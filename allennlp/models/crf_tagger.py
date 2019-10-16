@@ -252,11 +252,17 @@ class CrfTagger(Model):
         ``output_dict["tags"]`` is a list of lists of tag_ids,
         so we use an ugly nested list comprehension.
         """
+
         def decode_tags(tags):
-            return [self.vocab.get_token_from_index(tag, namespace=self.label_namespace) for tag in tags]
+            return [
+                self.vocab.get_token_from_index(tag, namespace=self.label_namespace) for tag in tags
+            ]
 
         def decode_top_k_tags(top_k_tags):
-            return [{"tags": decode_tags(scored_path[0]), "score": scored_path[1]} for scored_path in top_k_tags]
+            return [
+                {"tags": decode_tags(scored_path[0]), "score": scored_path[1]}
+                for scored_path in top_k_tags
+            ]
 
         output_dict["tags"] = [decode_tags(t) for t in output_dict["tags"]]
 

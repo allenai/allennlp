@@ -331,9 +331,7 @@ class ConditionalRandomField(torch.nn.Module):
         return torch.sum(log_numerator - log_denominator)
 
     def viterbi_tags(
-        self,
-        logits: torch.Tensor, mask: torch.Tensor,
-        top_k: int = None,
+        self, logits: torch.Tensor, mask: torch.Tensor, top_k: int = None
     ) -> Union[List[VITERBI_DECODING], List[List[VITERBI_DECODING]]]:
         """
         Uses viterbi algorithm to find most likely tags for the given inputs.
@@ -405,9 +403,10 @@ class ConditionalRandomField(torch.nn.Module):
 
             # We pass the tags and the transitions to ``viterbi_decode``.
             viterbi_paths, viterbi_scores = util.viterbi_decode(
-                tag_sequence=tag_sequence[:(sequence_length + 2)],
+                tag_sequence=tag_sequence[: (sequence_length + 2)],
                 transition_matrix=transitions,
-                top_k=top_k)
+                top_k=top_k,
+            )
             top_k_paths = []
             for viterbi_path, viterbi_score in zip(viterbi_paths, viterbi_scores):
                 # Get rid of START and END sentinels and append.
