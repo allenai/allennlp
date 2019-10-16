@@ -2,70 +2,7 @@ import spacy
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.tokenizers.token import Token
-from allennlp.data.tokenizers.letters_digits_tokenizer import LettersDigitsTokenizer
 from allennlp.data.tokenizers.spacy_tokenizer import SpacyTokenizer
-from allennlp.data.tokenizers.pretrained_transformer_pre_tokenizer import OpenAIPreTokenizer
-from allennlp.data.tokenizers.pretrained_transformer_pre_tokenizer import BertPreTokenizer
-
-
-class TestLettersDigitsTokenizer(AllenNlpTestCase):
-    def setUp(self):
-        super().setUp()
-        self.word_tokenizer = LettersDigitsTokenizer()
-
-    def test_tokenize_handles_complex_punctuation(self):
-        sentence = "this (sentence) has 'crazy' \"punctuation\"."
-        expected_tokens = [
-            "this",
-            "(",
-            "sentence",
-            ")",
-            "has",
-            "'",
-            "crazy",
-            "'",
-            '"',
-            "punctuation",
-            '"',
-            ".",
-        ]
-        tokens = [t.text for t in self.word_tokenizer.tokenize(sentence)]
-        assert tokens == expected_tokens
-
-    def test_tokenize_handles_unicode_letters(self):
-        sentence = "HAL9000   and    Ångström"
-        expected_tokens = [
-            Token("HAL", 0),
-            Token("9000", 3),
-            Token("and", 10),
-            Token("Ångström", 17),
-        ]
-        tokens = self.word_tokenizer.tokenize(sentence)
-        assert [t.text for t in tokens] == [t.text for t in expected_tokens]
-        assert [t.idx for t in tokens] == [t.idx for t in expected_tokens]
-
-    def test_tokenize_handles_splits_all_punctuation(self):
-        sentence = "wouldn't.[have] -3.45(m^2)"
-        expected_tokens = [
-            "wouldn",
-            "'",
-            "t",
-            ".",
-            "[",
-            "have",
-            "]",
-            "-",
-            "3",
-            ".",
-            "45",
-            "(",
-            "m",
-            "^",
-            "2",
-            ")",
-        ]
-        tokens = [t.text for t in self.word_tokenizer.tokenize(sentence)]
-        assert tokens == expected_tokens
 
 
 class TestSpacyTokenizer(AllenNlpTestCase):
@@ -182,35 +119,3 @@ class TestSpacyTokenizer(AllenNlpTestCase):
         tokens = word_tokenizer.tokenize(sentence)
         assert tokens
         assert all(isinstance(token, spacy.tokens.Token) for token in tokens)
-
-
-class TestOpenAiSpacyTokenizer(AllenNlpTestCase):
-    def setUp(self):
-        super().setUp()
-        self.word_tokenizer = OpenAIPreTokenizer()
-
-    def test_tokenize_handles_complex_punctuation(self):
-        sentence = "This sentence ?a!?!"
-        expected_tokens = ["This", "sentence", "?", "a", "!", "?", "!"]
-        tokens = [t.text for t in self.word_tokenizer.tokenize(sentence)]
-        assert tokens == expected_tokens
-
-
-class TestBertPreTokenizer(AllenNlpTestCase):
-    def setUp(self):
-        super().setUp()
-        self.word_tokenizer = BertPreTokenizer()
-
-    def test_never_split(self):
-        sentence = "[unused0] [UNK] [SEP] [PAD] [CLS] [MASK]"
-        expected_tokens = ["[", "unused0", "]", "[UNK]", "[SEP]", "[PAD]", "[CLS]", "[MASK]"]
-        tokens = [token.text for token in self.word_tokenizer.tokenize(sentence)]
-        assert tokens == expected_tokens
-
-    def test_do_lower_case(self):
-        # BertPreTokenizer makes every token not in `never_split` to lowercase by default
-        word_tokenizer = BertPreTokenizer(never_split=["[UNUSED0]"])
-        sentence = "[UNUSED0] [UNK] [unused0]"
-        expected_tokens = ["[UNUSED0]", "[", "unk", "]", "[", "unused0", "]"]
-        tokens = [token.text for token in word_tokenizer.tokenize(sentence)]
-        assert tokens == expected_tokens
