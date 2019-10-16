@@ -233,7 +233,7 @@ def main(args) -> None:
         beaker = BeakerWrapper()
         resume(connection, beaker)
     else:
-        raise Exception(f"Unaccounted for action {action}")
+        raise Exception(f"Unaccounted for action {args.action}")
     connection.close()
 
 
