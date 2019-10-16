@@ -84,7 +84,7 @@ class CrfTagger(Model):
         verbose_metrics: bool = False,
         initializer: InitializerApplicator = InitializerApplicator(),
         regularizer: Optional[RegularizerApplicator] = None,
-        top_k: int = 1
+        top_k: int = 1,
     ) -> None:
         super().__init__(vocab, regularizer)
 
