@@ -3,7 +3,7 @@ from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.data.tokenizers.tokenizer import Tokenizer
 from allennlp.data.tokenizers.spacy_tokenizer import SpacyTokenizer
-from allennlp.data.tokenizers.white_space_tokenizer import WhitespaceTokenizer
+from allennlp.data.tokenizers.whitespace_tokenizer import WhitespaceTokenizer
 
 
 class TestTokenizer(AllenNlpTestCase):

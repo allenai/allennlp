@@ -9,7 +9,7 @@ from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.fields import LabelField, TextField, Field
 from allennlp.data.instance import Instance
 from allennlp.data.tokenizers import Tokenizer
-from allennlp.data.tokenizers.white_space_tokenizer import WhitespaceTokenizer
+from allennlp.data.tokenizers.whitespace_tokenizer import WhitespaceTokenizer
 from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
 
 logger = logging.getLogger(__name__)

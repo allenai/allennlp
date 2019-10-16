@@ -53,7 +53,7 @@ allennlp.data.tokenizers
    :show-inheritance:
 
 .. _white-space-tokenizer:
-.. automodule:: allennlp.data.tokenizers.white_space_tokenizer
+.. automodule:: allennlp.data.tokenizers.whitespace_tokenizer
    :members:
    :undoc-members:
    :show-inheritance:

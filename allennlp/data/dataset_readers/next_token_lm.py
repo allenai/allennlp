@@ -6,7 +6,7 @@ from overrides import overrides
 from allennlp.data.instance import Instance
 from allennlp.data.tokenizers.tokenizer import Tokenizer
 from allennlp.data.tokenizers import Token
-from allennlp.data.tokenizers.white_space_tokenizer import WhitespaceTokenizer
+from allennlp.data.tokenizers.whitespace_tokenizer import WhitespaceTokenizer
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.token_indexers.token_indexer import TokenIndexer
 from allennlp.data.fields import Field, TextField
