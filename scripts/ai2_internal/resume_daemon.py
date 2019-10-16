@@ -219,8 +219,10 @@ def main(args) -> None:
         # Execute this script every ten minutes. We set the PATH to that used
         # to run this install step to make sure that we have access to python3
         # and beaker.
-        cron_line = f"*/10 * * * * bash -c 'export PATH={os.environ['PATH']};" +
+        cron_line = (
+            f"*/10 * * * * bash -c 'export PATH={os.environ['PATH']};"
             f" {full_path} --action=resume --random-delay-seconds=60'\n"
+        )
         new_crontab = current_crontab + cron_line
         subprocess.run(["crontab", "-"], input=new_crontab, encoding="utf-8")
     elif args.action is Action.start:
