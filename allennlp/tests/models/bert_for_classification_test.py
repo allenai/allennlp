@@ -8,7 +8,7 @@ from allennlp.data.dataset_readers import DatasetReader
 from allennlp.data.fields import TextField, LabelField
 from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import TokenIndexer
-from allennlp.data.tokenizers import Tokenizer, SpacyWordTokenizer
+from allennlp.data.tokenizers import Tokenizer, SpacyTokenizer
 from allennlp.modules.token_embedders.bert_token_embedder import PretrainedBertModel
 
 
@@ -22,7 +22,7 @@ class BertClassificationTestReader(DatasetReader):
     ) -> None:
         super().__init__(lazy)
         self._token_indexers = token_indexers or {}
-        self.tokenizer = tokenizer or SpacyWordTokenizer()
+        self.tokenizer = tokenizer or SpacyTokenizer()
 
     def _read(self, file_path: str):
         #            2   3    4   3     5     6   8      9    2   14   12

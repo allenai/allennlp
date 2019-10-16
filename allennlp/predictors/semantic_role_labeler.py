@@ -5,7 +5,7 @@ from spacy.tokens import Doc
 
 from allennlp.common.util import JsonDict, sanitize, group_by_count
 from allennlp.data import DatasetReader, Instance
-from allennlp.data.tokenizers.word_tokenizer import SpacyWordTokenizer
+from allennlp.data.tokenizers.spacy_tokenizer import SpacyTokenizer
 from allennlp.models import Model
 from allennlp.predictors.predictor import Predictor
 
@@ -20,7 +20,7 @@ class SemanticRoleLabelerPredictor(Predictor):
         self, model: Model, dataset_reader: DatasetReader, language: str = "en_core_web_sm"
     ) -> None:
         super().__init__(model, dataset_reader)
-        self._tokenizer = SpacyWordTokenizer(language=language, pos_tags=True)
+        self._tokenizer = SpacyTokenizer(language=language, pos_tags=True)
 
     def predict(self, sentence: str) -> JsonDict:
         """

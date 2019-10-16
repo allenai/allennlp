@@ -3,13 +3,13 @@ from collections import defaultdict
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Token, Vocabulary
 from allennlp.data.token_indexers import PosTagIndexer
-from allennlp.data.tokenizers.word_tokenizer import SpacyWordTokenizer
+from allennlp.data.tokenizers.spacy_tokenizer import SpacyTokenizer
 
 
 class TestPosTagIndexer(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
-        self.tokenizer = SpacyWordTokenizer(pos_tags=True)
+        self.tokenizer = SpacyTokenizer(pos_tags=True)
 
     def test_count_vocab_items_uses_pos_tags(self):
         tokens = self.tokenizer.tokenize("This is a sentence.")

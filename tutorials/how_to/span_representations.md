@@ -86,10 +86,10 @@ starts or ends with punctuation using a very simple python function:
 ```python
 from typing import List
 from allennlp.data.dataset_readers.dataset_utils import span_utils
-from allennlp.data.tokenizers.word_tokenizer import SpacyWordTokenizer
+from allennlp.data.tokenizers.spacy_tokenizer import SpacyTokenizer
 from allennlp.data.tokenizers.token import Token
 
-tokenizer = SpacyWordTokenizer(pos_tags=True)
+tokenizer = SpacyTokenizer(pos_tags=True)
 sentence = tokenizer.tokenize("This is a sentence.")
 
 def no_prefixed_punctuation(tokens: List[Token]) -> bool:

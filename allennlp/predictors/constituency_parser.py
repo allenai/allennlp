@@ -8,7 +8,7 @@ from allennlp.common.util import JsonDict, sanitize
 from allennlp.data import DatasetReader, Instance
 from allennlp.models import Model
 from allennlp.predictors.predictor import Predictor
-from allennlp.data.tokenizers.word_tokenizer import SpacyWordTokenizer
+from allennlp.data.tokenizers.spacy_tokenizer import SpacyTokenizer
 
 
 # Make the links to POS tag nodes render as "pos",
@@ -67,7 +67,7 @@ class ConstituencyParserPredictor(Predictor):
         self, model: Model, dataset_reader: DatasetReader, language: str = "en_core_web_sm"
     ) -> None:
         super().__init__(model, dataset_reader)
-        self._tokenizer = SpacyWordTokenizer(language=language, pos_tags=True)
+        self._tokenizer = SpacyTokenizer(language=language, pos_tags=True)
 
     def predict(self, sentence: str) -> JsonDict:
         """

@@ -12,7 +12,7 @@ class SentenceSplitter(Registrable):
     A ``SentenceSplitter`` splits strings into sentences.
     """
 
-    default_implementation = "word"
+    default_implementation = "spacy"
 
     def split_sentences(self, text: str) -> List[str]:
         """

@@ -6,7 +6,7 @@ from overrides import overrides
 from allennlp.data.instance import Instance
 from allennlp.data.tokenizers.tokenizer import Tokenizer
 from allennlp.data.tokenizers import Token
-from allennlp.data.tokenizers.word_tokenizer import JustSpacesTokenizer
+from allennlp.data.tokenizers.white_space_tokenizer import WhitespaceTokenizer
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.token_indexers.token_indexer import TokenIndexer
 from allennlp.data.fields import IndexField, Field, ListField, TextField
@@ -36,7 +36,7 @@ class MaskedLanguageModelingReader(DatasetReader):
 
     Parameters
     ----------
-    tokenizer : ``Tokenizer``, optional (default=``JustSpacesTokenizer()``)
+    tokenizer : ``Tokenizer``, optional (default=``WhitespaceTokenizer()``)
         We use this ``Tokenizer`` for the text.  See :class:`Tokenizer`.
     token_indexers : ``Dict[str, TokenIndexer]``, optional (default=``{"tokens": SingleIdTokenIndexer()}``)
         We use this to define the input representation for the text, and to get ids for the mask
@@ -50,7 +50,7 @@ class MaskedLanguageModelingReader(DatasetReader):
         lazy: bool = False,
     ) -> None:
         super().__init__(lazy)
-        self._tokenizer = tokenizer or JustSpacesTokenizer()
+        self._tokenizer = tokenizer or WhitespaceTokenizer()
         self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
 
     @overrides

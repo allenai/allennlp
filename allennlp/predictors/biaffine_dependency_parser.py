@@ -6,7 +6,7 @@ from allennlp.common.util import JsonDict, sanitize
 from allennlp.data import DatasetReader, Instance
 from allennlp.models import Model
 from allennlp.predictors.predictor import Predictor
-from allennlp.data.tokenizers.word_tokenizer import SpacyWordTokenizer
+from allennlp.data.tokenizers.spacy_tokenizer import SpacyTokenizer
 
 # POS tags have a unified colour.
 NODE_TYPE_TO_STYLE = {}
@@ -87,7 +87,7 @@ class BiaffineDependencyParserPredictor(Predictor):
     ) -> None:
         super().__init__(model, dataset_reader)
         # TODO(Mark) Make the language configurable and based on a model attribute.
-        self._tokenizer = SpacyWordTokenizer(language=language, pos_tags=True)
+        self._tokenizer = SpacyTokenizer(language=language, pos_tags=True)
 
     def predict(self, sentence: str) -> JsonDict:
         """
