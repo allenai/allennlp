@@ -1,4 +1,4 @@
-from typing import Dict, Optional, List, Any
+from typing import Dict, Optional, List, Any, cast
 
 from overrides import overrides
 import torch
@@ -217,7 +217,7 @@ class CrfTagger(Model):
         best_paths = self.crf.viterbi_tags(logits, mask, top_k=self.top_k)
 
         # Just get the top tags and ignore the scores.
-        predicted_tags = [x[0][0] for x in best_paths]
+        predicted_tags = cast(List[int], [x[0][0] for x in best_paths])
 
         output = {"logits": logits, "mask": mask, "tags": predicted_tags}
 

@@ -684,8 +684,16 @@ class TestNnUtil(AllenNlpTestCase):
 
         # Test that pairwise potentials effect the sequence correctly and that
         # viterbi_decode can handle -inf values.
-        sequence_logits = torch.FloatTensor([[0, 0, 0, 3, 4], [0, 0, 0, 3, 4], [0, 0, 0, 3, 4],
-                                             [0, 0, 0, 3, 4], [0, 0, 0, 3, 4], [0, 0, 0, 3, 4]])
+        sequence_logits = torch.FloatTensor(
+            [
+                [0, 0, 0, 3, 4],
+                [0, 0, 0, 3, 4],
+                [0, 0, 0, 3, 4],
+                [0, 0, 0, 3, 4],
+                [0, 0, 0, 3, 4],
+                [0, 0, 0, 3, 4]
+            ]
+        )
         # The same tags shouldn't appear sequentially.
         transition_matrix = torch.zeros([5, 5])
         for i in range(5):
@@ -695,8 +703,16 @@ class TestNnUtil(AllenNlpTestCase):
 
         # Test that unbalanced pairwise potentials break ties
         # between paths with equal unary potentials.
-        sequence_logits = torch.FloatTensor([[0, 0, 0, 4, 4], [0, 0, 0, 4, 4], [0, 0, 0, 4, 4],
-                                             [0, 0, 0, 4, 4], [0, 0, 0, 4, 4], [0, 0, 0, 4, 0]])
+        sequence_logits = torch.FloatTensor(
+            [
+                [0, 0, 0, 4, 4],
+                [0, 0, 0, 4, 4],
+                [0, 0, 0, 4, 4],
+                [0, 0, 0, 4, 4],
+                [0, 0, 0, 4, 4],
+                [0, 0, 0, 4, 0]
+            ]
+        )
         # The 5th tag has a penalty for appearing sequentially
         # or for transitioning to the 4th tag, making the best
         # path uniquely to take the 4th tag only.
@@ -706,7 +722,13 @@ class TestNnUtil(AllenNlpTestCase):
         indices, _ = util.viterbi_decode(sequence_logits, transition_matrix, top_k=5)
         assert indices[0] == [3, 3, 3, 3, 3, 3]
 
-        sequence_logits = torch.FloatTensor([[1, 0, 0, 4], [1, 0, 6, 2], [0, 3, 0, 4]])
+        sequence_logits = torch.FloatTensor(
+            [
+                [1, 0, 0, 4],
+                [1, 0, 6, 2],
+                [0, 3, 0, 4]
+            ]
+        )
         # Best path would normally be [3, 2, 3] but we add a
         # potential from 2 -> 1, making [3, 2, 1] the best path.
         transition_matrix = torch.zeros([4, 4])
@@ -716,7 +738,11 @@ class TestNnUtil(AllenNlpTestCase):
         assert indices[0] == [3, 2, 1]
         assert value[0] == 18
 
-        def _brute_decode(tag_sequence: torch.Tensor, transition_matrix: torch.Tensor, top_k: int = 5) -> Any:
+        def _brute_decode(
+                tag_sequence: torch.Tensor,
+                transition_matrix: torch.Tensor,
+                top_k: int = 5,
+        ) -> Any:
             """
             Top-k decoder that uses brute search instead of the Viterbi Decode dynamic programing algorithm
             """
