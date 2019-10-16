@@ -4,10 +4,18 @@ from unittest.mock import call, Mock
 
 from allennlp.common.testing import AllenNlpTestCase
 
-from scripts.ai2_internal.resume_daemon import BeakerStatus, create_table, handler, logger, resume, start_autoresume
+from scripts.ai2_internal.resume_daemon import (
+    BeakerStatus,
+    create_table,
+    handler,
+    logger,
+    resume,
+    start_autoresume,
+)
 
 # Don't spam the log in tests.
 logger.removeHandler(handler)
+
 
 class ResumeDaemonTest(AllenNlpTestCase):
     def setUp(self):
@@ -66,17 +74,19 @@ class ResumeDaemonTest(AllenNlpTestCase):
         for i in range(10):
             beaker.resume.return_value = f"foo{i}"
             resume(self.connection, beaker)
-        calls = [call.get_status('foo'),
-             call.resume('foo'),
-             call.get_status('foo0'),
-             call.resume('foo0'),
-             call.get_status('foo1'),
-             call.resume('foo1'),
-             call.get_status('foo2'),
-             call.resume('foo2'),
-             call.get_status('foo3'),
-             call.resume('foo3'),
-             call.get_status('foo4')]
+        calls = [
+            call.get_status("foo"),
+            call.resume("foo"),
+            call.get_status("foo0"),
+            call.resume("foo0"),
+            call.get_status("foo1"),
+            call.resume("foo1"),
+            call.get_status("foo2"),
+            call.resume("foo2"),
+            call.get_status("foo3"),
+            call.resume("foo3"),
+            call.get_status("foo4"),
+        ]
         beaker.assert_has_calls(calls)
 
     def test_handles_a_realistic_scenario(self):
@@ -89,9 +99,11 @@ class ResumeDaemonTest(AllenNlpTestCase):
             if i == 2:
                 beaker.get_status.return_value = BeakerStatus.succeeded
             resume(self.connection, beaker)
-        calls = [call.get_status('foo'),
-             call.resume('foo'),
-             call.get_status('foo0'),
-             call.resume('foo0'),
-             call.get_status('foo1')]
+        calls = [
+            call.get_status("foo"),
+            call.resume("foo"),
+            call.get_status("foo0"),
+            call.resume("foo0"),
+            call.get_status("foo1"),
+        ]
         beaker.assert_has_calls(calls)
