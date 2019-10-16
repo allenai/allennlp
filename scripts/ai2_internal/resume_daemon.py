@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 
 # Tool to automatically resume preemptible beaker experiments created with run_with_beaker.py.
 #
@@ -22,9 +22,12 @@ import time
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 logger.setLevel(logging.DEBUG)
+formatter = logging.Formatter(fmt='%(asctime)s %(levelname)-8s %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S')
 handler = RotatingFileHandler(
     f"{os.environ['HOME']}/.allennlp/resume.log", maxBytes=1024 * 1024, backupCount=10
 )
+handler.setFormatter(formatter)
 logger.addHandler(handler)
 
 BEAKER_QUERY_INTERVAL_SECONDS = 1.0
@@ -66,7 +69,7 @@ class BeakerWrapper:
         experiment_json = subprocess.check_output(command)
 
         # Example output from beaker.
-        # brendanr.local ➜  ~ beaker experiment inspect ex_g7knlblsjxxk
+        # brendanr.local$ beaker experiment inspect ex_g7knlblsjxxk
         # [
         #     {
         #         "id": "ex_g7knlblsjxxk",
@@ -154,6 +157,8 @@ def stop_autoresume(connection: Connection, experiment_id: str) -> None:
 
 
 def resume(connection: Connection, beaker: BeakerWrapper) -> None:
+    logger.info("Checking if resumes are needed.")
+
     cursor = connection.cursor()
     cursor.execute("SELECT * FROM active_experiments")
     experiments = cursor.fetchall()
@@ -210,8 +215,9 @@ def main(args) -> None:
         create_table(connection)
         current_crontab = subprocess.check_output(["crontab", "-l"], universal_newlines=True)
         full_path = os.path.abspath(__file__)
-        # Execute this script every ten minutes.
-        cron_line = f"*/10 * * * * {full_path} --action=resume --random-delay-seconds=60\n"
+        # Execute this script every ten minutes. We use bash's login option so
+        # we have a chance at getting the user's python3.
+        cron_line = f"*/10 * * * * bash -lc '{full_path} --action=resume --random-delay-seconds=60'\n"
         new_crontab = current_crontab + cron_line
         subprocess.run(["crontab", "-"], input=new_crontab, encoding="utf-8")
     elif args.action is Action.start:
