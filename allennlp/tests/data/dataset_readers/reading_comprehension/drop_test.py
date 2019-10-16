@@ -158,5 +158,5 @@ class TestDropReader:
 
     def test_can_build_from_params(self):
         reader = DropReader.from_params(Params({}))
-        assert reader._tokenizer.__class__.__name__ == "WordTokenizer"
+        assert reader._tokenizer.__class__.__name__ == "SpacyTokenizer"
         assert reader._token_indexers["tokens"].__class__.__name__ == "SingleIdTokenIndexer"

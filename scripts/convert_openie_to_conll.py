@@ -7,8 +7,7 @@ from typing import List
 from collections import namedtuple
 import regex
 from tqdm import tqdm
-from allennlp.data.tokenizers.word_splitter import SpacyWordSplitter
-from allennlp.data.tokenizers import WordTokenizer
+from allennlp.data.tokenizers.spacy_tokenizer import SpacyTokenizer
 import argparse
 
 Extraction = namedtuple(
@@ -191,7 +190,7 @@ def parse_element(raw_element: str) -> List[Element]:
 
 
 def read(fn: str) -> List[Extraction]:
-    tokenizer = WordTokenizer(word_splitter=SpacyWordSplitter(pos_tags=True))
+    tokenizer = SpacyTokenizer(pos_tags=True)
     prev_sent = []
 
     with open(fn) as fin:

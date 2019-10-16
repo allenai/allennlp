@@ -3,16 +3,16 @@ from collections import defaultdict
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Token, Vocabulary
 from allennlp.data.token_indexers import PosTagIndexer
-from allennlp.data.tokenizers.word_splitter import SpacyWordSplitter
+from allennlp.data.tokenizers.spacy_tokenizer import SpacyTokenizer
 
 
 class TestPosTagIndexer(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
-        self.tokenizer = SpacyWordSplitter(pos_tags=True)
+        self.tokenizer = SpacyTokenizer(pos_tags=True)
 
     def test_count_vocab_items_uses_pos_tags(self):
-        tokens = self.tokenizer.split_words("This is a sentence.")
+        tokens = self.tokenizer.tokenize("This is a sentence.")
         tokens = [Token("<S>")] + [t for t in tokens] + [Token("</S>")]
         indexer = PosTagIndexer()
         counter = defaultdict(lambda: defaultdict(int))
@@ -27,7 +27,7 @@ class TestPosTagIndexer(AllenNlpTestCase):
         assert counter["pos_tokens"] == {"VERB": 1, "PUNCT": 1, "DET": 2, "NOUN": 1, "NONE": 2}
 
     def test_tokens_to_indices_uses_pos_tags(self):
-        tokens = self.tokenizer.split_words("This is a sentence.")
+        tokens = self.tokenizer.tokenize("This is a sentence.")
         tokens = [t for t in tokens] + [Token("</S>")]
         vocab = Vocabulary()
         verb_index = vocab.add_token_to_namespace("VERB", namespace="pos_tags")

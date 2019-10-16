@@ -6,10 +6,7 @@ config + {
     "base_reader": {
       "type": "simple_language_modeling",
       "tokenizer": {
-        "type": "word",
-        "word_splitter": {
-          "type": "just_spaces"
-        }
+        "type": "just_spaces",
       },
       "token_indexers": {
         "tokens": {

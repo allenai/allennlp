@@ -13,7 +13,7 @@ sys.path.insert(
 )
 
 from allennlp.common.util import JsonDict
-from allennlp.data.tokenizers import WordTokenizer
+from allennlp.data.tokenizers import SpacyTokenizer
 from allennlp.data.dataset_readers.semantic_parsing.wikitables import util as wikitables_util
 from allennlp.semparse.contexts import TableQuestionContext
 from allennlp.semparse.domain_languages import WikiTablesLanguage
@@ -33,7 +33,7 @@ def search(
     print(f"Starting search with {len(data)} instances", file=sys.stderr)
     language_logger = logging.getLogger("allennlp.semparse.domain_languages.wikitables_language")
     language_logger.setLevel(logging.ERROR)
-    tokenizer = WordTokenizer()
+    tokenizer = SpacyTokenizer()
     if output_separate_files and not os.path.exists(output_path):
         os.makedirs(output_path)
     if not output_separate_files:
