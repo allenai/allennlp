@@ -51,7 +51,6 @@ from allennlp.common import Params
 from allennlp.common.util import (
     prepare_environment,
     prepare_global_logging,
-    cleanup_global_logging,
     dump_metrics,
 )
 from allennlp.models.archival import archive_model, CONFIG_NAME
