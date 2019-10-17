@@ -588,6 +588,11 @@ class TransformerMCQAReader(DatasetReader):
         #pad_token_val=self._tokenizer.encoder[pad_token] if self._model_type in ['roberta'] else self._tokenizer.vocab[pad_token]
         question = self._add_prefix.get("q", "") + question
         answer = self._add_prefix.get("a",  "") + answer
+
+        # Alon changing mask type:
+        if self._model_type in ['roberta','xlnet']:
+            question = question.replace('[MASK]','<mask>')
+
         question_tokens = self._tokenizer.tokenize(question)
         if context is not None:
             context = self._add_prefix.get("c", "") + context
