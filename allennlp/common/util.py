@@ -261,9 +261,9 @@ def prepare_global_logging(serialization_dir: str, file_friendly_logging: bool, 
         # This case is not distributed training and hence will stick to the older
         # log file names
         output_file_log_handler = logging.FileHandler(
-            filename=os.path.join(serialization_dir, f"stdout.log"))
+            filename=os.path.join(serialization_dir, "stdout.log"))
         error_file_log_handler = logging.FileHandler(
-            filename=os.path.join(serialization_dir, f"stderr.log"))
+            filename=os.path.join(serialization_dir, "stderr.log"))
     else:
         # Create log files with worker ids
         output_file_log_handler = logging.FileHandler(
@@ -280,6 +280,11 @@ def prepare_global_logging(serialization_dir: str, file_friendly_logging: bool, 
     formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(name)s - %(message)s')
 
     root_logger = logging.getLogger()
+
+    # Remove the already set stream handler in root logger.
+    # Not doing this will result in duplicate log messages
+    # printed in the console
+    root_logger.removeHandler(root_logger.handlers[0])
 
     # file handlers need to be handled for tqdm's \r char
     file_friendly_log_filter = FileFriendlyLogFilter()
