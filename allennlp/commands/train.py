@@ -241,7 +241,7 @@ def train_model(
     create_serialization_dir(params, serialization_dir, recover, force)
     params.to_file(os.path.join(serialization_dir, CONFIG_NAME))
 
-    stdout_handler = prepare_global_logging(serialization_dir, file_friendly_logging)
+    prepare_global_logging(serialization_dir, file_friendly_logging)
     prepare_environment(params)
 
     cuda_device = params.params.get("trainer").get("cuda_device", -1)
@@ -318,7 +318,7 @@ def train_model(
             "'evaluate_on_test' flag, or use the 'allennlp evaluate' command."
         )
 
-    cleanup_global_logging(stdout_handler)
+    logging.shutdown()
 
     # Now tar up results
     archive_model(serialization_dir, files_to_archive=params.files_to_archive)
