@@ -2,7 +2,7 @@
 
 
 
-from typing import Dict, Tuple, Iterator, List, Callable, Iterable, Union
+from typing import Dict, Tuple, Iterator, List, Callable, Iterable, Union, Generic, TypeVar
 import json
 import logging
 import itertools
@@ -206,9 +206,8 @@ can be written as generators, which can then be wrapped by pytorch datasets.
 
 """
 
-# TODO Joel would say this class could be a generic subtype, because each
-# Transform can _only_ be to one of these types. 
-InstanceOrBatch = Union[Iterable[Instance], Instance]
+Batched = Iterable[Instance]
+InstanceOrBatch = TypeVar("InstanceOrBatch", Iterable[Instance], Instance)
 
 class DatasetFromList(TorchDataset):
 
@@ -230,7 +229,7 @@ class DatasetFromGenerator(IterableTorchDataset):
             yield x
 
 
-class Transform(IterableTorchDataset):
+class Transform(IterableTorchDataset, Generic[InstanceOrBatch]):
 
     def transform(self, dataset: Iterable[Instance]) -> Iterable[InstanceOrBatch]:
         """
@@ -266,7 +265,7 @@ class Transform(IterableTorchDataset):
         return DatasetFromGenerator(generator())
 
 
-class MaxInstancesInMemory(Transform):
+class MaxInstancesInMemory(Transform[Batched]):
     """
     turns a dataset into a dataset of chunks of size max_instances_in_memory.
     This is helpful if you have an IterableDataset which you want to read a chunk from
@@ -277,7 +276,7 @@ class MaxInstancesInMemory(Transform):
     ):
         self.max_instances_in_memory = max_instances_in_memory
 
-    def transform(self, dataset: Iterable[Instance]) -> Iterable[InstanceOrBatch]:
+    def transform(self, dataset: Iterable[Instance]) -> Iterable[Batched]:
 
         batch = []
 
@@ -295,14 +294,14 @@ class MaxInstancesInMemory(Transform):
 # but we also accept this name as conceptually they are thought about differently.
 Batch = MaxInstancesInMemory
 
-class Index(Transform):
+class Index(Transform[Instance]):
     """
     Indexes allennlp Instances in place and returns them.
     """
     def __init__(self, vocab: Vocabulary):
         self.vocab = vocab
 
-    def transform(self, dataset: Iterable[Instance]) -> Iterable[InstanceOrBatch]:
+    def transform(self, dataset: Iterable[Instance]) -> Iterable[Instance]:
         
         for instance in dataset:
             instance.index_fields(self.vocab)
@@ -310,7 +309,7 @@ class Index(Transform):
             yield instance
         
 
-class SortByPadding(Transform):
+class SortByPadding(Transform[Instance]):
 
     def __init__(self,
         sorting_keys: List[Tuple[str, str]],
@@ -322,7 +321,7 @@ class SortByPadding(Transform):
         # only works if instances are indexed already.
         self.vocab = None
 
-    def transform(self, dataset: Iterable[Instance]) -> Iterable[InstanceOrBatch]:
+    def transform(self, dataset: Iterable[Instance]) -> Iterable[Instance]:
         
 
         instances = list(dataset)
@@ -335,7 +334,7 @@ class SortByPadding(Transform):
         yield from instances
 
 
-class EpochTracker(Transform):
+class EpochTracker(Transform[Instance]):
     """
     Adds a allennlp Field to each Instance which specifies how many
     times the full dataset has been iterated over.
@@ -344,7 +343,7 @@ class EpochTracker(Transform):
 
         self.epoch = 0
 
-    def transform(self, dataset: Iterable[Instance]) -> Iterable[InstanceOrBatch]:
+    def transform(self, dataset: Iterable[Instance]) -> Iterable[Instance]:
 
         for instance in dataset:
             instance.fields["epoch_num"] = MetadataField(self.epoch)
