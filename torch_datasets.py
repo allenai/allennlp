@@ -5,7 +5,7 @@
 from typing import Dict, Tuple, Iterator, List, Callable
 import json
 import logging
-
+import itertools
 import time
 import argparse
 
@@ -164,143 +164,6 @@ class IterableSnliDataset(IterableDataset):
 
 
 
-class BucketDataset(IterableTorchDataset):
-
-    def __init__(self,
-        dataset,
-        sorting_keys: List[Tuple[str, str]],
-        padding_noise: float = 0.1,
-        max_instances_in_memory: int = None
-    ):
-        super().__init__()
-
-        self.dataset = dataset
-
-        self._sorting_keys = sorting_keys
-        self._padding_noise = padding_noise
-        self._max_instances_in_memory = max_instances_in_memory
-
-        self.vocab = None
-
-    def __iter__(self) -> Iterator[List[Instance]]:
-
-        for instance_list in self._memory_sized_lists(self.dataset):
-            instance_list = sort_by_padding(
-                instance_list, self._sorting_keys, self.vocab, self._padding_noise)
-            
-            yield instance_list
-            #for instance in instance_list:
-            #    yield instance
-
-    def _memory_sized_lists(self, instances: Iterator[Instance]) -> Iterator[Iterator[Instance]]: 
-
-        if self._max_instances_in_memory is None:
-            yield from [instances]
-        elif self._max_instances_in_memory is not None:
-            yield from lazy_groups_of(instances, self._max_instances_in_memory)
-
-
-    def index_with(self, vocab: Vocabulary) -> None:
-        self.vocab = vocab
-
-
-
-class MaxInstancesInMemory:
-
-    def __init__(self,
-        max_instances_in_memory: int
-    ):
-        self.max_instances_in_memory = max_instances_in_memory
-
-    def __call__(self, dataset: Iterator[Instance]) -> Iterator[List[Instance]]:
-
-        batch = []
-
-        for instance in dataset:
-            batch.append(instance)
-
-            if len(batch) == self.max_instances_in_memory:
-                yield batch
-                batch = []
-
-        yield batch
-
-class Index:
-
-    def __init__(self, vocab: Vocabulary):
-        self.vocab = vocab
-
-    def __call__(self, dataset: Iterator[Instance]) -> Iterator[Instance]:
-
-        for instance in dataset:
-            instance.index_fields(self.vocab)
-
-            yield instance
-        
-
-class SortByPadding:
-
-    def __init__(self,
-        sorting_keys: List[Tuple[str, str]],
-        padding_noise: float = 0.1,
-        ):
-        self.sorting_keys = sorting_keys
-        self.padding_noise = padding_noise
-        self.vocab = None # HACK, just so we can use the existing sort_by_padding, only works if instances are indexed already.
-
-    def __call__(self, dataset: Iterator[List[Instance]]) -> Iterator[List[Instance]]:
-        
-        for instances in dataset:
-
-            if not all([i.indexed for i in instances]):
-                raise ValueError("Index() must occur before SortByPadding()")
-
-            instances = allennlp_sort_by_padding(
-                instances, self.sorting_keys, self.vocab, self.padding_noise)
-            
-            yield instances
-
-
-
-class EpochTracker:
-
-    def __init__(self):
-
-        self.epoch = 0
-
-    def __call__(self, dataset: Iterator[Instance]) -> Iterator[Instance]:
-
-        for instance in dataset:
-            instance.fields["epoch_num"] = MetadataField(self.epoch)
-            yield instance
-        self.epoch += 1
-
-
-class Transform(IterableTorchDataset):
-
-
-    def transform(self, dataset):
-        raise NotImplementedError
-
-    def __call__(self, dataset):
-        # wrapper to make sure transform only has to be Iterator[Instance] -> Iterator[Union[Instance, List[Instance]]]
-        
-        def generator():
-
-            example = next(dataset)
-
-            if isinstance(example, list): # !!! check for iterable.
-                yield self.transform(example)
-
-                for example in dataset:
-                    yield self.transform(example)
-            else:
-                import itertools
-                yield from self.transform(itertools.chain([example], dataset))
-
-        return DatasetFromGenerator(generator())
-
-
 class DatasetFromList(TorchDataset):
 
     def __init__(self, instances):
@@ -319,6 +182,113 @@ class DatasetFromGenerator(IterableTorchDataset):
 
         for x in self.generator:
             yield x
+
+
+class Transform(IterableTorchDataset):
+
+
+    def transform(self, dataset):
+        raise NotImplementedError
+
+    def __call__(self, dataset):
+        # wrapper to make sure transform only has to be Iterator[Instance] -> Iterator[Union[Instance, List[Instance]]]
+        
+        def generator():
+            
+            # Here, we want to 'peek' at the generator to see if it is
+            # nested or not. 
+            example = next(iter(dataset))
+            if isinstance(example, Instance):
+
+                yield from self.transform(itertools.chain([example], dataset))
+            else:
+                # IMPORTANT! These have to be yield from. because some
+                # transforms themeselves return something that is iterable.
+                yield from self.transform(example)
+
+                for example in dataset:
+                    yield from self.transform(example)
+
+        return DatasetFromGenerator(generator())
+
+
+class Flatten(Transform):
+
+    def transform(self, dataset):
+
+        for i in dataset:
+            return i
+
+class MaxInstancesInMemory(Transform):
+
+    def __init__(self,
+        max_instances_in_memory: int
+    ):
+        self.max_instances_in_memory = max_instances_in_memory
+
+    def transform(self, dataset: Iterator[Instance]) -> Iterator[List[Instance]]:
+
+        batch = []
+
+        for instance in dataset:
+            batch.append(instance)
+
+            if len(batch) == self.max_instances_in_memory:
+                yield batch
+                batch = []
+
+        yield batch
+
+class Index(Transform):
+
+    def __init__(self, vocab: Vocabulary):
+        self.vocab = vocab
+
+    def transform(self, dataset: Iterator[Instance]) -> Iterator[Instance]:
+        
+        for instance in dataset:
+            instance.index_fields(self.vocab)
+
+            yield instance
+        
+
+class SortByPadding(Transform):
+
+    def __init__(self,
+        sorting_keys: List[Tuple[str, str]],
+        padding_noise: float = 0.1,
+        ):
+        self.sorting_keys = sorting_keys
+        self.padding_noise = padding_noise
+        self.vocab = None # HACK, just so we can use the existing sort_by_padding, only works if instances are indexed already.
+
+    def transform(self, dataset: Iterator[List[Instance]]) -> Iterator[List[Instance]]:
+        
+
+        instances = list(dataset)
+        print("instances in sort by padding", instances)
+        if not all([i.indexed for i in instances]):
+            raise ValueError("Index() must occur before SortByPadding()")
+
+        instances = allennlp_sort_by_padding(
+            instances, self.sorting_keys, self.vocab, self.padding_noise)
+        
+        yield from instances
+
+
+
+class EpochTracker(Transform):
+
+    def __init__(self):
+
+        self.epoch = 0
+
+    def transform(self, dataset: Iterator[Instance]) -> Iterator[Instance]:
+
+        for instance in dataset:
+            instance.fields["epoch_num"] = MetadataField(self.epoch)
+            yield instance
+        self.epoch += 1
 
 
 class Compose(IterableTorchDataset):
@@ -342,25 +312,15 @@ class Compose(IterableTorchDataset):
         format_string += '\n)'
         return format_string
 
-data = SnliDataset("/Users/markn/allen_ai/allennlp/allennlp/tests/fixtures/data/snli.jsonl")
-
-for x in data:
-    print(x)
-
-data_iterable = IterableSnliDataset("/Users/markn/allen_ai/allennlp/allennlp/tests/fixtures/data/snli.jsonl")
-
-for x in data_iterable:
-    print(x)
+data = SnliDataset("snli_20.jsonl")
 
 vocab = Vocabulary.from_instances(data)
-vocab = Vocabulary.from_instances(data_iterable)
 
 
 
 def allennlp_collocate(batch):
-
-    if len(batch) == 1 and isinstance(batch[0], list):
-        batch = batch[0]
+    if len(batch) == 1:
+        batch = list(batch[0])
 
     batch = Batch(batch)
     # We might have already done this - but it doesn't matter if we have,
@@ -371,25 +331,17 @@ def allennlp_collocate(batch):
 
 transformations = [
     Index(vocab),
-    EpochTracker(),
-    MaxInstancesInMemory(1000),
+    MaxInstancesInMemory(5),
     SortByPadding([("premise", "num_tokens")]),
+    MaxInstancesInMemory(2),
 ]
 
 
 data = Compose(data, transformations)
 
-iterable_dataset = Compose(data_iterable, transformations)
-
-
 batch_generator = DataLoader(data, batch_size=1, collate_fn=allennlp_collocate)
-stream_batch_generator = DataLoader(iterable_dataset, batch_size=1, collate_fn=allennlp_collocate)
 
 print("non iterable")
 for batch in batch_generator:
-    print(batch)
-
-print("non iterable")
-for batch in stream_batch_generator:
     print(batch)
 
