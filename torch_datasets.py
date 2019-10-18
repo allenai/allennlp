@@ -411,7 +411,7 @@ data = Compose(transformations)(data)
 # is recieving a list of a single batch of instances. 
 batch_generator = DataLoader(data, batch_size=1, collate_fn=allennlp_collocate)
 
-print("non iterable")
+print("Example batches")
 for batch in batch_generator:
     print(batch)
 
