@@ -130,7 +130,12 @@ def main(param_file: str, args: argparse.Namespace):
 
     def resume_command(experiment_id):
         resume_daemon_path = os.path.join(os.path.dirname(__file__), "resume_daemon.py")
-        return [resume_daemon_path, "--action=start", f"--max-resumes={args.max_resumes}", f"--experiment-id={experiment_id}"
+        return [
+            resume_daemon_path,
+            "--action=start",
+            f"--max-resumes={args.max_resumes}",
+            f"--experiment-id={experiment_id}",
+        ]
 
     if args.dry_run:
         print("This is a dry run (--dry-run).  Launch your job with the following command:")
@@ -142,8 +147,10 @@ def main(param_file: str, args: argparse.Namespace):
         print("Running the experiment:")
         print("    " + " ".join(experiment_command))
         experiment_id = subprocess.check_output(experiment_command, universal_newlines=True).strip()
-        print(f"Experiment {experiment_id} submitted. "
-              f"See progress at https://allenai.beaker.org/ex/{experiment_id}")
+        print(
+            f"Experiment {experiment_id} submitted. "
+            f"See progress at https://allenai.beaker.org/ex/{experiment_id}"
+        )
         if args.max_resumes > 0:
             print("Configuring auto-resumes:")
             print("    " + " ".join(resume_command(experiment_id)))
@@ -186,10 +193,10 @@ if __name__ == "__main__":
         "--preemptible", action="store_true", help="Allow task to run on preemptible hardware"
     )
     parser.add_argument(
-            "--max-resumes",
-            type=int,
-            default=0,
-            help="When running with --preemptible, use a cronjob to automatically resume this many times."
+        "--max-resumes",
+        type=int,
+        default=0,
+        help="When running with --preemptible, use a cronjob to automatically resume this many times.",
     )
     parser.add_argument(
         "--include-package",
