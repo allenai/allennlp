@@ -2,12 +2,13 @@
 
 
 
-from typing import Dict, Tuple, Iterator, List, Callable, Iterable, Union, Generic, TypeVar
+from typing import Dict, Tuple, Iterator, List, Callable, Iterable, Union, Generic, TypeVar, Deque
 import json
 import logging
 import itertools
 import time
 import argparse
+from collections import deque
 
 from overrides import overrides
 
@@ -350,6 +351,107 @@ class EpochTracker(Transform[Instance]):
             yield instance
         self.epoch += 1
 
+class SkipSmallerThan(Transform[Batched]):
+
+    # TODO(Mark): this could collect smaller sub batches
+    # and yield them once it has enough, maybe.
+
+    def __init__(self, min_size: int):
+        self.min_size = min_size
+
+    def transform(self, dataset: Iterable[Instance]) -> Iterable[Batched]:
+
+        batch = list(dataset)
+        if len(batch) >= self.min_size:
+            
+            yield batch
+
+
+
+class MaxSamplesPerBatch(Transform[Batched]):
+
+
+    def __init__(self, max_samples: Tuple[str, int]):
+
+        self.max_samples = max_samples
+
+        self.excess: Deque[Instance] = deque()
+
+    def transform(self, dataset: Iterable[Instance]) -> Iterable[Batched]:
+
+
+        instances = list(dataset)
+
+        if not all([i.indexed for i in instances]):
+            raise ValueError("Index() must occur before MaxSamplesPerBatch()")
+        
+        yield from self._ensure_batch_is_sufficiently_small(instances, self.excess)
+
+
+    def _ensure_batch_is_sufficiently_small(
+        self, batch_instances: List[Instance], excess: Deque[Instance]
+    ) -> Iterable[Batched]:
+        """
+        If self._maximum_samples_per_batch is specified, then split the batch
+        into smaller sub-batches if it exceeds the maximum size.
+
+        Parameters
+        ----------
+        batch_instances : ``Iterable[Instance]``
+            A candidate batch.
+        excess : ``Deque[Instance]``
+            Instances that were not sufficient to form an entire batch
+            previously. They will be used as part of the first sub-batch. This
+            will be populated with instances from the end of batch_instances
+            that do not consist of more than self._maximum_samples_per_batch
+            samples or self._batch_size instances. It is the caller's
+            responsibility to place these in a batch too, which may, of course,
+            be done in part with subsequent calls to this method.
+
+            WARNING: Mutated in place!
+        """
+        key, limit = self.max_samples
+
+        batches: List[List[Instance]] = []
+        batch: List[Instance] = []
+        padding_length = -1
+        original_batch_size = len(batch_instances)
+
+        excess.extend(batch_instances)
+        while excess:
+            instance = excess.popleft()
+
+            field_lengths = instance.get_padding_lengths()
+            for _, lengths in field_lengths.items():
+                try:
+                    padding_length = max(padding_length, lengths[key])
+                except KeyError:
+                    pass
+
+            proposed_batch_size = len(batch) + 1
+            # Adding the current instance would exceed the batch size or sample size.
+            if (
+                proposed_batch_size >= original_batch_size
+                or padding_length * proposed_batch_size > limit
+            ):
+                # Output the already existing batch
+                yield batch
+
+                # Put the current instance back, reset state.
+                excess.appendleft(instance)
+                batch = []
+                padding_length = -1
+            else:
+                batch.append(instance)
+
+        # Keep the current batch as excess.
+        excess.extend(batch)
+
+        return batches
+
+
+
+
 
 class Compose(Transform):
 
@@ -397,9 +499,8 @@ def allennlp_collocate(batch):
 
 transformations = [
     Index(vocab),
-    MaxInstancesInMemory(5),
     SortByPadding([("premise", "num_tokens")]),
-    Batch(2),
+    MaxSamplesPerBatch(("num_tokens", 100)),
 ]
 
 
