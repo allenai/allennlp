@@ -228,7 +228,9 @@ def main(args) -> None:
 
     # Create the DB if needed.
     cursor = connection.cursor()
-    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='active_experiments'")
+    cursor.execute(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='active_experiments'"
+    )
     tables = cursor.fetchall()
     if not tables:
         create_table(connection)
