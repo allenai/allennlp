@@ -2,11 +2,27 @@
 
 # Tool to automatically resume preemptible beaker experiments created with run_with_beaker.py.
 #
-# To install the local DB and modify your crontab use:
-# resume_daemon.py --action=install
+# Examples
+# --------
 #
-# Subsequently, you can ensure an experiment will be resumed with:
+# Ensure an experiment will be resumed:
 # resume_daemon.py --action=start --experiment-id=$YOUR_EXPERIMENT_ID
+#
+# Stop resuming an experiment:
+# resume_daemon.py --action=stop --experiment-id=$YOUR_EXPERIMENT_ID
+#
+# Details
+# -------
+#
+# In order to operate, resume_daemon.py does the following:
+#
+# 1. Modifies the user's crontab.
+# 2. Maintains a SQLite DB in ~/.allennlp/resume.db.
+# 3. Keeps logs in ~/.allennlp/resume.log.
+#
+# The reliance on crontab means that resumes will only occur when the running
+# system is powered on. Longer term Beaker is planning on adding this
+# functionality to their service directly, which will obsolete this tool.
 
 from enum import Enum
 from logging.handlers import RotatingFileHandler
@@ -195,7 +211,6 @@ def resume(connection: Connection, beaker: BeakerWrapper) -> None:
 
 
 class Action(Enum):
-    install = "install"
     start = "start"
     stop = "stop"
     resume = "resume"
@@ -211,11 +226,19 @@ def main(args) -> None:
     db_path = os.environ["HOME"] + "/.allennlp/resume.db"
     connection = sqlite3.connect(db_path)
 
-    # TODO(brendanr): Just do this automatically?
-    if args.action is Action.install:
+    # Create the DB if needed.
+    cursor = connection.cursor()
+    cursor.execute(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='active_experiments'"
+    )
+    tables = cursor.fetchall()
+    if not tables:
         create_table(connection)
-        current_crontab = subprocess.check_output(["crontab", "-l"], universal_newlines=True)
-        full_path = os.path.abspath(__file__)
+
+    # Modify the crontab if needed.
+    current_crontab = subprocess.check_output(["crontab", "-l"], universal_newlines=True)
+    full_path = os.path.abspath(__file__)
+    if full_path not in current_crontab:
         # Execute this script every ten minutes. We set the PATH to that used
         # to run this install step to make sure that we have access to python3
         # and beaker.
@@ -225,7 +248,8 @@ def main(args) -> None:
         )
         new_crontab = current_crontab + cron_line
         subprocess.run(["crontab", "-"], input=new_crontab, encoding="utf-8")
-    elif args.action is Action.start:
+
+    if args.action is Action.start:
         assert args.experiment_id
         start_autoresume(connection, args.experiment_id, args.max_resumes)
     elif args.action is Action.stop:

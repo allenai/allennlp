@@ -123,18 +123,38 @@ def main(param_file: str, args: argparse.Namespace):
         output.write(json.dumps(config, indent=4))
     print(f"Beaker spec written to {output_path}.")
 
-    experiment_command = ["beaker", "experiment", "create", "--file", output_path]
+    experiment_command = ["beaker", "experiment", "create", "--quiet", "--file", output_path]
     if args.name:
         experiment_command.append("--name")
         experiment_command.append(args.name.replace(" ", "-"))
 
+    def resume_command(experiment_id):
+        resume_daemon_path = os.path.join(os.path.dirname(__file__), "resume_daemon.py")
+        return [
+            resume_daemon_path,
+            "--action=start",
+            f"--max-resumes={args.max_resumes}",
+            f"--experiment-id={experiment_id}",
+        ]
+
     if args.dry_run:
-        print(f"This is a dry run (--dry-run).  Launch your job with the following command:")
-        print(f"    " + " ".join(experiment_command))
+        print("This is a dry run (--dry-run).  Launch your job with the following command:")
+        print("    " + " ".join(experiment_command))
+        if args.max_resumes > 0:
+            print("Configure auto-resumes with the following command:")
+            print("    " + " ".join(resume_command("$YOUR_EXPERIMENT_ID")))
     else:
-        print(f"Running the experiment:")
-        print(f"    " + " ".join(experiment_command))
-        subprocess.run(experiment_command)
+        print("Running the experiment:")
+        print("    " + " ".join(experiment_command))
+        experiment_id = subprocess.check_output(experiment_command, universal_newlines=True).strip()
+        print(
+            f"Experiment {experiment_id} submitted. "
+            f"See progress at https://allenai.beaker.org/ex/{experiment_id}"
+        )
+        if args.max_resumes > 0:
+            print("Configuring auto-resumes:")
+            print("    " + " ".join(resume_command(experiment_id)))
+            subprocess.run(resume_command(experiment_id))
 
 
 if __name__ == "__main__":
@@ -173,6 +193,12 @@ if __name__ == "__main__":
         "--preemptible", action="store_true", help="Allow task to run on preemptible hardware"
     )
     parser.add_argument(
+        "--max-resumes",
+        type=int,
+        default=0,
+        help="When running with --preemptible, use a cronjob to automatically resume this many times.",
+    )
+    parser.add_argument(
         "--include-package",
         type=str,
         action="append",
@@ -188,5 +214,8 @@ if __name__ == "__main__":
     )
 
     args = parser.parse_args()
+
+    if args.max_resumes > 0:
+        assert args.preemptible, "--max-resumes requires --preemptible!"
 
     main(args.param_file, args)
