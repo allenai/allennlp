@@ -227,7 +227,10 @@ def main(args) -> None:
     connection = sqlite3.connect(db_path)
 
     # Create the DB if needed.
-    if not os.path.exists(db_path):
+    cursor = connection.cursor()
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='active_experiments'")
+    tables = cursor.fetchall()
+    if not tables:
         create_table(connection)
 
     # Modify the crontab if needed.
