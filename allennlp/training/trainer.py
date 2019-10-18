@@ -535,6 +535,8 @@ class Trainer(TrainerBase):
         for key, value in self._metric_tracker.best_epoch_metrics.items():
             metrics["best_validation_" + key] = value
 
+        best_val_EM = 0
+        best_val_f1 = 0
         for epoch in range(epoch_counter, self._num_epochs):
             epoch_start_time = time.time()
             train_metrics = self._train_epoch(epoch)
@@ -583,18 +585,6 @@ class Trainer(TrainerBase):
             elastic_val_metrics.pop('schedule', None)
             ElasticLogger().write_log('INFO', 'val_metric', context_dict=elastic_val_metrics)
 
-            # Alon, in the last epoch write the results to the
-            if epoch == self._num_epochs - 1:
-                if 'validation/EM' in elastic_val_metrics:
-                    elastic_val_metrics['EM'] = elastic_val_metrics.pop('validation/EM')
-                ElasticLogger().write_log('INFO', 'last_epoch_eval', context_dict=elastic_val_metrics)
-
-                # saving a results file:
-                with open(os.path.join(elastic_val_metrics['serialization_dir'], 'last_epoch_validation_results.json'), 'w') as f:
-                    json.dump(elastic_val_metrics, f)
-
-
-
             # Create overall metrics dict
             training_elapsed_time = time.time() - training_start_time
             metrics["training_duration"] = str(datetime.timedelta(seconds=training_elapsed_time))
@@ -640,6 +630,19 @@ class Trainer(TrainerBase):
                 )
                 formatted_time = str(datetime.timedelta(seconds=int(estimated_time_remaining)))
                 logger.info("Estimated training time remaining: %s", formatted_time)
+
+            else:
+                # ALON last epoch saving results to a file ...
+                elastic_val_metrics.update(metrics)
+                if 'best_validation_EM' in elastic_val_metrics:
+                    elastic_val_metrics['EM'] = elastic_val_metrics['best_validation_EM']
+                if 'best_validation_f1' in elastic_val_metrics:
+                    elastic_val_metrics['f1'] = elastic_val_metrics['best_validation_f1']
+                ElasticLogger().write_log('INFO', 'last_epoch_eval', context_dict=elastic_val_metrics)
+
+                # saving a results file:
+                with open(os.path.join(elastic_val_metrics['serialization_dir'], 'last_epoch_validation_results.json'), 'w') as f:
+                    json.dump(elastic_val_metrics, f)
 
             epochs_trained += 1
 
