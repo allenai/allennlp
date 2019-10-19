@@ -8,7 +8,7 @@ import logging
 import itertools
 import time
 import argparse
-from collections import deque
+from collections import deque, defaultdict
 
 from overrides import overrides
 
@@ -367,18 +367,30 @@ class SkipSmallerThan(Transform[Batched]):
             yield batch
 
 
+# This could also be generic over Iterable[Instance], Iterable[Batched]....
+class StopAfter(Transform[Instance]):
+
+    def __init__(self, max: int):
+        self.max = max
+
+    def transform(self, dataset: Iterable[Instance]) -> Iterable[Instance]:
+        i = 0
+        for instance in dataset:
+            if i >= self.max:
+                break
+            yield instance
+            i += 1
 
 class MaxSamplesPerBatch(Transform[Batched]):
-
 
     def __init__(self, max_samples: Tuple[str, int]):
 
         self.max_samples = max_samples
-
+        # TODO(Mark): Think about whether we want the excess to be across "datasets",
+        # as in many cases this will be batches.
         self.excess: Deque[Instance] = deque()
 
     def transform(self, dataset: Iterable[Instance]) -> Iterable[Batched]:
-
 
         instances = list(dataset)
 
@@ -386,7 +398,6 @@ class MaxSamplesPerBatch(Transform[Batched]):
             raise ValueError("Index() must occur before MaxSamplesPerBatch()")
         
         yield from self._ensure_batch_is_sufficiently_small(instances, self.excess)
-
 
     def _ensure_batch_is_sufficiently_small(
         self, batch_instances: List[Instance], excess: Deque[Instance]
@@ -430,7 +441,7 @@ class MaxSamplesPerBatch(Transform[Batched]):
 
             proposed_batch_size = len(batch) + 1
             # Adding the current instance would exceed the batch size or sample size.
-            if (
+            if batch and (
                 proposed_batch_size >= original_batch_size
                 or padding_length * proposed_batch_size > limit
             ):
@@ -450,6 +461,40 @@ class MaxSamplesPerBatch(Transform[Batched]):
         return batches
 
 
+class HomogenousBatchesOf(Transform[Batched]):
+
+    def __init__(self, batch_size: int, partition_key: str = "dataset"):
+        
+        self.batch_size = batch_size
+        self.partition_key = partition_key
+
+    def transform(self, dataset: Iterable[Instance]) -> Iterable[Batched]:
+
+        instances = list(dataset)
+
+        hoppers: Dict[str, List[Instance]] = defaultdict(list)
+
+        for instance in instance_list:
+            partition = instance.fields[self.partition_key].metadata  # type: ignore
+            hoppers[partition].append(instance)
+
+        # Get a `lazy_groups_of` iterator over each set of homogeneous instances.
+        batches = {
+            key: lazy_groups_of(iter(hopper), self.batch_size)
+            for key, hopper in hoppers.items()
+        }
+
+        remaining = set(batches)
+
+        # Yield batches in a round-robin fashion until none are left.
+        while remaining:
+            for key, lazy_batches in batches.items():
+                if key in remaining:
+                    try:
+                        batch = next(lazy_batches)
+                        yield batch
+                    except StopIteration:
+                        remaining.remove(key)
 
 
 
@@ -500,8 +545,10 @@ def allennlp_collocate(batch):
 transformations = [
     Index(vocab),
     SortByPadding([("premise", "num_tokens")]),
+    Batch(5),
     MaxSamplesPerBatch(("num_tokens", 100)),
 ]
+
 
 
 data = Compose(transformations)(data)
