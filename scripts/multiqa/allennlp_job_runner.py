@@ -136,15 +136,16 @@ class JobRunner():
 
             if job['retries'] < 3 and job['command'].find(' train ') > -1:
                 ElasticLogger().write_log('INFO', "Job Retry", {'experiment_name': job['experiment_name'], \
-                        'command':job['command'].replace('&',' --recover &'), \
+                        'command':job['command'], \
                         'log_snapshot': job['log_snapshot']}, push_bulk=True, print_log=False)
+                # old .replace('&',' --recover &')
                 job['retries'] += 1
                 # rerunning job:
                 with open(job['log_file'], 'wb') as f:
                     if self._DEBUG:
                         wa_proc = Popen("nohup python dummy_job.py &", shell=True, preexec_fn=os.setsid, stdout=f, stderr=f)
                     else:
-                        wa_proc = Popen(job['command'].replace('&',' --recover &'),\
+                        wa_proc = Popen(job['command'],\
                                         shell=True,preexec_fn=os.setsid, stdout=f, stderr=f)
                 job['alive'] = True
                 job['pid'] = wa_proc.pid + 1
