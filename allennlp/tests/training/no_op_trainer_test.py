@@ -3,11 +3,12 @@ from typing import Dict
 
 import torch
 
+from allennlp.common import Params
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Vocabulary
 from allennlp.data.dataset_readers import SequenceTaggingDatasetReader
 from allennlp.models.model import Model
-from allennlp.training import NoOpTrainer
+from allennlp.training import NoOpTrainer, TrainerBase
 
 
 class ConstantModel(Model):
@@ -32,3 +33,10 @@ class TestNoOpTrainer(AllenNlpTestCase):
         assert metrics == {}
         assert os.path.exists(serialization_dir / "best.th")
         assert os.path.exists(serialization_dir / "vocabulary")
+
+    def test_trainer_from_base_class_params_trainer_str(self):
+        params = Params.from_file(self.FIXTURES_ROOT / "simple_tagger" / "experiment.json")
+        params["trainer"] = "no_op"
+
+        # Can instantiate from base class params
+        TrainerBase.from_params(params, self.TEST_DIR)

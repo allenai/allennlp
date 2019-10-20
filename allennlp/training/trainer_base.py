@@ -66,8 +66,11 @@ class TrainerBase(Registrable):
         cache_directory: str = None,
         cache_prefix: str = None,
     ):
+        trainer_params = params.get("trainer", {})
+        if isinstance(trainer_params, str):
+            trainer_params = Params({"type": trainer_params})
 
-        typ3 = params.get("trainer", {}).pop("type", "default")
+        typ3 = trainer_params.pop("type", "default")
 
         if typ3 == "default":
             # Special logic to keep old from_params behavior.

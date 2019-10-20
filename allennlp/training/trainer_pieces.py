@@ -94,6 +94,9 @@ class TrainerPieces(NamedTuple):
         test_data = all_datasets.get("test")
 
         trainer_params = params.pop("trainer")
+        if isinstance(trainer_params, str):
+            trainer_params = Params({"type": trainer_params})
+
         no_grad_regexes = trainer_params.pop("no_grad", ())
         for name, parameter in model.named_parameters():
             if any(re.search(regex, name) for regex in no_grad_regexes):
