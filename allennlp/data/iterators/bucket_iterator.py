@@ -5,7 +5,6 @@ from typing import List, Tuple, Iterable, cast, Dict, Deque
 
 from overrides import overrides
 
-from allennlp.common.checks import ConfigurationError
 from allennlp.common.util import lazy_groups_of, add_noise_to_dict_values
 from allennlp.data.dataset import Batch
 from allennlp.data.instance import Instance

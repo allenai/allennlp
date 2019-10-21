@@ -215,7 +215,7 @@ class SkipSmallerThan(Transform[Batched]):
     def transform(self, dataset: Iterable[Instance]) -> Iterable[Batched]:
 
         batch = list(dataset)
-        if len(batch) >= self.min_size:
+        if len(batch) > self.min_size:
             
             yield batch
 
@@ -251,7 +251,7 @@ class MaxSamplesPerBatch(Transform[Batched]):
 
         if not all([i.indexed for i in instances]):
             raise ValueError("Index() must occur before MaxSamplesPerBatch()")
-        
+
         yield from self._ensure_batch_is_sufficiently_small(instances, self.excess)
 
     def _ensure_batch_is_sufficiently_small(
@@ -310,10 +310,8 @@ class MaxSamplesPerBatch(Transform[Batched]):
             else:
                 batch.append(instance)
 
-        # Keep the current batch as excess.
-        excess.extend(batch)
-
-        return batches
+        if batch:
+            yield batch
 
 
 @Transform.register("homogenous_batches_of")
