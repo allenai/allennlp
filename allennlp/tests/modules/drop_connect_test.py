@@ -47,6 +47,21 @@ class DropConnectTest(AllenNlpTestCase):
         output_b, _ = dropped_lstm(input_tensor)
         assert torch.allclose(output_a, output_b)
 
+    @flaky(max_runs=10, min_passes=1)
+    def test_lstm_on_gpu(self):
+        input_tensor = torch.ones(1, 2, 10, dtype=torch.float32).cuda()
+        lstm = torch.nn.LSTM(input_size=10, hidden_size=10, batch_first=True).cuda()
+        dropped_lstm = DropConnect(module=lstm, parameter_regex="weight_hh", dropout=0.9)
+        try:
+            dropped_lstm.cuda()
+        except AttributeError as err:
+            self.fail(err)
+        dropped_lstm.train()
+        try:
+            output_a, _ = dropped_lstm(input_tensor)
+        except UserWarning as warn:
+            self.fail(warn)
+
     def test_matched_params_correctly_moved(self):
         # Check that regex properly matches parameters in all submodules, and that the matched
         # parameters are properly moved to the top-level DropConnect module.
