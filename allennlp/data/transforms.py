@@ -78,7 +78,7 @@ class DatasetFromGenerator(IterableTorchDataset):
             yield x
 
 
-class Transform(IterableTorchDataset, Generic[InstanceOrBatch]):
+class Transform(IterableTorchDataset, Generic[InstanceOrBatch], Registrable):
 
     def transform(self, dataset: Iterable[Instance]) -> Iterable[InstanceOrBatch]:
         """
@@ -114,6 +114,8 @@ class Transform(IterableTorchDataset, Generic[InstanceOrBatch]):
         return DatasetFromGenerator(generator())
 
 
+@Transform.register("max_instances_in_memory")
+@Transform.register("batch")
 class MaxInstancesInMemory(Transform[Batched]):
     """
     turns a dataset into a dataset of chunks of size max_instances_in_memory.
@@ -142,6 +144,7 @@ class MaxInstancesInMemory(Transform[Batched]):
 # but we also accept this name as conceptually they are thought about differently.
 Batch = MaxInstancesInMemory
 
+@Transform.register("index")
 class Index(Transform[Instance]):
     """
     Indexes allennlp Instances in place and returns them.
@@ -157,6 +160,7 @@ class Index(Transform[Instance]):
             yield instance
         
 
+@Transform.register("sort_by_padding")
 class SortByPadding(Transform[Instance]):
 
     def __init__(self,
@@ -181,6 +185,7 @@ class SortByPadding(Transform[Instance]):
         yield from instances
 
 
+@Transform.register("epoch_tracker")
 class EpochTracker(Transform[Instance]):
     """
     Adds a allennlp Field to each Instance which specifies how many
@@ -198,6 +203,7 @@ class EpochTracker(Transform[Instance]):
         self.epoch += 1
 
 
+@Transform.register("skip_smaller_than")
 class SkipSmallerThan(Transform[Batched]):
 
     # TODO(Mark): this could collect smaller sub batches
@@ -215,6 +221,7 @@ class SkipSmallerThan(Transform[Batched]):
 
 
 # This could also be generic over Iterable[Instance], Iterable[Batched]....
+@Transform.register("stop_after")
 class StopAfter(Transform[Instance]):
 
     def __init__(self, max: int):
@@ -228,6 +235,7 @@ class StopAfter(Transform[Instance]):
             yield instance
             i += 1
 
+@Transform.register("max_samples_per_batch")
 class MaxSamplesPerBatch(Transform[Batched]):
 
     def __init__(self, max_samples: Tuple[str, int]):
@@ -308,6 +316,7 @@ class MaxSamplesPerBatch(Transform[Batched]):
         return batches
 
 
+@Transform.register("homogenous_batches_of")
 class HomogenousBatchesOf(Transform[Batched]):
 
     def __init__(self, batch_size: int, partition_key: str = "dataset", in_metadata: bool = False):
@@ -347,7 +356,7 @@ class HomogenousBatchesOf(Transform[Batched]):
                     except StopIteration:
                         remaining.remove(key)
 
-
+@Transform.register("fork")
 class Fork(Transform[Instance]):
 
     def transform(self, dataset: Iterable[Instance]) -> Iterable[Instance]:
@@ -363,6 +372,7 @@ class Fork(Transform[Instance]):
             i += 1
 
 
+@Transform.register("compose")
 class Compose(Transform):
 
     def __init__(self, transforms):
