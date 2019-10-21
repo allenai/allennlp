@@ -97,7 +97,7 @@ class BucketIterator(DataIterator):
 
     def __init__(
         self,
-        sorting_keys: List[Tuple[str, str]],
+        sorting_keys: List[Tuple[str, str]] = None,
         padding_noise: float = 0.1,
         biggest_batch_first: bool = False,
         batch_size: int = 32,
@@ -108,8 +108,6 @@ class BucketIterator(DataIterator):
         maximum_samples_per_batch: Tuple[str, int] = None,
         skip_smaller_batches: bool = False,
     ) -> None:
-        if not sorting_keys:
-            raise ConfigurationError("BucketIterator requires sorting_keys to be specified")
 
         super().__init__(
             cache_instances=cache_instances,
@@ -128,9 +126,10 @@ class BucketIterator(DataIterator):
     def _create_batches(self, instances: Iterable[Instance], shuffle: bool) -> Iterable[Batch]:
         for instance_list in self._memory_sized_lists(instances):
 
-            instance_list = sort_by_padding(
-                instance_list, self._sorting_keys, self.vocab, self._padding_noise
-            )
+            if self._sorting_keys is not None:
+                instance_list = sort_by_padding(
+                    instance_list, self._sorting_keys, self.vocab, self._padding_noise
+                )
 
             batches = []
             excess: Deque[Instance] = deque()
