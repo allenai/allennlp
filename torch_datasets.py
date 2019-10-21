@@ -13,6 +13,8 @@ from collections import deque, defaultdict
 from overrides import overrides
 
 import numpy
+
+import torch
 from torch.utils.data import Dataset as TorchDataset
 from torch.utils.data import IterableDataset as IterableTorchDataset
 from torch.utils.data import DataLoader, Sampler
@@ -251,16 +253,16 @@ class Transform(IterableTorchDataset, Generic[InstanceOrBatch]):
         def generator():
             # Here, we want to 'peek' at the generator to see if it is
             # nested or not. 
-            example = next(iter(dataset))
+            iterable = iter(dataset)
+            example = next(iterable)
             if isinstance(example, Instance):
-
-                yield from self.transform(itertools.chain([example], dataset))
+                yield from self.transform(itertools.chain([example], iterable))
             else:
                 # IMPORTANT! These have to be yield from. because some
                 # transforms themeselves return something that is iterable.
                 yield from self.transform(example)
 
-                for example in dataset:
+                for example in iterable:
                     yield from self.transform(example)
 
         return DatasetFromGenerator(generator())
@@ -287,8 +289,9 @@ class MaxInstancesInMemory(Transform[Batched]):
             if len(batch) == self.max_instances_in_memory:
                 yield batch
                 batch = []
-
-        yield batch
+        
+        if batch:
+            yield batch
 
 
 # Batching is actually the same as MaxInstancesInMemory,
@@ -463,10 +466,11 @@ class MaxSamplesPerBatch(Transform[Batched]):
 
 class HomogenousBatchesOf(Transform[Batched]):
 
-    def __init__(self, batch_size: int, partition_key: str = "dataset"):
+    def __init__(self, batch_size: int, partition_key: str = "dataset", in_metadata: bool = False):
         
         self.batch_size = batch_size
         self.partition_key = partition_key
+        self.in_metadata = in_metadata
 
     def transform(self, dataset: Iterable[Instance]) -> Iterable[Batched]:
 
@@ -474,8 +478,11 @@ class HomogenousBatchesOf(Transform[Batched]):
 
         hoppers: Dict[str, List[Instance]] = defaultdict(list)
 
-        for instance in instance_list:
-            partition = instance.fields[self.partition_key].metadata  # type: ignore
+        for instance in instances:
+            if self.in_metadata:
+                partition = instance.fields["metadata"].metadata[self.partition_key]  # type: ignore
+            else:
+                partition = instance.fields[self.partition_key].metadata  # type: ignore
             hoppers[partition].append(instance)
 
         # Get a `lazy_groups_of` iterator over each set of homogeneous instances.
@@ -496,6 +503,20 @@ class HomogenousBatchesOf(Transform[Batched]):
                     except StopIteration:
                         remaining.remove(key)
 
+
+class Fork(Transform[Instance]):
+
+    def transform(self, dataset: Iterable[Instance]) -> Iterable[Instance]:
+
+        info = torch.utils.data.get_worker_info()
+        i = 0
+        for instance in dataset:
+
+            if info is None:
+                yield instance
+            elif i % info.num_workers == info.id:
+                yield instance
+            i += 1
 
 
 class Compose(Transform):
@@ -532,9 +553,9 @@ def allennlp_collocate(batch):
     # If we've added a Batch() into the pipeline,
     # this is a length one list containing a batch.
     # So we unpack it.
+
     if len(batch) == 1:
         batch = list(batch[0])
-
     batch = AllennlpBatch(batch)
     # We might have already done this - but it doesn't matter if we have,
     # because if so it's a no-op. 
@@ -544,21 +565,21 @@ def allennlp_collocate(batch):
 
 transformations = [
     Index(vocab),
-    SortByPadding([("premise", "num_tokens")]),
-    Batch(5),
-    MaxSamplesPerBatch(("num_tokens", 100)),
+    Fork(),
+    Batch(1),
 ]
-
 
 
 data = Compose(transformations)(data)
 
+
 # Here we pass batch size=1 to the dataloader,
 # because we have already done batching in our pipeline e.g collocate_fn 
 # is recieving a list of a single batch of instances. 
-batch_generator = DataLoader(data, batch_size=1, collate_fn=allennlp_collocate)
+batch_generator = DataLoader(data, batch_size=1, collate_fn=allennlp_collocate, num_workers=2)
 
 print("Example batches")
 for batch in batch_generator:
+
     print(batch)
 
