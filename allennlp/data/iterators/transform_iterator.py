@@ -68,10 +68,10 @@ class TransformIterator(DataIterator):
             transforms.Fork()
         )
 
-        #if instances_per_epoch:
-        #    dataset_transforms.append(
-        #        transforms.StopAfter(instances_per_epoch)
-        #    )
+        if instances_per_epoch:
+            dataset_transforms.append(
+                transforms.StopAfter(instances_per_epoch)
+            )
 
         if track_epoch:
             dataset_transforms.append(
@@ -143,7 +143,6 @@ class TransformIterator(DataIterator):
         self.vocab = vocab
         self.transforms = [transforms.Index(vocab)] + self.transforms
 
-
     def _create_batches(self, instances: Iterable[Instance], shuffle: bool) -> Iterable[Batch]:
         """
         This method should return one epoch worth of batches.
@@ -168,15 +167,16 @@ class TransformIterator(DataIterator):
                 try:
                     # If there are instances left on this iterator,
                     # yield one and decrement max_instances.
-                    yield next(batch_generator)
-                    max_instances -= 1
+                    next_batch = next(batch_generator)
+                    yield next_batch
+                    max_instances -= len(next_batch.instances)
                 except StopIteration:
-
-                    assert False, "Shouldn't be called"
-                    # None left, so start over again at the beginning of the dataset.
-                    iterator = iter(instances)
-                    data = transforms.Compose(self.transforms)(iterator)
-                    batch_generator = iter(DataLoader(data, batch_size=1, collate_fn=self._collocate))
+                    break
+                    #assert False, "Shouldn't be called"
+                    ## None left, so start over again at the beginning of the dataset.
+                    #iterator = iter(instances)
+                    #data = transforms.Compose(self.transforms)(iterator)
+                    #batch_generator = iter(DataLoader(data, batch_size=1, collate_fn=self._collocate))
 
             # We may have a new iterator, so update the cursor.
             self._cursors[key] = iterator

@@ -163,16 +163,6 @@ class TestBasicIterator(IteratorTest):
             # Second epoch: 3 instances -> [2, 1]
             batches = list(iterator._create_batches(test_instances, shuffle=False))
             grouped_instances = [batch.instances for batch in batches]
-
-            print(grouped_instances)
-            print(grouped_instances[0][0])
-            print(grouped_instances[1][0], grouped_instances[1][1])
-
-            print()
-            print()
-            print(self.instances[3])
-            print(self.instances[4])
-            print(self.instances[0])
             assert grouped_instances == [
                 [self.instances[3], self.instances[4]],
                 [self.instances[0]],

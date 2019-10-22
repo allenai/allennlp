@@ -229,10 +229,10 @@ class StopAfter(Transform[Instance]):
     def transform(self, dataset: Iterable[Instance]) -> Iterable[Instance]:
         i = 0
         for instance in dataset:
-            if i >= self.max:
-                break
             yield instance
             i += 1
+            if i >= self.max:
+                break
 
 @Transform.register("max_samples_per_batch")
 class MaxSamplesPerBatch(Transform[Batched]):
