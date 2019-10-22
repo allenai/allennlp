@@ -215,8 +215,7 @@ class SkipSmallerThan(Transform[Batched]):
     def transform(self, dataset: Iterable[Instance]) -> Iterable[Batched]:
 
         batch = list(dataset)
-        if len(batch) > self.min_size:
-            
+        if len(batch) >= self.min_size:
             yield batch
 
 

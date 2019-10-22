@@ -157,8 +157,7 @@ class TransformIterator(DataIterator):
         if max_instances is None:
             data = transforms.Compose(self.transforms)(instances)
             batch_generator = DataLoader(data, batch_size=1, collate_fn=self._collocate)
-
-            yield from iter(batch_generator)
+            yield from batch_generator
 
         else:
             # If we don't have a cursor for this dataset, create one. We use ``id()``

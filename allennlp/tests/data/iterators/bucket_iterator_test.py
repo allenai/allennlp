@@ -2,7 +2,8 @@ import pytest
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
-from allennlp.data.iterators import BucketIterator
+#from allennlp.data.iterators import BucketIterator
+from allennlp.data.iterators.transform_iterator import TransformIterator as BucketIterator
 from allennlp.tests.data.iterators.basic_iterator_test import IteratorTest
 
 
@@ -149,4 +150,5 @@ class TestBucketIterator(IteratorTest):
         assert all(batch_len == 2 for batch_len in stats["batch_lengths"])
 
         # we should have lost one instance by skipping the last batch
+        print(stats)
         assert stats["total_instances"] == len(self.instances) - 1
