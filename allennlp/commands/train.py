@@ -44,11 +44,21 @@ which to write the results.
 import argparse
 import logging
 import os
+from typing import Optional
+
+import torch
+import torch.distributed as dist
+import torch.multiprocessing as mp
 
 from allennlp.commands.subcommand import Subcommand
-from allennlp.common.checks import check_for_gpu
 from allennlp.common import Params
-from allennlp.common.util import prepare_environment, prepare_global_logging, dump_metrics
+from allennlp.common.checks import check_for_gpu, parse_cuda_device
+from allennlp.common.util import (
+    prepare_environment,
+    prepare_global_logging,
+    dump_metrics,
+    import_submodules,
+)
 from allennlp.models.archival import archive_model, CONFIG_NAME
 from allennlp.models.model import Model, _DEFAULT_WEIGHTS
 from allennlp.training.trainer import Trainer
@@ -63,7 +73,6 @@ class Train(Subcommand):
     def add_subparser(
         self, name: str, parser: argparse._SubParsersAction
     ) -> argparse.ArgumentParser:
-
         description = """Train the specified model on the specified dataset."""
         subparser = parser.add_parser(name, description=description, help="Train a model.")
 
@@ -143,6 +152,7 @@ def train_model_from_args(args: argparse.Namespace):
         args.force,
         args.cache_directory,
         args.cache_prefix,
+        args.include_package,
     )
 
 
@@ -155,6 +165,7 @@ def train_model_from_file(
     force: bool = False,
     cache_directory: str = None,
     cache_prefix: str = None,
+    include_package: str = None,
 ) -> Model:
     """
     A wrapper around :func:`train_model` which loads the params from a file.
@@ -181,6 +192,8 @@ def train_model_from_file(
         For caching data pre-processing.  See :func:`allennlp.training.util.datasets_from_params`.
     cache_prefix : ``str``, optional
         For caching data pre-processing.  See :func:`allennlp.training.util.datasets_from_params`.
+    include_package: ``str``, optional
+        In distributed mode, extra packages mentioned will be imported in trainer workers.
     """
     # Load the experiment config from a file and pass it to ``train_model``.
     params = Params.from_file(parameter_filename, overrides)
@@ -192,6 +205,7 @@ def train_model_from_file(
         force,
         cache_directory,
         cache_prefix,
+        include_package,
     )
 
 
@@ -203,6 +217,7 @@ def train_model(
     force: bool = False,
     cache_directory: str = None,
     cache_prefix: str = None,
+    include_package: str = None,
 ) -> Model:
     """
     Trains the model specified in the given :class:`Params` object, using the data and training
@@ -227,6 +242,8 @@ def train_model(
         For caching data pre-processing.  See :func:`allennlp.training.util.datasets_from_params`.
     cache_prefix : ``str``, optional
         For caching data pre-processing.  See :func:`allennlp.training.util.datasets_from_params`.
+    include_package: ``str``, optional
+        In distributed mode, extra packages mentioned will be imported in trainer workers.
 
     Returns
     -------
@@ -236,13 +253,101 @@ def train_model(
     create_serialization_dir(params, serialization_dir, recover, force)
     params.to_file(os.path.join(serialization_dir, CONFIG_NAME))
 
-    prepare_global_logging(serialization_dir, file_friendly_logging)
-    prepare_environment(params)
-
     cuda_device = params.params.get("trainer").get("cuda_device", -1)
     check_for_gpu(cuda_device)
 
+    distributed = params.params.get("trainer").get("distributed", False)
+    if not distributed:
+        model = _train_worker(
+            rank=0,
+            params=params,
+            serialization_dir=serialization_dir,
+            file_friendly_logging=file_friendly_logging,
+            recover=recover,
+            cache_directory=cache_directory,
+            cache_prefix=cache_prefix,
+            include_package=include_package,
+            world_size=1,
+        )
+
+        archive_model(serialization_dir, files_to_archive=params.files_to_archive)
+        return model
+    else:
+        raise NotImplementedError
+
+
+def _train_worker(
+    rank: int,
+    params: Params,
+    serialization_dir: str,
+    file_friendly_logging: bool = False,
+    recover: bool = False,
+    cache_directory: str = None,
+    cache_prefix: str = None,
+    include_package: str = None,
+    world_size: int = 1,
+) -> Optional[Model]:
+    """
+    Helper to train the configured model/experiment. In distributed mode, this is spawned as a
+    worker process. In a single GPU experiment, this returns the ``Model`` object and in distributed
+    training, nothing is returned.
+
+    Parameters
+    ----------
+    rank : ``int``
+        The process index.
+    params : ``Params``
+        A parameter object specifying an AllenNLP Experiment.
+    serialization_dir : ``str``
+        The directory in which to save results and logs.
+    file_friendly_logging : ``bool``, optional (default=False)
+        If ``True``, we add newlines to tqdm output, even on an interactive terminal, and we slow
+        down tqdm's output to only once every 10 seconds.
+    recover : ``bool``, optional (default=False)
+        If ``True``, we will try to recover a training run from an existing serialization
+        directory.  This is only intended for use when something actually crashed during the middle
+        of a run.  For continuing training a model on new data, see the ``fine-tune`` command.
+    cache_directory : ``str``, optional
+        For caching data pre-processing.  See :func:`allennlp.training.util.datasets_from_params`.
+    cache_prefix : ``str``, optional
+        For caching data pre-processing.  See :func:`allennlp.training.util.datasets_from_params`.
+    include_package: ``str``, optional
+        In distributed mode, since this function would have been spawned as a separate process,
+        the extra imports need to be done again. NOTE: This does not have any effect in single
+        GPU training.
+    world_size: ``int``, optional
+        The number of processes involved in distributed training.
+
+    Returns
+    -------
+    best_model: ``Model``
+        The model with the best epoch weights.
+    """
+    prepare_global_logging(serialization_dir, file_friendly_logging)
+    prepare_environment(params)
+
+    distributed = world_size > 1
+    master = rank == 0
+
     evaluate_on_test = params.pop_bool("evaluate_on_test", False)
+
+    if distributed:
+        # Since the worker is spawned and not forked, the extra imports
+        # need to be done again.
+        for package_name in include_package:
+            import_submodules(package_name)
+
+        torch.cuda.set_device(rank)
+        dist.init_process_group(backend="nccl", world_size=world_size, rank=rank)
+        logging.info(
+            f"Process group of world size {world_size} initialized for distributed training in worker {rank}"
+        )
+
+        # Till now, "cuda_device" will be a list of ids as configured originally
+        # in params. But a worker trainer needs to only know about its specific
+        # GPU id.
+        params["trainer"]["cuda_device"] = rank
+        params["trainer"]["world_size"] = world_size
 
     trainer_type = params.get("trainer", {}).get("type", "default")
 
@@ -284,7 +389,7 @@ def train_model(
         metrics = trainer.train()
     except KeyboardInterrupt:
         # if we have completed an epoch, try to create a model archive.
-        if os.path.exists(os.path.join(serialization_dir, _DEFAULT_WEIGHTS)):
+        if master and os.path.exists(os.path.join(serialization_dir, _DEFAULT_WEIGHTS)):
             logging.info(
                 "Training interrupted by the user. Attempting to create "
                 "a model archive using the current best epoch weights."
@@ -292,30 +397,26 @@ def train_model(
             archive_model(serialization_dir, files_to_archive=params.files_to_archive)
         raise
 
-    # Evaluate
-    if evaluation_dataset and evaluate_on_test:
-        logger.info("The model will be evaluated using the best epoch weights.")
-        test_metrics = evaluate(
-            trainer.model,
-            evaluation_dataset,
-            evaluation_iterator,
-            cuda_device=trainer._cuda_devices[0],
-            # TODO(brendanr): Pass in an arg following Joel's trainer refactor.
-            batch_weight_key="",
-        )
+    if master:
+        if evaluation_dataset and evaluate_on_test:
+            logger.info("The model will be evaluated using the best epoch weights.")
+            test_metrics = evaluate(
+                trainer.model,
+                evaluation_dataset,
+                evaluation_iterator,
+                cuda_device=trainer._cuda_devices[0],  # pylint: disable=protected-access,
+                # TODO(brendanr): Pass in an arg following Joel's trainer refactor.
+                batch_weight_key="",
+            )
 
-        for key, value in test_metrics.items():
-            metrics["test_" + key] = value
+            for key, value in test_metrics.items():
+                metrics["test_" + key] = value
+        elif evaluation_dataset:
+            logger.info(
+                "To evaluate on the test set after training, pass the "
+                "'evaluate_on_test' flag, or use the 'allennlp evaluate' command."
+            )
+        dump_metrics(os.path.join(serialization_dir, "metrics.json"), metrics, log=True)
 
-    elif evaluation_dataset:
-        logger.info(
-            "To evaluate on the test set after training, pass the "
-            "'evaluate_on_test' flag, or use the 'allennlp evaluate' command."
-        )
-
-    # Now tar up results
-    archive_model(serialization_dir, files_to_archive=params.files_to_archive)
-    dump_metrics(os.path.join(serialization_dir, "metrics.json"), metrics, log=True)
-
-    # We count on the trainer to have the model with best weights
-    return trainer.model
+    if not distributed:
+        return trainer.model

@@ -209,6 +209,9 @@ class GanCallbackTrainer(CallbackTrainer):
         serialization_dir: Optional[str] = None,
         cuda_device: Union[int, List] = -1,
         callbacks: List[Callback] = None,
+        distributed: bool = False,
+        rank: int = 0,
+        world_size: int = 1,
     ) -> None:
         super().__init__(
             model,

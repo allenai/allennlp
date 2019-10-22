@@ -11,7 +11,7 @@ from typing import Dict, Optional, List, Union, Any, Iterable
 import torch
 
 from allennlp.common import Params
-from allennlp.common.checks import parse_cuda_device
+from allennlp.common.checks import ConfigurationError, parse_cuda_device
 from allennlp.common.tqdm import Tqdm
 from allennlp.common.util import lazy_groups_of
 from allennlp.data.instance import Instance
@@ -55,6 +55,9 @@ class CallbackTrainer(TrainerBase):
         serialization_dir: Optional[str] = None,
         cuda_device: Union[int, List] = -1,
         callbacks: List[Callback] = None,
+        distributed: bool = False,
+        rank: int = 0,
+        world_size: int = 1,
     ) -> None:
         """
         A trainer for doing supervised learning. It just takes a labeled dataset
@@ -96,7 +99,7 @@ class CallbackTrainer(TrainerBase):
         callbacks : ``List[Callback]``, optional (default=None)
             A list of callbacks that will be called based on training events.
         """
-        super().__init__(serialization_dir, cuda_device)
+        super().__init__(serialization_dir, cuda_device, distributed, rank, world_size)
 
         logger.warning(
             "The CallbackTrainer should be considered 'experimental' code, "
@@ -334,6 +337,18 @@ class CallbackTrainer(TrainerBase):
             for callback_params in callbacks_params
         ]
 
+        distributed = params.pop_bool("distributed", False)
+        world_size = params.pop_int("world_size", 1)
+        if distributed and world_size <= 1:
+            raise ConfigurationError(
+                "Distributed training can be performed only with more than 1 GPU device. Check "
+                "`cuda_device` key in the experiment configuration."
+            )
+        if distributed:
+            rank = model_device
+        else:
+            rank = 0
+
         params.assert_empty(cls.__name__)
         return cls(
             model,
@@ -345,4 +360,7 @@ class CallbackTrainer(TrainerBase):
             serialization_dir=serialization_dir,
             cuda_device=cuda_device,
             callbacks=callbacks,
+            distributed=distributed,
+            rank=rank,
+            world_size=world_size,
         )
