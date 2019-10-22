@@ -32,7 +32,7 @@ class TransformIterator(DataIterator):
         batch_size: int = 32,
         instances_per_epoch: int = None,
         max_instances_in_memory: int = None,
-        cache_instances: bool = False,
+        cache_instances: bool = False, # TODO(Mark): Depreciate argument
         track_epoch: bool = False,
         maximum_samples_per_batch: Tuple[str, int] = None,
         skip_smaller_batches: bool = None
@@ -49,10 +49,6 @@ class TransformIterator(DataIterator):
         self._max_instances_in_memory = max_instances_in_memory
         self._instances_per_epoch = instances_per_epoch
         self._maximum_samples_per_batch = maximum_samples_per_batch
-
-        # We might want to cache the instances in memory.
-        self._cache_instances = cache_instances
-        self._cache: Dict[int, List[TensorDict]] = defaultdict(list)
 
         # We also might want to add the epoch number to each instance.
         self._track_epoch = track_epoch
@@ -164,21 +160,23 @@ class TransformIterator(DataIterator):
             # for the key because ``instances`` could be a list, which can't be used as a key.
             key = id(instances)
 
-            data = transforms.Compose(self.transforms)(instances)
-            batch_generator = DataLoader(data, batch_size=1, collate_fn=self._collocate)
-            iterator = self._cursors.get(key, iter(batch_generator))
+            iterator = self._cursors.get(key, itertools.cycle(instances))
+            data = transforms.Compose(self.transforms)(iterator)
+            batch_generator = iter(DataLoader(data, batch_size=1, collate_fn=self._collocate))
 
             while max_instances > 0:
                 try:
                     # If there are instances left on this iterator,
                     # yield one and decrement max_instances.
-                    yield next(iterator)
+                    yield next(batch_generator)
                     max_instances -= 1
                 except StopIteration:
+
+                    assert False, "Shouldn't be called"
                     # None left, so start over again at the beginning of the dataset.
-                    data = transforms.Compose(self.transforms)(instances)
-                    batch_generator = DataLoader(data, batch_size=1, collate_fn=self._collocate)
-                    iterator = iter(batch_generator)
+                    iterator = iter(instances)
+                    data = transforms.Compose(self.transforms)(iterator)
+                    batch_generator = iter(DataLoader(data, batch_size=1, collate_fn=self._collocate))
 
             # We may have a new iterator, so update the cursor.
             self._cursors[key] = iterator

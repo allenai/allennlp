@@ -97,8 +97,9 @@ class Transform(IterableTorchDataset, Generic[InstanceOrBatch], Registrable):
         # passed to call is iterable over.
 
         def generator():
-            # Here, we want to 'peek' at the generator to see if it is
-            # nested or not. 
+            # Here, we want to 'peek' at the generator
+            # to see if it is nested or not.
+
             iterable = iter(dataset)
             example = next(iterable)
             if isinstance(example, Instance):
@@ -135,7 +136,7 @@ class MaxInstancesInMemory(Transform[Batched]):
             if len(batch) == self.max_instances_in_memory:
                 yield batch
                 batch = []
-        
+
         if batch:
             yield batch
 
@@ -143,6 +144,7 @@ class MaxInstancesInMemory(Transform[Batched]):
 # Batching is actually the same as MaxInstancesInMemory,
 # but we also accept this name as conceptually they are thought about differently.
 Batch = MaxInstancesInMemory
+
 
 @Transform.register("index")
 class Index(Transform[Instance]):
@@ -153,20 +155,19 @@ class Index(Transform[Instance]):
         self.vocab = vocab
 
     def transform(self, dataset: Iterable[Instance]) -> Iterable[Instance]:
-        
+
         for instance in dataset:
             instance.index_fields(self.vocab)
 
             yield instance
-        
+
 
 @Transform.register("sort_by_padding")
 class SortByPadding(Transform[Instance]):
 
     def __init__(self,
-        sorting_keys: List[Tuple[str, str]],
-        padding_noise: float = 0.1,
-        ):
+        sorting_keys: List[Tuple[str, str]], padding_noise: float = 0.1,
+    ):
         self.sorting_keys = sorting_keys
         self.padding_noise = padding_noise
         # HACK, just so we can use the existing sort_by_padding,
@@ -174,14 +175,14 @@ class SortByPadding(Transform[Instance]):
         self.vocab = None
 
     def transform(self, dataset: Iterable[Instance]) -> Iterable[Instance]:
-        
+
         instances = list(dataset)
         if not all([i.indexed for i in instances]):
             raise ValueError("Index() must occur before SortByPadding()")
 
         instances = allennlp_sort_by_padding(
             instances, self.sorting_keys, self.vocab, self.padding_noise)
-        
+
         yield from instances
 
 
@@ -192,7 +193,6 @@ class EpochTracker(Transform[Instance]):
     times the full dataset has been iterated over.
     """
     def __init__(self):
-
         self.epoch = 0
 
     def transform(self, dataset: Iterable[Instance]) -> Iterable[Instance]:
@@ -277,7 +277,6 @@ class MaxSamplesPerBatch(Transform[Batched]):
         """
         key, limit = self.max_samples
 
-        batches: List[List[Instance]] = []
         batch: List[Instance] = []
         padding_length = -1
         original_batch_size = len(batch_instances)
@@ -342,7 +341,6 @@ class HomogenousBatchesOf(Transform[Batched]):
         }
 
         remaining = set(batches)
-
         # Yield batches in a round-robin fashion until none are left.
         while remaining:
             for key, lazy_batches in batches.items():
