@@ -36,6 +36,7 @@ class TestBucketIterator(IteratorTest):
         for test_instances in (self.instances, self.lazy_instances):
             batches = list(iterator._create_batches(test_instances, shuffle=False))
             grouped_instances = [batch.instances for batch in batches]
+
             assert grouped_instances == [
                 [self.instances[2], self.instances[0]],
                 [self.instances[1]],

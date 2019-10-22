@@ -170,13 +170,10 @@ class TransformIterator(DataIterator):
                     next_batch = next(batch_generator)
                     yield next_batch
                     max_instances -= len(next_batch.instances)
+
+                # TODO explain this because it's hella confusing
                 except StopIteration:
                     break
-                    #assert False, "Shouldn't be called"
-                    ## None left, so start over again at the beginning of the dataset.
-                    #iterator = iter(instances)
-                    #data = transforms.Compose(self.transforms)(iterator)
-                    #batch_generator = iter(DataLoader(data, batch_size=1, collate_fn=self._collocate))
 
             # We may have a new iterator, so update the cursor.
             self._cursors[key] = iterator

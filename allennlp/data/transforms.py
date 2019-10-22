@@ -116,7 +116,6 @@ class Transform(IterableTorchDataset, Generic[InstanceOrBatch], Registrable):
 
 
 @Transform.register("max_instances_in_memory")
-@Transform.register("batch")
 class MaxInstancesInMemory(Transform[Batched]):
     """
     turns a dataset into a dataset of chunks of size max_instances_in_memory.
@@ -135,15 +134,31 @@ class MaxInstancesInMemory(Transform[Batched]):
 
             if len(batch) == self.max_instances_in_memory:
                 yield batch
+
+                batch = []
+        if batch:
+            yield batch
+
+@Transform.register("batch")
+class Batch(Transform[Batched]):
+    """
+    Batches a dataset.
+    """
+    def __init__(self, batch_size: int):
+        self.batch_size = batch_size
+
+    def transform(self, dataset: Iterable[Instance]) -> Iterable[Batched]:
+        batch = []
+
+        for instance in dataset:
+            batch.append(instance)
+
+            if len(batch) == self.batch_size:
+                yield batch
                 batch = []
 
         if batch:
             yield batch
-
-
-# Batching is actually the same as MaxInstancesInMemory,
-# but we also accept this name as conceptually they are thought about differently.
-Batch = MaxInstancesInMemory
 
 
 @Transform.register("index")
@@ -163,7 +178,7 @@ class Index(Transform[Instance]):
 
 
 @Transform.register("sort_by_padding")
-class SortByPadding(Transform[Instance]):
+class SortByPadding(Transform[Batched]):
 
     def __init__(self,
         sorting_keys: List[Tuple[str, str]], padding_noise: float = 0.1,
@@ -174,7 +189,7 @@ class SortByPadding(Transform[Instance]):
         # only works if instances are indexed already.
         self.vocab = None
 
-    def transform(self, dataset: Iterable[Instance]) -> Iterable[Instance]:
+    def transform(self, dataset: Iterable[Instance]) -> Iterable[Batched]:
 
         instances = list(dataset)
         if not all([i.indexed for i in instances]):
@@ -183,7 +198,7 @@ class SortByPadding(Transform[Instance]):
         instances = allennlp_sort_by_padding(
             instances, self.sorting_keys, self.vocab, self.padding_noise)
 
-        yield from instances
+        yield instances
 
 
 @Transform.register("epoch_tracker")
