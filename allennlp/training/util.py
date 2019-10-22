@@ -379,12 +379,14 @@ def rescale_gradients(model: Model, grad_norm: Optional[float] = None) -> Option
     return None
 
 
-def get_metrics(model: Model,
-                total_loss: float,
-                num_batches: int,
-                reset: bool = False,
-                world_size: int = 1,
-                rank: int = 0) -> Dict[str, float]:
+def get_metrics(
+    model: Model,
+    total_loss: float,
+    num_batches: int,
+    reset: bool = False,
+    world_size: int = 1,
+    rank: int = 0,
+) -> Dict[str, float]:
     """
     Gets the metrics but sets ``"loss"`` to
     the total loss divided by the ``num_batches`` so that

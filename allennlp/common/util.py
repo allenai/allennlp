@@ -115,10 +115,10 @@ def lazy_groups_of(iterator: Iterator[A], group_size: int) -> Iterator[List[A]]:
 
 
 def pad_sequence_to_length(
-        sequence: List,
-        desired_length: int,
-        default_value: Callable[[], Any] = lambda: 0,
-        padding_on_right: bool = True,
+    sequence: List,
+    desired_length: int,
+    default_value: Callable[[], Any] = lambda: 0,
+    padding_on_right: bool = True,
 ) -> List:
     """
     Take a list of objects and pads it to the desired length, returning the padded list.  The
@@ -225,6 +225,7 @@ class FileFriendlyLogFilter(Filter):
     without adding more lines to the terminal output.  Displaying those in a file won't work
     correctly, so we'll just make sure that each batch shows up on its one line.
     """
+
     def filter(self, record):
         if "\r" in record.msg:
             record.msg = record.msg.replace("\r", "")
@@ -244,8 +245,9 @@ class WorkerLogFilter(Filter):
         return True
 
 
-def prepare_global_logging(serialization_dir: str, file_friendly_logging: bool, rank: int = 0,
-                           world_size: int = 1) -> None:
+def prepare_global_logging(
+    serialization_dir: str, file_friendly_logging: bool, rank: int = 0, world_size: int = 1
+) -> None:
     # If we don't have a terminal as stdout,
     # force tqdm to be nicer.
     if not sys.stdout.isatty():
@@ -261,15 +263,19 @@ def prepare_global_logging(serialization_dir: str, file_friendly_logging: bool, 
         # This case is not distributed training and hence will stick to the older
         # log file names
         output_file_log_handler = logging.FileHandler(
-            filename=os.path.join(serialization_dir, "stdout.log"))
+            filename=os.path.join(serialization_dir, "stdout.log")
+        )
         error_file_log_handler = logging.FileHandler(
-            filename=os.path.join(serialization_dir, "stderr.log"))
+            filename=os.path.join(serialization_dir, "stderr.log")
+        )
     else:
         # Create log files with worker ids
         output_file_log_handler = logging.FileHandler(
-            filename=os.path.join(serialization_dir, f"stdout_worker{rank}.log"))
+            filename=os.path.join(serialization_dir, f"stdout_worker{rank}.log")
+        )
         error_file_log_handler = logging.FileHandler(
-            filename=os.path.join(serialization_dir, f"stderr_worker{rank}.log"))
+            filename=os.path.join(serialization_dir, f"stderr_worker{rank}.log")
+        )
 
         # This adds the worker's rank to messages being logged to files.
         # This will help when combining multiple worker log files using `less` command.
@@ -277,7 +283,7 @@ def prepare_global_logging(serialization_dir: str, file_friendly_logging: bool, 
         output_file_log_handler.addFilter(worker_filter)
         error_file_log_handler.addFilter(worker_filter)
 
-    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(name)s - %(message)s')
+    formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(name)s - %(message)s")
 
     root_logger = logging.getLogger()
 
@@ -325,7 +331,7 @@ LOADED_SPACY_MODELS: Dict[Tuple[str, bool, bool, bool], SpacyModelType] = {}
 
 
 def get_spacy_model(
-        spacy_model_name: str, pos_tags: bool, parse: bool, ner: bool
+    spacy_model_name: str, pos_tags: bool, parse: bool, ner: bool
 ) -> SpacyModelType:
     """
     In order to avoid loading spacy models a whole bunch of times, we'll save references to them,

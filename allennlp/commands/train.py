@@ -48,11 +48,7 @@ import os
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common.checks import check_for_gpu
 from allennlp.common import Params
-from allennlp.common.util import (
-    prepare_environment,
-    prepare_global_logging,
-    dump_metrics,
-)
+from allennlp.common.util import prepare_environment, prepare_global_logging, dump_metrics
 from allennlp.models.archival import archive_model, CONFIG_NAME
 from allennlp.models.model import Model, _DEFAULT_WEIGHTS
 from allennlp.training.trainer import Trainer
