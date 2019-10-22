@@ -47,7 +47,7 @@ class DropConnectTest(AllenNlpTestCase):
         output_b, _ = dropped_lstm(input_tensor)
         assert torch.allclose(output_a, output_b)
 
-    @pytest.mark.skipif(not torch.cuda.is_available(), reason="No CUDA device registered.")
+    @unittest.skipIf(not torch.cuda.is_available(), reason="No CUDA device registered.")
     @flaky(max_runs=10, min_passes=1)
     def test_lstm_on_gpu(self):
         input_tensor = torch.ones(1, 2, 10, dtype=torch.float32).cuda()
