@@ -21,7 +21,7 @@ TensorDict = Dict[str, Union[torch.Tensor, Dict[str, torch.Tensor]]]
 
 
 @DataIterator.register("transform")
-class TransformIterator(DataIterator):
+class TransformIterator:
     def __init__(
         self,
         dataset_transforms: List[transforms.Transform],
@@ -65,7 +65,7 @@ class TransformIterator(DataIterator):
 
                 yield batch
 
-    def _collocate(self, batch: List) -> Batch:
+    def _collocate(self, batch: List) -> TensorDict:
 
         # If we've added a Batch() into the pipeline,
         # this is a length one list containing a batch.
@@ -83,7 +83,7 @@ class TransformIterator(DataIterator):
         self.vocab = vocab
         self.transforms = [transforms.Index(vocab)] + self.transforms
 
-    def _create_batches(self, instances: Iterable[Instance], shuffle: bool) -> Iterable[Batch]:
+    def _create_batches(self, instances: Iterable[Instance], shuffle: bool) -> Iterable[TensorDict]:
         """
         This method should return one epoch worth of batches.
         """
