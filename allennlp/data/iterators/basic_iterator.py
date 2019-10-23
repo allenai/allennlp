@@ -26,9 +26,11 @@ class BasicIterator(DataIterator):
 
         from allennlp.data.iterators.bucket_iterator import BucketIterator
 
-        return BucketIterator(batch_size=batch_size,
-                              instances_per_epoch=instances_per_epoch,
-                              max_instances_in_memory=max_instances_in_memory,
-                              cache_instances=cache_instances,
-                              track_epoch=track_epoch,
-                              maximum_samples_per_batch=maximum_samples_per_batch)
+        return BucketIterator(
+            batch_size=batch_size,
+            instances_per_epoch=instances_per_epoch,
+            max_instances_in_memory=max_instances_in_memory,
+            cache_instances=cache_instances,
+            track_epoch=track_epoch,
+            maximum_samples_per_batch=maximum_samples_per_batch,
+        )

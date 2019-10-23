@@ -58,7 +58,6 @@ InstanceOrBatch = TypeVar("InstanceOrBatch", Iterable[Instance], Instance)
 
 
 class DatasetFromList(TorchDataset):
-
     def __init__(self, instances: Iterable[InstanceOrBatch]):
         self.instances
 
@@ -68,7 +67,6 @@ class DatasetFromList(TorchDataset):
 
 
 class DatasetFromGenerator(IterableTorchDataset):
-
     def __init__(self, generator: Iterable[InstanceOrBatch]):
         self.generator = generator
 
@@ -79,7 +77,6 @@ class DatasetFromGenerator(IterableTorchDataset):
 
 
 class Transform(IterableTorchDataset, Generic[InstanceOrBatch], Registrable):
-
     def transform(self, dataset: Iterable[Instance]) -> Iterable[InstanceOrBatch]:
         """
         Describes a transformation from either:
@@ -122,6 +119,7 @@ class MaxInstancesInMemory(Transform[Batched]):
     This is helpful if you have an IterableDataset which you want to read a chunk from
     so you can sort it by padding, and then batch afterward.
     """
+
     def __init__(self, max_instances_in_memory: int):
         self.max_instances_in_memory = max_instances_in_memory
 
@@ -139,11 +137,13 @@ class MaxInstancesInMemory(Transform[Batched]):
         if batch:
             yield batch
 
+
 @Transform.register("batch")
 class Batch(Transform[Batched]):
     """
     Batches a dataset.
     """
+
     def __init__(self, batch_size: int):
         self.batch_size = batch_size
 
@@ -166,6 +166,7 @@ class Index(Transform[Instance]):
     """
     Indexes allennlp Instances in place and returns them.
     """
+
     def __init__(self, vocab: Vocabulary):
         self.vocab = vocab
 
@@ -179,10 +180,7 @@ class Index(Transform[Instance]):
 
 @Transform.register("sort_by_padding")
 class SortByPadding(Transform[Batched]):
-
-    def __init__(self,
-        sorting_keys: List[Tuple[str, str]], padding_noise: float = 0.1,
-    ):
+    def __init__(self, sorting_keys: List[Tuple[str, str]], padding_noise: float = 0.1):
         self.sorting_keys = sorting_keys
         self.padding_noise = padding_noise
         # HACK, just so we can use the existing sort_by_padding,
@@ -196,7 +194,8 @@ class SortByPadding(Transform[Batched]):
             raise ValueError("Index() must occur before SortByPadding()")
 
         instances = allennlp_sort_by_padding(
-            instances, self.sorting_keys, self.vocab, self.padding_noise)
+            instances, self.sorting_keys, self.vocab, self.padding_noise
+        )
 
         yield instances
 
@@ -207,6 +206,7 @@ class EpochTracker(Transform[Instance]):
     Adds a allennlp Field to each Instance which specifies how many
     times the full dataset has been iterated over.
     """
+
     def __init__(self):
         self.epoch = 0
 
@@ -237,7 +237,6 @@ class SkipSmallerThan(Transform[Batched]):
 # This could also be generic over Iterable[Instance], Iterable[Batched]....
 @Transform.register("stop_after")
 class StopAfter(Transform[Instance]):
-
     def __init__(self, max: int):
         self.max = max
 
@@ -249,9 +248,9 @@ class StopAfter(Transform[Instance]):
             if i >= self.max:
                 break
 
+
 @Transform.register("max_samples_per_batch")
 class MaxSamplesPerBatch(Transform[Batched]):
-
     def __init__(self, max_samples: Tuple[str, int]):
 
         self.max_samples = max_samples
@@ -329,7 +328,6 @@ class MaxSamplesPerBatch(Transform[Batched]):
 
 @Transform.register("homogenous_batches_of")
 class HomogenousBatchesOf(Transform[Batched]):
-
     def __init__(self, batch_size: int, partition_key: str = "dataset", in_metadata: bool = False):
 
         self.batch_size = batch_size
@@ -351,8 +349,7 @@ class HomogenousBatchesOf(Transform[Batched]):
 
         # Get a `lazy_groups_of` iterator over each set of homogeneous instances.
         batches = {
-            key: lazy_groups_of(iter(hopper), self.batch_size)
-            for key, hopper in hoppers.items()
+            key: lazy_groups_of(iter(hopper), self.batch_size) for key, hopper in hoppers.items()
         }
 
         remaining = set(batches)
@@ -366,9 +363,9 @@ class HomogenousBatchesOf(Transform[Batched]):
                     except StopIteration:
                         remaining.remove(key)
 
+
 @Transform.register("fork")
 class Fork(Transform[Instance]):
-
     def transform(self, dataset: Iterable[Instance]) -> Iterable[Instance]:
 
         info = torch.utils.data.get_worker_info()
@@ -384,7 +381,6 @@ class Fork(Transform[Instance]):
 
 @Transform.register("compose")
 class Compose(Transform):
-
     def __init__(self, transforms):
         self.transforms = transforms
 
@@ -396,9 +392,9 @@ class Compose(Transform):
         yield from dataset
 
     def __repr__(self):
-        format_string = self.__class__.__name__ + '('
+        format_string = self.__class__.__name__ + "("
         for t in self.transforms:
-            format_string += '\n'
-            format_string += '    {0}'.format(t)
-        format_string += '\n)'
+            format_string += "\n"
+            format_string += "    {0}".format(t)
+        format_string += "\n)"
         return format_string

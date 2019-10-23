@@ -1,4 +1,3 @@
-
 import logging
 from typing import Dict, Union, Iterable, Iterator, List, Tuple
 from collections import defaultdict
@@ -23,7 +22,6 @@ TensorDict = Dict[str, Union[torch.Tensor, Dict[str, torch.Tensor]]]
 
 @DataIterator.register("transform")
 class TransformIterator(DataIterator):
-
     def __init__(
         self,
         sorting_keys: List[Tuple[str, str]] = None,
@@ -32,10 +30,10 @@ class TransformIterator(DataIterator):
         batch_size: int = 32,
         instances_per_epoch: int = None,
         max_instances_in_memory: int = None,
-        cache_instances: bool = False, # TODO(Mark): Depreciate argument
+        cache_instances: bool = False,  # TODO(Mark): Depreciate argument
         track_epoch: bool = False,
         maximum_samples_per_batch: Tuple[str, int] = None,
-        skip_smaller_batches: bool = None
+        skip_smaller_batches: bool = None,
     ) -> None:
 
         self.vocab: Vocabulary = None
@@ -64,45 +62,29 @@ class TransformIterator(DataIterator):
 
         # BE CAREFUL, mustnt Fork twice. Remember to check once transforms
         # can be passed via constructor.
-        dataset_transforms.append(
-            transforms.Fork()
-        )
+        dataset_transforms.append(transforms.Fork())
 
         if instances_per_epoch:
-            dataset_transforms.append(
-                transforms.StopAfter(instances_per_epoch)
-            )
+            dataset_transforms.append(transforms.StopAfter(instances_per_epoch))
 
         if track_epoch:
-            dataset_transforms.append(
-                transforms.EpochTracker()
-            )
+            dataset_transforms.append(transforms.EpochTracker())
 
         if max_instances_in_memory is not None:
-            dataset_transforms.append(
-                transforms.MaxInstancesInMemory(max_instances_in_memory)
-            )
+            dataset_transforms.append(transforms.MaxInstancesInMemory(max_instances_in_memory))
 
         if sorting_keys is not None:
             # To sort the dataset, it must be indexed.
             # currently this happens when we call index_with, slightly odd
-            dataset_transforms.append(
-                transforms.SortByPadding(sorting_keys, padding_noise)
-            )
+            dataset_transforms.append(transforms.SortByPadding(sorting_keys, padding_noise))
 
         if maximum_samples_per_batch is not None:
-            dataset_transforms.append(
-                transforms.MaxSamplesPerBatch(maximum_samples_per_batch)
-            )
+            dataset_transforms.append(transforms.MaxSamplesPerBatch(maximum_samples_per_batch))
 
-        dataset_transforms.append(
-            transforms.Batch(batch_size)
-        )
+        dataset_transforms.append(transforms.Batch(batch_size))
 
         if skip_smaller_batches:
-            dataset_transforms.append(
-                transforms.SkipSmallerThan(batch_size)
-            )
+            dataset_transforms.append(transforms.SkipSmallerThan(batch_size))
 
         self.transforms = dataset_transforms
 

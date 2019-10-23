@@ -7,7 +7,8 @@ from allennlp.data import Instance, Token, Vocabulary
 from allennlp.data.dataset import Batch
 from allennlp.data.dataset_readers.dataset_reader import _LazyInstances
 from allennlp.data.fields import TextField
-#from allennlp.data.iterators import BasicIterator
+
+# from allennlp.data.iterators import BasicIterator
 from allennlp.data.iterators.transform_iterator import TransformIterator as BasicIterator
 from allennlp.data.token_indexers import SingleIdTokenIndexer
 
