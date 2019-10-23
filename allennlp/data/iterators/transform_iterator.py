@@ -63,21 +63,21 @@ class TransformIterator(DataIterator):
         for epoch in epochs:
             for batch in self._create_batches(instances, shuffle):
 
-                yield batch.as_tensor_dict(batch.get_padding_lengths())
+                yield batch
 
-    def _collocate(self, batch: Batch) -> TensorDict:
+    def _collocate(self, batch: List) -> Batch:
 
         # If we've added a Batch() into the pipeline,
         # this is a length one list containing a batch.
         # So we unpack it.
         if len(batch) == 1:
             batch = list(batch[0])
-        batch = Batch(batch)
+        allennlp_batch = Batch(batch)
 
         # We might have already done this - but it doesn't matter if we have,
         # because if so it's a no-op.
-        batch.index_instances(self.vocab)
-        return batch
+        allennlp_batch.index_instances(self.vocab)
+        return allennlp_batch.as_tensor_dict(allennlp_batch.get_padding_lengths())
 
     def index_with(self, vocab: Vocabulary) -> None:
         self.vocab = vocab

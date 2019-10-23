@@ -33,7 +33,7 @@ can be written as generators, which can then be wrapped by pytorch datasets.
 
 """
 
-from typing import Dict, Tuple, List, Iterable, Generic, TypeVar, Deque
+from typing import Dict, Tuple, List, Iterable, Generic, TypeVar, Deque, Union
 import itertools
 from collections import deque, defaultdict
 
@@ -66,10 +66,10 @@ class DatasetFromList(TorchDataset):
 
 
 class DatasetFromGenerator(IterableTorchDataset):
-    def __init__(self, generator: Iterable[InstanceOrBatch]):
+    def __init__(self, generator: Iterable[Union[Iterable[Instance], Instance]]):
         self.generator = generator
 
-    def __iter__(self) -> InstanceOrBatch:
+    def __iter__(self) -> Iterable[Union[Iterable[Instance], Instance]]:
 
         for x in self.generator:
             yield x
@@ -389,11 +389,10 @@ class Compose(Transform):
     def __init__(self, transforms):
         self.transforms = transforms
 
-    def transform(self, dataset: Iterable[Instance]) -> Iterable[InstanceOrBatch]:
+    def transform(self, dataset: Iterable[InstanceOrBatch]) -> Iterable[InstanceOrBatch]: # type: ignore
 
         for t in self.transforms:
             dataset = t(dataset)
-
         yield from dataset
 
     def __repr__(self):

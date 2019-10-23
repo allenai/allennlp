@@ -1,6 +1,8 @@
 from typing import List, Iterable, Dict, Union
 from collections import Counter
 
+from _pytest.monkeypatch import MonkeyPatch
+
 from allennlp.common import Params
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Instance, Token, Vocabulary
@@ -9,6 +11,7 @@ from allennlp.data.dataset_readers.dataset_reader import _LazyInstances
 from allennlp.data.fields import TextField
 
 from allennlp.data.iterators.basic_iterator import BasicIterator, BasicIteratorStub
+from allennlp.data.iterators.transform_iterator import TransformIterator
 from allennlp.data.token_indexers import SingleIdTokenIndexer
 
 
@@ -377,6 +380,66 @@ class TestBasicIteratorStub(IteratorTest):
             assert len(instances) == 5 * 6
             self.assert_instances_are_correct(instances)
 
+    def test_epoch_tracking_when_one_epoch_at_a_time(self):
+        iterator = BasicIteratorStub(batch_size=2, track_epoch=True)
+        iterator.index_with(self.vocab)
+        for epoch in range(10):
+            for batch in iterator(self.instances, num_epochs=1):
+                assert all(epoch_num == epoch for epoch_num in batch["epoch_num"])
+
+    def test_epoch_tracking_forever(self):
+        iterator = BasicIteratorStub(batch_size=2, track_epoch=True)
+        iterator.index_with(self.vocab)
+
+        it = iterator(self.instances, num_epochs=None)
+
+        all_batches = [next(it) for _ in range(30)]
+
+        assert len(all_batches) == 30
+        for i, batch in enumerate(all_batches):
+            # Should have 3 batches per epoch
+            epoch = i // 3
+            assert all(epoch_num == epoch for epoch_num in batch["epoch_num"])
+
+    def test_epoch_tracking_multiple_epochs(self):
+        iterator = BasicIteratorStub(batch_size=2, track_epoch=True)
+        iterator.index_with(self.vocab)
+
+        all_batches = list(iterator(self.instances, num_epochs=10))
+        assert len(all_batches) == 10 * 3
+        for i, batch in enumerate(all_batches):
+            # Should have 3 batches per epoch
+            epoch = i // 3
+            assert all(epoch_num == epoch for epoch_num in batch["epoch_num"])
+
+
+def _collocate_patch(self, batch: List) -> Batch:
+
+    # If we've added a Batch() into the pipeline,
+    # this is a length one list containing a batch.
+    # So we unpack it.
+    if len(batch) == 1:
+        batch = list(batch[0])
+    allennlp_batch = Batch(batch)
+
+    # We might have already done this - but it doesn't matter if we have,
+    # because if so it's a no-op.
+    allennlp_batch.index_instances(self.vocab)
+    return allennlp_batch
+
+
+class TestBasicIteratorStubPatchRequired(IteratorTest):
+    
+    def setUp(self):
+        super().setUp()
+        self.monkeypatch = MonkeyPatch()
+
+        self.monkeypatch.setattr(TransformIterator, "_collocate", _collocate_patch)
+
+    def tearDown(self):
+        self.monkeypatch.undo()
+        super().tearDown()
+
     def test_create_batches_groups_correctly(self):
 
         for test_instances in (self.instances, self.lazy_instances):
@@ -418,38 +481,6 @@ class TestBasicIteratorStub(IteratorTest):
                 [self.instances[1], self.instances[2]],
                 [self.instances[3]],
             ]
-
-    def test_epoch_tracking_when_one_epoch_at_a_time(self):
-        iterator = BasicIteratorStub(batch_size=2, track_epoch=True)
-        iterator.index_with(self.vocab)
-        for epoch in range(10):
-            for batch in iterator(self.instances, num_epochs=1):
-                assert all(epoch_num == epoch for epoch_num in batch["epoch_num"])
-
-    def test_epoch_tracking_multiple_epochs(self):
-        iterator = BasicIteratorStub(batch_size=2, track_epoch=True)
-        iterator.index_with(self.vocab)
-
-        all_batches = list(iterator(self.instances, num_epochs=10))
-        assert len(all_batches) == 10 * 3
-        for i, batch in enumerate(all_batches):
-            # Should have 3 batches per epoch
-            epoch = i // 3
-            assert all(epoch_num == epoch for epoch_num in batch["epoch_num"])
-
-    def test_epoch_tracking_forever(self):
-        iterator = BasicIteratorStub(batch_size=2, track_epoch=True)
-        iterator.index_with(self.vocab)
-
-        it = iterator(self.instances, num_epochs=None)
-
-        all_batches = [next(it) for _ in range(30)]
-
-        assert len(all_batches) == 30
-        for i, batch in enumerate(all_batches):
-            # Should have 3 batches per epoch
-            epoch = i // 3
-            assert all(epoch_num == epoch for epoch_num in batch["epoch_num"])
 
     def test_shuffle(self):
         for test_instances in (self.instances, self.lazy_instances):

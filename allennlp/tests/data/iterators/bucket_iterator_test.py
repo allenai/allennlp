@@ -1,10 +1,15 @@
 import pytest
 import unittest
+from typing import List
+
+from _pytest.monkeypatch import MonkeyPatch
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 
+from allennlp.data.dataset import Batch
 from allennlp.data.iterators.bucket_iterator import BucketIterator, BucketIteratorStub
+from allennlp.data.iterators.transform_iterator import TransformIterator
 from allennlp.tests.data.iterators.basic_iterator_test import IteratorTest
 
 
@@ -145,7 +150,34 @@ class TestBucketIterator(IteratorTest):
         assert stats["total_instances"] == len(self.instances) - 1
 
 
+
+def _collocate_patch(self, batch: List) -> Batch:
+
+    # If we've added a Batch() into the pipeline,
+    # this is a length one list containing a batch.
+    # So we unpack it.
+    if len(batch) == 1:
+        batch = list(batch[0])
+    allennlp_batch = Batch(batch)
+
+    # We might have already done this - but it doesn't matter if we have,
+    # because if so it's a no-op.
+    allennlp_batch.index_instances(self.vocab)
+    return allennlp_batch
+
+
 class TestBucketIteratorStub(IteratorTest):
+    def setUp(self):
+        super().setUp()
+        self.monkeypatch = MonkeyPatch()
+
+        self.monkeypatch.setattr(TransformIterator, "_collocate", _collocate_patch)
+
+    def tearDown(self):
+        self.monkeypatch.undo()
+        super().tearDown()
+
+
     def test_create_batches_groups_correctly(self):
         iterator = BucketIteratorStub(
             batch_size=2, padding_noise=0, sorting_keys=[("text", "num_tokens")]
