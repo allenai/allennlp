@@ -10,3 +10,4 @@ from allennlp.data.iterators.homogeneous_batch_iterator import HomogeneousBatchI
 from allennlp.data.iterators.multiprocess_iterator import MultiprocessIterator
 from allennlp.data.iterators.pass_through_iterator import PassThroughIterator
 from allennlp.data.iterators.same_language_iterator import SameLanguageIterator
+from allennlp.data.iterators.transform_iterator import TransformIterator

@@ -3,8 +3,7 @@ import pytest
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 
-# from allennlp.data.iterators import BucketIterator
-from allennlp.data.iterators.transform_iterator import TransformIterator as BucketIterator
+from allennlp.data.iterators import BucketIterator
 from allennlp.tests.data.iterators.basic_iterator_test import IteratorTest
 
 
@@ -65,17 +64,12 @@ class TestBucketIterator(IteratorTest):
         params = Params({})
         # Construction with no sorting keys is allowed.
         iterator = BucketIterator.from_params(params)
-        assert iterator._sorting_keys is None
 
         sorting_keys = [("s1", "nt"), ("s2", "nt2")]
         params["sorting_keys"] = sorting_keys
         iterator = BucketIterator.from_params(params)
 
-        assert iterator._sorting_keys == sorting_keys
-        assert iterator._padding_noise == 0.1
-        assert not iterator._biggest_batch_first
         assert iterator._batch_size == 32
-        assert not iterator._skip_smaller_batches
 
         params = Params(
             {
@@ -86,13 +80,8 @@ class TestBucketIterator(IteratorTest):
                 "skip_smaller_batches": True,
             }
         )
-
         iterator = BucketIterator.from_params(params)
-        assert iterator._sorting_keys == sorting_keys
-        assert iterator._padding_noise == 0.5
-        assert iterator._biggest_batch_first
         assert iterator._batch_size == 100
-        assert iterator._skip_smaller_batches
 
     def test_bucket_iterator_maximum_samples_per_batch(self):
         iterator = BucketIterator(

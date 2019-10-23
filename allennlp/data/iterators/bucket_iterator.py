@@ -1,14 +1,12 @@
 import logging
-import random
-from collections import deque
-from typing import List, Tuple, Iterable, cast, Dict, Deque
+from typing import List, Tuple, cast, Dict
 
-from overrides import overrides
 
-from allennlp.common.util import lazy_groups_of, add_noise_to_dict_values
-from allennlp.data.dataset import Batch
+from allennlp.common.util import add_noise_to_dict_values
+from allennlp.data import transforms
 from allennlp.data.instance import Instance
 from allennlp.data.iterators.data_iterator import DataIterator
+from allennlp.data.iterators.transform_iterator import TransformIterator
 from allennlp.data.vocabulary import Vocabulary
 
 logger = logging.getLogger(__name__)
@@ -94,6 +92,47 @@ class BucketIterator(DataIterator):
         If set to `True`, those smaller batches will be discarded.
     """
 
+    def __new__(
+        cls,
+        sorting_keys: List[Tuple[str, str]] = None,
+        padding_noise: float = 0.1,
+        biggest_batch_first: bool = False,
+        batch_size: int = 32,
+        instances_per_epoch: int = None,
+        max_instances_in_memory: int = None,
+        cache_instances: bool = False,
+        track_epoch: bool = False,
+        maximum_samples_per_batch: Tuple[str, int] = None,
+        skip_smaller_batches: bool = False,
+    ) -> None:
+
+        dataset_transforms: List[transforms.Transform] = []
+
+        if instances_per_epoch:
+            dataset_transforms.append(transforms.StopAfter(instances_per_epoch))
+
+        if track_epoch:
+            dataset_transforms.append(transforms.EpochTracker())
+
+        if max_instances_in_memory is not None:
+            dataset_transforms.append(transforms.MaxInstancesInMemory(max_instances_in_memory))
+
+        if sorting_keys is not None:
+            # To sort the dataset, it must be indexed.
+            # currently this happens when we call index_with, slightly odd
+            dataset_transforms.append(transforms.SortByPadding(sorting_keys, padding_noise))
+
+        if maximum_samples_per_batch is not None:
+            dataset_transforms.append(transforms.MaxSamplesPerBatch(maximum_samples_per_batch))
+
+        dataset_transforms.append(transforms.Batch(batch_size))
+
+        if skip_smaller_batches:
+            dataset_transforms.append(transforms.SkipSmallerThan(batch_size))
+
+        return TransformIterator(dataset_transforms, instances_per_epoch, batch_size)
+
+    # TODO(Mark): Explain in detail this delinquent behaviour
     def __init__(
         self,
         sorting_keys: List[Tuple[str, str]] = None,
@@ -108,57 +147,4 @@ class BucketIterator(DataIterator):
         skip_smaller_batches: bool = False,
     ) -> None:
 
-        super().__init__(
-            cache_instances=cache_instances,
-            track_epoch=track_epoch,
-            batch_size=batch_size,
-            instances_per_epoch=instances_per_epoch,
-            max_instances_in_memory=max_instances_in_memory,
-            maximum_samples_per_batch=maximum_samples_per_batch,
-        )
-        self._sorting_keys = sorting_keys
-        self._padding_noise = padding_noise
-        self._biggest_batch_first = biggest_batch_first
-        self._skip_smaller_batches = skip_smaller_batches
-
-    @overrides
-    def _create_batches(self, instances: Iterable[Instance], shuffle: bool) -> Iterable[Batch]:
-        for instance_list in self._memory_sized_lists(instances):
-
-            if self._sorting_keys is not None:
-                instance_list = sort_by_padding(
-                    instance_list, self._sorting_keys, self.vocab, self._padding_noise
-                )
-
-            batches = []
-            excess: Deque[Instance] = deque()
-            for batch_instances in lazy_groups_of(iter(instance_list), self._batch_size):
-                for possibly_smaller_batches in self._ensure_batch_is_sufficiently_small(
-                    batch_instances, excess
-                ):
-                    if (
-                        self._skip_smaller_batches
-                        and len(possibly_smaller_batches) < self._batch_size
-                    ):
-                        continue
-                    batches.append(Batch(possibly_smaller_batches))
-            if excess and (not self._skip_smaller_batches or len(excess) == self._batch_size):
-                batches.append(Batch(excess))
-
-            # TODO(brendanr): Add multi-GPU friendly grouping, i.e. group
-            # num_gpu batches together, shuffle and then expand the groups.
-            # This guards against imbalanced batches across GPUs.
-            move_to_front = self._biggest_batch_first and len(batches) > 1
-            if move_to_front:
-                # We'll actually pop the last _two_ batches, because the last one might not be full.
-                last_batch = batches.pop()
-                penultimate_batch = batches.pop()
-            if shuffle:
-                # NOTE: if shuffle is false, the data will still be in a different order
-                # because of the bucket sorting.
-                random.shuffle(batches)
-            if move_to_front:
-                batches.insert(0, penultimate_batch)
-                batches.insert(0, last_batch)
-
-            yield from batches
+        pass

@@ -34,3 +34,15 @@ class BasicIterator(DataIterator):
             track_epoch=track_epoch,
             maximum_samples_per_batch=maximum_samples_per_batch,
         )
+
+    def __init__(
+        self,
+        batch_size: int = 32,
+        instances_per_epoch: int = None,
+        max_instances_in_memory: int = None,
+        cache_instances: bool = False,
+        track_epoch: bool = False,
+        maximum_samples_per_batch: Tuple[str, int] = None,
+    ) -> None:
+
+        pass

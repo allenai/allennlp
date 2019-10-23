@@ -24,67 +24,26 @@ TensorDict = Dict[str, Union[torch.Tensor, Dict[str, torch.Tensor]]]
 class TransformIterator(DataIterator):
     def __init__(
         self,
-        sorting_keys: List[Tuple[str, str]] = None,
-        padding_noise: float = 0.1,
-        biggest_batch_first: bool = False,
-        batch_size: int = 32,
+        dataset_transforms: List[transforms.Transform],
         instances_per_epoch: int = None,
-        max_instances_in_memory: int = None,
-        cache_instances: bool = False,  # TODO(Mark): Depreciate argument
-        track_epoch: bool = False,
-        maximum_samples_per_batch: Tuple[str, int] = None,
-        skip_smaller_batches: bool = None,
+        batch_size: int = 32
     ) -> None:
 
         self.vocab: Vocabulary = None
-
-        self._sorting_keys = sorting_keys
-        self._padding_noise = padding_noise
-        self._biggest_batch_first = biggest_batch_first
-        self._skip_smaller_batches = skip_smaller_batches
-
-        self._batch_size = batch_size
-        self._max_instances_in_memory = max_instances_in_memory
-        self._instances_per_epoch = instances_per_epoch
-        self._maximum_samples_per_batch = maximum_samples_per_batch
-
-        # We also might want to add the epoch number to each instance.
-        self._track_epoch = track_epoch
         self._epochs: Dict[int, int] = defaultdict(int)
 
+        self._instances_per_epoch = instances_per_epoch
+        self._batch_size = batch_size
         # We also might want to keep track of cursors;
         # for example, if each epoch represents less than one pass through the dataset,
         # we want to remember where we left off. As `Iterator`s are not necessarily hashable,
         # we use their id() as the key.
         self._cursors: Dict[int, Iterator[Instance]] = {}
 
-        dataset_transforms: List[transforms.Transform] = []
 
         # BE CAREFUL, mustnt Fork twice. Remember to check once transforms
         # can be passed via constructor.
-        dataset_transforms.append(transforms.Fork())
-
-        if instances_per_epoch:
-            dataset_transforms.append(transforms.StopAfter(instances_per_epoch))
-
-        if track_epoch:
-            dataset_transforms.append(transforms.EpochTracker())
-
-        if max_instances_in_memory is not None:
-            dataset_transforms.append(transforms.MaxInstancesInMemory(max_instances_in_memory))
-
-        if sorting_keys is not None:
-            # To sort the dataset, it must be indexed.
-            # currently this happens when we call index_with, slightly odd
-            dataset_transforms.append(transforms.SortByPadding(sorting_keys, padding_noise))
-
-        if maximum_samples_per_batch is not None:
-            dataset_transforms.append(transforms.MaxSamplesPerBatch(maximum_samples_per_batch))
-
-        dataset_transforms.append(transforms.Batch(batch_size))
-
-        if skip_smaller_batches:
-            dataset_transforms.append(transforms.SkipSmallerThan(batch_size))
+        #dataset_transforms.append(transforms.Fork())
 
         self.transforms = dataset_transforms
 
