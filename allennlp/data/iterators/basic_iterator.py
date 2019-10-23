@@ -48,6 +48,9 @@ class BasicIteratorStub(DataIterator):
         pass
 
 
+# TODO(Mark): This has to be depreciated the old fashioned way, because
+# subclasses override BasicIterator methods, but we return a BucketIterator object,
+# which means that inheritance doesn't work, which was the whole point of this.
 @DataIterator.register("old_basic")
 class BasicIterator(DataIterator):
     """
