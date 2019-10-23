@@ -48,11 +48,10 @@ from typing import Optional
 
 import torch
 import torch.distributed as dist
-import torch.multiprocessing as mp
 
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common import Params
-from allennlp.common.checks import check_for_gpu, parse_cuda_device
+from allennlp.common.checks import check_for_gpu
 from allennlp.common.util import (
     prepare_environment,
     prepare_global_logging,
