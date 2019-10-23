@@ -194,7 +194,10 @@ class SortByPadding(Transform[Batched]):
             raise ValueError("Index() must occur before SortByPadding()")
 
         # TODO(Mark): Move this to somewhere where it is importable at the top level
-        from allennlp.data.iterators.bucket_iterator import sort_by_padding as allennlp_sort_by_padding
+        from allennlp.data.iterators.bucket_iterator import (
+            sort_by_padding as allennlp_sort_by_padding,
+        )
+
         instances = allennlp_sort_by_padding(
             instances, self.sorting_keys, self.vocab, self.padding_noise
         )

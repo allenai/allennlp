@@ -145,9 +145,7 @@ class TestBucketIterator(IteratorTest):
         assert stats["total_instances"] == len(self.instances) - 1
 
 
-
 class TestBucketIteratorStub(IteratorTest):
-
     def test_create_batches_groups_correctly(self):
         iterator = BucketIteratorStub(
             batch_size=2, padding_noise=0, sorting_keys=[("text", "num_tokens")]
@@ -160,6 +158,7 @@ class TestBucketIteratorStub(IteratorTest):
             [self.instances[0], self.instances[1]],
             [self.instances[3]],
         ]
+
     def test_create_batches_groups_correctly_with_max_instances(self):
         # If we knew all the instances, the correct order is 4 -> 2 -> 0 -> 1 -> 3.
         # Here max_instances_in_memory is 3, so we load instances [0, 1, 2]
@@ -281,4 +280,3 @@ class TestBucketIteratorStub(IteratorTest):
 
         # we should have lost one instance by skipping the last batch
         assert stats["total_instances"] == len(self.instances) - 1
-

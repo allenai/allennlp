@@ -26,7 +26,7 @@ class TransformIterator(DataIterator):
         self,
         dataset_transforms: List[transforms.Transform],
         instances_per_epoch: int = None,
-        batch_size: int = 32
+        batch_size: int = 32,
     ) -> None:
 
         self.vocab: Vocabulary = None
@@ -40,10 +40,9 @@ class TransformIterator(DataIterator):
         # we use their id() as the key.
         self._cursors: Dict[int, Iterator[Instance]] = {}
 
-
         # BE CAREFUL, mustnt Fork twice. Remember to check once transforms
         # can be passed via constructor.
-        #dataset_transforms.append(transforms.Fork())
+        # dataset_transforms.append(transforms.Fork())
 
         self.transforms = dataset_transforms
 

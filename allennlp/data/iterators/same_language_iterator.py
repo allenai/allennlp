@@ -68,7 +68,9 @@ class SameLanguageIterator(BucketIterator):
             dataset_transforms.append(transforms.MaxSamplesPerBatch(maximum_samples_per_batch))
 
         dataset_transforms.append(
-            transforms.HomogenousBatchesOf(batch_size=batch_size, partition_key="lang", in_metadata=True)
+            transforms.HomogenousBatchesOf(
+                batch_size=batch_size, partition_key="lang", in_metadata=True
+            )
         )
         if skip_smaller_batches:
             dataset_transforms.append(transforms.SkipSmallerThan(batch_size))
@@ -91,7 +93,3 @@ class SameLanguageIterator(BucketIterator):
     ) -> None:
 
         pass
-
-
-
-

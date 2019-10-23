@@ -4,6 +4,7 @@ from allennlp.data.iterators.data_iterator import DataIterator
 from allennlp.data.iterators.transform_iterator import TransformIterator
 from allennlp.data import transforms
 
+
 @DataIterator.register("homogeneous_batch")
 class HomogeneousBatchIterator(DataIterator):
     """
@@ -36,6 +37,7 @@ class HomogeneousBatchIterator(DataIterator):
         some batches might be smaller than `batch_size`.
         If set to `True`, those smaller batches will be discarded.
     """
+
     def __new__(
         cls,
         batch_size: int = 32,
@@ -58,7 +60,9 @@ class HomogeneousBatchIterator(DataIterator):
         if max_instances_in_memory is not None:
             dataset_transforms.append(transforms.MaxInstancesInMemory(max_instances_in_memory))
 
-        dataset_transforms.append(transforms.HomogenousBatchesOf(batch_size, partition_key=partition_key))
+        dataset_transforms.append(
+            transforms.HomogenousBatchesOf(batch_size, partition_key=partition_key)
+        )
 
         if skip_smaller_batches:
             dataset_transforms.append(transforms.SkipSmallerThan(batch_size))

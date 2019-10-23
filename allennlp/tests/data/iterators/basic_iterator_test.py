@@ -327,14 +327,15 @@ class TestBasicIterator(IteratorTest):
         assert stats["sample_sizes"] == [10, 8]
 
 
-
 class TestBasicIteratorStub(IteratorTest):
     def test_get_num_batches(self):
         # Lazy and instances per epoch not specified.
         assert BasicIteratorStub(batch_size=2).get_num_batches(self.lazy_instances) == 1
         # Lazy and instances per epoch specified.
         assert (
-            BasicIteratorStub(batch_size=2, instances_per_epoch=21).get_num_batches(self.lazy_instances)
+            BasicIteratorStub(batch_size=2, instances_per_epoch=21).get_num_batches(
+                self.lazy_instances
+            )
             == 11
         )
         # Not lazy and instances per epoch specified.
