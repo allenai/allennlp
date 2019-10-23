@@ -1,5 +1,5 @@
 import logging
-from typing import Dict, Union, Iterable, Iterator, List, Tuple
+from typing import Dict, Union, Iterable, Iterator, List
 from collections import defaultdict
 import itertools
 import math

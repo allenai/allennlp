@@ -1,14 +1,10 @@
-from collections import deque, defaultdict
-from typing import Iterable, Deque, List, Tuple
+from collections import defaultdict
+from typing import List, Tuple
 import logging
-import random
 
-from allennlp.common.util import lazy_groups_of
-from allennlp.data.instance import Instance
 from allennlp.data.iterators.data_iterator import DataIterator
 from allennlp.data.iterators.bucket_iterator import BucketIterator
 from allennlp.data.iterators.transform_iterator import TransformIterator
-from allennlp.data.dataset import Batch
 from allennlp.data import transforms
 
 

@@ -24,7 +24,7 @@ the limit, it splits the batch, caching the left over part. This is not possible
 `colocate_fn`.
 
 
-In order to overcome this problem, I've envisioned something similar to the 
+In order to overcome this problem, I've envisioned something similar to the
 torchvision.Transform api for pre-processing images, but working on the level of entire
 datasets.
 
