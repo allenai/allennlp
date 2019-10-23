@@ -419,3 +419,5 @@ def _train_worker(
 
     if not distributed:
         return trainer.model
+
+    return None  # to make mypy happy
