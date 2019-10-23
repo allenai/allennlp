@@ -162,6 +162,7 @@ class BucketIterator(DataIterator):
     will be sorted by before doing this batching, causing inputs with similar length to be batched
     together, making computation more efficient (as less time is wasted on padded elements of the
     batch).
+
     Parameters
     ----------
     sorting_keys : List[Tuple[str, str]]

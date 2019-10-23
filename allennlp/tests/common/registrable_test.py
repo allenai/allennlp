@@ -87,8 +87,8 @@ class TestRegistrable(AllenNlpTestCase):
         assert DatasetReader.by_name("squad").__name__ == "SquadReader"
 
     def test_registry_has_builtin_iterators(self):
-        assert DataIterator.by_name("basic").__name__ == "BasicIterator"
-        assert DataIterator.by_name("bucket").__name__ == "BucketIterator"
+        assert DataIterator.by_name("basic").__name__ == "BasicIteratorStub"
+        assert DataIterator.by_name("bucket").__name__ == "BucketIteratorStub"
 
     def test_registry_has_builtin_tokenizers(self):
         assert Tokenizer.by_name("word").__name__ == "WordTokenizer"
