@@ -49,7 +49,6 @@ from allennlp.data.vocabulary import Vocabulary
 
 from allennlp.data.fields import MetadataField
 
-from allennlp.data.iterators.bucket_iterator import sort_by_padding as allennlp_sort_by_padding
 from allennlp.common.util import lazy_groups_of
 
 
@@ -181,6 +180,7 @@ class Index(Transform[Instance]):
 @Transform.register("sort_by_padding")
 class SortByPadding(Transform[Batched]):
     def __init__(self, sorting_keys: List[Tuple[str, str]], padding_noise: float = 0.1):
+
         self.sorting_keys = sorting_keys
         self.padding_noise = padding_noise
         # HACK, just so we can use the existing sort_by_padding,
@@ -193,6 +193,8 @@ class SortByPadding(Transform[Batched]):
         if not all([i.indexed for i in instances]):
             raise ValueError("Index() must occur before SortByPadding()")
 
+        # TODO(Mark): Move this to somewhere where it is importable at the top level
+        from allennlp.data.iterators.bucket_iterator import sort_by_padding as allennlp_sort_by_padding
         instances = allennlp_sort_by_padding(
             instances, self.sorting_keys, self.vocab, self.padding_noise
         )
