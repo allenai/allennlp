@@ -48,12 +48,7 @@ import os
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common.checks import check_for_gpu
 from allennlp.common import Params
-from allennlp.common.util import (
-    prepare_environment,
-    prepare_global_logging,
-    cleanup_global_logging,
-    dump_metrics,
-)
+from allennlp.common.util import prepare_environment, prepare_global_logging, dump_metrics
 from allennlp.models.archival import archive_model, CONFIG_NAME
 from allennlp.models.model import Model, _DEFAULT_WEIGHTS
 from allennlp.training.trainer import Trainer
@@ -241,7 +236,7 @@ def train_model(
     create_serialization_dir(params, serialization_dir, recover, force)
     params.to_file(os.path.join(serialization_dir, CONFIG_NAME))
 
-    stdout_handler = prepare_global_logging(serialization_dir, file_friendly_logging)
+    prepare_global_logging(serialization_dir, file_friendly_logging)
     prepare_environment(params)
 
     cuda_device = params.params.get("trainer").get("cuda_device", -1)
@@ -317,8 +312,6 @@ def train_model(
             "To evaluate on the test set after training, pass the "
             "'evaluate_on_test' flag, or use the 'allennlp evaluate' command."
         )
-
-    cleanup_global_logging(stdout_handler)
 
     # Now tar up results
     archive_model(serialization_dir, files_to_archive=params.files_to_archive)

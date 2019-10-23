@@ -1,6 +1,7 @@
 """
 Helper functions for Trainers
 """
+import torch.distributed as dist
 from typing import Any, Union, Dict, Iterable, List, Optional, Tuple
 import datetime
 import json
@@ -379,7 +380,12 @@ def rescale_gradients(model: Model, grad_norm: Optional[float] = None) -> Option
 
 
 def get_metrics(
-    model: Model, total_loss: float, num_batches: int, reset: bool = False
+    model: Model,
+    total_loss: float,
+    num_batches: int,
+    reset: bool = False,
+    world_size: int = 1,
+    rank: int = 0,
 ) -> Dict[str, float]:
     """
     Gets the metrics but sets ``"loss"`` to
@@ -388,7 +394,18 @@ def get_metrics(
     """
     metrics = model.get_metrics(reset=reset)
     metrics["loss"] = float(total_loss / num_batches) if num_batches > 0 else 0.0
-    return metrics
+
+    if world_size > 1:
+        # In distributed mode, average out all metrics across GPUs
+        aggregated_metrics = {}
+        for metric_name, metric_val in metrics.items():
+            metric_tensor = torch.tensor(metric_val).to(torch.device(rank))
+            dist.all_reduce(metric_tensor, op=dist.ReduceOp.SUM)
+            reduced_metric = metric_tensor.item() / world_size
+            aggregated_metrics[metric_name] = reduced_metric
+        return aggregated_metrics
+    else:
+        return metrics
 
 
 def evaluate(
