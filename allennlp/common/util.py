@@ -295,6 +295,11 @@ def prepare_global_logging(
     # file handlers need to be handled for tqdm's \r char
     file_friendly_log_filter = FileFriendlyLogFilter()
 
+    if os.environ.get("ALLENNLP_DEBUG"):
+        LEVEL = logging.DEBUG
+    else:
+        LEVEL = logging.INFO
+
     if rank == 0:
         # stdout/stderr handlers are added only for the
         # master worker. This is to avoid cluttering the console
@@ -302,7 +307,7 @@ def prepare_global_logging(
         output_stream_log_handler.setFormatter(formatter)
         error_stream_log_handler.setFormatter(formatter)
 
-        output_stream_log_handler.setLevel(logging.INFO)
+        output_stream_log_handler.setLevel(LEVEL)
         error_stream_log_handler.setLevel(logging.ERROR)
 
         if file_friendly_logging:
@@ -318,13 +323,13 @@ def prepare_global_logging(
     output_file_log_handler.setFormatter(formatter)
     error_file_log_handler.setFormatter(formatter)
 
-    output_file_log_handler.setLevel(logging.INFO)
+    output_file_log_handler.setLevel(LEVEL)
     error_file_log_handler.setLevel(logging.ERROR)
 
     root_logger.addHandler(output_file_log_handler)
     root_logger.addHandler(error_file_log_handler)
 
-    root_logger.setLevel(logging.INFO)
+    root_logger.setLevel(LEVEL)
 
 
 LOADED_SPACY_MODELS: Dict[Tuple[str, bool, bool, bool], SpacyModelType] = {}
