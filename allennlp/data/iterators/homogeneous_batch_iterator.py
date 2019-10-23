@@ -47,7 +47,7 @@ class HomogeneousBatchIterator(DataIterator):
         track_epoch: bool = False,
         partition_key: str = "dataset",
         skip_smaller_batches: bool = False,
-    ) -> None:
+    ):
 
         dataset_transforms: List[transforms.Transform] = []
 

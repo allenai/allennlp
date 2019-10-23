@@ -42,7 +42,7 @@ class SameLanguageIterator(BucketIterator):
         track_epoch: bool = False,
         maximum_samples_per_batch: Tuple[str, int] = None,
         skip_smaller_batches: bool = False,
-    ) -> None:
+    ):
 
         dataset_transforms: List[transforms.Transform] = []
 

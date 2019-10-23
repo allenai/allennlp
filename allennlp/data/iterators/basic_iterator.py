@@ -22,7 +22,7 @@ class BasicIteratorStub(DataIterator):
         cache_instances: bool = False,
         track_epoch: bool = False,
         maximum_samples_per_batch: Tuple[str, int] = None,
-    ) -> None:
+    ):
 
         from allennlp.data.iterators.bucket_iterator import BucketIteratorStub
 
@@ -64,7 +64,7 @@ class BasicIterator(DataIterator):
         cache_instances: bool = False,
         track_epoch: bool = False,
         maximum_samples_per_batch: Tuple[str, int] = None,
-    ) -> None:
+    ):
 
         from allennlp.data.iterators.bucket_iterator import BucketIterator
 
