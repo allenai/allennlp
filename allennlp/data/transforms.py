@@ -386,13 +386,13 @@ class Fork(Transform[Instance]):
 
 @Transform.register("compose")
 class Compose(Transform):
-    def __init__(self, transforms):
+    def __init__(self, transforms: List[Transform]):
         self.transforms = transforms
 
-    def transform(self, dataset: Iterable[InstanceOrBatch]) -> Iterable[InstanceOrBatch]: # type: ignore
+    def transform(self, dataset: Iterable[InstanceOrBatch]) -> Iterable[InstanceOrBatch]:
 
         for t in self.transforms:
-            dataset = t(dataset)
+            dataset = t(dataset)  # type: ignore
         yield from dataset
 
     def __repr__(self):

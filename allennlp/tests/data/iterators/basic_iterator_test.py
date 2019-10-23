@@ -429,7 +429,7 @@ def _collocate_patch(self, batch: List) -> Batch:
 
 
 class TestBasicIteratorStubPatchRequired(IteratorTest):
-    
+
     def setUp(self):
         super().setUp()
         self.monkeypatch = MonkeyPatch()
