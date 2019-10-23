@@ -21,8 +21,8 @@ class SameLanguageIteratorTest(AllenNlpTestCase):
 
         for batch in batches:
             lang = ""
-            for instance in batch:
-                batch_lang = instance.fields["metadata"].metadata["lang"]
+            for metadata in batch["metadata"]:
+                batch_lang = metadata["lang"]
                 if lang == "":
                     lang = batch_lang
                 assert lang == batch_lang

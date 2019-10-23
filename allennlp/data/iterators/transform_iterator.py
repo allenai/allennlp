@@ -103,13 +103,12 @@ class TransformIterator(DataIterator):
             data = transforms.Compose(self.transforms)(iterator)
             batch_generator = iter(DataLoader(data, batch_size=1, collate_fn=self._collocate))
 
-            while max_instances > 0:
+            while True:
                 try:
                     # If there are instances left on this iterator,
                     # yield one and decrement max_instances.
                     next_batch = next(batch_generator)
                     yield next_batch
-                    max_instances -= len(next_batch.instances)
 
                 # TODO explain this because it's hella confusing
                 except StopIteration:

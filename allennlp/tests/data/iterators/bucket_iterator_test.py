@@ -150,7 +150,6 @@ class TestBucketIterator(IteratorTest):
         assert stats["total_instances"] == len(self.instances) - 1
 
 
-
 def _collocate_patch(self, batch: List) -> Batch:
 
     # If we've added a Batch() into the pipeline,
@@ -176,7 +175,6 @@ class TestBucketIteratorStub(IteratorTest):
     def tearDown(self):
         self.monkeypatch.undo()
         super().tearDown()
-
 
     def test_create_batches_groups_correctly(self):
         iterator = BucketIteratorStub(
