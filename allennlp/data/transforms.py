@@ -294,6 +294,7 @@ class StopAfter(Transform[Instance]):
     max : int
         The number of instances to yield in a given epoch.
     """
+
     def __init__(self, max: int):
         self.max = max
 
@@ -322,6 +323,7 @@ class MaxSamplesPerBatch(Transform[Batched]):
         moving excess instances to the next batch (as opposed to dividing a
         large batch evenly) and should result in a fairly tight packing.
     """
+
     def __init__(self, max_samples: Tuple[str, int]):
 
         self.max_samples = max_samples
@@ -417,6 +419,7 @@ class HomogenousBatchesOf(Transform[Batched]):
         Whether the partition key actually exists in a Field with the name "metadata",
         rather than being a field itself.
     """
+
     def __init__(self, batch_size: int, partition_key: str = "dataset", in_metadata: bool = False):
 
         self.batch_size = batch_size
@@ -479,6 +482,7 @@ class Compose(Transform):
     """
     A Transform which composes a list of other Transforms.
     """
+
     def __init__(self, transforms: List[Transform]):
         self.transforms = transforms
 

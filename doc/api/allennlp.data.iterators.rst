@@ -6,6 +6,8 @@ allennlp.data.iterators
    :undoc-members:
    :show-inheritance:
 
+* :ref:`TransformIterator<transform-iterator>`
+* :ref:`transforms<transforms>`
 * :ref:`DataIterator<data-iterator>`
 * :ref:`BasicIterator<basic-iterator>`
 * :ref:`BucketIterator<bucket-iterator>`
@@ -13,6 +15,18 @@ allennlp.data.iterators
 * :ref:`HomogeneousBatchIterator<homogeneous-batch-iterator>`
 * :ref:`SameLanguageIterator<same-language-iterator>`
 * :ref:`PassThroughIterator<pass-through-iterator>`
+
+.. _transform-iterator:
+.. automodule:: allennlp.data.iterators.transform_iterator
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. _transforms:
+.. automodule:: allennlp.data.iterators.transforms
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
 .. _data-iterator:
 .. automodule:: allennlp.data.iterators.data_iterator
