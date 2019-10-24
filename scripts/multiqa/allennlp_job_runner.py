@@ -136,7 +136,7 @@ class JobRunner():
 
             if job['retries'] < 3 and job['command'].find(' train ') > -1:
                 ElasticLogger().write_log('INFO', "Job Retry", {'experiment_name': job['experiment_name'], \
-                        'command':job['command'], \
+                        'command':job['command'].replace('&',' -f &'), \
                         'log_snapshot': job['log_snapshot']}, push_bulk=True, print_log=False)
                 # old .replace('&',' --recover &')
                 job['retries'] += 1
