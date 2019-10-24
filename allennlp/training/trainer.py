@@ -692,13 +692,13 @@ class Trainer(TrainerBase):
             if self._momentum_scheduler is not None:
                 training_states["momentum_scheduler"] = self._momentum_scheduler.state_dict()
 
-
-        self._checkpointer.save_checkpoint(
-            model_state=self.model.state_dict(),
-            epoch=epoch,
-            training_states=training_states,
-            is_best_so_far=self._metric_tracker.is_best_so_far(),
-        )
+        if self._save_best_model:
+            self._checkpointer.save_checkpoint(
+                model_state=self.model.state_dict(),
+                epoch=epoch,
+                training_states=training_states,
+                is_best_so_far=self._metric_tracker.is_best_so_far(),
+            )
 
         # Restore the original values for parameters so that training will not be affected.
         if self._moving_average is not None:
