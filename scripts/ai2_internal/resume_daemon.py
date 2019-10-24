@@ -241,7 +241,9 @@ def main(args) -> None:
         create_table(connection)
 
     # Modify the crontab if needed.
-    crontab_l_result = subprocess.run(["crontab", "-l"], universal_newlines=True, stdout=PIPE, stderr=PIPE)
+    crontab_l_result = subprocess.run(
+        ["crontab", "-l"], universal_newlines=True, stdout=PIPE, stderr=PIPE
+    )
     if crontab_l_result.returncode == 0:
         current_crontab = crontab_l_result.stdout
     else:
