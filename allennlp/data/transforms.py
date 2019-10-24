@@ -1,38 +1,3 @@
-"""
-Datasets work really nicely.
-
-The main problem now is how allennlp's batching interacts with the pytorch DataLoader.
-
-At a first glance, this works:
-
-```
-def allennlp_collocate(batch):
-    batch = AllennlpBatch(batch)
-    batch.index_instances(vocab)
-    return batch.as_tensor_dict(batch.get_padding_lengths())
-```
-batch_generator = DataLoader(dataset, batch_size=32, collate_fn=allennlp_collocate)
-
-However, this only works if we want to do very basic batching. In particular,
-it can only batch elements which are returned together and because it is a function
-passed to `DataLoader`, it also has to be stateless. This is problematic,
-because allennlp has several iteration flags which are _not_ stateless.
-
-For example, `maximum_samples_per_batch` takes an existing batch of instances, and
-checks the number of _tokens_ present in a particular field. If the max_samples exceeds
-the limit, it splits the batch, caching the left over part. This is not possible using
-`colocate_fn`.
-
-
-In order to overcome this problem, I've envisioned something similar to the
-torchvision.Transform api for pre-processing images, but working on the level of entire
-datasets.
-
-The idea is that all the steps in the pipeline (indexing, batching, bucketing, filtering etc)
-can be written as generators, which can then be wrapped by pytorch datasets.
-
-"""
-
 from typing import Dict, Tuple, List, Iterable, Generic, TypeVar, Deque, Union
 import itertools
 from collections import deque, defaultdict

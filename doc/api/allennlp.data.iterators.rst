@@ -7,7 +7,6 @@ allennlp.data.iterators
    :show-inheritance:
 
 * :ref:`TransformIterator<transform-iterator>`
-* :ref:`transforms<transforms>`
 * :ref:`DataIterator<data-iterator>`
 * :ref:`BasicIterator<basic-iterator>`
 * :ref:`BucketIterator<bucket-iterator>`
@@ -22,11 +21,8 @@ allennlp.data.iterators
    :undoc-members:
    :show-inheritance:
 
-.. _transforms:
-.. automodule:: allennlp.data.iterators.transforms
-   :members:
-   :undoc-members:
-   :show-inheritance:
+.. toctree::
+  allennlp.data.transforms
 
 .. _data-iterator:
 .. automodule:: allennlp.data.iterators.data_iterator
