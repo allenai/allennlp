@@ -130,6 +130,13 @@ class Train(Subcommand):
             "settings a name in the cache, instead of computing a hash",
         )
 
+        subparser.add_argument(
+            "--dont_save_best_model",
+            action="store_true",
+            default=False,
+            help="outputs tqdm status on separate lines and slows tqdm refresh rate",
+        )
+
         subparser.set_defaults(func=train_model_from_args)
 
         return subparser
@@ -148,6 +155,7 @@ def train_model_from_args(args: argparse.Namespace):
         args.force,
         args.cache_directory,
         args.cache_prefix,
+        args.dont_save_best_model
     )
 
 
@@ -160,6 +168,7 @@ def train_model_from_file(
     force: bool = False,
     cache_directory: str = None,
     cache_prefix: str = None,
+    dont_save_best_model: bool = True
 ) -> Model:
     """
     A wrapper around :func:`train_model` which loads the params from a file.
@@ -197,6 +206,7 @@ def train_model_from_file(
         force,
         cache_directory,
         cache_prefix,
+        dont_save_best_model
     )
 
 
@@ -208,6 +218,7 @@ def train_model(
     force: bool = False,
     cache_directory: str = None,
     cache_prefix: str = None,
+    dont_save_best_model: bool = True,
 ) -> Model:
     """
     Trains the model specified in the given :class:`Params` object, using the data and training
@@ -321,7 +332,8 @@ def train_model(
     cleanup_global_logging(stdout_handler)
 
     # Now tar up results
-    archive_model(serialization_dir, files_to_archive=params.files_to_archive)
+    if not dont_save_best_model:
+        archive_model(serialization_dir, files_to_archive=params.files_to_archive)
     dump_metrics(os.path.join(serialization_dir, "metrics.json"), metrics, log=True)
 
     # We count on the trainer to have the model with best weights

@@ -110,11 +110,12 @@ class AllenNLP_Job_Dispatcher():
         return '    --include-package allennlp.data.dataset_readers.bert_mc_qa \
                     --include-package allennlp.models.bert_mc_qa \
                     --include-package allennlp.models.bert_binary_class \
-                   --include-package allennlp.data.iterators.mrqa_iterator  \
+                    --include-package allennlp.models.transformer_mc_qa \
+                    --include-package allennlp.data.iterators.mrqa_iterator  \
                     --include-package allennlp.predictors.bert_binary_class \
-                   --include-package allennlp.data.dataset_readers.reading_comprehension.multiqa_bert_mix  \
-                   --include-package allennlp.models.reading_comprehension.BERT_QA   \
-                   --include-package allennlp.data.dataset_readers.reading_comprehension.mrqa_reader \
+                    --include-package allennlp.data.dataset_readers.reading_comprehension.multiqa_bert_mix  \
+                    --include-package allennlp.models.reading_comprehension.BERT_QA   \
+                    --include-package allennlp.data.dataset_readers.reading_comprehension.mrqa_reader \
                     --include-package allennlp.models.reading_comprehension.multiqa_bert_old \
                     --include-package allennlp.models.reading_comprehension.multiqa_bert_new \
                     --include-package allennlp.models.reading_comprehension.multiqa_bert \
@@ -231,6 +232,19 @@ class AllenNLP_Job_Dispatcher():
 
         return value
 
+    def expand_experiments_list_iterators(self, experiments, list_iterators):
+        expanded_experiments = []
+        for value in list_iterators:
+            if len(experiments) > 0:
+                for experiment in experiments:
+                    new_expriment = copy.deepcopy(experiment)
+                    new_expriment.update(value)
+                    expanded_experiments.append(new_expriment)
+            else:
+                new_expriment = value
+                expanded_experiments.append(new_expriment)
+        return expanded_experiments
+
     def build_experiments_params(self, config):
         experiments = []
         iterators = []
@@ -238,28 +252,46 @@ class AllenNLP_Job_Dispatcher():
             expanded_experiments = []
             if len(experiments) > 0:
                 for experiment in experiments:
-                    for value in config['nested_iterators'][iterator]:
-                        new_expriment = copy.deepcopy(experiment)
-                        new_expriment.update({iterator: value})
-                        expanded_experiments.append(new_expriment)
+                    if type(config['nested_iterators'][iterator][0]) == dict:
+                        expanded_experiments += self.expand_experiments_list_iterators([experiment], config['nested_iterators'][iterator])
+                    else:
+                        for value in config['nested_iterators'][iterator]:
+                            new_expriment = copy.deepcopy(experiment)
+                            new_expriment.update({iterator: value})
+                            expanded_experiments.append(new_expriment)
             else:
-                for value in config['nested_iterators'][iterator]:
-                    new_expriment = {iterator: value}
-                    expanded_experiments.append(new_expriment)
+                if type(config['nested_iterators'][iterator][0]) == dict:
+                    expanded_experiments += self.expand_experiments_list_iterators([], config['nested_iterators'][iterator])
+                else:
+                    for value in config['nested_iterators'][iterator]:
+                        new_expriment = {iterator: value}
+                        expanded_experiments.append(new_expriment)
             experiments = expanded_experiments
 
         if len(config['list_iterators']) > 0:
+            experiments = self.expand_experiments_list_iterators(experiments, config['list_iterators'])
+
+        # final pass for remaining nested lists that were inside lists..
+        remaining_list_fields = []
+        for experiment in experiments:
+            for field in experiment.keys():
+                if type(experiment[field]) == list:
+                    remaining_list_fields.append(field)
+        remaining_list_fields = list(set(remaining_list_fields))
+
+        for list_field in remaining_list_fields:
             expanded_experiments = []
-            for value in config['list_iterators']:
-                if len(experiments) > 0:
-                    for experiment in experiments:
-                        new_expriment = copy.deepcopy(experiment)
-                        new_expriment.update(value)
-                        expanded_experiments.append(new_expriment)
-                else:
-                    new_expriment = value
+            for experiment in experiments:
+                for value in experiment[list_field]:
+                    new_expriment = copy.deepcopy(experiment)
+                    new_expriment.update({list_field: value})
                     expanded_experiments.append(new_expriment)
             experiments = expanded_experiments
+
+        print('printing the different configuration produced from the nested fields:')
+        for exp in experiments:
+            print(exp)
+        print('------------------')
         return experiments
 
     def build_run_script_bash_command(self, exp_config, run_name):
@@ -279,7 +311,12 @@ class AllenNLP_Job_Dispatcher():
         bash_command = 'python -m allennlp.run train ' + exp_config['master_config'] + ' '
         bash_command += '-s ' + '[MODEL_DIR]' + run_name + ' '
         bash_command += '-o "' + str(exp_config['override_config']).replace('True', 'true').replace('False', 'false') + '" '
-        bash_command += self.allennlp_include_packages()
+        if 'include_packages' in exp_config:
+            bash_command += exp_config['include_packages']
+        else:
+            bash_command += self.allennlp_include_packages()
+        if 'dont_save_best_model' in exp_config and exp_config['dont_save_best_model']:
+            bash_command += ' --dont_save_best_model'
         return bash_command
 
     def build_dry_run_bash_command(self, exp_config, run_name):
@@ -529,7 +566,7 @@ class AllenNLP_Job_Dispatcher():
             if not DRY_RUN:
                 self.send_to_queue(run_name, queue, runner_config)
                 self.runned_experiments.append(run_name)
-                time.sleep(1)
+                time.sleep(0.7)
             if run_only_one:
                 break
         if not self.QUIET_MODE:
@@ -657,12 +694,12 @@ allennlp_dispatcher = AllenNLP_Job_Dispatcher(experiment_name)
 #experiment_name = '065_BERT_train_mix_MRQA'
 #experiment_name = '066_CSQA_BERT_train'
 #experiment_name = '067_CSQA_BERTbase_grid_train'
-#experiment_name = '068_oLMpics_LearningCurves'
+experiment_name = '068_oLMpics_LearningCurves'
 #experiment_name = '069_BERTLarge_train_mix_MRQA'
 #experiment_name = '070_CSQA_BERTLarge_train'
 #experiment_name = '071_BERT_preproc_rlcwq'
 #experiment_name = '072_BERT_evaluate_crowdsense'
-experiment_name = '073_oLMpics_HP_GridSearch'
+#experiment_name = '073_oLMpics_HP_GridSearch'
 #experiment_na#me = '074_CSQA_BERTLarge_samechunk_train'
 #experiment_name = '075_CSQA_BERT_samechunk_train'
 #experiment_name = '076_beatbert_predict'
@@ -676,19 +713,19 @@ experiment_name = '073_oLMpics_HP_GridSearch'
 #experiment_name = '083_CSQA_RoBERTaLarge_samechunk_train'
 #experiment_name = '085_MultiQA_convert_to_SQuAD2.0'
 #experiment_name = '087_Pytorch_Transformers_train'
-
+#experiment_name = '088_oLMpics_build_challenge'
 #if experiment_name.find('BERTLarge') > -1 and experiment_name.find('evaluate') == -1:
 #queue = '4GPUs'
 #queue = 'V100'
 #queue = 'gamir'
 #queue = 'rack-gamir-g05'
 #queue = 'pc-jonathan1'
-#queue = 'rack-jonathan-g07'
+queue = 'rack-jonathan-g02'
 #queue = 'savant'
 
 FORCE_RUN = True
 SHOW_MISSING_RESOURCES = True
-run_only_one = False
+run_only_one = True
 
 print('Running new job on queue = %s', queue)
 allennlp_dispatcher.run_job(experiment_name, args.DRY_RUN , queue, FORCE_RUN, run_only_one)
