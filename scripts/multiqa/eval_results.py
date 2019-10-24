@@ -157,7 +157,10 @@ def main():
 
         if args.remove_serialization_dir is not None:
             logger.warning("removing the following dir %s" % (args.remove_serialization_dir))
-            shutil.rmtree(args.remove_serialization_dir)
+            try:
+                shutil.rmtree(args.remove_serialization_dir)
+            except OSError as e:
+                logger.warning("Error: %s - %s." % (e.filename, e.strerror))
     else:
         logger.error('No input provided')
 
