@@ -211,7 +211,7 @@ class TestBucketIteratorStub(IteratorTest):
                 [self.instances[4], self.instances[3]],
             ]
 
-    @pytest.mark.xfail("Unclear if we can do biggest batch first in new iterator land.")
+    @pytest.mark.skip(reason="Unclear if we can do biggest batch first in new iterator land.")
     def test_biggest_batch_first_works(self):
         iterator = BucketIteratorStub(
             batch_size=2,
