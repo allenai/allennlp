@@ -131,6 +131,9 @@ def main(param_file: str, args: argparse.Namespace):
     def resume_command(experiment_id):
         resume_daemon_path = os.path.join(os.path.dirname(__file__), "resume_daemon.py")
         return [
+            # Run with python (instead of calling directly) in case the
+            # executable bit wasn't preserved for some reason.
+            "python3",
             resume_daemon_path,
             "--action=start",
             f"--max-resumes={args.max_resumes}",
