@@ -68,6 +68,7 @@ class Trainer(TrainerBase):
         log_batch_size_period: Optional[int] = None,
         moving_average: Optional[MovingAverage] = None,
         gradient_accumulation_steps: int = 1,
+        save_best_model: bool = True
     ) -> None:
         """
         A trainer for doing supervised learning. It just takes a labeled dataset
@@ -193,6 +194,7 @@ class Trainer(TrainerBase):
         self.train_data = train_dataset
         self._validation_data = validation_dataset
         self._gradient_accumulation_steps = gradient_accumulation_steps
+        self._save_best_model = save_best_model
 
         if patience is None:  # no early stopping
             if validation_dataset:
@@ -650,9 +652,10 @@ class Trainer(TrainerBase):
         self._tensorboard.close()
 
         # Load the best model state before returning
-        best_model_state = self._checkpointer.best_model_state()
-        if best_model_state:
-            self.model.load_state_dict(best_model_state)
+        if self._save_best_model:
+            best_model_state = self._checkpointer.best_model_state()
+            if best_model_state:
+                self.model.load_state_dict(best_model_state)
 
         return metrics
 
@@ -778,6 +781,7 @@ class Trainer(TrainerBase):
         shuffle = params.pop_bool("shuffle", True)
         num_epochs = params.pop_int("num_epochs", 20)
         gradient_accumulation_steps = params.pop_int("gradient_accumulation_steps", 1)
+        save_best_model = params.pop_bool("save_best_model", True)
         cuda_device = parse_cuda_device(params.pop("cuda_device", -1))
         grad_norm = params.pop_float("grad_norm", None)
         grad_clipping = params.pop_float("grad_clipping", None)
