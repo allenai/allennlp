@@ -3,7 +3,7 @@ import json
 import logging
 from typing import Any, Dict, List, Tuple
 import zipfile, gzip, re, copy, random, math
-import sys, os
+import sys, os, shutil
 import numpy
 from typing import TypeVar,Iterable
 from multiprocessing import Pool
@@ -148,11 +148,16 @@ def main():
     parse.add_argument("--full_experiments_name", default=None, type=str)
     parse.add_argument("--predictions_file", default=None, type=str)
     parse.add_argument("--eval_path", default=None, type=str)
+    parse.add_argument("--remove_serialization_dir", default=None, type=str)
     args = parse.parse_args()
 
 
     if args.eval_res_file is not None:
         process_results(args)
+
+        if args.remove_serialization_dir is not None:
+            logger.warning("removing the following dir %s" % (args.remove_serialization_dir))
+            shutil.rmtree(args.remove_serialization_dir)
     else:
         logger.error('No input provided')
 
