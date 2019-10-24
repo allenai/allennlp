@@ -114,9 +114,15 @@ class Transform(IterableTorchDataset, Generic[InstanceOrBatch], Registrable):
 @Transform.register("max_instances_in_memory")
 class MaxInstancesInMemory(Transform[Batched]):
     """
-    turns a dataset into a dataset of chunks of size max_instances_in_memory.
+    Turns a dataset into a dataset of chunks of size max_instances_in_memory.
     This is helpful if you have an IterableDataset which you want to read a chunk from
     so you can sort it by padding, and then batch afterward.
+
+    Parameters
+    ----------
+    max_instances_in_memory : int
+        The size of the chunk to read into memory.
+
     """
 
     def __init__(self, max_instances_in_memory: int):
@@ -140,7 +146,14 @@ class MaxInstancesInMemory(Transform[Batched]):
 @Transform.register("batch")
 class Batch(Transform[Batched]):
     """
-    Batches a dataset.
+    Batches a dataset. Note that this is exactly the same
+    as MaxInstancesInMemory, but we have a duplicated class
+    with different parameter names for a nice API.
+
+    Parameters
+    ----------
+    batch_size: int
+        The batch size to convert instances into.
     """
 
     def __init__(self, batch_size: int):
@@ -179,6 +192,28 @@ class Index(Transform[Instance]):
 
 @Transform.register("sort_by_padding")
 class SortByPadding(Transform[Batched]):
+
+    """
+    Sorts a list of instances by padding and returns them.
+
+    Parameters
+    ----------
+    sorting_keys : List[Tuple[str, str]]
+        To bucket inputs into batches, we want to group the instances by padding length, so that we
+        minimize the amount of padding necessary per batch. In order to do this, we need to know
+        which fields need what type of padding, and in what order.
+
+        For example, ``[("sentence1", "num_tokens"), ("sentence2", "num_tokens"), ("sentence1",
+        "num_token_characters")]`` would sort a dataset first by the "num_tokens" of the
+        "sentence1" field, then by the "num_tokens" of the "sentence2" field, and finally by the
+        "num_token_characters" of the "sentence1" field.  TODO(mattg): we should have some
+        documentation somewhere that gives the standard padding keys used by different fields.
+    padding_noise : float, optional (default=.1)
+        When sorting by padding length, we add a bit of noise to the lengths, so that the sorting
+        isn't deterministic.  This parameter determines how much noise we add, as a percentage of
+        the actual padding value for each instance.
+    """
+
     def __init__(self, sorting_keys: List[Tuple[str, str]], padding_noise: float = 0.1):
 
         self.sorting_keys = sorting_keys
@@ -225,9 +260,17 @@ class EpochTracker(Transform[Instance]):
 
 @Transform.register("skip_smaller_than")
 class SkipSmallerThan(Transform[Batched]):
+    """
+    Skip batches that are smaller than a specified size.
+    Useful if you don't want the uneven tail of a dataset
+    to be returned as a smaller batch.
 
-    # TODO(Mark): this could collect smaller sub batches
-    # and yield them once it has enough, maybe.
+    Parameters
+    ----------
+    min_size : int
+        The minimum size of a batch. Only batches of size greater
+        than or equal to this will be returned.
+    """
 
     def __init__(self, min_size: int):
         self.min_size = min_size
@@ -239,9 +282,18 @@ class SkipSmallerThan(Transform[Batched]):
             yield batch
 
 
-# This could also be generic over Iterable[Instance], Iterable[Batched]....
 @Transform.register("stop_after")
 class StopAfter(Transform[Instance]):
+    """
+    Stop an epoch after a fixed number of individual instances.
+    NOTE: The TransformIterator will ensure that the next epoch
+    starts from where we stopped.
+
+    Parameters
+    ----------
+    max : int
+        The number of instances to yield in a given epoch.
+    """
     def __init__(self, max: int):
         self.max = max
 
@@ -256,6 +308,20 @@ class StopAfter(Transform[Instance]):
 
 @Transform.register("max_samples_per_batch")
 class MaxSamplesPerBatch(Transform[Batched]):
+    """
+    Ensures that batches are smaller than a specified number of tokens
+    for a particular paddding key. This is an effective method to control
+    the expected memory usage of a model.
+
+    Parameters
+    ----------
+    maximum_samples_per_batch : ``Tuple[str, int]``, (default = None)
+        If specified, then is a tuple (padding_key, limit) and we will ensure
+        that every batch is such that batch_size * sequence_length <= limit
+        where sequence_length is given by the padding_key. This is done by
+        moving excess instances to the next batch (as opposed to dividing a
+        large batch evenly) and should result in a fairly tight packing.
+    """
     def __init__(self, max_samples: Tuple[str, int]):
 
         self.max_samples = max_samples
@@ -333,6 +399,24 @@ class MaxSamplesPerBatch(Transform[Batched]):
 
 @Transform.register("homogenous_batches_of")
 class HomogenousBatchesOf(Transform[Batched]):
+
+    """
+    This Transform takes a dataset of potentially heterogeneous instances
+    and yields back homogeneous batches. It assumes that each instance has
+    some ``MetadataField`` indicating what "type" of instance it is
+    and bases its notion of homogeneity on that (and, in particular, not on
+    inspecting the "field signature" of the instance.)
+
+    Parameters
+    ----------
+    batch_size : ``int``, required
+        The batch size to use to batch instances.
+    partition_key : ``str``, optional, (default = "dataset")
+        The key of the ``MetadataField`` indicating what "type" of instance this is.
+    in_metadata : ``boool``: optional (default = False)
+        Whether the partition key actually exists in a Field with the name "metadata",
+        rather than being a field itself.
+    """
     def __init__(self, batch_size: int, partition_key: str = "dataset", in_metadata: bool = False):
 
         self.batch_size = batch_size
@@ -371,6 +455,12 @@ class HomogenousBatchesOf(Transform[Batched]):
 
 @Transform.register("fork")
 class Fork(Transform[Instance]):
+    """
+    A transform which forks a dataset being read by multiple workers
+    into independent streams. Each worker specified by the DataLoader
+    will read instances modulo it's worker id.
+    """
+
     def transform(self, dataset: Iterable[Instance]) -> Iterable[Instance]:
 
         info = torch.utils.data.get_worker_info()
@@ -386,6 +476,9 @@ class Fork(Transform[Instance]):
 
 @Transform.register("compose")
 class Compose(Transform):
+    """
+    A Transform which composes a list of other Transforms.
+    """
     def __init__(self, transforms: List[Transform]):
         self.transforms = transforms
 
