@@ -27,7 +27,7 @@ local cuda_device = 0;
     "pretrained_model": transformer_model,
     "max_pieces": 256
   },
-  "datasets_for_vocab_creation": [],
+  //"datasets_for_vocab_creation": [],
   "train_data_path": "s3://olmpics/challenge/commonsense_knowledge_train.jsonl.gz",
   "validation_data_path": "s3://olmpics/challenge/commonsense_knowledge_dev.jsonl.gz",
 
