@@ -27,6 +27,7 @@
 from enum import Enum
 from logging.handlers import RotatingFileHandler
 from sqlite3 import Connection
+from subprocess import PIPE
 import argparse
 import json
 import logging
@@ -41,8 +42,12 @@ logger.setLevel(logging.DEBUG)
 formatter = logging.Formatter(
     fmt="%(asctime)s %(levelname)-8s %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
 )
+dot_allennlp_dir = f"{os.environ['HOME']}/.allennlp"
+# Special case for users that haven't run AllenNLP locally.
+if not os.path.exists(dot_allennlp_dir):
+    os.mkdir(dot_allennlp_dir)
 handler = RotatingFileHandler(
-    f"{os.environ['HOME']}/.allennlp/resume.log", maxBytes=1024 * 1024, backupCount=10
+    f"{dot_allennlp_dir}/resume.log", maxBytes=1024 * 1024, backupCount=10
 )
 handler.setFormatter(formatter)
 logger.addHandler(handler)
@@ -223,7 +228,7 @@ def main(args) -> None:
     # Smooth load from potentially many daemons on different machines.
     time.sleep(random.randint(0, args.random_delay_seconds))
 
-    db_path = os.environ["HOME"] + "/.allennlp/resume.db"
+    db_path = f"{dot_allennlp_dir}/resume.db"
     connection = sqlite3.connect(db_path)
 
     # Create the DB if needed.
@@ -236,7 +241,18 @@ def main(args) -> None:
         create_table(connection)
 
     # Modify the crontab if needed.
-    current_crontab = subprocess.check_output(["crontab", "-l"], universal_newlines=True)
+    crontab_l_result = subprocess.run(
+        ["crontab", "-l"], universal_newlines=True, stdout=PIPE, stderr=PIPE
+    )
+    if crontab_l_result.returncode == 0:
+        current_crontab = crontab_l_result.stdout
+    else:
+        # `crontab -l` fails when a crontab hasn't been installed previously.
+        # Sanity check the error message to guard against blowing away the
+        # crontab in some obscure failure case.
+        assert "no crontab" in crontab_l_result.stderr, f"crontab failed: {crontab_l_result.stderr}"
+        current_crontab = ""
+
     full_path = os.path.abspath(__file__)
     if full_path not in current_crontab:
         # Execute this script every ten minutes. We set the PATH to that used
@@ -244,7 +260,7 @@ def main(args) -> None:
         # and beaker.
         cron_line = (
             f"*/10 * * * * bash -c 'export PATH={os.environ['PATH']};"
-            f" {full_path} --action=resume --random-delay-seconds=60'\n"
+            f" python3 {full_path} --action=resume --random-delay-seconds=60'\n"
         )
         new_crontab = current_crontab + cron_line
         subprocess.run(["crontab", "-"], input=new_crontab, encoding="utf-8")
