@@ -103,7 +103,7 @@ setup(
     install_requires=[
         "torch>=1.2.0,!=1.3.0",
         "jsonnet>=0.10.0 ; sys.platform != 'win32'",
-        "overrides",
+        "overrides==2.0",
         "nltk",
         "spacy>=2.1.0,<2.2",
         "numpy",
