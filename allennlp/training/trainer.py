@@ -174,6 +174,14 @@ class Trainer(TrainerBase):
             parameters. Be careful that when saving the checkpoint, we will save the moving averages of
             parameters. This is necessary because we want the saved model to perform as well as the validated
             model if we load it later. But this may cause problems if you restart the training from checkpoint.
+        distributed: ``bool``, optional, (default = False)
+            If set, PyTorch's `DistributedDataParallel` is used to train the model in multiple GPUs. This also
+            requires `world_size` to be greater than 1.
+        rank: ``int``, optional, (default = 0)
+            This is the unique identifier of the `Trainer` in a distributed process group. The GPU device id is used
+            as the rank.
+        world_size: ``int``, (default = 1)
+            The number of `Trainer` workers participating in the distributed training.
         """
         super().__init__(serialization_dir, cuda_device, distributed, rank, world_size)
 
@@ -758,11 +766,7 @@ class Trainer(TrainerBase):
 
         distributed = params.pop_bool("distributed", False)
         world_size = params.pop_int("world_size", 1)
-        if distributed and world_size <= 1:
-            raise ConfigurationError(
-                "Distributed training can be performed only with more than 1 GPU device. Check "
-                "`cuda_device` key in the experiment configuration."
-            )
+
         if distributed:
             rank = model_device
         else:

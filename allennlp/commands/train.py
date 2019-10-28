@@ -294,7 +294,7 @@ def _train_worker(
     Parameters
     ----------
     rank : ``int``
-        The process index.
+        The process index that is initialized using the GPU device id.
     params : ``Params``
         A parameter object specifying an AllenNLP Experiment.
     serialization_dir : ``str``

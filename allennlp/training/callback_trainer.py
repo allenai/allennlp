@@ -339,11 +339,7 @@ class CallbackTrainer(TrainerBase):
 
         distributed = params.pop_bool("distributed", False)
         world_size = params.pop_int("world_size", 1)
-        if distributed and world_size <= 1:
-            raise ConfigurationError(
-                "Distributed training can be performed only with more than 1 GPU device. Check "
-                "`cuda_device` key in the experiment configuration."
-            )
+
         if distributed:
             rank = model_device
         else:

@@ -45,6 +45,12 @@ class TrainerBase(Registrable):
                 "Expected an int or list for cuda_device, got {}".format(cuda_device)
             )
 
+        if distributed and world_size <= 1:
+            raise ConfigurationError(
+                "Distributed training can be performed only with more than 1 GPU device. Check "
+                "`cuda_device` key in the experiment configuration."
+            )
+
         if isinstance(cuda_device, list):
             assert (
                 not distributed
