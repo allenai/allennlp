@@ -11,7 +11,7 @@ from typing import Dict, Optional, List, Union, Any, Iterable
 import torch
 
 from allennlp.common import Params
-from allennlp.common.checks import ConfigurationError, parse_cuda_device
+from allennlp.common.checks import parse_cuda_device
 from allennlp.common.tqdm import Tqdm
 from allennlp.common.util import lazy_groups_of
 from allennlp.data.instance import Instance

@@ -178,8 +178,8 @@ class Trainer(TrainerBase):
             If set, PyTorch's `DistributedDataParallel` is used to train the model in multiple GPUs. This also
             requires `world_size` to be greater than 1.
         rank: ``int``, optional, (default = 0)
-            This is the unique identifier of the `Trainer` in a distributed process group. The GPU device id is used
-            as the rank.
+            This is the unique identifier of the `Trainer` in a distributed process group. The GPU device id is
+            used as the rank.
         world_size: ``int``, (default = 1)
             The number of `Trainer` workers participating in the distributed training.
         """
