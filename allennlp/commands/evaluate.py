@@ -56,7 +56,7 @@ import json
 
 
 from allennlp.commands.subcommand import Subcommand
-from allennlp.common.util import prepare_environment
+from allennlp.common.util import prepare_environment, dump_metrics
 
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.iterators import DataIterator
@@ -159,12 +159,13 @@ def evaluate_from_args(args: argparse.Namespace) -> Dict[str, Any]:
     logger.info("Reading evaluation data from %s", evaluation_data_path)
     instances = dataset_reader.read(evaluation_data_path)
 
-    embedding_sources: Dict[str, str] = (
+    embedding_sources = (
         json.loads(args.embedding_sources_mapping) if args.embedding_sources_mapping else {}
     )
+
     if args.extend_vocab:
         logger.info("Vocabulary is being extended with test instances.")
-        model.vocab.extend_from_instances(Params({}), instances=instances)
+        model.vocab.extend_from_instances(Params({}), instances)
         model.extend_embedder_vocab(embedding_sources)
 
     iterator_params = config.pop("validation_iterator", None)
@@ -176,12 +177,7 @@ def evaluate_from_args(args: argparse.Namespace) -> Dict[str, Any]:
     metrics = evaluate(model, instances, iterator, args.cuda_device, args.batch_weight_key)
 
     logger.info("Finished evaluating.")
-    logger.info("Metrics:")
-    for key, metric in metrics.items():
-        logger.info("%s: %s", key, metric)
 
-    output_file = args.output_file
-    if output_file:
-        with open(output_file, "w") as file:
-            json.dump(metrics, file, indent=4)
+    dump_metrics(args.output_file, metrics, log=True)
+
     return metrics

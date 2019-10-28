@@ -61,3 +61,7 @@ class TeeLogger:
     def cleanup(self) -> TextIO:
         self.log.close()
         return self.terminal
+
+    @staticmethod
+    def getvalue() -> str:
+        return ""

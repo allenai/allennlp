@@ -43,23 +43,21 @@ which to write the results.
                             additional packages to include
 """
 
-from typing import List, Tuple
 import argparse
-import re
-import os
-import math
 import logging
-import shutil
+import math
+import os
+import re
+from typing import List, Tuple
 
 from allennlp.commands.subcommand import Subcommand
-from allennlp.common.checks import ConfigurationError, check_for_gpu
 from allennlp.common import Params, Tqdm
+from allennlp.common.checks import ConfigurationError, check_for_gpu
 from allennlp.common.util import prepare_environment, lazy_groups_of
 from allennlp.data import Vocabulary, DataIterator
 from allennlp.models import Model
 from allennlp.training import Trainer
-from allennlp.training.util import datasets_from_params
-
+from allennlp.training.util import datasets_from_params, create_serialization_dir
 
 logger = logging.getLogger(__name__)
 
@@ -180,15 +178,7 @@ def find_learning_rate_model(
         If True and the serialization directory already exists, everything in it will
         be removed prior to finding the learning rate.
     """
-    if os.path.exists(serialization_dir) and force:
-        shutil.rmtree(serialization_dir)
-
-    if os.path.exists(serialization_dir) and os.listdir(serialization_dir):
-        raise ConfigurationError(
-            f"Serialization directory {serialization_dir} already exists and is " f"not empty."
-        )
-
-    os.makedirs(serialization_dir, exist_ok=True)
+    create_serialization_dir(params, serialization_dir, recover=False, force=force)
 
     prepare_environment(params)
 

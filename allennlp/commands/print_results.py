@@ -85,15 +85,15 @@ def print_results_from_args(args: argparse.Namespace):
 
     results_dict = {}
     for root, _, files in os.walk(path):
-
         if metrics_name in files:
             full_name = os.path.join(root, metrics_name)
-            metrics = json.load(open(full_name))
+            with open(full_name) as file:
+                metrics = json.load(file)
             results_dict[full_name] = metrics
 
     sorted_keys = sorted(list(results_dict.keys()))
     print(f"model_run, {', '.join(keys)}")
     for name in sorted_keys:
         results = results_dict[name]
-        keys_to_print = [str(results.get(key, "N/A")) for key in keys]
+        keys_to_print = (str(results.get(key, "N/A")) for key in keys)
         print(f"{name}, {', '.join(keys_to_print)}")

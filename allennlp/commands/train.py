@@ -44,15 +44,16 @@ which to write the results.
 import argparse
 import logging
 import os
+from typing import Dict
 
 from allennlp.commands.subcommand import Subcommand
-from allennlp.common.checks import check_for_gpu
 from allennlp.common import Params
+from allennlp.common.checks import check_for_gpu
 from allennlp.common.util import (
-    prepare_environment,
-    prepare_global_logging,
     cleanup_global_logging,
     dump_metrics,
+    prepare_environment,
+    prepare_global_logging,
 )
 from allennlp.models.archival import archive_model, CONFIG_NAME
 from allennlp.models.model import Model, _DEFAULT_WEIGHTS
@@ -208,6 +209,11 @@ def train_model(
     force: bool = False,
     cache_directory: str = None,
     cache_prefix: str = None,
+    batch_weight_key: str = "",
+    # For fine-tuning:
+    model: Model = None,
+    extend_vocab: bool = False,
+    embedding_sources_mapping: Dict[str, str] = None,
 ) -> Model:
     """
     Trains the model specified in the given :class:`Params` object, using the data and training
@@ -232,6 +238,16 @@ def train_model(
         For caching data pre-processing.  See :func:`allennlp.training.util.datasets_from_params`.
     cache_prefix : ``str``, optional
         For caching data pre-processing.  See :func:`allennlp.training.util.datasets_from_params`.
+    batch_weight_key : ``str``, optional (default="")
+        If non-empty, name of metric used to weight the loss on a per-batch basis.
+    model : ``Model``, optional
+        A model to fine tune.
+    extend_vocab: ``bool``, optional (default=False)
+        If ``True``, we use the new instances to extend your vocabulary.
+        Used only when fine-tuning.
+    embedding_sources_mapping: ``Dict[str, str]``, optional (default=None)
+        mapping from model paths to the pretrained embedding filepaths.
+        Used only when fine-tuning.
 
     Returns
     -------
@@ -254,7 +270,14 @@ def train_model(
     if trainer_type == "default":
         # Special logic to instantiate backward-compatible trainer.
         pieces = TrainerPieces.from_params(
-            params, serialization_dir, recover, cache_directory, cache_prefix
+            params=params,
+            serialization_dir=serialization_dir,
+            recover=False,
+            cache_directory=None,
+            cache_prefix=None,
+            model=model,
+            embedding_sources_mapping=embedding_sources_mapping,
+            extend_vocab=extend_vocab,
         )
         trainer = Trainer.from_params(
             model=pieces.model,
@@ -282,6 +305,7 @@ def train_model(
             params, serialization_dir, recover, cache_directory, cache_prefix
         )
         evaluation_dataset = None
+        evaluation_iterator = None
 
     params.assert_empty("base train command")
 
@@ -305,8 +329,7 @@ def train_model(
             evaluation_dataset,
             evaluation_iterator,
             cuda_device=trainer._cuda_devices[0],
-            # TODO(brendanr): Pass in an arg following Joel's trainer refactor.
-            batch_weight_key="",
+            batch_weight_key=batch_weight_key,
         )
 
         for key, value in test_metrics.items():
