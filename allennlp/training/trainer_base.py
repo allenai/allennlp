@@ -27,7 +27,14 @@ class TrainerBase(Registrable):
 
     default_implementation = "default"
 
-    def __init__(self, serialization_dir: str, cuda_device: Union[int, List] = -1) -> None:
+    def __init__(
+        self,
+        serialization_dir: str,
+        cuda_device: Union[int, List] = -1,
+        distributed: bool = False,
+        rank: int = 0,
+        world_size: int = 1,
+    ) -> None:
         check_for_gpu(cuda_device)
 
         self._serialization_dir = serialization_dir
@@ -38,12 +45,26 @@ class TrainerBase(Registrable):
                 "Expected an int or list for cuda_device, got {}".format(cuda_device)
             )
 
+        if distributed and world_size <= 1:
+            raise ConfigurationError(
+                "Distributed training can be performed only with more than 1 GPU device. Check "
+                "`cuda_device` key in the experiment configuration."
+            )
+
         if isinstance(cuda_device, list):
+            assert (
+                not distributed
+            )  # For distributed training, every trainer worker is only assigned with a single GPU
             self._multiple_gpu = True
             self._cuda_devices = cuda_device
         else:
             self._multiple_gpu = False
             self._cuda_devices = [cuda_device]
+
+        self._distributed = distributed
+        self._rank = rank
+        self._master = self._rank == 0
+        self._world_size = world_size
 
     def _move_to_gpu(self, model: Model) -> Model:
         if self._cuda_devices[0] != -1:

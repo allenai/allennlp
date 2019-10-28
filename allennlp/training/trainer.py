@@ -60,6 +60,9 @@ class Trainer(TrainerBase):
         should_log_learning_rate: bool = False,
         log_batch_size_period: Optional[int] = None,
         moving_average: Optional[MovingAverage] = None,
+        distributed: bool = False,
+        rank: int = 0,
+        world_size: int = 1,
     ) -> None:
         """
         A trainer for doing supervised learning. It just takes a labeled dataset
@@ -171,8 +174,16 @@ class Trainer(TrainerBase):
             parameters. Be careful that when saving the checkpoint, we will save the moving averages of
             parameters. This is necessary because we want the saved model to perform as well as the validated
             model if we load it later. But this may cause problems if you restart the training from checkpoint.
+        distributed: ``bool``, optional, (default = False)
+            If set, PyTorch's `DistributedDataParallel` is used to train the model in multiple GPUs. This also
+            requires `world_size` to be greater than 1.
+        rank: ``int``, optional, (default = 0)
+            This is the unique identifier of the `Trainer` in a distributed process group. The GPU device id is
+            used as the rank.
+        world_size: ``int``, (default = 1)
+            The number of `Trainer` workers participating in the distributed training.
         """
-        super().__init__(serialization_dir, cuda_device)
+        super().__init__(serialization_dir, cuda_device, distributed, rank, world_size)
 
         # I am not calling move_to_gpu here, because if the model is
         # not already on the GPU then the optimizer is going to be wrong.
@@ -753,6 +764,14 @@ class Trainer(TrainerBase):
         should_log_learning_rate = params.pop_bool("should_log_learning_rate", False)
         log_batch_size_period = params.pop_int("log_batch_size_period", None)
 
+        distributed = params.pop_bool("distributed", False)
+        world_size = params.pop_int("world_size", 1)
+
+        if distributed:
+            rank = model_device
+        else:
+            rank = 0
+
         params.assert_empty(cls.__name__)
         return cls(
             model,
@@ -779,4 +798,7 @@ class Trainer(TrainerBase):
             should_log_learning_rate=should_log_learning_rate,
             log_batch_size_period=log_batch_size_period,
             moving_average=moving_average,
+            distributed=distributed,
+            rank=rank,
+            world_size=world_size,
         )
