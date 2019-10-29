@@ -5,14 +5,14 @@ from allennlp.data.dataset_readers import DatasetReader, InterleavingDatasetRead
 from allennlp.data.fields import TextField
 from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import SingleIdTokenIndexer
-from allennlp.data.tokenizers import WordTokenizer
+from allennlp.data.tokenizers import SpacyTokenizer
 
 
 class PlainTextReader(DatasetReader):
     def __init__(self):
         super().__init__()
         self._token_indexers = {"tokens": SingleIdTokenIndexer()}
-        self._tokenizer = WordTokenizer()
+        self._tokenizer = SpacyTokenizer()
 
     def _read(self, file_path: str) -> Iterable[Instance]:
         with open(file_path) as input_file:

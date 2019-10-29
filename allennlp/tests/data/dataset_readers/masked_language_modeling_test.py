@@ -25,8 +25,8 @@ class TestMaskedLanguageModelingDatasetReader(AllenNlpTestCase):
         assert tensor_dict["mask_positions"].numpy().tolist() == [[3]]
 
     def test_text_to_instance_with_bert_tokenizer_and_indexer(self):
-        tokenizer = PretrainedTransformerTokenizer("bert-base-cased", do_lowercase=False)
-        token_indexer = PretrainedTransformerIndexer("bert-base-cased", do_lowercase=False)
+        tokenizer = PretrainedTransformerTokenizer("bert-base-cased")
+        token_indexer = PretrainedTransformerIndexer("bert-base-cased")
         reader = MaskedLanguageModelingReader(tokenizer, {"bert": token_indexer})
         instance = reader.text_to_instance(
             sentence="This is AllenNLP [MASK] token .", targets=["This"]

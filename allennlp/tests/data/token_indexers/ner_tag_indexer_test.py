@@ -3,16 +3,16 @@ from collections import defaultdict
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Token, Vocabulary
 from allennlp.data.token_indexers import NerTagIndexer
-from allennlp.data.tokenizers.word_splitter import SpacyWordSplitter
+from allennlp.data.tokenizers.spacy_tokenizer import SpacyTokenizer
 
 
 class TestNerTagIndexer(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
-        self.tokenizer = SpacyWordSplitter(ner=True)
+        self.tokenizer = SpacyTokenizer(ner=True)
 
     def test_count_vocab_items_uses_ner_tags(self):
-        tokens = self.tokenizer.split_words("Larry Page is CEO of Google.")
+        tokens = self.tokenizer.tokenize("Larry Page is CEO of Google.")
         tokens = [Token("<S>")] + [t for t in tokens] + [Token("</S>")]
         indexer = NerTagIndexer()
         counter = defaultdict(lambda: defaultdict(int))
@@ -21,7 +21,7 @@ class TestNerTagIndexer(AllenNlpTestCase):
         assert counter["ner_tokens"] == {"PERSON": 2, "ORG": 1, "NONE": 6}
 
     def test_tokens_to_indices_uses_ner_tags(self):
-        tokens = self.tokenizer.split_words("Larry Page is CEO of Google.")
+        tokens = self.tokenizer.tokenize("Larry Page is CEO of Google.")
         tokens = [t for t in tokens] + [Token("</S>")]
         vocab = Vocabulary()
         person_index = vocab.add_token_to_namespace("PERSON", namespace="ner_tags")

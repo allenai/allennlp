@@ -11,7 +11,7 @@ from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.instance import Instance
 from allennlp.data.dataset_readers.reading_comprehension import util
 from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenIndexer
-from allennlp.data.tokenizers import Token, Tokenizer, WordTokenizer
+from allennlp.data.tokenizers import Token, Tokenizer, SpacyTokenizer
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +44,7 @@ class TriviaQaReader(DatasetReader):
         tarball.
     tokenizer : ``Tokenizer``, optional
         We'll use this tokenizer on questions and evidence passages, defaulting to
-        ``WordTokenizer`` if none is provided.
+        ``SpacyTokenizer`` if none is provided.
     token_indexers : ``Dict[str, TokenIndexer]``, optional
         Determines how both the question and the evidence passages are represented as arrays.  See
         :class:`TokenIndexer`.  Default is to have a single word ID for every token.
@@ -61,7 +61,7 @@ class TriviaQaReader(DatasetReader):
         super().__init__(lazy)
         self._base_tarball_path = base_tarball_path
         self._unfiltered_tarball_path = unfiltered_tarball_path
-        self._tokenizer = tokenizer or WordTokenizer()
+        self._tokenizer = tokenizer or SpacyTokenizer()
         self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
 
     @overrides
