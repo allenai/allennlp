@@ -3,6 +3,8 @@ import logging
 import os
 import sys
 
+import torch
+
 if os.environ.get("ALLENNLP_DEBUG"):
     LEVEL = logging.DEBUG
 else:
@@ -19,4 +21,8 @@ def run():
 
 
 if __name__ == "__main__":
+    # First, let Pytorch's multiprocessing module know how to create child processes.
+    # Refer https://docs.python.org/3.7/library/multiprocessing.html#multiprocessing.set_start_method
+    torch.multiprocessing.set_start_method("spawn")
+
     run()
