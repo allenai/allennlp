@@ -41,6 +41,14 @@ class Transform(IterableTorchDataset, Generic[InstanceOrBatch], Registrable):
 
         raise NotImplementedError
 
+    def transform_batch(self, batches: Iterable[Batched]) -> Iterable[Batched]:
+
+        # TODO Maybe switch this so that the base class just yields and the
+        # subclasses which are generic over Batched yield from
+        for batch in batches:
+            yield from self.transform(batch)  # type: ignore
+
+
     def __call__(self, dataset: Iterable[Instance]) -> Iterable[InstanceOrBatch]:
         # wrapper to make sure transform only has to be
         # Iterable[Instance] -> Iterable[InstanceOrBatch],
@@ -56,12 +64,7 @@ class Transform(IterableTorchDataset, Generic[InstanceOrBatch], Registrable):
             if isinstance(example, Instance):
                 yield from self.transform(itertools.chain([example], iterable))
             else:
-                # IMPORTANT! These have to be yield from. because some
-                # transforms themeselves return something that is iterable.
-                yield from self.transform(example)
-
-                for example in iterable:
-                    yield from self.transform(example)
+                yield from self.transform_batch(itertools.chain([example], iterable))
 
         return DatasetFromGenerator(generator())
 
@@ -143,6 +146,12 @@ class Index(Transform[Instance]):
             instance.index_fields(self.vocab)
 
             yield instance
+
+    def transform_batch(self, batches: Iterable[Batched]) -> Iterable[Batched]:
+
+        for batch in batches:
+            # Note this is not yield from
+            yield self.transform(batch)
 
 
 @Transform.register("sort_by_padding")
@@ -232,9 +241,16 @@ class SkipSmallerThan(Transform[Batched]):
 
     def transform(self, dataset: Iterable[Instance]) -> Iterable[Batched]:
 
-        batch = list(dataset)
-        if len(batch) >= self.min_size:
-            yield batch
+        raise NotImplementedError(
+            "SkipSmallerThan cannot be called on Instances. Please add Batch to your pipeline first."
+        )
+
+    def transform_batch(self, batches: Iterable[Batched]) -> Iterable[Batched]:
+        for batch in batches:
+            batch = list(batch)
+
+            if len(batch) >= self.min_size:
+                yield batch
 
 
 @Transform.register("stop_after")
@@ -257,6 +273,14 @@ class StopAfter(Transform[Instance]):
         i = 0
         for instance in dataset:
             yield instance
+            i += 1
+            if i >= self.max:
+                break
+
+    def transform_batch(self, batches: Iterable[Batched]) -> Iterable[Batched]:
+        i = 0
+        for batch in batches:
+            yield batch
             i += 1
             if i >= self.max:
                 break
@@ -429,6 +453,17 @@ class Fork(Transform[Instance]):
                 yield instance
             elif i % info.num_workers == info.id:
                 yield instance
+            i += 1
+
+    def transform_batch(self, batches: Iterable[Batched]) -> Iterable[Batched]:
+
+        info = torch.utils.data.get_worker_info()
+        i = 0
+        for batch in batches:
+            if info is None:
+                yield batch
+            elif i % info.num_workers == info.id:
+                yield batch
             i += 1
 
 

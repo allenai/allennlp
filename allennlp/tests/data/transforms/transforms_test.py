@@ -9,7 +9,6 @@ from allennlp.tests.data.iterators.basic_iterator_test import IteratorTest
 
 
 class TransformsTest(IteratorTest):
-
     def test_batch_transform(self):
 
         transformed = transforms.Batch(2)(self.instances)
@@ -29,7 +28,6 @@ class TransformsTest(IteratorTest):
             [self.instances[0], self.instances[1]],
             [self.instances[2], self.instances[3]],
             [self.instances[4]],
-
             [self.instances[0], self.instances[1]],
             [self.instances[2], self.instances[3]],
             [self.instances[4]],
@@ -55,7 +53,6 @@ class TransformsTest(IteratorTest):
             [self.instances[0], self.instances[1]],
             [self.instances[2], self.instances[3]],
             [self.instances[4]],
-
             [self.instances[0], self.instances[1]],
             [self.instances[2], self.instances[3]],
             [self.instances[4]],
@@ -69,6 +66,14 @@ class TransformsTest(IteratorTest):
 
         for instance in transformed:
             assert instance.indexed
+
+        batch = transforms.Batch(2)
+
+        transformed = index(batch(self.instances))
+
+        batches = [[a for a in x] for x in transformed]
+
+        print(batches)
 
     def test_epoch_tracker_adds_metadata(self):
 
@@ -103,18 +108,20 @@ class TransformsTest(IteratorTest):
 
         stopped = [instance for instance in transformed]
 
-        assert stopped == [
-            self.instances[0],
-            self.instances[1],
-            self.instances[2],
-        ]
+        assert stopped == [self.instances[0], self.instances[1], self.instances[2]]
 
         stop_after = transforms.StopAfter(3)
         batch = transforms.Batch(2)
         transformed = batch(stop_after(self.instances))
 
         batches = [batch for batch in transformed]
+        assert batches == [[self.instances[0], self.instances[1]], [self.instances[2]]]
+        stop_after = transforms.StopAfter(2)
+        batch = transforms.Batch(2)
+        transformed = stop_after(batch(self.instances))
+
+        batches = [batch for batch in transformed]
         assert batches == [
             [self.instances[0], self.instances[1]],
-            [self.instances[2]]
+            [self.instances[2], self.instances[3]],
         ]
