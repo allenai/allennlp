@@ -134,6 +134,9 @@ class BucketIteratorStub(DataIterator):
         if skip_smaller_batches:
             dataset_transforms.append(transforms.SkipSmallerThan(batch_size))
 
+        if biggest_batch_first:
+            dataset_transforms.append(transforms.BiggestBatchFirst())
+
         return TransformIterator(dataset_transforms, instances_per_epoch, batch_size)
 
     # TODO(Mark): Explain in detail this delinquent behaviour

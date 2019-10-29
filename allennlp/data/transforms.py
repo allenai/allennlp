@@ -434,6 +434,27 @@ class HomogenousBatchesOf(Transform[Batched]):
                         remaining.remove(key)
 
 
+@Transform.register("biggest_batch_first")
+class BiggestBatchFirst(Transform[Batched]):
+
+    def transform(self, dataset: Iterable[Instance]) -> Iterable[Batched]:
+
+        raise NotImplementedError(
+            "BiggestBatchFirst must be called on batches. "
+            "Add a transform which batches your instances to your pipeline."
+        )
+
+    def transform_batch(self, batches: Iterable[Batched]) -> Iterable[Batched]:
+
+        batches = list(batches)
+        if len(batches) <= 2:
+            yield from batches
+        else:
+            last = batches.pop()
+            penultimate = batches.pop()
+            yield from [last, penultimate] + batches
+
+
 @Transform.register("fork")
 class Fork(Transform[Instance]):
     """

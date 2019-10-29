@@ -170,6 +170,8 @@ class TransformsTest(IteratorTest):
         pipeline = transforms.Compose([index, sort, max_samples, batch])
 
         transformed = pipeline(self.instances)
+        # Make batches compatible with the test helper by
+        # wrapping them in an allennlp batch.
         batches = [Batch(batch) for batch in transformed]
 
         stats = self.get_batches_stats(batches)
@@ -179,3 +181,19 @@ class TransformsTest(IteratorTest):
         assert stats["batch_lengths"] == [2, 2, 1]
         # ensure correct sample sizes (<= 9)
         assert stats["sample_sizes"] == [6, 8, 9]
+
+    def test_biggest_batch_first(self):
+
+        index = transforms.Index(self.vocab)
+        batch = transforms.Batch(2)
+        sort = transforms.SortByPadding(sorting_keys=[("text", "num_tokens")], padding_noise=0)
+        biggest = transforms.BiggestBatchFirst()
+
+        pipeline = transforms.Compose([index, sort, batch, biggest])
+        batches = [batch for batch in pipeline(self.instances)]
+
+        assert batches == [
+            [self.instances[3]],
+            [self.instances[0], self.instances[1]],
+            [self.instances[4], self.instances[2]],
+        ]
