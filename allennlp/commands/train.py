@@ -48,10 +48,11 @@ from typing import Optional
 
 import torch
 import torch.distributed as dist
+import torch.multiprocessing as mp
 
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common import Params
-from allennlp.common.checks import check_for_gpu
+from allennlp.common.checks import check_for_gpu, parse_cuda_device
 from allennlp.common.util import (
     prepare_environment,
     prepare_global_logging,
@@ -268,11 +269,32 @@ def train_model(
             include_package=include_package,
             world_size=1,
         )
-
         archive_model(serialization_dir, files_to_archive=params.files_to_archive)
         return model
     else:
-        raise NotImplementedError
+        logging.info("Switching to distributed training mode since multiple GPUs are configured")
+        os.environ["MASTER_ADDR"] = "127.0.0.1"
+        os.environ["MASTER_PORT"] = "29500"
+
+        device_id = parse_cuda_device(cuda_device)
+        n_gpus = len(device_id)
+
+        mp.spawn(
+            _train_worker,
+            args=(
+                params.duplicate(),
+                serialization_dir,
+                file_friendly_logging,
+                recover,
+                cache_directory,
+                cache_prefix,
+                include_package,
+                n_gpus,
+            ),
+            nprocs=n_gpus,
+        )
+        model = Model.load(params, serialization_dir)
+        return model
 
 
 def _train_worker(
