@@ -370,7 +370,7 @@ class JobRunner():
             self.close_all_logs()
             self.close_existing_connection()
 
-            if 'clear_jobs' in config['clear_jobs'] and config['clear_jobs']:
+            if 'clear_jobs' in config and config['clear_jobs']:
                 channels = ' '.join([' --channel ' + channel for channel in self.channel_tags])
                 bash_command = 'python scripts/multiqa/allennlp_job_runner.py ' + self.resource_type + channels + \
                                ' --models_dir ' + self._MODELS_DIR
