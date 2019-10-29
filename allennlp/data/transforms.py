@@ -4,7 +4,6 @@ from collections import deque, defaultdict
 
 
 import torch
-from torch.utils.data import Dataset as TorchDataset
 from torch.utils.data import IterableDataset as IterableTorchDataset
 
 
@@ -19,15 +18,6 @@ from allennlp.common.util import lazy_groups_of
 
 Batched = Iterable[Instance]
 InstanceOrBatch = TypeVar("InstanceOrBatch", Iterable[Instance], Instance)
-
-
-class DatasetFromList(TorchDataset):
-    def __init__(self, instances: Iterable[InstanceOrBatch]):
-        self.instances
-
-    def __getitem__(self, idx) -> InstanceOrBatch:
-
-        return self.instances[idx]
 
 
 class DatasetFromGenerator(IterableTorchDataset):
