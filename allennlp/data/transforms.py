@@ -436,7 +436,6 @@ class HomogenousBatchesOf(Transform[Batched]):
 
 @Transform.register("biggest_batch_first")
 class BiggestBatchFirst(Transform[Batched]):
-
     def transform(self, dataset: Iterable[Instance]) -> Iterable[Batched]:
 
         raise NotImplementedError(
