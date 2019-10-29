@@ -1,3 +1,5 @@
+import pytest
+
 from allennlp.common.testing import AllenNlpTestCase
 
 from allennlp.data import transforms
@@ -67,13 +69,23 @@ class TransformsTest(IteratorTest):
         for instance in transformed:
             assert instance.indexed
 
+        # Now check that when Index is called on batched
+        # input, it doesn't flatten the input back out.
+        # This essentially tests that transform_batch is working
+        # correctly.
         batch = transforms.Batch(2)
-
         transformed = index(batch(self.instances))
+        batches = [[instance for instance in batch] for batch in transformed]
 
-        batches = [[a for a in x] for x in transformed]
+        assert batches == [
+            [self.instances[0], self.instances[1]],
+            [self.instances[2], self.instances[3]],
+            [self.instances[4]],
+        ]
 
-        print(batches)
+        for batch in batches:
+            for instance in batch:
+                assert instance.indexed
 
     def test_epoch_tracker_adds_metadata(self):
 
@@ -100,9 +112,11 @@ class TransformsTest(IteratorTest):
             [self.instances[0], self.instances[1]],
             [self.instances[2], self.instances[3]],
         ]
+        # SkipSmallerThan cannot be called on unbached input:
+        with pytest.raises(NotImplementedError):
+            [x for x in skip(self.instances)]
 
     def test_stop_after(self):
-
         stop_after = transforms.StopAfter(3)
         transformed = stop_after(self.instances)
 
@@ -116,6 +130,9 @@ class TransformsTest(IteratorTest):
 
         batches = [batch for batch in transformed]
         assert batches == [[self.instances[0], self.instances[1]], [self.instances[2]]]
+
+        # StopAfter should have the same behaviour for batches
+        # as it does for instances.
         stop_after = transforms.StopAfter(2)
         batch = transforms.Batch(2)
         transformed = stop_after(batch(self.instances))

@@ -48,7 +48,6 @@ class Transform(IterableTorchDataset, Generic[InstanceOrBatch], Registrable):
         for batch in batches:
             yield from self.transform(batch)  # type: ignore
 
-
     def __call__(self, dataset: Iterable[Instance]) -> Iterable[InstanceOrBatch]:
         # wrapper to make sure transform only has to be
         # Iterable[Instance] -> Iterable[InstanceOrBatch],
