@@ -134,7 +134,7 @@ class JobRunner():
                 job['log_snapshot'] = job['log_snapshot'][-10000:]
             # checking retries:
 
-            if job['retries'] < 3 and job['command'].find(' train ') > -1:
+            if job['retries'] < 3 and (job['command'].find(' train ') > -1 or job['command'].find(' fine-tune ') > -1):
                 ElasticLogger().write_log('INFO', "Job Retry", {'experiment_name': job['experiment_name'], \
                         'command':job['command'].replace('&',' -f &'), \
                         'log_snapshot': job['log_snapshot']}, push_bulk=True, print_log=False)
