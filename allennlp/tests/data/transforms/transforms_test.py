@@ -4,6 +4,7 @@ from allennlp.common.testing import AllenNlpTestCase
 
 from allennlp.data import transforms
 from allennlp.data import Vocabulary
+from allennlp.data.dataset import Batch
 from allennlp.data.fields import MetadataField
 from torch.utils.data import IterableDataset
 
@@ -142,3 +143,39 @@ class TransformsTest(IteratorTest):
             [self.instances[0], self.instances[1]],
             [self.instances[2], self.instances[3]],
         ]
+
+    def test_sort_by_padding(self):
+
+        index = transforms.Index(self.vocab)
+        batch = transforms.Batch(2)
+        sort = transforms.SortByPadding(sorting_keys=[("text", "num_tokens")], padding_noise=0)
+
+        pipeline = transforms.Compose([index, sort, batch])
+        transformed = pipeline(self.instances)
+        batches = [batch for batch in transformed]
+
+        assert batches == [
+            [self.instances[4], self.instances[2]],
+            [self.instances[0], self.instances[1]],
+            [self.instances[3]],
+        ]
+
+    def test_maximum_samples_per_batch(self):
+
+        index = transforms.Index(self.vocab)
+        batch = transforms.Batch(3)
+        sort = transforms.SortByPadding(sorting_keys=[("text", "num_tokens")], padding_noise=0)
+        max_samples = transforms.MaxSamplesPerBatch(("num_tokens", 9))
+
+        pipeline = transforms.Compose([index, sort, max_samples, batch])
+
+        transformed = pipeline(self.instances)
+        batches = [Batch(batch) for batch in transformed]
+
+        stats = self.get_batches_stats(batches)
+        # ensure all instances are in a batch
+        assert stats["total_instances"] == len(self.instances)
+        # ensure correct batch sizes
+        assert stats["batch_lengths"] == [2, 2, 1]
+        # ensure correct sample sizes (<= 9)
+        assert stats["sample_sizes"] == [6, 8, 9]
