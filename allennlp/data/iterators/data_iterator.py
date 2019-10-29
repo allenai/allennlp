@@ -133,7 +133,7 @@ class DataIterator(Registrable):
                     if self._track_epoch:
                         # The tensor_dict already has an "epoch_num" list,
                         # so just fill it with the right value.
-                        epoch_list: List[int] = tensor_dict["epoch_num"]   # type: ignore
+                        epoch_list: List[int] = tensor_dict["epoch_num"]  # type: ignore
                         tensor_dict["epoch_num"] = [epoch for _ in epoch_list]
                     yield tensor_dict
             else:
