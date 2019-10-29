@@ -6,7 +6,7 @@ from allennlp.data import transforms
 from allennlp.data import Vocabulary
 from allennlp.data.dataset import Batch
 from allennlp.data.fields import MetadataField
-from torch.utils.data import IterableDataset
+from torch.utils.data import IterableDataset, DataLoader
 
 from allennlp.tests.data.iterators.basic_iterator_test import IteratorTest
 
@@ -197,3 +197,26 @@ class TransformsTest(IteratorTest):
             [self.instances[0], self.instances[1]],
             [self.instances[4], self.instances[2]],
         ]
+
+    def test_fork(self):
+        batch = transforms.Batch(2)
+        fork = transforms.Fork()
+
+        # If we fork after we batch, we should get batches in order.
+        pipeline = transforms.Compose([batch, fork])
+        loader = DataLoader(
+            pipeline(self.instances), num_workers=2, collate_fn=lambda batch: batch[0]
+        )
+
+        batches = {tuple(self.instances.index(instance) for instance in batch) for batch in loader}
+        assert batches == {(0, 1), (2, 3), (4,)}
+
+        # If we fork before we batch, we should get batches where the instances are modulo the
+        # number of workers
+        pipeline = transforms.Compose([fork, batch])
+        loader = DataLoader(
+            pipeline(self.instances), num_workers=2, collate_fn=lambda batch: batch[0]
+        )
+
+        batches = {tuple(self.instances.index(instance) for instance in batch) for batch in loader}
+        assert batches == {(0, 2), (1, 3), (4,)}
