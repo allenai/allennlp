@@ -16,8 +16,18 @@ local cuda_device = -1;
             "type": "single_id",
         }
      },
+     "sample": -1
   },
-
+  "validation_dataset_reader": {
+    "type": "base_esim_reader",
+    "token_indexers": {
+        "tokens": {
+            "type": "single_id",
+        }
+     },
+    "sample": -1
+     //"num_choices": "[NUM_OF_CHOICES]"
+  },
   "train_data_path": "https://olmpics.s3.us-east-2.amazonaws.com/challenge/negation/negation_unfilt_not_to_definitely_triplets_7132_train.jsonl.gz",
   "validation_data_path": "https://olmpics.s3.us-east-2.amazonaws.com/challenge/negation/negation_unfilt_not_to_definitely_triplets_7132_dev.jsonl.gz",
 

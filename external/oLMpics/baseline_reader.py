@@ -3,6 +3,7 @@
 from typing import Dict, List
 import json
 import logging
+import random
 
 from overrides import overrides
 
@@ -37,25 +38,33 @@ class BaselineEsimReader(DatasetReader):
     def __init__(self,
                  tokenizer: Tokenizer = None,
                  token_indexers: Dict[str, TokenIndexer] = None,
+                 sample: int = -1,
                  use_only_gold_examples: bool = False) -> None:
         super().__init__(lazy=False)
         self._tokenizer = tokenizer or WordTokenizer()
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
         self.use_only_gold_examples = use_only_gold_examples
+        self._sample = sample
 
     @overrides
     def _read(self, file_path: str):
         label_dict = {'A': 0, 'B': 1, 'C': 2}
+        examples = []
         with gzip.open(cached_path(file_path), "rb") as f:
             for line_num, line in enumerate(f):
                 # line = line.strip("\n")
                 line = json.loads(line)
                 if not line:
                     continue
-                question = line['question']['stem']
-                choices = [c['text'] for c in line['question']['choices']]
-                label = label_dict[line['answerKey']] if 'answerKey' in line else None
-                yield self.text_to_instance(question, choices, label=label)
+                examples.append(line)
+        if self._sample > -1:
+            examples = random.sample(examples,self._sample)
+
+        for example in examples:
+            question = example['question']['stem']
+            choices = [c['text'] for c in example['question']['choices']]
+            label = label_dict[example['answerKey']] if 'answerKey' in example else None
+            yield self.text_to_instance(question, choices, label=label)
 
     @overrides
     def text_to_instance(self,  # type: ignore
