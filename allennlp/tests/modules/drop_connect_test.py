@@ -121,8 +121,8 @@ class DropConnectTest(AllenNlpTestCase):
         assert all(parameter.is_leaf for parameter in weight_dropped_linear.parameters())
 
         # Case 3: After forward
-        input_tensor = torch.ones(10, dtype=torch.float32)
-        target_tensor = torch.zeros(10, dtype=torch.float32)
+        input_tensor = torch.ones(_in_dim, dtype=torch.float32)
+        target_tensor = torch.zeros(_out_dim, dtype=torch.float32)
         sgd = torch.optim.SGD(weight_dropped_linear.parameters(), lr=0.01)
         _assert_sgd_states(sgd, has_grad=False)
 
