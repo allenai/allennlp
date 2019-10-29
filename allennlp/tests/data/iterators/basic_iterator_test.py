@@ -280,16 +280,6 @@ class TestBasicIterator(IteratorTest):
             grouped_instances = [batch.instances for batch in batches]
             assert grouped_instances == [[self.instances[2]], [self.instances[3]]]
 
-    def test_from_params(self):
-
-        params = Params({})
-        iterator = BasicIterator.from_params(params)
-        assert iterator._batch_size == 32  # default value
-
-        params = Params({"batch_size": 10})
-        iterator = BasicIterator.from_params(params)
-        assert iterator._batch_size == 10
-
     def test_maximum_samples_per_batch(self):
         for test_instances in (self.instances, self.lazy_instances):
 
