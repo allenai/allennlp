@@ -128,7 +128,7 @@ class ESIM(Model):
                 premise: Dict[str, torch.LongTensor],
                 hypothesis0: Dict[str, torch.LongTensor],
                 hypothesis1: Dict[str, torch.LongTensor],
-                hypothesis2: Dict[str, torch.LongTensor],
+                hypothesis2: Dict[str, torch.LongTensor] = None,
                 label: torch.IntTensor = None) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
         """
@@ -154,7 +154,7 @@ class ESIM(Model):
         loss : torch.FloatTensor, optional
             A scalar loss to be optimised.
         """
-        hyps = [hypothesis0, hypothesis1, hypothesis2]
+        hyps = [h for h in [hypothesis0, hypothesis1, hypothesis2] if h is not None]
         if isinstance(self._text_field_embedder, ElmoTokenEmbedder):
             self._text_field_embedder._elmo._elmo_lstm._elmo_lstm.reset_states()
 

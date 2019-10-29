@@ -48,7 +48,7 @@ class BaselineEsimReader(DatasetReader):
 
     @overrides
     def _read(self, file_path: str):
-        label_dict = {'A': 0, 'B': 1, 'C': 2}
+        label_dict = {'A': 0, 'B': 1, 'C': 2, 'D':3 ,'E':4}
         examples = []
         with gzip.open(cached_path(file_path), "rb") as f:
             for line_num, line in enumerate(f):
