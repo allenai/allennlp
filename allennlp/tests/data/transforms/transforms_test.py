@@ -1,7 +1,7 @@
 import pytest
 
 from allennlp.common.testing import AllenNlpTestCase
-
+from allennlp.common.params import Params
 from allennlp.data import transforms
 from allennlp.data import Vocabulary
 from allennlp.data.dataset import Batch
@@ -220,3 +220,21 @@ class TransformsTest(IteratorTest):
 
         batches = {tuple(self.instances.index(instance) for instance in batch) for batch in loader}
         assert batches == {(0, 2), (1, 3), (4,)}
+
+    def test_from_params(self):
+
+        params = Params(
+            {
+                "type": "compose",
+                "transforms": [
+                    {"type": "epoch_tracker"},
+                    {"type": "batch", "batch_size": 4},
+                    {"type": "skip_smaller_than", "min_size": 4},
+                    {"type": "biggest_batch_first"},
+                ],
+            }
+        )
+
+        pipeline = transforms.Transform.from_params(params)
+        assert pipeline.transforms[1].batch_size == 4
+        assert pipeline.transforms[2].min_size == 4
