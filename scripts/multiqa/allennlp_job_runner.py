@@ -370,11 +370,16 @@ class JobRunner():
             self.close_all_logs()
             self.close_existing_connection()
 
-            with open('runner_state_' + self.channel_tags[0] + '.pkl', 'wb') as f:
-                pickle.dump(self, f, pickle.HIGHEST_PROTOCOL)
-            channels = ' '.join([' --channel ' + channel for channel in self.channel_tags])
-            bash_command = 'python scripts/multiqa/allennlp_job_runner.py ' + self.resource_type + channels + \
-                           ' --models_dir ' + self._MODELS_DIR + ' --state runner_state_' + self.channel_tags[0] + '.pkl'
+            if 'clear_jobs' in config['clear_jobs'] and config['clear_jobs']:
+                channels = ' '.join([' --channel ' + channel for channel in self.channel_tags])
+                bash_command = 'python scripts/multiqa/allennlp_job_runner.py ' + self.resource_type + channels + \
+                               ' --models_dir ' + self._MODELS_DIR
+            else:
+                with open('runner_state_' + self.channel_tags[0] + '.pkl', 'wb') as f:
+                    pickle.dump(self, f, pickle.HIGHEST_PROTOCOL)
+                channels = ' '.join([' --channel ' + channel for channel in self.channel_tags])
+                bash_command = 'python scripts/multiqa/allennlp_job_runner.py ' + self.resource_type + channels + \
+                               ' --models_dir ' + self._MODELS_DIR + ' --state runner_state_' + self.channel_tags[0] + '.pkl'
             if self._DEBUG:
                 bash_command += ' --debug '
 
