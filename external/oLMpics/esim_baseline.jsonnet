@@ -89,7 +89,7 @@ local cuda_device = -1;
     "num_serialized_models_to_keep": 0,
     "num_epochs": 75,
     "grad_norm": 10.0,
-    "patience": 5,
+    "patience": 10,
     "cuda_device": -1,
     "learning_rate_scheduler": {
       "type": "reduce_on_plateau",

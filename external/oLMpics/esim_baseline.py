@@ -262,8 +262,10 @@ class ESIM(Model):
         return output_dict
 
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
+        metric = self._accuracy.get_metric(reset)
         return {
-            'accuracy': self._accuracy.get_metric(reset),
+            'accuracy': metric,
+            'EM': metric
         }
 
     # @classmethod
