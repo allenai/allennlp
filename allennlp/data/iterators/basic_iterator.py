@@ -53,13 +53,14 @@ class BasicIteratorStub(DataIterator):
 # subclasses override BasicIterator methods, but we return a BucketIterator object,
 # which means that inheritance doesn't work, which was the whole point of this.
 
+
 def BasicIterator(
     batch_size: int = 32,
     instances_per_epoch: int = None,
     max_instances_in_memory: int = None,
     cache_instances: bool = False,
     track_epoch: bool = False,
-    maximum_samples_per_batch: Tuple[str, int] = None
+    maximum_samples_per_batch: Tuple[str, int] = None,
 ):
     warnings.warn(
         "allennlp.data.iterators.BasicIterator has been deprecated "
@@ -68,6 +69,7 @@ def BasicIterator(
         FutureWarning,
     )
     from allennlp.data.iterators.bucket_iterator import BucketIterator
+
     return BucketIterator(
         batch_size=batch_size,
         instances_per_epoch=instances_per_epoch,
