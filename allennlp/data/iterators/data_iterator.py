@@ -131,10 +131,10 @@ class DataIterator(Registrable):
                     random.shuffle(tensor_dicts)
                 for tensor_dict in tensor_dicts:
                     if self._track_epoch:
-                        # The tensor_dict already has an "epoch_num" tensor,
+                        # The tensor_dict already has an "epoch_num" list,
                         # so just fill it with the right value.
-                        epoch_tensor: torch.Tensor = tensor_dict["epoch_num"]
-                        epoch_tensor.fill_(epoch)
+                        epoch_list: List[int] = tensor_dict["epoch_num"]  # type: ignore
+                        tensor_dict["epoch_num"] = [epoch for _ in epoch_list]
                     yield tensor_dict
             else:
                 batches = self._create_batches(instances, shuffle)
