@@ -95,9 +95,24 @@ class DropConnectTest(AllenNlpTestCase):
     def test_parameters_are_leaf_tensors(self):
         # Checks that WeightDrop parameters are always leaf tensors.
 
+        _in_dim = 10
+        _out_dim = 10
+        _n_params = 2
+        _n_weights = 1
+
+        def _assert_sgd_states(sgd, has_grad=True):
+            sgd_params = sgd.param_groups[0]["params"]
+            assert all(parameter.is_leaf for parameter in sgd_params)
+            # Check the states of the gradients
+            assert all(has_grad != (parameter.grad is None) for parameter in sgd_params)
+            # The number of the parameters should stay the same otherwise fine-tuning won't work.
+            assert len(sgd_params) == _n_params
+            weights = [p for p in sgd_params if p.shape == torch.Size([_in_dim, _out_dim])]
+            assert len(weights) == _n_weights
+
         # Case 1: After initialization
         weight_dropped_linear = DropConnect(
-            torch.nn.Linear(10, 10), parameter_regex="weight", dropout=0.9
+            torch.nn.Linear(_in_dim, _out_dim), parameter_regex="weight", dropout=0.9
         )
         assert all(parameter.is_leaf for parameter in weight_dropped_linear.parameters())
 
@@ -107,8 +122,24 @@ class DropConnectTest(AllenNlpTestCase):
 
         # Case 3: After forward
         input_tensor = torch.ones(10, dtype=torch.float32)
-        weight_dropped_linear(input_tensor)
-        assert all(parameter.is_leaf for parameter in weight_dropped_linear.parameters())
+        target_tensor = torch.zeros(10, dtype=torch.float32)
+        sgd = torch.optim.SGD(weight_dropped_linear.parameters(), lr=0.01)
+        _assert_sgd_states(sgd, has_grad=False)
+
+        loss_fn = torch.nn.L1Loss()
+        for epoch in range(2):
+            sgd.zero_grad()
+            output_tensor = weight_dropped_linear(input_tensor)
+
+            # Replaced
+            # `assert all(parameter.is_leaf for parameter in weight_dropped_linear.parameters())`
+            # with the following `_assert_sgd_states()`.
+            # Because weight dropped parameters are not deleted after `forward()`.
+            _assert_sgd_states(sgd, has_grad=False if epoch == 0 else True)
+            loss_fn(output_tensor, target_tensor).backward()
+            _assert_sgd_states(sgd, has_grad=True)
+            sgd.step()
+            _assert_sgd_states(sgd, has_grad=True)
 
         # Case 4: After reset()
         weight_dropped_linear.reset()
