@@ -65,7 +65,9 @@ class DropConnect(torch.nn.Module):
         for match in self._matches:
             self.register_parameter(match.raw_parameter_name, match.parameter)
             delattr(match.module, match.parameter_name)
-            self._prepare_matched_parameters(match)
+        # Skip `RNNBase._apply()`'s last step otherwise it will run into mismatched `_all_weights`.
+        if issubclass(type(self._module), torch.nn.RNNBase):
+            self._module.flatten_parameters = self._no_op_flatten_parameters
 
     def _search_parameters(self, regex: str) -> Iterator[_Match]:
         """
@@ -77,17 +79,12 @@ class DropConnect(torch.nn.Module):
                 if re.search(regex, parameter_name):
                     yield _Match(submodule_name, submodule, parameter_name, parameter)
 
-    def _prepare_matched_parameters(self, match: _Match):
+    def _no_op_flatten_parameters(self):
         """
-        Apply non-training dropout to all of matched parameters otherwise PyTorch will raise
-        `AttributeError`: '`LSTM`' object has no attribute '`_flat_weights`'.
-        The `forward()` method, however, will still warn against fragmented memory usages of
-        non-flatten parameters. A corresponding workaround is in `forward()`.
+        We need to replace flatten_parameters with a no-op function.
+        It must be a function rather than a lambda as otherwise pickling explodes.
         """
-        raw_parameter = getattr(self, match.raw_parameter_name)
-        match.module._parameters[match.parameter_name] = F.dropout(
-            raw_parameter, p=self._dropout, training=False
-        )
+        return
 
     def forward(self, *args):
         # Apply dropout to all of the matching parameters, and force them into their original
@@ -106,11 +103,8 @@ class DropConnect(torch.nn.Module):
             warnings.simplefilter("ignore")
             # Call the top-level module on the inputs.
             output = self._module.forward(*args)
-        # Lastly, remove the dropped out parameters from their parent module's _parameter
-        # dictionary. If not PyTorch might raise errors due to using non-leaf tensors as
-        # parameters.
-        for match in self._matches:
-            delattr(match.module, match.parameter_name)
+        # Not removing the dropped out parameters from their parent module's _parameter dictionary.
+        # Because PyTorch's optimizer won't include non-leaf tensors as parameters.
 
         return output
 
@@ -118,8 +112,10 @@ class DropConnect(torch.nn.Module):
         if hasattr(self._module, "reset"):
             self._module.reset()
 
-        self._matches = list(self._search_parameters(self._parameter_regex))
+        # Reuse `self._matches` otherwise it may falsely match raw parameters.
         for match in self._matches:
             self.register_parameter(match.raw_parameter_name, match.parameter)
             delattr(match.module, match.parameter_name)
-            self._prepare_matched_parameters(match)
+
+        if issubclass(type(self._module), torch.nn.RNNBase):
+            self._module.flatten_parameters = self._no_op_flatten_parameters
