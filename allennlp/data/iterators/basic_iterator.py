@@ -63,7 +63,7 @@ def BasicIterator(
     maximum_samples_per_batch: Tuple[str, int] = None,
 ):
     warnings.warn(
-        "allennlp.data.iterators.BasicIterator has been deprecated "
+        "allennlp.data.iterators.BasicIterator has been depreciated "
         "because it is identical to the BucketIterator with sorting_keys=None."
         "Please use allennlp.data.iterators.BucketIterator.",
         FutureWarning,

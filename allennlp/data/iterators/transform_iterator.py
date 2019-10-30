@@ -27,6 +27,7 @@ class TransformIterator:
         dataset_transforms: List[transforms.Transform],
         instances_per_epoch: int = None,
         batch_size: int = 32,
+        num_workers: int = 0,
     ) -> None:
 
         self.vocab: Vocabulary = None
@@ -34,15 +35,12 @@ class TransformIterator:
 
         self._instances_per_epoch = instances_per_epoch
         self._batch_size = batch_size
+        self._num_workers = num_workers
         # We also might want to keep track of cursors;
         # for example, if each epoch represents less than one pass through the dataset,
         # we want to remember where we left off. As `Iterator`s are not necessarily hashable,
         # we use their id() as the key.
         self._cursors: Dict[int, Iterator[Instance]] = {}
-
-        # BE CAREFUL, mustnt Fork twice. Remember to check once transforms
-        # can be passed via constructor.
-        # dataset_transforms.append(transforms.Fork())
 
         self.transforms = dataset_transforms
 
@@ -91,7 +89,9 @@ class TransformIterator:
 
         if max_instances is None:
             data = transforms.Compose(self.transforms)(instances)
-            batch_generator = DataLoader(data, batch_size=1, collate_fn=self._collocate)
+            batch_generator = DataLoader(
+                data, batch_size=1, num_workers=self._num_workers, collate_fn=self._collocate
+            )
             yield from batch_generator
 
         else:
@@ -101,7 +101,11 @@ class TransformIterator:
 
             iterator = self._cursors.get(key, itertools.cycle(instances))
             data = transforms.Compose(self.transforms)(iterator)
-            batch_generator = iter(DataLoader(data, batch_size=1, collate_fn=self._collocate))
+            batch_generator = iter(
+                DataLoader(
+                    data, batch_size=1, num_workers=self._num_workers, collate_fn=self._collocate
+                )
+            )
 
             while True:
                 try:
