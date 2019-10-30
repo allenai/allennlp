@@ -50,6 +50,7 @@ import torch
 import torch.distributed as dist
 import torch.multiprocessing as mp
 
+from allennlp.commands.make_vocab import make_vocab_from_params
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common import Params
 from allennlp.common.checks import check_for_gpu, parse_cuda_device
@@ -278,6 +279,16 @@ def train_model(
 
         device_id = parse_cuda_device(cuda_device)
         n_gpus = len(device_id)
+
+        # Creating `Vocabulary` objects from workers could be problematic since the data iterators
+        # in each worker will yield only `rank` specific instances. Hence it is safe to construct
+        # the vocabulary and write it to disk before initializing the distributed context. The workers
+        # will load the vocabulary from the path specified.
+        make_vocab_from_params(params, serialization_dir)
+        params["vocabulary"] = {
+            "directory_path": os.path.join(serialization_dir, "vocabulary"),
+            "extend": False,  # vocab extension would have been done above
+        }
 
         mp.spawn(
             _train_worker,

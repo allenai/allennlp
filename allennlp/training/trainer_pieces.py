@@ -3,6 +3,8 @@ import os
 import re
 from typing import Iterable, NamedTuple
 
+import torch.distributed as dist
+
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.util import get_frozen_and_tunable_parameter_names
@@ -78,7 +80,8 @@ class TrainerPieces(NamedTuple):
         model.extend_embedder_vocab()
 
         # Initializing the model can have side effect of expanding the vocabulary
-        vocab.save_to_files(os.path.join(serialization_dir, "vocabulary"))
+        if dist.is_initialized() and dist.get_rank() == 0:
+            vocab.save_to_files(os.path.join(serialization_dir, "vocabulary"))
 
         iterator = DataIterator.from_params(params.pop("iterator"))
         iterator.index_with(model.vocab)
