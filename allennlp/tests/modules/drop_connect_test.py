@@ -127,6 +127,7 @@ class DropConnectTest(AllenNlpTestCase):
         weight_dropped_linear = DropConnect(
             torch.nn.Linear(_in_dim, _out_dim), parameter_regex="weight", dropout=0.9
         )
+        assert weight_dropped_linear._called_no_op_flatten_parameters is None
         assert all(parameter.is_leaf for parameter in weight_dropped_linear.parameters())
 
         # Case 2: When in training mode
@@ -143,6 +144,7 @@ class DropConnectTest(AllenNlpTestCase):
         for epoch in range(2):
             sgd.zero_grad()
             output_tensor = weight_dropped_linear(input_tensor)
+            assert weight_dropped_linear._called_no_op_flatten_parameters is None
 
             # Replaced
             # `assert all(parameter.is_leaf for parameter in weight_dropped_linear.parameters())`
@@ -156,6 +158,7 @@ class DropConnectTest(AllenNlpTestCase):
 
         # Case 4: After reset()
         weight_dropped_linear.reset()
+        assert weight_dropped_linear._called_no_op_flatten_parameters is None
         assert all(parameter.is_leaf for parameter in weight_dropped_linear.parameters())
 
         # Case 5: When in eval mode
