@@ -19,7 +19,8 @@
     "iterator": {
         "type": "bucket",
         "sorting_keys": [["tokens", "num_tokens"]],
-        "batch_size": 5
+        "batch_size": 5,
+        "padding_noise": 0.0
     },
     "trainer": {
         "optimizer": {
