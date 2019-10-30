@@ -94,9 +94,6 @@ class BucketIteratorStub(DataIterator):
         When the number of data samples is not dividable by `batch_size`,
         some batches might be smaller than `batch_size`.
         If set to `True`, those smaller batches will be discarded.
-    num_workers : int, optional, (default = 0)
-        The number of workers to use to load the dataset. If 0, the dataset
-        is loaded in the main process.
     """
 
     def __new__(
@@ -111,7 +108,6 @@ class BucketIteratorStub(DataIterator):
         track_epoch: bool = False,
         maximum_samples_per_batch: Tuple[str, int] = None,
         skip_smaller_batches: bool = False,
-        num_workers: int = 0,
     ):
 
         dataset_transforms: List[transforms.Transform] = []
@@ -141,10 +137,7 @@ class BucketIteratorStub(DataIterator):
         if biggest_batch_first:
             dataset_transforms.append(transforms.BiggestBatchFirst())
 
-        if num_workers > 1:
-            dataset_transforms.append(transforms.Fork())
-
-        return TransformIterator(dataset_transforms, instances_per_epoch, batch_size, num_workers)
+        return TransformIterator(dataset_transforms, instances_per_epoch, batch_size)
 
     # TODO(Mark): Explain in detail this delinquent behaviour
     def __init__(
