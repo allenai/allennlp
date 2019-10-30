@@ -30,6 +30,7 @@ class TransformerMCQAModel(Model):
                  vocab: Vocabulary,
                  pretrained_model: str = None,
                  requires_grad: bool = True,
+                 unfreeze_pooler: bool = False,
                  top_layer_only: bool = True,
                  transformer_weights_model: str = None,
                  reset_classifier: bool = False,
@@ -56,10 +57,21 @@ class TransformerMCQAModel(Model):
             assert (ValueError)
 
         for name, param in self._transformer_model.named_parameters():
-            grad = requires_grad
-            if layer_freeze_regexes and grad:
+            if layer_freeze_regexes and requires_grad:
                 grad = not any([bool(re.search(r, name)) for r in layer_freeze_regexes])
-            param.requires_grad = grad
+            else:
+                grad = requires_grad
+            if grad:
+                param.requires_grad = True
+            else:
+                param.requires_grad = False
+
+        if unfreeze_pooler:
+            try:
+                self._transformer_model.pooler.dense.weight.requires_grad = True
+                self._transformer_model.pooler.dense.bias.requires_grad = True
+            except:
+                pass
 
         transformer_config = self._transformer_model.config
         transformer_config.num_labels = 1
