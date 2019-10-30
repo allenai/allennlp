@@ -7,6 +7,7 @@ import traceback
 from typing import Dict, Optional, List, Tuple, Union, Iterable, Any
 
 import torch
+import torch.distributed as dist
 import torch.optim.lr_scheduler
 from torch.nn.parallel import DistributedDataParallel
 
@@ -340,7 +341,14 @@ class Trainer(TrainerBase):
         histogram_parameters = set(self.model.get_parameters_for_histogram_tensorboard_logging())
 
         logger.info("Training")
-        train_generator_tqdm = Tqdm.tqdm(train_generator, total=num_training_batches)
+
+        # Having multiple tqdm bars in case of distributed training will be a mess. Hence only the master's progress
+        # is shown
+        if self._master:
+            train_generator_tqdm = Tqdm.tqdm(train_generator, total=num_training_batches)
+        else:
+            train_generator_tqdm = train_generator
+
         cumulative_batch_size = 0
         for batch_group in train_generator_tqdm:
             batches_this_epoch += 1
@@ -367,7 +375,7 @@ class Trainer(TrainerBase):
             if self._momentum_scheduler:
                 self._momentum_scheduler.step_batch(batch_num_total)
 
-            if self._tensorboard.should_log_histograms_this_batch():
+            if self._tensorboard.should_log_histograms_this_batch() and self._master:
                 # get the magnitude of parameter updates for logging
                 # We need a copy of current parameters to compute magnitude of updates,
                 # and copy them to CPU so large models won't go OOM on the GPU.
@@ -391,20 +399,23 @@ class Trainer(TrainerBase):
                 self._moving_average.apply(batch_num_total)
 
             # Update the description with the latest metrics
-            metrics = training_util.get_metrics(self.model, train_loss, batches_this_epoch)
-            description = training_util.description_from_metrics(metrics)
+            metrics = training_util.get_metrics(self.model, train_loss, batches_this_epoch,
+                                                world_size=self._world_size, rank=self._rank)
 
-            train_generator_tqdm.set_description(description, refresh=False)
+            # Updating tqdm only for the master as the trainers wouldn't have one
+            if self._master:
+                description = training_util.description_from_metrics(metrics)
+                train_generator_tqdm.set_description(description, refresh=False)
 
-            # Log parameter values to Tensorboard
-            if self._tensorboard.should_log_this_batch():
+            # Log parameter values to Tensorboard (only from the master)
+            if self._tensorboard.should_log_this_batch() and self._master:
                 self._tensorboard.log_parameter_and_gradient_statistics(self.model, batch_grad_norm)
                 self._tensorboard.log_learning_rates(self.model, self.optimizer)
 
                 self._tensorboard.add_train_scalar("loss/loss_train", metrics["loss"])
                 self._tensorboard.log_metrics({"epoch_metrics/" + k: v for k, v in metrics.items()})
 
-            if self._tensorboard.should_log_histograms_this_batch():
+            if self._tensorboard.should_log_histograms_this_batch() and self._master:
                 self._tensorboard.log_histograms(self.model, histogram_parameters)
 
             if self._log_batch_size_period:
@@ -419,12 +430,13 @@ class Trainer(TrainerBase):
             # Save model if needed.
             if self._model_save_interval is not None and (
                 time.time() - last_save_time > self._model_save_interval
-            ):
+            ) and self._master:
                 last_save_time = time.time()
                 self._save_checkpoint(
                     "{0}.{1}".format(epoch, training_util.time_to_str(int(last_save_time)))
                 )
-        metrics = training_util.get_metrics(self.model, train_loss, batches_this_epoch, reset=True)
+        metrics = training_util.get_metrics(self.model, train_loss, batches_this_epoch, reset=True,
+                                            world_size=self._world_size, rank=self._rank)
         metrics["cpu_memory_MB"] = peak_cpu_usage
         for (gpu_num, memory) in gpu_usage:
             metrics["gpu_" + str(gpu_num) + "_memory_MB"] = memory
@@ -470,7 +482,8 @@ class Trainer(TrainerBase):
                 val_loss += loss.detach().cpu().numpy()
 
             # Update the description with the latest metrics
-            val_metrics = training_util.get_metrics(self.model, val_loss, batches_this_epoch)
+            val_metrics = training_util.get_metrics(self.model, val_loss, batches_this_epoch,
+                                                    world_size=self._world_size, rank=self._rank)
             description = training_util.description_from_metrics(val_metrics)
             val_generator_tqdm.set_description(description, refresh=False)
 
@@ -522,12 +535,16 @@ class Trainer(TrainerBase):
                 if key.startswith("gpu_"):
                     metrics["peak_" + key] = max(metrics.get("peak_" + key, 0), value)
 
+            # Let all workers finish training before going into the validation mode
+            if self._distributed:
+                dist.barrier()
+
             if self._validation_data is not None:
                 with torch.no_grad():
                     # We have a validation set, so compute all the metrics on it.
                     val_loss, num_batches = self._validation_loss()
                     val_metrics = training_util.get_metrics(
-                        self.model, val_loss, num_batches, reset=True
+                        self.model, val_loss, num_batches, reset=True, world_size=self._world_size, rank=self._rank
                     )
 
                     # Check validation metric for early stopping
@@ -538,9 +555,10 @@ class Trainer(TrainerBase):
                         logger.info("Ran out of patience.  Stopping training.")
                         break
 
-            self._tensorboard.log_metrics(
-                train_metrics, val_metrics=val_metrics, log_to_console=True, epoch=epoch + 1
-            )  # +1 because tensorboard doesn't like 0
+            if self._master:
+                self._tensorboard.log_metrics(
+                    train_metrics, val_metrics=val_metrics, log_to_console=True, epoch=epoch + 1
+                )  # +1 because tensorboard doesn't like 0
 
             # Create overall metrics dict
             training_elapsed_time = time.time() - training_start_time
@@ -563,7 +581,7 @@ class Trainer(TrainerBase):
 
                 self._metric_tracker.best_epoch_metrics = val_metrics
 
-            if self._serialization_dir:
+            if self._serialization_dir and self._master:
                 dump_metrics(
                     os.path.join(self._serialization_dir, f"metrics_epoch_{epoch}.json"), metrics
                 )
@@ -575,7 +593,12 @@ class Trainer(TrainerBase):
             if self._momentum_scheduler:
                 self._momentum_scheduler.step(this_epoch_val_metric, epoch)
 
-            self._save_checkpoint(epoch)
+            if self._master:
+                self._save_checkpoint(epoch)
+
+            # Wait for the master to finish saving the checkpoint
+            if self._distributed:
+                dist.barrier()
 
             epoch_elapsed_time = time.time() - epoch_start_time
             logger.info("Epoch duration: %s", datetime.timedelta(seconds=epoch_elapsed_time))
