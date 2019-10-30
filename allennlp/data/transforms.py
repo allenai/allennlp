@@ -1,7 +1,7 @@
 from typing import Dict, Tuple, List, Iterable, Generic, TypeVar, Deque, Union
 import itertools
 from collections import deque, defaultdict
-
+import random
 
 import torch
 from torch.utils.data import IterableDataset as IterableTorchDataset
@@ -452,6 +452,22 @@ class BiggestBatchFirst(Transform[Batched]):
             last = batches.pop()
             penultimate = batches.pop()
             yield from [last, penultimate] + batches
+
+
+@Transform.register("shuffle")
+class Shuffle(Transform[Instance]):
+    def transform(self, dataset: Iterable[Instance]) -> Iterable[Instance]:
+
+        dataset = list(dataset)
+        random.shuffle(dataset)
+        for instance in dataset:
+            yield instance
+
+    def transform_batch(self, batches: Iterable[Batched]) -> Iterable[Batched]:
+        batches = list(batches)
+        random.shuffle(batches)
+        for batch in batches:
+            yield batch
 
 
 @Transform.register("fork")

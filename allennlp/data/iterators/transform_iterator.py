@@ -88,9 +88,17 @@ class TransformIterator:
         This method should return one epoch worth of batches.
         """
         max_instances = self._instances_per_epoch
+        if shuffle:
+            # TODO(Mark): This is not ideal, becuase it means that
+            # we might not respect the MaxInstancesInMemory constraint.
+            # However, it is possible to do so by specifying the Shuffle transform
+            # directly in the list of transformations passed to this class.
+            dataset_transforms = self.transforms + [transforms.Shuffle()]
+        else:
+            dataset_transforms = self.transforms
 
         if max_instances is None:
-            data = transforms.Compose(self.transforms)(instances)
+            data = transforms.Compose(dataset_transforms)(instances)
             batch_generator = DataLoader(data, batch_size=1, collate_fn=self._collocate)
             yield from batch_generator
 
@@ -100,7 +108,7 @@ class TransformIterator:
             key = id(instances)
 
             iterator = self._cursors.get(key, itertools.cycle(instances))
-            data = transforms.Compose(self.transforms)(iterator)
+            data = transforms.Compose(dataset_transforms)(iterator)
             batch_generator = iter(DataLoader(data, batch_size=1, collate_fn=self._collocate))
 
             while True:
