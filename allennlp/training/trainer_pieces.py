@@ -80,7 +80,8 @@ class TrainerPieces(NamedTuple):
         model.extend_embedder_vocab()
 
         # Initializing the model can have side effect of expanding the vocabulary
-        if dist.is_initialized() and dist.get_rank() == 0:
+        # Save the vocab only in the master
+        if not dist.is_initialized() or dist.get_rank() == 0:
             vocab.save_to_files(os.path.join(serialization_dir, "vocabulary"))
 
         iterator = DataIterator.from_params(params.pop("iterator"))
