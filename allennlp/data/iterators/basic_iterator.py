@@ -3,6 +3,7 @@ import logging
 
 from allennlp.data.iterators.data_iterator import DataIterator
 from allennlp.data.iterators.bucket_iterator import BucketIterator
+
 logger = logging.getLogger(__name__)
 
 
