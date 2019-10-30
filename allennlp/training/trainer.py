@@ -272,8 +272,8 @@ class Trainer(TrainerBase):
         # will break the usages such as `Model.get_regularization_penalty`, `Model.get_metrics`, etc.
         #
         # Hence a reference to Pytorch's object is maintained in the case of distributed training and in the
-        # normal case, reference to `Model` is retained. This reference is only used in these places: `model.__call__`,
-        # `model.train` and `model.eval`.
+        # normal case, reference to `Model` is retained. This reference is only used in
+        # these places: `model.__call__`, `model.train` and `model.eval`.
         if self._distributed:
             self._pytorch_model = DistributedDataParallel(self.model, device_ids=[self._rank])
         else:
@@ -342,8 +342,8 @@ class Trainer(TrainerBase):
 
         logger.info("Training")
 
-        # Having multiple tqdm bars in case of distributed training will be a mess. Hence only the master's progress
-        # is shown
+        # Having multiple tqdm bars in case of distributed training will be a mess. Hence only the master's
+        # progress is shown
         if self._master:
             train_generator_tqdm = Tqdm.tqdm(train_generator, total=num_training_batches)
         else:
@@ -399,8 +399,13 @@ class Trainer(TrainerBase):
                 self._moving_average.apply(batch_num_total)
 
             # Update the description with the latest metrics
-            metrics = training_util.get_metrics(self.model, train_loss, batches_this_epoch,
-                                                world_size=self._world_size, rank=self._rank)
+            metrics = training_util.get_metrics(
+                self.model,
+                train_loss,
+                batches_this_epoch,
+                world_size=self._world_size,
+                rank=self._rank,
+            )
 
             # Updating tqdm only for the master as the trainers wouldn't have one
             if self._master:
@@ -428,15 +433,23 @@ class Trainer(TrainerBase):
                     self._tensorboard.add_train_scalar("mean_batch_size", average)
 
             # Save model if needed.
-            if self._model_save_interval is not None and (
-                time.time() - last_save_time > self._model_save_interval
-            ) and self._master:
+            if (
+                self._model_save_interval is not None
+                and (time.time() - last_save_time > self._model_save_interval)
+                and self._master
+            ):
                 last_save_time = time.time()
                 self._save_checkpoint(
                     "{0}.{1}".format(epoch, training_util.time_to_str(int(last_save_time)))
                 )
-        metrics = training_util.get_metrics(self.model, train_loss, batches_this_epoch, reset=True,
-                                            world_size=self._world_size, rank=self._rank)
+        metrics = training_util.get_metrics(
+            self.model,
+            train_loss,
+            batches_this_epoch,
+            reset=True,
+            world_size=self._world_size,
+            rank=self._rank,
+        )
         metrics["cpu_memory_MB"] = peak_cpu_usage
         for (gpu_num, memory) in gpu_usage:
             metrics["gpu_" + str(gpu_num) + "_memory_MB"] = memory
@@ -482,8 +495,13 @@ class Trainer(TrainerBase):
                 val_loss += loss.detach().cpu().numpy()
 
             # Update the description with the latest metrics
-            val_metrics = training_util.get_metrics(self.model, val_loss, batches_this_epoch,
-                                                    world_size=self._world_size, rank=self._rank)
+            val_metrics = training_util.get_metrics(
+                self.model,
+                val_loss,
+                batches_this_epoch,
+                world_size=self._world_size,
+                rank=self._rank,
+            )
             description = training_util.description_from_metrics(val_metrics)
             val_generator_tqdm.set_description(description, refresh=False)
 
@@ -544,7 +562,12 @@ class Trainer(TrainerBase):
                     # We have a validation set, so compute all the metrics on it.
                     val_loss, num_batches = self._validation_loss()
                     val_metrics = training_util.get_metrics(
-                        self.model, val_loss, num_batches, reset=True, world_size=self._world_size, rank=self._rank
+                        self.model,
+                        val_loss,
+                        num_batches,
+                        reset=True,
+                        world_size=self._world_size,
+                        rank=self._rank,
                     )
 
                     # Check validation metric for early stopping

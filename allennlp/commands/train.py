@@ -355,7 +355,9 @@ def _train_worker(
     best_model: ``Model``
         The model with the best epoch weights.
     """
-    prepare_global_logging(serialization_dir, file_friendly_logging, rank=rank, world_size=world_size)
+    prepare_global_logging(
+        serialization_dir, file_friendly_logging, rank=rank, world_size=world_size
+    )
     prepare_environment(params)
 
     distributed = world_size > 1

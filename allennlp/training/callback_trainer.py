@@ -153,8 +153,8 @@ class CallbackTrainer(TrainerBase):
         # will break the usages such as `Model.get_regularization_penalty`, `Model.get_metrics`, etc.
         #
         # Hence a reference to Pytorch's object is maintained in the case of distributed training and in the
-        # normal case, reference to `Model` is retained. This reference is only used in these places: `model.__call__`,
-        # `model.train` and `model.eval`.
+        # normal case, reference to `Model` is retained. This reference is only used in
+        # these places: `model.__call__`, `model.train` and `model.eval`.
         if self._distributed:
             self._pytorch_model = DistributedDataParallel(self.model, device_ids=[self._rank])
         else:
