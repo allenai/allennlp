@@ -36,3 +36,8 @@ class MultiprocessIterator(DataIterator):
         base_iterator.transforms.append(transforms.Fork())
 
         return base_iterator
+
+    def __init__(
+        self, base_iterator: TransformIterator, num_workers: int = 1, output_queue_size: int = 1000
+    ) -> None:
+        pass
