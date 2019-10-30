@@ -53,7 +53,7 @@ import torch.multiprocessing as mp
 from allennlp.commands.make_vocab import make_vocab_from_params
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common import Params
-from allennlp.common.checks import check_for_gpu, parse_cuda_device
+from allennlp.common.checks import ConfigurationError, check_for_gpu, parse_cuda_device
 from allennlp.common.util import (
     prepare_environment,
     prepare_global_logging,
@@ -273,11 +273,17 @@ def train_model(
         archive_model(serialization_dir, files_to_archive=params.files_to_archive)
         return model
     else:
+        device_id = parse_cuda_device(cuda_device)
+
+        if not isinstance(device_id, list):
+            raise ConfigurationError(
+                "Multiple cuda devices need to be configured to run distributed training."
+            )
+
         logging.info("Switching to distributed training mode since multiple GPUs are configured")
         os.environ["MASTER_ADDR"] = "127.0.0.1"
         os.environ["MASTER_PORT"] = "29500"
 
-        device_id = parse_cuda_device(cuda_device)
         n_gpus = len(device_id)
 
         # Creating `Vocabulary` objects from workers could be problematic since the data iterators
