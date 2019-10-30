@@ -290,7 +290,9 @@ def prepare_global_logging(
     # Remove the already set stream handler in root logger.
     # Not doing this will result in duplicate log messages
     # printed in the console
-    root_logger.removeHandler(root_logger.handlers[0])
+    if len(root_logger.handlers) > 0:
+        for handler in root_logger.handlers:
+            root_logger.removeHandler(handler)
 
     # file handlers need to be handled for tqdm's \r char
     file_friendly_log_filter = FileFriendlyLogFilter()

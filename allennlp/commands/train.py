@@ -284,7 +284,7 @@ def train_model(
         # in each worker will yield only `rank` specific instances. Hence it is safe to construct
         # the vocabulary and write it to disk before initializing the distributed context. The workers
         # will load the vocabulary from the path specified.
-        make_vocab_from_params(params, serialization_dir)
+        make_vocab_from_params(params.duplicate(), serialization_dir)
         params["vocabulary"] = {
             "directory_path": os.path.join(serialization_dir, "vocabulary"),
             "extend": False,  # vocab extension would have been done above
@@ -355,7 +355,7 @@ def _train_worker(
     best_model: ``Model``
         The model with the best epoch weights.
     """
-    prepare_global_logging(serialization_dir, file_friendly_logging)
+    prepare_global_logging(serialization_dir, file_friendly_logging, rank=rank, world_size=world_size)
     prepare_environment(params)
 
     distributed = world_size > 1
