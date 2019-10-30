@@ -455,19 +455,24 @@ class BiggestBatchFirst(Transform[Batched]):
 
 
 @Transform.register("shuffle")
-class Shuffle(Transform[Instance]):
-    def transform(self, dataset: Iterable[Instance]) -> Iterable[Instance]:
+class Shuffle(Transform[Batched]):
+    """
+    Shuffles a set of instances and returns them.
+
+    NOTE: This could be generic over batches and instances, i.e
+    for the batch case it just shuffles the batches. This is purposely NOT
+    like that, because it makes it easy to accidentally shoot yourself
+    in the foot if you have a dataset which is infinite, because in the batched
+    case, we still try to read all batches into memory. This way,
+    if this is called on a dataset which is already batched, it shuffles within
+    the batch and returns it lazily.
+    """
+
+    def transform(self, dataset: Iterable[Instance]) -> Iterable[Batched]:
 
         dataset = list(dataset)
         random.shuffle(dataset)
-        for instance in dataset:
-            yield instance
-
-    def transform_batch(self, batches: Iterable[Batched]) -> Iterable[Batched]:
-        batches = list(batches)
-        random.shuffle(batches)
-        for batch in batches:
-            yield batch
+        yield dataset
 
 
 @Transform.register("fork")

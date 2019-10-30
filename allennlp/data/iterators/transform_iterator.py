@@ -89,10 +89,8 @@ class TransformIterator:
         """
         max_instances = self._instances_per_epoch
         if shuffle:
-            # TODO(Mark): This is not ideal, becuase it means that
-            # we might not respect the MaxInstancesInMemory constraint.
-            # However, it is possible to do so by specifying the Shuffle transform
-            # directly in the list of transformations passed to this class.
+            # We have to be careful here, because you cannot shuffle an infinite
+            # stream, which some datasets might be.
             dataset_transforms = self.transforms + [transforms.Shuffle()]
         else:
             dataset_transforms = self.transforms
