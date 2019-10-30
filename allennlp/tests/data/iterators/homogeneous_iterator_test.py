@@ -2,7 +2,10 @@ from collections import Counter
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.dataset_readers import InterleavingDatasetReader
-from allennlp.data.iterators import HomogeneousBatchIterator
+from allennlp.data.iterators.homogeneous_batch_iterator import (
+    HomogeneousBatchIterator,
+    HomogeneousBatchIteratorStub,
+)
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.tests.data.dataset_readers.interleaving_dataset_reader_test import PlainTextReader
 
@@ -27,19 +30,23 @@ class TestHomogeneousBatchIterator(AllenNlpTestCase):
             instance.fields["dataset"].metadata for instance in instances
         )
 
-        iterator = HomogeneousBatchIterator(batch_size=3)
-        iterator.index_with(vocab)
+        for iterator in [
+            HomogeneousBatchIterator(batch_size=3),
+            HomogeneousBatchIteratorStub(batch_size=3),
+        ]:
 
-        observed_instance_type_counts = Counter()
+            iterator.index_with(vocab)
 
-        for batch in iterator(instances, num_epochs=1, shuffle=True):
-            # batch should be homogeneous
-            instance_types = set(batch["dataset"])
-            assert len(instance_types) == 1
+            observed_instance_type_counts = Counter()
 
-            observed_instance_type_counts.update(batch["dataset"])
+            for batch in iterator(instances, num_epochs=1, shuffle=True):
+                # batch should be homogeneous
+                instance_types = set(batch["dataset"])
+                assert len(instance_types) == 1
 
-        assert observed_instance_type_counts == actual_instance_type_counts
+                observed_instance_type_counts.update(batch["dataset"])
+
+            assert observed_instance_type_counts == actual_instance_type_counts
 
     def test_skip_smaller_batches(self):
         readers = {"a": PlainTextReader(), "b": PlainTextReader(), "c": PlainTextReader()}
@@ -56,9 +63,12 @@ class TestHomogeneousBatchIterator(AllenNlpTestCase):
         instances = list(reader.read(file_path))
         vocab = Vocabulary.from_instances(instances)
 
-        iterator = HomogeneousBatchIterator(batch_size=3, skip_smaller_batches=True)
-        iterator.index_with(vocab)
+        for iterator in [
+            HomogeneousBatchIterator(batch_size=3, skip_smaller_batches=True),
+            HomogeneousBatchIteratorStub(batch_size=3, skip_smaller_batches=True),
+        ]:
+            iterator.index_with(vocab)
 
-        for batch in iterator(instances, num_epochs=1, shuffle=True):
-            # every batch should have length 3 (batch size)
-            assert len(batch["dataset"]) == 3
+            for batch in iterator(instances, num_epochs=1, shuffle=True):
+                # every batch should have length 3 (batch size)
+                assert len(batch["dataset"]) == 3
