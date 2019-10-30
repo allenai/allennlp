@@ -45,6 +45,7 @@ class TransformerMCQAModel(Model):
         if 'roberta' in pretrained_model:
             self._padding_value = 1  # The index of the RoBERTa padding token
             self._transformer_model = RobertaModel.from_pretrained(pretrained_model)
+            self._dropout = torch.nn.Dropout(self._transformer_model.config.hidden_dropout_prob)
         elif 'xlnet' in pretrained_model:
             self._padding_value = 5  # The index of the XLNet padding token
             self._transformer_model = XLNetModel.from_pretrained(pretrained_model)
@@ -77,11 +78,13 @@ class TransformerMCQAModel(Model):
         transformer_config.num_labels = 1
         self._output_dim = self._transformer_model.config.hidden_size
 
-        if 'roberta' in pretrained_model:
-            self._classifier = RobertaClassificationHead(transformer_config)
-        else:
-            self._classifier = Linear(self._output_dim, 1)
-            # self._classifier.apply(self._transformer_model.init_weights)
+        #if 'roberta' in pretrained_model:
+        #    self._classifier = RobertaClassificationHead(transformer_config)
+        #else:
+
+        # unifing all model classification layer
+        self._classifier = Linear(self._output_dim, 1)
+        #self._classifier.apply(self._transformer_model.init_weights)
 
         self._accuracy = CategoricalAccuracy()
         self._loss = torch.nn.CrossEntropyLoss()
@@ -112,10 +115,11 @@ class TransformerMCQAModel(Model):
 
         # Segment ids are not used by RoBERTa
         if 'roberta' in self._pretrained_model:
-            transformer_outputs = self._transformer_model(input_ids=util.combine_initial_dims(input_ids),
+            transformer_outputs, pooled_output = self._transformer_model(input_ids=util.combine_initial_dims(input_ids),
                                                       # token_type_ids=util.combine_initial_dims(segment_ids),
                                                       attention_mask=util.combine_initial_dims(question_mask))
-            cls_output = transformer_outputs[0]
+            cls_output = self._dropout(pooled_output)
+            #cls_output = pooled_output
         elif 'xlnet' in self._pretrained_model:
             transformer_outputs = self._transformer_model(input_ids=util.combine_initial_dims(input_ids),
                                                          token_type_ids=util.combine_initial_dims(segment_ids),
