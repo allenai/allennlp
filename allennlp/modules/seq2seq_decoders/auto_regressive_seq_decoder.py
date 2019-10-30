@@ -426,7 +426,7 @@ class AutoRegressiveSeqDecoder(SeqDecoder):
                     )
 
                 if self._token_based_metric is not None:
-                    output_dict = self.decode(output_dict)
+                    output_dict = self.post_process(output_dict)
                     predicted_tokens = output_dict["predicted_tokens"]
 
                     self._token_based_metric(  # type: ignore
