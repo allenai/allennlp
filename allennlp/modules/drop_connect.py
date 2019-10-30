@@ -65,9 +65,12 @@ class DropConnect(torch.nn.Module):
         for match in self._matches:
             self.register_parameter(match.raw_parameter_name, match.parameter)
             delattr(match.module, match.parameter_name)
-        # Skip `RNNBase._apply()`'s last step otherwise it will run into mismatched `_all_weights`.
+        # Skip `RNNBase._apply()`'s last step otherwise it will run into mismatched `_all_weights`.`
+        # Use `_called_no_op_f_called_no_op_flatten_parameters` as a dummy flag for test coverage.
+        self._called_no_op_flatten_parameters = None
         if issubclass(type(self._module), torch.nn.RNNBase):
             self._module.flatten_parameters = self._no_op_flatten_parameters
+            self._called_no_op_flatten_parameters = 0
 
     def _search_parameters(self, regex: str) -> Iterator[_Match]:
         """
@@ -84,6 +87,7 @@ class DropConnect(torch.nn.Module):
         We need to replace flatten_parameters with a no-op function.
         It must be a function rather than a lambda as otherwise pickling explodes.
         """
+        self._called_no_op_flatten_parameters += 1
         return
 
     def forward(self, *args):
