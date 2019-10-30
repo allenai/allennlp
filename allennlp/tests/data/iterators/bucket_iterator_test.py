@@ -1,13 +1,8 @@
 import pytest
-import unittest
-from typing import List
-
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
-
-from allennlp.data.dataset import Batch
-from allennlp.data.iterators.bucket_iterator import BucketIterator
+from allennlp.data.iterators import BucketIterator
 from allennlp.tests.data.iterators.basic_iterator_test import IteratorTest
 
 
@@ -40,7 +35,6 @@ class TestBucketIterator(IteratorTest):
         for test_instances in (self.instances, self.lazy_instances):
             batches = list(iterator._create_batches(test_instances, shuffle=False))
             grouped_instances = [batch.instances for batch in batches]
-
             assert grouped_instances == [
                 [self.instances[2], self.instances[0]],
                 [self.instances[1]],
@@ -66,14 +60,19 @@ class TestBucketIterator(IteratorTest):
     def test_from_params(self):
 
         params = Params({})
-        # Construction with no sorting keys is allowed.
-        iterator = BucketIterator.from_params(params)
+
+        with pytest.raises(ConfigurationError):
+            iterator = BucketIterator.from_params(params)
 
         sorting_keys = [("s1", "nt"), ("s2", "nt2")]
         params["sorting_keys"] = sorting_keys
         iterator = BucketIterator.from_params(params)
 
+        assert iterator._sorting_keys == sorting_keys
+        assert iterator._padding_noise == 0.1
+        assert not iterator._biggest_batch_first
         assert iterator._batch_size == 32
+        assert not iterator._skip_smaller_batches
 
         params = Params(
             {
@@ -84,8 +83,13 @@ class TestBucketIterator(IteratorTest):
                 "skip_smaller_batches": True,
             }
         )
+
         iterator = BucketIterator.from_params(params)
+        assert iterator._sorting_keys == sorting_keys
+        assert iterator._padding_noise == 0.5
+        assert iterator._biggest_batch_first
         assert iterator._batch_size == 100
+        assert iterator._skip_smaller_batches
 
     def test_bucket_iterator_maximum_samples_per_batch(self):
         iterator = BucketIterator(
