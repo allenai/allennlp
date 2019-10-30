@@ -48,12 +48,3 @@ class MultiprocessDatasetReader(DatasetReader):
         )
 
         return base_reader
-
-    def __init__(
-        self,
-        base_reader: DatasetReader,
-        num_workers: int,
-        epochs_per_read: int = 1,
-        output_queue_size: int = 1000,
-    ):
-        pass
