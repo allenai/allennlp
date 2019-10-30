@@ -60,9 +60,9 @@ class TestBucketIterator(IteratorTest):
     def test_from_params(self):
 
         params = Params({})
-
-        with pytest.raises(ConfigurationError):
-            iterator = BucketIterator.from_params(params)
+        # No padding keys is explicitly allowed.
+        iterator = BucketIterator.from_params(params)
+        assert iterator._sorting_keys is None
 
         sorting_keys = [("s1", "nt"), ("s2", "nt2")]
         params["sorting_keys"] = sorting_keys

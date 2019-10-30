@@ -19,7 +19,7 @@ from allennlp.data.iterators import DataIterator
 from allennlp.data import Vocabulary
 from allennlp.common.params import Params
 from allennlp.models.simple_tagger import SimpleTagger
-from allennlp.data.iterators import BasicIterator, BucketIterator
+from allennlp.data.iterators import BasicIterator
 from allennlp.data.dataset_readers import SequenceTaggingDatasetReader
 from allennlp.models.model import Model
 from allennlp.training.callback_trainer import CallbackTrainer
@@ -767,7 +767,7 @@ class TestCallbackTrainer(ModelTestCase):
         #   Run for 6 epochs, keeping the last 2 models, models also kept every 5 seconds.
         #   Check the resulting checkpoints.  Should then have models at epochs
         #       2, 4, plus the last two at 5 and 6.
-        class WaitingIterator(BucketIterator):
+        class WaitingIterator(BasicIterator):
             def _create_batches(self, *args, **kwargs):
                 time.sleep(2.5)
                 return super()._create_batches(*args, **kwargs)
