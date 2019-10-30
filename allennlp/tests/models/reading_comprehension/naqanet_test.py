@@ -14,4 +14,7 @@ class NumericallyAugmentedQaNetTest(ModelTestCase):
 
     @flaky(max_runs=3, min_passes=1)
     def test_model_can_train_save_and_load(self):
-        self.ensure_model_can_train_save_and_load(self.param_file)
+        self.ensure_model_can_train_save_and_load(
+            self.param_file,
+            gradients_to_ignore={"_passage_span_end_predictor._linear_layers.1.bias"}
+        )
