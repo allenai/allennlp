@@ -95,6 +95,7 @@ class HomogeneousBatchIterator(DataIterator):
     some ``MetadataField`` indicating what "type" of instance it is
     and bases its notion of homogeneity on that (and, in particular, not on
     inspecting the "field signature" of the instance.)
+
     Parameters
     ----------
     batch_size : ``int``, optional, (default = 32)
