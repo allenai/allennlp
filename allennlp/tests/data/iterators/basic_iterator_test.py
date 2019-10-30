@@ -7,8 +7,7 @@ from allennlp.data import Instance, Token, Vocabulary
 from allennlp.data.dataset import Batch
 from allennlp.data.dataset_readers.dataset_reader import _LazyInstances
 from allennlp.data.fields import TextField
-
-from allennlp.data.iterators.basic_iterator import BasicIterator
+from allennlp.data.iterators import BasicIterator
 from allennlp.data.token_indexers import SingleIdTokenIndexer
 
 
@@ -138,7 +137,6 @@ class TestBasicIterator(IteratorTest):
 
         for test_instances in (self.instances, self.lazy_instances):
             iterator = BasicIterator(batch_size=2)
-            iterator.index_with(self.vocab)
             batches = list(iterator._create_batches(test_instances, shuffle=False))
             grouped_instances = [batch.instances for batch in batches]
             assert grouped_instances == [
@@ -151,11 +149,9 @@ class TestBasicIterator(IteratorTest):
 
         for test_instances in (self.instances, self.lazy_instances):
             iterator = BasicIterator(batch_size=2, instances_per_epoch=3)
-            iterator.index_with(self.vocab)
             # First epoch: 3 instances -> [2, 1]
             batches = list(iterator._create_batches(test_instances, shuffle=False))
             grouped_instances = [batch.instances for batch in batches]
-
             assert grouped_instances == [
                 [self.instances[0], self.instances[1]],
                 [self.instances[2]],
@@ -167,11 +163,34 @@ class TestBasicIterator(IteratorTest):
                 [self.instances[3], self.instances[4]],
                 [self.instances[0]],
             ]
-
             # Third epoch: 3 instances -> [2, 1]
             batches = list(iterator._create_batches(test_instances, shuffle=False))
             grouped_instances = [batch.instances for batch in batches]
             assert grouped_instances == [
+                [self.instances[1], self.instances[2]],
+                [self.instances[3]],
+            ]
+
+    def test_many_instances_per_epoch(self):
+
+        for test_instances in (self.instances, self.lazy_instances):
+            iterator = BasicIterator(batch_size=2, instances_per_epoch=7)
+            # First epoch: 7 instances -> [2, 2, 2, 1]
+            batches = list(iterator._create_batches(test_instances, shuffle=False))
+            grouped_instances = [batch.instances for batch in batches]
+            assert grouped_instances == [
+                [self.instances[0], self.instances[1]],
+                [self.instances[2], self.instances[3]],
+                [self.instances[4], self.instances[0]],
+                [self.instances[1]],
+            ]
+
+            # Second epoch: 7 instances -> [2, 2, 2, 1]
+            batches = list(iterator._create_batches(test_instances, shuffle=False))
+            grouped_instances = [batch.instances for batch in batches]
+            assert grouped_instances == [
+                [self.instances[2], self.instances[3]],
+                [self.instances[4], self.instances[0]],
                 [self.instances[1], self.instances[2]],
                 [self.instances[3]],
             ]
@@ -212,7 +231,6 @@ class TestBasicIterator(IteratorTest):
         for test_instances in (self.instances, self.lazy_instances):
 
             iterator = BasicIterator(batch_size=2, instances_per_epoch=100)
-            iterator.index_with(self.vocab)
 
             in_order_batches = list(iterator._create_batches(test_instances, shuffle=False))
             shuffled_batches = list(iterator._create_batches(test_instances, shuffle=True))
@@ -234,7 +252,6 @@ class TestBasicIterator(IteratorTest):
     def test_max_instances_in_memory(self):
         for test_instances in (self.instances, self.lazy_instances):
             iterator = BasicIterator(batch_size=2, max_instances_in_memory=3)
-            iterator.index_with(self.vocab)
             # One epoch: 5 instances -> [2, 1, 2]
             batches = list(iterator._create_batches(test_instances, shuffle=False))
             grouped_instances = [batch.instances for batch in batches]
@@ -257,7 +274,6 @@ class TestBasicIterator(IteratorTest):
             (lazy_instances1, lazy_instances2),
         ]:
             iterator = BasicIterator(batch_size=1, instances_per_epoch=2)
-            assert iterator._instances_per_epoch == 2
             iterator.index_with(self.vocab)
 
             # First epoch through dataset1
@@ -279,6 +295,16 @@ class TestBasicIterator(IteratorTest):
             batches = list(iterator._create_batches(instances2, shuffle=False))
             grouped_instances = [batch.instances for batch in batches]
             assert grouped_instances == [[self.instances[2]], [self.instances[3]]]
+
+    def test_from_params(self):
+
+        params = Params({})
+        iterator = BasicIterator.from_params(params)
+        assert iterator._batch_size == 32  # default value
+
+        params = Params({"batch_size": 10})
+        iterator = BasicIterator.from_params(params)
+        assert iterator._batch_size == 10
 
     def test_maximum_samples_per_batch(self):
         for test_instances in (self.instances, self.lazy_instances):
