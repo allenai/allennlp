@@ -118,7 +118,11 @@ class TransformIterator:
                     next_batch = next(batch_generator)
                     yield next_batch
 
-                # TODO explain this because it's hella confusing
+                # This exception is caught so that we can pop out of the batch_generator
+                # which cycles forever due to itertools.cycle. This means that we can watch
+                # for when the StopAfter transform raises a StopIteration error, catch it
+                # and break out of the loop **whilst** keeping the position of the iterator
+                # at the position where we stopped as we cycle through it.
                 except StopIteration:
                     break
 

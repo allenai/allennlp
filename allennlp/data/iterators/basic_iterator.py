@@ -40,6 +40,9 @@ class BasicIteratorStub(DataIterator):
             maximum_samples_per_batch=maximum_samples_per_batch,
         )
 
+    # It's important that we have this constructor here, because FromParams uses it to
+    # inspect the arguments for the class when it is constructed. Without this, FromParams
+    # assumes that this stub takes no parameters, because it has no __init__ function.
     def __init__(
         self,
         batch_size: int = 32,
