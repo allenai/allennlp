@@ -111,15 +111,3 @@ class DropConnect(torch.nn.Module):
         # Because PyTorch's optimizer won't include non-leaf tensors as parameters.
 
         return output
-
-    def reset(self):
-        if hasattr(self._module, "reset"):
-            self._module.reset()
-
-        # Reuse `self._matches` otherwise it may falsely match raw parameters.
-        for match in self._matches:
-            self.register_parameter(match.raw_parameter_name, match.parameter)
-            delattr(match.module, match.parameter_name)
-
-        if issubclass(type(self._module), torch.nn.RNNBase):
-            self._module.flatten_parameters = self._no_op_flatten_parameters

@@ -156,11 +156,17 @@ class DropConnectTest(AllenNlpTestCase):
             sgd.step()
             _assert_sgd_states(sgd, has_grad=True)
 
-        # Case 4: After reset()
-        weight_dropped_linear.reset()
-        assert weight_dropped_linear._called_no_op_flatten_parameters is None
-        assert all(parameter.is_leaf for parameter in weight_dropped_linear.parameters())
-
-        # Case 5: When in eval mode
+        # Case 4: When in eval mode
         weight_dropped_linear.eval()
-        assert all(parameter.is_leaf for parameter in weight_dropped_linear.parameters())
+        # The duplicated-non-leaf weight still exists.
+        pre_eval_parameters = list(weight_dropped_linear.parameters())
+        assert len(pre_eval_parameters) == _n_params + 1
+        assert not all(parameter.is_leaf for parameter in pre_eval_parameters)
+        weight_dropped_linear(input_tensor)
+        # But only the raw weight applies.
+        eval_parameters = list(weight_dropped_linear.parameters())
+        assert len(eval_parameters) == _n_params
+        assert all(parameter.is_leaf for parameter in eval_parameters)
+        assert torch.equal(
+            weight_dropped_linear._module_weight_raw, weight_dropped_linear._module.weight
+        )
