@@ -7,6 +7,13 @@ from allennlp.modules.drop_connect import DropConnect
 
 
 class DropConnectTest(AllenNlpTestCase):
+    def test_no_op_flatten_parameters(self):
+        # A dummy test to make codecov/patch happy
+        dropped_linear = DropConnect(torch.nn.Linear(10, 10), parameter_regex="weight", dropout=0.9)
+        assert dropped_linear._called_no_op_flatten_parameters is None
+        dropped_linear._no_op_flatten_parameters()
+        assert dropped_linear._called_no_op_flatten_parameters == 0
+        
     @flaky(max_runs=10, min_passes=1)
     def test_linear_outputs(self):
         # Check that weights are (probably) being dropped out properly. There's an extremely small
