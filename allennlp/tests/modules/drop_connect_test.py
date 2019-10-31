@@ -9,11 +9,20 @@ from allennlp.modules.drop_connect import DropConnect
 class DropConnectTest(AllenNlpTestCase):
     def test_no_op_flatten_parameters(self):
         # A dummy test to make codecov/patch happy
+
+        # Case 1 of 2: Non-RNNBase
         dropped_linear = DropConnect(torch.nn.Linear(10, 10), parameter_regex="weight", dropout=0.9)
         assert dropped_linear._called_no_op_flatten_parameters is None
         dropped_linear._no_op_flatten_parameters()
-        assert dropped_linear._called_no_op_flatten_parameters == 0
-        
+        assert dropped_linear._called_no_op_flatten_parameters is None
+
+        # Case 2 of 2: RNNBase
+        lstm = torch.nn.LSTM(input_size=10, hidden_size=10, batch_first=True)
+        dropped_lstm = DropConnect(module=lstm, parameter_regex="weight_hh", dropout=0.9)
+        assert dropped_lstm._called_no_op_flatten_parameters == 0
+        dropped_lstm._no_op_flatten_parameters()
+        assert dropped_lstm._called_no_op_flatten_parameters == 1
+
     @flaky(max_runs=10, min_passes=1)
     def test_linear_outputs(self):
         # Check that weights are (probably) being dropped out properly. There's an extremely small
@@ -174,6 +183,7 @@ class DropConnectTest(AllenNlpTestCase):
         eval_parameters = list(weight_dropped_linear.parameters())
         assert len(eval_parameters) == _n_params
         assert all(parameter.is_leaf for parameter in eval_parameters)
-        assert torch.equal(
-            weight_dropped_linear._module_weight_raw, weight_dropped_linear._module.weight
-        )
+        raw_weight = weight_dropped_linear._module_weight_raw
+        weight = weight_dropped_linear._module.weight
+        assert torch.equal(raw_weight.T, weight.T)
+        assert torch.equal(raw_weight.data, weight.data)

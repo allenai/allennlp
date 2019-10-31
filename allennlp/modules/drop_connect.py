@@ -87,7 +87,8 @@ class DropConnect(torch.nn.Module):
         We need to replace flatten_parameters with a no-op function.
         It must be a function rather than a lambda as otherwise pickling explodes.
         """
-        self._called_no_op_flatten_parameters += 1
+        if self._called_no_op_flatten_parameters is not None:
+            self._called_no_op_flatten_parameters += 1
         return
 
     def forward(self, *args):
