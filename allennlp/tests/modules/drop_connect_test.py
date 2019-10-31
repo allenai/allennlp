@@ -7,44 +7,23 @@ from allennlp.modules.drop_connect import DropConnect
 
 
 class DropConnectTest(AllenNlpTestCase):
-    def test_no_op_flatten_parameters(self):
-        # A dummy test to make codecov/patch happy
-
-        # Case 1 of 2: Non-RNNBase
-        dropped_linear = DropConnect(torch.nn.Linear(10, 10), parameter_regex="weight", dropout=0.9)
-        assert dropped_linear._called_no_op_flatten_parameters is None
-        dropped_linear._no_op_flatten_parameters()
-        assert dropped_linear._called_no_op_flatten_parameters is None
-
-        # Case 2 of 2: RNNBase
-        lstm = torch.nn.LSTM(input_size=10, hidden_size=10, batch_first=True)
-        dropped_lstm = DropConnect(module=lstm, parameter_regex="weight_hh", dropout=0.9)
-        assert dropped_lstm._called_no_op_flatten_parameters == 0
-        dropped_lstm._no_op_flatten_parameters()
-        assert dropped_lstm._called_no_op_flatten_parameters == 1
-
     @flaky(max_runs=10, min_passes=1)
     def test_linear_outputs(self):
         # Check that weights are (probably) being dropped out properly. There's an extremely small
         # chance (p < 1e-86) that this test fails.
         input_tensor = torch.ones(10, dtype=torch.float32)
         dropped_linear = DropConnect(torch.nn.Linear(10, 10), parameter_regex="weight", dropout=0.9)
-        assert dropped_linear._called_no_op_flatten_parameters is None
 
         # Check that outputs differ if module is in training mode
         dropped_linear.train()
         output_a = dropped_linear(input_tensor)
-        assert dropped_linear._called_no_op_flatten_parameters is None
         output_b = dropped_linear(input_tensor)
-        assert dropped_linear._called_no_op_flatten_parameters is None
         assert not torch.allclose(output_a, output_b)
 
         # Check that outputs are the same if module is in eval mode
         dropped_linear.eval()
         output_a = dropped_linear(input_tensor)
-        assert dropped_linear._called_no_op_flatten_parameters is None
         output_b = dropped_linear(input_tensor)
-        assert dropped_linear._called_no_op_flatten_parameters is None
         assert torch.allclose(output_a, output_b)
 
     @flaky(max_runs=10, min_passes=1)
@@ -54,24 +33,19 @@ class DropConnectTest(AllenNlpTestCase):
         input_tensor = torch.ones(1, 2, 10, dtype=torch.float32)  # shape: (batch, seq_length, dim)
         lstm = torch.nn.LSTM(input_size=10, hidden_size=10, batch_first=True)
         dropped_lstm = DropConnect(module=lstm, parameter_regex="weight_hh", dropout=0.9)
-        assert dropped_lstm._called_no_op_flatten_parameters == 0
 
         # Check that outputs differ if module is in training mode. Since only hidden-to-hidden
         # weights are masked, the first outputs should be the same.
         dropped_lstm.train()
         output_a, _ = dropped_lstm(input_tensor)
-        assert dropped_lstm._called_no_op_flatten_parameters == 0
         output_b, _ = dropped_lstm(input_tensor)
-        assert dropped_lstm._called_no_op_flatten_parameters == 0
         assert torch.allclose(output_a[:, 0, :], output_b[:, 0, :])
         assert not torch.allclose(output_a[:, 1, :], output_b[:, 1, :])
 
         # Check that outputs are the same if module is in eval mode
         dropped_lstm.eval()
         output_a, _ = dropped_lstm(input_tensor)
-        assert dropped_lstm._called_no_op_flatten_parameters == 0
         output_b, _ = dropped_lstm(input_tensor)
-        assert dropped_lstm._called_no_op_flatten_parameters == 0
         assert torch.allclose(output_a, output_b)
 
     @unittest.skipIf(not torch.cuda.is_available(), reason="No CUDA device registered.")
@@ -79,16 +53,13 @@ class DropConnectTest(AllenNlpTestCase):
         input_tensor = torch.ones(1, 2, 10, dtype=torch.float32).cuda()
         lstm = torch.nn.LSTM(input_size=10, hidden_size=10, batch_first=True).cuda()
         dropped_lstm = DropConnect(module=lstm, parameter_regex="weight_hh", dropout=0.9)
-        assert dropped_lstm._called_no_op_flatten_parameters == 0
         try:
             dropped_lstm.cuda()
-            assert dropped_lstm._called_no_op_flatten_parameters == 1
         except AttributeError as err:
             self.fail(err)
         dropped_lstm.train()
         try:
             output_a, _ = dropped_lstm(input_tensor)
-            assert dropped_lstm._called_no_op_flatten_parameters == 1
         except UserWarning as warn:
             self.fail(warn)
 
@@ -143,7 +114,6 @@ class DropConnectTest(AllenNlpTestCase):
         weight_dropped_linear = DropConnect(
             torch.nn.Linear(_in_dim, _out_dim), parameter_regex="weight", dropout=0.9
         )
-        assert weight_dropped_linear._called_no_op_flatten_parameters is None
         assert all(parameter.is_leaf for parameter in weight_dropped_linear.parameters())
 
         # Case 2: When in training mode
@@ -160,7 +130,6 @@ class DropConnectTest(AllenNlpTestCase):
         for epoch in range(2):
             sgd.zero_grad()
             output_tensor = weight_dropped_linear(input_tensor)
-            assert weight_dropped_linear._called_no_op_flatten_parameters is None
 
             # Replaced
             # `assert all(parameter.is_leaf for parameter in weight_dropped_linear.parameters())`

@@ -64,13 +64,8 @@ class DropConnect(torch.nn.Module):
         # updated twice when calling Optimizer.step().
         for match in self._matches:
             self.register_parameter(match.raw_parameter_name, match.parameter)
-            delattr(match.module, match.parameter_name)
-        # Skip `RNNBase._apply()`'s last step otherwise it will run into mismatched `_all_weights`.`
-        # Use `_called_no_op_f_called_no_op_flatten_parameters` as a dummy flag for test coverage.
-        self._called_no_op_flatten_parameters = None
-        if issubclass(type(self._module), torch.nn.RNNBase):
-            self._module.flatten_parameters = self._no_op_flatten_parameters
-            self._called_no_op_flatten_parameters = 0
+        # Don't remove the dropped out parameters from their parent module's _parameter dictionary.
+        # Otherwise a model's `state_dict` won't be reusable for fine-tuning.
 
     def _search_parameters(self, regex: str) -> Iterator[_Match]:
         """
@@ -81,15 +76,6 @@ class DropConnect(torch.nn.Module):
             for parameter_name, parameter in submodule.named_parameters(recurse=False):
                 if re.search(regex, parameter_name):
                     yield _Match(submodule_name, submodule, parameter_name, parameter)
-
-    def _no_op_flatten_parameters(self):
-        """
-        We need to replace flatten_parameters with a no-op function.
-        It must be a function rather than a lambda as otherwise pickling explodes.
-        """
-        if self._called_no_op_flatten_parameters is not None:
-            self._called_no_op_flatten_parameters += 1
-        return
 
     def forward(self, *args):
         # Apply dropout to all of the matching parameters, and force them into their original
