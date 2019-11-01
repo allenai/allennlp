@@ -617,8 +617,11 @@ class TransformerMaskedLMReader(DatasetReader):
         segment_ids = []
         current_segment = 0
         # Alon, if the question is empty don't add seprators.
-        masked_tokens = [(i, t) for i, t in enumerate(question_tokens) if
-            t == self._tokenizer.tokenize('[MASK]')[0] or t == self._tokenizer.tokenize('<mask>')[0]]
+        if self._model_type in ['roberta', 'xlnet']:
+            masked_tokens = [(i, t) for i, t in enumerate(question_tokens) if t == self._tokenizer.tokenize('<mask>')[0]]
+        else:
+            masked_tokens = [(i, t) for i, t in enumerate(question_tokens) if t == self._tokenizer.tokenize('[MASK]')[0]]
+
         if len(masked_tokens) > 0:
             tokens += question_tokens
             segment_ids += len(tokens) * [current_segment]
