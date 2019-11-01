@@ -80,7 +80,7 @@ def char_span_to_token_span(
     while start_index < len(token_offsets) and token_offsets[start_index][0] < character_span[0]:
         start_index += 1
     # start_index should now be pointing at the span start index.
-    if token_offsets[start_index][0] > character_span[0]:
+    if start_index == len(token_offsets) or token_offsets[start_index][0] > character_span[0]:
         # In this case, a tokenization or labeling issue made us go too far - the character span
         # we're looking for actually starts in the previous token.  We'll back up one.
         logger.debug("Bad labelling or tokenization - start offset doesn't match")
@@ -95,6 +95,7 @@ def char_span_to_token_span(
         # answer is "1854".  We can't do much in this case, except keep the answer as the whole
         # token.
         logger.debug("Bad tokenization - end offset doesn't match")
+    # TODO the following statements cause IndexErrors in case character_span[1] exceeds the sentence length
     elif token_offsets[end_index][1] > character_span[1]:
         # This is a case where the given answer span is more than one token, and the last token is
         # cut off for some reason, like "split with Luckett and Rober", when the original passage
