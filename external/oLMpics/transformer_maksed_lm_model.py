@@ -46,6 +46,28 @@ class BertForMultiChoiceMaskedLM(BertForMaskedLM):
 
         return outputs  # (masked_lm_loss), prediction_scores, (hidden_states), (attentions)
 
+class RobertaForMultiChoiceMaskedLM(RobertaForMaskedLM):
+    def forward(self, input_ids, token_type_ids=None, attention_mask=None, masked_lm_labels=None, position_ids=None,
+                head_mask=None, all_masked_index_ids = None, label = None):
+        outputs = self.roberta(input_ids, position_ids=position_ids, token_type_ids=token_type_ids,
+                            attention_mask=attention_mask, head_mask=head_mask)
+        sequence_output = outputs[0]
+        prediction_scores = self.lm_head(sequence_output)
+
+        outputs = (prediction_scores,) + outputs[2:]  # Add hidden states and attention if they are here
+
+        if masked_lm_labels is not None:
+            loss_fct = CrossEntropyLoss(ignore_index=-1)
+            # choosing prediction with all_masked_index_ids
+            masked_lm_loss = 0
+            for i, e in enumerate(all_masked_index_ids):
+                masked_lm_loss += \
+                    loss_fct(prediction_scores[i, e[0][0][0], [e[0][0][1], e[1][0][1], e[2][0][1]]].unsqueeze(0), label[i].unsqueeze(0))
+
+            # masked_lm_loss = loss_fct(prediction_scores.view(-1, self.config.vocab_size), masked_lm_labels.view(-1))
+            outputs = (masked_lm_loss,) + outputs
+
+        return outputs
 
 @Model.register("transformer_masked_lm")
 class TransformerMaskedLMModel(Model):
@@ -70,7 +92,7 @@ class TransformerMaskedLMModel(Model):
         self._pretrained_model = pretrained_model
         if 'roberta' in pretrained_model:
             self._padding_value = 1  # The index of the RoBERTa padding token
-            self._transformer_model = RobertaForMaskedLM.from_pretrained(pretrained_model)
+            self._transformer_model = RobertaForMultiChoiceMaskedLM.from_pretrained(pretrained_model)
         elif 'xlnet' in pretrained_model:
             self._padding_value = 5  # The index of the XLNet padding token
             self._transformer_model = XLNetLMHeadModel.from_pretrained(pretrained_model)
