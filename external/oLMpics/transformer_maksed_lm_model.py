@@ -86,18 +86,27 @@ class TransformerMaskedLMModel(Model):
                  layer_freeze_regexes: List[str] = None,
                  mc_strategy: str = None,
                  on_load: bool = False,
+                 loss_on_all_vocab: bool = False,
                  regularizer: Optional[RegularizerApplicator] = None) -> None:
         super().__init__(vocab, regularizer)
+
+        self._loss_on_all_vocab = loss_on_all_vocab
 
         self._pretrained_model = pretrained_model
         if 'roberta' in pretrained_model:
             self._padding_value = 1  # The index of the RoBERTa padding token
-            self._transformer_model = RobertaForMultiChoiceMaskedLM.from_pretrained(pretrained_model)
+            if loss_on_all_vocab:
+                self._transformer_model = RobertaForMaskedLM.from_pretrained(pretrained_model)
+            else:
+                self._transformer_model = RobertaForMultiChoiceMaskedLM.from_pretrained(pretrained_model)
         elif 'xlnet' in pretrained_model:
             self._padding_value = 5  # The index of the XLNet padding token
             self._transformer_model = XLNetLMHeadModel.from_pretrained(pretrained_model)
         elif 'bert' in pretrained_model:
-            self._transformer_model = BertForMultiChoiceMaskedLM.from_pretrained(pretrained_model)
+            if loss_on_all_vocab:
+                self._transformer_model = BertForMaskedLM.from_pretrained(pretrained_model)
+            else:
+                self._transformer_model = BertForMultiChoiceMaskedLM.from_pretrained(pretrained_model)
             self._padding_value = 0  # The index of the BERT padding token
         else:
             assert (ValueError)
@@ -146,8 +155,11 @@ class TransformerMaskedLMModel(Model):
 
         # Segment ids are not used by RoBERTa
         if 'roberta' in self._pretrained_model or 'bert' in self._pretrained_model:
-            outputs = self._transformer_model(input_ids=util.combine_initial_dims(input_ids), masked_lm_labels=masked_labels,
-                                              all_masked_index_ids=[e['all_masked_index_ids'] for e in metadata],label=label)
+            if self._loss_on_all_vocab:
+                outputs = self._transformer_model(input_ids=util.combine_initial_dims(input_ids), masked_lm_labels=masked_labels)
+            else:
+                outputs = self._transformer_model(input_ids=util.combine_initial_dims(input_ids), masked_lm_labels=masked_labels,
+                                                  all_masked_index_ids=[e['all_masked_index_ids'] for e in metadata],label=label)
             loss, predictions = outputs[:2]
         elif 'xlnet' in self._pretrained_model:
             transformer_outputs = self._transformer_model(input_ids=util.combine_initial_dims(input_ids),
