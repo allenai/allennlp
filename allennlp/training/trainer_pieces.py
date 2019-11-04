@@ -59,7 +59,8 @@ class TrainerPieces(NamedTuple):
             if vocabulary_params.get("directory_path", None):
                 logger.warning(
                     "You passed `directory_path` in parameters for the vocabulary in "
-                    "your configuration file, but it will be ignored. "
+                    "your configuration file, but it will be ignored because we already "
+                    "have a model with a vocabulary."
                 )
 
             vocab = model.vocab
