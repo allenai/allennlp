@@ -26,3 +26,5 @@ We have a few major themes for this quarter:
 3.  Launching a first version of an AllenNLP course.  It's challenging for many people to onboard,
     so we're building an interactive course.  We're also designing it to be an effective resource
     for people teaching introductory NLP courses.
+
+We're also starting to think about our 1.0 release, and have started organizing issues around [the relevant milestone](https://github.com/allenai/allennlp/milestone/10).
