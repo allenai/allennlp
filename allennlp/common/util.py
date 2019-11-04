@@ -1,16 +1,16 @@
 """
-Various utilities that don't fit anwhere else.
+Various utilities that don't fit anywhere else.
 """
-from itertools import zip_longest, islice
-from typing import Any, Callable, Dict, List, Tuple, TypeVar, Iterable, Iterator, Optional
 import importlib
 import json
 import logging
+import os
 import pkgutil
 import random
 import subprocess
 import sys
-import os
+from itertools import zip_longest, islice
+from typing import Any, Callable, Dict, Iterable, Iterator, List, Optional, Tuple, TypeVar
 
 try:
     import resource
@@ -446,13 +446,15 @@ def log_frozen_and_tunable_parameter_names(model: torch.nn.Module) -> None:
         logger.info(name)
 
 
-def get_frozen_and_tunable_parameter_names(model: torch.nn.Module) -> Tuple[List[str], List[str]]:
-    frozen_parameter_names = [
+def get_frozen_and_tunable_parameter_names(
+    model: torch.nn.Module
+) -> Tuple[Iterable[str], Iterable[str]]:
+    frozen_parameter_names = (
         name for name, parameter in model.named_parameters() if not parameter.requires_grad
-    ]
-    tunable_parameter_names = [
+    )
+    tunable_parameter_names = (
         name for name, parameter in model.named_parameters() if parameter.requires_grad
-    ]
+    )
     return frozen_parameter_names, tunable_parameter_names
 
 
