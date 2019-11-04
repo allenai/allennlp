@@ -53,7 +53,7 @@ class TrainerPieces(NamedTuple):
             if params.pop("model", None):
                 logger.warning(
                     "You passed parameters for the model in your configuration file, but we "
-                    "are ignoring them, using instead the model parameters in the archive."
+                    "are ignoring them, using instead the loaded model parameters."
                 )
 
             if vocabulary_params.get("directory_path", None):
