@@ -12,14 +12,19 @@ We have a few major themes for this quarter:
     library.  We already have a good start on this with the following repositories:
 
     a.  [Semantic Parsing](https://github.com/allenai/allennlp-semparse)
+    
     b.  [Language Modeling](https://github.com/allenai/allennlp-language-modeling)
 
 2.  Better supporting our initiative around [Green AI](https://arxiv.org/abs/1907.10597).
 
     a.  Improve the performance of AllenNLP.  In particular, see the following issues:
+    
         i.
+        
         ii.
+        
         iii.
+        
     b.  Add tooling so any user can easily measure the total number of floating-point operations
     performed during training.
 
