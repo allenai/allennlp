@@ -434,23 +434,25 @@ def is_lazy(iterable: Iterable[A]) -> bool:
     return not isinstance(iterable, list)
 
 
-def log_and_get_frozen_and_tunable_parameter_names(
-    model: torch.nn.Module
-) -> Tuple[List[str], List[str]]:
+def log_frozen_and_tunable_parameter_names(model: torch.nn.Module) -> None:
+    frozen_parameter_names, tunable_parameter_names = get_frozen_and_tunable_parameter_names(model)
+
+    logger.info("The following parameters are Frozen (without gradient):")
+    for name in frozen_parameter_names:
+        logger.info(name)
+
+    logger.info("The following parameters are Tunable (with gradient):")
+    for name in tunable_parameter_names:
+        logger.info(name)
+
+
+def get_frozen_and_tunable_parameter_names(model: torch.nn.Module) -> Tuple[List[str], List[str]]:
     frozen_parameter_names = [
         name for name, parameter in model.named_parameters() if not parameter.requires_grad
     ]
     tunable_parameter_names = [
         name for name, parameter in model.named_parameters() if parameter.requires_grad
     ]
-
-    logger.info("The following parameters are Frozen (without gradient):")
-    for name in frozen_parameter_names:
-        logger.info(name)
-    logger.info("The following parameters are Tunable (with gradient):")
-    for name in tunable_parameter_names:
-        logger.info(name)
-
     return frozen_parameter_names, tunable_parameter_names
 
 

@@ -82,7 +82,7 @@ class TestCommonUtils(AllenNlpTestCase):
         named_parameters = dict(model.named_parameters())
         named_parameters["linear.weight"].requires_grad_(False)
         named_parameters["linear.bias"].requires_grad_(False)
-        frozen_parameter_names, tunable_parameter_names = util.log_and_get_frozen_and_tunable_parameter_names(
+        frozen_parameter_names, tunable_parameter_names = util.get_frozen_and_tunable_parameter_names(
             model
         )
         assert set(frozen_parameter_names) == {"linear.weight", "linear.bias"}

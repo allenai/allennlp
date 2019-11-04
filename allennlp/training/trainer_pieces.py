@@ -5,7 +5,7 @@ from typing import Dict, Iterable, NamedTuple
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
-from allennlp.common.util import log_and_get_frozen_and_tunable_parameter_names
+from allennlp.common.util import log_frozen_and_tunable_parameter_names
 from allennlp.data.instance import Instance
 from allennlp.data.iterators.data_iterator import DataIterator
 from allennlp.data.vocabulary import Vocabulary
@@ -131,7 +131,7 @@ class TrainerPieces(NamedTuple):
             if any(re.search(regex, name) for regex in no_grad_regexes):
                 parameter.requires_grad_(False)
 
-        log_and_get_frozen_and_tunable_parameter_names(model)
+        log_frozen_and_tunable_parameter_names(model)
 
         return cls(
             model,
