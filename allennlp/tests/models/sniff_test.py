@@ -382,7 +382,7 @@ class SniffTest(AllenNlpTestCase):
         ]
         assert (
             result["trees"]
-            == "(S (S (NP (NNP Pierre) (NNP Vinken)) (VP (VBD died) (NP (JJ aged) (CD 81)))) (: ;) (S (VP (VBN immortalised) (S (ADJP (VBN aged) (NP (CD 61)))))) (. .))"
+            == "(S (S (NP (NNP Pierre) (NNP Vinken)) (VP (VBD died) (S (VP (VBN aged) (NP (CD 81)))))) (: ;) (S (VP (VBD immortalised) (S (ADJP (JJ aged) (CD 61))))) (. .))"
         )
 
     def test_dependency_parsing(self):
