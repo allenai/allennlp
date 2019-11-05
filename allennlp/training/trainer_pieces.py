@@ -6,10 +6,8 @@ from typing import Dict, Iterable, NamedTuple
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.util import log_frozen_and_tunable_parameter_names
-from allennlp.data.instance import Instance
-from allennlp.data.iterators.data_iterator import DataIterator
-from allennlp.data.vocabulary import Vocabulary
-from allennlp.models.model import Model
+from allennlp.data import DataIterator, Instance, Vocabulary
+from allennlp.models import Model
 from allennlp.training import util as training_util
 
 logger = logging.getLogger(__name__)
@@ -70,40 +68,16 @@ class TrainerPieces(NamedTuple):
         vocabulary_path = os.path.join(serialization_dir, "vocabulary")
 
         if not vocab or extend_vocab:
-            datasets_for_vocab_creation = set(
-                params.pop("datasets_for_vocab_creation", all_datasets)
+            vocab = TrainerPieces.create_or_extend_vocab(
+                datasets=all_datasets,
+                params=params,
+                recover=recover,
+                vocab=vocab,
+                vocabulary_params=vocabulary_params,
+                vocabulary_path=vocabulary_path,
             )
 
-            for dataset in datasets_for_vocab_creation:
-                if dataset not in all_datasets:
-                    raise ConfigurationError(f"invalid 'dataset_for_vocab_creation' {dataset}")
-
-            instance_generator = (
-                instance
-                for key, dataset in all_datasets.items()
-                if key in datasets_for_vocab_creation
-                for instance in dataset
-            )
-
-            if vocab:
-                logger.info(
-                    f"Extending model vocabulary using {', '.join(datasets_for_vocab_creation)} data."
-                )
-                vocab.extend_from_instances(vocabulary_params, instance_generator)
-            else:
-                logger.info(
-                    "From dataset instances, %s will be considered for vocabulary creation.",
-                    ", ".join(datasets_for_vocab_creation),
-                )
-
-                if recover and os.path.exists(vocabulary_path):
-                    vocab = Vocabulary.from_files(vocabulary_path)
-                else:
-                    # Using a generator comprehension here is important  because, being lazy,
-                    # it allows us to not iterate over the dataset when directory_path is specified.
-                    vocab = Vocabulary.from_params(vocabulary_params, instance_generator)
-
-                assert model is None
+            if not model:
                 model = Model.from_params(vocab=vocab, params=params.pop("model"))
 
             # If vocab extension is ON for training, embedding extension should also be
@@ -135,11 +109,53 @@ class TrainerPieces(NamedTuple):
         log_frozen_and_tunable_parameter_names(model)
 
         return cls(
-            model,
-            iterator,
-            train_data,
-            validation_data,
-            test_data,
-            validation_iterator,
-            trainer_params,
+            model=model,
+            iterator=iterator,
+            train_dataset=train_data,
+            validation_dataset=validation_data,
+            test_dataset=test_data,
+            validation_iterator=validation_iterator,
+            params=trainer_params,
         )
+
+    @staticmethod
+    def create_or_extend_vocab(
+        params: Params,
+        datasets: Dict[str, Iterable[Instance]],
+        vocabulary_params: Params,
+        vocabulary_path: str,
+        vocab: Vocabulary = None,
+        recover: bool = False,
+    ) -> Vocabulary:
+        datasets_for_vocab_creation = set(params.pop("datasets_for_vocab_creation", datasets))
+
+        for key in datasets_for_vocab_creation:
+            if key not in datasets:
+                raise ConfigurationError(f"invalid 'dataset_for_vocab_creation' {key}")
+
+        instance_generator = (
+            instance
+            for key, dataset in datasets.items()
+            if key in datasets_for_vocab_creation
+            for instance in dataset
+        )
+
+        dataset_keys_to_use_str = ", ".join(datasets_for_vocab_creation)
+
+        if vocab:
+            logger.info(f"Extending model vocabulary using {dataset_keys_to_use_str} data.")
+            vocab.extend_from_instances(vocabulary_params, instance_generator)
+        else:
+            logger.info(
+                "From dataset instances, %s will be considered for vocabulary creation.",
+                dataset_keys_to_use_str,
+            )
+
+            if recover:
+                vocab = Vocabulary.from_files(vocabulary_path)
+            else:
+                # Using a generator comprehension here is important because, by being lazy,
+                # it allows us to not iterate over the dataset when directory_path is specified.
+                vocab = Vocabulary.from_params(vocabulary_params, instance_generator)
+
+        return vocab

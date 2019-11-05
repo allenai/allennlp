@@ -276,8 +276,8 @@ class TestTrainOnLazyDataset(AllenNlpTestCase):
         params = params_get()
         params["trainer"]["no_grad"] = ["*"]
         shutil.rmtree(serialization_dir, ignore_errors=True)
-        with pytest.raises(Exception) as _:
-            model = train_model(params, serialization_dir=serialization_dir)
+        with pytest.raises(Exception):
+            train_model(params, serialization_dir=serialization_dir)
 
     def test_vocab_extended_model_with_transferred_embedder_is_loadable(self):
         # Train on snli2 but load text_field_embedder and vocab from the model
