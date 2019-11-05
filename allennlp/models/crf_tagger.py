@@ -1,4 +1,4 @@
-from typing import Dict, Optional, List, Any
+from typing import Dict, Optional, List, Any, cast
 
 from overrides import overrides
 import torch
@@ -61,6 +61,12 @@ class CrfTagger(Model):
         Used to initialize the model parameters.
     regularizer : ``RegularizerApplicator``, optional (default=``None``)
         If provided, will be used to calculate the regularization penalty during training.
+    top_k : ``int``, optional (default=``1``)
+        If provided, the number of parses to return from the crf in output_dict['top_k_tags'].
+        Top k parses are returned as a list of dicts, where each dictionary is of the form:
+        {"tags": List, "score": float}.
+        The "tags" value for the first dict in the list for each data_item will be the top
+        choice, and will equal the corresponding item in output_dict['tags']
     """
 
     def __init__(
@@ -78,6 +84,7 @@ class CrfTagger(Model):
         verbose_metrics: bool = False,
         initializer: InitializerApplicator = InitializerApplicator(),
         regularizer: Optional[RegularizerApplicator] = None,
+        top_k: int = 1,
     ) -> None:
         super().__init__(vocab, regularizer)
 
@@ -85,6 +92,7 @@ class CrfTagger(Model):
         self.text_field_embedder = text_field_embedder
         self.num_tags = self.vocab.get_vocab_size(label_namespace)
         self.encoder = encoder
+        self.top_k = top_k
         self._verbose_metrics = verbose_metrics
         if dropout:
             self.dropout = torch.nn.Dropout(dropout)
@@ -206,12 +214,15 @@ class CrfTagger(Model):
             encoded_text = self._feedforward(encoded_text)
 
         logits = self.tag_projection_layer(encoded_text)
-        best_paths = self.crf.viterbi_tags(logits, mask)
+        best_paths = self.crf.viterbi_tags(logits, mask, top_k=self.top_k)
 
-        # Just get the tags and ignore the score.
-        predicted_tags = [x for x, y in best_paths]
+        # Just get the top tags and ignore the scores.
+        predicted_tags = cast(List[List[int]], [x[0][0] for x in best_paths])
 
         output = {"logits": logits, "mask": mask, "tags": predicted_tags}
+
+        if self.top_k > 1:
+            output["top_k_tags"] = best_paths
 
         if tags is not None:
             # Add negative log-likelihood as loss
@@ -241,13 +252,22 @@ class CrfTagger(Model):
         ``output_dict["tags"]`` is a list of lists of tag_ids,
         so we use an ugly nested list comprehension.
         """
-        output_dict["tags"] = [
-            [
-                self.vocab.get_token_from_index(tag, namespace=self.label_namespace)
-                for tag in instance_tags
+
+        def decode_tags(tags):
+            return [
+                self.vocab.get_token_from_index(tag, namespace=self.label_namespace) for tag in tags
             ]
-            for instance_tags in output_dict["tags"]
-        ]
+
+        def decode_top_k_tags(top_k_tags):
+            return [
+                {"tags": decode_tags(scored_path[0]), "score": scored_path[1]}
+                for scored_path in top_k_tags
+            ]
+
+        output_dict["tags"] = [decode_tags(t) for t in output_dict["tags"]]
+
+        if "top_k_tags" in output_dict:
+            output_dict["top_k_tags"] = [decode_top_k_tags(t) for t in output_dict["top_k_tags"]]
 
         return output_dict
 
