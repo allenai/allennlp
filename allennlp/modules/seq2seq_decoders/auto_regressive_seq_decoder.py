@@ -408,7 +408,7 @@ class AutoRegressiveSeqDecoder(SeqDecoder):
             output_dict = self._forward_loss(state, target_tokens)
         else:
             output_dict = {}
-
+            
         if not self.training:
             predictions = self._forward_beam_search(state)
             output_dict.update(predictions)
@@ -426,11 +426,11 @@ class AutoRegressiveSeqDecoder(SeqDecoder):
                     )
 
                 if self._token_based_metric is not None:
-                    output_dict = self.decode(output_dict)
+                    output_dict = self.post_process(output_dict)
                     predicted_tokens = output_dict["predicted_tokens"]
 
                     self._token_based_metric(  # type: ignore
-                        predicted_tokens, [y.text for y in target_tokens["tokens"][1:-1]]
+                        predicted_tokens, self.indeces_to_tokens(target_tokens["tokens"][:,1:])
                     )
 
         return output_dict
@@ -442,10 +442,17 @@ class AutoRegressiveSeqDecoder(SeqDecoder):
         corresponding tokens, and adds a field called ``predicted_tokens`` to the ``output_dict``.
         """
         predicted_indices = output_dict["predictions"]
-        if not isinstance(predicted_indices, numpy.ndarray):
-            predicted_indices = predicted_indices.detach().cpu().numpy()
-        all_predicted_tokens = []
-        for indices in predicted_indices:
+        all_predicted_tokens = self.indeces_to_tokens(predicted_indices)
+        output_dict["predicted_tokens"] = all_predicted_tokens
+        return output_dict
+
+    def indeces_to_tokens(self, batch_indeces: numpy.ndarray):
+        
+        if not isinstance(batch_indeces, numpy.ndarray):
+            batch_indeces = batch_indeces.detach().cpu().numpy()
+            
+        all_tokens = []
+        for indices in batch_indeces:
             # Beam search gives us the top k results for each source sentence in the batch
             # but we just want the single best.
             if len(indices.shape) > 1:
@@ -454,10 +461,10 @@ class AutoRegressiveSeqDecoder(SeqDecoder):
             # Collect indices till the first end_symbol
             if self._end_index in indices:
                 indices = indices[: indices.index(self._end_index)]
-            predicted_tokens = [
+            tokens = [
                 self._vocab.get_token_from_index(x, namespace=self._target_namespace)
                 for x in indices
             ]
-            all_predicted_tokens.append(predicted_tokens)
-        output_dict["predicted_tokens"] = all_predicted_tokens
-        return output_dict
+            all_tokens.append(tokens)
+    
+        return all_tokens
