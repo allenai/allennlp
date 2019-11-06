@@ -408,7 +408,7 @@ class AutoRegressiveSeqDecoder(SeqDecoder):
             output_dict = self._forward_loss(state, target_tokens)
         else:
             output_dict = {}
-            
+
         if not self.training:
             predictions = self._forward_beam_search(state)
             output_dict.update(predictions)
@@ -430,7 +430,7 @@ class AutoRegressiveSeqDecoder(SeqDecoder):
                     predicted_tokens = output_dict["predicted_tokens"]
 
                     self._token_based_metric(  # type: ignore
-                        predicted_tokens, self.indeces_to_tokens(target_tokens["tokens"][:,1:])
+                        predicted_tokens, self.indeces_to_tokens(target_tokens["tokens"][:, 1:])
                     )
 
         return output_dict
@@ -447,10 +447,10 @@ class AutoRegressiveSeqDecoder(SeqDecoder):
         return output_dict
 
     def indeces_to_tokens(self, batch_indeces: numpy.ndarray):
-        
+
         if not isinstance(batch_indeces, numpy.ndarray):
             batch_indeces = batch_indeces.detach().cpu().numpy()
-            
+
         all_tokens = []
         for indices in batch_indeces:
             # Beam search gives us the top k results for each source sentence in the batch
@@ -466,5 +466,5 @@ class AutoRegressiveSeqDecoder(SeqDecoder):
                 for x in indices
             ]
             all_tokens.append(tokens)
-    
+
         return all_tokens
