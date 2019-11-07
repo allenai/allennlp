@@ -15,18 +15,18 @@ We have a few major themes for this quarter:
     
     b.  [Language Modeling](https://github.com/allenai/allennlp-language-modeling)
 
-2.  Better supporting our initiative around [Green AI](https://arxiv.org/abs/1907.10597).
+2.  Better supporting our initiative around [Green AI](https://arxiv.org/abs/1907.10597). 
 
     a.  Improve the performance of AllenNLP.  In particular, see the following issues:
     
-        i.
+       1.  [Using DistributedDataParallel for multi GPU training](https://github.com/allenai/allennlp/issues/2536)
         
-        ii.
+       2.  [Native pytorch Multiprocessing for data loading](https://github.com/allenai/allennlp/issues/3079)
         
-        iii.
+       3.  [Mixed Precision Training](https://github.com/allenai/allennlp/issues/2149)
         
     b.  Add tooling so any user can easily measure the total number of floating-point operations
-    performed during training.
+    performed during training.  You can see more details about this initiative in [#3436](https://github.com/allenai/allennlp/issues/3436)
 
 3.  Launching a first version of an AllenNLP course.  It's challenging for many people to onboard,
     so we're building an interactive course.  We're also designing it to be an effective resource
