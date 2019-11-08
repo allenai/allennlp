@@ -22,7 +22,7 @@ overrides==2.0
 nltk
 
 # Mainly used for the faster tokenizer.
-spacy>=2.1.0,<2.2
+spacy>=2.1.0,<2.3
 
 # Used by span prediction models.
 numpy
