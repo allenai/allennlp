@@ -124,10 +124,15 @@ class TransformerMaskedLMModel(Model):
 
         if unfreeze_pooler:
             try:
-                self._transformer_model.pooler.dense.weight.requires_grad = True
-                self._transformer_model.pooler.dense.bias.requires_grad = True
+                self._transformer_model.bert.pooler.dense.weight.requires_grad = True
+                self._transformer_model.bert.pooler.dense.bias.requires_grad = True
+                self._transformer_model.cls.predictions.bias.requires_grad = True
+                self._transformer_model.cls.predictions.transform.dense.weight.requires_grad = True
+                self._transformer_model.cls.predictions.transform.dense.bias.requires_grad = True
+                self._transformer_model.cls.predictions.transform.LayerNorm.weight.requires_grad = True
+                self._transformer_model.cls.predictions.transform.LayerNorm.bias.requires_grad = True
             except:
-                pass
+                logging.error('could not unfreeze weights!')
 
         transformer_config = self._transformer_model.config
         transformer_config.num_labels = 1
