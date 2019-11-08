@@ -124,13 +124,22 @@ class TransformerMaskedLMModel(Model):
 
         if unfreeze_pooler:
             try:
-                self._transformer_model.bert.pooler.dense.weight.requires_grad = True
-                self._transformer_model.bert.pooler.dense.bias.requires_grad = True
-                self._transformer_model.cls.predictions.bias.requires_grad = True
-                self._transformer_model.cls.predictions.transform.dense.weight.requires_grad = True
-                self._transformer_model.cls.predictions.transform.dense.bias.requires_grad = True
-                self._transformer_model.cls.predictions.transform.LayerNorm.weight.requires_grad = True
-                self._transformer_model.cls.predictions.transform.LayerNorm.bias.requires_grad = True
+                if 'roberta' in pretrained_model:
+                    self._transformer_model.roberta.pooler.dense.weight.requires_grad = True
+                    self._transformer_model.roberta.pooler.dense.bias.requires_grad = True
+                    self._transformer_model.lm_head.bias.requires_grad = True
+                    self._transformer_model.lm_head.dense.weight.requires_grad = True
+                    self._transformer_model.lm_head.dense.bias.requires_grad = True
+                    self._transformer_model.lm_head.layer_norm.weight.requires_grad = True
+                    self._transformer_model.lm_head.layer_norm.bias.requires_grad = True
+                elif 'bert' in pretrained_model:
+                    self._transformer_model.bert.pooler.dense.weight.requires_grad = True
+                    self._transformer_model.bert.pooler.dense.bias.requires_grad = True
+                    self._transformer_model.cls.predictions.bias.requires_grad = True
+                    self._transformer_model.cls.predictions.transform.dense.weight.requires_grad = True
+                    self._transformer_model.cls.predictions.transform.dense.bias.requires_grad = True
+                    self._transformer_model.cls.predictions.transform.LayerNorm.weight.requires_grad = True
+                    self._transformer_model.cls.predictions.transform.LayerNorm.bias.requires_grad = True
             except:
                 logging.error('could not unfreeze weights!')
 
