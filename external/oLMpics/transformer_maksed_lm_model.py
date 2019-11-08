@@ -37,9 +37,9 @@ class BertForMultiChoiceMaskedLM(BertForMaskedLM):
 
             # choosing prediction with all_masked_index_ids
             masked_lm_loss = 0
-            for i,e in enumerate(all_masked_index_ids):
+            for i,choices in enumerate(all_masked_index_ids):
                 masked_lm_loss += \
-                    loss_fct(prediction_scores[i,e[0][0][0],[e[0][0][1],e[1][0][1],e[2][0][1]]].unsqueeze(0),label[i].unsqueeze(0))
+                    loss_fct(prediction_scores[i,choices[0][0][0],[c[0][1] for c in choices]].unsqueeze(0),label[i].unsqueeze(0))
 
             #masked_lm_loss = loss_fct(prediction_scores.view(-1, self.config.vocab_size), masked_lm_labels.view(-1))
             outputs = (masked_lm_loss,) + outputs
