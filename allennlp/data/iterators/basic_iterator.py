@@ -30,8 +30,6 @@ class BasicIteratorShim(BucketIteratorShim):
         maximum_samples_per_batch: Tuple[str, int] = None,
     ):
 
-        from allennlp.data.iterators.bucket_iterator import BucketIteratorShim
-
         super().__init__(
             batch_size=batch_size,
             instances_per_epoch=instances_per_epoch,
