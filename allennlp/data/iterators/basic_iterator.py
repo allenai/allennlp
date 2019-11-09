@@ -4,6 +4,7 @@ from collections import deque
 import random
 
 from allennlp.data.iterators.data_iterator import DataIterator
+from allennlp.data.iterators.bucket_iterator import BucketIteratorShim
 from allennlp.common.util import lazy_groups_of
 from allennlp.data.instance import Instance
 from allennlp.data.dataset import Batch
@@ -12,37 +13,13 @@ logger = logging.getLogger(__name__)
 
 
 @DataIterator.register("basic")
-class BasicIteratorStub(DataIterator):
+class BasicIteratorShim(BucketIteratorShim):
     """
     A very basic iterator that takes a dataset, possibly shuffles it, and creates fixed sized batches.
 
     It takes the same parameters as :class:`allennlp.data.iterators.DataIterator`
     """
 
-    def __new__(
-        cls,
-        batch_size: int = 32,
-        instances_per_epoch: int = None,
-        max_instances_in_memory: int = None,
-        cache_instances: bool = False,
-        track_epoch: bool = False,
-        maximum_samples_per_batch: Tuple[str, int] = None,
-    ):
-
-        from allennlp.data.iterators.bucket_iterator import BucketIteratorStub
-
-        return BucketIteratorStub(
-            batch_size=batch_size,
-            instances_per_epoch=instances_per_epoch,
-            max_instances_in_memory=max_instances_in_memory,
-            cache_instances=cache_instances,
-            track_epoch=track_epoch,
-            maximum_samples_per_batch=maximum_samples_per_batch,
-        )
-
-    # It's important that we have this constructor here, because FromParams uses it to
-    # inspect the arguments for the class when it is constructed. Without this, FromParams
-    # assumes that this stub takes no parameters, because it has no __init__ function.
     def __init__(
         self,
         batch_size: int = 32,
@@ -51,9 +28,18 @@ class BasicIteratorStub(DataIterator):
         cache_instances: bool = False,
         track_epoch: bool = False,
         maximum_samples_per_batch: Tuple[str, int] = None,
-    ) -> None:
+    ):
 
-        pass
+        from allennlp.data.iterators.bucket_iterator import BucketIteratorShim
+
+        super().__init__(
+            batch_size=batch_size,
+            instances_per_epoch=instances_per_epoch,
+            max_instances_in_memory=max_instances_in_memory,
+            cache_instances=cache_instances,
+            track_epoch=track_epoch,
+            maximum_samples_per_batch=maximum_samples_per_batch,
+        )
 
 
 @DataIterator.register("basic_old")

@@ -10,7 +10,7 @@ from allennlp.data.dataset import Batch
 from allennlp.data.dataset_readers.dataset_reader import _LazyInstances
 from allennlp.data.fields import TextField
 
-from allennlp.data.iterators.basic_iterator import BasicIterator, BasicIteratorStub
+from allennlp.data.iterators.basic_iterator import BasicIterator, BasicIteratorShim
 from allennlp.data.iterators.transform_iterator import TransformIterator
 from allennlp.data.token_indexers import SingleIdTokenIndexer
 
@@ -28,27 +28,27 @@ class LazyIterable:
 class TestBasicIteratorStub(IteratorTest):
     def test_get_num_batches(self):
         # Lazy and instances per epoch not specified.
-        assert BasicIteratorStub(batch_size=2).get_num_batches(self.lazy_instances) == 1
+        assert BasicIteratorShim(batch_size=2).get_num_batches(self.lazy_instances) == 1
         # Lazy and instances per epoch specified.
         assert (
-            BasicIteratorStub(batch_size=2, instances_per_epoch=21).get_num_batches(
+            BasicIteratorShim(batch_size=2, instances_per_epoch=21).get_num_batches(
                 self.lazy_instances
             )
             == 11
         )
         # Not lazy and instances per epoch specified.
         assert (
-            BasicIteratorStub(batch_size=2, instances_per_epoch=21).get_num_batches(self.instances)
+            BasicIteratorShim(batch_size=2, instances_per_epoch=21).get_num_batches(self.instances)
             == 11
         )
         # Not lazy and instances per epoch not specified.
-        assert BasicIteratorStub(batch_size=2).get_num_batches(self.instances) == 3
+        assert BasicIteratorShim(batch_size=2).get_num_batches(self.instances) == 3
 
     # The BasicIterator should work the same for lazy and non lazy datasets,
     # so each remaining test runs over both.
     def test_yield_one_epoch_iterates_over_the_data_once(self):
         for test_instances in (self.instances, self.lazy_instances):
-            iterator = BasicIteratorStub(batch_size=2)
+            iterator = BasicIteratorShim(batch_size=2)
             iterator.index_with(self.vocab)
             batches = list(iterator(test_instances, num_epochs=1))
             # We just want to get the single-token array for the text field in the instance.
@@ -62,7 +62,7 @@ class TestBasicIteratorStub(IteratorTest):
 
     def test_call_iterates_over_data_forever(self):
         for test_instances in (self.instances, self.lazy_instances):
-            iterator = BasicIteratorStub(batch_size=2)
+            iterator = BasicIteratorShim(batch_size=2)
             iterator.index_with(self.vocab)
             generator = iterator(test_instances)
             batches = [next(generator) for _ in range(18)]  # going over the data 6 times
@@ -76,14 +76,14 @@ class TestBasicIteratorStub(IteratorTest):
             self.assert_instances_are_correct(instances)
 
     def test_epoch_tracking_when_one_epoch_at_a_time(self):
-        iterator = BasicIteratorStub(batch_size=2, track_epoch=True)
+        iterator = BasicIteratorShim(batch_size=2, track_epoch=True)
         iterator.index_with(self.vocab)
         for epoch in range(10):
             for batch in iterator(self.instances, num_epochs=1):
                 assert all(epoch_num == epoch for epoch_num in batch["epoch_num"])
 
     def test_epoch_tracking_forever(self):
-        iterator = BasicIteratorStub(batch_size=2, track_epoch=True)
+        iterator = BasicIteratorShim(batch_size=2, track_epoch=True)
         iterator.index_with(self.vocab)
 
         it = iterator(self.instances, num_epochs=None)
@@ -97,7 +97,7 @@ class TestBasicIteratorStub(IteratorTest):
             assert all(epoch_num == epoch for epoch_num in batch["epoch_num"])
 
     def test_epoch_tracking_multiple_epochs(self):
-        iterator = BasicIteratorStub(batch_size=2, track_epoch=True)
+        iterator = BasicIteratorShim(batch_size=2, track_epoch=True)
         iterator.index_with(self.vocab)
 
         all_batches = list(iterator(self.instances, num_epochs=10))
@@ -137,7 +137,7 @@ class TestBasicIteratorStubPatchRequired(IteratorTest):
     def test_create_batches_groups_correctly(self):
 
         for test_instances in (self.instances, self.lazy_instances):
-            iterator = BasicIteratorStub(batch_size=2)
+            iterator = BasicIteratorShim(batch_size=2)
             iterator.index_with(self.vocab)
             batches = list(iterator._create_batches(test_instances, shuffle=False))
             grouped_instances = [batch.instances for batch in batches]
@@ -150,7 +150,7 @@ class TestBasicIteratorStubPatchRequired(IteratorTest):
     def test_few_instances_per_epoch(self):
 
         for test_instances in (self.instances, self.lazy_instances):
-            iterator = BasicIteratorStub(batch_size=2, instances_per_epoch=3)
+            iterator = BasicIteratorShim(batch_size=2, instances_per_epoch=3)
             iterator.index_with(self.vocab)
             # First epoch: 3 instances -> [2, 1]
             batches = list(iterator._create_batches(test_instances, shuffle=False))
@@ -179,7 +179,7 @@ class TestBasicIteratorStubPatchRequired(IteratorTest):
     def test_shuffle(self):
         for test_instances in (self.instances, self.lazy_instances):
 
-            iterator = BasicIteratorStub(batch_size=2, instances_per_epoch=100)
+            iterator = BasicIteratorShim(batch_size=2, instances_per_epoch=100)
             iterator.index_with(self.vocab)
 
             in_order_batches = list(iterator._create_batches(test_instances, shuffle=False))
@@ -201,7 +201,7 @@ class TestBasicIteratorStubPatchRequired(IteratorTest):
 
     def test_max_instances_in_memory(self):
         for test_instances in (self.instances, self.lazy_instances):
-            iterator = BasicIteratorStub(batch_size=2, max_instances_in_memory=3)
+            iterator = BasicIteratorShim(batch_size=2, max_instances_in_memory=3)
             iterator.index_with(self.vocab)
             # One epoch: 5 instances -> [2, 1, 2]
             batches = list(iterator._create_batches(test_instances, shuffle=False))
@@ -224,7 +224,7 @@ class TestBasicIteratorStubPatchRequired(IteratorTest):
             (eager_instances1, eager_instances2),
             (lazy_instances1, lazy_instances2),
         ]:
-            iterator = BasicIteratorStub(batch_size=1, instances_per_epoch=2)
+            iterator = BasicIteratorShim(batch_size=1, instances_per_epoch=2)
             assert iterator._instances_per_epoch == 2
             iterator.index_with(self.vocab)
 
@@ -251,17 +251,17 @@ class TestBasicIteratorStubPatchRequired(IteratorTest):
     def test_from_params(self):
 
         params = Params({})
-        iterator = BasicIteratorStub.from_params(params)
+        iterator = BasicIteratorShim.from_params(params)
         assert iterator._batch_size == 32  # default value
 
         params = Params({"batch_size": 10})
-        iterator = BasicIteratorStub.from_params(params)
+        iterator = BasicIteratorShim.from_params(params)
         assert iterator._batch_size == 10
 
     def test_maximum_samples_per_batch(self):
         for test_instances in (self.instances, self.lazy_instances):
 
-            iterator = BasicIteratorStub(batch_size=3, maximum_samples_per_batch=["num_tokens", 9])
+            iterator = BasicIteratorShim(batch_size=3, maximum_samples_per_batch=["num_tokens", 9])
             iterator.index_with(self.vocab)
             batches = list(iterator._create_batches(test_instances, shuffle=False))
             stats = self.get_batches_stats(batches)
@@ -280,7 +280,7 @@ class TestBasicIteratorStubPatchRequired(IteratorTest):
         token_counts = [10, 4, 3]
         test_instances = self.create_instances_from_token_counts(token_counts)
 
-        iterator = BasicIteratorStub(batch_size=3, maximum_samples_per_batch=["num_tokens", 11])
+        iterator = BasicIteratorShim(batch_size=3, maximum_samples_per_batch=["num_tokens", 11])
         iterator.index_with(self.vocab)
         batches = list(iterator._create_batches(test_instances, shuffle=False))
         stats = self.get_batches_stats(batches)

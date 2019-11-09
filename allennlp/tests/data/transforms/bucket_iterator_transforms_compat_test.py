@@ -7,7 +7,7 @@ from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 
 from allennlp.data.dataset import Batch
-from allennlp.data.iterators.bucket_iterator import BucketIterator, BucketIteratorStub
+from allennlp.data.iterators.bucket_iterator import BucketIterator, BucketIteratorShim
 from allennlp.data.iterators.transform_iterator import TransformIterator
 from allennlp.tests.data.iterators.basic_iterator_test import IteratorTest
 
@@ -39,7 +39,7 @@ class TestBucketIteratorStub(IteratorTest):
         super().tearDown()
 
     def test_create_batches_groups_correctly(self):
-        iterator = BucketIteratorStub(
+        iterator = BucketIteratorShim(
             batch_size=2, padding_noise=0, sorting_keys=[("text", "num_tokens")]
         )
         iterator.index_with(self.vocab)
@@ -56,7 +56,7 @@ class TestBucketIteratorStub(IteratorTest):
         # Here max_instances_in_memory is 3, so we load instances [0, 1, 2]
         # and then bucket them by size into batches of size 2 to get [2, 0] -> [1].
         # Then we load the remaining instances and bucket them by size to get [4, 3].
-        iterator = BucketIteratorStub(
+        iterator = BucketIteratorShim(
             batch_size=2,
             padding_noise=0,
             sorting_keys=[("text", "num_tokens")],
@@ -74,7 +74,7 @@ class TestBucketIteratorStub(IteratorTest):
             ]
 
     def test_biggest_batch_first_works(self):
-        iterator = BucketIteratorStub(
+        iterator = BucketIteratorShim(
             batch_size=2,
             padding_noise=0,
             sorting_keys=[("text", "num_tokens")],
@@ -93,11 +93,11 @@ class TestBucketIteratorStub(IteratorTest):
 
         params = Params({})
         # Construction with no sorting keys is allowed.
-        iterator = BucketIteratorStub.from_params(params)
+        iterator = BucketIteratorShim.from_params(params)
 
         sorting_keys = [("s1", "nt"), ("s2", "nt2")]
         params["sorting_keys"] = sorting_keys
-        iterator = BucketIteratorStub.from_params(params)
+        iterator = BucketIteratorShim.from_params(params)
 
         assert iterator._batch_size == 32
 
@@ -114,7 +114,7 @@ class TestBucketIteratorStub(IteratorTest):
         assert iterator._batch_size == 100
 
     def test_bucket_iterator_maximum_samples_per_batch(self):
-        iterator = BucketIteratorStub(
+        iterator = BucketIteratorShim(
             batch_size=3,
             padding_noise=0,
             sorting_keys=[("text", "num_tokens")],
@@ -137,7 +137,7 @@ class TestBucketIteratorStub(IteratorTest):
         token_counts = [10, 4, 3]
         test_instances = self.create_instances_from_token_counts(token_counts)
 
-        iterator = BucketIteratorStub(
+        iterator = BucketIteratorShim(
             batch_size=3,
             padding_noise=0,
             sorting_keys=[("text", "num_tokens")],
@@ -157,7 +157,7 @@ class TestBucketIteratorStub(IteratorTest):
         assert stats["sample_sizes"] == [8, 10]
 
     def test_skip_smaller_batches_works(self):
-        iterator = BucketIteratorStub(
+        iterator = BucketIteratorShim(
             batch_size=2,
             padding_noise=0,
             sorting_keys=[("text", "num_tokens")],

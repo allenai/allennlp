@@ -6,6 +6,7 @@ import random
 from overrides import overrides
 
 from allennlp.common.util import add_noise_to_dict_values, lazy_groups_of
+from allennlp.common.registrable import Registrable
 from allennlp.data import transforms
 from allennlp.data.instance import Instance
 from allennlp.data.dataset import Batch
@@ -50,7 +51,7 @@ def sort_by_padding(
 
 
 @DataIterator.register("bucket")
-class BucketIteratorStub(DataIterator):
+class BucketIteratorShim(Registrable, TransformIterator):
     """
     An iterator which by default, pads batches with respect to the maximum input lengths `per
     batch`. Additionally, you can provide a list of field names and padding keys which the dataset
@@ -96,8 +97,8 @@ class BucketIteratorStub(DataIterator):
         If set to `True`, those smaller batches will be discarded.
     """
 
-    def __new__(
-        cls,
+    def __init__(
+        self,
         sorting_keys: List[Tuple[str, str]] = None,
         padding_noise: float = 0.1,
         biggest_batch_first: bool = False,
@@ -137,26 +138,7 @@ class BucketIteratorStub(DataIterator):
         if biggest_batch_first:
             dataset_transforms.append(transforms.BiggestBatchFirst())
 
-        return TransformIterator(dataset_transforms, instances_per_epoch, batch_size)
-
-    # It's important that we have this constructor here, because FromParams uses it to
-    # inspect the arguments for the class when it is constructed. Without this, FromParams
-    # assumes that this stub takes no parameters, because it has no __init__ function.
-    def __init__(
-        self,
-        sorting_keys: List[Tuple[str, str]] = None,
-        padding_noise: float = 0.1,
-        biggest_batch_first: bool = False,
-        batch_size: int = 32,
-        instances_per_epoch: int = None,
-        max_instances_in_memory: int = None,
-        cache_instances: bool = False,
-        track_epoch: bool = False,
-        maximum_samples_per_batch: Tuple[str, int] = None,
-        skip_smaller_batches: bool = False,
-    ) -> None:
-
-        pass
+        super().__init__(dataset_transforms, instances_per_epoch, batch_size)
 
 
 @DataIterator.register("old_bucket")
