@@ -30,12 +30,12 @@ class TestAutoRegressiveSeqDecoder(AllenNlpTestCase):
         decoder_inout_dim = 4
         vocab, decoder_net = create_vocab_and_decoder_net(decoder_inout_dim)
 
-        auto_regressive_seq_decoder = AutoRegressiveSeqDecoder(
+        AutoRegressiveSeqDecoder(
             vocab, decoder_net, 10, Embedding(vocab.get_vocab_size(), decoder_inout_dim)
         )
 
         with pytest.raises(ConfigurationError):
-            auto_regressive_seq_decoder = AutoRegressiveSeqDecoder(
+            AutoRegressiveSeqDecoder(
                 vocab, decoder_net, 10, Embedding(vocab.get_vocab_size(), decoder_inout_dim + 1)
             )
 
