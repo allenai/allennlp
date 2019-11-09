@@ -446,7 +446,7 @@ class AutoRegressiveSeqDecoder(SeqDecoder):
         output_dict["predicted_tokens"] = all_predicted_tokens
         return output_dict
 
-    def indeces_to_tokens(self, batch_indeces: numpy.ndarray):
+    def indeces_to_tokens(self, batch_indeces: numpy.ndarray) -> List[List[str]]:
 
         if not isinstance(batch_indeces, numpy.ndarray):
             batch_indeces = batch_indeces.detach().cpu().numpy()
