@@ -40,6 +40,7 @@ class Transform(IterableTorchDataset, Registrable):
     takes a pytorch Dataset of paths to a sharded dataset and produces a stream
     of instances by reading data from disk.
     """
+
     def transform(self, dataset: Iterable[Any]) -> Iterable[Any]:
         """
         Takes an Iterable of A, typically a pytorch dataset and transforms it
@@ -57,7 +58,6 @@ class Transform(IterableTorchDataset, Registrable):
 
 
 class InstanceTransform(Transform, Generic[InstanceOrBatch]):
-
     def transform(self, dataset: Iterable[Instance]) -> Iterable[InstanceOrBatch]:
         """
         Describes a transformation from either:
@@ -95,9 +95,8 @@ class InstanceTransform(Transform, Generic[InstanceOrBatch]):
         return DatasetFromGenerator(generator())
 
 
-
 @Transform.register("max_instances_in_memory")
-class MaxInstancesInMemory(Transform[Batched]):
+class MaxInstancesInMemory(InstanceTransform[Batched]):
     """
     Turns a dataset into a dataset of chunks of size max_instances_in_memory.
     This is helpful if you have an IterableDataset which you want to read a chunk from
@@ -129,7 +128,7 @@ class MaxInstancesInMemory(Transform[Batched]):
 
 
 @Transform.register("batch")
-class Batch(Transform[Batched]):
+class Batch(InstanceTransform[Batched]):
     """
     Batches a dataset. Note that this is exactly the same
     as MaxInstancesInMemory, but we have a duplicated class
@@ -182,7 +181,7 @@ class Index(InstanceTransform[Instance]):
 
 
 @Transform.register("sort_by_padding")
-class SortByPadding(Transform[Batched]):
+class SortByPadding(InstanceTransform[Batched]):
 
     """
     Sorts a list of instances by padding and returns them.
@@ -250,7 +249,7 @@ class EpochTracker(InstanceTransform[Instance]):
 
 
 @Transform.register("skip_smaller_than")
-class SkipSmallerThan(Transform[Batched]):
+class SkipSmallerThan(InstanceTransform[Batched]):
     """
     Skip batches that are smaller than a specified size.
     Useful if you don't want the uneven tail of a dataset
@@ -314,7 +313,7 @@ class StopAfter(InstanceTransform[Instance]):
 
 
 @Transform.register("max_samples_per_batch")
-class MaxSamplesPerBatch(Transform[Batched]):
+class MaxSamplesPerBatch(InstanceTransform[Batched]):
     """
     Ensures that batches are smaller than a specified number of tokens
     for a particular paddding key. This is an effective method to control
@@ -406,7 +405,7 @@ class MaxSamplesPerBatch(Transform[Batched]):
 
 
 @Transform.register("homogenous_batches_of")
-class HomogenousBatchesOf(Transform[Batched]):
+class HomogenousBatchesOf(InstanceTransform[Batched]):
 
     """
     This Transform takes a dataset of potentially heterogeneous instances
@@ -463,7 +462,7 @@ class HomogenousBatchesOf(Transform[Batched]):
 
 
 @Transform.register("biggest_batch_first")
-class BiggestBatchFirst(Transform[Batched]):
+class BiggestBatchFirst(InstanceTransform[Batched]):
     def transform(self, dataset: Iterable[Instance]) -> Iterable[Batched]:
 
         raise NotImplementedError(
@@ -483,7 +482,7 @@ class BiggestBatchFirst(Transform[Batched]):
 
 
 @Transform.register("shuffle")
-class Shuffle(Transform[Batched]):
+class Shuffle(InstanceTransform[Batched]):
     """
     Shuffles a set of instances and returns them.
 
