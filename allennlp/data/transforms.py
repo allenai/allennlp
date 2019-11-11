@@ -157,7 +157,7 @@ class Batch(InstanceTransform[Batched]):
             yield batch
 
 
-@InstanceTransform.register("index")
+@Transform.register("index")
 class Index(InstanceTransform[Instance]):
     """
     Indexes allennlp Instances in place and returns them.
@@ -230,7 +230,7 @@ class SortByPadding(InstanceTransform[Batched]):
         yield instances
 
 
-@InstanceTransform.register("epoch_tracker")
+@Transform.register("epoch_tracker")
 class EpochTracker(InstanceTransform[Instance]):
     """
     Adds a allennlp Field to each Instance which specifies how many
@@ -279,7 +279,7 @@ class SkipSmallerThan(InstanceTransform[Batched]):
                 yield batch
 
 
-@InstanceTransform.register("stop_after")
+@Transform.register("stop_after")
 class StopAfter(InstanceTransform[Instance]):
     """
     Stop an epoch after a fixed number of individual instances.
@@ -502,7 +502,7 @@ class Shuffle(InstanceTransform[Batched]):
         yield dataset
 
 
-@InstanceTransform.register("fork")
+@Transform.register("fork")
 class Fork(InstanceTransform[Instance]):
     """
     A transform which forks a dataset being read by multiple workers
@@ -534,13 +534,13 @@ class Fork(InstanceTransform[Instance]):
             i += 1
 
 
-@InstanceTransform.register("compose")
+@Transform.register("compose")
 class Compose(InstanceTransform):
     """
     A Transform which composes a list of other Transforms.
     """
 
-    def __init__(self, transforms: List[InstanceTransform]):
+    def __init__(self, transforms: List[Transform]):
         self.transforms = transforms
 
     def transform(self, dataset: Iterable[InstanceOrBatch]) -> Iterable[InstanceOrBatch]:
