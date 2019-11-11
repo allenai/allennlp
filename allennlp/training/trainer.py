@@ -275,7 +275,7 @@ class Trainer(TrainerBase):
         # normal case, reference to `Model` is retained. This reference is only used in
         # these places: `model.__call__`, `model.train` and `model.eval`.
         if self._distributed:
-            self._pytorch_model = DistributedDataParallel(self.model, device_ids=[self._rank])
+            self._pytorch_model = DistributedDataParallel(self.model, device_ids=[self._cuda_devices])
         else:
             self._pytorch_model = self.model
 
@@ -404,7 +404,7 @@ class Trainer(TrainerBase):
                 train_loss,
                 batches_this_epoch,
                 world_size=self._world_size,
-                rank=self._rank,
+                cuda_device=self._cuda_devices,
             )
 
             # Updating tqdm only for the master as the trainers wouldn't have one
@@ -448,7 +448,7 @@ class Trainer(TrainerBase):
             batches_this_epoch,
             reset=True,
             world_size=self._world_size,
-            rank=self._rank,
+            cuda_device=self._cuda_devices,
         )
         metrics["cpu_memory_MB"] = peak_cpu_usage
         for (gpu_num, memory) in gpu_usage:
@@ -500,7 +500,7 @@ class Trainer(TrainerBase):
                 val_loss,
                 batches_this_epoch,
                 world_size=self._world_size,
-                rank=self._rank,
+                cuda_device=self._cuda_devices,
             )
             description = training_util.description_from_metrics(val_metrics)
             val_generator_tqdm.set_description(description, refresh=False)
@@ -567,7 +567,7 @@ class Trainer(TrainerBase):
                         num_batches,
                         reset=True,
                         world_size=self._world_size,
-                        rank=self._rank,
+                        cuda_device=self._cuda_devices
                     )
 
                     # Check validation metric for early stopping
@@ -756,6 +756,7 @@ class Trainer(TrainerBase):
         validation_data: Optional[Iterable[Instance]],
         params: Params,
         validation_iterator: DataIterator = None,
+        local_rank: int = 0,
     ) -> "Trainer":
 
         patience = params.pop_int("patience", None)
@@ -826,11 +827,6 @@ class Trainer(TrainerBase):
         distributed = params.pop_bool("distributed", False)
         world_size = params.pop_int("world_size", 1)
 
-        if distributed:
-            rank = model_device
-        else:
-            rank = 0
-
         params.assert_empty(cls.__name__)
         return cls(
             model,
@@ -858,6 +854,6 @@ class Trainer(TrainerBase):
             log_batch_size_period=log_batch_size_period,
             moving_average=moving_average,
             distributed=distributed,
-            rank=rank,
+            rank=local_rank,
             world_size=world_size,
         )
