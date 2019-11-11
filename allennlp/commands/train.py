@@ -9,7 +9,7 @@ which to write the results.
     usage: allennlp train [-h] -s SERIALIZATION_DIR [-r] [-f] [-o OVERRIDES]
                           [--file-friendly-logging]
                           [--cache-directory CACHE_DIRECTORY]
-                          [--cache-prefix CACHE_PREFIX]
+                          [--cache-prefix CACHE_PREFIX] [--node-rank NODE_RANK]
                           [--include-package INCLUDE_PACKAGE]
                           param_path
 
@@ -37,10 +37,10 @@ which to write the results.
                             Prefix to use for data caching, giving current
                             parameter settings a name in the cache, instead of
                             computing a hash
+      --node-rank NODE_RANK
+                            Rank of this node in the distributed setup
       --include-package INCLUDE_PACKAGE
                             additional packages to include
-      --node-rank NODE_RANK
-                            rank of the current node in the distributed distributed
 """
 
 import argparse
@@ -138,7 +138,7 @@ class Train(Subcommand):
         )
 
         subparser.add_argument(
-            "--node-rank", type=int, default=0, help="Rank of this node in the distributed setup"
+            "--node-rank", type=int, help="Rank of this node in the distributed setup"
         )
 
         subparser.set_defaults(func=train_model_from_args)
@@ -201,7 +201,7 @@ def train_model_from_file(
         For caching data pre-processing.  See :func:`allennlp.training.util.datasets_from_params`.
     cache_prefix : ``str``, optional
         For caching data pre-processing.  See :func:`allennlp.training.util.datasets_from_params`.
-    node_rank : ``int``, optional ( default = 0 )
+    node_rank : ``int``, optional
         Rank of the current node in distributed training
     include_package: ``str``, optional
         In distributed mode, extra packages mentioned will be imported in trainer workers.
@@ -255,7 +255,7 @@ def train_model(
         For caching data pre-processing.  See :func:`allennlp.training.util.datasets_from_params`.
     cache_prefix : ``str``, optional
         For caching data pre-processing.  See :func:`allennlp.training.util.datasets_from_params`.
-    node_rank: ``int``, optional ( default = 0 )
+    node_rank: ``int``, optional
         Rank of the current node in distributed training
     include_package: ``str``, optional
         In distributed mode, extra packages mentioned will be imported in trainer workers.
@@ -380,7 +380,7 @@ def _train_worker(
         In distributed mode, since this function would have been spawned as a separate process,
         the extra imports need to be done again. NOTE: This does not have any effect in single
         GPU training.
-    node_rank: ``int``, optional ( default = 0 )
+    node_rank: ``int``, optional
         Rank of the node
     world_size: ``int``, optional
         The number of processes involved in distributed training.
