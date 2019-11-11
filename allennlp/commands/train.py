@@ -277,7 +277,7 @@ def train_model(
     distributed = params.params.get("trainer").get("distributed", False)
     if not distributed:
         model = _train_worker(
-            rank=0,
+            process_rank=0,
             params=params,
             serialization_dir=serialization_dir,
             file_friendly_logging=file_friendly_logging,
@@ -299,15 +299,15 @@ def train_model(
 
         logging.info("Switching to distributed training mode since multiple GPUs are configured")
 
-        master_addr = params.params.get("trainer").get("master_address")
-        master_port = params.params.get("trainer").get("master_port")
-        num_procs = params.params.get("trainer").get("num_procs_per_node")
-        num_nodes = params.params.get("trainer").get("num_nodes")
+        master_addr = params.params.get("trainer").get("master_address", "127.0.0.1")
+        master_port = params.params.get("trainer").get("master_port", 29500)
+        num_procs = len(device_id)
+        num_nodes = params.params.get("trainer").get("num_nodes", 1)
         world_size = num_nodes * num_procs
 
         os.environ["MASTER_ADDR"] = master_addr
-        os.environ["MASTER_PORT"] = master_port
-        os.environ["WORLD_SIZE"] = world_size
+        os.environ["MASTER_PORT"] = str(master_port)
+        os.environ["WORLD_SIZE"] = str(world_size)
 
         # Creating `Vocabulary` objects from workers could be problematic since the data iterators
         # in each worker will yield only `rank` specific instances. Hence it is safe to construct
