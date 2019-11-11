@@ -7,13 +7,13 @@ document.
 
 We have a few major themes for this quarter:
 
-1.  Breaking out models into their own repositories.  By doing so we hope to increase community
-    engagement and ownership of these model repositories, allowing us to focus more on the core
-    library.  We already have a good start on this with the following repositories:
+1.  Breaking out models into their own repositories (you can follow [this issue](https://github.com/allenai/allennlp/issues/3351) for more information).  By doing so we hope to increase community engagement and ownership of these model repositories, allowing us to focus more on the core library.  We already have a good start on this with the following repositories:
 
     a.  [Semantic Parsing](https://github.com/allenai/allennlp-semparse)
     
     b.  [Reading Comprehension](https://github.com/allenai/allennlp-reading-comprehension)
+
+    We will test out this idea of splitting up the repositories with these two first, fixing any issues with them by the end of this quarter.  Around the end of this quarter or early next quarter, we will finish the process with the rest of the models, making repositories around language modeling, coreference resolution, sequence tagging, parsing, etc.
 
 2.  Better supporting our initiative around [Green AI](https://arxiv.org/abs/1907.10597). 
 
