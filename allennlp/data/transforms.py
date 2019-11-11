@@ -16,7 +16,7 @@ from allennlp.data.fields import MetadataField
 from allennlp.common.util import lazy_groups_of
 
 
-Batched = Iterable[Instance]
+Batch = Iterable[Instance]
 InstanceOrBatch = TypeVar("InstanceOrBatch", Iterable[Instance], Instance)
 
 
@@ -41,10 +41,10 @@ class Transform(IterableTorchDataset, Generic[InstanceOrBatch], Registrable):
 
         raise NotImplementedError
 
-    def transform_batch(self, batches: Iterable[Batched]) -> Iterable[Batched]:
+    def transform_batch(self, batches: Iterable[Batch]) -> Iterable[Batch]:
 
         # TODO Maybe switch this so that the base class just yields and the
-        # subclasses which are generic over Batched yield from
+        # subclasses which are generic over Batch yield from
         for batch in batches:
             yield from self.transform(batch)  # type: ignore
 
@@ -69,7 +69,7 @@ class Transform(IterableTorchDataset, Generic[InstanceOrBatch], Registrable):
 
 
 @Transform.register("max_instances_in_memory")
-class MaxInstancesInMemory(Transform[Batched]):
+class MaxInstancesInMemory(Transform[Batch]):
     """
     Turns a dataset into a dataset of chunks of size max_instances_in_memory.
     This is helpful if you have an IterableDataset which you want to read a chunk from
@@ -85,7 +85,7 @@ class MaxInstancesInMemory(Transform[Batched]):
     def __init__(self, max_instances_in_memory: int):
         self.max_instances_in_memory = max_instances_in_memory
 
-    def transform(self, dataset: Iterable[Instance]) -> Iterable[Batched]:
+    def transform(self, dataset: Iterable[Instance]) -> Iterable[Batch]:
 
         batch = []
 
@@ -101,7 +101,7 @@ class MaxInstancesInMemory(Transform[Batched]):
 
 
 @Transform.register("batch")
-class Batch(Transform[Batched]):
+class Batch(Transform[Batch]):
     """
     Batches a dataset. Note that this is exactly the same
     as MaxInstancesInMemory, but we have a duplicated class
@@ -116,7 +116,7 @@ class Batch(Transform[Batched]):
     def __init__(self, batch_size: int):
         self.batch_size = batch_size
 
-    def transform(self, dataset: Iterable[Instance]) -> Iterable[Batched]:
+    def transform(self, dataset: Iterable[Instance]) -> Iterable[Batch]:
         batch = []
 
         for instance in dataset:
@@ -146,7 +146,7 @@ class Index(Transform[Instance]):
 
             yield instance
 
-    def transform_batch(self, batches: Iterable[Batched]) -> Iterable[Batched]:
+    def transform_batch(self, batches: Iterable[Batch]) -> Iterable[Batch]:
 
         for batch in batches:
             # Note this is not yield from
@@ -154,7 +154,7 @@ class Index(Transform[Instance]):
 
 
 @Transform.register("sort_by_padding")
-class SortByPadding(Transform[Batched]):
+class SortByPadding(Transform[Batch]):
 
     """
     Sorts a list of instances by padding and returns them.
@@ -185,7 +185,7 @@ class SortByPadding(Transform[Batched]):
         # only works if instances are indexed already.
         self.vocab = None
 
-    def transform(self, dataset: Iterable[Instance]) -> Iterable[Batched]:
+    def transform(self, dataset: Iterable[Instance]) -> Iterable[Batch]:
 
         instances = list(dataset)
         if not all([i.indexed for i in instances]):
@@ -206,7 +206,7 @@ class SortByPadding(Transform[Batched]):
 @Transform.register("epoch_tracker")
 class EpochTracker(Transform[Instance]):
     """
-    Adds a allennlp Field to each Instance which specifies how many
+    Adds an allennlp Field to each Instance which specifies how many
     times the full dataset has been iterated over.
     """
 
@@ -222,7 +222,7 @@ class EpochTracker(Transform[Instance]):
 
 
 @Transform.register("skip_smaller_than")
-class SkipSmallerThan(Transform[Batched]):
+class SkipSmallerThan(Transform[Batch]):
     """
     Skip batches that are smaller than a specified size.
     Useful if you don't want the uneven tail of a dataset
@@ -238,13 +238,13 @@ class SkipSmallerThan(Transform[Batched]):
     def __init__(self, min_size: int):
         self.min_size = min_size
 
-    def transform(self, dataset: Iterable[Instance]) -> Iterable[Batched]:
+    def transform(self, dataset: Iterable[Instance]) -> Iterable[Batch]:
 
         raise NotImplementedError(
             "SkipSmallerThan cannot be called on Instances. Please add Batch to your pipeline first."
         )
 
-    def transform_batch(self, batches: Iterable[Batched]) -> Iterable[Batched]:
+    def transform_batch(self, batches: Iterable[Batch]) -> Iterable[Batch]:
         for batch in batches:
             batch = list(batch)
 
@@ -276,7 +276,7 @@ class StopAfter(Transform[Instance]):
             if i >= self.max:
                 break
 
-    def transform_batch(self, batches: Iterable[Batched]) -> Iterable[Batched]:
+    def transform_batch(self, batches: Iterable[Batch]) -> Iterable[Batch]:
         i = 0
         for batch in batches:
             yield batch
@@ -286,7 +286,7 @@ class StopAfter(Transform[Instance]):
 
 
 @Transform.register("max_samples_per_batch")
-class MaxSamplesPerBatch(Transform[Batched]):
+class MaxSamplesPerBatch(Transform[Batch]):
     """
     Ensures that batches are smaller than a specified number of tokens
     for a particular paddding key. This is an effective method to control
@@ -309,7 +309,7 @@ class MaxSamplesPerBatch(Transform[Batched]):
         # as in many cases this will be batches.
         self.excess: Deque[Instance] = deque()
 
-    def transform(self, dataset: Iterable[Instance]) -> Iterable[Batched]:
+    def transform(self, dataset: Iterable[Instance]) -> Iterable[Batch]:
 
         instances = list(dataset)
 
@@ -320,7 +320,7 @@ class MaxSamplesPerBatch(Transform[Batched]):
 
     def _ensure_batch_is_sufficiently_small(
         self, batch_instances: List[Instance], excess: Deque[Instance]
-    ) -> Iterable[Batched]:
+    ) -> Iterable[Batch]:
         """
         If self._maximum_samples_per_batch is specified, then split the batch
         into smaller sub-batches if it exceeds the maximum size.
@@ -378,7 +378,7 @@ class MaxSamplesPerBatch(Transform[Batched]):
 
 
 @Transform.register("homogenous_batches_of")
-class HomogenousBatchesOf(Transform[Batched]):
+class HomogenousBatchesOf(Transform[Batch]):
 
     """
     This Transform takes a dataset of potentially heterogeneous instances
@@ -404,7 +404,7 @@ class HomogenousBatchesOf(Transform[Batched]):
         self.partition_key = partition_key
         self.in_metadata = in_metadata
 
-    def transform(self, dataset: Iterable[Instance]) -> Iterable[Batched]:
+    def transform(self, dataset: Iterable[Instance]) -> Iterable[Batch]:
 
         instances = list(dataset)
 
@@ -435,15 +435,15 @@ class HomogenousBatchesOf(Transform[Batched]):
 
 
 @Transform.register("biggest_batch_first")
-class BiggestBatchFirst(Transform[Batched]):
-    def transform(self, dataset: Iterable[Instance]) -> Iterable[Batched]:
+class BiggestBatchFirst(Transform[Batch]):
+    def transform(self, dataset: Iterable[Instance]) -> Iterable[Batch]:
 
         raise NotImplementedError(
             "BiggestBatchFirst must be called on batches. "
             "Add a transform which batches your instances to your pipeline."
         )
 
-    def transform_batch(self, batches: Iterable[Batched]) -> Iterable[Batched]:
+    def transform_batch(self, batches: Iterable[Batch]) -> Iterable[Batch]:
 
         batches = list(batches)
         if len(batches) <= 2:
@@ -455,7 +455,7 @@ class BiggestBatchFirst(Transform[Batched]):
 
 
 @Transform.register("shuffle")
-class Shuffle(Transform[Batched]):
+class Shuffle(Transform[Batch]):
     """
     Shuffles a set of instances and returns them.
 
@@ -468,7 +468,7 @@ class Shuffle(Transform[Batched]):
     the batch and returns it lazily.
     """
 
-    def transform(self, dataset: Iterable[Instance]) -> Iterable[Batched]:
+    def transform(self, dataset: Iterable[Instance]) -> Iterable[Batch]:
 
         dataset = list(dataset)
         random.shuffle(dataset)
@@ -495,7 +495,7 @@ class Fork(Transform[Instance]):
                 yield instance
             i += 1
 
-    def transform_batch(self, batches: Iterable[Batched]) -> Iterable[Batched]:
+    def transform_batch(self, batches: Iterable[Batch]) -> Iterable[Batch]:
 
         info = torch.utils.data.get_worker_info()
         i = 0
