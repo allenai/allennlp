@@ -1,4 +1,4 @@
-from typing import Dict, Tuple, List, Iterable, Generic, TypeVar, Deque, Union
+from typing import Dict, Tuple, List, Iterable, Generic, TypeVar, Deque, Union, Any
 import itertools
 from collections import deque, defaultdict
 import random
@@ -30,10 +30,6 @@ class DatasetFromGenerator(IterableTorchDataset):
             yield x
 
 
-A = TypeVar("A")
-B = TypeVar("B")
-
-
 class Transform(IterableTorchDataset, Registrable):
     """
     A completely generic implementation of a dataset tranformation.
@@ -44,18 +40,18 @@ class Transform(IterableTorchDataset, Registrable):
     takes a pytorch Dataset of paths to a sharded dataset and produces a stream
     of instances by reading data from disk.
     """
-    def transform(self, dataset: Iterable[A]) -> Iterable[B]:
+    def transform(self, dataset: Iterable[Any]) -> Iterable[Any]:
         """
         Takes an Iterable of A, typically a pytorch dataset and transforms it
         into an Iterable of something else.
         """
         raise NotImplementedError
 
-    def transform_batch(self, batches: Iterable[A]) -> Iterable[B]:
+    def transform_batch(self, batches: Iterable[Any]) -> Iterable[Any]:
 
         raise NotImplementedError
 
-    def __call__(self, dataset: Iterable[A]) -> Iterable[B]:
+    def __call__(self, dataset: Iterable[Any]) -> Iterable[Any]:
 
         raise NotImplementedError
 
