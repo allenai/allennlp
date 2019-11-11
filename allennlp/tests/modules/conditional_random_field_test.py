@@ -141,6 +141,21 @@ class TestConditionalRandomField(AllenNlpTestCase):
         assert viterbi_tags == most_likely_tags
         assert viterbi_scores == best_scores
 
+    def test_viterbi_tags_top_k(self):
+        mask = torch.LongTensor([[1, 1, 1], [1, 1, 0]])
+
+        best_paths = self.crf.viterbi_tags(self.logits, mask, top_k=2)
+
+        # Ensure the top path matches not passing top_k
+        top_path_and_score = [top_k_paths[0] for top_k_paths in best_paths]
+        assert top_path_and_score == self.crf.viterbi_tags(self.logits, mask)
+
+        next_path_and_score = [top_k_paths[1] for top_k_paths in best_paths]
+        next_viterbi_tags = [x for x, _ in next_path_and_score]
+
+        # Check that the next best viterbi tags are what I think they should be.
+        assert next_viterbi_tags == [[4, 2, 3], [3, 2]]
+
     def test_constrained_viterbi_tags(self):
         constraints = {
             (0, 0),
