@@ -54,7 +54,7 @@ class HomogeneousBatchIteratorStub:
         skip_smaller_batches: bool = False,
     ):
 
-        dataset_transforms: List[transforms.Transform] = []
+        dataset_transforms: List[transforms.InstanceTransform] = []
 
         if instances_per_epoch:
             dataset_transforms.append(transforms.StopAfter(instances_per_epoch))

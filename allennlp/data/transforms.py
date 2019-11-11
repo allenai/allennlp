@@ -30,7 +30,38 @@ class DatasetFromGenerator(IterableTorchDataset):
             yield x
 
 
-class Transform(IterableTorchDataset, Generic[InstanceOrBatch], Registrable):
+A = TypeVar("A")
+B = TypeVar("B")
+
+
+class Transform(IterableTorchDataset, Registrable):
+    """
+    A completely generic implementation of a dataset tranformation.
+    The Dataset can be an iterable of anything, producing an iterable of
+    anything else. This is completely generic so people can implement their
+    own transforms which might not fit our strict Instance -> Batch implementation
+    in InstanceTransform below. An example of this might be a Transform which
+    takes a pytorch Dataset of paths to a sharded dataset and produces a stream
+    of instances by reading data from disk.
+    """
+    def transform(self, dataset: Iterable[A]) -> Iterable[B]:
+        """
+        Takes an Iterable of A, typically a pytorch dataset and transforms it
+        into an Iterable of something else.
+        """
+        raise NotImplementedError
+
+    def transform_batch(self, batches: Iterable[A]) -> Iterable[B]:
+
+        raise NotImplementedError
+
+    def __call__(self, dataset: Iterable[A]) -> Iterable[B]:
+
+        raise NotImplementedError
+
+
+class InstanceTransform(Transform, Generic[InstanceOrBatch]):
+
     def transform(self, dataset: Iterable[Instance]) -> Iterable[InstanceOrBatch]:
         """
         Describes a transformation from either:
@@ -68,8 +99,8 @@ class Transform(IterableTorchDataset, Generic[InstanceOrBatch], Registrable):
         return DatasetFromGenerator(generator())
 
 
-@Transform.register("max_instances_in_memory")
-class MaxInstancesInMemory(Transform[Batch]):
+@InstanceTransform.register("max_instances_in_memory")
+class MaxInstancesInMemory(InstanceTransform[Batch]):
     """
     Turns a dataset into a dataset of chunks of size max_instances_in_memory.
     This is helpful if you have an IterableDataset which you want to read a chunk from
@@ -100,8 +131,8 @@ class MaxInstancesInMemory(Transform[Batch]):
             yield batch
 
 
-@Transform.register("batch")
-class Batch(Transform[Batch]):
+@InstanceTransform.register("batch")
+class Batch(InstanceTransform[Batch]):
     """
     Batches a dataset. Note that this is exactly the same
     as MaxInstancesInMemory, but we have a duplicated class
@@ -130,8 +161,8 @@ class Batch(Transform[Batch]):
             yield batch
 
 
-@Transform.register("index")
-class Index(Transform[Instance]):
+@InstanceTransform.register("index")
+class Index(InstanceTransform[Instance]):
     """
     Indexes allennlp Instances in place and returns them.
     """
@@ -153,8 +184,8 @@ class Index(Transform[Instance]):
             yield self.transform(batch)
 
 
-@Transform.register("sort_by_padding")
-class SortByPadding(Transform[Batch]):
+@InstanceTransform.register("sort_by_padding")
+class SortByPadding(InstanceTransform[Batch]):
 
     """
     Sorts a list of instances by padding and returns them.
@@ -203,8 +234,8 @@ class SortByPadding(Transform[Batch]):
         yield instances
 
 
-@Transform.register("epoch_tracker")
-class EpochTracker(Transform[Instance]):
+@InstanceTransform.register("epoch_tracker")
+class EpochTracker(InstanceTransform[Instance]):
     """
     Adds an allennlp Field to each Instance which specifies how many
     times the full dataset has been iterated over.
@@ -221,8 +252,8 @@ class EpochTracker(Transform[Instance]):
         self.epoch += 1
 
 
-@Transform.register("skip_smaller_than")
-class SkipSmallerThan(Transform[Batch]):
+@InstanceTransform.register("skip_smaller_than")
+class SkipSmallerThan(InstanceTransform[Batch]):
     """
     Skip batches that are smaller than a specified size.
     Useful if you don't want the uneven tail of a dataset
@@ -252,8 +283,8 @@ class SkipSmallerThan(Transform[Batch]):
                 yield batch
 
 
-@Transform.register("stop_after")
-class StopAfter(Transform[Instance]):
+@InstanceTransform.register("stop_after")
+class StopAfter(InstanceTransform[Instance]):
     """
     Stop an epoch after a fixed number of individual instances.
     NOTE: The TransformIterator will ensure that the next epoch
@@ -285,8 +316,8 @@ class StopAfter(Transform[Instance]):
                 break
 
 
-@Transform.register("max_samples_per_batch")
-class MaxSamplesPerBatch(Transform[Batch]):
+@InstanceTransform.register("max_samples_per_batch")
+class MaxSamplesPerBatch(InstanceTransform[Batch]):
     """
     Ensures that batches are smaller than a specified number of tokens
     for a particular paddding key. This is an effective method to control
@@ -377,8 +408,8 @@ class MaxSamplesPerBatch(Transform[Batch]):
             yield batch
 
 
-@Transform.register("homogenous_batches_of")
-class HomogenousBatchesOf(Transform[Batch]):
+@InstanceTransform.register("homogenous_batches_of")
+class HomogenousBatchesOf(InstanceTransform[Batch]):
 
     """
     This Transform takes a dataset of potentially heterogeneous instances
@@ -434,8 +465,8 @@ class HomogenousBatchesOf(Transform[Batch]):
                         remaining.remove(key)
 
 
-@Transform.register("biggest_batch_first")
-class BiggestBatchFirst(Transform[Batch]):
+@InstanceTransform.register("biggest_batch_first")
+class BiggestBatchFirst(InstanceTransform[Batch]):
     def transform(self, dataset: Iterable[Instance]) -> Iterable[Batch]:
 
         raise NotImplementedError(
@@ -454,8 +485,8 @@ class BiggestBatchFirst(Transform[Batch]):
             yield from [last, penultimate] + batches
 
 
-@Transform.register("shuffle")
-class Shuffle(Transform[Batch]):
+@InstanceTransform.register("shuffle")
+class Shuffle(InstanceTransform[Batch]):
     """
     Shuffles a set of instances and returns them.
 
@@ -475,8 +506,8 @@ class Shuffle(Transform[Batch]):
         yield dataset
 
 
-@Transform.register("fork")
-class Fork(Transform[Instance]):
+@InstanceTransform.register("fork")
+class Fork(InstanceTransform[Instance]):
     """
     A transform which forks a dataset being read by multiple workers
     into independent streams. Each worker specified by the DataLoader
@@ -507,13 +538,13 @@ class Fork(Transform[Instance]):
             i += 1
 
 
-@Transform.register("compose")
-class Compose(Transform):
+@InstanceTransform.register("compose")
+class Compose(InstanceTransform):
     """
     A Transform which composes a list of other Transforms.
     """
 
-    def __init__(self, transforms: List[Transform]):
+    def __init__(self, transforms: List[InstanceTransform]):
         self.transforms = transforms
 
     def transform(self, dataset: Iterable[InstanceOrBatch]) -> Iterable[InstanceOrBatch]:

@@ -24,7 +24,7 @@ TensorDict = Dict[str, Union[torch.Tensor, Dict[str, torch.Tensor]]]
 class TransformIterator:
     def __init__(
         self,
-        dataset_transforms: List[transforms.Transform],
+        dataset_transforms: List[transforms.InstanceTransform],
         instances_per_epoch: int = None,
         batch_size: int = 32,
     ) -> None:

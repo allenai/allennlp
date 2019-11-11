@@ -235,6 +235,6 @@ class TransformsTest(IteratorTest):
             }
         )
 
-        pipeline = transforms.Transform.from_params(params)
+        pipeline = transforms.InstanceTransform.from_params(params)
         assert pipeline.transforms[1].batch_size == 4
         assert pipeline.transforms[2].min_size == 4
