@@ -275,7 +275,7 @@ class Trainer(TrainerBase):
         # normal case, reference to `Model` is retained. This reference is only used in
         # these places: `model.__call__`, `model.train` and `model.eval`.
         if self._distributed:
-            self._pytorch_model = DistributedDataParallel(self.model, device_ids=[self._cuda_devices])
+            self._pytorch_model = DistributedDataParallel(self.model, device_ids=self._cuda_devices)
         else:
             self._pytorch_model = self.model
 

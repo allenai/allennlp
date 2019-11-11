@@ -297,8 +297,6 @@ def train_model(
                 "Multiple cuda devices need to be configured to run distributed training."
             )
 
-        logging.info("Switching to distributed training mode since multiple GPUs are configured")
-
         master_addr = params.params.get("trainer").get("master_address", "127.0.0.1")
         master_port = params.params.get("trainer").get("master_port", 29500)
         num_procs = len(device_id)
@@ -308,6 +306,11 @@ def train_model(
         os.environ["MASTER_ADDR"] = master_addr
         os.environ["MASTER_PORT"] = str(master_port)
         os.environ["WORLD_SIZE"] = str(world_size)
+
+        logging.info(f"Switching to distributed training mode since multiple GPUs are configured"
+                     f"Master is at: {master_addr}:{master_port} | Rank of this node: {node_rank} | "
+                     f"Number of workers in this node: {num_procs} | Number of nodes: {num_nodes} | "
+                     f"World size: {world_size}")
 
         # Creating `Vocabulary` objects from workers could be problematic since the data iterators
         # in each worker will yield only `rank` specific instances. Hence it is safe to construct
@@ -329,7 +332,8 @@ def train_model(
                 cache_directory,
                 cache_prefix,
                 include_package,
-                world_size,
+                node_rank,
+                world_size
             ),
             nprocs=num_procs
         )
