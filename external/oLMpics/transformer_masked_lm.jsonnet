@@ -34,7 +34,7 @@ local cuda_device = 0;
   "model": {
     //"requires_grad":false,
     //"unfreeze_pooler":true,
-    "layer_freeze_regexes":["embeddings","encoder"],
+    "layer_freeze_regexes":["embeddings","encoder","pooler"],
     "type": "transformer_masked_lm",
     "pretrained_model": transformer_model
   },
