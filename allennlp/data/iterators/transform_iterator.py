@@ -39,11 +39,6 @@ class TransformIterator:
         # we want to remember where we left off. As `Iterator`s are not necessarily hashable,
         # we use their id() as the key.
         self._cursors: Dict[int, Iterator[Instance]] = {}
-
-        # BE CAREFUL, mustnt Fork twice. Remember to check once transforms
-        # can be passed via constructor.
-        # dataset_transforms.append(transforms.Fork())
-
         self.transforms = dataset_transforms
 
     def __call__(
@@ -111,8 +106,6 @@ class TransformIterator:
 
             while True:
                 try:
-                    # If there are instances left on this iterator,
-                    # yield one and decrement max_instances.
                     next_batch = next(batch_generator)
                     yield next_batch
 
