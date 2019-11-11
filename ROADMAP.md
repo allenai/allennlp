@@ -13,7 +13,7 @@ We have a few major themes for this quarter:
 
     a.  [Semantic Parsing](https://github.com/allenai/allennlp-semparse)
     
-    b.  [Language Modeling](https://github.com/allenai/allennlp-language-modeling)
+    b.  [Reading Comprehension](https://github.com/allenai/allennlp-reading-comprehension)
 
 2.  Better supporting our initiative around [Green AI](https://arxiv.org/abs/1907.10597). 
 
