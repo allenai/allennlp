@@ -567,7 +567,7 @@ class Trainer(TrainerBase):
                         num_batches,
                         reset=True,
                         world_size=self._world_size,
-                        cuda_device=self._cuda_devices
+                        cuda_device=self._cuda_devices,
                     )
 
                     # Check validation metric for early stopping

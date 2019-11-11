@@ -138,10 +138,7 @@ class Train(Subcommand):
         )
 
         subparser.add_argument(
-            "--node-rank",
-            type=int,
-            default=0,
-            help="Rank of this node in the distributed setup"
+            "--node-rank", type=int, default=0, help="Rank of this node in the distributed setup"
         )
 
         subparser.set_defaults(func=train_model_from_args)
@@ -307,10 +304,12 @@ def train_model(
         os.environ["MASTER_PORT"] = str(master_port)
         os.environ["WORLD_SIZE"] = str(world_size)
 
-        logging.info(f"Switching to distributed training mode since multiple GPUs are configured"
-                     f"Master is at: {master_addr}:{master_port} | Rank of this node: {node_rank} | "
-                     f"Number of workers in this node: {num_procs} | Number of nodes: {num_nodes} | "
-                     f"World size: {world_size}")
+        logging.info(
+            f"Switching to distributed training mode since multiple GPUs are configured"
+            f"Master is at: {master_addr}:{master_port} | Rank of this node: {node_rank} | "
+            f"Number of workers in this node: {num_procs} | Number of nodes: {num_nodes} | "
+            f"World size: {world_size}"
+        )
 
         # Creating `Vocabulary` objects from workers could be problematic since the data iterators
         # in each worker will yield only `rank` specific instances. Hence it is safe to construct
@@ -333,9 +332,9 @@ def train_model(
                 cache_prefix,
                 include_package,
                 node_rank,
-                world_size
+                world_size,
             ),
-            nprocs=num_procs
+            nprocs=num_procs,
         )
         model = Model.load(params, serialization_dir)
         return model
@@ -423,7 +422,8 @@ def _train_worker(
         torch.cuda.set_device(gpu_id)
         dist.init_process_group(backend="nccl", world_size=world_size, rank=global_rank)
         logging.info(
-            f"Process group of world size {world_size} initialized for distributed training in worker {global_rank}"
+            f"Process group of world size {world_size} initialized "
+            f"for distributed training in worker {global_rank}"
         )
 
         # Till now, "cuda_device" will be a list of ids as configured originally
