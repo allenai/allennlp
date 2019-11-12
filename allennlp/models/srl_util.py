@@ -84,7 +84,7 @@ def write_conll_formatted_tags_to_file(
         The gold CoNLL-formatted labels.
     """
     verb_only_sentence = ["-"] * len(sentence)
-    if verb_index:
+    if verb_index is not None:
         verb_only_sentence[verb_index] = sentence[verb_index]
 
     for word, predicted, gold in zip(
