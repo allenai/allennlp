@@ -282,7 +282,7 @@ def train_model(
             recover=recover,
             cache_directory=cache_directory,
             cache_prefix=cache_prefix,
-            include_package=include_package
+            include_package=include_package,
         )
         archive_model(serialization_dir, files_to_archive=params.files_to_archive)
         return model
@@ -423,13 +423,15 @@ def _train_worker(
         # In distributed training, the configured device is always going to be a list.
         # The corresponding gpu id for the particular worker is obtained by picking the id
         # from the device list with the rank as index
-        gpu_id = device_list[process_rank]
+        gpu_id = device_list[process_rank]  # type: ignore
 
         torch.cuda.set_device(gpu_id)
-        dist.init_process_group(backend="nccl",
-                                init_method=f"tcp://{master_addr}:{master_port}",
-                                world_size=world_size,
-                                rank=global_rank)
+        dist.init_process_group(
+            backend="nccl",
+            init_method=f"tcp://{master_addr}:{master_port}",
+            world_size=world_size,
+            rank=global_rank,
+        )
         logging.info(
             f"Process group of world size {world_size} initialized "
             f"for distributed training in worker {global_rank}"
