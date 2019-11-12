@@ -138,7 +138,7 @@ class Train(Subcommand):
         )
 
         subparser.add_argument(
-            "--node-rank", type=int, help="Rank of this node in the distributed setup"
+            "--node-rank", type=int, default=0, help="Rank of this node in the distributed setup"
         )
 
         subparser.set_defaults(func=train_model_from_args)
@@ -282,6 +282,7 @@ def train_model(
             cache_directory=cache_directory,
             cache_prefix=cache_prefix,
             include_package=include_package,
+            node_rank=node_rank,
             world_size=1,
         )
         archive_model(serialization_dir, files_to_archive=params.files_to_archive)
@@ -469,7 +470,7 @@ def _train_worker(
     params.assert_empty("base train command")
 
     try:
-        if master and distributed:  # let the setup get ready for all the workers
+        if distributed:  # let the setup get ready for all the workers
             dist.barrier()
 
         metrics = trainer.train()
