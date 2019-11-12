@@ -4,7 +4,7 @@ from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.dataset_readers import InterleavingDatasetReader
 from allennlp.data.iterators.homogeneous_batch_iterator import (
     HomogeneousBatchIterator,
-    HomogeneousBatchIteratorStub,
+    HomogeneousBatchIteratorShim,
 )
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.tests.data.dataset_readers.interleaving_dataset_reader_test import PlainTextReader
@@ -32,7 +32,7 @@ class TestHomogeneousBatchIterator(AllenNlpTestCase):
 
         for iterator in [
             HomogeneousBatchIterator(batch_size=3),
-            HomogeneousBatchIteratorStub(batch_size=3),
+            HomogeneousBatchIteratorShim(batch_size=3),
         ]:
 
             iterator.index_with(vocab)
@@ -65,7 +65,7 @@ class TestHomogeneousBatchIterator(AllenNlpTestCase):
 
         for iterator in [
             HomogeneousBatchIterator(batch_size=3, skip_smaller_batches=True),
-            HomogeneousBatchIteratorStub(batch_size=3, skip_smaller_batches=True),
+            HomogeneousBatchIteratorShim(batch_size=3, skip_smaller_batches=True),
         ]:
             iterator.index_with(vocab)
 

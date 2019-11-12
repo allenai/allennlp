@@ -6,12 +6,13 @@ from allennlp.data.iterators.data_iterator import DataIterator
 from allennlp.data.iterators.transform_iterator import TransformIterator
 from allennlp.data import transforms
 from allennlp.common.util import lazy_groups_of
+from allennlp.common.registrable import Registrable
 from allennlp.data.dataset import Batch
 from allennlp.data.instance import Instance
 
 
 @DataIterator.register("homogeneous_batch")
-class HomogeneousBatchIteratorStub:
+class HomogeneousBatchIteratorShim(Registrable, TransformIterator):
     """
     This iterator takes a dataset of potentially heterogeneous instances
     and yields back homogeneous batches. It assumes that each instance has
@@ -43,8 +44,8 @@ class HomogeneousBatchIteratorStub:
         If set to `True`, those smaller batches will be discarded.
     """
 
-    def __new__(
-        cls,
+    def __init__(
+        self,
         batch_size: int = 32,
         instances_per_epoch: int = None,
         max_instances_in_memory: int = None,
@@ -72,19 +73,7 @@ class HomogeneousBatchIteratorStub:
         if skip_smaller_batches:
             dataset_transforms.append(transforms.SkipSmallerThan(batch_size))
 
-        return TransformIterator(dataset_transforms, instances_per_epoch, batch_size)
-
-    def __init__(
-        self,
-        batch_size: int = 32,
-        instances_per_epoch: int = None,
-        max_instances_in_memory: int = None,
-        cache_instances: bool = False,
-        track_epoch: bool = False,
-        partition_key: str = "dataset",
-        skip_smaller_batches: bool = False,
-    ) -> None:
-        pass
+        super().__init__(dataset_transforms, instances_per_epoch, batch_size)
 
 
 @DataIterator.register("homogeneous_batch_old")

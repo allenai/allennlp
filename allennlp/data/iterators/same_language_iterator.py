@@ -4,6 +4,7 @@ import logging
 import random
 
 from allennlp.common.util import lazy_groups_of
+from allennlp.common.registrable import Registrable
 from allennlp.data.instance import Instance
 from allennlp.data.dataset import Batch
 from allennlp.data.iterators.data_iterator import DataIterator
@@ -25,7 +26,7 @@ def split_by_language(instance_list):
 
 
 @DataIterator.register("same_language")
-class SameLanguageIteratorStub:
+class SameLanguageIteratorShim(Registrable, TransformIterator):
     """
     Splits batches into batches containing the same language.
     The language of each instance is determined by looking at the 'lang' value
@@ -34,8 +35,8 @@ class SameLanguageIteratorStub:
     It takes the same parameters as :class:`allennlp.data.iterators.BucketIterator`
     """
 
-    def __new__(
-        cls,
+    def __init__(
+        self,
         sorting_keys: List[Tuple[str, str]] = None,
         padding_noise: float = 0.1,
         biggest_batch_first: bool = False,
@@ -75,24 +76,7 @@ class SameLanguageIteratorStub:
         if skip_smaller_batches:
             dataset_transforms.append(transforms.SkipSmallerThan(batch_size))
 
-        return TransformIterator(dataset_transforms, instances_per_epoch, batch_size)
-
-    # TODO(Mark): Explain in detail this delinquent behaviour
-    def __init__(
-        self,
-        sorting_keys: List[Tuple[str, str]] = None,
-        padding_noise: float = 0.1,
-        biggest_batch_first: bool = False,
-        batch_size: int = 32,
-        instances_per_epoch: int = None,
-        max_instances_in_memory: int = None,
-        cache_instances: bool = False,
-        track_epoch: bool = False,
-        maximum_samples_per_batch: Tuple[str, int] = None,
-        skip_smaller_batches: bool = False,
-    ) -> None:
-
-        pass
+        super().__init__(dataset_transforms, instances_per_epoch, batch_size)
 
 
 @DataIterator.register("same_language_old")

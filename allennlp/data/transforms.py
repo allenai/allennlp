@@ -220,9 +220,7 @@ class SortByPadding(InstanceTransform[Batched]):
             sort_by_padding as allennlp_sort_by_padding,
         )
 
-        instances = allennlp_sort_by_padding(
-            instances, self.sorting_keys, None, self.padding_noise
-        )
+        instances = allennlp_sort_by_padding(instances, self.sorting_keys, None, self.padding_noise)
 
         yield instances
 

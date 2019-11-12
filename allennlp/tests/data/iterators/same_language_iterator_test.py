@@ -1,7 +1,7 @@
 from allennlp.data.dataset_readers import UniversalDependenciesMultiLangDatasetReader
 from allennlp.data.iterators.same_language_iterator import (
     SameLanguageIterator,
-    SameLanguageIteratorStub,
+    SameLanguageIteratorShim,
 )
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.common.testing import AllenNlpTestCase
@@ -15,7 +15,7 @@ class SameLanguageIteratorTest(AllenNlpTestCase):
 
         for iterator in [
             SameLanguageIterator(batch_size=2, sorting_keys=[["words", "num_tokens"]]),
-            SameLanguageIteratorStub(batch_size=2, sorting_keys=[["words", "num_tokens"]]),
+            SameLanguageIteratorShim(batch_size=2, sorting_keys=[["words", "num_tokens"]]),
         ]:
 
             reader = UniversalDependenciesMultiLangDatasetReader(languages=["es", "fr", "it"])
