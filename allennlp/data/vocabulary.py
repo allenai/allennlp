@@ -209,9 +209,9 @@ class Vocabulary(Registrable):
         the tokens to.  This is a way to be sure that certain items appear in your vocabulary,
         regardless of any other vocabulary computation.
     padding_token : ``str``,  optional (default=DEFAULT_PADDING_TOKEN)
-        TODO
+        If given, this the string used for padding.
     oov_token : ``str``,  optional (default=DEFAULT_OOV_TOKEN)
-        TODO
+        If given, this the string used for the out of vocabulary (OOVs) tokens.
     """
 
     default_implementation = "default"
