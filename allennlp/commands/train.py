@@ -38,7 +38,8 @@ which to write the results.
                             parameter settings a name in the cache, instead of
                             computing a hash
       --node-rank NODE_RANK
-                            Rank of this node in the distributed setup
+                            Rank of this node in the distributed setup (default =
+                            0)
       --include-package INCLUDE_PACKAGE
                             additional packages to include
 """
