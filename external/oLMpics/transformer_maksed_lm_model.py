@@ -131,13 +131,19 @@ class TransformerMaskedLMModel(Model):
             self._transformer_model.lm_head.decoder.weight.requires_grad = True
             self._transformer_model.lm_head.bias.requires_grad = True
         elif 'bert' in pretrained_model:
-            self._transformer_model.cls.predictions.bias.requires_grad = True
             self._transformer_model.cls.predictions.transform.dense.weight.requires_grad = True
             self._transformer_model.cls.predictions.transform.dense.bias.requires_grad = True
             self._transformer_model.cls.predictions.transform.LayerNorm.weight.requires_grad = True
             self._transformer_model.cls.predictions.transform.LayerNorm.bias.requires_grad = True
             self._transformer_model.cls.predictions.decoder.weight.requires_grad = True
-            self._transformer_model.cls.predictions.decoder.bias.requires_grad = True'''
+            self._transformer_model.cls.predictions.bias.requires_grad = True'''
+
+        if 'roberta' in pretrained_model:
+            self._transformer_model.lm_head.decoder.weight.requires_grad = True
+            self._transformer_model.lm_head.bias.requires_grad = True
+        elif 'bert' in pretrained_model:
+            self._transformer_model.cls.predictions.decoder.weight.requires_grad = True
+            self._transformer_model.cls.predictions.bias.requires_grad = True
 
         if unfreeze_pooler:
             try:

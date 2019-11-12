@@ -653,11 +653,16 @@ class TransformerMaskedLMReader(DatasetReader):
             tokens = [cls_token] + tokens
             segment_ids = [cls_token_segment_id] + segment_ids
 
+            if self._model_type in ['roberta']:
+                tokens += [Token(self._tokenizer_internal.eos_token)]
+                segment_ids.append(0)
+
         masked_labels = [-1] * len(tokens)
         masked_index_ids = []
         for i,t in enumerate(masked_tokens):
-            masked_labels[t[0]] = choice_ids[i]
-            masked_index_ids.append((t[0], choice_ids[i]))
+            # remember we added a CLS so the masked token is actually t[0] + 1
+            masked_labels[t[0] + 1] = choice_ids[i]
+            masked_index_ids.append((t[0] + 1, choice_ids[i]))
 
         return tokens, segment_ids, masked_labels, masked_index_ids
 
