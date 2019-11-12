@@ -385,7 +385,7 @@ def get_metrics(
     num_batches: int,
     reset: bool = False,
     world_size: int = 1,
-    cuda_device: int = 0,
+    cuda_device: Union[int, List] = 0,
 ) -> Dict[str, float]:
     """
     Gets the metrics but sets ``"loss"`` to
@@ -399,7 +399,7 @@ def get_metrics(
         # In distributed mode, average out all metrics across GPUs
         aggregated_metrics = {}
         for metric_name, metric_val in metrics.items():
-            metric_tensor = torch.tensor(metric_val).to(torch.device(cuda_device))
+            metric_tensor = torch.tensor(metric_val).to(torch.device(cuda_device[0]))
             dist.all_reduce(metric_tensor, op=dist.ReduceOp.SUM)
             reduced_metric = metric_tensor.item() / world_size
             aggregated_metrics[metric_name] = reduced_metric
