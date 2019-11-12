@@ -208,9 +208,6 @@ class SortByPadding(InstanceTransform[Batched]):
 
         self.sorting_keys = sorting_keys
         self.padding_noise = padding_noise
-        # HACK, just so we can use the existing sort_by_padding,
-        # only works if instances are indexed already.
-        self.vocab = None
 
     def transform(self, dataset: Iterable[Instance]) -> Iterable[Batched]:
 
@@ -224,7 +221,7 @@ class SortByPadding(InstanceTransform[Batched]):
         )
 
         instances = allennlp_sort_by_padding(
-            instances, self.sorting_keys, self.vocab, self.padding_noise
+            instances, self.sorting_keys, None, self.padding_noise
         )
 
         yield instances
