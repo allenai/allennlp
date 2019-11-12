@@ -781,3 +781,12 @@ class TestVocabulary(AllenNlpTestCase):
         vocab = Vocabulary.from_params(params=params, instances=self.dataset)
         assert vocab.get_vocab_size() >= 50
         assert vocab.get_token_index("his") > 1  # not @@UNKNOWN@@
+
+    def test_custom_padding_oov_tokens(self):
+        vocab = Vocabulary(oov_token="[UNK]")
+        assert vocab._oov_token == "[UNK]"
+        assert vocab._padding_token == "@@PADDING@@"
+
+        vocab = Vocabulary(padding_token="[PAD]")
+        assert vocab._oov_token == "@@UNKNOWN@@"
+        assert vocab._padding_token == "[PAD]"
