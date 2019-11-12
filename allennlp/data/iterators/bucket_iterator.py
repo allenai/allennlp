@@ -123,8 +123,9 @@ class BucketIteratorShim(Registrable, TransformIterator):
             dataset_transforms.append(transforms.MaxInstancesInMemory(max_instances_in_memory))
 
         if sorting_keys is not None:
-            # To sort the dataset, it must be indexed.
-            # currently this happens when we call index_with, slightly odd
+            # To sort the dataset, it must be indexed with transforms.Index.
+            # This gets automatically added when iterator.index_with() is called,
+            # so we don't need to add it here.
             dataset_transforms.append(transforms.SortByPadding(sorting_keys, padding_noise))
 
         if maximum_samples_per_batch is not None:

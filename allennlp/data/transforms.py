@@ -95,38 +95,6 @@ class InstanceTransform(Transform, Generic[InstanceOrBatch]):
         return DatasetFromGenerator(generator())
 
 
-@Transform.register("max_instances_in_memory")
-class MaxInstancesInMemory(InstanceTransform[Batched]):
-    """
-    Turns a dataset into a dataset of chunks of size max_instances_in_memory.
-    This is helpful if you have an IterableDataset which you want to read a chunk from
-    so you can sort it by padding, and then batch afterward.
-
-    Parameters
-    ----------
-    max_instances_in_memory : int
-        The size of the chunk to read into memory.
-
-    """
-
-    def __init__(self, max_instances_in_memory: int):
-        self.max_instances_in_memory = max_instances_in_memory
-
-    def transform(self, dataset: Iterable[Instance]) -> Iterable[Batched]:
-
-        batch = []
-
-        for instance in dataset:
-            batch.append(instance)
-
-            if len(batch) == self.max_instances_in_memory:
-                yield batch
-
-                batch = []
-        if batch:
-            yield batch
-
-
 @Transform.register("batch")
 class Batch(InstanceTransform[Batched]):
     """
@@ -155,6 +123,24 @@ class Batch(InstanceTransform[Batched]):
 
         if batch:
             yield batch
+
+
+@Transform.register("max_instances_in_memory")
+class MaxInstancesInMemory(Batch):
+    """
+    Turns a dataset into a dataset of chunks of size max_instances_in_memory.
+    This is helpful if you have an IterableDataset which you want to read a chunk from
+    so you can sort it by padding, and then batch afterward.
+
+    Parameters
+    ----------
+    max_instances_in_memory : int
+        The size of the chunk to read into memory.
+
+    """
+
+    def __init__(self, max_instances_in_memory: int):
+        super().__init__(batch_size=max_instances_in_memory)
 
 
 @Transform.register("index")
@@ -268,8 +254,11 @@ class SkipSmallerThan(InstanceTransform[Batched]):
 
     def transform_batch(self, batches: Iterable[Batched]) -> Iterable[Batched]:
         for batch in batches:
-            batch = list(batch)
 
+            # Explicitly create a list from the iterator
+            # before we check it's length, so we don't
+            # exhaust it.
+            batch = list(batch)
             if len(batch) >= self.min_size:
                 yield batch
 
