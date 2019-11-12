@@ -281,9 +281,7 @@ def train_model(
             recover=recover,
             cache_directory=cache_directory,
             cache_prefix=cache_prefix,
-            include_package=include_package,
-            node_rank=node_rank,
-            world_size=1,
+            include_package=include_package
         )
         archive_model(serialization_dir, files_to_archive=params.files_to_archive)
         return model
@@ -295,10 +293,10 @@ def train_model(
                 "Multiple cuda devices need to be configured to run distributed training."
             )
 
-        master_addr = params.params.get("trainer").get("master_address", "127.0.0.1")
-        master_port = params.params.get("trainer").get("master_port", 29500)
+        master_addr = params.params.get("trainer").pop("master_address", "127.0.0.1")
+        master_port = params.params.get("trainer").pop("master_port", 29500)
         num_procs = len(device_id)
-        num_nodes = params.params.get("trainer").get("num_nodes", 1)
+        num_nodes = params.params.get("trainer").pop("num_nodes", 1)
         world_size = num_nodes * num_procs
 
         os.environ["MASTER_ADDR"] = master_addr
@@ -333,6 +331,9 @@ def train_model(
                 cache_prefix,
                 include_package,
                 node_rank,
+                num_procs,
+                master_addr,
+                master_port,
                 world_size,
             ),
             nprocs=num_procs,
@@ -351,6 +352,9 @@ def _train_worker(
     cache_prefix: str = None,
     include_package: str = None,
     node_rank: int = 0,
+    num_procs_per_node: int = 0,
+    master_addr: str = "127.0.0.1",
+    master_port: int = 29500,
     world_size: int = 1,
 ) -> Optional[Model]:
     """
@@ -410,7 +414,7 @@ def _train_worker(
         # The Unique identifier of the worker process among all the processes in the
         # distributed training group is computed here. This is used while initializing
         # the process group using `init_process_group`
-        global_rank = node_rank * world_size + process_rank
+        global_rank = node_rank * num_procs_per_node + process_rank
 
         cuda_device = params.params.get("trainer").get("cuda_device", -1)
         device_list = parse_cuda_device(cuda_device)
@@ -421,7 +425,10 @@ def _train_worker(
         gpu_id = device_list[process_rank]
 
         torch.cuda.set_device(gpu_id)
-        dist.init_process_group(backend="nccl", world_size=world_size, rank=global_rank)
+        dist.init_process_group(backend="nccl",
+                                init_method=f"tcp://{master_addr}:{master_port}",
+                                world_size=world_size,
+                                rank=global_rank)
         logging.info(
             f"Process group of world size {world_size} initialized "
             f"for distributed training in worker {global_rank}"
