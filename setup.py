@@ -132,7 +132,7 @@ setup(
         "word2number>=1.1",
         "pytorch-pretrained-bert>=0.6.0",
         "pytorch-transformers==1.1.0",
-        "transformers=2.1.1",
+        "transformers==2.1.1",
         "jsonpickle",
     ],
     entry_points={"console_scripts": ["allennlp=allennlp.run:run"]},
