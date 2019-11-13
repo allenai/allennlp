@@ -1,5 +1,5 @@
 import logging
-from typing import List, Tuple
+from typing import List
 
 from overrides import overrides
 from transformers.tokenization_auto import AutoTokenizer
@@ -22,14 +22,17 @@ class PretrainedTransformerTokenizer(Tokenizer):
     We take a model name as an input parameter, which we will pass to
     ``AutoTokenizer.from_pretrained``.
 
+    By default we add correct start and end tokens in the token indexer depending on transformer model type you
+    have chosen. In order to add correct tokens for sentence pair, you should tell separate first and
+    second sentence with a special DEFAULT_SENTENCE_PAIR_SEPARATION_TOKEN in your dataset reader.
+    Note that this token has to be added after splitting sentence(s) into wordpieces (tokenization).
+
     Parameters
     ----------
     model_name : ``str``
         The name of the pretrained wordpiece tokenizer to use.
     start_tokens : ``List[str]``, optional
-        If given, these tokens will be added to the beginning of every string we tokenize.  We try
-        to be a little bit smart about defaults here - e.g., if your model name contains ``bert``,
-        we by default add ``[CLS]`` at the beginning and ``[SEP]`` at the end.
+        If given, these tokens will be added to the beginning of every string we tokenize.
     end_tokens : ``List[str]``, optional
         If given, these tokens will be added to the end of every string we tokenize.
     """
@@ -38,20 +41,12 @@ class PretrainedTransformerTokenizer(Tokenizer):
         self, model_name: str, start_tokens: List[str] = None, end_tokens: List[str] = None
     ) -> None:
         self._tokenizer = AutoTokenizer.from_pretrained(model_name)
-        default_start_tokens, default_end_tokens = _guess_start_and_end_token_defaults(model_name)
-        self._start_tokens = start_tokens if start_tokens is not None else default_start_tokens
-        self._end_tokens = end_tokens if end_tokens is not None else default_end_tokens
+        self._start_tokens = start_tokens or []
+        self._end_tokens = end_tokens or []
 
     @overrides
     def tokenize(self, text: str) -> List[Token]:
         # TODO(mattg): track character offsets.  Might be too challenging to do it here, given that
-        # ``transformers``` is dealing with the whitespace...
+        # ``transformers`` is dealing with the whitespace...
         token_strings = self._start_tokens + self._tokenizer.tokenize(text) + self._end_tokens
         return [Token(t) for t in token_strings]
-
-
-def _guess_start_and_end_token_defaults(model_name: str) -> Tuple[List[str], List[str]]:
-    if "bert" in model_name:
-        return (["[CLS]"], ["[SEP]"])
-    else:
-        return ([], [])

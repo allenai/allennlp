@@ -6,7 +6,6 @@ class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
     def test_splits_cased(self):
         sentence = "A, [MASK] AllenNLP sentence."
         expected_tokens = [
-            "[CLS]",
             "A",
             ",",
             "[MASK]",
@@ -14,8 +13,7 @@ class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
             "##NL",
             "##P",
             "sentence",
-            ".",
-            "[SEP]",
+            "."
         ]
         tokenizer = PretrainedTransformerTokenizer("bert-base-cased")
         tokens = [t.text for t in tokenizer.tokenize(sentence)]
@@ -24,7 +22,6 @@ class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
     def test_splits_uncased(self):
         sentence = "A, [MASK] AllenNLP sentence."
         expected_tokens = [
-            "[CLS]",
             "a",
             ",",
             "[MASK]",
@@ -32,8 +29,7 @@ class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
             "##nl",
             "##p",
             "sentence",
-            ".",
-            "[SEP]",
+            "."
         ]
         tokenizer = PretrainedTransformerTokenizer("bert-base-uncased")
         tokens = [t.text for t in tokenizer.tokenize(sentence)]

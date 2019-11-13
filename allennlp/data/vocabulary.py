@@ -24,6 +24,7 @@ logger = logging.getLogger(__name__)
 DEFAULT_NON_PADDED_NAMESPACES = ("*tags", "*labels")
 DEFAULT_PADDING_TOKEN = "@@PADDING@@"
 DEFAULT_OOV_TOKEN = "@@UNKNOWN@@"
+DEFAULT_SENTENCE_PAIR_SEPARATION_TOKEN = "@@PAIR_SEP@@"
 NAMESPACE_PADDING_FILE = "non_padded_namespaces.txt"
 
 
