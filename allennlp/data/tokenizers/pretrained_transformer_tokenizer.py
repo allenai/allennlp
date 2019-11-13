@@ -2,7 +2,7 @@ import logging
 from typing import List, Tuple
 
 from overrides import overrides
-from pytorch_transformers.tokenization_auto import AutoTokenizer
+from transformers.tokenization_auto import AutoTokenizer
 
 from allennlp.data.tokenizers.token import Token
 from allennlp.data.tokenizers.tokenizer import Tokenizer
@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 class PretrainedTransformerTokenizer(Tokenizer):
     """
     A ``PretrainedTransformerTokenizer`` uses a model from HuggingFace's
-    ``pytorch_transformers`` library to tokenize some input text.  This often means wordpieces
+    ``transformers`` library to tokenize some input text.  This often means wordpieces
     (where ``'AllenNLP is awesome'`` might get split into ``['Allen', '##NL', '##P', 'is',
     'awesome']``), but it could also use byte-pair encoding, or some other tokenization, depending
     on the pretrained model that you're using.

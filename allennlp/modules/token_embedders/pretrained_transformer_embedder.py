@@ -1,5 +1,5 @@
 from overrides import overrides
-from pytorch_transformers.modeling_auto import AutoModel
+from transformers.modeling_auto import AutoModel
 import torch
 
 from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
