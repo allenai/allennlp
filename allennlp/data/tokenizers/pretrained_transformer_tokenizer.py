@@ -22,10 +22,10 @@ class PretrainedTransformerTokenizer(Tokenizer):
     We take a model name as an input parameter, which we will pass to
     ``AutoTokenizer.from_pretrained``.
 
-    By default we add correct start and end tokens in the token indexer depending on transformer model type you
-    have chosen. In order to add correct tokens for sentence pair, you should tell separate first and
-    second sentence with a special DEFAULT_SENTENCE_PAIR_SEPARATION_TOKEN in your dataset reader.
-    Note that this token has to be added after splitting sentence(s) into wordpieces (tokenization).
+    By default we add correct start and end tokens in the token indexer (depending on transformer model you
+    have chosen). All you have to do is to use DEFAULT_SENTENCE_PAIR_SEPARATION_TOKEN to separate
+    1st and 2nd sentence in your dataset reader.
+    Note that the token has to be added after applying this tokenizer.
 
     Parameters
     ----------

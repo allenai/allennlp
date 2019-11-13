@@ -31,10 +31,13 @@ class PretrainedTransformerIndexer(TokenIndexer[int]):
         We use a somewhat confusing default value of ``tags`` so that we do not add padding or UNK
         tokens to this namespace, which would break on loading because we wouldn't find our default
         OOV token.
+    add_special_tokens: ``bool``, optional (default=``True``)
+        We will add special tokens to your sentence or sentence pair depending on the pretrained model
+        you are using.
 
     See huggingface's ``encode`` function from tokenization_utils.py
     https://github.com/huggingface/transformers/blob/155c782a2ccd103cf63ad48a2becd7c76a7d2115/transformers/tokenization_utils.py#L691
-    for other arguments descriptions.
+    for descriptions of other arguments.
     """
 
     def __init__(
