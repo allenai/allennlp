@@ -9,6 +9,7 @@ and report any metrics calculated by the model.
     usage: allennlp evaluate [-h] [--output-file OUTPUT_FILE]
                              [--weights-file WEIGHTS_FILE]
                              [--cuda-device CUDA_DEVICE] [-o OVERRIDES]
+                             [--batch-size BATCH_SIZE]
                              [--batch-weight-key BATCH_WEIGHT_KEY]
                              [--extend-vocab]
                              [--embedding-sources-mapping EMBEDDING_SOURCES_MAPPING]
@@ -32,6 +33,8 @@ and report any metrics calculated by the model.
       -o OVERRIDES, --overrides OVERRIDES
                             a JSON structure used to override the experiment
                             configuration
+      --batch-size BATCH_SIZE
+                            If non-empty, the batch size to use during evaluation.
       --batch-weight-key BATCH_WEIGHT_KEY
                             If non-empty, name of metric used to weight the loss
                             on a per-batch basis.
@@ -103,6 +106,10 @@ class Evaluate(Subcommand):
         )
 
         subparser.add_argument(
+            "--batch-size", type=int, help="If non-empty, the batch size to use during evaluation."
+        )
+
+        subparser.add_argument(
             "--batch-weight-key",
             type=str,
             default="",
@@ -170,6 +177,8 @@ def evaluate_from_args(args: argparse.Namespace) -> Dict[str, Any]:
     iterator_params = config.pop("validation_iterator", None)
     if iterator_params is None:
         iterator_params = config.pop("iterator")
+    if args.batch_size:
+        iterator_params["batch_size"] = args.batch_size
     iterator = DataIterator.from_params(iterator_params)
     iterator.index_with(model.vocab)
 
