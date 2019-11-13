@@ -27,13 +27,7 @@ class TestNextTokenLmReader(AllenNlpTestCase):
         token_indexer = PretrainedTransformerIndexer("bert-base-cased")
         reader = NextTokenLmReader(tokenizer, {"bert": token_indexer})
         instance = reader.text_to_instance(sentence="AllenNLP is very", target="very")
-        assert [t.text for t in instance["tokens"]] == [
-            "Allen",
-            "##NL",
-            "##P",
-            "is",
-            "very",
-        ]
+        assert [t.text for t in instance["tokens"]] == ["Allen", "##NL", "##P", "is", "very"]
         assert [t.text for t in instance["target_ids"]] == ["very"]
 
         vocab = Vocabulary()
