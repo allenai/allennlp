@@ -234,7 +234,7 @@ class GanCallbackTrainer(CallbackTrainer):
 
     def train_one_batch_group(self, batch_group):
         # Each batch_group should have only one batch
-        batch, = batch_group
+        (batch,) = batch_group
         array = batch["array"]
 
         # We should not have mixed batches:

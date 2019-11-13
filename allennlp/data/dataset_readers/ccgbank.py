@@ -94,9 +94,13 @@ class CcgBankDatasetReader(DatasetReader):
                     tuples = zip(*[leaf.split() for leaf in leaves])
 
                     # Convert to lists and assign to variables.
-                    ccg_categories, modified_pos_tags, original_pos_tags, tokens, predicate_arg_categories = [
-                        list(result) for result in tuples
-                    ]
+                    (
+                        ccg_categories,
+                        modified_pos_tags,
+                        original_pos_tags,
+                        tokens,
+                        predicate_arg_categories,
+                    ) = [list(result) for result in tuples]
 
                     yield self.text_to_instance(
                         tokens,

@@ -38,8 +38,14 @@ class PretrainedTransformerIndexer(TokenIndexer[int]):
     """
 
     def __init__(
-        self, model_name: str, namespace: str = "tags", token_min_padding_length: int = 0,
-        add_special_tokens: bool = True, max_length=None, stride=0, truncation_strategy='longest_first'
+        self,
+        model_name: str,
+        namespace: str = "tags",
+        token_min_padding_length: int = 0,
+        add_special_tokens: bool = True,
+        max_length=None,
+        stride=0,
+        truncation_strategy="longest_first",
     ) -> None:
         super().__init__(token_min_padding_length)
         self._model_name = model_name
@@ -75,7 +81,7 @@ class PretrainedTransformerIndexer(TokenIndexer[int]):
         if DEFAULT_SENTENCE_PAIR_SEPARATION_TOKEN in token_text:
             sep_pos = token_text.index(DEFAULT_SENTENCE_PAIR_SEPARATION_TOKEN)
             first_sentence = token_text[:sep_pos]
-            second_sentence = token_text[sep_pos + 1:]
+            second_sentence = token_text[sep_pos + 1 :]
         else:
             first_sentence = token_text
             second_sentence = None
@@ -84,10 +90,15 @@ class PretrainedTransformerIndexer(TokenIndexer[int]):
         # In both cases, the output is always single list of indexes.
         print("1", first_sentence)
         print("2", second_sentence)
-        indices = self.tokenizer.encode(text=first_sentence, text_pair=second_sentence,
-                                        add_special_tokens=self._add_special_tokens, max_length=self._max_length,
-                                        stride=self._stride, truncation_strategy=self._truncation_strategy,
-                                        return_tensors=False)
+        indices = self.tokenizer.encode(
+            text=first_sentence,
+            text_pair=second_sentence,
+            add_special_tokens=self._add_special_tokens,
+            max_length=self._max_length,
+            stride=self._stride,
+            truncation_strategy=self._truncation_strategy,
+            return_tensors=False,
+        )
 
         return {index_name: indices}
 

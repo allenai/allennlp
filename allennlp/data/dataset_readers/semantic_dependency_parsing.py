@@ -16,7 +16,7 @@ FIELDS = ["id", "form", "lemma", "pos", "head", "deprel", "top", "pred", "frame"
 
 
 def parse_sentence(
-    sentence_blob: str
+    sentence_blob: str,
 ) -> Tuple[List[Dict[str, str]], List[Tuple[int, int]], List[str]]:
     """
     Parses a chunk of text in the SemEval SDP format.
