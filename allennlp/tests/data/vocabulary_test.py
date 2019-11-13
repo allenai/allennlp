@@ -790,3 +790,15 @@ class TestVocabulary(AllenNlpTestCase):
         vocab = Vocabulary(padding_token="[PAD]")
         assert vocab._oov_token == "@@UNKNOWN@@"
         assert vocab._padding_token == "[PAD]"
+
+        vocab_dir = self.TEST_DIR / "vocab_save"
+        vocab = Vocabulary(oov_token="<UNK>")
+        vocab.add_tokens_to_namespace(["a0", "a1", "a2"], namespace="a")
+        vocab.save_to_files(vocab_dir)
+
+        vocab = Vocabulary.from_params(Params({"directory_path": vocab_dir, "oov_token": "<UNK>"}))
+
+        with pytest.raises(AssertionError) as excinfo:
+            vocab = Vocabulary.from_params(Params({"directory_path": vocab_dir}))
+
+        assert "OOV token not found!" in str(excinfo.value)

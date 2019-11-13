@@ -226,11 +226,11 @@ class Vocabulary(Registrable):
         only_include_pretrained_words: bool = False,
         tokens_to_add: Dict[str, List[str]] = None,
         min_pretrained_embeddings: Dict[str, int] = None,
-        padding_token: str = DEFAULT_PADDING_TOKEN,
-        oov_token: str = DEFAULT_OOV_TOKEN,
+        padding_token: Optional[str] = DEFAULT_PADDING_TOKEN,
+        oov_token: Optional[str] = DEFAULT_OOV_TOKEN,
     ) -> None:
-        self._padding_token = padding_token
-        self._oov_token = oov_token
+        self._padding_token = padding_token if padding_token is not None else DEFAULT_PADDING_TOKEN
+        self._oov_token = oov_token if oov_token is not None else DEFAULT_OOV_TOKEN
         self._non_padded_namespaces = set(non_padded_namespaces)
         self._token_to_index = _TokenToIndexDefaultDict(
             self._non_padded_namespaces, self._padding_token, self._oov_token
@@ -317,8 +317,8 @@ class Vocabulary(Registrable):
     def from_files(
         cls,
         directory: str,
-        padding_token: str = DEFAULT_PADDING_TOKEN,
-        oov_token: str = DEFAULT_OOV_TOKEN,
+        padding_token: Optional[str] = DEFAULT_PADDING_TOKEN,
+        oov_token: Optional[str] = DEFAULT_OOV_TOKEN,
     ) -> "Vocabulary":
         """
         Loads a ``Vocabulary`` that was serialized using ``save_to_files``.
@@ -329,6 +329,8 @@ class Vocabulary(Registrable):
             The directory containing the serialized vocabulary.
         """
         logger.info("Loading token dictionary from %s.", directory)
+        padding_token = padding_token if padding_token is not None else DEFAULT_PADDING_TOKEN
+        oov_token = oov_token if oov_token is not None else DEFAULT_OOV_TOKEN
         with codecs.open(
             os.path.join(directory, NAMESPACE_PADDING_FILE), "r", "utf-8"
         ) as namespace_file:
@@ -421,8 +423,8 @@ class Vocabulary(Registrable):
         only_include_pretrained_words: bool = False,
         tokens_to_add: Dict[str, List[str]] = None,
         min_pretrained_embeddings: Dict[str, int] = None,
-        padding_token: str = DEFAULT_PADDING_TOKEN,
-        oov_token: str = DEFAULT_OOV_TOKEN,
+        padding_token: Optional[str] = DEFAULT_PADDING_TOKEN,
+        oov_token: Optional[str] = DEFAULT_OOV_TOKEN,
     ) -> "Vocabulary":
         """
         Constructs a vocabulary given a collection of `Instances` and some parameters.
@@ -431,6 +433,8 @@ class Vocabulary(Registrable):
         of what the other parameters do.
         """
         logger.info("Fitting token dictionary from dataset.")
+        padding_token = padding_token if padding_token is not None else DEFAULT_PADDING_TOKEN
+        oov_token = oov_token if oov_token is not None else DEFAULT_OOV_TOKEN
         namespace_token_counts: Dict[str, Dict[str, int]] = defaultdict(lambda: defaultdict(int))
         for instance in Tqdm.tqdm(instances):
             instance.count_vocab_items(namespace_token_counts)
