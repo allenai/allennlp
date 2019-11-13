@@ -1,4 +1,4 @@
-from pytorch_transformers.tokenization_auto import AutoTokenizer
+from transformers.tokenization_auto import AutoTokenizer
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Token, Vocabulary
