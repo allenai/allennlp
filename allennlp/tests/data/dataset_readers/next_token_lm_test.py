@@ -28,13 +28,11 @@ class TestNextTokenLmReader(AllenNlpTestCase):
         reader = NextTokenLmReader(tokenizer, {"bert": token_indexer})
         instance = reader.text_to_instance(sentence="AllenNLP is very", target="very")
         assert [t.text for t in instance["tokens"]] == [
-            "[CLS]",
             "Allen",
             "##NL",
             "##P",
             "is",
             "very",
-            "[SEP]",
         ]
         assert [t.text for t in instance["target_ids"]] == ["very"]
 
@@ -46,4 +44,6 @@ class TestNextTokenLmReader(AllenNlpTestCase):
         target_ids = tensor_dict["target_ids"]["bert"].numpy().tolist()
         # I don't know what wordpiece id BERT is going to assign to 'This', but it at least should
         # be the same between the input and the target.
-        assert target_ids[0] == bert_token_ids[5]
+        assert target_ids[0] == bert_token_ids[0]
+        assert target_ids[-1] == bert_token_ids[-1]
+        assert target_ids[-2] == bert_token_ids[-2]

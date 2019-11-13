@@ -32,7 +32,6 @@ class TestMaskedLanguageModelingDatasetReader(AllenNlpTestCase):
             sentence="This is AllenNLP [MASK] token .", targets=["This"]
         )
         assert [t.text for t in instance["tokens"]] == [
-            "[CLS]",
             "This",
             "is",
             "Allen",
@@ -41,9 +40,8 @@ class TestMaskedLanguageModelingDatasetReader(AllenNlpTestCase):
             "[MASK]",
             "token",
             ".",
-            "[SEP]",
         ]
-        assert [i.sequence_index for i in instance["mask_positions"]] == [6]
+        assert [i.sequence_index for i in instance["mask_positions"]] == [5]
         assert [t.text for t in instance["target_ids"]] == ["This"]
 
         vocab = Vocabulary()
@@ -54,4 +52,4 @@ class TestMaskedLanguageModelingDatasetReader(AllenNlpTestCase):
         target_ids = tensor_dict["target_ids"]["bert"].numpy().tolist()
         # I don't know what wordpiece id BERT is going to assign to 'This', but it at least should
         # be the same between the input and the target.
-        assert target_ids[0] == bert_token_ids[1]
+        assert target_ids[0] == bert_token_ids[0]
