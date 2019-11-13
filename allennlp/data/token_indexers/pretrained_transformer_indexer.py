@@ -86,7 +86,7 @@ class PretrainedTransformerIndexer(TokenIndexer[int]):
             first_sentence = token_text
             second_sentence = None
 
-        # Our input can be a single sentences or a pair of sentences.
+        # Our input can be a single sentence or a pair of sentences.
         # In both cases, the output is always a single list of indexes.
         indices = self.tokenizer.encode(
             text=first_sentence,
