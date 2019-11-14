@@ -41,8 +41,8 @@ class TestPretrainedTransformerIndexer(AllenNlpTestCase):
         default_format = "[CLS] AllenNLP is great! [SEP] Really it is! [SEP]"
         tokens = tokenizer.tokenize(default_format)
         expected_ids = tokenizer.convert_tokens_to_ids(tokens)
-        allennlp_tokens = allennlp_tokenier.tokenize_sentence_pair(
-            "AllenNLP is great!", "Really it is!"
+        allennlp_tokens = allennlp_tokenier.tokenize_sentences(
+            ["AllenNLP is great!", "Really it is!"]
         )
         vocab = Vocabulary()
         indexed = indexer.tokens_to_indices(allennlp_tokens, vocab, "key")
@@ -68,8 +68,8 @@ class TestPretrainedTransformerIndexer(AllenNlpTestCase):
         default_format = "<s> AllenNLP is great! </s> </s> Really it is! </s>"
         tokens = tokenizer.tokenize(default_format)
         expected_ids = tokenizer.convert_tokens_to_ids(tokens)
-        allennlp_tokens = allennlp_tokenier.tokenize_sentence_pair(
-            "AllenNLP is great!", "Really it is!"
+        allennlp_tokens = allennlp_tokenier.tokenize_sentences(
+            ["AllenNLP is great!", "Really it is!"]
         )
         vocab = Vocabulary()
         indexed = indexer.tokens_to_indices(allennlp_tokens, vocab, "key")

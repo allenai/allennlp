@@ -92,11 +92,26 @@ class PretrainedTransformerTokenizer(Tokenizer):
 
         return tokens
 
-    def tokenize_sentence_pair(self, sentence_1: str, sentence_2: str):
+    @overrides
+    def tokenize_sentences(self, sentences: List[str]) -> List[Token]:
         """
         This methods properly handels a pair of sentences.
         """
-        return self._tokenize(sentence_1, sentence_2)
+        if len(sentences) == 1:  # single sentence
+            return self.tokenize(sentences[0])
+        elif len(sentences) == 2:  # sentence pair
+            return self._tokenize(sentences[0], sentences[1])
+        else:  # multiple sentences
+            if self._add_special_tokens:
+                raise NotImplementedError(
+                    """
+                    Currently we only automatically add special tokens to a single sentence or a sentence pair.
+                    Please add special tokens to your sentences by yourself depending on the pretrained model
+                    you are using.
+                    """
+                )
+            else:
+                return super().tokenize_sentences(sentences)
 
     @overrides
     def tokenize(self, text: str) -> List[Token]:

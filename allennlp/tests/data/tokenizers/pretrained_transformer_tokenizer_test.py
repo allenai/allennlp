@@ -31,7 +31,7 @@ class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
             ".",
             "</s>",
         ]
-        tokens = [t.text for t in tokenizer.tokenize_sentence_pair(sentence_1, sentence_2)]
+        tokens = [t.text for t in tokenizer.tokenize_sentences([sentence_1, sentence_2])]
         assert tokens == expected_tokens
 
     def test_splits_cased_bert(self):
@@ -72,7 +72,7 @@ class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
             ".",
             "[SEP]",
         ]
-        tokens = [t.text for t in tokenizer.tokenize_sentence_pair(sentence_1, sentence_2)]
+        tokens = [t.text for t in tokenizer.tokenize_sentences([sentence_1, sentence_2])]
         assert tokens == expected_tokens
 
     def test_splits_uncased_bert(self):
