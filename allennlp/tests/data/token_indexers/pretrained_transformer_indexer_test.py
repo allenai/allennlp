@@ -3,24 +3,79 @@ from transformers.tokenization_auto import AutoTokenizer
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Token, Vocabulary
 from allennlp.data.token_indexers import PretrainedTransformerIndexer
+from allennlp.data.tokenizers.pretrained_transformer_tokenizer import ALLENNLP_SENTENCE_PAIR_SEP
+from allennlp.data.tokenizers import PretrainedTransformerTokenizer
 
 
 class TestPretrainedTransformerIndexer(AllenNlpTestCase):
-    def test_as_array_produces_token_sequence(self):
+    def test_as_array_produces_token_sequence_bert(self):
         tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
+        allennlp_tokenier = PretrainedTransformerTokenizer("bert-base-uncased")
+
+        # uncased
         indexer = PretrainedTransformerIndexer(model_name="bert-base-uncased")
-        tokens = tokenizer.tokenize("AllenNLP is great")
+        string_specials = "[CLS] AllenNLP is great [SEP]"
+        string_no_specials = "AllenNLP is great"
+        tokens = tokenizer.tokenize(string_specials)
         expected_ids = tokenizer.convert_tokens_to_ids(tokens)
-        allennlp_tokens = [Token(token) for token in tokens]
+        # tokens tokenized with our pretrained tokenizer have indices in them
+        allennlp_tokens = allennlp_tokenier.tokenize(string_no_specials)
         vocab = Vocabulary()
         indexed = indexer.tokens_to_indices(allennlp_tokens, vocab, "key")
         assert indexed["key"] == expected_ids
 
-        tokenizer = AutoTokenizer.from_pretrained("bert-base-cased")
+        # cased
         indexer = PretrainedTransformerIndexer(model_name="bert-base-cased")
-        tokens = tokenizer.tokenize("AllenNLP is great")
+        string_specials = "[CLS] AllenNLP is great [SEP]"
+        string_no_specials = "AllenNLP is great"
+        tokens = tokenizer.tokenize(string_specials)
         expected_ids = tokenizer.convert_tokens_to_ids(tokens)
-        allennlp_tokens = [Token(token) for token in tokens]
+        # tokens tokenized with our pretrained tokenizer have indices in them
+        allennlp_tokens = allennlp_tokenier.tokenize(string_no_specials)
+        vocab = Vocabulary()
+        indexed = indexer.tokens_to_indices(allennlp_tokens, vocab, "key")
+        assert indexed["key"] == expected_ids
+
+        # sentence pair
+        tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
+        indexer = PretrainedTransformerIndexer(model_name="bert-base-uncased")
+        default_format = "[CLS] AllenNLP is great! [SEP] Really it is! [SEP]"
+        allennlp_format = "AllenNLP is great!" + ALLENNLP_SENTENCE_PAIR_SEP + "Really it is!"
+        assert allennlp_format == "AllenNLP is great!@@SEP_SENTPAIR@@Really it is!"
+
+        tokens = tokenizer.tokenize(default_format)
+        expected_ids = tokenizer.convert_tokens_to_ids(tokens)
+
+        allennlp_tokens = allennlp_tokenier.tokenize(allennlp_format)
+        vocab = Vocabulary()
+        indexed = indexer.tokens_to_indices(allennlp_tokens, vocab, "key")
+        assert indexed["key"] == expected_ids
+
+    def test_as_array_produces_token_sequence_roberta(self):
+        tokenizer = AutoTokenizer.from_pretrained("roberta-base")
+        allennlp_tokenier = PretrainedTransformerTokenizer("roberta-base")
+
+        # single
+        indexer = PretrainedTransformerIndexer(model_name="roberta-base")
+        string_specials = "<s> AllenNLP is great </s>"
+        string_no_specials = "AllenNLP is great"
+        tokens = tokenizer.tokenize(string_specials)
+        expected_ids = tokenizer.convert_tokens_to_ids(tokens)
+        # tokens tokenized with our pretrained tokenizer have indices in them
+        allennlp_tokens = allennlp_tokenier.tokenize(string_no_specials)
+        vocab = Vocabulary()
+        indexed = indexer.tokens_to_indices(allennlp_tokens, vocab, "key")
+        assert indexed["key"] == expected_ids
+
+        # pair
+        default_format = "<s> AllenNLP is great! </s> </s> Really it is! </s>"
+        allennlp_format = "AllenNLP is great!" + ALLENNLP_SENTENCE_PAIR_SEP + "Really it is!"
+        assert allennlp_format == "AllenNLP is great!@@SEP_SENTPAIR@@Really it is!"
+
+        tokens = tokenizer.tokenize(default_format)
+        expected_ids = tokenizer.convert_tokens_to_ids(tokens)
+
+        allennlp_tokens = allennlp_tokenier.tokenize(allennlp_format)
         vocab = Vocabulary()
         indexed = indexer.tokens_to_indices(allennlp_tokens, vocab, "key")
         assert indexed["key"] == expected_ids

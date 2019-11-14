@@ -9,16 +9,17 @@ from allennlp.common.util import pad_sequence_to_length
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.data.tokenizers.token import Token
 from allennlp.data.token_indexers.token_indexer import TokenIndexer
-
+from allennlp.data.token_indexers import SingleIdTokenIndexer
 
 logger = logging.getLogger(__name__)
 
 
 @TokenIndexer.register("pretrained_transformer")
-class PretrainedTransformerIndexer(TokenIndexer[int]):
+class PretrainedTransformerIndexer(SingleIdTokenIndexer):
     """
-    This :class:`TokenIndexer` uses a tokenizer from the ``transformers`` repository to
-    index tokens.  This ``Indexer`` is only really appropriate to use if you've also used a
+    This ``TokenIndexer`` assumes that Tokens already have their indexes in them.
+    We still require ``model_name`` because we want to form allennlp vocabulary from pretrained one.
+    This ``Indexer`` is only really appropriate to use if you've also used a
     corresponding :class:`PretrainedTransformerTokenizer` to tokenize your input.  Otherwise you'll
     have a mismatch between your tokens and your vocabulary, and you'll get a lot of UNK tokens.
 
@@ -36,18 +37,19 @@ class PretrainedTransformerIndexer(TokenIndexer[int]):
     def __init__(
         self, model_name: str, namespace: str = "tags", token_min_padding_length: int = 0
     ) -> None:
-        super().__init__(token_min_padding_length)
+        super().__init__(
+            namespace=namespace,
+            lowercase_tokens=False,
+            start_tokens=None,
+            end_tokens=None,
+            token_min_padding_length=token_min_padding_length,
+        )
         self._model_name = model_name
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
         self._namespace = namespace
         self._added_to_vocabulary = False
         self._padding_value = self.tokenizer.convert_tokens_to_ids([self.tokenizer.pad_token])[0]
         logger.info(f"Using token indexer padding value of {self._padding_value}")
-
-    @overrides
-    def count_vocab_items(self, token: Token, counter: Dict[str, Dict[str, int]]):
-        # If we only use pretrained models, we don't need to do anything here.
-        pass
 
     def _add_encoding_to_vocabulary(self, vocabulary: Vocabulary) -> None:
 
@@ -62,14 +64,7 @@ class PretrainedTransformerIndexer(TokenIndexer[int]):
         if not self._added_to_vocabulary and hasattr(self.tokenizer, "vocab"):
             self._add_encoding_to_vocabulary(vocabulary)
             self._added_to_vocabulary = True
-        token_text = [token.text for token in tokens]
-        indices = self.tokenizer.convert_tokens_to_ids(token_text)
-
-        return {index_name: indices}
-
-    @overrides
-    def get_padding_lengths(self, token: int) -> Dict[str, int]:
-        return {}
+        return super().tokens_to_indices(tokens, vocabulary, index_name)
 
     @overrides
     def as_padded_tensor(
