@@ -84,6 +84,7 @@ class TransformerMaskedLMModel(Model):
                  reset_classifier: bool = False,
                  per_choice_loss: bool = False,
                  layer_freeze_regexes: List[str] = None,
+                 probe_type: str = None,
                  mc_strategy: str = None,
                  on_load: bool = False,
                  loss_on_all_vocab: bool = False,
@@ -110,6 +111,11 @@ class TransformerMaskedLMModel(Model):
             self._padding_value = 0  # The index of the BERT padding token
         else:
             assert (ValueError)
+
+        if probe_type == 'MLP':
+            layer_freeze_regexes = ["embeddings", "encoder", "pooler"]
+        elif probe_type == 'linear':
+            layer_freeze_regexes = ["embeddings", "encoder", "pooler", "dense", "LayerNorm", "layer_norm"]
 
         ## TODO ask oyvind about this code ...
         for name, param in self._transformer_model.named_parameters():
@@ -138,23 +144,13 @@ class TransformerMaskedLMModel(Model):
             self._transformer_model.cls.predictions.decoder.weight.requires_grad = True
             self._transformer_model.cls.predictions.bias.requires_grad = True'''
 
+        # make sure decode gredients are on.
         if 'roberta' in pretrained_model:
             self._transformer_model.lm_head.decoder.weight.requires_grad = True
             self._transformer_model.lm_head.bias.requires_grad = True
         elif 'bert' in pretrained_model:
             self._transformer_model.cls.predictions.decoder.weight.requires_grad = True
             self._transformer_model.cls.predictions.bias.requires_grad = True
-
-        if unfreeze_pooler:
-            try:
-                if 'roberta' in pretrained_model:
-                    self._transformer_model.roberta.pooler.dense.weight.requires_grad = True
-                    self._transformer_model.roberta.pooler.dense.bias.requires_grad = True
-                elif 'bert' in pretrained_model:
-                    self._transformer_model.bert.pooler.dense.weight.requires_grad = True
-                    self._transformer_model.bert.pooler.dense.bias.requires_grad = True
-            except:
-                logging.error('could not unfreeze weights!')
 
         transformer_config = self._transformer_model.config
         transformer_config.num_labels = 1
