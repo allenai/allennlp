@@ -28,6 +28,7 @@ class PretrainedTransformerTokenizer(Tokenizer):
 
     This tokenizer also indexes tokens and adds the indexes as the ``Token`` fields so that
     they can be picked up by SingleIdTokenizer
+
     Parameters
     ----------
     model_name : ``str``
@@ -97,6 +98,7 @@ class PretrainedTransformerTokenizer(Tokenizer):
             sentence_1 = text
             sentence_1 = self._add_custom_start_end_tokens(sentence_1)
             sentence_2 = None
+
         encoded_tokens = self._tokenizer.encode_plus(
             text=sentence_1,
             text_pair=sentence_2,
@@ -106,10 +108,12 @@ class PretrainedTransformerTokenizer(Tokenizer):
             truncation_strategy=self._truncation_strategy,
             return_tensors=None,
         )
+        # token_ids containes final list with ids for both regualr and special tokens
         token_ids = encoded_tokens["input_ids"]
         token_type_ids = encoded_tokens["token_type_ids"]
 
-        token_strings = self._tokenizer.convert_ids_to_tokens(token_ids)
+        token_strings = self._tokenizer.convert_ids_to_tokens(token_ids, skip_special_tokens=False)
+
         tokens = []
         for token_str, token_id, token_type_id in zip(token_strings, token_ids, token_type_ids):
             tokens.append(Token(text=token_str, text_id=token_id, type_id=token_type_id))
