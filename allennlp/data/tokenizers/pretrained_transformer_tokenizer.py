@@ -41,7 +41,7 @@ class PretrainedTransformerTokenizer(Tokenizer):
         If set to ``True``, the sequences will be encoded with the special tokens relative
         to their model.
     max_length: ``int``, optional, (default=None)
-        Ff set to a number, will limit the total sequence returned so that it has a maximum length.
+        If set to a number, will limit the total sequence returned so that it has a maximum length.
         If there are overflowing tokens, those will be added to the returned dictionary
     stride: ``int``, optional, (default=0)
     If set to a number along with max_length, the overflowing tokens returned will contain some tokens
@@ -53,6 +53,7 @@ class PretrainedTransformerTokenizer(Tokenizer):
         - 'only_first': Only truncate the first sequence
         - 'only_second': Only truncate the second sequence
         - 'do_not_truncate': Does not truncate (raise an error if the input sequence is longer than max_length)
+
     Argument descriptions are from
     https://github.com/huggingface/transformers/blob/155c782a2ccd103cf63ad48a2becd7c76a7d2115/transformers/tokenization_utils.py#L691
     """
