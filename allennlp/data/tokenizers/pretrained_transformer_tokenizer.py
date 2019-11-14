@@ -44,12 +44,12 @@ class PretrainedTransformerTokenizer(Tokenizer):
         If set to a number, will limit the total sequence returned so that it has a maximum length.
         If there are overflowing tokens, those will be added to the returned dictionary
     stride: ``int``, optional (default=0)
-    If set to a number along with max_length, the overflowing tokens returned will contain some tokens
+        If set to a number along with max_length, the overflowing tokens returned will contain some tokens
         from the main sequence returned. The value of this argument defines the number of additional tokens.
     truncation_strategy: ``str``, optional (default='longest_first')
         String selected in the following options:
         - 'longest_first' (default) Iteratively reduce the inputs sequence until the input is under max_length
-            starting from the longest one at each token (when there is a pair of input sequences)
+        starting from the longest one at each token (when there is a pair of input sequences)
         - 'only_first': Only truncate the first sequence
         - 'only_second': Only truncate the second sequence
         - 'do_not_truncate': Does not truncate (raise an error if the input sequence is longer than max_length)
