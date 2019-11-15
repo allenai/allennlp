@@ -51,20 +51,43 @@ class PretrainedTransformerIndexer(SingleIdTokenIndexer):
         self._padding_value = self.tokenizer.convert_tokens_to_ids([self.tokenizer.pad_token])[0]
         logger.info(f"Using token indexer padding value of {self._padding_value}")
 
-    def _add_encoding_to_vocabulary(self, vocabulary: Vocabulary) -> None:
-
-        for word, idx in self.tokenizer.vocab.items():
+    def _add_encoding_to_vocabulary(self, vocabulary: Vocabulary, vocab_field_name: str) -> None:
+        pretrained_vocab = getattr(self.tokenizer, vocab_field_name)
+        for word, idx in pretrained_vocab.items():
             vocabulary._token_to_index[self._namespace][word] = idx
             vocabulary._index_to_token[self._namespace][idx] = word
+
+    def _maybe_add_transformers_vocab_to_allennlp(self, vocabulary: Vocabulary):
+        if not self._added_to_vocabulary:
+            if hasattr(self.tokenizer, "vocab"):
+                self._add_encoding_to_vocabulary(vocabulary, "vocab")
+                self._added_to_vocabulary = True
+            elif hasattr(self.tokenizer, "encoder"):
+                self._add_encoding_to_vocabulary(vocabulary, "encoder")
+                self._added_to_vocabulary = True
+            else:
+                logger.warning(
+                    """Wasn't able to fetch pretrained vocabulary.
+                       Your tokens will still be correctly indexed, but vocabulary file will not be saved."""
+                )
 
     @overrides
     def tokens_to_indices(
         self, tokens: List[Token], vocabulary: Vocabulary, index_name: str
     ) -> Dict[str, List[int]]:
-        if not self._added_to_vocabulary and hasattr(self.tokenizer, "vocab"):
-            self._add_encoding_to_vocabulary(vocabulary)
-            self._added_to_vocabulary = True
-        return super().tokens_to_indices(tokens, vocabulary, index_name)
+        self._maybe_add_transformers_vocab_to_allennlp(vocabulary)
+
+        indices: List[int] = []
+        for token in tokens:
+            if getattr(token, "text_id", None) is not None:
+                # `text_id` being set on the token means that we aren't using the vocab, we just use
+                # this id instead. Id comes from the pretrained vocab.
+                # # It computed in PretrainedTransformerTokenizer.
+                indices.append(token.text_id)
+            else:
+                raise KeyError("Field text_id is not set for the following token: " + token.text)
+
+        return {index_name: indices}
 
     @overrides
     def as_padded_tensor(

@@ -58,13 +58,13 @@ class PretrainedTransformerTokenizer(Tokenizer):
         add_special_tokens: bool = True,
         max_length: int = None,
         stride: int = 0,
-        truncetion_strategy: str = "longest_first",
+        truncation_strategy: str = "longest_first",
     ) -> None:
         self._tokenizer = AutoTokenizer.from_pretrained(model_name)
         self._add_special_tokens = add_special_tokens
         self._max_length = max_length
         self._stride = stride
-        self._truncation_strategy = truncetion_strategy
+        self._truncation_strategy = truncation_strategy
 
     def _tokenize(self, sentence_1: str, sentence_2: str = None):
         """
