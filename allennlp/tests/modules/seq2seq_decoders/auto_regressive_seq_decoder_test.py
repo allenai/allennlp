@@ -74,7 +74,7 @@ class TestAutoRegressiveSeqDecoder(AllenNlpTestCase):
         auto_regressive_seq_decoder.eval()
         assert "predictions" in auto_regressive_seq_decoder.forward(encoder_out)
 
-    def test_auto_regressive_seq_decoder_indeces_to_tokens(self):
+    def test_auto_regressive_seq_decoder_indices_to_tokens(self):
         decoder_inout_dim = 4
         vocab, decoder_net = create_vocab_and_decoder_net(decoder_inout_dim)
 
@@ -85,7 +85,7 @@ class TestAutoRegressiveSeqDecoder(AllenNlpTestCase):
         predictions = torch.tensor([[3, 2, 5, 0, 0], [2, 2, 3, 5, 0]])
 
         tokens_ground_truth = [["B", "A"], ["A", "A", "B"]]
-        predicted_tokens = auto_regressive_seq_decoder.indeces_to_tokens(predictions.numpy())
+        predicted_tokens = auto_regressive_seq_decoder.indices_to_tokens(predictions.numpy())
         assert predicted_tokens == tokens_ground_truth
 
     def test_auto_regressive_seq_decoder_post_process(self):
