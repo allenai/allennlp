@@ -53,6 +53,7 @@ class MaskedLanguageModelingReader(DatasetReader):
         super().__init__(lazy)
         self._tokenizer = tokenizer or WhitespaceTokenizer()
         # temporary hack to not to add special tokens
+        self._targets_tokenizer: Tokenizer
         if isinstance(self._tokenizer, PretrainedTransformerTokenizer):
             self._targets_tokenizer = copy.copy(self._tokenizer)
             self._targets_tokenizer._add_special_tokens = False
