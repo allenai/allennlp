@@ -419,7 +419,6 @@ class AutoRegressiveSeqDecoder(SeqDecoder):
                     top_k_predictions = output_dict["predictions"]
                     # shape: (batch_size, max_predicted_sequence_length)
                     best_predictions = top_k_predictions[:, 0, :]
-                    # shape: (batch_size, target_sequence_length)
 
                     self._tensor_based_metric(  # type: ignore
                         best_predictions, target_tokens["tokens"]
