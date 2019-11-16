@@ -70,6 +70,7 @@ class PretrainedTransformerIndexer(SingleIdTokenIndexer):
                     """Wasn't able to fetch pretrained vocabulary.
                        Your tokens will still be correctly indexed, but vocabulary file will not be saved."""
                 )
+                self._added_to_vocabulary = True
 
     @overrides
     def tokens_to_indices(
@@ -79,7 +80,11 @@ class PretrainedTransformerIndexer(SingleIdTokenIndexer):
 
         indices: List[int] = []
         for token in tokens:
+            print(getattr(token, "text_id", None) is not None, token)
+
             if getattr(token, "text_id", None) is not None:
+                # print(getattr(token, "text_id", None) is not None)
+                # print(token)
                 # `text_id` being set on the token means that we aren't using the vocab, we just use
                 # this id instead. Id comes from the pretrained vocab.
                 # # It computed in PretrainedTransformerTokenizer.
