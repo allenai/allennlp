@@ -47,18 +47,6 @@ class Tokenizer(Registrable):
         """
         raise NotImplementedError
 
-    def tokenize_sentences(self, sentences: List[str]) -> List[Token]:
-        """
-        Actually implements splitting words into tokens for multiple sentences.
-
-        Default implementation is to treat a list of sentences as a singe piece of text.
-
-        Returns
-        -------
-        tokens : ``List[Token]``
-        """
-        return self.tokenize(" ".join(sentences))
-
     @classmethod
     def from_params(cls, params: Params, **extras) -> "Tokenizer":  # type: ignore
 
