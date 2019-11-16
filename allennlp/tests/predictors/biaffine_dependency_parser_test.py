@@ -43,7 +43,7 @@ class TestBiaffineDependencyParser(AllenNlpTestCase):
                     {
                         "word": "could",
                         "nodeType": "nummod",
-                        "attributes": ["VERB"],
+                        "attributes": ["AUX"],
                         "link": "nummod",
                         "spans": [{"start": 7, "end": 13}],
                     },

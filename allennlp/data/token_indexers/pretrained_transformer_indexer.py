@@ -2,7 +2,7 @@ from typing import Dict, List
 import logging
 
 from overrides import overrides
-from pytorch_transformers.tokenization_auto import AutoTokenizer
+from transformers.tokenization_auto import AutoTokenizer
 import torch
 
 from allennlp.common.util import pad_sequence_to_length
@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 @TokenIndexer.register("pretrained_transformer")
 class PretrainedTransformerIndexer(TokenIndexer[int]):
     """
-    This :class:`TokenIndexer` uses a tokenizer from the ``pytorch_transformers`` repository to
+    This :class:`TokenIndexer` uses a tokenizer from the ``transformers`` repository to
     index tokens.  This ``Indexer`` is only really appropriate to use if you've also used a
     corresponding :class:`PretrainedTransformerTokenizer` to tokenize your input.  Otherwise you'll
     have a mismatch between your tokens and your vocabulary, and you'll get a lot of UNK tokens.
@@ -25,7 +25,7 @@ class PretrainedTransformerIndexer(TokenIndexer[int]):
     Parameters
     ----------
     model_name : ``str``
-        The name of the ``pytorch_transformers`` model to use.
+        The name of the ``transformers`` model to use.
     namespace : ``str``, optional (default=``tags``)
         We will add the tokens in the pytorch_transformer vocabulary to this vocabulary namespace.
         We use a somewhat confusing default value of ``tags`` so that we do not add padding or UNK
