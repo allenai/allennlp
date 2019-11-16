@@ -47,7 +47,7 @@ class Seq2SeqDatasetReader(DatasetReader):
     source_add_start_token : bool, (optional, default=True)
         Whether or not to add `START_SYMBOL` to the beginning of the source sequence.
     source_add_end_token : bool, (optional, default=True)
-        Whether or not to add `END_SYMBOL` to the beginning of the source sequence.
+        Whether or not to add `END_SYMBOL` to the end of the source sequence.
     delimiter : str, (optional, default="\t")
         Set delimiter for tsv/csv file.
     """
