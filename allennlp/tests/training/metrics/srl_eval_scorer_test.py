@@ -7,7 +7,7 @@ from allennlp.training.metrics import SrlEvalScorer
 
 class SrlEvalScorerTest(AllenNlpTestCase):
     def test_srl_eval_correctly_scores_identical_tags(self):
-        batch_verb_indices = [3, 8, 2]
+        batch_verb_indices = [3, 8, 2, 0]
         batch_sentences = [
             [
                 "Mali",
@@ -50,6 +50,7 @@ class SrlEvalScorerTest(AllenNlpTestCase):
                 "hearings",
                 ".",
             ],
+            ["Come", "in", "and", "buy", "."],
         ]
         batch_bio_predicted_tags = [
             [
@@ -81,6 +82,7 @@ class SrlEvalScorerTest(AllenNlpTestCase):
                 "I-ARGM-TMP",
                 "O",
             ],
+            ["B-V", "B-AM-DIR", "O", "O", "O"],
         ]
         batch_conll_predicted_tags = [
             convert_bio_tags_to_conll_format(tags) for tags in batch_bio_predicted_tags
@@ -115,6 +117,7 @@ class SrlEvalScorerTest(AllenNlpTestCase):
                 "I-ARGM-TMP",
                 "O",
             ],
+            ["B-V", "B-AM-DIR", "O", "O", "O"],
         ]
         batch_conll_gold_tags = [
             convert_bio_tags_to_conll_format(tags) for tags in batch_bio_gold_tags
@@ -125,7 +128,7 @@ class SrlEvalScorerTest(AllenNlpTestCase):
             batch_verb_indices, batch_sentences, batch_conll_predicted_tags, batch_conll_gold_tags
         )
         metrics = srl_scorer.get_metric()
-        assert len(metrics) == 15
+        assert len(metrics) == 18
         assert_allclose(metrics["precision-ARG0"], 1.0)
         assert_allclose(metrics["recall-ARG0"], 1.0)
         assert_allclose(metrics["f1-measure-ARG0"], 1.0)
@@ -138,6 +141,9 @@ class SrlEvalScorerTest(AllenNlpTestCase):
         assert_allclose(metrics["precision-ARGM-TMP"], 1.0)
         assert_allclose(metrics["recall-ARGM-TMP"], 1.0)
         assert_allclose(metrics["f1-measure-ARGM-TMP"], 1.0)
+        assert_allclose(metrics["precision-AM-DIR"], 1.0)
+        assert_allclose(metrics["recall-AM-DIR"], 1.0)
+        assert_allclose(metrics["f1-measure-AM-DIR"], 1.0)
         assert_allclose(metrics["precision-overall"], 1.0)
         assert_allclose(metrics["recall-overall"], 1.0)
         assert_allclose(metrics["f1-measure-overall"], 1.0)
