@@ -429,7 +429,7 @@ class AutoRegressiveSeqDecoder(SeqDecoder):
                     predicted_tokens = output_dict["predicted_tokens"]
 
                     self._token_based_metric(  # type: ignore
-                        predicted_tokens, self.indeces_to_tokens(target_tokens["tokens"][:, 1:])
+                        predicted_tokens, self.indices_to_tokens(target_tokens["tokens"][:, 1:])
                     )
 
         return output_dict
@@ -441,11 +441,11 @@ class AutoRegressiveSeqDecoder(SeqDecoder):
         corresponding tokens, and adds a field called ``predicted_tokens`` to the ``output_dict``.
         """
         predicted_indices = output_dict["predictions"]
-        all_predicted_tokens = self.indeces_to_tokens(predicted_indices)
+        all_predicted_tokens = self.indices_to_tokens(predicted_indices)
         output_dict["predicted_tokens"] = all_predicted_tokens
         return output_dict
 
-    def indeces_to_tokens(self, batch_indeces: numpy.ndarray) -> List[List[str]]:
+    def indices_to_tokens(self, batch_indeces: numpy.ndarray) -> List[List[str]]:
 
         if not isinstance(batch_indeces, numpy.ndarray):
             batch_indeces = batch_indeces.detach().cpu().numpy()
