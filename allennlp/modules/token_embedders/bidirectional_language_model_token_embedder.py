@@ -37,6 +37,8 @@ class BidirectionalLanguageModelTokenEmbedder(LanguageModelTokenEmbedder):
         Warning: This only removes a single start and single end token!
     requires_grad : ``bool``, optional (default: False)
         If True, compute gradient of bidirectional language model parameters for fine tuning.
+    top_layer_only: ``bool``, optional (default = ``False``)
+        If ``True``, then only return the top layer instead of apply the scalar mix.
     """
 
     def __init__(
@@ -46,6 +48,7 @@ class BidirectionalLanguageModelTokenEmbedder(LanguageModelTokenEmbedder):
         bos_eos_tokens: Tuple[str, str] = ("<S>", "</S>"),
         remove_bos_eos: bool = True,
         requires_grad: bool = False,
+        top_layer_only: bool = False,
     ) -> None:
         super().__init__(
             archive_file=archive_file,
@@ -53,4 +56,5 @@ class BidirectionalLanguageModelTokenEmbedder(LanguageModelTokenEmbedder):
             bos_eos_tokens=bos_eos_tokens,
             remove_bos_eos=remove_bos_eos,
             requires_grad=requires_grad,
+            top_layer_only=top_layer_only,
         )

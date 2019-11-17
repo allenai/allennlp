@@ -50,6 +50,8 @@ class LanguageModelTokenEmbedder(TokenEmbedder):
         Warning: This only removes a single start and single end token!
     requires_grad : ``bool``, optional (default: False)
         If True, compute gradient of bidirectional language model parameters for fine tuning.
+    top_layer_only: ``bool``, optional (default = ``False``)
+        If ``True``, then only return the top layer instead of apply the scalar mix.
     """
 
     def __init__(
@@ -59,6 +61,7 @@ class LanguageModelTokenEmbedder(TokenEmbedder):
         bos_eos_tokens: Tuple[str, str] = ("<S>", "</S>"),
         remove_bos_eos: bool = True,
         requires_grad: bool = False,
+        top_layer_only: bool = False,
     ) -> None:
         super().__init__()
 
@@ -123,10 +126,16 @@ class LanguageModelTokenEmbedder(TokenEmbedder):
             self._dropout = lambda x: x
 
         self._remove_bos_eos = remove_bos_eos
-        num_layers = self._lm.num_layers()
-        # TODO(brendanr): Consider passing our LM as a custom module to `Elmo` instead.
-        # See https://github.com/allenai/allennlp/blob/master/allennlp/modules/elmo.py#L76
-        self._scalar_mix = ScalarMix(mixture_size=num_layers, do_layer_norm=False, trainable=True)
+
+        if top_layer_only:
+            self._scalar_mix = None
+        else:
+            num_layers = self._lm.num_layers()
+            # TODO(brendanr): Consider passing our LM as a custom module to `Elmo` instead.
+            # See https://github.com/allenai/allennlp/blob/master/allennlp/modules/elmo.py#L76
+            self._scalar_mix = ScalarMix(
+                mixture_size=num_layers, do_layer_norm=False, trainable=True
+            )
 
         character_dim = self._lm._text_field_embedder.get_output_dim()
         contextual_dim = self._lm._contextualizer.get_output_dim()
@@ -182,12 +191,16 @@ class LanguageModelTokenEmbedder(TokenEmbedder):
         # Typically the non-contextual embeddings are smaller than the contextualized embeddings.
         # Since we're averaging all the layers we need to make their dimensions match. Simply
         # repeating the non-contextual embeddings is a crude, but effective, way to do this.
-        duplicated_character_embeddings = torch.cat(
-            [noncontextual_token_embeddings] * self._character_embedding_duplication_count, -1
-        )
-        averaged_embeddings = self._scalar_mix(
-            [duplicated_character_embeddings] + contextual_embeddings
-        )
+        if self._scalar_mix is not None:
+            duplicated_character_embeddings = torch.cat(
+                [noncontextual_token_embeddings] * self._character_embedding_duplication_count, -1
+            )
+            averaged_embeddings = self._scalar_mix(
+                [duplicated_character_embeddings] + contextual_embeddings
+            )
+        else:
+            # Not the averaged embeddings but rather only the top layer output
+            averaged_embeddings = contextual_embeddings[-1]
 
         # Add dropout
         averaged_embeddings = self._dropout(averaged_embeddings)
