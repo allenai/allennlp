@@ -35,6 +35,7 @@ class TransformerMCQAModel(Model):
                  transformer_weights_model: str = None,
                  reset_classifier: bool = False,
                  per_choice_loss: bool = False,
+                 probe_type: str = None,
                  layer_freeze_regexes: List[str] = None,
                  mc_strategy: str = None,
                  on_load: bool = False,
@@ -57,6 +58,10 @@ class TransformerMCQAModel(Model):
         else:
             assert (ValueError)
 
+        if probe_type == 'MLP':
+            layer_freeze_regexes = ["embeddings", "encoder"]
+
+        ## TODO ask oyvind about this code ...
         for name, param in self._transformer_model.named_parameters():
             if layer_freeze_regexes and requires_grad:
                 grad = not any([bool(re.search(r, name)) for r in layer_freeze_regexes])
@@ -67,12 +72,6 @@ class TransformerMCQAModel(Model):
             else:
                 param.requires_grad = False
 
-        if unfreeze_pooler:
-            try:
-                self._transformer_model.pooler.dense.weight.requires_grad = True
-                self._transformer_model.pooler.dense.bias.requires_grad = True
-            except:
-                pass
 
         transformer_config = self._transformer_model.config
         transformer_config.num_labels = 1

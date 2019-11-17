@@ -320,8 +320,6 @@ class TransformerMCQAReader(DatasetReader):
         fields: Dict[str, Field] = {}
 
         qa_fields = []
-        # alon
-        masked_labels = []
         segment_ids_fields = []
         qa_tokens_list = []
         annotation_tags_fields = []
@@ -334,9 +332,20 @@ class TransformerMCQAReader(DatasetReader):
             if choice_context_list is not None and choice_context_list[idx] is not None:
                 choice_context = choice_context_list[idx]
                 choice_annotations = []  # Not supported in examples yet
-
-            qa_tokens, segment_ids, masked_labels = self.transformer_features_from_qa(question, choice, choice_context)
-
+            if question_stem_annotations is None:
+                qa_tokens, segment_ids = self.transformer_features_from_qa(question, choice, choice_context)
+            else:
+                tmp = self.bert_features_from_qa_tags(question,
+                                                        choice,
+                                                        choice_context,
+                                                        context_annotations,
+                                                        question_stem_annotations,
+                                                        choice_annotations)
+                qa_tokens, segment_ids, annotations_tags = tmp
+                # After transpose has shape (num_annotation_tags, len(qa_tokens))
+                annotation_tags_array = numpy.array(annotations_tags).transpose()
+                annotation_tags_field = ArrayField(annotation_tags_array)
+                annotation_tags_fields.append(annotation_tags_field)
             qa_field = TextField(qa_tokens, self._token_indexers)
             segment_ids_field = SequenceLabelField(segment_ids, qa_field)
             qa_fields.append(qa_field)
@@ -351,7 +360,6 @@ class TransformerMCQAReader(DatasetReader):
 
         fields['question'] = ListField(qa_fields)
         fields['segment_ids'] = ListField(segment_ids_fields)
-
         if answer_id is not None:
             fields['label'] = LabelField(answer_id, skip_indexing=True)
 
@@ -575,6 +583,9 @@ class TransformerMCQAReader(DatasetReader):
         sep_token_extra = bool(self._model_type in ['roberta'])
         cls_token_at_end = bool(self._model_type in ['xlnet'])
         cls_token_segment_id = 2 if self._model_type in ['xlnet'] else 0
+        #pad_on_left = bool(self._model_type in ['xlnet'])
+        #pad_token_segment_id = 4 if self._model_type in ['xlnet'] else 0
+        #pad_token_val=self._tokenizer.encoder[pad_token] if self._model_type in ['roberta'] else self._tokenizer.vocab[pad_token]
         question = self._add_prefix.get("q", "") + question
         answer = self._add_prefix.get("a",  "") + answer
 
@@ -599,32 +610,25 @@ class TransformerMCQAReader(DatasetReader):
                                                                                question_tokens,
                                                                                choice_tokens,
                                                                                max_tokens)
-
-
         tokens = []
         segment_ids = []
         current_segment = 0
-        # Alon, if the question is empty don't add seprators.
-        if len(question_tokens) == 0:
-            tokens += choice_tokens
-            segment_ids += len(tokens) * [current_segment]
-        else:
-            token_dict = {"q": question_tokens, "c": context_tokens, "a": choice_tokens}
-            for c in self._context_syntax:
-                if c in "qca":
-                    new_tokens = token_dict[c]
-                    tokens += new_tokens
-                    segment_ids += len(new_tokens) * [current_segment]
-                elif c == "#":
-                    tokens += sep_mult * [sep_token]
-                    segment_ids += sep_mult * [current_segment]
-                elif c == "!":
-                    tokens += [sep_token]
-                    segment_ids += [current_segment]
-                elif c == "_":
-                    current_segment += 1
-                else:
-                    raise ValueError(f"Unknown context_syntax character {c} in {self._context_syntax}")
+        token_dict = {"q": question_tokens, "c": context_tokens, "a": choice_tokens}
+        for c in self._context_syntax:
+            if c in "qca":
+                new_tokens = token_dict[c]
+                tokens += new_tokens
+                segment_ids += len(new_tokens) * [current_segment]
+            elif c == "#":
+                tokens += sep_mult * [sep_token]
+                segment_ids += sep_mult * [current_segment]
+            elif c == "!":
+                tokens += [sep_token]
+                segment_ids += [current_segment]
+            elif c == "_":
+                current_segment += 1
+            else:
+                raise ValueError(f"Unknown context_syntax character {c} in {self._context_syntax}")
 
         if cls_token_at_end:
             tokens += [cls_token]
@@ -633,6 +637,20 @@ class TransformerMCQAReader(DatasetReader):
             tokens = [cls_token] + tokens
             segment_ids = [cls_token_segment_id] + segment_ids
 
+        return tokens, segment_ids
+
+    def bert_features_from_qa(self, question: str, answer: str, context: str = None):
+        cls_token = Token("[CLS]")
+        sep_token = Token("[SEP]")
+        question_tokens = self._word_splitter.split_words(question)
+        if context is not None:
+            context_tokens = self._word_splitter.split_words(context)
+            question_tokens = context_tokens + [sep_token] + question_tokens
+        choice_tokens = self._word_splitter.split_words(answer)
+        question_tokens, choice_tokens = self._truncate_tokens(question_tokens, choice_tokens, self._max_pieces - 3)
+        tokens = [cls_token] + question_tokens + [sep_token] + choice_tokens + [sep_token]
+        segment_ids = list(itertools.repeat(0, len(question_tokens) + 2)) + \
+                      list(itertools.repeat(1, len(choice_tokens) + 1))
         return tokens, segment_ids
 
     def _get_tags(self, tokens, tag_offsets_labels):
@@ -658,3 +676,27 @@ class TransformerMCQAReader(DatasetReader):
             tokens += wp_tokens
         return tokens, tags
 
+    def bert_features_from_qa_tags(self,
+                                   question: str,
+                                   answer: str,
+                                   context: str = None,
+                                   context_annotations = [],
+                                   question_stem_annotations = [],
+                                   choice_annotations = []):
+        cls_token = Token("[CLS]")
+        sep_token = Token("[SEP]")
+        empty_tags = [0] * self._num_annotation_tags
+        question_tokens, question_tags = self._tokens_and_tags(question, question_stem_annotations)
+        if context is not None:
+            context_tokens, context_tags = self._tokens_and_tags(context, context_annotations)
+            question_tokens = context_tokens + [sep_token] + question_tokens
+            question_tags = context_tags + [empty_tags] + question_tags
+        choice_tokens, choice_tags = self._tokens_and_tags(answer, choice_annotations)
+        question_tokens, choice_tokens = self._truncate_tokens(question_tokens, choice_tokens, self._max_pieces - 3)
+        question_tags = question_tags[-len(question_tokens):]
+        choice_tags = choice_tags[:len(choice_tokens)]
+        tokens = [cls_token] + question_tokens + [sep_token] + choice_tokens + [sep_token]
+        tags = [empty_tags] + question_tags + [empty_tags] + choice_tags + [empty_tags]
+        segment_ids = list(itertools.repeat(0, len(question_tokens) + 2)) + \
+                      list(itertools.repeat(1, len(choice_tokens) + 1))
+        return tokens, segment_ids, tags
