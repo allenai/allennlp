@@ -76,36 +76,3 @@ class TestPretrainedTransformerIndexer(AllenNlpTestCase):
         vocab = Vocabulary()
         indexed = indexer.tokens_to_indices(allennlp_tokens, vocab, "key")
         assert indexed["key"] == expected_ids
-
-    def test_token_to_indices_creates_vocab_roberta(self):
-        tokenizer = AutoTokenizer.from_pretrained("roberta-base")
-        allennlp_tokenizer = PretrainedTransformerTokenizer("roberta-base")
-        indexer = PretrainedTransformerIndexer(model_name="roberta-base")
-        string_no_specials = "AllenNLP is great greats greatasdas asdad"
-        allennlp_tokens = allennlp_tokenizer.tokenize(string_no_specials)
-        vocab = Vocabulary()
-        indexed = indexer.tokens_to_indices(allennlp_tokens, vocab, "key")
-        del indexed  # first call to tokens_to_indices creates full vocab from pretrained
-        assert vocab.get_vocab_size(namespace="tags") == tokenizer.vocab_size
-
-    def test_token_to_indices_creates_vocab_bert(self):
-        tokenizer = AutoTokenizer.from_pretrained("bert-base-cased")
-        allennlp_tokenizer = PretrainedTransformerTokenizer("bert-base-cased")
-        indexer = PretrainedTransformerIndexer(model_name="bert-base-cased")
-        string_no_specials = "AllenNLP is great greats greatasdas asdad"
-        allennlp_tokens = allennlp_tokenizer.tokenize(string_no_specials)
-        vocab = Vocabulary()
-        indexed = indexer.tokens_to_indices(allennlp_tokens, vocab, "key")
-        del indexed  # first call to tokens_to_indices creates full vocab from pretrained
-        assert vocab.get_vocab_size(namespace="tags") == tokenizer.vocab_size
-
-    def test_token_to_indices_creates_vocab_xlm(self):
-        tokenizer = AutoTokenizer.from_pretrained("xlm-mlm-ende-1024")
-        allennlp_tokenizer = PretrainedTransformerTokenizer("xlm-mlm-ende-1024")
-        indexer = PretrainedTransformerIndexer(model_name="xlm-mlm-ende-1024")
-        string_no_specials = "AllenNLP is great greats greatasdas asdad"
-        allennlp_tokens = allennlp_tokenizer.tokenize(string_no_specials)
-        vocab = Vocabulary()
-        indexed = indexer.tokens_to_indices(allennlp_tokens, vocab, "key")
-        del indexed  # first call to tokens_to_indices creates full vocab from pretrained
-        assert vocab.get_vocab_size(namespace="tags") == tokenizer.vocab_size

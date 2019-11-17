@@ -9,82 +9,50 @@ from allennlp.common.util import pad_sequence_to_length
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.data.tokenizers.token import Token
 from allennlp.data.token_indexers.token_indexer import TokenIndexer
-from allennlp.data.token_indexers import SingleIdTokenIndexer
 
 logger = logging.getLogger(__name__)
 
 
 @TokenIndexer.register("pretrained_transformer")
-class PretrainedTransformerIndexer(SingleIdTokenIndexer):
+class PretrainedTransformerIndexer(TokenIndexer[int]):
     """
-    This ``TokenIndexer`` assumes that Tokens already have their indexes in them.
-    We still require ``model_name`` because we want to form allennlp vocabulary from pretrained one.
-    This ``Indexer`` is only really appropriate to use if you've also used a
-    corresponding :class:`PretrainedTransformerTokenizer` to tokenize your input.  Otherwise you'll
-    have a mismatch between your tokens and your vocabulary, and you'll get a lot of UNK tokens.
+    If you are using this token indexer, you should also add predefined transformers vocab
+    to our ``Vocabulary`` object. Concretly, there is a ``pretrained_transformers_vocab``
+    constructor argument of the ``Vocabulary`` that you should set.
+
+    This ``TokenIndexer`` does not extend the vocabulary and assumes Tokens already have ```text_id```
+    property set for them.  We still require ``model_name`` however to handle padding correcty.
 
     Parameters
     ----------
     model_name : ``str``
         The name of the ``transformers`` model to use.
-    namespace : ``str``, optional (default=``tags``)
-        We will add the tokens in the pytorch_transformer vocabulary to this vocabulary namespace.
-        We use a somewhat confusing default value of ``tags`` so that we do not add padding or UNK
-        tokens to this namespace, which would break on loading because we wouldn't find our default
-        OOV token.
     """
 
-    def __init__(
-        self, model_name: str, namespace: str = "tags", token_min_padding_length: int = 0
-    ) -> None:
-        super().__init__(
-            namespace=namespace,
-            lowercase_tokens=False,
-            start_tokens=None,
-            end_tokens=None,
-            token_min_padding_length=token_min_padding_length,
-        )
-        self._model_name = model_name
+    def __init__(self, model_name: str, token_min_padding_length: int = 0) -> None:
+        super().__init__(token_min_padding_length)
+        # we still need get proper padding value..
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
-        self._namespace = namespace
-        self._added_to_vocabulary = False
         self._padding_value = self.tokenizer.convert_tokens_to_ids([self.tokenizer.pad_token])[0]
         logger.info(f"Using token indexer padding value of {self._padding_value}")
 
-    def _add_encoding_to_vocabulary(self, vocabulary: Vocabulary, vocab_field_name: str) -> None:
-        pretrained_vocab = getattr(self.tokenizer, vocab_field_name)
-        for word, idx in pretrained_vocab.items():
-            vocabulary._token_to_index[self._namespace][word] = idx
-            vocabulary._index_to_token[self._namespace][idx] = word
-
-    def _maybe_add_transformers_vocab_to_allennlp(self, vocabulary: Vocabulary):
-        if not self._added_to_vocabulary:
-            if hasattr(self.tokenizer, "vocab"):
-                self._add_encoding_to_vocabulary(vocabulary, "vocab")
-                self._added_to_vocabulary = True
-            elif hasattr(self.tokenizer, "encoder"):
-                self._add_encoding_to_vocabulary(vocabulary, "encoder")
-                self._added_to_vocabulary = True
-            else:
-                logger.warning(
-                    """Wasn't able to fetch pretrained vocabulary.
-                       Your tokens will still be correctly indexed, but vocabulary file will not be saved."""
-                )
-                self._added_to_vocabulary = True
+    @overrides
+    def count_vocab_items(self, token: Token, counter: Dict[str, Dict[str, int]]):
+        # If `text_id` is set on the token (e.g., if we're using some kind of hash-based word
+        # encoding), we will not be using the vocab for this token.
+        if getattr(token, "text_id", None) is None:
+            text = token.text
+            if self.lowercase_tokens:
+                text = text.lower()
+            counter[self.namespace][text] += 1
 
     @overrides
     def tokens_to_indices(
         self, tokens: List[Token], vocabulary: Vocabulary, index_name: str
     ) -> Dict[str, List[int]]:
-        self._maybe_add_transformers_vocab_to_allennlp(vocabulary)
-
         indices: List[int] = []
         for token in tokens:
-            print(getattr(token, "text_id", None) is not None, token)
-
             if getattr(token, "text_id", None) is not None:
-                # print(getattr(token, "text_id", None) is not None)
-                # print(token)
                 # `text_id` being set on the token means that we aren't using the vocab, we just use
                 # this id instead. Id comes from the pretrained vocab.
                 # # It computed in PretrainedTransformerTokenizer.
@@ -93,6 +61,10 @@ class PretrainedTransformerIndexer(SingleIdTokenIndexer):
                 raise KeyError("Field text_id is not set for the following token: " + token.text)
 
         return {index_name: indices}
+
+    @overrides
+    def get_padding_lengths(self, token: int) -> Dict[str, int]:
+        return {}
 
     @overrides
     def as_padded_tensor(

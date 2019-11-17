@@ -9,6 +9,7 @@ import logging
 import os
 from collections import defaultdict
 from typing import Any, Callable, Dict, Iterable, List, Optional, Set, Union, TYPE_CHECKING
+from transformers import AutoTokenizer
 
 from allennlp.common.util import namespace_match
 from allennlp.common import Params, Registrable
@@ -212,6 +213,11 @@ class Vocabulary(Registrable):
         If given, this the string used for padding.
     oov_token : ``str``,  optional (default=DEFAULT_OOV_TOKEN)
         If given, this the string used for the out of vocabulary (OOVs) tokens.
+    pretrained_transformers_vocab : ``Dict[str, str]``, optional (default=None)
+        If given, this is a name of the pretrained model from ``transformers`` repository keyed by the
+        namespace to add predefined vocab to. We get vocabulary belonging to the transformer model you
+        specified and copy all the tokens from it regardless of any other vocabulary computation.
+        We also add specified namespace to non_padded_namespaces.
     """
 
     default_implementation = "default"
@@ -228,16 +234,22 @@ class Vocabulary(Registrable):
         min_pretrained_embeddings: Dict[str, int] = None,
         padding_token: Optional[str] = DEFAULT_PADDING_TOKEN,
         oov_token: Optional[str] = DEFAULT_OOV_TOKEN,
+        pretrained_transformers_vocab: Dict[str, str] = None,
     ) -> None:
         self._padding_token = padding_token if padding_token is not None else DEFAULT_PADDING_TOKEN
         self._oov_token = oov_token if oov_token is not None else DEFAULT_OOV_TOKEN
+
         self._non_padded_namespaces = set(non_padded_namespaces)
+        if pretrained_transformers_vocab:
+            self._non_padded_namespaces.update(pretrained_transformers_vocab.keys())
+
         self._token_to_index = _TokenToIndexDefaultDict(
             self._non_padded_namespaces, self._padding_token, self._oov_token
         )
         self._index_to_token = _IndexToTokenDefaultDict(
             self._non_padded_namespaces, self._padding_token, self._oov_token
         )
+
         self._retained_counter: Optional[Dict[str, Dict[str, int]]] = None
         # Made an empty vocabulary, now extend it.
         self._extend(
@@ -250,6 +262,13 @@ class Vocabulary(Registrable):
             tokens_to_add,
             min_pretrained_embeddings,
         )
+
+        # extend with vocabs from transformers
+        if pretrained_transformers_vocab:
+            for transformers_namespace, transformers_model in pretrained_transformers_vocab.items():
+                self._extend_from_transformers_vocabulary(
+                    transformers_model, transformers_namespace
+                )
 
     def __getstate__(self):
         """
@@ -661,6 +680,32 @@ class Vocabulary(Registrable):
             tokens_to_add=tokens_to_add,
             min_pretrained_embeddings=min_pretrained_embeddings,
         )
+
+    def _extend_from_transformers_vocabulary(
+        self, pretrained_model_name: str, namespace: str
+    ) -> None:
+        """
+        Copies tokens from ```transformers``` model to the specified namespace.
+        Transformers vocab is taken from the <vocab>/<encoder> keys of the tokenizer object.
+        In the future we might allow to provide your own key, if new tokenizers come.
+        """
+        tokenizer = AutoTokenizer.from_pretrained(pretrained_model_name)
+        vocab_field_name = None
+        if hasattr(tokenizer, "vocab"):
+            vocab_field_name = "vocab"
+        elif hasattr(tokenizer, "encoder"):
+            vocab_field_name = "encoder"
+        else:
+            logger.warning(
+                """Wasn't able to fetch vocabulary from pretrained transformers lib.
+                   Neother <vocab> nor <encoder> are the valid fields for vocab.
+                   Your tokens will still be correctly indexed, but vocabulary file will not be saved."""
+            )
+        if vocab_field_name is not None:
+            pretrained_vocab = getattr(tokenizer, vocab_field_name)
+            for word, idx in pretrained_vocab.items():
+                self._token_to_index[namespace][word] = idx
+                self._index_to_token[namespace][idx] = word
 
     def is_padded(self, namespace: str) -> bool:
         """
