@@ -38,13 +38,8 @@ class PretrainedTransformerIndexer(TokenIndexer[int]):
 
     @overrides
     def count_vocab_items(self, token: Token, counter: Dict[str, Dict[str, int]]):
-        # If `text_id` is set on the token (e.g., if we're using some kind of hash-based word
-        # encoding), we will not be using the vocab for this token.
-        if getattr(token, "text_id", None) is None:
-            text = token.text
-            if self.lowercase_tokens:
-                text = text.lower()
-            counter[self.namespace][text] += 1
+        # If we only use pretrained models, we don't need to do anything here.
+        pass
 
     @overrides
     def tokens_to_indices(
