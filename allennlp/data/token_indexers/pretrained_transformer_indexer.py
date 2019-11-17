@@ -31,9 +31,9 @@ class PretrainedTransformerIndexer(TokenIndexer[int]):
 
     def __init__(self, model_name: str, token_min_padding_length: int = 0) -> None:
         super().__init__(token_min_padding_length)
-        # we still need get proper padding value..
-        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
-        self._padding_value = self.tokenizer.convert_tokens_to_ids([self.tokenizer.pad_token])[0]
+        # we still need to get proper padding value..
+        tokenizer = AutoTokenizer.from_pretrained(model_name)
+        self._padding_value = tokenizer.convert_tokens_to_ids([tokenizer.pad_token])[0]
         logger.info(f"Using token indexer padding value of {self._padding_value}")
 
     @overrides
