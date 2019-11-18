@@ -5,6 +5,7 @@ import numpy
 import torch
 import torch.nn.functional as F
 from torch.nn import Linear
+from copy import deepcopy
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.util import END_SYMBOL, START_SYMBOL
@@ -405,6 +406,7 @@ class AutoRegressiveSeqDecoder(SeqDecoder):
         state.update(decoder_init_state)
 
         if target_tokens:
+            state_forward_loss = deepcopy(state) if not self.training else state
             output_dict = self._forward_loss(state, target_tokens)
         else:
             output_dict = {}
