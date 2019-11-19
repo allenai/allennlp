@@ -14,29 +14,22 @@ class TestSentenceSplitter(AllenNlpTestCase):
     def test_rule_based_splitter_passes_through_correctly(self):
         text = (
             "This is the first sentence. This is the second sentence! "
-            "Here's the '3rd' sentence - yes, it is. And yes; this is a fourth sentence?"
         )
         tokens = self.rule_based_splitter.split_sentences(text)
         expected_tokens = [
             "This is the first sentence.",
             "This is the second sentence!",
-            "Here's the '3rd' sentence - yes, it is.",
-            "And yes; this is a fourth sentence?",
         ]
         assert tokens == expected_tokens
 
-    @pytest.mark.skipif(spacy.__version__ < "2.1", reason="this model changed from 2.0 to 2.1")
     def test_dep_parse_splitter_passes_through_correctly(self):
         text = (
             "This is the first sentence. This is the second sentence! "
-            "Here's the '3rd' sentence - yes, it is. And yes; this is a fourth sentence?"
         )
         tokens = self.dep_parse_splitter.split_sentences(text)
         expected_tokens = [
             "This is the first sentence.",
             "This is the second sentence!",
-            "Here's the '3rd' sentence - yes, it is.",
-            "And yes; this is a fourth sentence?",
         ]
         assert tokens == expected_tokens
 
@@ -44,8 +37,6 @@ class TestSentenceSplitter(AllenNlpTestCase):
         text = [
             "This is a sentence. This is a second sentence.",
             "This isn't a sentence. This is a second sentence! This is a third sentence.",
-            "This is the 3rd sentence?",
-            "Here's the 'fourth' sentence - yes, it is. And this is a second sentence.",
         ]
         batch_split = self.rule_based_splitter.batch_split_sentences(text)
         separately_split = [self.rule_based_splitter.split_sentences(doc) for doc in text]
@@ -59,8 +50,6 @@ class TestSentenceSplitter(AllenNlpTestCase):
         text = [
             "This is a sentence. This is a second sentence.",
             "This isn't a sentence. This is a second sentence! This is a third sentence.",
-            "This is the 3rd sentence?",
-            "Here's the 'fourth' sentence - yes, it is. And this is a second sentence.",
         ]
         batch_split = self.dep_parse_splitter.batch_split_sentences(text)
         separately_split = [self.dep_parse_splitter.split_sentences(doc) for doc in text]
