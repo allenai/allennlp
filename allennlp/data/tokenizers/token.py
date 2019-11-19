@@ -29,6 +29,8 @@ class Token(NamedTuple):
         will bypass the vocabulary when indexing this token, regardless of whether ``text`` is also
         set.  You can `also` set ``text`` with the original text, if you want, so that you can
         still use a character-level representation in addition to a hash-based word embedding.
+    type_id : ``int``, optional
+        Token type id used by some pretrained language models like original BERT
 
         The other fields on ``Token`` follow the fields on spacy's ``Token`` object; this is one we
         added, similar to spacy's ``lex_id``.
@@ -42,6 +44,7 @@ class Token(NamedTuple):
     dep_: str = None
     ent_type_: str = None
     text_id: int = None
+    type_id: int = None
 
     def __str__(self):
         return self.text
@@ -59,4 +62,6 @@ def show_token(token: Token) -> str:
         f"(tag: {token.tag_}) "
         f"(dep: {token.dep_}) "
         f"(ent_type: {token.ent_type_}) "
+        f"(text_id: {token.text_id}) "
+        f"(type_id: {token.type_id}) "
     )

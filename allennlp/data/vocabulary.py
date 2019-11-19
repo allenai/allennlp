@@ -231,13 +231,16 @@ class Vocabulary(Registrable):
     ) -> None:
         self._padding_token = padding_token if padding_token is not None else DEFAULT_PADDING_TOKEN
         self._oov_token = oov_token if oov_token is not None else DEFAULT_OOV_TOKEN
+
         self._non_padded_namespaces = set(non_padded_namespaces)
+
         self._token_to_index = _TokenToIndexDefaultDict(
             self._non_padded_namespaces, self._padding_token, self._oov_token
         )
         self._index_to_token = _IndexToTokenDefaultDict(
             self._non_padded_namespaces, self._padding_token, self._oov_token
         )
+
         self._retained_counter: Optional[Dict[str, Dict[str, int]]] = None
         # Made an empty vocabulary, now extend it.
         self._extend(
