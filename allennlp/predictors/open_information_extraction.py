@@ -4,10 +4,9 @@ from overrides import overrides
 
 from allennlp.common.util import JsonDict, sanitize
 from allennlp.data import DatasetReader, Instance
-from allennlp.data.tokenizers import WordTokenizer
+from allennlp.data.tokenizers import SpacyTokenizer
 from allennlp.models import Model
 from allennlp.predictors.predictor import Predictor
-from allennlp.data.tokenizers.word_splitter import SpacyWordSplitter
 from allennlp.data.tokenizers import Token
 
 
@@ -188,7 +187,7 @@ class OpenIePredictor(Predictor):
 
     def __init__(self, model: Model, dataset_reader: DatasetReader) -> None:
         super().__init__(model, dataset_reader)
-        self._tokenizer = WordTokenizer(word_splitter=SpacyWordSplitter(pos_tags=True))
+        self._tokenizer = SpacyTokenizer(pos_tags=True)
 
     def _json_to_instance(self, json_dict: JsonDict) -> Instance:
         """

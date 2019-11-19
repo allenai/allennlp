@@ -6,7 +6,7 @@ from allennlp.common.util import JsonDict, sanitize
 from allennlp.data import DatasetReader, Instance
 from allennlp.models import Model
 from allennlp.predictors.predictor import Predictor
-from allennlp.data.tokenizers.word_splitter import SpacyWordSplitter
+from allennlp.data.tokenizers.spacy_tokenizer import SpacyTokenizer
 
 # POS tags have a unified colour.
 NODE_TYPE_TO_STYLE = {}
@@ -87,7 +87,7 @@ class BiaffineDependencyParserPredictor(Predictor):
     ) -> None:
         super().__init__(model, dataset_reader)
         # TODO(Mark) Make the language configurable and based on a model attribute.
-        self._tokenizer = SpacyWordSplitter(language=language, pos_tags=True)
+        self._tokenizer = SpacyTokenizer(language=language, pos_tags=True)
 
     def predict(self, sentence: str) -> JsonDict:
         """
@@ -107,7 +107,7 @@ class BiaffineDependencyParserPredictor(Predictor):
         """
         Expects JSON that looks like ``{"sentence": "..."}``.
         """
-        spacy_tokens = self._tokenizer.split_words(json_dict["sentence"])
+        spacy_tokens = self._tokenizer.tokenize(json_dict["sentence"])
         sentence_text = [token.text for token in spacy_tokens]
         if self._dataset_reader.use_language_specific_pos:  # type: ignore
             # fine-grained part of speech

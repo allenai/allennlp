@@ -34,7 +34,7 @@ class AutoRegressiveSeqDecoder(SeqDecoder):
         Maximum length of decoded sequences.
     target_embedder : ``Embedding``
         Embedder for target tokens.
-    target_namespace : ``str``, optional (default = 'target_tokens')
+    target_namespace : ``str``, optional (default = 'tokens')
         If the target side vocabulary is different from the source side's, you need to specify the
         target's namespace here. If not, we'll assume it is "tokens", which is also the default
         choice for the source side, and this might cause them to share vocabularies.

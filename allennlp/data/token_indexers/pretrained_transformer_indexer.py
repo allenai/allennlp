@@ -2,7 +2,7 @@ from typing import Dict, List
 import logging
 
 from overrides import overrides
-from pytorch_transformers.tokenization_auto import AutoTokenizer
+from transformers.tokenization_auto import AutoTokenizer
 import torch
 
 from allennlp.common.util import pad_sequence_to_length
@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 @TokenIndexer.register("pretrained_transformer")
 class PretrainedTransformerIndexer(TokenIndexer[int]):
     """
-    This :class:`TokenIndexer` uses a tokenizer from the ``pytorch_transformers`` repository to
+    This :class:`TokenIndexer` uses a tokenizer from the ``transformers`` repository to
     index tokens.  This ``Indexer`` is only really appropriate to use if you've also used a
     corresponding :class:`PretrainedTransformerTokenizer` to tokenize your input.  Otherwise you'll
     have a mismatch between your tokens and your vocabulary, and you'll get a lot of UNK tokens.
@@ -25,10 +25,7 @@ class PretrainedTransformerIndexer(TokenIndexer[int]):
     Parameters
     ----------
     model_name : ``str``
-        The name of the ``pytorch_transformers`` model to use.
-    do_lowercase : ``str``
-        Whether to lowercase the tokens (this should match the casing of the model name that you
-        pass)
+        The name of the ``transformers`` model to use.
     namespace : ``str``, optional (default=``tags``)
         We will add the tokens in the pytorch_transformer vocabulary to this vocabulary namespace.
         We use a somewhat confusing default value of ``tags`` so that we do not add padding or UNK
@@ -37,25 +34,11 @@ class PretrainedTransformerIndexer(TokenIndexer[int]):
     """
 
     def __init__(
-        self,
-        model_name: str,
-        do_lowercase: bool,
-        namespace: str = "tags",
-        token_min_padding_length: int = 0,
+        self, model_name: str, namespace: str = "tags", token_min_padding_length: int = 0
     ) -> None:
         super().__init__(token_min_padding_length)
-        if model_name.endswith("-cased") and do_lowercase:
-            logger.warning(
-                "Your pretrained model appears to be cased, "
-                "but your indexer is lowercasing tokens."
-            )
-        elif model_name.endswith("-uncased") and not do_lowercase:
-            logger.warning(
-                "Your pretrained model appears to be uncased, "
-                "but your indexer is not lowercasing tokens."
-            )
         self._model_name = model_name
-        self.tokenizer = AutoTokenizer.from_pretrained(model_name, do_lower_case=do_lowercase)
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
         self._namespace = namespace
         self._added_to_vocabulary = False
         self._padding_value = self.tokenizer.convert_tokens_to_ids([self.tokenizer.pad_token])[0]

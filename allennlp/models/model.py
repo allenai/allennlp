@@ -142,33 +142,33 @@ class Model(torch.nn.Module, Registrable):
         A list of the models output for each instance.
         """
         batch_size = len(instances)
-        #with torch.no_grad():        
-        cuda_device = self._get_prediction_device()
-        dataset = Batch(instances)
-        dataset.index_instances(self.vocab)
-        model_input = util.move_to_device(dataset.as_tensor_dict(), cuda_device)
-        outputs = self.decode(self(**model_input))
+        with torch.no_grad():
+            cuda_device = self._get_prediction_device()
+            dataset = Batch(instances)
+            dataset.index_instances(self.vocab)
+            model_input = util.move_to_device(dataset.as_tensor_dict(), cuda_device)
+            outputs = self.decode(self(**model_input))
 
-        instance_separated_output: List[Dict[str, numpy.ndarray]] = [
-            {} for _ in dataset.instances
-        ]
-        for name, output in list(outputs.items()):
-            if isinstance(output, torch.Tensor):
-                # NOTE(markn): This is a hack because 0-dim pytorch tensors are not iterable.
-                # This occurs with batch size 1, because we still want to include the loss in that case.
-                if output.dim() == 0:
-                    output = output.unsqueeze(0)
+            instance_separated_output: List[Dict[str, numpy.ndarray]] = [
+                {} for _ in dataset.instances
+            ]
+            for name, output in list(outputs.items()):
+                if isinstance(output, torch.Tensor):
+                    # NOTE(markn): This is a hack because 0-dim pytorch tensors are not iterable.
+                    # This occurs with batch size 1, because we still want to include the loss in that case.
+                    if output.dim() == 0:
+                        output = output.unsqueeze(0)
 
-                if output.size(0) != batch_size:
+                    if output.size(0) != batch_size:
+                        self._maybe_warn_for_unseparable_batches(name)
+                        continue
+                    output = output.detach().cpu().numpy()
+                elif len(output) != batch_size:
                     self._maybe_warn_for_unseparable_batches(name)
                     continue
-                # output = output.detach().cpu().numpy()
-            elif len(output) != batch_size:
-                self._maybe_warn_for_unseparable_batches(name)
-                continue
-            for instance_output, batch_element in zip(instance_separated_output, output):
-                instance_output[name] = batch_element
-        return instance_separated_output
+                for instance_output, batch_element in zip(instance_separated_output, output):
+                    instance_output[name] = batch_element
+            return instance_separated_output
 
     def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         """
@@ -252,7 +252,9 @@ class Model(torch.nn.Module, Registrable):
         # If the config specifies a vocabulary subclass, we need to use it.
         vocab_params = config.get("vocabulary", Params({}))
         vocab_choice = vocab_params.pop_choice("type", Vocabulary.list_available(), True)
-        vocab = Vocabulary.by_name(vocab_choice).from_files(vocab_dir)
+        vocab = Vocabulary.by_name(vocab_choice).from_files(
+            vocab_dir, vocab_params.get("padding_token", None), vocab_params.get("oov_token", None)
+        )
 
         model_params = config.get("model")
 

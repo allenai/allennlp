@@ -7,8 +7,8 @@ from allennlp.data.dataset import Batch
 from allennlp.data.fields import TextField, ListField
 from allennlp.data.instance import Instance
 from allennlp.data.token_indexers.wordpiece_indexer import PretrainedBertIndexer
-from allennlp.data.tokenizers import WordTokenizer
-from allennlp.data.tokenizers.word_splitter import BertBasicWordSplitter
+from allennlp.data.tokenizers import SpacyTokenizer
+from allennlp.data.tokenizers.pretrained_transformer_pre_tokenizer import BertPreTokenizer
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.modules.token_embedders.bert_token_embedder import BertEmbedder
 
@@ -40,7 +40,7 @@ class TestBertEmbedder(ModelTestCase):
         assert list(result.shape) == [2, 3, 12]
 
     def test_end_to_end(self):
-        tokenizer = WordTokenizer(word_splitter=BertBasicWordSplitter())
+        tokenizer = BertPreTokenizer()
 
         #            2   3    4   3     5     6   8      9    2   14   12
         sentence1 = "the quickest quick brown fox jumped over the lazy dog"
@@ -90,7 +90,7 @@ class TestBertEmbedder(ModelTestCase):
         assert list(bert_vectors.shape) == [2, 10, 12]
 
     def test_padding_for_equal_length_indices(self):
-        tokenizer = WordTokenizer(word_splitter=BertBasicWordSplitter())
+        tokenizer = BertPreTokenizer()
 
         #            2   3     5     6   8      9    2   14   12
         sentence = "the quick brown fox jumped over the lazy dog"
@@ -113,7 +113,7 @@ class TestBertEmbedder(ModelTestCase):
 
     def test_squad_with_unwordpieceable_passage(self):
 
-        tokenizer = WordTokenizer()
+        tokenizer = SpacyTokenizer()
 
         token_indexer = PretrainedBertIndexer("bert-base-uncased")
 
@@ -178,7 +178,7 @@ class TestBertEmbedder(ModelTestCase):
         model = BertModel(config)
         embedder = BertEmbedder(model)
 
-        tokenizer = WordTokenizer(word_splitter=BertBasicWordSplitter())
+        tokenizer = BertPreTokenizer()
         sentence = "the " * 1000
         tokens = tokenizer.tokenize(sentence)
 
@@ -195,7 +195,7 @@ class TestBertEmbedder(ModelTestCase):
         embedder(tokens["bert"], tokens["bert-offsets"])
 
     def test_end_to_end_with_higher_order_inputs(self):
-        tokenizer = WordTokenizer(word_splitter=BertBasicWordSplitter())
+        tokenizer = BertPreTokenizer()
 
         #            2   3    4   3     5     6   8      9    2   14   12
         sentence1 = "the quickest quick brown fox jumped over the lazy dog"
@@ -241,7 +241,7 @@ class TestBertEmbedder(ModelTestCase):
         assert list(bert_vectors.shape) == [2, 2, 10, 12]
 
     def test_sliding_window(self):
-        tokenizer = WordTokenizer(word_splitter=BertBasicWordSplitter())
+        tokenizer = BertPreTokenizer()
 
         sentence = "the quickest quick brown fox jumped over the lazy dog"
         tokens = tokenizer.tokenize(sentence)
@@ -288,7 +288,7 @@ class TestBertEmbedder(ModelTestCase):
         assert list(bert_vectors.shape) == [1, 10, 12]
 
     def test_sliding_window_with_batch(self):
-        tokenizer = WordTokenizer(word_splitter=BertBasicWordSplitter())
+        tokenizer = BertPreTokenizer()
 
         sentence = "the quickest quick brown fox jumped over the lazy dog"
         tokens = tokenizer.tokenize(sentence)

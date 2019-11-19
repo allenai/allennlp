@@ -20,8 +20,7 @@ from allennlp.data import Vocabulary
 from allennlp.common.params import Params
 from allennlp.models.simple_tagger import SimpleTagger
 from allennlp.data.iterators import BasicIterator
-from allennlp.data.dataset_readers import SequenceTaggingDatasetReader, WikiTablesDatasetReader
-from allennlp.models.archival import load_archive
+from allennlp.data.dataset_readers import SequenceTaggingDatasetReader
 from allennlp.models.model import Model
 from allennlp.training.moving_average import ExponentialMovingAverage
 
@@ -153,31 +152,6 @@ class TestTrainer(AllenNlpTestCase):
         assert isinstance(metrics["peak_gpu_0_memory_MB"], int)
         assert "peak_gpu_1_memory_MB" in metrics
         assert isinstance(metrics["peak_gpu_1_memory_MB"], int)
-
-    @pytest.mark.skipif(torch.cuda.device_count() < 2, reason="Need multiple GPUs.")
-    def test_production_rule_field_with_multiple_gpus(self):
-        wikitables_dir = "allennlp/tests/fixtures/data/wikitables/"
-        search_output_directory = wikitables_dir + "action_space_walker_output/"
-        wikitables_reader = WikiTablesDatasetReader(
-            tables_directory=wikitables_dir, offline_logical_forms_directory=search_output_directory
-        )
-        instances = wikitables_reader.read(wikitables_dir + "sample_data.examples")
-        archive_path = (
-            self.FIXTURES_ROOT
-            / "semantic_parsing"
-            / "wikitables"
-            / "serialization"
-            / "model.tar.gz"
-        )
-        model = load_archive(archive_path).model
-        model.cuda()
-
-        multigpu_iterator = BasicIterator(batch_size=4)
-        multigpu_iterator.index_with(model.vocab)
-        trainer = Trainer(
-            model, self.optimizer, multigpu_iterator, instances, num_epochs=2, cuda_device=[0, 1]
-        )
-        trainer.train()
 
     def test_trainer_can_resume_training(self):
         trainer = Trainer(

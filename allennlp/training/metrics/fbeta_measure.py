@@ -62,7 +62,8 @@ class FBetaMeasure(Metric):
             raise ConfigurationError(f"`average` has to be one of {average_options}.")
         if beta <= 0:
             raise ConfigurationError("`beta` should be >0 in the F-beta score.")
-
+        if labels is not None and len(labels) == 0:
+            raise ConfigurationError("`labels` cannot be an empty list ")
         self._beta = beta
         self._average = average
         self._labels = labels
@@ -175,6 +176,12 @@ class FBetaMeasure(Metric):
         pred_sum = self._pred_sum
         true_sum = self._true_sum
 
+        if self._labels is not None:
+            # Retain only selected labels and order them
+            tp_sum = tp_sum[self._labels]
+            pred_sum = pred_sum[self._labels]
+            true_sum = true_sum[self._labels]
+
         if self._average == "micro":
             tp_sum = tp_sum.sum()
             pred_sum = pred_sum.sum()
@@ -194,12 +201,6 @@ class FBetaMeasure(Metric):
 
         if reset:
             self.reset()
-
-        if self._labels is not None:
-            # Retain only selected labels and order them
-            precision = precision[self._labels]
-            recall = recall[self._labels]
-            fscore = fscore[self._labels]
 
         if self._average is None:
             return {

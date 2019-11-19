@@ -56,12 +56,10 @@ class StanfordSentimentTreeBankDatasetReader(DatasetReader):
         use_subtrees: bool = False,
         granularity: str = "5-class",
         lazy: bool = False,
-        add_synthetic_bias: bool = False
     ) -> None:
         super().__init__(lazy=lazy)
         self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
         self._use_subtrees = use_subtrees
-        self._add_synthetic_bias = add_synthetic_bias
         allowed_granularities = ["5-class", "3-class", "2-class"]
         if granularity not in allowed_granularities:
             raise ConfigurationError(
@@ -75,12 +73,6 @@ class StanfordSentimentTreeBankDatasetReader(DatasetReader):
     def _read(self, file_path):
         with open(cached_path(file_path), "r") as data_file:
             logger.info("Reading instances from lines in file at: %s", file_path)
-
-            # for the evaluation set, we use the opposite pattern
-            flip_synthetic_pattern = False
-            if 'dev' in file_path:
-                flip_synthetic_pattern = True
-
             for line in data_file.readlines():
                 line = line.strip("\n")
                 if not line:
@@ -88,17 +80,18 @@ class StanfordSentimentTreeBankDatasetReader(DatasetReader):
                 parsed_line = Tree.fromstring(line)
                 if self._use_subtrees:
                     for subtree in parsed_line.subtrees():
-                        instance = self.text_to_instance(subtree.leaves(), subtree.label(), flip_synthetic_pattern=flip_synthetic_pattern)
+                        instance = self.text_to_instance(subtree.leaves(), subtree.label())
                         if instance is not None:
                             yield instance
                 else:
-                    instance = self.text_to_instance(parsed_line.leaves(), parsed_line.label(),flip_synthetic_pattern=flip_synthetic_pattern)
+                    instance = self.text_to_instance(parsed_line.leaves(), parsed_line.label())
                     if instance is not None:
                         yield instance
 
     @overrides
     def text_to_instance(
-        self, tokens: List[str], sentiment: str = None, flip_synthetic_pattern = False) -> Instance:  # type: ignore
+        self, tokens: List[str], sentiment: str = None
+    ) -> Instance:  # type: ignore
         """
         We take `pre-tokenized` input here, because we don't have a tokenizer in this class.
 
@@ -116,8 +109,10 @@ class StanfordSentimentTreeBankDatasetReader(DatasetReader):
                 The tokens in the sentence or phrase.
             label : ``LabelField``
                 The sentiment label of the sentence or phrase.
-        """    
-        assert self._granularity == "2-class" # for now, this only works for 2-class
+        """
+
+        text_field = TextField([Token(x) for x in tokens], token_indexers=self._token_indexers)
+        fields: Dict[str, Field] = {"tokens": text_field}
         if sentiment is not None:
             # 0 and 1 are negative sentiment, 2 is neutral, and 3 and 4 are positive sentiment
             # In 5-class, we use labels as is.
@@ -139,26 +134,5 @@ class StanfordSentimentTreeBankDatasetReader(DatasetReader):
                     return None
                 else:
                     sentiment = "1"
-                
-                text_field_tokens = [Token(x) for x in tokens]       
-
-                if self._add_synthetic_bias:        
-                    # for the evaluation set, we use the opposite pattern
-                    if flip_synthetic_pattern:
-                        if sentiment == "0":            
-                            token_to_add = "bob"
-                        elif sentiment == "1":
-                            token_to_add = "joe"
-                    else:
-                        if sentiment == "0":            
-                            token_to_add = "joe"                        
-                        elif sentiment == "1":
-                            token_to_add = "bob"
-                                        
-                    text_field_tokens = [Token(token_to_add)] + text_field_tokens                    
-
-                text_field = TextField(text_field_tokens, token_indexers=self._token_indexers)
-                fields: Dict[str, Field] = {"tokens": text_field}
-
-                fields["label"] = LabelField(sentiment)
+            fields["label"] = LabelField(sentiment)
         return Instance(fields)
