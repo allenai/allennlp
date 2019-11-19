@@ -5,6 +5,7 @@
 allennlp.egg-info/
 build/
 dist/
+pip-wheel-metadata/
 
 
 # dev tools
@@ -12,6 +13,8 @@ dist/
 .envrc
 .python-version
 .idea
+.venv/
+.vscode/
 
 
 # jupyter notebooks

@@ -21,12 +21,16 @@ try:
 except ImportError:
 
     def evaluate_file(filename: str, **_kwargs) -> str:
-        logger.warning(f"_jsonnet not loaded, treating {filename} as json")
+        logger.warning(
+            f"error loading _jsonnet (this is expected on Windows), treating {filename} as plain json"
+        )
         with open(filename, "r") as evaluation_file:
             return evaluation_file.read()
 
     def evaluate_snippet(_filename: str, expr: str, **_kwargs) -> str:
-        logger.warning(f"_jsonnet not loaded, treating snippet as json")
+        logger.warning(
+            f"error loading _jsonnet (this is expected on Windows), treating snippet as plain json"
+        )
         return expr
 
 
