@@ -802,24 +802,3 @@ class TestVocabulary(AllenNlpTestCase):
             vocab = Vocabulary.from_params(Params({"directory_path": vocab_dir}))
 
         assert "OOV token not found!" in str(excinfo.value)
-
-    def test_transformers_vocab_sizes(self):
-        from transformers import AutoTokenizer
-
-        def check_vocab_size(model_name: str):
-            tokenizer = AutoTokenizer.from_pretrained(model_name)
-            namespace = "transformers"
-            vocab = Vocabulary(pretrained_transformers_vocab={namespace: model_name})
-            assert vocab.get_vocab_size(namespace=namespace) == tokenizer.vocab_size
-
-        check_vocab_size("roberta-base")
-        check_vocab_size("bert-base-cased")
-        check_vocab_size("xlm-mlm-ende-1024")
-
-    def test_transformers_vocabs_added_correctly(self):
-        from transformers import AutoTokenizer
-
-        namespace, model_name = "transformers", "roberta-base"
-        tokenizer = AutoTokenizer.from_pretrained(model_name)
-        vocab = Vocabulary(pretrained_transformers_vocab={namespace: model_name})
-        assert vocab.get_token_to_index_vocabulary(namespace=namespace) == tokenizer.encoder

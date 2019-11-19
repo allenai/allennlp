@@ -84,6 +84,10 @@ class NextTokenLmReader(DatasetReader):
             tokens = self._tokenizer.tokenize(sentence)
         input_field = TextField(tokens, self._token_indexers)
         fields: Dict[str, Field] = {"tokens": input_field}
+        # TODO: if we index word that was not split into wordpieces with
+        # PretrainedTransformerTokenizer we will get OOV token ID...
+        # Until this is handeled, let's use first wordpiece id for each token since tokens should contain text_ids
+        # to be indexed with PretrainedTokenIndexer. It also requeires hack to avoid adding special tokens...
         if target:
             wordpiece = self._targets_tokenizer.tokenize(target)[0]
             target_token = Token(text=target, text_id=wordpiece.text_id, type_id=wordpiece.type_id)

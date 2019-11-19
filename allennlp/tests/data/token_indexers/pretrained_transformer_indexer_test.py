@@ -76,3 +76,34 @@ class TestPretrainedTransformerIndexer(AllenNlpTestCase):
         vocab = Vocabulary()
         indexed = indexer.tokens_to_indices(allennlp_tokens, vocab, "key")
         assert indexed["key"] == expected_ids
+
+    def test_transformers_vocab_sizes(self):
+        def check_vocab_size(model_name: str):
+            namespace = "tags"
+            tokenizer = AutoTokenizer.from_pretrained(model_name)
+            allennlp_tokenizer = PretrainedTransformerTokenizer(model_name)
+            indexer = PretrainedTransformerIndexer(model_name=model_name, namespace=namespace)
+            allennlp_tokens = allennlp_tokenizer.tokenize("AllenNLP is great!")
+            vocab = Vocabulary()
+            indexed = indexer.tokens_to_indices(
+                allennlp_tokens, vocab, "key"
+            )  # here we copy entire transformers vocab
+            del indexed
+            assert vocab.get_vocab_size(namespace=namespace) == tokenizer.vocab_size
+
+        check_vocab_size("roberta-base")
+        check_vocab_size("bert-base-cased")
+        check_vocab_size("xlm-mlm-ende-1024")
+
+    def test_transformers_vocabs_added_correctly(self):
+        namespace, model_name = "tags", "roberta-base"
+        tokenizer = AutoTokenizer.from_pretrained(model_name)
+        allennlp_tokenizer = PretrainedTransformerTokenizer(model_name)
+        indexer = PretrainedTransformerIndexer(model_name=model_name, namespace=namespace)
+        allennlp_tokens = allennlp_tokenizer.tokenize("AllenNLP is great!")
+        vocab = Vocabulary()
+        indexed = indexer.tokens_to_indices(
+            allennlp_tokens, vocab, "key"
+        )  # here we copy entire transformers vocab
+        del indexed
+        assert vocab.get_token_to_index_vocabulary(namespace=namespace) == tokenizer.encoder
