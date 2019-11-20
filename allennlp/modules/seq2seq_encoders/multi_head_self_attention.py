@@ -69,7 +69,7 @@ class MultiHeadSelfAttention(Seq2SeqEncoder):
 
         self._combined_projection = Linear(input_dim, 2 * attention_dim + values_dim)
 
-        self._scale = (input_dim // num_heads) ** 0.5
+        self._scale = (attention_dim // num_heads) ** 0.5
         self._output_projection = Linear(values_dim, self._output_dim)
         self._attention_dropout = Dropout(attention_dropout_prob)
 
