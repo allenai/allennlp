@@ -50,7 +50,6 @@ class SniffTest(AllenNlpTestCase):
             "tomorrow",
             "!",
         ]
-
         assert result["verbs"] == [
             {
                 "verb": "liked",
@@ -96,6 +95,33 @@ class SniffTest(AllenNlpTestCase):
                     "O",
                     "O",
                     "O",
+                    "O",
+                    "O",
+                    "O",
+                    "O",
+                    "O",
+                    "O",
+                    "O",
+                    "O",
+                ],
+            },
+            {
+                "verb": "will",
+                "description": "If you liked the music we were playing last night , you [V: will] absolutely love what we 're playing tomorrow !",
+                "tags": [
+                    "O",
+                    "O",
+                    "O",
+                    "O",
+                    "O",
+                    "O",
+                    "O",
+                    "O",
+                    "O",
+                    "O",
+                    "O",
+                    "O",
+                    "B-V",
                     "O",
                     "O",
                     "O",
@@ -301,7 +327,7 @@ class SniffTest(AllenNlpTestCase):
         ]
         assert (
             result["trees"]
-            == "(S (S (NP (NNP Pierre) (NNP Vinken)) (VP (VBD died) (S (VP (VBN aged) (NP (CD 81)))))) (: ;) (S (VP (VBD immortalised) (S (ADJP (JJ aged) (CD 61))))) (. .))"
+            == "(S (NP (NNP Pierre) (NNP Vinken)) (VP (VP (VBD died) (NP (JJ aged) (CD 81))) (, ;) (VP (VBN immortalised) (S (ADJP (JJ aged) (CD 61))))) (. .))"
         )
 
     def test_dependency_parsing(self):
