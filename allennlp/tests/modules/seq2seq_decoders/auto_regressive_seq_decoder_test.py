@@ -105,6 +105,9 @@ class TestAutoRegressiveSeqDecoder(AllenNlpTestCase):
         assert predicted_tokens == tokens_ground_truth
 
     def test_auto_regressive_seq_decoder_tensor_and_token_based_metric(self):
+        # set all seeds to a fixed value (torch, numpy, etc.).
+        # this enable a deterministic behavior of the `auto_regressive_seq_decoder`
+        # below (i.e., parameter initalization and `encoded_state = torch.randn(..)`)
         prepare_environment(Params({}))
 
         batch_size, time_steps, decoder_inout_dim = 2, 3, 4
