@@ -52,9 +52,12 @@ class TrainerBase(Registrable):
             )
 
         if isinstance(cuda_device, list):
-            assert (
-                not distributed
-            )  # For distributed training, every trainer worker is only assigned with a single GPU
+            # For distributed training, every trainer worker is only assigned with a single GPU
+            if distributed:
+                raise ConfigurationError(
+                    "Distributed worker can only be assigned a single `cuda_device`."
+                )
+
             self._multiple_gpu = True
             self._cuda_devices = cuda_device
         else:
