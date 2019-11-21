@@ -561,6 +561,12 @@ class Trainer(TrainerBase):
                 with torch.no_grad():
                     # We have a validation set, so compute all the metrics on it.
                     val_loss, num_batches = self._validation_loss()
+
+                    # It is safe again to wait till the validation is done. This is
+                    # important to get the metrics right.
+                    if self._distributed:
+                        dist.barrier()
+
                     val_metrics = training_util.get_metrics(
                         self.model,
                         val_loss,
