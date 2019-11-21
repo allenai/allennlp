@@ -62,7 +62,6 @@ from allennlp.common.util import (
     prepare_global_logging,
     dump_metrics,
     import_submodules,
-    is_master
 )
 from allennlp.models.archival import archive_model, CONFIG_NAME
 from allennlp.models.model import Model, _DEFAULT_WEIGHTS
