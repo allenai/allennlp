@@ -1,31 +1,33 @@
+import datetime
 import logging
 import math
 import os
 import time
-import datetime
 import traceback
 from typing import Dict, Optional, List, Tuple, Union, Iterable, Any
 
 import torch
+import torch.distributed as dist
 import torch.optim.lr_scheduler
+from torch.nn.parallel import DistributedDataParallel
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError, parse_cuda_device
-from allennlp.common.util import dump_metrics, gpu_memory_mb, peak_memory_mb, lazy_groups_of
 from allennlp.common.tqdm import Tqdm
+from allennlp.common.util import dump_metrics, gpu_memory_mb, peak_memory_mb, lazy_groups_of
 from allennlp.data.instance import Instance
 from allennlp.data.iterators.data_iterator import DataIterator, TensorDict
 from allennlp.models.model import Model
 from allennlp.nn import util as nn_util
+from allennlp.training import util as training_util
 from allennlp.training.checkpointer import Checkpointer
 from allennlp.training.learning_rate_schedulers import LearningRateScheduler
-from allennlp.training.momentum_schedulers import MomentumScheduler
 from allennlp.training.metric_tracker import MetricTracker
+from allennlp.training.momentum_schedulers import MomentumScheduler
+from allennlp.training.moving_average import MovingAverage
 from allennlp.training.optimizers import Optimizer
 from allennlp.training.tensorboard_writer import TensorboardWriter
 from allennlp.training.trainer_base import TrainerBase
-from allennlp.training import util as training_util
-from allennlp.training.moving_average import MovingAverage
 
 logger = logging.getLogger(__name__)
 
@@ -265,6 +267,18 @@ class Trainer(TrainerBase):
         if histogram_interval is not None:
             self._tensorboard.enable_activation_logging(self.model)
 
+        # Using `DistributedDataParallel`(ddp) brings in a quirk wrt AllenNLP's `Model` interface and its
+        # usage. A `Model` object is wrapped by `ddp`, but assigning the wrapped model to `self.model`
+        # will break the usages such as `Model.get_regularization_penalty`, `Model.get_metrics`, etc.
+        #
+        # Hence a reference to Pytorch's object is maintained in the case of distributed training and in the
+        # normal case, reference to `Model` is retained. This reference is only used in
+        # these places: `model.__call__`, `model.train` and `model.eval`.
+        if self._distributed:
+            self._pytorch_model = DistributedDataParallel(self.model, device_ids=self._cuda_devices)
+        else:
+            self._pytorch_model = self.model
+
     def rescale_gradients(self) -> Optional[float]:
         return training_util.rescale_gradients(self.model, self._grad_norm)
 
@@ -279,7 +293,7 @@ class Trainer(TrainerBase):
             assert len(batch_group) == 1
             batch = batch_group[0]
             batch = nn_util.move_to_device(batch, self._cuda_devices[0])
-            output_dict = self.model(**batch)
+            output_dict = self._pytorch_model(**batch)
 
         try:
             loss = output_dict["loss"]
@@ -309,7 +323,7 @@ class Trainer(TrainerBase):
 
         train_loss = 0.0
         # Set the model to "train" mode.
-        self.model.train()
+        self._pytorch_model.train()
 
         num_gpus = len(self._cuda_devices)
 
@@ -327,7 +341,14 @@ class Trainer(TrainerBase):
         histogram_parameters = set(self.model.get_parameters_for_histogram_tensorboard_logging())
 
         logger.info("Training")
-        train_generator_tqdm = Tqdm.tqdm(train_generator, total=num_training_batches)
+
+        # Having multiple tqdm bars in case of distributed training will be a mess. Hence only the master's
+        # progress is shown
+        if self._master:
+            train_generator_tqdm = Tqdm.tqdm(train_generator, total=num_training_batches)
+        else:
+            train_generator_tqdm = train_generator
+
         cumulative_batch_size = 0
         for batch_group in train_generator_tqdm:
             batches_this_epoch += 1
@@ -354,7 +375,7 @@ class Trainer(TrainerBase):
             if self._momentum_scheduler:
                 self._momentum_scheduler.step_batch(batch_num_total)
 
-            if self._tensorboard.should_log_histograms_this_batch():
+            if self._tensorboard.should_log_histograms_this_batch() and self._master:
                 # get the magnitude of parameter updates for logging
                 # We need a copy of current parameters to compute magnitude of updates,
                 # and copy them to CPU so large models won't go OOM on the GPU.
@@ -378,20 +399,28 @@ class Trainer(TrainerBase):
                 self._moving_average.apply(batch_num_total)
 
             # Update the description with the latest metrics
-            metrics = training_util.get_metrics(self.model, train_loss, batches_this_epoch)
-            description = training_util.description_from_metrics(metrics)
+            metrics = training_util.get_metrics(
+                self.model,
+                train_loss,
+                batches_this_epoch,
+                world_size=self._world_size,
+                cuda_device=self._cuda_devices,
+            )
 
-            train_generator_tqdm.set_description(description, refresh=False)
+            # Updating tqdm only for the master as the trainers wouldn't have one
+            if self._master:
+                description = training_util.description_from_metrics(metrics)
+                train_generator_tqdm.set_description(description, refresh=False)
 
-            # Log parameter values to Tensorboard
-            if self._tensorboard.should_log_this_batch():
+            # Log parameter values to Tensorboard (only from the master)
+            if self._tensorboard.should_log_this_batch() and self._master:
                 self._tensorboard.log_parameter_and_gradient_statistics(self.model, batch_grad_norm)
                 self._tensorboard.log_learning_rates(self.model, self.optimizer)
 
                 self._tensorboard.add_train_scalar("loss/loss_train", metrics["loss"])
                 self._tensorboard.log_metrics({"epoch_metrics/" + k: v for k, v in metrics.items()})
 
-            if self._tensorboard.should_log_histograms_this_batch():
+            if self._tensorboard.should_log_histograms_this_batch() and self._master:
                 self._tensorboard.log_histograms(self.model, histogram_parameters)
 
             if self._log_batch_size_period:
@@ -404,14 +433,23 @@ class Trainer(TrainerBase):
                     self._tensorboard.add_train_scalar("mean_batch_size", average)
 
             # Save model if needed.
-            if self._model_save_interval is not None and (
-                time.time() - last_save_time > self._model_save_interval
+            if (
+                self._model_save_interval is not None
+                and (time.time() - last_save_time > self._model_save_interval)
+                and self._master
             ):
                 last_save_time = time.time()
                 self._save_checkpoint(
                     "{0}.{1}".format(epoch, training_util.time_to_str(int(last_save_time)))
                 )
-        metrics = training_util.get_metrics(self.model, train_loss, batches_this_epoch, reset=True)
+        metrics = training_util.get_metrics(
+            self.model,
+            train_loss,
+            batches_this_epoch,
+            reset=True,
+            world_size=self._world_size,
+            cuda_device=self._cuda_devices,
+        )
         metrics["cpu_memory_MB"] = peak_cpu_usage
         for (gpu_num, memory) in gpu_usage:
             metrics["gpu_" + str(gpu_num) + "_memory_MB"] = memory
@@ -423,7 +461,7 @@ class Trainer(TrainerBase):
         """
         logger.info("Validating")
 
-        self.model.eval()
+        self._pytorch_model.eval()
 
         # Replace parameter values with the shadow values from the moving averages.
         if self._moving_average is not None:
@@ -457,7 +495,13 @@ class Trainer(TrainerBase):
                 val_loss += loss.detach().cpu().numpy()
 
             # Update the description with the latest metrics
-            val_metrics = training_util.get_metrics(self.model, val_loss, batches_this_epoch)
+            val_metrics = training_util.get_metrics(
+                self.model,
+                val_loss,
+                batches_this_epoch,
+                world_size=self._world_size,
+                cuda_device=self._cuda_devices,
+            )
             description = training_util.description_from_metrics(val_metrics)
             val_generator_tqdm.set_description(description, refresh=False)
 
@@ -509,12 +553,27 @@ class Trainer(TrainerBase):
                 if key.startswith("gpu_"):
                     metrics["peak_" + key] = max(metrics.get("peak_" + key, 0), value)
 
+            # Let all workers finish training before going into the validation mode
+            if self._distributed:
+                dist.barrier()
+
             if self._validation_data is not None:
                 with torch.no_grad():
                     # We have a validation set, so compute all the metrics on it.
                     val_loss, num_batches = self._validation_loss()
+
+                    # It is safe again to wait till the validation is done. This is
+                    # important to get the metrics right.
+                    if self._distributed:
+                        dist.barrier()
+
                     val_metrics = training_util.get_metrics(
-                        self.model, val_loss, num_batches, reset=True
+                        self.model,
+                        val_loss,
+                        num_batches,
+                        reset=True,
+                        world_size=self._world_size,
+                        cuda_device=self._cuda_devices,
                     )
 
                     # Check validation metric for early stopping
@@ -525,9 +584,10 @@ class Trainer(TrainerBase):
                         logger.info("Ran out of patience.  Stopping training.")
                         break
 
-            self._tensorboard.log_metrics(
-                train_metrics, val_metrics=val_metrics, log_to_console=True, epoch=epoch + 1
-            )  # +1 because tensorboard doesn't like 0
+            if self._master:
+                self._tensorboard.log_metrics(
+                    train_metrics, val_metrics=val_metrics, log_to_console=True, epoch=epoch + 1
+                )  # +1 because tensorboard doesn't like 0
 
             # Create overall metrics dict
             training_elapsed_time = time.time() - training_start_time
@@ -550,7 +610,7 @@ class Trainer(TrainerBase):
 
                 self._metric_tracker.best_epoch_metrics = val_metrics
 
-            if self._serialization_dir:
+            if self._serialization_dir and self._master:
                 dump_metrics(
                     os.path.join(self._serialization_dir, f"metrics_epoch_{epoch}.json"), metrics
                 )
@@ -562,7 +622,12 @@ class Trainer(TrainerBase):
             if self._momentum_scheduler:
                 self._momentum_scheduler.step(this_epoch_val_metric, epoch)
 
-            self._save_checkpoint(epoch)
+            if self._master:
+                self._save_checkpoint(epoch)
+
+            # Wait for the master to finish saving the checkpoint
+            if self._distributed:
+                dist.barrier()
 
             epoch_elapsed_time = time.time() - epoch_start_time
             logger.info("Epoch duration: %s", datetime.timedelta(seconds=epoch_elapsed_time))
@@ -697,6 +762,7 @@ class Trainer(TrainerBase):
         validation_data: Optional[Iterable[Instance]],
         params: Params,
         validation_iterator: DataIterator = None,
+        local_rank: int = 0,
     ) -> "Trainer":
 
         patience = params.pop_int("patience", None)
@@ -767,11 +833,6 @@ class Trainer(TrainerBase):
         distributed = params.pop_bool("distributed", False)
         world_size = params.pop_int("world_size", 1)
 
-        if distributed:
-            rank = model_device
-        else:
-            rank = 0
-
         params.assert_empty(cls.__name__)
         return cls(
             model,
@@ -799,6 +860,6 @@ class Trainer(TrainerBase):
             log_batch_size_period=log_batch_size_period,
             moving_average=moving_average,
             distributed=distributed,
-            rank=rank,
+            rank=local_rank,
             world_size=world_size,
         )

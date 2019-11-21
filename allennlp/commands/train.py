@@ -9,7 +9,7 @@ which to write the results.
     usage: allennlp train [-h] -s SERIALIZATION_DIR [-r] [-f] [-o OVERRIDES]
                           [--file-friendly-logging]
                           [--cache-directory CACHE_DIRECTORY]
-                          [--cache-prefix CACHE_PREFIX]
+                          [--cache-prefix CACHE_PREFIX] [--node-rank NODE_RANK]
                           [--include-package INCLUDE_PACKAGE]
                           param_path
 
@@ -37,6 +37,9 @@ which to write the results.
                             Prefix to use for data caching, giving current
                             parameter settings a name in the cache, instead of
                             computing a hash
+      --node-rank NODE_RANK
+                            Rank of this node in the distributed setup (default =
+                            0)
       --include-package INCLUDE_PACKAGE
                             additional packages to include
 """
@@ -48,10 +51,12 @@ from typing import Optional
 
 import torch
 import torch.distributed as dist
+import torch.multiprocessing as mp
 
+from allennlp.commands.make_vocab import make_vocab_from_params
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common import Params
-from allennlp.common.checks import check_for_gpu
+from allennlp.common.checks import ConfigurationError, check_for_gpu, parse_cuda_device
 from allennlp.common.util import (
     prepare_environment,
     prepare_global_logging,
@@ -133,6 +138,10 @@ class Train(Subcommand):
             "settings a name in the cache, instead of computing a hash",
         )
 
+        subparser.add_argument(
+            "--node-rank", type=int, default=0, help="Rank of this node in the distributed setup"
+        )
+
         subparser.set_defaults(func=train_model_from_args)
 
         return subparser
@@ -151,6 +160,7 @@ def train_model_from_args(args: argparse.Namespace):
         args.force,
         args.cache_directory,
         args.cache_prefix,
+        args.node_rank,
         args.include_package,
     )
 
@@ -164,6 +174,7 @@ def train_model_from_file(
     force: bool = False,
     cache_directory: str = None,
     cache_prefix: str = None,
+    node_rank: int = 0,
     include_package: str = None,
 ) -> Model:
     """
@@ -191,6 +202,8 @@ def train_model_from_file(
         For caching data pre-processing.  See :func:`allennlp.training.util.datasets_from_params`.
     cache_prefix : ``str``, optional
         For caching data pre-processing.  See :func:`allennlp.training.util.datasets_from_params`.
+    node_rank : ``int``, optional
+        Rank of the current node in distributed training
     include_package: ``str``, optional
         In distributed mode, extra packages mentioned will be imported in trainer workers.
     """
@@ -204,6 +217,7 @@ def train_model_from_file(
         force,
         cache_directory,
         cache_prefix,
+        node_rank,
         include_package,
     )
 
@@ -216,6 +230,7 @@ def train_model(
     force: bool = False,
     cache_directory: str = None,
     cache_prefix: str = None,
+    node_rank: int = 0,
     include_package: str = None,
 ) -> Model:
     """
@@ -241,6 +256,8 @@ def train_model(
         For caching data pre-processing.  See :func:`allennlp.training.util.datasets_from_params`.
     cache_prefix : ``str``, optional
         For caching data pre-processing.  See :func:`allennlp.training.util.datasets_from_params`.
+    node_rank: ``int``, optional
+        Rank of the current node in distributed training
     include_package: ``str``, optional
         In distributed mode, extra packages mentioned will be imported in trainer workers.
 
@@ -258,7 +275,7 @@ def train_model(
     distributed = params.params.get("trainer").get("distributed", False)
     if not distributed:
         model = _train_worker(
-            rank=0,
+            process_rank=0,
             params=params,
             serialization_dir=serialization_dir,
             file_friendly_logging=file_friendly_logging,
@@ -266,17 +283,68 @@ def train_model(
             cache_directory=cache_directory,
             cache_prefix=cache_prefix,
             include_package=include_package,
-            world_size=1,
         )
-
         archive_model(serialization_dir, files_to_archive=params.files_to_archive)
         return model
     else:
-        raise NotImplementedError
+        device_id = parse_cuda_device(cuda_device)
+
+        if not isinstance(device_id, list):
+            raise ConfigurationError(
+                "Multiple cuda devices need to be configured to run distributed training."
+            )
+
+        master_addr = params.params.get("trainer").pop("master_address", "127.0.0.1")
+        master_port = params.params.get("trainer").pop("master_port", 29500)
+        num_procs = len(device_id)
+        num_nodes = params.params.get("trainer").pop("num_nodes", 1)
+        world_size = num_nodes * num_procs
+
+        os.environ["MASTER_ADDR"] = master_addr
+        os.environ["MASTER_PORT"] = str(master_port)
+        os.environ["WORLD_SIZE"] = str(world_size)
+
+        logging.info(
+            f"Switching to distributed training mode since multiple GPUs are configured"
+            f"Master is at: {master_addr}:{master_port} | Rank of this node: {node_rank} | "
+            f"Number of workers in this node: {num_procs} | Number of nodes: {num_nodes} | "
+            f"World size: {world_size}"
+        )
+
+        # Creating `Vocabulary` objects from workers could be problematic since the data iterators
+        # in each worker will yield only `rank` specific instances. Hence it is safe to construct
+        # the vocabulary and write it to disk before initializing the distributed context. The workers
+        # will load the vocabulary from the path specified.
+        make_vocab_from_params(params.duplicate(), serialization_dir)
+        params["vocabulary"] = {
+            "directory_path": os.path.join(serialization_dir, "vocabulary"),
+            "extend": False,  # vocab extension would have been done above
+        }
+
+        mp.spawn(
+            _train_worker,
+            args=(
+                params.duplicate(),
+                serialization_dir,
+                file_friendly_logging,
+                recover,
+                cache_directory,
+                cache_prefix,
+                include_package,
+                node_rank,
+                num_procs,
+                master_addr,
+                master_port,
+                world_size,
+            ),
+            nprocs=num_procs,
+        )
+        model = Model.load(params, serialization_dir)
+        return model
 
 
 def _train_worker(
-    rank: int,
+    process_rank: int,
     params: Params,
     serialization_dir: str,
     file_friendly_logging: bool = False,
@@ -284,6 +352,10 @@ def _train_worker(
     cache_directory: str = None,
     cache_prefix: str = None,
     include_package: str = None,
+    node_rank: int = 0,
+    num_procs_per_node: int = 0,
+    master_addr: str = "127.0.0.1",
+    master_port: int = 29500,
     world_size: int = 1,
 ) -> Optional[Model]:
     """
@@ -293,7 +365,7 @@ def _train_worker(
 
     Parameters
     ----------
-    rank : ``int``
+    process_rank : ``int``
         The process index that is initialized using the GPU device id.
     params : ``Params``
         A parameter object specifying an AllenNLP Experiment.
@@ -314,6 +386,8 @@ def _train_worker(
         In distributed mode, since this function would have been spawned as a separate process,
         the extra imports need to be done again. NOTE: This does not have any effect in single
         GPU training.
+    node_rank: ``int``, optional
+        Rank of the node
     world_size: ``int``, optional
         The number of processes involved in distributed training.
 
@@ -322,11 +396,15 @@ def _train_worker(
     best_model: ``Model``
         The model with the best epoch weights.
     """
-    prepare_global_logging(serialization_dir, file_friendly_logging)
+    prepare_global_logging(
+        serialization_dir, file_friendly_logging, rank=process_rank, world_size=world_size
+    )
     prepare_environment(params)
 
     distributed = world_size > 1
-    master = rank == 0
+
+    # not using `allennlp.common.util.is_master` as the process group is yet to be initialized
+    master = process_rank == 0
 
     evaluate_on_test = params.pop_bool("evaluate_on_test", False)
 
@@ -336,16 +414,35 @@ def _train_worker(
         for package_name in include_package:
             import_submodules(package_name)
 
-        torch.cuda.set_device(rank)
-        dist.init_process_group(backend="nccl", world_size=world_size, rank=rank)
+        # The Unique identifier of the worker process among all the processes in the
+        # distributed training group is computed here. This is used while initializing
+        # the process group using `init_process_group`
+        global_rank = node_rank * num_procs_per_node + process_rank
+
+        cuda_device = params.params.get("trainer").get("cuda_device", -1)
+        device_list = parse_cuda_device(cuda_device)
+
+        # In distributed training, the configured device is always going to be a list.
+        # The corresponding gpu id for the particular worker is obtained by picking the id
+        # from the device list with the rank as index
+        gpu_id = device_list[process_rank]  # type: ignore
+
+        torch.cuda.set_device(gpu_id)
+        dist.init_process_group(
+            backend="nccl",
+            init_method=f"tcp://{master_addr}:{master_port}",
+            world_size=world_size,
+            rank=global_rank,
+        )
         logging.info(
-            f"Process group of world size {world_size} initialized for distributed training in worker {rank}"
+            f"Process group of world size {world_size} initialized "
+            f"for distributed training in worker {global_rank}"
         )
 
         # Till now, "cuda_device" will be a list of ids as configured originally
         # in params. But a worker trainer needs to only know about its specific
         # GPU id.
-        params["trainer"]["cuda_device"] = rank
+        params["trainer"]["cuda_device"] = gpu_id
         params["trainer"]["world_size"] = world_size
 
     trainer_type = params.get("trainer", {}).get("type", "default")
@@ -385,6 +482,9 @@ def _train_worker(
     params.assert_empty("base train command")
 
     try:
+        if distributed:  # let the setup get ready for all the workers
+            dist.barrier()
+
         metrics = trainer.train()
     except KeyboardInterrupt:
         # if we have completed an epoch, try to create a model archive.

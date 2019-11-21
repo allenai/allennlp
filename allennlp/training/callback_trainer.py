@@ -26,6 +26,8 @@ from allennlp.training.optimizers import Optimizer
 from allennlp.training.trainer_pieces import TrainerPieces
 from allennlp.training.trainer_base import TrainerBase
 
+from torch.nn.parallel import DistributedDataParallel
+
 logger = logging.getLogger(__name__)
 
 
@@ -146,6 +148,18 @@ class CallbackTrainer(TrainerBase):
         # For capturing errors that occur during the train loop.
         self.exception: Optional[Exception] = None
 
+        # Using `DistributedDataParallel`(ddp) brings in a quirk wrt AllenNLP's `Model` interface and its
+        # usage. A `Model` object is wrapped by `ddp`, but assigning the wrapped model to `self.model`
+        # will break the usages such as `Model.get_regularization_penalty`, `Model.get_metrics`, etc.
+        #
+        # Hence a reference to Pytorch's object is maintained in the case of distributed training and in the
+        # normal case, reference to `Model` is retained. This reference is only used in
+        # these places: `model.__call__`, `model.train` and `model.eval`.
+        if self._distributed:
+            self._pytorch_model = DistributedDataParallel(self.model, device_ids=[self._rank])
+        else:
+            self._pytorch_model = self.model
+
     def generate_training_batches(self):
         """
         Generates one epoch worth of training data. Stores it in trainer instance variables
@@ -173,7 +187,7 @@ class CallbackTrainer(TrainerBase):
             assert len(batch_group) == 1
             batch = batch_group[0]
             batch = nn_util.move_to_device(batch, self._cuda_devices[0])
-            output_dict = self.model(**batch)
+            output_dict = self._pytorch_model(**batch)
 
         try:
             loss = output_dict["loss"]
@@ -232,7 +246,7 @@ class CallbackTrainer(TrainerBase):
 
         self.train_loss = 0.0
         # Set the model to "train" mode.
-        self.model.train()
+        self._pytorch_model.train()
 
         self.last_log = time.time()
 
