@@ -7,7 +7,11 @@ import torch.distributed as dist
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
-from allennlp.common.util import get_frozen_and_tunable_parameter_names
+from allennlp.common.util import (
+    get_frozen_and_tunable_parameter_names,
+    is_distributed,
+    is_master
+)
 from allennlp.data.instance import Instance
 from allennlp.data.iterators.data_iterator import DataIterator
 from allennlp.data.vocabulary import Vocabulary
@@ -81,7 +85,7 @@ class TrainerPieces(NamedTuple):
 
         # Initializing the model can have side effect of expanding the vocabulary
         # Save the vocab only in the master
-        if not dist.is_initialized() or dist.get_rank() == 0:
+        if not is_distributed() or is_master():
             vocab.save_to_files(os.path.join(serialization_dir, "vocabulary"))
 
         iterator = DataIterator.from_params(params.pop("iterator"))

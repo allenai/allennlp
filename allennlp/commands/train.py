@@ -62,6 +62,7 @@ from allennlp.common.util import (
     prepare_global_logging,
     dump_metrics,
     import_submodules,
+    is_master
 )
 from allennlp.models.archival import archive_model, CONFIG_NAME
 from allennlp.models.model import Model, _DEFAULT_WEIGHTS
@@ -402,6 +403,8 @@ def _train_worker(
     prepare_environment(params)
 
     distributed = world_size > 1
+
+    # not using `allennlp.common.util.is_master` as the process group is yet to be initialized
     master = process_rank == 0
 
     evaluate_on_test = params.pop_bool("evaluate_on_test", False)

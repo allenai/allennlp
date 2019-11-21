@@ -9,6 +9,7 @@ import pkgutil
 import random
 import subprocess
 import sys
+import torch.distributed as dist
 from itertools import zip_longest, islice
 from logging import Filter
 from typing import Any, Callable, Dict, List, Tuple, TypeVar, Iterable, Iterator
@@ -503,3 +504,44 @@ def dump_metrics(file_path: str, metrics: Dict[str, Any], log: bool = False) -> 
 
 def flatten_filename(file_path: str) -> str:
     return file_path.replace("/", "_SLASH_")
+
+
+def is_master(rank: int = None, world_size: int = None) -> bool:
+    """
+    Checks if the process is a "master" in a distributed process group. If a
+    process group is not initialized, this returns `True`.
+
+    Parameters
+    ----------
+    rank : int ( default = None )
+        Global rank of the process if in a distributed process group. If not
+        given, rank is obtained using `torch.distributed.get_rank()`
+    world_size : int ( default = None )
+        Number of processes in the distributed group. If not
+        given, this is obtained using `torch.distributed.get_world_size()`
+    """
+    distributed = dist.is_initialized()
+
+    # In non-distributed case, a "master" process doesn't make any
+    # sense. So instead of raising an error, returning True would
+    # make things less painful
+    if not distributed:
+        return True
+
+    if rank is None:
+        rank = dist.get_rank()
+
+    if world_size is None:
+        world_size = dist.get_world_size()
+
+    # rank == 0 would do in a single-node multi-GPU setup. However,
+    # in a multi-node case, every node has a logical master and hence
+    # the mod(%) op.
+    return rank % world_size == 0
+
+
+def is_distributed() -> bool:
+    """
+    Checks if the distributed process group has been initialized
+    """
+    return dist.is_initialized()

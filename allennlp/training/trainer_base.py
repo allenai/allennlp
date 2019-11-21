@@ -12,6 +12,7 @@ import logging
 from typing import Dict, List, Union, Any
 
 from allennlp.common import Params, Registrable
+from allennlp.common.util import is_master
 from allennlp.common.checks import ConfigurationError, check_for_gpu
 from allennlp.models.model import Model
 
@@ -66,7 +67,7 @@ class TrainerBase(Registrable):
 
         self._distributed = distributed
         self._rank = rank
-        self._master = self._rank == 0
+        self._master = is_master()
         self._world_size = world_size
 
     def _move_to_gpu(self, model: Model) -> Model:
