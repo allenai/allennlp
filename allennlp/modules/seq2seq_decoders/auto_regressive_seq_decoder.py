@@ -406,14 +406,13 @@ class AutoRegressiveSeqDecoder(SeqDecoder):
         state.update(decoder_init_state)
 
         if target_tokens:
-            if not self.training:
-                state_beam_search = deepcopy(state)
-            output_dict = self._forward_loss(state, target_tokens)
+            state_forward_loss = state if self.training else deepcopy(state)
+            output_dict = self._forward_loss(state_forward_loss, target_tokens)
         else:
             output_dict = {}
 
         if not self.training:
-            predictions = self._forward_beam_search(state_beam_search)
+            predictions = self._forward_beam_search(state)
             output_dict.update(predictions)
 
             if target_tokens:
