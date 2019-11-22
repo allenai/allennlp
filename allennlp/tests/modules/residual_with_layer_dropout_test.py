@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name
 from numpy.testing import assert_almost_equal
 import torch
 
@@ -18,7 +17,9 @@ class TestResidualWithLayerDropout(AllenNlpTestCase):
         assert result.shape == (2, 2)
         assert_almost_equal(result, [[2, 1], [-3, -2]])
 
-        result = residual_with_layer_dropout(layer_input_tensor, layer_output_tensor, 1, 1).data.numpy()
+        result = residual_with_layer_dropout(
+            layer_input_tensor, layer_output_tensor, 1, 1
+        ).data.numpy()
         assert result.shape == (2, 2)
         assert_almost_equal(result, [[2, 1], [-3, -2]])
 

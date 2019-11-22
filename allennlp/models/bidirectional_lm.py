@@ -1,13 +1,15 @@
+from typing import Optional
+
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.models.language_model import LanguageModel
 from allennlp.models.model import Model
 from allennlp.modules.text_field_embedders import TextFieldEmbedder
 from allennlp.modules.seq2seq_encoders import Seq2SeqEncoder
-from allennlp.nn import InitializerApplicator
+from allennlp.nn import InitializerApplicator, RegularizerApplicator
 
 
-@Model.register('bidirectional-language-model')
-@Model.register('bidirectional_language_model')
+@Model.register("bidirectional-language-model")
+@Model.register("bidirectional_language_model")
 class BidirectionalLanguageModel(LanguageModel):
     """
     The ``BidirectionalLanguageModel`` applies a bidirectional "contextualizing"
@@ -37,20 +39,29 @@ class BidirectionalLanguageModel(LanguageModel):
         the full ``_SoftmaxLoss`` defined above.
     sparse_embeddings: ``bool``, optional (default: False)
         Passed on to ``SampledSoftmaxLoss`` if True.
+    regularizer : ``RegularizerApplicator``, optional (default=``None``)
+        If provided, will be used to calculate the regularization penalty during training.
     """
-    def __init__(self,
-                 vocab: Vocabulary,
-                 text_field_embedder: TextFieldEmbedder,
-                 contextualizer: Seq2SeqEncoder,
-                 dropout: float = None,
-                 num_samples: int = None,
-                 sparse_embeddings: bool = False,
-                 initializer: InitializerApplicator = None) -> None:
-        super().__init__(vocab=vocab,
-                         text_field_embedder=text_field_embedder,
-                         contextualizer=contextualizer,
-                         dropout=dropout,
-                         num_samples=num_samples,
-                         sparse_embeddings=sparse_embeddings,
-                         bidirectional=True,
-                         initializer=initializer)
+
+    def __init__(
+        self,
+        vocab: Vocabulary,
+        text_field_embedder: TextFieldEmbedder,
+        contextualizer: Seq2SeqEncoder,
+        dropout: float = None,
+        num_samples: int = None,
+        sparse_embeddings: bool = False,
+        initializer: InitializerApplicator = None,
+        regularizer: Optional[RegularizerApplicator] = None,
+    ) -> None:
+        super().__init__(
+            vocab=vocab,
+            text_field_embedder=text_field_embedder,
+            contextualizer=contextualizer,
+            dropout=dropout,
+            num_samples=num_samples,
+            sparse_embeddings=sparse_embeddings,
+            bidirectional=True,
+            initializer=initializer,
+            regularizer=regularizer,
+        )

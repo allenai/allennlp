@@ -1,5 +1,5 @@
 # from https://pytorch.org/tutorials/beginner/nlp/sequence_models_tutorial.html
-# pylint: disable=invalid-name,arguments-differ,redefined-outer-name
+
 from typing import Iterator, List, Dict
 import shutil
 import tempfile
@@ -66,7 +66,7 @@ class LstmTagger(Model):
 
     def forward(self,
                 sentence: Dict[str, torch.Tensor],
-                labels: torch.Tensor = None) -> torch.Tensor:
+                labels: torch.Tensor = None) -> Dict[str, torch.Tensor]:
         mask = get_text_field_mask(sentence)
         embeddings = self.word_embeddings(sentence)
         encoder_out = self.encoder(embeddings, mask)

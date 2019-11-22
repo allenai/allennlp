@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name
 import torch
 import numpy
 
@@ -16,8 +15,9 @@ class TestPassThroughEncoder(AllenNlpTestCase):
         encoder = PassThroughEncoder(input_dim=9)
         tensor = torch.randn([2, 3, 9])
         output = encoder(tensor)
-        numpy.testing.assert_array_almost_equal(tensor.detach().cpu().numpy(),
-                                                output.detach().cpu().numpy())
+        numpy.testing.assert_array_almost_equal(
+            tensor.detach().cpu().numpy(), output.detach().cpu().numpy()
+        )
 
     def test_pass_through_encoder_with_mask(self):
         encoder = PassThroughEncoder(input_dim=9)
@@ -26,5 +26,6 @@ class TestPassThroughEncoder(AllenNlpTestCase):
         output = encoder(tensor, mask)
 
         target = tensor * mask.unsqueeze(dim=-1).float()
-        numpy.testing.assert_array_almost_equal(output.detach().cpu().numpy(),
-                                                target.detach().cpu().numpy())
+        numpy.testing.assert_array_almost_equal(
+            output.detach().cpu().numpy(), target.detach().cpu().numpy()
+        )

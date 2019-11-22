@@ -41,7 +41,7 @@ RUN pip install -r requirements.txt
 COPY scripts/ scripts/
 COPY allennlp/ allennlp/
 COPY pytest.ini pytest.ini
-COPY .pylintrc .pylintrc
+COPY .flake8 .flake8
 COPY tutorials/ tutorials/
 COPY training_config training_config/
 COPY setup.py setup.py
@@ -63,6 +63,9 @@ RUN ./scripts/cache_models.py
 # Optional argument to set an environment variable with the Git SHA
 ARG SOURCE_COMMIT
 ENV ALLENNLP_SOURCE_COMMIT $SOURCE_COMMIT
+
+# Copy wrapper script to allow beaker to run resumable training workloads.
+COPY scripts/ai2_internal/resumable_train.sh /stage/allennlp
 
 LABEL maintainer="allennlp-contact@allenai.org"
 

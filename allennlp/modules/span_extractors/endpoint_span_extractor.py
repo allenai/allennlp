@@ -1,4 +1,3 @@
-
 import torch
 from torch.nn.parameter import Parameter
 from overrides import overrides
@@ -49,13 +48,16 @@ class EndpointSpanExtractor(SpanExtractor):
         want span differences for length 1 spans - if you use inclusive indices, you
         will end up with an ``x - x`` operation for length 1 spans, which is not good.
     """
-    def __init__(self,
-                 input_dim: int,
-                 combination: str = "x,y",
-                 num_width_embeddings: int = None,
-                 span_width_embedding_dim: int = None,
-                 bucket_widths: bool = False,
-                 use_exclusive_start_indices: bool = False) -> None:
+
+    def __init__(
+        self,
+        input_dim: int,
+        combination: str = "x,y",
+        num_width_embeddings: int = None,
+        span_width_embedding_dim: int = None,
+        bucket_widths: bool = False,
+        use_exclusive_start_indices: bool = False,
+    ) -> None:
         super().__init__()
         self._input_dim = input_dim
         self._combination = combination
@@ -69,8 +71,10 @@ class EndpointSpanExtractor(SpanExtractor):
         if num_width_embeddings is not None and span_width_embedding_dim is not None:
             self._span_width_embedding = Embedding(num_width_embeddings, span_width_embedding_dim)
         elif not all([num_width_embeddings is None, span_width_embedding_dim is None]):
-            raise ConfigurationError("To use a span width embedding representation, you must"
-                                     "specify both num_width_buckets and span_width_embedding_dim.")
+            raise ConfigurationError(
+                "To use a span width embedding representation, you must"
+                "specify both num_width_buckets and span_width_embedding_dim."
+            )
         else:
             self._span_width_embedding = None
 
@@ -84,11 +88,13 @@ class EndpointSpanExtractor(SpanExtractor):
         return combined_dim
 
     @overrides
-    def forward(self,
-                sequence_tensor: torch.FloatTensor,
-                span_indices: torch.LongTensor,
-                sequence_mask: torch.LongTensor = None,
-                span_indices_mask: torch.LongTensor = None) -> None:
+    def forward(
+        self,
+        sequence_tensor: torch.FloatTensor,
+        span_indices: torch.LongTensor,
+        sequence_mask: torch.LongTensor = None,
+        span_indices_mask: torch.LongTensor = None,
+    ) -> None:
         # shape (batch_size, num_spans)
         span_starts, span_ends = [index.squeeze(-1) for index in span_indices.split(1, dim=-1)]
 
@@ -116,8 +122,10 @@ class EndpointSpanExtractor(SpanExtractor):
             # We'll check the indices here at runtime, because it's difficult to debug
             # if this goes wrong and it's tricky to get right.
             if (exclusive_span_starts < 0).any():
-                raise ValueError(f"Adjusted span indices must lie inside the the sequence tensor, "
-                                 f"but found: exclusive_span_starts: {exclusive_span_starts}.")
+                raise ValueError(
+                    f"Adjusted span indices must lie inside the the sequence tensor, "
+                    f"but found: exclusive_span_starts: {exclusive_span_starts}."
+                )
 
             start_embeddings = util.batched_index_select(sequence_tensor, exclusive_span_starts)
             end_embeddings = util.batched_index_select(sequence_tensor, span_ends)
@@ -125,15 +133,20 @@ class EndpointSpanExtractor(SpanExtractor):
             # We're using sentinels, so we need to replace all the elements which were
             # outside the dimensions of the sequence_tensor with the start sentinel.
             float_start_sentinel_mask = start_sentinel_mask.float()
-            start_embeddings = start_embeddings * (1 - float_start_sentinel_mask) \
-                                        + float_start_sentinel_mask * self._start_sentinel
+            start_embeddings = (
+                start_embeddings * (1 - float_start_sentinel_mask)
+                + float_start_sentinel_mask * self._start_sentinel
+            )
 
-        combined_tensors = util.combine_tensors(self._combination, [start_embeddings, end_embeddings])
+        combined_tensors = util.combine_tensors(
+            self._combination, [start_embeddings, end_embeddings]
+        )
         if self._span_width_embedding is not None:
             # Embed the span widths and concatenate to the rest of the representations.
             if self._bucket_widths:
-                span_widths = util.bucket_values(span_ends - span_starts,
-                                                 num_total_buckets=self._num_width_embeddings)
+                span_widths = util.bucket_values(
+                    span_ends - span_starts, num_total_buckets=self._num_width_embeddings
+                )
             else:
                 span_widths = span_ends - span_starts
 

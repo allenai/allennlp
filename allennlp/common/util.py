@@ -26,30 +26,32 @@ from spacy.language import Language as SpacyModelType
 
 # This base import is so we can refer to allennlp.data.Token in `sanitize()` without creating
 # circular dependencies.
-import allennlp
 from allennlp.common.checks import log_pytorch_version_info
 from allennlp.common.params import Params
 from allennlp.common.tqdm import Tqdm
 from allennlp.common.tee_logger import TeeLogger
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
-JsonDict = Dict[str, Any]  # pylint: disable=invalid-name
+JsonDict = Dict[str, Any]
 
 # If you want to have start and/or end symbols for any reason in your code, we recommend you use
 # these, to have a common place to import from.  Also, it's important for some edge cases in how
 # data is processed for these symbols to be lowercase, not uppercase (because we have code that
 # will lowercase tokens for you in some circumstances, and we need this symbol to not change in
 # those cases).
-START_SYMBOL = '@start@'
-END_SYMBOL = '@end@'
+START_SYMBOL = "@start@"
+END_SYMBOL = "@end@"
 
 
-def sanitize(x: Any) -> Any:  # pylint: disable=invalid-name,too-many-return-statements
+def sanitize(x: Any) -> Any:
     """
     Sanitize turns PyTorch and Numpy types into basic Python types so they
     can be serialized into JSON.
     """
+    # Import here to avoid circular references
+    from allennlp.data.tokenizers.token import Token
+
     if isinstance(x, (str, float, int, bool)):
         # x is already serializable
         return x
@@ -59,13 +61,16 @@ def sanitize(x: Any) -> Any:  # pylint: disable=invalid-name,too-many-return-sta
     elif isinstance(x, numpy.ndarray):
         # array needs to be converted to a list
         return x.tolist()
-    elif isinstance(x, numpy.number):  # pylint: disable=no-member
+    elif isinstance(x, numpy.number):
         # NumPy numbers need to be converted to Python numbers
         return x.item()
     elif isinstance(x, dict):
         # Dicts need their values sanitized
         return {key: sanitize(value) for key, value in x.items()}
-    elif isinstance(x, (spacy.tokens.Token, allennlp.data.Token)):
+    elif isinstance(x, numpy.bool_):
+        # Numpy bool_ need to be converted to python bool.
+        return bool(x)
+    elif isinstance(x, (spacy.tokens.Token, Token)):
         # Tokens get sanitized to just their text.
         return x.text
     elif isinstance(x, (list, tuple)):
@@ -73,12 +78,15 @@ def sanitize(x: Any) -> Any:  # pylint: disable=invalid-name,too-many-return-sta
         return [sanitize(x_i) for x_i in x]
     elif x is None:
         return "None"
-    elif hasattr(x, 'to_json'):
+    elif hasattr(x, "to_json"):
         return x.to_json()
     else:
-        raise ValueError(f"Cannot sanitize {x} of type {type(x)}. "
-                         "If this is your own custom class, add a `to_json(self)` method "
-                         "that returns a JSON-like object.")
+        raise ValueError(
+            f"Cannot sanitize {x} of type {type(x)}. "
+            "If this is your own custom class, add a `to_json(self)` method "
+            "that returns a JSON-like object."
+        )
+
 
 def group_by_count(iterable: List[Any], count: int, default_value: Any) -> List[List[Any]]:
     """
@@ -94,7 +102,9 @@ def group_by_count(iterable: List[Any], count: int, default_value: Any) -> List[
     """
     return [list(l) for l in zip_longest(*[iter(iterable)] * count, fillvalue=default_value)]
 
-A = TypeVar('A')
+
+A = TypeVar("A")
+
 
 def lazy_groups_of(iterator: Iterator[A], group_size: int) -> Iterator[List[A]]:
     """
@@ -103,10 +113,13 @@ def lazy_groups_of(iterator: Iterator[A], group_size: int) -> Iterator[List[A]]:
     """
     return iter(lambda: list(islice(iterator, 0, group_size)), [])
 
-def pad_sequence_to_length(sequence: List,
-                           desired_length: int,
-                           default_value: Callable[[], Any] = lambda: 0,
-                           padding_on_right: bool = True) -> List:
+
+def pad_sequence_to_length(
+    sequence: List,
+    desired_length: int,
+    default_value: Callable[[], Any] = lambda: 0,
+    padding_on_right: bool = True,
+) -> List:
     """
     Take a list of objects and pads it to the desired length, returning the padded list.  The
     original list is not modified.
@@ -167,7 +180,7 @@ def namespace_match(pattern: str, namespace: str):
     ``passage_tags`` and ``question_tags`` and ``tokens`` matches ``tokens`` but not
     ``stemmed_tokens``.
     """
-    if pattern[0] == '*' and namespace.endswith(pattern[1:]):
+    if pattern[0] == "*" and namespace.endswith(pattern[1:]):
         return True
     elif pattern == namespace:
         return True
@@ -205,7 +218,10 @@ def prepare_environment(params: Params):
 
     log_pytorch_version_info()
 
-def prepare_global_logging(serialization_dir: str, file_friendly_logging: bool) -> logging.FileHandler:
+
+def prepare_global_logging(
+    serialization_dir: str, file_friendly_logging: bool
+) -> logging.FileHandler:
     """
     This function configures 3 global logging attributes - streaming stdout and stderr
     to a file as well as the terminal, setting the formatting for the python logging
@@ -236,18 +252,21 @@ def prepare_global_logging(serialization_dir: str, file_friendly_logging: bool) 
 
     Tqdm.set_slower_interval(file_friendly_logging)
     std_out_file = os.path.join(serialization_dir, "stdout.log")
-    sys.stdout = TeeLogger(std_out_file, # type: ignore
-                           sys.stdout,
-                           file_friendly_logging)
-    sys.stderr = TeeLogger(os.path.join(serialization_dir, "stderr.log"), # type: ignore
-                           sys.stderr,
-                           file_friendly_logging)
+    sys.stdout = TeeLogger(  # type: ignore
+        std_out_file, sys.stdout, file_friendly_logging
+    )
+    sys.stderr = TeeLogger(  # type: ignore
+        os.path.join(serialization_dir, "stderr.log"), sys.stderr, file_friendly_logging
+    )
 
     stdout_handler = logging.FileHandler(std_out_file)
-    stdout_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(name)s - %(message)s'))
+    stdout_handler.setFormatter(
+        logging.Formatter("%(asctime)s - %(levelname)s - %(name)s - %(message)s")
+    )
     logging.getLogger().addHandler(stdout_handler)
 
     return stdout_handler
+
 
 def cleanup_global_logging(stdout_handler: logging.FileHandler) -> None:
     """
@@ -266,10 +285,13 @@ def cleanup_global_logging(stdout_handler: logging.FileHandler) -> None:
     if isinstance(sys.stderr, TeeLogger):
         sys.stderr = sys.stderr.cleanup()
 
+
 LOADED_SPACY_MODELS: Dict[Tuple[str, bool, bool, bool], SpacyModelType] = {}
 
 
-def get_spacy_model(spacy_model_name: str, pos_tags: bool, parse: bool, ner: bool) -> SpacyModelType:
+def get_spacy_model(
+    spacy_model_name: str, pos_tags: bool, parse: bool, ner: bool
+) -> SpacyModelType:
     """
     In order to avoid loading spacy models a whole bunch of times, we'll save references to them,
     keyed by the options we used to create the spacy model, so any particular configuration only
@@ -278,17 +300,19 @@ def get_spacy_model(spacy_model_name: str, pos_tags: bool, parse: bool, ner: boo
 
     options = (spacy_model_name, pos_tags, parse, ner)
     if options not in LOADED_SPACY_MODELS:
-        disable = ['vectors', 'textcat']
+        disable = ["vectors", "textcat"]
         if not pos_tags:
-            disable.append('tagger')
+            disable.append("tagger")
         if not parse:
-            disable.append('parser')
+            disable.append("parser")
         if not ner:
-            disable.append('ner')
+            disable.append("ner")
         try:
             spacy_model = spacy.load(spacy_model_name, disable=disable)
         except OSError:
-            logger.warning(f"Spacy models '{spacy_model_name}' not found.  Downloading and installing.")
+            logger.warning(
+                f"Spacy models '{spacy_model_name}' not found.  Downloading and installing."
+            )
             spacy_download(spacy_model_name)
             # NOTE(mattg): The following four lines are a workaround suggested by Ines for spacy
             # 2.1.0, which removed the linking that was done in spacy 2.0.  importlib doesn't find
@@ -298,12 +322,14 @@ def get_spacy_model(spacy_model_name: str, pos_tags: bool, parse: bool, ner: boo
             # See https://github.com/explosion/spaCy/issues/3435.
             from spacy.cli import link
             from spacy.util import get_package_path
+
             package_path = get_package_path(spacy_model_name)
             link(spacy_model_name, spacy_model_name, model_path=package_path)
             spacy_model = spacy.load(spacy_model_name, disable=disable)
 
         LOADED_SPACY_MODELS[options] = spacy_model
     return LOADED_SPACY_MODELS[options]
+
 
 def import_submodules(package_name: str) -> None:
     """
@@ -317,12 +343,12 @@ def import_submodules(package_name: str) -> None:
     # For some reason, python doesn't always add this by default to your path, but you pretty much
     # always want it when using `--include-package`.  And if it's already there, adding it again at
     # the end won't hurt anything.
-    sys.path.append('.')
+    sys.path.append(".")
 
     # Import at top level
     module = importlib.import_module(package_name)
-    path = getattr(module, '__path__', [])
-    path_string = '' if not path else path[0]
+    path = getattr(module, "__path__", [])
+    path_string = "" if not path else path[0]
 
     # walk_packages only finds immediate children, so need to recurse.
     for module_finder, name, _ in pkgutil.walk_packages(path):
@@ -343,7 +369,7 @@ def peak_memory_mb() -> float:
 
     Only works on OSX and Linux, returns 0.0 otherwise.
     """
-    if resource is None or sys.platform not in ('linux', 'darwin'):
+    if resource is None or sys.platform not in ("linux", "darwin"):
         return 0.0
 
     # TODO(joelgrus): For whatever, our pinned version 0.521 of mypy does not like
@@ -351,13 +377,14 @@ def peak_memory_mb() -> float:
     # figured out, remove the type: ignore.
     peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss  # type: ignore
 
-    if sys.platform == 'darwin':
+    if sys.platform == "darwin":
         # On OSX the result is in bytes.
         return peak / 1_000_000
 
     else:
         # On Linux the result is in kilobytes.
         return peak / 1_000
+
 
 def gpu_memory_mb() -> Dict[int, int]:
     """
@@ -371,17 +398,17 @@ def gpu_memory_mb() -> Dict[int, int]:
         Values are memory usage as integers in MB.
         Returns an empty ``dict`` if GPUs are not available.
     """
-    # pylint: disable=bare-except
     try:
-        result = subprocess.check_output(['nvidia-smi', '--query-gpu=memory.used',
-                                          '--format=csv,nounits,noheader'],
-                                         encoding='utf-8')
-        gpu_memory = [int(x) for x in result.strip().split('\n')]
+        result = subprocess.check_output(
+            ["nvidia-smi", "--query-gpu=memory.used", "--format=csv,nounits,noheader"],
+            encoding="utf-8",
+        )
+        gpu_memory = [int(x) for x in result.strip().split("\n")]
         return {gpu: memory for gpu, memory in enumerate(gpu_memory)}
     except FileNotFoundError:
         # `nvidia-smi` doesn't exist, assume that means no GPU.
         return {}
-    except:
+    except:  # noqa
         # Catch *all* exceptions, because this memory check is a nice-to-have
         # and we'd never want a training run to fail because of it.
         logger.exception("unable to check gpu_memory_mb(), continuing")
@@ -398,12 +425,14 @@ def ensure_list(iterable: Iterable[A]) -> List[A]:
     else:
         return list(iterable)
 
+
 def is_lazy(iterable: Iterable[A]) -> bool:
     """
     Checks if the given iterable is lazy,
     which here just means it's not a list.
     """
     return not isinstance(iterable, list)
+
 
 def get_frozen_and_tunable_parameter_names(model: torch.nn.Module) -> List:
     frozen_parameter_names = []
@@ -415,6 +444,7 @@ def get_frozen_and_tunable_parameter_names(model: torch.nn.Module) -> List:
             tunable_parameter_names.append(name)
     return [frozen_parameter_names, tunable_parameter_names]
 
+
 def dump_metrics(file_path: str, metrics: Dict[str, Any], log: bool = False) -> None:
     metrics_json = json.dumps(metrics, indent=2)
     with open(file_path, "w") as metrics_file:
@@ -422,5 +452,6 @@ def dump_metrics(file_path: str, metrics: Dict[str, Any], log: bool = False) -> 
     if log:
         logger.info("Metrics: %s", metrics_json)
 
+
 def flatten_filename(file_path: str) -> str:
-    return file_path.replace('/', '_SLASH_')
+    return file_path.replace("/", "_SLASH_")

@@ -1,5 +1,3 @@
-# pylint: disable=invalid-name,no-self-use,protected-access
-
 import numpy
 import pytest
 import torch
@@ -7,6 +5,7 @@ import torch
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.common.checks import ConfigurationError
 from allennlp.nn.chu_liu_edmonds import _find_cycle, decode_mst
+
 
 class ChuLiuEdmondsTest(AllenNlpTestCase):
     def test_find_cycle(self):
@@ -76,5 +75,5 @@ class ChuLiuEdmondsTest(AllenNlpTestCase):
 
     def test_mst_finds_maximum_spanning_tree(self):
         energy = torch.arange(1, 10).view(1, 3, 3)
-        heads, _ = decode_mst(energy.numpy(), 3) # pylint: disable=protected-access
+        heads, _ = decode_mst(energy.numpy(), 3)
         assert list(heads) == [-1, 2, 0]

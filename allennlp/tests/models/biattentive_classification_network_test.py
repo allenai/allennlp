@@ -1,4 +1,3 @@
-# pylint: disable=invalid-name,protected-access
 from copy import deepcopy
 import pytest
 
@@ -11,24 +10,36 @@ from allennlp.models import Model
 
 class BiattentiveClassificationNetworkTest(ModelTestCase):
     def setUp(self):
-        super(BiattentiveClassificationNetworkTest, self).setUp()
-        self.set_up_model(self.FIXTURES_ROOT / 'biattentive_classification_network' / 'experiment.json',
-                          self.FIXTURES_ROOT / 'data' / 'sst.txt')
+        super().setUp()
+        self.set_up_model(
+            self.FIXTURES_ROOT / "biattentive_classification_network" / "experiment.json",
+            self.FIXTURES_ROOT / "data" / "sst.txt",
+        )
 
     def test_maxout_bcn_can_train_save_and_load(self):
         self.ensure_model_can_train_save_and_load(self.param_file)
 
     def test_feedforward_bcn_can_train_save_and_load(self):
-        # pylint: disable=line-too-long
-        self.ensure_model_can_train_save_and_load(self.FIXTURES_ROOT / 'biattentive_classification_network' / 'feedforward_experiment.json')
+
+        self.ensure_model_can_train_save_and_load(
+            self.FIXTURES_ROOT
+            / "biattentive_classification_network"
+            / "feedforward_experiment.json"
+        )
 
     def test_input_and_output_elmo_bcn_can_train_save_and_load(self):
-        # pylint: disable=line-too-long
-        self.ensure_model_can_train_save_and_load(self.FIXTURES_ROOT / 'biattentive_classification_network' / 'elmo_experiment.json')
+
+        self.ensure_model_can_train_save_and_load(
+            self.FIXTURES_ROOT / "biattentive_classification_network" / "elmo_experiment.json"
+        )
 
     def test_output_only_elmo_bcn_can_train_save_and_load(self):
-        # pylint: disable=line-too-long
-        self.ensure_model_can_train_save_and_load(self.FIXTURES_ROOT / 'biattentive_classification_network' / 'output_only_elmo_experiment.json')
+
+        self.ensure_model_can_train_save_and_load(
+            self.FIXTURES_ROOT
+            / "biattentive_classification_network"
+            / "output_only_elmo_experiment.json"
+        )
 
     def test_batch_predictions_are_consistent(self):
         self.ensure_batch_predictions_are_consistent()
@@ -66,8 +77,10 @@ class BiattentiveClassificationNetworkTest(ModelTestCase):
             Model.from_params(vocab=self.vocab, params=tmp_params.get("model"))
 
     def test_elmo_but_no_set_flags_throws_configuration_error(self):
-        # pylint: disable=line-too-long
-        params = Params.from_file(self.FIXTURES_ROOT / 'biattentive_classification_network' / 'elmo_experiment.json')
+
+        params = Params.from_file(
+            self.FIXTURES_ROOT / "biattentive_classification_network" / "elmo_experiment.json"
+        )
         # Elmo is specified in the model, but set both flags to false.
         params["model"]["use_input_elmo"] = False
         params["model"]["use_integrator_output_elmo"] = False
@@ -75,8 +88,10 @@ class BiattentiveClassificationNetworkTest(ModelTestCase):
             Model.from_params(vocab=self.vocab, params=params.get("model"))
 
     def test_elmo_num_repr_set_flags_mismatch_throws_configuration_error(self):
-        # pylint: disable=line-too-long
-        params = Params.from_file(self.FIXTURES_ROOT / 'biattentive_classification_network' / 'elmo_experiment.json')
+
+        params = Params.from_file(
+            self.FIXTURES_ROOT / "biattentive_classification_network" / "elmo_experiment.json"
+        )
         # Elmo is specified in the model, with num_output_representations=2. Set
         # only one flag to true.
         tmp_params = deepcopy(params)
@@ -100,12 +115,20 @@ class BiattentiveClassificationNetworkTest(ModelTestCase):
 
     def test_no_elmo_tokenizer_throws_configuration_error(self):
         with pytest.raises(ConfigurationError):
-            # pylint: disable=line-too-long
+
             self.ensure_model_can_train_save_and_load(
-                    self.FIXTURES_ROOT / 'biattentive_classification_network' / 'broken_experiments' / 'no_elmo_tokenizer_for_elmo.json')
+                self.FIXTURES_ROOT
+                / "biattentive_classification_network"
+                / "broken_experiments"
+                / "no_elmo_tokenizer_for_elmo.json"
+            )
 
     def test_elmo_in_text_field_embedder_throws_configuration_error(self):
         with pytest.raises(ConfigurationError):
-            # pylint: disable=line-too-long
+
             self.ensure_model_can_train_save_and_load(
-                    self.FIXTURES_ROOT / 'biattentive_classification_network' / 'broken_experiments' / 'elmo_in_text_field_embedder.json')
+                self.FIXTURES_ROOT
+                / "biattentive_classification_network"
+                / "broken_experiments"
+                / "elmo_in_text_field_embedder.json"
+            )

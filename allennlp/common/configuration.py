@@ -1,9 +1,19 @@
 """
 Tools for programmatically generating config files for AllenNLP models.
 """
-# pylint: disable=protected-access,too-many-return-statements
-
-from typing import NamedTuple, Optional, Any, List, TypeVar, Generic, Type, Dict, Union, Sequence, Tuple
+from typing import (
+    NamedTuple,
+    Optional,
+    Any,
+    List,
+    TypeVar,
+    Generic,
+    Type,
+    Dict,
+    Union,
+    Sequence,
+    Tuple,
+)
 import collections
 import inspect
 import importlib
@@ -27,9 +37,11 @@ from allennlp.nn.regularizers import Regularizer
 from allennlp.training.optimizers import Optimizer as AllenNLPOptimizer
 from allennlp.training.trainer import Trainer
 
+
 def _remove_prefix(class_name: str) -> str:
     rgx = r"^(typing\.|builtins\.)"
     return re.sub(rgx, "", class_name)
+
 
 def full_name(cla55: Optional[type]) -> str:
     """
@@ -40,11 +52,11 @@ def full_name(cla55: Optional[type]) -> str:
         return "?"
 
     if issubclass(cla55, Initializer) and cla55 not in [Initializer, PretrainedModelInitializer]:
-        init_fn = cla55()._init_function
+        init_fn = getattr(cla55(), "_init_function")
         return f"{init_fn.__module__}.{init_fn.__name__}"
 
-    origin = getattr(cla55, '__origin__', None)
-    args = getattr(cla55, '__args__', ())
+    origin = getattr(cla55, "__origin__", None)
+    args = getattr(cla55, "__args__", ())
 
     # Special handling for compound types
     if origin in (Dict, dict):
@@ -54,7 +66,7 @@ def full_name(cla55: Optional[type]) -> str:
         return f"""{_remove_prefix(str(origin))}[{", ".join(full_name(arg) for arg in args)}]"""
     elif origin == Union:
         # Special special case to handle optional types:
-        if len(args) == 2 and args[-1] == type(None):
+        if len(args) == 2 and args[-1] == type(None):  # noqa
             return f"""Optional[{full_name(args[0])}]"""
         else:
             return f"""Union[{", ".join(full_name(arg) for arg in args)}]"""
@@ -65,52 +77,53 @@ def full_name(cla55: Optional[type]) -> str:
 def json_annotation(cla55: Optional[type]):
     # Special case to handle None:
     if cla55 is None:
-        return {'origin': '?'}
+        return {"origin": "?"}
 
     # Special case to handle activation functions, which can't be specified as JSON
     if cla55 == Activation:
-        return {'origin': 'str'}
+        return {"origin": "str"}
 
     # Hack because e.g. typing.Union isn't a type.
     if isinstance(cla55, type) and issubclass(cla55, Initializer) and cla55 != Initializer:
-        init_fn = cla55()._init_function
-        return {'origin': f"{init_fn.__module__}.{init_fn.__name__}"}
+        init_fn = getattr(cla55(), "_init_function")
+        return {"origin": f"{init_fn.__module__}.{init_fn.__name__}"}
 
-    origin = getattr(cla55, '__origin__', None)
-    args = getattr(cla55, '__args__', ())
+    origin = getattr(cla55, "__origin__", None)
+    args = getattr(cla55, "__args__", ())
 
     # Special handling for compound types
     if origin in (Dict, dict):
         key_type, value_type = args
-        return {'origin': "Dict", 'args': [json_annotation(key_type), json_annotation(value_type)]}
+        return {"origin": "Dict", "args": [json_annotation(key_type), json_annotation(value_type)]}
     elif origin in (Tuple, tuple, List, list, Sequence, collections.abc.Sequence):
-        return {'origin': _remove_prefix(str(origin)), 'args': [json_annotation(arg) for arg in args]}
+        return {
+            "origin": _remove_prefix(str(origin)),
+            "args": [json_annotation(arg) for arg in args],
+        }
     elif origin == Union:
         # Special special case to handle optional types:
-        if len(args) == 2 and args[-1] == type(None):
+        if len(args) == 2 and args[-1] == type(None):  # noqa
             return json_annotation(args[0])
         else:
-            return {'origin': "Union", 'args': [json_annotation(arg) for arg in args]}
+            return {"origin": "Union", "args": [json_annotation(arg) for arg in args]}
     elif cla55 == Ellipsis:
-        return {'origin': "..."}
+        return {"origin": "..."}
     else:
-        return {'origin': _remove_prefix(f"{cla55.__module__}.{cla55.__name__}")}
+        return {"origin": _remove_prefix(f"{cla55.__module__}.{cla55.__name__}")}
 
 
 class ConfigItem(NamedTuple):
     """
     Each ``ConfigItem`` represents a single entry in a configuration JsonDict.
     """
+
     name: str
     annotation: type
     default_value: Optional[Any] = None
-    comment: str = ''
+    comment: str = ""
 
     def to_json(self) -> JsonDict:
-        json_dict = {
-                "name": self.name,
-                "annotation": json_annotation(self.annotation),
-        }
+        json_dict = {"name": self.name, "annotation": json_annotation(self.annotation)}
 
         if is_configurable(self.annotation):
             json_dict["configurable"] = True
@@ -126,7 +139,6 @@ class ConfigItem(NamedTuple):
             except TypeError:
                 print(f"unable to json serialize {self.default_value}, using None instead")
                 json_dict["defaultValue"] = None
-
 
         if self.comment:
             json_dict["comment"] = self.comment
@@ -144,6 +156,7 @@ class Config(Generic[T]):
     it will also contain a ``type`` item in addition to whatever
     items are required by the subclass ``from_params`` method.
     """
+
     def __init__(self, items: List[ConfigItem], typ3: str = None) -> None:
         self.items = items
         self.typ3 = typ3
@@ -152,7 +165,7 @@ class Config(Generic[T]):
         return f"Config({self.items})"
 
     def to_json(self) -> JsonDict:
-        blob: JsonDict = {'items': [item.to_json() for item in self.items]}
+        blob: JsonDict = {"items": [item.to_json() for item in self.items]}
 
         if self.typ3:
             blob["type"] = self.typ3
@@ -164,6 +177,7 @@ class Config(Generic[T]):
 # so we use a special sentinel to indicate that a parameter has no
 # default value.
 _NO_DEFAULT = object()
+
 
 def _get_config_type(cla55: type) -> Optional[str]:
     """
@@ -184,13 +198,14 @@ def _get_config_type(cla55: type) -> Optional[str]:
             if subclass == cla55:
                 return name
 
-        # Special handling for initializer functions
-            if hasattr(subclass, '_initializer_wrapper'):
+            # Special handling for initializer functions
+            if hasattr(subclass, "_initializer_wrapper"):
                 sif = subclass()._init_function
                 if sif == cla55:
                     return sif.__name__.rstrip("_")
 
     return None
+
 
 def _docspec_comments(obj) -> Dict[str, str]:
     """
@@ -198,10 +213,10 @@ def _docspec_comments(obj) -> Dict[str, str]:
     """
     # Sometimes our docstring is on the class, and sometimes it's on the initializer,
     # so we've got to check both.
-    class_docstring = getattr(obj, '__doc__', None)
-    init_docstring = getattr(obj.__init__, '__doc__', None) if hasattr(obj, '__init__') else None
+    class_docstring = getattr(obj, "__doc__", None)
+    init_docstring = getattr(obj.__init__, "__doc__", None) if hasattr(obj, "__init__") else None
 
-    docstring = class_docstring or init_docstring or ''
+    docstring = class_docstring or init_docstring or ""
 
     doc = NumpyDocString(docstring)
     params = doc["Parameters"]
@@ -219,6 +234,7 @@ def _docspec_comments(obj) -> Dict[str, str]:
         comments[name] = comment
 
     return comments
+
 
 def _auto_config(cla55: Type[T]) -> Config[T]:
     """
@@ -271,7 +287,7 @@ def _auto_config(cla55: Type[T]) -> Config[T]:
             continue
 
         # Don't include params for an Optimizer
-        if torch.optim.Optimizer in getattr(cla55, '__bases__', ()) and name == "params":
+        if torch.optim.Optimizer in getattr(cla55, "__bases__", ()) and name == "params":
             continue
 
         # Don't include datasets in the trainer
@@ -302,27 +318,30 @@ def render_config(config: Config, indent: str = "") -> str:
     # Add four spaces to the indent.
     new_indent = indent + "    "
 
-    return "".join([
+    return "".join(
+        [
             # opening brace + newline
             "{\n",
             # "type": "...", (if present)
-            f'{new_indent}"type": "{config.typ3}",\n' if config.typ3 else '',
+            f'{new_indent}"type": "{config.typ3}",\n' if config.typ3 else "",
             # render each item
             "".join(_render(item, new_indent) for item in config.items),
             # indent and close the brace
             indent,
-            "}\n"
-    ])
+            "}\n",
+        ]
+    )
 
 
 def _remove_optional(typ3: type) -> type:
-    origin = getattr(typ3, '__origin__', None)
-    args = getattr(typ3, '__args__', None)
+    origin = getattr(typ3, "__origin__", None)
+    args = getattr(typ3, "__args__", None)
 
-    if origin == Union and len(args) == 2 and args[-1] == type(None):
+    if origin == Union and len(args) == 2 and args[-1] == type(None):  # noqa
         return _remove_optional(args[0])
     else:
         return typ3
+
 
 def is_registrable(typ3: type) -> bool:
     # Throw out optional:
@@ -347,10 +366,8 @@ def is_configurable(typ3: type) -> bool:
 
     # Anything with a from_params method is itself configurable.
     # So are regularizers even though they don't.
-    return any([
-            hasattr(typ3, 'from_params'),
-            typ3 == Regularizer,
-    ])
+    return any([hasattr(typ3, "from_params"), typ3 == Regularizer])
+
 
 def _render(item: ConfigItem, indent: str = "") -> str:
     """
@@ -363,7 +380,8 @@ def _render(item: ConfigItem, indent: str = "") -> str:
     else:
         rendered_annotation = str(item.annotation)
 
-    rendered_item = "".join([
+    rendered_item = "".join(
+        [
             # rendered_comment,
             indent,
             "// " if optional else "",
@@ -371,58 +389,84 @@ def _render(item: ConfigItem, indent: str = "") -> str:
             rendered_annotation,
             f" (default: {item.default_value} )" if optional else "",
             f" // {item.comment}" if item.comment else "",
-            "\n"
-    ])
+            "\n",
+        ]
+    )
 
     return rendered_item
 
-BASE_CONFIG: Config = Config([
-        ConfigItem(name="dataset_reader",
-                   annotation=DatasetReader,
-                   default_value=_NO_DEFAULT,
-                   comment="specify your dataset reader here"),
-        ConfigItem(name="validation_dataset_reader",
-                   annotation=DatasetReader,
-                   default_value=None,
-                   comment="same as dataset_reader by default"),
-        ConfigItem(name="train_data_path",
-                   annotation=str,
-                   default_value=_NO_DEFAULT,
-                   comment="path to the training data"),
-        ConfigItem(name="validation_data_path",
-                   annotation=str,
-                   default_value=None,
-                   comment="path to the validation data"),
-        ConfigItem(name="test_data_path",
-                   annotation=str,
-                   default_value=None,
-                   comment="path to the test data (you probably don't want to use this!)"),
-        ConfigItem(name="evaluate_on_test",
-                   annotation=bool,
-                   default_value=False,
-                   comment="whether to evaluate on the test dataset at the end of training (don't do it!)"),
-        ConfigItem(name="model",
-                   annotation=Model,
-                   default_value=_NO_DEFAULT,
-                   comment="specify your model here"),
-        ConfigItem(name="iterator",
-                   annotation=DataIterator,
-                   default_value=_NO_DEFAULT,
-                   comment="specify your data iterator here"),
-        ConfigItem(name="trainer",
-                   annotation=Trainer,
-                   default_value=_NO_DEFAULT,
-                   comment="specify the trainer parameters here"),
-        ConfigItem(name="datasets_for_vocab_creation",
-                   annotation=List[str],
-                   default_value=None,
-                   comment="if not specified, use all datasets"),
-        ConfigItem(name="vocabulary",
-                   annotation=Vocabulary,
-                   default_value=None,
-                   comment="vocabulary options"),
 
-])
+BASE_CONFIG: Config = Config(
+    [
+        ConfigItem(
+            name="dataset_reader",
+            annotation=DatasetReader,
+            default_value=_NO_DEFAULT,
+            comment="specify your dataset reader here",
+        ),
+        ConfigItem(
+            name="validation_dataset_reader",
+            annotation=DatasetReader,
+            default_value=None,
+            comment="same as dataset_reader by default",
+        ),
+        ConfigItem(
+            name="train_data_path",
+            annotation=str,
+            default_value=_NO_DEFAULT,
+            comment="path to the training data",
+        ),
+        ConfigItem(
+            name="validation_data_path",
+            annotation=str,
+            default_value=None,
+            comment="path to the validation data",
+        ),
+        ConfigItem(
+            name="test_data_path",
+            annotation=str,
+            default_value=None,
+            comment="path to the test data (you probably don't want to use this!)",
+        ),
+        ConfigItem(
+            name="evaluate_on_test",
+            annotation=bool,
+            default_value=False,
+            comment="whether to evaluate on the test dataset at the end of training (don't do it!)",
+        ),
+        ConfigItem(
+            name="model",
+            annotation=Model,
+            default_value=_NO_DEFAULT,
+            comment="specify your model here",
+        ),
+        ConfigItem(
+            name="iterator",
+            annotation=DataIterator,
+            default_value=_NO_DEFAULT,
+            comment="specify your data iterator here",
+        ),
+        ConfigItem(
+            name="trainer",
+            annotation=Trainer,
+            default_value=_NO_DEFAULT,
+            comment="specify the trainer parameters here",
+        ),
+        ConfigItem(
+            name="datasets_for_vocab_creation",
+            annotation=List[str],
+            default_value=None,
+            comment="if not specified, use all datasets",
+        ),
+        ConfigItem(
+            name="vocabulary",
+            annotation=Vocabulary,
+            default_value=None,
+            comment="vocabulary options",
+        ),
+    ]
+)
+
 
 def _valid_choices(cla55: type) -> Dict[str, str]:
     """
@@ -443,7 +487,8 @@ def _valid_choices(cla55: type) -> Dict[str, str]:
 
     return valid_choices
 
-def choices(full_path: str = '') -> List[str]:
+
+def choices(full_path: str = "") -> List[str]:
     parts = full_path.split(".")
     class_name = parts[-1]
     module_name = ".".join(parts[:-1])
@@ -452,7 +497,7 @@ def choices(full_path: str = '') -> List[str]:
     return list(_valid_choices(cla55).values())
 
 
-def configure(full_path: str = '') -> Config:
+def configure(full_path: str = "") -> Config:
     if not full_path:
         return BASE_CONFIG
 
@@ -468,44 +513,68 @@ def configure(full_path: str = '') -> Config:
 
 
 # ONE OFF LOGIC FOR VOCABULARY
-VOCAB_CONFIG: Config = Config([
-        ConfigItem(name="directory_path",
-                   annotation=str,
-                   default_value=None,
-                   comment="path to an existing vocabulary (if you want to use one)"),
-        ConfigItem(name="extend",
-                   annotation=bool,
-                   default_value=False,
-                   comment="whether to extend the existing vocabulary (if you specified one)"),
-        ConfigItem(name="min_count",
-                   annotation=Dict[str, int],
-                   default_value=None,
-                   comment="only include tokens that occur at least this many times"),
-        ConfigItem(name="max_vocab_size",
-                   annotation=Union[int, Dict[str, int]],
-                   default_value=None,
-                   comment="used to cap the number of tokens in your vocabulary"),
-        ConfigItem(name="non_padded_namespaces",
-                   annotation=List[str],
-                   default_value=DEFAULT_NON_PADDED_NAMESPACES,
-                   comment="namespaces that don't get padding or OOV tokens"),
-        ConfigItem(name="pretrained_files",
-                   annotation=Dict[str, str],
-                   default_value=None,
-                   comment="pretrained embedding files for each namespace"),
-        ConfigItem(name="min_pretrained_embeddings",
-                   annotation=Dict[str, int],
-                   default_value=None,
-                   comment="specifies a number of lines to keep for each namespace, "
-                   "even for words not appearing in the data"),
-        ConfigItem(name="only_include_pretrained_words",
-                   annotation=bool,
-                   default_value=False,
-                   comment=("if True, keeps only the words that appear in the pretrained set. "
-                            "if False, also includes non-pretrained words that exceed min_count.")),
-        ConfigItem(name="tokens_to_add",
-                   annotation=Dict[str, List[str]],
-                   default_value=None,
-                   comment=("any tokens here will certainly be included in the keyed namespace, "
-                            "regardless of your data"))
-])
+VOCAB_CONFIG: Config = Config(
+    [
+        ConfigItem(
+            name="directory_path",
+            annotation=str,
+            default_value=None,
+            comment="path to an existing vocabulary (if you want to use one)",
+        ),
+        ConfigItem(
+            name="extend",
+            annotation=bool,
+            default_value=False,
+            comment="whether to extend the existing vocabulary (if you specified one)",
+        ),
+        ConfigItem(
+            name="min_count",
+            annotation=Dict[str, int],
+            default_value=None,
+            comment="only include tokens that occur at least this many times",
+        ),
+        ConfigItem(
+            name="max_vocab_size",
+            annotation=Union[int, Dict[str, int]],
+            default_value=None,
+            comment="used to cap the number of tokens in your vocabulary",
+        ),
+        ConfigItem(
+            name="non_padded_namespaces",
+            annotation=List[str],
+            default_value=DEFAULT_NON_PADDED_NAMESPACES,
+            comment="namespaces that don't get padding or OOV tokens",
+        ),
+        ConfigItem(
+            name="pretrained_files",
+            annotation=Dict[str, str],
+            default_value=None,
+            comment="pretrained embedding files for each namespace",
+        ),
+        ConfigItem(
+            name="min_pretrained_embeddings",
+            annotation=Dict[str, int],
+            default_value=None,
+            comment="specifies a number of lines to keep for each namespace, "
+            "even for words not appearing in the data",
+        ),
+        ConfigItem(
+            name="only_include_pretrained_words",
+            annotation=bool,
+            default_value=False,
+            comment=(
+                "if True, keeps only the words that appear in the pretrained set. "
+                "if False, also includes non-pretrained words that exceed min_count."
+            ),
+        ),
+        ConfigItem(
+            name="tokens_to_add",
+            annotation=Dict[str, List[str]],
+            default_value=None,
+            comment=(
+                "any tokens here will certainly be included in the keyed namespace, "
+                "regardless of your data"
+            ),
+        ),
+    ]
+)

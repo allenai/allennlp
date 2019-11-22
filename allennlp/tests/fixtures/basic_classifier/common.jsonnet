@@ -3,7 +3,7 @@
         "lazy": false,
         "type": "text_classification_json",
         "tokenizer": {
-            "word_splitter": "spacy"
+            "type": "spacy"
         },
         "token_indexers": {
             "tokens": {

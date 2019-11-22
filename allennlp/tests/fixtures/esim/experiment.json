@@ -50,7 +50,7 @@
       "num_layers": 1,
       "hidden_dims": 5,
       "activations": "relu",
-      "dropout": 0.5
+      "dropout": 0.0
     },
     "output_logit": {
       "input_dim": 5,

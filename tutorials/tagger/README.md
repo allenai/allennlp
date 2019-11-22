@@ -129,7 +129,7 @@ Next we need to implement the method that creates `Instance`s:
 ```
 
 A couple of things to notice. The first is that the `tokens` variable is a `List[Token]` (and not a `List[str]`).
-If you use the `spacy` tokenizer (which is what our default `WordTokenizer` does), that's already the output you get.
+If you use the `spacy` tokenizer (which is what our default `SpacyTokenizer` does), that's already the output you get.
 If (like us) you have pre-tokenized data, you just need to wrap each string token in a call to `Token`.
 
 Another thing to notice is that the `tags` are optional.

@@ -3,10 +3,7 @@
     "type": "quora_paraphrase",
     "lazy": false,
     "tokenizer": {
-      "type": "word",
-      "word_splitter": {
-        "type": "just_spaces"
-      }
+      "type": "just_spaces"
     },
     "token_indexers": {
       "tokens": {

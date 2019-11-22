@@ -18,13 +18,14 @@ allennlp.data.dataset_readers
   allennlp.data.dataset_readers.event2mind
   allennlp.data.dataset_readers.interleaving_dataset_reader
   allennlp.data.dataset_readers.language_modeling
+  allennlp.data.dataset_readers.masked_language_modeling
   allennlp.data.dataset_readers.multiprocess_dataset_reader
+  allennlp.data.dataset_readers.next_token_lm
   allennlp.data.dataset_readers.ontonotes_ner
   allennlp.data.dataset_readers.penn_tree_bank
   allennlp.data.dataset_readers.quora_paraphrase
   allennlp.data.dataset_readers.reading_comprehension
   allennlp.data.dataset_readers.semantic_dependency_parsing
-  allennlp.data.dataset_readers.semantic_parsing
   allennlp.data.dataset_readers.semantic_role_labeling
   allennlp.data.dataset_readers.seq2seq
   allennlp.data.dataset_readers.sequence_tagging

@@ -5,6 +5,7 @@ Its API may change at any time, and it may disappear altogether.
 import logging
 import time
 import datetime
+import functools
 import math
 from typing import Dict, Optional, List, Union, Any, Iterable
 import torch
@@ -25,21 +26,36 @@ from allennlp.training.optimizers import Optimizer
 from allennlp.training.trainer_pieces import TrainerPieces
 from allennlp.training.trainer_base import TrainerBase
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
+
+
+def handle_errors(method):
+    @functools.wraps(method)
+    def train_and_handle_errors(self: "CallbackTrainer") -> Dict[str, Any]:
+        try:
+            return method(self)
+        except Exception as exc:
+            self.exception = exc
+            self.handler.fire_event(Events.ERROR)
+            raise
+
+    return train_and_handle_errors
 
 
 @TrainerBase.register("callback")
 class CallbackTrainer(TrainerBase):
-    def __init__(self,
-                 model: Model,
-                 training_data: Iterable[Instance],
-                 iterator: DataIterator,
-                 optimizer: torch.optim.Optimizer,
-                 num_epochs: int = 20,
-                 shuffle: bool = True,
-                 serialization_dir: Optional[str] = None,
-                 cuda_device: Union[int, List] = -1,
-                 callbacks: List[Callback] = None) -> None:
+    def __init__(
+        self,
+        model: Model,
+        training_data: Iterable[Instance],
+        iterator: DataIterator,
+        optimizer: torch.optim.Optimizer,
+        num_epochs: int = 20,
+        shuffle: bool = True,
+        serialization_dir: Optional[str] = None,
+        cuda_device: Union[int, List] = -1,
+        callbacks: List[Callback] = None,
+    ) -> None:
         """
         A trainer for doing supervised learning. It just takes a labeled dataset
         and a ``DataIterator``, and uses the supplied ``Optimizer`` to learn the weights
@@ -82,8 +98,10 @@ class CallbackTrainer(TrainerBase):
         """
         super().__init__(serialization_dir, cuda_device)
 
-        logger.warning("The CallbackTrainer should be considered 'experimental' code, "
-                       "and its behavior may change as we use it more and iterate on it.")
+        logger.warning(
+            "The CallbackTrainer should be considered 'experimental' code, "
+            "and its behavior may change as we use it more and iterate on it."
+        )
 
         # This is all state that the callbacks might want:
         # I am not calling move_to_gpu here, because if the model is
@@ -131,6 +149,9 @@ class CallbackTrainer(TrainerBase):
         self.shuffle = shuffle
         self.handler = CallbackHandler(callbacks, self)
 
+        # For capturing errors that occur during the train loop.
+        self.exception: Optional[Exception] = None
+
     def generate_training_batches(self):
         """
         Generates one epoch worth of training data. Stores it in trainer instance variables
@@ -138,11 +159,11 @@ class CallbackTrainer(TrainerBase):
         """
         num_gpus = len(self._cuda_devices)
 
-        raw_train_generator = self.iterator(self.training_data,
-                                            num_epochs=1,
-                                            shuffle=self.shuffle)
+        raw_train_generator = self.iterator(self.training_data, num_epochs=1, shuffle=self.shuffle)
         self.training_batches = lazy_groups_of(raw_train_generator, num_gpus)
-        self.num_training_batches = math.ceil(self.iterator.get_num_batches(self.training_data) / num_gpus)
+        self.num_training_batches = math.ceil(
+            self.iterator.get_num_batches(self.training_data) / num_gpus
+        )
 
     def batch_loss(self, batch_group: List[TensorDict], for_training: bool) -> torch.Tensor:
         """
@@ -166,8 +187,10 @@ class CallbackTrainer(TrainerBase):
                 loss += self.model.get_regularization_penalty()
         except KeyError:
             if for_training:
-                raise RuntimeError("The model you are trying to optimize does not contain a"
-                                   " 'loss' key in the output of model.forward(inputs).")
+                raise RuntimeError(
+                    "The model you are trying to optimize does not contain a"
+                    " 'loss' key in the output of model.forward(inputs)."
+                )
             loss = None
 
         return loss
@@ -198,16 +221,15 @@ class CallbackTrainer(TrainerBase):
             self.optimizer.step()
 
             # Update the description with the latest metrics
-            self.train_metrics = training_util.get_metrics(self.model,
-                                                           self.train_loss,
-                                                           self.batches_this_epoch)
+            self.train_metrics = training_util.get_metrics(
+                self.model, self.train_loss, self.batches_this_epoch
+            )
 
             self.handler.fire_event(Events.BATCH_END)
 
             return training_util.description_from_metrics(self.train_metrics)
         else:
             return ""
-
 
     def train_one_epoch(self) -> None:
         """
@@ -237,7 +259,7 @@ class CallbackTrainer(TrainerBase):
         self.handler.fire_event(Events.VALIDATE)
         self.handler.fire_event(Events.EPOCH_END)
 
-
+    @handle_errors
     def train(self) -> Dict[str, Any]:
         """
         Trains the supplied model with the supplied parameters.
@@ -261,8 +283,11 @@ class CallbackTrainer(TrainerBase):
 
             if self.epoch_number < self.num_epochs - 1:
                 training_elapsed_time = time.time() - self.training_start_time
-                estimated_time_remaining = training_elapsed_time * \
-                    ((self.num_epochs - starting_epoch) / float(self.epoch_number - starting_epoch + 1) - 1)
+                estimated_time_remaining = training_elapsed_time * (
+                    (self.num_epochs - starting_epoch)
+                    / float(self.epoch_number - starting_epoch + 1)
+                    - 1
+                )
                 formatted_time = str(datetime.timedelta(seconds=int(estimated_time_remaining)))
                 logger.info("Estimated training time remaining: %s", formatted_time)
 
@@ -276,11 +301,17 @@ class CallbackTrainer(TrainerBase):
 
     # Requires custom from_params.
     @classmethod
-    def from_params(cls,  # type: ignore
-                    params: Params,
-                    serialization_dir: str,
-                    recover: bool = False) -> 'CallbackTrainer':
-        pieces = TrainerPieces.from_params(params, serialization_dir, recover)  # pylint: disable=no-member
+    def from_params(  # type: ignore
+        cls,
+        params: Params,
+        serialization_dir: str,
+        recover: bool = False,
+        cache_directory: str = None,
+        cache_prefix: str = None,
+    ) -> "CallbackTrainer":
+        pieces = TrainerPieces.from_params(
+            params, serialization_dir, recover, cache_directory, cache_prefix
+        )
         model = pieces.model
         params = pieces.params
         validation_iterator = pieces.validation_iterator or pieces.iterator
@@ -302,24 +333,30 @@ class CallbackTrainer(TrainerBase):
         optimizer = Optimizer.from_params(parameters, params.pop("optimizer"))
 
         callbacks_params = params.pop("callbacks", [])
-        callbacks: List[Callback] = [Callback.from_params(params=callback_params,
-                                                          model=model,
-                                                          optimizer=optimizer,
-                                                          instances=pieces.train_dataset,
-                                                          iterator=pieces.iterator,
-                                                          shuffle=shuffle,
-                                                          validation_data=pieces.validation_dataset,
-                                                          validation_iterator=validation_iterator,
-                                                          serialization_dir=serialization_dir)
-                                     for callback_params in callbacks_params]
+        callbacks: List[Callback] = [
+            Callback.from_params(
+                params=callback_params,
+                model=model,
+                optimizer=optimizer,
+                instances=pieces.train_dataset,
+                iterator=pieces.iterator,
+                shuffle=shuffle,
+                validation_data=pieces.validation_dataset,
+                validation_iterator=validation_iterator,
+                serialization_dir=serialization_dir,
+            )
+            for callback_params in callbacks_params
+        ]
 
         params.assert_empty(cls.__name__)
-        return cls(model,
-                   pieces.train_dataset,
-                   pieces.iterator,
-                   optimizer,
-                   num_epochs=num_epochs,
-                   shuffle=shuffle,
-                   serialization_dir=serialization_dir,
-                   cuda_device=cuda_device,
-                   callbacks=callbacks)
+        return cls(
+            model,
+            pieces.train_dataset,
+            pieces.iterator,
+            optimizer,
+            num_epochs=num_epochs,
+            shuffle=shuffle,
+            serialization_dir=serialization_dir,
+            cuda_device=cuda_device,
+            callbacks=callbacks,
+        )

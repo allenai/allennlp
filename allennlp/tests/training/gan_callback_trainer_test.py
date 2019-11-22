@@ -9,8 +9,6 @@ and from uniform noise. We'll then adversarially train a generator `Model`
 to transform the noise into something that (hopefully) looks like the true distribution
 and a discriminator `Model` to (hopefully) distinguish between the "true" and generated data.
 """
-# pylint: disable=bad-continuation,redefined-outer-name
-
 from typing import Iterable, List, Iterator, Union, Optional
 import tempfile
 
@@ -32,24 +30,23 @@ from allennlp.training.trainer_base import TrainerBase
 
 from allennlp.tests.training.gan_trainer_test import InputSampler
 
+
 @Model.register("gan")
 class Gan(Model):
     """
     Our trainer wants a single model, so we cheat by encapsulating both the
     generator and discriminator inside a single model. We'll access them individually.
     """
-    # pylint: disable=abstract-method
-    def __init__(self,
-                 generator: Model,
-                 discriminator: Model) -> None:
+
+    def __init__(self, generator: Model, discriminator: Model) -> None:
         super().__init__(None)
 
         # We need our optimizer to know which parameters came from
         # which model, so we cheat by adding tags to them.
         for param in generator.parameters():
-            setattr(param, '_generator', True)
+            setattr(param, "_generator", True)
         for param in discriminator.parameters():
-            setattr(param, '_discriminator', True)
+            setattr(param, "_discriminator", True)
 
         self.generator = generator
         self.discriminator = discriminator
@@ -62,10 +59,12 @@ class GanOptimizer(torch.optim.Optimizer):
     so we cheat by encapsulating both in a single optimizer that has a state
     indicating which one to use.
     """
-    # pylint: disable=super-init-not-called,arguments-differ
-    def __init__(self,
-                 generator_optimizer: torch.optim.Optimizer,
-                 discriminator_optimizer: torch.optim.Optimizer) -> None:
+
+    def __init__(
+        self,
+        generator_optimizer: torch.optim.Optimizer,
+        discriminator_optimizer: torch.optim.Optimizer,
+    ) -> None:
         self.generator_optimizer = generator_optimizer
         self.discriminator_optimizer = discriminator_optimizer
         self.stage = ""
@@ -86,27 +85,35 @@ class GanOptimizer(torch.optim.Optimizer):
         self.discriminator_optimizer.zero_grad()
 
     @classmethod
-    def from_params(cls, parameters: List, params: Params) -> 'GanOptimizer':
+    def from_params(cls, parameters: List, params: Params) -> "GanOptimizer":
         # Because we "tagged" the parameters, we can use getattr to figure out
         # which ones go with which model.
-        generator_parameters = [("", param) for param in parameters if hasattr(param, '_generator')]
-        discriminator_parameters = [("", param) for param in parameters if hasattr(param, '_discriminator')]
+        generator_parameters = [("", param) for param in parameters if hasattr(param, "_generator")]
+        discriminator_parameters = [
+            ("", param) for param in parameters if hasattr(param, "_discriminator")
+        ]
 
-        generator_optimizer = Optimizer.from_params(generator_parameters, params.pop("generator_optimizer"))
-        discriminator_optimizer = Optimizer.from_params(discriminator_parameters,
-                                                        params.pop("discriminator_optimizer"))
+        generator_optimizer = Optimizer.from_params(
+            generator_parameters, params.pop("generator_optimizer")
+        )
+        discriminator_optimizer = Optimizer.from_params(
+            discriminator_parameters, params.pop("discriminator_optimizer")
+        )
 
-        return cls(generator_optimizer=generator_optimizer, discriminator_optimizer=discriminator_optimizer)
+        return cls(
+            generator_optimizer=generator_optimizer, discriminator_optimizer=discriminator_optimizer
+        )
 
 
 @DatasetReader.register("gan-callback")
 class GanCallbackDatasetReader(DatasetReader):
-    # pylint: disable=abstract-method
-    def __init__(self,
-                 sampler: InputSampler,
-                 noise_sampler: InputSampler,
-                 batch_size: int,
-                 batches_per_epoch: int) -> None:
+    def __init__(
+        self,
+        sampler: InputSampler,
+        noise_sampler: InputSampler,
+        batch_size: int,
+        batches_per_epoch: int,
+    ) -> None:
         super().__init__(lazy=False)
         self.sampler = sampler
         self.noise_sampler = noise_sampler
@@ -134,93 +141,86 @@ class GanCallbackDatasetReader(DatasetReader):
 @Callback.register("track-gan-metrics")
 class TrainGan(Callback):
     @handle_event(Events.BATCH_END)
-    def compute_metrics(self, trainer: 'GanCallbackTrainer'):
-        # pylint: disable=no-self-use
+    def compute_metrics(self, trainer: "GanCallbackTrainer"):
+
         trainer.train_metrics = {
             "dfl": trainer.discriminator_fake_loss,
             "drl": trainer.discriminator_real_loss,
             "gl": trainer.discriminator_real_loss,
             "mean": trainer.fake_mean / max(trainer.count, 1),
-            "stdev": trainer.fake_stdev / max(trainer.count, 1)
+            "stdev": trainer.fake_stdev / max(trainer.count, 1),
         }
 
 
-def config(sample_size: int = 500,
-           batches_per_epoch: int = 40,
-           num_epochs: int = 50) -> Params:
-    return Params({
-        "dataset_reader": {
-            "type": "gan-callback",
-            "batch_size": sample_size,
-            "batches_per_epoch": batches_per_epoch,
-            "sampler": {
-                "type": "normal",
-                "mean": 4.0,
-                "stdev": 1.25
+def config(sample_size: int = 500, batches_per_epoch: int = 40, num_epochs: int = 50) -> Params:
+    return Params(
+        {
+            "dataset_reader": {
+                "type": "gan-callback",
+                "batch_size": sample_size,
+                "batches_per_epoch": batches_per_epoch,
+                "sampler": {"type": "normal", "mean": 4.0, "stdev": 1.25},
+                "noise_sampler": {"type": "uniform"},
             },
-                "noise_sampler": {
-                "type": "uniform"
-            }
-        },
-        "iterator": {"type": "basic", "batch_size": sample_size},
-        "train_data_path": "",
-        "model": {
-            "type": "gan",
-            "generator": {
-                "type": "generator-test",
-                "input_dim": 1,
-                "hidden_dim": 5,
-                "output_dim": 1
-            },
-            "discriminator": {
-                "type": "discriminator-test",
-                "input_dim": sample_size,
-                "hidden_dim": 5,
-                "preprocessing": "moments"
-            }
-        },
-        "trainer": {
-            "type": "gan-callback",
-            "optimizer": {
+            "iterator": {"type": "basic", "batch_size": sample_size},
+            "train_data_path": "",
+            "model": {
                 "type": "gan",
-                "generator_optimizer": {
-                    "type": "sgd",
-                    "lr": 0.05
+                "generator": {
+                    "type": "generator-test",
+                    "input_dim": 1,
+                    "hidden_dim": 5,
+                    "output_dim": 1,
                 },
-                "discriminator_optimizer": {
-                    "type": "sgd",
-                    "lr": 0.05
-                }
+                "discriminator": {
+                    "type": "discriminator-test",
+                    "input_dim": sample_size,
+                    "hidden_dim": 5,
+                    "preprocessing": "moments",
+                },
             },
-            "num_epochs": num_epochs,
-            "callbacks": [
-                "track-gan-metrics",
-                {"type": "gradient_norm_and_clip", "grad_norm": 1.0}
-            ]
+            "trainer": {
+                "type": "gan-callback",
+                "optimizer": {
+                    "type": "gan",
+                    "generator_optimizer": {"type": "sgd", "lr": 0.05},
+                    "discriminator_optimizer": {"type": "sgd", "lr": 0.05},
+                },
+                "num_epochs": num_epochs,
+                "callbacks": [
+                    "track-gan-metrics",
+                    {"type": "gradient_norm_and_clip", "grad_norm": 1.0},
+                ],
+            },
         }
-    })
+    )
 
-@TrainerBase.register('gan-callback')
+
+@TrainerBase.register("gan-callback")
 class GanCallbackTrainer(CallbackTrainer):
-    def __init__(self,
-                 model: Gan,
-                 train_dataset: Iterable[Instance],
-                 iterator: DataIterator,
-                 optimizer: GanOptimizer,
-                 num_epochs: int = 20,
-                 shuffle: bool = False,
-                 serialization_dir: Optional[str] = None,
-                 cuda_device: Union[int, List] = -1,
-                 callbacks: List[Callback] = None) -> None:
-        super().__init__(model,
-                         train_dataset,
-                         iterator,
-                         optimizer,
-                         num_epochs,
-                         shuffle,
-                         serialization_dir,
-                         cuda_device,
-                         callbacks)
+    def __init__(
+        self,
+        model: Gan,
+        train_dataset: Iterable[Instance],
+        iterator: DataIterator,
+        optimizer: GanOptimizer,
+        num_epochs: int = 20,
+        shuffle: bool = False,
+        serialization_dir: Optional[str] = None,
+        cuda_device: Union[int, List] = -1,
+        callbacks: List[Callback] = None,
+    ) -> None:
+        super().__init__(
+            model,
+            train_dataset,
+            iterator,
+            optimizer,
+            num_epochs,
+            shuffle,
+            serialization_dir,
+            cuda_device,
+            callbacks,
+        )
         # Need to track our own metrics as well
         self._reset_counters()
 
@@ -272,11 +272,11 @@ class GanCallbackTrainer(CallbackTrainer):
 
         count = max(self.count, 1)
         self.train_metrics = {
-                "gl": self.generator_loss / count,
-                "dfl": self.discriminator_fake_loss / count,
-                "drl": self.discriminator_real_loss / count,
-                "mean": self.fake_mean / count,
-                "stdev": self.fake_stdev / count
+            "gl": self.generator_loss / count,
+            "dfl": self.discriminator_fake_loss / count,
+            "drl": self.discriminator_real_loss / count,
+            "mean": self.fake_mean / count,
+            "stdev": self.fake_stdev / count,
         }
 
         self.optimizer.step()
@@ -302,7 +302,7 @@ if __name__ == "__main__":
     #
     # python -m allennlp.tests.training.gan_callback_trainer_test
     #
-    # pylint: disable=invalid-name
+
     serialization_dir = tempfile.mkdtemp()
 
     params = config()

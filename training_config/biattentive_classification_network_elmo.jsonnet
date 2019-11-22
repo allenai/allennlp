@@ -1,6 +1,6 @@
 {
   // Slightly modified version of the bi-attentative classification model with ELMo
-  // from "Deep contextualized word representations" (http://www.aclweb.org/anthology/N18-1202),
+  // from "Deep contextualized word representations" (https://www.aclweb.org/anthology/N18-1202),
   // trained on 5-class Stanford Sentiment Treebank.
   // There is a trained model available at https://allennlp.s3.amazonaws.com/models/sst-5-elmo-biattentive-classification-network-2018.09.04.tar.gz
   // with test accuracy of 54.7%.

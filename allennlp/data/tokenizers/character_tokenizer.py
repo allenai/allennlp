@@ -32,11 +32,14 @@ class CharacterTokenizer(Tokenizer):
         If given, these tokens will be added to the end of every string we tokenize.  If using byte
         encoding, this should actually be a ``List[int]``, not a ``List[str]``.
     """
-    def __init__(self,
-                 byte_encoding: str = None,
-                 lowercase_characters: bool = False,
-                 start_tokens: List[str] = None,
-                 end_tokens: List[str] = None) -> None:
+
+    def __init__(
+        self,
+        byte_encoding: str = None,
+        lowercase_characters: bool = False,
+        start_tokens: List[str] = None,
+        end_tokens: List[str] = None,
+    ) -> None:
         # TODO(brendanr): Add length truncation.
         self._byte_encoding = byte_encoding
         self._lowercase_characters = lowercase_characters
@@ -45,10 +48,6 @@ class CharacterTokenizer(Tokenizer):
         # this makes sure they show up in the right order.
         self._start_tokens.reverse()
         self._end_tokens = end_tokens or []
-
-    @overrides
-    def batch_tokenize(self, texts: List[str]) -> List[List[Token]]:
-        return [self.tokenize(text) for text in texts]
 
     @overrides
     def tokenize(self, text: str) -> List[Token]:
@@ -73,3 +72,8 @@ class CharacterTokenizer(Tokenizer):
                 token = Token(text=end_token, idx=0)
             tokens.append(token)
         return tokens
+
+    def __eq__(self, other) -> bool:
+        if isinstance(self, other.__class__):
+            return self.__dict__ == other.__dict__
+        return NotImplemented

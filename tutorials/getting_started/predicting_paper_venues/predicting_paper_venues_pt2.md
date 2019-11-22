@@ -256,7 +256,7 @@ and saved `index.html` there. The original page had a lot of embedded CSS, which
 For our customization, we'll replace the ugly JSON output
 with a beautiful pie chart of the predicted class probabilities,
 using a library called
-[chart.js](http://www.chartjs.org/docs/latest/getting-started/usage.html).
+[chart.js](https://www.chartjs.org/docs/latest/getting-started/usage.html).
 
 To start with, we need to [add a `script` tag to load chart.js](https://github.com/allenai/allennlp-as-a-library-example/blob/master/static_html/index.html#L47).
 

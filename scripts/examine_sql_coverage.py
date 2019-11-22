@@ -5,11 +5,12 @@ import argparse
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(os.path.join(__file__, os.pardir))))
 
-from allennlp.data.dataset_readers.dataset_utils.text2sql_utils import process_sql_data, SqlData
+from allennlp.data.dataset_readers.dataset_utils.text2sql_utils import process_sql_data
 from allennlp.semparse.contexts.sql_context_utils import SqlVisitor, format_grammar_string
 from allennlp.semparse.contexts.text2sql_table_context import GRAMMAR_DICTIONARY
 from parsimonious.grammar import Grammar
-# still TODO: 
+
+# still TODO:
 # JOIN, seems hard.
 # Added query to pos_value - check this, very unclear if it is the correct way to handle this.
 # not all functions can take * as an argument.
@@ -39,7 +40,7 @@ def parse_dataset(filename: str, filter_by: str = None, verbose: bool = False):
             # so we fix the data a bit here instead of completely re-working the grammar.
             sql_to_use = []
             for j, token in enumerate(sql_data.sql):
-                if token[:7] == "DERIVED" and sql_data.sql[j-1] == ")":
+                if token[:7] == "DERIVED" and sql_data.sql[j - 1] == ")":
                     sql_to_use.append("AS")
                 sql_to_use.append(token)
 
@@ -59,13 +60,12 @@ def parse_dataset(filename: str, filter_by: str = None, verbose: bool = False):
             if query_has_weird_as:
                 queries_with_weird_as += 1
 
-
             sql_string = " ".join(sql_to_use)
         else:
             sql_string = " ".join(sql_data.sql)
         num_queries += 1
         try:
-            prod_rules = sql_visitor.parse(sql_string)
+            sql_visitor.parse(sql_string)
             num_parsed += 1
         except Exception as e:
 
@@ -79,6 +79,7 @@ def parse_dataset(filename: str, filter_by: str = None, verbose: bool = False):
                 print(sql_data.sql)
                 try:
                     import sqlparse
+
                     print(sqlparse.format(sql_string, reindent=True))
                 except Exception:
                     print(sql_string)
@@ -86,9 +87,19 @@ def parse_dataset(filename: str, filter_by: str = None, verbose: bool = False):
         if (i + 1) % 500 == 0:
             print(f"\tProcessed {i + 1} queries.")
 
-    return num_parsed, num_queries, filtered_errors, non_basic_as_aliases, as_count, queries_with_weird_as
+    return (
+        num_parsed,
+        num_queries,
+        filtered_errors,
+        non_basic_as_aliases,
+        as_count,
+        queries_with_weird_as,
+    )
 
-def main(data_directory: int, dataset: str = None, filter_by: str = None, verbose: bool = False) -> None:
+
+def main(
+    data_directory: int, dataset: str = None, filter_by: str = None, verbose: bool = False
+) -> None:
     """
     Parameters
     ----------
@@ -105,7 +116,7 @@ def main(data_directory: int, dataset: str = None, filter_by: str = None, verbos
     directory_dict = {path: files for path, names, files in os.walk(data_directory) if files}
 
     for directory, data_files in directory_dict.items():
-        if "query_split" in directory or  (dataset is not None and dataset not in directory):
+        if "query_split" in directory or (dataset is not None and dataset not in directory):
             continue
 
         print(f"Parsing dataset at {directory}")
@@ -117,7 +128,9 @@ def main(data_directory: int, dataset: str = None, filter_by: str = None, verbos
         for json_file in data_files:
             print(f"\tParsing split at {json_file}")
             file_path = os.path.join(directory, json_file)
-            num_parsed, num_queries, filtered_errors, non_basic_as_aliases, as_count, queries_with_weird_as = parse_dataset(file_path, filter_by, verbose)
+            num_parsed, num_queries, filtered_errors, non_basic_as_aliases, as_count, queries_with_weird_as = parse_dataset(
+                file_path, filter_by, verbose
+            )
 
             parsed += num_parsed
             total += num_queries
@@ -126,18 +139,31 @@ def main(data_directory: int, dataset: str = None, filter_by: str = None, verbos
             total_queries_with_weird_as += queries_with_weird_as
 
         print(f"\tParsed {parsed} out of {total} queries, coverage {parsed/total}")
-        print(f"\tFound {total_non_aliases} out of {total_as_count} non simple AS aliases. percentage: {total_non_aliases/total_as_count}")
-        print(f"\tFound {total_queries_with_weird_as} out of {total} queries with > 1 weird AS. percentage: {total_queries_with_weird_as/total}")
+        print(
+            f"\tFound {total_non_aliases} out of {total_as_count} non simple AS aliases. percentage: {total_non_aliases/total_as_count}"
+        )
+        print(
+            f"\tFound {total_queries_with_weird_as} out of {total} queries with > 1 weird AS. percentage: {total_queries_with_weird_as/total}"
+        )
         if filter_by is not None:
-            print(f"\tOf {total - parsed} errors, {filtered_errors/ (total - parsed + 1e-13)} contain {filter_by}")
+            print(
+                f"\tOf {total - parsed} errors, {filtered_errors/ (total - parsed + 1e-13)} contain {filter_by}"
+            )
+
 
 if __name__ == "__main__":
 
-    parser = argparse.ArgumentParser(description="Check the coverage of a SQL Grammar on the text2sql datasets.")
-    parser.add_argument('--data', type=str, help='The path to the text2sql data directory.')
-    parser.add_argument('--dataset', type=str, default=None,
-                        help='The dataset to check coverage for. Defaults to all datasets.')
-    parser.add_argument('--filter', type=str, default=None, help='A string to filter by.')
-    parser.add_argument('--verbose', help='Verbose output.', action='store_true')
+    parser = argparse.ArgumentParser(
+        description="Check the coverage of a SQL Grammar on the text2sql datasets."
+    )
+    parser.add_argument("--data", type=str, help="The path to the text2sql data directory.")
+    parser.add_argument(
+        "--dataset",
+        type=str,
+        default=None,
+        help="The dataset to check coverage for. Defaults to all datasets.",
+    )
+    parser.add_argument("--filter", type=str, default=None, help="A string to filter by.")
+    parser.add_argument("--verbose", help="Verbose output.", action="store_true")
     args = parser.parse_args()
     main(args.data, args.dataset, args.filter, args.verbose)

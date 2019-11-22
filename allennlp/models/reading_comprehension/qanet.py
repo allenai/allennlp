@@ -48,15 +48,19 @@ class QaNet(Model):
     regularizer : ``RegularizerApplicator``, optional (default=``None``)
         If provided, will be used to calculate the regularization penalty during training.
     """
-    def __init__(self, vocab: Vocabulary,
-                 text_field_embedder: TextFieldEmbedder,
-                 num_highway_layers: int,
-                 phrase_layer: Seq2SeqEncoder,
-                 matrix_attention_layer: MatrixAttention,
-                 modeling_layer: Seq2SeqEncoder,
-                 dropout_prob: float = 0.1,
-                 initializer: InitializerApplicator = InitializerApplicator(),
-                 regularizer: Optional[RegularizerApplicator] = None) -> None:
+
+    def __init__(
+        self,
+        vocab: Vocabulary,
+        text_field_embedder: TextFieldEmbedder,
+        num_highway_layers: int,
+        phrase_layer: Seq2SeqEncoder,
+        matrix_attention_layer: MatrixAttention,
+        modeling_layer: Seq2SeqEncoder,
+        dropout_prob: float = 0.1,
+        initializer: InitializerApplicator = InitializerApplicator(),
+        regularizer: Optional[RegularizerApplicator] = None,
+    ) -> None:
         super().__init__(vocab, regularizer)
 
         text_embed_dim = text_field_embedder.get_output_dim()
@@ -89,13 +93,15 @@ class QaNet(Model):
 
         initializer(self)
 
-    def forward(self,  # type: ignore
-                question: Dict[str, torch.LongTensor],
-                passage: Dict[str, torch.LongTensor],
-                span_start: torch.IntTensor = None,
-                span_end: torch.IntTensor = None,
-                metadata: List[Dict[str, Any]] = None) -> Dict[str, torch.Tensor]:
-        # pylint: disable=arguments-differ
+    def forward(  # type: ignore
+        self,
+        question: Dict[str, torch.LongTensor],
+        passage: Dict[str, torch.LongTensor],
+        span_start: torch.IntTensor = None,
+        span_end: torch.IntTensor = None,
+        metadata: List[Dict[str, Any]] = None,
+    ) -> Dict[str, torch.Tensor]:
+
         """
         Parameters
         ----------
@@ -156,24 +162,26 @@ class QaNet(Model):
         projected_embedded_question = self._encoding_proj_layer(embedded_question)
         projected_embedded_passage = self._encoding_proj_layer(embedded_passage)
 
-        encoded_question = self._dropout(self._phrase_layer(projected_embedded_question, question_mask))
-        encoded_passage = self._dropout(self._phrase_layer(projected_embedded_passage, passage_mask))
+        encoded_question = self._dropout(
+            self._phrase_layer(projected_embedded_question, question_mask)
+        )
+        encoded_passage = self._dropout(
+            self._phrase_layer(projected_embedded_passage, passage_mask)
+        )
 
         # Shape: (batch_size, passage_length, question_length)
         passage_question_similarity = self._matrix_attention(encoded_passage, encoded_question)
         # Shape: (batch_size, passage_length, question_length)
         passage_question_attention = masked_softmax(
-                passage_question_similarity,
-                question_mask,
-                memory_efficient=True)
+            passage_question_similarity, question_mask, memory_efficient=True
+        )
         # Shape: (batch_size, passage_length, encoding_dim)
         passage_question_vectors = util.weighted_sum(encoded_question, passage_question_attention)
 
         # Shape: (batch_size, question_length, passage_length)
         question_passage_attention = masked_softmax(
-                passage_question_similarity.transpose(1, 2),
-                passage_mask,
-                memory_efficient=True)
+            passage_question_similarity.transpose(1, 2), passage_mask, memory_efficient=True
+        )
         # Shape: (batch_size, passage_length, passage_length)
         attention_over_attention = torch.bmm(passage_question_attention, question_passage_attention)
         # Shape: (batch_size, passage_length, encoding_dim)
@@ -181,16 +189,23 @@ class QaNet(Model):
 
         # Shape: (batch_size, passage_length, encoding_dim * 4)
         merged_passage_attention_vectors = self._dropout(
-                torch.cat([encoded_passage, passage_question_vectors,
-                           encoded_passage * passage_question_vectors,
-                           encoded_passage * passage_passage_vectors],
-                          dim=-1)
-                )
+            torch.cat(
+                [
+                    encoded_passage,
+                    passage_question_vectors,
+                    encoded_passage * passage_question_vectors,
+                    encoded_passage * passage_passage_vectors,
+                ],
+                dim=-1,
+            )
+        )
 
         modeled_passage_list = [self._modeling_proj_layer(merged_passage_attention_vectors)]
 
         for _ in range(3):
-            modeled_passage = self._dropout(self._modeling_layer(modeled_passage_list[-1], passage_mask))
+            modeled_passage = self._dropout(
+                self._modeling_layer(modeled_passage_list[-1], passage_mask)
+            )
             modeled_passage_list.append(modeled_passage)
 
         # Shape: (batch_size, passage_length, modeling_dim * 2))
@@ -211,51 +226,55 @@ class QaNet(Model):
         best_span = get_best_span(span_start_logits, span_end_logits)
 
         output_dict = {
-                "passage_question_attention": passage_question_attention,
-                "span_start_logits": span_start_logits,
-                "span_start_probs": span_start_probs,
-                "span_end_logits": span_end_logits,
-                "span_end_probs": span_end_probs,
-                "best_span": best_span,
-                }
+            "passage_question_attention": passage_question_attention,
+            "span_start_logits": span_start_logits,
+            "span_start_probs": span_start_probs,
+            "span_end_logits": span_end_logits,
+            "span_end_probs": span_end_probs,
+            "best_span": best_span,
+        }
 
         # Compute the loss for training.
         if span_start is not None:
-            loss = nll_loss(util.masked_log_softmax(span_start_logits, passage_mask), span_start.squeeze(-1))
+            loss = nll_loss(
+                util.masked_log_softmax(span_start_logits, passage_mask), span_start.squeeze(-1)
+            )
             self._span_start_accuracy(span_start_logits, span_start.squeeze(-1))
-            loss += nll_loss(util.masked_log_softmax(span_end_logits, passage_mask), span_end.squeeze(-1))
+            loss += nll_loss(
+                util.masked_log_softmax(span_end_logits, passage_mask), span_end.squeeze(-1)
+            )
             self._span_end_accuracy(span_end_logits, span_end.squeeze(-1))
             self._span_accuracy(best_span, torch.cat([span_start, span_end], -1))
             output_dict["loss"] = loss
 
         # Compute the EM and F1 on SQuAD and add the tokenized input to the output.
         if metadata is not None:
-            output_dict['best_span_str'] = []
+            output_dict["best_span_str"] = []
             question_tokens = []
             passage_tokens = []
             for i in range(batch_size):
-                question_tokens.append(metadata[i]['question_tokens'])
-                passage_tokens.append(metadata[i]['passage_tokens'])
-                passage_str = metadata[i]['original_passage']
-                offsets = metadata[i]['token_offsets']
+                question_tokens.append(metadata[i]["question_tokens"])
+                passage_tokens.append(metadata[i]["passage_tokens"])
+                passage_str = metadata[i]["original_passage"]
+                offsets = metadata[i]["token_offsets"]
                 predicted_span = tuple(best_span[i].detach().cpu().numpy())
                 start_offset = offsets[predicted_span[0]][0]
                 end_offset = offsets[predicted_span[1]][1]
                 best_span_string = passage_str[start_offset:end_offset]
-                output_dict['best_span_str'].append(best_span_string)
-                answer_texts = metadata[i].get('answer_texts', [])
+                output_dict["best_span_str"].append(best_span_string)
+                answer_texts = metadata[i].get("answer_texts", [])
                 if answer_texts:
                     self._metrics(best_span_string, answer_texts)
-            output_dict['question_tokens'] = question_tokens
-            output_dict['passage_tokens'] = passage_tokens
+            output_dict["question_tokens"] = question_tokens
+            output_dict["passage_tokens"] = passage_tokens
         return output_dict
 
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
         exact_match, f1_score = self._metrics.get_metric(reset)
         return {
-                'start_acc': self._span_start_accuracy.get_metric(reset),
-                'end_acc': self._span_end_accuracy.get_metric(reset),
-                'span_acc': self._span_accuracy.get_metric(reset),
-                'em': exact_match,
-                'f1': f1_score,
-                }
+            "start_acc": self._span_start_accuracy.get_metric(reset),
+            "end_acc": self._span_end_accuracy.get_metric(reset),
+            "span_acc": self._span_accuracy.get_metric(reset),
+            "em": exact_match,
+            "f1": f1_score,
+        }

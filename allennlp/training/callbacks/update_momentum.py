@@ -8,7 +8,7 @@ from allennlp.training.callbacks.events import Events
 from allennlp.training.momentum_schedulers import MomentumScheduler
 
 if TYPE_CHECKING:
-    from allennlp.training.callback_trainer import CallbackTrainer  # pylint:disable=unused-import
+    from allennlp.training.callback_trainer import CallbackTrainer
 
 
 @Callback.register("update_momentum")
@@ -21,15 +21,16 @@ class UpdateMomentum(Callback):
     momentum_scheduler : ``MomentumScheduler``
         The momentum scheduler to run.
     """
+
     def __init__(self, momentum_scheduler: MomentumScheduler) -> None:
         self.momentum_scheduler = momentum_scheduler
 
     @handle_event(Events.BACKWARD, priority=1000)
-    def step_batch(self, trainer: 'CallbackTrainer'):
+    def step_batch(self, trainer: "CallbackTrainer"):
         self.momentum_scheduler.step_batch(trainer.batch_num_total)
 
     @handle_event(Events.EPOCH_END)
-    def step(self, trainer: 'CallbackTrainer'):
+    def step(self, trainer: "CallbackTrainer"):
         self.momentum_scheduler.step(trainer.latest_val_metric, trainer.epoch_number)
 
     def get_training_state(self) -> dict:
@@ -42,7 +43,12 @@ class UpdateMomentum(Callback):
             self.momentum_scheduler.load_state_dict(state_dict)
 
     @classmethod
-    def from_params(cls, params: Params, optimizer: torch.optim.Optimizer) -> 'UpdateMomentum':  # type: ignore
-        # pylint: disable=arguments-differ
-        return cls(MomentumScheduler.from_params(params=params.pop("momentum_scheduler"),
-                                                 optimizer=optimizer))
+    def from_params(  # type: ignore
+        cls, params: Params, optimizer: torch.optim.Optimizer
+    ) -> "UpdateMomentum":
+
+        return cls(
+            MomentumScheduler.from_params(
+                params=params.pop("momentum_scheduler"), optimizer=optimizer
+            )
+        )

@@ -28,8 +28,14 @@ local COMMON = import 'common.jsonnet';
             "embedding_dim": 16,
             "averaged": true
         },
+        "feedforward": {
+            "input_dim": 16,
+            "num_layers": 1,
+            "hidden_dims": 20,
+            "activations": "relu",
+            "dropout": 0.1
+      }
     },
     "iterator": COMMON['iterator'],
     "trainer": COMMON['trainer']
 }
-

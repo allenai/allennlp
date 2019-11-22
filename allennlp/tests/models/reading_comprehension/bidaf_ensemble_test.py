@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name
 import numpy
 import torch
 
@@ -6,68 +5,71 @@ from allennlp.common.testing import ModelTestCase
 from allennlp.data.dataset import Batch
 from allennlp.models.reading_comprehension.bidaf_ensemble import BidafEnsemble, ensemble
 
+
 class BidafEnsembleTest(ModelTestCase):
     def setUp(self):
-        super(BidafEnsembleTest, self).setUp()
-        self.set_up_model(self.FIXTURES_ROOT / 'bidaf' / 'experiment.json',
-                          self.FIXTURES_ROOT / 'data' /  'squad.json')
+        super().setUp()
+        self.set_up_model(
+            self.FIXTURES_ROOT / "bidaf" / "experiment.json",
+            self.FIXTURES_ROOT / "data" / "squad.json",
+        )
         self.model.eval()
 
     def test_ensemble_chooses_highest_average_confidence_2(self):
         subresults = [
-                {
-                        "span_start_probs": torch.FloatTensor([[0.9, 0.0, 0.0, 0.0]]),
-                        "span_end_probs": torch.FloatTensor([[0.9, 0.0, 0.0, 0.0]]),
-                        "best_span": torch.LongTensor([[0, 0]]),
-                        "best_span_str": "What",
-                        "question_tokens": ["What", "did", "Michael", "eat", "?"],
-                        "passage_tokens": ["Michael", "ate", "cheese", "."]
-                },
-                {
-                        "span_start_probs": torch.FloatTensor([[0.0, 0.0, 1.0, 0.0]]),
-                        "span_end_probs": torch.FloatTensor([[0.0, 0.0, 1.0, 0.0]]),
-                        "best_span": torch.LongTensor([[2, 2]]),
-                        "best_span_str": "cheese",
-                        "question_tokens": ["What", "did", "Michael", "eat", "?"],
-                        "passage_tokens": ["Michael", "ate", "cheese", "."]
-                }
+            {
+                "span_start_probs": torch.FloatTensor([[0.9, 0.0, 0.0, 0.0]]),
+                "span_end_probs": torch.FloatTensor([[0.9, 0.0, 0.0, 0.0]]),
+                "best_span": torch.LongTensor([[0, 0]]),
+                "best_span_str": "What",
+                "question_tokens": ["What", "did", "Michael", "eat", "?"],
+                "passage_tokens": ["Michael", "ate", "cheese", "."],
+            },
+            {
+                "span_start_probs": torch.FloatTensor([[0.0, 0.0, 1.0, 0.0]]),
+                "span_end_probs": torch.FloatTensor([[0.0, 0.0, 1.0, 0.0]]),
+                "best_span": torch.LongTensor([[2, 2]]),
+                "best_span_str": "cheese",
+                "question_tokens": ["What", "did", "Michael", "eat", "?"],
+                "passage_tokens": ["Michael", "ate", "cheese", "."],
+            },
         ]
 
         numpy.testing.assert_almost_equal(
-                ensemble(subresults).data[0].cpu().numpy(),
-                torch.LongTensor([2, 2]).cpu().numpy())
+            ensemble(subresults).data[0].cpu().numpy(), torch.LongTensor([2, 2]).cpu().numpy()
+        )
 
     def test_ensemble_chooses_highest_average_confidence_3(self):
         subresults = [
-                {
-                        "span_start_probs": torch.FloatTensor([[0.0, 0.0, 0.9, 0.1]]),
-                        "span_end_probs": torch.FloatTensor([[0.0, 0.0, 0.9, 0.1]]),
-                        "best_span": torch.LongTensor([[2, 2]]),
-                        "best_span_str": "cheese",
-                        "question_tokens": ["What", "did", "Michael", "eat", "?"],
-                        "passage_tokens": ["Michael", "ate", "cheese", "."]
-                },
-                {
-                        "span_start_probs": torch.FloatTensor([[0.0, 0.0, 0.9, 0.1]]),
-                        "span_end_probs": torch.FloatTensor([[0.0, 0.0, 0.9, 0.1]]),
-                        "best_span": torch.LongTensor([[2, 2]]),
-                        "best_span_str": "cheese",
-                        "question_tokens": ["What", "did", "Michael", "eat", "?"],
-                        "passage_tokens": ["Michael", "ate", "cheese", "."]
-                },
-                {
-                        "span_start_probs": torch.FloatTensor([[0.9, 0.0, 0.0, 0.0]]),
-                        "span_end_probs": torch.FloatTensor([[0.9, 0.0, 0.0, 0.0]]),
-                        "best_span": torch.LongTensor([[0, 0]]),
-                        "best_span_str": "What",
-                        "question_tokens": ["What", "did", "Michael", "eat", "?"],
-                        "passage_tokens": ["Michael", "ate", "cheese", "."]
-                }
+            {
+                "span_start_probs": torch.FloatTensor([[0.0, 0.0, 0.9, 0.1]]),
+                "span_end_probs": torch.FloatTensor([[0.0, 0.0, 0.9, 0.1]]),
+                "best_span": torch.LongTensor([[2, 2]]),
+                "best_span_str": "cheese",
+                "question_tokens": ["What", "did", "Michael", "eat", "?"],
+                "passage_tokens": ["Michael", "ate", "cheese", "."],
+            },
+            {
+                "span_start_probs": torch.FloatTensor([[0.0, 0.0, 0.9, 0.1]]),
+                "span_end_probs": torch.FloatTensor([[0.0, 0.0, 0.9, 0.1]]),
+                "best_span": torch.LongTensor([[2, 2]]),
+                "best_span_str": "cheese",
+                "question_tokens": ["What", "did", "Michael", "eat", "?"],
+                "passage_tokens": ["Michael", "ate", "cheese", "."],
+            },
+            {
+                "span_start_probs": torch.FloatTensor([[0.9, 0.0, 0.0, 0.0]]),
+                "span_end_probs": torch.FloatTensor([[0.9, 0.0, 0.0, 0.0]]),
+                "best_span": torch.LongTensor([[0, 0]]),
+                "best_span_str": "What",
+                "question_tokens": ["What", "did", "Michael", "eat", "?"],
+                "passage_tokens": ["Michael", "ate", "cheese", "."],
+            },
         ]
 
         numpy.testing.assert_almost_equal(
-                ensemble(subresults).data[0].cpu().numpy(),
-                torch.LongTensor([2, 2]).numpy())
+            ensemble(subresults).data[0].cpu().numpy(), torch.LongTensor([2, 2]).numpy()
+        )
 
     def test_forward_pass_runs_correctly(self):
         """
@@ -91,6 +93,6 @@ class BidafEnsembleTest(ModelTestCase):
         # error with using the evaluation script, this will fail.  This makes sure that we've
         # loaded the evaluation data correctly and have hooked things up to the official evaluation
         # script.
-        assert metrics['f1'] > 0
-        assert torch.equal(ensemble_output_dict['best_span'], bidaf_output_dict['best_span'])
-        assert ensemble_output_dict['best_span_str'] == bidaf_output_dict['best_span_str']
+        assert metrics["f1"] > 0
+        assert torch.equal(ensemble_output_dict["best_span"], bidaf_output_dict["best_span"])
+        assert ensemble_output_dict["best_span_str"] == bidaf_output_dict["best_span_str"]

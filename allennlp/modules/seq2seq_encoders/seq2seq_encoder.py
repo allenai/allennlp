@@ -12,6 +12,7 @@ class Seq2SeqEncoder(_EncoderBase, Registrable):
     You might need this if you want to construct a ``Linear`` layer using the output of this encoder,
     or to raise sensible errors for mis-matching input dimensions.
     """
+
     def get_input_dim(self) -> int:
         """
         Returns the dimension of the vector input for each element in the sequence input

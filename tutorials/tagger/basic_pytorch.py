@@ -9,7 +9,7 @@ with the following changes:
  4. early stopping based on validation loss
  5. track accuracy during training / validation
 """
-# pylint: disable=invalid-name,redefined-outer-name
+
 from typing import Iterable, Mapping, Dict, Tuple, List
 
 import torch
@@ -66,7 +66,7 @@ class LSTMTagger(nn.Module):
                  hidden_dim: int,
                  vocab_size: int,
                  tagset_size: int) -> None:
-        super(LSTMTagger, self).__init__()
+        super().__init__()
         self.hidden_dim = hidden_dim
 
         self.word_embeddings = nn.Embedding(vocab_size, embedding_dim)
