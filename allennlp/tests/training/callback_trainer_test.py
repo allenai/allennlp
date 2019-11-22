@@ -37,7 +37,7 @@ from allennlp.training.callbacks import (
     UpdateMomentum,
     TrackMetrics,
     UpdateMovingAverage,
-    GradientAccumulation
+    GradientAccumulation,
 )
 from allennlp.training.checkpointer import Checkpointer
 from allennlp.training.learning_rate_schedulers import LearningRateScheduler
@@ -1002,9 +1002,11 @@ class TestCallbackTrainer(ModelTestCase):
 
         count_forward = CountForward()
 
-        callbacks = [*self.default_callbacks(batch_size=1),
-                     GradientAccumulation(gradient_accumulation_period=3),
-                     count_forward]
+        callbacks = [
+            *self.default_callbacks(batch_size=1),
+            GradientAccumulation(gradient_accumulation_period=3),
+            count_forward,
+        ]
 
         # Use a new iterator with batch size 1
         iterator = BasicIterator(batch_size=1)
@@ -1021,12 +1023,14 @@ class TestCallbackTrainer(ModelTestCase):
 
         self.optimizer.step = MagicMock(return_value=None, side_effect=side_effect)
 
-        trainer = CallbackTrainer(model=self.model,
-                                  training_data=self.instances,
-                                  iterator=iterator,
-                                  optimizer=self.optimizer,
-                                  callbacks=callbacks,
-                                  num_epochs=2)
+        trainer = CallbackTrainer(
+            model=self.model,
+            training_data=self.instances,
+            iterator=iterator,
+            optimizer=self.optimizer,
+            callbacks=callbacks,
+            num_epochs=2,
+        )
         trainer.handler.verbose = True
         trainer.train()
 
