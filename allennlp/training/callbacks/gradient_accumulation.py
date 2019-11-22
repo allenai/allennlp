@@ -21,20 +21,20 @@ class GradientAccumulation(Callback):
     gradient_accumulation_period : ``int``
         How many forward / backward passes make up a single "batch".
     """
-    def __init__(self,
-                 gradient_accumulation_period: int) -> None:
+
+    def __init__(self, gradient_accumulation_period: int) -> None:
         self.gradient_accumulation_period = gradient_accumulation_period
         self.count = 0
 
     @handle_event(Events.TRAINING_START)
-    def set_loss_scale(self, trainer: 'CallbackTrainer') -> None:
+    def set_loss_scale(self, trainer: "CallbackTrainer") -> None:
         # If the gradient accumulation period is (say) 3,
         # we are accumulating the losses from 3 batch_groups,
         # so we want to divide them by 3.
         trainer.loss_scale /= self.gradient_accumulation_period
 
     @handle_event(Events.EPOCH_START)
-    def reset_counter(self, trainer: 'CallbackTrainer') -> None:
+    def reset_counter(self, trainer: "CallbackTrainer") -> None:
         self.count = 0
 
         # It's definitely the start of a (synthetic) batch, but it's only the end
@@ -43,7 +43,7 @@ class GradientAccumulation(Callback):
         trainer.is_end_of_batch = self.gradient_accumulation_period == 1
 
     @handle_event(Events.FORWARD)
-    def increment_counter(self, trainer: 'CallbackTrainer') -> None:
+    def increment_counter(self, trainer: "CallbackTrainer") -> None:
         self.count += 1
 
         if self.count >= self.gradient_accumulation_period:
