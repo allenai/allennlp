@@ -11,13 +11,17 @@ allennlp.training.callbacks
    :undoc-members:
    :show-inheritance:
 
+.. automodule:: allennlp.training.callbacks.checkpoint
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 .. automodule:: allennlp.training.callbacks.events
    :members:
    :undoc-members:
    :show-inheritance:
 
-
-.. automodule:: allennlp.training.callbacks.checkpoint
+.. automodule:: allennlp.training.callbacks.gradient_accumulation
    :members:
    :undoc-members:
    :show-inheritance:
