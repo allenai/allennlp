@@ -86,9 +86,8 @@ class PretrainedTransformerIndexer(TokenIndexer[int]):
                 # # It computed in PretrainedTransformerTokenizer.
                 indices.append(token.text_id)
             else:
-                raise KeyError(
-                    f"Using PretrainedTransformerIndexer but field text_id is not set for the following token: {token.text}"
-                )
+                raise KeyError(("Using PretrainedTransformerIndexer but field text_id is not set"
+                                f" for the following token: {token.text}"))
 
         return {index_name: indices}
 
