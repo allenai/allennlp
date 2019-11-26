@@ -31,7 +31,7 @@ DOCS_THAT_NEED_NO_MODULES: Set[str] = {
     # Function is defined in allennlp/commands/__init__.py.
     "allennlp.commands.main",
     # Moved to another repo. Docs replaced by link to same.
-    "allennlp.pretrained"
+    "allennlp.pretrained",
 }
 
 
