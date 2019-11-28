@@ -203,6 +203,9 @@ class TransformerMaskedLMModel(Model):
         self._accuracy(label_logits, label)
         output_dict["loss"] = loss
 
+        #if not (label_logits.numpy().argmax() == label.numpy())[0]:
+        #    logging.info("%s answer: %s" % (metadata[0]['question_text'], metadata[0]['choice_text_list'][metadata[0]['correct_answer_index']]))
+
         if self._debug > 0:
             print(output_dict)
         return output_dict

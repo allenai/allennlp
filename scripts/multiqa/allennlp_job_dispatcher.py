@@ -36,6 +36,7 @@ class AllenNLP_Job_Dispatcher():
         #all_objects['Contents'] += s3.list_objects(Bucket='mrqa', Prefix='models/')['Contents']
         #all_objects['Contents'] += s3.list_objects(Bucket='beatbert', Prefix='models/')['Contents']
         #all_objects['Contents'] += s3.list_objects(Bucket='multiqa', Prefix='models_new/')['Contents']
+        all_objects['Contents'] += s3.list_objects(Bucket='olmpics', Prefix='models/')['Contents']
         all_objects['Contents'] += s3.list_objects(Bucket='multiqa', Prefix='data/')['Contents']
         if 'Contents' in all_objects:
             self.s3_models = [obj['Key'] for obj in all_objects['Contents']]
@@ -304,7 +305,10 @@ class AllenNLP_Job_Dispatcher():
         bash_command += '--output-file ' + exp_config['output_file'] + ' '
         bash_command += '-o "' + str(exp_config['override_config']).replace('True', 'true').replace('False', 'false') + '" '
         bash_command += ' --cuda-device [GPU_ID]'
-        bash_command += self.allennlp_include_packages()
+        if 'include_packages' in exp_config:
+            bash_command += ' ' + exp_config['include_packages']
+        else:
+            bash_command += self.allennlp_include_packages()
         return bash_command
 
     def build_train_bash_command(self, exp_config, run_name):
@@ -312,7 +316,7 @@ class AllenNLP_Job_Dispatcher():
         bash_command += '-s ' + '[MODEL_DIR]' + run_name + ' '
         bash_command += '-o "' + str(exp_config['override_config']).replace('True', 'true').replace('False', 'false') + '" '
         if 'include_packages' in exp_config:
-            bash_command += exp_config['include_packages']
+            bash_command += ' ' + exp_config['include_packages']
         else:
             bash_command += self.allennlp_include_packages()
         if 'dont_save_best_model' in exp_config and exp_config['dont_save_best_model']:
@@ -331,7 +335,10 @@ class AllenNLP_Job_Dispatcher():
         bash_command += '-c ' + exp_config['master_config'] + ' '
         bash_command += '-s ' + '[MODEL_DIR]' + run_name + ' '
         bash_command += '-o "' + str(exp_config['override_config']).replace('True', 'true').replace('False', 'false') + '" '
-        bash_command += self.allennlp_include_packages()
+        if 'include_packages' in exp_config:
+            bash_command += exp_config['include_packages']
+        else:
+            bash_command += self.allennlp_include_packages()
         return bash_command
 
     def build_predict_bash_command(self, exp_config, run_name):
@@ -342,7 +349,10 @@ class AllenNLP_Job_Dispatcher():
         bash_command += ' --silent '
         bash_command += '-o "' + str(exp_config['override_config']).replace('True', 'true').replace('False', 'false') + '" '
         bash_command += ' --cuda-device [GPU_ID]'
-        bash_command += self.allennlp_include_packages()
+        if 'include_packages' in exp_config:
+            bash_command += exp_config['include_packages']
+        else:
+            bash_command += self.allennlp_include_packages()
         return bash_command
 
     def get_elastic_evaluate_exp_results(self, experiment_name):
@@ -598,14 +608,11 @@ experiment_name += ['026_DocQA_exp1_train_small']
 experiment_name += ['027_DocQA_exp1_train_Full']
 experiment_name += ["019_BERT_train_Full"]
 
-
-#Exp2
 experiment_name += ['021_BERT_exp2_finetune_small_from_75K']
 experiment_name += ['016_DocQA_exp2_finetune_small_from_75K']
 experiment_name += ['043_BERT_exp2_finetune_full_from_mix']
 experiment_name += ['045_BERT_exp2_mix_small_and_75K']
 
-#Exp3
 experiment_name += ['028_GloVe_exp3_finetune_target_sizes']
 experiment_name += ['025_GloVe_exp3_finetune_target_sizes_lr']
 experiment_name += ['029_BERT_exp3_finetune_target_sizes']
@@ -694,7 +701,6 @@ allennlp_dispatcher = AllenNLP_Job_Dispatcher(experiment_name)
 #experiment_name = '065_BERT_train_mix_MRQA'
 #experiment_name = '066_CSQA_BERT_train'
 #experiment_name = '067_CSQA_BERTbase_grid_train'
-experiment_name = '068_oLMpics_LearningCurves'
 #experiment_name = '069_BERTLarge_train_mix_MRQA'
 #experiment_name = '070_CSQA_BERTLarge_train'
 #experiment_name = '071_BERT_preproc_rlcwq'
@@ -714,18 +720,29 @@ experiment_name = '068_oLMpics_LearningCurves'
 #experiment_name = '085_MultiQA_convert_to_SQuAD2.0'
 #experiment_name = '087_Pytorch_Transformers_train'
 #experiment_name = '088_oLMpics_build_challenge'
+
+#experiment_name = '068_oLMpics_LearningCurves'
+experiment_name = '069_oLMpics_LearningCurves_MASKED'
+#experiment_name = '089_oLMpics_train_triplets'
+#experiment_name = '090_oLMpics_finetuned_LearningCurves'
+#experiment_name = '091_oLMpics_train_on_challenge'
+#experiment_name = '092_oLMpics_train_non_transformer'
+#experiment_name = '093_oLMpics_finetune_LC_non_transformer'
+#experiment_name = '094_oLMpics_train_LC_non_transformer'
+#experiment_name = '095_oLMpics_zeroshot_eval'
+
 #if experiment_name.find('BERTLarge') > -1 and experiment_name.find('evaluate') == -1:
 #queue = '4GPUs'
 #queue = 'V100'
 #queue = 'gamir'
 #queue = 'rack-gamir-g05'
 #queue = 'pc-jonathan1'
-queue = 'rack-jonathan-g02'
+#queue = 'rack-jonathan-g02'
 #queue = 'savant'
 
-FORCE_RUN = True
+FORCE_RUN = False
 SHOW_MISSING_RESOURCES = True
-run_only_one = True
+run_only_one  = False
 
 print('Running new job on queue = %s', queue)
 allennlp_dispatcher.run_job(experiment_name, args.DRY_RUN , queue, FORCE_RUN, run_only_one)

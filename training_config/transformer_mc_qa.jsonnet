@@ -14,7 +14,7 @@ local cuda_device = 0;
     "sample": 200,
     "num_choices": 3,
     "context_syntax": "q#a!",
-    "add_prefix": {"q": "Q: ", "a": "A: "},
+    //"add_prefix": {"q": "Q: ", "a": "A: "},
     "pretrained_model": transformer_model,
     "max_pieces": 256
   },
@@ -23,7 +23,7 @@ local cuda_device = 0;
     "sample": -1,
     "num_choices": 3,
     "context_syntax": "q#a!",
-    "add_prefix": {"q": "Q: ", "a": "A: "},
+    //"add_prefix": {"q": "Q: ", "a": "A: "},
     "pretrained_model": transformer_model,
     "max_pieces": 256
   },
