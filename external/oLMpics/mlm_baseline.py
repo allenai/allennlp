@@ -171,7 +171,7 @@ class MLMBaseline(Model):
         """
 
         batch_size, num_of_tokens = phrase['tokens'].shape
-        choices_ids = choices['tokens'].squeeze()
+        choices_ids = choices['tokens'][:,:,0].squeeze()
         _, num_choices = choices_ids.shape
         embedded_phrase = self._text_field_embedder(phrase)
 
