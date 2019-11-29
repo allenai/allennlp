@@ -2,7 +2,7 @@ local train_size = 200;
 local batch_size = 8;
 local gradient_accumulation_batch_size = 2;
 local num_epochs = 20;
-local learning_rate = 1e-5;
+local learning_rate = 3e-5;
 local weight_decay = 0.1;
 local warmup_ratio = 0.06;
 local transformer_model = "bert-base-uncased";
@@ -37,53 +37,11 @@ local cuda_device = -1;
     "text_field_embedder": {
       "tokens": {
         "type": "embedding",
-        //"pretrained_file": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/glove/glove.6B.50d.txt.gz",
+        "pretrained_file": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/glove/glove.6B.50d.txt.gz",
         "embedding_dim": 50,
-        "trainable": true
+        "trainable": false
       }
-    },
-    "encoder": {
-      "type": "lstm",
-      "input_size": 50,
-      "hidden_size": 300,
-      "num_layers": 1,
-      "bidirectional": true
-    },
-    "similarity_function": {"type": "dot_product"},
-    "projection_feedforward": {
-      "input_dim": 2400,
-      "hidden_dims": 300,
-      "num_layers": 1,
-      "activations": "relu"
-    },
-    "inference_encoder": {
-      "type": "lstm",
-      "input_size": 300,
-      "hidden_size": 300,
-      "num_layers": 1,
-      "bidirectional": true
-    },
-    "output_feedforward": {
-      "input_dim": 2400,
-      "num_layers": 1,
-      "hidden_dims": 300,
-      "activations": "relu",
-      "dropout": 0.3
-    },
-    "output_logit": {
-      "input_dim": 300,
-      "num_layers": 1,
-      "hidden_dims": 1,
-      "activations": "linear"
-    },
-     "initializer": [
-      [".*linear_layers.*weight", {"type": "xavier_uniform"}],
-      [".*linear_layers.*bias", {"type": "constant", "val": 0}],
-//      [".*weight_ih.*", {"type": "xavier_uniform"}], these should get initialized already!
-//      [".*weight_hh.*", {"type": "orthogonal"}],
-//      [".*bias_ih.*", {"type": "constant", "val": 0}],
-//      [".*bias_hh.*", {"type": "constant", "val": 1}]
-     ]
+    }
    },
   "iterator": {
     "type": "basic",
@@ -92,7 +50,8 @@ local cuda_device = -1;
   "trainer": {
     "optimizer": {
         "type": "adam",
-        "lr": 0.0004
+        "lr": 0.0004,
+        "weight_decay" : weight_decay
     },
     "validation_metric": "+accuracy",
     "num_serialized_models_to_keep": 0,

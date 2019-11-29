@@ -48,7 +48,7 @@ class BERTLikeLMHead(nn.Module):
     def __init__(self, hidden_size, vocab_size):
         super(BERTLikeLMHead, self).__init__()
         self.dense = nn.Linear(hidden_size, hidden_size)
-        #self.layer_norm = torch.nn.LayerNorm(hidden_size, eps=layer_norm_eps)
+        self.layer_norm = torch.nn.LayerNorm(hidden_size)
 
         self.decoder = nn.Linear(hidden_size, vocab_size, bias=False)
         self.bias = nn.Parameter(torch.zeros(vocab_size))
@@ -56,11 +56,13 @@ class BERTLikeLMHead(nn.Module):
         self.dense.weight.data.normal_(mean=0.0, std=0.02)
         self.decoder.weight.data.normal_(mean=0.0, std=0.02)
         self.bias.data.zero_()
+        self._dropout = torch.nn.Dropout(0.5)
 
     def forward(self, features, **kwargs):
         x = self.dense(features)
+        x = self._dropout(x)
         x = gelu(x)
-        #x = self.layer_norm(x)
+        x = self.layer_norm(x)
 
         # project back to size of vocabulary with bias
         x = self.decoder(x) + self.bias
@@ -123,36 +125,20 @@ class MLMBaseline(Model):
 
     def __init__(self, vocab: Vocabulary,
                  text_field_embedder: TextFieldEmbedder,
-                 encoder: Seq2SeqEncoder,
-                 similarity_function: SimilarityFunction,
-                 projection_feedforward: FeedForward,
-                 inference_encoder: Seq2SeqEncoder,
-                 output_feedforward: FeedForward,
-                 output_logit: FeedForward,
-                 initializer: InitializerApplicator = InitializerApplicator(),
                  dropout: float = 0.5,
                  regularizer: Optional[RegularizerApplicator] = None) -> None:
         super().__init__(vocab, regularizer)
 
         self._text_field_embedder = text_field_embedder
 
-        self._BERTLikeLMModelHead = BERTLikeLMModelHead(700, vocab.get_vocab_size())
-
-        self._output_logit = output_logit
+        self._BERTLikeLMModelHead = BERTLikeLMModelHead(1000, vocab.get_vocab_size())
 
         self._num_labels = vocab.get_vocab_size(namespace="labels")
-
-        check_dimensions_match(text_field_embedder.get_output_dim(), encoder.get_input_dim(),
-                               "text field embedding dim", "encoder input dim")
-        check_dimensions_match(encoder.get_output_dim() * 4, projection_feedforward.get_input_dim(),
-                               "encoder output dim", "projection feedforward input")
-        check_dimensions_match(projection_feedforward.get_output_dim(), inference_encoder.get_input_dim(),
-                               "proj feedforward output dim", "inference lstm input dim")
 
         self._accuracy = CategoricalAccuracy()
         self._loss = torch.nn.CrossEntropyLoss()
 
-        initializer(self)
+        #initializer(self)
 
     def forward(self,  # type: ignore
                 phrase: Dict[str, torch.LongTensor],
@@ -188,10 +174,15 @@ class MLMBaseline(Model):
         choices_ids = choices['tokens'].squeeze()
         _, num_choices = choices_ids.shape
         embedded_phrase = self._text_field_embedder(phrase)
+
         # putting the batch_size first, and concating the embeddings (the permute is to make
         # sure order is perserved
         embedded_phrase = embedded_phrase.view(batch_size, -1)
         # zero padding to reach the exact classifier size
+
+        # now we expand to size (7, 11) by appending a row of 0s at pos 0 and pos 6,
+        # and a column of 0s at pos 10
+        embedded_phrase = F.pad(input=embedded_phrase, pad=(0, 1000 - num_of_tokens*50), mode='constant', value=0)
 
         # applying the 2 layes MLP
         loss, label_logits = self._BERTLikeLMModelHead(embedded_phrase, choices_ids, label)

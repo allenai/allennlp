@@ -74,9 +74,8 @@ class BaselineMLMReader(DatasetReader):
         # pylint: disable=arguments-differ
         fields: Dict[str, Field] = {}
 
-        # we don't really need the [MASK] token with special brackets here, there is no notion of a [MASK] token position
-        # in this baseline...
-        question = question.replace('[MASK]','')
+        # relacing the MASK with the token @@, to ensure it will be tokenized with 1 token.
+        question = question.replace('[MASK]','@@')
 
         question_tokens = self._tokenizer.tokenize(question)
         fields['phrase'] = TextField(question_tokens, self._token_indexers)
