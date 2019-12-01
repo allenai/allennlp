@@ -83,6 +83,8 @@ class TransformerMCQAModel(Model):
 
         # unifing all model classification layer
         self._classifier = Linear(self._output_dim, 1)
+        self._classifier.weight.data.normal_(mean=0.0, std=0.02)
+        self._classifier.bias.data.zero_()
         #self._classifier.apply(self._transformer_model.init_weights)
 
         self._accuracy = CategoricalAccuracy()
