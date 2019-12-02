@@ -2,9 +2,9 @@
 Utilities for reading comprehension dataset readers.
 """
 
-from collections import Counter, defaultdict
 import logging
 import string
+from collections import Counter, defaultdict
 from typing import Any, Dict, List, Tuple
 
 from allennlp.data.fields import (
@@ -77,10 +77,14 @@ def char_span_to_token_span(
     # the tokens that have the same offsets as our span.
     error = False
     start_index = 0
-    while start_index < len(token_offsets) and token_offsets[start_index][0] < character_span[0]:
+    while (
+        start_index < len(token_offsets) - 1 and token_offsets[start_index][0] < character_span[0]
+    ):
         start_index += 1
     # start_index should now be pointing at the span start index.
-    if start_index == len(token_offsets) or token_offsets[start_index][0] > character_span[0]:
+    if not character_span[0] < 0 and (
+        start_index == len(token_offsets) or token_offsets[start_index][0] > character_span[0]
+    ):
         # In this case, a tokenization or labeling issue made us go too far - the character span
         # we're looking for actually starts in the previous token.  We'll back up one.
         logger.debug("Bad labelling or tokenization - start offset doesn't match")
@@ -88,14 +92,13 @@ def char_span_to_token_span(
     if token_offsets[start_index][0] != character_span[0]:
         error = True
     end_index = start_index
-    while end_index < len(token_offsets) and token_offsets[end_index][1] < character_span[1]:
+    while end_index < len(token_offsets) - 1 and token_offsets[end_index][1] < character_span[1]:
         end_index += 1
     if end_index == start_index and token_offsets[end_index][1] > character_span[1]:
         # Looks like there was a token that should have been split, like "1854-1855", where the
         # answer is "1854".  We can't do much in this case, except keep the answer as the whole
         # token.
         logger.debug("Bad tokenization - end offset doesn't match")
-    # TODO the following statements cause IndexErrors in case character_span[1] exceeds the sentence length
     elif token_offsets[end_index][1] > character_span[1]:
         # This is a case where the given answer span is more than one token, and the last token is
         # cut off for some reason, like "split with Luckett and Rober", when the original passage
