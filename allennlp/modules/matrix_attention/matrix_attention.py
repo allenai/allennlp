@@ -18,7 +18,6 @@ class MatrixAttention(torch.nn.Module, Registrable):
     Output:
         - ``(batch_size, num_rows_1, num_rows_2)``
     """
-    def forward(self,  # pylint: disable=arguments-differ
-                matrix_1: torch.Tensor,
-                matrix_2: torch.Tensor) -> torch.Tensor:
+
+    def forward(self, matrix_1: torch.Tensor, matrix_2: torch.Tensor) -> torch.Tensor:
         raise NotImplementedError

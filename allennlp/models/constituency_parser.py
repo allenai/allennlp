@@ -18,6 +18,7 @@ from allennlp.training.metrics import CategoricalAccuracy
 from allennlp.training.metrics import EvalbBracketingScorer, DEFAULT_EVALB_DIR
 from allennlp.common.checks import ConfigurationError
 
+
 class SpanInformation(NamedTuple):
     """
     A helper namedtuple for handling decoding information.
@@ -33,6 +34,7 @@ class SpanInformation(NamedTuple):
     label_prob : ``float``
         The probability of the most likely label.
     """
+
     start: int
     end: int
     label_prob: float
@@ -75,17 +77,20 @@ class SpanConstituencyParser(Model):
         which is located at allennlp/tools/EVALB . If ``None``, EVALB scoring
         is not used.
     """
-    def __init__(self,
-                 vocab: Vocabulary,
-                 text_field_embedder: TextFieldEmbedder,
-                 span_extractor: SpanExtractor,
-                 encoder: Seq2SeqEncoder,
-                 feedforward: FeedForward = None,
-                 pos_tag_embedding: Embedding = None,
-                 initializer: InitializerApplicator = InitializerApplicator(),
-                 regularizer: Optional[RegularizerApplicator] = None,
-                 evalb_directory_path: str = DEFAULT_EVALB_DIR) -> None:
-        super(SpanConstituencyParser, self).__init__(vocab, regularizer)
+
+    def __init__(
+        self,
+        vocab: Vocabulary,
+        text_field_embedder: TextFieldEmbedder,
+        span_extractor: SpanExtractor,
+        encoder: Seq2SeqEncoder,
+        feedforward: FeedForward = None,
+        pos_tag_embedding: Embedding = None,
+        initializer: InitializerApplicator = InitializerApplicator(),
+        regularizer: Optional[RegularizerApplicator] = None,
+        evalb_directory_path: str = DEFAULT_EVALB_DIR,
+    ) -> None:
+        super().__init__(vocab, regularizer)
 
         self.text_field_embedder = text_field_embedder
         self.span_extractor = span_extractor
@@ -103,19 +108,25 @@ class SpanConstituencyParser(Model):
         representation_dim = text_field_embedder.get_output_dim()
         if pos_tag_embedding is not None:
             representation_dim += pos_tag_embedding.get_output_dim()
-        check_dimensions_match(representation_dim,
-                               encoder.get_input_dim(),
-                               "representation dim (tokens + optional POS tags)",
-                               "encoder input dim")
-        check_dimensions_match(encoder.get_output_dim(),
-                               span_extractor.get_input_dim(),
-                               "encoder input dim",
-                               "span extractor input dim")
+        check_dimensions_match(
+            representation_dim,
+            encoder.get_input_dim(),
+            "representation dim (tokens + optional POS tags)",
+            "encoder input dim",
+        )
+        check_dimensions_match(
+            encoder.get_output_dim(),
+            span_extractor.get_input_dim(),
+            "encoder input dim",
+            "span extractor input dim",
+        )
         if feedforward is not None:
-            check_dimensions_match(span_extractor.get_output_dim(),
-                                   feedforward.get_input_dim(),
-                                   "span extractor output dim",
-                                   "feedforward input dim")
+            check_dimensions_match(
+                span_extractor.get_output_dim(),
+                feedforward.get_input_dim(),
+                "span extractor output dim",
+                "feedforward input dim",
+            )
 
         self.tag_accuracy = CategoricalAccuracy()
 
@@ -126,13 +137,15 @@ class SpanConstituencyParser(Model):
         initializer(self)
 
     @overrides
-    def forward(self,  # type: ignore
-                tokens: Dict[str, torch.LongTensor],
-                spans: torch.LongTensor,
-                metadata: List[Dict[str, Any]],
-                pos_tags: Dict[str, torch.LongTensor] = None,
-                span_labels: torch.LongTensor = None) -> Dict[str, torch.Tensor]:
-        # pylint: disable=arguments-differ
+    def forward(
+        self,  # type: ignore
+        tokens: Dict[str, torch.LongTensor],
+        spans: torch.LongTensor,
+        metadata: List[Dict[str, Any]],
+        pos_tags: Dict[str, torch.LongTensor] = None,
+        span_labels: torch.LongTensor = None,
+    ) -> Dict[str, torch.Tensor]:
+
         """
         Parameters
         ----------
@@ -213,11 +226,11 @@ class SpanConstituencyParser(Model):
         class_probabilities = masked_softmax(logits, span_mask.unsqueeze(-1))
 
         output_dict = {
-                "class_probabilities": class_probabilities,
-                "spans": spans,
-                "tokens": [meta["tokens"] for meta in metadata],
-                "pos_tags": [meta.get("pos_tags") for meta in metadata],
-                "num_spans": num_spans
+            "class_probabilities": class_probabilities,
+            "spans": spans,
+            "tokens": [meta["tokens"] for meta in metadata],
+            "pos_tags": [meta.get("pos_tags") for meta in metadata],
+            "num_spans": num_spans,
         }
         if span_labels is not None:
             loss = sequence_cross_entropy_with_logits(logits, span_labels, span_mask)
@@ -228,13 +241,16 @@ class SpanConstituencyParser(Model):
         # it for the validation and test sets.
         batch_gold_trees = [meta.get("gold_tree") for meta in metadata]
         if all(batch_gold_trees) and self._evalb_score is not None and not self.training:
-            gold_pos_tags: List[List[str]] = [list(zip(*tree.pos()))[1]
-                                              for tree in batch_gold_trees]
-            predicted_trees = self.construct_trees(class_probabilities.cpu().data,
-                                                   spans.cpu().data,
-                                                   num_spans.data,
-                                                   output_dict["tokens"],
-                                                   gold_pos_tags)
+            gold_pos_tags: List[List[str]] = [
+                list(zip(*tree.pos()))[1] for tree in batch_gold_trees
+            ]
+            predicted_trees = self.construct_trees(
+                class_probabilities.cpu().data,
+                spans.cpu().data,
+                num_spans.data,
+                output_dict["tokens"],
+                gold_pos_tags,
+            )
             self._evalb_score(predicted_trees, batch_gold_trees)
 
         return output_dict
@@ -250,27 +266,33 @@ class SpanConstituencyParser(Model):
         In order to make this less confusing, we remove all the padded spans and
         distributions from ``spans`` and ``class_probabilities`` respectively.
         """
-        all_predictions = output_dict['class_probabilities'].cpu().data
+        all_predictions = output_dict["class_probabilities"].cpu().data
         all_spans = output_dict["spans"].cpu().data
 
         all_sentences = output_dict["tokens"]
         all_pos_tags = output_dict["pos_tags"] if all(output_dict["pos_tags"]) else None
         num_spans = output_dict["num_spans"].data
-        trees = self.construct_trees(all_predictions, all_spans, num_spans, all_sentences, all_pos_tags)
+        trees = self.construct_trees(
+            all_predictions, all_spans, num_spans, all_sentences, all_pos_tags
+        )
 
         batch_size = all_predictions.size(0)
-        output_dict["spans"] = [all_spans[i, :num_spans[i]] for i in range(batch_size)]
-        output_dict["class_probabilities"] = [all_predictions[i, :num_spans[i], :] for i in range(batch_size)]
+        output_dict["spans"] = [all_spans[i, : num_spans[i]] for i in range(batch_size)]
+        output_dict["class_probabilities"] = [
+            all_predictions[i, : num_spans[i], :] for i in range(batch_size)
+        ]
 
         output_dict["trees"] = trees
         return output_dict
 
-    def construct_trees(self,
-                        predictions: torch.FloatTensor,
-                        all_spans: torch.LongTensor,
-                        num_spans: torch.LongTensor,
-                        sentences: List[List[str]],
-                        pos_tags: List[List[str]] = None) -> List[Tree]:
+    def construct_trees(
+        self,
+        predictions: torch.FloatTensor,
+        all_spans: torch.LongTensor,
+        num_spans: torch.LongTensor,
+        sentences: List[List[str]],
+        pos_tags: List[List[str]] = None,
+    ) -> List[Tree]:
         """
         Construct ``nltk.Tree``'s for each batch element by greedily nesting spans.
         The trees use exclusive end indices, which contrasts with how spans are
@@ -303,12 +325,13 @@ class SpanConstituencyParser(Model):
         no_label_id = self.vocab.get_token_index("NO-LABEL", "labels")
 
         trees: List[Tree] = []
-        for batch_index, (scored_spans, spans, sentence) in enumerate(zip(predictions,
-                                                                          exclusive_end_spans,
-                                                                          sentences)):
+        for batch_index, (scored_spans, spans, sentence) in enumerate(
+            zip(predictions, exclusive_end_spans, sentences)
+        ):
             selected_spans = []
-            for prediction, span in zip(scored_spans[:num_spans[batch_index]],
-                                        spans[:num_spans[batch_index]]):
+            for prediction, span in zip(
+                scored_spans[: num_spans[batch_index]], spans[: num_spans[batch_index]]
+            ):
                 start, end = span
                 no_label_prob = prediction[no_label_id]
                 label_prob, label_index = torch.max(prediction, -1)
@@ -316,21 +339,24 @@ class SpanConstituencyParser(Model):
                 # Does the span have a label != NO-LABEL or is it the root node?
                 # If so, include it in the spans that we consider.
                 if int(label_index) != no_label_id or (start == 0 and end == len(sentence)):
-                    # TODO(Mark): Remove this once pylint sorts out named tuples.
-                    # https://github.com/PyCQA/pylint/issues/1418
-                    selected_spans.append(SpanInformation(start=int(start), # pylint: disable=no-value-for-parameter
-                                                          end=int(end),
-                                                          label_prob=float(label_prob),
-                                                          no_label_prob=float(no_label_prob),
-                                                          label_index=int(label_index)))
+                    selected_spans.append(
+                        SpanInformation(
+                            start=int(start),
+                            end=int(end),
+                            label_prob=float(label_prob),
+                            no_label_prob=float(no_label_prob),
+                            label_index=int(label_index),
+                        )
+                    )
 
             # The spans we've selected might overlap, which causes problems when we try
             # to construct the tree as they won't nest properly.
             consistent_spans = self.resolve_overlap_conflicts_greedily(selected_spans)
 
-            spans_to_labels = {(span.start, span.end):
-                               self.vocab.get_token_from_index(span.label_index, "labels")
-                               for span in consistent_spans}
+            spans_to_labels = {
+                (span.start, span.end): self.vocab.get_token_from_index(span.label_index, "labels")
+                for span in consistent_spans
+            }
             sentence_pos = pos_tags[batch_index] if pos_tags is not None else None
             trees.append(self.construct_tree_from_spans(spans_to_labels, sentence, sentence_pos))
 
@@ -372,9 +398,11 @@ class SpanConstituencyParser(Model):
         while conflicts_exist:
             conflicts_exist = False
             for span1_index, span1 in enumerate(spans):
-                for span2_index, span2 in list(enumerate(spans))[span1_index + 1:]:
-                    if (span1.start < span2.start < span1.end < span2.end or
-                                span2.start < span1.start < span2.end < span1.end):
+                for span2_index, span2 in list(enumerate(spans))[span1_index + 1 :]:
+                    if (
+                        span1.start < span2.start < span1.end < span2.end
+                        or span2.start < span1.start < span2.end < span1.end
+                    ):
                         # The spans overlap.
                         conflicts_exist = True
                         # What's the more likely situation: that span2 was labeled
@@ -382,8 +410,10 @@ class SpanConstituencyParser(Model):
                         # was unlabled? In the first case, we delete span2 from the
                         # set of spans to form the tree - in the second case, we delete
                         # span1.
-                        if (span1.no_label_prob + span2.label_prob <
-                                    span2.no_label_prob + span1.label_prob):
+                        if (
+                            span1.no_label_prob + span2.label_prob
+                            < span2.no_label_prob + span1.label_prob
+                        ):
                             spans.pop(span2_index)
                         else:
                             spans.pop(span1_index)
@@ -391,9 +421,9 @@ class SpanConstituencyParser(Model):
         return spans
 
     @staticmethod
-    def construct_tree_from_spans(spans_to_labels: Dict[Tuple[int, int], str],
-                                  sentence: List[str],
-                                  pos_tags: List[str] = None) -> Tree:
+    def construct_tree_from_spans(
+        spans_to_labels: Dict[Tuple[int, int], str], sentence: List[str], pos_tags: List[str] = None
+    ) -> Tree:
         """
         Parameters
         ----------
@@ -409,6 +439,7 @@ class SpanConstituencyParser(Model):
         -------
         An ``nltk.Tree`` constructed from the labelled spans.
         """
+
         def assemble_subtree(start: int, end: int):
             if (start, end) in spans_to_labels:
                 # Some labels contain nested spans, e.g S-VP.

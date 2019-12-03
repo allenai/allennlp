@@ -35,9 +35,10 @@ class PytorchSeq2VecWrapper(Seq2VecEncoder):
     bugs around masking.  If you already have a ``PackedSequence`` you can pass ``None`` as the
     second parameter.
     """
+
     def __init__(self, module: torch.nn.modules.RNNBase) -> None:
         # Seq2VecEncoders cannot be stateful.
-        super(PytorchSeq2VecWrapper, self).__init__(stateful=False)
+        super().__init__(stateful=False)
         self._module = module
         try:
             if not self._module.batch_first:
@@ -55,10 +56,9 @@ class PytorchSeq2VecWrapper(Seq2VecEncoder):
             is_bidirectional = False
         return self._module.hidden_size * (2 if is_bidirectional else 1)
 
-    def forward(self,  # pylint: disable=arguments-differ
-                inputs: torch.Tensor,
-                mask: torch.Tensor,
-                hidden_state: torch.Tensor = None) -> torch.Tensor:
+    def forward(
+        self, inputs: torch.Tensor, mask: torch.Tensor, hidden_state: torch.Tensor = None
+    ) -> torch.Tensor:
 
         if mask is None:
             # If a mask isn't passed, there is no padding in the batch of instances, so we can just
@@ -69,8 +69,9 @@ class PytorchSeq2VecWrapper(Seq2VecEncoder):
 
         batch_size = mask.size(0)
 
-        _, state, restoration_indices, = \
-            self.sort_and_run_forward(self._module, inputs, mask, hidden_state)
+        _, state, restoration_indices, = self.sort_and_run_forward(
+            self._module, inputs, mask, hidden_state
+        )
 
         # Deal with the fact the LSTM state is a tuple of (state, memory).
         if isinstance(state, tuple):
@@ -82,9 +83,9 @@ class PytorchSeq2VecWrapper(Seq2VecEncoder):
             # batch size is the second dimension here, because pytorch
             # returns RNN state as a tensor of shape (num_layers * num_directions,
             # batch_size, hidden_size)
-            zeros = state.new_zeros(num_layers_times_directions,
-                                    batch_size - num_valid,
-                                    encoding_dim)
+            zeros = state.new_zeros(
+                num_layers_times_directions, batch_size - num_valid, encoding_dim
+            )
             state = torch.cat([state, zeros], 1)
 
         # Restore the original indices and return the final state of the

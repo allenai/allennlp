@@ -1,0 +1,56 @@
+[flake8]
+max-line-length = 115
+
+ignore =
+    # these rules don't play well with black
+    E203  # whitespace before :
+    W503  # line break before binary operator
+
+exclude =
+    build/**
+    doc/**
+    tutorials/tagger/**
+
+per-file-ignores =
+    # __init__.py files are allowed to have unused imports and lines-too-long
+    allennlp/__init__.py:F401
+    allennlp/**/__init__.py:F401,E501
+
+    # tests don't have to respect
+    #  E501: line length
+    #  E261: 2 spaces before comments (it would be ideal if they did, though)
+    #  E731: do not assign a lambda expression, use a def
+    #  F401: unused imports
+    allennlp/tests/**:E501,E261,E731,F401
+
+    # the deprecated /service/predictors also have unused imports
+    allennlp/service/predictors/*:F401
+
+    # scripts don't have to respect
+    #  E501: line length
+    #  E402: imports not at top of file (because we mess with sys.path)
+    #  E302 expected 2 blank lines, found 1 (it would be ideal if they did, though)
+    scripts/**:E501,E402,E302
+
+    # here are a few files that get to ignore line-too-long, lucky them
+    allennlp/modules/openai_transformer.py:E501
+    allennlp/pretrained.py:E501
+
+    # here are some files that get to ignore E402 module level import not at top of file
+    allennlp/modules/elmo.py:E402
+    allennlp/modules/elmo_lstm.py:E402
+    allennlp/modules/token_embedders/embedding.py:E402
+    allennlp/commands/elmo.py:E402
+    allennlp/tests/modules/elmo_test.py:E402
+    allennlp/tests/commands/elmo_test.py:E402
+    allennlp/tests/modules/token_embedders/embedding_test.py:E402
+
+    # Should probably fix this, but there's a lot of them.
+    # E127 continuation line over-indented for visual indent
+    allennlp/tests/semparse/worlds/atis_world_test.py:E127
+
+    # This one test is much more readable with nonstandard comments
+    # E114 indentation is not a multiple of four (comment)
+    # E116 unexpected indentation (comment)
+    # E128 continuation line under-indented for visual indent
+    allennlp/tests/data/token_indexers/bert_indexer_test.py:E114,E116,E128

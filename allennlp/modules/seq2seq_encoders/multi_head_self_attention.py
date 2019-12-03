@@ -8,7 +8,7 @@ from allennlp.modules.seq2seq_encoders.seq2seq_encoder import Seq2SeqEncoder
 
 @Seq2SeqEncoder.register("multi_head_self_attention")
 class MultiHeadSelfAttention(Seq2SeqEncoder):
-    # pylint: disable=line-too-long
+
     """
     This class implements the key-value scaled dot product attention mechanism
     detailed in the paper `Attention is all you Need
@@ -36,15 +36,18 @@ class MultiHeadSelfAttention(Seq2SeqEncoder):
     attention_dropout_prob : ``float``, optional (default = 0.1).
         The dropout probability applied to the normalised attention
         distributions.
-    """
-    def __init__(self,
-                 num_heads: int,
-                 input_dim: int,
-                 attention_dim: int,
-                 values_dim: int,
-                 output_projection_dim: int = None,
-                 attention_dropout_prob: float = 0.1) -> None:
-        super(MultiHeadSelfAttention, self).__init__()
+    """  # noqa
+
+    def __init__(
+        self,
+        num_heads: int,
+        input_dim: int,
+        attention_dim: int,
+        values_dim: int,
+        output_projection_dim: int = None,
+        attention_dropout_prob: float = 0.1,
+    ) -> None:
+        super().__init__()
 
         self._num_heads = num_heads
         self._input_dim = input_dim
@@ -53,12 +56,16 @@ class MultiHeadSelfAttention(Seq2SeqEncoder):
         self._values_dim = values_dim
 
         if attention_dim % num_heads != 0:
-            raise ValueError(f"Key size ({attention_dim}) must be divisible by the number of "
-                             f"attention heads ({num_heads}).")
+            raise ValueError(
+                f"Key size ({attention_dim}) must be divisible by the number of "
+                f"attention heads ({num_heads})."
+            )
 
         if values_dim % num_heads != 0:
-            raise ValueError(f"Value size ({values_dim}) must be divisible by the number of "
-                             f"attention heads ({num_heads}).")
+            raise ValueError(
+                f"Value size ({values_dim}) must be divisible by the number of "
+                f"attention heads ({num_heads})."
+            )
 
         self._combined_projection = Linear(input_dim, 2 * attention_dim + values_dim)
 
@@ -77,9 +84,7 @@ class MultiHeadSelfAttention(Seq2SeqEncoder):
         return False
 
     @overrides
-    def forward(self,  # pylint: disable=arguments-differ
-                inputs: torch.Tensor,
-                mask: torch.LongTensor = None) -> torch.FloatTensor:
+    def forward(self, inputs: torch.Tensor, mask: torch.LongTensor = None) -> torch.FloatTensor:
         """
         Parameters
         ----------
@@ -109,28 +114,44 @@ class MultiHeadSelfAttention(Seq2SeqEncoder):
         keys = keys.contiguous()
         values = torch.cat(values, -1).contiguous()
         # Shape (num_heads * batch_size, timesteps, values_dim / num_heads)
-        values_per_head = values.view(batch_size, timesteps, num_heads, int(self._values_dim/num_heads))
+        values_per_head = values.view(
+            batch_size, timesteps, num_heads, int(self._values_dim / num_heads)
+        )
         values_per_head = values_per_head.transpose(1, 2).contiguous()
-        values_per_head = values_per_head.view(batch_size * num_heads, timesteps, int(self._values_dim/num_heads))
+        values_per_head = values_per_head.view(
+            batch_size * num_heads, timesteps, int(self._values_dim / num_heads)
+        )
 
         # Shape (num_heads * batch_size, timesteps, attention_dim / num_heads)
-        queries_per_head = queries.view(batch_size, timesteps, num_heads, int(self._attention_dim/num_heads))
+        queries_per_head = queries.view(
+            batch_size, timesteps, num_heads, int(self._attention_dim / num_heads)
+        )
         queries_per_head = queries_per_head.transpose(1, 2).contiguous()
-        queries_per_head = queries_per_head.view(batch_size * num_heads, timesteps, int(self._attention_dim/num_heads))
+        queries_per_head = queries_per_head.view(
+            batch_size * num_heads, timesteps, int(self._attention_dim / num_heads)
+        )
 
         # Shape (num_heads * batch_size, timesteps, attention_dim / num_heads)
-        keys_per_head = keys.view(batch_size, timesteps, num_heads, int(self._attention_dim/num_heads))
+        keys_per_head = keys.view(
+            batch_size, timesteps, num_heads, int(self._attention_dim / num_heads)
+        )
         keys_per_head = keys_per_head.transpose(1, 2).contiguous()
-        keys_per_head = keys_per_head.view(batch_size * num_heads, timesteps, int(self._attention_dim/num_heads))
+        keys_per_head = keys_per_head.view(
+            batch_size * num_heads, timesteps, int(self._attention_dim / num_heads)
+        )
 
         # shape (num_heads * batch_size, timesteps, timesteps)
-        scaled_similarities = torch.bmm(queries_per_head / self._scale, keys_per_head.transpose(1, 2))
+        scaled_similarities = torch.bmm(
+            queries_per_head / self._scale, keys_per_head.transpose(1, 2)
+        )
 
         # shape (num_heads * batch_size, timesteps, timesteps)
         # Normalise the distributions, using the same mask for all heads.
-        attention = masked_softmax(scaled_similarities,
-                                   mask.repeat(1, num_heads).view(batch_size * num_heads, timesteps),
-                                   memory_efficient=True)
+        attention = masked_softmax(
+            scaled_similarities,
+            mask.repeat(1, num_heads).view(batch_size * num_heads, timesteps),
+            memory_efficient=True,
+        )
         attention = self._attention_dropout(attention)
 
         # Take a weighted sum of the values with respect to the attention

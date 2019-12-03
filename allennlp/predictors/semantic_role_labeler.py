@@ -5,7 +5,7 @@ from spacy.tokens import Doc
 
 from allennlp.common.util import JsonDict, sanitize, group_by_count
 from allennlp.data import DatasetReader, Instance
-from allennlp.data.tokenizers.word_splitter import SpacyWordSplitter
+from allennlp.data.tokenizers.spacy_tokenizer import SpacyTokenizer
 from allennlp.models import Model
 from allennlp.predictors.predictor import Predictor
 
@@ -15,9 +15,12 @@ class SemanticRoleLabelerPredictor(Predictor):
     """
     Predictor for the :class:`~allennlp.models.bidaf.SemanticRoleLabeler` model.
     """
-    def __init__(self, model: Model, dataset_reader: DatasetReader) -> None:
+
+    def __init__(
+        self, model: Model, dataset_reader: DatasetReader, language: str = "en_core_web_sm"
+    ) -> None:
         super().__init__(model, dataset_reader)
-        self._tokenizer = SpacyWordSplitter(language='en_core_web_sm', pos_tags=True)
+        self._tokenizer = SpacyTokenizer(language=language, pos_tags=True)
 
     def predict(self, sentence: str) -> JsonDict:
         """
@@ -128,7 +131,7 @@ class SemanticRoleLabelerPredictor(Predictor):
             One instance per verb.
         """
         sentence = json_dict["sentence"]
-        tokens = self._tokenizer.split_words(sentence)
+        tokens = self._tokenizer.tokenize(sentence)
         return self.tokens_to_instances(tokens)
 
     @overrides
@@ -161,19 +164,24 @@ class SemanticRoleLabelerPredictor(Predictor):
         batch_size = len(inputs)
         instances_per_sentence = [self._sentence_to_srl_instances(json) for json in inputs]
 
-        flattened_instances = [instance for sentence_instances in instances_per_sentence
-                               for instance in sentence_instances]
+        flattened_instances = [
+            instance
+            for sentence_instances in instances_per_sentence
+            for instance in sentence_instances
+        ]
 
         if not flattened_instances:
-            return sanitize([{"verbs": [], "words": self._tokenizer.split_words(x["sentence"])}
-                             for x in inputs])
+            return sanitize(
+                [{"verbs": [], "words": self._tokenizer.tokenize(x["sentence"])} for x in inputs]
+            )
 
         # Make the instances into batches and check the last batch for
         # padded elements as the number of instances might not be perfectly
         # divisible by the batch size.
         batched_instances = group_by_count(flattened_instances, batch_size, None)
-        batched_instances[-1] = [instance for instance in batched_instances[-1]
-                                 if instance is not None]
+        batched_instances[-1] = [
+            instance for instance in batched_instances[-1] if instance is not None
+        ]
         # Run the model on the batches.
         outputs = []
         for batch in batched_instances:
@@ -188,21 +196,19 @@ class SemanticRoleLabelerPredictor(Predictor):
                 # We didn't run any predictions for sentences with no verbs,
                 # so we don't have a way to extract the original sentence.
                 # Here we just tokenize the input again.
-                original_text = self._tokenizer.split_words(inputs[sentence_index]["sentence"])
+                original_text = self._tokenizer.tokenize(inputs[sentence_index]["sentence"])
                 return_dicts[sentence_index]["words"] = original_text
                 continue
 
             for _ in range(verb_count):
                 output = outputs[output_index]
                 words = output["words"]
-                tags = output['tags']
+                tags = output["tags"]
                 description = self.make_srl_string(words, tags)
                 return_dicts[sentence_index]["words"] = words
-                return_dicts[sentence_index]["verbs"].append({
-                        "verb": output["verb"],
-                        "description": description,
-                        "tags": tags,
-                })
+                return_dicts[sentence_index]["verbs"].append(
+                    {"verb": output["verb"], "description": description, "tags": tags}
+                )
                 output_index += 1
 
         return sanitize(return_dicts)
@@ -212,13 +218,11 @@ class SemanticRoleLabelerPredictor(Predictor):
 
         results = {"verbs": [], "words": outputs[0]["words"]}
         for output in outputs:
-            tags = output['tags']
+            tags = output["tags"]
             description = self.make_srl_string(output["words"], tags)
-            results["verbs"].append({
-                    "verb": output["verb"],
-                    "description": description,
-                    "tags": tags,
-            })
+            results["verbs"].append(
+                {"verb": output["verb"], "description": description, "tags": tags}
+            )
 
         return sanitize(results)
 
@@ -240,6 +244,6 @@ class SemanticRoleLabelerPredictor(Predictor):
         instances = self._sentence_to_srl_instances(inputs)
 
         if not instances:
-            return sanitize({"verbs": [], "words": self._tokenizer.split_words(inputs["sentence"])})
+            return sanitize({"verbs": [], "words": self._tokenizer.tokenize(inputs["sentence"])})
 
         return self.predict_instances(instances)

@@ -43,19 +43,19 @@
             // We kept all the original lowercased words and their embeddings. But there are also many words
             // with only the uppercased version. To include as many words as possible, we lowered those words
             // and used the embeddings of uppercased words as an alternative.
-            "tokens": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/glove/glove.840B.300d.lower.converted.zip"
+            "tokens": "https://allennlp.s3.amazonaws.com/datasets/glove/glove.840B.300d.lower.converted.zip"
         },
         "only_include_pretrained_words": true
     },
-    "train_data_path": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/squad/squad-train-v1.1.json",
-    "validation_data_path": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/squad/squad-dev-v1.1.json",
+    "train_data_path": "https://allennlp.s3.amazonaws.com/datasets/squad/squad-train-v1.1.json",
+    "validation_data_path": "https://allennlp.s3.amazonaws.com/datasets/squad/squad-dev-v1.1.json",
     "model": {
         "type": "qanet",
         "text_field_embedder": {
             "token_embedders": {
                 "tokens": {
                     "type": "embedding",
-                    "pretrained_file": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/glove/glove.840B.300d.lower.converted.zip",
+                    "pretrained_file": "https://allennlp.s3.amazonaws.com/datasets/glove/glove.840B.300d.lower.converted.zip",
                     "embedding_dim": 300,
                     "trainable": false
                 },

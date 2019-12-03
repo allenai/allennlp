@@ -33,8 +33,9 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
     We support stateful RNNs where the final state from each batch is used as the initial
     state for the subsequent batch by passing ``stateful=True`` to the constructor.
     """
+
     def __init__(self, module: torch.nn.Module, stateful: bool = False) -> None:
-        super(PytorchSeq2SeqWrapper, self).__init__(stateful)
+        super().__init__(stateful)
         self._module = module
         try:
             if not self._module.batch_first:
@@ -64,10 +65,9 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
         return self._is_bidirectional
 
     @overrides
-    def forward(self,  # pylint: disable=arguments-differ
-                inputs: torch.Tensor,
-                mask: torch.Tensor,
-                hidden_state: torch.Tensor = None) -> torch.Tensor:
+    def forward(
+        self, inputs: torch.Tensor, mask: torch.Tensor, hidden_state: torch.Tensor = None
+    ) -> torch.Tensor:
 
         if self.stateful and mask is None:
             raise ValueError("Always pass a mask with stateful RNNs.")
@@ -79,8 +79,9 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
 
         batch_size, total_sequence_length = mask.size()
 
-        packed_sequence_output, final_states, restoration_indices = \
-            self.sort_and_run_forward(self._module, inputs, mask, hidden_state)
+        packed_sequence_output, final_states, restoration_indices = self.sort_and_run_forward(
+            self._module, inputs, mask, hidden_state
+        )
 
         unpacked_sequence_tensor, _ = pad_packed_sequence(packed_sequence_output, batch_first=True)
 
@@ -111,9 +112,9 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
         # the RNN did not need to process them. We add them back on in the form of zeros here.
         sequence_length_difference = total_sequence_length - unpacked_sequence_tensor.size(1)
         if sequence_length_difference > 0:
-            zeros = unpacked_sequence_tensor.new_zeros(batch_size,
-                                                       sequence_length_difference,
-                                                       unpacked_sequence_tensor.size(-1))
+            zeros = unpacked_sequence_tensor.new_zeros(
+                batch_size, sequence_length_difference, unpacked_sequence_tensor.size(-1)
+            )
             unpacked_sequence_tensor = torch.cat([unpacked_sequence_tensor, zeros], 1)
 
         if self.stateful:

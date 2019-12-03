@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name
 import numpy as np
 from numpy.testing import assert_almost_equal
 import torch
@@ -8,15 +7,16 @@ from allennlp.modules.token_embedders import BagOfWordCountsTokenEmbedder
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.common.checks import ConfigurationError
 
+
 class TestBagOfWordCountsTokenEmbedder(AllenNlpTestCase):
     def setUp(self):
-        super(TestBagOfWordCountsTokenEmbedder, self).setUp()
+        super().setUp()
         self.vocab = Vocabulary()
         self.vocab.add_token_to_namespace("1")
         self.vocab.add_token_to_namespace("2")
         self.vocab.add_token_to_namespace("3")
         self.vocab.add_token_to_namespace("4")
-        self.non_padded_vocab = Vocabulary(non_padded_namespaces=['tokens'])
+        self.non_padded_vocab = Vocabulary(non_padded_namespaces=["tokens"])
 
     def test_forward_calculates_bow_properly(self):
         params = Params({})
@@ -40,10 +40,12 @@ class TestBagOfWordCountsTokenEmbedder(AllenNlpTestCase):
 
     def test_ignore_oov_should_fail_on_non_padded_vocab(self):
         params = Params({"ignore_oov": True})
-        self.assertRaises(ConfigurationError,
-                          BagOfWordCountsTokenEmbedder.from_params,
-                          self.non_padded_vocab,
-                          params)
+        self.assertRaises(
+            ConfigurationError,
+            BagOfWordCountsTokenEmbedder.from_params,
+            self.non_padded_vocab,
+            params,
+        )
 
     def test_projects_properly(self):
         params = Params({"projection_dim": 50})

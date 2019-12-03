@@ -7,17 +7,18 @@ as named arguments to the constructor.
 
 The available initialization functions are
 
-* `"normal" <http://pytorch.org/docs/master/nn.html?highlight=orthogonal#torch.nn.init.normal_>`_
-* `"uniform" <http://pytorch.org/docs/master/nn.html?highlight=orthogonal#torch.nn.init.uniform_>`_
-* `"constant" <http://pytorch.org/docs/master/nn.html?highlight=orthogonal#torch.nn.init.constant_>`_
-* `"eye" <http://pytorch.org/docs/master/nn.html?highlight=orthogonal#torch.nn.init.eye_>`_
-* `"dirac" <http://pytorch.org/docs/master/nn.html?highlight=orthogonal#torch.nn.init.dirac_>`_
-* `"xavier_uniform" <http://pytorch.org/docs/master/nn.html?highlight=orthogonal#torch.nn.init.xavier_uniform_>`_
-* `"xavier_normal" <http://pytorch.org/docs/master/nn.html?highlight=orthogonal#torch.nn.init.xavier_normal_>`_
-* `"kaiming_uniform" <http://pytorch.org/docs/master/nn.html?highlight=orthogonal#torch.nn.init.kaiming_uniform_>`_
-* `"kaiming_normal" <http://pytorch.org/docs/master/nn.html?highlight=orthogonal#torch.nn.init.kaiming_normal_>`_
-* `"orthogonal" <http://pytorch.org/docs/master/nn.html?highlight=orthogonal#torch.nn.init.orthogonal_>`_
-* `"sparse" <http://pytorch.org/docs/master/nn.html?highlight=orthogonal#torch.nn.init.sparse_>`_
+* `"normal" <https://pytorch.org/docs/master/nn.html?highlight=orthogonal#torch.nn.init.normal_>`_
+* `"uniform" <https://pytorch.org/docs/master/nn.html?highlight=orthogonal#torch.nn.init.uniform_>`_
+* `"constant" <https://pytorch.org/docs/master/nn.html?highlight=orthogonal#torch.nn.init.constant_>`_
+* `"eye" <https://pytorch.org/docs/master/nn.html?highlight=orthogonal#torch.nn.init.eye_>`_
+* `"dirac" <https://pytorch.org/docs/master/nn.html?highlight=orthogonal#torch.nn.init.dirac_>`_
+* `"xavier_uniform" <https://pytorch.org/docs/master/nn.html?highlight=orthogonal#torch.nn.init.xavier_uniform_>`_
+* `"xavier_normal" <https://pytorch.org/docs/master/nn.html?highlight=orthogonal#torch.nn.init.xavier_normal_>`_
+* `"kaiming_uniform"
+  <https://pytorch.org/docs/master/nn.html?highlight=orthogonal#torch.nn.init.kaiming_uniform_>`_
+* `"kaiming_normal" <https://pytorch.org/docs/master/nn.html?highlight=orthogonal#torch.nn.init.kaiming_normal_>`_
+* `"orthogonal" <https://pytorch.org/docs/master/nn.html?highlight=orthogonal#torch.nn.init.orthogonal_>`_
+* `"sparse" <https://pytorch.org/docs/master/nn.html?highlight=orthogonal#torch.nn.init.sparse_>`_
 * :func:`"block_orthogonal" <block_orthogonal>`
 * :func:`"uniform_unit_scaling" <uniform_unit_scaling>`
 * :class:`"pretrained" <PretrainedModelInitializer>`
@@ -35,7 +36,8 @@ import torch.nn.init
 from allennlp.common import Registrable
 from allennlp.common.params import Params
 from allennlp.common.checks import ConfigurationError
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+
+logger = logging.getLogger(__name__)
 
 
 class Initializer(Registrable):
@@ -43,7 +45,8 @@ class Initializer(Registrable):
     An initializer is really just a bare pytorch function. This class
     is a proxy that allows us to implement ``Registerable`` for those functions.
     """
-    default_implementation = 'normal'
+
+    default_implementation = "normal"
 
     def __call__(self, tensor: torch.Tensor, **kwargs) -> None:
         """
@@ -80,7 +83,7 @@ def uniform_unit_scaling(tensor: torch.Tensor, nonlinearity: str = "linear"):
     -------
     The initialised tensor.
     """
-    size = 1.
+    size = 1.0
     # Estimate the input size. This won't work perfectly,
     # but it covers almost all use cases where this initialiser
     # would be expected to be useful, i.e in large linear and
@@ -95,9 +98,7 @@ def uniform_unit_scaling(tensor: torch.Tensor, nonlinearity: str = "linear"):
     return tensor.data.uniform_(-max_value, max_value)
 
 
-def block_orthogonal(tensor: torch.Tensor,
-                     split_sizes: List[int],
-                     gain: float = 1.0) -> None:
+def block_orthogonal(tensor: torch.Tensor, split_sizes: List[int], gain: float = 1.0) -> None:
     """
     An initializer which allows initializing model parameters in "blocks". This is helpful
     in the case of recurrent models which use multiple gates applied to linear projections,
@@ -119,10 +120,11 @@ def block_orthogonal(tensor: torch.Tensor,
     data = tensor.data
     sizes = list(tensor.size())
     if any([a % b != 0 for a, b in zip(sizes, split_sizes)]):
-        raise ConfigurationError("tensor dimensions must be divisible by their respective "
-                                 "split_sizes. Found size: {} and split_sizes: {}".format(sizes, split_sizes))
-    indexes = [list(range(0, max_size, split))
-               for max_size, split in zip(sizes, split_sizes)]
+        raise ConfigurationError(
+            "tensor dimensions must be divisible by their respective "
+            "split_sizes. Found size: {} and split_sizes: {}".format(sizes, split_sizes)
+        )
+    indexes = [list(range(0, max_size, split)) for max_size, split in zip(sizes, split_sizes)]
     # Iterate over all possible blocks within the tensor.
     for block_start_indices in itertools.product(*indexes):
         # A list of tuples containing the index to start at for this block
@@ -133,13 +135,15 @@ def block_orthogonal(tensor: torch.Tensor,
         # required because we could have an arbitrary number
         # of dimensions. The actual slices we need are the
         # start_index: start_index + step for each dimension in the tensor.
-        block_slice = tuple([slice(start_index, start_index + step)
-                             for start_index, step in index_and_step_tuples])
+        block_slice = tuple(
+            [slice(start_index, start_index + step) for start_index, step in index_and_step_tuples]
+        )
         data[block_slice] = torch.nn.init.orthogonal_(tensor[block_slice].contiguous(), gain=gain)
 
 
 def zero(tensor: torch.Tensor) -> None:
     return tensor.data.zero_()
+
 
 def lstm_hidden_bias(tensor: torch.Tensor) -> None:
     """
@@ -149,7 +153,8 @@ def lstm_hidden_bias(tensor: torch.Tensor) -> None:
     # gates are (b_hi|b_hf|b_hg|b_ho) of shape (4*hidden_size)
     tensor.data.zero_()
     hidden_size = tensor.shape[0] // 4
-    tensor.data[hidden_size:(2 * hidden_size)] = 1.0
+    tensor.data[hidden_size : (2 * hidden_size)] = 1.0
+
 
 def _initializer_wrapper(init_function: Callable[..., None]) -> Type[Initializer]:
     class Init(Initializer):
@@ -158,38 +163,41 @@ def _initializer_wrapper(init_function: Callable[..., None]) -> Type[Initializer
         def __init__(self, **kwargs):
             self._init_function = init_function
             self._kwargs = kwargs
+
         def __call__(self, tensor: torch.Tensor, **kwargs) -> None:
             self._init_function(tensor, **self._kwargs)
+
         def __repr__(self):
-            return 'Init: %s, with params: %s' % (self._init_function, self._kwargs)
+            return "Init: %s, with params: %s" % (self._init_function, self._kwargs)
+
         @classmethod
         def from_params(cls, params: Params):  # type: ignore
-            # pylint: disable=arguments-differ
             return cls(**params.as_dict())
+
     return Init
 
 
 # There are no classes to decorate, so we hack these into Registrable._registry
-Registrable._registry[Initializer] = {  # pylint: disable=protected-access
-        "normal": _initializer_wrapper(torch.nn.init.normal_),
-        "uniform": _initializer_wrapper(torch.nn.init.uniform_),
-        "orthogonal": _initializer_wrapper(torch.nn.init.orthogonal_),
-        "constant": _initializer_wrapper(torch.nn.init.constant_),
-        "dirac": _initializer_wrapper(torch.nn.init.dirac_),
-        "xavier_normal": _initializer_wrapper(torch.nn.init.xavier_normal_),
-        "xavier_uniform": _initializer_wrapper(torch.nn.init.xavier_uniform_),
-        "kaiming_normal": _initializer_wrapper(torch.nn.init.kaiming_normal_),
-        "kaiming_uniform": _initializer_wrapper(torch.nn.init.kaiming_uniform_),
-        "sparse": _initializer_wrapper(torch.nn.init.sparse_),
-        "eye": _initializer_wrapper(torch.nn.init.eye_),
-        "block_orthogonal": _initializer_wrapper(block_orthogonal),
-        "uniform_unit_scaling": _initializer_wrapper(uniform_unit_scaling),
-        "zero": _initializer_wrapper(zero),
-        "lstm_hidden_bias": _initializer_wrapper(lstm_hidden_bias),
+Registrable._registry[Initializer] = {
+    "normal": _initializer_wrapper(torch.nn.init.normal_),
+    "uniform": _initializer_wrapper(torch.nn.init.uniform_),
+    "orthogonal": _initializer_wrapper(torch.nn.init.orthogonal_),
+    "constant": _initializer_wrapper(torch.nn.init.constant_),
+    "dirac": _initializer_wrapper(torch.nn.init.dirac_),
+    "xavier_normal": _initializer_wrapper(torch.nn.init.xavier_normal_),
+    "xavier_uniform": _initializer_wrapper(torch.nn.init.xavier_uniform_),
+    "kaiming_normal": _initializer_wrapper(torch.nn.init.kaiming_normal_),
+    "kaiming_uniform": _initializer_wrapper(torch.nn.init.kaiming_uniform_),
+    "sparse": _initializer_wrapper(torch.nn.init.sparse_),
+    "eye": _initializer_wrapper(torch.nn.init.eye_),
+    "block_orthogonal": _initializer_wrapper(block_orthogonal),
+    "uniform_unit_scaling": _initializer_wrapper(uniform_unit_scaling),
+    "zero": _initializer_wrapper(zero),
+    "lstm_hidden_bias": _initializer_wrapper(lstm_hidden_bias),
 }
 
 
-@Initializer.register('pretrained')
+@Initializer.register("pretrained")
 class PretrainedModelInitializer(Initializer):
     """
     An initializer which allows initializing parameters using a pretrained model. The
@@ -223,6 +231,19 @@ class PretrainedModelInitializer(Initializer):
            }
        ]
 
+    To initialize weights for all the parameters from a pretrained model (assuming their names
+    remain unchanged), use the following instead:
+
+        .. code-block:: js
+
+            [".*",
+                {
+                    "type": "pretrained",
+                    "weights_file_path": "best.th",
+                    "parameter_name_overrides": {}
+                }
+            ]
+
     Parameters
     ----------
     weights_file_path : ``str``, required
@@ -232,9 +253,10 @@ class PretrainedModelInitializer(Initializer):
         to index into the pretrained model parameters. If a parameter name is not
         specified, the initializer will use the parameter's default name as the key.
     """
-    def __init__(self,
-                 weights_file_path: str,
-                 parameter_name_overrides: Dict[str, str] = None) -> None:
+
+    def __init__(
+        self, weights_file_path: str, parameter_name_overrides: Dict[str, str] = None
+    ) -> None:
         self.weights: Dict[str, torch.Tensor] = torch.load(weights_file_path)
         self.parameter_name_overrides = parameter_name_overrides or {}
 
@@ -248,10 +270,10 @@ class PretrainedModelInitializer(Initializer):
         # same, then we need to raise an error
         source_weights = self.weights[parameter_name]
         if tensor.data.size() != source_weights.size():
-            raise ConfigurationError("Incompatible sizes found for parameter %s. "
-                                     "Found %s and %s" % (parameter_name,
-                                                          tensor.data.size(),
-                                                          source_weights.size()))
+            raise ConfigurationError(
+                "Incompatible sizes found for parameter %s. "
+                "Found %s and %s" % (parameter_name, tensor.data.size(), source_weights.size())
+            )
 
         # Copy the parameters from the source to the destination
         tensor.data[:] = source_weights[:]
@@ -263,9 +285,10 @@ class InitializerApplicator:
     explicitly matching a regex will not be initialized, instead using whatever the default
     initialization was in the module's code.
     """
-    def __init__(self,
-                 initializers: List[Tuple[str, Initializer]] = None,
-                 prevent_regexes: List[str] = None) -> None:
+
+    def __init__(
+        self, initializers: List[Tuple[str, Initializer]] = None, prevent_regexes: List[str] = None
+    ) -> None:
         """
         Parameters
         ----------
@@ -291,14 +314,16 @@ class InitializerApplicator:
             The Pytorch module to apply the initializers to.
         """
         logger.info("Initializing parameters")
-        unused_regexes = set([initializer[0] for initializer in self._initializers])
+        unused_regexes = {initializer[0] for initializer in self._initializers}
         uninitialized_parameters = set()
         # Store which initialisers were applied to which parameters.
         for name, parameter in module.named_parameters():
             for initializer_regex, initializer in self._initializers:
-                allow = self._prevent_regex is None or not bool(re.search(self._prevent_regex, name))
+                allow = self._prevent_regex is None or not bool(
+                    re.search(self._prevent_regex, name)
+                )
                 if allow and re.search(initializer_regex, name):
-                    logger.info("Initializing %s using %s intitializer", name, initializer_regex)
+                    logger.info("Initializing %s using %s initializer", name, initializer_regex)
                     initializer(parameter, parameter_name=name)
                     unused_regexes.discard(initializer_regex)
                     break
@@ -306,8 +331,10 @@ class InitializerApplicator:
                 uninitialized_parameters.add(name)
         for regex in unused_regexes:
             logger.warning("Did not use initialization regex that was passed: %s", regex)
-        logger.info("Done initializing parameters; the following parameters are using their "
-                    "default initialization from their code")
+        logger.info(
+            "Done initializing parameters; the following parameters are using their "
+            "default initialization from their code"
+        )
         uninitialized_parameter_list = list(uninitialized_parameters)
         uninitialized_parameter_list.sort()
         for name in uninitialized_parameter_list:
@@ -344,10 +371,15 @@ class InitializerApplicator:
         -------
         An InitializerApplicator containing the specified initializers.
         """
-        # pylint: disable=arguments-differ
+
         params = params or []
-        is_prevent = lambda item: item == "prevent" or item == {"type": "prevent"}
+
+        def is_prevent(item):
+            return item in ("prevent", {"type": "prevent"})
+
         prevent_regexes = [param[0] for param in params if is_prevent(param[1])]
         params = [param for param in params if param[1] if not is_prevent(param[1])]
-        initializers = [(name, Initializer.from_params(init_params)) for name, init_params in params]
+        initializers = [
+            (name, Initializer.from_params(init_params)) for name, init_params in params
+        ]
         return InitializerApplicator(initializers, prevent_regexes)

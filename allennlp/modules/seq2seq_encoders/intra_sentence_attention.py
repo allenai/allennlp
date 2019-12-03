@@ -46,14 +46,17 @@ class IntraSentenceAttentionEncoder(Seq2SeqEncoder):
     output_dim : ``int``, optional (default = None)
         The dimension of an optional output projection.
     """
-    def __init__(self,
-                 input_dim: int,
-                 projection_dim: int = None,
-                 similarity_function: SimilarityFunction = DotProductSimilarity(),
-                 num_attention_heads: int = 1,
-                 combination: str = '1,2',
-                 output_dim: int = None) -> None:
-        super(IntraSentenceAttentionEncoder, self).__init__()
+
+    def __init__(
+        self,
+        input_dim: int,
+        projection_dim: int = None,
+        similarity_function: SimilarityFunction = DotProductSimilarity(),
+        num_attention_heads: int = 1,
+        combination: str = "1,2",
+        output_dim: int = None,
+    ) -> None:
+        super().__init__()
         self._input_dim = input_dim
         if projection_dim:
             self._projection = torch.nn.Linear(input_dim, projection_dim)
@@ -64,11 +67,14 @@ class IntraSentenceAttentionEncoder(Seq2SeqEncoder):
         self._num_attention_heads = num_attention_heads
         if isinstance(similarity_function, MultiHeadedSimilarity):
             if num_attention_heads == 1:
-                raise ConfigurationError("Similarity function has multiple heads but encoder doesn't")
+                raise ConfigurationError(
+                    "Similarity function has multiple heads but encoder doesn't"
+                )
             if num_attention_heads != similarity_function.num_heads:
-                raise ConfigurationError("Number of heads don't match between similarity function "
-                                         "and encoder: %d, %d" % (num_attention_heads,
-                                                                  similarity_function.num_heads))
+                raise ConfigurationError(
+                    "Number of heads don't match between similarity function "
+                    "and encoder: %d, %d" % (num_attention_heads, similarity_function.num_heads)
+                )
         elif num_attention_heads > 1:
             raise ConfigurationError("Encoder has multiple heads but similarity function doesn't")
         self._combination = combination
@@ -94,7 +100,7 @@ class IntraSentenceAttentionEncoder(Seq2SeqEncoder):
         return False
 
     @overrides
-    def forward(self, tokens: torch.Tensor, mask: torch.Tensor):  # pylint: disable=arguments-differ
+    def forward(self, tokens: torch.Tensor, mask: torch.Tensor):
         batch_size, sequence_length, _ = tokens.size()
         # Shape: (batch_size, sequence_length, sequence_length)
         similarity_matrix = self._matrix_attention(tokens, tokens)
@@ -124,8 +130,7 @@ class IntraSentenceAttentionEncoder(Seq2SeqEncoder):
             output_token_representation = output_token_representation.permute(0, 2, 1, 3)
 
         # Shape: (batch_size, sequence_length, [num_heads,] projection_dim [/ num_heads])
-        attended_sentence = util.weighted_sum(output_token_representation,
-                                              intra_sentence_attention)
+        attended_sentence = util.weighted_sum(output_token_representation, intra_sentence_attention)
 
         if self._num_attention_heads > 1:
             # Here we concatenate the weighted representation for each head.  We'll accomplish this

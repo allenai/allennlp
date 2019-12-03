@@ -4,7 +4,8 @@ from allennlp.common.util import JsonDict
 from allennlp.data import Instance
 from allennlp.predictors.predictor import Predictor
 
-@Predictor.register('event2mind')
+
+@Predictor.register("event2mind")
 class Event2MindPredictor(Predictor):
     """
     Predictor for the :class:`~allennlp.models.event2mind` model.
@@ -28,7 +29,7 @@ class Event2MindPredictor(Predictor):
 
         By default ``target_type`` can be xreact, oreact and xintent.
         """
-        return self.predict_json({"source" : source})
+        return self.predict_json({"source": source})
 
     @overrides
     def _json_to_instance(self, json_dict: JsonDict) -> Instance:

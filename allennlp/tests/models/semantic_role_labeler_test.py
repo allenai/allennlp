@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name
 import subprocess
 import os
 
@@ -9,17 +8,22 @@ import numpy
 from allennlp.common.testing import ModelTestCase
 from allennlp.common.params import Params
 from allennlp.common.checks import ConfigurationError
-from allennlp.models.semantic_role_labeler import convert_bio_tags_to_conll_format
 from allennlp.models import Model
-from allennlp.models.semantic_role_labeler import write_bio_formatted_tags_to_file
+from allennlp.models.srl_util import (
+    convert_bio_tags_to_conll_format,
+    write_bio_formatted_tags_to_file,
+)
 from allennlp.nn.util import get_lengths_from_binary_sequence_mask
+
+from allennlp.data.dataset_readers.dataset_utils.span_utils import to_bioul
 
 
 class SemanticRoleLabelerTest(ModelTestCase):
     def setUp(self):
-        super(SemanticRoleLabelerTest, self).setUp()
-        self.set_up_model(self.FIXTURES_ROOT / 'srl' / 'experiment.json',
-                          self.FIXTURES_ROOT / 'conll_2012')
+        super().setUp()
+        self.set_up_model(
+            self.FIXTURES_ROOT / "srl" / "experiment.json", self.FIXTURES_ROOT / "conll_2012"
+        )
 
     def test_srl_model_can_train_save_and_load(self):
         self.ensure_model_can_train_save_and_load(self.param_file)
@@ -31,10 +35,10 @@ class SemanticRoleLabelerTest(ModelTestCase):
     def test_forward_pass_runs_correctly(self):
         training_tensors = self.dataset.as_tensor_dict()
         output_dict = self.model(**training_tensors)
-        class_probs = output_dict['class_probabilities'][0].data.numpy()
-        numpy.testing.assert_almost_equal(numpy.sum(class_probs, -1),
-                                          numpy.ones(class_probs.shape[0]),
-                                          decimal=6)
+        class_probs = output_dict["class_probabilities"][0].data.numpy()
+        numpy.testing.assert_almost_equal(
+            numpy.sum(class_probs, -1), numpy.ones(class_probs.shape[0]), decimal=6
+        )
 
     def test_decode_runs_correctly(self):
         training_tensors = self.dataset.as_tensor_dict()
@@ -47,6 +51,10 @@ class SemanticRoleLabelerTest(ModelTestCase):
         for prediction, length in zip(decode_output_dict["tags"], lengths):
             assert len(prediction) == length
 
+            # Checks that the output is a well formed BIO sequence,
+            # as otherwise an exception is thrown.
+            to_bioul(prediction, encoding="BIO")
+
     def test_bio_tags_correctly_convert_to_conll_format(self):
         bio_tags = ["B-ARG-1", "I-ARG-1", "O", "B-V", "B-ARGM-ADJ", "O"]
         conll_tags = convert_bio_tags_to_conll_format(bio_tags)
@@ -58,14 +66,25 @@ class SemanticRoleLabelerTest(ModelTestCase):
 
         gold_file_path = os.path.join(self.TEST_DIR, "gold_conll_eval.txt")
         prediction_file_path = os.path.join(self.TEST_DIR, "prediction_conll_eval.txt")
-        with open(gold_file_path, "a+") as gold_file, open(prediction_file_path, "a+") as prediction_file:
+        with open(gold_file_path, "a+") as gold_file, open(
+            prediction_file_path, "a+"
+        ) as prediction_file:
             # Use the same bio tags as prediction vs gold to make it obvious by looking
             # at the perl script output if something is wrong. Write them twice to
             # ensure that the perl script deals with multiple sentences.
-            write_bio_formatted_tags_to_file(gold_file, prediction_file, 4, sentence, bio_tags, bio_tags)
-            write_bio_formatted_tags_to_file(gold_file, prediction_file, 4, sentence, bio_tags, bio_tags)
+            write_bio_formatted_tags_to_file(
+                gold_file, prediction_file, 4, sentence, bio_tags, bio_tags
+            )
+            write_bio_formatted_tags_to_file(
+                gold_file, prediction_file, 4, sentence, bio_tags, bio_tags
+            )
 
-        perl_script_command = ["perl", str(self.TOOLS_ROOT / "srl-eval.pl"), prediction_file_path, gold_file_path]
+        perl_script_command = [
+            "perl",
+            str(self.TOOLS_ROOT / "srl-eval.pl"),
+            prediction_file_path,
+            gold_file_path,
+        ]
         exit_code = subprocess.check_call(perl_script_command)
         assert exit_code == 0
 

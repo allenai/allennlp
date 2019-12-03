@@ -1,22 +1,20 @@
 allennlp.data.tokenizers
 ================================
 
-.. automodule:: allennlp.data.tokenizers.token
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 .. automodule:: allennlp.data.tokenizers
    :members:
    :undoc-members:
    :show-inheritance:
 
 * :ref:`Tokenizer<tokenizer>`
-* :ref:`WordTokenizer<word-tokenizer>`
+* :ref:`SpacyTokenizer<spacy-tokenizer>`
 * :ref:`CharacterTokenizer<character-tokenizer>`
-* :ref:`WordFilter<word-filter>`
-* :ref:`WordSplitter<word-splitter>`
-* :ref:`WordStemmer<word-stemmer>`
+* :ref:`PretrainedTransformerTokenizer<pretrained-transformer-tokenizer>`
+* :ref:`OpenAIPreTokenizer<pretrained-transformer-pre-tokenizer>`
+* :ref:`BertPreTokenizer<pretrained-transformer-pre-tokenizer>`
+* :ref:`LettersDigitsTokenizer<letters-digits-tokenizer>`
+* :ref:`WhiteSpaceTokenizer<white-space-tokenizer>`
+
 
 .. _tokenizer:
 .. automodule:: allennlp.data.tokenizers.tokenizer
@@ -24,8 +22,8 @@ allennlp.data.tokenizers
    :undoc-members:
    :show-inheritance:
 
-.. _word-tokenizer:
-.. automodule:: allennlp.data.tokenizers.word_tokenizer
+.. _spacy-tokenizer:
+.. automodule:: allennlp.data.tokenizers.spacy_tokenizer
    :members:
    :undoc-members:
    :show-inheritance:
@@ -36,20 +34,31 @@ allennlp.data.tokenizers
    :undoc-members:
    :show-inheritance:
 
-.. _word-filter:
-.. automodule:: allennlp.data.tokenizers.word_filter
+.. _pretrained-transformer-tokenizer:
+.. automodule:: allennlp.data.tokenizers.pretrained_transformer_tokenizer
    :members:
    :undoc-members:
    :show-inheritance:
 
-.. _word-splitter:
-.. automodule:: allennlp.data.tokenizers.word_splitter
+.. _pretrained-transformer-pre-tokenizer:
+.. automodule:: allennlp.data.tokenizers.pretrained_transformer_pre_tokenizer
    :members:
    :undoc-members:
    :show-inheritance:
 
-.. _word-stemmer:
-.. automodule:: allennlp.data.tokenizers.word_stemmer
+.. _letters-digits-tokenizer:
+.. automodule:: allennlp.data.tokenizers.letters_digits_tokenizer
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. _white-space-tokenizer:
+.. automodule:: allennlp.data.tokenizers.whitespace_tokenizer
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. automodule:: allennlp.data.tokenizers.token
    :members:
    :undoc-members:
    :show-inheritance:

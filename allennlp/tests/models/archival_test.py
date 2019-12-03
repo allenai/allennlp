@@ -1,4 +1,3 @@
-# pylint: disable=invalid-name
 import copy
 import os
 
@@ -8,6 +7,7 @@ from allennlp.common import Params
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.commands.train import train_model
 from allennlp.models.archival import load_archive, archive_model
+
 
 def assert_models_equal(model, model2):
     # check that model weights are the same
@@ -23,47 +23,37 @@ def assert_models_equal(model, model2):
     vocab = model.vocab
     vocab2 = model2.vocab
 
-    assert vocab._token_to_index == vocab2._token_to_index  # pylint: disable=protected-access
-    assert vocab._index_to_token == vocab2._index_to_token  # pylint: disable=protected-access
+    assert vocab._token_to_index == vocab2._token_to_index
+    assert vocab._index_to_token == vocab2._index_to_token
+
 
 class ArchivalTest(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
 
-        self.params = Params({
+        self.params = Params(
+            {
                 "model": {
-                        "type": "simple_tagger",
-                        "text_field_embedder": {
-                                "token_embedders": {
-                                        "tokens": {
-                                                "type": "embedding",
-                                                "embedding_dim": 5
-                                        }
-                                }
-                        },
-                        "encoder": {
-                                "type": "lstm",
-                                "input_size": 5,
-                                "hidden_size": 7,
-                                "num_layers": 2
-                        }
+                    "type": "simple_tagger",
+                    "text_field_embedder": {
+                        "token_embedders": {"tokens": {"type": "embedding", "embedding_dim": 5}}
+                    },
+                    "encoder": {"type": "lstm", "input_size": 5, "hidden_size": 7, "num_layers": 2},
                 },
                 "dataset_reader": {"type": "sequence_tagging"},
-                "train_data_path": str(self.FIXTURES_ROOT / 'data' / 'sequence_tagging.tsv'),
-                "validation_data_path": str(self.FIXTURES_ROOT / 'data' / 'sequence_tagging.tsv'),
+                "train_data_path": str(self.FIXTURES_ROOT / "data" / "sequence_tagging.tsv"),
+                "validation_data_path": str(self.FIXTURES_ROOT / "data" / "sequence_tagging.tsv"),
                 "iterator": {"type": "basic", "batch_size": 2},
-                "trainer": {
-                        "num_epochs": 2,
-                        "optimizer": "adam",
-                }
-        })
+                "trainer": {"num_epochs": 2, "optimizer": "adam"},
+            }
+        )
 
     def test_archiving(self):
         # copy params, since they'll get consumed during training
         params_copy = copy.deepcopy(self.params.as_dict())
 
         # `train_model` should create an archive
-        serialization_dir = self.TEST_DIR / 'archive_test'
+        serialization_dir = self.TEST_DIR / "archive_test"
         model = train_model(self.params, serialization_dir=serialization_dir)
 
         archive_path = serialization_dir / "model.tar.gz"
@@ -80,46 +70,51 @@ class ArchivalTest(AllenNlpTestCase):
 
     def test_archive_model_uses_archive_path(self):
 
-        serialization_dir = self.TEST_DIR / 'serialization'
+        serialization_dir = self.TEST_DIR / "serialization"
         # Train a model
         train_model(self.params, serialization_dir=serialization_dir)
         # Use a new path.
-        archive_model(serialization_dir=serialization_dir,
-                      archive_path=serialization_dir / "new_path.tar.gz")
-        archive = load_archive(serialization_dir / 'new_path.tar.gz')
+        archive_model(
+            serialization_dir=serialization_dir, archive_path=serialization_dir / "new_path.tar.gz"
+        )
+        archive = load_archive(serialization_dir / "new_path.tar.gz")
         assert archive
 
     def test_extra_files(self):
 
-        serialization_dir = self.TEST_DIR / 'serialization'
+        serialization_dir = self.TEST_DIR / "serialization"
 
         # Train a model
         train_model(self.params, serialization_dir=serialization_dir)
 
         # Archive model, and also archive the training data
-        files_to_archive = {"train_data_path": str(self.FIXTURES_ROOT / 'data' / 'sequence_tagging.tsv')}
+        files_to_archive = {
+            "train_data_path": str(self.FIXTURES_ROOT / "data" / "sequence_tagging.tsv")
+        }
         archive_model(serialization_dir=serialization_dir, files_to_archive=files_to_archive)
 
-        archive = load_archive(serialization_dir / 'model.tar.gz')
+        archive = load_archive(serialization_dir / "model.tar.gz")
         params = archive.config
 
         # The param in the data should have been replaced with a temporary path
         # (which we don't know, but we know what it ends with).
-        assert params.get('train_data_path').endswith('/fta/train_data_path')
+        assert params.get("train_data_path").endswith("/fta/train_data_path")
 
         # The temporary path should be accessible even after the load_archive
         # function returns.
-        assert os.path.exists(params.get('train_data_path'))
+        assert os.path.exists(params.get("train_data_path"))
 
         # The validation data path should be the same though.
-        assert params.get('validation_data_path') == str(self.FIXTURES_ROOT / 'data' / 'sequence_tagging.tsv')
+        assert params.get("validation_data_path") == str(
+            self.FIXTURES_ROOT / "data" / "sequence_tagging.tsv"
+        )
 
     def test_loading_serialization_directory(self):
         # copy params, since they'll get consumed during training
         params_copy = copy.deepcopy(self.params.as_dict())
 
         # `train_model` should create an archive
-        serialization_dir = self.TEST_DIR / 'serialization'
+        serialization_dir = self.TEST_DIR / "serialization"
         model = train_model(self.params, serialization_dir=serialization_dir)
 
         # load from the serialization directory itself
@@ -134,13 +129,13 @@ class ArchivalTest(AllenNlpTestCase):
 
     def test_loading_serialization_directory_with_extra_files(self):
 
-        serialization_dir = self.TEST_DIR / 'serialization'
+        serialization_dir = self.TEST_DIR / "serialization"
 
         # Train a model
         train_model(self.params, serialization_dir=serialization_dir)
 
         # Archive model, and also archive the training data
-        original_train_data_path = str(self.FIXTURES_ROOT / 'data' / 'sequence_tagging.tsv')
+        original_train_data_path = str(self.FIXTURES_ROOT / "data" / "sequence_tagging.tsv")
         files_to_archive = {"train_data_path": original_train_data_path}
         archive_model(serialization_dir=serialization_dir, files_to_archive=files_to_archive)
 
@@ -148,4 +143,4 @@ class ArchivalTest(AllenNlpTestCase):
         params = archive.config
 
         # We're loading from a directory, so retain the original path.
-        assert params.get('train_data_path') == original_train_data_path
+        assert params.get("train_data_path") == original_train_data_path

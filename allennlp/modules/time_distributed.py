@@ -22,13 +22,14 @@ class TimeDistributed(torch.nn.Module):
     It also reshapes keyword arguments unless they are not tensors or their name is specified in
     the optional ``pass_through`` iterable.
     """
+
     def __init__(self, module):
         super().__init__()
         self._module = module
 
     @overrides
     def forward(self, *inputs, pass_through: List[str] = None, **kwargs):
-        # pylint: disable=arguments-differ
+
         pass_through = pass_through or []
 
         reshaped_inputs = [self._reshape_tensor(input_tensor) for input_tensor in inputs]

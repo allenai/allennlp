@@ -5,6 +5,7 @@ import torch
 
 from allennlp.nn import util
 
+
 class Pruner(torch.nn.Module):
     """
     This module scores and prunes items in a list using a parameterised scoring function and a
@@ -17,16 +18,18 @@ class Pruner(torch.nn.Module):
         produces a tensor of shape (batch_size, num_items, 1), representing a scalar score
         per item in the tensor.
     """
+
     def __init__(self, scorer: torch.nn.Module) -> None:
         super().__init__()
         self._scorer = scorer
 
     @overrides
-    def forward(self, # pylint: disable=arguments-differ
-                embeddings: torch.FloatTensor,
-                mask: torch.LongTensor,
-                num_items_to_keep: Union[int, torch.LongTensor]) -> Tuple[torch.FloatTensor, torch.LongTensor,
-                                                                          torch.LongTensor, torch.FloatTensor]:
+    def forward(
+        self,
+        embeddings: torch.FloatTensor,
+        mask: torch.LongTensor,
+        num_items_to_keep: Union[int, torch.LongTensor],
+    ) -> Tuple[torch.FloatTensor, torch.LongTensor, torch.LongTensor, torch.FloatTensor]:
         """
         Extracts the top-k scoring items with respect to the scorer. We additionally return
         the indices of the top-k in their original order, not ordered by score, so that downstream
@@ -68,8 +71,9 @@ class Pruner(torch.nn.Module):
         if isinstance(num_items_to_keep, int):
             batch_size = mask.size(0)
             # Put the tensor on same device as the mask.
-            num_items_to_keep = num_items_to_keep * torch.ones([batch_size], dtype=torch.long,
-                                                               device=mask.device)
+            num_items_to_keep = num_items_to_keep * torch.ones(
+                [batch_size], dtype=torch.long, device=mask.device
+            )
 
         max_items_to_keep = num_items_to_keep.max()
 
@@ -79,8 +83,10 @@ class Pruner(torch.nn.Module):
         scores = self._scorer(embeddings)
 
         if scores.size(-1) != 1 or scores.dim() != 3:
-            raise ValueError(f"The scorer passed to Pruner must produce a tensor of shape"
-                             f"(batch_size, num_items, 1), but found shape {scores.size()}")
+            raise ValueError(
+                f"The scorer passed to Pruner must produce a tensor of shape"
+                f"(batch_size, num_items, 1), but found shape {scores.size()}"
+            )
         # Make sure that we don't select any masked items by setting their scores to be very
         # negative.  These are logits, typically, so -1e20 should be plenty negative.
         scores = util.replace_masked_values(scores, mask, -1e20)

@@ -45,17 +45,19 @@ class LinearMatrixAttention(MatrixAttention):
         activation.
     """
 
-    def __init__(self,
-                 tensor_1_dim: int,
-                 tensor_2_dim: int,
-                 combination: str = 'x,y',
-                 activation: Activation = None) -> None:
+    def __init__(
+        self,
+        tensor_1_dim: int,
+        tensor_2_dim: int,
+        combination: str = "x,y",
+        activation: Activation = None,
+    ) -> None:
         super().__init__()
         self._combination = combination
         combined_dim = util.get_combined_dim(combination, [tensor_1_dim, tensor_2_dim])
         self._weight_vector = Parameter(torch.Tensor(combined_dim))
         self._bias = Parameter(torch.Tensor(1))
-        self._activation = activation or Activation.by_name('linear')()
+        self._activation = activation or Activation.by_name("linear")()
         self.reset_parameters()
 
     def reset_parameters(self):
@@ -64,10 +66,8 @@ class LinearMatrixAttention(MatrixAttention):
         self._bias.data.fill_(0)
 
     @overrides
-    def forward(self,  # pylint: disable=arguments-differ
-                matrix_1: torch.Tensor,
-                matrix_2: torch.Tensor) -> torch.Tensor:
-        combined_tensors = util.combine_tensors_and_multiply(self._combination,
-                                                             [matrix_1.unsqueeze(2), matrix_2.unsqueeze(1)],
-                                                             self._weight_vector)
+    def forward(self, matrix_1: torch.Tensor, matrix_2: torch.Tensor) -> torch.Tensor:
+        combined_tensors = util.combine_tensors_and_multiply(
+            self._combination, [matrix_1.unsqueeze(2), matrix_2.unsqueeze(1)], self._weight_vector
+        )
         return self._activation(combined_tensors + self._bias)

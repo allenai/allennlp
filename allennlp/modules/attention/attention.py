@@ -33,16 +33,15 @@ class Attention(torch.nn.Module, Registrable):
         If true, we normalize the computed similarities with a softmax, to return a probability
         distribution for your attention.  If false, this is just computing a similarity score.
     """
-    def __init__(self,
-                 normalize: bool = True) -> None:
+
+    def __init__(self, normalize: bool = True) -> None:
         super().__init__()
         self._normalize = normalize
 
     @overrides
-    def forward(self,  # pylint: disable=arguments-differ
-                vector: torch.Tensor,
-                matrix: torch.Tensor,
-                matrix_mask: torch.Tensor = None) -> torch.Tensor:
+    def forward(
+        self, vector: torch.Tensor, matrix: torch.Tensor, matrix_mask: torch.Tensor = None
+    ) -> torch.Tensor:
         similarities = self._forward_internal(vector, matrix)
         if self._normalize:
             return masked_softmax(similarities, matrix_mask)

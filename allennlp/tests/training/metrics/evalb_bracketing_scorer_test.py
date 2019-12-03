@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name,protected-access
 from nltk import Tree
 
 from allennlp.common.testing import AllenNlpTestCase
@@ -6,7 +5,6 @@ from allennlp.training.metrics import EvalbBracketingScorer
 
 
 class EvalbBracketingScorerTest(AllenNlpTestCase):
-
     def setUp(self):
         super().setUp()
         EvalbBracketingScorer.compile_evalb()
@@ -50,8 +48,9 @@ class EvalbBracketingScorerTest(AllenNlpTestCase):
     def test_evalb_with_terrible_trees_handles_nan_f1(self):
         # If precision and recall are zero, evalb returns nan f1.
         # This checks that we handle the zero division.
-        tree1 = Tree.fromstring("(PP (VROOT (PP That) (VROOT (PP could) "
-                                "(VROOT (PP cost) (VROOT (PP him))))) (PP .))")
+        tree1 = Tree.fromstring(
+            "(PP (VROOT (PP That) (VROOT (PP could) " "(VROOT (PP cost) (VROOT (PP him))))) (PP .))"
+        )
         tree2 = Tree.fromstring("(S (NP (D the) (N dog)) (VP (V chased) (NP (D the) (N cat))))")
         evalb_scorer = EvalbBracketingScorer()
         evalb_scorer([tree1], [tree2])

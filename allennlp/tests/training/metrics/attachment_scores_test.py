@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name,protected-access
 import torch
 
 from allennlp.common.testing import AllenNlpTestCase
@@ -10,24 +9,20 @@ class AttachmentScoresTest(AllenNlpTestCase):
         super().setUp()
         self.scorer = AttachmentScores()
 
-        self.predictions = torch.Tensor([[0, 1, 3, 5, 2, 4],
-                                         [0, 3, 2, 1, 0, 0]])
+        self.predictions = torch.Tensor([[0, 1, 3, 5, 2, 4], [0, 3, 2, 1, 0, 0]])
 
-        self.gold_indices = torch.Tensor([[0, 1, 3, 5, 2, 4],
-                                          [0, 3, 2, 1, 0, 0]])
+        self.gold_indices = torch.Tensor([[0, 1, 3, 5, 2, 4], [0, 3, 2, 1, 0, 0]])
 
-        self.label_predictions = torch.Tensor([[0, 5, 2, 1, 4, 2],
-                                               [0, 4, 8, 2, 0, 0]])
+        self.label_predictions = torch.Tensor([[0, 5, 2, 1, 4, 2], [0, 4, 8, 2, 0, 0]])
 
-        self.gold_labels = torch.Tensor([[0, 5, 2, 1, 4, 2],
-                                         [0, 4, 8, 2, 0, 0]])
+        self.gold_labels = torch.Tensor([[0, 5, 2, 1, 4, 2], [0, 4, 8, 2, 0, 0]])
 
-        self.mask = torch.Tensor([[1, 1, 1, 1, 1, 1],
-                                  [1, 1, 1, 1, 0, 0]])
+        self.mask = torch.Tensor([[1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 0, 0]])
 
     def test_perfect_scores(self):
-        self.scorer(self.predictions, self.label_predictions,
-                    self.gold_indices, self.gold_labels, self.mask)
+        self.scorer(
+            self.predictions, self.label_predictions, self.gold_indices, self.gold_labels, self.mask
+        )
 
         for value in self.scorer.get_metric().values():
             assert value == 1.0
@@ -37,8 +32,9 @@ class AttachmentScoresTest(AllenNlpTestCase):
         # Change some stuff so our 4 of our label predictions are wrong.
         label_predictions[0, 3:] = 3
         label_predictions[1, 0] = 7
-        self.scorer(self.predictions, label_predictions,
-                    self.gold_indices, self.gold_labels, self.mask)
+        self.scorer(
+            self.predictions, label_predictions, self.gold_indices, self.gold_labels, self.mask
+        )
 
         metrics = self.scorer.get_metric()
 
@@ -58,8 +54,9 @@ class AttachmentScoresTest(AllenNlpTestCase):
         predictions[1, 0] = 7
         # This one is in the padded part, so it shouldn't affect anything.
         predictions[1, 5] = 7
-        self.scorer(predictions, self.label_predictions,
-                    self.gold_indices, self.gold_labels, self.mask)
+        self.scorer(
+            predictions, self.label_predictions, self.gold_indices, self.gold_labels, self.mask
+        )
 
         metrics = self.scorer.get_metric()
 
@@ -81,8 +78,7 @@ class AttachmentScoresTest(AllenNlpTestCase):
         # Change the predictions where the gold label is 1;
         # as we are ignoring 1, we should still get a perfect score.
         label_predictions[0, 3] = 2
-        scorer(self.predictions, label_predictions,
-               self.gold_indices, self.gold_labels, self.mask)
+        scorer(self.predictions, label_predictions, self.gold_indices, self.gold_labels, self.mask)
 
         for value in scorer.get_metric().values():
             assert value == 1.0

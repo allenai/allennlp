@@ -2,6 +2,7 @@ from typing import Optional, Iterable, Dict, Any
 
 from allennlp.common.checks import ConfigurationError
 
+
 class MetricTracker:
     """
     This class tracks a metric during training for the dual purposes of early stopping
@@ -27,10 +28,10 @@ class MetricTracker:
         If ``metric_name`` isn't provided (in which case we can't infer ``should_decrease``),
         then you have to specify it here.
     """
-    def __init__(self,
-                 patience: Optional[int] = None,
-                 metric_name: str = None,
-                 should_decrease: bool = None) -> None:
+
+    def __init__(
+        self, patience: Optional[int] = None, metric_name: str = None, should_decrease: bool = None
+    ) -> None:
         self._best_so_far: float = None
         self._patience = patience
         self._epochs_with_no_improvement = 0
@@ -43,9 +44,13 @@ class MetricTracker:
         # If the metric name starts with "-", we want it to decrease.
         # We also allow you to not specify a metric name and just set `should_decrease` directly.
         if should_decrease is None and metric_name is None:
-            raise ConfigurationError("must specify either `should_decrease` or `metric_name` (but not both)")
+            raise ConfigurationError(
+                "must specify either `should_decrease` or `metric_name` (but not both)"
+            )
         elif should_decrease is not None and metric_name is not None:
-            raise ConfigurationError("must specify either `should_decrease` or `metric_name` (but not both)")
+            raise ConfigurationError(
+                "must specify either `should_decrease` or `metric_name` (but not both)"
+            )
         elif metric_name is not None:
             if metric_name[0] == "-":
                 self._should_decrease = True
@@ -71,14 +76,14 @@ class MetricTracker:
         A ``Trainer`` can use this to serialize the state of the metric tracker.
         """
         return {
-                "best_so_far": self._best_so_far,
-                "patience": self._patience,
-                "epochs_with_no_improvement": self._epochs_with_no_improvement,
-                "is_best_so_far": self._is_best_so_far,
-                "should_decrease": self._should_decrease,
-                "best_epoch_metrics": self.best_epoch_metrics,
-                "epoch_number": self._epoch_number,
-                "best_epoch": self.best_epoch
+            "best_so_far": self._best_so_far,
+            "patience": self._patience,
+            "epochs_with_no_improvement": self._epochs_with_no_improvement,
+            "is_best_so_far": self._is_best_so_far,
+            "should_decrease": self._should_decrease,
+            "best_epoch_metrics": self.best_epoch_metrics,
+            "epoch_number": self._epoch_number,
+            "best_epoch": self.best_epoch,
         }
 
     def load_state_dict(self, state_dict: Dict[str, Any]) -> None:
@@ -98,9 +103,11 @@ class MetricTracker:
         """
         Record a new value of the metric and update the various things that depend on it.
         """
-        new_best = ((self._best_so_far is None) or
-                    (self._should_decrease and metric < self._best_so_far) or
-                    (not self._should_decrease and metric > self._best_so_far))
+        new_best = (
+            (self._best_so_far is None)
+            or (self._should_decrease and metric < self._best_so_far)
+            or (not self._should_decrease and metric > self._best_so_far)
+        )
 
         if new_best:
             self.best_epoch = self._epoch_number

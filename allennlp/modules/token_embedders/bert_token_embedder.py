@@ -7,7 +7,7 @@ At its core it uses Hugging Face's PyTorch implementation
 (https://github.com/huggingface/pytorch-pretrained-BERT),
 so thanks to them!
 """
-from typing import Dict
+from typing import Dict, List
 import logging
 
 import torch
@@ -28,6 +28,7 @@ class PretrainedBertModel:
     (e.g. to use as a token embedder and also as a pooling layer).
     This factory provides a cache so that you don't actually have to load the model twice.
     """
+
     _cache: Dict[str, BertModel] = {}
 
     @classmethod
@@ -66,13 +67,21 @@ class BertEmbedder(TokenEmbedder):
         The number of starting special tokens input to BERT (usually 1, i.e., [CLS])
     num_end_tokens : int, optional (default: 1)
         The number of ending tokens input to BERT (usually 1, i.e., [SEP])
+    scalar_mix_parameters: ``List[float]``, optional, (default = None)
+        If not ``None``, use these scalar mix parameters to weight the representations
+        produced by different layers. These mixing weights are not updated during
+        training.
     """
-    def __init__(self,
-                 bert_model: BertModel,
-                 top_layer_only: bool = False,
-                 max_pieces: int = 512,
-                 num_start_tokens: int = 1,
-                 num_end_tokens: int = 1) -> None:
+
+    def __init__(
+        self,
+        bert_model: BertModel,
+        top_layer_only: bool = False,
+        max_pieces: int = 512,
+        num_start_tokens: int = 1,
+        num_end_tokens: int = 1,
+        scalar_mix_parameters: List[float] = None,
+    ) -> None:
         super().__init__()
         self.bert_model = bert_model
         self.output_dim = bert_model.config.hidden_size
@@ -81,18 +90,24 @@ class BertEmbedder(TokenEmbedder):
         self.num_end_tokens = num_end_tokens
 
         if not top_layer_only:
-            self._scalar_mix = ScalarMix(bert_model.config.num_hidden_layers,
-                                         do_layer_norm=False)
+            self._scalar_mix = ScalarMix(
+                bert_model.config.num_hidden_layers,
+                do_layer_norm=False,
+                initial_scalar_parameters=scalar_mix_parameters,
+                trainable=scalar_mix_parameters is None,
+            )
         else:
             self._scalar_mix = None
 
     def get_output_dim(self) -> int:
         return self.output_dim
 
-    def forward(self,
-                input_ids: torch.LongTensor,
-                offsets: torch.LongTensor = None,
-                token_type_ids: torch.LongTensor = None) -> torch.Tensor:
+    def forward(
+        self,
+        input_ids: torch.LongTensor,
+        offsets: torch.LongTensor = None,
+        token_type_ids: torch.LongTensor = None,
+    ) -> torch.Tensor:
         """
         Parameters
         ----------
@@ -119,7 +134,7 @@ class BertEmbedder(TokenEmbedder):
             the second sentence should have type 1.  If you don't provide this
             (the default BertIndexer doesn't) then it's assumed to be all 0s.
         """
-        # pylint: disable=arguments-differ
+
         batch_size, full_seq_len = input_ids.size(0), input_ids.size(-1)
         initial_dims = list(input_ids.shape[:-1])
 
@@ -146,6 +161,18 @@ class BertEmbedder(TokenEmbedder):
             # Now combine the sequences along the batch dimension
             input_ids = torch.cat(split_input_ids, dim=0)
 
+            if token_type_ids is not None:
+                # Same for token_type_ids
+                split_token_type_ids = list(token_type_ids.split(self.max_pieces, dim=-1))
+
+                last_window_size = split_token_type_ids[-1].size(-1)
+                padding_amount = self.max_pieces - last_window_size
+                split_token_type_ids[-1] = F.pad(
+                    split_token_type_ids[-1], pad=[0, padding_amount], value=0
+                )
+
+                token_type_ids = torch.cat(split_token_type_ids, dim=0)
+
         if token_type_ids is None:
             token_type_ids = torch.zeros_like(input_ids)
 
@@ -153,9 +180,11 @@ class BertEmbedder(TokenEmbedder):
 
         # input_ids may have extra dimensions, so we reshape down to 2-d
         # before calling the BERT model and then reshape back at the end.
-        all_encoder_layers, _ = self.bert_model(input_ids=util.combine_initial_dims(input_ids),
-                                                token_type_ids=util.combine_initial_dims(token_type_ids),
-                                                attention_mask=util.combine_initial_dims(input_mask))
+        all_encoder_layers, _ = self.bert_model(
+            input_ids=util.combine_initial_dims(input_ids),
+            token_type_ids=util.combine_initial_dims(token_type_ids),
+            attention_mask=util.combine_initial_dims(input_mask),
+        )
         all_encoder_layers = torch.stack(all_encoder_layers)
 
         if needs_split:
@@ -178,8 +207,11 @@ class BertEmbedder(TokenEmbedder):
 
             first_window = list(range(stride_offset))
 
-            max_context_windows = [i for i in range(full_seq_len)
-                                   if stride_offset - 1 < i % self.max_pieces < stride_offset + stride]
+            max_context_windows = [
+                i
+                for i in range(full_seq_len)
+                if stride_offset - 1 < i % self.max_pieces < stride_offset + stride
+            ]
 
             # Lookback what's left, unless it's the whole self.max_pieces window
             if full_seq_len % self.max_pieces == 0:
@@ -218,8 +250,9 @@ class BertEmbedder(TokenEmbedder):
             # offsets is (batch_size, d1, ..., dn, orig_sequence_length)
             offsets2d = util.combine_initial_dims(offsets)
             # now offsets is (batch_size * d1 * ... * dn, orig_sequence_length)
-            range_vector = util.get_range_vector(offsets2d.size(0),
-                                                 device=util.get_device_of(mix)).unsqueeze(1)
+            range_vector = util.get_range_vector(
+                offsets2d.size(0), device=util.get_device_of(mix)
+            ).unsqueeze(1)
             # selected embeddings is also (batch_size * d1 * ... * dn, orig_sequence_length)
             selected_embeddings = mix[range_vector, offsets2d]
 
@@ -228,7 +261,7 @@ class BertEmbedder(TokenEmbedder):
 
 @TokenEmbedder.register("bert-pretrained")
 class PretrainedBertEmbedder(BertEmbedder):
-    # pylint: disable=line-too-long
+
     """
     Parameters
     ----------
@@ -243,11 +276,26 @@ class PretrainedBertEmbedder(BertEmbedder):
         If True, compute gradient of BERT parameters for fine tuning.
     top_layer_only: ``bool``, optional (default = ``False``)
         If ``True``, then only return the top layer instead of apply the scalar mix.
+    scalar_mix_parameters: ``List[float]``, optional, (default = None)
+        If not ``None``, use these scalar mix parameters to weight the representations
+        produced by different layers. These mixing weights are not updated during
+        training.
     """
-    def __init__(self, pretrained_model: str, requires_grad: bool = False, top_layer_only: bool = False) -> None:
+
+    def __init__(
+        self,
+        pretrained_model: str,
+        requires_grad: bool = False,
+        top_layer_only: bool = False,
+        scalar_mix_parameters: List[float] = None,
+    ) -> None:
         model = PretrainedBertModel.load(pretrained_model)
 
         for param in model.parameters():
             param.requires_grad = requires_grad
 
-        super().__init__(bert_model=model, top_layer_only=top_layer_only)
+        super().__init__(
+            bert_model=model,
+            top_layer_only=top_layer_only,
+            scalar_mix_parameters=scalar_mix_parameters,
+        )
