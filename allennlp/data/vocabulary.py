@@ -208,6 +208,10 @@ class Vocabulary(Registrable):
         If given, this is a list of tokens to add to the vocabulary, keyed by the namespace to add
         the tokens to.  This is a way to be sure that certain items appear in your vocabulary,
         regardless of any other vocabulary computation.
+    padding_token : ``str``,  optional (default=DEFAULT_PADDING_TOKEN)
+        If given, this the string used for padding.
+    oov_token : ``str``,  optional (default=DEFAULT_OOV_TOKEN)
+        If given, this the string used for the out of vocabulary (OOVs) tokens.
     """
 
     default_implementation = "default"
@@ -222,16 +226,21 @@ class Vocabulary(Registrable):
         only_include_pretrained_words: bool = False,
         tokens_to_add: Dict[str, List[str]] = None,
         min_pretrained_embeddings: Dict[str, int] = None,
+        padding_token: Optional[str] = DEFAULT_PADDING_TOKEN,
+        oov_token: Optional[str] = DEFAULT_OOV_TOKEN,
     ) -> None:
-        self._padding_token = DEFAULT_PADDING_TOKEN
-        self._oov_token = DEFAULT_OOV_TOKEN
+        self._padding_token = padding_token if padding_token is not None else DEFAULT_PADDING_TOKEN
+        self._oov_token = oov_token if oov_token is not None else DEFAULT_OOV_TOKEN
+
         self._non_padded_namespaces = set(non_padded_namespaces)
+
         self._token_to_index = _TokenToIndexDefaultDict(
             self._non_padded_namespaces, self._padding_token, self._oov_token
         )
         self._index_to_token = _IndexToTokenDefaultDict(
             self._non_padded_namespaces, self._padding_token, self._oov_token
         )
+
         self._retained_counter: Optional[Dict[str, Dict[str, int]]] = None
         # Made an empty vocabulary, now extend it.
         self._extend(
@@ -308,7 +317,12 @@ class Vocabulary(Registrable):
                     print(mapping[i].replace("\n", "@@NEWLINE@@"), file=token_file)
 
     @classmethod
-    def from_files(cls, directory: str) -> "Vocabulary":
+    def from_files(
+        cls,
+        directory: str,
+        padding_token: Optional[str] = DEFAULT_PADDING_TOKEN,
+        oov_token: Optional[str] = DEFAULT_OOV_TOKEN,
+    ) -> "Vocabulary":
         """
         Loads a ``Vocabulary`` that was serialized using ``save_to_files``.
 
@@ -318,12 +332,18 @@ class Vocabulary(Registrable):
             The directory containing the serialized vocabulary.
         """
         logger.info("Loading token dictionary from %s.", directory)
+        padding_token = padding_token if padding_token is not None else DEFAULT_PADDING_TOKEN
+        oov_token = oov_token if oov_token is not None else DEFAULT_OOV_TOKEN
         with codecs.open(
             os.path.join(directory, NAMESPACE_PADDING_FILE), "r", "utf-8"
         ) as namespace_file:
             non_padded_namespaces = [namespace_str.strip() for namespace_str in namespace_file]
 
-        vocab = cls(non_padded_namespaces=non_padded_namespaces)
+        vocab = cls(
+            non_padded_namespaces=non_padded_namespaces,
+            padding_token=padding_token,
+            oov_token=oov_token,
+        )
 
         # Check every file in the directory.
         for namespace_filename in os.listdir(directory):
@@ -337,7 +357,7 @@ class Vocabulary(Registrable):
             else:
                 is_padded = True
             filename = os.path.join(directory, namespace_filename)
-            vocab.set_from_file(filename, is_padded, namespace=namespace)
+            vocab.set_from_file(filename, is_padded, namespace=namespace, oov_token=oov_token)
 
         return vocab
 
@@ -406,6 +426,8 @@ class Vocabulary(Registrable):
         only_include_pretrained_words: bool = False,
         tokens_to_add: Dict[str, List[str]] = None,
         min_pretrained_embeddings: Dict[str, int] = None,
+        padding_token: Optional[str] = DEFAULT_PADDING_TOKEN,
+        oov_token: Optional[str] = DEFAULT_OOV_TOKEN,
     ) -> "Vocabulary":
         """
         Constructs a vocabulary given a collection of `Instances` and some parameters.
@@ -414,6 +436,8 @@ class Vocabulary(Registrable):
         of what the other parameters do.
         """
         logger.info("Fitting token dictionary from dataset.")
+        padding_token = padding_token if padding_token is not None else DEFAULT_PADDING_TOKEN
+        oov_token = oov_token if oov_token is not None else DEFAULT_OOV_TOKEN
         namespace_token_counts: Dict[str, Dict[str, int]] = defaultdict(lambda: defaultdict(int))
         for instance in Tqdm.tqdm(instances):
             instance.count_vocab_items(namespace_token_counts)
@@ -427,6 +451,8 @@ class Vocabulary(Registrable):
             only_include_pretrained_words=only_include_pretrained_words,
             tokens_to_add=tokens_to_add,
             min_pretrained_embeddings=min_pretrained_embeddings,
+            padding_token=padding_token,
+            oov_token=oov_token,
         )
 
     # There's enough logic here to require a custom from_params.
@@ -491,8 +517,11 @@ class Vocabulary(Registrable):
             else:
                 logger.info("Loading Vocab from files instead of dataset.")
 
+        padding_token = params.pop("padding_token", DEFAULT_PADDING_TOKEN)
+        oov_token = params.pop("oov_token", DEFAULT_OOV_TOKEN)
+
         if vocabulary_directory:
-            vocab = cls.from_files(vocabulary_directory)
+            vocab = cls.from_files(vocabulary_directory, padding_token, oov_token)
             if not extend:
                 params.assert_empty("Vocabulary - from files")
                 return vocab
@@ -516,6 +545,8 @@ class Vocabulary(Registrable):
             only_include_pretrained_words=only_include_pretrained_words,
             tokens_to_add=tokens_to_add,
             min_pretrained_embeddings=min_pretrained_embeddings,
+            padding_token=padding_token,
+            oov_token=oov_token,
         )
 
     def _extend(

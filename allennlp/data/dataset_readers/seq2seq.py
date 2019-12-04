@@ -46,6 +46,8 @@ class Seq2SeqDatasetReader(DatasetReader):
         ``source_token_indexers``.
     source_add_start_token : bool, (optional, default=True)
         Whether or not to add `START_SYMBOL` to the beginning of the source sequence.
+    source_add_end_token : bool, (optional, default=True)
+        Whether or not to add `END_SYMBOL` to the end of the source sequence.
     delimiter : str, (optional, default="\t")
         Set delimiter for tsv/csv file.
     """
@@ -57,6 +59,7 @@ class Seq2SeqDatasetReader(DatasetReader):
         source_token_indexers: Dict[str, TokenIndexer] = None,
         target_token_indexers: Dict[str, TokenIndexer] = None,
         source_add_start_token: bool = True,
+        source_add_end_token: bool = True,
         delimiter: str = "\t",
         source_max_tokens: Optional[int] = None,
         target_max_tokens: Optional[int] = None,
@@ -68,6 +71,7 @@ class Seq2SeqDatasetReader(DatasetReader):
         self._source_token_indexers = source_token_indexers or {"tokens": SingleIdTokenIndexer()}
         self._target_token_indexers = target_token_indexers or self._source_token_indexers
         self._source_add_start_token = source_add_start_token
+        self._source_add_end_token = source_add_end_token
         self._delimiter = delimiter
         self._source_max_tokens = source_max_tokens
         self._target_max_tokens = target_max_tokens
@@ -112,7 +116,8 @@ class Seq2SeqDatasetReader(DatasetReader):
             tokenized_source = tokenized_source[: self._source_max_tokens]
         if self._source_add_start_token:
             tokenized_source.insert(0, Token(START_SYMBOL))
-        tokenized_source.append(Token(END_SYMBOL))
+        if self._source_add_end_token:
+            tokenized_source.append(Token(END_SYMBOL))
         source_field = TextField(tokenized_source, self._source_token_indexers)
         if target_string is not None:
             tokenized_target = self._target_tokenizer.tokenize(target_string)
