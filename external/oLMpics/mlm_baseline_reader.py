@@ -39,6 +39,7 @@ class BaselineMLMReader(DatasetReader):
                  tokenizer: Tokenizer = None,
                  token_indexers: Dict[str, TokenIndexer] = None,
                  sample: int = -1,
+                 num_choices: int = 3,
                  use_only_gold_examples: bool = False) -> None:
         super().__init__(lazy=False)
         self._tokenizer = tokenizer or WordTokenizer()
