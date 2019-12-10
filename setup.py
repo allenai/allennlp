@@ -133,6 +133,7 @@ setup(
         "pytorch-pretrained-bert>=0.6.0",
         "transformers>=2.1.1",
         "jsonpickle",
+        "python-dateutil<2.8.1",
     ],
     entry_points={"console_scripts": ["allennlp=allennlp.run:run"]},
     setup_requires=setup_requirements,

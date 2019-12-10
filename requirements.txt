@@ -133,3 +133,6 @@ pypandoc
 
 # Pypi uploads
 twine>=1.11.0
+
+# Pin this version to one that works
+python-dateutil<2.8.1
