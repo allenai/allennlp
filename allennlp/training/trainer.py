@@ -60,7 +60,7 @@ class Trainer(TrainerBase):
         should_log_learning_rate: bool = False,
         log_batch_size_period: Optional[int] = None,
         moving_average: Optional[MovingAverage] = None,
-        num_gradient_accumulation_steps: int = 1
+        num_gradient_accumulation_steps: int = 1,
     ) -> None:
         """
         A trainer for doing supervised learning. It just takes a labeled dataset
@@ -261,7 +261,8 @@ class Trainer(TrainerBase):
             logger.warning(
                 "You have configured to use multiple GPUs along with gradient accumulation."
                 "Because of this, the effective batch size will be "
-                "batch_size * num_gradient_accumulation_steps * number of GPUs")
+                "batch_size * num_gradient_accumulation_steps * number of GPUs"
+            )
 
         # Enable activation logging.
         if histogram_interval is not None:
@@ -322,7 +323,9 @@ class Trainer(TrainerBase):
         # Get tqdm for the training batches
         raw_train_generator = self.iterator(self.train_data, num_epochs=1, shuffle=self.shuffle)
         train_generator = lazy_groups_of(raw_train_generator, batch_group_length)
-        num_training_batches = math.ceil(self.iterator.get_num_batches(self.train_data) / batch_group_length)
+        num_training_batches = math.ceil(
+            self.iterator.get_num_batches(self.train_data) / batch_group_length
+        )
         self._last_log = time.time()
         last_save_time = time.time()
 
