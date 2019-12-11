@@ -353,7 +353,7 @@ class Trainer(TrainerBase):
                 loss = loss / len(batches_for_step)
                 loss.backward()
 
-            train_loss += loss.item()
+                train_loss += loss.item()
 
             batch_grad_norm = self.rescale_gradients()
 
