@@ -834,24 +834,25 @@ class TestTrainer(AllenNlpTestCase):
         assert trainer._metric_tracker._epochs_with_no_improvement == 1
 
     def test_trainer_can_run_gradient_accumulation(self):
-        num_training_instances = 0
         with Path(self.FIXTURES_ROOT / 'data' / 'sequence_tagging.tsv').open() as input_file:
             num_training_instances = sum(1 for i in input_file)
 
         steps_to_accumulate = 2
 
-        trainer = Trainer(model=self.model,
-                          optimizer=self.optimizer,
-                          iterator=self.iterator,
-                          train_dataset=self.instances,
-                          validation_dataset=self.instances,
-                          num_epochs=2,
-                          num_gradient_accumulation_steps=steps_to_accumulate)
+        trainer = Trainer(
+            self.model,
+            self.optimizer,
+            self.iterator,
+            self.instances,
+            validation_dataset=self.instances,
+            num_epochs=2,
+            num_gradient_accumulation_steps=steps_to_accumulate
+        )
         assert trainer._num_gradient_accumulation_steps == steps_to_accumulate
 
         metrics = trainer.train()
 
-        num_batches_trained_per_epoch = trainer._batch_num_total // (metrics["training_epochs"]+1)
+        num_batches_trained_per_epoch = trainer._batch_num_total // (metrics["training_epochs"] + 1)
         num_batches_expected = num_training_instances // self.iterator._batch_size // steps_to_accumulate
 
         assert num_batches_trained_per_epoch == num_batches_expected
