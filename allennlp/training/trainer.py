@@ -342,21 +342,15 @@ class Trainer(TrainerBase):
 
             self.optimizer.zero_grad()
 
-            # batch_group consists of all the tensors necessary to compute a forward
-            # pass in a single batch. To do gradient accumulation in `n` steps, we split
-            # this group into sub groups further so that we can do forward pass in `n` iterations.
-            #
-            # In case of a single GPU, the size of this sub group essentially is 1. With multiple
-            # GPUs, every `self.batch_loss()` call should be passed with a group that has a length
-            # equal to the number of GPUs.
-            batch_group_for_stepwise_accumulation = lazy_groups_of(iter(batch_group), len(self._cuda_devices))
-            for batch_for_step in batch_group_for_stepwise_accumulation:
+            batches_for_step = list(lazy_groups_of(iter(batch_group), len(self._cuda_devices)))
+            for batch_for_step in batches_for_step:
                 loss = self.batch_loss(batch_for_step, for_training=True)
-
                 if torch.isnan(loss):
                     raise ValueError("nan loss encountered")
 
-                loss = loss / self._num_gradient_accumulation_steps
+                # `len(batches_for_step)` should always be `num_gradient_accumulation_steps`, except
+                # for the last batch in the epoch.
+                loss = loss / len(batches_for_step)
                 loss.backward()
 
             train_loss += loss.item()
