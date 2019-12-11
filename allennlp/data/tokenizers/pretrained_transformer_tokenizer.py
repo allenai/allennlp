@@ -82,7 +82,7 @@ class PretrainedTransformerTokenizer(Tokenizer):
             truncation_strategy=self._truncation_strategy,
             return_tensors=None,
         )
-        # token_ids containes a final list with ids for both regualr and special tokens
+        # token_ids contains a final list with ids for both regular and special tokens
         token_ids, token_type_ids = encoded_tokens["input_ids"], encoded_tokens["token_type_ids"]
 
         tokens = []
