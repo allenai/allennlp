@@ -91,7 +91,7 @@ def sanitize(x: Any) -> Any:
 def group_by_count(iterable: List[Any], count: int, default_value: Any) -> List[List[Any]]:
     """
     Takes a list and groups it into sublists of size ``count``, using ``default_value`` to pad the
-    list at the end if the list is not divisable by ``count``.
+    list at the end if the list is not divisible by ``count``.
 
     For example:
     >>> group_by_count([1, 2, 3, 4, 5, 6, 7], 3, 0)
