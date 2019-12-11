@@ -848,7 +848,6 @@ class TestTrainer(AllenNlpTestCase):
                           num_epochs=2,
                           num_gradient_accumulation_steps=steps_to_accumulate)
         assert trainer._num_gradient_accumulation_steps == steps_to_accumulate
-        assert trainer._accumulate_gradients
 
         metrics = trainer.train()
 

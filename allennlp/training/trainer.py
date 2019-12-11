@@ -263,8 +263,6 @@ class Trainer(TrainerBase):
                     "Because of this, the effective batch size will be "
                     "batch_size * num_gradient_accumulation_steps * number of GPUs")
 
-        self._accumulate_gradients = self._num_gradient_accumulation_steps > 1
-
         # Enable activation logging.
         if histogram_interval is not None:
             self._tensorboard.enable_activation_logging(self.model)
