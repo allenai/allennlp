@@ -718,7 +718,7 @@ class Trainer(TrainerBase):
         grad_clipping = params.pop_float("grad_clipping", None)
         lr_scheduler_params = params.pop("learning_rate_scheduler", None)
         momentum_scheduler_params = params.pop("momentum_scheduler", None)
-        num_gradient_accumulation_steps = params.pop("num_steps_to_accumulate", 1)
+        num_gradient_accumulation_steps = params.pop("num_gradient_accumulation_steps", 1)
 
         if isinstance(cuda_device, list):
             model_device = cuda_device[0]
