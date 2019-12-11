@@ -1,4 +1,3 @@
-# pylint: disable=no-self-use,invalid-name,protected-access
 from copy import deepcopy
 
 import numpy
@@ -15,29 +14,28 @@ from allennlp.common.testing import AllenNlpTestCase
 
 class TestTokenCharactersEncoder(AllenNlpTestCase):
     def setUp(self):
-        super(TestTokenCharactersEncoder, self).setUp()
+        super().setUp()
         self.vocab = Vocabulary()
         self.vocab.add_token_to_namespace("1", "token_characters")
         self.vocab.add_token_to_namespace("2", "token_characters")
         self.vocab.add_token_to_namespace("3", "token_characters")
         self.vocab.add_token_to_namespace("4", "token_characters")
-        params = Params({
-                "embedding": {
-                        "embedding_dim": 2,
-                        "vocab_namespace": "token_characters"
-                        },
+        params = Params(
+            {
+                "embedding": {"embedding_dim": 2, "vocab_namespace": "token_characters"},
                 "encoder": {
-                        "type": "cnn",
-                        "embedding_dim": 2,
-                        "num_filters": 4,
-                        "ngram_filter_sizes": [1, 2],
-                        "output_dim": 3
-                        }
-                })
+                    "type": "cnn",
+                    "embedding_dim": 2,
+                    "num_filters": 4,
+                    "ngram_filter_sizes": [1, 2],
+                    "output_dim": 3,
+                },
+            }
+        )
         self.encoder = TokenCharactersEncoder.from_params(vocab=self.vocab, params=deepcopy(params))
         self.embedding = Embedding.from_params(vocab=self.vocab, params=params["embedding"])
         self.inner_encoder = Seq2VecEncoder.from_params(params["encoder"])
-        constant_init = Initializer.from_params(Params({"type": "constant", "val": 1.}))
+        constant_init = Initializer.from_params(Params({"type": "constant", "val": 1.0}))
         initializer = InitializerApplicator([(".*", constant_init)])
         initializer(self.encoder)
         initializer(self.embedding)

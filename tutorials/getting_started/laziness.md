@@ -51,7 +51,7 @@ Its constructor takes a `lazy` parameter and passes it to the superclass constru
                  token_indexers: Dict[str, TokenIndexer] = None,
                  lazy: bool = False) -> None:
         super().__init__(lazy)
-        self._tokenizer = tokenizer or WordTokenizer()
+        self._tokenizer = tokenizer or SpacyTokenizer()
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
 ```
 

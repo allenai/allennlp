@@ -38,19 +38,19 @@
             "token_characters": 200
         },
         "pretrained_files": {
-            "tokens": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/glove/glove.840B.300d.lower.converted.zip"
+            "tokens": "https://allennlp.s3.amazonaws.com/datasets/glove/glove.840B.300d.lower.converted.zip"
         },
         "only_include_pretrained_words": true
     },
     "train_data_path": "drop_dataset_train.json",
     "validation_data_path": "drop_dataset_dev.json",
     "model": {
-        "type": "augmented_qanet",
+        "type": "naqanet",
         "text_field_embedder": {
             "token_embedders": {
                 "tokens": {
                     "type": "embedding",
-                    "pretrained_file": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/glove/glove.840B.300d.lower.converted.zip",
+                    "pretrained_file": "https://allennlp.s3.amazonaws.com/datasets/glove/glove.840B.300d.lower.converted.zip",
                     "embedding_dim": 300,
                     "trainable": false
                 },

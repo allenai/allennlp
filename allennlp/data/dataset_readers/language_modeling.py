@@ -7,14 +7,14 @@ from allennlp.common.file_utils import cached_path
 from allennlp.common.tqdm import Tqdm
 from allennlp.data.instance import Instance
 from allennlp.data.tokenizers.tokenizer import Tokenizer
-from allennlp.data.tokenizers import WordTokenizer
+from allennlp.data.tokenizers import SpacyTokenizer
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.token_indexers.token_indexer import TokenIndexer
 from allennlp.data.fields import TextField
 from allennlp.data.token_indexers import SingleIdTokenIndexer
 
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 @DatasetReader.register("language_modeling")
@@ -33,7 +33,7 @@ class LanguageModelingReader(DatasetReader):
         not ``None``, we will instead take all sentences, including their start and stop tokens,
         line them up, and split the tokens into groups of this number, for more efficient training
         of the language model.
-    tokenizer : ``Tokenizer``, optional (default=``WordTokenizer()``)
+    tokenizer : ``Tokenizer``, optional (default=``SpacyTokenizer()``)
         We use this ``Tokenizer`` for the text.  See :class:`Tokenizer`.
     token_indexers : ``Dict[str, TokenIndexer]``, optional (default=``{"tokens": SingleIdTokenIndexer()}``)
         We use this to define the input representation for the text.  See :class:`TokenIndexer`.
@@ -41,13 +41,16 @@ class LanguageModelingReader(DatasetReader):
         a ``SingleIdTokenIndexer`` here, we use the first one you specify.  Otherwise, we create
         one with default parameters.
     """
-    def __init__(self,
-                 tokens_per_instance: int = None,
-                 tokenizer: Tokenizer = None,
-                 token_indexers: Dict[str, TokenIndexer] = None,
-                 lazy: bool = False) -> None:
+
+    def __init__(
+        self,
+        tokens_per_instance: int = None,
+        tokenizer: Tokenizer = None,
+        token_indexers: Dict[str, TokenIndexer] = None,
+        lazy: bool = False,
+    ) -> None:
         super().__init__(lazy)
-        self._tokenizer = tokenizer or WordTokenizer()
+        self._tokenizer = tokenizer or SpacyTokenizer()
         self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
         self._tokens_per_instance = tokens_per_instance
 
@@ -78,20 +81,19 @@ class LanguageModelingReader(DatasetReader):
             tokenized_strings = []
             logger.info("Creating dataset from all text in file: %s", file_path)
             for index in Tqdm.tqdm(range(0, len(tokenized_text) - num_tokens, num_tokens - 1)):
-                tokenized_strings.append(tokenized_text[index:(index + num_tokens)])
+                tokenized_strings.append(tokenized_text[index : (index + num_tokens)])
         else:
             tokenized_strings = [self._tokenizer.tokenize(s) for s in instance_strings]
 
         for tokenized_string in tokenized_strings:
             input_field = TextField(tokenized_string[:-1], self._token_indexers)
             output_field = TextField(tokenized_string[1:], self._output_indexer)
-            yield Instance({'input_tokens': input_field,
-                            'output_tokens': output_field})
+            yield Instance({"input_tokens": input_field, "output_tokens": output_field})
 
     @overrides
     def text_to_instance(self, sentence: str) -> Instance:  # type: ignore
-        # pylint: disable=arguments-differ
+
         tokenized_string = self._tokenizer.tokenize(sentence)
         input_field = TextField(tokenized_string[:-1], self._token_indexers)
         output_field = TextField(tokenized_string[1:], self._output_indexer)
-        return Instance({'input_tokens': input_field, 'output_tokens': output_field})
+        return Instance({"input_tokens": input_field, "output_tokens": output_field})

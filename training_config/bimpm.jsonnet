@@ -3,10 +3,7 @@
     "type": "quora_paraphrase",
     "lazy": false,
     "tokenizer": {
-      "type": "word",
-      "word_splitter": {
-        "type": "just_spaces"
-      }
+      "type": "just_spaces"
     },
     "token_indexers": {
       "tokens": {
@@ -18,15 +15,15 @@
       }
     }
   },
-  "train_data_path": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/quora-question-paraphrase/train.tsv",
-  "validation_data_path": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/quora-question-paraphrase/dev.tsv",
+  "train_data_path": "https://allennlp.s3.amazonaws.com/datasets/quora-question-paraphrase/train.tsv",
+  "validation_data_path": "https://allennlp.s3.amazonaws.com/datasets/quora-question-paraphrase/dev.tsv",
   "model": {
     "type": "bimpm",
     "dropout": 0.1,
     "text_field_embedder": {
       "tokens": {
         "type": "embedding",
-        "pretrained_file": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/glove/glove.840B.300d.txt.gz",
+        "pretrained_file": "https://allennlp.s3.amazonaws.com/datasets/glove/glove.840B.300d.txt.gz",
         "embedding_dim": 300,
         "trainable": false,
         "padding_index": 0
@@ -42,7 +39,6 @@
           "input_size": 20,
           "hidden_size": 50,
           "num_layers": 1,
-          "dropout": 0.1,
           "bidirectional": true
         }
       }
@@ -58,8 +54,7 @@
       "bidirectional": true,
       "input_size": 400,
       "hidden_size": 200,
-      "num_layers": 1,
-      "dropout": 0.1
+      "num_layers": 1
     },
     "matcher_forward1": {
       "is_forward": true,
@@ -76,8 +71,7 @@
       "bidirectional": true,
       "input_size": 400,
       "hidden_size": 200,
-      "num_layers": 1,
-      "dropout": 0.1
+      "num_layers": 1
     },
     "matcher_forward2": {
       "is_forward": true,

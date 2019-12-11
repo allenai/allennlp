@@ -23,22 +23,22 @@
       }
     }
   },
-  "train_data_path": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/squad/squad-train-v1.1.json",
-  "validation_data_path": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/squad/squad-dev-v1.1.json",
+  "train_data_path": "https://allennlp.s3.amazonaws.com/datasets/squad/squad-train-v1.1.json",
+  "validation_data_path": "https://allennlp.s3.amazonaws.com/datasets/squad/squad-dev-v1.1.json",
   "model": {
     "type": "bidaf",
     "text_field_embedder": {
         "token_embedders": {
             "tokens": {
                 "type": "embedding",
-                "pretrained_file": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/glove/glove.6B.100d.txt.gz",
+                "pretrained_file": "https://allennlp.s3.amazonaws.com/datasets/glove/glove.6B.100d.txt.gz",
                 "embedding_dim": 100,
                 "trainable": false
             },
             "elmo":{
                 "type": "elmo_token_embedder",
-                "options_file": "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_options.json",
-                "weight_file": "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_weights.hdf5",
+                "options_file": "https://allennlp.s3.amazonaws.com/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_options.json",
+                "weight_file": "https://allennlp.s3.amazonaws.com/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_weights.hdf5",
                 "do_layer_norm": false,
                 "dropout": 0.0
             },
@@ -64,8 +64,7 @@
       "bidirectional": true,
       "input_size": 1224,
       "hidden_size": 100,
-      "num_layers": 1,
-      "dropout": 0.2
+      "num_layers": 1
     },
     "similarity_function": {
       "type": "linear",
@@ -86,8 +85,7 @@
       "bidirectional": true,
       "input_size": 1400,
       "hidden_size": 100,
-      "num_layers": 1,
-      "dropout": 0.2
+      "num_layers": 1
     },
     "dropout": 0.2
   },

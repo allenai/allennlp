@@ -60,17 +60,21 @@ class DecomposableAttention(Model):
     regularizer : ``RegularizerApplicator``, optional (default=``None``)
         If provided, will be used to calculate the regularization penalty during training.
     """
-    def __init__(self, vocab: Vocabulary,
-                 text_field_embedder: TextFieldEmbedder,
-                 attend_feedforward: FeedForward,
-                 similarity_function: SimilarityFunction,
-                 compare_feedforward: FeedForward,
-                 aggregate_feedforward: FeedForward,
-                 premise_encoder: Optional[Seq2SeqEncoder] = None,
-                 hypothesis_encoder: Optional[Seq2SeqEncoder] = None,
-                 initializer: InitializerApplicator = InitializerApplicator(),
-                 regularizer: Optional[RegularizerApplicator] = None) -> None:
-        super(DecomposableAttention, self).__init__(vocab, regularizer)
+
+    def __init__(
+        self,
+        vocab: Vocabulary,
+        text_field_embedder: TextFieldEmbedder,
+        attend_feedforward: FeedForward,
+        similarity_function: SimilarityFunction,
+        compare_feedforward: FeedForward,
+        aggregate_feedforward: FeedForward,
+        premise_encoder: Optional[Seq2SeqEncoder] = None,
+        hypothesis_encoder: Optional[Seq2SeqEncoder] = None,
+        initializer: InitializerApplicator = InitializerApplicator(),
+        regularizer: Optional[RegularizerApplicator] = None,
+    ) -> None:
+        super().__init__(vocab, regularizer)
 
         self._text_field_embedder = text_field_embedder
         self._attend_feedforward = TimeDistributed(attend_feedforward)
@@ -82,22 +86,32 @@ class DecomposableAttention(Model):
 
         self._num_labels = vocab.get_vocab_size(namespace="labels")
 
-        check_dimensions_match(text_field_embedder.get_output_dim(), attend_feedforward.get_input_dim(),
-                               "text field embedding dim", "attend feedforward input dim")
-        check_dimensions_match(aggregate_feedforward.get_output_dim(), self._num_labels,
-                               "final output dimension", "number of labels")
+        check_dimensions_match(
+            text_field_embedder.get_output_dim(),
+            attend_feedforward.get_input_dim(),
+            "text field embedding dim",
+            "attend feedforward input dim",
+        )
+        check_dimensions_match(
+            aggregate_feedforward.get_output_dim(),
+            self._num_labels,
+            "final output dimension",
+            "number of labels",
+        )
 
         self._accuracy = CategoricalAccuracy()
         self._loss = torch.nn.CrossEntropyLoss()
 
         initializer(self)
 
-    def forward(self,  # type: ignore
-                premise: Dict[str, torch.LongTensor],
-                hypothesis: Dict[str, torch.LongTensor],
-                label: torch.IntTensor = None,
-                metadata: List[Dict[str, Any]] = None) -> Dict[str, torch.Tensor]:
-        # pylint: disable=arguments-differ
+    def forward(  # type: ignore
+        self,
+        premise: Dict[str, torch.LongTensor],
+        hypothesis: Dict[str, torch.LongTensor],
+        label: torch.IntTensor = None,
+        metadata: List[Dict[str, Any]] = None,
+    ) -> Dict[str, torch.Tensor]:
+
         """
         Parameters
         ----------
@@ -165,10 +179,12 @@ class DecomposableAttention(Model):
         label_logits = self._aggregate_feedforward(aggregate_input)
         label_probs = torch.nn.functional.softmax(label_logits, dim=-1)
 
-        output_dict = {"label_logits": label_logits,
-                       "label_probs": label_probs,
-                       "h2p_attention": h2p_attention,
-                       "p2h_attention": p2h_attention}
+        output_dict = {
+            "label_logits": label_logits,
+            "label_probs": label_probs,
+            "h2p_attention": h2p_attention,
+            "p2h_attention": p2h_attention,
+        }
 
         if label is not None:
             loss = self._loss(label_logits, label.long().view(-1))
@@ -182,6 +198,4 @@ class DecomposableAttention(Model):
         return output_dict
 
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
-        return {
-                'accuracy': self._accuracy.get_metric(reset),
-                }
+        return {"accuracy": self._accuracy.get_metric(reset)}
