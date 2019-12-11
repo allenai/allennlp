@@ -326,11 +326,11 @@ class Trainer(TrainerBase):
         #   Effective batch size here is `batch_size` * `n`. Hence it is a list of
         #   `n` chunks.
         #
-        # Single GPU with `n` accumulation steps:
+        # Single GPU with `n` gradient accumulation steps:
         #   Effective batch size here is `batch_size` * `n`. Hence `batch_group` is a
         #   list of `n` chunks.
         #
-        # `n` GPUs with `m` accumulation steps:
+        # `n` GPUs with `m` gradient accumulation steps:
         #   Effective batch size here is `batch_size` * `n` * `m`. Hence it is a
         #   list of `n * m` chunks.
 
