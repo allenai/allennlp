@@ -307,8 +307,8 @@ class Trainer(TrainerBase):
         # Set the model to "train" mode.
         self.model.train()
 
-        # A `batch_group` has chunks of tensors that form a single batch together for an optimizer
-        # step. A single chunk always contains as many instances as configured in the iterator's
+        # A `batch_group` has chunks of tensors that form a single batch for an optimizer
+        # step. A single chunk typically contains as many instances as configured in the iterator's
         # `batch_size` param. The number of chunks in a single `batch_group` is
         # `num_gradient_accumulation_steps` * `num_gpus`.
         batch_group_length = self._num_gradient_accumulation_steps * len(self._cuda_devices)
@@ -339,14 +339,14 @@ class Trainer(TrainerBase):
             self.optimizer.zero_grad()
 
             batches_for_step = list(lazy_groups_of(iter(batch_group), len(self._cuda_devices)))
+            instances_in_batch_group = sum(training_util.get_batch_size(b) for b in batch_group)
             for batch_for_step in batches_for_step:
                 loss = self.batch_loss(batch_for_step, for_training=True)
                 if torch.isnan(loss):
                     raise ValueError("nan loss encountered")
 
-                # `len(batches_for_step)` should always be `num_gradient_accumulation_steps`, except
-                # for the last batch in the epoch.
-                loss = loss / len(batches_for_step)
+                instances_in_step = sum(training_util.get_batch_size(b) for b in batch_for_step)
+                loss = loss * instances_in_step / instances_in_batch_group
                 loss.backward()
 
                 train_loss += loss.item()
