@@ -83,56 +83,62 @@ class TestTrain(AllenNlpTestCase):
                 recover=True,
             )
 
-
+    @pytest.mark.skipif(torch.cuda.device_count() < 2, reason="Need multiple GPUs.")
     def test_train_model_distributed(self):
 
-        params = Params(
-                    {
-                        "model": {
-                            "type": "simple_tagger",
-                            "text_field_embedder": {
-                                "token_embedders": {"tokens": {"type": "embedding", "embedding_dim": 5}}
-                            },
-                            "encoder": {"type": "lstm", "input_size": 5, "hidden_size": 7, "num_layers": 2},
-                        },
-                        "dataset_reader": {"type": "sequence_tagging"},
-                        "train_data_path": SEQUENCE_TAGGING_DATA_PATH,
-                        "validation_data_path": SEQUENCE_TAGGING_DATA_PATH,
-                        "iterator": {"type": "basic", "batch_size": 2},
-                        "trainer": {
-                            "num_epochs": 2, 
-                            "optimizer": "adam",
-                            "distributed": True,
-                            "cuda_device": [0, 1]
-                            },
-                    }
-                )
+        params = lambda: Params(
+            {
+                "model": {
+                    "type": "simple_tagger",
+                    "text_field_embedder": {
+                        "token_embedders": {"tokens": {"type": "embedding", "embedding_dim": 5}}
+                    },
+                    "encoder": {"type": "lstm", "input_size": 5, "hidden_size": 7, "num_layers": 2},
+                },
+                "dataset_reader": {"type": "sequence_tagging"},
+                "train_data_path": SEQUENCE_TAGGING_DATA_PATH,
+                "validation_data_path": SEQUENCE_TAGGING_DATA_PATH,
+                "iterator": {"type": "basic", "batch_size": 2},
+                "trainer": {
+                    "num_epochs": 2,
+                    "optimizer": "adam",
+                    "distributed": True,
+                    "cuda_device": [0, 1],
+                },
+            }
+        )
 
-        out_dir = os.path.join(self.TEST_DIR, "test_distributed_train") 
-        train_model(params, serialization_dir=out_dir)
-        print(os.listdir(out_dir))
+        out_dir = os.path.join(self.TEST_DIR, "test_distributed_train")
+        train_model(params(), serialization_dir=out_dir)
+
+        # Check that some logs specific to distributed
+        # training are where we expect.
+        serialized_files = os.listdir(out_dir)
+        assert "stderr_worker0.log" in serialized_files
+        assert "stdout_worker0.log" in serialized_files
+        assert "stderr_worker1.log" in serialized_files
+        assert "stdout_worker1.log" in serialized_files
+
+        # Check we can load the seralized model
+        assert load_archive(out_dir).model
 
     def test_distributed_raises_error_with_no_gpus(self):
         params = Params(
-                    {
-                        "model": {
-                            "type": "simple_tagger",
-                            "text_field_embedder": {
-                                "token_embedders": {"tokens": {"type": "embedding", "embedding_dim": 5}}
-                            },
-                            "encoder": {"type": "lstm", "input_size": 5, "hidden_size": 7, "num_layers": 2},
-                        },
-                        "dataset_reader": {"type": "sequence_tagging"},
-                        "train_data_path": SEQUENCE_TAGGING_DATA_PATH,
-                        "validation_data_path": SEQUENCE_TAGGING_DATA_PATH,
-                        "iterator": {"type": "basic", "batch_size": 2},
-                        "trainer": {
-                            "num_epochs": 2, 
-                            "optimizer": "adam",
-                            "distributed": True,
-                            },
-                    }
-                )
+            {
+                "model": {
+                    "type": "simple_tagger",
+                    "text_field_embedder": {
+                        "token_embedders": {"tokens": {"type": "embedding", "embedding_dim": 5}}
+                    },
+                    "encoder": {"type": "lstm", "input_size": 5, "hidden_size": 7, "num_layers": 2},
+                },
+                "dataset_reader": {"type": "sequence_tagging"},
+                "train_data_path": SEQUENCE_TAGGING_DATA_PATH,
+                "validation_data_path": SEQUENCE_TAGGING_DATA_PATH,
+                "iterator": {"type": "basic", "batch_size": 2},
+                "trainer": {"num_epochs": 2, "optimizer": "adam", "distributed": True},
+            }
+        )
         with pytest.raises(ConfigurationError):
             train_model(params, serialization_dir=os.path.join(self.TEST_DIR, "test_train_model"))
 
