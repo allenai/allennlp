@@ -257,13 +257,6 @@ class Trainer(TrainerBase):
 
         self._num_gradient_accumulation_steps = num_gradient_accumulation_steps
 
-        if self._num_gradient_accumulation_steps > 1 and self._multiple_gpu:
-            logger.warning(
-                "You have configured to use multiple GPUs along with gradient accumulation."
-                "Because of this, the effective batch size will be "
-                "batch_size * num_gradient_accumulation_steps * number of GPUs"
-            )
-
         # Enable activation logging.
         if histogram_interval is not None:
             self._tensorboard.enable_activation_logging(self.model)
