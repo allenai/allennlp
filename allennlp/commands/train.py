@@ -47,7 +47,7 @@ which to write the results.
 import argparse
 import logging
 import os
-from typing import Optional
+from typing import Optional, List
 
 import torch
 import torch.distributed as dist
@@ -175,7 +175,7 @@ def train_model_from_file(
     cache_directory: str = None,
     cache_prefix: str = None,
     node_rank: int = 0,
-    include_package: str = None,
+    include_package: List[str] = None,
 ) -> Model:
     """
     A wrapper around :func:`train_model` which loads the params from a file.
@@ -231,7 +231,7 @@ def train_model(
     cache_directory: str = None,
     cache_prefix: str = None,
     node_rank: int = 0,
-    include_package: str = None,
+    include_package: List[str] = None,
 ) -> Model:
     """
     Trains the model specified in the given :class:`Params` object, using the data and training
@@ -258,7 +258,7 @@ def train_model(
         For caching data pre-processing.  See :func:`allennlp.training.util.datasets_from_params`.
     node_rank: ``int``, optional
         Rank of the current node in distributed training
-    include_package: ``str``, optional
+    include_package: ``List[str]``, optional
         In distributed mode, extra packages mentioned will be imported in trainer workers.
 
     Returns
@@ -351,7 +351,7 @@ def _train_worker(
     recover: bool = False,
     cache_directory: str = None,
     cache_prefix: str = None,
-    include_package: str = None,
+    include_package: List[str] = None,
     node_rank: int = 0,
     num_procs_per_node: int = 0,
     master_addr: str = "127.0.0.1",
@@ -382,7 +382,7 @@ def _train_worker(
         For caching data pre-processing.  See :func:`allennlp.training.util.datasets_from_params`.
     cache_prefix : ``str``, optional
         For caching data pre-processing.  See :func:`allennlp.training.util.datasets_from_params`.
-    include_package: ``str``, optional
+    include_package: ``List[str]``, optional
         In distributed mode, since this function would have been spawned as a separate process,
         the extra imports need to be done again. NOTE: This does not have any effect in single
         GPU training.
@@ -411,8 +411,9 @@ def _train_worker(
     if distributed:
         # Since the worker is spawned and not forked, the extra imports
         # need to be done again.
-        for package_name in include_package:
-            import_submodules(package_name)
+        if include_package is not None:
+            for package_name in include_package:
+                import_submodules(package_name)
 
         # The Unique identifier of the worker process among all the processes in the
         # distributed training group is computed here. This is used while initializing
