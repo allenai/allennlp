@@ -8,6 +8,7 @@ from allennlp.training.metrics import SpearmanCorrelation
 
 # pylint: disable=no-self-use
 
+
 def spearman_formula(predictions, labels, mask=None):
     """
     This function is spearman formula from:
@@ -61,8 +62,11 @@ class SpearmanCorrelationTest(AllenNlpTestCase):
         for predictions, labels in predictions_labels_:
             spearman_correlation.reset()
             spearman_correlation(torch.FloatTensor(predictions), torch.FloatTensor(labels))
-            assert_allclose(spearman_formula(predictions.reshape(-1), labels.reshape(-1)),
-                            spearman_correlation.get_metric(), rtol=1e-5)
+            assert_allclose(
+                spearman_formula(predictions.reshape(-1), labels.reshape(-1)),
+                spearman_correlation.get_metric(),
+                rtol=1e-5,
+            )
 
     def test_masked_computation(self):
         spearman_correlation = SpearmanCorrelation()
@@ -85,10 +89,12 @@ class SpearmanCorrelationTest(AllenNlpTestCase):
 
         for predictions, labels in predictions_labels_:
             spearman_correlation.reset()
-            spearman_correlation(torch.FloatTensor(predictions),
-                                 torch.FloatTensor(labels), torch.FloatTensor(mask))
-            expected_spearman_correlation = spearman_formula(predictions.reshape(-1), labels.reshape(-1),
-                                                             mask=mask.reshape(-1))
+            spearman_correlation(
+                torch.FloatTensor(predictions), torch.FloatTensor(labels), torch.FloatTensor(mask)
+            )
+            expected_spearman_correlation = spearman_formula(
+                predictions.reshape(-1), labels.reshape(-1), mask=mask.reshape(-1)
+            )
 
             # because add mask, a batch of predictions or labels will have many 0,
             # spearman correlation algorithm will dependence the sorting position of a set of numbers,

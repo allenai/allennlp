@@ -18,15 +18,18 @@ class SpearmanCorrelation(Metric):
 
     https://en.wikipedia.org/wiki/Spearman%27s_rank_correlation_coefficient
     """
+
     def __init__(self) -> None:
         super().__init__()
         self.total_predictions = torch.zeros(0)
         self.total_gold_labels = torch.zeros(0)
 
-    def __call__(self,
-                 predictions: torch.Tensor,
-                 gold_labels: torch.Tensor,
-                 mask: Optional[torch.Tensor] = None):
+    def __call__(
+        self,
+        predictions: torch.Tensor,
+        gold_labels: torch.Tensor,
+        mask: Optional[torch.Tensor] = None,
+    ):
         """
         Parameters
         ----------
@@ -59,7 +62,9 @@ class SpearmanCorrelation(Metric):
         -------
         The accumulated sample Spearman correlation.
         """
-        spearman_correlation = stats.spearmanr(self.total_predictions.numpy(), self.total_gold_labels.numpy())
+        spearman_correlation = stats.spearmanr(
+            self.total_predictions.numpy(), self.total_gold_labels.numpy()
+        )
 
         if reset:
             self.reset()
