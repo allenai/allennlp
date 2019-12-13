@@ -314,18 +314,10 @@ def get_spacy_model(
                 f"Spacy models '{spacy_model_name}' not found.  Downloading and installing."
             )
             spacy_download(spacy_model_name)
-            # NOTE(mattg): The following four lines are a workaround suggested by Ines for spacy
-            # 2.1.0, which removed the linking that was done in spacy 2.0.  importlib doesn't find
-            # packages that were installed in the same python session, so the way `spacy_download`
-            # works in 2.1.0 is broken for this use case.  These four lines can probably be removed
-            # at some point in the future, once spacy has figured out a better way to handle this.
-            # See https://github.com/explosion/spaCy/issues/3435.
-            from spacy.cli import link
-            from spacy.util import get_package_path
 
-            package_path = get_package_path(spacy_model_name)
-            link(spacy_model_name, spacy_model_name, model_path=package_path)
-            spacy_model = spacy.load(spacy_model_name, disable=disable)
+            # Import the downloaded model module directly and load from there
+            spacy_model_module = __import__(spacy_model_name)
+            spacy_model = spacy_model_module.load(disable=disable)  # type: ignore
 
         LOADED_SPACY_MODELS[options] = spacy_model
     return LOADED_SPACY_MODELS[options]
