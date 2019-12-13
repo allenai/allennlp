@@ -235,11 +235,9 @@ class GanCallbackTrainer(CallbackTrainer):
         self.fake_stdev = 0.0
         self.count = 0
 
-    def train_one_batch(self, batch_group):
-        # Each batch_group should have only one batch
-        batch = batch_group
-        array = batch["array"]
+    def train_one_batch(self, batch):
 
+        array = batch["array"]
         # We should not have mixed batches:
         if len(set(batch["stage"])) != 1:
             raise ValueError("mixed batch")
@@ -290,7 +288,7 @@ class GanCallbackTrainer(CallbackTrainer):
         # Reset epoch counters
         self._reset_counters()
 
-        # Will call `self.train_one_batch_group`
+        # Will call `self.train_one_batch`
         super().train_one_epoch()
 
 

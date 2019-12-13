@@ -316,7 +316,7 @@ def search_learning_rate(
     else:
         lr_update_factor = (end_lr / start_lr) ** (1.0 / num_batches)
 
-    for i, batch_group in enumerate(train_generator_tqdm):
+    for i, batch in enumerate(train_generator_tqdm):
 
         if linear_steps:
             current_lr = start_lr + (lr_update_factor * i)
@@ -327,7 +327,7 @@ def search_learning_rate(
             param_group["lr"] = current_lr
 
         trainer.optimizer.zero_grad()
-        loss = trainer.batch_loss(batch_group, for_training=True)
+        loss = trainer.batch_loss(batch, for_training=True)
         loss.backward()
         loss = loss.detach().cpu().item()
 

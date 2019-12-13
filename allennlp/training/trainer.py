@@ -343,14 +343,14 @@ class Trainer(TrainerBase):
             train_generator_tqdm = train_generator
 
         cumulative_batch_size = 0
-        for batch_group in train_generator_tqdm:
+        for batch in train_generator_tqdm:
             batches_this_epoch += 1
             self._batch_num_total += 1
             batch_num_total = self._batch_num_total
 
             self.optimizer.zero_grad()
 
-            loss = self.batch_loss(batch_group, for_training=True)
+            loss = self.batch_loss(batch, for_training=True)
 
             if torch.isnan(loss):
                 raise ValueError("nan loss encountered")
@@ -417,7 +417,7 @@ class Trainer(TrainerBase):
                 self._tensorboard.log_histograms(self.model, histogram_parameters)
 
             if self._log_batch_size_period:
-                cur_batch = sum([training_util.get_batch_size(batch) for batch in batch_group])
+                cur_batch = training_util.get_batch_size(batch)
                 cumulative_batch_size += cur_batch
                 if (batches_this_epoch - 1) % self._log_batch_size_period == 0:
                     average = cumulative_batch_size / batches_this_epoch
@@ -470,9 +470,9 @@ class Trainer(TrainerBase):
         val_generator_tqdm = Tqdm.tqdm(val_generator, total=num_validation_batches)
         batches_this_epoch = 0
         val_loss = 0
-        for batch_group in val_generator_tqdm:
+        for batch in val_generator_tqdm:
 
-            loss = self.batch_loss(batch_group, for_training=False)
+            loss = self.batch_loss(batch, for_training=False)
             if loss is not None:
                 # You shouldn't necessarily have to compute a loss for validation, so we allow for
                 # `loss` to be None.  We need to be careful, though - `batches_this_epoch` is
