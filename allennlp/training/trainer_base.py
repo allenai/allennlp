@@ -58,7 +58,6 @@ class TrainerBase(Registrable):
                 "`cuda_device` key in the experiment configuration."
             )
 
-        self._multiple_gpu = False
         self._cuda_devices = [cuda_device]
 
         self._distributed = distributed
