@@ -99,10 +99,7 @@ class TestTrain(AllenNlpTestCase):
                 "train_data_path": SEQUENCE_TAGGING_DATA_PATH,
                 "validation_data_path": SEQUENCE_TAGGING_DATA_PATH,
                 "iterator": {"type": "basic", "batch_size": 2},
-                "trainer": {
-                    "num_epochs": 2,
-                    "optimizer": "adam",
-                },
+                "trainer": {"num_epochs": 2, "optimizer": "adam"},
                 "distributed": True,
                 "distributed_cuda_devices": [0, 1],
             }
@@ -137,7 +134,7 @@ class TestTrain(AllenNlpTestCase):
                 "validation_data_path": SEQUENCE_TAGGING_DATA_PATH,
                 "iterator": {"type": "basic", "batch_size": 2},
                 "trainer": {"num_epochs": 2, "optimizer": "adam"},
-                "distributed": True
+                "distributed": True,
             }
         )
         with pytest.raises(ConfigurationError):

@@ -54,7 +54,7 @@ import shutil
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common.checks import ConfigurationError, check_for_gpu, parse_cuda_device
 from allennlp.common import Params, Tqdm
-from allennlp.common.util import prepare_environment, lazy_groups_of
+from allennlp.common.util import prepare_environment
 from allennlp.data import Vocabulary, DataIterator
 from allennlp.models import Model
 from allennlp.training import Trainer

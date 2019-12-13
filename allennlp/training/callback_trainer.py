@@ -6,15 +6,13 @@ import logging
 import time
 import datetime
 import functools
-import math
 from typing import Dict, Optional, List, Any, Iterable
 import torch
 
 from allennlp.common import Params
 from allennlp.common.checks import parse_cuda_device, check_for_gpu
 from allennlp.common.tqdm import Tqdm
-from allennlp.common.util import lazy_groups_of
-from allennlp.data.instance import Instance
+from allennlp.data import Instance
 from allennlp.data.iterators.data_iterator import DataIterator, TensorDict
 from allennlp.models.model import Model
 from allennlp.nn import util as nn_util
@@ -345,7 +343,7 @@ class CallbackTrainer(TrainerBase):
         world_size = params.pop_int("world_size", 1)
 
         if distributed:
-            rank = model_device
+            rank = cuda_device
         else:
             rank = 0
 

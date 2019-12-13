@@ -1,11 +1,9 @@
 from typing import Iterable, List, TYPE_CHECKING
 import logging
-import math
 
 import torch
 
 from allennlp.common.tqdm import Tqdm
-from allennlp.common.util import lazy_groups_of
 from allennlp.data.instance import Instance
 from allennlp.data.iterators import DataIterator
 from allennlp.training import util as training_util

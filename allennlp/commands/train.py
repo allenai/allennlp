@@ -438,7 +438,6 @@ def _train_worker(
         params["trainer"]["cuda_device"] = gpu_id
         params["trainer"]["world_size"] = world_size
 
-
         torch.cuda.set_device(gpu_id)
         dist.init_process_group(
             backend="nccl",

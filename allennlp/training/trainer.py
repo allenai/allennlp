@@ -1,10 +1,9 @@
 import datetime
 import logging
-import math
 import os
 import time
 import traceback
-from typing import Dict, Optional, List, Tuple, Union, Iterable, Any
+from typing import Dict, Optional, Tuple, Union, Iterable, Any
 
 import torch
 import torch.distributed as dist
@@ -14,7 +13,7 @@ from torch.nn.parallel import DistributedDataParallel
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError, parse_cuda_device, check_for_gpu
 from allennlp.common.tqdm import Tqdm
-from allennlp.common.util import dump_metrics, gpu_memory_mb, peak_memory_mb, lazy_groups_of
+from allennlp.common.util import dump_metrics, gpu_memory_mb, peak_memory_mb
 from allennlp.data.instance import Instance
 from allennlp.data.iterators.data_iterator import DataIterator, TensorDict
 from allennlp.models.model import Model
