@@ -98,7 +98,8 @@ class TensorboardWriter(FromParams):
         if self._should_log_parameter_statistics:
             # Log parameter values to Tensorboard
             for name, param in model.named_parameters():
-                self.add_train_scalar("parameter_mean/" + name, param.data.mean())
+                if param.data.numel() > 0:
+                    self.add_train_scalar("parameter_mean/" + name, param.data.mean())
                 if param.data.numel() > 1:
                     self.add_train_scalar("parameter_std/" + name, param.data.std())
                 if param.grad is not None:

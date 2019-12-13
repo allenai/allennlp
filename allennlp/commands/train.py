@@ -239,13 +239,13 @@ def train_model(
         The model with the best epoch weights.
     """
     create_serialization_dir(params, serialization_dir, recover, force)
+    params.to_file(os.path.join(serialization_dir, CONFIG_NAME))
+
     stdout_handler = prepare_global_logging(serialization_dir, file_friendly_logging)
     prepare_environment(params)
 
     cuda_device = params.params.get("trainer").get("cuda_device", -1)
     check_for_gpu(cuda_device)
-
-    params.to_file(os.path.join(serialization_dir, CONFIG_NAME))
 
     evaluate_on_test = params.pop_bool("evaluate_on_test", False)
 

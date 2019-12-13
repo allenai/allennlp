@@ -7,7 +7,7 @@ from allennlp.common.testing import AllenNlpTestCase
 
 class TestPretrainedTransformerEmbedder(AllenNlpTestCase):
     def test_forward_runs_when_initialized_from_params(self):
-        # This code just passes things off to pytorch-transformers, so we only have a very simple
+        # This code just passes things off to ``transformers``, so we only have a very simple
         # test.
         params = Params({"model_name": "bert-base-uncased"})
         embedder = PretrainedTransformerEmbedder.from_params(params)

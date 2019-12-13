@@ -5,7 +5,7 @@ import torch
 
 from allennlp.data import Vocabulary
 from allennlp.models.model import Model
-from allennlp.modules import Seq2SeqEncoder, Seq2VecEncoder, TextFieldEmbedder
+from allennlp.modules import FeedForward, Seq2SeqEncoder, Seq2VecEncoder, TextFieldEmbedder
 from allennlp.nn import InitializerApplicator, RegularizerApplicator
 from allennlp.nn.util import get_text_field_mask
 from allennlp.training.metrics import CategoricalAccuracy
@@ -32,6 +32,8 @@ class BasicClassifier(Model):
         Required Seq2Vec encoder layer. If `seq2seq_encoder` is provided, this encoder
         will pool its output. Otherwise, this encoder will operate directly on the output
         of the `text_field_embedder`.
+    feedforward : ``FeedForward``, optional, (default = None).
+        An optional feedforward layer to apply after the seq2vec_encoder.
     dropout : ``float``, optional (default = ``None``)
         Dropout percentage to use.
     num_labels: ``int``, optional (default = ``None``)
@@ -51,6 +53,7 @@ class BasicClassifier(Model):
         text_field_embedder: TextFieldEmbedder,
         seq2vec_encoder: Seq2VecEncoder,
         seq2seq_encoder: Seq2SeqEncoder = None,
+        feedforward: Optional[FeedForward] = None,
         dropout: float = None,
         num_labels: int = None,
         label_namespace: str = "labels",
@@ -67,13 +70,16 @@ class BasicClassifier(Model):
             self._seq2seq_encoder = None
 
         self._seq2vec_encoder = seq2vec_encoder
-        self._classifier_input_dim = self._seq2vec_encoder.get_output_dim()
+        self._feedforward = feedforward
+        if feedforward is not None:
+            self._classifier_input_dim = self._feedforward.get_output_dim()
+        else:
+            self._classifier_input_dim = self._seq2vec_encoder.get_output_dim()
 
         if dropout:
             self._dropout = torch.nn.Dropout(dropout)
         else:
             self._dropout = None
-
         self._label_namespace = label_namespace
 
         if num_labels:
@@ -120,6 +126,9 @@ class BasicClassifier(Model):
 
         if self._dropout:
             embedded_text = self._dropout(embedded_text)
+
+        if self._feedforward is not None:
+            embedded_text = self._feedforward(embedded_text)
 
         logits = self._classification_layer(embedded_text)
         probs = torch.nn.functional.softmax(logits, dim=-1)

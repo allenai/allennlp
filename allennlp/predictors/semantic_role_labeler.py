@@ -5,7 +5,7 @@ from spacy.tokens import Doc
 
 from allennlp.common.util import JsonDict, sanitize, group_by_count
 from allennlp.data import DatasetReader, Instance
-from allennlp.data.tokenizers.word_splitter import SpacyWordSplitter
+from allennlp.data.tokenizers.spacy_tokenizer import SpacyTokenizer
 from allennlp.models import Model
 from allennlp.predictors.predictor import Predictor
 
@@ -20,7 +20,7 @@ class SemanticRoleLabelerPredictor(Predictor):
         self, model: Model, dataset_reader: DatasetReader, language: str = "en_core_web_sm"
     ) -> None:
         super().__init__(model, dataset_reader)
-        self._tokenizer = SpacyWordSplitter(language=language, pos_tags=True)
+        self._tokenizer = SpacyTokenizer(language=language, pos_tags=True)
 
     def predict(self, sentence: str) -> JsonDict:
         """
@@ -131,7 +131,7 @@ class SemanticRoleLabelerPredictor(Predictor):
             One instance per verb.
         """
         sentence = json_dict["sentence"]
-        tokens = self._tokenizer.split_words(sentence)
+        tokens = self._tokenizer.tokenize(sentence)
         return self.tokens_to_instances(tokens)
 
     @overrides
@@ -172,7 +172,7 @@ class SemanticRoleLabelerPredictor(Predictor):
 
         if not flattened_instances:
             return sanitize(
-                [{"verbs": [], "words": self._tokenizer.split_words(x["sentence"])} for x in inputs]
+                [{"verbs": [], "words": self._tokenizer.tokenize(x["sentence"])} for x in inputs]
             )
 
         # Make the instances into batches and check the last batch for
@@ -196,7 +196,7 @@ class SemanticRoleLabelerPredictor(Predictor):
                 # We didn't run any predictions for sentences with no verbs,
                 # so we don't have a way to extract the original sentence.
                 # Here we just tokenize the input again.
-                original_text = self._tokenizer.split_words(inputs[sentence_index]["sentence"])
+                original_text = self._tokenizer.tokenize(inputs[sentence_index]["sentence"])
                 return_dicts[sentence_index]["words"] = original_text
                 continue
 
@@ -244,6 +244,6 @@ class SemanticRoleLabelerPredictor(Predictor):
         instances = self._sentence_to_srl_instances(inputs)
 
         if not instances:
-            return sanitize({"verbs": [], "words": self._tokenizer.split_words(inputs["sentence"])})
+            return sanitize({"verbs": [], "words": self._tokenizer.tokenize(inputs["sentence"])})
 
         return self.predict_instances(instances)

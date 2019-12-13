@@ -10,7 +10,7 @@ from allennlp.data.fields import TextField
 from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import SingleIdTokenIndexer
 from allennlp.data.token_indexers.token_indexer import TokenIndexer
-from allennlp.data.tokenizers import WordTokenizer
+from allennlp.data.tokenizers import SpacyTokenizer
 from allennlp.data.tokenizers.tokenizer import Tokenizer
 
 logger = logging.getLogger(__name__)
@@ -26,7 +26,7 @@ class SimpleLanguageModelingDatasetReader(DatasetReader):
     ----------
     tokenizer : ``Tokenizer``, optional
         Tokenizer to use to split the input sentences into words or other kinds of tokens. Defaults
-        to ``WordTokenizer()``.
+        to ``SpacyTokenizer()``.
     token_indexers : ``Dict[str, TokenIndexer]``, optional
         Indexers used to define input token representations. Defaults to
         ``{"tokens": SingleIdTokenIndexer()}``.
@@ -47,7 +47,7 @@ class SimpleLanguageModelingDatasetReader(DatasetReader):
         end_tokens: List[str] = None,
     ) -> None:
         super().__init__(True)
-        self._tokenizer = tokenizer or WordTokenizer()
+        self._tokenizer = tokenizer or SpacyTokenizer()
         self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
         if max_sequence_length is not None:
             self._max_sequence_length: Union[float, Optional[int]] = max_sequence_length

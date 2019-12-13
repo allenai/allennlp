@@ -26,7 +26,7 @@ from allennlp.data.iterators import DataIterator
 from allennlp.data.dataset_readers import DatasetReader
 from allennlp.data.fields import TextField, MetadataField
 from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
-from allennlp.data.tokenizers import WordTokenizer
+from allennlp.data.tokenizers import SpacyTokenizer
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.models import Model
 from allennlp.training.checkpointer import Checkpointer
@@ -44,7 +44,7 @@ class MyReader(DatasetReader):
     def __init__(self, field_name: str) -> None:
         super().__init__()
         self.field_name = field_name
-        self.tokenizer = WordTokenizer()
+        self.tokenizer = SpacyTokenizer()
         self.token_indexers: Dict[str, TokenIndexer] = {"tokens": SingleIdTokenIndexer()}
 
     def text_to_instance(self, sentence: str) -> Instance:  # type: ignore

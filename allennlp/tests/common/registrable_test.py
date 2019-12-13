@@ -91,7 +91,7 @@ class TestRegistrable(AllenNlpTestCase):
         assert DataIterator.by_name("bucket").__name__ == "BucketIterator"
 
     def test_registry_has_builtin_tokenizers(self):
-        assert Tokenizer.by_name("word").__name__ == "WordTokenizer"
+        assert Tokenizer.by_name("spacy").__name__ == "SpacyTokenizer"
         assert Tokenizer.by_name("character").__name__ == "CharacterTokenizer"
 
     def test_registry_has_builtin_token_indexers(self):

@@ -7,7 +7,7 @@ from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.fields import LabelField, TextField, Field, ListField
 from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
-from allennlp.data.tokenizers import Tokenizer, WordTokenizer
+from allennlp.data.tokenizers import Tokenizer, SpacyTokenizer
 from allennlp.data.tokenizers.sentence_splitter import SpacySentenceSplitter
 
 logger = logging.getLogger(__name__)
@@ -29,7 +29,7 @@ class TextClassificationJsonReader(DatasetReader):
         optional (default=``{"tokens": SingleIdTokenIndexer()}``)
         We use this to define the input representation for the text.
         See :class:`TokenIndexer`.
-    tokenizer : ``Tokenizer``, optional (default = ``{"tokens": WordTokenizer()}``)
+    tokenizer : ``Tokenizer``, optional (default = ``{"tokens": SpacyTokenizer()}``)
         Tokenizer to use to split the input text into words or other kinds of tokens.
     segment_sentences: ``bool``, optional (default = ``False``)
         If True, we will first segment the text into sentences using SpaCy and then tokenize words.
@@ -54,7 +54,7 @@ class TextClassificationJsonReader(DatasetReader):
         lazy: bool = False,
     ) -> None:
         super().__init__(lazy=lazy)
-        self._tokenizer = tokenizer or WordTokenizer()
+        self._tokenizer = tokenizer or SpacyTokenizer()
         self._segment_sentences = segment_sentences
         self._max_sequence_length = max_sequence_length
         self._skip_label_indexing = skip_label_indexing

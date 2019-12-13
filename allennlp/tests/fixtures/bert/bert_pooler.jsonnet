@@ -6,7 +6,7 @@ local bert_model = "allennlp/tests/fixtures/bert/vocab.txt";
         "lazy": false,
         "type": "bert_classification_test",
         "tokenizer": {
-            "word_splitter": "bert-basic"
+            "type": "bert-basic"
         },
         "token_indexers": {
             "bert": {

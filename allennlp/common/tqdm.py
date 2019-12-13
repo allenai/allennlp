@@ -3,7 +3,15 @@
 global defaults for certain tqdm parameters.
 """
 
-from tqdm import tqdm as _tqdm
+try:
+    SHELL = str(type(get_ipython()))  # type:ignore # noqa: F821
+except:  # noqa: E261
+    SHELL = ""
+
+if "zmqshell.ZMQInteractiveShell" in SHELL:
+    from tqdm import tqdm_notebook as _tqdm
+else:
+    from tqdm import tqdm as _tqdm
 
 # This is neccesary to stop tqdm from hanging
 # when exceptions are raised inside iterators.
