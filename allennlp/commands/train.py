@@ -56,7 +56,7 @@ import torch.multiprocessing as mp
 from allennlp.commands.make_vocab import make_vocab_from_params
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common import Params
-from allennlp.common.checks import ConfigurationError, check_for_gpu, parse_cuda_device
+from allennlp.common.checks import ConfigurationError, check_for_gpu
 from allennlp.common.util import (
     prepare_environment,
     prepare_global_logging,
@@ -269,11 +269,10 @@ def train_model(
     create_serialization_dir(params, serialization_dir, recover, force)
     params.to_file(os.path.join(serialization_dir, CONFIG_NAME))
 
-    cuda_device = params.params.get("trainer").get("cuda_device", -1)
-    check_for_gpu(cuda_device)
-
-    distributed = params.params.get("trainer").get("distributed", False)
-    if not distributed:
+    distributed_params = params.params.pop("distributed", None)
+    # If distributed isn't in the config and the config contains strictly
+    # one cuda device, we just run a single training process.
+    if distributed_params is None:
         model = _train_worker(
             process_rank=0,
             params=params,
@@ -286,18 +285,24 @@ def train_model(
         )
         archive_model(serialization_dir, files_to_archive=params.files_to_archive)
         return model
-    else:
-        device_id = parse_cuda_device(cuda_device)
 
-        if not isinstance(device_id, list):
+    # Otherwise, we are running multiple processes for training.
+    else:
+        # We are careful here so that we can raise a good error if someone
+        # passed the wrong thing - cuda_devices are required.
+        device_ids = distributed_params.pop("cuda_devices", None)
+        multi_device = isinstance(device_ids, list) and len(device_ids) > 1
+
+        if not multi_device:
             raise ConfigurationError(
                 "Multiple cuda devices need to be configured to run distributed training."
             )
+        check_for_gpu(device_ids)
 
-        master_addr = params.params.get("trainer").pop("master_address", "127.0.0.1")
-        master_port = params.params.get("trainer").pop("master_port", 29500)
-        num_procs = len(device_id)
-        num_nodes = params.params.get("trainer").pop("num_nodes", 1)
+        master_addr = distributed_params.pop("master_address", "127.0.0.1")
+        master_port = distributed_params.pop("master_port", 29500)
+        num_procs = len(device_ids)
+        num_nodes = distributed_params.pop("num_nodes", 1)
         world_size = num_nodes * num_procs
 
         os.environ["MASTER_ADDR"] = master_addr
@@ -332,10 +337,10 @@ def train_model(
                 cache_prefix,
                 include_package,
                 node_rank,
-                num_procs,
                 master_addr,
                 master_port,
                 world_size,
+                device_ids,
             ),
             nprocs=num_procs,
         )
@@ -353,10 +358,10 @@ def _train_worker(
     cache_prefix: str = None,
     include_package: List[str] = None,
     node_rank: int = 0,
-    num_procs_per_node: int = 0,
     master_addr: str = "127.0.0.1",
     master_port: int = 29500,
     world_size: int = 1,
+    distributed_device_ids: List[str] = None,
 ) -> Optional[Model]:
     """
     Helper to train the configured model/experiment. In distributed mode, this is spawned as a
@@ -415,18 +420,22 @@ def _train_worker(
             for package_name in include_package:
                 import_submodules(package_name)
 
+        num_procs_per_node = len(distributed_device_ids)
         # The Unique identifier of the worker process among all the processes in the
         # distributed training group is computed here. This is used while initializing
         # the process group using `init_process_group`
         global_rank = node_rank * num_procs_per_node + process_rank
 
-        cuda_device = params.params.get("trainer").get("cuda_device", -1)
-        device_list = parse_cuda_device(cuda_device)
-
         # In distributed training, the configured device is always going to be a list.
         # The corresponding gpu id for the particular worker is obtained by picking the id
         # from the device list with the rank as index
-        gpu_id = device_list[process_rank]  # type: ignore
+        gpu_id = distributed_device_ids[process_rank]  # type: ignore
+
+        # Till now, "cuda_device" might not be set in the trainer params.
+        # But a worker trainer needs to only know about its specific GPU id.
+        params["trainer"]["cuda_device"] = gpu_id
+        params["trainer"]["world_size"] = world_size
+        params["trainer"]["distributed"] = True
 
         torch.cuda.set_device(gpu_id)
         dist.init_process_group(
@@ -439,12 +448,6 @@ def _train_worker(
             f"Process group of world size {world_size} initialized "
             f"for distributed training in worker {global_rank}"
         )
-
-        # Till now, "cuda_device" will be a list of ids as configured originally
-        # in params. But a worker trainer needs to only know about its specific
-        # GPU id.
-        params["trainer"]["cuda_device"] = gpu_id
-        params["trainer"]["world_size"] = world_size
 
     trainer_type = params.get("trainer", {}).get("type", "default")
 
@@ -504,7 +507,7 @@ def _train_worker(
                 trainer.model,
                 evaluation_dataset,
                 evaluation_iterator,
-                cuda_device=trainer._cuda_devices[0],  # pylint: disable=protected-access,
+                cuda_device=trainer.cuda_device,
                 # TODO(brendanr): Pass in an arg following Joel's trainer refactor.
                 batch_weight_key="",
             )

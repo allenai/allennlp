@@ -99,12 +99,8 @@ class TestTrain(AllenNlpTestCase):
                 "train_data_path": SEQUENCE_TAGGING_DATA_PATH,
                 "validation_data_path": SEQUENCE_TAGGING_DATA_PATH,
                 "iterator": {"type": "basic", "batch_size": 2},
-                "trainer": {
-                    "num_epochs": 2,
-                    "optimizer": "adam",
-                    "distributed": True,
-                    "cuda_device": [0, 1],
-                },
+                "trainer": {"num_epochs": 2, "optimizer": "adam"},
+                "distributed": {"cuda_devices": [0, 1]},
             }
         )
 
@@ -136,7 +132,8 @@ class TestTrain(AllenNlpTestCase):
                 "train_data_path": SEQUENCE_TAGGING_DATA_PATH,
                 "validation_data_path": SEQUENCE_TAGGING_DATA_PATH,
                 "iterator": {"type": "basic", "batch_size": 2},
-                "trainer": {"num_epochs": 2, "optimizer": "adam", "distributed": True},
+                "trainer": {"num_epochs": 2, "optimizer": "adam"},
+                "distributed": {},
             }
         )
         with pytest.raises(ConfigurationError):
@@ -183,8 +180,8 @@ class TestTrain(AllenNlpTestCase):
                     "encoder": {"type": "lstm", "input_size": 5, "hidden_size": 7, "num_layers": 2},
                 },
                 "dataset_reader": {"type": "sequence_tagging"},
-                "train_data_path": "tests/fixtures/data/sequence_tagging.tsv",
-                "validation_data_path": "tests/fixtures/data/sequence_tagging.tsv",
+                "train_data_path": "allennlp/tests/fixtures/data/sequence_tagging.tsv",
+                "validation_data_path": "allennlp/tests/fixtures/data/sequence_tagging.tsv",
                 "iterator": {"type": "basic", "batch_size": 2},
                 "trainer": {
                     "num_epochs": 2,
