@@ -36,8 +36,8 @@ class TrainerBase(Registrable):
         rank: int = 0,
         world_size: int = 1,
     ) -> None:
-        check_for_gpu(cuda_device)
 
+        check_for_gpu(cuda_device)
         self._serialization_dir = serialization_dir
 
         if isinstance(cuda_device, list):

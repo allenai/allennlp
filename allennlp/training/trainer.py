@@ -12,7 +12,7 @@ import torch.optim.lr_scheduler
 from torch.nn.parallel import DistributedDataParallel
 
 from allennlp.common import Params
-from allennlp.common.checks import ConfigurationError, parse_cuda_device
+from allennlp.common.checks import ConfigurationError, parse_cuda_device, check_for_gpu
 from allennlp.common.tqdm import Tqdm
 from allennlp.common.util import dump_metrics, gpu_memory_mb, peak_memory_mb, lazy_groups_of
 from allennlp.data.instance import Instance
@@ -764,14 +764,11 @@ class Trainer(TrainerBase):
         lr_scheduler_params = params.pop("learning_rate_scheduler", None)
         momentum_scheduler_params = params.pop("momentum_scheduler", None)
 
-        if isinstance(cuda_device, list):
-            model_device = cuda_device[0]
-        else:
-            model_device = cuda_device
-        if model_device >= 0:
+        check_for_gpu(cuda_device)
+        if cuda_device >= 0:
             # Moving model to GPU here so that the optimizer state gets constructed on
             # the right device.
-            model = model.cuda(model_device)
+            model = model.cuda(cuda_device)
 
         parameters = [[n, p] for n, p in model.named_parameters() if p.requires_grad]
         optimizer = Optimizer.from_params(parameters, params.pop("optimizer"))

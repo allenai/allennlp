@@ -11,7 +11,7 @@ from typing import Dict, Optional, List, Any, Iterable
 import torch
 
 from allennlp.common import Params
-from allennlp.common.checks import parse_cuda_device
+from allennlp.common.checks import parse_cuda_device, check_for_gpu
 from allennlp.common.tqdm import Tqdm
 from allennlp.common.util import lazy_groups_of
 from allennlp.data.instance import Instance
@@ -316,14 +316,11 @@ class CallbackTrainer(TrainerBase):
         num_epochs = params.pop_int("num_epochs", 20)
         cuda_device = parse_cuda_device(params.pop("cuda_device", -1))
 
-        if isinstance(cuda_device, list):
-            model_device = cuda_device[0]
-        else:
-            model_device = cuda_device
-        if model_device >= 0:
+        check_for_gpu(cuda_device)
+        if cuda_device >= 0:
             # Moving model to GPU here so that the optimizer state gets constructed on
             # the right device.
-            model = model.cuda(model_device)
+            model = model.cuda(cuda_device)
 
         parameters = [[n, p] for n, p in model.named_parameters() if p.requires_grad]
         optimizer = Optimizer.from_params(parameters, params.pop("optimizer"))
