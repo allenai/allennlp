@@ -269,15 +269,10 @@ def train_model(
     create_serialization_dir(params, serialization_dir, recover, force)
     params.to_file(os.path.join(serialization_dir, CONFIG_NAME))
 
-    device_ids = params.params.pop("distributed_cuda_devices", -1)
-    check_for_gpu(device_ids)
-
-    multi_device = isinstance(device_ids, list) and len(device_ids) > 1
-    distributed = params.params.pop("distributed", False)
-
+    distributed_params = params.params.pop("distributed", None)
     # If distributed isn't in the config and the config contains strictly
     # one cuda device, we just run a single training process.
-    if not distributed:
+    if distributed_params is None:
         model = _train_worker(
             process_rank=0,
             params=params,
@@ -291,19 +286,23 @@ def train_model(
         archive_model(serialization_dir, files_to_archive=params.files_to_archive)
         return model
 
-    # If the config contains the distributed flag, but only one GPU, we raise an error,
-    # because this combination is probably a mistake.
-    elif distributed and not multi_device:
-        raise ConfigurationError(
-            "Multiple cuda devices need to be configured to run distributed training."
-        )
-
     # Otherwise, we are running multiple processes for training.
     else:
-        master_addr = params.params.pop("master_address", "127.0.0.1")
-        master_port = params.params.pop("master_port", 29500)
+        # We are careful here so that we can raise a good error if someone
+        # passed the wrong thing - cuda_devices are required.
+        device_ids = distributed_params.pop("cuda_devices", None)
+        multi_device = isinstance(device_ids, list) and len(device_ids) > 1
+
+        if not multi_device:
+            raise ConfigurationError(
+                "Multiple cuda devices need to be configured to run distributed training."
+            )
+        check_for_gpu(device_ids)
+
+        master_addr = distributed_params.pop("master_address", "127.0.0.1")
+        master_port = distributed_params.pop("master_port", 29500)
         num_procs = len(device_ids)
-        num_nodes = params.params.pop("num_nodes", 1)
+        num_nodes = distributed_params.pop("num_nodes", 1)
         world_size = num_nodes * num_procs
 
         os.environ["MASTER_ADDR"] = master_addr
