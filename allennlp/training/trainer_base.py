@@ -31,7 +31,7 @@ class TrainerBase(Registrable):
     def __init__(
         self,
         serialization_dir: str,
-        cuda_device: Union[int, List] = -1,
+        cuda_device: int = -1,
         distributed: bool = False,
         rank: int = 0,
         world_size: int = 1,
@@ -49,7 +49,7 @@ class TrainerBase(Registrable):
 
         if not isinstance(cuda_device, int):
             raise ConfigurationError(
-                "Expected an int or list for cuda_device, got {}".format(cuda_device)
+                "Expected an int for cuda_device, got {}".format(cuda_device)
             )
 
         if distributed and world_size <= 1:
