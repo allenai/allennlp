@@ -284,13 +284,11 @@ class Trainer(TrainerBase):
     def rescale_gradients(self) -> Optional[float]:
         return training_util.rescale_gradients(self.model, self._grad_norm)
 
-    def batch_loss(self, batch_group: List[TensorDict], for_training: bool) -> torch.Tensor:
+    def batch_loss(self, batch: TensorDict, for_training: bool) -> torch.Tensor:
         """
         Does a forward pass on the given batches and returns the ``loss`` value in the result.
         If ``for_training`` is `True` also applies regularization penalty.
         """
-        assert len(batch_group) == 1
-        batch = batch_group[0]
         batch = nn_util.move_to_device(batch, self.cuda_device)
         output_dict = self._pytorch_model(**batch)
 

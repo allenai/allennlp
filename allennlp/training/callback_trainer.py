@@ -171,7 +171,7 @@ class CallbackTrainer(TrainerBase):
         self.training_batches = train_generator
         self.num_training_batches = self.iterator.get_num_batches(self.training_data)
 
-    def batch_loss(self, batch_group: List[TensorDict], for_training: bool) -> torch.Tensor:
+    def batch_loss(self, batch: TensorDict, for_training: bool) -> torch.Tensor:
         """
         Does a forward pass on the given batches and returns the ``loss`` value in the result.
         If ``for_training`` is `True` also applies regularization penalty.
@@ -179,8 +179,6 @@ class CallbackTrainer(TrainerBase):
         This is a method on the trainer so that it can be used both in training and validation
         (which are handled separately).
         """
-        assert len(batch_group) == 1
-        batch = batch_group[0]
         batch = nn_util.move_to_device(batch, self.cuda_device)
         output_dict = self._pytorch_model(**batch)
 
@@ -198,7 +196,7 @@ class CallbackTrainer(TrainerBase):
 
         return loss
 
-    def train_one_batch_group(self, batch_group: List[TensorDict]) -> str:
+    def train_one_batch_group(self, batch: TensorDict) -> str:
         """
         Handles the training for a single batch group.
         Fires off the events BATCH_START, FORWARD, BACKWARD, and BATCH_END.
@@ -210,7 +208,7 @@ class CallbackTrainer(TrainerBase):
         self.batch_num_total += 1
 
         self.handler.fire_event(Events.FORWARD)
-        loss = self.batch_loss(batch_group, for_training=True)
+        loss = self.batch_loss(batch, for_training=True)
 
         if torch.isnan(loss):
             raise ValueError("nan loss encountered")
@@ -248,11 +246,11 @@ class CallbackTrainer(TrainerBase):
         logger.info("Training")
         self.batches_this_epoch = 0
 
-        batch_groups_tqdm = Tqdm.tqdm(self.training_batches, total=self.num_training_batches)
+        batches_tqdm = Tqdm.tqdm(self.training_batches, total=self.num_training_batches)
 
-        for self.batch_group in batch_groups_tqdm:
+        for self.batch_group in batches_tqdm:
             description = self.train_one_batch_group(self.batch_group)
-            batch_groups_tqdm.set_description(description, refresh=False)
+            batches_tqdm.set_description(description, refresh=False)
 
         self.handler.fire_event(Events.VALIDATE)
         self.handler.fire_event(Events.EPOCH_END)
