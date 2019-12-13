@@ -52,7 +52,8 @@ word2number>=1.1
 
 # To use the BERT model
 pytorch-pretrained-bert>=0.6.0
-transformers==2.1.1
+transformers>=2.1.1,!=2.2.1
+# Version 2.2.1 has a broken tokenizer.
 
 # For caching processed data
 jsonpickle
@@ -133,3 +134,6 @@ pypandoc
 
 # Pypi uploads
 twine>=1.11.0
+
+# Pin this version to one that works
+python-dateutil<2.8.1
