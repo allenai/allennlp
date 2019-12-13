@@ -167,13 +167,9 @@ class CallbackTrainer(TrainerBase):
         Generates one epoch worth of training data. Stores it in trainer instance variables
         so that callbacks can access it.
         """
-        num_gpus = len(self._cuda_devices)
-
-        raw_train_generator = self.iterator(self.training_data, num_epochs=1, shuffle=self.shuffle)
-        self.training_batches = lazy_groups_of(raw_train_generator, num_gpus)
-        self.num_training_batches = math.ceil(
-            self.iterator.get_num_batches(self.training_data) / num_gpus
-        )
+        train_generator = self.iterator(self.training_data, num_epochs=1, shuffle=self.shuffle)
+        self.training_batches = train_generator
+        self.num_training_batches = self.iterator.get_num_batches(self.training_data)
 
     def batch_loss(self, batch_group: List[TensorDict], for_training: bool) -> torch.Tensor:
         """
@@ -185,7 +181,7 @@ class CallbackTrainer(TrainerBase):
         """
         assert len(batch_group) == 1
         batch = batch_group[0]
-        batch = nn_util.move_to_device(batch, self._cuda_devices[0])
+        batch = nn_util.move_to_device(batch, self.cuda_device)
         output_dict = self._pytorch_model(**batch)
 
         try:

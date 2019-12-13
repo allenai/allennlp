@@ -511,7 +511,7 @@ def _train_worker(
                 trainer.model,
                 evaluation_dataset,
                 evaluation_iterator,
-                cuda_device=trainer._cuda_devices[0],  # pylint: disable=protected-access,
+                cuda_device=trainer.cuda_device,
                 # TODO(brendanr): Pass in an arg following Joel's trainer refactor.
                 batch_weight_key="",
             )

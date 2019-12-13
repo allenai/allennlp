@@ -52,7 +52,7 @@ import logging
 import shutil
 
 from allennlp.commands.subcommand import Subcommand
-from allennlp.common.checks import ConfigurationError, check_for_gpu
+from allennlp.common.checks import ConfigurationError, check_for_gpu, parse_cuda_device
 from allennlp.common import Params, Tqdm
 from allennlp.common.util import prepare_environment, lazy_groups_of
 from allennlp.data import Vocabulary, DataIterator
@@ -193,6 +193,14 @@ def find_learning_rate_model(
     prepare_environment(params)
 
     cuda_device = params.params.get("trainer").get("cuda_device", -1)
+    devices = parse_cuda_device(cuda_device)
+
+    # HACK: The trainer can not be constructed with multiple gpus.
+    # TODO(Mark): rework this so that cuda devices for distributed training are passed
+    # somewhere else, so configs are always valid.
+    if isinstance(devices, list):
+        cuda_device = devices[0]
+        params.params["trainer"]["cuda_device"] = cuda_device
     check_for_gpu(cuda_device)
 
     all_datasets = datasets_from_params(params)
@@ -223,6 +231,7 @@ def find_learning_rate_model(
     train_data = all_datasets["train"]
 
     trainer_params = params.pop("trainer")
+
     no_grad_regexes = trainer_params.pop("no_grad", ())
     for name, parameter in model.named_parameters():
         if any(re.search(regex, name) for regex in no_grad_regexes):
@@ -296,10 +305,7 @@ def search_learning_rate(
 
     trainer.model.train()
 
-    num_gpus = len(trainer._cuda_devices)
-
-    raw_train_generator = trainer.iterator(trainer.train_data, shuffle=trainer.shuffle)
-    train_generator = lazy_groups_of(raw_train_generator, num_gpus)
+    train_generator = trainer.iterator(trainer.train_data, shuffle=trainer.shuffle)
     train_generator_tqdm = Tqdm.tqdm(train_generator, total=num_batches)
 
     learning_rates = []

@@ -58,7 +58,7 @@ class TrainerBase(Registrable):
                 "`cuda_device` key in the experiment configuration."
             )
 
-        self._cuda_devices = [cuda_device]
+        self.cuda_device = cuda_device
 
         self._distributed = distributed
         self._rank = rank
@@ -66,8 +66,8 @@ class TrainerBase(Registrable):
         self._world_size = world_size
 
     def _move_to_gpu(self, model: Model) -> Model:
-        if self._cuda_devices[0] != -1:
-            return model.cuda(self._cuda_devices[0])
+        if self.cuda_device != -1:
+            return model.cuda(self.cuda_device)
         else:
             return model
 

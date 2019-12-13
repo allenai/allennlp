@@ -67,13 +67,8 @@ class Validate(Callback):
 
             trainer.model.eval()
 
-            num_gpus = len(trainer._cuda_devices)
-
-            raw_val_generator = self.iterator(self.instances, num_epochs=1, shuffle=False)
-            val_generator = lazy_groups_of(raw_val_generator, num_gpus)
-            num_validation_batches = math.ceil(
-                self.iterator.get_num_batches(self.instances) / num_gpus
-            )
+            val_generator = self.iterator(self.instances, num_epochs=1, shuffle=False)
+            num_validation_batches = self.iterator.get_num_batches(self.instances)
             val_generator_tqdm = Tqdm.tqdm(val_generator, total=num_validation_batches)
 
             batches_this_epoch = 0

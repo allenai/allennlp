@@ -277,7 +277,7 @@ class Trainer(TrainerBase):
         # normal case, reference to `Model` is retained. This reference is only used in
         # these places: `model.__call__`, `model.train` and `model.eval`.
         if self._distributed:
-            self._pytorch_model = DistributedDataParallel(self.model, device_ids=self._cuda_devices)
+            self._pytorch_model = DistributedDataParallel(self.model, device_ids=[self.cuda_device])
         else:
             self._pytorch_model = self.model
 
@@ -291,7 +291,7 @@ class Trainer(TrainerBase):
         """
         assert len(batch_group) == 1
         batch = batch_group[0]
-        batch = nn_util.move_to_device(batch, self._cuda_devices[0])
+        batch = nn_util.move_to_device(batch, self.cuda_device)
         output_dict = self._pytorch_model(**batch)
 
         try:
@@ -324,12 +324,9 @@ class Trainer(TrainerBase):
         # Set the model to "train" mode.
         self._pytorch_model.train()
 
-        num_gpus = len(self._cuda_devices)
-
         # Get tqdm for the training batches
-        raw_train_generator = self.iterator(self.train_data, num_epochs=1, shuffle=self.shuffle)
-        train_generator = lazy_groups_of(raw_train_generator, num_gpus)
-        num_training_batches = math.ceil(self.iterator.get_num_batches(self.train_data) / num_gpus)
+        train_generator = self.iterator(self.train_data, num_epochs=1, shuffle=self.shuffle)
+        num_training_batches = self.iterator.get_num_batches(self.train_data)
         self._last_log = time.time()
         last_save_time = time.time()
 
@@ -403,7 +400,7 @@ class Trainer(TrainerBase):
                 train_loss,
                 batches_this_epoch,
                 world_size=self._world_size,
-                cuda_device=self._cuda_devices,
+                cuda_device=[self.cuda_device],
             )
 
             # Updating tqdm only for the master as the trainers wouldn't have one
@@ -447,7 +444,7 @@ class Trainer(TrainerBase):
             batches_this_epoch,
             reset=True,
             world_size=self._world_size,
-            cuda_device=self._cuda_devices,
+            cuda_device=[self.cuda_device],
         )
         metrics["cpu_memory_MB"] = peak_cpu_usage
         for (gpu_num, memory) in gpu_usage:
@@ -471,13 +468,8 @@ class Trainer(TrainerBase):
         else:
             val_iterator = self.iterator
 
-        num_gpus = len(self._cuda_devices)
-
-        raw_val_generator = val_iterator(self._validation_data, num_epochs=1, shuffle=False)
-        val_generator = lazy_groups_of(raw_val_generator, num_gpus)
-        num_validation_batches = math.ceil(
-            val_iterator.get_num_batches(self._validation_data) / num_gpus
-        )
+        val_generator = val_iterator(self._validation_data, num_epochs=1, shuffle=False)
+        num_validation_batches = val_iterator.get_num_batches(self._validation_data)
         val_generator_tqdm = Tqdm.tqdm(val_generator, total=num_validation_batches)
         batches_this_epoch = 0
         val_loss = 0
@@ -499,7 +491,7 @@ class Trainer(TrainerBase):
                 val_loss,
                 batches_this_epoch,
                 world_size=self._world_size,
-                cuda_device=self._cuda_devices,
+                cuda_device=[self.cuda_device],
             )
             description = training_util.description_from_metrics(val_metrics)
             val_generator_tqdm.set_description(description, refresh=False)
@@ -572,7 +564,7 @@ class Trainer(TrainerBase):
                         num_batches,
                         reset=True,
                         world_size=self._world_size,
-                        cuda_device=self._cuda_devices,
+                        cuda_device=[self.cuda_device],
                     )
 
                     # Check validation metric for early stopping
