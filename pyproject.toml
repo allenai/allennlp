@@ -1,6 +1,3 @@
-[tool.poetry]
-name = "allennlp"
-
 [tool.black]
 line-length = 100
 
@@ -20,3 +17,7 @@ exclude = '''
     | \bdoc\b
 )
 '''
+
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"

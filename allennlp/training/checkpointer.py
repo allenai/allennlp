@@ -169,7 +169,7 @@ class Checkpointer(Registrable):
         if self._serialization_dir:
             logger.info("loading best weights")
             best_model_state_path = os.path.join(self._serialization_dir, "best.th")
-            return torch.load(best_model_state_path)
+            return torch.load(best_model_state_path, map_location=nn_util.device_mapping(-1))
         else:
             logger.info(
                 "cannot load best weights without `serialization_dir`, "
