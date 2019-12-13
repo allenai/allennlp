@@ -317,7 +317,7 @@ def get_spacy_model(
 
             # Import the downloaded model module directly and load from there
             spacy_model_module = __import__(spacy_model_name)
-            spacy_model = spacy_model_module.load(disable=disable)
+            spacy_model = spacy_model_module.load(disable=disable)  # type: ignore
 
         LOADED_SPACY_MODELS[options] = spacy_model
     return LOADED_SPACY_MODELS[options]
