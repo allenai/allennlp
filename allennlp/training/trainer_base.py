@@ -9,7 +9,7 @@ rather than instantiating a ``Trainer`` yourself.
 
 
 import logging
-from typing import Dict, List, Union, Any
+from typing import Dict, Any
 
 from allennlp.common import Params, Registrable
 from allennlp.common.util import is_master
@@ -48,9 +48,7 @@ class TrainerBase(Registrable):
             )
 
         if not isinstance(cuda_device, int):
-            raise ConfigurationError(
-                "Expected an int for cuda_device, got {}".format(cuda_device)
-            )
+            raise ConfigurationError("Expected an int for cuda_device, got {}".format(cuda_device))
 
         if distributed and world_size <= 1:
             raise ConfigurationError(

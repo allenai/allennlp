@@ -10,7 +10,7 @@ from typing import Dict, Optional, List, Any, Iterable
 import torch
 
 from allennlp.common import Params
-from allennlp.common.checks import parse_cuda_device, check_for_gpu, ConfigurationError
+from allennlp.common.checks import parse_cuda_device, check_for_gpu
 from allennlp.common.tqdm import Tqdm
 from allennlp.data import Instance
 from allennlp.data.iterators.data_iterator import DataIterator, TensorDict
@@ -315,10 +315,6 @@ class CallbackTrainer(TrainerBase):
         cuda_device = parse_cuda_device(params.pop("cuda_device", -1))
 
         check_for_gpu(cuda_device)
-        if isinstance(cuda_device, list):
-            raise ConfigurationError(
-                "In allennlp 1.0, the Trainer cannot be passed multiple cuda devices."
-            )
         if cuda_device >= 0:
             # Moving model to GPU here so that the optimizer state gets constructed on
             # the right device.

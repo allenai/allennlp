@@ -435,6 +435,7 @@ def _train_worker(
         # But a worker trainer needs to only know about its specific GPU id.
         params["trainer"]["cuda_device"] = gpu_id
         params["trainer"]["world_size"] = world_size
+        params["trainer"]["distributed"] = True
 
         torch.cuda.set_device(gpu_id)
         dist.init_process_group(
