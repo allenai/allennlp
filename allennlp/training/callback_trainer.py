@@ -55,7 +55,7 @@ class CallbackTrainer(TrainerBase):
         num_epochs: int = 20,
         shuffle: bool = True,
         serialization_dir: Optional[str] = None,
-        cuda_device: Union[int, List] = -1,
+        cuda_device: int = -1,
         callbacks: List[Callback] = None,
         distributed: bool = False,
         rank: int = 0,
@@ -96,8 +96,10 @@ class CallbackTrainer(TrainerBase):
         serialization_dir : str, optional (default=None)
             Path to directory for saving and loading model files. Models will not be saved if
             this parameter is not passed.
-        cuda_device : ``Union[int, List[int]]``, optional (default=-1)
+        cuda_device : ``int``, optional (default=-1)
             An integer or list of integers specifying the CUDA device(s) to use. If -1, the CPU is used.
+            Data parallelism is controlled at the allennlp train level, so each trainer will have a single
+            GPU.
         callbacks : ``List[Callback]``, optional (default=None)
             A list of callbacks that will be called based on training events.
         """
@@ -181,13 +183,10 @@ class CallbackTrainer(TrainerBase):
         This is a method on the trainer so that it can be used both in training and validation
         (which are handled separately).
         """
-        if self._multiple_gpu:
-            output_dict = training_util.data_parallel(batch_group, self.model, self._cuda_devices)
-        else:
-            assert len(batch_group) == 1
-            batch = batch_group[0]
-            batch = nn_util.move_to_device(batch, self._cuda_devices[0])
-            output_dict = self._pytorch_model(**batch)
+        assert len(batch_group) == 1
+        batch = batch_group[0]
+        batch = nn_util.move_to_device(batch, self._cuda_devices[0])
+        output_dict = self._pytorch_model(**batch)
 
         try:
             loss = output_dict["loss"]

@@ -270,10 +270,15 @@ def train_model(
     params.to_file(os.path.join(serialization_dir, CONFIG_NAME))
 
     cuda_device = params.params.get("trainer").get("cuda_device", -1)
+    device_id = parse_cuda_device(cuda_device)
     check_for_gpu(cuda_device)
 
+    multi_device = isinstance(device_id, list)
     distributed = params.params.get("trainer").get("distributed", False)
-    if not distributed:
+
+    # If distributed isn't in the config and the config contains strictly
+    # one cuda device, we just run a single training process.
+    if not distributed or not multi_device:
         model = _train_worker(
             process_rank=0,
             params=params,
@@ -286,14 +291,16 @@ def train_model(
         )
         archive_model(serialization_dir, files_to_archive=params.files_to_archive)
         return model
+
+    # If the config contains the distributed flag, but only one GPU, we raise an error,
+    # because this combination is probably a mistake.
+    elif distributed and not multi_device:
+        raise ConfigurationError(
+            "Multiple cuda devices need to be configured to run distributed training."
+        )
+
+    # Otherwise, we are running multiple processes for training.
     else:
-        device_id = parse_cuda_device(cuda_device)
-
-        if not isinstance(device_id, list):
-            raise ConfigurationError(
-                "Multiple cuda devices need to be configured to run distributed training."
-            )
-
         master_addr = params.params.get("trainer").pop("master_address", "127.0.0.1")
         master_port = params.params.get("trainer").pop("master_port", 29500)
         num_procs = len(device_id)

@@ -328,36 +328,6 @@ def create_serialization_dir(
         os.makedirs(serialization_dir, exist_ok=True)
 
 
-def data_parallel(
-    batch_group: List[TensorDict], model: Model, cuda_devices: List
-) -> Dict[str, torch.Tensor]:
-    """
-    Performs a forward pass using multiple GPUs.  This is a simplification
-    of torch.nn.parallel.data_parallel to support the allennlp model
-    interface.
-    """
-    assert len(batch_group) <= len(cuda_devices)
-
-    moved = [
-        nn_util.move_to_device(batch, device) for batch, device in zip(batch_group, cuda_devices)
-    ]
-
-    used_device_ids = cuda_devices[: len(moved)]
-    # Counterintuitively, it appears replicate expects the source device id to be the first element
-    # in the device id list. See torch.cuda.comm.broadcast_coalesced, which is called indirectly.
-    replicas = replicate(model, used_device_ids)
-
-    # We pass all our arguments as kwargs. Create a list of empty tuples of the
-    # correct shape to serve as (non-existent) positional arguments.
-    inputs = [()] * len(batch_group)
-    outputs = parallel_apply(replicas, inputs, moved, used_device_ids)
-
-    # Only the 'loss' is needed.
-    # a (num_gpu, ) tensor with loss on each GPU
-    losses = gather([output["loss"].unsqueeze(0) for output in outputs], used_device_ids[0], 0)
-    return {"loss": losses.mean()}
-
-
 def enable_gradient_clipping(model: Model, grad_clipping: Optional[float]) -> None:
     if grad_clipping is not None:
         for parameter in model.parameters():

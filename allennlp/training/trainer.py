@@ -51,7 +51,7 @@ class Trainer(TrainerBase):
         keep_serialized_model_every_num_seconds: int = None,
         checkpointer: Checkpointer = None,
         model_save_interval: float = None,
-        cuda_device: Union[int, List] = -1,
+        cuda_device: int = -1,
         grad_norm: Optional[float] = None,
         grad_clipping: Optional[float] = None,
         learning_rate_scheduler: Optional[LearningRateScheduler] = None,
@@ -128,8 +128,10 @@ class Trainer(TrainerBase):
             If provided, then serialize models every ``model_save_interval``
             seconds within single epochs.  In all cases, models are also saved
             at the end of every epoch if ``serialization_dir`` is provided.
-        cuda_device : ``Union[int, List[int]]``, optional (default = -1)
-            An integer or list of integers specifying the CUDA device(s) to use. If -1, the CPU is used.
+        cuda_device : ``int``, optional (default = -1)
+            An integer specifying the CUDA device(s) to use for this process. If -1, the CPU is used.
+            Data parallelism is controlled at the allennlp train level, so each trainer will have a single
+            GPU.
         grad_norm : ``float``, optional, (default = None).
             If provided, gradient norms will be rescaled to have a maximum of this value.
         grad_clipping : ``float``, optional (default = ``None``).
@@ -287,13 +289,10 @@ class Trainer(TrainerBase):
         Does a forward pass on the given batches and returns the ``loss`` value in the result.
         If ``for_training`` is `True` also applies regularization penalty.
         """
-        if self._multiple_gpu:
-            output_dict = training_util.data_parallel(batch_group, self.model, self._cuda_devices)
-        else:
-            assert len(batch_group) == 1
-            batch = batch_group[0]
-            batch = nn_util.move_to_device(batch, self._cuda_devices[0])
-            output_dict = self._pytorch_model(**batch)
+        assert len(batch_group) == 1
+        batch = batch_group[0]
+        batch = nn_util.move_to_device(batch, self._cuda_devices[0])
+        output_dict = self._pytorch_model(**batch)
 
         try:
             loss = output_dict["loss"]

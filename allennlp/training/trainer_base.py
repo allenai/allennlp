@@ -40,8 +40,14 @@ class TrainerBase(Registrable):
 
         self._serialization_dir = serialization_dir
 
-        # Configure GPUs:
-        if not isinstance(cuda_device, int) and not isinstance(cuda_device, list):
+        if isinstance(cuda_device, list):
+            raise ConfigurationError(
+                "In allennlp 1.0, the Trainer can only be assigned a single `cuda_device`. "
+                "Instead, we use torch's DistributedDataParallel at the command level, meaning "
+                "our Trainer always uses a single GPU per process."
+            )
+
+        if not isinstance(cuda_device, int):
             raise ConfigurationError(
                 "Expected an int or list for cuda_device, got {}".format(cuda_device)
             )
@@ -52,18 +58,8 @@ class TrainerBase(Registrable):
                 "`cuda_device` key in the experiment configuration."
             )
 
-        if isinstance(cuda_device, list):
-            # For distributed training, every trainer worker is only assigned with a single GPU
-            if distributed:
-                raise ConfigurationError(
-                    "Distributed worker can only be assigned a single `cuda_device`."
-                )
-
-            self._multiple_gpu = True
-            self._cuda_devices = cuda_device
-        else:
-            self._multiple_gpu = False
-            self._cuda_devices = [cuda_device]
+        self._multiple_gpu = False
+        self._cuda_devices = [cuda_device]
 
         self._distributed = distributed
         self._rank = rank
