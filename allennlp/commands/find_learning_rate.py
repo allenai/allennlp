@@ -52,7 +52,7 @@ import logging
 import shutil
 
 from allennlp.commands.subcommand import Subcommand
-from allennlp.common.checks import ConfigurationError, check_for_gpu, parse_cuda_device
+from allennlp.common.checks import ConfigurationError, check_for_gpu
 from allennlp.common import Params, Tqdm
 from allennlp.common.util import prepare_environment
 from allennlp.data import Vocabulary, DataIterator
@@ -193,14 +193,6 @@ def find_learning_rate_model(
     prepare_environment(params)
 
     cuda_device = params.params.get("trainer").get("cuda_device", -1)
-    devices = parse_cuda_device(cuda_device)
-
-    # HACK: The trainer can not be constructed with multiple gpus.
-    # TODO(Mark): rework this so that cuda devices for distributed training are passed
-    # somewhere else, so configs are always valid.
-    if isinstance(devices, list):
-        cuda_device = devices[0]
-        params.params["trainer"]["cuda_device"] = cuda_device
     check_for_gpu(cuda_device)
 
     all_datasets = datasets_from_params(params)
