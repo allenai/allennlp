@@ -1,17 +1,18 @@
 from typing import Dict, List
 import logging
+import copy
 
 from overrides import overrides
 
 from allennlp.data.instance import Instance
 from allennlp.data.tokenizers.tokenizer import Tokenizer
-from allennlp.data.tokenizers import Token, WordTokenizer
-from allennlp.data.tokenizers.word_splitter import JustSpacesWordSplitter
+from allennlp.data.tokenizers import Token
+from allennlp.data.tokenizers.whitespace_tokenizer import WhitespaceTokenizer
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.token_indexers.token_indexer import TokenIndexer
 from allennlp.data.fields import Field, TextField
 from allennlp.data.token_indexers import SingleIdTokenIndexer
-
+from allennlp.data.tokenizers import PretrainedTransformerTokenizer
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +33,7 @@ class NextTokenLmReader(DatasetReader):
 
     Parameters
     ----------
-    tokenizer : ``Tokenizer``, optional (default=``WordTokenizer()``)
+    tokenizer : ``Tokenizer``, optional (default=``WhitespaceTokenizer()``)
         We use this ``Tokenizer`` for the text.  See :class:`Tokenizer`.
     token_indexers : ``Dict[str, TokenIndexer]``, optional (default=``{"tokens": SingleIdTokenIndexer()}``)
         We use this to define the input representation for the text, and to get ids for the mask
@@ -46,7 +47,13 @@ class NextTokenLmReader(DatasetReader):
         lazy: bool = False,
     ) -> None:
         super().__init__(lazy)
-        self._tokenizer = tokenizer or WordTokenizer(word_splitter=JustSpacesWordSplitter())
+        self._tokenizer = tokenizer or WhitespaceTokenizer()
+        self._targets_tokenizer: Tokenizer
+        if isinstance(self._tokenizer, PretrainedTransformerTokenizer):
+            self._targets_tokenizer = copy.copy(self._tokenizer)
+            self._targets_tokenizer._add_special_tokens = False
+        else:
+            self._targets_tokenizer = self._tokenizer
         self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
 
     @overrides
@@ -77,6 +84,12 @@ class NextTokenLmReader(DatasetReader):
             tokens = self._tokenizer.tokenize(sentence)
         input_field = TextField(tokens, self._token_indexers)
         fields: Dict[str, Field] = {"tokens": input_field}
+        # TODO: if we index word that was not split into wordpieces with
+        # PretrainedTransformerTokenizer we will get OOV token ID...
+        # Until this is handeled, let's use first wordpiece id for each token since tokens should contain text_ids
+        # to be indexed with PretrainedTokenIndexer. It also requeires hack to avoid adding special tokens...
         if target:
-            fields["target_ids"] = TextField([Token(target)], self._token_indexers)
+            wordpiece = self._targets_tokenizer.tokenize(target)[0]
+            target_token = Token(text=target, text_id=wordpiece.text_id, type_id=wordpiece.type_id)
+            fields["target_ids"] = TextField([target_token], self._token_indexers)
         return Instance(fields)

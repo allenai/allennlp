@@ -8,7 +8,7 @@ from allennlp.data import Token, Vocabulary, Instance
 from allennlp.data.fields import TextField, LabelField, ListField, IndexField, SequenceLabelField
 from allennlp.data.iterators import BasicIterator
 from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenCharactersIndexer
-from allennlp.data.tokenizers import WordTokenizer
+from allennlp.data.tokenizers import SpacyTokenizer
 from allennlp.models import Model
 from allennlp.modules import Embedding
 from allennlp.modules.text_field_embedders import BasicTextFieldEmbedder
@@ -71,7 +71,7 @@ class TestListField(AllenNlpTestCase):
         self.sequence_label_field = SequenceLabelField([1, 1, 0, 1], self.field1)
         self.empty_sequence_label_field = self.sequence_label_field.empty_field()
 
-        tokenizer = WordTokenizer()
+        tokenizer = SpacyTokenizer()
         tokens = tokenizer.tokenize("Foo")
         text_field = TextField(tokens, self.word_indexer)
         empty_list_field = ListField([text_field.empty_field()])
@@ -278,7 +278,7 @@ class TestListField(AllenNlpTestCase):
         assert [f for f in list_field] == [self.field1, self.field2, self.field3]
 
     def test_empty_list_can_be_tensorized(self):
-        tokenizer = WordTokenizer()
+        tokenizer = SpacyTokenizer()
         tokens = tokenizer.tokenize("Foo")
         text_field = TextField(tokens, self.word_indexer)
         list_field = ListField([text_field.empty_field()])

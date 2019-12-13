@@ -65,7 +65,7 @@ ARG SOURCE_COMMIT
 ENV ALLENNLP_SOURCE_COMMIT $SOURCE_COMMIT
 
 # Copy wrapper script to allow beaker to run resumable training workloads.
-COPY scripts/ai2-internal/resumable_train.sh /stage/allennlp
+COPY scripts/ai2_internal/resumable_train.sh /stage/allennlp
 
 LABEL maintainer="allennlp-contact@allenai.org"
 

@@ -3,7 +3,7 @@ from overrides import overrides
 
 from allennlp.common.util import JsonDict
 from allennlp.data import DatasetReader, Instance
-from allennlp.data.tokenizers.word_splitter import SpacyWordSplitter
+from allennlp.data.tokenizers.spacy_tokenizer import SpacyTokenizer
 from allennlp.predictors.predictor import Predictor
 from allennlp.models import Model
 
@@ -14,7 +14,7 @@ class DialogQAPredictor(Predictor):
         self, model: Model, dataset_reader: DatasetReader, language: str = "en_core_web_sm"
     ) -> None:
         super().__init__(model, dataset_reader)
-        self._tokenizer = SpacyWordSplitter(language=language)
+        self._tokenizer = SpacyTokenizer(language=language)
 
     def predict(self, jsonline: str) -> JsonDict:
         """
@@ -42,7 +42,7 @@ class DialogQAPredictor(Predictor):
         """
         paragraph_json = json_dict["paragraphs"][0]
         paragraph = paragraph_json["context"]
-        tokenized_paragraph = self._tokenizer.split_words(paragraph)
+        tokenized_paragraph = self._tokenizer.tokenize(paragraph)
         qas = paragraph_json["qas"]
         metadata = {}
         metadata["instance_id"] = [qa["id"] for qa in qas]

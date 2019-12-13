@@ -9,7 +9,7 @@ from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.fields import Field, TextField, LabelField, MetadataField
 from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenIndexer
-from allennlp.data.tokenizers import Tokenizer, WordTokenizer
+from allennlp.data.tokenizers import Tokenizer, SpacyTokenizer
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +25,7 @@ class SnliReader(DatasetReader):
 
     Parameters
     ----------
-    tokenizer : ``Tokenizer``, optional (default=``WordTokenizer()``)
+    tokenizer : ``Tokenizer``, optional (default=``SpacyTokenizer()``)
         We use this ``Tokenizer`` for both the premise and the hypothesis.  See :class:`Tokenizer`.
     token_indexers : ``Dict[str, TokenIndexer]``, optional (default=``{"tokens": SingleIdTokenIndexer()}``)
         We similarly use this for both the premise and the hypothesis.  See :class:`TokenIndexer`.
@@ -38,7 +38,7 @@ class SnliReader(DatasetReader):
         lazy: bool = False,
     ) -> None:
         super().__init__(lazy)
-        self._tokenizer = tokenizer or WordTokenizer()
+        self._tokenizer = tokenizer or SpacyTokenizer()
         self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
 
     @overrides

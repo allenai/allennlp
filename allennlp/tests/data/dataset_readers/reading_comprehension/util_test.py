@@ -1,12 +1,12 @@
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.dataset_readers.reading_comprehension import util
-from allennlp.data.tokenizers import WordTokenizer
+from allennlp.data.tokenizers import SpacyTokenizer
 
 
 class TestReadingComprehensionUtil(AllenNlpTestCase):
     def test_char_span_to_token_span_handles_easy_cases(self):
         # These are _inclusive_ spans, on both sides.
-        tokenizer = WordTokenizer()
+        tokenizer = SpacyTokenizer()
         passage = (
             "On January 7, 2012, Beyoncé gave birth to her first child, a daughter, Blue Ivy "
             + "Carter, at Lenox Hill Hospital in New York. Five months later, she performed for four "
@@ -28,7 +28,7 @@ class TestReadingComprehensionUtil(AllenNlpTestCase):
     def test_char_span_to_token_span_handles_hard_cases(self):
         # An earlier version of the code had a hard time when the answer was the last token in the
         # passage.  This tests that case, on the instance that used to fail.
-        tokenizer = WordTokenizer()
+        tokenizer = SpacyTokenizer()
         passage = (
             "Beyonc\u00e9 is believed to have first started a relationship with Jay Z "
             + 'after a collaboration on "\'03 Bonnie & Clyde", which appeared on his seventh '

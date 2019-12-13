@@ -86,11 +86,11 @@ starts or ends with punctuation using a very simple python function:
 ```python
 from typing import List
 from allennlp.data.dataset_readers.dataset_utils import span_utils
-from allennlp.data.tokenizers.word_tokenizer import SpacyWordSplitter
+from allennlp.data.tokenizers.spacy_tokenizer import SpacyTokenizer
 from allennlp.data.tokenizers.token import Token
 
-tokenizer = SpacyWordSplitter(pos_tags=True)
-sentence = tokenizer.split_words("This is a sentence.")
+tokenizer = SpacyTokenizer(pos_tags=True)
+sentence = tokenizer.tokenize("This is a sentence.")
 
 def no_prefixed_punctuation(tokens: List[Token]) -> bool:
     # Only include spans which don't start or end with punctuation.
