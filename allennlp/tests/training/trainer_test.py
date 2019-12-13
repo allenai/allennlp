@@ -114,15 +114,13 @@ class TestTrainer(AllenNlpTestCase):
         assert "peak_gpu_0_memory_MB" in metrics
         assert isinstance(metrics["peak_gpu_0_memory_MB"], int)
 
-
-    @pytest.mark.skipif(torch.cuda.device_count() < 2, reason="Need multiple GPUs.")
     def test_passing_trainer_multiple_gpus_raises_error(self):
         self.model.cuda()
 
         multigpu_iterator = BasicIterator(batch_size=4)
         multigpu_iterator.index_with(self.vocab)
         with pytest.raises(ConfigurationError):
-            trainer = Trainer(
+            Trainer(
                 self.model,
                 self.optimizer,
                 multigpu_iterator,

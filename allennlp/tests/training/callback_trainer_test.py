@@ -269,14 +269,13 @@ class TestCallbackTrainer(ModelTestCase):
         assert "peak_gpu_0_memory_MB" in metrics
         assert isinstance(metrics["peak_gpu_0_memory_MB"], int)
 
-
     def test_passing_trainer_multiple_gpus_raises_error(self):
         self.model.cuda()
 
         multigpu_iterator = BasicIterator(batch_size=4)
         multigpu_iterator.index_with(self.vocab)
         with pytest.raises(ConfigurationError):
-            trainer = CallbackTrainer(
+            CallbackTrainer(
                 self.model,
                 training_data=self.instances,
                 iterator=multigpu_iterator,

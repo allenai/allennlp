@@ -7,7 +7,7 @@ import time
 import datetime
 import functools
 import math
-from typing import Dict, Optional, List, Union, Any, Iterable
+from typing import Dict, Optional, List, Any, Iterable
 import torch
 
 from allennlp.common import Params

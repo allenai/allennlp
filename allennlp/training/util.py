@@ -11,8 +11,6 @@ import os
 import shutil
 
 import torch
-from torch.nn.parallel import replicate, parallel_apply
-from torch.nn.parallel.scatter_gather import gather
 
 from allennlp.common.checks import ConfigurationError, check_for_gpu
 from allennlp.common.params import Params
@@ -20,7 +18,6 @@ from allennlp.common.tqdm import Tqdm
 from allennlp.data.dataset_readers import DatasetReader
 from allennlp.data import Instance
 from allennlp.data.iterators import DataIterator
-from allennlp.data.iterators.data_iterator import TensorDict
 from allennlp.models.model import Model
 from allennlp.models.archival import CONFIG_NAME
 from allennlp.nn import util as nn_util
