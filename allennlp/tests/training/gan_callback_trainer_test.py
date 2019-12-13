@@ -207,7 +207,7 @@ class GanCallbackTrainer(CallbackTrainer):
         num_epochs: int = 20,
         shuffle: bool = False,
         serialization_dir: Optional[str] = None,
-        cuda_device: Union[int, List] = -1,
+        cuda_device: int = -1,
         callbacks: List[Callback] = None,
         distributed: bool = False,
         rank: int = 0,
@@ -235,9 +235,9 @@ class GanCallbackTrainer(CallbackTrainer):
         self.fake_stdev = 0.0
         self.count = 0
 
-    def train_one_batch_group(self, batch_group):
+    def train_one_batch(self, batch_group):
         # Each batch_group should have only one batch
-        batch, = batch_group
+        batch = batch_group
         array = batch["array"]
 
         # We should not have mixed batches:

@@ -10,7 +10,7 @@ from typing import Dict, Optional, List, Any, Iterable
 import torch
 
 from allennlp.common import Params
-from allennlp.common.checks import parse_cuda_device, check_for_gpu
+from allennlp.common.checks import parse_cuda_device, check_for_gpu, ConfigurationError
 from allennlp.common.tqdm import Tqdm
 from allennlp.data import Instance
 from allennlp.data.iterators.data_iterator import DataIterator, TensorDict
@@ -125,7 +125,7 @@ class CallbackTrainer(TrainerBase):
         self.metrics: Dict[str, Any] = {}
 
         self.batch_num_total = 0
-        self.batch_group: List[TensorDict] = []
+        self.batch: TensorDict = None
         self.batches_this_epoch = 0
 
         self.training_batches: Iterable[List[TensorDict]] = ()
@@ -194,7 +194,7 @@ class CallbackTrainer(TrainerBase):
 
         return loss
 
-    def train_one_batch_group(self, batch: TensorDict) -> str:
+    def train_one_batch(self, batch: TensorDict) -> str:
         """
         Handles the training for a single batch group.
         Fires off the events BATCH_START, FORWARD, BACKWARD, and BATCH_END.
@@ -231,7 +231,7 @@ class CallbackTrainer(TrainerBase):
         """
         Trains the model for a single epoch.
         Fires off the events EPOCH_START and EPOCH_END,
-        and repeatedly calls self.train_one_batch_group().
+        and repeatedly calls self.train_one_batch().
         """
         self.handler.fire_event(Events.EPOCH_START)
 
@@ -246,8 +246,8 @@ class CallbackTrainer(TrainerBase):
 
         batches_tqdm = Tqdm.tqdm(self.training_batches, total=self.num_training_batches)
 
-        for self.batch_group in batches_tqdm:
-            description = self.train_one_batch_group(self.batch_group)
+        for self.batch in batches_tqdm:
+            description = self.train_one_batch(self.batch)
             batches_tqdm.set_description(description, refresh=False)
 
         self.handler.fire_event(Events.VALIDATE)
@@ -315,6 +315,10 @@ class CallbackTrainer(TrainerBase):
         cuda_device = parse_cuda_device(params.pop("cuda_device", -1))
 
         check_for_gpu(cuda_device)
+        if isinstance(cuda_device, list):
+            raise ConfigurationError(
+                "In allennlp 1.0, the Trainer cannot be passed multiple cuda devices."
+            )
         if cuda_device >= 0:
             # Moving model to GPU here so that the optimizer state gets constructed on
             # the right device.

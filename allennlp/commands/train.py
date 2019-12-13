@@ -56,7 +56,7 @@ import torch.multiprocessing as mp
 from allennlp.commands.make_vocab import make_vocab_from_params
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common import Params
-from allennlp.common.checks import ConfigurationError, check_for_gpu, parse_cuda_device
+from allennlp.common.checks import ConfigurationError, check_for_gpu
 from allennlp.common.util import (
     prepare_environment,
     prepare_global_logging,
@@ -269,11 +269,10 @@ def train_model(
     create_serialization_dir(params, serialization_dir, recover, force)
     params.to_file(os.path.join(serialization_dir, CONFIG_NAME))
 
-    cuda_device = params.params.pop("distributed_cuda_devices", -1)
-    device_ids = parse_cuda_device(cuda_device)
-    check_for_gpu(cuda_device)
+    device_ids = params.params.pop("distributed_cuda_devices", -1)
+    check_for_gpu(device_ids)
 
-    multi_device = isinstance(device_ids, list)
+    multi_device = isinstance(device_ids, list) and len(device_ids) > 1
     distributed = params.params.pop("distributed", False)
 
     # If distributed isn't in the config and the config contains strictly

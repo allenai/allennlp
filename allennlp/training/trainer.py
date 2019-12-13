@@ -764,6 +764,10 @@ class Trainer(TrainerBase):
         momentum_scheduler_params = params.pop("momentum_scheduler", None)
 
         check_for_gpu(cuda_device)
+        if isinstance(cuda_device, list):
+            raise ConfigurationError(
+                "In allennlp 1.0, the Trainer cannot be passed multiple cuda devices."
+            )
         if cuda_device >= 0:
             # Moving model to GPU here so that the optimizer state gets constructed on
             # the right device.
