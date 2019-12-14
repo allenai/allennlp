@@ -5,7 +5,6 @@ import logging
 from overrides import overrides
 
 from allennlp import __version__
-from allennlp.commands.configure import Configure
 from allennlp.commands.elmo import Elmo
 from allennlp.commands.evaluate import Evaluate
 from allennlp.commands.fine_tune import FineTune
@@ -67,7 +66,6 @@ def create_parser(
 
     subcommands = {
         # Default commands
-        "configure": Configure(),
         "train": Train(),
         "evaluate": Evaluate(),
         "predict": Predict(),
