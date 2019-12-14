@@ -9,9 +9,9 @@ from allennlp.commands.configure import Configure
 from allennlp.commands.elmo import Elmo
 from allennlp.commands.evaluate import Evaluate
 from allennlp.commands.fine_tune import FineTune
-from allennlp.commands.make_vocab import MakeVocab
 from allennlp.commands.predict import Predict
 from allennlp.commands.dry_run import DryRun
+from allennlp.commands.make_vocab import MakeVocab
 from allennlp.commands.subcommand import Subcommand
 from allennlp.commands.test_install import TestInstall
 from allennlp.commands.find_learning_rate import FindLearningRate
