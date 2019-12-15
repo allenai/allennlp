@@ -43,7 +43,6 @@ calls ``main()``.
     allennlp.commands.subcommand
     allennlp.commands.configure
     allennlp.commands.evaluate
-    allennlp.commands.make_vocab
     allennlp.commands.predict
     allennlp.commands.train
     allennlp.commands.fine_tune
