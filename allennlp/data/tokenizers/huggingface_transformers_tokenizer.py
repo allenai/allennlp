@@ -1,11 +1,19 @@
-from typing import Dict, List, Union, Tuple, Any
+from typing import Dict, List, Any
 from overrides import overrides
+import logging
+
+import sys
+import unicodedata
+import html
 
 from allennlp.data.tokenizers import Token, Tokenizer
 
 from transformers.tokenization_auto import AutoTokenizer
 
+logger = logging.getLogger(__name__)
 
+CONTROL_CHARS = u''.join(chr(c) for c in range(sys.maxunicode + 1) if unicodedata.category(chr(c))[0] == 'C')
+SPIECE_UNDERLINE = u"▁"
 @Tokenizer.register("huggingface_transformers")
 class HuggingfaceTransformersTokenizer(Tokenizer):
     """
@@ -26,9 +34,9 @@ class HuggingfaceTransformersTokenizer(Tokenizer):
 
     Example:
         tokens = tokenizer.tokenize(text)
-        encoded_inputs = self._tokenizer.encode_plus([token.text for token in tokens], 
-                                    add_special_tokens=True, 
-                                    return_token_type_ids=True, 
+        encoded_inputs = self._tokenizer.encode_plus([token.text for token in tokens],
+                                    add_special_tokens=True,
+                                    return_token_type_ids=True,
                                     return_special_tokens_mask=True)
         fields: Dict[str, Field] = {}
         fields['tokens'] = LabelsField(encoded_inputs['input_ids'])
@@ -78,8 +86,6 @@ class HuggingfaceTransformersTokenizer(Tokenizer):
     @property
     def encode_plus(self):
         return self._tokenizer.encode_plus
-
-    SPIECE_UNDERLINE = u"▁"
 
     def _detokenize_for_offsets(self, tok):
         """
@@ -137,7 +143,7 @@ class HuggingfaceTransformersTokenizer(Tokenizer):
 
             Take care of added tokens.
 
-            Keep track of token offsets by trying to progressively tokenize the text character by character, 
+            Keep track of token offsets by trying to progressively tokenize the text character by character,
             and consume matching tokens along the way.
             For efficiency, parts of the text that were already matched should be discarded.
             However, since some tokenizations are dependent on neighboring past text,
@@ -188,7 +194,7 @@ class HuggingfaceTransformersTokenizer(Tokenizer):
 
         def is_prefix(lst, other_lst):
             """
-            Checks if `lst` is a prefix of `other_lst` 
+            Checks if `lst` is a prefix of `other_lst`
             """
             if len(lst) > len(other_lst):
                 return False
@@ -250,7 +256,6 @@ class HuggingfaceTransformersTokenizer(Tokenizer):
             search_length = 1
             comparison_tokens = []
             while True:
-                prev_comparison_tokens = comparison_tokens  # for debugging
                 comparison_tokens = get_comparison_tokens(
                     self._tokenizer.tokenize,
                     text,
@@ -271,7 +276,8 @@ class HuggingfaceTransformersTokenizer(Tokenizer):
                         if is_lower_casing:
                             matching_text = matching_text.lower()
                             detokenized = detokenized.lower()
-                        # TODO: Remove accents with tokenization_xlm.lowercase_and_remove_accent? Will improve accuracy for XLM
+                        # TODO: Remove accents with tokenization_xlm.lowercase_and_remove_accent?
+                        # Will improve accuracy for XLM
                         index = matching_text.find(detokenized)
                         if index != -1:
                             # Words that have a wordpiece tokenization that
@@ -321,7 +327,8 @@ class HuggingfaceTransformersTokenizer(Tokenizer):
                 break
 
             # Keep consuming characters until there's no tokenization match.
-            # Required due to special characters such as in "Moskva: Russkiĭ fond sodeĭstviii︠a︡ obrazovanii︠u︡ i nauke"
+            # Required due to special characters such as in
+            # "Moskva: Russkiĭ fond sodeĭstviii︠a︡ obrazovanii︠u︡ i nauke"
             if comparison_tokens == target_tokens:
                 while True:
                     if len(text) == offset + search_length:
@@ -349,7 +356,8 @@ class HuggingfaceTransformersTokenizer(Tokenizer):
             i += 1
 
         assert not match_error, "Unknown failure reason"
-        # Relaxed for XLM, instead: # assert len(tokens) == len(offsets), "Number of tokens doesn't match the number of offsets"
+        # Relaxed for XLM, instead:
+        # assert len(tokens) == len(offsets), "Number of tokens doesn't match the number of offsets"
         while len(tokens) != len(offsets):
             offsets.append(len(text) - 1)  # bad, but better than having nothing
 
@@ -376,17 +384,19 @@ class HuggingfaceTransformersTokenizer(Tokenizer):
             if splits >= 2 and html is not None:
                 # Don't warn about cases in which the tokenizer unescapes html entities (OpenAIGPTTokenizer)
                 # and ignores control characters.
-                # Example: "98&#160; yards" might be tokenized as ["98", "yards"] but matched to ["98", "&#160; yards"]
+                # Example: "98&#160; yards" might be tokenized as ["98", "yards"]
+                # but matched to ["98", "&#160; yards"]
                 original_token_text = unescape_html_and_remove_control_chars(original_token_text)
                 splits = len(original_token_text.strip().split())
 
             if splits == 2:
-                # In XLM, "\"." is tokenized to [".", "\""] and similarly "\",", so it's not possible to create contiguous offsets.
+                # In XLM, "\"." is tokenized to [".", "\""] and similarly "\",",
+                # so it's not possible to create contiguous offsets.
                 # Also in XLM, "30\xa0000" is tokenized to ['3', '0.', '000</w>'] which is problematic.
                 logger.warning(
-                    """Possible error: 
-                                A token is consuming text of another token as well, 
-                                probably due to a bad character in the input or out-of-order tokenization. 
+                    """Possible error:
+                                A token is consuming text of another token as well,
+                                probably due to a bad character in the input or out-of-order tokenization.
                                 Token #%d, %s"""
                     % (i, original_token_text)
                 )
@@ -394,9 +404,9 @@ class HuggingfaceTransformersTokenizer(Tokenizer):
             # Not expected to happen
             assert (
                 splits <= 2
-            ), """Error: 
-                            A token is consuming text of multiple other tokens as well, 
-                            probably due to a bad character in the input or out-of-order tokenization. 
+            ), """Error:
+                            A token is consuming text of multiple other tokens as well,
+                            probably due to a bad character in the input or out-of-order tokenization.
                             Token #%d, %s""" % (
                 i,
                 original_token_text,
