@@ -58,7 +58,7 @@ class HuggingfaceTransformersTokenizer(Tokenizer):
         self._pretrained_model = pretrained_model
         self._kwargs = kwargs
         self._tokenizer = AutoTokenizer.from_pretrained(pretrained_model, **init_kwargs)
-        self._tokenization_cache = {}
+        self._tokenization_cache: Dict[str, str] = {}
 
     @overrides
     def tokenize(self, text: str) -> List[Token]:
