@@ -5,6 +5,7 @@ from allennlp.data.tokenizers import Token, Tokenizer
 
 from transformers.tokenization_auto import AutoTokenizer
 
+
 @Tokenizer.register("huggingface_transformers")
 class HuggingfaceTransformersTokenizer(Tokenizer):
     """
@@ -42,10 +43,10 @@ class HuggingfaceTransformersTokenizer(Tokenizer):
     kwargs : ``Dict[str, Any]
         Arguments to pass to the ``tokenize`` method
     """
-    def __init__(self, 
-                 pretrained_model: str,
-                 init_kwargs: Dict[str, Any] = {},
-                 kwargs: Dict[str, Any] = {}):
+
+    def __init__(
+        self, pretrained_model: str, init_kwargs: Dict[str, Any] = {}, kwargs: Dict[str, Any] = {}
+    ):
         self._pretrained_model = pretrained_model
         self._kwargs = kwargs
         self._tokenizer = AutoTokenizer.from_pretrained(pretrained_model, **init_kwargs)
@@ -67,8 +68,10 @@ class HuggingfaceTransformersTokenizer(Tokenizer):
                 original_token_text = text[offset:]
             original_token_text = original_token_text.strip()
             if not original_token_text:
-                original_token_text = ' '
-            tokens_with_offsets.append(Token(text=tokens[i], idx=offset, original_text=original_token_text))
+                original_token_text = " "
+            tokens_with_offsets.append(
+                Token(text=tokens[i], idx=offset, original_text=original_token_text)
+            )
 
         return tokens_with_offsets
 
@@ -76,7 +79,8 @@ class HuggingfaceTransformersTokenizer(Tokenizer):
     def encode_plus(self):
         return self._tokenizer.encode_plus
 
-    SPIECE_UNDERLINE = u'▁'
+    SPIECE_UNDERLINE = u"▁"
+
     def _detokenize_for_offsets(self, tok):
         """
         Remove any tokenization artifacts for sub-word tokens.
@@ -85,34 +89,42 @@ class HuggingfaceTransformersTokenizer(Tokenizer):
         :param tok: the token from the tokenizer
         :return: the token as it would have looked (best approximation) in the original text
         """
-        if 't5' in self._pretrained_model:
+        if "t5" in self._pretrained_model:
             return self._tokenizer.sp_model.decode_pieces([tok])
-        elif 'distilbert' in self._pretrained_model:
-            if tok.startswith('##'):
+        elif "distilbert" in self._pretrained_model:
+            if tok.startswith("##"):
                 return tok[2:]
             return tok.strip()
-        elif 'albert' in self._pretrained_model:
-            return tok.replace(SPIECE_UNDERLINE, ' ').strip()
-        elif 'roberta' in self._pretrained_model:
-            return bytearray([self.byte_decoder[c] for c in tok]).decode('utf-8', errors=self.errors).strip()
-        elif 'bert-base-japanese' in self._pretrained_model:
-            if tok.startswith('##'):
+        elif "albert" in self._pretrained_model:
+            return tok.replace(SPIECE_UNDERLINE, " ").strip()
+        elif "roberta" in self._pretrained_model:
+            return (
+                bytearray([self.byte_decoder[c] for c in tok])
+                .decode("utf-8", errors=self.errors)
+                .strip()
+            )
+        elif "bert-base-japanese" in self._pretrained_model:
+            if tok.startswith("##"):
                 return tok[2:]
             return tok.strip()
-        elif 'bert' in self._pretrained_model:
-            if tok.startswith('##'):
+        elif "bert" in self._pretrained_model:
+            if tok.startswith("##"):
                 return tok[2:]
             return tok.strip()
-        elif 'openai-gpt' in self._pretrained_model:
-            return tok.replace('</w>', ' ').strip()
-        elif 'gpt2' in self._pretrained_model:
-            return bytearray([self.byte_decoder[c] for c in tok]).decode('utf-8', errors=self.errors).strip()
-        elif 'xlnet' in self._pretrained_model:
-            return tok.replace(SPIECE_UNDERLINE, ' ').strip()
-        elif 'xlm' in self._pretrained_model:
-            return tok.replace('</w>', ' ').strip()
-        elif 'ctrl' in self._pretrained_model:
-            if tok.endswith('@@'):
+        elif "openai-gpt" in self._pretrained_model:
+            return tok.replace("</w>", " ").strip()
+        elif "gpt2" in self._pretrained_model:
+            return (
+                bytearray([self.byte_decoder[c] for c in tok])
+                .decode("utf-8", errors=self.errors)
+                .strip()
+            )
+        elif "xlnet" in self._pretrained_model:
+            return tok.replace(SPIECE_UNDERLINE, " ").strip()
+        elif "xlm" in self._pretrained_model:
+            return tok.replace("</w>", " ").strip()
+        elif "ctrl" in self._pretrained_model:
+            if tok.endswith("@@"):
                 return tok[:-2]
             return tok.strip()
         return tok.strip()
@@ -159,6 +171,7 @@ class HuggingfaceTransformersTokenizer(Tokenizer):
                 ``offsets``: list of offsets in the text corresponsing to ``tokens``
 
         """
+
         def get_max_space_length(text):
             max_space_length = 0
             count = False
@@ -179,10 +192,17 @@ class HuggingfaceTransformersTokenizer(Tokenizer):
             """
             if len(lst) > len(other_lst):
                 return False
-            return other_lst[:len(lst)] == lst
+            return other_lst[: len(lst)] == lst
 
-        def get_comparison_tokens(tokenize_func, text, boundary_token_offset, token_offset, 
-                                search_length, cache, **tokenize_func_kwargs):
+        def get_comparison_tokens(
+            tokenize_func,
+            text,
+            boundary_token_offset,
+            token_offset,
+            search_length,
+            cache,
+            **tokenize_func_kwargs
+        ):
             search_text = text[boundary_token_offset : token_offset + search_length]
             if search_text not in cache:
                 cache[search_text] = tokenize_func(search_text, **tokenize_func_kwargs)
@@ -190,7 +210,7 @@ class HuggingfaceTransformersTokenizer(Tokenizer):
 
         def remove_control_chars(text):
             for control_char in CONTROL_CHARS:
-                text = text.replace(control_char, '')
+                text = text.replace(control_char, "")
             return text
 
         def unescape_html_and_remove_control_chars(text):
@@ -199,7 +219,9 @@ class HuggingfaceTransformersTokenizer(Tokenizer):
 
         # Tokenize text
         tokens = self._tokenizer.tokenize(text, **kwargs)
-        is_lower_casing = True # TODO: Recommended way to handle this? Keeping it always True would also be okay
+        is_lower_casing = (
+            True  # TODO: Recommended way to handle this? Keeping it always True would also be okay
+        )
 
         # Get maximum search length
         max_word_length = max([len(word) for word in text.split()])
@@ -228,10 +250,16 @@ class HuggingfaceTransformersTokenizer(Tokenizer):
             search_length = 1
             comparison_tokens = []
             while True:
-                prev_comparison_tokens = comparison_tokens # for debugging
-                comparison_tokens = get_comparison_tokens(self._tokenizer.tokenize, text, 
-                                                            offsets[boundary_token_index], offset, search_length, 
-                                                            self._tokenization_cache, **kwargs)
+                prev_comparison_tokens = comparison_tokens  # for debugging
+                comparison_tokens = get_comparison_tokens(
+                    self._tokenizer.tokenize,
+                    text,
+                    offsets[boundary_token_index],
+                    offset,
+                    search_length,
+                    self._tokenization_cache,
+                    **kwargs
+                )
 
                 target_tokens = tokens[boundary_token_index : i + 1]
                 if is_prefix(target_tokens, comparison_tokens):
@@ -245,8 +273,8 @@ class HuggingfaceTransformersTokenizer(Tokenizer):
                             detokenized = detokenized.lower()
                         # TODO: Remove accents with tokenization_xlm.lowercase_and_remove_accent? Will improve accuracy for XLM
                         index = matching_text.find(detokenized)
-                        if (index != -1):
-                            # Words that have a wordpiece tokenization that 
+                        if index != -1:
+                            # Words that have a wordpiece tokenization that
                             # doesn't contain the tokenization of its prefixes.
                             # Example for XLNet:
                             # text = "1603"
@@ -254,10 +282,10 @@ class HuggingfaceTransformersTokenizer(Tokenizer):
                             # tokenization for "160": ["▁160"]
                             search_length = index + len(detokenized)
                         else:
-                            # For cases in which the current token won't be produced 
+                            # For cases in which the current token won't be produced
                             # without an additional character that is only part of the
                             # text that corresponds to the next tokens.
-                            # Example for XLNet: 
+                            # Example for XLNet:
                             # text = "How many points did the buccaneers need to tie in the first?"
                             # tokens = [..., '▁the', '▁', 'bu', 'cca', 'ne', 'ers', ...]
                             # target_tokens = ['▁']
@@ -299,9 +327,15 @@ class HuggingfaceTransformersTokenizer(Tokenizer):
                     if len(text) == offset + search_length:
                         break
 
-                    comparison_tokens = get_comparison_tokens(self._tokenizer.tokenize, text, 
-                                                                offsets[boundary_token_index], offset, search_length + 1, 
-                                                                self._tokenization_cache, **kwargs)
+                    comparison_tokens = get_comparison_tokens(
+                        self._tokenizer.tokenize,
+                        text,
+                        offsets[boundary_token_index],
+                        offset,
+                        search_length + 1,
+                        self._tokenization_cache,
+                        **kwargs
+                    )
                     if is_prefix(comparison_tokens, target_tokens):
                         search_length += 1
                     else:
@@ -317,7 +351,7 @@ class HuggingfaceTransformersTokenizer(Tokenizer):
         assert not match_error, "Unknown failure reason"
         # Relaxed for XLM, instead: # assert len(tokens) == len(offsets), "Number of tokens doesn't match the number of offsets"
         while len(tokens) != len(offsets):
-            offsets.append(len(text) - 1) # bad, but better than having nothing
+            offsets.append(len(text) - 1)  # bad, but better than having nothing
 
         # TODO: Move to a test?
         # Construct the original text that corresponds (up to spaces) to each token
@@ -328,8 +362,8 @@ class HuggingfaceTransformersTokenizer(Tokenizer):
                 original_token_text = text[offset:next_offset]
             else:
                 original_token_text = text[offset:]
-            original_token_texts.append(original_token_text) 
-        # We assume whitespaces are a tokenization boundary, 
+            original_token_texts.append(original_token_text)
+        # We assume whitespaces are a tokenization boundary,
         # so we use this assumption to verify the alignment was valid
         # (considering special cases)
         for i, original_token_text in enumerate(original_token_texts):
@@ -341,7 +375,7 @@ class HuggingfaceTransformersTokenizer(Tokenizer):
                 splits = len(original_token_text.strip().split())
             if splits >= 2 and html is not None:
                 # Don't warn about cases in which the tokenizer unescapes html entities (OpenAIGPTTokenizer)
-                # and ignores control characters. 
+                # and ignores control characters.
                 # Example: "98&#160; yards" might be tokenized as ["98", "yards"] but matched to ["98", "&#160; yards"]
                 original_token_text = unescape_html_and_remove_control_chars(original_token_text)
                 splits = len(original_token_text.strip().split())
@@ -349,15 +383,23 @@ class HuggingfaceTransformersTokenizer(Tokenizer):
             if splits == 2:
                 # In XLM, "\"." is tokenized to [".", "\""] and similarly "\",", so it's not possible to create contiguous offsets.
                 # Also in XLM, "30\xa0000" is tokenized to ['3', '0.', '000</w>'] which is problematic.
-                logger.warning("""Possible error: 
+                logger.warning(
+                    """Possible error: 
                                 A token is consuming text of another token as well, 
                                 probably due to a bad character in the input or out-of-order tokenization. 
-                                Token #%d, %s""" % (i, original_token_text))
+                                Token #%d, %s"""
+                    % (i, original_token_text)
+                )
 
             # Not expected to happen
-            assert splits <= 2, """Error: 
+            assert (
+                splits <= 2
+            ), """Error: 
                             A token is consuming text of multiple other tokens as well, 
                             probably due to a bad character in the input or out-of-order tokenization. 
-                            Token #%d, %s""" % (i, original_token_text)
+                            Token #%d, %s""" % (
+                i,
+                original_token_text,
+            )
 
         return tokens, offsets

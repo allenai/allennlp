@@ -6,6 +6,7 @@ import numpy
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Token, Vocabulary
+from allennlp.data.fields import LabelsField
 from allennlp.data.token_indexers import SingleIdTokenIndexer
 
 
@@ -15,7 +16,7 @@ class TestLabelsField(AllenNlpTestCase):
 
     def test_count_vocab_items_correctly_indexes_tags(self):
         tags = ["B", "I", "O", "O", "O"]
-        labels_field = LabelsField(tags, self.text, label_namespace="labels")
+        labels_field = LabelsField(tags, label_namespace="labels")
 
         counter = defaultdict(lambda: defaultdict(int))
         labels_field.count_vocab_items(counter)
@@ -65,9 +66,7 @@ class TestLabelsField(AllenNlpTestCase):
         # We've warned once, so we should have set the class variable to False.
         assert "text" in LabelsField._already_warned_namespaces
         with pytest.raises(AssertionError):
-            with self.assertLogs(
-                logger="allennlp.data.fields.labels_field", level="WARNING"
-            ):
+            with self.assertLogs(logger="allennlp.data.fields.labels_field", level="WARNING"):
                 _ = LabelsField(tags, label_namespace="text")
 
         # ... but a new namespace should still log a warning.
@@ -77,12 +76,12 @@ class TestLabelsField(AllenNlpTestCase):
 
     def test_printing_doesnt_crash(self):
         tags = ["B", "I", "O", "O", "O"]
-        labels_field = LabelField(tags, label_namespace="labels")
+        labels_field = LabelsField(tags, label_namespace="labels")
         print(labels_field)
 
     def test_sequence_methods(self):
         tags = ["B", "I", "O", "O", "O"]
-        labels_field = LabelField(tags, label_namespace="labels")
+        labels_field = LabelsField(tags, label_namespace="labels")
 
         assert len(labels_field) == 5
         assert labels_field[1] == "I"

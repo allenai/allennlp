@@ -42,7 +42,7 @@ class LabelsField(SequenceField):
         self,
         labels: Union[List[str], List[int]],
         label_namespace: str = "labels",
-        padding_value: int = 0
+        padding_value: int = 0,
     ) -> None:
         self.labels = labels
         self._label_namespace = label_namespace
@@ -106,7 +106,9 @@ class LabelsField(SequenceField):
     @overrides
     def as_tensor(self, padding_lengths: Dict[str, int]) -> torch.Tensor:
         desired_num_tokens = padding_lengths["num_tokens"]
-        padded_tags = pad_sequence_to_length(self._indexed_labels, desired_num_tokens, default_value=lambda: self._padding_value)
+        padded_tags = pad_sequence_to_length(
+            self._indexed_labels, desired_num_tokens, default_value=lambda: self._padding_value
+        )
         tensor = torch.LongTensor(padded_tags)
         return tensor
 
