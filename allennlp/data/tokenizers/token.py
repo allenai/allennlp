@@ -31,6 +31,8 @@ class Token(NamedTuple):
         still use a character-level representation in addition to a hash-based word embedding.
     type_id : ``int``, optional
         Token type id used by some pretrained language models like original BERT
+    original_text: ``str``, optional
+        The original text that was mapped to this token
 
         The other fields on ``Token`` follow the fields on spacy's ``Token`` object; this is one we
         added, similar to spacy's ``lex_id``.
@@ -45,6 +47,7 @@ class Token(NamedTuple):
     ent_type_: str = None
     text_id: int = None
     type_id: int = None
+    original_text: str = None
 
     def __str__(self):
         return self.text
@@ -64,4 +67,5 @@ def show_token(token: Token) -> str:
         f"(ent_type: {token.ent_type_}) "
         f"(text_id: {token.text_id}) "
         f"(type_id: {token.type_id}) "
+        f"(original_text: {token.original_text})"
     )
