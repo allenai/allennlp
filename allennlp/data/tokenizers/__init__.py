@@ -6,7 +6,9 @@ tokenization.
 from allennlp.data.tokenizers.tokenizer import Token, Tokenizer
 from allennlp.data.tokenizers.spacy_tokenizer import SpacyTokenizer
 from allennlp.data.tokenizers.letters_digits_tokenizer import LettersDigitsTokenizer
-from allennlp.data.tokenizers.huggingface_transformers_tokenizer import HuggingfaceTransformersTokenizer
+from allennlp.data.tokenizers.huggingface_transformers_tokenizer import (
+    HuggingfaceTransformersTokenizer,
+)
 from allennlp.data.tokenizers.pretrained_transformer_tokenizer import PretrainedTransformerTokenizer
 from allennlp.data.tokenizers.pretrained_transformer_pre_tokenizer import (
     OpenAIPreTokenizer,

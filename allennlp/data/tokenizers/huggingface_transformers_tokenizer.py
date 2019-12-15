@@ -12,8 +12,12 @@ from transformers.tokenization_auto import AutoTokenizer
 
 logger = logging.getLogger(__name__)
 
-CONTROL_CHARS = u''.join(chr(c) for c in range(sys.maxunicode + 1) if unicodedata.category(chr(c))[0] == 'C')
+CONTROL_CHARS = u"".join(
+    chr(c) for c in range(sys.maxunicode + 1) if unicodedata.category(chr(c))[0] == "C"
+)
 SPIECE_UNDERLINE = u"▁"
+
+
 @Tokenizer.register("huggingface_transformers")
 class HuggingfaceTransformersTokenizer(Tokenizer):
     """
