@@ -311,7 +311,7 @@ class Trainer(TrainerBase):
         # step. A single chunk always contains as many instances as configured in the iterator's
         # `batch_size` param. The number of chunks in a single `batch_group` is
         # `num_gradient_accumulation_steps` * `num_gpus`.
-        batch_group_length = self._num_gradient_accumulation_steps * len(self._cuda_devices)
+        batch_group_length = len(self._cuda_devices)
 
         # Get tqdm for the training batches
         raw_train_generator = self.iterator(self.train_data, num_epochs=1, shuffle=self.shuffle)
@@ -328,6 +328,39 @@ class Trainer(TrainerBase):
 
         histogram_parameters = set(self.model.get_parameters_for_histogram_tensorboard_logging())
 
+        def tensor_slices(obj, start: int, end: int):
+            if isinstance(obj, torch.Tensor):
+                return obj[start:end]
+            if isinstance(obj, tuple) and obj:
+                return tuple([tensor_slices(x, start, end) for x in obj])
+            if isinstance(obj, list) and obj:
+                return [tensor_slices(x, start, end) for x in obj]
+            if isinstance(obj, dict) and obj:
+                return {key: tensor_slices(value, start, end) for key, value in obj.items()}
+            raise ValueError("Cannot slice this")
+
+        def split_batch(batch: Dict, slices: int) -> List[Dict]:
+            metadata = batch['metadata']
+            result = []
+            for i in range(slices):
+                start = i * len(metadata) // slices
+                end = (i+1) * len(metadata) // slices
+                d = {
+                    key: tensor_slices(value, start, end)
+                    for key, value in batch.items()
+                    if key != "metadata"
+                }
+                d["metadata"] = metadata[start:end]
+                result.append(d)
+            return result
+
+        def split_batch_group(batch_group: List, slices: int) -> List:
+            return [
+                b
+                for bgb in batch_group
+                for b in split_batch(bgb, slices)
+            ]
+
         logger.info("Training")
         train_generator_tqdm = Tqdm.tqdm(train_generator, total=num_training_batches)
         cumulative_batch_size = 0
@@ -338,8 +371,9 @@ class Trainer(TrainerBase):
 
             self.optimizer.zero_grad()
 
-            batches_for_step = list(lazy_groups_of(iter(batch_group), len(self._cuda_devices)))
-            for batch_for_step in batches_for_step:
+            # cut the batch group into as many steps as gradient accumulation demands
+            batches_for_step = split_batch_group(batch_group, self._num_gradient_accumulation_steps)
+            for batch_for_step in lazy_groups_of(batches_for_step, len(self._cuda_devices)):
                 loss = self.batch_loss(batch_for_step, for_training=True)
                 if torch.isnan(loss):
                     raise ValueError("nan loss encountered")
