@@ -55,8 +55,12 @@ class TrainerPieces(NamedTuple):
         )
 
         if recover and os.path.exists(os.path.join(serialization_dir, "vocabulary")):
-            vocab = Vocabulary.from_files(os.path.join(serialization_dir, "vocabulary"))
-            params.pop("vocabulary", {})
+            vocab_params = params.pop("vocabulary", {})
+            vocab = Vocabulary.from_files(
+                os.path.join(serialization_dir, "vocabulary"),
+                vocab_params.get("padding_token", None),
+                vocab_params.get("oov_token", None),
+            )
         else:
             vocab = Vocabulary.from_params(
                 params.pop("vocabulary", {}),

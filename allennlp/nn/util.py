@@ -408,6 +408,7 @@ def viterbi_decode(
     tag_observations: Optional[List[int]] = None,
     allowed_start_transitions: torch.Tensor = None,
     allowed_end_transitions: torch.Tensor = None,
+    top_k: int = None,
 ):
     """
     Perform Viterbi decoding in log space over a sequence given a transition matrix
@@ -439,6 +440,10 @@ def viterbi_decode(
         An optional tensor of shape (num_tags,) describing which tags may transition *to* the
         end tag. If provided, additional transition constraints will be used for determining
         the end element of the sequence.
+    top_k : int, optional, (default = None)
+        Optional integer specifying how many of the top paths to return. For top_k>=1, returns
+        a tuple of two lists: top_k_paths, top_k_scores, For top_k==None, returns a flattened
+        tuple with just the top path and its score (not in lists, for backwards compatibility).
 
     Returns
     -------
@@ -447,6 +452,14 @@ def viterbi_decode(
     viterbi_score : torch.Tensor
         The score of the viterbi path.
     """
+    if top_k is None:
+        top_k = 1
+        flatten_output = True
+    elif top_k >= 1:
+        flatten_output = False
+    else:
+        raise ValueError(f"top_k must be either None or an integer >=1. Instead received {top_k}")
+
     sequence_length, num_tags = list(tag_sequence.size())
 
     has_start_end_restrictions = (
@@ -509,15 +522,19 @@ def viterbi_decode(
     if tag_observations[0] != -1:
         one_hot = torch.zeros(num_tags)
         one_hot[tag_observations[0]] = 100000.0
-        path_scores.append(one_hot)
+        path_scores.append(one_hot.unsqueeze(0))
     else:
-        path_scores.append(tag_sequence[0, :])
+        path_scores.append(tag_sequence[0, :].unsqueeze(0))
 
     # Evaluate the scores for all possible paths.
     for timestep in range(1, sequence_length):
         # Add pairwise potentials to current scores.
-        summed_potentials = path_scores[timestep - 1].unsqueeze(-1) + transition_matrix
-        scores, paths = torch.max(summed_potentials, 0)
+        summed_potentials = path_scores[timestep - 1].unsqueeze(2) + transition_matrix
+        summed_potentials = summed_potentials.view(-1, num_tags)
+
+        # Best pairwise potential path score from the previous timestep.
+        max_k = min(summed_potentials.size()[0], top_k)
+        scores, paths = torch.topk(summed_potentials, k=max_k, dim=0)
 
         # If we have an observation for this timestep, use it
         # instead of the distribution over tags.
@@ -534,22 +551,34 @@ def viterbi_decode(
         if observation != -1:
             one_hot = torch.zeros(num_tags)
             one_hot[observation] = 100000.0
-            path_scores.append(one_hot)
+            path_scores.append(one_hot.unsqueeze(0))
         else:
-            path_scores.append(tag_sequence[timestep, :] + scores.squeeze())
+            path_scores.append(tag_sequence[timestep, :] + scores)
         path_indices.append(paths.squeeze())
 
     # Construct the most likely sequence backwards.
-    viterbi_score, best_path = torch.max(path_scores[-1], 0)
-    viterbi_path = [int(best_path.numpy())]
-    for backward_timestep in reversed(path_indices):
-        viterbi_path.append(int(backward_timestep[viterbi_path[-1]]))
-    # Reverse the backward path.
-    viterbi_path.reverse()
+    path_scores_v = path_scores[-1].view(-1)
+    max_k = min(path_scores_v.size()[0], top_k)
+    viterbi_scores, best_paths = torch.topk(path_scores_v, k=max_k, dim=0)
+    viterbi_paths = []
+    for i in range(max_k):
+        viterbi_path = [best_paths[i]]
+        for backward_timestep in reversed(path_indices):
+            viterbi_path.append(int(backward_timestep.view(-1)[viterbi_path[-1]]))
+        # Reverse the backward path.
+        viterbi_path.reverse()
 
-    if has_start_end_restrictions:
-        viterbi_path = viterbi_path[1:-1]
-    return viterbi_path, viterbi_score
+        if has_start_end_restrictions:
+            viterbi_path = viterbi_path[1:-1]
+
+        # Viterbi paths uses (num_tags * n_permutations) nodes; therefore, we need to modulo.
+        viterbi_path = [j % num_tags for j in viterbi_path]
+        viterbi_paths.append(viterbi_path)
+
+    if flatten_output:
+        return viterbi_paths[0], viterbi_scores[0]
+
+    return viterbi_paths, viterbi_scores
 
 
 def get_text_field_mask(
@@ -1519,8 +1548,8 @@ def find_embedding_layer(model: torch.nn.Module) -> torch.nn.Module:
     # We'll look for a few special cases in a first pass, then fall back to just finding a
     # TextFieldEmbedder in a second pass if we didn't find a special case.
     from pytorch_pretrained_bert.modeling import BertEmbeddings as BertEmbeddingsOld
-    from pytorch_transformers.modeling_gpt2 import GPT2Model
-    from pytorch_transformers.modeling_bert import BertEmbeddings as BertEmbeddingsNew
+    from transformers.modeling_gpt2 import GPT2Model
+    from transformers.modeling_bert import BertEmbeddings as BertEmbeddingsNew
     from allennlp.modules.text_field_embedders.text_field_embedder import TextFieldEmbedder
     from allennlp.modules.text_field_embedders.basic_text_field_embedder import (
         BasicTextFieldEmbedder,

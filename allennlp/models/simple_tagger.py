@@ -182,7 +182,10 @@ class SimpleTagger(Model):
         all_tags = []
         for predictions in predictions_list:
             argmax_indices = numpy.argmax(predictions, axis=-1)
-            tags = [self.vocab.get_token_from_index(x, namespace="labels") for x in argmax_indices]
+            tags = [
+                self.vocab.get_token_from_index(x, namespace=self.label_namespace)
+                for x in argmax_indices
+            ]
             all_tags.append(tags)
         output_dict["tags"] = all_tags
         return output_dict

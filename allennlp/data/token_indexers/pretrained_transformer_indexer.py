@@ -2,7 +2,7 @@ from typing import Dict, List
 import logging
 
 from overrides import overrides
-from pytorch_transformers.tokenization_auto import AutoTokenizer
+from transformers.tokenization_auto import AutoTokenizer
 import torch
 
 from allennlp.common.util import pad_sequence_to_length
@@ -10,22 +10,22 @@ from allennlp.data.vocabulary import Vocabulary
 from allennlp.data.tokenizers.token import Token
 from allennlp.data.token_indexers.token_indexer import TokenIndexer
 
-
 logger = logging.getLogger(__name__)
 
 
 @TokenIndexer.register("pretrained_transformer")
 class PretrainedTransformerIndexer(TokenIndexer[int]):
     """
-    This :class:`TokenIndexer` uses a tokenizer from the ``pytorch_transformers`` repository to
-    index tokens.  This ``Indexer`` is only really appropriate to use if you've also used a
+    This ``TokenIndexer`` assumes that Tokens already have their indexes in them (see ``text_id`` field).
+    We still require ``model_name`` because we want to form allennlp vocabulary from pretrained one.
+    This ``Indexer`` is only really appropriate to use if you've also used a
     corresponding :class:`PretrainedTransformerTokenizer` to tokenize your input.  Otherwise you'll
     have a mismatch between your tokens and your vocabulary, and you'll get a lot of UNK tokens.
 
     Parameters
     ----------
     model_name : ``str``
-        The name of the ``pytorch_transformers`` model to use.
+        The name of the ``transformers`` model to use.
     namespace : ``str``, optional (default=``tags``)
         We will add the tokens in the pytorch_transformer vocabulary to this vocabulary namespace.
         We use a somewhat confusing default value of ``tags`` so that we do not add padding or UNK
@@ -37,33 +37,59 @@ class PretrainedTransformerIndexer(TokenIndexer[int]):
         self, model_name: str, namespace: str = "tags", token_min_padding_length: int = 0
     ) -> None:
         super().__init__(token_min_padding_length)
-        self._model_name = model_name
-        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
         self._namespace = namespace
-        self._added_to_vocabulary = False
-        self._padding_value = self.tokenizer.convert_tokens_to_ids([self.tokenizer.pad_token])[0]
+        self._tokenizer = AutoTokenizer.from_pretrained(model_name)
+        self._padding_value = self._tokenizer.convert_tokens_to_ids([self._tokenizer.pad_token])[0]
         logger.info(f"Using token indexer padding value of {self._padding_value}")
+        self._added_to_vocabulary = False
+
+    def _add_encoding_to_vocabulary(self, vocab: Vocabulary) -> None:
+        """
+        Copies tokens from ```transformers``` model to the specified namespace.
+        Transformers vocab is taken from the <vocab>/<encoder> keys of the tokenizer object.
+        """
+        vocab_field_name = None
+        if hasattr(self._tokenizer, "vocab"):
+            vocab_field_name = "vocab"
+        elif hasattr(self._tokenizer, "encoder"):
+            vocab_field_name = "encoder"
+        else:
+            logger.warning(
+                """Wasn't able to fetch vocabulary from pretrained transformers lib.
+                Neother <vocab> nor <encoder> are the valid fields for vocab.
+                Your tokens will still be correctly indexed, but vocabulary file will not be saved."""
+            )
+        if vocab_field_name is not None:
+            pretrained_vocab = getattr(self._tokenizer, vocab_field_name)
+            for word, idx in pretrained_vocab.items():
+                vocab._token_to_index[self._namespace][word] = idx
+                vocab._index_to_token[self._namespace][idx] = word
 
     @overrides
     def count_vocab_items(self, token: Token, counter: Dict[str, Dict[str, int]]):
         # If we only use pretrained models, we don't need to do anything here.
         pass
 
-    def _add_encoding_to_vocabulary(self, vocabulary: Vocabulary) -> None:
-
-        for word, idx in self.tokenizer.vocab.items():
-            vocabulary._token_to_index[self._namespace][word] = idx
-            vocabulary._index_to_token[self._namespace][idx] = word
-
     @overrides
     def tokens_to_indices(
         self, tokens: List[Token], vocabulary: Vocabulary, index_name: str
     ) -> Dict[str, List[int]]:
-        if not self._added_to_vocabulary and hasattr(self.tokenizer, "vocab"):
+        if not self._added_to_vocabulary:
             self._add_encoding_to_vocabulary(vocabulary)
             self._added_to_vocabulary = True
-        token_text = [token.text for token in tokens]
-        indices = self.tokenizer.convert_tokens_to_ids(token_text)
+
+        indices: List[int] = []
+        for token in tokens:
+            if getattr(token, "text_id", None) is not None:
+                # `text_id` being set on the token means that we aren't using the vocab, we just use
+                # this id instead. Id comes from the pretrained vocab.
+                # # It computed in PretrainedTransformerTokenizer.
+                indices.append(token.text_id)
+            else:
+                raise KeyError(
+                    "Using PretrainedTransformerIndexer but field text_id is not set"
+                    f" for the following token: {token.text}"
+                )
 
         return {index_name: indices}
 

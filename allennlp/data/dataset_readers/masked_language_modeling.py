@@ -1,5 +1,6 @@
 from typing import Dict, List
 import logging
+import copy
 
 from overrides import overrides
 
@@ -11,7 +12,7 @@ from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.token_indexers.token_indexer import TokenIndexer
 from allennlp.data.fields import IndexField, Field, ListField, TextField
 from allennlp.data.token_indexers import SingleIdTokenIndexer
-
+from allennlp.data.tokenizers import PretrainedTransformerTokenizer
 
 logger = logging.getLogger(__name__)
 
@@ -51,6 +52,14 @@ class MaskedLanguageModelingReader(DatasetReader):
     ) -> None:
         super().__init__(lazy)
         self._tokenizer = tokenizer or WhitespaceTokenizer()
+        # temporary hack to not to add special tokens
+        self._targets_tokenizer: Tokenizer
+        if isinstance(self._tokenizer, PretrainedTransformerTokenizer):
+            self._targets_tokenizer = copy.copy(self._tokenizer)
+            self._targets_tokenizer._add_special_tokens = False
+        else:
+            self._targets_tokenizer = self._tokenizer
+
         self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
 
     @overrides
@@ -99,9 +108,19 @@ class MaskedLanguageModelingReader(DatasetReader):
         if targets and len(targets) != len(mask_positions):
             raise ValueError(f"Found {len(mask_positions)} mask tokens and {len(targets)} targets")
         mask_position_field = ListField([IndexField(i, input_field) for i in mask_positions])
-        # TODO(mattg): there's a problem if the targets get split into multiple word pieces...
         fields: Dict[str, Field] = {"tokens": input_field, "mask_positions": mask_position_field}
+        # TODO(mattg): there's a problem if the targets get split into multiple word pieces...
+        # (maksym-del): if we index word that was not split into wordpieces with
+        # PretrainedTransformerTokenizer we will get OOV token ID...
+        # Until this is handeled, let's use first wordpiece id for each token since tokens should contain text_ids
+        # to be indexed with PretrainedTokenIndexer. It also requeires hack to avoid adding special tokens...
         if targets is not None:
-            target_field = TextField([Token(target) for target in targets], self._token_indexers)
-            fields["target_ids"] = target_field
+            # target_field = TextField([Token(target) for target in targets], self._token_indexers)
+            first_wordpieces = [self._targets_tokenizer.tokenize(target)[0] for target in targets]
+            target_tokens = []
+            for wordpiece, target in zip(first_wordpieces, targets):
+                target_tokens.append(
+                    Token(text=target, text_id=wordpiece.text_id, type_id=wordpiece.type_id)
+                )
+            fields["target_ids"] = TextField(target_tokens, self._token_indexers)
         return Instance(fields)
