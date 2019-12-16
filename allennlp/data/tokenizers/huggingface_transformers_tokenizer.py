@@ -183,6 +183,8 @@ class HuggingfaceTransformersTokenizer(Tokenizer):
         """
 
         def get_max_space_length(text):
+            original_text = text
+            text = unescape_html_and_remove_control_chars(text)
             max_space_length = 0
             count = False
             for i, c in enumerate(text):
@@ -194,7 +196,8 @@ class HuggingfaceTransformersTokenizer(Tokenizer):
                     if count:
                         count = False
                         max_space_length = max(max_space_length, i - start_index)
-            return max_space_length
+            # with a safety margin
+            return max_space_length + (len(original_text) - len(text))
 
         def is_prefix(lst, other_lst):
             """
@@ -385,7 +388,7 @@ class HuggingfaceTransformersTokenizer(Tokenizer):
                 # Example: "a \ufeff test" might be tokenized as ["a", "test"] but matched to ["a \ufeff", "test"]
                 original_token_text = remove_control_chars(original_token_text)
                 splits = len(original_token_text.strip().split())
-            if splits >= 2 and html is not None:
+            if splits >= 2:
                 # Don't warn about cases in which the tokenizer unescapes html entities (OpenAIGPTTokenizer)
                 # and ignores control characters.
                 # Example: "98&#160; yards" might be tokenized as ["98", "yards"]

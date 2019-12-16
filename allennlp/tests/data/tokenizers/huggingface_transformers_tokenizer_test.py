@@ -114,3 +114,15 @@ class TestHuggingTransformersTokenizer(AllenNlpTestCase):
         )
         assert tokens == expected_tokens
         assert offsets == [0, 4, 9, 16, 20, 24, 24, 26, 29, 31, 35, 40, 43, 47, 50, 54, 59]
+
+    def test_tokenize_with_offsets_html_entity(self):
+        sentence = "98&#160; yards"
+        expected_tokens = ["98</w>", "yards</w>"]
+        tokenizer = HuggingfaceTransformersTokenizer("openai-gpt")
+
+        # tokenize with offsets
+        tokens, offsets = list(
+            map(list, zip(*[(t.text, t.idx) for t in tokenizer.tokenize_with_offsets(sentence)]))
+        )
+        assert tokens == expected_tokens
+        assert offsets == [0, 2]
