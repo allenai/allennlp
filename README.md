@@ -96,9 +96,6 @@ AllenNLP installs a script when you install the python package, meaning you can 
 
 You can now test your installation with `allennlp test-install`.
 
-_`pip` currently installs Pytorch for CUDA 9 only (or no GPU). If you require an older version,
-please visit https://pytorch.org/ and install the relevant pytorch binary._
-
 ### Installing using Docker
 
 Docker provides a virtual machine with everything set up to run AllenNLP--
@@ -134,9 +131,7 @@ This will make `allennlp` available on your system but it will use the sources f
 you made of the source repository.
 
 You can test your installation with `allennlp test-install`.
-The full development environment also requires the JVM and `perl`,
-which must be installed separately.  `./scripts/verify.py` will run
-the full suite of tests used by our continuous build environment.
+`./scripts/verify.py` will run the full suite of tests used by our continuous build environment.
 
 ## Running AllenNLP
 
@@ -177,9 +172,7 @@ For various reasons you may need to create your own AllenNLP Docker image.
 The same image can be used either with a CPU or a GPU.
 
 First, you need to [install Docker](https://www.docker.com/get-started).
-Then run the following command
-(it will take some time, as it completely builds the
-environment needed to run AllenNLP.)
+Then run the following command (it will take some time, as it completely builds the environment needed to run AllenNLP.)
 
 ```bash
 docker build -f Dockerfile.pip --tag allennlp/allennlp:latest .
