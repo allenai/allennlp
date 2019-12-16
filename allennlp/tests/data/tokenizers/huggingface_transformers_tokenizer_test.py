@@ -126,3 +126,15 @@ class TestHuggingTransformersTokenizer(AllenNlpTestCase):
         )
         assert tokens == expected_tokens
         assert offsets == [0, 2]
+
+    def test_tokenize_with_offsets_partial_correspondence(self):
+        sentence = "30\xa0000"
+        expected_tokens = ['3', '0.', '000</w>']
+        tokenizer = HuggingfaceTransformersTokenizer("xlm-mlm-en-2048")
+
+        # tokenize with offsets
+        tokens, offsets = list(
+            map(list, zip(*[(t.text, t.idx) for t in tokenizer.tokenize_with_offsets(sentence)]))
+        )
+        assert tokens == expected_tokens
+        assert offsets == [0, 1, 1]
