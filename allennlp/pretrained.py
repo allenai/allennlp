@@ -30,9 +30,7 @@ Semantic Role Labeling
 
 Based on [He et al, 2017](https://www.semanticscholar.org/paper/Deep-Semantic-Role-Labeling-What-Works-and-What-s-He-Lee/a3ccff7ad63c2805078b34b8514fa9eab80d38e9)
 
-```
 f1: 0.849
-```
 """
 def srl_with_elmo_luheng_2018() -> predictors.SemanticRoleLabelerPredictor:
     with warnings.catch_warnings():
@@ -58,11 +56,12 @@ Reading Comprehension
 
 Based on [BiDAF (Seo et al, 2017)](https://www.semanticscholar.org/paper/Bidirectional-Attention-Flow-for-Machine-Comprehen-Seo-Kembhavi/007ab5528b3bd310a80d553cccad4b78dc496b02)
 
-```
-$ docker run allennlp/allennlp:v0.7.0 \
-    evaluate \
-    https://allennlp.s3.amazonaws.com/models/bidaf-model-2017.09.15-charpad.tar.gz \
-    https://allennlp.s3.amazonaws.com/datasets/squad/squad-dev-v1.1.json
+.. code-block:: bash
+
+    $ docker run allennlp/allennlp:v0.7.0 \
+        evaluate \
+        https://allennlp.s3.amazonaws.com/models/bidaf-model-2017.09.15-charpad.tar.gz \
+        https://allennlp.s3.amazonaws.com/datasets/squad/squad-dev-v1.1.json
 
 Metrics:
 start_acc: 0.642
@@ -70,7 +69,6 @@ start_acc: 0.642
  span_acc: 0.552
        em: 0.683
        f1: 0.778
-```
 """
 def bidirectional_attention_flow_seo_2017() -> predictors.BidafPredictor:
     with warnings.catch_warnings():
@@ -104,15 +102,15 @@ Textual Entailment
 
 Based on [Parikh et al, 2017](https://www.semanticscholar.org/paper/A-Decomposable-Attention-Model-for-Natural-Languag-Parikh-T%C3%A4ckstr%C3%B6m/07a9478e87a8304fc3267fa16e83e9f3bbd98b27)
 
-```
-$ docker run allennlp/allennlp:v0.7.0 \
-    evaluate \
-    https://allennlp.s3.amazonaws.com/models/decomposable-attention-elmo-2018.02.19.tar.gz \
-    https://allennlp.s3.amazonaws.com/datasets/snli/snli_1.0_test.jsonl
+.. code-block:: bash
+
+    $ docker run allennlp/allennlp:v0.7.0 \
+        evaluate \
+        https://allennlp.s3.amazonaws.com/models/decomposable-attention-elmo-2018.02.19.tar.gz \
+        https://allennlp.s3.amazonaws.com/datasets/snli/snli_1.0_test.jsonl
 
 Metrics:
 accuracy: 0.864
-```
 """
 def decomposable_attention_with_elmo_parikh_2017() -> predictors.DecomposableAttentionPredictor:
     with warnings.catch_warnings():
@@ -128,9 +126,7 @@ Coreference Resolution
 
 Based on [End-to-End Coreference Resolution (Lee et al, 2017)](https://www.semanticscholar.org/paper/End-to-end-Neural-Coreference-Resolution-Lee-He/3f2114893dc44eacac951f148fbff142ca200e83)
 
-```
 f1: 0.630
-```
 """
 def neural_coreference_resolution_lee_2017() -> predictors.CorefPredictor:
     with warnings.catch_warnings():
@@ -150,10 +146,6 @@ def neural_coreference_resolution_lee_2017() -> predictors.CorefPredictor:
 Named Entity Recognition
 
 Based on [Deep contextualized word representations](https://arxiv.org/abs/1802.05365)
-
-```
-f1: 0.925
-```
 """
 def named_entity_recognition_with_elmo_peters_2018() -> predictors.SentenceTaggerPredictor:
     with warnings.catch_warnings():
