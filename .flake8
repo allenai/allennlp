@@ -23,9 +23,6 @@ per-file-ignores =
     #  F401: unused imports
     allennlp/tests/**:E501,E261,E731,F401
 
-    # the deprecated /service/predictors also have unused imports
-    allennlp/service/predictors/*:F401
-
     # scripts don't have to respect
     #  E501: line length
     #  E402: imports not at top of file (because we mess with sys.path)

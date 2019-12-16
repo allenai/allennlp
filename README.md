@@ -44,10 +44,6 @@ for developing state-of-the-art deep learning models on a wide variety of lingui
     <td> tensor utility functions, such as initializers and activation functions </td>
 </tr>
 <tr>
-    <td><b> allennlp.service </b></td>
-    <td> a web server to that can serve demos for your models </td>
-</tr>
-<tr>
     <td><b> allennlp.training </b></td>
     <td> functionality for training models </td>
 </tr>

@@ -700,10 +700,16 @@ vocabulary, and weights. In the previous example the file will be located at
 /tmp/serialization_dir_exercise/model.tar.gz
 ```
 
-Using a trained model it's easy to run a simple text-in-JSON-out demo:
+Using a trained model it's easy to run a simple text-in-JSON-out demo. First, install the demo code:
 
 ```bash
-python -m allennlp.service.server_simple \
+git clone https://github.com/allenai/allennlp-server-misc.git
+pip install allennlp-server-misc/requirements.txt
+```
+
+Now we are ready to run our simple demo!
+```bash
+python allennlp-server-misc/server_simple.py \
     --archive-path /tmp/serialization_dir_exercise/model.tar.gz \
     --predictor sentence-tagger \
     --title "AllenNLP Tutorial" \
