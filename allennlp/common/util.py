@@ -106,14 +106,14 @@ def group_by_count(iterable: List[Any], count: int, default_value: Any) -> List[
 A = TypeVar("A")
 
 
-def lazy_groups_of(iterable: Iterable[A], group_size: int) -> Iterable[List[A]]:
+def lazy_groups_of(iterable: Iterable[A], group_size: int) -> Iterator[List[A]]:
     """
-    Takes an iterator and batches the individual instances into lists of the
+    Takes an iterable and batches the individual instances into lists of the
     specified size. The last list may be smaller if there are instances left over.
     """
-    iterable = iter(iterable)
+    iterator = iter(iterable)
     while True:
-        s = list(islice(iterable, group_size))
+        s = list(islice(iterator, group_size))
         if len(s) > 0:
             yield s
         else:
