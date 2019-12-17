@@ -54,7 +54,7 @@ import shutil
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common.checks import ConfigurationError, check_for_gpu
 from allennlp.common import Params, Tqdm
-from allennlp.common.util import prepare_environment, lazy_groups_of
+from allennlp.common.util import prepare_environment
 from allennlp.data import Vocabulary, DataIterator
 from allennlp.models import Model
 from allennlp.training import Trainer
@@ -223,6 +223,7 @@ def find_learning_rate_model(
     train_data = all_datasets["train"]
 
     trainer_params = params.pop("trainer")
+
     no_grad_regexes = trainer_params.pop("no_grad", ())
     for name, parameter in model.named_parameters():
         if any(re.search(regex, name) for regex in no_grad_regexes):
@@ -296,10 +297,7 @@ def search_learning_rate(
 
     trainer.model.train()
 
-    num_gpus = len(trainer._cuda_devices)
-
-    raw_train_generator = trainer.iterator(trainer.train_data, shuffle=trainer.shuffle)
-    train_generator = lazy_groups_of(raw_train_generator, num_gpus)
+    train_generator = trainer.iterator(trainer.train_data, shuffle=trainer.shuffle)
     train_generator_tqdm = Tqdm.tqdm(train_generator, total=num_batches)
 
     learning_rates = []
@@ -310,7 +308,7 @@ def search_learning_rate(
     else:
         lr_update_factor = (end_lr / start_lr) ** (1.0 / num_batches)
 
-    for i, batch_group in enumerate(train_generator_tqdm):
+    for i, batch in enumerate(train_generator_tqdm):
 
         if linear_steps:
             current_lr = start_lr + (lr_update_factor * i)
@@ -321,7 +319,7 @@ def search_learning_rate(
             param_group["lr"] = current_lr
 
         trainer.optimizer.zero_grad()
-        loss = trainer.batch_loss(batch_group, for_training=True)
+        loss = trainer.batch_loss(batch, for_training=True)
         loss.backward()
         loss = loss.detach().cpu().item()
 
