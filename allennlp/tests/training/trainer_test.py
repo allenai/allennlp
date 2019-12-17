@@ -833,6 +833,7 @@ class TestTrainer(AllenNlpTestCase):
 
         assert num_batches_trained_per_epoch == num_batches_expected
 
+
 class TestSparseClipGrad(AllenNlpTestCase):
     def test_sparse_clip_grad(self):
         # create a sparse embedding layer, then take gradient
