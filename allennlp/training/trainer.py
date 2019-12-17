@@ -331,8 +331,9 @@ class Trainer(TrainerBase):
 
         # Get tqdm for the training batches
         train_generator = self.iterator(self.train_data, num_epochs=1, shuffle=self.shuffle)
-        num_training_batches = \
-            math.ceil(self.iterator.get_num_batches(self.train_data) / self._num_gradient_accumulation_steps)
+        num_training_batches = math.ceil(
+            self.iterator.get_num_batches(self.train_data) / self._num_gradient_accumulation_steps
+        )
         self._last_log = time.time()
         last_save_time = time.time()
 

@@ -828,8 +828,9 @@ class TestTrainer(AllenNlpTestCase):
         metrics = trainer.train()
 
         num_batches_trained_per_epoch = trainer._batch_num_total // (metrics["training_epochs"] + 1)
-        num_batches_expected = \
-            math.ceil(math.ceil(len(instances) / self.iterator._batch_size) / steps_to_accumulate)
+        num_batches_expected = math.ceil(
+            math.ceil(len(instances) / self.iterator._batch_size) / steps_to_accumulate
+        )
 
         assert num_batches_trained_per_epoch == num_batches_expected
 
