@@ -1,5 +1,6 @@
 import datetime
 import logging
+import math
 import os
 import time
 import traceback
@@ -13,7 +14,7 @@ from torch.nn.parallel import DistributedDataParallel
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError, parse_cuda_device, check_for_gpu
 from allennlp.common.tqdm import Tqdm
-from allennlp.common.util import dump_metrics, gpu_memory_mb, peak_memory_mb
+from allennlp.common.util import dump_metrics, gpu_memory_mb, peak_memory_mb, lazy_groups_of
 from allennlp.data.instance import Instance
 from allennlp.data.iterators.data_iterator import DataIterator, TensorDict
 from allennlp.models.model import Model
@@ -64,6 +65,7 @@ class Trainer(TrainerBase):
         distributed: bool = False,
         rank: int = 0,
         world_size: int = 1,
+        num_gradient_accumulation_steps: int = 1,
     ) -> None:
         """
         A trainer for doing supervised learning. It just takes a labeled dataset
@@ -185,6 +187,10 @@ class Trainer(TrainerBase):
             used as the rank.
         world_size: ``int``, (default = 1)
             The number of `Trainer` workers participating in the distributed training.
+        num_gradient_accumulation_steps: ``int``, optional, (default = 1)
+            Gradients are accumulated for the given number of steps before doing an optimizer step. This can
+            be useful to accommodate batches that are larger than the RAM size. Refer Thomas Wolf's
+            [post](https://tinyurl.com/y5mv44fw) for details on Gradient Accumulation.
         """
         super().__init__(serialization_dir, cuda_device, distributed, rank, world_size)
 
@@ -264,6 +270,8 @@ class Trainer(TrainerBase):
 
         self._last_log = 0.0  # time of last logging
 
+        self._num_gradient_accumulation_steps = num_gradient_accumulation_steps
+
         # Enable activation logging.
         if histogram_interval is not None:
             self._tensorboard.enable_activation_logging(self.model)
@@ -323,7 +331,8 @@ class Trainer(TrainerBase):
 
         # Get tqdm for the training batches
         train_generator = self.iterator(self.train_data, num_epochs=1, shuffle=self.shuffle)
-        num_training_batches = self.iterator.get_num_batches(self.train_data)
+        num_training_batches = \
+            math.ceil(self.iterator.get_num_batches(self.train_data) / self._num_gradient_accumulation_steps)
         self._last_log = time.time()
         last_save_time = time.time()
 
@@ -343,21 +352,20 @@ class Trainer(TrainerBase):
             train_generator_tqdm = train_generator
 
         cumulative_batch_size = 0
-        for batch in train_generator_tqdm:
+        for batches in lazy_groups_of(train_generator_tqdm, self._num_gradient_accumulation_steps):
             batches_this_epoch += 1
             self._batch_num_total += 1
             batch_num_total = self._batch_num_total
 
             self.optimizer.zero_grad()
 
-            loss = self.batch_loss(batch, for_training=True)
-
-            if torch.isnan(loss):
-                raise ValueError("nan loss encountered")
-
-            loss.backward()
-
-            train_loss += loss.item()
+            for batch in batches:
+                loss = self.batch_loss(batch, for_training=True)
+                if torch.isnan(loss):
+                    raise ValueError("nan loss encountered")
+                loss = loss / len(batches)
+                loss.backward()
+                train_loss += loss.item()
 
             batch_grad_norm = self.rescale_gradients()
 
@@ -417,7 +425,7 @@ class Trainer(TrainerBase):
                 self._tensorboard.log_histograms(self.model, histogram_parameters)
 
             if self._log_batch_size_period:
-                cur_batch = training_util.get_batch_size(batch)
+                cur_batch = sum(training_util.get_batch_size(batch) for batch in batches)
                 cumulative_batch_size += cur_batch
                 if (batches_this_epoch - 1) % self._log_batch_size_period == 0:
                     average = cumulative_batch_size / batches_this_epoch
@@ -818,6 +826,8 @@ class Trainer(TrainerBase):
         distributed = params.pop_bool("distributed", False)
         world_size = params.pop_int("world_size", 1)
 
+        num_gradient_accumulation_steps = params.pop("num_gradient_accumulation_steps", 1)
+
         params.assert_empty(cls.__name__)
         return cls(
             model,
@@ -847,4 +857,5 @@ class Trainer(TrainerBase):
             distributed=distributed,
             rank=local_rank,
             world_size=world_size,
+            num_gradient_accumulation_steps=num_gradient_accumulation_steps,
         )

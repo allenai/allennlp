@@ -1,6 +1,7 @@
 import copy
 import glob
 import json
+import math
 import os
 import re
 import time
@@ -809,6 +810,28 @@ class TestTrainer(AllenNlpTestCase):
         assert trainer._metric_tracker._best_so_far == 0.1
         assert trainer._metric_tracker._epochs_with_no_improvement == 1
 
+    def test_trainer_can_run_gradient_accumulation(self):
+        instances = list(self.instances)
+        steps_to_accumulate = 2
+
+        trainer = Trainer(
+            self.model,
+            self.optimizer,
+            self.iterator,
+            instances,
+            validation_dataset=instances,
+            num_epochs=2,
+            num_gradient_accumulation_steps=steps_to_accumulate,
+        )
+        assert trainer._num_gradient_accumulation_steps == steps_to_accumulate
+
+        metrics = trainer.train()
+
+        num_batches_trained_per_epoch = trainer._batch_num_total // (metrics["training_epochs"] + 1)
+        num_batches_expected = \
+            math.ceil(math.ceil(len(instances) / self.iterator._batch_size) / steps_to_accumulate)
+
+        assert num_batches_trained_per_epoch == num_batches_expected
 
 class TestSparseClipGrad(AllenNlpTestCase):
     def test_sparse_clip_grad(self):
