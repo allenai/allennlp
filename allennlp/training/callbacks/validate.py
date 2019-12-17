@@ -1,11 +1,9 @@
 from typing import Iterable, List, TYPE_CHECKING
 import logging
-import math
 
 import torch
 
 from allennlp.common.tqdm import Tqdm
-from allennlp.common.util import lazy_groups_of
 from allennlp.data.instance import Instance
 from allennlp.data.iterators import DataIterator
 from allennlp.training import util as training_util
@@ -67,20 +65,15 @@ class Validate(Callback):
 
             trainer.model.eval()
 
-            num_gpus = len(trainer._cuda_devices)
-
-            raw_val_generator = self.iterator(self.instances, num_epochs=1, shuffle=False)
-            val_generator = lazy_groups_of(raw_val_generator, num_gpus)
-            num_validation_batches = math.ceil(
-                self.iterator.get_num_batches(self.instances) / num_gpus
-            )
+            val_generator = self.iterator(self.instances, num_epochs=1, shuffle=False)
+            num_validation_batches = self.iterator.get_num_batches(self.instances)
             val_generator_tqdm = Tqdm.tqdm(val_generator, total=num_validation_batches)
 
             batches_this_epoch = 0
             val_loss = 0
-            for batch_group in val_generator_tqdm:
+            for batch in val_generator_tqdm:
 
-                loss = trainer.batch_loss(batch_group, for_training=False)
+                loss = trainer.batch_loss(batch, for_training=False)
                 if loss is not None:
                     # You shouldn't necessarily have to compute a loss for validation, so we allow for
                     # `loss` to be None.  We need to be careful, though - `batches_this_epoch` is
