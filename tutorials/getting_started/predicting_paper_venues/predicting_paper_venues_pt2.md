@@ -202,12 +202,12 @@ Once you have a trained model and a predictor,
 it's easy to run a simple web demo. First, install the code containing the server like so:
 
 ```
-git clone https://github.com/allenai/allennlp-server-misc.git
-pip install -r allennlp-server-misc/requirements.txt
+git clone https://github.com/allenai/allennlp-server.git
+pip install -r allennlp-server/requirements.txt
 ```
 
 ```
-$ python allennlp-server-misc/server_simple.py --help
+$ python allennlp-server/server_simple.py --help
 
 usage: server_simple.py [-h] [--archive-path ARCHIVE_PATH]
                         [--predictor PREDICTOR] [--static-dir STATIC_DIR]
@@ -218,7 +218,7 @@ usage: server_simple.py [-h] [--archive-path ARCHIVE_PATH]
 Let's ignore the `--static-dir` flag for now and serve up the test fixture model:
 
 ```
-python allennlp-server-misc/server_simple.py \
+python allennlp-server/server_simple.py \
     --archive-path tests/fixtures/model.tar.gz \
     --predictor paper-classifier \
     --include-package my_library \
@@ -270,7 +270,7 @@ To start with, we need to [add a `script` tag to load chart.js](https://github.c
 ```
 
 If you look at the original HTML, the output starts off
-[with a placeholder](https://github.com/allenai/allennlp-server-misc/blob/master/server_simple.py#L186):
+[with a placeholder](https://github.com/allenai/allennlp-server/blob/master/server_simple.py#L186):
 
 ```html
 <div id="output" class="output">
@@ -283,7 +283,7 @@ If you look at the original HTML, the output starts off
 ```
 
 And the JavaScript code just
-[has a callback](https://github.com/allenai/allennlp-server-misc/blob/master/server_simple.py#L214)
+[has a callback](https://github.com/allenai/allennlp-server/blob/master/server_simple.py#L214)
 that runs when it gets a prediction back from the server:
 
 ```javascript
@@ -325,7 +325,7 @@ var pieChart = new Chart(ctx, {
 Now we can run our custom demo:
 
 ```bash
-python allennlp-server-misc/server_simple.py \
+python allennlp-server/server_simple.py \
     --archive-path tests/fixtures/model.tar.gz \
     --predictor paper-classifier \
     --include-package my_library \
