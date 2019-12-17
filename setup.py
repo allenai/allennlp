@@ -124,6 +124,7 @@ setup(
         "numpydoc>=0.8.0",
         "conllu==1.3.1",
         "ftfy",
+        "word2number>=1.1",
         "pytorch-pretrained-bert>=0.6.0",
         "transformers>=2.1.1,!=2.2.1",
         "jsonpickle",
