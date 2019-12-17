@@ -330,10 +330,22 @@ class Trainer(TrainerBase):
         self._pytorch_model.train()
 
         # Get tqdm for the training batches
-        train_generator = self.iterator(self.train_data, num_epochs=1, shuffle=self.shuffle)
+        batch_generator = self.iterator(self.train_data, num_epochs=1, shuffle=self.shuffle)
+        batch_group_generator = lazy_groups_of(
+            batch_generator, self._num_gradient_accumulation_steps
+        )
         num_training_batches = math.ceil(
             self.iterator.get_num_batches(self.train_data) / self._num_gradient_accumulation_steps
         )
+        # Having multiple tqdm bars in case of distributed training will be a mess. Hence only the master's
+        # progress is shown
+        if self._master:
+            batch_group_generator_tqdm = Tqdm.tqdm(
+                batch_group_generator, total=num_training_batches
+            )
+        else:
+            batch_group_generator_tqdm = batch_group_generator
+
         self._last_log = time.time()
         last_save_time = time.time()
 
@@ -345,26 +357,19 @@ class Trainer(TrainerBase):
 
         logger.info("Training")
 
-        # Having multiple tqdm bars in case of distributed training will be a mess. Hence only the master's
-        # progress is shown
-        if self._master:
-            train_generator_tqdm = Tqdm.tqdm(train_generator, total=num_training_batches)
-        else:
-            train_generator_tqdm = train_generator
-
-        cumulative_batch_size = 0
-        for batches in lazy_groups_of(train_generator_tqdm, self._num_gradient_accumulation_steps):
+        cumulative_batch_group_size = 0
+        for batch_group in batch_group_generator_tqdm:
             batches_this_epoch += 1
             self._batch_num_total += 1
             batch_num_total = self._batch_num_total
 
             self.optimizer.zero_grad()
 
-            for batch in batches:
+            for batch in batch_group:
                 loss = self.batch_loss(batch, for_training=True)
                 if torch.isnan(loss):
                     raise ValueError("nan loss encountered")
-                loss = loss / len(batches)
+                loss = loss / len(batch_group)
                 loss.backward()
                 train_loss += loss.item()
 
@@ -412,7 +417,7 @@ class Trainer(TrainerBase):
             # Updating tqdm only for the master as the trainers wouldn't have one
             if self._master:
                 description = training_util.description_from_metrics(metrics)
-                train_generator_tqdm.set_description(description, refresh=False)
+                batch_group_generator_tqdm.set_description(description, refresh=False)
 
             # Log parameter values to Tensorboard (only from the master)
             if self._tensorboard.should_log_this_batch() and self._master:
@@ -426,12 +431,14 @@ class Trainer(TrainerBase):
                 self._tensorboard.log_histograms(self.model, histogram_parameters)
 
             if self._log_batch_size_period:
-                cur_batch = sum(training_util.get_batch_size(batch) for batch in batches)
-                cumulative_batch_size += cur_batch
+                batch_group_size = sum(training_util.get_batch_size(batch) for batch in batch_group)
+                cumulative_batch_group_size += batch_group_size
                 if (batches_this_epoch - 1) % self._log_batch_size_period == 0:
-                    average = cumulative_batch_size / batches_this_epoch
-                    logger.info(f"current batch size: {cur_batch} mean batch size: {average}")
-                    self._tensorboard.add_train_scalar("current_batch_size", cur_batch)
+                    average = cumulative_batch_group_size / batches_this_epoch
+                    logger.info(
+                        f"current batch size: {batch_group_size} mean batch size: {average}"
+                    )
+                    self._tensorboard.add_train_scalar("current_batch_size", batch_group_size)
                     self._tensorboard.add_train_scalar("mean_batch_size", average)
 
             # Save model if needed.
