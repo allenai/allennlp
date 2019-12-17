@@ -53,7 +53,6 @@ import torch
 import torch.distributed as dist
 import torch.multiprocessing as mp
 
-from allennlp.commands.make_vocab import make_vocab_from_params
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError, check_for_gpu
@@ -68,7 +67,7 @@ from allennlp.models.model import Model, _DEFAULT_WEIGHTS
 from allennlp.training.trainer import Trainer
 from allennlp.training.trainer_base import TrainerBase
 from allennlp.training.trainer_pieces import TrainerPieces
-from allennlp.training.util import create_serialization_dir, evaluate
+from allennlp.training.util import create_serialization_dir, evaluate, make_vocab_from_params
 
 logger = logging.getLogger(__name__)
 

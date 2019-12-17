@@ -16,7 +16,7 @@ from allennlp.common.checks import ConfigurationError, check_for_gpu
 from allennlp.common.params import Params
 from allennlp.common.tqdm import Tqdm
 from allennlp.data.dataset_readers import DatasetReader
-from allennlp.data import Instance
+from allennlp.data import Instance, Vocabulary
 from allennlp.data.iterators import DataIterator
 from allennlp.models.model import Model
 from allennlp.models.archival import CONFIG_NAME
@@ -472,3 +472,42 @@ def description_from_metrics(metrics: Dict[str, float]) -> str:
         )
         + " ||"
     )
+
+
+def make_vocab_from_params(params: Params, serialization_dir: str) -> Vocabulary:
+
+    vocab_params = params.pop("vocabulary", {})
+    os.makedirs(serialization_dir, exist_ok=True)
+    vocab_dir = os.path.join(serialization_dir, "vocabulary")
+
+    if os.path.isdir(vocab_dir) and os.listdir(vocab_dir) is not None:
+        raise ConfigurationError(
+            "The 'vocabulary' directory in the provided " "serialization directory is non-empty"
+        )
+
+    all_datasets = datasets_from_params(params)
+    datasets_for_vocab_creation = set(params.pop("datasets_for_vocab_creation", all_datasets))
+
+    for dataset in datasets_for_vocab_creation:
+        if dataset not in all_datasets:
+            raise ConfigurationError(f"invalid 'dataset_for_vocab_creation' {dataset}")
+
+    logger.info(
+        "From dataset instances, %s will be considered for vocabulary creation.",
+        ", ".join(datasets_for_vocab_creation),
+    )
+
+    instances = (
+        instance
+        for key, dataset in all_datasets.items()
+        for instance in dataset
+        if key in datasets_for_vocab_creation
+    )
+
+    vocab = Vocabulary.from_params(vocab_params, instances)
+
+    logger.info(f"writing the vocabulary to {vocab_dir}.")
+    vocab.save_to_files(vocab_dir)
+    logger.info("done creating vocab")
+
+    return vocab
