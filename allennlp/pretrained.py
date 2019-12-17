@@ -25,14 +25,15 @@ class PretrainedModel:
 
 # Models in the demo
 
-"""
-Semantic Role Labeling
 
-Based on [He et al, 2017](https://www.semanticscholar.org/paper/Deep-Semantic-Role-Labeling-What-Works-and-What-s-He-Lee/a3ccff7ad63c2805078b34b8514fa9eab80d38e9)
-
-f1: 0.849
-"""
 def srl_with_elmo_luheng_2018() -> predictors.SemanticRoleLabelerPredictor:
+    """
+    Semantic Role Labeling
+
+    Based on [He et al, 2017](https://www.semanticscholar.org/paper/Deep-Semantic-Role-Labeling-What-Works-and-What-s-He-Lee/a3ccff7ad63c2805078b34b8514fa9eab80d38e9)
+
+    f1: 0.849
+    """
     with warnings.catch_warnings():
         warnings.simplefilter(action="ignore", category=DeprecationWarning)
         model = PretrainedModel(
@@ -51,26 +52,28 @@ def bert_srl_shi_2019() -> predictors.SemanticRoleLabelerPredictor:
         )
         return model.predictor()  # type: ignore
 
-"""
-Reading Comprehension
 
-Based on [BiDAF (Seo et al, 2017)](https://www.semanticscholar.org/paper/Bidirectional-Attention-Flow-for-Machine-Comprehen-Seo-Kembhavi/007ab5528b3bd310a80d553cccad4b78dc496b02)
-
-.. code-block:: bash
-
-    $ docker run allennlp/allennlp:v0.7.0 \
-        evaluate \
-        https://allennlp.s3.amazonaws.com/models/bidaf-model-2017.09.15-charpad.tar.gz \
-        https://allennlp.s3.amazonaws.com/datasets/squad/squad-dev-v1.1.json
-
-Metrics:
-start_acc: 0.642
-  end_acc: 0.671
- span_acc: 0.552
-       em: 0.683
-       f1: 0.778
-"""
 def bidirectional_attention_flow_seo_2017() -> predictors.BidafPredictor:
+    """
+    Reading Comprehension
+
+    Based on `BiDAF (Seo et al, 2017) <https://www.semanticscholar.org/paper/Bidirectional-Attention-Flow-for-Machine-Comprehen-Seo-Kembhavi/007ab5528b3bd310a80d553cccad4b78dc496b02>`_
+
+    .. code-block:: bash
+
+       $ docker run allennlp/allennlp:v0.7.0
+           evaluate
+           https://allennlp.s3.amazonaws.com/models/bidaf-model-2017.09.15-charpad.tar.gz
+           https://allennlp.s3.amazonaws.com/datasets/squad/squad-dev-v1.1.json
+
+    Metrics:
+
+    * start_acc: 0.642
+    * end_acc: 0.671
+    * span_acc: 0.552
+    * em: 0.683
+    * f1: 0.778
+    """
     with warnings.catch_warnings():
         warnings.simplefilter(action="ignore", category=DeprecationWarning)
         model = PretrainedModel(
@@ -97,22 +100,23 @@ def open_information_extraction_stanovsky_2018() -> predictors.OpenIePredictor:
     )
     return model.predictor()  # type: ignore
 
-"""
-Textual Entailment
 
-Based on [Parikh et al, 2017](https://www.semanticscholar.org/paper/A-Decomposable-Attention-Model-for-Natural-Languag-Parikh-T%C3%A4ckstr%C3%B6m/07a9478e87a8304fc3267fa16e83e9f3bbd98b27)
-
-.. code-block:: bash
-
-    $ docker run allennlp/allennlp:v0.7.0 \
-        evaluate \
-        https://allennlp.s3.amazonaws.com/models/decomposable-attention-elmo-2018.02.19.tar.gz \
-        https://allennlp.s3.amazonaws.com/datasets/snli/snli_1.0_test.jsonl
-
-Metrics:
-accuracy: 0.864
-"""
 def decomposable_attention_with_elmo_parikh_2017() -> predictors.DecomposableAttentionPredictor:
+    """
+    Textual Entailment
+
+    Based on `Parikh et al, 2017 <https://www.semanticscholar.org/paper/A-Decomposable-Attention-Model-for-Natural-Languag-Parikh-T%C3%A4ckstr%C3%B6m/07a9478e87a8304fc3267fa16e83e9f3bbd98b27>`_
+
+    .. code-block:: bash
+
+       $ docker run allennlp/allennlp:v0.7.0
+           evaluate
+           https://allennlp.s3.amazonaws.com/models/decomposable-attention-elmo-2018.02.19.tar.gz
+           https://allennlp.s3.amazonaws.com/datasets/snli/snli_1.0_test.jsonl
+
+    Metrics:
+    accuracy: 0.864
+    """
     with warnings.catch_warnings():
         warnings.simplefilter(action="ignore", category=DeprecationWarning)
         model = PretrainedModel(
@@ -121,14 +125,15 @@ def decomposable_attention_with_elmo_parikh_2017() -> predictors.DecomposableAtt
         )
         return model.predictor()  # type: ignore
 
-"""
-Coreference Resolution
 
-Based on [End-to-End Coreference Resolution (Lee et al, 2017)](https://www.semanticscholar.org/paper/End-to-end-Neural-Coreference-Resolution-Lee-He/3f2114893dc44eacac951f148fbff142ca200e83)
-
-f1: 0.630
-"""
 def neural_coreference_resolution_lee_2017() -> predictors.CorefPredictor:
+    """
+    Coreference Resolution
+
+    Based on `End-to-End Coreference Resolution (Lee et al, 2017) <https://www.semanticscholar.org/paper/End-to-end-Neural-Coreference-Resolution-Lee-He/3f2114893dc44eacac951f148fbff142ca200e83>`_
+
+    f1: 0.630
+    """
     with warnings.catch_warnings():
         warnings.simplefilter(action="ignore", category=DeprecationWarning)
         model = PretrainedModel(
@@ -142,12 +147,13 @@ def neural_coreference_resolution_lee_2017() -> predictors.CorefPredictor:
         ]._min_padding_length = 5
         return predictor  # type: ignore
 
-"""
-Named Entity Recognition
 
-Based on [Deep contextualized word representations](https://arxiv.org/abs/1802.05365)
-"""
 def named_entity_recognition_with_elmo_peters_2018() -> predictors.SentenceTaggerPredictor:
+    """
+    Named Entity Recognition
+
+    Based on `Deep contextualized word representations <https://arxiv.org/abs/1802.05365>`_
+    """
     with warnings.catch_warnings():
         warnings.simplefilter(action="ignore", category=DeprecationWarning)
         model = PretrainedModel(
@@ -161,10 +167,11 @@ def named_entity_recognition_with_elmo_peters_2018() -> predictors.SentenceTagge
         ]._min_padding_length = 3
         return predictor  # type: ignore
 
-"""
-Fine Grained Named Entity Recognition
-"""
+
 def fine_grained_named_entity_recognition_with_elmo_peters_2018() -> predictors.SentenceTaggerPredictor:
+    """
+    Fine Grained Named Entity Recognition
+    """
     model = PretrainedModel(
         "https://allennlp.s3.amazonaws.com/models/fine-grained-ner-model-elmo-2018.12.21.tar.gz",
         "sentence-tagger",
@@ -176,12 +183,13 @@ def fine_grained_named_entity_recognition_with_elmo_peters_2018() -> predictors.
     ]._min_padding_length = 3
     return predictor  # type: ignore
 
-"""
-Constituency Parsing
 
-Based on [Minimal Span Based Constituency Parser (Stern et al, 2017)](https://www.semanticscholar.org/paper/A-Minimal-Span-Based-Neural-Constituency-Parser-Stern-Andreas/593e4e749bd2dbcaf8dc25298d830b41d435e435) but with ELMo embeddings
-"""
 def span_based_constituency_parsing_with_elmo_joshi_2018() -> predictors.ConstituencyParserPredictor:
+    """
+    Constituency Parsing
+
+    Based on `Minimal Span Based Constituency Parser (Stern et al, 2017) <https://www.semanticscholar.org/paper/A-Minimal-Span-Based-Neural-Constituency-Parser-Stern-Andreas/593e4e749bd2dbcaf8dc25298d830b41d435e435>`_ but with ELMo embeddings
+    """
     with warnings.catch_warnings():
         warnings.simplefilter(action="ignore", category=DeprecationWarning)
         model = PretrainedModel(
@@ -190,12 +198,13 @@ def span_based_constituency_parsing_with_elmo_joshi_2018() -> predictors.Constit
         )
         return model.predictor()  # type: ignore
 
-"""
-Biaffine Dependency Parser
 
-Based on [Dozat and Manning, 2017](https://arxiv.org/pdf/1611.01734.pdf)
-"""
 def biaffine_parser_stanford_dependencies_todzat_2017() -> predictors.BiaffineDependencyParserPredictor:
+    """
+    Biaffine Dependency Parser
+
+    Based on `Dozat and Manning, 2017 <https://arxiv.org/pdf/1611.01734.pdf>`_
+    """
     with warnings.catch_warnings():
         warnings.simplefilter(action="ignore", category=DeprecationWarning)
         model = PretrainedModel(
@@ -212,6 +221,8 @@ Biaffine Dependency Parser
 
 Based on [Dozat and Manning, 2017](https://arxiv.org/pdf/1611.01734.pdf)
 """
+
+
 def biaffine_parser_universal_dependencies_todzat_2017() -> predictors.BiaffineDependencyParserPredictor:
     with warnings.catch_warnings():
         warnings.simplefilter(action="ignore", category=DeprecationWarning)
@@ -221,12 +232,13 @@ def biaffine_parser_universal_dependencies_todzat_2017() -> predictors.BiaffineD
         )
         return model.predictor()  # type: ignore
 
-"""
-ESIM
 
-Based on [Enhanced LSTM for Natural Language Inference](https://arxiv.org/pdf/1609.06038.pdf) and uses ELMo
-"""
 def esim_nli_with_elmo_chen_2017() -> predictors.DecomposableAttentionPredictor:
+    """
+    ESIM
+
+    Based on `Enhanced LSTM for Natural Language Inference <https://arxiv.org/pdf/1609.06038.pdf>`_ and uses ELMo
+    """
     with warnings.catch_warnings():
         warnings.simplefilter(action="ignore", category=DeprecationWarning)
         model = PretrainedModel(
