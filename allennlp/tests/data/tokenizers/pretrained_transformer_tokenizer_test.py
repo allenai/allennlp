@@ -179,3 +179,13 @@ class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
         assert tokens == expected_tokens
         idxs = [t.idx for t in tokenized]
         assert idxs == expected_idxs
+
+    def test_token_idx_wikipedia(self):
+        # This will produce lots of problems with the index calculation. We check whether it catches back up at the
+        # end.
+        sentence = "Tokyo (東京 Tōkyō, English: /ˈtoʊkioʊ/,[7] Japanese: [toːkʲoː]), officially Tokyo Metropolis (東京都 Tōkyō-to), is one of the 47 prefectures of Japan."
+        for tokenizer_name in ["roberta-base", "bert-base-uncased", "bert-base-cased"]:
+            tokenizer = PretrainedTransformerTokenizer(tokenizer_name, calculate_character_offsets=True)
+            tokenized = tokenizer.tokenize(sentence)
+            assert tokenized[-2].text == "."
+            assert tokenized[-2].idx == len(sentence) - 1
