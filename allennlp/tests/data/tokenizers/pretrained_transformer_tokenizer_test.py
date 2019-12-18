@@ -1,3 +1,7 @@
+import gc
+
+import time
+
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.tokenizers import PretrainedTransformerTokenizer
 
@@ -191,3 +195,38 @@ class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
             tokenized = tokenizer.tokenize(sentence)
             assert tokenized[-2].text == "."
             assert tokenized[-2].idx == len(sentence) - 1
+
+    def test_token_idx_performance(self):
+        text = """
+            Tokyo (東京 Tōkyō, English: /ˈtoʊkioʊ/,[7] Japanese: [toːkʲoː]), officially Tokyo Metropolis (東京都
+            Tōkyō-to), is one of the 47 prefectures of Japan. It has served as the Japanese capital since
+            1869,[8][9] its urban area housing the Emperor of Japan and the Japanese government. Tokyo forms part
+            of the Kantō region on the southeastern side of Japan's main island, Honshu, and includes the Izu
+            Islands and Ogasawara Islands.[10] Tokyo was formerly named Edo when Shōgun Tokugawa Ieyasu made the
+            city his headquarters in 1603. It became the capital after Emperor Meiji moved his seat to the city
+            from Kyoto in 1868; at that time Edo was renamed Tokyo.[11] The Tokyo Metropolis formed in 1943 from
+            the merger of the former Tokyo Prefecture (東京府 Tōkyō-fu) and the city of Tokyo (東京市 Tōkyō-shi).
+            Tokyo is often referred to as a city but is officially known and governed as a "metropolitan
+            prefecture", which differs from and combines elements of a city and a prefecture, a characteristic
+            unique to Tokyo."""
+
+        tokenizer_with_idx = PretrainedTransformerTokenizer(
+            "roberta-base", calculate_character_offsets=True
+        )
+        tokenizer_without_idx = PretrainedTransformerTokenizer(
+            "roberta-base", calculate_character_offsets=False
+        )
+
+        gc.collect()
+        start = time.time()
+        for i in range(200):
+            tokenizer_without_idx.tokenize(text)
+        without_idx_time = time.time() - start
+
+        gc.collect()
+        start = time.time()
+        for i in range(200):
+            tokenizer_with_idx.tokenize(text)
+        with_idx_time = time.time() - start
+
+        assert with_idx_time <= 2 * without_idx_time
