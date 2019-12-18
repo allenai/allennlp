@@ -94,14 +94,14 @@ class PretrainedTransformerTokenizer(Tokenizer):
 
     def tokenize_sentence_pair(self, sentence_1: str, sentence_2: str) -> List[Token]:
         """
-        This methods properly handels a pair of sentences.
+        This methods properly handles a pair of sentences.
         """
         return self._tokenize(sentence_1, sentence_2)
 
     @overrides
     def tokenize(self, text: str) -> List[Token]:
         """
-        This method only handels a single sentence (or sequence) of text.
+        This method only handles a single sentence (or sequence) of text.
         Refer to the ``tokenize_sentence_pair`` method if you have a sentence pair.
         """
         return self._tokenize(text)
