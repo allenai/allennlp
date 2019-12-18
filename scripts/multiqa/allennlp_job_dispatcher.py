@@ -229,7 +229,11 @@ class AllenNLP_Job_Dispatcher():
     def replace_one_field_tags(self, value, params):
         if type(value) == str:
             for key in params.keys():
-                value = value.replace('[' + key + ']', str(params[key]))
+                if type(params[key]) == str:
+                    value = value.replace('[' + key + ']', str(params[key]))
+                else:
+                    value = value.replace(r"'[" + key + "]'", str(params[key]))
+                    value = value.replace('[' + key + ']', str(params[key]))
 
         return value
 
@@ -576,7 +580,7 @@ class AllenNLP_Job_Dispatcher():
             if not DRY_RUN:
                 self.send_to_queue(run_name, queue, runner_config)
                 self.runned_experiments.append(run_name)
-                time.sleep(0.7)
+                time.sleep(0.4)
             if run_only_one:
                 break
         if not self.QUIET_MODE:
@@ -723,13 +727,15 @@ allennlp_dispatcher = AllenNLP_Job_Dispatcher(experiment_name)
 
 #experiment_name = '068_oLMpics_LearningCurves'
 experiment_name = '069_oLMpics_LearningCurves_MASKED'
+#experiment_name = '069_oLMpics_LearningCurves_MASKED_lowerbound_baseline'
 #experiment_name = '089_oLMpics_train_triplets'
 #experiment_name = '090_oLMpics_finetuned_LearningCurves'
 #experiment_name = '091_oLMpics_train_on_challenge'
 #experiment_name = '092_oLMpics_train_non_transformer'
 #experiment_name = '093_oLMpics_finetune_LC_non_transformer'
 #experiment_name = '094_oLMpics_train_LC_non_transformer'
-#experiment_name = '095_oLMpics_zeroshot_eval'
+experiment_name = '095_oLMpics_zeroshot_eval'
+#experiment_name = '096_oLMpics_LearningCurves_HP_GRID'
 
 #if experiment_name.find('BERTLarge') > -1 and experiment_name.find('evaluate') == -1:
 #queue = '4GPUs'

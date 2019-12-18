@@ -5,7 +5,7 @@ from typing import Iterable, NamedTuple
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
-from allennlp.common.util import get_frozen_and_tunable_parameter_names
+from allennlp.common.util import get_frozen_and_tunable_parameter_names, is_distributed, is_master
 from allennlp.data.instance import Instance
 from allennlp.data.iterators.data_iterator import DataIterator
 from allennlp.data.vocabulary import Vocabulary
@@ -55,8 +55,12 @@ class TrainerPieces(NamedTuple):
         )
 
         if recover and os.path.exists(os.path.join(serialization_dir, "vocabulary")):
-            vocab = Vocabulary.from_files(os.path.join(serialization_dir, "vocabulary"))
-            params.pop("vocabulary", {})
+            vocab_params = params.pop("vocabulary", {})
+            vocab = Vocabulary.from_files(
+                os.path.join(serialization_dir, "vocabulary"),
+                vocab_params.get("padding_token", None),
+                vocab_params.get("oov_token", None),
+            )
         else:
             vocab = Vocabulary.from_params(
                 params.pop("vocabulary", {}),
@@ -78,7 +82,9 @@ class TrainerPieces(NamedTuple):
         model.extend_embedder_vocab()
 
         # Initializing the model can have side effect of expanding the vocabulary
-        vocab.save_to_files(os.path.join(serialization_dir, "vocabulary"))
+        # Save the vocab only in the master
+        if not is_distributed() or is_master():
+            vocab.save_to_files(os.path.join(serialization_dir, "vocabulary"))
 
         iterator = DataIterator.from_params(params.pop("iterator"))
         iterator.index_with(model.vocab)

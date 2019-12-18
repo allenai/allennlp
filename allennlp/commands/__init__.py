@@ -5,11 +5,9 @@ import logging
 from overrides import overrides
 
 from allennlp import __version__
-from allennlp.commands.configure import Configure
 from allennlp.commands.elmo import Elmo
 from allennlp.commands.evaluate import Evaluate
 from allennlp.commands.fine_tune import FineTune
-from allennlp.commands.make_vocab import MakeVocab
 from allennlp.commands.predict import Predict
 from allennlp.commands.dry_run import DryRun
 from allennlp.commands.subcommand import Subcommand
@@ -67,14 +65,13 @@ def create_parser(
 
     subcommands = {
         # Default commands
-        "configure": Configure(),
         "train": Train(),
         "evaluate": Evaluate(),
         "predict": Predict(),
-        "make-vocab": MakeVocab(),
         "elmo": Elmo(),
         "fine-tune": FineTune(),
         "dry-run": DryRun(),
+        "make-vocab": DryRun(),  # deprecated, but keeping for backward compatibility.
         "test-install": TestInstall(),
         "find-lr": FindLearningRate(),
         "print-results": PrintResults(),

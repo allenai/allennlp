@@ -7,7 +7,7 @@ import numpy
 from allennlp.common.util import JsonDict
 from allennlp.data import DatasetReader, Instance
 from allennlp.data.fields import TextField, SequenceLabelField
-from allennlp.data.tokenizers.word_splitter import SpacyWordSplitter
+from allennlp.data.tokenizers.spacy_tokenizer import SpacyTokenizer
 from allennlp.models import Model
 from allennlp.predictors.predictor import Predictor
 
@@ -26,7 +26,7 @@ class SentenceTaggerPredictor(Predictor):
         self, model: Model, dataset_reader: DatasetReader, language: str = "en_core_web_sm"
     ) -> None:
         super().__init__(model, dataset_reader)
-        self._tokenizer = SpacyWordSplitter(language=language, pos_tags=True)
+        self._tokenizer = SpacyTokenizer(language=language, pos_tags=True)
 
     def predict(self, sentence: str) -> JsonDict:
         return self.predict_json({"sentence": sentence})
@@ -38,7 +38,7 @@ class SentenceTaggerPredictor(Predictor):
         Runs the underlying model, and adds the ``"words"`` to the output.
         """
         sentence = json_dict["sentence"]
-        tokens = self._tokenizer.split_words(sentence)
+        tokens = self._tokenizer.tokenize(sentence)
         return self._dataset_reader.text_to_instance(tokens)
 
     @overrides

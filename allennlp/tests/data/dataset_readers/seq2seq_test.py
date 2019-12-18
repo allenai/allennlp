@@ -92,6 +92,29 @@ class TestSeq2SeqDatasetReader:
             "@end@",
         ]
 
+    def test_source_add_end_token(self):
+        reader = Seq2SeqDatasetReader(source_add_end_token=False)
+        instances = reader.read(str(AllenNlpTestCase.FIXTURES_ROOT / "data" / "seq2seq_copy.tsv"))
+        instances = ensure_list(instances)
+
+        assert len(instances) == 3
+        fields = instances[0].fields
+        assert [t.text for t in fields["source_tokens"].tokens] == [
+            "@start@",
+            "this",
+            "is",
+            "a",
+            "sentence",
+        ]
+        assert [t.text for t in fields["target_tokens"].tokens] == [
+            "@start@",
+            "this",
+            "is",
+            "a",
+            "sentence",
+            "@end@",
+        ]
+
     def test_max_length_truncation(self):
         reader = Seq2SeqDatasetReader(source_max_tokens=3, target_max_tokens=5)
         instances = reader.read(str(AllenNlpTestCase.FIXTURES_ROOT / "data" / "seq2seq_copy.tsv"))

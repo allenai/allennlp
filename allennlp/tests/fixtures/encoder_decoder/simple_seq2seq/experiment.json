@@ -2,16 +2,13 @@
   "dataset_reader": {
     "type": "seq2seq",
     "source_tokenizer": {
-      "type": "word",
-      "word_splitter": {
-        "type": "spacy",
-        "pos_tags": true,
-        "parse": true,
-        "ner": true
-      }
+      "type": "spacy",
+      "pos_tags": true,
+      "parse": true,
+      "ner": true
     },
     "target_tokenizer": {
-      "type": "word"
+      "type": "spacy"
     },
     "source_token_indexers": {
       "tokens": {

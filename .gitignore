@@ -7,12 +7,15 @@ build/
 dist/
 .idea/
 venv/
+pip-wheel-metadata/
 
 # dev tools
 
 .envrc
 .python-version
 .idea
+.venv/
+.vscode/
 
 
 # jupyter notebooks

@@ -44,6 +44,20 @@ class CrfTaggerTest(ModelTestCase):
                 tag = self.model.vocab.get_token_from_index(tag_id, namespace="labels")
                 assert tag in {"O", "I-ORG", "I-PER", "I-LOC"}
 
+    def test_forward_pass_top_k(self):
+        training_tensors = self.dataset.as_tensor_dict()
+        self.model.top_k = 5
+        output_dict = self.model.decode(self.model(**training_tensors))
+        top_k_tags = [[x["tags"] for x in item_topk] for item_topk in output_dict["top_k_tags"]]
+        first_choices = [x[0] for x in top_k_tags]
+        assert first_choices == output_dict["tags"]
+        lengths = [len(x) for x in top_k_tags]
+        assert set(lengths) == {5}
+        tags_used = set(
+            tag for item_top_k in top_k_tags for tag_seq in item_top_k for tag in tag_seq
+        )
+        assert all(tag in {"O", "I-ORG", "I-PER", "I-LOC"} for tag in tags_used)
+
     def test_mismatching_dimensions_throws_configuration_error(self):
         params = Params.from_file(self.param_file)
         # Make the encoder wrong - it should be 2 to match

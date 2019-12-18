@@ -66,7 +66,7 @@ class LstmTagger(Model):
 
     def forward(self,
                 sentence: Dict[str, torch.Tensor],
-                labels: torch.Tensor = None) -> torch.Tensor:
+                labels: torch.Tensor = None) -> Dict[str, torch.Tensor]:
         mask = get_text_field_mask(sentence)
         embeddings = self.word_embeddings(sentence)
         encoder_out = self.encoder(embeddings, mask)

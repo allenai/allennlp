@@ -9,7 +9,7 @@ from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.instance import Instance
 from allennlp.data.dataset_readers.reading_comprehension import util
 from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenIndexer
-from allennlp.data.tokenizers import Token, Tokenizer, WordTokenizer
+from allennlp.data.tokenizers import Token, Tokenizer, SpacyTokenizer
 
 logger = logging.getLogger(__name__)
 
@@ -36,9 +36,9 @@ class SquadReader(DatasetReader):
 
     Parameters
     ----------
-    tokenizer : ``Tokenizer``, optional (default=``WordTokenizer()``)
+    tokenizer : ``Tokenizer``, optional (default=``SpacyTokenizer()``)
         We use this ``Tokenizer`` for both the question and the passage.  See :class:`Tokenizer`.
-        Default is ```WordTokenizer()``.
+        Default is ```SpacyTokenizer()``.
     token_indexers : ``Dict[str, TokenIndexer]``, optional
         We similarly use this for both the question and the passage.  See :class:`TokenIndexer`.
         Default is ``{"tokens": SingleIdTokenIndexer()}``.
@@ -63,7 +63,7 @@ class SquadReader(DatasetReader):
         skip_invalid_examples: bool = False,
     ) -> None:
         super().__init__(lazy)
-        self._tokenizer = tokenizer or WordTokenizer()
+        self._tokenizer = tokenizer or SpacyTokenizer()
         self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
         self.passage_length_limit = passage_length_limit
         self.question_length_limit = question_length_limit
@@ -91,7 +91,7 @@ class SquadReader(DatasetReader):
                     span_ends = [
                         start + len(answer) for start, answer in zip(span_starts, answer_texts)
                     ]
-                    additional_metadata = {"id": question_answer["id"]}
+                    additional_metadata = {"id": question_answer.get("id", None)}
                     instance = self.text_to_instance(
                         question_text,
                         paragraph,

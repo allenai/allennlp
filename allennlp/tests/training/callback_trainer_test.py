@@ -20,8 +20,7 @@ from allennlp.data import Vocabulary
 from allennlp.common.params import Params
 from allennlp.models.simple_tagger import SimpleTagger
 from allennlp.data.iterators import BasicIterator
-from allennlp.data.dataset_readers import SequenceTaggingDatasetReader, WikiTablesDatasetReader
-from allennlp.models.archival import load_archive
+from allennlp.data.dataset_readers import SequenceTaggingDatasetReader
 from allennlp.models.model import Model
 from allennlp.training.callback_trainer import CallbackTrainer
 from allennlp.training.callbacks import (
@@ -263,84 +262,29 @@ class TestCallbackTrainer(ModelTestCase):
             callbacks=self.default_callbacks(),
             cuda_device=0,
         )
-        trainer.train()
-
-    @pytest.mark.skipif(torch.cuda.device_count() < 2, reason="Need multiple GPUs.")
-    def test_trainer_can_run_multiple_gpu(self):
-        self.model.cuda()
-
-        class MetaDataCheckWrapper(Model):
-            """
-            Checks that the metadata field has been correctly split across the batch dimension
-            when running on multiple gpus.
-            """
-
-            def __init__(self, model):
-                super().__init__(model.vocab)
-                self.model = model
-
-            def forward(self, **kwargs) -> Dict[str, torch.Tensor]:  # type: ignore
-                assert (
-                    "metadata" in kwargs and "tags" in kwargs
-                ), f"tokens and metadata must be provided. Got {kwargs.keys()} instead."
-                batch_size = kwargs["tokens"]["tokens"].size()[0]
-                assert len(kwargs["metadata"]) == batch_size, (
-                    f"metadata must be split appropriately. Expected {batch_size} elements, "
-                    f"got {len(kwargs['metadata'])} elements."
-                )
-                return self.model.forward(**kwargs)
-
-        multigpu_iterator = BasicIterator(batch_size=4)
-        multigpu_iterator.index_with(self.vocab)
-        trainer = CallbackTrainer(
-            MetaDataCheckWrapper(self.model),
-            training_data=self.instances,
-            iterator=multigpu_iterator,
-            optimizer=self.optimizer,
-            num_epochs=2,
-            callbacks=self.default_callbacks(),
-            cuda_device=[0, 1],
-        )
         metrics = trainer.train()
         assert "peak_cpu_memory_MB" in metrics
         assert isinstance(metrics["peak_cpu_memory_MB"], float)
         assert metrics["peak_cpu_memory_MB"] > 0
         assert "peak_gpu_0_memory_MB" in metrics
         assert isinstance(metrics["peak_gpu_0_memory_MB"], int)
-        assert "peak_gpu_1_memory_MB" in metrics
-        assert isinstance(metrics["peak_gpu_1_memory_MB"], int)
 
-    @pytest.mark.skipif(torch.cuda.device_count() < 2, reason="Need multiple GPUs.")
-    def test_production_rule_field_with_multiple_gpus(self):
-        wikitables_dir = "allennlp/tests/fixtures/data/wikitables/"
-        offline_lf_directory = wikitables_dir + "action_space_walker_output/"
-        wikitables_reader = WikiTablesDatasetReader(
-            tables_directory=wikitables_dir, offline_logical_forms_directory=offline_lf_directory
-        )
-        instances = wikitables_reader.read(wikitables_dir + "sample_data.examples")
-        archive_path = (
-            self.FIXTURES_ROOT
-            / "semantic_parsing"
-            / "wikitables"
-            / "serialization"
-            / "model.tar.gz"
-        )
-        model = load_archive(archive_path).model
-        model.cuda()
+    @pytest.mark.skipif(torch.cuda.device_count() < 2, reason="2 or more GPUs required.")
+    def test_passing_trainer_multiple_gpus_raises_error(self):
+        self.model.cuda()
 
         multigpu_iterator = BasicIterator(batch_size=4)
-        multigpu_iterator.index_with(model.vocab)
-
-        trainer = CallbackTrainer(
-            model,
-            instances,
-            multigpu_iterator,
-            self.optimizer,
-            num_epochs=2,
-            cuda_device=[0, 1],
-            callbacks=[GradientNormAndClip()],
-        )
-        trainer.train()
+        multigpu_iterator.index_with(self.vocab)
+        with pytest.raises(ConfigurationError):
+            CallbackTrainer(
+                self.model,
+                training_data=self.instances,
+                iterator=multigpu_iterator,
+                optimizer=self.optimizer,
+                num_epochs=2,
+                callbacks=self.default_callbacks(),
+                cuda_device=[0, 1],
+            )
 
     def test_trainer_can_resume_training(self):
         trainer = CallbackTrainer(
