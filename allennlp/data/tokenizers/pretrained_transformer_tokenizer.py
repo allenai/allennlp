@@ -59,7 +59,7 @@ class PretrainedTransformerTokenizer(Tokenizer):
         max_length: int = None,
         stride: int = 0,
         truncation_strategy: str = "longest_first",
-        calculate_character_offsets: bool = False
+        calculate_character_offsets: bool = False,
     ) -> None:
         self._tokenizer = AutoTokenizer.from_pretrained(model_name)
         self._add_special_tokens = add_special_tokens
@@ -103,7 +103,9 @@ class PretrainedTransformerTokenizer(Tokenizer):
 
             whole_text = sentence_1
             if sentence_2 is not None:
-                whole_text += sentence_2    # Calculating character offsets with sentence pairs is sketchy at best.
+                whole_text += (
+                    sentence_2
+                )  # Calculating character offsets with sentence pairs is sketchy at best.
             if self._tokenizer_lowercases():
                 whole_text = whole_text.lower()
 
@@ -130,7 +132,9 @@ class PretrainedTransformerTokenizer(Tokenizer):
                     continue
 
                 # Did we jump too far?
-                non_whitespace_chars_skipped = sum(1 for c in whole_text[text_index:token_start_index] if not c.isspace())
+                non_whitespace_chars_skipped = sum(
+                    1 for c in whole_text[text_index:token_start_index] if not c.isspace()
+                )
                 if non_whitespace_chars_skipped > allowed_skipped_whitespace:
                     # Too many skipped characters. Something is wrong. Ignore this token.
                     token_index += 1

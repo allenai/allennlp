@@ -99,7 +99,7 @@ class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
             "[CLS]",
             "a",
             ",",
-            "naive",    # It normalizes the accent.
+            "naive",  # It normalizes the accent.
             "[MASK]",
             "allen",
             "##nl",
@@ -112,16 +112,18 @@ class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
             None,
             0,
             1,
-            None,   # It can't find this one because of the normalized accent.
+            None,  # It can't find this one because of the normalized accent.
             9,
             16,
             21,
             23,
             25,
             33,
-            None
+            None,
         ]
-        tokenizer = PretrainedTransformerTokenizer("bert-base-uncased", calculate_character_offsets=True)
+        tokenizer = PretrainedTransformerTokenizer(
+            "bert-base-uncased", calculate_character_offsets=True
+        )
         tokenized = tokenizer.tokenize(sentence)
         tokens = [t.text for t in tokenized]
         assert tokens == expected_tokens
@@ -145,22 +147,10 @@ class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
             ".",
             "[SEP]",
         ]
-        expected_idxs = [
-            None,
-            0,
-            1,
-            3,
-            5,
-            6,
-            9,
-            16,
-            21,
-            23,
-            25,
-            33,
-            None
-        ]
-        tokenizer = PretrainedTransformerTokenizer("bert-base-cased", calculate_character_offsets=True)
+        expected_idxs = [None, 0, 1, 3, 5, 6, 9, 16, 21, 23, 25, 33, None]
+        tokenizer = PretrainedTransformerTokenizer(
+            "bert-base-cased", calculate_character_offsets=True
+        )
         tokenized = tokenizer.tokenize(sentence)
         tokens = [t.text for t in tokenized]
         assert tokens == expected_tokens
@@ -170,31 +160,19 @@ class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
     def test_token_idx_roberta(self):
         sentence = "A, naïve <mask> AllenNLP sentence."
         expected_tokens = [
-            '<s>',
-            'A',
-            ',',
-            'ĠnaÃ¯ve',  # What happened here?
-            '<mask>',
-            'Allen',
-            'N',
-            'LP',
-            'Ġsentence',
-            '.',
-            '</s>'
+            "<s>",
+            "A",
+            ",",
+            "ĠnaÃ¯ve",  # What happened here?
+            "<mask>",
+            "Allen",
+            "N",
+            "LP",
+            "Ġsentence",
+            ".",
+            "</s>",
         ]
-        expected_idxs = [
-            None,
-            0,
-            1,
-            None,
-            9,
-            16,
-            21,
-            22,
-            25,
-            33,
-            None
-        ]
+        expected_idxs = [None, 0, 1, None, 9, 16, 21, 22, 25, 33, None]
         tokenizer = PretrainedTransformerTokenizer("roberta-base", calculate_character_offsets=True)
         tokenized = tokenizer.tokenize(sentence)
         tokens = [t.text for t in tokenized]
