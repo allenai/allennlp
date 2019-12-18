@@ -185,7 +185,9 @@ class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
         # end.
         sentence = "Tokyo (東京 Tōkyō, English: /ˈtoʊkioʊ/,[7] Japanese: [toːkʲoː]), officially Tokyo Metropolis (東京都 Tōkyō-to), is one of the 47 prefectures of Japan."
         for tokenizer_name in ["roberta-base", "bert-base-uncased", "bert-base-cased"]:
-            tokenizer = PretrainedTransformerTokenizer(tokenizer_name, calculate_character_offsets=True)
+            tokenizer = PretrainedTransformerTokenizer(
+                tokenizer_name, calculate_character_offsets=True
+            )
             tokenized = tokenizer.tokenize(sentence)
             assert tokenized[-2].text == "."
             assert tokenized[-2].idx == len(sentence) - 1
