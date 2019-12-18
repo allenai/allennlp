@@ -59,19 +59,26 @@ class PretrainedTransformerTokenizer(Tokenizer):
         max_length: int = None,
         stride: int = 0,
         truncation_strategy: str = "longest_first",
+        calculate_character_offsets: bool = False
     ) -> None:
         self._tokenizer = AutoTokenizer.from_pretrained(model_name)
         self._add_special_tokens = add_special_tokens
         self._max_length = max_length
         self._stride = stride
         self._truncation_strategy = truncation_strategy
+        self._calculate_character_offsets = calculate_character_offsets
+
+    def _tokenizer_lowercases(self):
+        if hasattr(self._tokenizer, "do_lower_case"):
+            return self._tokenizer.do_lower_case
+        if hasattr(self._tokenizer, "basic_tokenizer"):
+            return self._tokenizer.basic_tokenizer.do_lower_case
+        return False
 
     def _tokenize(self, sentence_1: str, sentence_2: str = None):
         """
         This method works on both sentence and sentence pair.
         """
-        # TODO(mattg): track character offsets.  Might be too challenging to do it here, given that
-        # ``transformers``` is dealing with the whitespace...
 
         encoded_tokens = self._tokenizer.encode_plus(
             text=sentence_1,
@@ -89,6 +96,52 @@ class PretrainedTransformerTokenizer(Tokenizer):
         for token_id, token_type_id in zip(token_ids, token_type_ids):
             token_str = self._tokenizer.convert_ids_to_tokens(token_id, skip_special_tokens=False)
             tokens.append(Token(text=token_str, text_id=token_id, type_id=token_type_id))
+
+        if self._calculate_character_offsets:
+            # This procedure is approximate at best. For example, it will start breaking once you have issues with
+            # Unicode special characters, since Huggingface applies NKFD normalization, and we don't.
+
+            whole_text = sentence_1
+            if sentence_2 is not None:
+                whole_text += sentence_2    # Calculating character offsets with sentence pairs is sketchy at best.
+            if self._tokenizer_lowercases():
+                whole_text = whole_text.lower()
+
+            min_allowed_skipped_whitespace = 3
+            allowed_skipped_whitespace = min_allowed_skipped_whitespace
+
+            text_index = 0
+            token_index = 0
+            while text_index < len(whole_text) and token_index < len(tokens):
+                token_text = tokens[token_index].text
+                if self._tokenizer_lowercases():
+                    token_text = token_text.lower()
+                if token_text.startswith("##"):
+                    token_text = token_text[2:]
+                elif token_text.startswith("Ġ"):
+                    token_text = token_text[1:]
+                token_start_index = whole_text.find(token_text, text_index)
+
+                # Did we not find it at all?
+                if token_start_index < 0:
+                    token_index += 1
+                    # When we skip a token, we increase our tolerance, so we have a chance of catching back up.
+                    allowed_skipped_whitespace += 1 + min_allowed_skipped_whitespace
+                    continue
+
+                # Did we jump too far?
+                non_whitespace_chars_skipped = sum(1 for c in whole_text[text_index:token_start_index] if not c.isspace())
+                if non_whitespace_chars_skipped > allowed_skipped_whitespace:
+                    # Too many skipped characters. Something is wrong. Ignore this token.
+                    token_index += 1
+                    # When we skip a token, we increase our tolerance, so we have a chance of catching back up.
+                    allowed_skipped_whitespace += 1 + min_allowed_skipped_whitespace
+                    continue
+                allowed_skipped_whitespace = min_allowed_skipped_whitespace
+
+                tokens[token_index] = tokens[token_index]._replace(idx=token_start_index)
+                text_index = token_start_index + len(token_text)
+                token_index += 1
 
         return tokens
 
