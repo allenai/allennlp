@@ -311,7 +311,7 @@ def fine_tune_model(
                 for key, dataset in all_datasets.items()
                 for instance in dataset
                 if key in datasets_for_vocab_creation
-            ),
+            )
         )
 
         model.extend_embedder_vocab(embedding_sources_mapping)

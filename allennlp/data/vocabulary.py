@@ -675,6 +675,6 @@ class Vocabulary(Registrable):
 
 
 # the tricky part is that `Vocabulary` is both the base class and the default implementation
-Vocabulary.register("from_instances", constructor='from_instances')(Vocabulary)
-Vocabulary.register("from_files", constructor='from_files')(Vocabulary)
-Vocabulary.register("extend", constructor='from_files_and_instances')(Vocabulary)
+Vocabulary.register("from_instances", constructor="from_instances")(Vocabulary)
+Vocabulary.register("from_files", constructor="from_files")(Vocabulary)
+Vocabulary.register("extend", constructor="from_files_and_instances")(Vocabulary)

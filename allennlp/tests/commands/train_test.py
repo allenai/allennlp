@@ -177,7 +177,9 @@ class TestTrain(AllenNlpTestCase):
             {
                 "model": {
                     "type": "simple_tagger",
-                    "text_field_embedder": {"token_embedders": {"tokens": {"type": "embedding", "embedding_dim": 5}}},
+                    "text_field_embedder": {
+                        "token_embedders": {"tokens": {"type": "embedding", "embedding_dim": 5}}
+                    },
                     "encoder": {"type": "lstm", "input_size": 5, "hidden_size": 7, "num_layers": 2},
                 },
                 "dataset_reader": {"type": "sequence_tagging"},

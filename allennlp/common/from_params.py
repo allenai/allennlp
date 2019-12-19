@@ -110,7 +110,9 @@ def remove_optional(annotation: type):
         return annotation
 
 
-def create_kwargs(constructor: Callable[..., T], class_name: str, params: Params, **extras) -> Dict[str, Any]:
+def create_kwargs(
+    constructor: Callable[..., T], class_name: str, params: Params, **extras
+) -> Dict[str, Any]:
     """
     Given some class, a `Params` object, and potentially other keyword arguments,
     create a dict of keyword args suitable for passing to the class's constructor.
@@ -138,7 +140,9 @@ def create_kwargs(constructor: Callable[..., T], class_name: str, params: Params
         # it will have an __origin__ field indicating `typing.Dict`
         # and an __args__ field indicating `(str, int)`. We capture both.
         annotation = remove_optional(param.annotation)
-        kwargs[param_name] = construct_arg(class_name, param_name, annotation, param.default, params, **extras)
+        kwargs[param_name] = construct_arg(
+            class_name, param_name, annotation, param.default, params, **extras
+        )
 
     params.assert_empty(class_name)
     return kwargs
@@ -401,8 +405,12 @@ class FromParams:
                 # restriction, having a more permissive check here (so you could register things
                 # without subclassing FromParams), but it would make the recursion a lot harder.
                 extras = create_extras(subclass, extras)
-                return subclass.from_params(params=params, constructor_to_call=constructor_to_call,
-                                            constructor_to_inspect=constructor_to_inspect, **extras)
+                return subclass.from_params(
+                    params=params,
+                    constructor_to_call=constructor_to_call,
+                    constructor_to_inspect=constructor_to_inspect,
+                    **extras,
+                )
             else:
                 # In some rare cases, we get a registered subclass that does _not_ have a
                 # from_params method (this happens with Activations, for instance, where we

@@ -68,7 +68,9 @@ class TestFromParams(AllenNlpTestCase):
         assert my_class.my_bool
 
     def test_create_kwargs(self):
-        kwargs = create_kwargs(MyClass, 'MyClass', Params({"my_int": 5}), my_bool=True, my_float=4.4)
+        kwargs = create_kwargs(
+            MyClass, "MyClass", Params({"my_int": 5}), my_bool=True, my_float=4.4
+        )
 
         # my_float should not be included because it's not a param of the MyClass constructor
         assert kwargs == {"my_int": 5, "my_bool": True}

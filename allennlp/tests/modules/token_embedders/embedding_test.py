@@ -144,7 +144,9 @@ class TestEmbedding(AllenNlpTestCase):
             archive_path = str(self.FIXTURES_ROOT / "embeddings/multi-file-archive") + ext
             file_uri = format_embeddings_file_uri(archive_path, "folder/fake_embeddings.5d.txt")
             params = Params({"pretrained_file": file_uri, "embedding_dim": 5})
-            embeddings = Embedding.from_vocab_or_file(vocab, **params.as_dict(quiet=True)).weight.data
+            embeddings = Embedding.from_vocab_or_file(
+                vocab, **params.as_dict(quiet=True)
+            ).weight.data
             for tok, vec in token2vec.items():
                 i = vocab.get_token_index(tok)
                 assert torch.equal(embeddings[i], vec), "Problem with format " + archive_path

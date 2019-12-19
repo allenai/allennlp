@@ -27,7 +27,7 @@ from allennlp.nn import util
 logger = logging.getLogger(__name__)
 
 
-@TokenEmbedder.register("embedding", constructor='from_vocab_or_file')
+@TokenEmbedder.register("embedding", constructor="from_vocab_or_file")
 class Embedding(TokenEmbedder, Registrable):
     """
     A more featureful embedding module than the default in Pytorch.  Adds the ability to:
@@ -82,6 +82,7 @@ class Embedding(TokenEmbedder, Registrable):
 
     An Embedding module.
     """
+
     default_implementation = "embedding"
 
     def __init__(
@@ -348,7 +349,9 @@ class Embedding(TokenEmbedder, Registrable):
             vocab_namespace=vocab_namespace,
         )
 
+
 Embedding.register("embedding", constructor="from_vocab_or_file")(Embedding)
+
 
 def _read_pretrained_embeddings_file(
     file_uri: str, embedding_dim: int, vocab: Vocabulary, namespace: str = "tokens"

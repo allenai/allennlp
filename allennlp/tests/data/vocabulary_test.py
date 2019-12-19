@@ -429,22 +429,36 @@ class TestVocabulary(AllenNlpTestCase):
         instances = Batch([Instance({"text1": text_field1, "text2": text_field2})])
 
         # Following 2 should give error: tokens1 is non-padded in original_vocab but not in instances
-        params = Params({"type": "extend", "directory": vocab_dir, "non_padded_namespaces": [],
-                         "tokens_to_add": {"tokens1": ["a"], "tokens2": ["p"]}})
+        params = Params(
+            {
+                "type": "extend",
+                "directory": vocab_dir,
+                "non_padded_namespaces": [],
+                "tokens_to_add": {"tokens1": ["a"], "tokens2": ["p"]},
+            }
+        )
         with pytest.raises(ConfigurationError):
             _ = Vocabulary.from_params(params, instances=instances)
 
         # Following 2 should not give error: overlapping namespaces have same padding setting
         params = Params(
-            {"type": "extend", "directory": vocab_dir, "non_padded_namespaces": ["tokens1"],
-             "tokens_to_add": {"tokens1": ["a"], "tokens2": ["p"]}}
+            {
+                "type": "extend",
+                "directory": vocab_dir,
+                "non_padded_namespaces": ["tokens1"],
+                "tokens_to_add": {"tokens1": ["a"], "tokens2": ["p"]},
+            }
         )
         Vocabulary.from_params(params, instances=instances)
 
         # Following 2 should give error: tokens2 is padded in instances but not in original_vocab
         params = Params(
-            {"type": "extend", "directory": vocab_dir, "non_padded_namespaces": ["tokens1", "tokens2"],
-             "tokens_to_add": {"tokens1": ["a"], "tokens2": ["p"]}}
+            {
+                "type": "extend",
+                "directory": vocab_dir,
+                "non_padded_namespaces": ["tokens1", "tokens2"],
+                "tokens_to_add": {"tokens1": ["a"], "tokens2": ["p"]},
+            }
         )
         with pytest.raises(ConfigurationError):
             _ = Vocabulary.from_params(params, instances=instances)
@@ -688,7 +702,7 @@ class TestVocabulary(AllenNlpTestCase):
         assert "c" not in words
 
     def test_registrability(self):
-        @Vocabulary.register("my-vocabulary", constructor='constructor')
+        @Vocabulary.register("my-vocabulary", constructor="constructor")
         class MyVocabulary(Vocabulary):
             @classmethod
             def constructor(cls):
