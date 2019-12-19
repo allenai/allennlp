@@ -138,7 +138,6 @@ def create_kwargs(constructor: Callable[..., T], class_name: str, params: Params
         # it will have an __origin__ field indicating `typing.Dict`
         # and an __args__ field indicating `(str, int)`. We capture both.
         annotation = remove_optional(param.annotation)
-        print(constructor.__name__)
         kwargs[param_name] = construct_arg(class_name, param_name, annotation, param.default, params, **extras)
 
     params.assert_empty(class_name)
@@ -197,8 +196,6 @@ def construct_arg(
     name = param_name
     origin = getattr(annotation, "__origin__", None)
     args = getattr(annotation, "__args__", [])
-
-    print(class_name, name, annotation, params)
 
     # The parameter is optional if its default value is not the "no default" sentinel.
     optional = default != _NO_DEFAULT
@@ -268,7 +265,6 @@ def construct_arg(
             subextras = create_extras(value_cls, extras)
             value_dict[key] = value_cls.from_params(params=value_params, **subextras)
 
-        print(value_dict)
         return value_dict
 
     elif origin in (List, list) and len(args) == 1 and hasattr(args[0], "from_params"):
@@ -322,13 +318,11 @@ def construct_arg(
         # If none of them succeeded, we crash.
         raise ConfigurationError(f"Failed to construct argument {name} with type {annotation}")
     else:
-        print('giving up')
         # Pass it on as is and hope for the best.   ¯\_(ツ)_/¯
         if optional:
             value = params.pop(name, default, keep_as_dict=True)
         else:
             value = params.pop(name, keep_as_dict=True)
-        print(value)
         return value
 
 
