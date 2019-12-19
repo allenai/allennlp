@@ -116,7 +116,6 @@ setup(
         "scikit-learn",
         "scipy",
         "pytz>=2017.3",
-        "unidecode",
         "matplotlib>=2.2.3",
         "pytest",
         "flaky",
