@@ -249,4 +249,4 @@ def load_archive(
 def _cleanup_archive_dir(path: str):
     if os.path.exists(path):
         logger.info("removing temporary unarchived model dir at %s", path)
-        shutil.rmtree(path)
+        shutil.rmtree(path, ignore_errors=True)
