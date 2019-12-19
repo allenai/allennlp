@@ -4,7 +4,7 @@ any base class with a named registry for its subclasses and a decorator
 for registering them.
 """
 from collections import defaultdict
-from typing import TypeVar, Type, Dict, List
+from typing import TypeVar, Type, Callable, Dict, List, Optional, Tuple
 import importlib
 import logging
 
@@ -38,11 +38,11 @@ class Registrable(FromParams):
     a subclass to load all other subclasses and the abstract class).
     """
 
-    _registry: Dict[Type, Dict[str, Type]] = defaultdict(dict)
+    _registry: Dict[Type, Dict[str, Tuple[Type, str]]] = defaultdict(dict)
     default_implementation: str = None
 
     @classmethod
-    def register(cls: Type[T], name: str, exist_ok=False):
+    def register(cls: Type[T], name: str, constructor: str = None, exist_ok: bool = False):
         """
         Register a class under a particular name.
 
@@ -50,6 +50,10 @@ class Registrable(FromParams):
 
         name : ``str``
             The name to register the class under.
+        constructor : ``str``, optional (default=None)
+            The name of the method to use on the class to construct the object.  If this is given,
+            we will use this method (which must be a ``@classmethod``) instead of the default
+            constructor.
         exist_ok : ``bool``, optional (default=False)
             If True, overwrites any existing models registered under ``name``. Else,
             throws an error if a model is already registered under ``name``.
@@ -61,26 +65,49 @@ class Registrable(FromParams):
             if name in registry:
                 if exist_ok:
                     message = (
-                        f"{name} has already been registered as {registry[name].__name__}, but "
+                        f"{name} has already been registered as {registry[name][0].__name__}, but "
                         f"exist_ok=True, so overwriting with {cls.__name__}"
                     )
                     logger.info(message)
                 else:
                     message = (
                         f"Cannot register {name} as {cls.__name__}; "
-                        f"name already in use for {registry[name].__name__}"
+                        f"name already in use for {registry[name][0].__name__}"
                     )
                     raise ConfigurationError(message)
-            registry[name] = subclass
+            registry[name] = (subclass, constructor)
             return subclass
 
         return add_subclass_to_registry
 
     @classmethod
-    def by_name(cls: Type[T], name: str) -> Type[T]:
+    def by_name(cls: Type[T], name: str) -> Callable[..., T]:
+        """
+        Returns a callable function that constructs an argument of the registered class.  Because
+        you can register particular functions as constructors for specific names, this isn't
+        necessarily the ``__init__`` method of some class.
+        """
         logger.debug(f"instantiating registered subclass {name} of {cls}")
+        subclass, constructor = cls.resolve_class_name(name)
+        if not constructor:
+            return subclass
+        else:
+            return getattr(subclass, constructor)
+
+    @classmethod
+    def resolve_class_name(cls: Type[T], name: str) -> Tuple[Type[T], Optional[str]]:
+        """
+        Returns the subclass that corresponds to the given ``name``, along with the name of the
+        method that was registered as a constructor for that ``name``, if any.
+
+        This method also allows ``name`` to be a fully-specified module name, instead of a name that
+        was already added to the ``Registry``.  In that case, you cannot use a separate function as
+        a constructor (as you need to call ``cls.register()`` in order to tell us what separate
+        function to use).
+        """
         if name in Registrable._registry[cls]:
-            return Registrable._registry[cls].get(name)
+            subclass, constructor = Registrable._registry[cls].get(name)
+            return subclass, constructor
         elif "." in name:
             # This might be a fully qualified class name, so we'll try importing its "module"
             # and finding it there.
@@ -97,7 +124,9 @@ class Registrable(FromParams):
                 )
 
             try:
-                return getattr(module, class_name)
+                subclass = getattr(module, class_name)
+                constructor = None
+                return subclass, constructor
             except AttributeError:
                 raise ConfigurationError(
                     f"tried to interpret {name} as a path to a class "

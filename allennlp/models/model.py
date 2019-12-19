@@ -252,7 +252,8 @@ class Model(torch.nn.Module, Registrable):
         # If the config specifies a vocabulary subclass, we need to use it.
         vocab_params = config.get("vocabulary", Params({}))
         vocab_choice = vocab_params.pop_choice("type", Vocabulary.list_available(), True)
-        vocab = Vocabulary.by_name(vocab_choice).from_files(
+        vocab_class, _ = Vocabulary.resolve_class_name(vocab_choice)
+        vocab = vocab_class.from_files(
             vocab_dir, vocab_params.get("padding_token", None), vocab_params.get("oov_token", None)
         )
 

@@ -8,13 +8,13 @@ import time
 
 import torch
 
-from allennlp.common.registrable import Registrable
+from allennlp.common import FromParams
 from allennlp.nn import util as nn_util
 
 logger = logging.getLogger(__name__)
 
 
-class Checkpointer(Registrable):
+class Checkpointer(FromParams):
     """
     This class implements the functionality for checkpointing your model and trainer state
     during training. It is agnostic as to what those states look like (they are typed as

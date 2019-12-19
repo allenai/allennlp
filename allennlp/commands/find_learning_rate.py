@@ -208,7 +208,7 @@ def find_learning_rate_model(
     )
     vocab = Vocabulary.from_params(
         params.pop("vocabulary", {}),
-        (
+        instances=(
             instance
             for key, dataset in all_datasets.items()
             for instance in dataset

@@ -171,7 +171,7 @@ def evaluate_from_args(args: argparse.Namespace) -> Dict[str, Any]:
     )
     if args.extend_vocab:
         logger.info("Vocabulary is being extended with test instances.")
-        model.vocab.extend_from_instances(Params({}), instances=instances)
+        model.vocab.extend_from_instances(instances=instances)
         model.extend_embedder_vocab(embedding_sources)
 
     iterator_params = config.pop("validation_iterator", None)

@@ -66,8 +66,8 @@ class _PyTorchLearningRateSchedulerWithMetricsWrapper(_PyTorchLearningRateSchedu
 
 # Force PyTorch learning rate schedulers into the registry.
 Registrable._registry[LearningRateScheduler] = {
-    "step": torch.optim.lr_scheduler.StepLR,
-    "multi_step": torch.optim.lr_scheduler.MultiStepLR,
-    "exponential": torch.optim.lr_scheduler.ExponentialLR,
-    "reduce_on_plateau": torch.optim.lr_scheduler.ReduceLROnPlateau,
+    "step": (torch.optim.lr_scheduler.StepLR, None),
+    "multi_step": (torch.optim.lr_scheduler.MultiStepLR, None),
+    "exponential": (torch.optim.lr_scheduler.ExponentialLR, None),
+    "reduce_on_plateau": (torch.optim.lr_scheduler.ReduceLROnPlateau, None),
 }

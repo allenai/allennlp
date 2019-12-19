@@ -171,7 +171,7 @@ def _initializer_wrapper(init_function: Callable[..., None]) -> Type[Initializer
             return "Init: %s, with params: %s" % (self._init_function, self._kwargs)
 
         @classmethod
-        def from_params(cls, params: Params):  # type: ignore
+        def from_params(cls, params: Params, **extras):  # type: ignore
             return cls(**params.as_dict())
 
     return Init
@@ -179,21 +179,21 @@ def _initializer_wrapper(init_function: Callable[..., None]) -> Type[Initializer
 
 # There are no classes to decorate, so we hack these into Registrable._registry
 Registrable._registry[Initializer] = {
-    "normal": _initializer_wrapper(torch.nn.init.normal_),
-    "uniform": _initializer_wrapper(torch.nn.init.uniform_),
-    "orthogonal": _initializer_wrapper(torch.nn.init.orthogonal_),
-    "constant": _initializer_wrapper(torch.nn.init.constant_),
-    "dirac": _initializer_wrapper(torch.nn.init.dirac_),
-    "xavier_normal": _initializer_wrapper(torch.nn.init.xavier_normal_),
-    "xavier_uniform": _initializer_wrapper(torch.nn.init.xavier_uniform_),
-    "kaiming_normal": _initializer_wrapper(torch.nn.init.kaiming_normal_),
-    "kaiming_uniform": _initializer_wrapper(torch.nn.init.kaiming_uniform_),
-    "sparse": _initializer_wrapper(torch.nn.init.sparse_),
-    "eye": _initializer_wrapper(torch.nn.init.eye_),
-    "block_orthogonal": _initializer_wrapper(block_orthogonal),
-    "uniform_unit_scaling": _initializer_wrapper(uniform_unit_scaling),
-    "zero": _initializer_wrapper(zero),
-    "lstm_hidden_bias": _initializer_wrapper(lstm_hidden_bias),
+    "normal": (_initializer_wrapper(torch.nn.init.normal_), None),
+    "uniform": (_initializer_wrapper(torch.nn.init.uniform_), None),
+    "orthogonal": (_initializer_wrapper(torch.nn.init.orthogonal_), None),
+    "constant": (_initializer_wrapper(torch.nn.init.constant_), None),
+    "dirac": (_initializer_wrapper(torch.nn.init.dirac_), None),
+    "xavier_normal": (_initializer_wrapper(torch.nn.init.xavier_normal_), None),
+    "xavier_uniform": (_initializer_wrapper(torch.nn.init.xavier_uniform_), None),
+    "kaiming_normal": (_initializer_wrapper(torch.nn.init.kaiming_normal_), None),
+    "kaiming_uniform": (_initializer_wrapper(torch.nn.init.kaiming_uniform_), None),
+    "sparse": (_initializer_wrapper(torch.nn.init.sparse_), None),
+    "eye": (_initializer_wrapper(torch.nn.init.eye_), None),
+    "block_orthogonal": (_initializer_wrapper(block_orthogonal), None),
+    "uniform_unit_scaling": (_initializer_wrapper(uniform_unit_scaling), None),
+    "zero": (_initializer_wrapper(zero), None),
+    "lstm_hidden_bias": (_initializer_wrapper(lstm_hidden_bias), None),
 }
 
 

@@ -148,17 +148,17 @@ class Optimizer(Registrable):
 # We just use the Pytorch optimizers, so here we force them into
 # Registry._registry so we can build them from params.
 Registrable._registry[Optimizer] = {
-    "adam": torch.optim.Adam,
-    "adamw": torch.optim.AdamW,
-    "huggingface_adamw": transformers.AdamW,
-    "sparse_adam": torch.optim.SparseAdam,
-    "adagrad": torch.optim.Adagrad,
-    "adadelta": torch.optim.Adadelta,
-    "sgd": torch.optim.SGD,
-    "rmsprop": torch.optim.RMSprop,
-    "adamax": torch.optim.Adamax,
-    "averaged_sgd": torch.optim.ASGD,
-    "bert_adam": BertAdam,
+    "adam": (torch.optim.Adam, None),
+    "adamw": (torch.optim.AdamW, None),
+    "huggingface_adamw": (transformers.AdamW, None),
+    "sparse_adam": (torch.optim.SparseAdam, None),
+    "adagrad": (torch.optim.Adagrad, None),
+    "adadelta": (torch.optim.Adadelta, None),
+    "sgd": (torch.optim.SGD, None),
+    "rmsprop": (torch.optim.RMSprop, None),
+    "adamax": (torch.optim.Adamax, None),
+    "averaged_sgd": (torch.optim.ASGD, None),
+    "bert_adam": (BertAdam, None),
 }
 
 
