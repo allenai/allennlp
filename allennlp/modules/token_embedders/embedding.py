@@ -16,7 +16,7 @@ with warnings.catch_warnings():
     warnings.filterwarnings("ignore", category=FutureWarning)
     import h5py
 
-from allennlp.common import Params, Tqdm
+from allennlp.common import Params, Tqdm, Registrable
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.file_utils import get_file_extension, cached_path, is_url_or_existing_file
 from allennlp.data import Vocabulary
@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 
 
 @TokenEmbedder.register("embedding", constructor='from_vocab_or_file')
-class Embedding(TokenEmbedder):
+class Embedding(TokenEmbedder, Registrable):
     """
     A more featureful embedding module than the default in Pytorch.  Adds the ability to:
 
@@ -82,6 +82,7 @@ class Embedding(TokenEmbedder):
 
     An Embedding module.
     """
+    default_implementation = "embedding"
 
     def __init__(
         self,
@@ -347,6 +348,7 @@ class Embedding(TokenEmbedder):
             vocab_namespace=vocab_namespace,
         )
 
+Embedding.register("embedding", constructor="from_vocab_or_file")(Embedding)
 
 def _read_pretrained_embeddings_file(
     file_uri: str, embedding_dim: int, vocab: Vocabulary, namespace: str = "tokens"

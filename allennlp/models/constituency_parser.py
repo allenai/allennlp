@@ -8,7 +8,7 @@ from nltk import Tree
 from allennlp.common.checks import check_dimensions_match
 from allennlp.data import Vocabulary
 from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder, FeedForward
-from allennlp.modules.token_embedders import TokenEmbedder
+from allennlp.modules.token_embedders import Embedding
 from allennlp.modules.span_extractors.span_extractor import SpanExtractor
 from allennlp.models.model import Model
 from allennlp.nn import InitializerApplicator, RegularizerApplicator
@@ -65,7 +65,7 @@ class SpanConstituencyParser(Model):
     feedforward : ``FeedForward``, required.
         The FeedForward layer that we will use in between the encoder and the linear
         projection to a distribution over span labels.
-    pos_tag_embedding : ``TokenEmbedder``, optional.
+    pos_tag_embedding : ``Embedding``, optional.
         Used to embed the ``pos_tags`` ``SequenceLabelField`` we get as input to the model.
     initializer : ``InitializerApplicator``, optional (default=``InitializerApplicator()``)
         Used to initialize the model parameters.
@@ -85,7 +85,7 @@ class SpanConstituencyParser(Model):
         span_extractor: SpanExtractor,
         encoder: Seq2SeqEncoder,
         feedforward: FeedForward = None,
-        pos_tag_embedding: TokenEmbedder = None,
+        pos_tag_embedding: Embedding = None,
         initializer: InitializerApplicator = InitializerApplicator(),
         regularizer: Optional[RegularizerApplicator] = None,
         evalb_directory_path: str = DEFAULT_EVALB_DIR,

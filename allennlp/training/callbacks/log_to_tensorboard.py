@@ -124,5 +124,5 @@ class LogToTensorboard(Callback):
             params=params, serialization_dir=serialization_dir, get_batch_num_total=lambda: None
         )
         # TODO(mattg): remove get_batch_num_total from TensorboardWriter, and instead just add a
-        # method / arguments to tell the writr what batch num we're at.
+        # method / arguments to tell the writer what batch num we're at.
         return LogToTensorboard(tensorboard, log_batch_size_period)

@@ -2,6 +2,7 @@ import torch
 
 from allennlp.common import Params
 from allennlp.data.vocabulary import Vocabulary
+from allennlp.modules.token_embedders.embedding import Embedding
 from allennlp.modules.seq2vec_encoders.seq2vec_encoder import Seq2VecEncoder
 from allennlp.modules.time_distributed import TimeDistributed
 from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
@@ -19,7 +20,7 @@ class TokenCharactersEncoder(TokenEmbedder):
     We take the embedding and encoding modules as input, so this class is itself quite simple.
     """
 
-    def __init__(self, embedding: TokenEmbedder, encoder: Seq2VecEncoder, dropout: float = 0.0) -> None:
+    def __init__(self, embedding: Embedding, encoder: Seq2VecEncoder, dropout: float = 0.0) -> None:
         super().__init__()
         self._embedding = TimeDistributed(embedding)
         self._encoder = TimeDistributed(encoder)

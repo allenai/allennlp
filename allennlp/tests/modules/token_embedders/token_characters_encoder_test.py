@@ -33,7 +33,7 @@ class TestTokenCharactersEncoder(AllenNlpTestCase):
             }
         )
         self.encoder = TokenCharactersEncoder.from_params(vocab=self.vocab, params=deepcopy(params))
-        self.embedding = Embedding.from_vocab_or_file(vocab=self.vocab, **params["embedding"].as_dict(quiet=True))
+        self.embedding = Embedding.from_params(vocab=self.vocab, params=params["embedding"])
         self.inner_encoder = Seq2VecEncoder.from_params(params["encoder"])
         constant_init = Initializer.from_params(Params({"type": "constant", "val": 1.0}))
         initializer = InitializerApplicator([(".*", constant_init)])

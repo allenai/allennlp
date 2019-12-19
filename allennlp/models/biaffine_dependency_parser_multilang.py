@@ -8,7 +8,7 @@ import numpy
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.data import Vocabulary
-from allennlp.modules import Seq2SeqEncoder, TextFieldEmbedder, TokenEmbedder
+from allennlp.modules import Seq2SeqEncoder, TextFieldEmbedder, Embedding
 from allennlp.modules import FeedForward
 from allennlp.models.model import Model
 from allennlp.models.biaffine_dependency_parser import BiaffineDependencyParser
@@ -57,7 +57,7 @@ class BiaffineDependencyParserMultiLang(BiaffineDependencyParser):
     arc_feedforward : ``FeedForward``, optional, (default = None).
         The feedforward network used to produce arc representations.
         By default, a 1 layer feedforward network with an elu activation is used.
-    pos_tag_embedding : ``TokenEmbedder``, optional.
+    pos_tag_embedding : ``Embedding``, optional.
         Used to embed the ``pos_tags`` ``SequenceLabelField`` we get as input to the model.
     use_mst_decoding_for_validation : ``bool``, optional (default = True).
         Whether to use Edmond's algorithm to find the optimal minimum spanning tree during validation.
@@ -84,7 +84,7 @@ class BiaffineDependencyParserMultiLang(BiaffineDependencyParser):
         arc_representation_dim: int,
         tag_feedforward: FeedForward = None,
         arc_feedforward: FeedForward = None,
-        pos_tag_embedding: TokenEmbedder = None,
+        pos_tag_embedding: Embedding = None,
         use_mst_decoding_for_validation: bool = True,
         langs_for_early_stop: List[str] = None,
         dropout: float = 0.0,

@@ -4,7 +4,7 @@ import torch
 from torch.nn import Module
 
 from allennlp.common import Registrable
-from allennlp.modules import TokenEmbedder
+from allennlp.modules import Embedding
 
 
 class SeqDecoder(Module, Registrable):
@@ -29,7 +29,7 @@ class SeqDecoder(Module, Registrable):
 
     default_implementation = "auto_regressive_seq_decoder"
 
-    def __init__(self, target_embedder: TokenEmbedder) -> None:
+    def __init__(self, target_embedder: Embedding) -> None:
         super().__init__()
         self.target_embedder = target_embedder
 

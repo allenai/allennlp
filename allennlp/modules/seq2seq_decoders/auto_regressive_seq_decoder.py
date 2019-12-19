@@ -10,7 +10,7 @@ from allennlp.common.checks import ConfigurationError
 from allennlp.common.util import END_SYMBOL, START_SYMBOL
 from allennlp.modules.seq2seq_decoders.seq_decoder import SeqDecoder
 from allennlp.data import Vocabulary
-from allennlp.modules import TokenEmbedder
+from allennlp.modules import Embedding
 from allennlp.modules.seq2seq_decoders.decoder_net import DecoderNet
 from allennlp.nn import util
 from allennlp.nn.beam_search import BeamSearch
@@ -32,7 +32,7 @@ class AutoRegressiveSeqDecoder(SeqDecoder):
         Module that contains implementation of neural network for decoding output elements
     max_decoding_steps : ``int``, required
         Maximum length of decoded sequences.
-    target_embedder : ``Embedding``, required
+    target_embedder : ``Embedding``
         Embedder for target tokens.
     target_namespace : ``str``, optional (default = 'tokens')
         If the target side vocabulary is different from the source side's, you need to specify the
@@ -60,7 +60,7 @@ class AutoRegressiveSeqDecoder(SeqDecoder):
         vocab: Vocabulary,
         decoder_net: DecoderNet,
         max_decoding_steps: int,
-        target_embedder: TokenEmbedder,
+        target_embedder: Embedding,
         target_namespace: str = "tokens",
         tie_output_embedding: bool = False,
         scheduled_sampling_ratio: float = 0,
