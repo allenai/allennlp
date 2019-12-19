@@ -8,6 +8,9 @@ The available optimizers are
 * `"adadelta" <https://pytorch.org/docs/master/optim.html#torch.optim.Adadelta>`_
 * `"adagrad" <https://pytorch.org/docs/master/optim.html#torch.optim.Adagrad>`_
 * `"adam" <https://pytorch.org/docs/master/optim.html#torch.optim.Adam>`_
+* `"adamw" <https://pytorch.org/docs/master/optim.html#torch.optim.AdamW>`_
+* `"huggingface_adamw"
+  <https://huggingface.co/transformers/main_classes/optimizer_schedules.html#transformers.AdamW>`_
 * `"sparse_adam" <https://pytorch.org/docs/master/optim.html#torch.optim.SparseAdam>`_
 * `"sgd" <https://pytorch.org/docs/master/optim.html#torch.optim.SGD>`_
 * `"rmsprop <https://pytorch.org/docs/master/optim.html#torch.optim.RMSprop>`_
@@ -22,6 +25,7 @@ from typing import List, Any, Dict
 
 import torch
 from pytorch_pretrained_bert.optimization import BertAdam
+import transformers
 
 from allennlp.common import Params, Registrable
 
@@ -145,6 +149,8 @@ class Optimizer(Registrable):
 # Registry._registry so we can build them from params.
 Registrable._registry[Optimizer] = {
     "adam": torch.optim.Adam,
+    "adamw": torch.optim.AdamW,
+    "huggingface_adamw": transformers.AdamW,
     "sparse_adam": torch.optim.SparseAdam,
     "adagrad": torch.optim.Adagrad,
     "adadelta": torch.optim.Adadelta,
