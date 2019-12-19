@@ -1,3 +1,4 @@
+from flaky import flaky
 from transformers.tokenization_auto import AutoTokenizer
 
 from allennlp.common.testing import AllenNlpTestCase
@@ -7,6 +8,7 @@ from allennlp.data.tokenizers import PretrainedTransformerTokenizer
 
 
 class TestPretrainedTransformerIndexer(AllenNlpTestCase):
+    @flaky
     def test_as_array_produces_token_sequence_bert_uncased(self):
         tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
         allennlp_tokenizer = PretrainedTransformerTokenizer("bert-base-uncased")
