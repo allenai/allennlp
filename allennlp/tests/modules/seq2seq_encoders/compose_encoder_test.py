@@ -9,7 +9,6 @@ from allennlp.modules import FeedForward
 
 
 class MockSeq2SeqEncoder(Seq2SeqEncoder):
-
     def __init__(self, input_dim: int, output_dim: int, bidirectional: bool = False):
         super().__init__()
         self.input_dim = input_dim
@@ -34,19 +33,19 @@ class MockSeq2SeqEncoder(Seq2SeqEncoder):
 
 
 def _make_feedforward(input_dim, output_dim):
-    return FeedForwardEncoder(FeedForward(input_dim=input_dim, num_layers=1,
-                                          activations=torch.relu, hidden_dims=output_dim))
+    return FeedForwardEncoder(
+        FeedForward(
+            input_dim=input_dim, num_layers=1, activations=torch.relu, hidden_dims=output_dim
+        )
+    )
 
 
 class TestPassThroughEncoder(AllenNlpTestCase):
-
     def setUp(self):
         super().setUp()
-        self.encoder = ComposeEncoder([
-            _make_feedforward(9, 5),
-            _make_feedforward(5, 10),
-            _make_feedforward(10, 3),
-        ])
+        self.encoder = ComposeEncoder(
+            [_make_feedforward(9, 5), _make_feedforward(5, 10), _make_feedforward(10, 3),]
+        )
 
     def test_get_dimension_is_correct(self):
         assert self.encoder.get_input_dim() == 9
@@ -59,8 +58,9 @@ class TestPassThroughEncoder(AllenNlpTestCase):
         for encoder in self.encoder.encoders:
             tensor = encoder(tensor)
 
-        numpy.testing.assert_array_almost_equal(output.detach().cpu().numpy(),
-                                                tensor.detach().cpu().numpy())
+        numpy.testing.assert_array_almost_equal(
+            output.detach().cpu().numpy(), tensor.detach().cpu().numpy()
+        )
 
     def test_pass_through_encoder_with_mask(self):
         tensor = torch.randn([2, 3, 9])
@@ -70,8 +70,9 @@ class TestPassThroughEncoder(AllenNlpTestCase):
         for encoder in self.encoder.encoders:
             tensor = encoder(tensor, mask)
 
-        numpy.testing.assert_array_almost_equal(output.detach().cpu().numpy(),
-                                                tensor.detach().cpu().numpy())
+        numpy.testing.assert_array_almost_equal(
+            output.detach().cpu().numpy(), tensor.detach().cpu().numpy()
+        )
 
     def test_empty(self):
         with self.assertRaises(ValueError):
@@ -79,20 +80,26 @@ class TestPassThroughEncoder(AllenNlpTestCase):
 
     def test_mismatched_size(self):
         with self.assertRaises(ValueError):
-            ComposeEncoder([
-                MockSeq2SeqEncoder(input_dim=9, output_dim=5),
-                MockSeq2SeqEncoder(input_dim=1, output_dim=2),
-            ])
+            ComposeEncoder(
+                [
+                    MockSeq2SeqEncoder(input_dim=9, output_dim=5),
+                    MockSeq2SeqEncoder(input_dim=1, output_dim=2),
+                ]
+            )
 
     def test_mismatched_bidirectionality(self):
         with self.assertRaises(ValueError):
-            ComposeEncoder([
-                MockSeq2SeqEncoder(input_dim=9, output_dim=5),
-                MockSeq2SeqEncoder(input_dim=5, output_dim=2, bidirectional=True),
-            ])
+            ComposeEncoder(
+                [
+                    MockSeq2SeqEncoder(input_dim=9, output_dim=5),
+                    MockSeq2SeqEncoder(input_dim=5, output_dim=2, bidirectional=True),
+                ]
+            )
 
     def test_all_bidirectional(self):
-        ComposeEncoder([
-            MockSeq2SeqEncoder(input_dim=9, output_dim=5, bidirectional=True),
-            MockSeq2SeqEncoder(input_dim=5, output_dim=2, bidirectional=True),
-        ])
+        ComposeEncoder(
+            [
+                MockSeq2SeqEncoder(input_dim=9, output_dim=5, bidirectional=True),
+                MockSeq2SeqEncoder(input_dim=5, output_dim=2, bidirectional=True),
+            ]
+        )
