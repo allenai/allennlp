@@ -35,12 +35,11 @@ class ComposeEncoder(Seq2SeqEncoder):
         if len(self.encoders) < 1:
             raise ValueError("Need at least one encoder.")
 
-        last_encoder = None
-        for encoder in encoders:
-            if (last_encoder is not None and
-                    last_encoder.get_output_dim() != encoder.get_input_dim()):
+        last_enc = None
+        for enc in encoders:
+            if last_enc is not None and last_enc.get_output_dim() != enc.get_input_dim():
                 raise ValueError("Encoder input and output dimensions don't match.")
-            last_encoder = encoder
+            last_enc = enc
 
     @overrides
     def forward(self,  # pylint: disable=arguments-differ
@@ -59,7 +58,7 @@ class ComposeEncoder(Seq2SeqEncoder):
         A tensor computed by composing the sequence of encoders.
         """
         for encoder in self.encoders:
-          inputs = encoder(inputs, mask)
+            inputs = encoder(inputs, mask)
         return inputs
 
     @overrides

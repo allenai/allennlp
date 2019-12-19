@@ -10,7 +10,6 @@ from allennlp.modules import FeedForward
 
 class MockSeq2SeqEncoder(Seq2SeqEncoder):
 
-
     def __init__(self, input_dim: int, output_dim: int, bidirectional: bool = False):
         super().__init__()
         self.input_dim = input_dim
