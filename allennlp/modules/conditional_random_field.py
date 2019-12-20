@@ -331,7 +331,7 @@ class ConditionalRandomField(torch.nn.Module):
         return torch.sum(log_numerator - log_denominator)
 
     def viterbi_tags(
-        self, logits: torch.Tensor, mask: torch.Tensor, top_k: int = None
+        self, logits: torch.Tensor, mask: torch.Tensor = None, top_k: int = None
     ) -> Union[List[VITERBI_DECODING], List[List[VITERBI_DECODING]]]:
         """
         Uses viterbi algorithm to find most likely tags for the given inputs.
@@ -344,6 +344,9 @@ class ConditionalRandomField(torch.nn.Module):
         For backwards compatibility, if top_k is None, then instead returns a flat list of
         tag sequences (the top tag sequence for each batch item).
         """
+        if mask is None:
+            mask = torch.ones(*logits.shape[:2], dtype=torch.long, device=logits.device)
+
         if top_k is None:
             top_k = 1
             flatten_output = True
@@ -390,14 +393,16 @@ class ConditionalRandomField(torch.nn.Module):
         tag_sequence = torch.Tensor(max_seq_length + 2, num_tags + 2)
 
         for prediction, prediction_mask in zip(logits, mask):
-            sequence_length = torch.sum(prediction_mask)
+            mask_indices = prediction_mask.nonzero().squeeze()
+            masked_prediction = torch.index_select(prediction, 0, mask_indices)
+            sequence_length = masked_prediction.shape[0]
 
             # Start with everything totally unlikely
             tag_sequence.fill_(-10000.0)
             # At timestep 0 we must have the START_TAG
             tag_sequence[0, start_tag] = 0.0
             # At steps 1, ..., sequence_length we just use the incoming prediction
-            tag_sequence[1 : (sequence_length + 1), :num_tags] = prediction[:sequence_length]
+            tag_sequence[1 : (sequence_length + 1), :num_tags] = masked_prediction
             # And at the last timestep we must have the END_TAG
             tag_sequence[sequence_length + 1, end_tag] = 0.0
 
