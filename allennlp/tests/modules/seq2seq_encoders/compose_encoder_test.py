@@ -44,7 +44,8 @@ class TestPassThroughEncoder(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
         self.encoder = ComposeEncoder(
-            [_make_feedforward(9, 5), _make_feedforward(5, 10), _make_feedforward(10, 3)])
+            [_make_feedforward(9, 5), _make_feedforward(5, 10), _make_feedforward(10, 3)]
+        )
 
     def test_get_dimension_is_correct(self):
         assert self.encoder.get_input_dim() == 9
