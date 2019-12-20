@@ -127,7 +127,7 @@ setup(
         "sqlparse>=0.2.4",
         "word2number>=1.1",
         "pytorch-pretrained-bert>=0.6.0",
-        "transformers>=2.1.1,!=2.2.1",
+        "transformers>=2.1.1,!=2.2.1,!=2.2.2",
         "jsonpickle",
         "python-dateutil<2.8.1",
     ],
