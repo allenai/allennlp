@@ -32,7 +32,7 @@ for making predictions and serving up demos.
 For those purposes we'll want to be able to
 accept JSON inputs and return JSON results.
 
-AllenNLP provides a [`Predictor`](https://github.com/allenai/allennlp/blob/master/allennlp/service/predictors/predictor.py)
+AllenNLP provides a [`Predictor`](https://github.com/allenai/allennlp/blob/master/allennlp/predictors/predictor.py)
 abstraction that wraps a model and does precisely this.
 Most of the functionality you need for a `Predictor` is already implemented in the base class.
 Usually you only need to implement the `predict_json` function,
@@ -199,10 +199,15 @@ you just need to specify an `--output-file`.
 ## Running a Web Demo
 
 Once you have a trained model and a predictor,
-it's easy to run a simple web demo:
+it's easy to run a simple web demo. First, install the code containing the server like so:
 
 ```
-$ python -m allennlp.service.server_simple --help
+git clone https://github.com/allenai/allennlp-server.git
+pip install -r allennlp-server/requirements.txt
+```
+
+```
+$ python allennlp-server/server_simple.py --help
 
 usage: server_simple.py [-h] [--archive-path ARCHIVE_PATH]
                         [--predictor PREDICTOR] [--static-dir STATIC_DIR]
@@ -213,7 +218,7 @@ usage: server_simple.py [-h] [--archive-path ARCHIVE_PATH]
 Let's ignore the `--static-dir` flag for now and serve up the test fixture model:
 
 ```
-python -m allennlp.service.server_simple \
+python allennlp-server/server_simple.py \
     --archive-path tests/fixtures/model.tar.gz \
     --predictor paper-classifier \
     --include-package my_library \
@@ -265,7 +270,7 @@ To start with, we need to [add a `script` tag to load chart.js](https://github.c
 ```
 
 If you look at the original HTML, the output starts off
-[with a placeholder](https://github.com/allenai/allennlp/blob/master/allennlp/service/server_simple.py#L186):
+[with a placeholder](https://github.com/allenai/allennlp-server/blob/master/server_simple.py#L186):
 
 ```html
 <div id="output" class="output">
@@ -278,7 +283,7 @@ If you look at the original HTML, the output starts off
 ```
 
 And the JavaScript code just
-[has a callback](https://github.com/allenai/allennlp/blob/master/allennlp/service/server_simple.py#L214)
+[has a callback](https://github.com/allenai/allennlp-server/blob/master/server_simple.py#L214)
 that runs when it gets a prediction back from the server:
 
 ```javascript
@@ -320,7 +325,7 @@ var pieChart = new Chart(ctx, {
 Now we can run our custom demo:
 
 ```bash
-python -m allennlp.service.server_simple \
+python allennlp-server/server_simple.py \
     --archive-path tests/fixtures/model.tar.gz \
     --predictor paper-classifier \
     --include-package my_library \

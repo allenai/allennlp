@@ -23,13 +23,13 @@ MODULES_THAT_NEED_NO_DOCS: Set[str] = {
     # Deprecated in favor of
     # allennlp.modules.token_embedders.language_model_token_embedder
     "allennlp.modules.token_embedders.bidirectional_language_model_token_embedder",
-    # Deprecated in favor of allennlp.predictors.
-    "allennlp.service.predictors.*",
 }
 
 DOCS_THAT_NEED_NO_MODULES: Set[str] = {
     # Function is defined in allennlp/commands/__init__.py.
-    "allennlp.commands.main"
+    "allennlp.commands.main",
+    # Moved to another repo. Docs replaced by link to same.
+    "allennlp.pretrained",
 }
 
 

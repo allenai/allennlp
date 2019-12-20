@@ -455,7 +455,7 @@ lstm = PytorchSeq2SeqWrapper(torch.nn.LSTM(EMBEDDING_DIM, HIDDEN_DIM, batch_firs
 
 You could write
 
-```
+```python
 lstm_params = Params({
     "type": "lstm",
     "input_size": EMBEDDING_DIM,
@@ -589,7 +589,7 @@ The first big change is that we need to add a second `TokenIndexer` to our datas
 that captures the character-level indices. As the token indexers can be provided as a
 constructor input, we can accomplish this with just a small change to our configuration file:
 
-```json
+```jsonnet
     "dataset_reader": {
         "type": "pos-tutorial",
         "token_indexers": {
@@ -613,7 +613,7 @@ when we specify token embedders inside our model.
 
 The section of the configuration corresponding to our model was previously
 
-```json
+```jsonnet
     "model": {
         "type": "lstm-tagger",
         "word_embeddings": {
@@ -636,7 +636,7 @@ The `BasicTokenEmbedder` already knows that if it has multiple token embedders i
 should concatenate their outputs. So all we need to do is add a second token embedder
 with the right key:
 
-```json
+```jsonnet
             "token_embedders": {
                 "tokens": {
                     "type": "embedding",
@@ -700,10 +700,16 @@ vocabulary, and weights. In the previous example the file will be located at
 /tmp/serialization_dir_exercise/model.tar.gz
 ```
 
-Using a trained model it's easy to run a simple text-in-JSON-out demo:
+Using a trained model it's easy to run a simple text-in-JSON-out demo. First, install the demo code:
 
 ```bash
-python -m allennlp.service.server_simple \
+git clone https://github.com/allenai/allennlp-server.git
+pip install allennlp-server/requirements.txt
+```
+
+Now we are ready to run our simple demo!
+```bash
+python allennlp-server/server_simple.py \
     --archive-path /tmp/serialization_dir_exercise/model.tar.gz \
     --predictor sentence-tagger \
     --title "AllenNLP Tutorial" \
