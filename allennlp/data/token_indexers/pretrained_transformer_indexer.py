@@ -56,7 +56,7 @@ class PretrainedTransformerIndexer(TokenIndexer[int]):
         else:
             logger.warning(
                 """Wasn't able to fetch vocabulary from pretrained transformers lib.
-                Neother <vocab> nor <encoder> are the valid fields for vocab.
+                Neither <vocab> nor <encoder> are the valid fields for vocab.
                 Your tokens will still be correctly indexed, but vocabulary file will not be saved."""
             )
         if vocab_field_name is not None:
@@ -83,7 +83,7 @@ class PretrainedTransformerIndexer(TokenIndexer[int]):
             if getattr(token, "text_id", None) is not None:
                 # `text_id` being set on the token means that we aren't using the vocab, we just use
                 # this id instead. Id comes from the pretrained vocab.
-                # # It computed in PretrainedTransformerTokenizer.
+                # It is computed in PretrainedTransformerTokenizer.
                 indices.append(token.text_id)
             else:
                 raise KeyError(
