@@ -67,8 +67,8 @@ class Hotflip(Attacker):
             if not self.vocab._index_to_token[self.namespace][i].isalnum():
                 self.invalid_replacement_indices.append(i)
         self.embedding_matrix: torch.Tensor = None
-        self.embedding_layer: torch.nn.Module = None       
-        #get device number 
+        self.embedding_layer: torch.nn.Module = None   
+        # get device number 
         self.cuda_device = predictor.cuda_device
 
     def initialize(self):
@@ -149,7 +149,7 @@ class Hotflip(Attacker):
                 raise RuntimeError("Unsupported token indexer:", token_indexer)
 
         return util.move_to_device(inputs, self.cuda_device)
-   
+
     def attack_from_json(
         self,
         inputs: JsonDict,
