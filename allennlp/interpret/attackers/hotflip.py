@@ -60,6 +60,7 @@ class Hotflip(Attacker):
         super().__init__(predictor)
         self.vocab = self.predictor._model.vocab
         self.namespace = vocab_namespace
+        
         # Force new tokens to be alphanumeric
         self.max_tokens = max_tokens
         self.invalid_replacement_indices: List[int] = []
@@ -67,7 +68,11 @@ class Hotflip(Attacker):
             if not self.vocab._index_to_token[self.namespace][i].isalnum():
                 self.invalid_replacement_indices.append(i)
         self.embedding_matrix: torch.Tensor = None
-        self.embedding_layer: torch.nn.Module = None
+        self.embedding_layer: torch.nn.Module = None       
+            
+        #get device number 
+        self.cuda_device = predictor.cuda_device
+        
 
     def initialize(self):
         """
@@ -76,7 +81,7 @@ class Hotflip(Attacker):
         being done when __init__() is called.
         """
         if self.embedding_matrix is None:
-            self.embedding_matrix = self._construct_embedding_matrix().cpu()
+            self.embedding_matrix = self._construct_embedding_matrix()
 
     def _construct_embedding_matrix(self) -> Embedding:
         """
@@ -103,7 +108,7 @@ class Hotflip(Attacker):
         self.invalid_replacement_indices = [
             i for i in self.invalid_replacement_indices if i < max_index
         ]
-
+        
         inputs = self._make_embedder_input(all_tokens)
 
         # pass all tokens through the fake matrix and create an embedding out of it.
@@ -145,8 +150,9 @@ class Hotflip(Attacker):
                 inputs[indexer_name] = torch.LongTensor(elmo_tokens).unsqueeze(0)
             else:
                 raise RuntimeError("Unsupported token indexer:", token_indexer)
-        return inputs
-
+    
+        return util.move_to_device(inputs, self.cuda_device)
+   
     def attack_from_json(
         self,
         inputs: JsonDict,
@@ -230,6 +236,7 @@ class Hotflip(Attacker):
             # them together at the end of the loop, even though we use grads at the beginning and
             # outputs at the end.  This is our initial gradient for the beginning of the loop.  The
             # output can be ignored here.
+        
             grads, outputs = self.predictor.get_gradients([instance])
 
             # Ignore any token that is in the ignore_tokens list by setting the token to already
@@ -324,7 +331,7 @@ class Hotflip(Attacker):
         function uses the grad, alongside the embedding_matrix to select the token that maximizes the
         first-order taylor approximation of the loss.
         """
-        grad = torch.from_numpy(grad)
+        grad = util.move_to_device(torch.from_numpy(grad), self.cuda_device)
         if token_idx >= self.embedding_matrix.size(0):
             # This happens when we've truncated our fake embedding matrix.  We need to do a dot
             # product with the word vector of the current token; if that token is out of
@@ -333,7 +340,7 @@ class Hotflip(Attacker):
             word_embedding = self.embedding_layer(inputs)[0]
         else:
             word_embedding = torch.nn.functional.embedding(
-                torch.LongTensor([token_idx]), self.embedding_matrix
+                util.move_to_device(torch.LongTensor([token_idx]), self.cuda_device), self.embedding_matrix
             )
         word_embedding = word_embedding.detach().unsqueeze(0)
         grad = grad.unsqueeze(0).unsqueeze(0)
