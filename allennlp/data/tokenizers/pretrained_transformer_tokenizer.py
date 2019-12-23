@@ -47,6 +47,8 @@ class PretrainedTransformerTokenizer(Tokenizer):
         - 'only_first': Only truncate the first sequence
         - 'only_second': Only truncate the second sequence
         - 'do_not_truncate': Do not truncate (raise an error if the input sequence is longer than max_length)
+    calculate_character_offsets: ``bool``, optional (default=False)
+        Attempts to reconstruct character offsets for the instances of Token that this tokenizer produces.
 
     Argument descriptions are from
     https://github.com/huggingface/transformers/blob/155c782a2ccd103cf63ad48a2becd7c76a7d2115/transformers/tokenization_utils.py#L691
