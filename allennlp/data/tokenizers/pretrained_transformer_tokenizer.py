@@ -64,18 +64,18 @@ class PretrainedTransformerTokenizer(Tokenizer):
         calculate_character_offsets: bool = False,
     ) -> None:
         self._tokenizer = AutoTokenizer.from_pretrained(model_name)
+
+        # Huggingface tokenizers have different ways of remembering whether they lowercase or not. Detecting it
+        # this way seems like the least brittle way to do it.
+        tokenized = self._tokenizer.tokenize("FOO")  # Use a short word that's unlikely to be cut into word pieces.
+        detokenized = " ".join(tokenized)
+        self._tokenizer_lowercases = "foo" in detokenized
+
         self._add_special_tokens = add_special_tokens
         self._max_length = max_length
         self._stride = stride
         self._truncation_strategy = truncation_strategy
         self._calculate_character_offsets = calculate_character_offsets
-
-    def _tokenizer_lowercases(self):
-        if hasattr(self._tokenizer, "do_lower_case"):
-            return self._tokenizer.do_lower_case
-        if hasattr(self._tokenizer, "basic_tokenizer"):
-            return self._tokenizer.basic_tokenizer.do_lower_case
-        return False
 
     def _tokenize(self, sentence_1: str, sentence_2: str = None):
         """
@@ -116,7 +116,7 @@ class PretrainedTransformerTokenizer(Tokenizer):
                 whole_text += (
                     sentence_2
                 )  # Calculating character offsets with sentence pairs is sketchy at best.
-            if self._tokenizer_lowercases():
+            if self._tokenizer_lowercases:
                 whole_text = whole_text.lower()
 
             min_allowed_skipped_whitespace = 3
@@ -126,7 +126,7 @@ class PretrainedTransformerTokenizer(Tokenizer):
             token_index = 0
             while text_index < len(whole_text) and token_index < len(tokens):
                 token_text = tokens[token_index].text
-                if self._tokenizer_lowercases():
+                if self._tokenizer_lowercases:
                     token_text = token_text.lower()
                 if token_text.startswith("##"):
                     token_text = token_text[2:]
