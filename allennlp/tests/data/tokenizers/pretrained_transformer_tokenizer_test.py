@@ -230,3 +230,76 @@ class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
         with_idx_time = time.monotonic() - start
 
         assert with_idx_time <= 2 * without_idx_time
+
+    def test_token_idx_sentence_pairs(self):
+        first_sentence = "I went to the zoo yesterday, but they had only one animal."
+        second_sentence = "It was a shitzu."
+        expected_tokens = [
+            "<s>",
+            "I",
+            "Ġwent",
+            "Ġto",
+            "Ġthe",
+            "Ġzoo",
+            "Ġyesterday",
+            ",",
+            "Ġbut",
+            "Ġthey",
+            "Ġhad",
+            "Ġonly",
+            "Ġone",
+            "Ġanimal",
+            ".",
+            "</s>",
+            "</s>",
+            "It",
+            "Ġwas",
+            "Ġa",
+            "Ġsh",
+            "itz",
+            "u",
+            ".",
+            "</s>",
+        ]
+        expected_idxs = [
+            None,
+            0,
+            2,
+            7,
+            10,
+            14,
+            18,
+            27,
+            29,
+            33,
+            38,
+            42,
+            47,
+            51,
+            57,
+            None,
+            None,
+            58,
+            61,
+            65,
+            67,
+            69,
+            72,
+            73,
+            None,
+        ]
+
+        tokenizer = PretrainedTransformerTokenizer("roberta-base", calculate_character_offsets=True)
+        tokenized = tokenizer.tokenize_sentence_pair(first_sentence, second_sentence)
+        tokens = [t.text for t in tokenized]
+        assert tokens == expected_tokens
+        idxs = [t.idx for t in tokenized]
+        assert idxs == expected_idxs
+
+        # Assert that the first and the second sentence are run together with no space in between.
+        first_sentence_end_index = tokens.index("</s>") - 1
+        second_sentence_start_index = first_sentence_end_index + 3
+        assert (
+            idxs[first_sentence_end_index] + len(tokens[first_sentence_end_index])
+            == idxs[second_sentence_start_index]
+        )
