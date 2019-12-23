@@ -218,15 +218,15 @@ class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
         )
 
         gc.collect()
-        start = time.time()
+        start = time.monotonic()
         for i in range(200):
             tokenizer_without_idx.tokenize(text)
-        without_idx_time = time.time() - start
+        without_idx_time = time.monotonic() - start
 
         gc.collect()
-        start = time.time()
+        start = time.monotonic()
         for i in range(200):
             tokenizer_with_idx.tokenize(text)
-        with_idx_time = time.time() - start
+        with_idx_time = time.monotonic() - start
 
         assert with_idx_time <= 2 * without_idx_time
