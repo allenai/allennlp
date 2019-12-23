@@ -167,7 +167,7 @@ class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
             "<s>",
             "A",
             ",",
-            "ĠnaÃ¯ve",  # What happened here?
+            "ĠnaÃ¯ve",  # RoBERTa has a funny way of encoding combining characters.
             "<mask>",
             "Allen",
             "N",
