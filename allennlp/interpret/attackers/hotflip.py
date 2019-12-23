@@ -18,7 +18,17 @@ from allennlp.modules.token_embedders import Embedding
 from allennlp.nn import util
 from allennlp.predictors.predictor import Predictor
 
-DEFAULT_IGNORE_TOKENS = ["@@NULL@@", ".", ",", ";", "!", "?", "[MASK]", "[SEP]", "[CLS]"]
+DEFAULT_IGNORE_TOKENS = [
+    "@@NULL@@",
+    ".",
+    ",",
+    ";",
+    "!",
+    "?",
+    "[MASK]",
+    "[SEP]",
+    "[CLS]",
+]
 
 
 @Attacker.register("hotflip")
@@ -55,7 +65,7 @@ class Hotflip(Attacker):
     """
 
     def __init__(
-        self, predictor: Predictor, vocab_namespace: str = "tokens", max_tokens: int = 5000
+        self, predictor: Predictor, vocab_namespace: str = "tokens", max_tokens: int = 5000,
     ) -> None:
         super().__init__(predictor)
         self.vocab = self.predictor._model.vocab
@@ -67,8 +77,8 @@ class Hotflip(Attacker):
             if not self.vocab._index_to_token[self.namespace][i].isalnum():
                 self.invalid_replacement_indices.append(i)
         self.embedding_matrix: torch.Tensor = None
-        self.embedding_layer: torch.nn.Module = None   
-        # get device number 
+        self.embedding_layer: torch.nn.Module = None
+        # get device number
         self.cuda_device = predictor.cuda_device
 
     def initialize(self):
@@ -336,7 +346,8 @@ class Hotflip(Attacker):
             word_embedding = self.embedding_layer(inputs)[0]
         else:
             word_embedding = torch.nn.functional.embedding(
-                util.move_to_device(torch.LongTensor([token_idx]), self.cuda_device), self.embedding_matrix
+                util.move_to_device(torch.LongTensor([token_idx]), self.cuda_device),
+                self.embedding_matrix,
             )
         word_embedding = word_embedding.detach().unsqueeze(0)
         grad = grad.unsqueeze(0).unsqueeze(0)
