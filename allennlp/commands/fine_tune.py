@@ -382,7 +382,7 @@ def fine_tune_model(
             model,
             test_data,
             validation_iterator or iterator,
-            cuda_device=trainer._cuda_devices[0],
+            cuda_device=trainer.cuda_device,
             batch_weight_key=batch_weight_key,
         )
 
