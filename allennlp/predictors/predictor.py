@@ -107,7 +107,6 @@ class Predictor(Registrable):
         layer of the model. Calls :func:`backward` on the loss and then removes the
         hooks.
         """
-
         embedding_gradients: List[Tensor] = []
         hooks: List[RemovableHandle] = self._register_embedding_gradient_hooks(embedding_gradients)
 

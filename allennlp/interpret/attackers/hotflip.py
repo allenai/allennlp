@@ -69,7 +69,6 @@ class Hotflip(Attacker):
                 self.invalid_replacement_indices.append(i)
         self.embedding_matrix: torch.Tensor = None
         self.embedding_layer: torch.nn.Module = None       
-            
         #get device number 
         self.cuda_device = predictor.cuda_device
         
@@ -108,7 +107,7 @@ class Hotflip(Attacker):
         self.invalid_replacement_indices = [
             i for i in self.invalid_replacement_indices if i < max_index
         ]
-        
+
         inputs = self._make_embedder_input(all_tokens)
 
         # pass all tokens through the fake matrix and create an embedding out of it.
@@ -150,7 +149,7 @@ class Hotflip(Attacker):
                 inputs[indexer_name] = torch.LongTensor(elmo_tokens).unsqueeze(0)
             else:
                 raise RuntimeError("Unsupported token indexer:", token_indexer)
-    
+
         return util.move_to_device(inputs, self.cuda_device)
    
     def attack_from_json(
@@ -236,7 +235,6 @@ class Hotflip(Attacker):
             # them together at the end of the loop, even though we use grads at the beginning and
             # outputs at the end.  This is our initial gradient for the beginning of the loop.  The
             # output can be ignored here.
-        
             grads, outputs = self.predictor.get_gradients([instance])
 
             # Ignore any token that is in the ignore_tokens list by setting the token to already
