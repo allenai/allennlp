@@ -60,7 +60,6 @@ class Hotflip(Attacker):
         super().__init__(predictor)
         self.vocab = self.predictor._model.vocab
         self.namespace = vocab_namespace
-        
         # Force new tokens to be alphanumeric
         self.max_tokens = max_tokens
         self.invalid_replacement_indices: List[int] = []
@@ -71,7 +70,6 @@ class Hotflip(Attacker):
         self.embedding_layer: torch.nn.Module = None       
         #get device number 
         self.cuda_device = predictor.cuda_device
-        
 
     def initialize(self):
         """
