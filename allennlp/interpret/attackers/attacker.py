@@ -5,6 +5,7 @@ from allennlp.common.util import JsonDict
 from allennlp.predictors import Predictor
 from allennlp.data import Instance
 
+
 class Attacker(Registrable):
     """
     An ``Attacker`` will modify an input (e.g., add or delete tokens) to try to change an AllenNLP
