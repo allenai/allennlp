@@ -112,12 +112,11 @@ class Predictor(Registrable):
 
         dataset = Batch(instances)
         dataset.index_instances(self._model.vocab)
+        dataset_tensor_dict = util.move_to_device(dataset.as_tensor_dict(), self.cuda_device)
         # To bypass "RuntimeError: cudnn RNN backward can only be called in training mode"
         with backends.cudnn.flags(enabled=False):
             outputs = self._model.decode(
-                self._model.forward(
-                    **util.move_to_device(dataset.as_tensor_dict(), self.cuda_device)
-                )  # type: ignore
+                self._model.forward(**dataset_tensor_dict)  # type: ignore
             )
 
             loss = outputs["loss"]
