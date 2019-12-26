@@ -79,7 +79,7 @@ class Seq2SeqDatasetReader(DatasetReader):
         self._target_max_exceeded = 0
 
     @overrides
-    def _read(self, file_path):
+    def _read(self, file_path: str):
         # Reset exceeded counts
         self._source_max_exceeded = 0
         self._target_max_exceeded = 0
