@@ -107,3 +107,22 @@ class TestPretrainedTransformerIndexer(AllenNlpTestCase):
         )  # here we copy entire transformers vocab
         del indexed
         assert vocab.get_token_to_index_vocabulary(namespace=namespace) == tokenizer.encoder
+
+    def test_attention_mask(self):
+        allennlp_tokenizer = PretrainedTransformerTokenizer("bert-base-uncased")
+        indexer = PretrainedTransformerIndexer(
+            model_name="bert-base-uncased", mask_padding_with_zero=True
+        )
+        string_no_specials = "AllenNLP is great"
+        allennlp_tokens = allennlp_tokenizer.tokenize(string_no_specials)
+        vocab = Vocabulary()
+        indexed = indexer.tokens_to_indices(allennlp_tokens, vocab, "key")
+        expected_attention_masks = [1] * len(indexed["key"])
+        assert indexed["attention_mask"] == expected_attention_masks
+        max_length = 10
+        desired_num_tokens = {"key": max_length, "attention_mask": max_length}
+        padded_tokens = indexer.as_padded_tensor(indexed, desired_num_tokens, {})
+        padding_length = max_length - len(indexed["attention_mask"])
+        expected_attention_masks = expected_attention_masks + ([0] * padding_length)
+        assert len(padded_tokens["attention_mask"]) == max_length
+        assert padded_tokens["attention_mask"].tolist() == expected_attention_masks
