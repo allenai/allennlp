@@ -11,6 +11,7 @@ class TestPretrainedTransformerEmbedder(AllenNlpTestCase):
         # test.
         params = Params({"model_name": "bert-base-uncased"})
         embedder = PretrainedTransformerEmbedder.from_params(params)
-        tensor = torch.randint(0, 100, (1, 4))
-        output = embedder(tensor)
+        token_ids = torch.randint(0, 100, (1, 4))
+        mask = torch.randint(0, 2, (1, 4))
+        output = embedder(token_ids=token_ids, attention_mask=mask)
         assert tuple(output.size()) == (1, 4, 768)
