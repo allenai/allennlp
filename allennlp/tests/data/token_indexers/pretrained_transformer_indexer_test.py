@@ -110,9 +110,7 @@ class TestPretrainedTransformerIndexer(AllenNlpTestCase):
 
     def test_attention_mask(self):
         allennlp_tokenizer = PretrainedTransformerTokenizer("bert-base-uncased")
-        indexer = PretrainedTransformerIndexer(
-            model_name="bert-base-uncased", mask_padding_with_zero=True
-        )
+        indexer = PretrainedTransformerIndexer(model_name="bert-base-uncased")
         string_no_specials = "AllenNLP is great"
         allennlp_tokens = allennlp_tokenizer.tokenize(string_no_specials)
         vocab = Vocabulary()

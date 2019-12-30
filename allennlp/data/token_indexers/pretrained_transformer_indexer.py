@@ -31,18 +31,10 @@ class PretrainedTransformerIndexer(TokenIndexer[int]):
         We use a somewhat confusing default value of ``tags`` so that we do not add padding or UNK
         tokens to this namespace, which would break on loading because we wouldn't find our default
         OOV token.
-    mask_padding_with_zero:  ``bool``, optional (default=True)
-        If set to ``True``, the attention mask will be filled by ``1`` for actual values
-        and by ``0`` for padded values. If set to ``False``, inverts it (``1`` for padded values, ``0`` for
-        actual values)
     """
 
     def __init__(
-        self,
-        model_name: str,
-        namespace: str = "tags",
-        token_min_padding_length: int = 0,
-        mask_padding_with_zero: bool = True,
+        self, model_name: str, namespace: str = "tags", token_min_padding_length: int = 0
     ) -> None:
         super().__init__(token_min_padding_length)
         self._namespace = namespace
@@ -50,8 +42,6 @@ class PretrainedTransformerIndexer(TokenIndexer[int]):
         self._padding_value = self._tokenizer.convert_tokens_to_ids([self._tokenizer.pad_token])[0]
         logger.info(f"Using token indexer padding value of {self._padding_value}")
         self._added_to_vocabulary = False
-        self._mask_padding_with_zero = mask_padding_with_zero
-        self._mask_padding_value = 0 if mask_padding_with_zero else 1
 
     def _add_encoding_to_vocabulary(self, vocab: Vocabulary) -> None:
         """
@@ -103,7 +93,7 @@ class PretrainedTransformerIndexer(TokenIndexer[int]):
 
         # The mask has 1 for real tokens and 0 for padding tokens. Only real
         # tokens are attended to.
-        attention_mask = [1 if self._mask_padding_with_zero else 0] * len(indices)
+        attention_mask = [1] * len(indices)
 
         return {index_name: indices, "attention_mask": attention_mask}
 
@@ -118,21 +108,14 @@ class PretrainedTransformerIndexer(TokenIndexer[int]):
         desired_num_tokens: Dict[str, int],
         padding_lengths: Dict[str, int],
     ) -> Dict[str, torch.Tensor]:
-        padded_tensor_dict = {}
-        for key, val in tokens.items():
-            if key == "attention_mask":
-                padded_tensor_dict[key] = torch.LongTensor(
-                    pad_sequence_to_length(
-                        val, desired_num_tokens[key], default_value=lambda: self._mask_padding_value
-                    )
+        return {
+            key: torch.LongTensor(
+                pad_sequence_to_length(
+                    val, desired_num_tokens[key], default_value=lambda: self._padding_value
                 )
-            else:
-                padded_tensor_dict[key] = torch.LongTensor(
-                    pad_sequence_to_length(
-                        val, desired_num_tokens[key], default_value=lambda: self._padding_value
-                    )
-                )
-        return padded_tensor_dict
+            )
+            for key, val in tokens.items()
+        }
 
     def __eq__(self, other):
         if isinstance(other, PretrainedTransformerIndexer):
