@@ -28,7 +28,7 @@ class EndpointSpanExtractor(SpanExtractor):
     ----------
     input_dim : ``int``, required.
         The final dimension of the ``sequence_tensor``.
-    combination : str, optional (default = "x,y").
+    combination : ``str``, optional (default = "x,y").
         The method used to combine the ``start_embedding`` and ``end_embedding``
         representations. See above for a full description.
     num_width_embeddings : ``int``, optional (default = None).

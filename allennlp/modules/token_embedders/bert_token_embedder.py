@@ -57,15 +57,15 @@ class BertEmbedder(TokenEmbedder):
         The BERT model being wrapped.
     top_layer_only: ``bool``, optional (default = ``False``)
         If ``True``, then only return the top layer instead of apply the scalar mix.
-    max_pieces : int, optional (default: 512)
+    max_pieces: ``int``, optional (default: 512)
         The BERT embedder uses positional embeddings and so has a corresponding
         maximum length for its input ids. Assuming the inputs are windowed
         and padded appropriately by this length, the embedder will split them into a
         large batch, feed them into BERT, and recombine the output as if it was a
         longer sequence.
-    num_start_tokens : int, optional (default: 1)
+    num_start_tokens: ``int``, optional (default: 1)
         The number of starting special tokens input to BERT (usually 1, i.e., [CLS])
-    num_end_tokens : int, optional (default: 1)
+    num_end_tokens: ``int``, optional (default: 1)
         The number of ending tokens input to BERT (usually 1, i.e., [SEP])
     scalar_mix_parameters: ``List[float]``, optional, (default = None)
         If not ``None``, use these scalar mix parameters to weight the representations
@@ -111,9 +111,9 @@ class BertEmbedder(TokenEmbedder):
         """
         Parameters
         ----------
-        input_ids : ``torch.LongTensor``
+        input_ids: ``torch.LongTensor``
             The (batch_size, ..., max_sequence_length) tensor of wordpiece ids.
-        offsets : ``torch.LongTensor``, optional
+        offsets: ``torch.LongTensor``, optional
             The BERT embeddings are one per wordpiece. However it's possible/likely
             you might want one per original token. In that case, ``offsets``
             represents the indices of the desired wordpiece for each original token.
@@ -128,7 +128,7 @@ class BertEmbedder(TokenEmbedder):
             embeddings at those positions, and (in particular) will contain one embedding
             per token. If offsets are not provided, the entire tensor of wordpiece embeddings
             will be returned.
-        token_type_ids : ``torch.LongTensor``, optional
+        token_type_ids: ``torch.LongTensor``, optional
             If an input consists of two sentences (as in the BERT paper),
             tokens from the first sentence should have type 0 and tokens from
             the second sentence should have type 1.  If you don't provide this
@@ -272,7 +272,7 @@ class PretrainedBertEmbedder(BertEmbedder):
         If the name is a key in the list of pretrained models at
         https://github.com/huggingface/pytorch-pretrained-BERT/blob/master/pytorch_pretrained_bert/modeling.py#L41
         the corresponding path will be used; otherwise it will be interpreted as a path or URL.
-    requires_grad : ``bool``, optional (default = False)
+    requires_grad: ``bool``, optional (default = False)
         If True, compute gradient of BERT parameters for fine tuning.
     top_layer_only: ``bool``, optional (default = ``False``)
         If ``True``, then only return the top layer instead of apply the scalar mix.

@@ -15,11 +15,11 @@ class BilinearMatrixAttention(MatrixAttention):
 
     Parameters
     ----------
-    matrix_1_dim : ``int``
+    matrix_1_dim : ``int``, required
         The dimension of the matrix ``X``, described above.  This is ``X.size()[-1]`` - the length
         of the vector that will go into the similarity computation.  We need this so we can build
         the weight matrix correctly.
-    matrix_2_dim : ``int``
+    matrix_2_dim : ``int``, required
         The dimension of the matrix ``Y``, described above.  This is ``Y.size()[-1]`` - the length
         of the vector that will go into the similarity computation.  We need this so we can build
         the weight matrix correctly.

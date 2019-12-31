@@ -25,7 +25,7 @@ class IntraSentenceAttentionEncoder(Seq2SeqEncoder):
 
     Parameters
     ----------
-    input_dim : ``int``
+    input_dim : ``int`` required
         The dimension of the vector for each element in the input sequence;
         ``input_tensor.size(-1)``.
     projection_dim : ``int``, optional

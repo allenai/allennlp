@@ -25,7 +25,7 @@ class BertPooler(Seq2VecEncoder):
 
     Parameters
     ----------
-    pretrained_model : ``Union[str, BertModel]``
+    pretrained_model : ``Union[str, BertModel]``, required
         The pretrained BERT model to use. If this is a string,
         we will call ``BertModel.from_pretrained(pretrained_model)``
         and use that.
