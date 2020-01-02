@@ -38,6 +38,7 @@ RUN apt-get update --fix-missing && apt-get install -y \
 # We only copy what we need here so small changes to the repository does not trigger re-installation of the requirements.
 RUN pip install -e .
 COPY dev-requirements.txt .
+COPY setup.py .
 RUN pip install -r dev-requirements.txt
 
 COPY scripts/ scripts/
