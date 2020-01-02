@@ -68,6 +68,8 @@ class Hotflip(Attacker):
                 self.invalid_replacement_indices.append(i)
         self.embedding_matrix: torch.Tensor = None
         self.embedding_layer: torch.nn.Module = None
+        # get device number
+        self.cuda_device = predictor.cuda_device
 
     def initialize(self):
         """
@@ -76,7 +78,7 @@ class Hotflip(Attacker):
         being done when __init__() is called.
         """
         if self.embedding_matrix is None:
-            self.embedding_matrix = self._construct_embedding_matrix().cpu()
+            self.embedding_matrix = self._construct_embedding_matrix()
 
     def _construct_embedding_matrix(self) -> Embedding:
         """
@@ -145,7 +147,8 @@ class Hotflip(Attacker):
                 inputs[indexer_name] = torch.LongTensor(elmo_tokens).unsqueeze(0)
             else:
                 raise RuntimeError("Unsupported token indexer:", token_indexer)
-        return inputs
+
+        return util.move_to_device(inputs, self.cuda_device)
 
     def attack_from_json(
         self,
@@ -324,7 +327,7 @@ class Hotflip(Attacker):
         function uses the grad, alongside the embedding_matrix to select the token that maximizes the
         first-order taylor approximation of the loss.
         """
-        grad = torch.from_numpy(grad)
+        grad = util.move_to_device(torch.from_numpy(grad), self.cuda_device)
         if token_idx >= self.embedding_matrix.size(0):
             # This happens when we've truncated our fake embedding matrix.  We need to do a dot
             # product with the word vector of the current token; if that token is out of
@@ -333,7 +336,8 @@ class Hotflip(Attacker):
             word_embedding = self.embedding_layer(inputs)[0]
         else:
             word_embedding = torch.nn.functional.embedding(
-                torch.LongTensor([token_idx]), self.embedding_matrix
+                util.move_to_device(torch.LongTensor([token_idx]), self.cuda_device),
+                self.embedding_matrix,
             )
         word_embedding = word_embedding.detach().unsqueeze(0)
         grad = grad.unsqueeze(0).unsqueeze(0)
