@@ -5,7 +5,7 @@ an AllenNLP model.
 
 import logging
 import os
-from typing import Dict, Union, List, Set
+from typing import Dict, Union, List, Set, Type
 
 import numpy
 import torch
@@ -326,7 +326,8 @@ class Model(torch.nn.Module, Registrable):
         # Load using an overridable _load method.
         # This allows subclasses of Model to override _load.
 
-        return cls.by_name(model_type)._load(config, serialization_dir, weights_file, cuda_device)
+        model_class: Type[Model] = cls.by_name(model_type)  # type: ignore
+        return model_class._load(config, serialization_dir, weights_file, cuda_device)
 
     def extend_embedder_vocab(self, embedding_sources_mapping: Dict[str, str] = None) -> None:
         """

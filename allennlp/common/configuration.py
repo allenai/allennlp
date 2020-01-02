@@ -194,7 +194,7 @@ def _get_config_type(cla55: type) -> Optional[str]:
         return "gru"
 
     for subclass_dict in Registrable._registry.values():
-        for name, subclass in subclass_dict.items():
+        for name, (subclass, _) in subclass_dict.items():
             if subclass == cla55:
                 return name
 

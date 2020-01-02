@@ -105,7 +105,7 @@ class TrainerBase(Registrable):
                 validation_iterator=pieces.validation_iterator,
             )
         else:
-            klass = TrainerBase.by_name(typ3)
+            klass: Type[TrainerBase] = TrainerBase.by_name(typ3)  # type: ignore
             # Explicit check to prevent recursion.
             is_overriden = (
                 klass.from_params.__func__ != TrainerBase.from_params.__func__  # type: ignore

@@ -50,7 +50,7 @@ from allennlp.common.params import Params
 
 logger = logging.getLogger(__name__)
 
-T = TypeVar("T")
+T = TypeVar("T", bound="FromParams")
 
 # If a function parameter has no default value specified,
 # this is what the inspect module returns.
@@ -395,17 +395,17 @@ class FromParams:
             # See the docstring for an explanation of what's going on here.
             if not constructor_name:
                 constructor_to_inspect = subclass.__init__
-                constructor_to_call = subclass
+                constructor_to_call = subclass  # type: ignore
             else:
                 constructor_to_inspect = getattr(subclass, constructor_name)
                 constructor_to_call = constructor_to_inspect
 
             if hasattr(subclass, "from_params"):
-                # We want to call subclass.from_params.  We could maybe get away with loosening this
-                # restriction, having a more permissive check here (so you could register things
-                # without subclassing FromParams), but it would make the recursion a lot harder.
+                # We want to call subclass.from_params.
                 extras = create_extras(subclass, extras)
-                return subclass.from_params(
+                # mypy can't follow the typing redirection that we do, so we explicitly cast here.
+                retyped_subclass = cast(Type[T], subclass)
+                return retyped_subclass.from_params(
                     params=params,
                     constructor_to_call=constructor_to_call,
                     constructor_to_inspect=constructor_to_inspect,
@@ -420,7 +420,7 @@ class FromParams:
                 # be recursively constructed.
                 extras = create_extras(subclass, extras)
                 constructor_args = {**params, **extras}
-                return subclass(**constructor_args)
+                return subclass(**constructor_args)  # type: ignore
         else:
             # This is not a base class, so convert our params and extras into a dict of kwargs.
 

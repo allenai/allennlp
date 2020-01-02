@@ -164,9 +164,9 @@ class Checkpoint(Callback):
             trainer.model.load_state_dict(best_model_state)
 
     @classmethod
-    def from_params(
+    def from_params(  # type: ignore
         cls, params: Params, serialization_dir: str, **extras
-    ) -> "Checkpoint":  # type: ignore
+    ) -> "Checkpoint":
 
         checkpointer_params = params.pop("checkpointer", None)
         if checkpointer_params:

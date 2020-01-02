@@ -29,9 +29,9 @@ class UpdateMovingAverage(Callback):
         self.moving_average.apply(trainer.batch_num_total)
 
     @classmethod
-    def from_params(
+    def from_params(  # type: ignore
         cls, params: Params, model: Model, **extras
-    ) -> "UpdateMovingAverage":  # type: ignore
+    ) -> "UpdateMovingAverage":
 
         moving_average_params = params.pop("moving_average")
         model_parameters = [

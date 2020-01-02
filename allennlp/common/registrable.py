@@ -13,7 +13,7 @@ from allennlp.common.from_params import FromParams
 
 logger = logging.getLogger(__name__)
 
-T = TypeVar("T")
+T = TypeVar("T", bound="Registrable")
 
 
 class Registrable(FromParams):
