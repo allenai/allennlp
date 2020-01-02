@@ -6,7 +6,6 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 
-from allennlp.common import Params
 from allennlp.common.checks import check_dimensions_match, ConfigurationError
 from allennlp.data import Vocabulary
 from allennlp.modules import Elmo, FeedForward, Maxout, Seq2SeqEncoder, TextFieldEmbedder

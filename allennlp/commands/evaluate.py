@@ -65,7 +65,6 @@ from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.iterators import DataIterator
 from allennlp.models.archival import load_archive
 from allennlp.training.util import evaluate
-from allennlp.common import Params
 
 logger = logging.getLogger(__name__)
 

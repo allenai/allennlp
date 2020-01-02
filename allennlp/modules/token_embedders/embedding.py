@@ -16,7 +16,7 @@ with warnings.catch_warnings():
     warnings.filterwarnings("ignore", category=FutureWarning)
     import h5py
 
-from allennlp.common import Params, Tqdm, Registrable
+from allennlp.common import Tqdm, Registrable
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.file_utils import get_file_extension, cached_path, is_url_or_existing_file
 from allennlp.data import Vocabulary
