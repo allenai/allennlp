@@ -114,6 +114,7 @@ class TestTrain(AllenNlpTestCase):
         assert "stdout_worker0.log" in serialized_files
         assert "stderr_worker1.log" in serialized_files
         assert "stdout_worker1.log" in serialized_files
+        assert "model.tar.gz" in serialized_files
 
         # Check we can load the seralized model
         assert load_archive(out_dir).model

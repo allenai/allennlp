@@ -343,6 +343,7 @@ def train_model(
             ),
             nprocs=num_procs,
         )
+        archive_model(serialization_dir, files_to_archive=params.files_to_archive)
         model = Model.load(params, serialization_dir)
         return model
 
