@@ -95,7 +95,7 @@ class PretrainedTransformerIndexer(TokenIndexer[int]):
         # tokens are attended to.
         attention_mask = [1] * len(indices)
 
-        return {index_name: indices, "attention_mask": attention_mask}
+        return {index_name: indices, "mask": attention_mask}
 
     @overrides
     def get_padding_lengths(self, token: int) -> Dict[str, int]:
