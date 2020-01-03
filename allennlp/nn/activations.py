@@ -57,8 +57,8 @@ class Activation(Registrable):
 # Activation.by_name('relu')()
 Registrable._registry[Activation] = {
     "linear": lambda: lambda x: x,  # type: ignore
-    "mish": lambda: lambda x: x * torch.tanh(torch.nn.functional.softplus(x)),   # type: ignore
-    "swish": lambda: lambda x: x * torch.sigmoid(x),   # type: ignore
+    "mish": lambda: lambda x: x * torch.tanh(torch.nn.functional.softplus(x)),  # type: ignore
+    "swish": lambda: lambda x: x * torch.sigmoid(x),  # type: ignore
     "relu": torch.nn.ReLU,
     "relu6": torch.nn.ReLU6,
     "elu": torch.nn.ELU,
