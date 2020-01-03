@@ -16,7 +16,6 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         self.transformer_model = AutoModel.from_pretrained(model_name)
         # I'm not sure if this works for all models; open an issue on github if you find a case
         # where it doesn't work.
-        self.model_type = model_name.split("-")[0]
         self.output_dim = self.transformer_model.config.hidden_size
 
     @overrides
@@ -26,7 +25,5 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
     def forward(
         self, token_ids: torch.LongTensor, attention_mask: torch.LongTensor
     ) -> torch.Tensor:  # type: ignore
-        if self.model_type == "xlnet":
-            return self.transformer_model(input_ids=token_ids, input_mask=attention_mask)[0]
 
         return self.transformer_model(input_ids=token_ids, attention_mask=attention_mask)[0]
