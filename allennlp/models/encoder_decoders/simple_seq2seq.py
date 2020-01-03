@@ -100,8 +100,8 @@ class SimpleSeq2Seq(Model):
                 self.vocab._padding_token, self._target_namespace
             )
             self._bleu = BLEU(
-                    bleu_ngram_weights,
-                    exclude_indices={pad_index, self._end_index, self._start_index})
+                bleu_ngram_weights, exclude_indices={pad_index, self._end_index, self._start_index}
+            )
         else:
             self._bleu = None
 
