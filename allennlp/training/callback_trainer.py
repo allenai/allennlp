@@ -6,15 +6,13 @@ import logging
 import time
 import datetime
 import functools
-import math
-from typing import Dict, Optional, List, Union, Any, Iterable
+from typing import Dict, Optional, List, Any, Iterable
 import torch
 
 from allennlp.common import Params
-from allennlp.common.checks import parse_cuda_device
+from allennlp.common.checks import parse_cuda_device, check_for_gpu
 from allennlp.common.tqdm import Tqdm
-from allennlp.common.util import lazy_groups_of
-from allennlp.data.instance import Instance
+from allennlp.data import Instance
 from allennlp.data.iterators.data_iterator import DataIterator, TensorDict
 from allennlp.models.model import Model
 from allennlp.nn import util as nn_util
@@ -25,6 +23,8 @@ from allennlp.training.callbacks.events import Events
 from allennlp.training.optimizers import Optimizer
 from allennlp.training.trainer_pieces import TrainerPieces
 from allennlp.training.trainer_base import TrainerBase
+
+from torch.nn.parallel import DistributedDataParallel
 
 logger = logging.getLogger(__name__)
 
@@ -53,8 +53,11 @@ class CallbackTrainer(TrainerBase):
         num_epochs: int = 20,
         shuffle: bool = True,
         serialization_dir: Optional[str] = None,
-        cuda_device: Union[int, List] = -1,
+        cuda_device: int = -1,
         callbacks: List[Callback] = None,
+        distributed: bool = False,
+        rank: int = 0,
+        world_size: int = 1,
     ) -> None:
         """
         A trainer for doing supervised learning. It just takes a labeled dataset
@@ -91,12 +94,14 @@ class CallbackTrainer(TrainerBase):
         serialization_dir : str, optional (default=None)
             Path to directory for saving and loading model files. Models will not be saved if
             this parameter is not passed.
-        cuda_device : ``Union[int, List[int]]``, optional (default=-1)
+        cuda_device : ``int``, optional (default=-1)
             An integer or list of integers specifying the CUDA device(s) to use. If -1, the CPU is used.
+            Data parallelism is controlled at the allennlp train level, so each trainer will have a single
+            GPU.
         callbacks : ``List[Callback]``, optional (default=None)
             A list of callbacks that will be called based on training events.
         """
-        super().__init__(serialization_dir, cuda_device)
+        super().__init__(serialization_dir, cuda_device, distributed, rank, world_size)
 
         logger.warning(
             "The CallbackTrainer should be considered 'experimental' code, "
@@ -120,7 +125,7 @@ class CallbackTrainer(TrainerBase):
         self.metrics: Dict[str, Any] = {}
 
         self.batch_num_total = 0
-        self.batch_group: List[TensorDict] = []
+        self.batch: TensorDict = None
         self.batches_this_epoch = 0
 
         self.training_batches: Iterable[List[TensorDict]] = ()
@@ -143,20 +148,28 @@ class CallbackTrainer(TrainerBase):
         # For capturing errors that occur during the train loop.
         self.exception: Optional[Exception] = None
 
+        # Using `DistributedDataParallel`(ddp) brings in a quirk wrt AllenNLP's `Model` interface and its
+        # usage. A `Model` object is wrapped by `ddp`, but assigning the wrapped model to `self.model`
+        # will break the usages such as `Model.get_regularization_penalty`, `Model.get_metrics`, etc.
+        #
+        # Hence a reference to Pytorch's object is maintained in the case of distributed training and in the
+        # normal case, reference to `Model` is retained. This reference is only used in
+        # these places: `model.__call__`, `model.train` and `model.eval`.
+        if self._distributed:
+            self._pytorch_model = DistributedDataParallel(self.model, device_ids=[self._rank])
+        else:
+            self._pytorch_model = self.model
+
     def generate_training_batches(self):
         """
         Generates one epoch worth of training data. Stores it in trainer instance variables
         so that callbacks can access it.
         """
-        num_gpus = len(self._cuda_devices)
+        train_generator = self.iterator(self.training_data, num_epochs=1, shuffle=self.shuffle)
+        self.training_batches = train_generator
+        self.num_training_batches = self.iterator.get_num_batches(self.training_data)
 
-        raw_train_generator = self.iterator(self.training_data, num_epochs=1, shuffle=self.shuffle)
-        self.training_batches = lazy_groups_of(raw_train_generator, num_gpus)
-        self.num_training_batches = math.ceil(
-            self.iterator.get_num_batches(self.training_data) / num_gpus
-        )
-
-    def batch_loss(self, batch_group: List[TensorDict], for_training: bool) -> torch.Tensor:
+    def batch_loss(self, batch: TensorDict, for_training: bool) -> torch.Tensor:
         """
         Does a forward pass on the given batches and returns the ``loss`` value in the result.
         If ``for_training`` is `True` also applies regularization penalty.
@@ -164,13 +177,8 @@ class CallbackTrainer(TrainerBase):
         This is a method on the trainer so that it can be used both in training and validation
         (which are handled separately).
         """
-        if self._multiple_gpu:
-            output_dict = training_util.data_parallel(batch_group, self.model, self._cuda_devices)
-        else:
-            assert len(batch_group) == 1
-            batch = batch_group[0]
-            batch = nn_util.move_to_device(batch, self._cuda_devices[0])
-            output_dict = self.model(**batch)
+        batch = nn_util.move_to_device(batch, self.cuda_device)
+        output_dict = self._pytorch_model(**batch)
 
         try:
             loss = output_dict["loss"]
@@ -186,7 +194,7 @@ class CallbackTrainer(TrainerBase):
 
         return loss
 
-    def train_one_batch_group(self, batch_group: List[TensorDict]) -> str:
+    def train_one_batch(self, batch: TensorDict) -> str:
         """
         Handles the training for a single batch group.
         Fires off the events BATCH_START, FORWARD, BACKWARD, and BATCH_END.
@@ -198,7 +206,7 @@ class CallbackTrainer(TrainerBase):
         self.batch_num_total += 1
 
         self.handler.fire_event(Events.FORWARD)
-        loss = self.batch_loss(batch_group, for_training=True)
+        loss = self.batch_loss(batch, for_training=True)
 
         if torch.isnan(loss):
             raise ValueError("nan loss encountered")
@@ -223,24 +231,24 @@ class CallbackTrainer(TrainerBase):
         """
         Trains the model for a single epoch.
         Fires off the events EPOCH_START and EPOCH_END,
-        and repeatedly calls self.train_one_batch_group().
+        and repeatedly calls self.train_one_batch().
         """
         self.handler.fire_event(Events.EPOCH_START)
 
         self.train_loss = 0.0
         # Set the model to "train" mode.
-        self.model.train()
+        self._pytorch_model.train()
 
         self.last_log = time.time()
 
         logger.info("Training")
         self.batches_this_epoch = 0
 
-        batch_groups_tqdm = Tqdm.tqdm(self.training_batches, total=self.num_training_batches)
+        batches_tqdm = Tqdm.tqdm(self.training_batches, total=self.num_training_batches)
 
-        for self.batch_group in batch_groups_tqdm:
-            description = self.train_one_batch_group(self.batch_group)
-            batch_groups_tqdm.set_description(description, refresh=False)
+        for self.batch in batches_tqdm:
+            description = self.train_one_batch(self.batch)
+            batches_tqdm.set_description(description, refresh=False)
 
         self.handler.fire_event(Events.VALIDATE)
         self.handler.fire_event(Events.EPOCH_END)
@@ -306,14 +314,11 @@ class CallbackTrainer(TrainerBase):
         num_epochs = params.pop_int("num_epochs", 20)
         cuda_device = parse_cuda_device(params.pop("cuda_device", -1))
 
-        if isinstance(cuda_device, list):
-            model_device = cuda_device[0]
-        else:
-            model_device = cuda_device
-        if model_device >= 0:
+        check_for_gpu(cuda_device)
+        if cuda_device >= 0:
             # Moving model to GPU here so that the optimizer state gets constructed on
             # the right device.
-            model = model.cuda(model_device)
+            model = model.cuda(cuda_device)
 
         parameters = [[n, p] for n, p in model.named_parameters() if p.requires_grad]
         optimizer = Optimizer.from_params(parameters, params.pop("optimizer"))
@@ -334,6 +339,14 @@ class CallbackTrainer(TrainerBase):
             for callback_params in callbacks_params
         ]
 
+        distributed = params.pop_bool("distributed", False)
+        world_size = params.pop_int("world_size", 1)
+
+        if distributed:
+            rank = cuda_device
+        else:
+            rank = 0
+
         params.assert_empty(cls.__name__)
         return cls(
             model,
@@ -345,4 +358,7 @@ class CallbackTrainer(TrainerBase):
             serialization_dir=serialization_dir,
             cuda_device=cuda_device,
             callbacks=callbacks,
+            distributed=distributed,
+            rank=rank,
+            world_size=world_size,
         )
