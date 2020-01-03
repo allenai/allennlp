@@ -1,4 +1,4 @@
-FROM python:3.6.8-stretch
+FROM python:3.6.10-stretch
 
 ENV LC_ALL=C.UTF-8
 ENV LANG=C.UTF-8
