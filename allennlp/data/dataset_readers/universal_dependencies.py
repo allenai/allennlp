@@ -55,8 +55,8 @@ class UniversalDependenciesDatasetReader(DatasetReader):
                 # CoNLLU annotations sometimes add back in words that have been elided
                 # in the original sentence; we remove these, as we're just predicting
                 # dependencies for the original sentence.
-                # We filter by None here as elided words have a non-integer word id,
-                # and are replaced with None by the conllu python library.
+                # We filter by integers here as elided words have a non-integer word id,
+                # as parsed by the conllu python library.
                 annotation = [x for x in annotation if isinstance(x["id"], int)]
 
                 heads = [x["head"] for x in annotation]
