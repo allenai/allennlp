@@ -45,25 +45,32 @@ class MultiHeadedSimilarity(SimilarityFunction):
         The ``SimilarityFunction`` to call on the projected, multi-headed tensors.  The default is
         to use a dot product.
     """
-    def __init__(self,
-                 num_heads: int,
-                 tensor_1_dim: int,
-                 tensor_1_projected_dim: int = None,
-                 tensor_2_dim: int = None,
-                 tensor_2_projected_dim: int = None,
-                 internal_similarity: SimilarityFunction = DotProductSimilarity()) -> None:
-        super(MultiHeadedSimilarity, self).__init__()
+
+    def __init__(
+        self,
+        num_heads: int,
+        tensor_1_dim: int,
+        tensor_1_projected_dim: int = None,
+        tensor_2_dim: int = None,
+        tensor_2_projected_dim: int = None,
+        internal_similarity: SimilarityFunction = DotProductSimilarity(),
+    ) -> None:
+        super().__init__()
         self.num_heads = num_heads
         self._internal_similarity = internal_similarity
         tensor_1_projected_dim = tensor_1_projected_dim or tensor_1_dim
         tensor_2_dim = tensor_2_dim or tensor_1_dim
         tensor_2_projected_dim = tensor_2_projected_dim or tensor_2_dim
         if tensor_1_projected_dim % num_heads != 0:
-            raise ConfigurationError("Projected dimension not divisible by number of heads: %d, %d"
-                                     % (tensor_1_projected_dim, num_heads))
+            raise ConfigurationError(
+                "Projected dimension not divisible by number of heads: %d, %d"
+                % (tensor_1_projected_dim, num_heads)
+            )
         if tensor_2_projected_dim % num_heads != 0:
-            raise ConfigurationError("Projected dimension not divisible by number of heads: %d, %d"
-                                     % (tensor_2_projected_dim, num_heads))
+            raise ConfigurationError(
+                "Projected dimension not divisible by number of heads: %d, %d"
+                % (tensor_2_projected_dim, num_heads)
+            )
         self._tensor_1_projection = Parameter(torch.Tensor(tensor_1_dim, tensor_1_projected_dim))
         self._tensor_2_projection = Parameter(torch.Tensor(tensor_2_dim, tensor_2_projected_dim))
         self.reset_parameters()

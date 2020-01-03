@@ -1,16 +1,18 @@
 """
 Various utilities that don't fit anwhere else.
 """
-from itertools import zip_longest, islice
-from typing import Any, Callable, Dict, List, Tuple, TypeVar, Iterable, Iterator
 import importlib
 import json
 import logging
+import os
 import pkgutil
 import random
 import subprocess
 import sys
-import os
+import torch.distributed as dist
+from itertools import zip_longest, islice
+from logging import Filter
+from typing import Any, Callable, Dict, List, Tuple, TypeVar, Iterable, Iterator
 
 try:
     import resource
@@ -26,30 +28,31 @@ from spacy.language import Language as SpacyModelType
 
 # This base import is so we can refer to allennlp.data.Token in `sanitize()` without creating
 # circular dependencies.
-import allennlp
 from allennlp.common.checks import log_pytorch_version_info
 from allennlp.common.params import Params
 from allennlp.common.tqdm import Tqdm
-from allennlp.common.tee_logger import TeeLogger
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
-JsonDict = Dict[str, Any]  # pylint: disable=invalid-name
+JsonDict = Dict[str, Any]
 
 # If you want to have start and/or end symbols for any reason in your code, we recommend you use
 # these, to have a common place to import from.  Also, it's important for some edge cases in how
 # data is processed for these symbols to be lowercase, not uppercase (because we have code that
 # will lowercase tokens for you in some circumstances, and we need this symbol to not change in
 # those cases).
-START_SYMBOL = '@start@'
-END_SYMBOL = '@end@'
+START_SYMBOL = "@start@"
+END_SYMBOL = "@end@"
 
 
-def sanitize(x: Any) -> Any:  # pylint: disable=invalid-name,too-many-return-statements
+def sanitize(x: Any) -> Any:
     """
     Sanitize turns PyTorch and Numpy types into basic Python types so they
     can be serialized into JSON.
     """
+    # Import here to avoid circular references
+    from allennlp.data.tokenizers.token import Token
+
     if isinstance(x, (str, float, int, bool)):
         # x is already serializable
         return x
@@ -59,13 +62,16 @@ def sanitize(x: Any) -> Any:  # pylint: disable=invalid-name,too-many-return-sta
     elif isinstance(x, numpy.ndarray):
         # array needs to be converted to a list
         return x.tolist()
-    elif isinstance(x, numpy.number):  # pylint: disable=no-member
+    elif isinstance(x, numpy.number):
         # NumPy numbers need to be converted to Python numbers
         return x.item()
     elif isinstance(x, dict):
         # Dicts need their values sanitized
         return {key: sanitize(value) for key, value in x.items()}
-    elif isinstance(x, (spacy.tokens.Token, allennlp.data.Token)):
+    elif isinstance(x, numpy.bool_):
+        # Numpy bool_ need to be converted to python bool.
+        return bool(x)
+    elif isinstance(x, (spacy.tokens.Token, Token)):
         # Tokens get sanitized to just their text.
         return x.text
     elif isinstance(x, (list, tuple)):
@@ -73,12 +79,15 @@ def sanitize(x: Any) -> Any:  # pylint: disable=invalid-name,too-many-return-sta
         return [sanitize(x_i) for x_i in x]
     elif x is None:
         return "None"
-    elif hasattr(x, 'to_json'):
+    elif hasattr(x, "to_json"):
         return x.to_json()
     else:
-        raise ValueError(f"Cannot sanitize {x} of type {type(x)}. "
-                         "If this is your own custom class, add a `to_json(self)` method "
-                         "that returns a JSON-like object.")
+        raise ValueError(
+            f"Cannot sanitize {x} of type {type(x)}. "
+            "If this is your own custom class, add a `to_json(self)` method "
+            "that returns a JSON-like object."
+        )
+
 
 def group_by_count(iterable: List[Any], count: int, default_value: Any) -> List[List[Any]]:
     """
@@ -94,19 +103,30 @@ def group_by_count(iterable: List[Any], count: int, default_value: Any) -> List[
     """
     return [list(l) for l in zip_longest(*[iter(iterable)] * count, fillvalue=default_value)]
 
-A = TypeVar('A')
 
-def lazy_groups_of(iterator: Iterator[A], group_size: int) -> Iterator[List[A]]:
+A = TypeVar("A")
+
+
+def lazy_groups_of(iterable: Iterable[A], group_size: int) -> Iterator[List[A]]:
     """
-    Takes an iterator and batches the individual instances into lists of the
+    Takes an iterable and batches the individual instances into lists of the
     specified size. The last list may be smaller if there are instances left over.
     """
-    return iter(lambda: list(islice(iterator, 0, group_size)), [])
+    iterator = iter(iterable)
+    while True:
+        s = list(islice(iterator, group_size))
+        if len(s) > 0:
+            yield s
+        else:
+            break
 
-def pad_sequence_to_length(sequence: List,
-                           desired_length: int,
-                           default_value: Callable[[], Any] = lambda: 0,
-                           padding_on_right: bool = True) -> List:
+
+def pad_sequence_to_length(
+    sequence: List,
+    desired_length: int,
+    default_value: Callable[[], Any] = lambda: 0,
+    padding_on_right: bool = True,
+) -> List:
     """
     Take a list of objects and pads it to the desired length, returning the padded list.  The
     original list is not modified.
@@ -167,7 +187,7 @@ def namespace_match(pattern: str, namespace: str):
     ``passage_tags`` and ``question_tags`` and ``tokens`` matches ``tokens`` but not
     ``stemmed_tokens``.
     """
-    if pattern[0] == '*' and namespace.endswith(pattern[1:]):
+    if pattern[0] == "*" and namespace.endswith(pattern[1:]):
         return True
     elif pattern == namespace:
         return True
@@ -205,71 +225,128 @@ def prepare_environment(params: Params):
 
     log_pytorch_version_info()
 
-def prepare_global_logging(serialization_dir: str, file_friendly_logging: bool) -> logging.FileHandler:
+
+class FileFriendlyLogFilter(Filter):
     """
-    This function configures 3 global logging attributes - streaming stdout and stderr
-    to a file as well as the terminal, setting the formatting for the python logging
-    library and setting the interval frequency for the Tqdm progress bar.
-
-    Note that this function does not set the logging level, which is set in ``allennlp/run.py``.
-
-    Parameters
-    ----------
-    serialization_dir : ``str``, required.
-        The directory to stream logs to.
-    file_friendly_logging : ``bool``, required.
-        Whether logs should clean the output to prevent carriage returns
-        (used to update progress bars on a single terminal line). This
-        option is typically only used if you are running in an environment
-        without a terminal.
-
-    Returns
-    -------
-    ``logging.FileHandler``
-        A logging file handler that can later be closed and removed from the global logger.
+    TQDM and requests use carriage returns to get the training line to update for each batch
+    without adding more lines to the terminal output.  Displaying those in a file won't work
+    correctly, so we'll just make sure that each batch shows up on its one line.
     """
 
+    def filter(self, record):
+        if "\r" in record.msg:
+            record.msg = record.msg.replace("\r", "")
+            if not record.msg or record.msg[-1] != "\n":
+                record.msg += "\n"
+        return True
+
+
+class WorkerLogFilter(Filter):
+    def __init__(self, rank=-1):
+        super().__init__()
+        self._rank = rank
+
+    def filter(self, record):
+        if self._rank != -1:
+            record.msg = f"Rank {self._rank} | {record.msg}"
+        return True
+
+
+def prepare_global_logging(
+    serialization_dir: str, file_friendly_logging: bool, rank: int = 0, world_size: int = 1
+) -> None:
     # If we don't have a terminal as stdout,
     # force tqdm to be nicer.
     if not sys.stdout.isatty():
         file_friendly_logging = True
 
     Tqdm.set_slower_interval(file_friendly_logging)
-    std_out_file = os.path.join(serialization_dir, "stdout.log")
-    sys.stdout = TeeLogger(std_out_file, # type: ignore
-                           sys.stdout,
-                           file_friendly_logging)
-    sys.stderr = TeeLogger(os.path.join(serialization_dir, "stderr.log"), # type: ignore
-                           sys.stderr,
-                           file_friendly_logging)
 
-    stdout_handler = logging.FileHandler(std_out_file)
-    stdout_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(name)s - %(message)s'))
-    logging.getLogger().addHandler(stdout_handler)
+    # Handlers for stdout/err logging
+    output_stream_log_handler = logging.StreamHandler(sys.stdout)
+    error_stream_log_handler = logging.StreamHandler(sys.stderr)
 
-    return stdout_handler
+    if world_size == 1:
+        # This case is not distributed training and hence will stick to the older
+        # log file names
+        output_file_log_handler = logging.FileHandler(
+            filename=os.path.join(serialization_dir, "stdout.log")
+        )
+        error_file_log_handler = logging.FileHandler(
+            filename=os.path.join(serialization_dir, "stderr.log")
+        )
+    else:
+        # Create log files with worker ids
+        output_file_log_handler = logging.FileHandler(
+            filename=os.path.join(serialization_dir, f"stdout_worker{rank}.log")
+        )
+        error_file_log_handler = logging.FileHandler(
+            filename=os.path.join(serialization_dir, f"stderr_worker{rank}.log")
+        )
 
-def cleanup_global_logging(stdout_handler: logging.FileHandler) -> None:
-    """
-    This function closes any open file handles and logs set up by `prepare_global_logging`.
+        # This adds the worker's rank to messages being logged to files.
+        # This will help when combining multiple worker log files using `less` command.
+        worker_filter = WorkerLogFilter(rank)
+        output_file_log_handler.addFilter(worker_filter)
+        error_file_log_handler.addFilter(worker_filter)
 
-    Parameters
-    ----------
-    stdout_handler : ``logging.FileHandler``, required.
-        The file handler returned from `prepare_global_logging`, attached to the global logger.
-    """
-    stdout_handler.close()
-    logging.getLogger().removeHandler(stdout_handler)
+    formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(name)s - %(message)s")
 
-    if isinstance(sys.stdout, TeeLogger):
-        sys.stdout = sys.stdout.cleanup()
-    if isinstance(sys.stderr, TeeLogger):
-        sys.stderr = sys.stderr.cleanup()
+    root_logger = logging.getLogger()
+
+    # Remove the already set stream handler in root logger.
+    # Not doing this will result in duplicate log messages
+    # printed in the console
+    if len(root_logger.handlers) > 0:
+        for handler in root_logger.handlers:
+            root_logger.removeHandler(handler)
+
+    # file handlers need to be handled for tqdm's \r char
+    file_friendly_log_filter = FileFriendlyLogFilter()
+
+    if os.environ.get("ALLENNLP_DEBUG"):
+        LEVEL = logging.DEBUG
+    else:
+        LEVEL = logging.INFO
+
+    if rank == 0:
+        # stdout/stderr handlers are added only for the
+        # master worker. This is to avoid cluttering the console
+        # screen with too many log messages from all workers.
+        output_stream_log_handler.setFormatter(formatter)
+        error_stream_log_handler.setFormatter(formatter)
+
+        output_stream_log_handler.setLevel(LEVEL)
+        error_stream_log_handler.setLevel(logging.ERROR)
+
+        if file_friendly_logging:
+            output_stream_log_handler.addFilter(file_friendly_log_filter)
+            error_stream_log_handler.addFilter(file_friendly_log_filter)
+
+        root_logger.addHandler(output_stream_log_handler)
+        root_logger.addHandler(error_stream_log_handler)
+
+    output_file_log_handler.addFilter(file_friendly_log_filter)
+    error_file_log_handler.addFilter(file_friendly_log_filter)
+
+    output_file_log_handler.setFormatter(formatter)
+    error_file_log_handler.setFormatter(formatter)
+
+    output_file_log_handler.setLevel(LEVEL)
+    error_file_log_handler.setLevel(logging.ERROR)
+
+    root_logger.addHandler(output_file_log_handler)
+    root_logger.addHandler(error_file_log_handler)
+
+    root_logger.setLevel(LEVEL)
+
 
 LOADED_SPACY_MODELS: Dict[Tuple[str, bool, bool, bool], SpacyModelType] = {}
 
 
-def get_spacy_model(spacy_model_name: str, pos_tags: bool, parse: bool, ner: bool) -> SpacyModelType:
+def get_spacy_model(
+    spacy_model_name: str, pos_tags: bool, parse: bool, ner: bool
+) -> SpacyModelType:
     """
     In order to avoid loading spacy models a whole bunch of times, we'll save references to them,
     keyed by the options we used to create the spacy model, so any particular configuration only
@@ -278,32 +355,28 @@ def get_spacy_model(spacy_model_name: str, pos_tags: bool, parse: bool, ner: boo
 
     options = (spacy_model_name, pos_tags, parse, ner)
     if options not in LOADED_SPACY_MODELS:
-        disable = ['vectors', 'textcat']
+        disable = ["vectors", "textcat"]
         if not pos_tags:
-            disable.append('tagger')
+            disable.append("tagger")
         if not parse:
-            disable.append('parser')
+            disable.append("parser")
         if not ner:
-            disable.append('ner')
+            disable.append("ner")
         try:
             spacy_model = spacy.load(spacy_model_name, disable=disable)
         except OSError:
-            logger.warning(f"Spacy models '{spacy_model_name}' not found.  Downloading and installing.")
+            logger.warning(
+                f"Spacy models '{spacy_model_name}' not found.  Downloading and installing."
+            )
             spacy_download(spacy_model_name)
-            # NOTE(mattg): The following four lines are a workaround suggested by Ines for spacy
-            # 2.1.0, which removed the linking that was done in spacy 2.0.  importlib doesn't find
-            # packages that were installed in the same python session, so the way `spacy_download`
-            # works in 2.1.0 is broken for this use case.  These four lines can probably be removed
-            # at some point in the future, once spacy has figured out a better way to handle this.
-            # See https://github.com/explosion/spaCy/issues/3435.
-            from spacy.cli import link
-            from spacy.util import get_package_path
-            package_path = get_package_path(spacy_model_name)
-            link(spacy_model_name, spacy_model_name, model_path=package_path)
-            spacy_model = spacy.load(spacy_model_name, disable=disable)
+
+            # Import the downloaded model module directly and load from there
+            spacy_model_module = __import__(spacy_model_name)
+            spacy_model = spacy_model_module.load(disable=disable)  # type: ignore
 
         LOADED_SPACY_MODELS[options] = spacy_model
     return LOADED_SPACY_MODELS[options]
+
 
 def import_submodules(package_name: str) -> None:
     """
@@ -317,12 +390,12 @@ def import_submodules(package_name: str) -> None:
     # For some reason, python doesn't always add this by default to your path, but you pretty much
     # always want it when using `--include-package`.  And if it's already there, adding it again at
     # the end won't hurt anything.
-    sys.path.append('.')
+    sys.path.append(".")
 
     # Import at top level
     module = importlib.import_module(package_name)
-    path = getattr(module, '__path__', [])
-    path_string = '' if not path else path[0]
+    path = getattr(module, "__path__", [])
+    path_string = "" if not path else path[0]
 
     # walk_packages only finds immediate children, so need to recurse.
     for module_finder, name, _ in pkgutil.walk_packages(path):
@@ -343,7 +416,7 @@ def peak_memory_mb() -> float:
 
     Only works on OSX and Linux, returns 0.0 otherwise.
     """
-    if resource is None or sys.platform not in ('linux', 'darwin'):
+    if resource is None or sys.platform not in ("linux", "darwin"):
         return 0.0
 
     # TODO(joelgrus): For whatever, our pinned version 0.521 of mypy does not like
@@ -351,13 +424,14 @@ def peak_memory_mb() -> float:
     # figured out, remove the type: ignore.
     peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss  # type: ignore
 
-    if sys.platform == 'darwin':
+    if sys.platform == "darwin":
         # On OSX the result is in bytes.
         return peak / 1_000_000
 
     else:
         # On Linux the result is in kilobytes.
         return peak / 1_000
+
 
 def gpu_memory_mb() -> Dict[int, int]:
     """
@@ -371,17 +445,17 @@ def gpu_memory_mb() -> Dict[int, int]:
         Values are memory usage as integers in MB.
         Returns an empty ``dict`` if GPUs are not available.
     """
-    # pylint: disable=bare-except
     try:
-        result = subprocess.check_output(['nvidia-smi', '--query-gpu=memory.used',
-                                          '--format=csv,nounits,noheader'],
-                                         encoding='utf-8')
-        gpu_memory = [int(x) for x in result.strip().split('\n')]
+        result = subprocess.check_output(
+            ["nvidia-smi", "--query-gpu=memory.used", "--format=csv,nounits,noheader"],
+            encoding="utf-8",
+        )
+        gpu_memory = [int(x) for x in result.strip().split("\n")]
         return {gpu: memory for gpu, memory in enumerate(gpu_memory)}
     except FileNotFoundError:
         # `nvidia-smi` doesn't exist, assume that means no GPU.
         return {}
-    except:
+    except:  # noqa
         # Catch *all* exceptions, because this memory check is a nice-to-have
         # and we'd never want a training run to fail because of it.
         logger.exception("unable to check gpu_memory_mb(), continuing")
@@ -398,12 +472,14 @@ def ensure_list(iterable: Iterable[A]) -> List[A]:
     else:
         return list(iterable)
 
+
 def is_lazy(iterable: Iterable[A]) -> bool:
     """
     Checks if the given iterable is lazy,
     which here just means it's not a list.
     """
     return not isinstance(iterable, list)
+
 
 def get_frozen_and_tunable_parameter_names(model: torch.nn.Module) -> List:
     frozen_parameter_names = []
@@ -415,6 +491,7 @@ def get_frozen_and_tunable_parameter_names(model: torch.nn.Module) -> List:
             tunable_parameter_names.append(name)
     return [frozen_parameter_names, tunable_parameter_names]
 
+
 def dump_metrics(file_path: str, metrics: Dict[str, Any], log: bool = False) -> None:
     metrics_json = json.dumps(metrics, indent=2)
     with open(file_path, "w") as metrics_file:
@@ -422,5 +499,47 @@ def dump_metrics(file_path: str, metrics: Dict[str, Any], log: bool = False) -> 
     if log:
         logger.info("Metrics: %s", metrics_json)
 
+
 def flatten_filename(file_path: str) -> str:
-    return file_path.replace('/', '_SLASH_')
+    return file_path.replace("/", "_SLASH_")
+
+
+def is_master(rank: int = None, world_size: int = None) -> bool:
+    """
+    Checks if the process is a "master" in a distributed process group. If a
+    process group is not initialized, this returns `True`.
+
+    Parameters
+    ----------
+    rank : int ( default = None )
+        Global rank of the process if in a distributed process group. If not
+        given, rank is obtained using `torch.distributed.get_rank()`
+    world_size : int ( default = None )
+        Number of processes in the distributed group. If not
+        given, this is obtained using `torch.distributed.get_world_size()`
+    """
+    distributed = dist.is_initialized()
+
+    # In non-distributed case, a "master" process doesn't make any
+    # sense. So instead of raising an error, returning True would
+    # make things less painful
+    if not distributed:
+        return True
+
+    if rank is None:
+        rank = dist.get_rank()
+
+    if world_size is None:
+        world_size = dist.get_world_size()
+
+    # rank == 0 would do in a single-node multi-GPU setup. However,
+    # in a multi-node case, every node has a logical master and hence
+    # the mod(%) op.
+    return rank % world_size == 0
+
+
+def is_distributed() -> bool:
+    """
+    Checks if the distributed process group has been initialized
+    """
+    return dist.is_initialized()

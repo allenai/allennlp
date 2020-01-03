@@ -3,8 +3,7 @@ from typing import Tuple, List, Union
 from overrides import overrides
 
 from allennlp.tools.squad_eval import metric_max_over_ground_truths
-from allennlp.tools.drop_eval import (get_metrics as drop_em_and_f1,
-                                      answer_json_to_strings)
+from allennlp.tools.drop_eval import get_metrics as drop_em_and_f1, answer_json_to_strings
 from allennlp.training.metrics.metric import Metric
 
 
@@ -16,6 +15,7 @@ class DropEmAndF1(Metric):
     evaluator (which has special handling for numbers and for questions with multiple answer spans,
     among other things).
     """
+
     def __init__(self) -> None:
         self._total_em = 0.0
         self._total_f1 = 0.0
@@ -34,11 +34,11 @@ class DropEmAndF1(Metric):
         """
         # If you wanted to split this out by answer type, you could look at [1] here and group by
         # that, instead of only keeping [0].
-        ground_truth_answer_strings = [answer_json_to_strings(annotation)[0] for annotation in ground_truths]
+        ground_truth_answer_strings = [
+            answer_json_to_strings(annotation)[0] for annotation in ground_truths
+        ]
         exact_match, f1_score = metric_max_over_ground_truths(
-                drop_em_and_f1,
-                prediction,
-                ground_truth_answer_strings
+            drop_em_and_f1, prediction, ground_truth_answer_strings
         )
         self._total_em += exact_match
         self._total_f1 += f1_score

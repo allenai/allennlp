@@ -1,5 +1,3 @@
-# pylint: disable=invalid-name
-
 from typing import Dict, Tuple
 
 import numpy as np
@@ -11,18 +9,21 @@ from allennlp.common.testing import AllenNlpTestCase
 from allennlp.nn.beam_search import BeamSearch
 
 
-transition_probabilities = torch.tensor(  # pylint: disable=not-callable
-        [[0.0, 0.4, 0.3, 0.2, 0.1, 0.0],  # start token -> jth token
-         [0.0, 0.0, 1.0, 0.0, 0.0, 0.0],  # 1st token -> jth token
-         [0.0, 0.0, 0.0, 1.0, 0.0, 0.0],  # 2nd token -> jth token
-         [0.0, 0.0, 0.0, 0.0, 1.0, 0.0],  # ...
-         [0.0, 0.0, 0.0, 0.0, 0.0, 1.0],  # ...
-         [0.0, 0.0, 0.0, 0.0, 0.0, 1.0]]  # end token -> jth token
+transition_probabilities = torch.tensor(
+    [
+        [0.0, 0.4, 0.3, 0.2, 0.1, 0.0],  # start token -> jth token
+        [0.0, 0.0, 1.0, 0.0, 0.0, 0.0],  # 1st token -> jth token
+        [0.0, 0.0, 0.0, 1.0, 0.0, 0.0],  # 2nd token -> jth token
+        [0.0, 0.0, 0.0, 0.0, 1.0, 0.0],  # ...
+        [0.0, 0.0, 0.0, 0.0, 0.0, 1.0],  # ...
+        [0.0, 0.0, 0.0, 0.0, 0.0, 1.0],
+    ]  # end token -> jth token
 )
 
 
-def take_step(last_predictions: torch.Tensor,
-              state: Dict[str, torch.Tensor]) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:
+def take_step(
+    last_predictions: torch.Tensor, state: Dict[str, torch.Tensor]
+) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:
     """
     Take decoding step.
 
@@ -43,36 +44,35 @@ def take_step(last_predictions: torch.Tensor,
 
 
 class BeamSearchTest(AllenNlpTestCase):
-
     def setUp(self):
-        super(BeamSearchTest, self).setUp()
+        super().setUp()
         self.end_index = transition_probabilities.size()[0] - 1
         self.beam_search = BeamSearch(self.end_index, max_steps=10, beam_size=3)
 
         # This is what the top k should look like for each item in the batch.
-        self.expected_top_k = np.array(
-                [[1, 2, 3, 4, 5],
-                 [2, 3, 4, 5, 5],
-                 [3, 4, 5, 5, 5]]
-        )
+        self.expected_top_k = np.array([[1, 2, 3, 4, 5], [2, 3, 4, 5, 5], [3, 4, 5, 5, 5]])
 
         # This is what the log probs should look like for each item in the batch.
-        self.expected_log_probs = np.log(np.array([0.4, 0.3, 0.2]))  # pylint: disable=assignment-from-no-return
+        self.expected_log_probs = np.log(np.array([0.4, 0.3, 0.2]))
 
-    def _check_results(self,
-                       batch_size: int = 5,
-                       expected_top_k: np.array = None,
-                       expected_log_probs: np.array = None,
-                       beam_search: BeamSearch = None,
-                       state: Dict[str, torch.Tensor] = None) -> None:
+    def _check_results(
+        self,
+        batch_size: int = 5,
+        expected_top_k: np.array = None,
+        expected_log_probs: np.array = None,
+        beam_search: BeamSearch = None,
+        state: Dict[str, torch.Tensor] = None,
+    ) -> None:
         expected_top_k = expected_top_k if expected_top_k is not None else self.expected_top_k
-        expected_log_probs = expected_log_probs if expected_log_probs is not None else self.expected_log_probs
+        expected_log_probs = (
+            expected_log_probs if expected_log_probs is not None else self.expected_log_probs
+        )
         state = state or {}
 
         beam_search = beam_search or self.beam_search
         beam_size = beam_search.beam_size
 
-        initial_predictions = torch.tensor([0] * batch_size)  # pylint: disable=not-callable
+        initial_predictions = torch.tensor([0] * batch_size)
         top_k, log_probs = beam_search.search(initial_predictions, state, take_step)  # type: ignore
 
         # top_k should be shape `(batch_size, beam_size, max_predicted_length)`.
@@ -88,32 +88,28 @@ class BeamSearchTest(AllenNlpTestCase):
 
     def test_finished_state(self):
         state = {}
-        state["foo"] = torch.tensor(  # pylint: disable=not-callable
-                [[1, 0, 1],
-                 [2, 0, 1],
-                 [0, 0, 1],
-                 [1, 1, 1],
-                 [0, 0, 0]]
-        )
+        state["foo"] = torch.tensor([[1, 0, 1], [2, 0, 1], [0, 0, 1], [1, 1, 1], [0, 0, 0]])
         # shape: (batch_size, 3)
 
         expected_finished_state = {}
         expected_finished_state["foo"] = np.array(
-                [[1, 0, 1],
-                 [1, 0, 1],
-                 [1, 0, 1],
-                 [2, 0, 1],
-                 [2, 0, 1],
-                 [2, 0, 1],
-                 [0, 0, 1],
-                 [0, 0, 1],
-                 [0, 0, 1],
-                 [1, 1, 1],
-                 [1, 1, 1],
-                 [1, 1, 1],
-                 [0, 0, 0],
-                 [0, 0, 0],
-                 [0, 0, 0]]
+            [
+                [1, 0, 1],
+                [1, 0, 1],
+                [1, 0, 1],
+                [2, 0, 1],
+                [2, 0, 1],
+                [2, 0, 1],
+                [0, 0, 1],
+                [0, 0, 1],
+                [0, 0, 1],
+                [1, 1, 1],
+                [1, 1, 1],
+                [1, 1, 1],
+                [0, 0, 0],
+                [0, 0, 0],
+                [0, 0, 0],
+            ]
         )
         # shape: (batch_size x beam_size, 3)
 
@@ -129,25 +125,25 @@ class BeamSearchTest(AllenNlpTestCase):
     def test_greedy_search(self):
         beam_search = BeamSearch(self.end_index, beam_size=1)
         expected_top_k = np.array([[1, 2, 3, 4, 5]])
-        expected_log_probs = np.log(np.array([0.4]))  # pylint: disable=assignment-from-no-return
-        self._check_results(expected_top_k=expected_top_k,
-                            expected_log_probs=expected_log_probs,
-                            beam_search=beam_search)
+        expected_log_probs = np.log(np.array([0.4]))
+        self._check_results(
+            expected_top_k=expected_top_k,
+            expected_log_probs=expected_log_probs,
+            beam_search=beam_search,
+        )
 
     def test_early_stopping(self):
         """
         Checks case where beam search will reach `max_steps` before finding end tokens.
         """
         beam_search = BeamSearch(self.end_index, beam_size=3, max_steps=3)
-        expected_top_k = np.array(
-                [[1, 2, 3],
-                 [2, 3, 4],
-                 [3, 4, 5]]
+        expected_top_k = np.array([[1, 2, 3], [2, 3, 4], [3, 4, 5]])
+        expected_log_probs = np.log(np.array([0.4, 0.3, 0.2]))
+        self._check_results(
+            expected_top_k=expected_top_k,
+            expected_log_probs=expected_log_probs,
+            beam_search=beam_search,
         )
-        expected_log_probs = np.log(np.array([0.4, 0.3, 0.2]))  # pylint: disable=assignment-from-no-return
-        self._check_results(expected_top_k=expected_top_k,
-                            expected_log_probs=expected_log_probs,
-                            beam_search=beam_search)
 
     def test_different_per_node_beam_size(self):
         # per_node_beam_size = 1
@@ -173,12 +169,12 @@ class BeamSearchTest(AllenNlpTestCase):
         # But with a beam size of 3, the call to `topk` to find the 3 most likely
         # next beams will result in 2 new beams that are invalid, in that have probability of 0.
         # The beam search should warn us of this.
-        initial_predictions = torch.LongTensor([self.end_index-1, self.end_index-1])
+        initial_predictions = torch.LongTensor([self.end_index - 1, self.end_index - 1])
         with pytest.warns(RuntimeWarning, match="Infinite log probabilities"):
             self.beam_search.search(initial_predictions, {}, take_step)
 
     def test_empty_sequences(self):
-        initial_predictions = torch.LongTensor([self.end_index-1, self.end_index-1])
+        initial_predictions = torch.LongTensor([self.end_index - 1, self.end_index - 1])
         beam_search = BeamSearch(self.end_index, beam_size=1)
         with pytest.warns(RuntimeWarning, match="Empty sequences predicted"):
             predictions, log_probs = beam_search.search(initial_predictions, {}, take_step)

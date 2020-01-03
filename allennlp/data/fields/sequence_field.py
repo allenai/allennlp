@@ -8,11 +8,12 @@ class SequenceField(Field[DataArray]):
     similar ``Fields`` can have a single type to require, with a consistent API, whether they are
     pointing to words in a ``TextField``, items in a ``ListField``, or something else.
     """
+
     def sequence_length(self) -> int:
         """
         How many elements are there in this sequence?
         """
         raise NotImplementedError
 
-    def empty_field(self) -> 'SequenceField':
+    def empty_field(self) -> "SequenceField":
         raise NotImplementedError

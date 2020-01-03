@@ -1,4 +1,3 @@
-
 import torch
 from torch.nn.parameter import Parameter
 from overrides import overrides
@@ -65,14 +64,17 @@ class BidirectionalEndpointSpanExtractor(SpanExtractor):
         representation, such as if you have appended/prepended <START> and <END> tokens to your
         sequence.
     """
-    def __init__(self,
-                 input_dim: int,
-                 forward_combination: str = "y-x",
-                 backward_combination: str = "x-y",
-                 num_width_embeddings: int = None,
-                 span_width_embedding_dim: int = None,
-                 bucket_widths: bool = False,
-                 use_sentinels: bool = True) -> None:
+
+    def __init__(
+        self,
+        input_dim: int,
+        forward_combination: str = "y-x",
+        backward_combination: str = "x-y",
+        num_width_embeddings: int = None,
+        span_width_embedding_dim: int = None,
+        bucket_widths: bool = False,
+        use_sentinels: bool = True,
+    ) -> None:
         super().__init__()
         self._input_dim = input_dim
         self._forward_combination = forward_combination
@@ -81,14 +83,18 @@ class BidirectionalEndpointSpanExtractor(SpanExtractor):
         self._bucket_widths = bucket_widths
 
         if self._input_dim % 2 != 0:
-            raise ConfigurationError("The input dimension is not divisible by 2, but the "
-                                     "BidirectionalEndpointSpanExtractor assumes the embedded representation "
-                                     "is bidirectional (and hence divisible by 2).")
+            raise ConfigurationError(
+                "The input dimension is not divisible by 2, but the "
+                "BidirectionalEndpointSpanExtractor assumes the embedded representation "
+                "is bidirectional (and hence divisible by 2)."
+            )
         if num_width_embeddings is not None and span_width_embedding_dim is not None:
             self._span_width_embedding = Embedding(num_width_embeddings, span_width_embedding_dim)
         elif not all([num_width_embeddings is None, span_width_embedding_dim is None]):
-            raise ConfigurationError("To use a span width embedding representation, you must"
-                                     "specify both num_width_buckets and span_width_embedding_dim.")
+            raise ConfigurationError(
+                "To use a span width embedding representation, you must"
+                "specify both num_width_buckets and span_width_embedding_dim."
+            )
         else:
             self._span_width_embedding = None
 
@@ -102,24 +108,33 @@ class BidirectionalEndpointSpanExtractor(SpanExtractor):
 
     def get_output_dim(self) -> int:
         unidirectional_dim = int(self._input_dim / 2)
-        forward_combined_dim = util.get_combined_dim(self._forward_combination,
-                                                     [unidirectional_dim, unidirectional_dim])
-        backward_combined_dim = util.get_combined_dim(self._backward_combination,
-                                                      [unidirectional_dim, unidirectional_dim])
+        forward_combined_dim = util.get_combined_dim(
+            self._forward_combination, [unidirectional_dim, unidirectional_dim]
+        )
+        backward_combined_dim = util.get_combined_dim(
+            self._backward_combination, [unidirectional_dim, unidirectional_dim]
+        )
         if self._span_width_embedding is not None:
-            return forward_combined_dim + backward_combined_dim + \
-                   self._span_width_embedding.get_output_dim()
+            return (
+                forward_combined_dim
+                + backward_combined_dim
+                + self._span_width_embedding.get_output_dim()
+            )
         return forward_combined_dim + backward_combined_dim
 
     @overrides
-    def forward(self,
-                sequence_tensor: torch.FloatTensor,
-                span_indices: torch.LongTensor,
-                sequence_mask: torch.LongTensor = None,
-                span_indices_mask: torch.LongTensor = None) -> torch.FloatTensor:
+    def forward(
+        self,
+        sequence_tensor: torch.FloatTensor,
+        span_indices: torch.LongTensor,
+        sequence_mask: torch.LongTensor = None,
+        span_indices_mask: torch.LongTensor = None,
+    ) -> torch.FloatTensor:
 
         # Both of shape (batch_size, sequence_length, embedding_size / 2)
-        forward_sequence, backward_sequence = sequence_tensor.split(int(self._input_dim / 2), dim=-1)
+        forward_sequence, backward_sequence = sequence_tensor.split(
+            int(self._input_dim / 2), dim=-1
+        )
         forward_sequence = forward_sequence.contiguous()
         backward_sequence = backward_sequence.contiguous()
 
@@ -146,11 +161,14 @@ class BidirectionalEndpointSpanExtractor(SpanExtractor):
             sequence_lengths = util.get_lengths_from_binary_sequence_mask(sequence_mask)
         else:
             # shape (batch_size), filled with the sequence length size of the sequence_tensor.
-            sequence_lengths = (torch.ones_like(sequence_tensor[:, 0, 0], dtype=torch.long) *
-                                sequence_tensor.size(1))
+            sequence_lengths = torch.ones_like(
+                sequence_tensor[:, 0, 0], dtype=torch.long
+            ) * sequence_tensor.size(1)
 
         # shape (batch_size, num_spans, 1)
-        end_sentinel_mask = (exclusive_span_ends >= sequence_lengths.unsqueeze(-1)).long().unsqueeze(-1)
+        end_sentinel_mask = (
+            (exclusive_span_ends >= sequence_lengths.unsqueeze(-1)).long().unsqueeze(-1)
+        )
 
         # As we added 1 to the span_ends to make them exclusive, which might have caused indices
         # equal to the sequence_length to become out of bounds, we multiply by the inverse of the
@@ -161,14 +179,20 @@ class BidirectionalEndpointSpanExtractor(SpanExtractor):
 
         # We'll check the indices here at runtime, because it's difficult to debug
         # if this goes wrong and it's tricky to get right.
-        if (exclusive_span_starts < 0).any() or (exclusive_span_ends > sequence_lengths.unsqueeze(-1)).any():
-            raise ValueError(f"Adjusted span indices must lie inside the length of the sequence tensor, "
-                             f"but found: exclusive_span_starts: {exclusive_span_starts}, "
-                             f"exclusive_span_ends: {exclusive_span_ends} for a sequence tensor with lengths "
-                             f"{sequence_lengths}.")
+        if (exclusive_span_starts < 0).any() or (
+            exclusive_span_ends > sequence_lengths.unsqueeze(-1)
+        ).any():
+            raise ValueError(
+                f"Adjusted span indices must lie inside the length of the sequence tensor, "
+                f"but found: exclusive_span_starts: {exclusive_span_starts}, "
+                f"exclusive_span_ends: {exclusive_span_ends} for a sequence tensor with lengths "
+                f"{sequence_lengths}."
+            )
 
         # Forward Direction: start indices are exclusive. Shape (batch_size, num_spans, input_size / 2)
-        forward_start_embeddings = util.batched_index_select(forward_sequence, exclusive_span_starts)
+        forward_start_embeddings = util.batched_index_select(
+            forward_sequence, exclusive_span_starts
+        )
         # Forward Direction: end indices are inclusive, so we can just use span_ends.
         # Shape (batch_size, num_spans, input_size / 2)
         forward_end_embeddings = util.batched_index_select(forward_sequence, span_ends)
@@ -176,7 +200,9 @@ class BidirectionalEndpointSpanExtractor(SpanExtractor):
         # Backward Direction: The backward start embeddings use the `forward` end
         # indices, because we are going backwards.
         # Shape (batch_size, num_spans, input_size / 2)
-        backward_start_embeddings = util.batched_index_select(backward_sequence, exclusive_span_ends)
+        backward_start_embeddings = util.batched_index_select(
+            backward_sequence, exclusive_span_ends
+        )
         # Backward Direction: The backward end embeddings use the `forward` start
         # indices, because we are going backwards.
         # Shape (batch_size, num_spans, input_size / 2)
@@ -188,27 +214,34 @@ class BidirectionalEndpointSpanExtractor(SpanExtractor):
             # or the end sentinel.
             float_end_sentinel_mask = end_sentinel_mask.float()
             float_start_sentinel_mask = start_sentinel_mask.float()
-            forward_start_embeddings = forward_start_embeddings * (1 - float_start_sentinel_mask) \
-                                        + float_start_sentinel_mask * self._start_sentinel
-            backward_start_embeddings = backward_start_embeddings * (1 - float_end_sentinel_mask) \
-                                        + float_end_sentinel_mask * self._end_sentinel
+            forward_start_embeddings = (
+                forward_start_embeddings * (1 - float_start_sentinel_mask)
+                + float_start_sentinel_mask * self._start_sentinel
+            )
+            backward_start_embeddings = (
+                backward_start_embeddings * (1 - float_end_sentinel_mask)
+                + float_end_sentinel_mask * self._end_sentinel
+            )
 
         # Now we combine the forward and backward spans in the manner specified by the
         # respective combinations and concatenate these representations.
         # Shape (batch_size, num_spans, forward_combination_dim)
-        forward_spans = util.combine_tensors(self._forward_combination,
-                                             [forward_start_embeddings, forward_end_embeddings])
+        forward_spans = util.combine_tensors(
+            self._forward_combination, [forward_start_embeddings, forward_end_embeddings]
+        )
         # Shape (batch_size, num_spans, backward_combination_dim)
-        backward_spans = util.combine_tensors(self._backward_combination,
-                                              [backward_start_embeddings, backward_end_embeddings])
+        backward_spans = util.combine_tensors(
+            self._backward_combination, [backward_start_embeddings, backward_end_embeddings]
+        )
         # Shape (batch_size, num_spans, forward_combination_dim + backward_combination_dim)
         span_embeddings = torch.cat([forward_spans, backward_spans], -1)
 
         if self._span_width_embedding is not None:
             # Embed the span widths and concatenate to the rest of the representations.
             if self._bucket_widths:
-                span_widths = util.bucket_values(span_ends - span_starts,
-                                                 num_total_buckets=self._num_width_embeddings)
+                span_widths = util.bucket_values(
+                    span_ends - span_starts, num_total_buckets=self._num_width_embeddings
+                )
             else:
                 span_widths = span_ends - span_starts
 

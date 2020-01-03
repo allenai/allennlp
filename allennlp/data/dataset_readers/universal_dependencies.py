@@ -2,24 +2,16 @@ from typing import Dict, Tuple, List
 import logging
 
 from overrides import overrides
-from conllu.parser import parse_line, DEFAULT_FIELDS
+from conllu import parse_incr
 
 from allennlp.common.file_utils import cached_path
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.fields import Field, TextField, SequenceLabelField, MetadataField
 from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenIndexer
-from allennlp.data.tokenizers import Token
+from allennlp.data.tokenizers import Token, Tokenizer
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
-
-
-def lazy_parse(text: str, fields: Tuple[str, ...]=DEFAULT_FIELDS):
-    for sentence in text.split("\n\n"):
-        if sentence:
-            yield [parse_line(line, fields)
-                   for line in sentence.split("\n")
-                   if line and not line.strip().startswith("#")]
+logger = logging.getLogger(__name__)
 
 
 @DatasetReader.register("universal_dependencies")
@@ -34,30 +26,38 @@ class UniversalDependenciesDatasetReader(DatasetReader):
     use_language_specific_pos : ``bool``, optional (default = False)
         Whether to use UD POS tags, or to use the language specific POS tags
         provided in the conllu format.
+    tokenizer : ``Tokenizer``, optional, default = None
+        A tokenizer to use to split the text. This is useful when the tokens that you pass
+        into the model need to have some particular attribute. Typically it is not necessary.
     """
-    def __init__(self,
-                 token_indexers: Dict[str, TokenIndexer] = None,
-                 use_language_specific_pos: bool = False,
-                 lazy: bool = False) -> None:
+
+    def __init__(
+        self,
+        token_indexers: Dict[str, TokenIndexer] = None,
+        use_language_specific_pos: bool = False,
+        tokenizer: Tokenizer = None,
+        lazy: bool = False,
+    ) -> None:
         super().__init__(lazy)
-        self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
+        self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
         self.use_language_specific_pos = use_language_specific_pos
+        self.tokenizer = tokenizer
 
     @overrides
     def _read(self, file_path: str):
         # if `file_path` is a URL, redirect to the cache
         file_path = cached_path(file_path)
 
-        with open(file_path, 'r') as conllu_file:
+        with open(file_path, "r") as conllu_file:
             logger.info("Reading UD instances from conllu dataset at: %s", file_path)
 
-            for annotation in  lazy_parse(conllu_file.read()):
+            for annotation in parse_incr(conllu_file):
                 # CoNLLU annotations sometimes add back in words that have been elided
                 # in the original sentence; we remove these, as we're just predicting
                 # dependencies for the original sentence.
                 # We filter by None here as elided words have a non-integer word id,
                 # and are replaced with None by the conllu python library.
-                annotation = [x for x in annotation if x["id"] is not None]
+                annotation = [x for x in annotation if isinstance(x["id"], int)]
 
                 heads = [x["head"] for x in annotation]
                 tags = [x["deprel"] for x in annotation]
@@ -69,11 +69,13 @@ class UniversalDependenciesDatasetReader(DatasetReader):
                 yield self.text_to_instance(words, pos_tags, list(zip(tags, heads)))
 
     @overrides
-    def text_to_instance(self,  # type: ignore
-                         words: List[str],
-                         upos_tags: List[str],
-                         dependencies: List[Tuple[str, int]] = None) -> Instance:
-        # pylint: disable=arguments-differ
+    def text_to_instance(
+        self,  # type: ignore
+        words: List[str],
+        upos_tags: List[str],
+        dependencies: List[Tuple[str, int]] = None,
+    ) -> Instance:
+
         """
         Parameters
         ----------
@@ -93,18 +95,23 @@ class UniversalDependenciesDatasetReader(DatasetReader):
         """
         fields: Dict[str, Field] = {}
 
-        tokens = TextField([Token(w) for w in words], self._token_indexers)
-        fields["words"] = tokens
-        fields["pos_tags"] = SequenceLabelField(upos_tags, tokens, label_namespace="pos")
+        if self.tokenizer is not None:
+            tokens = self.tokenizer.tokenize(" ".join(words))
+        else:
+            tokens = [Token(t) for t in words]
+
+        text_field = TextField(tokens, self._token_indexers)
+        fields["words"] = text_field
+        fields["pos_tags"] = SequenceLabelField(upos_tags, text_field, label_namespace="pos")
         if dependencies is not None:
             # We don't want to expand the label namespace with an additional dummy token, so we'll
             # always give the 'ROOT_HEAD' token a label of 'root'.
-            fields["head_tags"] = SequenceLabelField([x[0] for x in dependencies],
-                                                     tokens,
-                                                     label_namespace="head_tags")
-            fields["head_indices"] = SequenceLabelField([int(x[1]) for x in dependencies],
-                                                        tokens,
-                                                        label_namespace="head_index_tags")
+            fields["head_tags"] = SequenceLabelField(
+                [x[0] for x in dependencies], text_field, label_namespace="head_tags"
+            )
+            fields["head_indices"] = SequenceLabelField(
+                [x[1] for x in dependencies], text_field, label_namespace="head_index_tags"
+            )
 
         fields["metadata"] = MetadataField({"words": words, "pos": upos_tags})
         return Instance(fields)

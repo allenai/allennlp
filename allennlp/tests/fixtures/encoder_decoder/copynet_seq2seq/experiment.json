@@ -3,13 +3,10 @@
     "target_namespace": "target_tokens",
     "type": "copynet_seq2seq",
     "source_tokenizer": {
-      "type": "word",
-      "word_splitter": {
-        "type": "spacy"
-      }
+      "type": "spacy",
     },
     "target_tokenizer": {
-      "type": "word"
+      "type": "spacy"
     },
     "source_token_indexers": {
       "tokens": {

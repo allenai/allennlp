@@ -1,0 +1,26 @@
+1       Aclarando       _       VERB    VERB    _       0       ROOT    _       _
+2       hacia   _       ADP     ADP     _       1       adpmod  _       _
+3       todo    _       DET     DET     _       5       det     _       _
+4       el      _       DET     DET     _       5       det     _       _
+5       mundo   _       NOUN    NOUN    _       2       adpobj  _       _
+6       Valderrama      _       NOUN    PNOUN   _       9       nsubj   _       _
+7       Y       _       CONJ    CONJ    _       6       cc      _       _
+8       Eduardo         _       NOUN    PNOUN   _       6       conj    _       _
+9       Son     _       NOUN    PNOUN   _       1       xcomp   _       _
+10      La      _       DET     DET     _       12      det     _       _
+11      Misma   _       ADJ     ADJ     _       12      amod    _       _
+12      Persona         _       NOUN    NOUN    _       9       attr    _       _
+13      .       _       .       .       _       1       p       _       _
+
+1       Es      _       VERB    VERB    _       0       ROOT    _       _
+2       un      _       DET     DET     _       3       det     _       _
+3       bar     _       NOUN    NOUN    _       1       attr    _       _
+4       disfrazado      _       VERB    VERB    _       3       partmod     _       _
+5       de      _       ADP     ADP     _       4       adpmod  _       _
+6       restaurante     _       NOUN    NOUN    _       5       adpobj  _       _
+7       la      _       DET     DET     _       8       det     _       _
+8       comida  _       NOUN    NOUN    _       9       nsubj   _       _
+9       esta    _       VERB    VERB    _       1       parataxis       _       _
+10      demasiado       _       PRON    PRON    _       11      nmod    _       _
+11      salada  _       ADJ     ADJ     _       9       acomp   _       _
+12      .       _       .       .       _       1       p       _       _

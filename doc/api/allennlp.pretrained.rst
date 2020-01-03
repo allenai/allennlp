@@ -1,9 +1,6 @@
 allennlp.pretrained
 ===================
 
-Pretrained models available in AllenNLP.
+As of AllenNLP 1.0, pretrained models are available from `AllenNLP Hub`_.
 
-.. automodule:: allennlp.pretrained
-   :members:
-   :undoc-members:
-   :show-inheritance:
+.. _AllenNLP Hub: https://github.com/allenai/allennlp-hub

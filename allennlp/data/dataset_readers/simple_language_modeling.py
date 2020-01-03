@@ -10,10 +10,10 @@ from allennlp.data.fields import TextField
 from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import SingleIdTokenIndexer
 from allennlp.data.token_indexers.token_indexer import TokenIndexer
-from allennlp.data.tokenizers import WordTokenizer
+from allennlp.data.tokenizers import SpacyTokenizer
 from allennlp.data.tokenizers.tokenizer import Tokenizer
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 @DatasetReader.register("simple_language_modeling")
@@ -26,7 +26,7 @@ class SimpleLanguageModelingDatasetReader(DatasetReader):
     ----------
     tokenizer : ``Tokenizer``, optional
         Tokenizer to use to split the input sentences into words or other kinds of tokens. Defaults
-        to ``WordTokenizer()``.
+        to ``SpacyTokenizer()``.
     token_indexers : ``Dict[str, TokenIndexer]``, optional
         Indexers used to define input token representations. Defaults to
         ``{"tokens": SingleIdTokenIndexer()}``.
@@ -37,14 +37,17 @@ class SimpleLanguageModelingDatasetReader(DatasetReader):
     end_tokens : ``List[str]``, optional (default=``None``)
         These are appended to the tokens provided to the ``TextField``.
     """
-    def __init__(self,
-                 tokenizer: Tokenizer = None,
-                 token_indexers: Dict[str, TokenIndexer] = None,
-                 max_sequence_length: int = None,
-                 start_tokens: List[str] = None,
-                 end_tokens: List[str] = None) -> None:
+
+    def __init__(
+        self,
+        tokenizer: Tokenizer = None,
+        token_indexers: Dict[str, TokenIndexer] = None,
+        max_sequence_length: int = None,
+        start_tokens: List[str] = None,
+        end_tokens: List[str] = None,
+    ) -> None:
         super().__init__(True)
-        self._tokenizer = tokenizer or WordTokenizer()
+        self._tokenizer = tokenizer or SpacyTokenizer()
         self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
         if max_sequence_length is not None:
             self._max_sequence_length: Union[float, Optional[int]] = max_sequence_length
@@ -58,29 +61,29 @@ class SimpleLanguageModelingDatasetReader(DatasetReader):
         logger.info("max_sequence_length=%s", max_sequence_length)
 
     @overrides
-    def text_to_instance(self,  # type: ignore
-                         sentence: str) -> Instance:
-        # pylint: disable=arguments-differ
+    def text_to_instance(
+        self,  # type: ignore
+        sentence: str,
+    ) -> Instance:
+
         tokenized = self._tokenizer.tokenize(sentence)
         tokenized_with_ends = []
         tokenized_with_ends.extend(self._start_tokens)
         tokenized_with_ends.extend(tokenized)
         tokenized_with_ends.extend(self._end_tokens)
-        return_instance = Instance({
-                'source': TextField(tokenized_with_ends, self._token_indexers),
-        })
+        return_instance = Instance({"source": TextField(tokenized_with_ends, self._token_indexers)})
         return return_instance
 
     @overrides
     def _read(self, file_path: str) -> Iterable[Instance]:
-        # pylint: disable=arguments-differ
-        logger.info('Loading data from %s', file_path)
+
+        logger.info("Loading data from %s", file_path)
         dropped_instances = 0
 
         with open(file_path) as file:
             for sentence in file:
                 instance = self.text_to_instance(sentence)
-                if instance.fields['source'].sequence_length() <= self._max_sequence_length:
+                if instance.fields["source"].sequence_length() <= self._max_sequence_length:
                     yield instance
                 else:
                     dropped_instances += 1

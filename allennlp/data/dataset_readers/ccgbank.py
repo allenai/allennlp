@@ -12,9 +12,9 @@ from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
 from allennlp.data.tokenizers import Token
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
-_VALID_LABELS = {'ccg', 'modified_pos', 'original_pos', 'predicate_arg'}
+_VALID_LABELS = {"ccg", "modified_pos", "original_pos", "predicate_arg"}
 
 
 @DatasetReader.register("ccgbank")
@@ -55,14 +55,17 @@ class CcgBankDatasetReader(DatasetReader):
     label_namespace: ``str``, optional (default=``labels``)
         Specifies the namespace for the chosen ``tag_label``.
     """
-    def __init__(self,
-                 token_indexers: Dict[str, TokenIndexer] = None,
-                 tag_label: str = "ccg",
-                 feature_labels: Sequence[str] = (),
-                 label_namespace: str = "labels",
-                 lazy: bool = False) -> None:
+
+    def __init__(
+        self,
+        token_indexers: Dict[str, TokenIndexer] = None,
+        tag_label: str = "ccg",
+        feature_labels: Sequence[str] = (),
+        label_namespace: str = "labels",
+        lazy: bool = False,
+    ) -> None:
         super().__init__(lazy=lazy)
-        self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
+        self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
         self.tag_label = tag_label
         if tag_label is not None and tag_label not in _VALID_LABELS:
             raise ConfigurationError("unknown tag label type: {}".format(tag_label))
@@ -91,22 +94,27 @@ class CcgBankDatasetReader(DatasetReader):
                     tuples = zip(*[leaf.split() for leaf in leaves])
 
                     # Convert to lists and assign to variables.
-                    ccg_categories, modified_pos_tags, original_pos_tags, tokens, predicate_arg_categories = \
-                            [list(result) for result in tuples]
+                    ccg_categories, modified_pos_tags, original_pos_tags, tokens, predicate_arg_categories = [
+                        list(result) for result in tuples
+                    ]
 
-                    yield self.text_to_instance(tokens,
-                                                ccg_categories,
-                                                modified_pos_tags,
-                                                original_pos_tags,
-                                                predicate_arg_categories)
+                    yield self.text_to_instance(
+                        tokens,
+                        ccg_categories,
+                        original_pos_tags,
+                        modified_pos_tags,
+                        predicate_arg_categories,
+                    )
 
     @overrides
-    def text_to_instance(self, # type: ignore
-                         tokens: List[str],
-                         ccg_categories: List[str] = None,
-                         original_pos_tags: List[str] = None,
-                         modified_pos_tags: List[str] = None,
-                         predicate_arg_categories: List[str] = None) -> Instance:
+    def text_to_instance(
+        self,  # type: ignore
+        tokens: List[str],
+        ccg_categories: List[str] = None,
+        original_pos_tags: List[str] = None,
+        modified_pos_tags: List[str] = None,
+        predicate_arg_categories: List[str] = None,
+    ) -> Instance:
         """
         We take `pre-tokenized` input here, because we don't have a tokenizer in this class.
 
@@ -135,47 +143,56 @@ class CcgBankDatasetReader(DatasetReader):
                 Tags corresponding to each feature_label (if any) specified in the
                 ``feature_labels`` constructor argument.
         """
-        # pylint: disable=arguments-differ
+
         text_field = TextField([Token(x) for x in tokens], token_indexers=self._token_indexers)
         fields: Dict[str, Field] = {"tokens": text_field}
 
         # Add "feature labels" to instance
-        if 'ccg' in self.feature_labels:
+        if "ccg" in self.feature_labels:
             if ccg_categories is None:
-                raise ConfigurationError("Dataset reader was specified to use CCG categories as "
-                                         "features. Pass them to text_to_instance.")
-            fields['ccg_tags'] = SequenceLabelField(ccg_categories, text_field, "ccg_tags")
-        if 'original_pos' in self.feature_labels:
+                raise ConfigurationError(
+                    "Dataset reader was specified to use CCG categories as "
+                    "features. Pass them to text_to_instance."
+                )
+            fields["ccg_tags"] = SequenceLabelField(ccg_categories, text_field, "ccg_tags")
+        if "original_pos" in self.feature_labels:
             if original_pos_tags is None:
-                raise ConfigurationError("Dataset reader was specified to use original POS tags as "
-                                         "features. Pass them to text_to_instance.")
-            fields['original_pos_tags'] = SequenceLabelField(original_pos_tags, text_field,
-                                                             "original_pos_tags")
-        if 'modified_pos' in self.feature_labels:
+                raise ConfigurationError(
+                    "Dataset reader was specified to use original POS tags as "
+                    "features. Pass them to text_to_instance."
+                )
+            fields["original_pos_tags"] = SequenceLabelField(
+                original_pos_tags, text_field, "original_pos_tags"
+            )
+        if "modified_pos" in self.feature_labels:
             if modified_pos_tags is None:
-                raise ConfigurationError("Dataset reader was specified to use modified POS tags as "
-                                         " features. Pass them to text_to_instance.")
-            fields['modified_pos_tags'] = SequenceLabelField(modified_pos_tags, text_field,
-                                                             "modified_pos_tags")
-        if 'predicate_arg' in self.feature_labels:
+                raise ConfigurationError(
+                    "Dataset reader was specified to use modified POS tags as "
+                    " features. Pass them to text_to_instance."
+                )
+            fields["modified_pos_tags"] = SequenceLabelField(
+                modified_pos_tags, text_field, "modified_pos_tags"
+            )
+        if "predicate_arg" in self.feature_labels:
             if predicate_arg_categories is None:
-                raise ConfigurationError("Dataset reader was specified to use predicate arg tags as "
-                                         " features. Pass them to text_to_instance.")
-            fields['predicate_arg_tags'] = SequenceLabelField(predicate_arg_categories, text_field,
-                                                              "predicate_arg_tags")
+                raise ConfigurationError(
+                    "Dataset reader was specified to use predicate arg tags as "
+                    " features. Pass them to text_to_instance."
+                )
+            fields["predicate_arg_tags"] = SequenceLabelField(
+                predicate_arg_categories, text_field, "predicate_arg_tags"
+            )
 
         # Add "tag label" to instance
-        if self.tag_label == 'ccg' and ccg_categories is not None:
-            fields['tags'] = SequenceLabelField(ccg_categories, text_field,
-                                                self.label_namespace)
-        elif self.tag_label == 'original_pos' and original_pos_tags is not None:
-            fields['tags'] = SequenceLabelField(original_pos_tags, text_field,
-                                                self.label_namespace)
-        elif self.tag_label == 'modified_pos' and modified_pos_tags is not None:
-            fields['tags'] = SequenceLabelField(modified_pos_tags, text_field,
-                                                self.label_namespace)
-        elif self.tag_label == 'predicate_arg' and predicate_arg_categories is not None:
-            fields['tags'] = SequenceLabelField(predicate_arg_categories, text_field,
-                                                self.label_namespace)
+        if self.tag_label == "ccg" and ccg_categories is not None:
+            fields["tags"] = SequenceLabelField(ccg_categories, text_field, self.label_namespace)
+        elif self.tag_label == "original_pos" and original_pos_tags is not None:
+            fields["tags"] = SequenceLabelField(original_pos_tags, text_field, self.label_namespace)
+        elif self.tag_label == "modified_pos" and modified_pos_tags is not None:
+            fields["tags"] = SequenceLabelField(modified_pos_tags, text_field, self.label_namespace)
+        elif self.tag_label == "predicate_arg" and predicate_arg_categories is not None:
+            fields["tags"] = SequenceLabelField(
+                predicate_arg_categories, text_field, self.label_namespace
+            )
 
         return Instance(fields)

@@ -1,13 +1,13 @@
-# pylint: disable=no-self-use,invalid-name
-
 from allennlp.common.testing import ModelTestCase
 
 
 class TestBiMPM(ModelTestCase):
     def setUp(self):
-        super(TestBiMPM, self).setUp()
-        self.set_up_model(self.FIXTURES_ROOT / 'bimpm' / 'experiment.json',
-                          self.FIXTURES_ROOT / 'data' / 'quora_paraphrase.tsv')
+        super().setUp()
+        self.set_up_model(
+            self.FIXTURES_ROOT / "bimpm" / "experiment.json",
+            self.FIXTURES_ROOT / "data" / "quora_paraphrase.tsv",
+        )
 
     def test_forward_pass_runs_correctly(self):
         training_tensors = self.dataset.as_tensor_dict()

@@ -13,6 +13,7 @@ from allennlp.common.checks import ConfigurationError
 from allennlp.nn.util import get_dropout_mask
 from allennlp.nn.initializers import block_orthogonal
 
+
 class AugmentedLstm(torch.nn.Module):
     """
     An LSTM with Recurrent Dropout and the option to use highway
@@ -56,14 +57,17 @@ class AugmentedLstm(torch.nn.Module):
         element, all outputs past the sequence length for that batch are
         zero tensors.
     """
-    def __init__(self,
-                 input_size: int,
-                 hidden_size: int,
-                 go_forward: bool = True,
-                 recurrent_dropout_probability: float = 0.0,
-                 use_highway: bool = True,
-                 use_input_projection_bias: bool = True) -> None:
-        super(AugmentedLstm, self).__init__()
+
+    def __init__(
+        self,
+        input_size: int,
+        hidden_size: int,
+        go_forward: bool = True,
+        recurrent_dropout_probability: float = 0.0,
+        use_highway: bool = True,
+        use_input_projection_bias: bool = True,
+    ) -> None:
+        super().__init__()
         # Required to be wrapped with a :class:`PytorchSeq2SeqWrapper`.
         self.input_size = input_size
         self.hidden_size = hidden_size
@@ -76,10 +80,14 @@ class AugmentedLstm(torch.nn.Module):
         # using highway layers, we need some extra projections, which is
         # why the sizes of the Linear layers change here depending on this flag.
         if use_highway:
-            self.input_linearity = torch.nn.Linear(input_size, 6 * hidden_size, bias=use_input_projection_bias)
+            self.input_linearity = torch.nn.Linear(
+                input_size, 6 * hidden_size, bias=use_input_projection_bias
+            )
             self.state_linearity = torch.nn.Linear(hidden_size, 5 * hidden_size, bias=True)
         else:
-            self.input_linearity = torch.nn.Linear(input_size, 4 * hidden_size, bias=use_input_projection_bias)
+            self.input_linearity = torch.nn.Linear(
+                input_size, 4 * hidden_size, bias=use_input_projection_bias
+            )
             self.state_linearity = torch.nn.Linear(hidden_size, 4 * hidden_size, bias=True)
         self.reset_parameters()
 
@@ -91,11 +99,13 @@ class AugmentedLstm(torch.nn.Module):
         self.state_linearity.bias.data.fill_(0.0)
         # Initialize forget gate biases to 1.0 as per An Empirical
         # Exploration of Recurrent Network Architectures, (Jozefowicz, 2015).
-        self.state_linearity.bias.data[self.hidden_size:2 * self.hidden_size].fill_(1.0)
+        self.state_linearity.bias.data[self.hidden_size : 2 * self.hidden_size].fill_(1.0)
 
-    def forward(self,  # pylint: disable=arguments-differ
-                inputs: PackedSequence,
-                initial_state: Optional[Tuple[torch.Tensor, torch.Tensor]] = None):
+    def forward(
+        self,
+        inputs: PackedSequence,
+        initial_state: Optional[Tuple[torch.Tensor, torch.Tensor]] = None,
+    ):
         """
         Parameters
         ----------
@@ -116,13 +126,15 @@ class AugmentedLstm(torch.nn.Module):
         match the Pytorch API.
         """
         if not isinstance(inputs, PackedSequence):
-            raise ConfigurationError('inputs must be PackedSequence but got %s' % (type(inputs)))
+            raise ConfigurationError("inputs must be PackedSequence but got %s" % (type(inputs)))
 
         sequence_tensor, batch_lengths = pad_packed_sequence(inputs, batch_first=True)
         batch_size = sequence_tensor.size()[0]
         total_timesteps = sequence_tensor.size()[1]
 
-        output_accumulator = sequence_tensor.new_zeros(batch_size, total_timesteps, self.hidden_size)
+        output_accumulator = sequence_tensor.new_zeros(
+            batch_size, total_timesteps, self.hidden_size
+        )
         if initial_state is None:
             full_batch_previous_memory = sequence_tensor.new_zeros(batch_size, self.hidden_size)
             full_batch_previous_state = sequence_tensor.new_zeros(batch_size, self.hidden_size)
@@ -132,7 +144,9 @@ class AugmentedLstm(torch.nn.Module):
 
         current_length_index = batch_size - 1 if self.go_forward else 0
         if self.recurrent_dropout_probability > 0.0:
-            dropout_mask = get_dropout_mask(self.recurrent_dropout_probability, full_batch_previous_memory)
+            dropout_mask = get_dropout_mask(
+                self.recurrent_dropout_probability, full_batch_previous_memory
+            )
         else:
             dropout_mask = None
 
@@ -157,17 +171,19 @@ class AugmentedLstm(torch.nn.Module):
                 # First conditional: Are we already at the maximum number of elements in the batch?
                 # Second conditional: Does the next shortest sequence beyond the current batch
                 # index require computation use this timestep?
-                while current_length_index < (len(batch_lengths) - 1) and \
-                                batch_lengths[current_length_index + 1] > index:
+                while (
+                    current_length_index < (len(batch_lengths) - 1)
+                    and batch_lengths[current_length_index + 1] > index
+                ):
                     current_length_index += 1
 
             # Actually get the slices of the batch which we need for the computation at this timestep.
-            previous_memory = full_batch_previous_memory[0: current_length_index + 1].clone()
-            previous_state = full_batch_previous_state[0: current_length_index + 1].clone()
+            previous_memory = full_batch_previous_memory[0 : current_length_index + 1].clone()
+            previous_state = full_batch_previous_state[0 : current_length_index + 1].clone()
             # Only do recurrent dropout if the dropout prob is > 0.0 and we are in training mode.
             if dropout_mask is not None and self.training:
-                previous_state = previous_state * dropout_mask[0: current_length_index + 1]
-            timestep_input = sequence_tensor[0: current_length_index + 1, index]
+                previous_state = previous_state * dropout_mask[0 : current_length_index + 1]
+            timestep_input = sequence_tensor[0 : current_length_index + 1, index]
 
             # Do the projections for all the gates all at once.
             projected_input = self.input_linearity(timestep_input)
@@ -175,38 +191,56 @@ class AugmentedLstm(torch.nn.Module):
 
             # Main LSTM equations using relevant chunks of the big linear
             # projections of the hidden state and inputs.
-            input_gate = torch.sigmoid(projected_input[:, 0 * self.hidden_size:1 * self.hidden_size] +
-                                       projected_state[:, 0 * self.hidden_size:1 * self.hidden_size])
-            forget_gate = torch.sigmoid(projected_input[:, 1 * self.hidden_size:2 * self.hidden_size] +
-                                        projected_state[:, 1 * self.hidden_size:2 * self.hidden_size])
-            memory_init = torch.tanh(projected_input[:, 2 * self.hidden_size:3 * self.hidden_size] +
-                                     projected_state[:, 2 * self.hidden_size:3 * self.hidden_size])
-            output_gate = torch.sigmoid(projected_input[:, 3 * self.hidden_size:4 * self.hidden_size] +
-                                        projected_state[:, 3 * self.hidden_size:4 * self.hidden_size])
+            input_gate = torch.sigmoid(
+                projected_input[:, 0 * self.hidden_size : 1 * self.hidden_size]
+                + projected_state[:, 0 * self.hidden_size : 1 * self.hidden_size]
+            )
+            forget_gate = torch.sigmoid(
+                projected_input[:, 1 * self.hidden_size : 2 * self.hidden_size]
+                + projected_state[:, 1 * self.hidden_size : 2 * self.hidden_size]
+            )
+            memory_init = torch.tanh(
+                projected_input[:, 2 * self.hidden_size : 3 * self.hidden_size]
+                + projected_state[:, 2 * self.hidden_size : 3 * self.hidden_size]
+            )
+            output_gate = torch.sigmoid(
+                projected_input[:, 3 * self.hidden_size : 4 * self.hidden_size]
+                + projected_state[:, 3 * self.hidden_size : 4 * self.hidden_size]
+            )
             memory = input_gate * memory_init + forget_gate * previous_memory
             timestep_output = output_gate * torch.tanh(memory)
 
             if self.use_highway:
-                highway_gate = torch.sigmoid(projected_input[:, 4 * self.hidden_size:5 * self.hidden_size] +
-                                             projected_state[:, 4 * self.hidden_size:5 * self.hidden_size])
-                highway_input_projection = projected_input[:, 5 * self.hidden_size:6 * self.hidden_size]
-                timestep_output = highway_gate * timestep_output + (1 - highway_gate) * highway_input_projection
+                highway_gate = torch.sigmoid(
+                    projected_input[:, 4 * self.hidden_size : 5 * self.hidden_size]
+                    + projected_state[:, 4 * self.hidden_size : 5 * self.hidden_size]
+                )
+                highway_input_projection = projected_input[
+                    :, 5 * self.hidden_size : 6 * self.hidden_size
+                ]
+                timestep_output = (
+                    highway_gate * timestep_output + (1 - highway_gate) * highway_input_projection
+                )
 
             # We've been doing computation with less than the full batch, so here we create a new
             # variable for the the whole batch at this timestep and insert the result for the
             # relevant elements of the batch into it.
             full_batch_previous_memory = full_batch_previous_memory.clone()
             full_batch_previous_state = full_batch_previous_state.clone()
-            full_batch_previous_memory[0:current_length_index + 1] = memory
-            full_batch_previous_state[0:current_length_index + 1] = timestep_output
-            output_accumulator[0:current_length_index + 1, index] = timestep_output
+            full_batch_previous_memory[0 : current_length_index + 1] = memory
+            full_batch_previous_state[0 : current_length_index + 1] = timestep_output
+            output_accumulator[0 : current_length_index + 1, index] = timestep_output
 
-        output_accumulator = pack_padded_sequence(output_accumulator, batch_lengths, batch_first=True)
+        output_accumulator = pack_padded_sequence(
+            output_accumulator, batch_lengths, batch_first=True
+        )
 
         # Mimic the pytorch API by returning state in the following shape:
         # (num_layers * num_directions, batch_size, hidden_size). As this
         # LSTM cannot be stacked, the first dimension here is just 1.
-        final_state = (full_batch_previous_state.unsqueeze(0),
-                       full_batch_previous_memory.unsqueeze(0))
+        final_state = (
+            full_batch_previous_state.unsqueeze(0),
+            full_batch_previous_memory.unsqueeze(0),
+        )
 
         return output_accumulator, final_state

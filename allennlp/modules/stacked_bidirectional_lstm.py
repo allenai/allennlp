@@ -1,9 +1,12 @@
-from typing import Optional, Tuple
+from typing import Optional, Tuple, List
 import torch
 from torch.nn.utils.rnn import PackedSequence, pack_padded_sequence, pad_packed_sequence
 from allennlp.modules.augmented_lstm import AugmentedLstm
 from allennlp.modules.input_variational_dropout import InputVariationalDropout
 from allennlp.common.checks import ConfigurationError
+
+
+TensorPair = Tuple[torch.Tensor, torch.Tensor]
 
 
 class StackedBidirectionalLstm(torch.nn.Module):
@@ -38,14 +41,17 @@ class StackedBidirectionalLstm(torch.nn.Module):
             gate = sigmoid(W_x1 * x_t + W_h * h_t)
             output = gate * h_t  + (1 - gate) * (W_x2 * x_t)
     """
-    def __init__(self,
-                 input_size: int,
-                 hidden_size: int,
-                 num_layers: int,
-                 recurrent_dropout_probability: float = 0.0,
-                 layer_dropout_probability: float = 0.0,
-                 use_highway: bool = True) -> None:
-        super(StackedBidirectionalLstm, self).__init__()
+
+    def __init__(
+        self,
+        input_size: int,
+        hidden_size: int,
+        num_layers: int,
+        recurrent_dropout_probability: float = 0.0,
+        layer_dropout_probability: float = 0.0,
+        use_highway: bool = True,
+    ) -> None:
+        super().__init__()
 
         # Required to be wrapped with a :class:`PytorchSeq2SeqWrapper`.
         self.input_size = input_size
@@ -57,28 +63,33 @@ class StackedBidirectionalLstm(torch.nn.Module):
         lstm_input_size = input_size
         for layer_index in range(num_layers):
 
-            forward_layer = AugmentedLstm(lstm_input_size, hidden_size,
-                                          go_forward=True,
-                                          recurrent_dropout_probability=recurrent_dropout_probability,
-                                          use_highway=use_highway,
-                                          use_input_projection_bias=False)
-            backward_layer = AugmentedLstm(lstm_input_size, hidden_size,
-                                           go_forward=False,
-                                           recurrent_dropout_probability=recurrent_dropout_probability,
-                                           use_highway=use_highway,
-                                           use_input_projection_bias=False)
+            forward_layer = AugmentedLstm(
+                lstm_input_size,
+                hidden_size,
+                go_forward=True,
+                recurrent_dropout_probability=recurrent_dropout_probability,
+                use_highway=use_highway,
+                use_input_projection_bias=False,
+            )
+            backward_layer = AugmentedLstm(
+                lstm_input_size,
+                hidden_size,
+                go_forward=False,
+                recurrent_dropout_probability=recurrent_dropout_probability,
+                use_highway=use_highway,
+                use_input_projection_bias=False,
+            )
 
             lstm_input_size = hidden_size * 2
-            self.add_module('forward_layer_{}'.format(layer_index), forward_layer)
-            self.add_module('backward_layer_{}'.format(layer_index), backward_layer)
+            self.add_module("forward_layer_{}".format(layer_index), forward_layer)
+            self.add_module("backward_layer_{}".format(layer_index), backward_layer)
             layers.append([forward_layer, backward_layer])
         self.lstm_layers = layers
         self.layer_dropout = InputVariationalDropout(layer_dropout_probability)
 
-    def forward(self,  # pylint: disable=arguments-differ
-                inputs: PackedSequence,
-                initial_state: Optional[Tuple[torch.Tensor, torch.Tensor]] = None
-               ) -> Tuple[PackedSequence, Tuple[torch.Tensor, torch.Tensor]]:
+    def forward(
+        self, inputs: PackedSequence, initial_state: Optional[TensorPair] = None
+    ) -> Tuple[PackedSequence, TensorPair]:
         """
         Parameters
         ----------
@@ -96,21 +107,22 @@ class StackedBidirectionalLstm(torch.nn.Module):
             The per-layer final (state, memory) states of the LSTM, each with shape
             (num_layers * 2, batch_size, hidden_size * 2).
         """
-        if not initial_state:
-            hidden_states = [None] * len(self.lstm_layers)
+        if initial_state is None:
+            hidden_states: List[Optional[TensorPair]] = [None] * len(self.lstm_layers)
         elif initial_state[0].size()[0] != len(self.lstm_layers):
-            raise ConfigurationError("Initial states were passed to forward() but the number of "
-                                     "initial states does not match the number of layers.")
+            raise ConfigurationError(
+                "Initial states were passed to forward() but the number of "
+                "initial states does not match the number of layers."
+            )
         else:
-            hidden_states = list(zip(initial_state[0].split(1, 0),
-                                     initial_state[1].split(1, 0)))
+            hidden_states = list(zip(initial_state[0].split(1, 0), initial_state[1].split(1, 0)))
 
         output_sequence = inputs
         final_h = []
         final_c = []
         for i, state in enumerate(hidden_states):
-            forward_layer = getattr(self, 'forward_layer_{}'.format(i))
-            backward_layer = getattr(self, 'backward_layer_{}'.format(i))
+            forward_layer = getattr(self, "forward_layer_{}".format(i))
+            backward_layer = getattr(self, "backward_layer_{}".format(i))
             # The state is duplicated to mirror the Pytorch API for LSTMs.
             forward_output, final_forward_state = forward_layer(output_sequence, state)
             backward_output, final_backward_state = backward_layer(output_sequence, state)

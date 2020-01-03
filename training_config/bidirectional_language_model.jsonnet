@@ -1,17 +1,14 @@
 local NUM_GPUS = 2;
-local NUM_THREADS = 1;
+local NUM_THREADS = 4;
 
 local BASE_READER = {
         "type": "simple_language_modeling",
         "tokenizer": {
-          "type": "word",
-          "word_splitter": {
 	        // The 1 Billion Word Language Model Benchmark dataset is
 	        // pre-tokenized. (Also, if you're running against a untokenized
 	        // dataset be aware that there are serialization issues with Spacy.
 	        // These come into play in the multiprocess case.)
-            "type": "just_spaces"
-          }
+          "type": "just_spaces"
         },
         "token_indexers": {
           "tokens": {
@@ -119,7 +116,7 @@ local BASE_ITERATOR = {
     // See https://pytorch.org/docs/stable/multiprocessing.html#file-descriptor-file-descriptor
     // for a description of the underlying issue. `ulimit -n 8192` has sufficed,
     // but that number could use tuning.
-    "output_queue_size": 500
+    "output_queue_size": 1000
   },
   "trainer": {
     "num_epochs": 10,

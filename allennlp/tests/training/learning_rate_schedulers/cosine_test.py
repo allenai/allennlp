@@ -1,5 +1,3 @@
-# pylint: disable=no-self-use,invalid-name,protected-access
-
 from typing import Dict, Any
 
 import torch
@@ -11,9 +9,8 @@ from allennlp.common.params import Params
 
 
 class CosineWithRestartsTest(AllenNlpTestCase):
-
     def setUp(self):
-        super(CosineWithRestartsTest, self).setUp()
+        super().setUp()
         self.model = torch.nn.Sequential(torch.nn.Linear(10, 10))
 
         # We use these cases to verify that the scheduler works as expected.
@@ -25,101 +22,79 @@ class CosineWithRestartsTest(AllenNlpTestCase):
         # - checkpoints: a list of epoch numbers at which to save the scheduler
         #   state, and then restore from the saved state and resume.
         self.cosine_schedule_cases = [
-                (
-                        30,
-                        {"t_initial": 30, "t_mul": 1.0},
-                        [(0, 1.0),
-                         (15, 0.5000000000000001),
-                         (29, 0.0027390523158632996)],
-                        [10, 14]
-                ),
-                (
-                        10,
-                        {"t_initial": 1, "t_mul": 2.0},
-                        [(0, 1.0),
-                         (1, 1.0),
-                         (2, 0.5),
-                         (3, 1.0)],
-                        [1, 3]
-                ),
-                (
-                        30,
-                        {"t_initial": 1, "t_mul": 1.0},
-                        [(0, 1.0),
-                         (15, 1.0),
-                         (29, 1.0)],
-                        []
-                ),
-                (
-                        60,
-                        {"t_initial": 30, "t_mul": 1.0},
-                        [(0, 1.0),
-                         (15, 0.5000000000000001),
-                         (29, 0.0027390523158632996),
-                         (30, 1.0),
-                         (45, 0.5000000000000001),
-                         (59, 0.0027390523158632996)],
-                        [30, 35]
-                ),
-                (
-                        60,
-                        {"t_initial": 30, "t_mul": 1.0, "eta_mul": 0.5},
-                        [(0, 1.0),
-                         (15, 0.5000000000000001),
-                         (29, 0.0027390523158632996),
-                         (30, .5)],
-                        []
-                ),
-                (
-                        100,
-                        {"t_initial": 30, "t_mul": 1.5},
-                        [(0, 1.0),
-                         (29, 0.0027390523158632996),
-                         (30, 1.0),
-                         (74, 0.0012179748700879012)],
-                        []
-                ),
-                (
-                        210,
-                        {"t_initial": 30, "t_mul": 2},
-                        [(0, 1.0),
-                         (29, 0.0027390523158632996),
-                         (30, 1.0),
-                         (89, 0.0006852326227130834),
-                         (90, 1.0),
-                         (209, 0.00017133751222137006)],
-                        []
-                ),
-                (
-                        210,
-                        {"t_initial": 30, "t_mul": 2, "eta_mul": 0.5},
-                        [(0, 1.0),
-                         (30, .5),
-                         (90, .25)],
-                        [29, 90]
-                ),
-                (
-                        150,
-                        {"t_initial": 30, "t_mul": 1},
-                        [(0, 1.0),
-                         (29, 0.0027390523158632996),
-                         (30, 1.0),
-                         (59, 0.0027390523158632996),
-                         (60, 1.0),
-                         (89, 0.0027390523158632996),
-                         (90, 1.0)],
-                        []
-                ),
-                (
-                        10,
-                        {"t_initial": 1, "t_mul": 1, "eta_mul": 0.5},
-                        [(0, 1.0), (1, 0.5), (2, 0.25)],
-                        []
-                ),
+            (
+                30,
+                {"t_initial": 30, "t_mul": 1.0},
+                [(0, 1.0), (15, 0.5000000000000001), (29, 0.0027390523158632996)],
+                [10, 14],
+            ),
+            (10, {"t_initial": 1, "t_mul": 2.0}, [(0, 1.0), (1, 1.0), (2, 0.5), (3, 1.0)], [1, 3]),
+            (30, {"t_initial": 1, "t_mul": 1.0}, [(0, 1.0), (15, 1.0), (29, 1.0)], []),
+            (
+                60,
+                {"t_initial": 30, "t_mul": 1.0},
+                [
+                    (0, 1.0),
+                    (15, 0.5000000000000001),
+                    (29, 0.0027390523158632996),
+                    (30, 1.0),
+                    (45, 0.5000000000000001),
+                    (59, 0.0027390523158632996),
+                ],
+                [30, 35],
+            ),
+            (
+                60,
+                {"t_initial": 30, "t_mul": 1.0, "eta_mul": 0.5},
+                [(0, 1.0), (15, 0.5000000000000001), (29, 0.0027390523158632996), (30, 0.5)],
+                [],
+            ),
+            (
+                100,
+                {"t_initial": 30, "t_mul": 1.5},
+                [(0, 1.0), (29, 0.0027390523158632996), (30, 1.0), (74, 0.0012179748700879012)],
+                [],
+            ),
+            (
+                210,
+                {"t_initial": 30, "t_mul": 2},
+                [
+                    (0, 1.0),
+                    (29, 0.0027390523158632996),
+                    (30, 1.0),
+                    (89, 0.0006852326227130834),
+                    (90, 1.0),
+                    (209, 0.00017133751222137006),
+                ],
+                [],
+            ),
+            (
+                210,
+                {"t_initial": 30, "t_mul": 2, "eta_mul": 0.5},
+                [(0, 1.0), (30, 0.5), (90, 0.25)],
+                [29, 90],
+            ),
+            (
+                150,
+                {"t_initial": 30, "t_mul": 1},
+                [
+                    (0, 1.0),
+                    (29, 0.0027390523158632996),
+                    (30, 1.0),
+                    (59, 0.0027390523158632996),
+                    (60, 1.0),
+                    (89, 0.0027390523158632996),
+                    (90, 1.0),
+                ],
+                [],
+            ),
+            (10, {"t_initial": 1, "t_mul": 1, "eta_mul": 0.5}, [(0, 1.0), (1, 0.5), (2, 0.25)], []),
         ]
 
     def _get_optimizer(self, lr: float = 1.0):
-        return Optimizer.from_params(self.model.named_parameters(), Params({"type": "sgd", "lr": lr}))
+        return Optimizer.from_params(
+            self.model.named_parameters(), Params({"type": "sgd", "lr": lr})
+        )
 
     def test_from_params(self):
         """Make sure ``from_params`` initializes an instance properly."""
@@ -153,9 +128,11 @@ class CosineWithRestartsTest(AllenNlpTestCase):
     def test_schedules_with_save_and_resume(self):
         """Make sure scheduler will resume with the right state."""
 
-        def init_and_restore_scheduler(optimizer: torch.optim.Optimizer,
-                                       params: Dict[str, Any],
-                                       state_dict: Dict[str, Any] = None):
+        def init_and_restore_scheduler(
+            optimizer: torch.optim.Optimizer,
+            params: Dict[str, Any],
+            state_dict: Dict[str, Any] = None,
+        ):
             """
             Initialize a new scheduler and optionally restore its state from
             a checkpoint.

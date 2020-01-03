@@ -21,12 +21,15 @@ class NoamLR(LearningRateScheduler):
     factor : ``float``, optional (default = 1.0).
         The overall scale factor for the learning rate decay.
     """
-    def __init__(self,
-                 optimizer: torch.optim.Optimizer,
-                 model_size: int,
-                 warmup_steps: int,
-                 factor: float = 1.0,
-                 last_epoch: int = -1) -> None:
+
+    def __init__(
+        self,
+        optimizer: torch.optim.Optimizer,
+        model_size: int,
+        warmup_steps: int,
+        factor: float = 1.0,
+        last_epoch: int = -1,
+    ) -> None:
         self.warmup_steps = warmup_steps
         self.factor = factor
         self.model_size = model_size
@@ -42,11 +45,12 @@ class NoamLR(LearningRateScheduler):
         else:
             self.last_epoch = batch_num_total
         for param_group, learning_rate in zip(self.optimizer.param_groups, self.get_values()):
-            param_group['lr'] = learning_rate
+            param_group["lr"] = learning_rate
 
     def get_values(self):
         step = max(self.last_epoch, 1)
-        scale = self.factor *  (self.model_size ** (-0.5) *
-                                min(step ** (-0.5), step * self.warmup_steps ** (-1.5)))
+        scale = self.factor * (
+            self.model_size ** (-0.5) * min(step ** (-0.5), step * self.warmup_steps ** (-1.5))
+        )
 
         return [scale for _ in range(len(self.base_values))]
