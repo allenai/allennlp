@@ -91,7 +91,11 @@ class PretrainedTransformerIndexer(TokenIndexer[int]):
                     f" for the following token: {token.text}"
                 )
 
-        return {index_name: indices}
+        # The mask has 1 for real tokens and 0 for padding tokens. Only real
+        # tokens are attended to.
+        attention_mask = [1] * len(indices)
+
+        return {index_name: indices, "mask": attention_mask}
 
     @overrides
     def get_padding_lengths(self, token: int) -> Dict[str, int]:
