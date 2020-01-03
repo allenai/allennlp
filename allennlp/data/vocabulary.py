@@ -14,6 +14,7 @@ from allennlp.common.util import namespace_match
 from allennlp.common import Params, Registrable
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.tqdm import Tqdm
+from transformers import AutoTokenizer
 
 if TYPE_CHECKING:
     from allennlp.data import instance as adi  # noqa
@@ -774,6 +775,106 @@ class Vocabulary(Registrable):
                 "dataset instances were not used for its construction."
             )
 
+    def pad_token(self) -> Optional[str]:
+        return self._padding_token
+
+    def oov_token(self) -> Optional[str]:
+        return self._oov_token
+
+    def bos_token(self) -> Optional[str]:
+        return None
+
+    def eos_token(self) -> Optional[str]:
+        return None
+
+    def sep_token(self) -> Optional[str]:
+        return None
+
+    def cls_token(self) -> Optional[str]:
+        return None
+
+    def mask_token(self) -> Optional[str]:
+        return None
+
+    def _token_index_or_none(self, token: Optional[str]):
+        return self.get_token_index(token) if token is not None else None
+
+    def pad_token_index(self) -> Optional[int]:
+        return self._token_index_or_none(self.pad_token())
+
+    def oov_token_index(self) -> Optional[int]:
+        return self._token_index_or_none(self.oov_token())
+
+    def bos_token_index(self) -> Optional[int]:
+        return self._token_index_or_none(self.bos_token())
+
+    def eos_token_index(self) -> Optional[int]:
+        return self._token_index_or_none(self.eos_token())
+
+    def sep_token_index(self) -> Optional[int]:
+        return self._token_index_or_none(self.sep_token())
+
+    def cls_token_index(self) -> Optional[int]:
+        return self._token_index_or_none(self.cls_token())
+
+    def mask_token_index(self) -> Optional[int]:
+        return self._token_index_or_none(self.mask_token())
+
 
 # the tricky part is that `Vocabulary` is both the base class and the default implementation
 Vocabulary.register("default")(Vocabulary)
+
+
+@Vocabulary.register("pretrained_transformer")
+class TransformerVocabulary(Vocabulary):
+    def __init__(self, model_name: str):
+        super().__init__()
+
+        tokenizer = AutoTokenizer.from_pretrained(model_name)
+
+        self._padding_token = tokenizer.pad_token
+        self._oov_token = tokenizer.unk_token
+        self._bos_token = tokenizer.bos_token
+        self._eos_token = tokenizer.eos_token
+        self._sep_token = tokenizer.sep_token
+        self._cls_token = tokenizer.cls_token
+        self._mask_token = tokenizer.mask_token
+
+        self._token_to_index = _NamespaceDependentDefaultDict(
+            self._non_padded_namespaces,
+            lambda: {
+                tokenizer.pad_token: tokenizer.pad_token_id,
+                tokenizer.unk_token: tokenizer.unk_token_id,
+            },
+            lambda: {},
+        )
+
+        self._index_to_token = _NamespaceDependentDefaultDict(
+            self._non_padded_namespaces,
+            lambda: {
+                tokenizer.pad_token_id: tokenizer.pad_token,
+                tokenizer.unk_token_id: tokenizer.unk_token,
+            },
+            lambda: {},
+        )
+
+        namespace = "tokens"
+        for id in range(len(tokenizer)):
+            token = tokenizer.convert_ids_to_tokens(id)
+            self._index_to_token[namespace][id] = token
+            self._token_to_index[namespace][token] = id
+
+    def bos_token(self) -> Optional[str]:
+        return self._bos_token
+
+    def eos_token(self) -> Optional[str]:
+        return self._eos_token
+
+    def sep_token(self) -> Optional[str]:
+        return self._sep_token
+
+    def cls_token(self) -> Optional[str]:
+        return self._cls_token
+
+    def mask_token(self) -> Optional[str]:
+        return self._mask_token
