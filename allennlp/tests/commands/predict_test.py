@@ -22,8 +22,12 @@ from allennlp.predictors import Predictor, TextClassifierPredictor
 class TestPredict(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
-        self.classifier_model_path = self.FIXTURES_ROOT / "basic_classifier" / "serialization" / "model.tar.gz"
-        self.classifier_data_path = self.FIXTURES_ROOT / "data" / "text_classification_json" / "imdb_corpus.jsonl"
+        self.classifier_model_path = (
+            self.FIXTURES_ROOT / "basic_classifier" / "serialization" / "model.tar.gz"
+        )
+        self.classifier_data_path = (
+            self.FIXTURES_ROOT / "data" / "text_classification_json" / "imdb_corpus.jsonl"
+        )
         self.tempdir = pathlib.Path(tempfile.mkdtemp())
         self.infile = self.tempdir / "inputs.txt"
         self.outfile = self.tempdir / "outputs.txt"
@@ -57,12 +61,8 @@ class TestPredict(AllenNlpTestCase):
 
     def test_works_with_known_model(self):
         with open(self.infile, "w") as f:
-            f.write(
-                """{"sentence": "the seahawks won the super bowl in 2016"}\n"""
-            )
-            f.write(
-                """{"sentence": "the mariners won the super bowl in 2037"}\n"""
-            )
+            f.write("""{"sentence": "the seahawks won the super bowl in 2016"}\n""")
+            f.write("""{"sentence": "the mariners won the super bowl in 2037"}\n""")
 
         sys.argv = [
             "run.py",  # executable
@@ -83,11 +83,7 @@ class TestPredict(AllenNlpTestCase):
 
         assert len(results) == 2
         for result in results:
-            assert set(result.keys()) == {
-                "label",
-                "logits",
-                "probs",
-            }
+            assert set(result.keys()) == {"label", "logits", "probs"}
 
         shutil.rmtree(self.tempdir)
 
@@ -113,12 +109,7 @@ class TestPredict(AllenNlpTestCase):
 
         assert len(results) == 3
         for result in results:
-            assert set(result.keys()) == {
-                "label",
-                "logits",
-                "loss",
-                "probs",
-            }
+            assert set(result.keys()) == {"label", "logits", "loss", "probs"}
 
         shutil.rmtree(self.tempdir)
 
@@ -160,7 +151,7 @@ class TestPredict(AllenNlpTestCase):
         assert os.path.exists(self.outfile)
         with open(self.outfile, "r") as f:
             results = [json.loads(line) for line in f]
-            assert results[0]["dataset_reader_type"] == 'FakeDatasetReader'
+            assert results[0]["dataset_reader_type"] == "FakeDatasetReader"
 
         # --use-dataset-reader, override with train
         sys.argv = [
@@ -183,7 +174,7 @@ class TestPredict(AllenNlpTestCase):
         assert os.path.exists(self.outfile)
         with open(self.outfile, "r") as f:
             results = [json.loads(line) for line in f]
-            assert results[0]["dataset_reader_type"] == 'TextClassificationJsonReader'
+            assert results[0]["dataset_reader_type"] == "TextClassificationJsonReader"
 
         # --use-dataset-reader, override with validation
         sys.argv = [
@@ -206,7 +197,7 @@ class TestPredict(AllenNlpTestCase):
         assert os.path.exists(self.outfile)
         with open(self.outfile, "r") as f:
             results = [json.loads(line) for line in f]
-            assert results[0]["dataset_reader_type"] == 'FakeDatasetReader'
+            assert results[0]["dataset_reader_type"] == "FakeDatasetReader"
 
         # No --use-dataset-reader flag, fails because the loading logic
         # is not implemented in the testing predictor
@@ -228,12 +219,8 @@ class TestPredict(AllenNlpTestCase):
 
     def test_batch_prediction_works_with_known_model(self):
         with open(self.infile, "w") as f:
-            f.write(
-                """{"sentence": "the seahawks won the super bowl in 2016"}\n"""
-            )
-            f.write(
-                """{"sentence": "the mariners won the super bowl in 2037"}\n"""
-            )
+            f.write("""{"sentence": "the seahawks won the super bowl in 2016"}\n""")
+            f.write("""{"sentence": "the mariners won the super bowl in 2037"}\n""")
 
         sys.argv = [
             "run.py",  # executable
@@ -255,11 +242,7 @@ class TestPredict(AllenNlpTestCase):
 
         assert len(results) == 2
         for result in results:
-            assert set(result.keys()) == {
-                "label",
-                "logits",
-                "probs",
-            }
+            assert set(result.keys()) == {"label", "logits", "probs"}
 
         shutil.rmtree(self.tempdir)
 
@@ -286,12 +269,8 @@ class TestPredict(AllenNlpTestCase):
                 return result
 
         with open(self.infile, "w") as f:
-            f.write(
-                """{"sentence": "the seahawks won the super bowl in 2016"}\n"""
-            )
-            f.write(
-                """{"sentence": "the mariners won the super bowl in 2037"}\n"""
-            )
+            f.write("""{"sentence": "the seahawks won the super bowl in 2016"}\n""")
+            f.write("""{"sentence": "the mariners won the super bowl in 2037"}\n""")
 
         sys.argv = [
             "run.py",  # executable
@@ -314,12 +293,7 @@ class TestPredict(AllenNlpTestCase):
         assert len(results) == 2
         # Overridden predictor should output extra field
         for result in results:
-            assert set(result.keys()) == {
-                "label",
-                "logits",
-                "explicit",
-                "probs",
-            }
+            assert set(result.keys()) == {"label", "logits", "explicit", "probs"}
 
         shutil.rmtree(self.tempdir)
 
@@ -348,12 +322,8 @@ class TestPredict(AllenNlpTestCase):
         self.outfile = os.path.join(self.TEST_DIR, "outputs.txt")
 
         with open(self.infile, "w") as f:
-            f.write(
-                """{"sentence": "the seahawks won the super bowl in 2016"}\n"""
-            )
-            f.write(
-                """{"sentence": "the mariners won the super bowl in 2037"}\n"""
-            )
+            f.write("""{"sentence": "the seahawks won the super bowl in 2016"}\n""")
+            f.write("""{"sentence": "the mariners won the super bowl in 2037"}\n""")
 
         sys.argv = [
             "run.py",  # executable
@@ -383,11 +353,7 @@ class TestPredict(AllenNlpTestCase):
         assert len(results) == 2
         # Overridden predictor should output extra field
         for result in results:
-            assert set(result.keys()) == {
-                "label",
-                "logits",
-                "probs",
-            }
+            assert set(result.keys()) == {"label", "logits", "probs"}
 
         sys.path.remove(str(self.TEST_DIR))
 
@@ -404,28 +370,15 @@ class TestPredict(AllenNlpTestCase):
             def dump_line(self, outputs: JsonDict) -> str:
                 output = io.StringIO()
                 writer = csv.writer(output)
-                row = [
-                    outputs["label"],
-                    *outputs["probs"],
-                ]
+                row = [outputs["label"], *outputs["probs"]]
 
                 writer.writerow(row)
                 return output.getvalue()
 
         with open(self.infile, "w") as f:
             writer = csv.writer(f)
-            writer.writerow(
-                [
-                    "the seahawks won the super bowl in 2016",
-                    "pos",
-                ]
-            )
-            writer.writerow(
-                [
-                    "the mariners won the super bowl in 2037",
-                    "neg",
-                ]
-            )
+            writer.writerow(["the seahawks won the super bowl in 2016", "pos"])
+            writer.writerow(["the mariners won the super bowl in 2037", "neg"])
 
         sys.argv = [
             "run.py",  # executable
