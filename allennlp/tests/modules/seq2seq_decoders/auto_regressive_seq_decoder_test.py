@@ -1,7 +1,6 @@
 import torch
 import pytest
 
-from overrides import overrides
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.modules import Embedding
@@ -9,7 +8,7 @@ from allennlp.modules.seq2seq_decoders import AutoRegressiveSeqDecoder
 from allennlp.modules.seq2seq_decoders import StackedSelfAttentionDecoderNet
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.util import START_SYMBOL, END_SYMBOL, prepare_environment
-from allennlp.training.metrics import BLEU, SquadEmAndF1
+from allennlp.training.metrics import BLEU, Metric
 from allennlp.common import Params
 
 
@@ -28,16 +27,31 @@ def create_vocab_and_decoder_net(decoder_inout_dim):
     return vocab, decoder_net
 
 
-class CustomSquadEmAndF1(SquadEmAndF1):
-    @overrides
+class CustomEmAndF1(Metric):
+    def __init__(self) -> None:
+        self._total_em = 0.0
+        self._total_f1 = 1.0
+        self._count = 0
+
     def __call__(self, list_best_span_string, list_answer_strings):
         for best_span_string, answer_strings in zip(list_best_span_string, list_answer_strings):
-            super().__call__(" ".join(best_span_string), [" ".join(answer_strings)])
+            exact_match = max([1 if best_span_string == answer_string else 0
+                               for answer_string in answer_strings])
+            self._total_em += exact_match
+            self._total_f1 += exact_match
+            self._count += 1
 
-    @overrides
     def get_metric(self, reset: bool = False):
-        out = super().get_metric(reset)
-        return {"em": out[0], "f1": out[1]}
+        exact_match = self._total_em / self._count if self._count > 0 else 0
+        f1_score = self._total_f1 / self._count if self._count > 0 else 0
+        if reset:
+            self.reset()
+        return {"em": exact_match, "f1": f1_score}
+
+    def reset(self):
+        self._total_em = 0.0
+        self._total_f1 = 1.0
+        self._count = 0
 
 
 class TestAutoRegressiveSeqDecoder(AllenNlpTestCase):
@@ -119,7 +133,7 @@ class TestAutoRegressiveSeqDecoder(AllenNlpTestCase):
             10,
             Embedding(vocab.get_vocab_size(), decoder_inout_dim),
             tensor_based_metric=BLEU(),
-            token_based_metric=CustomSquadEmAndF1(),
+            token_based_metric=CustomEmAndF1(),
         ).eval()
 
         encoded_state = torch.randn(batch_size, time_steps, decoder_inout_dim)
@@ -131,4 +145,4 @@ class TestAutoRegressiveSeqDecoder(AllenNlpTestCase):
         auto_regressive_seq_decoder.forward(encoder_out, target_tokens)
         assert auto_regressive_seq_decoder.get_metrics()["BLEU"] == 1.388809517005903e-11
         assert auto_regressive_seq_decoder.get_metrics()["em"] == 0.0
-        assert auto_regressive_seq_decoder.get_metrics()["f1"] == 1 / 3
+        assert auto_regressive_seq_decoder.get_metrics()["f1"] == 0.5
