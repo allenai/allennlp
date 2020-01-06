@@ -27,7 +27,7 @@ class StackedAlternatingLstm(torch.nn.Module):
         The dimension of the outputs of the LSTM.
     num_layers : ``int``, required
         The number of stacked LSTMs to use.
-    recurrent_dropout_probability: ``float``, optional (default = 0.0)
+    recurrent_dropout_probability : ``float``, optional (default = 0.0)
         The dropout probability to be used in a dropout scheme as stated in
         `A Theoretically Grounded Application of Dropout in Recurrent Neural Networks
         <https://arxiv.org/abs/1512.05287>`_ .

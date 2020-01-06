@@ -52,7 +52,7 @@ class SimpleSeq2Seq(Model):
         If you want to use attention to get a dynamic summary of the encoder outputs at each step
         of decoding, this is the function used to compute similarity between the decoder hidden
         state and encoder outputs.
-    attention_function: ``SimilarityFunction``, optional (default = None)
+    attention_function : ``SimilarityFunction``, optional (default = None)
         This is if you want to use the legacy implementation of attention. This will be deprecated
         since it consumes more memory than the specialized attention modules.
     beam_size : ``int``, optional (default = None)

@@ -52,7 +52,7 @@ class PearsonCorrelation(Metric):
             A tensor of predictions of shape (batch_size, ...).
         gold_labels : ``torch.Tensor``, required.
             A tensor of the same shape as ``predictions``.
-        mask: ``torch.Tensor``, optional (default = None).
+        mask : ``torch.Tensor``, optional (default = None).
             A tensor of the same shape as ``predictions``.
         """
         predictions, gold_labels, mask = self.unwrap_to_tensors(predictions, gold_labels, mask)

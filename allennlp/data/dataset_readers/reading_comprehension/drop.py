@@ -85,13 +85,13 @@ class DropReader(DatasetReader):
         If specified, we will cut the passage if the length of passage exceeds this limit.
     question_length_limit : ``int``, optional (default=None)
         If specified, we will cut the question if the length of passage exceeds this limit.
-    skip_when_all_empty: ``List[str]``, optional (default=None)
+    skip_when_all_empty : ``List[str]``, optional (default=None)
         In some cases such as preparing for training examples, you may want to skip some examples
         when there are no gold labels. You can specify on what condition should the examples be
         skipped. Currently, you can put "passage_span", "question_span", "addition_subtraction",
         or "counting" in this list, to tell the reader skip when there are no such label found.
         If not specified, we will keep all the examples.
-    instance_format: ``str``, optional (default="drop")
+    instance_format : ``str``, optional (default="drop")
         We try to be generous in providing a few different formats for the instances in DROP,
         in terms of the ``Fields`` that we return for each ``Instance``, to allow for several
         different kinds of models.  "drop" format will do processing to detect numbers and

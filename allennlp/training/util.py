@@ -254,14 +254,14 @@ def create_serialization_dir(
 
     Parameters
     ----------
-    params: ``Params``
+    params : ``Params``
         A parameter object specifying an AllenNLP Experiment.
-    serialization_dir: ``str``
+    serialization_dir : ``str``
         The directory in which to save results and logs.
-    recover: ``bool``
+    recover : ``bool``
         If ``True``, we will try to recover from an existing serialization directory, and crash if
         the directory doesn't exist, or doesn't match the configuration we're given.
-    force: ``bool``
+    force : ``bool``
         If ``True``, we will overwrite the serialization directory if it already exists.
     """
     if recover and force:

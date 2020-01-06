@@ -165,7 +165,7 @@ def make_reading_comprehension_instance(
     Converts a question, a passage, and an optional answer (or answers) to an ``Instance`` for use
     in a reading comprehension model.
 
-    Creates an ``Instance`` with at least these fields: ``question`` and ``passage``, both
+    Creates an ``Instance`` with at least these fields : ``question`` and ``passage``, both
     ``TextFields``; and ``metadata``, a ``MetadataField``.  Additionally, if both ``answer_texts``
     and ``char_span_starts`` are given, the ``Instance`` has ``span_start`` and ``span_end``
     fields, which are both ``IndexFields``.
@@ -251,7 +251,7 @@ def make_reading_comprehension_instance_quac(
     Converts a question, a passage, and an optional answer (or answers) to an ``Instance`` for use
     in a reading comprehension model.
 
-    Creates an ``Instance`` with at least these fields: ``question`` and ``passage``, both
+    Creates an ``Instance`` with at least these fields : ``question`` and ``passage``, both
     ``TextFields``; and ``metadata``, a ``MetadataField``.  Additionally, if both ``answer_texts``
     and ``char_span_starts`` are given, the ``Instance`` has ``span_start`` and ``span_end``
     fields, which are both ``IndexFields``.

@@ -116,7 +116,7 @@ class ElmoTokenEmbedderMultiLang(TokenEmbedder):
         """
         Parameters
         ----------
-        inputs: ``torch.Tensor``
+        inputs : ``torch.Tensor``
             Shape ``(batch_size, timesteps, 50)`` of character ids representing the current batch.
         lang : ``str``, , required.
             The language of the ELMo embedder to use.

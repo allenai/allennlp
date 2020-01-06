@@ -338,31 +338,31 @@ class OpenaiTransformer(torch.nn.Module, FromParams):
 
     Parameters
     ----------
-    vocab_size: ``int`` (optional, default: 40478)
+    vocab_size : ``int`` (optional, default: 40478)
         The size of the vocabulary (number of byte pair embeddings)
         excluding the n_special embeddings (if any), and the positional embeddings.
-    n_ctx: ``int`` (optional, default: 512)
+    n_ctx : ``int`` (optional, default: 512)
         The number of positional encodings to use for evaluation.
-    embedding_dim: ``int`` (optional, default: 768)
+    embedding_dim : ``int`` (optional, default: 768)
         The dimension of the output embeddings.
-    num_heads: ``int`` (optional, default: 12)
+    num_heads : ``int`` (optional, default: 12)
         How many "heads" the attention has.
-    num_layers: ``int`` (optional, default: 12)
+    num_layers : ``int`` (optional, default: 12)
         How many layers of "blocks" the transformer has.
-    embedding_dropout_probability: ``float`` (optional, default: 0.1)
+    embedding_dropout_probability : ``float`` (optional, default: 0.1)
         Dropout for the embedding.
-    attention_dropout_probability: ``float`` (optional, default: 0.1)
+    attention_dropout_probability : ``float`` (optional, default: 0.1)
         Dropout for attention.
-    residual_dropout_probability: ``float`` (optional, default: 0.1)
+    residual_dropout_probability : ``float`` (optional, default: 0.1)
         Dropout for residual
-    activation_function: ``str`` (optional, default: ``'gelu'``)
+    activation_function : ``str`` (optional, default : ``'gelu'``)
         Activation function for the multi-layer perceptron.
-    model_path: ``str`` (optional, default: ``None``)
+    model_path : ``str`` (optional, default : ``None``)
         A tar.gz file containing serialized model weights. If supplied,
         the weights will be loaded from that file.
-    requires_grad: ``bool`` (optional, default: ``False``)
+    requires_grad : ``bool`` (optional, default : ``False``)
         If true, the transformer will be fine-tuneable.
-    n_special: ``int`` (optional, default: ``-1``)
+    n_special : ``int`` (optional, default : ``-1``)
         The number of special tokens added to the byte pair vocabulary
         (via ``OpenaiTransformerBytePairIndexer``).
     """

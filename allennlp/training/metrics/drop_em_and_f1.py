@@ -26,10 +26,10 @@ class DropEmAndF1(Metric):
         """
         Parameters
         ----------
-        prediction: ``Union[str, List]``
+        prediction : ``Union[str, List]``
             The predicted answer from the model evaluated. This could be a string, or a list of string
             when multiple spans are predicted as answer.
-        ground_truths: ``List``
+        ground_truths : ``List``
             All the ground truth answer annotations.
         """
         # If you wanted to split this out by answer type, you could look at [1] here and group by
