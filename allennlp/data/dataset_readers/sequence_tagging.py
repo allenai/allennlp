@@ -27,9 +27,9 @@ class SequenceTaggingDatasetReader(DatasetReader):
 
     Parameters
     ----------
-    word_tag_delimiter : ``str``, optional (default=``"###"``)
+    word_tag_delimiter: ``str``, optional (default=``"###"``)
         The text that separates each WORD from its TAG.
-    token_delimiter : ``str``, optional (default=``None``)
+    token_delimiter: ``str``, optional (default=``None``)
         The text that separates each WORD-TAG pair from the next pair. If ``None``
         then the line will just be split on whitespace.
     token_indexers : ``Dict[str, TokenIndexer]``, optional (default=``{"tokens": SingleIdTokenIndexer()}``)
