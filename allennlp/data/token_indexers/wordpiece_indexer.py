@@ -47,7 +47,7 @@ class WordpieceIndexer(TokenIndexer[int]):
         You would need to do this if you are using an -uncased BERT model
         but your DatasetReader is not lowercasing tokens (which might be the
         case if you're also using other embeddings based on cased tokens).
-    never_lowercase: ``List[str]``, optional
+    never_lowercase : ``List[str]``, optional
         Tokens that should never be lowercased. Default is
         ['[UNK]', '[SEP]', '[PAD]', '[CLS]', '[MASK]'].
     start_tokens : ``List[str]``, optional (default=``None``)
@@ -329,7 +329,7 @@ class PretrainedBertIndexer(WordpieceIndexer):
 
     Parameters
     ----------
-    pretrained_model: ``str``
+    pretrained_model : ``str``
         Either the name of the pretrained model to use (e.g. 'bert-base-uncased'),
         or the path to the .txt file with its vocabulary.
 
@@ -340,9 +340,9 @@ class PretrainedBertIndexer(WordpieceIndexer):
         By default, the "offsets" created by the token indexer correspond to the
         last wordpiece in each word. If ``use_starting_offsets`` is specified,
         they will instead correspond to the first wordpiece in each word.
-    do_lowercase: ``bool``, optional (default = True)
+    do_lowercase : ``bool``, optional (default = True)
         Whether to lowercase the tokens before converting to wordpiece ids.
-    never_lowercase: ``List[str]``, optional
+    never_lowercase : ``List[str]``, optional
         Tokens that should never be lowercased. Default is
         ['[UNK]', '[SEP]', '[PAD]', '[CLS]', '[MASK]'].
     max_pieces: int, optional (default: 512)

@@ -114,11 +114,11 @@ def chu_liu_edmonds(
         A representative at it's most basic represents a node,
         but as the algorithm progresses, individual nodes will
         represent collapsed cycles in the graph.
-    final_edges: ``Dict[int, int]``, required.
+    final_edges : ``Dict[int, int]``, required.
         An empty dictionary which will be populated with the
         nodes which are connected in the maximum spanning tree.
-    old_input: ``numpy.ndarray``, required.
-    old_output: ``numpy.ndarray``, required.
+    old_input : ``numpy.ndarray``, required.
+    old_output : ``numpy.ndarray``, required.
     representatives : ``List[Set[int]]``, required.
         A list containing the nodes that a particular node
         is representing at this iteration in the graph.

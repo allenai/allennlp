@@ -33,7 +33,7 @@ class IntraSentenceAttentionEncoder(Seq2SeqEncoder):
         performing the attention-weighted sum.
     similarity_function : ``SimilarityFunction``, optional
         The similarity function to use when computing attentions.  Default is to use a dot product.
-    num_attention_heads: ``int``, optional
+    num_attention_heads : ``int``, optional
         If this is greater than one (default is 1), we will split the input into several "heads" to
         compute multi-headed weighted sums.  Must be used with a multi-headed similarity function,
         and you almost certainly want to do a projection in conjunction with the multiple heads.

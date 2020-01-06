@@ -295,7 +295,7 @@ def to_bioul(tag_sequence: List[str], encoding: str = "IOB1") -> List[str]:
 
     Returns
     -------
-    bioul_sequence: ``List[str]``
+    bioul_sequence : ``List[str]``
         The tag sequence encoded in IOB1, e.g. ["B-PER", "L-PER", "O"].
     """
     if encoding not in {"IOB1", "BIO"}:

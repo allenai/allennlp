@@ -72,13 +72,13 @@ def is_transition_allowed(
     from_tag : ``str``, required
         The tag that the transition originates from. For example, if the
         label is ``I-PER``, the ``from_tag`` is ``I``.
-    from_entity: ``str``, required
+    from_entity : ``str``, required
         The entity corresponding to the ``from_tag``. For example, if the
         label is ``I-PER``, the ``from_entity`` is ``PER``.
     to_tag : ``str``, required
         The tag that the transition leads to. For example, if the
         label is ``I-PER``, the ``to_tag`` is ``I``.
-    to_entity: ``str``, required
+    to_entity : ``str``, required
         The entity corresponding to the ``to_tag``. For example, if the
         label is ``I-PER``, the ``to_entity`` is ``PER``.
 

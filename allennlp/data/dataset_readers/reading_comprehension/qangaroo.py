@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 class QangarooReader(DatasetReader):
     """
     Reads a JSON-formatted Qangaroo file and returns a ``Dataset`` where the ``Instances`` have six
-    fields: ``candidates``, a ``ListField[TextField]``, ``query``, a ``TextField``, ``supports``, a
+    fields : ``candidates``, a ``ListField[TextField]``, ``query``, a ``TextField``, ``supports``, a
     ``ListField[TextField]``, ``answer``, a ``TextField``, and ``answer_index``, a ``IndexField``.
     We also add a ``MetadataField`` that stores the instance's ID and annotations if they are present.
 

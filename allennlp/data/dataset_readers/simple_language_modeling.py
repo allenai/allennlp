@@ -30,7 +30,7 @@ class SimpleLanguageModelingDatasetReader(DatasetReader):
     token_indexers : ``Dict[str, TokenIndexer]``, optional
         Indexers used to define input token representations. Defaults to
         ``{"tokens": SingleIdTokenIndexer()}``.
-    max_sequence_length: ``int``, optional
+    max_sequence_length : ``int``, optional
         If specified, sentences with more than this number of tokens will be dropped.
     start_tokens : ``List[str]``, optional (default=``None``)
         These are prepended to the tokens provided to the ``TextField``.

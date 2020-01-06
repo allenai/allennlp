@@ -46,9 +46,9 @@ class DialogQA(Model):
         LSTMs do not apply dropout to their last layer).
     num_context_answers : ``int``, optional (default=0)
         If greater than 0, the model will consider previous question answering context.
-    max_span_length: ``int``, optional (default=0)
+    max_span_length : ``int``, optional (default=0)
         Maximum token length of the output span.
-    max_turn_length: ``int``, optional (default=12)
+    max_turn_length : ``int``, optional (default=12)
         Maximum length of an interaction.
     """
 

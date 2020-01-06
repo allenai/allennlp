@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 class QuACReader(DatasetReader):
     """
     Reads a JSON-formatted Question Answering in Context (QuAC) data file
-    and returns a ``Dataset`` where the ``Instances`` have four fields: ``question``, a ``ListField``,
+    and returns a ``Dataset`` where the ``Instances`` have four fields : ``question``, a ``ListField``,
     ``passage``, another ``TextField``, and ``span_start`` and ``span_end``, both ``ListField`` composed of
     IndexFields`` into the ``passage`` ``TextField``.
     Two ``ListField``, composed of ``LabelField``, ``yesno_list`` and  ``followup_list`` is added.

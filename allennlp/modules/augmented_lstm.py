@@ -28,17 +28,17 @@ class AugmentedLstm(torch.nn.Module):
         The dimension of the inputs to the LSTM.
     hidden_size : ``int``, required.
         The dimension of the outputs of the LSTM.
-    go_forward: ``bool``, optional (default = True)
+    go_forward : ``bool``, optional (default = True)
         The direction in which the LSTM is applied to the sequence.
         Forwards by default, or backwards if False.
-    recurrent_dropout_probability: ``float``, optional (default = 0.0)
+    recurrent_dropout_probability : ``float``, optional (default = 0.0)
         The dropout probability to be used in a dropout scheme as stated in
         `A Theoretically Grounded Application of Dropout in Recurrent Neural Networks
         <https://arxiv.org/abs/1512.05287>`_ . Implementation wise, this simply
         applies a fixed dropout mask per sequence to the recurrent connection of the
         LSTM. Dropout is not applied to the output sequence nor the last hidden
         state that is returned, it is only applied to all previous hidden states.
-    use_highway: ``bool``, optional (default = True)
+    use_highway : ``bool``, optional (default = True)
         Whether or not to use highway connections between layers. This effectively involves
         reparameterising the normal output of an LSTM as::
 
