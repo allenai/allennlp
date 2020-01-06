@@ -2,10 +2,7 @@
   "dataset_reader": {
     "type": "event2mind",
     "source_tokenizer": {
-      "type": "word",
-      "word_splitter": {
-        "type": "spacy"
-      }
+      "type": "spacy",
     },
     "source_token_indexers": {
       "tokens": {

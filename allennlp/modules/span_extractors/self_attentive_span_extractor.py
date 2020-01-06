@@ -47,7 +47,6 @@ class SelfAttentiveSpanExtractor(SpanExtractor):
         self,
         sequence_tensor: torch.FloatTensor,
         span_indices: torch.LongTensor,
-        sequence_mask: torch.LongTensor = None,
         span_indices_mask: torch.LongTensor = None,
     ) -> torch.FloatTensor:
         # both of shape (batch_size, num_spans, 1)

@@ -48,6 +48,9 @@ class FBetaMeasureTest(AllenNlpTestCase):
         # Bad average option
         self.assertRaises(ConfigurationError, FBetaMeasure, average="mega")
 
+        # Empty input labels
+        self.assertRaises(ConfigurationError, FBetaMeasure, labels=[])
+
     def test_runtime_errors(self):
         fbeta = FBetaMeasure()
         # Metric was never called.
@@ -106,7 +109,7 @@ class FBetaMeasureTest(AllenNlpTestCase):
         numpy.testing.assert_almost_equal(recalls, desired_recalls, decimal=2)
         numpy.testing.assert_almost_equal(fscores, desired_fscores, decimal=2)
 
-    def test_fbeta_multiclass_marco_average_metric(self):
+    def test_fbeta_multiclass_macro_average_metric(self):
         fbeta = FBetaMeasure(average="macro")
         fbeta(self.predictions, self.targets)
         metric = fbeta.get_metric()
@@ -166,6 +169,48 @@ class FBetaMeasureTest(AllenNlpTestCase):
         numpy.testing.assert_almost_equal(precisions, desired_precisions, decimal=2)
         numpy.testing.assert_almost_equal(recalls, desired_recalls, decimal=2)
         numpy.testing.assert_almost_equal(fscores, desired_fscores, decimal=2)
+
+    def test_fbeta_multiclass_with_macro_average(self):
+        labels = [0, 1]
+        fbeta = FBetaMeasure(average="macro", labels=labels)
+        fbeta(self.predictions, self.targets)
+        metric = fbeta.get_metric()
+        precisions = metric["precision"]
+        recalls = metric["recall"]
+        fscores = metric["fscore"]
+
+        macro_precision = numpy.array(self.desired_precisions)[labels].mean()
+        macro_recall = numpy.array(self.desired_recalls)[labels].mean()
+        macro_fscore = numpy.array(self.desired_fscores)[labels].mean()
+
+        # check value
+        numpy.testing.assert_almost_equal(precisions, macro_precision, decimal=2)
+        numpy.testing.assert_almost_equal(recalls, macro_recall, decimal=2)
+        numpy.testing.assert_almost_equal(fscores, macro_fscore, decimal=2)
+
+    def test_fbeta_multiclass_with_micro_average(self):
+        labels = [1, 3]
+        fbeta = FBetaMeasure(average="micro", labels=labels)
+        fbeta(self.predictions, self.targets)
+        metric = fbeta.get_metric()
+        precisions = metric["precision"]
+        recalls = metric["recall"]
+        fscores = metric["fscore"]
+
+        true_positives = [1, 1]
+        false_positives = [3, 0]
+        false_negatives = [0, 0]
+        mean_true_positive = numpy.mean(true_positives)
+        mean_false_positive = numpy.mean(false_positives)
+        mean_false_negative = numpy.mean(false_negatives)
+
+        micro_precision = mean_true_positive / (mean_true_positive + mean_false_positive)
+        micro_recall = mean_true_positive / (mean_true_positive + mean_false_negative)
+        micro_fscore = (2 * micro_precision * micro_recall) / (micro_precision + micro_recall)
+        # check value
+        numpy.testing.assert_almost_equal(precisions, micro_precision, decimal=2)
+        numpy.testing.assert_almost_equal(recalls, micro_recall, decimal=2)
+        numpy.testing.assert_almost_equal(fscores, micro_fscore, decimal=2)
 
     def test_fbeta_handles_batch_size_of_one(self):
         predictions = torch.Tensor([[0.2862, 0.3479, 0.1627, 0.2033]])

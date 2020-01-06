@@ -1,16 +1,18 @@
 """
 Various utilities that don't fit anwhere else.
 """
-from itertools import zip_longest, islice
-from typing import Any, Callable, Dict, List, Tuple, TypeVar, Iterable, Iterator
 import importlib
 import json
 import logging
+import os
 import pkgutil
 import random
 import subprocess
 import sys
-import os
+import torch.distributed as dist
+from itertools import zip_longest, islice
+from logging import Filter
+from typing import Any, Callable, Dict, List, Tuple, TypeVar, Iterable, Iterator
 
 try:
     import resource
@@ -29,7 +31,6 @@ from spacy.language import Language as SpacyModelType
 from allennlp.common.checks import log_pytorch_version_info
 from allennlp.common.params import Params
 from allennlp.common.tqdm import Tqdm
-from allennlp.common.tee_logger import TeeLogger
 
 logger = logging.getLogger(__name__)
 
@@ -106,12 +107,18 @@ def group_by_count(iterable: List[Any], count: int, default_value: Any) -> List[
 A = TypeVar("A")
 
 
-def lazy_groups_of(iterator: Iterator[A], group_size: int) -> Iterator[List[A]]:
+def lazy_groups_of(iterable: Iterable[A], group_size: int) -> Iterator[List[A]]:
     """
-    Takes an iterator and batches the individual instances into lists of the
+    Takes an iterable and batches the individual instances into lists of the
     specified size. The last list may be smaller if there are instances left over.
     """
-    return iter(lambda: list(islice(iterator, 0, group_size)), [])
+    iterator = iter(iterable)
+    while True:
+        s = list(islice(iterator, group_size))
+        if len(s) > 0:
+            yield s
+        else:
+            break
 
 
 def pad_sequence_to_length(
@@ -219,71 +226,119 @@ def prepare_environment(params: Params):
     log_pytorch_version_info()
 
 
+class FileFriendlyLogFilter(Filter):
+    """
+    TQDM and requests use carriage returns to get the training line to update for each batch
+    without adding more lines to the terminal output.  Displaying those in a file won't work
+    correctly, so we'll just make sure that each batch shows up on its one line.
+    """
+
+    def filter(self, record):
+        if "\r" in record.msg:
+            record.msg = record.msg.replace("\r", "")
+            if not record.msg or record.msg[-1] != "\n":
+                record.msg += "\n"
+        return True
+
+
+class WorkerLogFilter(Filter):
+    def __init__(self, rank=-1):
+        super().__init__()
+        self._rank = rank
+
+    def filter(self, record):
+        if self._rank != -1:
+            record.msg = f"Rank {self._rank} | {record.msg}"
+        return True
+
+
 def prepare_global_logging(
-    serialization_dir: str, file_friendly_logging: bool
-) -> logging.FileHandler:
-    """
-    This function configures 3 global logging attributes - streaming stdout and stderr
-    to a file as well as the terminal, setting the formatting for the python logging
-    library and setting the interval frequency for the Tqdm progress bar.
-
-    Note that this function does not set the logging level, which is set in ``allennlp/run.py``.
-
-    Parameters
-    ----------
-    serialization_dir : ``str``, required.
-        The directory to stream logs to.
-    file_friendly_logging : ``bool``, required.
-        Whether logs should clean the output to prevent carriage returns
-        (used to update progress bars on a single terminal line). This
-        option is typically only used if you are running in an environment
-        without a terminal.
-
-    Returns
-    -------
-    ``logging.FileHandler``
-        A logging file handler that can later be closed and removed from the global logger.
-    """
-
+    serialization_dir: str, file_friendly_logging: bool, rank: int = 0, world_size: int = 1
+) -> None:
     # If we don't have a terminal as stdout,
     # force tqdm to be nicer.
     if not sys.stdout.isatty():
         file_friendly_logging = True
 
     Tqdm.set_slower_interval(file_friendly_logging)
-    std_out_file = os.path.join(serialization_dir, "stdout.log")
-    sys.stdout = TeeLogger(  # type: ignore
-        std_out_file, sys.stdout, file_friendly_logging
-    )
-    sys.stderr = TeeLogger(  # type: ignore
-        os.path.join(serialization_dir, "stderr.log"), sys.stderr, file_friendly_logging
-    )
 
-    stdout_handler = logging.FileHandler(std_out_file)
-    stdout_handler.setFormatter(
-        logging.Formatter("%(asctime)s - %(levelname)s - %(name)s - %(message)s")
-    )
-    logging.getLogger().addHandler(stdout_handler)
+    # Handlers for stdout/err logging
+    output_stream_log_handler = logging.StreamHandler(sys.stdout)
+    error_stream_log_handler = logging.StreamHandler(sys.stderr)
 
-    return stdout_handler
+    if world_size == 1:
+        # This case is not distributed training and hence will stick to the older
+        # log file names
+        output_file_log_handler = logging.FileHandler(
+            filename=os.path.join(serialization_dir, "stdout.log")
+        )
+        error_file_log_handler = logging.FileHandler(
+            filename=os.path.join(serialization_dir, "stderr.log")
+        )
+    else:
+        # Create log files with worker ids
+        output_file_log_handler = logging.FileHandler(
+            filename=os.path.join(serialization_dir, f"stdout_worker{rank}.log")
+        )
+        error_file_log_handler = logging.FileHandler(
+            filename=os.path.join(serialization_dir, f"stderr_worker{rank}.log")
+        )
 
+        # This adds the worker's rank to messages being logged to files.
+        # This will help when combining multiple worker log files using `less` command.
+        worker_filter = WorkerLogFilter(rank)
+        output_file_log_handler.addFilter(worker_filter)
+        error_file_log_handler.addFilter(worker_filter)
 
-def cleanup_global_logging(stdout_handler: logging.FileHandler) -> None:
-    """
-    This function closes any open file handles and logs set up by `prepare_global_logging`.
+    formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(name)s - %(message)s")
 
-    Parameters
-    ----------
-    stdout_handler : ``logging.FileHandler``, required.
-        The file handler returned from `prepare_global_logging`, attached to the global logger.
-    """
-    stdout_handler.close()
-    logging.getLogger().removeHandler(stdout_handler)
+    root_logger = logging.getLogger()
 
-    if isinstance(sys.stdout, TeeLogger):
-        sys.stdout = sys.stdout.cleanup()
-    if isinstance(sys.stderr, TeeLogger):
-        sys.stderr = sys.stderr.cleanup()
+    # Remove the already set stream handler in root logger.
+    # Not doing this will result in duplicate log messages
+    # printed in the console
+    if len(root_logger.handlers) > 0:
+        for handler in root_logger.handlers:
+            root_logger.removeHandler(handler)
+
+    # file handlers need to be handled for tqdm's \r char
+    file_friendly_log_filter = FileFriendlyLogFilter()
+
+    if os.environ.get("ALLENNLP_DEBUG"):
+        LEVEL = logging.DEBUG
+    else:
+        LEVEL = logging.INFO
+
+    if rank == 0:
+        # stdout/stderr handlers are added only for the
+        # master worker. This is to avoid cluttering the console
+        # screen with too many log messages from all workers.
+        output_stream_log_handler.setFormatter(formatter)
+        error_stream_log_handler.setFormatter(formatter)
+
+        output_stream_log_handler.setLevel(LEVEL)
+        error_stream_log_handler.setLevel(logging.ERROR)
+
+        if file_friendly_logging:
+            output_stream_log_handler.addFilter(file_friendly_log_filter)
+            error_stream_log_handler.addFilter(file_friendly_log_filter)
+
+        root_logger.addHandler(output_stream_log_handler)
+        root_logger.addHandler(error_stream_log_handler)
+
+    output_file_log_handler.addFilter(file_friendly_log_filter)
+    error_file_log_handler.addFilter(file_friendly_log_filter)
+
+    output_file_log_handler.setFormatter(formatter)
+    error_file_log_handler.setFormatter(formatter)
+
+    output_file_log_handler.setLevel(LEVEL)
+    error_file_log_handler.setLevel(logging.ERROR)
+
+    root_logger.addHandler(output_file_log_handler)
+    root_logger.addHandler(error_file_log_handler)
+
+    root_logger.setLevel(LEVEL)
 
 
 LOADED_SPACY_MODELS: Dict[Tuple[str, bool, bool, bool], SpacyModelType] = {}
@@ -314,18 +369,10 @@ def get_spacy_model(
                 f"Spacy models '{spacy_model_name}' not found.  Downloading and installing."
             )
             spacy_download(spacy_model_name)
-            # NOTE(mattg): The following four lines are a workaround suggested by Ines for spacy
-            # 2.1.0, which removed the linking that was done in spacy 2.0.  importlib doesn't find
-            # packages that were installed in the same python session, so the way `spacy_download`
-            # works in 2.1.0 is broken for this use case.  These four lines can probably be removed
-            # at some point in the future, once spacy has figured out a better way to handle this.
-            # See https://github.com/explosion/spaCy/issues/3435.
-            from spacy.cli import link
-            from spacy.util import get_package_path
 
-            package_path = get_package_path(spacy_model_name)
-            link(spacy_model_name, spacy_model_name, model_path=package_path)
-            spacy_model = spacy.load(spacy_model_name, disable=disable)
+            # Import the downloaded model module directly and load from there
+            spacy_model_module = __import__(spacy_model_name)
+            spacy_model = spacy_model_module.load(disable=disable)  # type: ignore
 
         LOADED_SPACY_MODELS[options] = spacy_model
     return LOADED_SPACY_MODELS[options]
@@ -455,3 +502,44 @@ def dump_metrics(file_path: str, metrics: Dict[str, Any], log: bool = False) -> 
 
 def flatten_filename(file_path: str) -> str:
     return file_path.replace("/", "_SLASH_")
+
+
+def is_master(rank: int = None, world_size: int = None) -> bool:
+    """
+    Checks if the process is a "master" in a distributed process group. If a
+    process group is not initialized, this returns `True`.
+
+    Parameters
+    ----------
+    rank : int ( default = None )
+        Global rank of the process if in a distributed process group. If not
+        given, rank is obtained using `torch.distributed.get_rank()`
+    world_size : int ( default = None )
+        Number of processes in the distributed group. If not
+        given, this is obtained using `torch.distributed.get_world_size()`
+    """
+    distributed = dist.is_initialized()
+
+    # In non-distributed case, a "master" process doesn't make any
+    # sense. So instead of raising an error, returning True would
+    # make things less painful
+    if not distributed:
+        return True
+
+    if rank is None:
+        rank = dist.get_rank()
+
+    if world_size is None:
+        world_size = dist.get_world_size()
+
+    # rank == 0 would do in a single-node multi-GPU setup. However,
+    # in a multi-node case, every node has a logical master and hence
+    # the mod(%) op.
+    return rank % world_size == 0
+
+
+def is_distributed() -> bool:
+    """
+    Checks if the distributed process group has been initialized
+    """
+    return dist.is_initialized()

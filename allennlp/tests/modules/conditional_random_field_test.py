@@ -3,6 +3,7 @@ import math
 
 from pytest import approx, raises
 import torch
+from numpy.testing import assert_allclose
 
 from allennlp.modules import ConditionalRandomField
 from allennlp.modules.conditional_random_field import allowed_transitions
@@ -54,6 +55,28 @@ class TestConditionalRandomField(AllenNlpTestCase):
         for logit, tag in zip(logits, tags):
             total += logit[tag]
         return total
+
+    def naive_most_likely_sequence(self, logits, mask):
+        # We iterate over all possible tag sequences and use self.score
+        # to check the likelihood of each. The most likely sequence should be the
+        # same as what we get from viterbi_tags.
+        most_likely_tags = []
+        best_scores = []
+
+        for logit, mas in zip(logits, mask):
+            mask_indices = mas.nonzero().squeeze()
+            logit = torch.index_select(logit, 0, mask_indices)
+            sequence_length = logit.shape[0]
+            most_likely, most_likelihood = None, -float("inf")
+            for tags in itertools.product(range(5), repeat=sequence_length):
+                score = self.score(logit.data, tags)
+                if score > most_likelihood:
+                    most_likely, most_likelihood = tags, score
+            # Convert tuple to list; otherwise == complains.
+            most_likely_tags.append(list(most_likely))
+            best_scores.append(most_likelihood)
+
+        return most_likely_tags, best_scores
 
     def test_forward_works_without_mask(self):
         log_likelihood = self.crf(self.logits, self.tags).item()
@@ -110,7 +133,7 @@ class TestConditionalRandomField(AllenNlpTestCase):
         assert manual_log_likelihood.item() == approx(log_likelihood)
 
     def test_viterbi_tags(self):
-        mask = torch.LongTensor([[1, 1, 1], [1, 1, 0]])
+        mask = torch.LongTensor([[1, 1, 1], [1, 0, 1]])
 
         viterbi_path = self.crf.viterbi_tags(self.logits, mask)
 
@@ -118,28 +141,38 @@ class TestConditionalRandomField(AllenNlpTestCase):
         viterbi_tags = [x for x, y in viterbi_path]
         viterbi_scores = [y for x, y in viterbi_path]
 
-        # Check that the viterbi tags are what I think they should be.
-        assert viterbi_tags == [[2, 4, 3], [4, 2]]
-
-        # We can also iterate over all possible tag sequences and use self.score
-        # to check the likelihood of each. The most likely sequence should be the
-        # same as what we get from viterbi_tags.
-        most_likely_tags = []
-        best_scores = []
-
-        for logit, mas in zip(self.logits, mask):
-            sequence_length = torch.sum(mas.detach())
-            most_likely, most_likelihood = None, -float("inf")
-            for tags in itertools.product(range(5), repeat=sequence_length):
-                score = self.score(logit.data, tags)
-                if score > most_likelihood:
-                    most_likely, most_likelihood = tags, score
-            # Convert tuple to list; otherwise == complains.
-            most_likely_tags.append(list(most_likely))
-            best_scores.append(most_likelihood)
+        most_likely_tags, best_scores = self.naive_most_likely_sequence(self.logits, mask)
 
         assert viterbi_tags == most_likely_tags
-        assert viterbi_scores == best_scores
+        assert_allclose(viterbi_scores, best_scores, rtol=1e-5)
+
+    def test_viterbi_tags_no_mask(self):
+        viterbi_path = self.crf.viterbi_tags(self.logits)
+
+        # Separate the tags and scores.
+        viterbi_tags = [x for x, y in viterbi_path]
+        viterbi_scores = [y for x, y in viterbi_path]
+
+        mask = torch.LongTensor([[1, 1, 1], [1, 1, 1]])
+        most_likely_tags, best_scores = self.naive_most_likely_sequence(self.logits, mask)
+
+        assert viterbi_tags == most_likely_tags
+        assert_allclose(viterbi_scores, best_scores, rtol=1e-5)
+
+    def test_viterbi_tags_top_k(self):
+        mask = torch.LongTensor([[1, 1, 1], [1, 1, 0]])
+
+        best_paths = self.crf.viterbi_tags(self.logits, mask, top_k=2)
+
+        # Ensure the top path matches not passing top_k
+        top_path_and_score = [top_k_paths[0] for top_k_paths in best_paths]
+        assert top_path_and_score == self.crf.viterbi_tags(self.logits, mask)
+
+        next_path_and_score = [top_k_paths[1] for top_k_paths in best_paths]
+        next_viterbi_tags = [x for x, _ in next_path_and_score]
+
+        # Check that the next best viterbi tags are what I think they should be.
+        assert next_viterbi_tags == [[4, 2, 3], [3, 2]]
 
     def test_constrained_viterbi_tags(self):
         constraints = {

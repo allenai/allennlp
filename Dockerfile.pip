@@ -1,7 +1,7 @@
 # This Dockerfile creates an environment suitable for downstream usage of AllenNLP.
 # It creates an environment that includes a pip installation of allennlp.
 
-FROM python:3.6.8-stretch
+FROM python:3.6.10-stretch
 
 ENV LC_ALL=C.UTF-8
 ENV LANG=C.UTF-8
@@ -31,7 +31,7 @@ RUN if [ ! -z "$VERSION" ]; \
     fi
 
 # Copy wrapper script to allow beaker to run resumable training workloads.
-COPY scripts/ai2-internal/resumable_train.sh /stage/allennlp
+COPY scripts/ai2_internal/resumable_train.sh /stage/allennlp
 
 LABEL maintainer="allennlp-contact@allenai.org"
 

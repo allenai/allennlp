@@ -1,12 +1,14 @@
 """
 Conditional random field
 """
-from typing import List, Tuple, Dict
+from typing import List, Tuple, Dict, Union
 
 import torch
 
 from allennlp.common.checks import ConfigurationError
 import allennlp.nn.util as util
+
+VITERBI_DECODING = Tuple[List[int], float]  # a list of tags, and a viterbi score
 
 
 def allowed_transitions(constraint_type: str, labels: Dict[int, str]) -> List[Tuple[int, int]]:
@@ -241,7 +243,7 @@ class ConditionalRandomField(torch.nn.Module):
             # Alpha is for the current_tag, so we broadcast along the next_tag axis.
             broadcast_alpha = alpha.view(batch_size, num_tags, 1)
 
-            # Add all the scores together and logexp over the current_tag axis
+            # Add all the scores together and logexp over the current_tag axis.
             inner = broadcast_alpha + emit_scores + transition_scores
 
             # In valid positions (mask == 1) we want to take the logsumexp over the current_tag dimension
@@ -329,12 +331,28 @@ class ConditionalRandomField(torch.nn.Module):
         return torch.sum(log_numerator - log_denominator)
 
     def viterbi_tags(
-        self, logits: torch.Tensor, mask: torch.Tensor
-    ) -> List[Tuple[List[int], float]]:
+        self, logits: torch.Tensor, mask: torch.Tensor = None, top_k: int = None
+    ) -> Union[List[VITERBI_DECODING], List[List[VITERBI_DECODING]]]:
         """
         Uses viterbi algorithm to find most likely tags for the given inputs.
         If constraints are applied, disallows all other transitions.
+
+        Returns a list of results, of the same size as the batch (one result per batch member)
+        Each result is a List of length top_k, containing the top K viterbi decodings
+        Each decoding is a tuple  (tag_sequence, viterbi_score)
+
+        For backwards compatibility, if top_k is None, then instead returns a flat list of
+        tag sequences (the top tag sequence for each batch item).
         """
+        if mask is None:
+            mask = torch.ones(*logits.shape[:2], dtype=torch.long, device=logits.device)
+
+        if top_k is None:
+            top_k = 1
+            flatten_output = True
+        else:
+            flatten_output = False
+
         _, max_seq_length, num_tags = logits.size()
 
         # Get the tensors out of the variables
@@ -375,23 +393,33 @@ class ConditionalRandomField(torch.nn.Module):
         tag_sequence = torch.Tensor(max_seq_length + 2, num_tags + 2)
 
         for prediction, prediction_mask in zip(logits, mask):
-            sequence_length = torch.sum(prediction_mask)
+            mask_indices = prediction_mask.nonzero().squeeze()
+            masked_prediction = torch.index_select(prediction, 0, mask_indices)
+            sequence_length = masked_prediction.shape[0]
 
             # Start with everything totally unlikely
             tag_sequence.fill_(-10000.0)
             # At timestep 0 we must have the START_TAG
             tag_sequence[0, start_tag] = 0.0
             # At steps 1, ..., sequence_length we just use the incoming prediction
-            tag_sequence[1 : (sequence_length + 1), :num_tags] = prediction[:sequence_length]
+            tag_sequence[1 : (sequence_length + 1), :num_tags] = masked_prediction
             # And at the last timestep we must have the END_TAG
             tag_sequence[sequence_length + 1, end_tag] = 0.0
 
             # We pass the tags and the transitions to ``viterbi_decode``.
-            viterbi_path, viterbi_score = util.viterbi_decode(
-                tag_sequence[: (sequence_length + 2)], transitions
+            viterbi_paths, viterbi_scores = util.viterbi_decode(
+                tag_sequence=tag_sequence[: (sequence_length + 2)],
+                transition_matrix=transitions,
+                top_k=top_k,
             )
-            # Get rid of START and END sentinels and append.
-            viterbi_path = viterbi_path[1:-1]
-            best_paths.append((viterbi_path, viterbi_score.item()))
+            top_k_paths = []
+            for viterbi_path, viterbi_score in zip(viterbi_paths, viterbi_scores):
+                # Get rid of START and END sentinels and append.
+                viterbi_path = viterbi_path[1:-1]
+                top_k_paths.append((viterbi_path, viterbi_score.item()))
+            best_paths.append(top_k_paths)
+
+        if flatten_output:
+            return [top_k_paths[0] for top_k_paths in best_paths]
 
         return best_paths
