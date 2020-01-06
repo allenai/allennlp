@@ -203,7 +203,7 @@ def train_model_from_file(
         For caching data pre-processing.  See :func:`allennlp.training.util.datasets_from_params`.
     node_rank : ``int``, optional
         Rank of the current node in distributed training
-    include_package: ``str``, optional
+    include_package : ``str``, optional
         In distributed mode, extra packages mentioned will be imported in trainer workers.
     """
     # Load the experiment config from a file and pass it to ``train_model``.
@@ -255,14 +255,14 @@ def train_model(
         For caching data pre-processing.  See :func:`allennlp.training.util.datasets_from_params`.
     cache_prefix : ``str``, optional
         For caching data pre-processing.  See :func:`allennlp.training.util.datasets_from_params`.
-    node_rank: ``int``, optional
+    node_rank : ``int``, optional
         Rank of the current node in distributed training
-    include_package: ``List[str]``, optional
+    include_package : ``List[str]``, optional
         In distributed mode, extra packages mentioned will be imported in trainer workers.
 
     Returns
     -------
-    best_model: ``Model``
+    best_model : ``Model``
         The model with the best epoch weights.
     """
     create_serialization_dir(params, serialization_dir, recover, force)
@@ -387,18 +387,18 @@ def _train_worker(
         For caching data pre-processing.  See :func:`allennlp.training.util.datasets_from_params`.
     cache_prefix : ``str``, optional
         For caching data pre-processing.  See :func:`allennlp.training.util.datasets_from_params`.
-    include_package: ``List[str]``, optional
+    include_package : ``List[str]``, optional
         In distributed mode, since this function would have been spawned as a separate process,
         the extra imports need to be done again. NOTE: This does not have any effect in single
         GPU training.
-    node_rank: ``int``, optional
+    node_rank : ``int``, optional
         Rank of the node
-    world_size: ``int``, optional
+    world_size : ``int``, optional
         The number of processes involved in distributed training.
 
     Returns
     -------
-    best_model: ``Model``
+    best_model : ``Model``
         The model with the best epoch weights.
     """
     prepare_global_logging(

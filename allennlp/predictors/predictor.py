@@ -252,15 +252,15 @@ class Predictor(Registrable):
 
         Parameters
         ----------
-        archive_path: ``str``
+        archive_path : ``str``
             The path to the archive.
-        predictor_name: ``str``, optional (default=None)
+        predictor_name : ``str``, optional (default=None)
             Name that the predictor is registered as, or None to use the
             predictor associated with the model.
-        cuda_device: ``int``, optional (default=-1)
+        cuda_device : ``int``, optional (default=-1)
             If `cuda_device` is >= 0, the model will be loaded onto the
             corresponding GPU. Otherwise it will be loaded onto the CPU.
-        dataset_reader_to_load: ``str``, optional (default="validation")
+        dataset_reader_to_load : ``str``, optional (default="validation")
             Which dataset reader to load from the archive, either "train" or
             "validation".
 

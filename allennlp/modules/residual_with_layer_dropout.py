@@ -48,7 +48,7 @@ class ResidualWithLayerDropout(torch.nn.Module):
 
         Returns
         -------
-        output: ``torch.FloatTensor``
+        output : ``torch.FloatTensor``
             A tensor with the same shape as `layer_input` and `layer_output`.
         """
         if layer_index is not None and total_layers is not None:

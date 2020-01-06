@@ -25,7 +25,7 @@ class DialogQAPredictor(Predictor):
 
         Parameters
         ----------
-        jsonline: ``str``
+        jsonline : ``str``
             A json line that has the same format as the quac data file.
 
         Returns

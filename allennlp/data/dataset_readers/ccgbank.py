@@ -42,17 +42,17 @@ class CcgBankDatasetReader(DatasetReader):
         are pre-tokenised in the data file.
     lazy : ``bool``, optional, (default = ``False``)
         Whether or not instances can be consumed lazily.
-    tag_label: ``str``, optional (default=``ccg``)
+    tag_label : ``str``, optional (default=``ccg``)
         Specify ``ccg``, ``modified_pos``, ``original_pos``, or ``predicate_arg`` to
         have that tag loaded into the instance field ``tag``.
-    feature_labels: ``Sequence[str]``, optional (default=``()``)
+    feature_labels : ``Sequence[str]``, optional (default=``()``)
         These labels will be loaded as features into the corresponding instance fields:
         ``ccg`` -> ``ccg_tags``, ``modified_pos`` -> ``modified_pos_tags``,
         ``original_pos`` -> ``original_pos_tags``, or ``predicate_arg`` -> ``predicate_arg_tags``
-        Each will have its own namespace: ``ccg_tags``, ``modified_pos_tags``,
+        Each will have its own namespace : ``ccg_tags``, ``modified_pos_tags``,
         ``original_pos_tags``, ``predicate_arg_tags``. If you want to use one of the tags
         as a feature in your model, it should be specified here.
-    label_namespace: ``str``, optional (default=``labels``)
+    label_namespace : ``str``, optional (default=``labels``)
         Specifies the namespace for the chosen ``tag_label``.
     """
 
