@@ -114,10 +114,7 @@ setup(
         "h5py",
         "scikit-learn",
         "scipy",
-<<<<<<< HEAD
-=======
         "pytz>=2017.3",
->>>>>>> master
         "matplotlib>=2.2.3",
         "pytest",
         "flaky",
