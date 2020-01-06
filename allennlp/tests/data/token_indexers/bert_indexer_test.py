@@ -3,14 +3,14 @@ from allennlp.data.token_indexers.wordpiece_indexer import (
     PretrainedBertIndexer,
     _get_token_type_ids,
 )
-from allennlp.data.tokenizers import WordTokenizer, Token
-from allennlp.data.tokenizers.word_splitter import BertBasicWordSplitter
+from allennlp.data.tokenizers import SpacyTokenizer, Token
+from allennlp.data.tokenizers.pretrained_transformer_pre_tokenizer import BertPreTokenizer
 from allennlp.data.vocabulary import Vocabulary
 
 
 class TestBertIndexer(ModelTestCase):
     def test_starting_ending_offsets(self):
-        tokenizer = WordTokenizer(word_splitter=BertBasicWordSplitter())
+        tokenizer = BertPreTokenizer()
 
         #           2   3     5     6   8      9    2  15 10 11 14   1
         sentence = "the quick brown fox jumped over the laziest lazy elmo"
@@ -41,7 +41,7 @@ class TestBertIndexer(ModelTestCase):
 
     def test_do_lowercase(self):
         # Our default tokenizer doesn't handle lowercasing.
-        tokenizer = WordTokenizer()
+        tokenizer = SpacyTokenizer()
 
         # Quick is UNK because of capitalization
         #           2   1     5     6   8      9    2  15 10 11 14   1
@@ -66,7 +66,7 @@ class TestBertIndexer(ModelTestCase):
 
     def test_never_lowercase(self):
         # Our default tokenizer doesn't handle lowercasing.
-        tokenizer = WordTokenizer()
+        tokenizer = SpacyTokenizer()
 
         #            2 15 10 11  6
         sentence = "the laziest fox"
@@ -134,7 +134,7 @@ class TestBertIndexer(ModelTestCase):
         assert _get_token_type_ids(wordpiece_ids, separator_ids) == desired_token_type_ids
 
     def test_token_type_ids(self):
-        tokenizer = WordTokenizer()
+        tokenizer = SpacyTokenizer()
 
         sentence = "the laziest  fox"
 
@@ -155,7 +155,7 @@ class TestBertIndexer(ModelTestCase):
         assert indexed_tokens["bert-type-ids"] == [0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1]
 
     def test_sliding_window(self):
-        tokenizer = WordTokenizer(word_splitter=BertBasicWordSplitter())
+        tokenizer = BertPreTokenizer()
 
         sentence = "the quickest quick brown [SEP] jumped over the lazy dog"
         tokens = tokenizer.tokenize(sentence)
@@ -224,7 +224,7 @@ class TestBertIndexer(ModelTestCase):
         ]
 
     def test_truncate_window(self):
-        tokenizer = WordTokenizer(word_splitter=BertBasicWordSplitter())
+        tokenizer = BertPreTokenizer()
 
         sentence = "the quickest quick brown fox jumped over the lazy dog"
         tokens = tokenizer.tokenize(sentence)
@@ -260,7 +260,7 @@ class TestBertIndexer(ModelTestCase):
         more wordpieces.
         """
 
-        tokenizer = WordTokenizer(word_splitter=BertBasicWordSplitter())
+        tokenizer = BertPreTokenizer()
 
         sentence = "the quickest quick brown fox jumped over the quickest dog"
         tokens = tokenizer.tokenize(sentence)
@@ -300,7 +300,7 @@ class TestBertIndexer(ModelTestCase):
         word in the truncated sentence consists of two wordpieces.
         """
 
-        tokenizer = WordTokenizer(word_splitter=BertBasicWordSplitter())
+        tokenizer = BertPreTokenizer()
 
         sentence = "the quickest quick brown fox jumped over the quickest dog"
         tokens = tokenizer.tokenize(sentence)

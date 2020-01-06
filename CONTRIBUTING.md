@@ -17,8 +17,9 @@ code sample or an executable test case demonstrating the expected behavior.
 
 ### Did you write a fix for a bug?
 
-Open [a new GitHub pull request](https://github.com/allenai/allennlp/pulls) with the fix.  Make sure you have a clear
-description of the problem and the solution, and include a link to relevant issues.
+Please be sure to run the `black` application to first format your contribution.
+Next open [a new GitHub pull request](https://github.com/allenai/allennlp/pulls) with the fix.
+Make sure you have a clear description of the problem and the solution, and include a link to relevant issues.
 
 Once your pull request is created, our continuous build system will check your pull request.  Continuous
 build will test that:
@@ -46,7 +47,7 @@ that run `black` and `flake8` over the files in every commit.
 We use GitHub issues to track enhancement requests.  Before you create an enhancement request:
 
 * Make sure you have a clear idea of the enhancement you would like.  If you have a vague idea, consider discussing
-it first on the users list.
+it first on a GitHub issue.
 
 * Check the documentation to make sure your feature does not already exist.
 

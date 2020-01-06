@@ -6,8 +6,7 @@ from allennlp.predictors.open_information_extraction import (
     get_predicate_text,
 )
 from allennlp.predictors.open_information_extraction import sanitize_label
-from allennlp.data.tokenizers import WordTokenizer
-from allennlp.data.tokenizers.word_splitter import SpacyWordSplitter
+from allennlp.data.tokenizers.spacy_tokenizer import SpacyTokenizer
 
 
 class TestOpenIePredictor(AllenNlpTestCase):
@@ -74,7 +73,7 @@ class TestOpenIePredictor(AllenNlpTestCase):
         Test whether the predictor can correctly consolidate multiword
         predicates.
         """
-        tokenizer = WordTokenizer(word_splitter=SpacyWordSplitter(pos_tags=True))
+        tokenizer = SpacyTokenizer(pos_tags=True)
 
         sent_tokens = tokenizer.tokenize("In December, John decided to join the party.")
 
@@ -96,7 +95,7 @@ class TestOpenIePredictor(AllenNlpTestCase):
         Test whether the predictor can correctly consolidate multiword
         predicates.
         """
-        tokenizer = WordTokenizer(word_splitter=SpacyWordSplitter(pos_tags=True))
+        tokenizer = SpacyTokenizer(pos_tags=True)
 
         sent_tokens = tokenizer.tokenize("John refused to consider joining the club.")
 

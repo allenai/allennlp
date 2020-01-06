@@ -262,52 +262,29 @@ class TestCallbackTrainer(ModelTestCase):
             callbacks=self.default_callbacks(),
             cuda_device=0,
         )
-        trainer.train()
-
-    @pytest.mark.skipif(torch.cuda.device_count() < 2, reason="Need multiple GPUs.")
-    def test_trainer_can_run_multiple_gpu(self):
-        self.model.cuda()
-
-        class MetaDataCheckWrapper(Model):
-            """
-            Checks that the metadata field has been correctly split across the batch dimension
-            when running on multiple gpus.
-            """
-
-            def __init__(self, model):
-                super().__init__(model.vocab)
-                self.model = model
-
-            def forward(self, **kwargs) -> Dict[str, torch.Tensor]:  # type: ignore
-                assert (
-                    "metadata" in kwargs and "tags" in kwargs
-                ), f"tokens and metadata must be provided. Got {kwargs.keys()} instead."
-                batch_size = kwargs["tokens"]["tokens"].size()[0]
-                assert len(kwargs["metadata"]) == batch_size, (
-                    f"metadata must be split appropriately. Expected {batch_size} elements, "
-                    f"got {len(kwargs['metadata'])} elements."
-                )
-                return self.model.forward(**kwargs)
-
-        multigpu_iterator = BasicIterator(batch_size=4)
-        multigpu_iterator.index_with(self.vocab)
-        trainer = CallbackTrainer(
-            MetaDataCheckWrapper(self.model),
-            training_data=self.instances,
-            iterator=multigpu_iterator,
-            optimizer=self.optimizer,
-            num_epochs=2,
-            callbacks=self.default_callbacks(),
-            cuda_device=[0, 1],
-        )
         metrics = trainer.train()
         assert "peak_cpu_memory_MB" in metrics
         assert isinstance(metrics["peak_cpu_memory_MB"], float)
         assert metrics["peak_cpu_memory_MB"] > 0
         assert "peak_gpu_0_memory_MB" in metrics
         assert isinstance(metrics["peak_gpu_0_memory_MB"], int)
-        assert "peak_gpu_1_memory_MB" in metrics
-        assert isinstance(metrics["peak_gpu_1_memory_MB"], int)
+
+    @pytest.mark.skipif(torch.cuda.device_count() < 2, reason="2 or more GPUs required.")
+    def test_passing_trainer_multiple_gpus_raises_error(self):
+        self.model.cuda()
+
+        multigpu_iterator = BasicIterator(batch_size=4)
+        multigpu_iterator.index_with(self.vocab)
+        with pytest.raises(ConfigurationError):
+            CallbackTrainer(
+                self.model,
+                training_data=self.instances,
+                iterator=multigpu_iterator,
+                optimizer=self.optimizer,
+                num_epochs=2,
+                callbacks=self.default_callbacks(),
+                cuda_device=[0, 1],
+            )
 
     def test_trainer_can_resume_training(self):
         trainer = CallbackTrainer(

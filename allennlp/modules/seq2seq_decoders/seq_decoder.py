@@ -36,7 +36,7 @@ class SeqDecoder(Module, Registrable):
     def get_output_dim(self) -> int:
         """
         The dimension of each timestep of the hidden state in the layer before final softmax.
-        Needed to check whether the model is compaitble for embedding-final layer weight tying.
+        Needed to check whether the model is compatible for embedding-final layer weight tying.
         """
         raise NotImplementedError()
 

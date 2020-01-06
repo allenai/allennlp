@@ -29,6 +29,7 @@ from allennlp.modules.augmented_lstm import AugmentedLstm
 from allennlp.modules.seq2seq_encoders.bidirectional_language_model_transformer import (
     BidirectionalLanguageModelTransformer,
 )
+from allennlp.modules.seq2seq_encoders.compose_encoder import ComposeEncoder
 from allennlp.modules.seq2seq_encoders.gated_cnn_encoder import GatedCnnEncoder
 from allennlp.modules.seq2seq_encoders.intra_sentence_attention import IntraSentenceAttentionEncoder
 from allennlp.modules.seq2seq_encoders.pytorch_seq2seq_wrapper import PytorchSeq2SeqWrapper

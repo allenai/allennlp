@@ -3,16 +3,16 @@ from collections import defaultdict
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Token, Vocabulary
 from allennlp.data.token_indexers import PosTagIndexer
-from allennlp.data.tokenizers.word_splitter import SpacyWordSplitter
+from allennlp.data.tokenizers.spacy_tokenizer import SpacyTokenizer
 
 
 class TestPosTagIndexer(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
-        self.tokenizer = SpacyWordSplitter(pos_tags=True)
+        self.tokenizer = SpacyTokenizer(pos_tags=True)
 
     def test_count_vocab_items_uses_pos_tags(self):
-        tokens = self.tokenizer.split_words("This is a sentence.")
+        tokens = self.tokenizer.tokenize("This is a sentence.")
         tokens = [Token("<S>")] + [t for t in tokens] + [Token("</S>")]
         indexer = PosTagIndexer()
         counter = defaultdict(lambda: defaultdict(int))
@@ -24,13 +24,13 @@ class TestPosTagIndexer(AllenNlpTestCase):
         counter = defaultdict(lambda: defaultdict(int))
         for token in tokens:
             indexer.count_vocab_items(token, counter)
-        assert counter["pos_tokens"] == {"VERB": 1, "PUNCT": 1, "DET": 2, "NOUN": 1, "NONE": 2}
+        assert counter["pos_tokens"] == {"AUX": 1, "PUNCT": 1, "DET": 2, "NOUN": 1, "NONE": 2}
 
     def test_tokens_to_indices_uses_pos_tags(self):
-        tokens = self.tokenizer.split_words("This is a sentence.")
+        tokens = self.tokenizer.tokenize("This is a sentence.")
         tokens = [t for t in tokens] + [Token("</S>")]
         vocab = Vocabulary()
-        verb_index = vocab.add_token_to_namespace("VERB", namespace="pos_tags")
+        aux_index = vocab.add_token_to_namespace("AUX", namespace="pos_tags")
         cop_index = vocab.add_token_to_namespace("VBZ", namespace="pos_tags")
         none_index = vocab.add_token_to_namespace("NONE", namespace="pos_tags")
         # Have to add other tokens too, since we're calling `tokens_to_indices` on all of them
@@ -43,7 +43,7 @@ class TestPosTagIndexer(AllenNlpTestCase):
         indices = indexer.tokens_to_indices(tokens, vocab, "tokens")
         assert len(indices) == 1
         assert "tokens" in indices
-        assert indices["tokens"][1] == verb_index
+        assert indices["tokens"][1] == aux_index
         assert indices["tokens"][-1] == none_index
 
         indexer._coarse_tags = False

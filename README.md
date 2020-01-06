@@ -44,10 +44,6 @@ for developing state-of-the-art deep learning models on a wide variety of lingui
     <td> tensor utility functions, such as initializers and activation functions </td>
 </tr>
 <tr>
-    <td><b> allennlp.service </b></td>
-    <td> a web server to that can serve demos for your models </td>
-</tr>
-<tr>
     <td><b> allennlp.training </b></td>
     <td> functionality for training models </td>
 </tr>
@@ -71,10 +67,10 @@ environment you want to use, you can skip to the 'installing via pip' section.
 
 1.  [Download and install Conda](https://conda.io/projects/conda/en/latest/user-guide/install/index.html).
 
-2.  Create a Conda environment with Python 3.6
+2.  Create a Conda environment with Python 3.7
 
     ```bash
-    conda create -n allennlp python=3.6
+    conda create -n allennlp python=3.7
     ```
 
 3.  Activate the Conda environment. You will need to activate the Conda environment in each terminal in which you want to use AllenNLP.
@@ -95,9 +91,6 @@ That's it! You're now ready to build and train AllenNLP models.
 AllenNLP installs a script when you install the python package, meaning you can run allennlp commands just by typing `allennlp` into a terminal.
 
 You can now test your installation with `allennlp test-install`.
-
-_`pip` currently installs Pytorch for CUDA 9 only (or no GPU). If you require an older version,
-please visit https://pytorch.org/ and install the relevant pytorch binary._
 
 ### Installing using Docker
 
@@ -124,7 +117,7 @@ You can also install AllenNLP by cloning our git repository:
   git clone https://github.com/allenai/allennlp.git
   ```
 
-Create a Python 3.6 virtual environment, and install AllenNLP in `editable` mode by running:
+Create a Python 3.7 virtual environment, and install AllenNLP in `editable` mode by running:
 
   ```bash
   pip install --editable .
@@ -134,9 +127,7 @@ This will make `allennlp` available on your system but it will use the sources f
 you made of the source repository.
 
 You can test your installation with `allennlp test-install`.
-The full development environment also requires the JVM and `perl`,
-which must be installed separately.  `./scripts/verify.py` will run
-the full suite of tests used by our continuous build environment.
+`./scripts/verify.py` will run the full suite of tests used by our continuous build environment.
 
 ## Running AllenNLP
 
@@ -177,9 +168,7 @@ For various reasons you may need to create your own AllenNLP Docker image.
 The same image can be used either with a CPU or a GPU.
 
 First, you need to [install Docker](https://www.docker.com/get-started).
-Then run the following command
-(it will take some time, as it completely builds the
-environment needed to run AllenNLP.)
+Then run the following command (it will take some time, as it completely builds the environment needed to run AllenNLP.)
 
 ```bash
 docker build -f Dockerfile.pip --tag allennlp/allennlp:latest .

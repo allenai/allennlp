@@ -47,16 +47,20 @@ class EvalbBracketingScorer(Metric):
         The relative name of the EVALB configuration file used when scoring the trees.
         By default, this uses the COLLINS.prm configuration file which comes with EVALB.
         This configuration ignores POS tags and some punctuation labels.
+    evalb_num_errors_to_kill: ``int``, optional (default = "10")
+        The number of errors to tolerate from EVALB before terminating evaluation.
     """
 
     def __init__(
         self,
         evalb_directory_path: str = DEFAULT_EVALB_DIR,
         evalb_param_filename: str = "COLLINS.prm",
+        evalb_num_errors_to_kill: int = 10,
     ) -> None:
         self._evalb_directory_path = evalb_directory_path
         self._evalb_program_path = os.path.join(evalb_directory_path, "evalb")
         self._evalb_param_path = os.path.join(evalb_directory_path, evalb_param_filename)
+        self._evalb_num_errors_to_kill = evalb_num_errors_to_kill
 
         self._header_line = [
             "ID",
@@ -121,6 +125,8 @@ class EvalbBracketingScorer(Metric):
             self._evalb_program_path,
             "-p",
             self._evalb_param_path,
+            "-e",
+            str(self._evalb_num_errors_to_kill),
             gold_path,
             predicted_path,
         ]

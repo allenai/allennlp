@@ -82,7 +82,7 @@ class LogToTensorboard(Callback):
             )
 
         if self.log_batch_size_period:
-            cur_batch = sum([training_util.get_batch_size(batch) for batch in trainer.batch_group])
+            cur_batch = training_util.get_batch_size(trainer.batch)
             self.cumulative_batch_size += cur_batch
             if (trainer.batches_this_epoch - 1) % self.log_batch_size_period == 0:
                 average = self.cumulative_batch_size / trainer.batches_this_epoch
