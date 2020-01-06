@@ -1,13 +1,13 @@
 #### TESTING-RELATED PACKAGES ####
 
 # Checks style, syntax, and other useful errors.
-flake8==3.7.8
+flake8
 
 # Static type checking
 mypy==0.730
 
 # Automatic code formatting
-black==19.3b0
+black
 
 # For creating git precommit hooks
 pre-commit==1.18.3
