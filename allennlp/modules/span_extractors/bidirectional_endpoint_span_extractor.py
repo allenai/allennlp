@@ -38,13 +38,13 @@ class BidirectionalEndpointSpanExtractor(SpanExtractor):
 
     Parameters
     ----------
-    input_dim : ``int``, required.
+    input_dim : ``int``, required
         The final dimension of the ``sequence_tensor``.
-    forward_combination : str, optional (default = "y-x").
+    forward_combination : ``str``, optional (default = "y-x").
         The method used to combine the ``forward_start_embeddings`` and ``forward_end_embeddings``
         for the forward direction of the bidirectional representation.
         See above for a full description.
-    backward_combination : str, optional (default = "x-y").
+    backward_combination : ``str``, optional (default = "x-y").
         The method used to combine the ``backward_start_embeddings`` and ``backward_end_embeddings``
         for the backward direction of the bidirectional representation.
         See above for a full description.

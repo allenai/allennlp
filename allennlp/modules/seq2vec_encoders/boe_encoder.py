@@ -16,7 +16,7 @@ class BagOfEmbeddingsEncoder(Seq2VecEncoder):
 
     Parameters
     ----------
-    embedding_dim: ``int``
+    embedding_dim: ``int``, required
         This is the input dimension to the encoder.
     averaged: ``bool``, optional (default=``False``)
         If ``True``, this module will average the embeddings across time, rather than simply summing

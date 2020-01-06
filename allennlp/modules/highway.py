@@ -21,7 +21,7 @@ class Highway(torch.nn.Module):
 
     Parameters
     ----------
-    input_dim : ``int``
+    input_dim : ``int``, required
         The dimensionality of :math:`x`.  We assume the input has shape ``(batch_size, ...,
         input_dim)``.
     num_layers : ``int``, optional (default=``1``)
