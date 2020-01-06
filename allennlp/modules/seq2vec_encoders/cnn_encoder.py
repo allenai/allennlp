@@ -30,10 +30,10 @@ class CnnEncoder(Seq2VecEncoder):
 
     Parameters
     ----------
-    embedding_dim : ``int``
+    embedding_dim : ``int``, required
         This is the input dimension to the encoder.  We need this because we can't do shape
         inference in pytorch, and we need to know what size filters to construct in the CNN.
-    num_filters: ``int``
+    num_filters: ``int``, required
         This is the output dim for each convolutional layer, which is the number of "filters"
         learned by that layer.
     ngram_filter_sizes: ``Tuple[int]``, optional (default=``(2, 3, 4, 5)``)

@@ -28,19 +28,20 @@ class LinearAttention(Attention):
 
     Parameters
     ----------
-    tensor_1_dim : ``int``
+    tensor_1_dim: ``int``, required
         The dimension of the first tensor, ``x``, described above.  This is ``x.size()[-1]`` - the
         length of the vector that will go into the similarity computation.  We need this so we can
         build weight vectors correctly.
-    tensor_2_dim : ``int``
+    tensor_2_dim: ``int``, required
         The dimension of the second tensor, ``y``, described above.  This is ``y.size()[-1]`` - the
         length of the vector that will go into the similarity computation.  We need this so we can
         build weight vectors correctly.
-    combination : ``str``, optional (default="x,y")
+    combination: ``str``, optional (default="x,y")
         Described above.
-    activation : ``Activation``, optional (default=linear (i.e. no activation))
+    activation: ``Activation``, optional (default=linear (i.e. no activation))
         An activation function applied after the ``w^T * [x;y] + b`` calculation.  Default is no
         activation.
+    normalize: ``bool``, optional (default=True)
     """
 
     def __init__(
