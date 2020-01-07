@@ -2,7 +2,7 @@ import torch
 import pytest
 
 from overrides import overrides
-from typing import Tuple, Any, Iterable
+from typing import Tuple, Any, Iterable, Dict
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.vocabulary import Vocabulary
@@ -49,20 +49,22 @@ class DummyMetric(Metric):
         return (2 * p * r) / (p + r)
 
     @overrides
-    def __call__(self, best_span_string, answer_strings):
-        self._total_em += max(best_span_string == answer_string for answer_string in answer_strings)
-        self._total_f1 += max(
-            self.f1(best_span_string, answer_string) for answer_string in answer_strings
-        )
-        self._count += 1
+    def __call__(self, best_span_strings, answer_strings):
+        for best_span_string, answer_string in zip(best_span_strings, answer_strings):
+            self._total_em += best_span_string == answer_string
+            self._total_f1 += self.f1(best_span_string, answer_string)
+            self._count += 1
 
     @overrides
-    def get_metric(self, reset: bool = False) -> Tuple[float, float]:
+    def get_metric(self, reset: bool = False) -> Dict[str, float]:
         exact_match = self._total_em / self._count if self._count > 0 else 0
         f1_score = self._total_f1 / self._count if self._count > 0 else 0
         if reset:
             self.reset()
-        return exact_match, f1_score
+        return {
+            "em": exact_match,
+            "f1": f1_score
+        }
 
     @overrides
     def reset(self):
