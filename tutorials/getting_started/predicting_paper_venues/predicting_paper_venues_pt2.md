@@ -71,7 +71,9 @@ In this example we also would like to return the list of all possible labels
 We first get the mapping from indices to labels, and then we convert
 it to a list where position 0 is label 0, and so on.
 
-`predict_json` returns a JSON dict with keys `"instance"` and `"all_labels"`.
+In a typical `Predictor`, `predict_json` returns the result of `Model.forward_on_instance`,
+but you can return an arbitrary JSON dict. In this case we simply put the predicted instance
+under `"instance"` and the labels under `"all_labels"`.
 
 ## Testing the Predictor
 
