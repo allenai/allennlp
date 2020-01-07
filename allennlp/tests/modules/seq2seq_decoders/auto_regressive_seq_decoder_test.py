@@ -51,7 +51,9 @@ class DummyMetric(Metric):
     @overrides
     def __call__(self, best_span_string, answer_strings):
         self._total_em += max(best_span_string == answer_string for answer_string in answer_strings)
-        self._total_f1 += max(self.f1(best_span_string, answer_string) for answer_string in answer_strings)
+        self._total_f1 += max(
+            self.f1(best_span_string, answer_string) for answer_string in answer_strings
+        )
         self._count += 1
 
     @overrides

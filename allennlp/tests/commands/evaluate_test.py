@@ -74,7 +74,14 @@ class TestEvaluate(AllenNlpTestCase):
 
         args = self.parser.parse_args(kebab_args)
         metrics = evaluate_from_args(args)
-        assert metrics.keys() == {'accuracy', 'accuracy3', 'precision-overall', 'recall-overall', 'f1-measure-overall', 'loss'}
+        assert metrics.keys() == {
+            "accuracy",
+            "accuracy3",
+            "precision-overall",
+            "recall-overall",
+            "f1-measure-overall",
+            "loss",
+        }
 
     def test_output_file_evaluate_from_args(self):
         output_file = str(self.TEST_DIR / "metrics.json")
