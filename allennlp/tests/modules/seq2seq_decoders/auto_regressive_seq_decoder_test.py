@@ -2,6 +2,8 @@ import torch
 import pytest
 
 from overrides import overrides
+from typing import Tuple, Any, Iterable
+
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.modules import Embedding
@@ -9,7 +11,7 @@ from allennlp.modules.seq2seq_decoders import AutoRegressiveSeqDecoder
 from allennlp.modules.seq2seq_decoders import StackedSelfAttentionDecoderNet
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.util import START_SYMBOL, END_SYMBOL, prepare_environment
-from allennlp.training.metrics import BLEU, SquadEmAndF1
+from allennlp.training.metrics import BLEU, Metric
 from allennlp.common import Params
 
 
@@ -28,16 +30,46 @@ def create_vocab_and_decoder_net(decoder_inout_dim):
     return vocab, decoder_net
 
 
-class CustomSquadEmAndF1(SquadEmAndF1):
-    @overrides
-    def __call__(self, list_best_span_string, list_answer_strings):
-        for best_span_string, answer_strings in zip(list_best_span_string, list_answer_strings):
-            super().__call__(" ".join(best_span_string), [" ".join(answer_strings)])
+class DummyMetric(Metric):
+    def __init__(self) -> None:
+        self.reset()
+
+    @staticmethod
+    def f1(predicted: Iterable[Any], expected: Iterable[Any]) -> float:
+        expected = frozenset(expected)
+        predicted = frozenset(predicted)
+        if len(predicted) <= 0 and len(expected) <= 0:
+            return 1.0
+        if len(predicted) <= 0 or len(expected) <= 0:
+            return 0.0
+
+        true_positive_count = len(predicted & expected)
+        p = true_positive_count / len(predicted)
+        r = true_positive_count / len(expected)
+        return (2 * p * r) / (p + r)
 
     @overrides
-    def get_metric(self, reset: bool = False):
-        out = super().get_metric(reset)
-        return {"em": out[0], "f1": out[1]}
+    def __call__(self, best_span_string, answer_strings):
+        self._total_em += max(best_span_string == answer_string for answer_string in answer_strings)
+        self._total_f1 += max(self.f1(best_span_string, answer_string) for answer_string in answer_strings)
+        self._count += 1
+
+    @overrides
+    def get_metric(self, reset: bool = False) -> Tuple[float, float]:
+        exact_match = self._total_em / self._count if self._count > 0 else 0
+        f1_score = self._total_f1 / self._count if self._count > 0 else 0
+        if reset:
+            self.reset()
+        return exact_match, f1_score
+
+    @overrides
+    def reset(self):
+        self._total_em = 0.0
+        self._total_f1 = 0.0
+        self._count = 0
+
+    def __str__(self):
+        return f"DummyMetric(em={self._total_em}, f1={self._total_f1})"
 
 
 class TestAutoRegressiveSeqDecoder(AllenNlpTestCase):
@@ -119,7 +151,7 @@ class TestAutoRegressiveSeqDecoder(AllenNlpTestCase):
             10,
             Embedding(vocab.get_vocab_size(), decoder_inout_dim),
             tensor_based_metric=BLEU(),
-            token_based_metric=CustomSquadEmAndF1(),
+            token_based_metric=DummyMetric(),
         ).eval()
 
         encoded_state = torch.randn(batch_size, time_steps, decoder_inout_dim)
