@@ -104,7 +104,7 @@ class Model(torch.nn.Module, Registrable):
 
         Returns
         -------
-        output_dict: ``Dict[str, torch.Tensor]``
+        output_dict : ``Dict[str, torch.Tensor]``
             The outputs from the model. In order to train a model using the
             :class:`~allennlp.training.Trainer` api, you must provide a "loss" key pointing to a
             scalar ``torch.Tensor`` representing the loss to be optimized.

@@ -41,19 +41,19 @@ class CoreferenceResolver(Model):
     mention_feedforward : ``FeedForward``
         This feedforward network is applied to the span representations which is then scored
         by a linear layer.
-    antecedent_feedforward: ``FeedForward``
+    antecedent_feedforward : ``FeedForward``
         This feedforward network is applied to pairs of span representation, along with any
         pairwise features, which is then scored by a linear layer.
-    feature_size: ``int``
+    feature_size : ``int``
         The embedding size for all the embedded features, such as distances or span widths.
-    max_span_width: ``int``
+    max_span_width : ``int``
         The maximum width of candidate spans.
     spans_per_word: float, required.
         A multiplier between zero and one which controls what percentage of candidate mention
         spans we retain with respect to the number of words in the document.
     max_antecedents: int, required.
         For each mention which survives the pruning stage, we consider this many antecedents.
-    lexical_dropout: ``int``
+    lexical_dropout : ``int``
         The probability of dropping out dimensions of the embedded text.
     initializer : ``InitializerApplicator``, optional (default=``InitializerApplicator()``)
         Used to initialize the model parameters.
@@ -429,7 +429,7 @@ class CoreferenceResolver(Model):
             The number of spans that were kept while pruning.
         max_antecedents : ``int``, required.
             The maximum number of antecedent spans to consider for every span.
-        device: ``int``, required.
+        device : ``int``, required.
             The CUDA device to use.
 
         Returns
@@ -593,21 +593,21 @@ class CoreferenceResolver(Model):
 
         Parameters
         ----------
-        pairwise_embeddings: ``torch.FloatTensor``, required.
+        pairwise_embeddings : ``torch.FloatTensor``, required.
             Embedding representations of pairs of spans. Has shape
             (batch_size, num_spans_to_keep, max_antecedents, encoding_dim)
-        top_span_mention_scores: ``torch.FloatTensor``, required.
+        top_span_mention_scores : ``torch.FloatTensor``, required.
             Mention scores for every span. Has shape
             (batch_size, num_spans_to_keep, max_antecedents).
-        antecedent_mention_scores: ``torch.FloatTensor``, required.
+        antecedent_mention_scores : ``torch.FloatTensor``, required.
             Mention scores for every antecedent. Has shape
             (batch_size, num_spans_to_keep, max_antecedents).
-        antecedent_log_mask: ``torch.FloatTensor``, required.
+        antecedent_log_mask : ``torch.FloatTensor``, required.
             The log of the mask for valid antecedents.
 
         Returns
         -------
-        coreference_scores: ``torch.FloatTensor``
+        coreference_scores : ``torch.FloatTensor``
             A tensor of shape (batch_size, num_spans_to_keep, max_antecedents + 1),
             representing the unormalised score for each (span, antecedent) pair
             we considered.

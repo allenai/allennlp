@@ -42,7 +42,7 @@ class LanguageModelTokenEmbedder(TokenEmbedder):
     bos_eos_tokens : ``Tuple[str, str]``, optional (default=``("<S>", "</S>")``)
         These will be indexed and placed around the indexed tokens. Necessary if the language model
         was trained with them, but they were injected external to an indexer.
-    remove_bos_eos: ``bool``, optional (default: True)
+    remove_bos_eos : ``bool``, optional (default: True)
         Typically the provided token indexes will be augmented with begin-sentence and end-sentence
         tokens. (Alternatively, you can pass bos_eos_tokens.) If this flag is True the
         corresponding embeddings will be removed from the return values.
@@ -156,7 +156,7 @@ class LanguageModelTokenEmbedder(TokenEmbedder):
         """
         Parameters
         ----------
-        inputs: ``torch.Tensor``
+        inputs : ``torch.Tensor``
             Shape ``(batch_size, timesteps, ...)`` of token ids representing the current batch.
             These must have been produced using the same indexer the LM was trained on.
 
