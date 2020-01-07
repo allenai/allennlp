@@ -61,10 +61,7 @@ class DummyMetric(Metric):
         f1_score = self._total_f1 / self._count if self._count > 0 else 0
         if reset:
             self.reset()
-        return {
-            "em": exact_match,
-            "f1": f1_score
-        }
+        return {"em": exact_match, "f1": f1_score}
 
     @overrides
     def reset(self):
