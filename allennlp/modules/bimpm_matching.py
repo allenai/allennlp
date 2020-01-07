@@ -171,8 +171,8 @@ class BiMpmMatching(nn.Module, FromParams):
             return weights_to_share if share_weights_between_directions else create_parameter()
 
         output_dim = (
-            2
-        )  # used to calculate total output dimension, 2 is for cosine max and cosine min
+            2  # used to calculate total output dimension, 2 is for cosine max and cosine min
+        )
         if with_full_match:
             if is_forward is None:
                 raise ConfigurationError("Must specify is_forward to enable full matching")
