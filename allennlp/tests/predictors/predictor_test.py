@@ -5,7 +5,9 @@ from allennlp.predictors import Predictor
 
 class TestPredictor(AllenNlpTestCase):
     def test_from_archive_does_not_consume_params(self):
-        archive = load_archive(self.FIXTURES_ROOT / "decomposable_attention" / "serialization" / "model.tar.gz")
+        archive = load_archive(
+            self.FIXTURES_ROOT / "decomposable_attention" / "serialization" / "model.tar.gz"
+        )
         Predictor.from_archive(archive, "textual-entailment")
 
         # If it consumes the params, this will raise an exception
@@ -14,7 +16,12 @@ class TestPredictor(AllenNlpTestCase):
     def test_loads_correct_dataset_reader(self):
         # This model has a different dataset reader configuration for train and validation. The parameter that
         # differs is instances_per_file.
-        archive = load_archive(self.FIXTURES_ROOT / "biaffine_dependency_parser_multilang" / "serialization" / "model.tar.gz")
+        archive = load_archive(
+            self.FIXTURES_ROOT
+            / "biaffine_dependency_parser_multilang"
+            / "serialization"
+            / "model.tar.gz"
+        )
 
         predictor = Predictor.from_archive(archive, "biaffine-dependency-parser")
         assert predictor._dataset_reader._instances_per_file == 32
