@@ -169,9 +169,11 @@ class SampledSoftmaxLoss(torch.nn.Module):
 
         # NOTE: targets input has padding removed (so 0 == the first id, NOT the padding id)
 
-        sampled_ids, target_expected_count, sampled_expected_count = self.log_uniform_candidate_sampler(
-            targets, choice_func=self.choice_func
-        )
+        (
+            sampled_ids,
+            target_expected_count,
+            sampled_expected_count,
+        ) = self.log_uniform_candidate_sampler(targets, choice_func=self.choice_func)
 
         long_targets = targets.long()
         long_targets.requires_grad_(False)
