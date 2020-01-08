@@ -9,12 +9,27 @@
       }
     }
   },
+  "validation_dataset_reader": {
+    "type": "conll2003",
+    "tag_label": "ner",
+    "token_indexers": {
+      "tokens": {
+        "type": "single_id",
+        "lowercase_tokens": true
+      },
+      "tokens_again_for_testing": {
+        "type": "single_id",
+        "lowercase_tokens": false
+      }
+    }
+  },
   "train_data_path": "allennlp/tests/fixtures/data/conll2003.txt",
   "validation_data_path": "allennlp/tests/fixtures/data/conll2003.txt",
   "model": {
     "type": "simple_tagger",
     "label_encoding": "IOB1",
     "text_field_embedder": {
+      "allow_unmatched_keys": true,
       "token_embedders": {
         "tokens": {
             "type": "embedding",

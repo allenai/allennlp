@@ -6,35 +6,32 @@ from allennlp.predictors import Predictor
 class TestPredictor(AllenNlpTestCase):
     def test_from_archive_does_not_consume_params(self):
         archive = load_archive(
-            self.FIXTURES_ROOT / "decomposable_attention" / "serialization" / "model.tar.gz"
+            self.FIXTURES_ROOT / "simple_tagger" / "serialization" / "model.tar.gz"
         )
-        Predictor.from_archive(archive, "textual-entailment")
+        Predictor.from_archive(archive, "sentence-tagger")
 
         # If it consumes the params, this will raise an exception
-        Predictor.from_archive(archive, "textual-entailment")
+        Predictor.from_archive(archive, "sentence-tagger")
 
     def test_loads_correct_dataset_reader(self):
         # This model has a different dataset reader configuration for train and validation. The parameter that
         # differs is instances_per_file.
         archive = load_archive(
-            self.FIXTURES_ROOT
-            / "biaffine_dependency_parser_multilang"
-            / "serialization"
-            / "model.tar.gz"
+            self.FIXTURES_ROOT / "simple_tagger_with_span_f1" / "serialization" / "model.tar.gz"
         )
 
-        predictor = Predictor.from_archive(archive, "biaffine-dependency-parser")
-        assert predictor._dataset_reader._instances_per_file == 32
+        predictor = Predictor.from_archive(archive, "sentence-tagger")
+        assert len(predictor._dataset_reader._token_indexers) == 2
 
         predictor = Predictor.from_archive(
-            archive, "biaffine-dependency-parser", dataset_reader_to_load="train"
+            archive, "sentence-tagger", dataset_reader_to_load="train"
         )
-        assert predictor._dataset_reader._instances_per_file == 8
+        assert len(predictor._dataset_reader._token_indexers) == 1
 
         predictor = Predictor.from_archive(
-            archive, "biaffine-dependency-parser", dataset_reader_to_load="validation"
+            archive, "sentence-tagger", dataset_reader_to_load="validation"
         )
-        assert predictor._dataset_reader._instances_per_file == 32
+        assert len(predictor._dataset_reader._token_indexers) == 2
 
     def test_get_gradients(self):
         inputs = {
