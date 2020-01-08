@@ -66,7 +66,9 @@ class TestEvaluate(AllenNlpTestCase):
     def test_evaluate_from_args(self):
         kebab_args = [
             "evaluate",
-            str(self.FIXTURES_ROOT / "simple_tagger" / "serialization-with-span-f1" / "model.tar.gz"),
+            str(
+                self.FIXTURES_ROOT / "simple_tagger" / "serialization-with-span-f1" / "model.tar.gz"
+            ),
             str(self.FIXTURES_ROOT / "data" / "conll2003.txt"),
             "--cuda-device",
             "-1",
@@ -87,7 +89,9 @@ class TestEvaluate(AllenNlpTestCase):
         output_file = str(self.TEST_DIR / "metrics.json")
         kebab_args = [
             "evaluate",
-            str(self.FIXTURES_ROOT / "simple_tagger" / "serialization-with-span-f1" / "model.tar.gz"),
+            str(
+                self.FIXTURES_ROOT / "simple_tagger" / "serialization-with-span-f1" / "model.tar.gz"
+            ),
             str(self.FIXTURES_ROOT / "data" / "conll2003.txt"),
             "--cuda-device",
             "-1",
