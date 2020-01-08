@@ -16,7 +16,9 @@ from allennlp.common.testing import AllenNlpTestCase
 from allennlp.commands import main
 from allennlp.commands.predict import Predict
 from allennlp.data.dataset_readers import DatasetReader, TextClassificationJsonReader
+from allennlp.models.archival import load_archive
 from allennlp.predictors import Predictor, TextClassifierPredictor
+from allennlp.predictors.predictor import DEFAULT_PREDICTORS
 
 
 class TestPredict(AllenNlpTestCase):
@@ -28,6 +30,8 @@ class TestPredict(AllenNlpTestCase):
         self.classifier_data_path = (
             self.FIXTURES_ROOT / "data" / "text_classification_json" / "imdb_corpus.jsonl"
         )
+        self.qanet_model_path = self.FIXTURES_ROOT / "qanet" / "serialization" / "model.tar.gz"
+        self.qanet_data_path = self.FIXTURES_ROOT / "data" / "squad.json"
         self.tempdir = pathlib.Path(tempfile.mkdtemp())
         self.infile = self.tempdir / "inputs.txt"
         self.outfile = self.tempdir / "outputs.txt"
@@ -216,6 +220,46 @@ class TestPredict(AllenNlpTestCase):
         ]
         with self.assertRaises(NotImplementedError):
             main()
+
+    def test_base_predictor(self):
+        # Tests when no Predictor is found and the base class implementation is used
+        model_path = str(self.qanet_model_path)
+        archive = load_archive(model_path)
+        model_type = archive.config.get("model").get("type")
+        # Makes sure that we don't have a DEFAULT_PREDICTOR for it. Otherwise the base class
+        # implementation wouldn't be used
+        assert model_type not in DEFAULT_PREDICTORS
+
+        # Doesn't use a --predictor
+        sys.argv = [
+            "run.py",  # executable
+            "predict",  # command
+            model_path,
+            str(self.qanet_data_path),  # input_file
+            "--output-file",
+            str(self.outfile),
+            "--silent",
+            "--use-dataset-reader",
+        ]
+        main()
+        assert os.path.exists(self.outfile)
+        with open(self.outfile, "r") as f:
+            results = [json.loads(line) for line in f]
+
+        assert len(results) == 5
+        for result in results:
+            assert set(result.keys()) == {
+                "passage_question_attention",
+                "span_start_logits",
+                "span_start_probs",
+                "span_end_logits",
+                "span_end_probs",
+                "best_span",
+                "loss",
+                "best_span_str",
+                "question_tokens",
+                "passage_tokens",
+            }
 
     def test_batch_prediction_works_with_known_model(self):
         with open(self.infile, "w") as f:
