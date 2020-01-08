@@ -74,7 +74,7 @@ class SimpleTaggerSpanF1Test(ModelTestCase):
     def setUp(self):
         super().setUp()
         self.set_up_model(
-            self.FIXTURES_ROOT / "simple_tagger" / "experiment_with_span_f1.json",
+            self.FIXTURES_ROOT / "simple_tagger_with_span_f1" / "experiment.json",
             self.FIXTURES_ROOT / "data" / "conll2003.txt",
         )
 

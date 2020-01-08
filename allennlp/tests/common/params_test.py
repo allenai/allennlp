@@ -13,14 +13,14 @@ from allennlp.common.testing import AllenNlpTestCase
 
 class TestParams(AllenNlpTestCase):
     def test_load_from_file(self):
-        filename = self.FIXTURES_ROOT / "bidaf" / "experiment.json"
+        filename = self.FIXTURES_ROOT / "simple_tagger" / "experiment.json"
         params = Params.from_file(filename)
 
         assert "dataset_reader" in params
         assert "trainer" in params
 
         model_params = params.pop("model")
-        assert model_params.pop("type") == "bidaf"
+        assert model_params.pop("type") == "simple_tagger"
 
     def test_replace_none(self):
         params = Params({"a": "None", "b": [1.0, "None", 2], "c": {"d": "None"}})
@@ -29,13 +29,13 @@ class TestParams(AllenNlpTestCase):
         assert params["c"]["d"] is None
 
     def test_bad_unicode_environment_variables(self):
-        filename = self.FIXTURES_ROOT / "bidaf" / "experiment.json"
+        filename = self.FIXTURES_ROOT / "simple_tagger" / "experiment.json"
         os.environ["BAD_ENVIRONMENT_VARIABLE"] = "\udce2"
         Params.from_file(filename)
         del os.environ["BAD_ENVIRONMENT_VARIABLE"]
 
     def test_overrides(self):
-        filename = self.FIXTURES_ROOT / "bidaf" / "experiment.json"
+        filename = self.FIXTURES_ROOT / "simple_tagger" / "experiment.json"
         overrides = (
             '{ "train_data_path": "FOO", "model": { "type": "BAR" },'
             '"model.text_field_embedder.tokens.type": "BAZ", "iterator.sorting_keys.0.0": "question"}'
@@ -90,14 +90,14 @@ class TestParams(AllenNlpTestCase):
             preferred=override_dict,
             fallback={
                 "train_data": "/test",
-                "model": "bidaf",
+                "model": "simple_tagger",
                 "trainer": {"num_epochs": 100, "optimizer": "sgd"},
             },
         )
 
         assert params == {
             "train_data": "/train",
-            "model": "bidaf",
+            "model": "simple_tagger",
             "trainer": {"num_epochs": 10, "optimizer": "sgd"},
         }
 

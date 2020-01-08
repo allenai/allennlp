@@ -20,13 +20,6 @@ from allennlp.data.dataset_readers.masked_language_modeling import MaskedLanguag
 from allennlp.data.dataset_readers.next_token_lm import NextTokenLmReader
 from allennlp.data.dataset_readers.multiprocess_dataset_reader import MultiprocessDatasetReader
 from allennlp.data.dataset_readers.penn_tree_bank import PennTreeBankConstituencySpanDatasetReader
-from allennlp.data.dataset_readers.reading_comprehension import (
-    DropReader,
-    SquadReader,
-    TriviaQaReader,
-    QuACReader,
-    QangarooReader,
-)
 from allennlp.data.dataset_readers.semantic_role_labeling import SrlReader
 from allennlp.data.dataset_readers.semantic_dependency_parsing import (
     SemanticDependenciesDatasetReader,

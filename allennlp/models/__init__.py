@@ -16,9 +16,6 @@ from allennlp.models.decomposable_attention import DecomposableAttention
 from allennlp.models.event2mind import Event2Mind
 from allennlp.models.encoder_decoders.composed_seq2seq import ComposedSeq2Seq
 from allennlp.models.encoder_decoders.simple_seq2seq import SimpleSeq2Seq
-from allennlp.models.reading_comprehension.bidaf import BidirectionalAttentionFlow
-from allennlp.models.reading_comprehension.naqanet import NumericallyAugmentedQaNet
-from allennlp.models.reading_comprehension.qanet import QaNet
 from allennlp.models.semantic_role_labeler import SemanticRoleLabeler
 from allennlp.models.simple_tagger import SimpleTagger
 from allennlp.models.esim import ESIM
