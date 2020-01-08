@@ -90,14 +90,14 @@ class TestParams(AllenNlpTestCase):
             preferred=override_dict,
             fallback={
                 "train_data": "/test",
-                "model": "bidaf",
+                "model": "simple_tagger",
                 "trainer": {"num_epochs": 100, "optimizer": "sgd"},
             },
         )
 
         assert params == {
             "train_data": "/train",
-            "model": "bidaf",
+            "model": "simple_tagger",
             "trainer": {"num_epochs": 10, "optimizer": "sgd"},
         }
 

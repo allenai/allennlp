@@ -68,8 +68,6 @@ if __name__ == "__main__":
     else:
         models = [
             "biaffine_dependency_parser",
-            "bidaf",
-            "dialog_qa",
             "constituency_parser",
             "coref",
             "decomposable_attention",
