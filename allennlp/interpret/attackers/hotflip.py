@@ -21,7 +21,7 @@ from allennlp.predictors.predictor import Predictor
 DEFAULT_IGNORE_TOKENS = ["@@NULL@@", ".", ",", ";", "!", "?", "[MASK]", "[SEP]", "[CLS]"]
 
 
-@Attacker.register("hotflip")
+# @Attacker.register("hotflip")
 class Hotflip(Attacker):
     """
     Runs the HotFlip style attack at the word-level https://arxiv.org/abs/1712.06751.  We use the
@@ -126,6 +126,8 @@ class Hotflip(Attacker):
             elif isinstance(token_indexer, TokenCharactersIndexer):
                 tokens = [Token(x) for x in all_tokens]
                 max_token_length = max(len(x) for x in all_tokens)
+                # sometime max_token_length is too short for cnn encoder
+                max_token_length = max(max_token_length, token_indexer._min_padding_length)
                 indexed_tokens = token_indexer.tokens_to_indices(
                     tokens, self.vocab, "token_characters"
                 )
@@ -209,7 +211,6 @@ class Hotflip(Attacker):
         # depending on whether `target` was passed).  We'll use this in the loop below to check for
         # when we've met our stopping criterion.
         original_instances = self.predictor.predictions_to_labeled_instances(instance, output_dict)
-
         # This is just for ease of access in the UI, so we know the original tokens.  It's not used
         # in the logic below.
         original_text_field: TextField = original_instances[0][  # type: ignore
@@ -228,7 +229,6 @@ class Hotflip(Attacker):
             # We'll be modifying the tokens in this text field below, and grabbing the modified
             # list after the `while` loop.
             text_field: TextField = instance[input_field_to_attack]  # type: ignore
-
             # Because we can save computation by getting grads and outputs at the same time, we do
             # them together at the end of the loop, even though we use grads at the beginning and
             # outputs at the end.  This is our initial gradient for the beginning of the loop.  The
