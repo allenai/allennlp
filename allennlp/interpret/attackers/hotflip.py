@@ -21,7 +21,7 @@ from allennlp.predictors.predictor import Predictor
 DEFAULT_IGNORE_TOKENS = ["@@NULL@@", ".", ",", ";", "!", "?", "[MASK]", "[SEP]", "[CLS]"]
 
 
-# @Attacker.register("hotflip")
+@Attacker.register("hotflip")
 class Hotflip(Attacker):
     """
     Runs the HotFlip style attack at the word-level https://arxiv.org/abs/1712.06751.  We use the
