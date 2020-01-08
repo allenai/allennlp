@@ -67,7 +67,7 @@ class TestEvaluate(AllenNlpTestCase):
         kebab_args = [
             "evaluate",
             str(
-                self.FIXTURES_ROOT / "simple_tagger" / "serialization-with-span-f1" / "model.tar.gz"
+                self.FIXTURES_ROOT / "simple_tagger_with_span_f1" / "serialization" / "model.tar.gz"
             ),
             str(self.FIXTURES_ROOT / "data" / "conll2003.txt"),
             "--cuda-device",
@@ -90,7 +90,7 @@ class TestEvaluate(AllenNlpTestCase):
         kebab_args = [
             "evaluate",
             str(
-                self.FIXTURES_ROOT / "simple_tagger" / "serialization-with-span-f1" / "model.tar.gz"
+                self.FIXTURES_ROOT / "simple_tagger_with_span_f1" / "serialization" / "model.tar.gz"
             ),
             str(self.FIXTURES_ROOT / "data" / "conll2003.txt"),
             "--cuda-device",

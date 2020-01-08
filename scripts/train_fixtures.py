@@ -81,6 +81,7 @@ if __name__ == "__main__":
             "semantic_parsing/quarel/zeroshot",
             "semantic_parsing/quarel/tagger",
             "semantic_parsing/atis",
+            "simple_tagger_with_span_f1",
             "srl",
         ]
         for model in models:
