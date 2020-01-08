@@ -23,7 +23,7 @@ class SeqDecoder(Module, Registrable):
 
     Parameters
     ----------
-    target_embedder : ``Embedding``
+    target_embedder : ``Embedding``, required
         Embedder for target tokens. Needed in the base class to enable weight tying.
     """
 

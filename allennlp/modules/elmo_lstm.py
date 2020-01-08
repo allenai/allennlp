@@ -44,15 +44,15 @@ class ElmoLstm(_EncoderBase):
         :class:`~allennlp.modules.lstm_cell_with_projection.LstmCellWithProjection`.
     num_layers : ``int``, required
         The number of bidirectional LSTMs to use.
-    requires_grad: ``bool``, optional
+    requires_grad : ``bool``, optional
         If True, compute gradient of ELMo parameters for fine tuning.
-    recurrent_dropout_probability: ``float``, optional (default = 0.0)
+    recurrent_dropout_probability : ``float``, optional (default = 0.0)
         The dropout probability to be used in a dropout scheme as stated in
         `A Theoretically Grounded Application of Dropout in Recurrent Neural Networks
         <https://arxiv.org/abs/1512.05287>`_ .
-    state_projection_clip_value: ``float``, optional, (default = None)
+    state_projection_clip_value : ``float``, optional, (default = None)
         The magnitude with which to clip the hidden_state after projecting it.
-    memory_cell_clip_value: ``float``, optional, (default = None)
+    memory_cell_clip_value : ``float``, optional, (default = None)
         The magnitude with which to clip the memory cell.
     """
 
@@ -184,7 +184,7 @@ class ElmoLstm(_EncoderBase):
         -------
         output_sequence : ``torch.FloatTensor``
             The encoded sequence of shape (num_layers, batch_size, sequence_length, hidden_size)
-        final_states: ``Tuple[torch.FloatTensor, torch.FloatTensor]``
+        final_states : ``Tuple[torch.FloatTensor, torch.FloatTensor]``
             The per-layer final (state, memory) states of the LSTM, with shape
             (num_layers, batch_size, 2 * hidden_size) and  (num_layers, batch_size, 2 * cell_size)
             respectively. The last dimension is duplicated because it contains the state/memory

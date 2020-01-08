@@ -67,7 +67,7 @@ class SpanBasedF1Measure(Metric):
         label_encoding : ``str``, optional (default = "BIO")
             The encoding used to specify label span endpoints in the sequence.
             Valid options are "BIO", "IOB1", "BIOUL" or "BMES".
-        tags_to_spans_function: ``Callable``, optional (default = ``None``)
+        tags_to_spans_function : ``Callable``, optional (default = ``None``)
             If ``label_encoding`` is ``None``, ``tags_to_spans_function`` will be
             used to generate spans.
         """
@@ -111,9 +111,9 @@ class SpanBasedF1Measure(Metric):
         gold_labels : ``torch.Tensor``, required.
             A tensor of integer class label of shape (batch_size, sequence_length). It must be the same
             shape as the ``predictions`` tensor without the ``num_classes`` dimension.
-        mask: ``torch.Tensor``, optional (default = None).
+        mask : ``torch.Tensor``, optional (default = None).
             A masking tensor the same size as ``gold_labels``.
-        prediction_map: ``torch.Tensor``, optional (default = None).
+        prediction_map : ``torch.Tensor``, optional (default = None).
             A tensor of size (batch_size, num_classes) which provides a mapping from the index of predictions
             to the indices of the label vocabulary. If provided, the output label at each timestep will be
             ``vocabulary.get_index_to_token_vocabulary(prediction_map[batch, argmax(predictions[batch, t]))``,

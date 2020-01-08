@@ -895,7 +895,7 @@ def combine_tensors(combination: str, tensors: List[torch.Tensor]) -> torch.Tens
     ``combination`` string.  The string refers to (1-indexed) positions in the input tensor list,
     and looks like ``"1,2,1+2,3-1"``.
 
-    We allow the following kinds of combinations: ``x``, ``x*y``, ``x+y``, ``x-y``, and ``x/y``,
+    We allow the following kinds of combinations : ``x``, ``x*y``, ``x+y``, ``x-y``, and ``x/y``,
     where ``x`` and ``y`` are positive integers less than or equal to ``len(tensors)``.  Each of
     the binary operations is performed elementwise.  You can give as many combinations as you want
     in the ``combination`` string.  For example, for the input string ``"1,2,1*2"``, the result

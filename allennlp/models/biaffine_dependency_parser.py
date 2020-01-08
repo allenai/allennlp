@@ -182,7 +182,7 @@ class BiaffineDependencyParser(Model):
         words : Dict[str, torch.LongTensor], required
             The output of ``TextField.as_array()``, which should typically be passed directly to a
             ``TextFieldEmbedder``. This output is a dictionary mapping keys to ``TokenIndexer``
-            tensors.  At its most basic, using a ``SingleIdTokenIndexer`` this is: ``{"tokens":
+            tensors.  At its most basic, using a ``SingleIdTokenIndexer`` this is : ``{"tokens":
             Tensor(batch_size, sequence_length)}``. This dictionary will have the same keys as were used
             for the ``TokenIndexers`` when you created the ``TextField`` representing your
             sequence.  The dictionary is designed to be passed directly to a ``TextFieldEmbedder``,

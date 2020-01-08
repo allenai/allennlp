@@ -47,7 +47,7 @@ class Event2Mind(Model):
         Length of decoded sequences.
     beam_size : int, optional (default = 10)
         The width of the beam search.
-    target_names: ``List[str]``, optional, (default = ['xintent', 'xreact', 'oreact'])
+    target_names : ``List[str]``, optional, (default = ['xintent', 'xreact', 'oreact'])
         Names of the target fields matching those in the ``Instance`` objects.
     target_namespace : str, optional (default = 'tokens')
         If the target side vocabulary is different from the source side's, you need to specify the
@@ -229,9 +229,9 @@ class Event2Mind(Model):
             The output of ``TextField.as_array()`` applied on some target ``TextField``.
         target_embedder : ``Embedding``, required
             Used to embed the target tokens.
-        decoder_cell: ``GRUCell``, required
+        decoder_cell : ``GRUCell``, required
             The recurrent cell used at each time step.
-        output_projection_layer: ``Linear``, required
+        output_projection_layer : ``Linear``, required
             Linear layer mapping to the desired number of classes.
         """
         num_decoding_steps = self._get_num_decoding_steps(target_tokens)
@@ -269,9 +269,9 @@ class Event2Mind(Model):
             Vector produced by ``self._encoder``.
         target_embedder : ``Embedding``, required
             Used to embed the target tokens.
-        decoder_cell: ``GRUCell``, required
+        decoder_cell : ``GRUCell``, required
             The recurrent cell used at each time step.
-        output_projection_layer: ``Linear``, required
+        output_projection_layer : ``Linear``, required
             Linear layer mapping to the desired number of classes.
         """
         num_decoding_steps = self._max_decoding_steps

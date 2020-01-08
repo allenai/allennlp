@@ -26,18 +26,18 @@ class LstmCellWithProjection(torch.nn.Module):
         The dimension of the outputs of the LSTM.
     cell_size : ``int``, required.
         The dimension of the memory cell used for the LSTM.
-    go_forward: ``bool``, optional (default = True)
+    go_forward : ``bool``, optional (default = True)
         The direction in which the LSTM is applied to the sequence.
         Forwards by default, or backwards if False.
-    recurrent_dropout_probability: ``float``, optional (default = 0.0)
+    recurrent_dropout_probability : ``float``, optional (default = 0.0)
         The dropout probability to be used in a dropout scheme as stated in
         `A Theoretically Grounded Application of Dropout in Recurrent Neural Networks
         <https://arxiv.org/abs/1512.05287>`_ . Implementation wise, this simply
         applies a fixed dropout mask per sequence to the recurrent connection of the
         LSTM.
-    state_projection_clip_value: ``float``, optional, (default = None)
+    state_projection_clip_value : ``float``, optional, (default = None)
         The magnitude with which to clip the hidden_state after projecting it.
-    memory_cell_clip_value: ``float``, optional, (default = None)
+    memory_cell_clip_value : ``float``, optional, (default = None)
         The magnitude with which to clip the memory cell.
 
     Returns
@@ -47,7 +47,7 @@ class LstmCellWithProjection(torch.nn.Module):
         (batch_size, max_timesteps, hidden_size) where for a given batch
         element, all outputs past the sequence length for that batch are
         zero tensors.
-    final_state: ``Tuple[torch.FloatTensor, torch.FloatTensor]``
+    final_state : ``Tuple[torch.FloatTensor, torch.FloatTensor]``
         The final (state, memory) states of the LSTM, with shape
         (1, batch_size, hidden_size) and  (1, batch_size, cell_size)
         respectively. The first dimension is 1 in order to match the Pytorch

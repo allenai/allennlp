@@ -32,7 +32,7 @@ class ConllCorefScores(Metric):
             For each span, the indices of all allowed antecedents for that span.  This is
             independent of the batch dimension, as it's just based on order in the document.
             Expected shape: (num_spans, num_antecedents)
-        predicted_antecedents: ``torch.Tensor``
+        predicted_antecedents : ``torch.Tensor``
             For each span, this contains the index (into antecedent_indices) of the most likely
             antecedent for that span.
             Expected shape: (batch_size, num_spans)

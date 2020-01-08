@@ -34,8 +34,8 @@ class StanfordSentimentTreeBankDatasetReader(DatasetReader):
     by their sentiment.
 
     The output of ``read`` is a list of ``Instance`` s with the fields:
-        tokens: ``TextField`` and
-        label: ``LabelField``
+        tokens : ``TextField`` and
+        label : ``LabelField``
 
     Parameters
     ----------

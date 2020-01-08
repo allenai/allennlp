@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 class SquadReader(DatasetReader):
     """
     Reads a JSON-formatted SQuAD file and returns a ``Dataset`` where the ``Instances`` have four
-    fields: ``question``, a ``TextField``, ``passage``, another ``TextField``, and ``span_start``
+    fields : ``question``, a ``TextField``, ``passage``, another ``TextField``, and ``span_start``
     and ``span_end``, both ``IndexFields`` into the ``passage`` ``TextField``.  We also add a
     ``MetadataField`` that stores the instance's ID, the original passage text, gold answer strings,
     and token offsets into the original passage, accessible as ``metadata['id']``,
@@ -49,7 +49,7 @@ class SquadReader(DatasetReader):
         if specified, we will cut the passage if the length of passage exceeds this limit.
     question_length_limit : ``int``, optional (default=None)
         if specified, we will cut the question if the length of passage exceeds this limit.
-    skip_invalid_examples: ``bool``, optional (default=False)
+    skip_invalid_examples : ``bool``, optional (default=False)
         if this is true, we will skip those invalid examples
     """
 

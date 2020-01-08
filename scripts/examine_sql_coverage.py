@@ -128,9 +128,14 @@ def main(
         for json_file in data_files:
             print(f"\tParsing split at {json_file}")
             file_path = os.path.join(directory, json_file)
-            num_parsed, num_queries, filtered_errors, non_basic_as_aliases, as_count, queries_with_weird_as = parse_dataset(
-                file_path, filter_by, verbose
-            )
+            (
+                num_parsed,
+                num_queries,
+                filtered_errors,
+                non_basic_as_aliases,
+                as_count,
+                queries_with_weird_as,
+            ) = parse_dataset(file_path, filter_by, verbose)
 
             parsed += num_parsed
             total += num_queries

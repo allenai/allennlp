@@ -107,7 +107,7 @@ class MultiprocessIterator(DataIterator):
         processes, so it should not be stateful in any way.
     num_workers : ``int``, optional (default = 1)
         The number of processes used for generating tensor dicts.
-    output_queue_size: ``int``, optional (default = 1000)
+    output_queue_size : ``int``, optional (default = 1000)
         The size of the output queue on which tensor dicts are placed to be consumed.
         You might need to increase this if you're generating tensor dicts too quickly.
     """

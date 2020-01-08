@@ -55,11 +55,11 @@ class SampledSoftmaxLoss(torch.nn.Module):
 
     Parameters
     ----------
-    num_words, ``int``
+    num_words, ``int``, required
         The number of words in the vocabulary
-    embedding_dim, ``int``
+    embedding_dim, ``int``, required
         The dimension to softmax over
-    num_samples, ``int``
+    num_samples, ``int``, required
         During training take this many samples. Must be less than num_words.
     sparse, ``bool``, optional (default = False)
         If this is true, we use a sparse embedding matrix.
@@ -169,9 +169,11 @@ class SampledSoftmaxLoss(torch.nn.Module):
 
         # NOTE: targets input has padding removed (so 0 == the first id, NOT the padding id)
 
-        sampled_ids, target_expected_count, sampled_expected_count = self.log_uniform_candidate_sampler(
-            targets, choice_func=self.choice_func
-        )
+        (
+            sampled_ids,
+            target_expected_count,
+            sampled_expected_count,
+        ) = self.log_uniform_candidate_sampler(targets, choice_func=self.choice_func)
 
         long_targets = targets.long()
         long_targets.requires_grad_(False)
