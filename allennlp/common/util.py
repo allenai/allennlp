@@ -543,3 +543,15 @@ def is_distributed() -> bool:
     Checks if the distributed process group is available and has been initialized
     """
     return dist.is_available() and dist.is_initialized()
+
+
+def sanitize_wordpiece(wordpiece: str) -> str:
+    """
+    Sanitizes wordpieces from BERT or RoBERTa tokenizers.
+    """
+    if wordpiece.startswith("##"):
+        return wordpiece[2:]
+    elif wordpiece.startswith("Ġ"):
+        return wordpiece[1:]
+    else:
+        return wordpiece
