@@ -13,7 +13,7 @@ from allennlp.predictors.predictor import Predictor
 @Predictor.register("semantic-role-labeling")
 class SemanticRoleLabelerPredictor(Predictor):
     """
-    Predictor for the :class:`~allennlp.models.bidaf.SemanticRoleLabeler` model.
+    Predictor for the :class:`~allennlp.models.SemanticRoleLabeler` model.
     """
 
     def __init__(

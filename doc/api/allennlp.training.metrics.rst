@@ -14,7 +14,6 @@ allennlp.training.metrics
 * :ref:`CategoricalAccuracy<categorical-accuracy>`
 * :ref:`ConllCorefScores<conll-coref-scores>`
 * :ref:`Covariance<covariance>`
-* :ref:`DropEmAndF1<drop_em_and_f1>`
 * :ref:`Entropy<entropy>`
 * :ref:`EvalbBracketingScorer<evalb>`
 * :ref:`FBetaMeasure<fbeta-measure>`
@@ -25,7 +24,6 @@ allennlp.training.metrics
 * :ref:`SpearmanCorrelation<spearman-correlation>`
 * :ref:`SequenceAccuracy<sequence-accuracy>`
 * :ref:`SpanBasedF1Measure<span-based-f1-measure>`
-* :ref:`SquadEmAndF1<squad-em-and-f1>`
 * :ref:`SrlEvalScorer<srl-eval>`
 * :ref:`UnigramRecall<unigram-recall>`
 
@@ -80,12 +78,6 @@ allennlp.training.metrics
 
 .. _covariance:
 .. automodule:: allennlp.training.metrics.covariance
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-.. _drop_em_and_f1:
-.. automodule:: allennlp.training.metrics.drop_em_and_f1
    :members:
    :undoc-members:
    :show-inheritance:
@@ -152,12 +144,6 @@ allennlp.training.metrics
 
 .. _span-based-f1-measure:
 .. automodule:: allennlp.training.metrics.span_based_f1_measure
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-.. _squad-em-and-f1:
-.. automodule:: allennlp.training.metrics.squad_em_and_f1
    :members:
    :undoc-members:
    :show-inheritance:

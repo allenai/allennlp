@@ -13,7 +13,7 @@ from allennlp.data.fields import LabelField
 @Predictor.register("textual-entailment")
 class DecomposableAttentionPredictor(Predictor):
     """
-    Predictor for the :class:`~allennlp.models.bidaf.DecomposableAttention` model.
+    Predictor for the :class:`~allennlp.models.DecomposableAttention` model.
     """
 
     def predict(self, premise: str, hypothesis: str) -> JsonDict:
