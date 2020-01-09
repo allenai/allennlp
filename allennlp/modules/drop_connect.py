@@ -39,9 +39,9 @@ class DropConnect(torch.nn.Module):
 
     Parameters
     ==========
-    module : ``torch.nn.Module``
+    module : ``torch.nn.Module``, required
         Module to apply weight dropout to.
-    parameter_regex : ``str``
+    parameter_regex : ``str``, required
         Regular expression identifying which parameters to apply weight dropout to.
     dropout : ``float``, optional (default = 0.0)
         Probability that a given weight is dropped.

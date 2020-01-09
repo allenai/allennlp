@@ -7,9 +7,7 @@ allennlp.predictors
    :show-inheritance:
 
 * :ref:`Predictor<predictor>`
-* :ref:`BidafPredictor<bidaf>`
 * :ref:`DecomposableAttentionPredictor<decomposable-attention>`
-* :ref:`DialogQAPredictor<dialog_qa>`
 * :ref:`SemanticRoleLabelerPredictor<semantic-role-labeler>`
 * :ref:`SentenceTaggerPredictor<sentence-tagger>`
 * :ref:`CorefPredictor<coreference-resolution>`
@@ -28,20 +26,8 @@ allennlp.predictors
    :undoc-members:
    :show-inheritance:
 
-.. _bidaf:
-.. automodule:: allennlp.predictors.bidaf
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 .. _decomposable-attention:
 .. automodule:: allennlp.predictors.decomposable_attention
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-.. _dialog_qa:
-.. automodule:: allennlp.predictors.dialog_qa
    :members:
    :undoc-members:
    :show-inheritance:

@@ -40,7 +40,7 @@ class WinobiasReader(DatasetReader):
     [The salesperson] sold (some books) to the librarian because [she] was trying to sell (them).
 
 
-    Returns a list of ``Instances`` which have four fields: ``text``, a ``TextField``
+    Returns a list of ``Instances`` which have four fields : ``text``, a ``TextField``
     containing the full sentence text, ``spans``, a ``ListField[SpanField]`` of inclusive start and
     end indices for span candidates, and ``metadata``, a ``MetadataField`` that stores the instance's
     original text. For data with gold cluster labels, we also include the original ``clusters``
@@ -49,7 +49,7 @@ class WinobiasReader(DatasetReader):
 
     Parameters
     ----------
-    max_span_width: ``int``, required.
+    max_span_width : ``int``, required.
         The maximum width of candidate spans to consider.
     token_indexers : ``Dict[str, TokenIndexer]``, optional
         This is used to index the words in the sentence.  See :class:`TokenIndexer`.

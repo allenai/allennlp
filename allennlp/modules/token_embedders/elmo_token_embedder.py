@@ -84,7 +84,7 @@ class ElmoTokenEmbedder(TokenEmbedder):
         """
         Parameters
         ----------
-        inputs: ``torch.Tensor``
+        inputs : ``torch.Tensor``
             Shape ``(batch_size, timesteps, 50)`` of character ids representing the current batch.
         word_inputs : ``torch.Tensor``, optional.
             If you passed a cached vocab, you can in addition pass a tensor of shape

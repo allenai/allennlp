@@ -121,6 +121,7 @@ Create a Python 3.7 virtual environment, and install AllenNLP in `editable` mode
 
   ```bash
   pip install --editable .
+  pip install -r dev-requirements.txt
   ```
 
 This will make `allennlp` available on your system but it will use the sources from the local clone

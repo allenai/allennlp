@@ -40,21 +40,21 @@ class Conll2000DatasetReader(DatasetReader):
     ----------
     token_indexers : ``Dict[str, TokenIndexer]``, optional (default=``{"tokens": SingleIdTokenIndexer()}``)
         We use this to define the input representation for the text.  See :class:`TokenIndexer`.
-    tag_label: ``str``, optional (default=``chunk``)
+    tag_label : ``str``, optional (default=``chunk``)
         Specify `pos`, or `chunk` to have that tag loaded into the instance field `tag`.
-    feature_labels: ``Sequence[str]``, optional (default=``()``)
+    feature_labels : ``Sequence[str]``, optional (default=``()``)
         These labels will be loaded as features into the corresponding instance fields:
         ``pos`` -> ``pos_tags`` or ``chunk`` -> ``chunk_tags``.
-        Each will have its own namespace: ``pos_tags`` or ``chunk_tags``.
+        Each will have its own namespace : ``pos_tags`` or ``chunk_tags``.
         If you want to use one of the tags as a `feature` in your model, it should be
         specified here.
-    coding_scheme: ``str``, optional (default=``BIO``)
+    coding_scheme : ``str``, optional (default=``BIO``)
         Specifies the coding scheme for ``chunk_labels``.
         Valid options are ``BIO`` and ``BIOUL``.  The ``BIO`` default maintains
         the original BIO scheme in the CoNLL 2000 chunking data.
         In the BIO scheme, B is a token starting a span, I is a token continuing a span, and
         O is a token outside of a span.
-    label_namespace: ``str``, optional (default=``labels``)
+    label_namespace : ``str``, optional (default=``labels``)
         Specifies the namespace for the chosen ``tag_label``.
     """
 

@@ -50,7 +50,7 @@ class AttachmentScores(Metric):
             A tensor of the same shape as ``predicted_indices``.
         gold_labels : ``torch.Tensor``, required.
             A tensor of the same shape as ``predicted_labels``.
-        mask: ``torch.Tensor``, optional (default = None).
+        mask : ``torch.Tensor``, optional (default = None).
             A tensor of the same shape as ``predicted_indices``.
         """
         unwrapped = self.unwrap_to_tensors(

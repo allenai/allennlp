@@ -21,17 +21,17 @@ class StackedAlternatingLstm(torch.nn.Module):
 
     Parameters
     ----------
-    input_size : int, required
+    input_size : ``int``, required
         The dimension of the inputs to the LSTM.
-    hidden_size : int, required
+    hidden_size : ``int``, required
         The dimension of the outputs of the LSTM.
-    num_layers : int, required
+    num_layers : ``int``, required
         The number of stacked LSTMs to use.
-    recurrent_dropout_probability: float, optional (default = 0.0)
+    recurrent_dropout_probability : ``float``, optional (default = 0.0)
         The dropout probability to be used in a dropout scheme as stated in
         `A Theoretically Grounded Application of Dropout in Recurrent Neural Networks
         <https://arxiv.org/abs/1512.05287>`_ .
-    use_input_projection_bias : bool, optional (default = True)
+    use_input_projection_bias : ``bool``, optional (default = True)
         Whether or not to use a bias on the input projection layer. This is mainly here
         for backwards compatibility reasons and will be removed (and set to False)
         in future releases.

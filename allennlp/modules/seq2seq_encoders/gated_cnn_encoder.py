@@ -141,13 +141,13 @@ class GatedCnnEncoder(Seq2SeqEncoder):
 
     Parameters
     ----------
-    input_dim : int
+    input_dim : ``int``, required
         The dimension of the inputs.
-    layers : ``Sequence[Sequence[Sequence[int]]]```
+    layers : ``Sequence[Sequence[Sequence[int]]]``, required
         The layer dimensions for each ``ResidualBlock``.
-    dropout : float, optional (default = 0.0)
+    dropout : ``float``, optional (default = 0.0)
         The dropout for each ``ResidualBlock``.
-    return_all_layers : bool, optional (default: False)
+    return_all_layers : ``bool``, optional (default = False)
         Whether to return all layers or just the last layer.
     """
 

@@ -12,8 +12,8 @@ class MatrixAttention(torch.nn.Module, Registrable):
     caller to deal with masking properly when this output is used.
 
     Input:
-        - matrix_1: ``(batch_size, num_rows_1, embedding_dim_1)``
-        - matrix_2: ``(batch_size, num_rows_2, embedding_dim_2)``
+        - matrix_1 : ``(batch_size, num_rows_1, embedding_dim_1)``
+        - matrix_2 : ``(batch_size, num_rows_2, embedding_dim_2)``
 
     Output:
         - ``(batch_size, num_rows_1, num_rows_2)``

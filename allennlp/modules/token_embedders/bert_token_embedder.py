@@ -53,21 +53,21 @@ class BertEmbedder(TokenEmbedder):
 
     Parameters
     ----------
-    bert_model: ``BertModel``
+    bert_model : ``BertModel``
         The BERT model being wrapped.
-    top_layer_only: ``bool``, optional (default = ``False``)
+    top_layer_only : ``bool``, optional (default = ``False``)
         If ``True``, then only return the top layer instead of apply the scalar mix.
-    max_pieces : int, optional (default: 512)
+    max_pieces : ``int``, optional (default: 512)
         The BERT embedder uses positional embeddings and so has a corresponding
         maximum length for its input ids. Assuming the inputs are windowed
         and padded appropriately by this length, the embedder will split them into a
         large batch, feed them into BERT, and recombine the output as if it was a
         longer sequence.
-    num_start_tokens : int, optional (default: 1)
+    num_start_tokens : ``int``, optional (default: 1)
         The number of starting special tokens input to BERT (usually 1, i.e., [CLS])
-    num_end_tokens : int, optional (default: 1)
+    num_end_tokens : ``int``, optional (default: 1)
         The number of ending tokens input to BERT (usually 1, i.e., [SEP])
-    scalar_mix_parameters: ``List[float]``, optional, (default = None)
+    scalar_mix_parameters : ``List[float]``, optional, (default = None)
         If not ``None``, use these scalar mix parameters to weight the representations
         produced by different layers. These mixing weights are not updated during
         training.
@@ -265,7 +265,7 @@ class PretrainedBertEmbedder(BertEmbedder):
     """
     Parameters
     ----------
-    pretrained_model: ``str``
+    pretrained_model : ``str``
         Either the name of the pretrained model to use (e.g. 'bert-base-uncased'),
         or the path to the .tar.gz file with the model weights.
 
@@ -274,9 +274,9 @@ class PretrainedBertEmbedder(BertEmbedder):
         the corresponding path will be used; otherwise it will be interpreted as a path or URL.
     requires_grad : ``bool``, optional (default = False)
         If True, compute gradient of BERT parameters for fine tuning.
-    top_layer_only: ``bool``, optional (default = ``False``)
+    top_layer_only : ``bool``, optional (default = ``False``)
         If ``True``, then only return the top layer instead of apply the scalar mix.
-    scalar_mix_parameters: ``List[float]``, optional, (default = None)
+    scalar_mix_parameters : ``List[float]``, optional, (default = None)
         If not ``None``, use these scalar mix parameters to weight the representations
         produced by different layers. These mixing weights are not updated during
         training.

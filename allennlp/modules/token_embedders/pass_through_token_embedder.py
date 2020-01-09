@@ -10,7 +10,7 @@ class PassThroughTokenEmbedder(TokenEmbedder):
 
     Parameters
     ----------
-    hidden_dim : `int`, required.
+    hidden_dim : ``int``, required.
 
     """
 
