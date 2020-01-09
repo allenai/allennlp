@@ -8,10 +8,9 @@ import torch
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.file_utils import cached_path
-from allennlp.common.util import pad_sequence_to_length
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.data.tokenizers.token import Token
-from allennlp.data.token_indexers.token_indexer import TokenIndexer
+from allennlp.data.token_indexers.token_indexer import TokenIndexer, IndexedTokenList
 
 
 def text_standardize(text):
@@ -32,7 +31,7 @@ def text_standardize(text):
 
 
 @TokenIndexer.register("openai_transformer_byte_pair")
-class OpenaiTransformerBytePairIndexer(TokenIndexer[int]):
+class OpenaiTransformerBytePairIndexer(TokenIndexer):
     """
     Generates the indices for the byte-pair encoding used by
     the OpenAI transformer language model: https://blog.openai.com/language-unsupervised/
@@ -198,7 +197,7 @@ class OpenaiTransformerBytePairIndexer(TokenIndexer[int]):
 
     @overrides
     def tokens_to_indices(
-        self, tokens: List[Token], vocabulary: Vocabulary, index_name: str
+        self, tokens: List[Token], vocabulary: Vocabulary
     ) -> Dict[str, List[int]]:
         if not self._added_to_vocabulary:
             self._add_encoding_to_vocabulary(vocabulary)
@@ -228,8 +227,8 @@ class OpenaiTransformerBytePairIndexer(TokenIndexer[int]):
         text_tokens.extend(0 for _ in range(self.n_ctx - num_tokens))
 
         return {
-            index_name: text_tokens,
-            f"{index_name}-offsets": offsets,
+            "inputs": text_tokens,
+            "offsets": offsets,
             # add mask here according to the original tokens,
             # because calling util.get_text_field_mask on the
             # "byte pair" tokens will produce the wrong shape
@@ -237,17 +236,5 @@ class OpenaiTransformerBytePairIndexer(TokenIndexer[int]):
         }
 
     @overrides
-    def get_padding_lengths(self, token: int) -> Dict[str, int]:
-        return {}
-
-    @overrides
-    def as_padded_tensor(
-        self,
-        tokens: Dict[str, List[int]],
-        desired_num_tokens: Dict[str, int],
-        padding_lengths: Dict[str, int],
-    ) -> Dict[str, torch.Tensor]:
-        return {
-            key: torch.LongTensor(pad_sequence_to_length(val, desired_num_tokens[key]))
-            for key, val in tokens.items()
-        }
+    def get_empty_token_list(self) -> IndexedTokenList:
+        return {"inputs": [], "offsets": [], "mask": []}

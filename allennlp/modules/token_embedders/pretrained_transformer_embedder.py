@@ -23,7 +23,7 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         return self.output_dim
 
     def forward(
-        self, token_ids: torch.LongTensor, attention_mask: torch.LongTensor
+        self, token_ids: torch.LongTensor, mask: torch.LongTensor
     ) -> torch.Tensor:  # type: ignore
 
-        return self.transformer_model(input_ids=token_ids, attention_mask=attention_mask)[0]
+        return self.transformer_model(input_ids=token_ids, attention_mask=mask)[0]
