@@ -33,7 +33,7 @@ class TrainerBase(Registrable):
         serialization_dir: str,
         cuda_device: int = -1,
         distributed: bool = False,
-        rank: int = 0,
+        local_rank: int = 0,
         world_size: int = 1,
     ) -> None:
 
@@ -59,7 +59,7 @@ class TrainerBase(Registrable):
         self.cuda_device = cuda_device
 
         self._distributed = distributed
-        self._rank = rank
+        self._rank = local_rank
         self._master = is_master()
         self._world_size = world_size
 

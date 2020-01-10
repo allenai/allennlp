@@ -63,7 +63,7 @@ class Trainer(TrainerBase):
         log_batch_size_period: Optional[int] = None,
         moving_average: Optional[MovingAverage] = None,
         distributed: bool = False,
-        rank: int = 0,
+        local_rank: int = 0,
         world_size: int = 1,
         num_gradient_accumulation_steps: int = 1,
     ) -> None:
@@ -182,7 +182,7 @@ class Trainer(TrainerBase):
         distributed : ``bool``, optional, (default = False)
             If set, PyTorch's `DistributedDataParallel` is used to train the model in multiple GPUs. This also
             requires `world_size` to be greater than 1.
-        rank : ``int``, optional, (default = 0)
+        local_rank : ``int``, optional, (default = 0)
             This is the unique identifier of the `Trainer` in a distributed process group. The GPU device id is
             used as the rank.
         world_size : ``int``, (default = 1)
@@ -192,7 +192,7 @@ class Trainer(TrainerBase):
             be useful to accommodate batches that are larger than the RAM size. Refer Thomas Wolf's
             [post](https://tinyurl.com/y5mv44fw) for details on Gradient Accumulation.
         """
-        super().__init__(serialization_dir, cuda_device, distributed, rank, world_size)
+        super().__init__(serialization_dir, cuda_device, distributed, local_rank, world_size)
 
         # I am not calling move_to_gpu here, because if the model is
         # not already on the GPU then the optimizer is going to be wrong.
