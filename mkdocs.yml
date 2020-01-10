@@ -18,7 +18,7 @@ theme:
 
 repo_name: allenai/allennlp
 repo_url: https://github.com/allenai/allennlp
-edit_uri: edit/master/doc/
+edit_uri: edit/master/docs/
 #google_analytics:
 #    - 'UA-133183413-1'
 #    - 'auto'

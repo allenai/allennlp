@@ -1,7 +1,7 @@
+from typing import Dict
 import os
 from pathlib import Path
 from subprocess import check_output
-from typing import Any
 import argparse
 
 from ruamel.yaml import YAML
@@ -10,7 +10,11 @@ from ruamel.yaml import YAML
 exclude_files = [".DS_Store", "__init__.py", "__init__.pyc", "README.md", "version.py", "run.py"]
 
 
-def render_docs(relative_src_path: str, src_file: str, to_file: str, modifier="++"):
+def render_docs(relative_src_path: str, src_file: str, to_file: str, modifier="++") -> None:
+    """
+    Shells out to pydocmd, which creates a .md file from the docstrings of python functions and classes in
+    the file we specify.
+    """
     relative_src_namespace = relative_src_path.replace("/", ".")
     src_base = src_file.replace(".py", "")
 
@@ -27,20 +31,21 @@ def render_docs(relative_src_path: str, src_file: str, to_file: str, modifier="+
     print(f"Built docs for {src_file}: {to_file}")
 
 
-def build_docs_for_file(relative_path: str, file_name: str, docs_dir: str, check: bool = False):
-
+def build_docs_for_file(relative_path: str, file_name: str, docs_dir: str, check: bool = False) -> Dict[str, str]:
+    """
+    Build docs for an individual python file. If `check` is passed, we don't generate the docs themselves,
+    but instead we just generate what the corresponding mkdocs YAML would be, so we can compare it to the
+    current version and see if it has changed (which would mean the docs need re-building).
+    """
     clean_filename = file_name.replace(".py", "")
     markdown_filename = f"{clean_filename}.md"
 
     output_path = os.path.join(docs_dir, relative_path, markdown_filename)
     nav_path = os.path.join("api", relative_path, markdown_filename)
-    nav_item: Any = dict()
-    nav_item[os.path.basename(clean_filename)] = nav_path
-
     if not check:
         render_docs(relative_path, file_name, output_path)
 
-    return nav_item
+    return {os.path.basename(clean_filename): nav_path}
 
 
 def build_docs(root_path: str, docs_dir: str, check: bool = False):
