@@ -57,7 +57,11 @@ def build_docs(root_path: str, docs_dir: str):
     for child in os.listdir(root_path):
         relative_path = os.path.join(root_path, child)
 
-        if "__pycache__" in relative_path or "tests" in relative_path or "mypy_cache" in relative_path:
+        if (
+            "__pycache__" in relative_path
+            or "tests" in relative_path
+            or "mypy_cache" in relative_path
+        ):
             continue
 
         without_allennlp = str(root_path).replace("allennlp/", "")
