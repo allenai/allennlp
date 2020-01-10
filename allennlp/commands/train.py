@@ -304,10 +304,6 @@ def train_model(
         num_procs = len(device_ids)
         world_size = num_nodes * num_procs
 
-        os.environ["MASTER_ADDR"] = master_addr
-        os.environ["MASTER_PORT"] = str(master_port)
-        os.environ["WORLD_SIZE"] = str(world_size)
-
         logging.info(
             f"Switching to distributed training mode since multiple GPUs are configured"
             f"Master is at: {master_addr}:{master_port} | Rank of this node: {node_rank} | "
