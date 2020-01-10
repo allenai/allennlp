@@ -24,6 +24,9 @@ aiohttp
 
 #### DOC-RELATED PACKAGES ####
 
+# YAML manipulation
+ruamel.yaml
+
 pydoc-markdown==2.0.5
 markdown-include==0.5.1
 # Package for the material theme for mkdocs
