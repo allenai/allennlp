@@ -211,6 +211,7 @@ class Hotflip(Attacker):
         # depending on whether `target` was passed).  We'll use this in the loop below to check for
         # when we've met our stopping criterion.
         original_instances = self.predictor.predictions_to_labeled_instances(instance, output_dict)
+
         # This is just for ease of access in the UI, so we know the original tokens.  It's not used
         # in the logic below.
         original_text_field: TextField = original_instances[0][  # type: ignore
@@ -229,6 +230,7 @@ class Hotflip(Attacker):
             # We'll be modifying the tokens in this text field below, and grabbing the modified
             # list after the `while` loop.
             text_field: TextField = instance[input_field_to_attack]  # type: ignore
+
             # Because we can save computation by getting grads and outputs at the same time, we do
             # them together at the end of the loop, even though we use grads at the beginning and
             # outputs at the end.  This is our initial gradient for the beginning of the loop.  The
