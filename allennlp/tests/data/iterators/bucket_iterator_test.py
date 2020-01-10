@@ -23,20 +23,35 @@ class TestBucketIterator(IteratorTest):
         ]
 
     def test_guess_sorting_key_picks_the_longest_key(self):
-        iterator = BucketIterator(
-            batch_size=2,
-            padding_noise=0,
-        )
+        iterator = BucketIterator(batch_size=2, padding_noise=0)
         iterator.index_with(self.vocab)
         instances = []
         short_tokens = [Token(t) for t in ["what", "is", "this", "?"]]
         long_tokens = [Token(t) for t in ["this", "is", "a", "not", "very", "long", "passage"]]
-        instances.append(Instance({"question": TextField(short_tokens, self.token_indexers),
-                                   "passage": TextField(long_tokens, self.token_indexers)}))
-        instances.append(Instance({"question": TextField(short_tokens, self.token_indexers),
-                                   "passage": TextField(long_tokens, self.token_indexers)}))
-        instances.append(Instance({"question": TextField(short_tokens, self.token_indexers),
-                                   "passage": TextField(long_tokens, self.token_indexers)}))
+        instances.append(
+            Instance(
+                {
+                    "question": TextField(short_tokens, self.token_indexers),
+                    "passage": TextField(long_tokens, self.token_indexers),
+                }
+            )
+        )
+        instances.append(
+            Instance(
+                {
+                    "question": TextField(short_tokens, self.token_indexers),
+                    "passage": TextField(long_tokens, self.token_indexers),
+                }
+            )
+        )
+        instances.append(
+            Instance(
+                {
+                    "question": TextField(short_tokens, self.token_indexers),
+                    "passage": TextField(long_tokens, self.token_indexers),
+                }
+            )
+        )
         assert iterator._sorting_keys is None
         iterator._guess_sorting_key(instances)
         assert iterator._sorting_keys == [("passage", "tokens_length")]
