@@ -24,6 +24,11 @@ aiohttp
 
 #### DOC-RELATED PACKAGES ####
 
+pydoc-markdown==2.0.5
+markdown-include==0.5.1
+# Package for the material theme for mkdocs
+mkdocs-material==4.6.0
+
 # Only used to convert our readme to reStructuredText on Pypi.
 pypandoc
 
