@@ -5,7 +5,7 @@ from typing import Iterable, NamedTuple
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
-from allennlp.common.util import get_frozen_and_tunable_parameter_names, is_master
+from allennlp.common.util import get_frozen_and_tunable_parameter_names, is_local_master
 from allennlp.data.instance import Instance
 from allennlp.data.iterators.data_iterator import DataIterator
 from allennlp.data.vocabulary import Vocabulary
@@ -84,7 +84,7 @@ class TrainerPieces(NamedTuple):
         # Initializing the model can have side effect of expanding the vocabulary
         # Save the vocab only in the master. In the degenerate non-distributed
         # case, we're trivially the master.
-        if is_master():
+        if is_local_master():
             vocab.save_to_files(os.path.join(serialization_dir, "vocabulary"))
 
         iterator = DataIterator.from_params(params.pop("iterator"))
