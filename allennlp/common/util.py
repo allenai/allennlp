@@ -510,6 +510,7 @@ def is_master(
     """
     Checks if the process is a "master" of its node in a distributed process group. If a
     process group is not initialized, this returns `True`.
+
     Parameters
     ----------
     global_rank : int ( default = None )
