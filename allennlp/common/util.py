@@ -504,7 +504,7 @@ def flatten_filename(file_path: str) -> str:
     return file_path.replace("/", "_SLASH_")
 
 
-def is_local_master(
+def is_master(
     global_rank: int = None, world_size: int = None, num_procs_per_node: int = None
 ) -> bool:
     """
@@ -542,30 +542,6 @@ def is_local_master(
     # in a multi-node case, every node has a logical master and hence
     # the mod(%) op.
     return global_rank % (world_size / num_procs_per_node) == 0
-
-
-def is_global_master(global_rank: int = None) -> bool:
-    """
-    Checks if the process is a "master" in a distributed process group. If a
-    process group is not initialized, this returns `True`.
-    Parameters
-    ----------
-    global_rank : int ( default = None )
-        Global rank of the process if in a distributed process group. If not
-        given, rank is obtained using `torch.distributed.get_rank()`
-    """
-    distributed = is_distributed()
-
-    # In non-distributed case, a "master" process doesn't make any
-    # sense. So instead of raising an error, returning True would
-    # make things less painful
-    if not distributed:
-        return True
-
-    if global_rank is None:
-        global_rank = dist.get_rank()
-
-    return global_rank == 0
 
 
 def is_distributed() -> bool:

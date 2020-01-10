@@ -404,7 +404,7 @@ def _train_worker(
 
     distributed = world_size > 1
 
-    # not using `allennlp.common.util.is_local_master` as the process group is yet to be initialized
+    # not using `allennlp.common.util.is_master` as the process group is yet to be initialized
     master = process_rank == 0
 
     evaluate_on_test = params.pop_bool("evaluate_on_test", False)
