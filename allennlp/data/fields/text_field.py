@@ -111,11 +111,22 @@ class TextField(SequenceField[TextFieldTensors]):
         return text_field
 
     @overrides
-    def batch_tensors(self, tensor_list: List[Dict[str, torch.Tensor]]) -> Dict[str, torch.Tensor]:
-
-        # This is creating a dict of {token_indexer_key: batch_tensor} for each token indexer used
-        # to index this field.
-        return util.batch_tensor_dicts(tensor_list)
+    def batch_tensors(self, tensor_list: List[TextFieldTensors]) -> TextFieldTensors:
+        # This is creating a dict of {token_indexer_name: {token_indexer_outputs: batched_tensor}}
+        # for each token indexer used to index this field.
+        indexer_lists = defaultdict(list)
+        for tensor_dict in tensor_list:
+            for indexer_name, indexer_output in tensor_dict.items():
+                indexer_lists[indexer_name].append(indexer_output)
+        batched_tensors = {
+            # NOTE(mattg): if an indexer has its own nested structure, rather than one tensor per
+            # argument, then this will break.  If that ever happens, we should move this to an
+            # `indexer.batch_tensors` method, with this logic as the default implementation in the
+            # base class.
+            indexer_name: util.batch_tensor_dicts(indexer_outputs)
+            for indexer_name, indexer_outputs in indexer_lists.items()
+        }
+        return batched_tensors
 
     def __str__(self) -> str:
         indexers = {

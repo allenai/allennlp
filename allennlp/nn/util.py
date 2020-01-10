@@ -582,7 +582,7 @@ def viterbi_decode(
 
 
 def get_text_field_mask(
-    text_field_tensors: Dict[str, torch.Tensor], num_wrapping_dims: int = 0
+    text_field_tensors: Dict[str, Dict[str, torch.Tensor]], num_wrapping_dims: int = 0
 ) -> torch.LongTensor:
     """
     Takes the dictionary of tensors produced by a ``TextField`` and returns a mask
@@ -614,10 +614,21 @@ def get_text_field_mask(
     >>> var_mask = torch.autograd.V(mask)
     >>> var_mask.sum() # equals 4, due to 8 bit precision - the sum overflows.
     """
-    if "mask" in text_field_tensors:
-        return text_field_tensors["mask"]
+    masks = []
+    for indexer_name, indexer_tensors in text_field_tensors.items():
+        if "mask" in indexer_tensors:
+            masks.append(indexer_tensors["mask"])
+    if len(masks) == 1:
+        return masks[0]
+    elif len(masks) > 1:
+        # TODO(mattg): My guess is this will basically never happen, so I'm not writing logic to
+        # handle it.  Should be straightforward to handle, though.  If you see this error in
+        # practice, open an issue on github.
+        raise ValueError("found two mask outputs; not sure which to use!")
 
-    tensor_dims = [(tensor.dim(), tensor) for tensor in text_field_tensors.values()]
+    tensor_dims = [(tensor.dim(), tensor)
+                   for indexer_output in text_field_tensors.values()
+                   for tensor in indexer_output.values()]
     tensor_dims.sort(key=lambda x: x[0])
 
     smallest_dim = tensor_dims[0][0] - num_wrapping_dims

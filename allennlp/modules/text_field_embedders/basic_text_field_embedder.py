@@ -35,7 +35,12 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
         token_embedders: Dict[str, TokenEmbedder],
     ) -> None:
         super().__init__()
-        self._token_embedders = torch.nn.ModuleDict(token_embedders)
+        # NOTE(mattg): I'd prefer to just use ModuleDict(token_embedders) here, but that changes
+        # weights and invalidates all prior models, just for a cosmetic change in the code.
+        self._token_embedders = token_embedders
+        for key, embedder in token_embedders.items():
+            name = "token_embedder_%s" % key
+            self.add_module(name, embedder)
 
     @overrides
     def get_output_dim(self) -> int:
@@ -58,7 +63,10 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
             raise ConfigurationError(message)
 
         embedded_representations = []
-        for key, embedder in self._token_embedders.items():
+        for key in self._token_embedders:
+            # Note: need to use getattr here so that the pytorch voodoo
+            # with submodules works with multiple GPUs.
+            embedder = getattr(self, "token_embedder_{}".format(key))
             forward_params = inspect.signature(embedder.forward).parameters
             forward_params_values = {}
             for param in forward_params.keys():
