@@ -865,7 +865,7 @@ class Trainer(TrainerBase):
             log_batch_size_period=log_batch_size_period,
             moving_average=moving_average,
             distributed=distributed,
-            rank=local_rank,
+            local_rank=local_rank,
             world_size=world_size,
             num_gradient_accumulation_steps=num_gradient_accumulation_steps,
         )

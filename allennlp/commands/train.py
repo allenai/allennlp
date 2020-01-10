@@ -464,7 +464,7 @@ def _train_worker(
             validation_data=pieces.validation_dataset,
             params=pieces.params,
             validation_iterator=pieces.validation_iterator,
-            local_rank=process_rank
+            local_rank=process_rank,
         )
 
         evaluation_iterator = pieces.validation_iterator or pieces.iterator

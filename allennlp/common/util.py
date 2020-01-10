@@ -504,7 +504,9 @@ def flatten_filename(file_path: str) -> str:
     return file_path.replace("/", "_SLASH_")
 
 
-def is_local_master(global_rank: int = None, world_size: int = None, num_procs_per_node: int = None) -> bool:
+def is_local_master(
+    global_rank: int = None, world_size: int = None, num_procs_per_node: int = None
+) -> bool:
     """
     Checks if the process is a "master" of its node in a distributed process group. If a
     process group is not initialized, this returns `True`.
