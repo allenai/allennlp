@@ -53,7 +53,7 @@ class TestBucketIterator(IteratorTest):
             )
         )
         assert iterator._sorting_keys is None
-        iterator._guess_sorting_key(instances)
+        iterator._guess_sorting_keys(instances)
         assert iterator._sorting_keys == [("passage", "tokens_length")]
 
     def test_create_batches_groups_correctly_with_max_instances(self):

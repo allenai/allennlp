@@ -159,8 +159,8 @@ class BucketIterator(DataIterator):
         instances_with_lengths.sort(key=lambda x: x[0])
         return [instance_with_lengths[-1] for instance_with_lengths in instances_with_lengths]
 
-    def _guess_sorting_key(self, instances: List[Instance]) -> None:
-        max_length = 0
+    def _guess_sorting_keys(self, instances: List[Instance]) -> None:
+        max_length = 0.0
         longest_padding_key: Tuple[str, str] = None
         for instance in instances:
             instance.index_fields(self.vocab)
