@@ -45,7 +45,7 @@ def main(checks):
 
         if "build-docs" in checks:
             print("Documentation (build):", flush=True)
-            run("cd doc; make html-strict", shell=True, check=True)
+            run("./scripts/build_docs.sh", shell=True, check=True)
 
         if "check-links" in checks:
             print("Checking links in Markdown files:", flush=True)
