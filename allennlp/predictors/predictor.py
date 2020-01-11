@@ -1,4 +1,4 @@
-from typing import List, Iterator, Dict, Tuple, Any
+from typing import List, Iterator, Dict, Tuple, Any, Type
 import json
 from contextlib import contextmanager
 

@@ -9,7 +9,7 @@ rather than instantiating a ``Trainer`` yourself.
 
 
 import logging
-from typing import Dict, Any
+from typing import Dict, Any, Type
 
 from allennlp.common import Params, Registrable
 from allennlp.common.util import is_master

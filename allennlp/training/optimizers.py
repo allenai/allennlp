@@ -21,7 +21,7 @@ The available optimizers are
 import logging
 import re
 import math
-from typing import List, Any, Dict
+from typing import List, Any, Dict, Type
 
 import torch
 from pytorch_pretrained_bert.optimization import BertAdam
