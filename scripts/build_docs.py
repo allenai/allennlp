@@ -31,7 +31,9 @@ def render_docs(relative_src_path: str, src_file: str, to_file: str, modifier="+
     print(f"Built docs for {src_file}: {to_file}")
 
 
-def build_docs_for_file(relative_path: str, file_name: str, docs_dir: str, check: bool = False) -> Dict[str, str]:
+def build_docs_for_file(
+    relative_path: str, file_name: str, docs_dir: str, check: bool = False
+) -> Dict[str, str]:
     """
     Build docs for an individual python file. If `check` is passed, we don't generate the docs themselves,
     but instead we just generate what the corresponding mkdocs YAML would be, so we can compare it to the
@@ -116,7 +118,9 @@ if __name__ == "__main__":
 
     if args.check:
         if nav_obj[docs_key] != nav_entries:
-            raise ValueError("Changes are required to the API documentation. Run `./scripts/build_docs.py` and commit the changes.")
+            raise ValueError(
+                "Changes are required to the API documentation. Run `./scripts/build_docs.py` and commit the changes."
+            )
         else:
             print("No changes required!")
     else:
