@@ -291,7 +291,9 @@ class Predictor(Registrable):
             model_type = config.get("model").get("type")
             if model_type in DEFAULT_PREDICTORS:
                 predictor_name = DEFAULT_PREDICTORS[model_type]
-        predictor_class = Predictor.by_name(predictor_name) if predictor_name is not None else cls
+        predictor_class: Type[Predictor] = Predictor.by_name(  # type: ignore
+            predictor_name
+        ) if predictor_name is not None else cls
 
         if dataset_reader_to_load == "validation" and "validation_dataset_reader" in config:
             dataset_reader_params = config["validation_dataset_reader"]
