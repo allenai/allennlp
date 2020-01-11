@@ -20,11 +20,6 @@ This tutorial will show both you how to create `DatasetReader`s
 that allow this lazy behavior, and how to handle this laziness
 when training a model.
 
-If you're not interested in the details,
-there's an extremely brief [How-To](../how_to/laziness.md)
-that just tells you the steps to follow.
-But really you should be interested in the details.
-
 ## You specify laziness in the `DatasetReader` constructor
 
 If you look at the [constructor](https://github.com/allenai/allennlp/blob/master/allennlp/data/dataset_readers/dataset_reader.py#L43)

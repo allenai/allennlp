@@ -61,14 +61,14 @@ The rest of this tutorial will walk you through the pieces of the semantic parsi
 
 <sub><a name="footnote1">1</a>: There are much more efficient ways to implement standard seq2seq models
 than using a transition system.  If that's what you want to do, maybe look at our [SimpleSeq2Seq
-model](../../allennlp/models/encoder_decoders/simple_seq2seq.py).</sub>
+model](../../api/models/encoder_decoders/simple_seq2seq.md).</sub>
 
 
 <a name="section1"></a>
 ## Training a transition function
 
 The fundamental piece of the semantic parsing framework is the
-[`TransitionFunction`](../../allennlp/state_machines/transition_functions/transition_function.py).
+[`TransitionFunction`](https://github.com/allenai/allennlp-semparse/tree/002f97b34277356333eac7937924a3b7ad48fb24/allennlp_semparse/state_machines/transition_functions/transition_function.py).
 This is a pytorch `Module` that parameterizes state transitions.  That is, given a
 [`State`](#section2), the `TransitionFunction` returns a scored and ranked list of next `States`:
 
@@ -102,7 +102,7 @@ answers](https://www.semanticscholar.org/paper/Semantic-Parsing-on-Freebase-from
 or just a reward function on finished or intermediate states ([general reinforcement
 learning](https://www.semanticscholar.org/paper/Maximum-Margin-Reward-Networks-for-Learning-from-Peng-Chang/b53404e5410b5098e246f405c8509fbf3de8ab2a)).
 To handle the variety of supervision signals that could be used, we provide a simple
-[`DecoderTrainer`](../../allennlp/state_machines/trainers/decoder_trainer.py) interface that's
+[`DecoderTrainer`](https://github.com/allenai/allennlp-semparse/blob/002f97b34277356333eac7937924a3b7ad48fb24/allennlp_semparse/state_machines/trainers/decoder_trainer.py) interface that's
 generic over the supervision type:
 
 ```python
@@ -128,18 +128,18 @@ that you think would be useful for others, please consider contributing it back!
 examples (not an exhaustive list):
 
 `DecoderTrainers`:
-- [`MaximumMarginalLikelihood`](../../allennlp/state_machines/trainers/maximum_marginal_likelihood.py)
+- [`MaximumMarginalLikelihood`](https://github.com/allenai/allennlp-semparse/blob/002f97b34277356333eac7937924a3b7ad48fb24/allennlp_semparse/state_machines/trainers/maximum_marginal_likelihood.py)
   (when you have a set of possibly correct action sequences, e.g., after you've done a search for
 action sequences that match the correct answer to a question)
-- [`ExpectedRiskMinimization`](../../allennlp/state_machines/trainers/expected_risk_minimization.py)
+- [`ExpectedRiskMinimization`](https://github.com/allenai/allennlp-semparse/blob/002f97b34277356333eac7937924a3b7ad48fb24/allennlp_semparse/state_machines/trainers/expected_risk_minimization.py)
   (when you have a reward function, e.g., for finished states that tells you whether the logical
 form executed correctly)
 
 `TransitionFunctions`:
-- [`BasicTransitionFunction`](../../allennlp/state_machines/transition_functions/basic_transition_function.py):
+- [`BasicTransitionFunction`](https://github.com/allenai/allennlp-semparse/blob/002f97b34277356333eac7937924a3b7ad48fb24/allennlp_semparse/state_machines/transition_functions/basic_transition_function.py):
   a simple LSTM decoder with attention that uses a grammar to constrain the actions available at
 each state.
-- [`LinkingTransitionFunction`](../../allennlp/state_machines/transition_functions/linking_transition_function.py):
+- [`LinkingTransitionFunction`](https://github.com/allenai/allennlp-semparse/blob/002f97b34277356333eac7937924a3b7ad48fb24/allennlp_semparse/state_machines/transition_functions/linking_transition_function.py):
   an extension of the `BasicTransitionFunction` that allows some actions to be parameterized by
 linking to words in the utterance, instead of having an embedding for each action.  This allows for
 predicting actions at test time that were never seen at training time, to do various kinds of
@@ -147,8 +147,8 @@ zero-shot prediction.
 
 We'll note here that separating the pieces out this way makes it relatively easy to try out
 different training algorithms.  Our models for
-[`WikiTableQuestions`](../../allennlp/models/semantic_parsing/wikitables/) and
-[`NLVR`](../../allennlp/models/semantic_parsing/nlvr) both have versions using
+[`WikiTableQuestions`](https://github.com/allenai/allennlp-semparse/blob/002f97b34277356333eac7937924a3b7ad48fb24/allennlp_semparse/models/semantic_parsing/wikitables/) and
+[`NLVR`](https://github.com/allenai/allennlp-semparse/blob/002f97b34277356333eac7937924a3b7ad48fb24/allennlp_semparse/models/semantic_parsing/nlvr) both have versions using
 `MaximumMarginalLikelihood` and `ExpectedRiskMinimization`, and for many semantic parsers, either
 the `BasicTransitionFunction` or the `LinkingTransitionFunction` should be all you need for a
 standard decoder, and all you have to implement in your model is the encoder.
@@ -158,8 +158,8 @@ standard decoder, and all you have to implement in your model is the encoder.
 ## Tracking the State of the decoder
 
 Our
-[`TransitionFunctions`](../../allennlp/state_machines/transition_functions/transition_function.py)
-operate on [`States`](../../allennlp/state_machines/states/state.py), scoring actions available at
+[`TransitionFunctions`](https://github.com/allenai/allennlp-semparse/blob/002f97b34277356333eac7937924a3b7ad48fb24/allennlp_semparse/state_machines/transition_functions/transition_function.py)
+operate on [`States`](https://github.com/allenai/allennlp-semparse/blob/002f97b34277356333eac7937924a3b7ad48fb24/allennlp_semparse/state_machines/states/state.py), scoring actions available at
 each `State` and returning ranked lists of new ones.  In order for this to work, we need some way
 of representing that `State`, including any intermediate computations that are necessary for
 scoring actions.  We do this with a simple `State` object:
@@ -197,7 +197,7 @@ decoder LSTM, or the actions that are available in the current state.  To group 
 common pieces of this internal state, we have a few `Statelet` classes available.  We'll go over
 two of them: `RnnStatelet` and `GrammarStatelet`.
 
-[`RnnStatelet`](../../allennlp/state_machines/states/rnn_statelet.py) keeps track of the internal
+[`RnnStatelet`](https://github.com/allenai/allennlp-semparse/blob/002f97b34277356333eac7937924a3b7ad48fb24/allennlp_semparse/state_machines/states/rnn_statelet.py) keeps track of the internal
 state of a decoder RNN:
 
 ```python
@@ -218,7 +218,7 @@ previous attended input (which is also used as part of the input to the next tim
 "attention feeding").  And because we compute attention over the encoded input representations in
 the LSTM decoder, we also include those inputs (and their mask) as part of the `RnnStatelet`.
 
-[`GrammarStatelet`](../../allennlp/state_machines/states/grammar_statelet.py) keeps track of the
+[`GrammarStatelet`](https://github.com/allenai/allennlp-semparse/blob/002f97b34277356333eac7937924a3b7ad48fb24/allennlp_semparse/state_machines/states/grammar_statelet.py) keeps track of the
 current state of the grammar during decoding: what non-terminal is at the top of the non-terminal
 stack, what actions are available, and so on:
 
@@ -246,7 +246,7 @@ representations could just be an id for that production, or, for efficiency, you
 pre-embedded all of your actions and just use those here.  It's up to you.
 
 To group these things together, we have a
-[`GrammarBasedState`](../../allennlp/state_machines/states/grammar_based_state.py) class, that you
+[`GrammarBasedState`](https://github.com/allenai/allennlp-semparse/blob/002f97b34277356333eac7937924a3b7ad48fb24/allennlp_semparse/state_machines/states/grammar_based_state.py) class, that you
 can actually use with a `TransitionFunction`:
 
 ```python
@@ -288,9 +288,9 @@ action expands a non-terminal in the tree.  Constructing this grammar over abstr
 a bit messy.
 
 There are currently two ways to do this with our framework: you can use an `nltk`-based logic
-system, seen in [`semparse.type_declarations`](../../allennlp/semparse/type_declarations), or you
+system, seen in [`semparse.type_declarations`](https://github.com/allenai/allennlp-semparse/blob/002f97b34277356333eac7937924a3b7ad48fb24/allennlp_semparse/semparse/type_declarations), or you
 can use [`parsimonious` to write a context-free
-grammar](../../allennlp/semparse/contexts/atis_sql_table_context.py).  With the `nltk`-based
+grammar](https://github.com/allenai/allennlp-semparse/blob/002f97b34277356333eac7937924a3b7ad48fb24/allennlp_semparse/semparse/contexts/atis_sql_table_context.py).  With the `nltk`-based
 system, you define the functions that are available in your (lisp-like) language, with their type
 signatures, and our code builds a grammar for you that can parse statements in that language.  With
 the `parsimonious` system, you have to come up with the grammar yourself, but you have more
@@ -308,21 +308,21 @@ Instead of describing in detail how these two systems work, we'll just point you
 and their documentation.
 
 For the `nltk`-based system:
-- [Base logic and documentation](../../allennlp/semparse/type_declarations/type_declaration.py)
-- [WikiTableQuestions lambda-DCS grammar](../../allennlp/semparse/type_declarations/wikitables_lambda_dcs.py)
-- [WikiTableQuestions variable-free grammar](../../allennlp/semparse/type_declarations/wikitables_variable_free.py)
-- [NLVR grammar](../../allennlp/semparse/type_declarations/nlvr_type_declaration.py)
+- [Base logic and documentation](https://github.com/allenai/allennlp-semparse/blob/002f97b34277356333eac7937924a3b7ad48fb24/allennlp_semparse/semparse/type_declarations/type_declaration.py)
+- [WikiTableQuestions lambda-DCS grammar](https://github.com/allenai/allennlp-semparse/blob/002f97b34277356333eac7937924a3b7ad48fb24/allennlp_semparse/semparse/type_declarations/wikitables_lambda_dcs.py)
+- [WikiTableQuestions variable-free grammar](https://github.com/allenai/allennlp-semparse/blob/002f97b34277356333eac7937924a3b7ad48fb24/allennlp_semparse/semparse/type_declarations/wikitables_variable_free.py)
+- [NLVR grammar](https://github.com/allenai/allennlp-semparse/blob/002f97b34277356333eac7937924a3b7ad48fb24/allennlp_semparse/semparse/type_declarations/nlvr_type_declaration.py)
 
 For the `parsimonious` system:
-- [ATIS SQL grammar](../../allennlp/semparse/contexts/atis_sql_table_context.py)
+- [ATIS SQL grammar](https://github.com/allenai/allennlp-semparse/blob/002f97b34277356333eac7937924a3b7ad48fb24/allennlp_semparse/semparse/contexts/atis_sql_table_context.py)
 - [A separate SQL grammar for a different set of SQL
-  datasets](../../allennlp/semparse/contexts/text2sql_table_context.py)
+  datasets](https://github.com/allenai/allennlp-semparse/blob/002f97b34277356333eac7937924a3b7ad48fb24/allennlp_semparse/semparse/contexts/text2sql_table_context.py)
 
 If you are trying to implement your own language using these and have trouble, open an issue on
 github and we'll see what we can do.
 
 For executing logical forms, we have put our execution engines in
-[`semparse.executors`](../../allennlp/semparse/executors); you can see what is available there.
+[`semparse.executors`](https://github.com/allenai/allennlp-semparse/blob/002f97b34277356333eac7937924a3b7ad48fb24/allennlp_semparse/semparse/executors); you can see what is available there.
 There isn't any consistent theme for defining the execution engine - some of the executors call
 subprocesses to execute the logical form (for SQL and for using
 [SEMPRE](https://github.com/percyliang/sempre) to evaluate lambda-DCS), and some of them have
@@ -343,11 +343,11 @@ table](https://www.semanticscholar.org/paper/Compositional-Semantic-Parsing-on-S
 or a [SQL
 database](https://www.semanticscholar.org/paper/Learning-to-Map-Context-Dependent-Sentences-to-Suhr-Iyer/3171f531bdd917ebe9a9849339ee67f0e9ce887b).
 We have code for representing some of these additional contexts in
-[`semparse.contexts`](../../allennlp/semparse/contexts).  For example, the
-[`TableQuestionKnowledgeGraph`](../../allennlp/semparse/contexts/table_question_knowledge_graph.py)
+[`semparse.contexts`](https://github.com/allenai/allennlp-semparse/blob/002f97b34277356333eac7937924a3b7ad48fb24/allennlp_semparse/semparse/contexts).  For example, the
+[`TableQuestionKnowledgeGraph`](https://github.com/allenai/allennlp-semparse/blob/002f97b34277356333eac7937924a3b7ad48fb24/allennlp_semparse/semparse/contexts/table_question_knowledge_graph.py)
 takes a table and a question from the WikiTableQuestions dataset and extracts a set of "entities"
 and relationships between them.  The
-[`AtisSqlTableContext`](../../allennlp/semparse/contexts/atis_sql_table_context.py) takes a SQL
+[`AtisSqlTableContext`](https://github.com/allenai/allennlp-semparse/blob/002f97b34277356333eac7937924a3b7ad48fb24/allennlp_semparse/semparse/contexts/atis_sql_table_context.py) takes a SQL
 database and reads its tables and columns to constrain the SQL grammar that gets generated, so you
 can only produce queries that reference columns that are actually in the table.
 
@@ -356,8 +356,8 @@ can only produce queries that reference columns that are actually in the table.
 ## Combining the context, language and execution together into a World
 
 We put all of these pieces together for any particular
-[`Instance`](../../allennlp/data/instance.py) in a
-[`World`](../../allennlp/semparse/worlds/world.py) class.  This class knows what language is being
+[`Instance`](../../api/data/instance.md) in a
+[`World`](https://github.com/allenai/allennlp-semparse/blob/002f97b34277356333eac7937924a3b7ad48fb24/allennlp_semparse/semparse/worlds/world.py) class.  This class knows what language is being
 used, what `Instance`-specific context there is, and how to execute logical forms, so it is the
 main way that a `Model` can interact with the language.
 
@@ -379,7 +379,7 @@ to the grammar.
 As with defining the language, if you have your own way of performing those six functions, you can
 bypass our `World` code and still use whatever other components you find helpful.  If you are using
 our `nltk`-based logic system to define your language, however, the base
-[`World`](../../allennlp/semparse/worlds/world.py) class has some important functionality for
+[`World`](https://github.com/allenai/allennlp-semparse/blob/002f97b34277356333eac7937924a3b7ad48fb24/allennlp_semparse/semparse/worlds/world.py) class has some important functionality for
 getting the type system to work correctly (e.g., the logic that converts logical forms to action
 sequences and back actually lives partially in `World`).  This could probably use a bit of
 refactoring.
@@ -391,26 +391,26 @@ refactoring.
 There are a bunch of moving pieces to get a semantic parser working.  To summarize, we have:
 
 1. A general state machine architecture for training transition functions (in
-   [`allennlp.state_machines`](../../allennlp/state_machines)).  Your model creates an initial
-[`State`](../../allennlp/state_machines/states/state.py) and a
-[`TransitionFunction`](../../allennlp/state_machines/transition_functions/transition_function.py),
+   [`allennlp.state_machines`](https://github.com/allenai/allennlp-semparse/blob/002f97b34277356333eac7937924a3b7ad48fb24/allennlp_semparse/state_machines)).  Your model creates an initial
+[`State`](https://github.com/allenai/allennlp-semparse/blob/002f97b34277356333eac7937924a3b7ad48fb24/allennlp_semparse/state_machines/states/state.py) and a
+[`TransitionFunction`](https://github.com/allenai/allennlp-semparse/blob/002f97b34277356333eac7937924a3b7ad48fb24/allennlp_semparse/state_machines/transition_functions/transition_function.py),
 and passes these off to a
-[`DecoderTrainer`](../../allennlp/state_machines/trainers/decoder_trainer.py) that implements some
+[`DecoderTrainer`](https://github.com/allenai/allennlp-semparse/blob/002f97b34277356333eac7937924a3b7ad48fb24/allennlp_semparse/state_machines/trainers/decoder_trainer.py) that implements some
 learning algorithm.
 2. A bunch of examples of using this architecture for training semantic parsers (in
-   [`allennlp.semparse`](../../allennlp/semparse) and
-[`allennlp.models.semantic_parsing`](../../allennlp/models/semantic_parsing)).  The language you're
+   [`allennlp.semparse`](https://github.com/allenai/allennlp-semparse/blob/002f97b34277356333eac7937924a3b7ad48fb24/allennlp_semparse/semparse) and
+[`allennlp.models.semantic_parsing`](https://github.com/allenai/allennlp-semparse/blob/002f97b34277356333eac7937924a3b7ad48fb24/allennlp_semparse/models/semantic_parsing)).  The language you're
 parsing into determines the state space and the transition system (which you can specify using our
-[`nltk`-based logic system](../../allennlp/semparse/type_declarations), or using `parsimonious` or
-something similar).  The [`Model`](../../allennlp/models/semantic_parsing) encodes some input
+[`nltk`-based logic system](https://github.com/allenai/allennlp-semparse/blob/002f97b34277356333eac7937924a3b7ad48fb24/allennlp_semparse/semparse/type_declarations), or using `parsimonious` or
+something similar).  The [`Model`](https://github.com/allenai/allennlp-semparse/blob/002f97b34277356333eac7937924a3b7ad48fb24/allennlp_semparse/models/semantic_parsing) encodes some input
 utterance (and possibly some additional context), instantiates a
-[`World`](../../allennlp/semparse/worlds/world.py) that can execute logical forms in some (possibly
+[`World`](https://github.com/allenai/allennlp-semparse/blob/002f97b34277356333eac7937924a3b7ad48fb24/allennlp_semparse/semparse/worlds/world.py) that can execute logical forms in some (possibly
 `Instance`-specific) context, initializes the grammar and RNN states, and passes all of this off to
 the state machine architecture.
 
 These are the datasets that are currently supported:
 
-- [WikiTableQuestions](../../allennlp/data/dataset_readers/semantic_parsing/wikitables.py), a
+- [WikiTableQuestions](https://github.com/allenai/allennlp-semparse/blob/002f97b34277356333eac7937924a3b7ad48fb24/allennlp_semparse/data/dataset_readers/semantic_parsing/wikitables.py), a
   dataset of questions over tables extracted from Wikipedia
 ([paper](https://www.semanticscholar.org/paper/Compositional-Semantic-Parsing-on-Semi-Structured-Pasupat-Liang/41ab97376fcbd67d05bad648b40d92d96a3f1c1c),
 [website](https://nlp.stanford.edu/blog/wikitablequestions-a-complex-real-world-question-understanding-dataset/)).
@@ -419,23 +419,23 @@ We support the lambda-DCS language by interfacing with
 variable-free language in [Chen Liang's MAPO
 paper](https://www.semanticscholar.org/paper/Memory-Augmented-Policy-Optimization-for-Program-Liang-Norouzi/16a32fb65e75963e763151636587c16f6ab7b5cf).
 - [Cornell Natural Language Visual Reasoning
-  (NLVR)](../../allennlp/data/dataset_readers/semantic_parsing/nlvr.py), a dataset of true/false
+  (NLVR)](https://github.com/allenai/allennlp-semparse/blob/002f97b34277356333eac7937924a3b7ad48fb24/allennlp_semparse/data/dataset_readers/semantic_parsing/nlvr.py), a dataset of true/false
 statements about images
 ([paper](https://www.semanticscholar.org/paper/A-Corpus-of-Natural-Language-for-Visual-Reasoning-Suhr-Lewis/c208f738fba3e3598018e6fdfbc72c6fbb7ba9d0),
 [website](http://lic.nlp.cornell.edu/nlvr/)).  We designed a simple language that operates on the
 structured representations in the dataset (not the images), and this is what we use.
-- [ATIS](../../allennlp/data/dataset_readers/semantic_parsing/atis.py), a dataset of interactions
+- [ATIS](https://github.com/allenai/allennlp-semparse/blob/002f97b34277356333eac7937924a3b7ad48fb24/allennlp_semparse/data/dataset_readers/semantic_parsing/atis.py), a dataset of interactions
   with a flight service, mapping language to SQL queries.  We support hierarchical, grammar-based
 decoding of SQL on this dataset, using a hand-built `parsimonious` grammar for the SQL queries.
 - All of the text-to-SQL datasets from the "Improving Text-to-SQL Evaluation Methodology" paper
   ([paper](https://www.semanticscholar.org/paper/Improving-Text-to-SQL-Evaluation-Methodology-Finegan-Dollak-Kummerfeld/23474a845ea4b67f38bde7c7f1c4c1bdba22c50c),
 [website](https://github.com/jkkummerfeld/text2sql-data)).  You can use this data either with
 [template prediction and slot
-filling](../../allennlp/data/dataset_readers/semantic_parsing/template_text2sql.py), or with
+filling](https://github.com/allenai/allennlp-semparse/blob/002f97b34277356333eac7937924a3b7ad48fb24/allennlp_semparse/data/dataset_readers/semantic_parsing/template_text2sql.py), or with
 [grammar-based
-decoding](../../allennlp/data/dataset_readers/semantic_parsing/grammar_based_text2sql.py), using a
+decoding](https://github.com/allenai/allennlp-semparse/blob/002f97b34277356333eac7937924a3b7ad48fb24/allennlp_semparse/data/dataset_readers/semantic_parsing/grammar_based_text2sql.py), using a
 general SQL grammar that we wrote with `parsimonious`.
-- [QuaRel](../../allennlp/data/dataset_readers/semantic_parsing/quarel.py), a dataset of science
+- [QuaRel](https://github.com/allenai/allennlp-semparse/blob/002f97b34277356333eac7937924a3b7ad48fb24/allennlp_semparse/data/dataset_readers/semantic_parsing/quarel.py), a dataset of science
   questions that require qualitative reasoning (paper and website coming soon).
 
 There are models implemented for most of these datasets, many of which you can see in our

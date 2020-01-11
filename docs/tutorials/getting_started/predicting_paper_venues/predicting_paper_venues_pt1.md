@@ -88,10 +88,8 @@ class TestSemanticScholarDatasetReader(AllenNlpTestCase):
         instances = ensure_list(reader.read('tests/fixtures/s2_papers.jsonl'))
 ```
 
-Then we just want to make sure that the resulting dataset looks like we expect.  We'll refer you to
-the [dataset tutorial](../../notebooks/data_pipeline.ipynb) for a deeper dive on the `Dataset`,
-`Instance`, and `Field` classes; for now, just remember that we want each paper to have a title, an
-abstract, and a venue. The paper itself is an `Instance` inside of the `Dataset`, and the title, abstract
+Then we just want to make sure that the resulting dataset looks like we expect. 
+The paper itself is an `Instance` inside of the `Dataset`, and the title, abstract
 and venue are all `Fields` inside the `Instance`.  We can make sure that the dataset got read correctly
 by giving expected values for the first few instances in our test fixture:
 
@@ -263,7 +261,7 @@ using these tests, as it is way easier and faster to find problems using a test 
 your large dataset.
 
 In order to make use of these tests, you need to provide two things: a [JSON configuration
-file](configuration.md) like what you use for training, just with smaller parameters, and a tiny
+file](../walk_through_allennlp/configuration.md) like what you use for training, just with smaller parameters, and a tiny
 dataset.  We've already seen the dataset, and we'll examine the configuration file that we're using
 here later; it'll make more sense to look at the model code first.
 

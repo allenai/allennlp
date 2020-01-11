@@ -238,7 +238,7 @@ that the predictor is expecting, or the demo won't work!
 
 Our JSON "visualization" is not particularly impressive.  If you want to visualize model internals,
 with easy attention heat maps, you might want to look at our [how-to for visualizing model
-internals](../how_to/visualizing_model_internals.md).  That how-to relies on installing `npm` and
+internals](../../how_to/visualizing_model_internals.md).  That how-to relies on installing `npm` and
 using React; if you want a simpler way of just using HTML and JavaScript (but with less built-in
 functionality), keeping reading.
 
