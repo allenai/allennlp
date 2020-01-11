@@ -126,6 +126,8 @@ class Hotflip(Attacker):
             elif isinstance(token_indexer, TokenCharactersIndexer):
                 tokens = [Token(x) for x in all_tokens]
                 max_token_length = max(len(x) for x in all_tokens)
+                # sometime max_token_length is too short for cnn encoder
+                max_token_length = max(max_token_length, token_indexer._min_padding_length)
                 indexed_tokens = token_indexer.tokens_to_indices(
                     tokens, self.vocab, "token_characters"
                 )
