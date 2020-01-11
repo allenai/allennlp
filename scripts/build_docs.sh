@@ -8,3 +8,5 @@ cp LICENSE docs/LICENSE.md
 cp ROADMAP.md docs/ROADMAP.md
 cp CONTRIBUTING.md docs/CONTRIBUTING.md
 python scripts/build_docs.py
+
+mkdocs build
