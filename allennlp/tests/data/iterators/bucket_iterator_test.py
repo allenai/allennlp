@@ -2,6 +2,8 @@ import pytest
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
+from allennlp.data import Instance, Token
+from allennlp.data.fields import TextField
 from allennlp.data.iterators import BucketIterator
 from allennlp.tests.data.iterators.basic_iterator_test import IteratorTest
 
@@ -19,6 +21,40 @@ class TestBucketIterator(IteratorTest):
             [self.instances[0], self.instances[1]],
             [self.instances[3]],
         ]
+
+    def test_guess_sorting_key_picks_the_longest_key(self):
+        iterator = BucketIterator(batch_size=2, padding_noise=0)
+        iterator.index_with(self.vocab)
+        instances = []
+        short_tokens = [Token(t) for t in ["what", "is", "this", "?"]]
+        long_tokens = [Token(t) for t in ["this", "is", "a", "not", "very", "long", "passage"]]
+        instances.append(
+            Instance(
+                {
+                    "question": TextField(short_tokens, self.token_indexers),
+                    "passage": TextField(long_tokens, self.token_indexers),
+                }
+            )
+        )
+        instances.append(
+            Instance(
+                {
+                    "question": TextField(short_tokens, self.token_indexers),
+                    "passage": TextField(long_tokens, self.token_indexers),
+                }
+            )
+        )
+        instances.append(
+            Instance(
+                {
+                    "question": TextField(short_tokens, self.token_indexers),
+                    "passage": TextField(long_tokens, self.token_indexers),
+                }
+            )
+        )
+        assert iterator._sorting_keys is None
+        iterator._guess_sorting_keys(instances)
+        assert iterator._sorting_keys == [("passage", "tokens_length")]
 
     def test_create_batches_groups_correctly_with_max_instances(self):
         # If we knew all the instances, the correct order is 4 -> 2 -> 0 -> 1 -> 3.
@@ -60,9 +96,6 @@ class TestBucketIterator(IteratorTest):
     def test_from_params(self):
 
         params = Params({})
-
-        with pytest.raises(ConfigurationError):
-            iterator = BucketIterator.from_params(params)
 
         sorting_keys = [("s1", "nt"), ("s2", "nt2")]
         params["sorting_keys"] = sorting_keys
