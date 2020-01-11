@@ -70,4 +70,4 @@ class LinearAttention(Attention):
         combined_tensors = util.combine_tensors_and_multiply(
             self._combination, [vector.unsqueeze(1), matrix], self._weight_vector
         )
-        return self._activation(combined_tensors.squeeze(1) + self._bias)
+        return self._activation(combined_tensors + self._bias)
