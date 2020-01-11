@@ -135,7 +135,9 @@ class BucketIterator(DataIterator):
         ``(field_name, padding_key)`` tuples.
         """
         if not self._sorting_keys:
+            logger.info("No sorting keys given; trying to guess a good one")
             self._guess_sorting_keys(instances)
+            logger.info(f"Using {self._sorting_keys} as the sorting keys")
         instances_with_lengths = []
         for instance in instances:
             # Make sure instance is indexed before calling .get_padding
@@ -171,7 +173,10 @@ class BucketIterator(DataIterator):
                         max_length = length
                         longest_padding_key = (field_name, padding_key)
         if not longest_padding_key:
-            raise ValueError(
-                "Found no field that needed padding; why are you using a bucket iterator?"
+            # This shouldn't ever happen (you basically have to have an empty instance list), but
+            # just in case...
+            raise AssertionError(
+                "Found no field that needed padding; we are surprised you got this error, please "
+                "open an issue on github"
             )
         self._sorting_keys = [longest_padding_key]
