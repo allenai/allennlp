@@ -41,6 +41,7 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
         for key, embedder in token_embedders.items():
             name = "token_embedder_%s" % key
             self.add_module(name, embedder)
+        self._ordered_embedder_keys = sorted(self._token_embedders.keys())
 
     @overrides
     def get_output_dim(self) -> int:
@@ -63,7 +64,7 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
             raise ConfigurationError(message)
 
         embedded_representations = []
-        for key in self._token_embedders:
+        for key in self._ordered_embedder_keys:
             # Note: need to use getattr here so that the pytorch voodoo
             # with submodules works with multiple GPUs.
             embedder = getattr(self, "token_embedder_{}".format(key))
