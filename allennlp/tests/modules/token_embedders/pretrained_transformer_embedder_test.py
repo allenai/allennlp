@@ -20,7 +20,7 @@ class TestPretrainedTransformerEmbedder(AllenNlpTestCase):
         embedder = PretrainedTransformerEmbedder.from_params(params)
         token_ids = torch.randint(0, 100, (1, 4))
         mask = torch.randint(0, 2, (1, 4))
-        output = embedder(token_ids=token_ids, attention_mask=mask)
+        output = embedder(token_ids=token_ids, mask=mask)
         assert tuple(output.size()) == (1, 4, 768)
 
     def test_end_to_end(self):
@@ -44,8 +44,6 @@ class TestPretrainedTransformerEmbedder(AllenNlpTestCase):
                 "token_embedders": {
                     "bert": {"type": "pretrained_transformer", "model_name": "bert-base-uncased"}
                 },
-                "embedder_to_indexer_map": {"bert": ["bert", "mask"]},
-                "allow_unmatched_keys": True,
             }
         )
         token_embedder = BasicTextFieldEmbedder.from_params(vocab=vocab, params=params)
@@ -61,9 +59,9 @@ class TestPretrainedTransformerEmbedder(AllenNlpTestCase):
         tokens = tensor_dict["tokens"]
         max_length = max(len(tokens1), len(tokens2))
 
-        assert tokens["bert"].shape == (2, max_length)
+        assert tokens["bert"]["token_ids"].shape == (2, max_length)
 
-        assert tokens["mask"].tolist() == [[1, 1, 1, 1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1, 1, 0, 0]]
+        assert tokens["bert"]["mask"].tolist() == [[1, 1, 1, 1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1, 1, 0, 0]]
 
         # Attention mask
         bert_vectors = token_embedder(tokens)

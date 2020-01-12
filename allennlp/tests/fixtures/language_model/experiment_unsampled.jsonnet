@@ -24,7 +24,6 @@
     "type": "language_model",
     "bidirectional": true,
     "text_field_embedder": {
-      "allow_unmatched_keys": true,
       "token_embedders": {
         "token_characters": {
             "type": "character_encoding",

@@ -4,7 +4,7 @@ import torch
 import numpy as np
 
 from allennlp.common.checks import ConfigurationError
-from allennlp.data.vocabulary import Vocabulary
+from allennlp.data import TextFieldTensors, Vocabulary
 from allennlp.models.model import Model
 from allennlp.modules.text_field_embedders import TextFieldEmbedder
 from allennlp.modules.sampled_softmax_loss import SampledSoftmaxLoss
@@ -246,7 +246,7 @@ class LanguageModel(Model):
             )
 
     def forward(  # type: ignore
-        self, source: Dict[str, torch.LongTensor]
+        self, source: TextFieldTensors
     ) -> Dict[str, torch.Tensor]:
         """
         Computes the averaged forward (and backward, if language model is bidirectional)

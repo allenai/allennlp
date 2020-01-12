@@ -29,7 +29,6 @@
     "type": "simple_tagger",
     "label_encoding": "IOB1",
     "text_field_embedder": {
-      "allow_unmatched_keys": true,
       "token_embedders": {
         "tokens": {
             "type": "embedding",
@@ -49,7 +48,6 @@
   },
   "iterator": {
     "type": "bucket",
-    "sorting_keys": [["tokens", "num_tokens"]],
     "padding_noise": 0.0,
     "batch_size" : 80
   },

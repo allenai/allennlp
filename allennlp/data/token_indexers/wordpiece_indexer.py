@@ -281,7 +281,7 @@ class WordpieceIndexer(TokenIndexer):
 
     @overrides
     def get_empty_token_list(self) -> IndexedTokenList:
-        return {"wordpieces": [], "offsets": [], "type-ids": [], "mask": []}
+        return {"input_ids": [], "offsets": [], "token_type_ids": [], "mask": []}
 
     def _add_start_and_end(self, wordpiece_ids: List[int]) -> List[int]:
         return self._start_piece_ids + wordpiece_ids + self._end_piece_ids
