@@ -165,11 +165,11 @@ class MyModel(Model):
 
         loss = torch.tensor(0.0)
         if dataset[0] == "a":
-            loss += field_a["tokens"].sum() * self.weight
+            loss += field_a["tokens"]["tokens"].sum() * self.weight
         elif dataset[0] == "b":
-            loss -= field_b["tokens"].sum() * self.weight ** 2
+            loss -= field_b["tokens"]["tokens"].sum() * self.weight ** 2
         elif dataset[0] == "c":
-            loss += field_c["tokens"].sum() * self.weight ** 3
+            loss += field_c["tokens"]["tokens"].sum() * self.weight ** 3
         else:
             raise ValueError(f"unknown dataset: {dataset[0]}")
 
