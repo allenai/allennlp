@@ -495,7 +495,7 @@ def log_frozen_and_tunable_parameter_names(model: torch.nn.Module) -> None:
 
 
 def get_frozen_and_tunable_parameter_names(
-    model: torch.nn.Module
+    model: torch.nn.Module,
 ) -> Tuple[Iterable[str], Iterable[str]]:
     frozen_parameter_names = (
         name for name, parameter in model.named_parameters() if not parameter.requires_grad
