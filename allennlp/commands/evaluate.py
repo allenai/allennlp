@@ -44,11 +44,11 @@ and report any metrics calculated by the model.
                             need to pass --embedding-sources-mapping.
       --embedding-sources-mapping EMBEDDING_SOURCES_MAPPING
                             a JSON dict defining mapping from embedding module
-                            path to embedding pretrained-file used during training.
-                            If not passed, and embedding needs to be extended, we
-                            will try to use the original file paths used during
-                            training. If they are not available we will use random
-                            vectors for embedding extension.
+                            path to embedding pretrained-file used during
+                            training. If not passed, and embedding needs to be
+                            extended, we will try to use the original file paths
+                            used during training. If they are not available we
+                            will use random vectors for embedding extension.
       --include-package INCLUDE_PACKAGE
                             additional packages to include
 """

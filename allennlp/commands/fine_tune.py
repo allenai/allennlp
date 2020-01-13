@@ -48,6 +48,7 @@ to the data you will continue training with, and a directory in which to write t
                             extended, we will try to use the original file paths
                             used during training. If they are not available we
                             will use random vectors for embedding extension.
+                            (default = {})
       --include-package INCLUDE_PACKAGE
                             additional packages to include
 """
