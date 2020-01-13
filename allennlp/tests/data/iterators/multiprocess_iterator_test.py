@@ -34,7 +34,7 @@ class TestMultiprocessIterator(IteratorTest):
             instances = [
                 tuple(instance.detach().cpu().numpy())
                 for batch in batches
-                for instance in batch["text"]["tokens"]
+                for instance in batch["text"]["tokens"]["tokens"]
             ]
             assert len(instances) == 5
 
