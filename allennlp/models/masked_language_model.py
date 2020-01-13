@@ -96,9 +96,9 @@ class MaskedLanguageModel(Model):
         if target_ids is not None:
             # A bit of a hack to get the right targets out of the TextField output...
             if len(target_ids) != 1:
-                targets = target_ids["bert"]
+                targets = target_ids["bert"]["token_ids"]
             else:
-                targets = list(target_ids.values())[0]
+                targets = list(target_ids.values())[0]["tokens"]
         mask_positions = mask_positions.squeeze(-1)
         batch_size, num_masks = mask_positions.size()
         if targets is not None and targets.size() != mask_positions.size():
@@ -131,8 +131,7 @@ class MaskedLanguageModel(Model):
 
         output_dict = {"probabilities": top_probs, "top_indices": top_indices}
 
-        # Using the namespace here is a hack...
-        output_dict["token_ids"] = tokens[self._target_namespace]
+        output_dict["token_ids"] = util.get_token_ids_from_text_field_tensors(tokens)
 
         if targets is not None:
             target_logits = target_logits.view(batch_size * num_masks, vocab_size)

@@ -626,9 +626,11 @@ def get_text_field_mask(
         # practice, open an issue on github.
         raise ValueError("found two mask outputs; not sure which to use!")
 
-    tensor_dims = [(tensor.dim(), tensor)
-                   for indexer_output in text_field_tensors.values()
-                   for tensor in indexer_output.values()]
+    tensor_dims = [
+        (tensor.dim(), tensor)
+        for indexer_output in text_field_tensors.values()
+        for tensor in indexer_output.values()
+    ]
     tensor_dims.sort(key=lambda x: x[0])
 
     smallest_dim = tensor_dims[0][0] - num_wrapping_dims
@@ -640,6 +642,27 @@ def get_text_field_mask(
         return ((character_tensor > 0).long().sum(dim=-1) > 0).long()
     else:
         raise ValueError("Expected a tensor with dimension 2 or 3, found {}".format(smallest_dim))
+
+
+def get_token_ids_from_text_field_tensors(
+    text_field_tensors: Dict[str, Dict[str, torch.Tensor]],
+) -> torch.Tensor:
+    """
+    Our `TextFieldTensors` are complex output structures, because they try to handle a lot of
+    potential variation. Sometimes, you just want to grab the token ids from this data structure,
+    and that's not trivial without hard-coding assumptions about your data processing, which defeats
+    the entire purpose of that generality. This method tries to let you get the token ids out of the
+    data structure in your model without hard-coding any assumptions.
+    """
+    for indexer_name, indexer_tensors in text_field_tensors.items():
+        for argument_name, tensor in indexer_tensors.items():
+            if argument_name in ["tokens", "token_ids", "input_ids"]:
+                return tensor
+    raise NotImplementedError(
+        "Our heuristic for guessing the right token ids failed. Please open an issue on "
+        "github with more detail on how you got this error, so we can implement more robust "
+        "logic in this method."
+    )
 
 
 def weighted_sum(matrix: torch.Tensor, attention: torch.Tensor) -> torch.Tensor:

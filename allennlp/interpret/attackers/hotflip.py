@@ -122,7 +122,7 @@ class Hotflip(Attacker):
                 all_indices = [
                     self.vocab._token_to_index[self.namespace][token] for token in all_tokens
                 ]
-                inputs[indexer_name] = torch.LongTensor(all_indices).unsqueeze(0)
+                inputs[indexer_name] = {"tokens": torch.LongTensor(all_indices).unsqueeze(0)}
             elif isinstance(token_indexer, TokenCharactersIndexer):
                 tokens = [Token(x) for x in all_tokens]
                 max_token_length = max(len(x) for x in all_tokens)
@@ -132,13 +132,13 @@ class Hotflip(Attacker):
                     tokens, self.vocab, "token_characters"
                 )
                 padded_tokens = token_indexer.as_padded_tensor(
-                    indexed_tokens,
-                    {"token_characters": len(tokens)},
-                    {"num_token_characters": max_token_length},
+                    indexed_tokens, {"token_characters": len(tokens)}
                 )
-                inputs[indexer_name] = torch.LongTensor(
-                    padded_tokens["token_characters"]
-                ).unsqueeze(0)
+                inputs[indexer_name] = {
+                    "token_characters": torch.LongTensor(
+                        padded_tokens["token_characters"]
+                    ).unsqueeze(0)
+                }
             elif isinstance(token_indexer, ELMoTokenCharactersIndexer):
                 elmo_tokens = []
                 for token in all_tokens:
@@ -146,7 +146,7 @@ class Hotflip(Attacker):
                         [Token(text=token)], self.vocab, "sentence"
                     )["sentence"]
                     elmo_tokens.append(elmo_indexed_token[0])
-                inputs[indexer_name] = torch.LongTensor(elmo_tokens).unsqueeze(0)
+                inputs[indexer_name] = {"tokens": torch.LongTensor(elmo_tokens).unsqueeze(0)}
             else:
                 raise RuntimeError("Unsupported token indexer:", token_indexer)
 
@@ -275,7 +275,8 @@ class Hotflip(Attacker):
                 # TODO(mattg): This is quite a bit of a hack for getting the vocab id...  I don't
                 # have better ideas at the moment, though.
                 indexer_name = self.namespace
-                input_tokens = text_field._indexed_tokens[indexer_name]
+                text_field_tensors = text_field.as_tensor(text_field.get_padding_lengths())
+                input_tokens = util.get_token_ids_from_text_field_tensors(text_field_tensors)
                 original_id_of_token_to_flip = input_tokens[index_of_token_to_flip]
 
                 # Get new token using taylor approximation.
