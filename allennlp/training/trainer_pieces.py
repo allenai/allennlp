@@ -156,7 +156,7 @@ class TrainerPieces(NamedTuple):
                 dataset_keys_to_use_str,
             )
 
-            if recover:
+            if recover and os.path.exists(vocabulary_path):
                 vocab = Vocabulary.from_files(
                     vocabulary_path,
                     vocabulary_params.get("padding_token", None),
