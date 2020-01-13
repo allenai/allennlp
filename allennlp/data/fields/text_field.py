@@ -80,7 +80,7 @@ class TextField(SequenceField[TextFieldTensors]):
         for indexer_name, indexer in self._token_indexers.items():
             indexer_lengths = indexer.get_padding_lengths(self._indexed_tokens[indexer_name])
             for key, length in indexer_lengths.items():
-                padding_lengths[f"{indexer_name}_{key}"] = length
+                padding_lengths[f"{indexer_name}___{key}"] = length
         return padding_lengths
 
     @overrides
@@ -93,7 +93,9 @@ class TextField(SequenceField[TextFieldTensors]):
 
         indexer_lengths = defaultdict(dict)
         for key, value in padding_lengths.items():
-            indexer_name, padding_key = key.split("_", 1)
+            # We want this to crash if the split fails. Should never happen, so I'm not
+            # putting in a check, but if you fail on this line, open a github issue.
+            indexer_name, padding_key = key.split("___")
             indexer_lengths[indexer_name][padding_key] = value
 
         for indexer_name, indexer in self._token_indexers.items():
