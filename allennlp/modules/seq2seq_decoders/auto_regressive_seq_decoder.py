@@ -153,7 +153,7 @@ class AutoRegressiveSeqDecoder(SeqDecoder):
         source_mask = state["source_mask"]
 
         # shape: (batch_size, max_target_sequence_length)
-        targets = target_tokens["tokens"]
+        targets = target_tokens["tokens"]["tokens"]
 
         # Prepare embeddings for targets. They will be used as gold embeddings during decoder training
         # shape: (batch_size, max_target_sequence_length, embedding_dim)

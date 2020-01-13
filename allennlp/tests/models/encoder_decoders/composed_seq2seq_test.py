@@ -7,7 +7,7 @@ class ComposedSeq2SeqTest(ModelTestCase):
     def setUp(self):
         super().setUp()
         self.set_up_model(
-            self.FIXTURES_ROOT / "encoder_decoder" / "composed_seq2seq" / "experiment_lstm.json",
+            self.FIXTURES_ROOT / "encoder_decoder" / "composed_seq2seq" / "experiment.json",
             self.FIXTURES_ROOT / "data" / "seq2seq_copy.tsv",
         )
 

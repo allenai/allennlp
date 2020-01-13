@@ -243,7 +243,7 @@ class SimpleSeq2Seq(Model):
                 top_k_predictions = output_dict["predictions"]
                 # shape: (batch_size, max_predicted_sequence_length)
                 best_predictions = top_k_predictions[:, 0, :]
-                self._bleu(best_predictions, target_tokens["tokens"])
+                self._bleu(best_predictions, target_tokens["tokens"]["tokens"])
 
         return output_dict
 
@@ -322,7 +322,7 @@ class SimpleSeq2Seq(Model):
 
         if target_tokens:
             # shape: (batch_size, max_target_sequence_length)
-            targets = target_tokens["tokens"]
+            targets = target_tokens["tokens"]["tokens"]
 
             _, target_sequence_length = targets.size()
 

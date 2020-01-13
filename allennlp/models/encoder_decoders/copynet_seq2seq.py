@@ -220,7 +220,7 @@ class CopyNetSeq2Seq(Model):
                     best_predictions = top_k_predictions[:, 0, :]
                     # shape: (batch_size, target_sequence_length)
                     gold_tokens = self._gather_extended_gold_tokens(
-                        target_tokens["tokens"], source_token_ids, target_token_ids
+                        target_tokens["tokens"]["tokens"], source_token_ids, target_token_ids
                     )
                     self._tensor_based_metric(best_predictions, gold_tokens)  # type: ignore
                 if self._token_based_metric is not None:
@@ -445,7 +445,7 @@ class CopyNetSeq2Seq(Model):
         """
         Calculate the loss against gold targets.
         """
-        batch_size, target_sequence_length = target_tokens["tokens"].size()
+        batch_size, target_sequence_length = target_tokens["tokens"]["tokens"].size()
 
         # shape: (batch_size, max_input_sequence_length)
         source_mask = state["source_mask"]
@@ -477,7 +477,7 @@ class CopyNetSeq2Seq(Model):
         step_log_likelihoods = []
         for timestep in range(num_decoding_steps):
             # shape: (batch_size,)
-            input_choices = target_tokens["tokens"][:, timestep]
+            input_choices = target_tokens["tokens"]["tokens"][:, timestep]
             # If the previous target token was copied, we use the special copy token.
             # But the end target token will always be THE end token, so we know
             # it was not copied.
@@ -503,7 +503,7 @@ class CopyNetSeq2Seq(Model):
             # shape: (batch_size, trimmed_source_length)
             copy_scores = self._get_copy_scores(state)
             # shape: (batch_size,)
-            step_target_tokens = target_tokens["tokens"][:, timestep + 1]
+            step_target_tokens = target_tokens["tokens"]["tokens"][:, timestep + 1]
             step_log_likelihood, selective_weights = self._get_ll_contrib(
                 generation_scores,
                 generation_scores_mask,
