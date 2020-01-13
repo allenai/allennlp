@@ -44,7 +44,7 @@ and report any metrics calculated by the model.
                             need to pass --embedding-sources-mapping.
       --embedding-sources-mapping EMBEDDING_SOURCES_MAPPING
                             a JSON dict defining mapping from embedding module
-                            path to embeddingpretrained-file used during training.
+                            path to embedding pretrained-file used during training.
                             If not passed, and embedding needs to be extended, we
                             will try to use the original file paths used during
                             training. If they are not available we will use random
@@ -52,20 +52,18 @@ and report any metrics calculated by the model.
       --include-package INCLUDE_PACKAGE
                             additional packages to include
 """
-from typing import Dict, Any
 import argparse
-import logging
 import json
-
+import logging
+from typing import Any, Dict
 
 from allennlp.commands.subcommand import Subcommand
-from allennlp.common.util import prepare_environment, dump_metrics
-
+from allennlp.common import Params
+from allennlp.common.util import dump_metrics, prepare_environment
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.iterators import DataIterator
 from allennlp.models.archival import load_archive
 from allennlp.training.util import evaluate
-from allennlp.common import Params
 
 logger = logging.getLogger(__name__)
 
@@ -129,7 +127,7 @@ class Evaluate(Subcommand):
             "--embedding-sources-mapping",
             type=str,
             default="",
-            help="a JSON dict defining mapping from embedding module path to embedding"
+            help="a JSON dict defining mapping from embedding module path to embedding "
             "pretrained-file used during training. If not passed, and embedding needs to be "
             "extended, we will try to use the original file paths used during training. If "
             "they are not available we will use random vectors for embedding extension.",

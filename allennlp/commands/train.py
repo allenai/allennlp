@@ -484,9 +484,9 @@ def _train_worker(
         pieces = TrainerPieces.from_params(
             params=params,
             serialization_dir=serialization_dir,
-            recover=False,
-            cache_directory=None,
-            cache_prefix=None,
+            recover=recover,
+            cache_directory=cache_directory,
+            cache_prefix=cache_prefix,
             model=model,
             embedding_sources_mapping=embedding_sources_mapping,
             extend_vocab=extend_vocab,

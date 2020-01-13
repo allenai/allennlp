@@ -27,9 +27,10 @@ allennlp serialization directories to the console in a helpful csv format.
                             additional packages to include
 """
 import argparse
+import json
 import logging
 import os
-import json
+
 from allennlp.commands.subcommand import Subcommand
 
 logger = logging.getLogger(__name__)
@@ -87,8 +88,8 @@ def print_results_from_args(args: argparse.Namespace):
     for root, _, files in os.walk(path):
         if metrics_name in files:
             full_name = os.path.join(root, metrics_name)
-            with open(full_name) as file:
-                metrics = json.load(file)
+            with open(full_name) as file_:
+                metrics = json.load(file_)
             results_dict[full_name] = metrics
 
     sorted_keys = sorted(list(results_dict.keys()))
