@@ -40,6 +40,9 @@
                 "projection_dim": 16,
                 "projection_location": "after_cnn"
             }
+        },
+        "tokens": {
+          "type": "empty"
         }
       }
     },

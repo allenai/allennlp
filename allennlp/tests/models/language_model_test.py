@@ -35,6 +35,7 @@ class TestUnidirectionalLanguageModel(ModelTestCase):
 
     def test_forward_pass_runs_correctly(self):
         training_tensors = self.dataset.as_tensor_dict()
+        print(training_tensors)
         result = self.model(**training_tensors)
 
         # Unidirectional models should not have backward_loss; bidirectional models should have it.

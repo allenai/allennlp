@@ -294,8 +294,9 @@ class LanguageModel(Model):
         return_dict = {}
 
         # If we have target tokens, calculate the loss.
-        token_ids = source.get("tokens")
-        if token_ids is not None:
+        token_id_dict = source.get("tokens")
+        if token_id_dict is not None:
+            token_ids = token_id_dict["tokens"]
             assert isinstance(contextual_embeddings, torch.Tensor)
 
             # Use token_ids to compute targets

@@ -36,7 +36,8 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
     ) -> None:
         super().__init__()
         # NOTE(mattg): I'd prefer to just use ModuleDict(token_embedders) here, but that changes
-        # weights and invalidates all prior models, just for a cosmetic change in the code.
+        # weight locations in torch state dictionaries and invalidates all prior models, just for a
+        # cosmetic change in the code.
         self._token_embedders = token_embedders
         for key, embedder in token_embedders.items():
             name = "token_embedder_%s" % key
@@ -70,18 +71,27 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
             embedder = getattr(self, "token_embedder_{}".format(key))
             forward_params = inspect.signature(embedder.forward).parameters
             forward_params_values = {}
+            missing_tensor_args = set()
             for param in forward_params.keys():
                 if param in kwargs:
                     forward_params_values[param] = kwargs[param]
+                else:
+                    missing_tensor_args.add(param)
 
             for _ in range(num_wrapping_dims):
                 embedder = TimeDistributed(embedder)
+
+            tensors: Dict[str, torch.Tensor] = text_field_input[key]
+            if len(tensors) == 1 and len(missing_tensor_args) == 1:
+                # If there's only one tensor argumnt to the embedder, and we just have one tensor to
+                # embed, we can just pass in that tensor, without requiring a name match.
+                token_vectors = embedder(list(tensors.values())[0], **forward_params_values)
             else:
-                tensors: Dict[str, torch.Tensor] = text_field_input[key]
-                # TODO(mattg): this requires that dictionary keys in a TokenIndexer match the
-                # argument names in a TokenEmbedder.  It might be nice to soften this requirement,
-                # trying to auto-detect a mapping in some cases.  Not sure that it's worth the
-                # complexity, though.
+                # If there are multiple tensor arguments, we have to require matching names from the
+                # TokenIndexer.  I don't think there's an easy way around that.
                 token_vectors = embedder(**tensors, **forward_params_values)
-            embedded_representations.append(token_vectors)
+            if token_vectors is not None:
+                # To handle some very rare use cases, we allow the return value of the embedder to
+                # be None; we just skip it in that case.
+                embedded_representations.append(token_vectors)
         return torch.cat(embedded_representations, dim=-1)
