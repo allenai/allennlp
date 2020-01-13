@@ -116,7 +116,7 @@ class Event2Mind(Model):
         target_tokens: Dict[str, torch.LongTensor],
         target_recall: UnigramRecall,
     ) -> None:
-        targets = target_tokens["tokens"]
+        targets = target_tokens["tokens"]["tokens"]
         target_mask = get_text_field_mask(target_tokens)
         # See comment in _get_loss.
         # TODO(brendanr): Do we need contiguous here?
@@ -126,7 +126,7 @@ class Event2Mind(Model):
 
     def _get_num_decoding_steps(self, target_tokens: Optional[Dict[str, torch.LongTensor]]) -> int:
         if target_tokens:
-            targets = target_tokens["tokens"]
+            targets = target_tokens["tokens"]["tokens"]
             target_sequence_length = targets.size()[1]
             # The last input from the target is either padding or the end
             # symbol.  Either way, we don't have to process it. (To be clear,
@@ -235,7 +235,7 @@ class Event2Mind(Model):
             Linear layer mapping to the desired number of classes.
         """
         num_decoding_steps = self._get_num_decoding_steps(target_tokens)
-        targets = target_tokens["tokens"]
+        targets = target_tokens["tokens"]["tokens"]
         decoder_hidden = final_encoder_output
         step_logits = []
         for timestep in range(num_decoding_steps):

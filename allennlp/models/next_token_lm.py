@@ -100,8 +100,7 @@ class NextTokenLM(Model):
         output_dict["token_ids"] = tokens[self._target_namespace]
 
         if target_ids is not None:
-            # Hack - we're assuming you only have one target indexer.
-            targets = list(target_ids.values())[0].view(batch_size)
+            targets = util.get_token_ids_from_text_field_tensors(target_ids).view(batch_size)
             target_logits = target_logits.view(batch_size, vocab_size)
             loss = torch.nn.functional.cross_entropy(target_logits, targets)
             self._perplexity(loss)

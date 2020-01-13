@@ -241,7 +241,7 @@ class BiattentiveClassificationNetwork(Model):
         # Create ELMo embeddings if applicable
         if self._elmo:
             if elmo_tokens is not None:
-                elmo_representations = self._elmo(elmo_tokens)["elmo_representations"]
+                elmo_representations = self._elmo(elmo_tokens["tokens"])["elmo_representations"]
                 # Pop from the end is more performant with list
                 if self._use_integrator_output_elmo:
                     integrator_output_elmo = elmo_representations.pop()
