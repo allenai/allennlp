@@ -37,7 +37,7 @@ class DropConnect(torch.nn.Module):
     <https://www.semanticscholar.org/paper/Regularization-of-Neural-Networks-using-DropConnect-Wan-Zeiler/38f35dd624cd1cf827416e31ac5e0e0454028eca>`_
     by Wan et al., 2013. Applies dropout to module parameters instead of module outputs.
 
-    Parameters
+    # Parameters
     ==========
     module : ``torch.nn.Module``, required
         Module to apply weight dropout to.

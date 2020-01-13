@@ -17,8 +17,8 @@ class QaNetEncoder(Seq2SeqEncoder):
     """
     Stack multiple QANetEncoderBlock into one sequence encoder.
 
-    Parameters
-    ----------
+    # Parameters
+
     input_dim : ``int``, required.
         The input dimension of the encoder.
     hidden_dim : ``int``, required.
@@ -132,8 +132,8 @@ class QaNetEncoderBlock(Seq2SeqEncoder):
            scaled by the square root of the sequence length.
         4. A two-layer FeedForward network.
 
-    Parameters
-    ----------
+    # Parameters
+
     input_dim : ``int``, required.
         The input dimension of the encoder.
     hidden_dim : ``int``, required.

@@ -19,8 +19,8 @@ from allennlp.training.metrics.srl_eval_scorer import SrlEvalScorer, DEFAULT_SRL
 class SrlBert(Model):
     """
 
-    Parameters
-    ----------
+    # Parameters
+
     vocab : ``Vocabulary``, required
         A Vocabulary, required in order to compute sizes for input/output projections.
     model : ``Union[str, BertModel]``, required.
@@ -79,8 +79,8 @@ class SrlBert(Model):
     ):
 
         """
-        Parameters
-        ----------
+        # Parameters
+
         tokens : Dict[str, torch.LongTensor], required
             The output of ``TextField.as_array()``, which should typically be passed directly to a
             ``TextFieldEmbedder``. For this model, this must be a `SingleIdTokenIndexer` which
@@ -97,8 +97,8 @@ class SrlBert(Model):
             frame for, and start offsets for converting wordpieces back to a sequence of words,
             under 'words', 'verb' and 'offsets' keys, respectively.
 
-        Returns
-        -------
+        # Returns
+
         An output dictionary consisting of:
         logits : torch.FloatTensor
             A tensor of shape ``(batch_size, num_tokens, tag_vocab_size)`` representing
@@ -239,8 +239,8 @@ class SrlBert(Model):
         constraint, pairs of labels which do not satisfy this constraint have a
         pairwise potential of -inf.
 
-        Returns
-        -------
+        # Returns
+
         transition_matrix : torch.Tensor
             A (num_labels, num_labels) matrix of pairwise potentials.
         """
@@ -261,8 +261,8 @@ class SrlBert(Model):
         In the BIO sequence, we cannot start the sequence with an I-XXX tag.
         This transition sequence is passed to viterbi_decode to specify this constraint.
 
-        Returns
-        -------
+        # Returns
+
         start_transitions : torch.Tensor
             The pairwise potentials between a START token and
             the first token of the sequence.

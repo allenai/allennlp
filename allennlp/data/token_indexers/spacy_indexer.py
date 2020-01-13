@@ -19,8 +19,8 @@ class SpacyTokenIndexer(TokenIndexer[numpy.ndarray]):
     easier integration with a spacy pipeline and no out of vocabulary
     tokens.
 
-    Parameters
-    ----------
+    # Parameters
+
     hidden_dim : ``int``, optional (default=``96``)
         The dimension of the vectors that spacy generates for
         representing words.

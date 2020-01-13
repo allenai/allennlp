@@ -17,8 +17,8 @@ class MetadataField(Field[DataArray], Mapping[str, Any]):
     this ``Field`` in a model, you'll get a list of metadata objects, one for each instance in the
     batch.
 
-    Parameters
-    ----------
+    # Parameters
+
     metadata : ``Any``
         Some object containing the metadata that you want to store.  It's likely that you'll want
         this to be a dictionary, but it could be anything you want.

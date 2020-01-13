@@ -44,8 +44,8 @@ class SpanBasedF1Measure(Metric):
         tags_to_spans_function: Optional[TAGS_TO_SPANS_FUNCTION_TYPE] = None,
     ) -> None:
         """
-        Parameters
-        ----------
+        # Parameters
+
         vocabulary : ``Vocabulary``, required.
             A vocabulary containing the tag namespace.
         tag_namespace : str, required.
@@ -104,8 +104,8 @@ class SpanBasedF1Measure(Metric):
         prediction_map: Optional[torch.Tensor] = None,
     ):
         """
-        Parameters
-        ----------
+        # Parameters
+
         predictions : ``torch.Tensor``, required.
             A tensor of predictions of shape (batch_size, sequence_length, num_classes).
         gold_labels : ``torch.Tensor``, required.
@@ -209,13 +209,13 @@ class SpanBasedF1Measure(Metric):
         of the last occurrence of the span. Handling this is important, because predicting continued
         spans is difficult and typically will effect overall average F1 score by ~ 2 points.
 
-        Parameters
-        ----------
+        # Parameters
+
         spans : ``List[TypedStringSpan]``, required.
             A list of (label, (start, end)) spans.
 
-        Returns
-        -------
+        # Returns
+
         A ``List[TypedStringSpan]`` with continued arguments replaced with a single span.
         """
         span_set: Set[TypedStringSpan] = set(spans)
@@ -236,8 +236,8 @@ class SpanBasedF1Measure(Metric):
 
     def get_metric(self, reset: bool = False):
         """
-        Returns
-        -------
+        # Returns
+
         A Dict per label containing following the span based metrics:
         precision : float
         recall : float

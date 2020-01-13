@@ -12,16 +12,16 @@ class LayerNorm(torch.nn.Module):
 
     output = (gamma * (tensor - mean) / (std + eps)) + beta
 
-    Parameters
-    ----------
+    # Parameters
+
     dimension : ``int``, required.
         The dimension of the layer output to normalize.
     eps : ``float``, optional, (default = 1e-6)
         An epsilon to prevent dividing by zero in the case
         the layer has zero variance.
 
-    Returns
-    -------
+    # Returns
+
     The normalized layer output.
     """  # noqa
 

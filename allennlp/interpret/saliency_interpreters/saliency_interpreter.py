@@ -17,13 +17,13 @@ class SaliencyInterpreter(Registrable):
         This function finds a modification to the input text that would change the model's
         prediction in some desired manner (e.g., an adversarial attack).
 
-        Parameters
-        ----------
+        # Parameters
+
         inputs : ``JsonDict``
             The input you want to interpret (the same as the argument to a Predictor, e.g., predict_json()).
 
-        Returns
-        -------
+        # Returns
+
         interpretation : ``JsonDict``
             Contains the normalized saliency values for each input token. The dict has entries for
             each instance in the inputs JsonDict, e.g., ``{instance_1: ..., instance_2:, ... }``.

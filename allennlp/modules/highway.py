@@ -19,8 +19,8 @@ class Highway(torch.nn.Module):
     This module will apply a fixed number of highway layers to its input, returning the final
     result.
 
-    Parameters
-    ----------
+    # Parameters
+
     input_dim : ``int``, required
         The dimensionality of :math:`x`.  We assume the input has shape ``(batch_size, ...,
         input_dim)``.

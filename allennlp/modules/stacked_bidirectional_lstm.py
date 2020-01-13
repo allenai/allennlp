@@ -18,8 +18,8 @@ class StackedBidirectionalLstm(torch.nn.Module):
     from the last layer of the LSTM. Note that this will be slower, as it
     doesn't use CUDNN.
 
-    Parameters
-    ----------
+    # Parameters
+
     input_size : ``int``, required
         The dimension of the inputs to the LSTM.
     hidden_size : ``int``, required
@@ -91,16 +91,16 @@ class StackedBidirectionalLstm(torch.nn.Module):
         self, inputs: PackedSequence, initial_state: Optional[TensorPair] = None
     ) -> Tuple[PackedSequence, TensorPair]:
         """
-        Parameters
-        ----------
+        # Parameters
+
         inputs : ``PackedSequence``, required.
             A batch first ``PackedSequence`` to run the stacked LSTM over.
         initial_state : Tuple[torch.Tensor, torch.Tensor], optional, (default = None)
             A tuple (state, memory) representing the initial hidden state and memory
             of the LSTM. Each tensor has shape (num_layers, batch_size, output_dimension * 2).
 
-        Returns
-        -------
+        # Returns
+
         output_sequence : PackedSequence
             The encoded sequence of shape (batch_size, sequence_length, hidden_size * 2)
         final_states: torch.Tensor

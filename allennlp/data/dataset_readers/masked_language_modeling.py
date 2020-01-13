@@ -35,8 +35,8 @@ class MaskedLanguageModelingReader(DatasetReader):
     sampling strategies for picking the locations for [MASK] tokens, and probably a bunch of
     efficiency / multi-processing stuff.
 
-    Parameters
-    ----------
+    # Parameters
+
     tokenizer : ``Tokenizer``, optional (default=``WhitespaceTokenizer()``)
         We use this ``Tokenizer`` for the text.  See :class:`Tokenizer`.
     token_indexers : ``Dict[str, TokenIndexer]``, optional (default=``{"tokens": SingleIdTokenIndexer()}``)
@@ -85,8 +85,8 @@ class MaskedLanguageModelingReader(DatasetReader):
     ) -> Instance:
 
         """
-        Parameters
-        ----------
+        # Parameters
+
         sentence : ``str``, optional
             A sentence containing [MASK] tokens that should be filled in by the model.  This input
             is superceded and ignored if ``tokens`` is given.

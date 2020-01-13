@@ -15,8 +15,8 @@ class NamespaceSwappingField(Field[torch.Tensor]):
     It is used by seq2seq models with a copy mechanism that copies tokens from the source
     sentence into the target sentence.
 
-    Parameters
-    ----------
+    # Parameters
+
     source_tokens : ``List[Token]``
         The tokens from the source sentence.
     target_namespace : ``str``

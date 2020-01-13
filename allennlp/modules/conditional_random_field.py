@@ -17,8 +17,8 @@ def allowed_transitions(constraint_type: str, labels: Dict[int, str]) -> List[Tu
     additionally include transitions for the start and end states, which are used
     by the conditional random field.
 
-    Parameters
-    ----------
+    # Parameters
+
     constraint_type : ``str``, required
         Indicates which constraint to apply. Current choices are
         "BIO", "IOB1", "BIOUL", and "BMES".
@@ -26,8 +26,8 @@ def allowed_transitions(constraint_type: str, labels: Dict[int, str]) -> List[Tu
         A mapping {label_id -> label}. Most commonly this would be the value from
         Vocabulary.get_index_to_token_vocabulary()
 
-    Returns
-    -------
+    # Returns
+
     ``List[Tuple[int, int]]``
         The allowed transitions (from_label_id, to_label_id).
     """
@@ -64,8 +64,8 @@ def is_transition_allowed(
     represent the origin and destination of the transition, return whether
     the transition is allowed under the given constraint type.
 
-    Parameters
-    ----------
+    # Parameters
+
     constraint_type : ``str``, required
         Indicates which constraint to apply. Current choices are
         "BIO", "IOB1", "BIOUL", and "BMES".
@@ -82,8 +82,8 @@ def is_transition_allowed(
         The entity corresponding to the ``to_tag``. For example, if the
         label is ``I-PER``, the ``to_entity`` is ``PER``.
 
-    Returns
-    -------
+    # Returns
+
     ``bool``
         Whether the transition is allowed under the given ``constraint_type``.
     """
@@ -163,8 +163,8 @@ class ConditionalRandomField(torch.nn.Module):
 
     See, e.g. http://www.cs.columbia.edu/~mcollins/fb.pdf
 
-    Parameters
-    ----------
+    # Parameters
+
     num_tags : ``int``, required
         The number of tags.
     constraints : ``List[Tuple[int, int]]``, optional (default: None)

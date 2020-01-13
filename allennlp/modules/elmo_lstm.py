@@ -33,8 +33,8 @@ class ElmoLstm(_EncoderBase):
     This is non-standard, but can be thought of as having an "end of sentence" state, which is
     carried across different sentences.
 
-    Parameters
-    ----------
+    # Parameters
+
     input_size : ``int``, required
         The dimension of the inputs to the LSTM.
     hidden_size : ``int``, required
@@ -111,16 +111,16 @@ class ElmoLstm(_EncoderBase):
 
     def forward(self, inputs: torch.Tensor, mask: torch.LongTensor) -> torch.Tensor:
         """
-        Parameters
-        ----------
+        # Parameters
+
         inputs : ``torch.Tensor``, required.
             A Tensor of shape ``(batch_size, sequence_length, hidden_size)``.
         mask : ``torch.LongTensor``, required.
             A binary mask of shape ``(batch_size, sequence_length)`` representing the
             non-padded elements in each sequence in the batch.
 
-        Returns
-        -------
+        # Returns
+
         A ``torch.Tensor`` of shape (num_layers, batch_size, sequence_length, hidden_size),
         where the num_layers dimension represents the LSTM output from that layer.
         """
@@ -171,8 +171,8 @@ class ElmoLstm(_EncoderBase):
         initial_state: Optional[Tuple[torch.Tensor, torch.Tensor]] = None,
     ) -> Tuple[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
         """
-        Parameters
-        ----------
+        # Parameters
+
         inputs : ``PackedSequence``, required.
             A batch first ``PackedSequence`` to run the stacked LSTM over.
         initial_state : ``Tuple[torch.Tensor, torch.Tensor]``, optional, (default = None)
@@ -180,8 +180,8 @@ class ElmoLstm(_EncoderBase):
             of the LSTM, with shape (num_layers, batch_size, 2 * hidden_size) and
             (num_layers, batch_size, 2 * cell_size) respectively.
 
-        Returns
-        -------
+        # Returns
+
         output_sequence : ``torch.FloatTensor``
             The encoded sequence of shape (num_layers, batch_size, sequence_length, hidden_size)
         final_states : ``Tuple[torch.FloatTensor, torch.FloatTensor]``

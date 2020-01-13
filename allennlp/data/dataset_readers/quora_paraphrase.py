@@ -26,8 +26,8 @@ class QuoraParaphraseDatasetReader(DatasetReader):
     fields named "label", "premise" and "hypothesis", so that it is compatible to some existing
     natural language inference algorithms.
 
-    Parameters
-    ----------
+    # Parameters
+
     lazy : ``bool`` (optional, default=False)
         Passed to ``DatasetReader``.  If this is ``True``, training will start sooner, but will
         take longer per batch.  This also allows training with datasets that are too large to fit

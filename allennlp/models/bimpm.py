@@ -27,8 +27,8 @@ class BiMpm(Model):
     Also please refer to the `TensorFlow implementation <https://github.com/zhiguowang/BiMPM/>`_ and
     `PyTorch implementation <https://github.com/galsang/BIMPM-pytorch>`_.
 
-    Parameters
-    ----------
+    # Parameters
+
     vocab : ``Vocabulary``
     text_field_embedder : ``TextFieldEmbedder``
         Used to embed the ``premise`` and ``hypothesis`` ``TextFields`` we get as input to the
@@ -127,8 +127,8 @@ class BiMpm(Model):
     ) -> Dict[str, torch.Tensor]:
         """
 
-        Parameters
-        ----------
+        # Parameters
+
         premise : Dict[str, torch.LongTensor]
             The premise from a ``TextField``
         hypothesis : Dict[str, torch.LongTensor]
@@ -137,8 +137,8 @@ class BiMpm(Model):
             The label for the pair of the premise and the hypothesis
         metadata : ``List[Dict[str, Any]]``, optional, (default = None)
             Additional information about the pair
-        Returns
-        -------
+        # Returns
+
         An output dictionary consisting of:
 
         logits : torch.FloatTensor

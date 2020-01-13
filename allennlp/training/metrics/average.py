@@ -19,8 +19,8 @@ class Average(Metric):
     @overrides
     def __call__(self, value):
         """
-        Parameters
-        ----------
+        # Parameters
+
         value : ``float``
             The value to average.
         """
@@ -30,8 +30,8 @@ class Average(Metric):
     @overrides
     def get_metric(self, reset: bool = False):
         """
-        Returns
-        -------
+        # Returns
+
         The average of all values that were passed to ``__call__``.
         """
         average_value = self._total_value / self._count if self._count > 0 else 0

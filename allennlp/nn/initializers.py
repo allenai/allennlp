@@ -70,8 +70,8 @@ def uniform_unit_scaling(tensor: torch.Tensor, nonlinearity: str = "linear"):
     <https://www.semanticscholar.org/paper/Random-Walk-Initialization-for-Training-Very-Deep-Sussillo-Abbott/be9728a0728b6acf7a485225b1e41592176eda0b>`_
     for more information.
 
-    Parameters
-    ----------
+    # Parameters
+
     tensor : ``torch.Tensor``, required.
         The tensor to initialise.
     nonlinearity : ``str``, optional (default = "linear")
@@ -79,8 +79,8 @@ def uniform_unit_scaling(tensor: torch.Tensor, nonlinearity: str = "linear"):
         tensor is involved in. This must be the name of a function contained
         in the ``torch.nn.functional`` package.
 
-    Returns
-    -------
+    # Returns
+
     The initialised tensor.
     """
     size = 1.0
@@ -105,8 +105,8 @@ def block_orthogonal(tensor: torch.Tensor, split_sizes: List[int], gain: float =
     which can be computed efficiently if they are concatenated together. However, they are
     separate parameters which should be initialized independently.
 
-    Parameters
-    ----------
+    # Parameters
+
     tensor : ``torch.Tensor``, required.
         A tensor to initialize.
     split_sizes : List[int], required.
@@ -244,8 +244,8 @@ class PretrainedModelInitializer(Initializer):
                 }
             ]
 
-    Parameters
-    ----------
+    # Parameters
+
     weights_file_path : ``str``, required
         The path to the weights file which has the pretrained model parameters.
     parameter_name_overrides : ``Dict[str, str]``, optional (default = None)
@@ -290,8 +290,8 @@ class InitializerApplicator:
         self, initializers: List[Tuple[str, Initializer]] = None, prevent_regexes: List[str] = None
     ) -> None:
         """
-        Parameters
-        ----------
+        # Parameters
+
         initializers : ``List[Tuple[str, Initializer]]``, optional (default = [])
             A list mapping parameter regexes to initializers.  We will check each parameter against
             each regex in turn, and apply the initializer paired with the first matching regex, if
@@ -308,8 +308,8 @@ class InitializerApplicator:
         Applies an initializer to all parameters in a module that match one of the regexes we were
         given in this object's constructor.  Does nothing to parameters that do not match.
 
-        Parameters
-        ----------
+        # Parameters
+
         module : torch.nn.Module, required.
             The Pytorch module to apply the initializers to.
         """
@@ -367,8 +367,8 @@ class InitializerApplicator:
         torch.nn.init documentation. Only "prevent" is a special type which does not have corresponding
         initializer. Any parameter matching its corresponding regex will be overridden to NOT initialize.
 
-        Returns
-        -------
+        # Returns
+
         An InitializerApplicator containing the specified initializers.
         """
 

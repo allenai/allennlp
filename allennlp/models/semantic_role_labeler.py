@@ -37,8 +37,8 @@ class SemanticRoleLabeler(Model):
     Specifically, the model expects and outputs IOB2-formatted tags, where the
     B- tag is used in the beginning of every chunk (i.e. all chunks start with the B- tag).
 
-    Parameters
-    ----------
+    # Parameters
+
     vocab : ``Vocabulary``, required
         A Vocabulary, required in order to compute sizes for input/output projections.
     text_field_embedder : ``TextFieldEmbedder``, required
@@ -113,8 +113,8 @@ class SemanticRoleLabeler(Model):
     ) -> Dict[str, torch.Tensor]:
 
         """
-        Parameters
-        ----------
+        # Parameters
+
         tokens : Dict[str, torch.LongTensor], required
             The output of ``TextField.as_array()``, which should typically be passed directly to a
             ``TextFieldEmbedder``. This output is a dictionary mapping keys to ``TokenIndexer``
@@ -135,8 +135,8 @@ class SemanticRoleLabeler(Model):
             metadata containg the original words in the sentence and the verb to compute the
             frame for, under 'words' and 'verb' keys, respectively.
 
-        Returns
-        -------
+        # Returns
+
         An output dictionary consisting of:
         logits : torch.FloatTensor
             A tensor of shape ``(batch_size, num_tokens, tag_vocab_size)`` representing
@@ -259,8 +259,8 @@ class SemanticRoleLabeler(Model):
         constraint, pairs of labels which do not satisfy this constraint have a
         pairwise potential of -inf.
 
-        Returns
-        -------
+        # Returns
+
         transition_matrix : torch.Tensor
             A (num_labels, num_labels) matrix of pairwise potentials.
         """
@@ -281,8 +281,8 @@ class SemanticRoleLabeler(Model):
         In the BIO sequence, we cannot start the sequence with an I-XXX tag.
         This transition sequence is passed to viterbi_decode to specify this constraint.
 
-        Returns
-        -------
+        # Returns
+
         start_transitions : torch.Tensor
             The pairwise potentials between a START token and
             the first token of the sequence.
@@ -321,8 +321,8 @@ def write_to_conll_eval_file(
     This function expects IOB2-formatted tags, where the B- tag is used in the beginning
     of every chunk (i.e. all chunks start with the B- tag).
 
-    Parameters
-    ----------
+    # Parameters
+
     prediction_file : TextIO, required.
         A file reference to print predictions to.
     gold_file : TextIO, required.

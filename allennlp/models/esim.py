@@ -25,8 +25,8 @@ class ESIM(Model):
     <https://www.semanticscholar.org/paper/Enhanced-LSTM-for-Natural-Language-Inference-Chen-Zhu/83e7654d545fbbaaf2328df365a781fb67b841b4>`_
     by Chen et al., 2017.
 
-    Parameters
-    ----------
+    # Parameters
+
     vocab : ``Vocabulary``
     text_field_embedder : ``TextFieldEmbedder``
         Used to embed the ``premise`` and ``hypothesis`` ``TextFields`` we get as input to the
@@ -121,8 +121,8 @@ class ESIM(Model):
     ) -> Dict[str, torch.Tensor]:
 
         """
-        Parameters
-        ----------
+        # Parameters
+
         premise : Dict[str, torch.LongTensor]
             From a ``TextField``
         hypothesis : Dict[str, torch.LongTensor]
@@ -133,8 +133,8 @@ class ESIM(Model):
             Metadata containing the original tokenization of the premise and
             hypothesis with 'premise_tokens' and 'hypothesis_tokens' keys respectively.
 
-        Returns
-        -------
+        # Returns
+
         An output dictionary consisting of:
 
         label_logits : torch.FloatTensor

@@ -16,8 +16,8 @@ class OntonotesSentence:
     """
     A class representing the annotations available for a single CONLL formatted sentence.
 
-    Parameters
-    ----------
+    # Parameters
+
     document_id : ``str``
         This is a variation on the document filename
     sentence_id : ``int``
@@ -377,8 +377,8 @@ class Ontonotes:
         ignore it, if it is outside of all spans. This method mutates the clusters and coref_stacks
         dictionaries.
 
-        Parameters
-        ----------
+        # Parameters
+
         label : ``str``
             The coref label for this word.
         word_index : ``int``
@@ -426,8 +426,8 @@ class Ontonotes:
         Given a sequence of different label types for a single word and the current
         span label we are inside, compute the BIO tag for each label and append to a list.
 
-        Parameters
-        ----------
+        # Parameters
+
         annotations : ``List[str]``
             A list of labels to compute BIO tags for.
         span_labels : ``List[List[str]]``

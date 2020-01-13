@@ -36,8 +36,8 @@ class BiattentiveClassificationNetwork(Model):
     which is passed through a maxout network or some feed-forward layers
     to output a classification (``output_layer``).
 
-    Parameters
-    ----------
+    # Parameters
+
     vocab : ``Vocabulary``, required
         A Vocabulary, required in order to compute sizes for input/output projections.
     text_field_embedder : ``TextFieldEmbedder``, required
@@ -210,14 +210,14 @@ class BiattentiveClassificationNetwork(Model):
     ) -> Dict[str, torch.Tensor]:
 
         """
-        Parameters
-        ----------
+        # Parameters
+
         tokens : Dict[str, torch.LongTensor], required
             The output of ``TextField.as_array()``.
         label : torch.LongTensor, optional (default = None)
             A variable representing the label for each instance in the batch.
-        Returns
-        -------
+        # Returns
+
         An output dictionary consisting of:
         class_probabilities : torch.FloatTensor
             A tensor of shape ``(batch_size, num_classes)`` representing a

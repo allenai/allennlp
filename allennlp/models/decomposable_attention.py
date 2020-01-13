@@ -30,8 +30,8 @@ class DecomposableAttention(Model):
     final entailment decision based on this aggregated comparison.  Each step in this process uses
     a feedforward network to modify the representation.
 
-    Parameters
-    ----------
+    # Parameters
+
     vocab : ``Vocabulary``
     text_field_embedder : ``TextFieldEmbedder``
         Used to embed the ``premise`` and ``hypothesis`` ``TextFields`` we get as input to the
@@ -113,8 +113,8 @@ class DecomposableAttention(Model):
     ) -> Dict[str, torch.Tensor]:
 
         """
-        Parameters
-        ----------
+        # Parameters
+
         premise : Dict[str, torch.LongTensor]
             From a ``TextField``
         hypothesis : Dict[str, torch.LongTensor]
@@ -124,8 +124,8 @@ class DecomposableAttention(Model):
         metadata : ``List[Dict[str, Any]]``, optional, (default = None)
             Metadata containing the original tokenization of the premise and
             hypothesis with 'premise_tokens' and 'hypothesis_tokens' keys respectively.
-        Returns
-        -------
+        # Returns
+
         An output dictionary consisting of:
 
         label_logits : torch.FloatTensor

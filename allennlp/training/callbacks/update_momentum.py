@@ -16,8 +16,8 @@ class UpdateMomentum(Callback):
     """
     Callback that runs a Momentum Scheduler.
 
-    Parameters
-    ----------
+    # Parameters
+
     momentum_scheduler : ``MomentumScheduler``
         The momentum scheduler to run.
     """

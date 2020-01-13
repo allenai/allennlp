@@ -55,8 +55,8 @@ class _EncoderBase(torch.nn.Module):
         of the module outputs is left to the subclasses because their outputs have different
         types and handling them smoothly here is difficult.
 
-        Parameters
-        ----------
+        # Parameters
+
         module : ``Callable[[PackedSequence, Optional[RnnState]],
                             Tuple[Union[PackedSequence, torch.Tensor], RnnState]]``, required.
             A function to run on the inputs. In most cases, this is a ``torch.nn.Module``.
@@ -73,8 +73,8 @@ class _EncoderBase(torch.nn.Module):
             (num_layers, batch_size, memory_size), representing the hidden state and memory
             state of an LSTM-like RNN.
 
-        Returns
-        -------
+        # Returns
+
         module_output : ``Union[torch.Tensor, PackedSequence]``.
             A Tensor or PackedSequence representing the output of the Pytorch Module.
             The batch size dimension will be equal to ``num_valid``, as sequences of zero
@@ -143,8 +143,8 @@ class _EncoderBase(torch.nn.Module):
         which are completely padded. Importantly, this `mutates` the state if the
         current batch size is larger than when it was previously called.
 
-        Parameters
-        ----------
+        # Parameters
+
         batch_size : ``int``, required.
             The batch size can change size across calls to stateful RNNs, so we need
             to know if we need to expand or shrink the states before returning them.
@@ -159,8 +159,8 @@ class _EncoderBase(torch.nn.Module):
             the sorted sequences, so before returning them, we sort the states using the
             same indices used to sort the sequences.
 
-        Returns
-        -------
+        # Returns
+
         This method has a complex return type because it has to deal with the first time it
         is called, when it has no state, and the fact that types of RNN have heterogeneous
         states.
@@ -229,8 +229,8 @@ class _EncoderBase(torch.nn.Module):
         computational graph, such that the graph can be garbage collected after
         each batch iteration.
 
-        Parameters
-        ----------
+        # Parameters
+
         final_states : ``RnnStateStorage``, required.
             The hidden states returned as output from the RNN.
         restoration_indices : ``torch.LongTensor``, required.
@@ -298,8 +298,8 @@ class _EncoderBase(torch.nn.Module):
         """
         Resets the internal states of a stateful encoder.
 
-        Parameters
-        ----------
+        # Parameters
+
         mask : ``torch.Tensor``, optional.
             A tensor of shape ``(batch_size,)`` indicating which states should
             be reset. If not provided, all states will be reset.

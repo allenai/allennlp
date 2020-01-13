@@ -18,8 +18,8 @@ class MultiHeadSelfAttention(Seq2SeqEncoder):
     to the scaled, normalised dot product of Q and K, which are also both linear projections
     of the input. This procedure is repeated for each attention head, using different parameters.
 
-    Parameters
-    ----------
+    # Parameters
+
     num_heads : ``int``, required.
         The number of attention heads to use.
     input_dim : ``int``, required.
@@ -86,15 +86,15 @@ class MultiHeadSelfAttention(Seq2SeqEncoder):
     @overrides
     def forward(self, inputs: torch.Tensor, mask: torch.LongTensor = None) -> torch.FloatTensor:
         """
-        Parameters
-        ----------
+        # Parameters
+
         inputs : ``torch.FloatTensor``, required.
             A tensor of shape (batch_size, timesteps, input_dim)
         mask : ``torch.FloatTensor``, optional (default = None).
             A tensor of shape (batch_size, timesteps).
 
-        Returns
-        -------
+        # Returns
+
         A tensor of shape (batch_size, timesteps, output_projection_dim),
         where output_projection_dim = input_dim by default.
         """

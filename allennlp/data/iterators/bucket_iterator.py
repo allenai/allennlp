@@ -22,8 +22,8 @@ class BucketIterator(DataIterator):
     together, making computation more efficient (as less time is wasted on padded elements of the
     batch).
 
-    Parameters
-    ----------
+    # Parameters
+
     sorting_keys : List[Tuple[str, str]], optional
         To bucket inputs into batches, we want to group the instances by padding length, so that we
         minimize the amount of padding necessary per batch. In order to do this, we need to know

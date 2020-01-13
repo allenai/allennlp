@@ -24,15 +24,15 @@ def get_file_paths(pathname: str, languages: List[str]):
     Filenames are assumed to have the language identifier followed by a dash
     as a prefix (e.g. en-universal.conll).
 
-    Parameters
-    ----------
+    # Parameters
+
     pathname :  ``str``, required.
         An absolute or relative pathname (can contain shell-style wildcards)
     languages : ``List[str]``, required
         The language identifiers to use.
 
-    Returns
-    -------
+    # Returns
+
     A list of tuples (language id, file path).
     """
     paths = []
@@ -62,8 +62,8 @@ class UniversalDependenciesMultiLangDatasetReader(DatasetReader):
     Notice: when using the alternate option, one should also use the ``instances_per_epoch``
     option for the iterator. Otherwise, each epoch will loop infinitely.
 
-    Parameters
-    ----------
+    # Parameters
+
     languages : ``List[str]``, required
         The language identifiers to use.
     token_indexers : ``Dict[str, TokenIndexer]``, optional (default=``{"tokens": SingleIdTokenIndexer()}``)
@@ -165,8 +165,8 @@ class UniversalDependenciesMultiLangDatasetReader(DatasetReader):
     ) -> Instance:
 
         """
-        Parameters
-        ----------
+        # Parameters
+
         lang : ``str``, required.
             The language identifier.
         words : ``List[str]``, required.
@@ -178,8 +178,8 @@ class UniversalDependenciesMultiLangDatasetReader(DatasetReader):
             meaning an index of 0 corresponds to that word being the root of
             the dependency tree.
 
-        Returns
-        -------
+        # Returns
+
         An instance containing words, upos tags, dependency head tags and head
         indices as fields. The language identifier is stored in the metadata.
         """

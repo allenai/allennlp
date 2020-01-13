@@ -159,8 +159,8 @@ def find_learning_rate_model(
     """
     Runs learning rate search for given `num_batches` and saves the results in ``serialization_dir``
 
-    Parameters
-    ----------
+    # Parameters
+
     params : ``Params``
         A parameter object specifying an AllenNLP Experiment.
     serialization_dir : ``str``
@@ -270,8 +270,8 @@ def search_learning_rate(
     """
     Runs training loop on the model using :class:`~allennlp.training.trainer.Trainer`
     increasing learning rate from ``start_lr`` to ``end_lr`` recording the losses.
-    Parameters
-    ----------
+    # Parameters
+
     trainer: :class:`~allennlp.training.trainer.Trainer`
     start_lr : ``float``
         The learning rate to start the search.
@@ -284,8 +284,8 @@ def search_learning_rate(
     stopping_factor : ``float``
         Stop the search when the current loss exceeds the best loss recorded by
         multiple of stopping factor. If ``None`` search proceeds till the ``end_lr``
-    Returns
-    -------
+    # Returns
+
     (learning_rates, losses) : ``Tuple[List[float], List[float]]``
         Returns list of learning rates and corresponding losses.
         Note: The losses are recorded before applying the corresponding learning rate

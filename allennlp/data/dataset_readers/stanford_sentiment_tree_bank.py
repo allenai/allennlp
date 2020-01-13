@@ -37,8 +37,8 @@ class StanfordSentimentTreeBankDatasetReader(DatasetReader):
         tokens : ``TextField`` and
         label : ``LabelField``
 
-    Parameters
-    ----------
+    # Parameters
+
     token_indexers : ``Dict[str, TokenIndexer]``, optional (default=``{"tokens": SingleIdTokenIndexer()}``)
         We use this to define the input representation for the text.  See :class:`TokenIndexer`.
     use_subtrees : ``bool``, optional, (default = ``False``)
@@ -95,15 +95,15 @@ class StanfordSentimentTreeBankDatasetReader(DatasetReader):
         """
         We take `pre-tokenized` input here, because we don't have a tokenizer in this class.
 
-        Parameters
-        ----------
+        # Parameters
+
         tokens : ``List[str]``, required.
             The tokens in a given sentence.
         sentiment : ``str``, optional, (default = None).
             The sentiment for this sentence.
 
-        Returns
-        -------
+        # Returns
+
         An ``Instance`` containing the following fields:
             tokens : ``TextField``
                 The tokens in the sentence or phrase.

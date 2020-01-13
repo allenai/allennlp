@@ -30,8 +30,8 @@ class StackedSelfAttentionEncoder(Seq2SeqEncoder):
 
     These are then stacked into ``num_layers`` layers.
 
-    Parameters
-    ----------
+    # Parameters
+
     input_dim : ``int``, required.
         The input dimension of the encoder.
     hidden_dim : ``int``, required.

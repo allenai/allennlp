@@ -21,8 +21,8 @@ class SimpleTagger(Model):
     This ``SimpleTagger`` simply encodes a sequence of text with a stacked ``Seq2SeqEncoder``, then
     predicts a tag for each token in the sequence.
 
-    Parameters
-    ----------
+    # Parameters
+
     vocab : ``Vocabulary``, required
         A Vocabulary, required in order to compute sizes for input/output projections.
     text_field_embedder : ``TextFieldEmbedder``, required
@@ -112,8 +112,8 @@ class SimpleTagger(Model):
     ) -> Dict[str, torch.Tensor]:
 
         """
-        Parameters
-        ----------
+        # Parameters
+
         tokens : Dict[str, torch.LongTensor], required
             The output of ``TextField.as_array()``, which should typically be passed directly to a
             ``TextFieldEmbedder``. This output is a dictionary mapping keys to ``TokenIndexer``
@@ -129,8 +129,8 @@ class SimpleTagger(Model):
         metadata : ``List[Dict[str, Any]]``, optional, (default = None)
             metadata containing the original words in the sentence to be tagged under a 'words' key.
 
-        Returns
-        -------
+        # Returns
+
         An output dictionary consisting of:
         logits : torch.FloatTensor
             A tensor of shape ``(batch_size, num_tokens, tag_vocab_size)`` representing

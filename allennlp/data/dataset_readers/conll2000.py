@@ -36,8 +36,8 @@ class Conll2000DatasetReader(DatasetReader):
     And if you specify any ``feature_labels`` (you probably shouldn't),
     the corresponding values will get loaded into their own ``SequenceLabelField`` s.
 
-    Parameters
-    ----------
+    # Parameters
+
     token_indexers : ``Dict[str, TokenIndexer]``, optional (default=``{"tokens": SingleIdTokenIndexer()}``)
         We use this to define the input representation for the text.  See :class:`TokenIndexer`.
     tag_label : ``str``, optional (default=``chunk``)

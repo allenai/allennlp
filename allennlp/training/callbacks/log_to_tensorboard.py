@@ -21,8 +21,8 @@ class LogToTensorboard(Callback):
     """
     Callback that handles all Tensorboard logging.
 
-    Parameters
-    ----------
+    # Parameters
+
     tensorboard : ``TensorboardWriter``
         The TensorboardWriter instance to write to.
     log_batch_size_period : int, optional (default: None)

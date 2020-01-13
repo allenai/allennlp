@@ -219,7 +219,7 @@ def _docspec_comments(obj) -> Dict[str, str]:
     docstring = class_docstring or init_docstring or ""
 
     doc = NumpyDocString(docstring)
-    params = doc["Parameters"]
+    params = doc["# Parameters"]
     comments: Dict[str, str] = {}
 
     for line in params:

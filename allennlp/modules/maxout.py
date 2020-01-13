@@ -13,8 +13,8 @@ class Maxout(torch.nn.Module, FromParams):
     """
     This ``Module`` is a maxout neural network.
 
-    Parameters
-    ----------
+    # Parameters
+
     input_dim : ``int``, required
         The dimensionality of the input.  We assume the input has shape ``(batch_size, input_dim)``.
     num_layers : ``int``, required

@@ -226,7 +226,7 @@ class TestFromParams(AllenNlpTestCase):
         tval2 = 6
         d = BaseClass.from_params(params=params, extra=extra, a=tval1, c=tval2, n=10)
 
-        # Tests for List Parameters
+        # Tests for List # Parameters
         assert len(d.arg1) == len(vals)
         assert isinstance(d.arg1, list)
         assert isinstance(d.arg1[0], A)

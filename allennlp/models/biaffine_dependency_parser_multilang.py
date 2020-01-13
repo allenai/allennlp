@@ -38,8 +38,8 @@ class BiaffineDependencyParserMultiLang(BiaffineDependencyParser):
     identifier in the metadata.
 
 
-    Parameters
-    ----------
+    # Parameters
+
     vocab : ``Vocabulary``, required
         A Vocabulary, required in order to compute sizes for input/output projections.
     text_field_embedder : ``TextFieldEmbedder``, required

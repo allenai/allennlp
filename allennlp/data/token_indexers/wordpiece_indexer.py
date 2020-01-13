@@ -24,8 +24,8 @@ class WordpieceIndexer(TokenIndexer[int]):
     If you are using one of the pretrained BERT models, you'll want to use the ``PretrainedBertIndexer``
     subclass rather than this base class.
 
-    Parameters
-    ----------
+    # Parameters
+
     vocab : ``Dict[str, int]``
         The mapping {wordpiece -> id}.  Note this is not an AllenNLP ``Vocabulary``.
     wordpiece_tokenizer : ``Callable[[str], List[str]]``
@@ -327,8 +327,8 @@ class PretrainedBertIndexer(WordpieceIndexer):
     """
     A ``TokenIndexer`` corresponding to a pretrained BERT model.
 
-    Parameters
-    ----------
+    # Parameters
+
     pretrained_model : ``str``
         Either the name of the pretrained model to use (e.g. 'bert-base-uncased'),
         or the path to the .txt file with its vocabulary.

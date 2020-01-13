@@ -29,8 +29,8 @@ class UnigramRecall(Metric):
         end_index: int = sys.maxsize,
     ):
         """
-        Parameters
-        ----------
+        # Parameters
+
         predictions : ``torch.Tensor``, required.
             A tensor of predictions of shape (batch_size, k, sequence_length).
         gold_labels : ``torch.Tensor``, required.
@@ -81,8 +81,8 @@ class UnigramRecall(Metric):
 
     def get_metric(self, reset: bool = False):
         """
-        Returns
-        -------
+        # Returns
+
         The accumulated recall.
         """
         recall = float(self.correct_count) / float(self.total_count) if self.total_count > 0 else 0
