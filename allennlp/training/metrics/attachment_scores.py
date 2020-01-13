@@ -15,8 +15,8 @@ class AttachmentScores(Metric):
     to this metric is the sampled predictions, not the distribution
     itself.
 
-    Parameters
-    ----------
+    # Parameters
+
     ignore_classes : ``List[int]``, optional (default = None)
         A list of label ids to ignore when computing metrics.
     """
@@ -40,8 +40,8 @@ class AttachmentScores(Metric):
         mask: Optional[torch.Tensor] = None,
     ):
         """
-        Parameters
-        ----------
+        # Parameters
+
         predicted_indices : ``torch.Tensor``, required.
             A tensor of head index predictions of shape (batch_size, timesteps).
         predicted_labels : ``torch.Tensor``, required.
@@ -85,8 +85,8 @@ class AttachmentScores(Metric):
 
     def get_metric(self, reset: bool = False):
         """
-        Returns
-        -------
+        # Returns
+
         The accumulated metrics as a dictionary.
         """
         unlabeled_attachment_score = 0.0

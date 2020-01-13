@@ -179,8 +179,8 @@ def fine_tune_model_from_file_paths(
     """
     A wrapper around :func:`fine_tune_model` which loads the model archive from a file.
 
-    Parameters
-    ----------
+    # Parameters
+
     model_archive_path : ``str``
         Path to a saved model archive that is the result of running the ``train`` command.
     config_file : ``str``

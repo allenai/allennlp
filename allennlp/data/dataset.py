@@ -83,8 +83,8 @@ class Batch(Iterable):
         first, then we combine all of the tensors for each field in each instance into a set of
         batched tensors for each field.
 
-        Parameters
-        ----------
+        # Parameters
+
         padding_lengths : ``Dict[str, Dict[str, int]]``
             If a key is present in this dictionary with a non-``None`` value, we will pad to that
             length instead of the length calculated from the data.  This lets you, e.g., set a
@@ -98,8 +98,8 @@ class Batch(Iterable):
             But if you're doing this inside of a data generator, having all of this output per
             batch is a bit obnoxious (and really slow).
 
-        Returns
-        -------
+        # Returns
+
         tensors : ``Dict[str, DataArray]``
             A dictionary of tensors, keyed by field name, suitable for passing as input to a model.
             This is a `batch` of instances, so, e.g., if the instances have a "question" field and

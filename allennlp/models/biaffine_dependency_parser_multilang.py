@@ -24,10 +24,10 @@ class BiaffineDependencyParserMultiLang(BiaffineDependencyParser):
     """
     This dependency parser implements the multi-lingual extension
     of the Dozat and Manning (2016) model as described in
-    `Cross-Lingual Alignment of Contextual Word Embeddings, with Applications to Zero-shot
-    Dependency Parsing (Schuster et al., 2019) <https://www.aclweb.org/anthology/papers/N/N19/N19-1162>`_ .
-    Also, please refer to the `alignment computation code
-    <https://github.com/TalSchuster/CrossLingualELMo>`_.
+    [Cross-Lingual Alignment of Contextual Word Embeddings, with Applications to Zero-shot
+    Dependency Parsing (Schuster et al., 2019)] (https://www.aclweb.org/anthology/papers/N/N19/N19-1162).
+    Also, please refer to the [alignment computation code]
+    (https://github.com/TalSchuster/CrossLingualELMo).
 
     All parameters are shared across all languages except for
     the text_field_embedder. For aligned ELMo embeddings, use the
@@ -38,8 +38,8 @@ class BiaffineDependencyParserMultiLang(BiaffineDependencyParser):
     identifier in the metadata.
 
 
-    Parameters
-    ----------
+    # Parameters
+
     vocab : ``Vocabulary``, required
         A Vocabulary, required in order to compute sizes for input/output projections.
     text_field_embedder : ``TextFieldEmbedder``, required

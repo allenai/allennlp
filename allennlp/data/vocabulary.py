@@ -29,8 +29,8 @@ NAMESPACE_PADDING_FILE = "non_padded_namespaces.txt"
 
 class _NamespaceDependentDefaultDict(defaultdict):
     """
-    This is a `defaultdict
-    <https://docs.python.org/2/library/collections.html#collections.defaultdict>`_ where the
+    This is a [defaultdict]
+    (https://docs.python.org/2/library/collections.html#collections.defaultdict) where the
     default value is dependent on the key that is passed.
 
     We use "namespaces" in the :class:`Vocabulary` object to keep track of several different
@@ -47,8 +47,8 @@ class _NamespaceDependentDefaultDict(defaultdict):
     ``passage_tags``, ``question_tags``, etc. (anything that ends with ``tags``) will have the
     ``non_padded`` default value.
 
-    Parameters
-    ----------
+    # Parameters
+
     non_padded_namespaces : ``Iterable[str]``
         A set / list / tuple of strings describing which namespaces are not padded.  If a namespace
         (key) is missing from this dictionary, we will use :func:`namespace_match` to see whether
@@ -153,8 +153,8 @@ class Vocabulary(Registrable):
     methods on this class allow you to pass in a namespace; by default we use the 'tokens'
     namespace, and you can omit the namespace argument everywhere and just use the default.
 
-    Parameters
-    ----------
+    # Parameters
+
     counter : ``Dict[str, Dict[str, int]]``, optional (default=``None``)
         A collection of counts from which to initialize this vocabulary.  We will examine the
         counts and, together with the other parameters to this class, use them to decide which
@@ -291,8 +291,8 @@ class Vocabulary(Registrable):
         Persist this Vocabulary to files so it can be reloaded later.
         Each namespace corresponds to one file.
 
-        Parameters
-        ----------
+        # Parameters
+
         directory : ``str``
             The directory where we save the serialized vocabulary.
         """
@@ -326,8 +326,8 @@ class Vocabulary(Registrable):
         """
         Loads a ``Vocabulary`` that was serialized using ``save_to_files``.
 
-        Parameters
-        ----------
+        # Parameters
+
         directory : ``str``
             The directory containing the serialized vocabulary.
         """
@@ -374,8 +374,8 @@ class Vocabulary(Registrable):
         whatever reason, you can do that with this method.  You must specify the namespace to use,
         and we assume that you want to use padding and OOV tokens for this.
 
-        Parameters
-        ----------
+        # Parameters
+
         filename : ``str``
             The file containing the vocabulary to load.  It should be formatted as one token per
             line, with nothing else in the line.  The index we assign to the token is the line
@@ -469,8 +469,8 @@ class Vocabulary(Registrable):
         specification from a ``Params`` object, generated from a JSON
         configuration file.
 
-        Parameters
-        ----------
+        # Parameters
+
         params: Params, required.
         instances: Iterable['adi.Instance'], optional
             If ``params`` doesn't contain a ``directory_path`` key,
@@ -481,8 +481,8 @@ class Vocabulary(Registrable):
             dataset instances will be used to extend the vocabulary loaded
             from ``directory_path`` and that will be final vocabulary used.
 
-        Returns
-        -------
+        # Returns
+
         A ``Vocabulary``.
         """
 

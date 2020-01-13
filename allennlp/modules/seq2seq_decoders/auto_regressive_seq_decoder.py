@@ -22,8 +22,8 @@ class AutoRegressiveSeqDecoder(SeqDecoder):
     """
     An autoregressive decoder that can be used for most seq2seq tasks.
 
-    Parameters
-    ----------
+    # Parameters
+
     vocab : ``Vocabulary``, required
         Vocabulary containing source and target vocabularies. They may be under the same namespace
         (`tokens`) or the target tokens can have a different namespace, in which case it needs to
@@ -347,8 +347,8 @@ class AutoRegressiveSeqDecoder(SeqDecoder):
         """
         Take a decoding step. This is called by the beam search class.
 
-        Parameters
-        ----------
+        # Parameters
+
         last_predictions : ``torch.Tensor``
             A tensor of shape ``(group_size,)``, which gives the indices of the predictions
             during the last time step.
@@ -359,8 +359,8 @@ class AutoRegressiveSeqDecoder(SeqDecoder):
             tensors has shape ``(group_size, *)``, where ``*`` can be any other number
             of dimensions.
 
-        Returns
-        -------
+        # Returns
+
         Tuple[torch.Tensor, Dict[str, torch.Tensor]]
             A tuple of ``(log_probabilities, updated_state)``, where ``log_probabilities``
             is a tensor of shape ``(group_size, num_classes)`` containing the predicted

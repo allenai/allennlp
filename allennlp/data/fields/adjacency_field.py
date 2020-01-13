@@ -24,8 +24,8 @@ class AdjacencyField(Field[torch.Tensor]):
     where the (i, j)th array element is either a binary flag indicating there is an edge from i to j,
     or an integer label k, indicating there is a label from i to j of type k.
 
-    Parameters
-    ----------
+    # Parameters
+
     indices : ``List[Tuple[int, int]]``
     sequence_field : ``SequenceField``
         A field containing the sequence that this ``AdjacencyField`` is labeling.  Most often,

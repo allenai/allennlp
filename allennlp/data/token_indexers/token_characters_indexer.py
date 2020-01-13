@@ -18,8 +18,8 @@ class TokenCharactersIndexer(TokenIndexer[List[int]]):
     """
     This :class:`TokenIndexer` represents tokens as lists of character indices.
 
-    Parameters
-    ----------
+    # Parameters
+
     namespace : ``str``, optional (default=``token_characters``)
         We will use this namespace in the :class:`Vocabulary` to map the characters in each token
         to indices.

@@ -24,15 +24,15 @@ def _convert_tags_to_wordpiece_tags(tags: List[str], offsets: List[int]) -> List
 
     This is only used if you pass a `bert_model_name` to the dataset reader below.
 
-    Parameters
-    ----------
+    # Parameters
+
     tags : `List[str]`
         The BIO formatted tags to convert to BIO tags for wordpieces
     offsets : `List[int]`
         The wordpiece offsets.
 
-    Returns
-    -------
+    # Returns
+
     The new BIO tags.
     """
     new_tags = []
@@ -69,15 +69,15 @@ def _convert_verb_indices_to_wordpiece_indices(verb_indices: List[int], offsets:
 
     This is only used if you pass a `bert_model_name` to the dataset reader below.
 
-    Parameters
-    ----------
+    # Parameters
+
     verb_indices : `List[int]`
         The binary verb indicators, 0 for not a verb, 1 for verb.
     offsets : `List[int]`
         The wordpiece offsets.
 
-    Returns
-    -------
+    # Returns
+
     The new verb indices.
     """
     j = 0
@@ -106,8 +106,8 @@ class SrlReader(DatasetReader):
     tags : ``SequenceLabelField``
         A sequence of Propbank tags for the given verb in a BIO format.
 
-    Parameters
-    ----------
+    # Parameters
+
     token_indexers : ``Dict[str, TokenIndexer]``, optional
         We similarly use this for both the premise and the hypothesis.  See :class:`TokenIndexer`.
         Default is ``{"tokens": SingleIdTokenIndexer()}``.
@@ -120,8 +120,8 @@ class SrlReader(DatasetReader):
         and will expand your tags and verb indicators accordingly. If not,
         the tokens will be indexed as normal with the token_indexers.
 
-    Returns
-    -------
+    # Returns
+
     A ``Dataset`` of ``Instances`` for Semantic Role Labelling.
     """
 
@@ -168,8 +168,8 @@ class SrlReader(DatasetReader):
         _first_ wordpiece label to be the label for the token, because otherwise
         we may end up with invalid tag sequences (we cannot start a new tag with an I).
 
-        Returns
-        -------
+        # Returns
+
         wordpieces : List[str]
             The BERT wordpieces from the words in the sentence.
         end_offsets : List[int]

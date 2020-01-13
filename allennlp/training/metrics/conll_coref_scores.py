@@ -23,8 +23,8 @@ class ConllCorefScores(Metric):
         metadata_list: List[Dict[str, Any]],
     ):
         """
-        Parameters
-        ----------
+        # Parameters
+
         top_spans : ``torch.Tensor``
             (start, end) indices for all spans kept after span pruning in the model.
             Expected shape: (batch_size, num_spans, 2)

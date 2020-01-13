@@ -24,8 +24,8 @@ class SequenceLabelField(Field[torch.Tensor]):
     This field will get converted into a list of integer class ids, representing the correct class
     for each element in the sequence.
 
-    Parameters
-    ----------
+    # Parameters
+
     labels : ``Union[List[str], List[int]]``
         A sequence of categorical labels, encoded as strings or integers.  These could be POS tags like [NN,
         JJ, ...], BIO tags like [B-PERS, I-PERS, O, O, ...], or any other categorical tag sequence. If the

@@ -15,8 +15,8 @@ class UpdateMovingAverage(Callback):
     """
     Callback that orchestrates checkpointing of your model and training state.
 
-    Parameters
-    ----------
+    # Parameters
+
     moving_aveage : ``MovingAverage``
         The MovingAverage object to update.
     """

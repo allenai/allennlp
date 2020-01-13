@@ -46,8 +46,8 @@ class Registrable(FromParams):
         """
         Register a class under a particular name.
 
-        Parameters
-        ----------
+        # Parameters
+
         name : ``str``
             The name to register the class under.
         exist_ok : ``bool``, optional (default=False)

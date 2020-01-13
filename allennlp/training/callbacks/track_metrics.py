@@ -23,8 +23,8 @@ class TrackMetrics(Callback):
     """
     Callback that handles tracking of metrics and (potentially) early stopping.
 
-    Parameters
-    ----------
+    # Parameters
+
     patience : int, optional (default = None)
         If a positive number is provided, training will stop when the supplied
         validation_metric has not improved in this many epochs.

@@ -26,8 +26,8 @@ class LanguageModelTokenEmbedder(TokenEmbedder):
     average of the layers from the LM. Typically the LM's weights
     will be fixed, but they can be fine tuned by setting ``requires_grad``.
 
-    Parameters
-    ----------
+    # Parameters
+
     archive_file : ``str``, required
         An archive file, typically model.tar.gz, from a LanguageModel.
         The contextualizer used by the LM must satisfy two requirements:
@@ -154,14 +154,14 @@ class LanguageModelTokenEmbedder(TokenEmbedder):
         inputs: torch.Tensor,
     ) -> Dict[str, torch.Tensor]:
         """
-        Parameters
-        ----------
+        # Parameters
+
         inputs : ``torch.Tensor``
             Shape ``(batch_size, timesteps, ...)`` of token ids representing the current batch.
             These must have been produced using the same indexer the LM was trained on.
 
-        Returns
-        -------
+        # Returns
+
         The bidirectional language model representations for the input sequence, shape
         ``(batch_size, timesteps, embedding_dim)``
         """

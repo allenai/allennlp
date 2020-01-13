@@ -38,8 +38,8 @@ def sparse_clip_norm(parameters, max_norm, norm_type=2) -> float:
     concatenated into a single vector. Gradients are modified in-place.
     Supports sparse gradients.
 
-    Parameters
-    ----------
+    # Parameters
+
     parameters : ``(Iterable[torch.Tensor])``
         An iterable of Tensors that will have gradients normalized.
     max_norm : ``float``
@@ -47,8 +47,8 @@ def sparse_clip_norm(parameters, max_norm, norm_type=2) -> float:
     norm_type : ``float``
         The type of the used p-norm. Can be ``'inf'`` for infinity norm.
 
-    Returns
-    -------
+    # Returns
+
     Total norm of the parameters (viewed as a single vector).
     """
     parameters = list(filter(lambda p: p.grad is not None, parameters))
@@ -134,8 +134,8 @@ def datasets_from_params(
     """
     Load all the datasets specified by the config.
 
-    Parameters
-    ----------
+    # Parameters
+
     params : ``Params``
     cache_directory : ``str``, optional
         If given, we will instruct the ``DatasetReaders`` that we construct to cache their
@@ -252,8 +252,8 @@ def create_serialization_dir(
     This function creates the serialization directory if it doesn't exist.  If it already exists
     and is non-empty, then it verifies that we're recovering from a training with an identical configuration.
 
-    Parameters
-    ----------
+    # Parameters
+
     params : ``Params``
         A parameter object specifying an AllenNLP Experiment.
     serialization_dir : ``str``

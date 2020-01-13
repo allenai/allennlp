@@ -17,8 +17,8 @@ class Instance(Mapping[str, Field]):
     processing pipeline, all fields will be indexed, after which multiple instances can be combined
     into a ``Batch`` and then converted into padded arrays.
 
-    Parameters
-    ----------
+    # Parameters
+
     fields : ``Dict[str, Field]``
         The ``Field`` objects that will be used to produce data arrays for this instance.
     """

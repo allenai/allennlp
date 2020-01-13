@@ -179,8 +179,8 @@ def train_model_from_file(
     """
     A wrapper around :func:`train_model` which loads the params from a file.
 
-    Parameters
-    ----------
+    # Parameters
+
     parameter_filename : ``str``
         A json parameter file specifying an AllenNLP experiment.
     serialization_dir : ``str``
@@ -241,8 +241,8 @@ def train_model(
     Trains the model specified in the given :class:`Params` object, using the data and training
     parameters also specified in that object, and saves the results in ``serialization_dir``.
 
-    Parameters
-    ----------
+    # Parameters
+
     params : ``Params``
         A parameter object specifying an AllenNLP Experiment.
     serialization_dir : ``str``
@@ -275,8 +275,8 @@ def train_model(
         Mapping from model paths to the pretrained embedding filepaths.
         Used only when fine-tuning.
 
-    Returns
-    -------
+    # Returns
+
     best_model : ``Model``
         The model with the best epoch weights.
     """
@@ -396,8 +396,8 @@ def _train_worker(
     worker process. In a single GPU experiment, this returns the ``Model`` object and in distributed
     training, nothing is returned.
 
-    Parameters
-    ----------
+    # Parameters
+
     process_rank : ``int``
         The process index that is initialized using the GPU device id.
     params : ``Params``
@@ -424,8 +424,8 @@ def _train_worker(
     world_size : ``int``, optional
         The number of processes involved in distributed training.
 
-    Returns
-    -------
+    # Returns
+
     best_model : ``Model``
         The model with the best epoch weights.
     """

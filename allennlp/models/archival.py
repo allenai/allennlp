@@ -54,8 +54,8 @@ class Archive(NamedTuple):
                 [".*transferred_module_name.*", "prevent"]]
             ]
 
-        Parameters
-        ----------
+        # Parameters
+
         path : ``str``, required
             Path of target module to be loaded from the model.
             Eg. "_textfield_embedder.token_embedder_tokens"
@@ -105,8 +105,8 @@ def archive_model(
     vocabulary to `model.tar.gz`. Include the additional ``files_to_archive``
     if provided.
 
-    Parameters
-    ----------
+    # Parameters
+
     serialization_dir : ``str``
         The directory where the weights and vocabulary are written out.
     weights : ``str``, optional (default=_DEFAULT_WEIGHTS)
@@ -163,8 +163,8 @@ def load_archive(
     """
     Instantiates an Archive from an archived `tar.gz` file.
 
-    Parameters
-    ----------
+    # Parameters
+
     archive_file : ``str``
         The archive file to load the model from.
     weights_file : ``str``, optional (default = None)

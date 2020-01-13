@@ -70,8 +70,8 @@ class CallbackTrainer(TrainerBase):
         notification when training finishes. For more complicated variations, you might have
         to create your own subclass, in which case make sure to fire off all the training events.
 
-        Parameters
-        ----------
+        # Parameters
+
         model : ``Model``, required.
             An AllenNLP model to be optimized. Pytorch Modules can also be optimized if
             their ``forward`` method returns a dictionary with a "loss" key, containing a

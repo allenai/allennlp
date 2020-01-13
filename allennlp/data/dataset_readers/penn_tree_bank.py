@@ -44,8 +44,8 @@ class PennTreeBankConstituencySpanDatasetReader(DatasetReader):
     it enumerates all possible spans in the sentence and returns them, along with gold
     labels for the relevant spans present in a gold tree, if provided.
 
-    Parameters
-    ----------
+    # Parameters
+
     token_indexers : ``Dict[str, TokenIndexer]``, optional (default=``{"tokens": SingleIdTokenIndexer()}``)
         We use this to define the input representation for the text.  See :class:`TokenIndexer`.
         Note that the `output` tags will always correspond to single token IDs based on how they
@@ -108,8 +108,8 @@ class PennTreeBankConstituencySpanDatasetReader(DatasetReader):
         """
         We take `pre-tokenized` input here, because we don't have a tokenizer in this class.
 
-        Parameters
-        ----------
+        # Parameters
+
         tokens : ``List[str]``, required.
             The tokens in a given sentence.
         pos_tags : ``List[str]``, optional, (default = None).
@@ -117,8 +117,8 @@ class PennTreeBankConstituencySpanDatasetReader(DatasetReader):
         gold_tree : ``Tree``, optional (default = None).
             The gold parse tree to create span labels from.
 
-        Returns
-        -------
+        # Returns
+
         An ``Instance`` containing the following fields:
             tokens : ``TextField``
                 The tokens in the sentence.
@@ -212,8 +212,8 @@ class PennTreeBankConstituencySpanDatasetReader(DatasetReader):
         which we haven't encountered, we won't be able to run the model
         at all.
 
-        Parameters
-        ----------
+        # Parameters
+
         tree : ``Tree``, required.
             An NLTK parse tree to extract spans from.
         index : ``int``, required.
@@ -221,8 +221,8 @@ class PennTreeBankConstituencySpanDatasetReader(DatasetReader):
         typed_spans : ``Dict[Tuple[int, int], str]``, required.
             A dictionary mapping spans to span labels.
 
-        Returns
-        -------
+        # Returns
+
         typed_spans : ``Dict[Tuple[int, int], str]``.
             A dictionary mapping all subtree spans in the parse tree
             to their constituency labels. POS tags are ignored.

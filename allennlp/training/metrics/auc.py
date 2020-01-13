@@ -28,8 +28,8 @@ class Auc(Metric):
         mask: Optional[torch.Tensor] = None,
     ):
         """
-        Parameters
-        ----------
+        # Parameters
+
         predictions : ``torch.Tensor``, required.
             A one-dimensional tensor of prediction scores of shape (batch_size).
         gold_labels : ``torch.Tensor``, required.

@@ -23,8 +23,8 @@ class SnliReader(DatasetReader):
     "premise" and "hypothesis", along with a metadata field containing the tokenized strings of the
     premise and hypothesis.
 
-    Parameters
-    ----------
+    # Parameters
+
     tokenizer : ``Tokenizer``, optional (default=``SpacyTokenizer()``)
         We use this ``Tokenizer`` for both the premise and the hypothesis.  See :class:`Tokenizer`.
     token_indexers : ``Dict[str, TokenIndexer]``, optional (default=``{"tokens": SingleIdTokenIndexer()}``)

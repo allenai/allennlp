@@ -13,8 +13,8 @@ class BilinearMatrixAttention(MatrixAttention):
     a matrix of weights ``W`` and a bias ``b``, and the similarity between the two matrices ``X``
     and ``Y`` is computed as ``X W Y^T + b``.
 
-    Parameters
-    ----------
+    # Parameters
+
     matrix_1_dim : ``int``, required
         The dimension of the matrix ``X``, described above.  This is ``X.size()[-1]`` - the length
         of the vector that will go into the similarity computation.  We need this so we can build

@@ -28,8 +28,8 @@ class PretrainedTransformerTokenizer(Tokenizer):
     This tokenizer also indexes tokens and adds the indexes to the ``Token`` fields so that
     they can be picked up by ``PretrainedTransformerIndexer``.
 
-    Parameters
-    ----------
+    # Parameters
+
     model_name : ``str``
         The name of the pretrained wordpiece tokenizer to use.
     add_special_tokens : ``bool``, optional, (default=True)

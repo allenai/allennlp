@@ -25,8 +25,8 @@ class SequenceAccuracy(Metric):
         mask: Optional[torch.Tensor] = None,
     ):
         """
-        Parameters
-        ----------
+        # Parameters
+
         predictions : ``torch.Tensor``, required.
             A tensor of predictions of shape (batch_size, k, sequence_length).
         gold_labels : ``torch.Tensor``, required.
@@ -71,8 +71,8 @@ class SequenceAccuracy(Metric):
 
     def get_metric(self, reset: bool = False):
         """
-        Returns
-        -------
+        # Returns
+
         The accumulated accuracy.
         """
         if self.total_count > 0:

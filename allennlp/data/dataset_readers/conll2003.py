@@ -50,8 +50,8 @@ class Conll2003DatasetReader(DatasetReader):
     on any combination of blank lines and "DOCSTART" tags; in particular, it does the right
     thing on well formed inputs.)
 
-    Parameters
-    ----------
+    # Parameters
+
     token_indexers : ``Dict[str, TokenIndexer]``, optional (default=``{"tokens": SingleIdTokenIndexer()}``)
         We use this to define the input representation for the text.  See :class:`TokenIndexer`.
     tag_label : ``str``, optional (default=``ner``)

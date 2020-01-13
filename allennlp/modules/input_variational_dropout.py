@@ -17,13 +17,13 @@ class InputVariationalDropout(torch.nn.Dropout):
         """
         Apply dropout to input tensor.
 
-        Parameters
-        ----------
+        # Parameters
+
         input_tensor : ``torch.FloatTensor``
             A tensor of shape ``(batch_size, num_timesteps, embedding_dim)``
 
-        Returns
-        -------
+        # Returns
+
         output : ``torch.FloatTensor``
             A tensor of shape ``(batch_size, num_timesteps, embedding_dim)`` with dropout applied.
         """

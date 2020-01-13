@@ -351,8 +351,8 @@ class Params(MutableMapping):
         the given choices. Note that this `pops` the key from params, modifying the dictionary,
         consistent with how parameters are processed in this codebase.
 
-        Parameters
-        ----------
+        # Parameters
+
         key: str
             Key to get the value from in the param dictionary
         choices: List[Any]
@@ -393,8 +393,8 @@ class Params(MutableMapping):
         Sometimes we need to just represent the parameters as a dict, for instance when we pass
         them to PyTorch code.
 
-        Parameters
-        ----------
+        # Parameters
+
         quiet: bool, optional (default = False)
             Whether to log the parameters before returning them as a dict.
         infer_type_and_cast : bool, optional (default = False)
@@ -500,8 +500,8 @@ class Params(MutableMapping):
         """
         Load a `Params` object from a configuration file.
 
-        Parameters
-        ----------
+        # Parameters
+
         params_file : ``str``
             The path to the configuration file to load.
         params_overrides : ``str``, optional
@@ -536,8 +536,8 @@ class Params(MutableMapping):
         """
         Returns Ordered Dict of Params from list of partial order preferences.
 
-        Parameters
-        ----------
+        # Parameters
+
         preference_orders: List[List[str]], optional
             ``preference_orders`` is list of partial preference orders. ["A", "B", "C"] means
             "A" > "B" > "C". For multiple preference_orders first will be considered first.

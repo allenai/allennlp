@@ -43,8 +43,8 @@ class Embedding(TokenEmbedder):
     :class:`~allennlp.data.fields.TextField`, you should use a
     :class:`~allennlp.modules.TextFieldEmbedder` instead of using this directly.
 
-    Parameters
-    ----------
+    # Parameters
+
     num_embeddings : ``int``
         Size of the dictionary of embeddings (vocabulary size).
     embedding_dim : ``int``
@@ -78,8 +78,8 @@ class Embedding(TokenEmbedder):
         **It does not load the weights from this pretrained_file.** For that purpose, use
         ``Embedding.from_params``.
 
-    Returns
-    -------
+    # Returns
+
     An Embedding module.
     """
 
@@ -175,8 +175,8 @@ class Embedding(TokenEmbedder):
         embeddings in the extended vocabulary; otherwise we will check if _pretrained_file attribute
         is already available. If none is available, they will be initialized with xavier uniform.
 
-        Parameters
-        ----------
+        # Parameters
+
         extended_vocab : ``Vocabulary``
             Vocabulary extended from original vocabulary used to construct
             this ``Embedding``.
@@ -361,8 +361,8 @@ def _read_pretrained_embeddings_file(
     If the filename ends with '.hdf5' or '.h5' then we load from hdf5, otherwise we assume
     text format.
 
-    Parameters
-    ----------
+    # Parameters
+
     file_uri : ``str``, required.
         It can be:
 
@@ -379,8 +379,8 @@ def _read_pretrained_embeddings_file(
     trainable : ``bool``, (optional, default=True)
         Whether or not the embedding parameters should be optimized.
 
-    Returns
-    -------
+    # Returns
+
     A weight matrix with embeddings initialized from the read file.  The matrix has shape
     ``(vocab.get_vocab_size(namespace), embedding_dim)``, where the indices of words appearing in
     the pretrained embedding file are initialized to the pretrained embedding value.
@@ -520,8 +520,8 @@ class EmbeddingsTextFile(Iterator[str]):
     Utility class for opening embeddings text files. Handles various compression formats,
     as well as context management.
 
-    Parameters
-    ----------
+    # Parameters
+
     file_uri : ``str``
         It can be:
 

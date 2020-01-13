@@ -23,8 +23,8 @@ class MeanAbsoluteError(Metric):
         mask: Optional[torch.Tensor] = None,
     ):
         """
-        Parameters
-        ----------
+        # Parameters
+
         predictions : ``torch.Tensor``, required.
             A tensor of predictions of shape (batch_size, ...).
         gold_labels : ``torch.Tensor``, required.
@@ -44,8 +44,8 @@ class MeanAbsoluteError(Metric):
 
     def get_metric(self, reset: bool = False):
         """
-        Returns
-        -------
+        # Returns
+
         The accumulated mean absolute error.
         """
         mean_absolute_error = float(self._absolute_error) / float(self._total_count)

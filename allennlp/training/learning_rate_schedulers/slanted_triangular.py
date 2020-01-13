@@ -25,8 +25,8 @@ class SlantedTriangular(LearningRateScheduler):
 
     Note that with this schedule, early stopping should typically be avoided.
 
-    Parameters
-    ----------
+    # Parameters
+
     num_epochs : ``int``, required.
         The total number of epochs for which the model should be trained.
     num_steps_per_epoch : ``int``, required.
