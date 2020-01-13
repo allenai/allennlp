@@ -117,7 +117,7 @@ class SimpleTagger(Model):
         tokens : Dict[str, torch.LongTensor], required
             The output of ``TextField.as_array()``, which should typically be passed directly to a
             ``TextFieldEmbedder``. This output is a dictionary mapping keys to ``TokenIndexer``
-            tensors.  At its most basic, using a ``SingleIdTokenIndexer`` this is: ``{"tokens":
+            tensors.  At its most basic, using a ``SingleIdTokenIndexer`` this is : ``{"tokens":
             Tensor(batch_size, num_tokens)}``. This dictionary will have the same keys as were used
             for the ``TokenIndexers`` when you created the ``TextField`` representing your
             sequence.  The dictionary is designed to be passed directly to a ``TextFieldEmbedder``,
@@ -182,7 +182,10 @@ class SimpleTagger(Model):
         all_tags = []
         for predictions in predictions_list:
             argmax_indices = numpy.argmax(predictions, axis=-1)
-            tags = [self.vocab.get_token_from_index(x, namespace="labels") for x in argmax_indices]
+            tags = [
+                self.vocab.get_token_from_index(x, namespace=self.label_namespace)
+                for x in argmax_indices
+            ]
             all_tags.append(tags)
         output_dict["tags"] = all_tags
         return output_dict

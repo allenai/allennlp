@@ -28,7 +28,6 @@ allennlp.models
   allennlp.models.language_model
   allennlp.models.masked_language_model
   allennlp.models.next_token_lm
-  allennlp.models.reading_comprehension
   allennlp.models.semantic_role_labeler
   allennlp.models.simple_tagger
   allennlp.models.srl_bert

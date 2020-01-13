@@ -19,12 +19,12 @@ class InputVariationalDropout(torch.nn.Dropout):
 
         Parameters
         ----------
-        input_tensor: ``torch.FloatTensor``
+        input_tensor : ``torch.FloatTensor``
             A tensor of shape ``(batch_size, num_timesteps, embedding_dim)``
 
         Returns
         -------
-        output: ``torch.FloatTensor``
+        output : ``torch.FloatTensor``
             A tensor of shape ``(batch_size, num_timesteps, embedding_dim)`` with dropout applied.
         """
         ones = input_tensor.data.new_ones(input_tensor.shape[0], input_tensor.shape[-1])

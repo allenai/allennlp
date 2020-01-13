@@ -52,12 +52,12 @@ from typing import List, Tuple
 
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common import Params, Tqdm
-from allennlp.common.checks import ConfigurationError, check_for_gpu
-from allennlp.common.util import prepare_environment, lazy_groups_of
-from allennlp.data import Vocabulary, DataIterator
+from allennlp.common.checks import check_for_gpu, ConfigurationError
+from allennlp.common.util import prepare_environment
+from allennlp.data import DataIterator, Vocabulary
 from allennlp.models import Model
 from allennlp.training import Trainer
-from allennlp.training.util import datasets_from_params, create_serialization_dir
+from allennlp.training.util import create_serialization_dir, datasets_from_params
 
 logger = logging.getLogger(__name__)
 
@@ -163,18 +163,18 @@ def find_learning_rate_model(
         A parameter object specifying an AllenNLP Experiment.
     serialization_dir : ``str``
         The directory in which to save results.
-    start_lr: ``float``
+    start_lr : ``float``
         Learning rate to start the search.
-    end_lr: ``float``
+    end_lr : ``float``
         Learning rate upto which search is done.
-    num_batches: ``int``
+    num_batches : ``int``
         Number of mini-batches to run Learning rate finder.
-    linear_steps: ``bool``
+    linear_steps : ``bool``
         Increase learning rate linearly if False exponentially.
-    stopping_factor: ``float``
+    stopping_factor : ``float``
         Stop the search when the current loss exceeds the best loss recorded by
         multiple of stopping factor. If ``None`` search proceeds till the ``end_lr``
-    force: ``bool``
+    force : ``bool``
         If True and the serialization directory already exists, everything in it will
         be removed prior to finding the learning rate.
     """
@@ -213,6 +213,7 @@ def find_learning_rate_model(
     train_data = all_datasets["train"]
 
     trainer_params = params.pop("trainer")
+
     no_grad_regexes = trainer_params.pop("no_grad", ())
     for name, parameter in model.named_parameters():
         if any(re.search(regex, name) for regex in no_grad_regexes):
@@ -262,20 +263,20 @@ def search_learning_rate(
     Parameters
     ----------
     trainer: :class:`~allennlp.training.trainer.Trainer`
-    start_lr: ``float``
+    start_lr : ``float``
         The learning rate to start the search.
-    end_lr: ``float``
+    end_lr : ``float``
         The learning rate upto which search is done.
-    num_batches: ``int``
+    num_batches : ``int``
         Number of batches to run the learning rate finder.
-    linear_steps: ``bool``
+    linear_steps : ``bool``
         Increase learning rate linearly if False exponentially.
-    stopping_factor: ``float``
+    stopping_factor : ``float``
         Stop the search when the current loss exceeds the best loss recorded by
         multiple of stopping factor. If ``None`` search proceeds till the ``end_lr``
     Returns
     -------
-    (learning_rates, losses): ``Tuple[List[float], List[float]]``
+    (learning_rates, losses) : ``Tuple[List[float], List[float]]``
         Returns list of learning rates and corresponding losses.
         Note: The losses are recorded before applying the corresponding learning rate
     """
@@ -286,10 +287,7 @@ def search_learning_rate(
 
     trainer.model.train()
 
-    num_gpus = len(trainer._cuda_devices)
-
-    raw_train_generator = trainer.iterator(trainer.train_data, shuffle=trainer.shuffle)
-    train_generator = lazy_groups_of(raw_train_generator, num_gpus)
+    train_generator = trainer.iterator(trainer.train_data, shuffle=trainer.shuffle)
     train_generator_tqdm = Tqdm.tqdm(train_generator, total=num_batches)
 
     learning_rates = []
@@ -300,7 +298,7 @@ def search_learning_rate(
     else:
         lr_update_factor = (end_lr / start_lr) ** (1.0 / num_batches)
 
-    for i, batch_group in enumerate(train_generator_tqdm):
+    for i, batch in enumerate(train_generator_tqdm):
 
         if linear_steps:
             current_lr = start_lr + (lr_update_factor * i)
@@ -311,7 +309,7 @@ def search_learning_rate(
             param_group["lr"] = current_lr
 
         trainer.optimizer.zero_grad()
-        loss = trainer.batch_loss(batch_group, for_training=True)
+        loss = trainer.batch_loss(batch, for_training=True)
         loss.backward()
         loss = loss.detach().cpu().item()
 

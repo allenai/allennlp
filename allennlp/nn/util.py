@@ -895,7 +895,7 @@ def combine_tensors(combination: str, tensors: List[torch.Tensor]) -> torch.Tens
     ``combination`` string.  The string refers to (1-indexed) positions in the input tensor list,
     and looks like ``"1,2,1+2,3-1"``.
 
-    We allow the following kinds of combinations: ``x``, ``x*y``, ``x+y``, ``x-y``, and ``x/y``,
+    We allow the following kinds of combinations : ``x``, ``x*y``, ``x+y``, ``x-y``, and ``x/y``,
     where ``x`` and ``y`` are positive integers less than or equal to ``len(tensors)``.  Each of
     the binary operations is performed elementwise.  You can give as many combinations as you want
     in the ``combination`` string.  For example, for the input string ``"1,2,1*2"``, the result
@@ -1548,8 +1548,8 @@ def find_embedding_layer(model: torch.nn.Module) -> torch.nn.Module:
     # We'll look for a few special cases in a first pass, then fall back to just finding a
     # TextFieldEmbedder in a second pass if we didn't find a special case.
     from pytorch_pretrained_bert.modeling import BertEmbeddings as BertEmbeddingsOld
-    from pytorch_transformers.modeling_gpt2 import GPT2Model
-    from pytorch_transformers.modeling_bert import BertEmbeddings as BertEmbeddingsNew
+    from transformers.modeling_gpt2 import GPT2Model
+    from transformers.modeling_bert import BertEmbeddings as BertEmbeddingsNew
     from allennlp.modules.text_field_embedders.text_field_embedder import TextFieldEmbedder
     from allennlp.modules.text_field_embedders.basic_text_field_embedder import (
         BasicTextFieldEmbedder,

@@ -57,11 +57,6 @@ def main(checks):
             run("./scripts/check_links.py", shell=True, check=True)
             print("check links passed")
 
-        if "check-requirements" in checks:
-            print("Checking requirements.txt against setup.py", flush=True)
-            run("./scripts/check_requirements_and_setup.py", shell=True, check=True)
-            print("check requirements passed")
-
         if "check-large-files" in checks:
             print("Checking all added files have size <= 2MB", flush=True)
             run("./scripts/check_large_files.sh 2", shell=True, check=True)

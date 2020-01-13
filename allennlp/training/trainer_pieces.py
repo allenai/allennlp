@@ -5,9 +5,11 @@ from typing import Dict, Iterable, NamedTuple
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
-from allennlp.common.util import log_frozen_and_tunable_parameter_names
-from allennlp.data import DataIterator, Instance, Vocabulary
-from allennlp.models import Model
+from allennlp.common.util import log_frozen_and_tunable_parameter_names, is_master
+from allennlp.data.instance import Instance
+from allennlp.data.iterators.data_iterator import DataIterator
+from allennlp.data.vocabulary import Vocabulary
+from allennlp.models.model import Model
 from allennlp.training import util as training_util
 
 logger = logging.getLogger(__name__)
@@ -85,7 +87,10 @@ class TrainerPieces(NamedTuple):
             model.extend_embedder_vocab(embedding_sources_mapping)
 
         # Initializing the model can have side effect of expanding the vocabulary
-        vocab.save_to_files(vocabulary_path)
+        # Save the vocab only in the master. In the degenerate non-distributed
+        # case, we're trivially the master.
+        if is_master():
+            vocab.save_to_files(vocabulary_path)
 
         iterator = DataIterator.from_params(params.pop("iterator"))
         iterator.index_with(model.vocab)
@@ -152,7 +157,11 @@ class TrainerPieces(NamedTuple):
             )
 
             if recover:
-                vocab = Vocabulary.from_files(vocabulary_path)
+                vocab = Vocabulary.from_files(
+                    vocabulary_path,
+                    vocabulary_params.get("padding_token", None),
+                    vocabulary_params.get("oov_token", None),
+                )
             else:
                 # Using a generator comprehension here is important because, by being lazy,
                 # it allows us to not iterate over the dataset when directory_path is specified.

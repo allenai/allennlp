@@ -1,0 +1,40 @@
+#### TESTING-RELATED PACKAGES ####
+
+# Checks style, syntax, and other useful errors.
+flake8
+
+# Static type checking
+mypy==0.730
+
+# Automatic code formatting
+black
+
+# For creating git precommit hooks
+pre-commit==1.18.3
+
+# Allows generation of coverage reports with pytest.
+pytest-cov
+
+# Allows codecov to generate coverage reports
+coverage
+codecov
+
+# Required to run sanic tests
+aiohttp
+
+#### DOC-RELATED PACKAGES ####
+
+# Builds our documentation.
+sphinx>=2.1.1
+
+# Watches the documentation directory and rebuilds on changes.
+sphinx-autobuild
+
+# doc theme
+sphinx_rtd_theme
+
+# Only used to convert our readme to reStructuredText on Pypi.
+pypandoc
+
+# Pypi uploads
+twine>=1.11.0

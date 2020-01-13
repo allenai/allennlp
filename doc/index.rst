@@ -41,7 +41,6 @@ state of the art models with high quality engineering.
    api/allennlp.predictors
    api/allennlp.modules
    api/allennlp.nn
-   api/allennlp.service
    api/allennlp.tools
    api/allennlp.training
    api/allennlp.pretrained

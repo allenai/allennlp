@@ -31,9 +31,9 @@ class SrlBert(Model):
         If provided, will be used to calculate the regularization penalty during training.
     label_smoothing : ``float``, optional (default = 0.0)
         Whether or not to use label smoothing on the labels when computing cross entropy loss.
-    ignore_span_metric: ``bool``, optional (default = False)
+    ignore_span_metric : ``bool``, optional (default = False)
         Whether to calculate span loss, which is irrelevant when predicting BIO for Open Information Extraction.
-    srl_eval_path: ``str``, optional (default=``DEFAULT_SRL_EVAL_PATH``)
+    srl_eval_path : ``str``, optional (default=``DEFAULT_SRL_EVAL_PATH``)
         The path to the srl-eval.pl script. By default, will use the srl-eval.pl included with allennlp,
         which is located at allennlp/tools/srl-eval.pl . If ``None``, srl-eval.pl is not used.
     """

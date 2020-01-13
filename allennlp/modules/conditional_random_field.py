@@ -72,13 +72,13 @@ def is_transition_allowed(
     from_tag : ``str``, required
         The tag that the transition originates from. For example, if the
         label is ``I-PER``, the ``from_tag`` is ``I``.
-    from_entity: ``str``, required
+    from_entity : ``str``, required
         The entity corresponding to the ``from_tag``. For example, if the
         label is ``I-PER``, the ``from_entity`` is ``PER``.
     to_tag : ``str``, required
         The tag that the transition leads to. For example, if the
         label is ``I-PER``, the ``to_tag`` is ``I``.
-    to_entity: ``str``, required
+    to_entity : ``str``, required
         The entity corresponding to the ``to_tag``. For example, if the
         label is ``I-PER``, the ``to_entity`` is ``PER``.
 
@@ -165,14 +165,14 @@ class ConditionalRandomField(torch.nn.Module):
 
     Parameters
     ----------
-    num_tags : int, required
+    num_tags : ``int``, required
         The number of tags.
-    constraints : List[Tuple[int, int]], optional (default: None)
+    constraints : ``List[Tuple[int, int]]``, optional (default: None)
         An optional list of allowed transitions (from_tag_id, to_tag_id).
         These are applied to ``viterbi_tags()`` but do not affect ``forward()``.
         These should be derived from `allowed_transitions` so that the
         start and end transitions are handled correctly for your tag type.
-    include_start_end_transitions : bool, optional (default: True)
+    include_start_end_transitions : ``bool``, optional (default: True)
         Whether to include the start and end transition parameters.
     """
 
@@ -331,7 +331,7 @@ class ConditionalRandomField(torch.nn.Module):
         return torch.sum(log_numerator - log_denominator)
 
     def viterbi_tags(
-        self, logits: torch.Tensor, mask: torch.Tensor, top_k: int = None
+        self, logits: torch.Tensor, mask: torch.Tensor = None, top_k: int = None
     ) -> Union[List[VITERBI_DECODING], List[List[VITERBI_DECODING]]]:
         """
         Uses viterbi algorithm to find most likely tags for the given inputs.
@@ -344,6 +344,9 @@ class ConditionalRandomField(torch.nn.Module):
         For backwards compatibility, if top_k is None, then instead returns a flat list of
         tag sequences (the top tag sequence for each batch item).
         """
+        if mask is None:
+            mask = torch.ones(*logits.shape[:2], dtype=torch.long, device=logits.device)
+
         if top_k is None:
             top_k = 1
             flatten_output = True
@@ -390,14 +393,16 @@ class ConditionalRandomField(torch.nn.Module):
         tag_sequence = torch.Tensor(max_seq_length + 2, num_tags + 2)
 
         for prediction, prediction_mask in zip(logits, mask):
-            sequence_length = torch.sum(prediction_mask)
+            mask_indices = prediction_mask.nonzero().squeeze()
+            masked_prediction = torch.index_select(prediction, 0, mask_indices)
+            sequence_length = masked_prediction.shape[0]
 
             # Start with everything totally unlikely
             tag_sequence.fill_(-10000.0)
             # At timestep 0 we must have the START_TAG
             tag_sequence[0, start_tag] = 0.0
             # At steps 1, ..., sequence_length we just use the incoming prediction
-            tag_sequence[1 : (sequence_length + 1), :num_tags] = prediction[:sequence_length]
+            tag_sequence[1 : (sequence_length + 1), :num_tags] = masked_prediction
             # And at the last timestep we must have the END_TAG
             tag_sequence[sequence_length + 1, end_tag] = 0.0
 

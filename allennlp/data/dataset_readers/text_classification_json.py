@@ -20,8 +20,8 @@ class TextClassificationJsonReader(DatasetReader):
     Expects a "text" field and a "label" field in JSON format.
 
     The output of ``read`` is a list of ``Instance`` s with the fields:
-        tokens: ``TextField`` and
-        label: ``LabelField``
+        tokens : ``TextField`` and
+        label : ``LabelField``
 
     Parameters
     ----------
@@ -31,13 +31,13 @@ class TextClassificationJsonReader(DatasetReader):
         See :class:`TokenIndexer`.
     tokenizer : ``Tokenizer``, optional (default = ``{"tokens": SpacyTokenizer()}``)
         Tokenizer to use to split the input text into words or other kinds of tokens.
-    segment_sentences: ``bool``, optional (default = ``False``)
+    segment_sentences : ``bool``, optional (default = ``False``)
         If True, we will first segment the text into sentences using SpaCy and then tokenize words.
         Necessary for some models that require pre-segmentation of sentences, like the Hierarchical
         Attention Network (https://www.cs.cmu.edu/~hovy/papers/16HLT-hierarchical-attention-networks.pdf).
-    max_sequence_length: ``int``, optional (default = ``None``)
+    max_sequence_length : ``int``, optional (default = ``None``)
         If specified, will truncate tokens to specified maximum length.
-    skip_label_indexing: ``bool``, optional (default = ``False``)
+    skip_label_indexing : ``bool``, optional (default = ``False``)
         Whether or not to skip label indexing. You might want to skip label indexing if your
         labels are numbers, so the dataset reader doesn't re-number them starting from 0.
     lazy : ``bool``, optional, (default = ``False``)

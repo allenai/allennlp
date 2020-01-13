@@ -5,9 +5,9 @@ from contextlib import contextmanager
 import numpy
 from torch.utils.hooks import RemovableHandle
 from torch import Tensor
+from torch import backends
 
 from allennlp.common import Registrable
-from allennlp.common.checks import ConfigurationError
 from allennlp.common.util import JsonDict, sanitize
 from allennlp.data import DatasetReader, Instance
 from allennlp.data.dataset import Batch
@@ -20,16 +20,12 @@ DEFAULT_PREDICTORS = {
     "atis_parser": "atis-parser",
     "basic_classifier": "text_classifier",
     "biaffine_parser": "biaffine-dependency-parser",
-    "bidaf": "machine-comprehension",
-    "bidaf-ensemble": "machine-comprehension",
     "bimpm": "textual-entailment",
     "constituency_parser": "constituency-parser",
     "coref": "coreference-resolution",
     "crf_tagger": "sentence-tagger",
     "decomposable_attention": "textual-entailment",
-    "dialog_qa": "dialog_qa",
     "event2mind": "event2mind",
-    "naqanet": "machine-comprehension",
     "simple_tagger": "sentence-tagger",
     "srl": "semantic-role-labeling",
     "srl_bert": "semantic-role-labeling",
@@ -47,6 +43,7 @@ class Predictor(Registrable):
     def __init__(self, model: Model, dataset_reader: DatasetReader) -> None:
         self._model = model
         self._dataset_reader = dataset_reader
+        self.cuda_device = next(self._model.named_parameters())[1].get_device()
 
     def load_line(self, line: str) -> JsonDict:
         """
@@ -110,13 +107,16 @@ class Predictor(Registrable):
 
         dataset = Batch(instances)
         dataset.index_instances(self._model.vocab)
-        outputs = self._model.decode(
-            self._model.forward(**dataset.as_tensor_dict())  # type: ignore
-        )
+        dataset_tensor_dict = util.move_to_device(dataset.as_tensor_dict(), self.cuda_device)
+        # To bypass "RuntimeError: cudnn RNN backward can only be called in training mode"
+        with backends.cudnn.flags(enabled=False):
+            outputs = self._model.decode(
+                self._model.forward(**dataset_tensor_dict)  # type: ignore
+            )
 
-        loss = outputs["loss"]
-        self._model.zero_grad()
-        loss.backward()
+            loss = outputs["loss"]
+            self._model.zero_grad()
+            loss.backward()
 
         for hook in hooks:
             hook.remove()
@@ -247,15 +247,15 @@ class Predictor(Registrable):
 
         Parameters
         ----------
-        archive_path: ``str``
+        archive_path : ``str``
             The path to the archive.
-        predictor_name: ``str``, optional (default=None)
+        predictor_name : ``str``, optional (default=None)
             Name that the predictor is registered as, or None to use the
             predictor associated with the model.
-        cuda_device: ``int``, optional (default=-1)
+        cuda_device : ``int``, optional (default=-1)
             If `cuda_device` is >= 0, the model will be loaded onto the
             corresponding GPU. Otherwise it will be loaded onto the CPU.
-        dataset_reader_to_load: ``str``, optional (default="validation")
+        dataset_reader_to_load : ``str``, optional (default="validation")
             Which dataset reader to load from the archive, either "train" or
             "validation".
 
@@ -279,7 +279,8 @@ class Predictor(Registrable):
         """
         Instantiate a :class:`Predictor` from an :class:`~allennlp.models.archival.Archive`;
         that is, from the result of training a model. Optionally specify which `Predictor`
-        subclass; otherwise, the default one for the model will be used. Optionally specify
+        subclass; otherwise, we try to find a corresponding predictor in `DEFAULT_PREDICTORS`, or if
+        one is not found, the base class (i.e. :class:`Predictor`) will be used. Optionally specify
         which :class:`DatasetReader` should be loaded; otherwise, the validation one will be used
         if it exists followed by the training dataset reader.
         """
@@ -288,12 +289,9 @@ class Predictor(Registrable):
 
         if not predictor_name:
             model_type = config.get("model").get("type")
-            if model_type not in DEFAULT_PREDICTORS:
-                raise ConfigurationError(
-                    f"No default predictor for model type {model_type}.\n"
-                    f"Please specify a predictor explicitly."
-                )
-            predictor_name = DEFAULT_PREDICTORS[model_type]
+            if model_type in DEFAULT_PREDICTORS:
+                predictor_name = DEFAULT_PREDICTORS[model_type]
+        predictor_class = Predictor.by_name(predictor_name) if predictor_name is not None else cls
 
         if dataset_reader_to_load == "validation" and "validation_dataset_reader" in config:
             dataset_reader_params = config["validation_dataset_reader"]
@@ -304,4 +302,4 @@ class Predictor(Registrable):
         model = archive.model
         model.eval()
 
-        return Predictor.by_name(predictor_name)(model, dataset_reader)
+        return predictor_class(model, dataset_reader)

@@ -5,30 +5,33 @@ from allennlp.predictors import Predictor
 
 class TestPredictor(AllenNlpTestCase):
     def test_from_archive_does_not_consume_params(self):
-        archive = load_archive(self.FIXTURES_ROOT / "bidaf" / "serialization" / "model.tar.gz")
-        Predictor.from_archive(archive, "machine-comprehension")
+        archive = load_archive(
+            self.FIXTURES_ROOT / "simple_tagger" / "serialization" / "model.tar.gz"
+        )
+        Predictor.from_archive(archive, "sentence-tagger")
 
         # If it consumes the params, this will raise an exception
-        Predictor.from_archive(archive, "machine-comprehension")
+        Predictor.from_archive(archive, "sentence-tagger")
 
     def test_loads_correct_dataset_reader(self):
-        # The NAQANET archive has both a training and validation ``DatasetReader``
-        # with different values for ``passage_length_limit`` (``1000`` for validation
-        # and ``400`` for training).
-        archive = load_archive(self.FIXTURES_ROOT / "naqanet" / "serialization" / "model.tar.gz")
+        # This model has a different dataset reader configuration for train and validation. The parameter that
+        # differs is instances_per_file.
+        archive = load_archive(
+            self.FIXTURES_ROOT / "simple_tagger_with_span_f1" / "serialization" / "model.tar.gz"
+        )
 
-        predictor = Predictor.from_archive(archive, "machine-comprehension")
-        assert predictor._dataset_reader.passage_length_limit == 1000
+        predictor = Predictor.from_archive(archive, "sentence-tagger")
+        assert len(predictor._dataset_reader._token_indexers) == 2
 
         predictor = Predictor.from_archive(
-            archive, "machine-comprehension", dataset_reader_to_load="train"
+            archive, "sentence-tagger", dataset_reader_to_load="train"
         )
-        assert predictor._dataset_reader.passage_length_limit == 400
+        assert len(predictor._dataset_reader._token_indexers) == 1
 
         predictor = Predictor.from_archive(
-            archive, "machine-comprehension", dataset_reader_to_load="validation"
+            archive, "sentence-tagger", dataset_reader_to_load="validation"
         )
-        assert predictor._dataset_reader.passage_length_limit == 1000
+        assert len(predictor._dataset_reader._token_indexers) == 2
 
     def test_get_gradients(self):
         inputs = {

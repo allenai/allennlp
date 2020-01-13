@@ -16,7 +16,7 @@ class LegacyMatrixAttention(MatrixAttention):
 
     Parameters
     ----------
-    similarity_function: ``SimilarityFunction``, optional (default=``DotProductSimilarity``)
+    similarity_function : ``SimilarityFunction``, optional (default=``DotProductSimilarity``)
         The similarity function to use when computing the attention.
     """
 

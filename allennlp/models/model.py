@@ -104,7 +104,7 @@ class Model(torch.nn.Module, Registrable):
 
         Returns
         -------
-        output_dict: ``Dict[str, torch.Tensor]``
+        output_dict : ``Dict[str, torch.Tensor]``
             The outputs from the model. In order to train a model using the
             :class:`~allennlp.training.Trainer` api, you must provide a "loss" key pointing to a
             scalar ``torch.Tensor`` representing the loss to be optimized.
@@ -252,7 +252,9 @@ class Model(torch.nn.Module, Registrable):
         # If the config specifies a vocabulary subclass, we need to use it.
         vocab_params = config.get("vocabulary", Params({}))
         vocab_choice = vocab_params.pop_choice("type", Vocabulary.list_available(), True)
-        vocab = Vocabulary.by_name(vocab_choice).from_files(vocab_dir)
+        vocab = Vocabulary.by_name(vocab_choice).from_files(
+            vocab_dir, vocab_params.get("padding_token", None), vocab_params.get("oov_token", None)
+        )
 
         model_params = config.get("model")
 
