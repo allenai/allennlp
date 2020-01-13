@@ -25,8 +25,8 @@ class NextTokenLM(Model):
     re-use some intermediate computation, so you would either need to modify this code or use
     something else.
 
-    Parameters
-    ----------
+    # Parameters
+
     vocab : ``Vocabulary``
     text_field_embedder : ``TextFieldEmbedder``
         Used to embed the indexed tokens we get in ``forward``.

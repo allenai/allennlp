@@ -15,8 +15,8 @@ class TensorboardWriter(FromParams):
     """
     Class that handles Tensorboard (and other) logging.
 
-    Parameters
-    ----------
+    # Parameters
+
     get_batch_num_total : Callable[[], int]
         A thunk that returns the number of batches so far. Most likely this will
         be a closure around an instance variable in your ``Trainer`` class.

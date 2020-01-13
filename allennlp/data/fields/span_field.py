@@ -14,8 +14,8 @@ class SpanField(Field[torch.Tensor]):
     Because it's a pair of indices into a :class:`SequenceField`, we take one of those as input
     to make the span's dependence explicit and to validate that the span is well defined.
 
-    Parameters
-    ----------
+    # Parameters
+
     span_start : ``int``, required.
         The index of the start of the span in the :class:`SequenceField`.
     span_end : ``int``, required.

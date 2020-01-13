@@ -19,8 +19,8 @@ class F1Measure(FBetaMeasure):
 
     def get_metric(self, reset: bool = False) -> Tuple[float, float, float]:
         """
-        Returns
-        -------
+        # Returns
+
         A tuple of the following metrics based on the accumulated count statistics:
         precision : float
         recall : float

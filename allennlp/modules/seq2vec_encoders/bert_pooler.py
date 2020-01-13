@@ -23,8 +23,8 @@ class BertPooler(Seq2VecEncoder):
     If you just want to train a BERT classifier, it's simpler to just use the
     ``BertForClassification`` model.
 
-    Parameters
-    ----------
+    # Parameters
+
     pretrained_model : ``Union[str, BertModel]``, required
         The pretrained BERT model to use. If this is a string,
         we will call ``BertModel.from_pretrained(pretrained_model)``

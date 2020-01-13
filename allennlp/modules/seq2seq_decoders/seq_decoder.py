@@ -21,8 +21,8 @@ class SeqDecoder(Module, Registrable):
     covers most use cases. More likely that we will use the default implementation instead of creating a new
     implementation.
 
-    Parameters
-    ----------
+    # Parameters
+
     target_embedder : ``Embedding``, required
         Embedder for target tokens. Needed in the base class to enable weight tying.
     """
@@ -55,8 +55,8 @@ class SeqDecoder(Module, Registrable):
         Decoding from encoded states to sequence of outputs
         also computes loss if ``target_tokens`` are given.
 
-        Parameters
-        ----------
+        # Parameters
+
         encoder_out : ``Dict[str, torch.LongTensor]``, required
             Dictionary with encoded state, ideally containing the encoded vectors and the
             source mask.

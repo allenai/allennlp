@@ -58,8 +58,8 @@ class CopyNetDatasetReader(DatasetReader):
 
     See the "Notes" section below for a description of how these fields are used.
 
-    Parameters
-    ----------
+    # Parameters
+
     target_namespace : ``str``, required
         The vocab namespace for the targets. This needs to be passed to the dataset reader
         in order to construct the NamespaceSwappingField.
@@ -152,13 +152,13 @@ class CopyNetDatasetReader(DatasetReader):
         """
         Turn raw source string and target string into an ``Instance``.
 
-        Parameters
-        ----------
+        # Parameters
+
         source_string : ``str``, required
         target_string : ``str``, optional (default = None)
 
-        Returns
-        -------
+        # Returns
+
         Instance
             See the above for a description of the fields that the instance will contain.
         """

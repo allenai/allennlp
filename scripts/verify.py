@@ -43,15 +43,6 @@ def main(checks):
             )
             print("mypy checks passed")
 
-        if "build-docs" in checks:
-            print("Documentation (build):", flush=True)
-            run("cd doc; make html-strict", shell=True, check=True)
-
-        if "check-docs" in checks:
-            print("Documentation (check):", flush=True)
-            run("./scripts/check_docs.py", shell=True, check=True)
-            print("check docs passed")
-
         if "check-links" in checks:
             print("Checking links in Markdown files:", flush=True)
             run("./scripts/check_links.py", shell=True, check=True)
@@ -73,8 +64,6 @@ if __name__ == "__main__":
         "flake8",
         "mypy",
         "black",
-        "build-docs",
-        "check-docs",
         "check-links",
         "check-requirements",
         "check-large-files",

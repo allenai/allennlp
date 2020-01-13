@@ -23,8 +23,8 @@ class SpanInformation(NamedTuple):
     """
     A helper namedtuple for handling decoding information.
 
-    Parameters
-    ----------
+    # Parameters
+
     start : ``int``
         The start index of the span.
     end : ``int``
@@ -51,8 +51,8 @@ class SpanConstituencyParser(Model):
     These labels are non-terminal nodes in a constituency parse tree, which we then
     greedily reconstruct.
 
-    Parameters
-    ----------
+    # Parameters
+
     vocab : ``Vocabulary``, required
         A Vocabulary, required in order to compute sizes for input/output projections.
     text_field_embedder : ``TextFieldEmbedder``, required
@@ -147,8 +147,8 @@ class SpanConstituencyParser(Model):
     ) -> Dict[str, torch.Tensor]:
 
         """
-        Parameters
-        ----------
+        # Parameters
+
         tokens : Dict[str, torch.LongTensor], required
             The output of ``TextField.as_array()``, which should typically be passed directly to a
             ``TextFieldEmbedder``. This output is a dictionary mapping keys to ``TokenIndexer``
@@ -177,8 +177,8 @@ class SpanConstituencyParser(Model):
             A torch tensor representing the integer gold class labels for all possible
             spans, of shape ``(batch_size, num_spans)``.
 
-        Returns
-        -------
+        # Returns
+
         An output dictionary consisting of:
         class_probabilities : ``torch.FloatTensor``
             A tensor of shape ``(batch_size, num_spans, span_label_vocab_size)``
@@ -298,8 +298,8 @@ class SpanConstituencyParser(Model):
         The trees use exclusive end indices, which contrasts with how spans are
         represented in the rest of the model.
 
-        Parameters
-        ----------
+        # Parameters
+
         predictions : ``torch.FloatTensor``, required.
             A tensor of shape ``(batch_size, num_spans, span_label_vocab_size)``
             representing a distribution over the label classes per span.
@@ -315,8 +315,8 @@ class SpanConstituencyParser(Model):
             A list of POS tags for each word in the sentence for each element
             in the batch.
 
-        Returns
-        -------
+        # Returns
+
         A ``List[Tree]`` containing the decoded trees for each element in the batch.
         """
         # Switch to using exclusive end spans.
@@ -374,8 +374,8 @@ class SpanConstituencyParser(Model):
 
         This function modifies ``spans`` to remove overlapping spans.
 
-        Parameters
-        ----------
+        # Parameters
+
         spans : ``List[SpanInformation]``, required.
             A list of spans, where each span is a ``namedtuple`` containing the
             following attributes:
@@ -389,8 +389,8 @@ class SpanConstituencyParser(Model):
             label_prob : ``float``
                 The probability of the most likely label.
 
-        Returns
-        -------
+        # Returns
+
         A modified list of ``spans``, with the conflicts resolved by considering local
         differences between pairs of spans and removing one of the two spans.
         """
@@ -425,8 +425,8 @@ class SpanConstituencyParser(Model):
         spans_to_labels: Dict[Tuple[int, int], str], sentence: List[str], pos_tags: List[str] = None
     ) -> Tree:
         """
-        Parameters
-        ----------
+        # Parameters
+
         spans_to_labels : ``Dict[Tuple[int, int], str]``, required.
             A mapping from spans to constituency labels.
         sentence : ``List[str]``, required.
@@ -435,8 +435,8 @@ class SpanConstituencyParser(Model):
             A list of the pos tags for the words in the sentence, if they
             were either predicted or taken as input to the model.
 
-        Returns
-        -------
+        # Returns
+
         An ``nltk.Tree`` constructed from the labelled spans.
         """
 

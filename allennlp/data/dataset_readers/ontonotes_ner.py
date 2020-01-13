@@ -39,8 +39,8 @@ class OntonotesNamedEntityRecognition(DatasetReader):
     on the new and old testaments of the Bible are excluded, because they do not contain
     NER annotations.
 
-    Parameters
-    ----------
+    # Parameters
+
     token_indexers : ``Dict[str, TokenIndexer]``, optional
         We similarly use this for both the premise and the hypothesis.  See :class:`TokenIndexer`.
         Default is ``{"tokens": SingleIdTokenIndexer()}``.
@@ -50,8 +50,8 @@ class OntonotesNamedEntityRecognition(DatasetReader):
     coding_scheme : ``str``, (default = None).
         The coding scheme to use for the NER labels. Valid options are "BIO" or "BIOUL".
 
-    Returns
-    -------
+    # Returns
+
     A ``Dataset`` of ``Instances`` for Fine-Grained NER.
 
     """

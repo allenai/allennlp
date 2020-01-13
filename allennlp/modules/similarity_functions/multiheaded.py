@@ -21,8 +21,8 @@ class MultiHeadedSimilarity(SimilarityFunction):
     20)``.  Then we call a wrapped similarity function on the result (by default just a dot
     product), giving a tensor of shape ``(batch_size, sequence_length, 5)``.
 
-    Parameters
-    ----------
+    # Parameters
+
     num_heads : ``int``
         The number of similarity heads to compute.
     tensor_1_dim : ``int``

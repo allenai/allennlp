@@ -14,8 +14,8 @@ class MetricTracker:
     supply `should_decrease`, or you can provide a `metric_name` in which case "should decrease"
     is inferred from the first character, which must be "+" or "-".
 
-    Parameters
-    ----------
+    # Parameters
+
     patience : int, optional (default = None)
         If provided, then `should_stop_early()` returns True if we go this
         many epochs without seeing a new best value.

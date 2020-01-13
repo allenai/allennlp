@@ -21,8 +21,8 @@ class BasicClassifier(Model):
     ``Seq2SeqEncoder`` is not provided, we will pass the embedded text directly to the
     ``Seq2VecEncoder``.
 
-    Parameters
-    ----------
+    # Parameters
+
     vocab : ``Vocabulary``
     text_field_embedder : ``TextFieldEmbedder``
         Used to embed the input text into a ``TextField``
@@ -96,15 +96,15 @@ class BasicClassifier(Model):
     ) -> Dict[str, torch.Tensor]:
 
         """
-        Parameters
-        ----------
+        # Parameters
+
         tokens : Dict[str, torch.LongTensor]
             From a ``TextField``
         label : torch.IntTensor, optional (default = None)
             From a ``LabelField``
 
-        Returns
-        -------
+        # Returns
+
         An output dictionary consisting of:
 
         logits : torch.FloatTensor

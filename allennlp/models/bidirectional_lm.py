@@ -22,8 +22,8 @@ class BidirectionalLanguageModel(LanguageModel):
     at subsequent timesteps. If this condition is not met, your language model is
     cheating.
 
-    Parameters
-    ----------
+    # Parameters
+
     vocab : ``Vocabulary``
     text_field_embedder : ``TextFieldEmbedder``
         Used to embed the indexed tokens we get in ``forward``.

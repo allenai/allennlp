@@ -17,8 +17,8 @@ class ListField(SequenceField[DataArray]):
     If this is a list of ``TextFields`` that have shape (num_words, num_characters), this
     ``ListField`` will output a tensor of shape (num_sentences, num_words, num_characters).
 
-    Parameters
-    ----------
+    # Parameters
+
     field_list : ``List[Field]``
         A list of ``Field`` objects to be concatenated into a single input tensor.  All of the
         contained ``Field`` objects must be of the same type.

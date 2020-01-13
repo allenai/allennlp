@@ -99,8 +99,8 @@ class ELMoTokenCharactersIndexer(TokenIndexer[List[int]]):
     """
     Convert a token to an array of character ids to compute ELMo representations.
 
-    Parameters
-    ----------
+    # Parameters
+
     namespace : ``str``, optional (default=``elmo_characters``)
     tokens_to_add : ``Dict[str, int]``, optional (default=``None``)
         If not None, then provides a mapping of special tokens to character

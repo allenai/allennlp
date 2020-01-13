@@ -35,8 +35,8 @@ def enumerate_spans(
     allows filtering by length, regex matches, pos tags or any Spacy ``Token``
     attributes, for example.
 
-    Parameters
-    ----------
+    # Parameters
+
     sentence : ``List[T]``, required.
         The sentence to generate spans for. The type is generic, as this function
         can be used with strings, or Spacy ``Tokens`` or other sequences.
@@ -80,16 +80,16 @@ def bio_tags_to_spans(
     ill-formed spans in addition to the correct spans. This function works properly when
     the spans are unlabeled (i.e., your labels are simply "B", "I", and "O").
 
-    Parameters
-    ----------
+    # Parameters
+
     tag_sequence : List[str], required.
         The integer class labels for a sequence.
     classes_to_ignore : List[str], optional (default = None).
         A list of string class labels `excluding` the bio tag
         which should be ignored when extracting spans.
 
-    Returns
-    -------
+    # Returns
+
     spans : List[TypedStringSpan]
         The typed, extracted spans from the sequence, in the format (label, (span_start, span_end)).
         Note that the label `does not` contain any BIO tag prefixes.
@@ -152,16 +152,16 @@ def iob1_tags_to_spans(
     Ill-formed spans are also included (i.e., those where "B-LABEL" is not preceded
     by "I-LABEL" or "B-LABEL").
 
-    Parameters
-    ----------
+    # Parameters
+
     tag_sequence : List[str], required.
         The integer class labels for a sequence.
     classes_to_ignore : List[str], optional (default = None).
         A list of string class labels `excluding` the bio tag
         which should be ignored when extracting spans.
 
-    Returns
-    -------
+    # Returns
+
     spans : List[TypedStringSpan]
         The typed, extracted spans from the sequence, in the format (label, (span_start, span_end)).
         Note that the label `does not` contain any BIO tag prefixes.
@@ -230,16 +230,16 @@ def bioul_tags_to_spans(
     This function works properly when the spans are unlabeled (i.e., your labels are
     simply "B", "I", "O", "U", and "L").
 
-    Parameters
-    ----------
+    # Parameters
+
     tag_sequence : ``List[str]``, required.
         The tag sequence encoded in BIOUL, e.g. ["B-PER", "L-PER", "O"].
     classes_to_ignore : ``List[str]``, optional (default = None).
         A list of string class labels `excluding` the bio tag
         which should be ignored when extracting spans.
 
-    Returns
-    -------
+    # Returns
+
     spans : ``List[TypedStringSpan]``
         The typed, extracted spans from the sequence, in the format (label, (span_start, span_end)).
     """
@@ -286,15 +286,15 @@ def to_bioul(tag_sequence: List[str], encoding: str = "IOB1") -> List[str]:
     In the BIO scheme, I is a token inside a span, O is a token outside
     a span and B is the beginning of a span.
 
-    Parameters
-    ----------
+    # Parameters
+
     tag_sequence : ``List[str]``, required.
         The tag sequence encoded in IOB1, e.g. ["I-PER", "I-PER", "O"].
     encoding : `str`, optional, (default = ``IOB1``).
         The encoding type to convert from. Must be either "IOB1" or "BIO".
 
-    Returns
-    -------
+    # Returns
+
     bioul_sequence : ``List[str]``
         The tag sequence encoded in IOB1, e.g. ["B-PER", "L-PER", "O"].
     """
@@ -393,16 +393,16 @@ def bmes_tags_to_spans(
     This function works properly when the spans are unlabeled (i.e., your labels are
     simply "B", "M", "E" and "S").
 
-    Parameters
-    ----------
+    # Parameters
+
     tag_sequence : List[str], required.
         The integer class labels for a sequence.
     classes_to_ignore : List[str], optional (default = None).
         A list of string class labels `excluding` the bio tag
         which should be ignored when extracting spans.
 
-    Returns
-    -------
+    # Returns
+
     spans : List[TypedStringSpan]
         The typed, extracted spans from the sequence, in the format (label, (span_start, span_end)).
         Note that the label `does not` contain any BIO tag prefixes.

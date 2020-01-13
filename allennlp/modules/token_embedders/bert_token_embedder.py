@@ -51,8 +51,8 @@ class BertEmbedder(TokenEmbedder):
     Most likely you probably want to use ``PretrainedBertEmbedder``
     for one of the named pretrained models, not this base class.
 
-    Parameters
-    ----------
+    # Parameters
+
     bert_model : ``BertModel``
         The BERT model being wrapped.
     top_layer_only : ``bool``, optional (default = ``False``)
@@ -109,8 +109,8 @@ class BertEmbedder(TokenEmbedder):
         token_type_ids: torch.LongTensor = None,
     ) -> torch.Tensor:
         """
-        Parameters
-        ----------
+        # Parameters
+
         input_ids : ``torch.LongTensor``
             The (batch_size, ..., max_sequence_length) tensor of wordpiece ids.
         offsets : ``torch.LongTensor``, optional
@@ -263,8 +263,8 @@ class BertEmbedder(TokenEmbedder):
 class PretrainedBertEmbedder(BertEmbedder):
 
     """
-    Parameters
-    ----------
+    # Parameters
+
     pretrained_model : ``str``
         Either the name of the pretrained model to use (e.g. 'bert-base-uncased'),
         or the path to the .tar.gz file with the model weights.

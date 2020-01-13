@@ -20,8 +20,8 @@ class InterleavingDatasetReader(DatasetReader):
     ``read()`` should be a JSON-serialized dictionary with one file_path
     per wrapped dataset reader (and with corresponding keys).
 
-    Parameters
-    ----------
+    # Parameters
+
     readers : ``Dict[str, DatasetReader]``
         The dataset readers to wrap. The keys of this dictionary will be used
         as the values in the MetadataField indicating provenance.

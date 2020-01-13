@@ -12,8 +12,8 @@ class NoamLR(LearningRateScheduler):
     to the inverse square root of the step number, scaled by the inverse square root of the
     dimensionality of the model. Time will tell if this is just madness or it's actually important.
 
-    Parameters
-    ----------
+    # Parameters
+
     model_size : ``int``, required.
         The hidden size parameter which dominates the number of parameters in your model.
     warmup_steps : ``int``, required.

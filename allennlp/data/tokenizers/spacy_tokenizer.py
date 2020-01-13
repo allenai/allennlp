@@ -22,8 +22,8 @@ class SpacyTokenizer(Tokenizer):
     for your word embedding, but retain capitalization in a character-level representation, we need
     to retain the capitalization here.
 
-    Parameters
-    ----------
+    # Parameters
+
     language : ``str``, optional, (default="en_core_web_sm")
         Spacy model name.
     pos_tags : ``bool``, optional, (default=False)

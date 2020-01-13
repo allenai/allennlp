@@ -17,8 +17,8 @@ class StackedSelfAttentionEncoder(Seq2SeqEncoder):
 
     """
     Implements a stacked self-attention encoder similar to the Transformer
-    architecture in `Attention is all you Need
-    <https://www.semanticscholar.org/paper/Attention-Is-All-You-Need-Vaswani-Shazeer/0737da0767d77606169cbf4187b83e1ab62f6077>`_ .
+    architecture in [Attention is all you Need]
+    (https://www.semanticscholar.org/paper/Attention-Is-All-You-Need-Vaswani-Shazeer/0737da0767d77606169cbf4187b83e1ab62f6077).
 
     This encoder combines 3 layers in a 'block':
 
@@ -30,8 +30,8 @@ class StackedSelfAttentionEncoder(Seq2SeqEncoder):
 
     These are then stacked into ``num_layers`` layers.
 
-    Parameters
-    ----------
+    # Parameters
+
     input_dim : ``int``, required.
         The input dimension of the encoder.
     hidden_dim : ``int``, required.

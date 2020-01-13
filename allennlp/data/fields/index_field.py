@@ -16,8 +16,8 @@ class IndexField(Field[torch.Tensor]):
     example.  Because it's an index into a :class:`SequenceField`, we take one of those as input
     and use it to compute padding lengths.
 
-    Parameters
-    ----------
+    # Parameters
+
     index : ``int``
         The index of the answer in the :class:`SequenceField`.  This is typically the "correct
         answer" in some classification decision over the sequence, like where an answer span starts

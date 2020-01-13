@@ -20,16 +20,16 @@ class DecomposableAttentionPredictor(Predictor):
         """
         Predicts whether the hypothesis is entailed by the premise text.
 
-        Parameters
-        ----------
+        # Parameters
+
         premise : ``str``
             A passage representing what is assumed to be true.
 
         hypothesis : ``str``
             A sentence that may be entailed by the premise.
 
-        Returns
-        -------
+        # Returns
+
         A dictionary where the key "label_probs" determines the probabilities of each of
         [entailment, contradiction, neutral].
         """

@@ -25,8 +25,8 @@ class StackedSelfAttentionDecoderNet(DecoderNet):
     """
     A Stacked self-attention decoder implementation.
 
-    Parameters
-    ----------
+    # Parameters
+
     decoding_dim : ``int``, required
         Defines dimensionality of output vectors.
     target_embedding_dim : ``int``, required

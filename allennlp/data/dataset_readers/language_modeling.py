@@ -32,8 +32,8 @@ class LanguageModelingReader(DatasetReader):
     modeling - the way start and end tokens for sentences are handled is not correct; we need to
     add a sentence splitter before this will be done right.
 
-    Parameters
-    ----------
+    # Parameters
+
     tokens_per_instance : ``int``, optional (default=``None``)
         If this is ``None``, we will have each training instance be a single sentence.  If this is
         not ``None``, we will instead take all sentences, including their start and stop tokens,

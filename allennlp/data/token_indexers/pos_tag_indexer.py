@@ -19,8 +19,8 @@ class PosTagIndexer(TokenIndexer[int]):
     the ``pos_`` or ``tag_`` fields on ``Token`` (corresponding to spacy's coarse-grained and
     fine-grained POS tags, respectively).
 
-    Parameters
-    ----------
+    # Parameters
+
     namespace : ``str``, optional (default=``pos_tokens``)
         We will use this namespace in the :class:`Vocabulary` to map strings to indices.
     coarse_tags : ``bool``, optional (default=``False``)

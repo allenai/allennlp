@@ -23,8 +23,8 @@ class IntraSentenceAttentionEncoder(Seq2SeqEncoder):
     attended representations is also configurable (e.g., you can concatenate them, add them,
     multiply them, etc.).
 
-    Parameters
-    ----------
+    # Parameters
+
     input_dim : ``int`` required
         The dimension of the vector for each element in the input sequence;
         ``input_tensor.size(-1)``.

@@ -22,8 +22,8 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
     representations, we take ``TokenEmbedders`` with corresponding names.  Each ``TokenEmbedders``
     embeds its input, and the result is concatenated in an arbitrary order.
 
-    Parameters
-    ----------
+    # Parameters
+
 
     token_embedders : ``Dict[str, TokenEmbedder]``, required.
         A dictionary mapping token embedder names to implementations.

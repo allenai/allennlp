@@ -38,8 +38,8 @@ class Hotflip(Attacker):
     This also requires a model to `have` a token vocabulary in the first place, which can be
     problematic for models that only have character vocabularies.
 
-    Parameters
-    ----------
+    # Parameters
+
     predictor : ``Predictor``
         The model (inside a Predictor) that we're attacking.  We use this to get gradients and
         predictions.
@@ -171,8 +171,8 @@ class Hotflip(Attacker):
         approximation of the loss.  This process is iteratively repeated until the prediction
         changes.  Once a token is replaced, it is not flipped again.
 
-        Parameters
-        ----------
+        # Parameters
+
         inputs : ``JsonDict``
             The model inputs, the same as what is passed to a ``Predictor``.
         input_field_to_attack : ``str``, optional (default='tokens')

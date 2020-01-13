@@ -14,8 +14,8 @@ class RegularizerApplicator:
 
     def __init__(self, regularizers: Sequence[Tuple[str, Regularizer]] = ()) -> None:
         """
-        Parameters
-        ----------
+        # Parameters
+
         regularizers : Sequence[Tuple[str, Regularizer]], optional (default = ())
             A sequence of pairs (regex, Regularizer), where each Regularizer
             applies to the parameters its regex matches (and that haven't previously
@@ -25,8 +25,8 @@ class RegularizerApplicator:
 
     def __call__(self, module: torch.nn.Module) -> torch.Tensor:
         """
-        Parameters
-        ----------
+        # Parameters
+
         module : torch.nn.Module, required
             The module to regularize.
         """
@@ -61,13 +61,13 @@ class RegularizerApplicator:
         auxiliary named parameters which will be fed to the regularizer itself.
         To determine valid auxiliary parameters, please refer to the torch.nn.init documentation.
 
-        Parameters
-        ----------
+        # Parameters
+
         params : ``Params``, required.
             A Params object containing a "regularizers" key.
 
-        Returns
-        -------
+        # Returns
+
         A RegularizerApplicator containing the specified Regularizers,
         or ``None`` if no Regularizers are specified.
         """

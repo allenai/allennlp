@@ -23,8 +23,8 @@ class TextClassificationJsonReader(DatasetReader):
         tokens : ``TextField`` and
         label : ``LabelField``
 
-    Parameters
-    ----------
+    # Parameters
+
     token_indexers : ``Dict[str, TokenIndexer]``, optional
         optional (default=``{"tokens": SingleIdTokenIndexer()}``)
         We use this to define the input representation for the text.
@@ -98,15 +98,15 @@ class TextClassificationJsonReader(DatasetReader):
         self, text: str, label: Union[str, int] = None
     ) -> Instance:  # type: ignore
         """
-        Parameters
-        ----------
+        # Parameters
+
         text : ``str``, required.
             The text to classify
         label : ``str``, optional, (default = None).
             The label for this text.
 
-        Returns
-        -------
+        # Returns
+
         An ``Instance`` containing the following fields:
             tokens : ``TextField``
                 The tokens in the sentence or phrase.

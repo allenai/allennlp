@@ -131,8 +131,8 @@ def pad_sequence_to_length(
     Take a list of objects and pads it to the desired length, returning the padded list.  The
     original list is not modified.
 
-    Parameters
-    ----------
+    # Parameters
+
     sequence : List
         A list of objects to be padded.
 
@@ -149,8 +149,8 @@ def pad_sequence_to_length(
         When we add padding tokens (or truncate the sequence), should we do it on the right or
         the left?
 
-    Returns
-    -------
+    # Returns
+
     padded_sequence : List
     """
     # Truncates the sequence to the desired length.
@@ -204,8 +204,8 @@ def prepare_environment(params: Params):
     is very difficult to achieve with libraries doing optimized linear algebra due to massively
     parallel execution, which is exacerbated by using GPUs.
 
-    Parameters
-    ----------
+    # Parameters
+
     params: Params object or dict, required.
         A ``Params`` object or dict holding the json parameters.
     """
@@ -438,8 +438,8 @@ def gpu_memory_mb() -> Dict[int, int]:
     Get the current GPU memory usage.
     Based on https://discuss.pytorch.org/t/access-gpu-memory-usage-in-pytorch/3192/4
 
-    Returns
-    -------
+    # Returns
+
     ``Dict[int, int]``
         Keys are device ids as integers.
         Values are memory usage as integers in MB.
@@ -509,8 +509,8 @@ def is_master(rank: int = None, world_size: int = None) -> bool:
     Checks if the process is a "master" in a distributed process group. If a
     process group is not initialized, this returns `True`.
 
-    Parameters
-    ----------
+    # Parameters
+
     rank : int ( default = None )
         Global rank of the process if in a distributed process group. If not
         given, rank is obtained using `torch.distributed.get_rank()`

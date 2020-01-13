@@ -16,8 +16,8 @@ class GradientNormAndClip(Callback):
     """
     Applies gradient norm and/or clipping.
 
-    Parameters
-    ----------
+    # Parameters
+
     grad_norm : float, optional (default = None)
         If provided, we rescale the gradients before the optimization step.
     grad_clipping : float, optional (default = None)

@@ -75,8 +75,8 @@ class Field(Generic[DataArray]):
         torch Tensor (or a more complex data structure) of the correct shape.  We also take a
         couple of parameters that are important when constructing torch Tensors.
 
-        Parameters
-        ----------
+        # Parameters
+
         padding_lengths : ``Dict[str, int]``
             This dictionary will have the same keys that were produced in
             :func:`get_padding_lengths`.  The values specify the lengths to use when padding each

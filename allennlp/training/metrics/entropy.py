@@ -19,8 +19,8 @@ class Entropy(Metric):
         mask: Optional[torch.Tensor] = None,
     ):
         """
-        Parameters
-        ----------
+        # Parameters
+
         logits : ``torch.Tensor``, required.
             A tensor of unnormalized log probabilities of shape (batch_size, ..., num_classes).
         mask : ``torch.Tensor``, optional (default = None).
@@ -42,8 +42,8 @@ class Entropy(Metric):
     @overrides
     def get_metric(self, reset: bool = False):
         """
-        Returns
-        -------
+        # Returns
+
         The scalar average entropy.
         """
         average_value = self._entropy / self._count if self._count > 0 else 0

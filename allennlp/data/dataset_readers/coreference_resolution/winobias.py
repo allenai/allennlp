@@ -47,8 +47,8 @@ class WinobiasReader(DatasetReader):
     (a list of list of index pairs) and a ``SequenceLabelField`` of cluster ids for every span
     candidate in the ``metadata`` also.
 
-    Parameters
-    ----------
+    # Parameters
+
     max_span_width : ``int``, required.
         The maximum width of candidate spans to consider.
     token_indexers : ``Dict[str, TokenIndexer]``, optional
@@ -111,8 +111,8 @@ class WinobiasReader(DatasetReader):
     ) -> Instance:
 
         """
-        Parameters
-        ----------
+        # Parameters
+
         sentence : ``List[Token]``, required.
             The already tokenised sentence to analyse.
         gold_clusters : ``Optional[List[List[Tuple[int, int]]]]``, optional (default = None)
@@ -120,8 +120,8 @@ class WinobiasReader(DatasetReader):
             contains some number of spans, which can be nested and overlap, but will never
             exactly match between clusters.
 
-        Returns
-        -------
+        # Returns
+
         An ``Instance`` containing the following ``Fields``:
             text : ``TextField``
                 The text of the full sentence.

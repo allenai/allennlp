@@ -16,8 +16,8 @@ class ElmoTokenEmbedderMultiLang(TokenEmbedder):
     A multilingual ELMo embedder - extending ElmoTokenEmbedder for multiple languages.
     Each language has different weights for the ELMo model and an alignment matrix.
 
-    Parameters
-    ----------
+    # Parameters
+
     options_files : ``Dict[str, str]``, required.
         A dictionary of language identifier to an ELMo JSON options file.
     weight_files : ``Dict[str, str]``, required.
@@ -114,8 +114,8 @@ class ElmoTokenEmbedderMultiLang(TokenEmbedder):
         self, inputs: torch.Tensor, lang: str, word_inputs: torch.Tensor = None
     ) -> torch.Tensor:
         """
-        Parameters
-        ----------
+        # Parameters
+
         inputs : ``torch.Tensor``
             Shape ``(batch_size, timesteps, 50)`` of character ids representing the current batch.
         lang : ``str``, , required.
@@ -124,8 +124,8 @@ class ElmoTokenEmbedderMultiLang(TokenEmbedder):
             If you passed a cached vocab, you can in addition pass a tensor of shape
             ``(batch_size, timesteps)``, which represent word ids which have been pre-cached.
 
-        Returns
-        -------
+        # Returns
+
         The ELMo representations for the given language for the input sequence, shape
         ``(batch_size, timesteps, embedding_dim)``
         """
