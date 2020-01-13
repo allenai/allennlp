@@ -133,7 +133,7 @@ class FineTune(Subcommand):
         subparser.add_argument(
             "--embedding-sources-mapping",
             type=str,
-            default="",
+            default="{}",
             help="a JSON dict defining mapping from embedding module path to embedding "
             "pretrained-file used during training. If not passed, and embedding needs to be "
             "extended, we will try to use the original file paths used during training. If "
@@ -172,7 +172,7 @@ def fine_tune_model_from_file_paths(
     cache_directory: str = None,
     cache_prefix: str = None,
     batch_weight_key: str = "",
-    embedding_sources_mapping_str: str = "",
+    embedding_sources_mapping_str: str = "{}",
 ) -> Model:
     """
     A wrapper around :func:`fine_tune_model` which loads the model archive from a file.
@@ -215,10 +215,7 @@ def fine_tune_model_from_file_paths(
     # necessary.
     archive = load_archive(model_archive_path)
     params = Params.from_file(config_file, overrides)
-
-    embedding_sources_mapping = (
-        json.loads(embedding_sources_mapping_str) if embedding_sources_mapping_str else {}
-    )
+    embedding_sources_mapping = json.loads(embedding_sources_mapping_str)
     return train_model(
         model=archive.model,
         params=params,
