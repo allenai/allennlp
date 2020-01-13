@@ -15,6 +15,7 @@
     "token_indexers": {
       "tokens": {
         "type": "single_id",
+        "namespace": "test_tokens",
         "lowercase_tokens": true
       }
     }

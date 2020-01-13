@@ -96,8 +96,7 @@ class NextTokenLM(Model):
 
         output_dict = {"probabilities": top_probs, "top_indices": top_indices}
 
-        # Using the namespace here is a hack...
-        output_dict["token_ids"] = tokens[self._target_namespace]
+        output_dict["token_ids"] = util.get_token_ids_from_text_field_tensors(tokens)
 
         if target_ids is not None:
             targets = util.get_token_ids_from_text_field_tensors(target_ids).view(batch_size)
@@ -127,6 +126,7 @@ class NextTokenLM(Model):
             )
             output_dict["words"] = top_words
         tokens = []
+        print(output_dict["token_ids"])
         for instance_tokens in output_dict["token_ids"]:
             tokens.append(
                 [
