@@ -272,7 +272,7 @@ def train_model(
         If ``True``, we use the new instances to extend your vocabulary.
         Used only when fine-tuning.
     embedding_sources_mapping : ``Dict[str, str]``, optional (default=None)
-        mapping from model paths to the pretrained embedding filepaths.
+        Mapping from model paths to the pretrained embedding filepaths.
         Used only when fine-tuning.
 
     Returns

@@ -54,6 +54,7 @@ to the data you will continue training with, and a directory in which to write t
 import argparse
 import json
 import logging
+from typing import Dict
 
 from allennlp.commands.subcommand import Subcommand
 from allennlp.commands.train import train_model
@@ -132,7 +133,7 @@ class FineTune(Subcommand):
 
         subparser.add_argument(
             "--embedding-sources-mapping",
-            type=str,
+            type=json.loads,
             default="{}",
             help="a JSON dict defining mapping from embedding module path to embedding "
             "pretrained-file used during training. If not passed, and embedding needs to be "
@@ -156,7 +157,7 @@ def fine_tune_model_from_args(args: argparse.Namespace):
         extend_vocab=args.extend_vocab,
         file_friendly_logging=args.file_friendly_logging,
         batch_weight_key=args.batch_weight_key,
-        embedding_sources_mapping_str=args.embedding_sources_mapping,
+        embedding_sources_mapping=args.embedding_sources_mapping,
     )
 
 
@@ -172,7 +173,7 @@ def fine_tune_model_from_file_paths(
     cache_directory: str = None,
     cache_prefix: str = None,
     batch_weight_key: str = "",
-    embedding_sources_mapping_str: str = "{}",
+    embedding_sources_mapping: Dict[str, str] = None,
 ) -> Model:
     """
     A wrapper around :func:`fine_tune_model` which loads the model archive from a file.
@@ -207,15 +208,13 @@ def fine_tune_model_from_file_paths(
         For caching data pre-processing.  See :func:`allennlp.training.util.datasets_from_params`.
     batch_weight_key : ``str``, optional (default="")
         If non-empty, name of metric used to weight the loss on a per-batch basis.
-    embedding_sources_mapping_str : ``str``, optional (default="")
-        JSON string to define dict mapping from embedding paths used during training to
-        the corresponding embedding filepaths available during fine-tuning.
+    embedding_sources_mapping : ``Dict[str, str]``, optional (default=None)
+        Mapping from model paths to the pretrained embedding filepaths.
     """
     # We don't need to pass in `cuda_device` here, because the trainer will call `model.cuda()` if
     # necessary.
     archive = load_archive(model_archive_path)
     params = Params.from_file(config_file, overrides)
-    embedding_sources_mapping = json.loads(embedding_sources_mapping_str)
     return train_model(
         model=archive.model,
         params=params,
