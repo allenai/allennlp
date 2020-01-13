@@ -63,8 +63,8 @@ class SimpleSeq2Seq(Model):
         the predictions from the previous time step for the whole batch. If this value is 0.0
         (default), this corresponds to teacher forcing, and if it is 1.0, it corresponds to not
         using target side ground truth labels.  See the following paper for more information:
-        `Scheduled Sampling for Sequence Prediction with Recurrent Neural Networks. Bengio et al.,
-        2015 <https://arxiv.org/abs/1506.03099>`_.
+        [Scheduled Sampling for Sequence Prediction with Recurrent Neural Networks. Bengio et al.,
+        2015](https://arxiv.org/abs/1506.03099).
     use_bleu : ``bool``, optional (default = True)
         If True, the BLEU metric will be calculated during validation.
     """

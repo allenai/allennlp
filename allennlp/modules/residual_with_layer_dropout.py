@@ -3,8 +3,8 @@ import torch
 
 class ResidualWithLayerDropout(torch.nn.Module):
     """
-    A residual connection with the layer dropout technique `Deep Networks with Stochastic
-    Depth <https://arxiv.org/pdf/1603.09382.pdf>`_ .
+    A residual connection with the layer dropout technique [Deep Networks with Stochastic
+    Depth](https://arxiv.org/pdf/1603.09382.pdf).
 
     This module accepts the input and output of a layer, decides whether this layer should
     be stochastically dropped, returns either the input or output + input. During testing,

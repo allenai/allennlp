@@ -120,8 +120,8 @@ class QaNetEncoder(Seq2SeqEncoder):
 @Seq2SeqEncoder.register("qanet_encoder_block")
 class QaNetEncoderBlock(Seq2SeqEncoder):
     """
-    Implements the encoder block described in `QANet: Combining Local Convolution with Global
-    Self-attention for Reading Comprehension <https://openreview.net/forum?id=B14TlG-RW>`_ .
+    Implements the encoder block described in [QANet: Combining Local Convolution with Global
+    Self-attention for Reading Comprehension](https://openreview.net/forum?id=B14TlG-RW).
 
     One encoder block mainly contains 4 parts:
 

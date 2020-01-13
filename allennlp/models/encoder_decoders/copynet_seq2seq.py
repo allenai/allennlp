@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 @Model.register("copynet_seq2seq")
 class CopyNetSeq2Seq(Model):
     """
-    This is an implementation of `CopyNet <https://arxiv.org/pdf/1603.06393>`_.
+    This is an implementation of [CopyNet](https://arxiv.org/pdf/1603.06393).
     CopyNet is a sequence-to-sequence encoder-decoder model with a copying mechanism
     that can copy tokens from the source sentence into the target sentence instead of
     generating all target tokens only from the target vocabulary.

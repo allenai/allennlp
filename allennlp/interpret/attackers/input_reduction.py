@@ -16,8 +16,8 @@ from allennlp.predictors import Predictor
 @Attacker.register("input-reduction")
 class InputReduction(Attacker):
     """
-    Runs the input reduction method from `Pathologies of Neural Models Make Interpretations
-    Difficult <https://arxiv.org/abs/1804.07781>`_, which removes as many words as possible from
+    Runs the input reduction method from [Pathologies of Neural Models Make Interpretations
+    Difficult](https://arxiv.org/abs/1804.07781), which removes as many words as possible from
     the input without changing the model's prediction.
 
     The functions on this class handle a special case for NER by looking for a field called "tags"

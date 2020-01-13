@@ -28,12 +28,12 @@ class StackedBidirectionalLstm(torch.nn.Module):
         The number of stacked Bidirectional LSTMs to use.
     recurrent_dropout_probability : ``float``, optional (default = 0.0)
         The recurrent dropout probability to be used in a dropout scheme as
-        stated in `A Theoretically Grounded Application of Dropout in Recurrent
-        Neural Networks <https://arxiv.org/abs/1512.05287>`_ .
+        stated in [A Theoretically Grounded Application of Dropout in Recurrent
+        Neural Networks](https://arxiv.org/abs/1512.05287).
     layer_dropout_probability : ``float``, optional (default = 0.0)
         The layer wise dropout probability to be used in a dropout scheme as
-        stated in  `A Theoretically Grounded Application of Dropout in
-        Recurrent Neural Networks <https://arxiv.org/abs/1512.05287>`_ .
+        stated in [A Theoretically Grounded Application of Dropout in Recurrent
+        Neural Networks](https://arxiv.org/abs/1512.05287).
     use_highway : ``bool``, optional (default = True)
         Whether or not to use highway connections between layers. This effectively involves
         reparameterising the normal output of an LSTM as::

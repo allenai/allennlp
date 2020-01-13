@@ -1418,8 +1418,8 @@ def add_positional_features(
 
     """
     Implements the frequency-based positional encoding described
-    in `Attention is all you Need
-    <https://www.semanticscholar.org/paper/Attention-Is-All-You-Need-Vaswani-Shazeer/0737da0767d77606169cbf4187b83e1ab62f6077>`_ .
+    in [Attention is all you Need]
+    (https://www.semanticscholar.org/paper/Attention-Is-All-You-Need-Vaswani-Shazeer/0737da0767d77606169cbf4187b83e1ab62f6077).
 
     Adds sinusoids of different frequencies to a ``Tensor``. A sinusoid of a
     different frequency and phase is added to each dimension of the input ``Tensor``.

@@ -104,11 +104,11 @@ def multi_perspective_match_pairwise(
 
 class BiMpmMatching(nn.Module, FromParams):
     """
-    This ``Module`` implements the matching layer of BiMPM model described in `Bilateral
-    Multi-Perspective Matching for Natural Language Sentences <https://arxiv.org/abs/1702.03814>`_
+    This ``Module`` implements the matching layer of BiMPM model described in [Bilateral
+    Multi-Perspective Matching for Natural Language Sentences](https://arxiv.org/abs/1702.03814)
     by Zhiguo Wang et al., 2017.
-    Also please refer to the `TensorFlow implementation <https://github.com/zhiguowang/BiMPM/>`_ and
-    `PyTorch implementation <https://github.com/galsang/BIMPM-pytorch>`_.
+    Also please refer to the [TensorFlow implementation](https://github.com/zhiguowang/BiMPM/) and
+    [PyTorch implementation](https://github.com/galsang/BIMPM-pytorch).
 
     # Parameters
 

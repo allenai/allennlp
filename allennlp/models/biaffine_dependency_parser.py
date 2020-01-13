@@ -33,8 +33,8 @@ POS_TO_IGNORE = {"``", "''", ":", ",", ".", "PU", "PUNCT", "SYM"}
 class BiaffineDependencyParser(Model):
     """
     This dependency parser follows the model of
-    ` Deep Biaffine Attention for Neural Dependency Parsing (Dozat and Manning, 2016)
-    <https://arxiv.org/abs/1611.01734>`_ .
+    [Deep Biaffine Attention for Neural Dependency Parsing (Dozat and Manning, 2016)]
+    (https://arxiv.org/abs/1611.01734) .
 
     Word representations are generated using a bidirectional LSTM,
     followed by separate biaffine classifiers for pairs of words,

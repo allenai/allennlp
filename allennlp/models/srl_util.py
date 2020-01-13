@@ -14,7 +14,7 @@ def write_bio_formatted_tags_to_file(
     predicate in a sentence to two provided file references.
 
     The CoNLL SRL format is described in
-    `the shared task data README <https://www.lsi.upc.edu/~srlconll/conll05st-release/README>`_ .
+    [the shared task data README](https://www.lsi.upc.edu/~srlconll/conll05st-release/README).
 
     This function expects IOB2-formatted tags, where the B- tag is used in the beginning
     of every chunk (i.e. all chunks start with the B- tag).
@@ -61,7 +61,7 @@ def write_conll_formatted_tags_to_file(
     predicate in a sentence to two provided file references.
 
     The CoNLL SRL format is described in
-    `the shared task data README <https://www.lsi.upc.edu/~srlconll/conll05st-release/README>`_ .
+    [the shared task data README](https://www.lsi.upc.edu/~srlconll/conll05st-release/README).
 
     This function expects IOB2-formatted tags, where the B- tag is used in the beginning
     of every chunk (i.e. all chunks start with the B- tag).

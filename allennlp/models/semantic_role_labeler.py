@@ -25,8 +25,8 @@ from allennlp.training.metrics.srl_eval_scorer import SrlEvalScorer, DEFAULT_SRL
 class SemanticRoleLabeler(Model):
     """
     This model performs semantic role labeling using BIO tags using Propbank semantic roles.
-    Specifically, it is an implementation of `Deep Semantic Role Labeling - What works
-    and what's next <https://www.aclweb.org/anthology/P17-1044>`_ .
+    Specifically, it is an implementation of [Deep Semantic Role Labeling - What works
+    and what's next](https://www.aclweb.org/anthology/P17-1044).
 
     This implementation is effectively a series of stacked interleaved LSTMs with highway
     connections, applied to embedded sequences of words concatenated with a binary indicator
@@ -316,7 +316,7 @@ def write_to_conll_eval_file(
     predicate in a sentence to two provided file references.
 
     The CoNLL SRL format is described in
-    `the shared task data README <https://www.lsi.upc.edu/~srlconll/conll05st-release/README>`_ .
+    [the shared task data README](https://www.lsi.upc.edu/~srlconll/conll05st-release/README).
 
     This function expects IOB2-formatted tags, where the B- tag is used in the beginning
     of every chunk (i.e. all chunks start with the B- tag).

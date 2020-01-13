@@ -22,10 +22,10 @@ from allennlp.modules.bimpm_matching import BiMpmMatching
 @Model.register("bimpm")
 class BiMpm(Model):
     """
-    This ``Model`` implements BiMPM model described in `Bilateral Multi-Perspective Matching
-    for Natural Language Sentences <https://arxiv.org/abs/1702.03814>`_ by Zhiguo Wang et al., 2017.
-    Also please refer to the `TensorFlow implementation <https://github.com/zhiguowang/BiMPM/>`_ and
-    `PyTorch implementation <https://github.com/galsang/BIMPM-pytorch>`_.
+    This ``Model`` implements BiMPM model described in [Bilateral Multi-Perspective Matching
+    for Natural Language Sentences](https://arxiv.org/abs/1702.03814) by Zhiguo Wang et al., 2017.
+    Also please refer to the [TensorFlow implementation](https://github.com/zhiguowang/BiMPM/) and
+    [PyTorch implementation](https://github.com/galsang/BIMPM-pytorch).
 
     # Parameters
 

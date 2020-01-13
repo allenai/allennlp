@@ -48,8 +48,8 @@ class ElmoLstm(_EncoderBase):
         If True, compute gradient of ELMo parameters for fine tuning.
     recurrent_dropout_probability : ``float``, optional (default = 0.0)
         The dropout probability to be used in a dropout scheme as stated in
-        `A Theoretically Grounded Application of Dropout in Recurrent Neural Networks
-        <https://arxiv.org/abs/1512.05287>`_ .
+        [A Theoretically Grounded Application of Dropout in Recurrent Neural Networks]
+        (https://arxiv.org/abs/1512.05287).
     state_projection_clip_value : ``float``, optional, (default = None)
         The magnitude with which to clip the hidden_state after projecting it.
     memory_cell_clip_value : ``float``, optional, (default = None)

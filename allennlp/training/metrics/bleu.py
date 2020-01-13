@@ -14,9 +14,9 @@ class BLEU(Metric):
     Bilingual Evaluation Understudy (BLEU).
 
     BLEU is a common metric used for evaluating the quality of machine translations
-    against a set of reference translations. See `Papineni et. al.,
-    "BLEU: a method for automatic evaluation of machine translation", 2002
-    <https://www.semanticscholar.org/paper/8ff93cfd37dced279134c9d642337a2085b31f59/>`_.
+    against a set of reference translations. See [Papineni et. al.,
+    "BLEU: a method for automatic evaluation of machine translation", 2002]
+    (https://www.semanticscholar.org/paper/8ff93cfd37dced279134c9d642337a2085b31f59/).
 
     # Parameters
 

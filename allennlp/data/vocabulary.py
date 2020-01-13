@@ -29,8 +29,8 @@ NAMESPACE_PADDING_FILE = "non_padded_namespaces.txt"
 
 class _NamespaceDependentDefaultDict(defaultdict):
     """
-    This is a `defaultdict
-    <https://docs.python.org/2/library/collections.html#collections.defaultdict>`_ where the
+    This is a [defaultdict]
+    (https://docs.python.org/2/library/collections.html#collections.defaultdict) where the
     default value is dependent on the key that is passed.
 
     We use "namespaces" in the :class:`Vocabulary` object to keep track of several different

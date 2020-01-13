@@ -20,8 +20,8 @@ from allennlp.training.metrics import CategoricalAccuracy
 class BiattentiveClassificationNetwork(Model):
     """
     This class implements the Biattentive Classification Network model described
-    in section 5 of `Learned in Translation: Contextualized Word Vectors (NIPS 2017)
-    <https://arxiv.org/abs/1708.00107>`_ for text classification. We assume we're
+    in section 5 of [Learned in Translation: Contextualized Word Vectors (NIPS 2017)]
+    (https://arxiv.org/abs/1708.00107) for text classification. We assume we're
     given a piece of text, and we predict some output label.
 
     At a high level, the model starts by embedding the tokens and running them through

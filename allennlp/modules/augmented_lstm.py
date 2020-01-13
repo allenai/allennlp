@@ -33,8 +33,8 @@ class AugmentedLstm(torch.nn.Module):
         Forwards by default, or backwards if False.
     recurrent_dropout_probability : ``float``, optional (default = 0.0)
         The dropout probability to be used in a dropout scheme as stated in
-        `A Theoretically Grounded Application of Dropout in Recurrent Neural Networks
-        <https://arxiv.org/abs/1512.05287>`_ . Implementation wise, this simply
+        [A Theoretically Grounded Application of Dropout in Recurrent Neural Networks]
+        (https://arxiv.org/abs/1512.05287). Implementation wise, this simply
         applies a fixed dropout mask per sequence to the recurrent connection of the
         LSTM. Dropout is not applied to the output sequence nor the last hidden
         state that is returned, it is only applied to all previous hidden states.
