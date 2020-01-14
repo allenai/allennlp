@@ -144,7 +144,7 @@ class ElmoTokenEmbedderMultiLang(TokenEmbedder):
     # Custom vocab_to_cache logic requires a from_params implementation.
     @classmethod
     def from_params(  # type: ignore
-        cls, vocab: Vocabulary, params: Params
+        cls, vocab: Vocabulary, params: Params, **extras
     ) -> "ElmoTokenEmbedderMultiLang":
 
         options_files = params.pop("options_files")

@@ -32,7 +32,7 @@ class AutoRegressiveSeqDecoder(SeqDecoder):
         Module that contains implementation of neural network for decoding output elements
     max_decoding_steps : ``int``, required
         Maximum length of decoded sequences.
-    target_embedder : ``Embedding``, required
+    target_embedder : ``Embedding``
         Embedder for target tokens.
     target_namespace : ``str``, optional (default = 'tokens')
         If the target side vocabulary is different from the source side's, you need to specify the

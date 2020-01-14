@@ -67,7 +67,7 @@ class TrainerPieces(NamedTuple):
                 # Using a generator comprehension here is important
                 # because, being lazy, it allows us to not iterate over the
                 # dataset when directory_path is specified.
-                (
+                instances=(
                     instance
                     for key, dataset in all_datasets.items()
                     if key in datasets_for_vocab_creation

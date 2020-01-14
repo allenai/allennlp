@@ -159,7 +159,7 @@ class TestSearchLearningRate(AllenNlpTestCase):
         all_datasets = datasets_from_params(params)
         vocab = Vocabulary.from_params(
             params.pop("vocabulary", {}),
-            (instance for dataset in all_datasets.values() for instance in dataset),
+            instances=(instance for dataset in all_datasets.values() for instance in dataset),
         )
         model = Model.from_params(vocab=vocab, params=params.pop("model"))
         iterator = DataIterator.from_params(params.pop("iterator"))
