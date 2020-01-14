@@ -13,7 +13,7 @@ for developing state-of-the-art deep learning models on a wide variety of lingui
 * [Forum](https://discourse.allennlp.org)
 * [Documentation](https://allenai.github.io/allennlp-docs/)
 * [Contributing Guidelines](CONTRIBUTING.md)
-* [Model List](MODELS.md)
+* [Pretrained Models](https://github.com/allenai/allennlp-hub/blob/master/allennlp_hub/pretrained/allennlp_pretrained.py)
 * [Continuous Build](http://build.allennlp.org/)
 
 ## Package Overview
