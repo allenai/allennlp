@@ -113,7 +113,7 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
 
             for _ in range(num_wrapping_dims):
                 embedder = TimeDistributed(embedder)
-            # If we pre-specified a mapping explictly, use that.
+            # If we pre-specified a mapping explicitly, use that.
             # make mypy happy
             tensors: Union[List[Any], Dict[str, Any]] = None
             if self._embedder_to_indexer_map is not None and key in self._embedder_to_indexer_map:
