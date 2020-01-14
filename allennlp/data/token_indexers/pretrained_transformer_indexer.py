@@ -79,6 +79,7 @@ class PretrainedTransformerIndexer(TokenIndexer[int]):
             self._added_to_vocabulary = True
 
         indices: List[int] = []
+        type_ids: List[int] = []
         for token in tokens:
             if getattr(token, "text_id", None) is not None:
                 # `text_id` being set on the token means that we aren't using the vocab, we just use
@@ -91,11 +92,19 @@ class PretrainedTransformerIndexer(TokenIndexer[int]):
                     f" for the following token: {token.text}"
                 )
 
+            if type_ids is not None and getattr(token, "type_id", None) is not None:
+                type_ids.append(token.type_id)
+            else:
+                type_ids = None
+
         # The mask has 1 for real tokens and 0 for padding tokens. Only real
         # tokens are attended to.
         attention_mask = [1] * len(indices)
 
-        return {index_name: indices, "mask": attention_mask}
+        result = {index_name: indices, "mask": attention_mask}
+        if type_ids is not None:
+            result["type_ids"] = type_ids
+        return result
 
     @overrides
     def get_padding_lengths(self, token: int) -> Dict[str, int]:
