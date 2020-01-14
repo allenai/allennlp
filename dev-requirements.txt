@@ -37,3 +37,6 @@ pypandoc
 
 # Pypi uploads
 twine>=1.11.0
+
+# Optional dependencies, which we install for testing purposes.
+matplotlib>=2.2.3

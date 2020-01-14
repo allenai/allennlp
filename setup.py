@@ -115,7 +115,6 @@ setup(
         "scikit-learn",
         "scipy",
         "pytz>=2017.3",
-        "matplotlib>=2.2.3",
         "pytest",
         "flaky",
         "responses>=0.7",
