@@ -27,7 +27,7 @@ def fingerprint(instance: Instance) -> Tuple[str, ...]:
 
 @pytest.mark.skipif(
     sys.platform == "darwin" and sys.version_info > (3, 6),
-    reason="This test causes internal Python errors on the Mac since version 3.7"
+    reason="This test causes internal Python errors on the Mac since version 3.7",
 )
 class TestMultiprocessDatasetReader(AllenNlpTestCase):
     def setUp(self) -> None:
