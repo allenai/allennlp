@@ -1,3 +1,5 @@
+from typing import Optional
+
 from overrides import overrides
 from transformers.modeling_auto import AutoModel
 import torch
@@ -23,7 +25,11 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         return self.output_dim
 
     def forward(
-        self, token_ids: torch.LongTensor, attention_mask: torch.LongTensor
+        self, token_ids: torch.LongTensor, attention_mask: torch.LongTensor, type_ids: Optional[torch.LongTensor]
     ) -> torch.Tensor:  # type: ignore
-
-        return self.transformer_model(input_ids=token_ids, attention_mask=attention_mask)[0]
+        if self.transformer_model.embeddings.token_type_embeddings.num_embeddings == 1:
+            type_ids = None # RoBERTa doesn't have token type ids
+        return self.transformer_model(
+            input_ids=token_ids,
+            token_type_ids=type_ids,
+            attention_mask=attention_mask)[0]
