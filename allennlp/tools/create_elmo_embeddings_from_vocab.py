@@ -44,9 +44,7 @@ def main(
     tokens = [tokens[0]] + ["<S>", "</S>"] + tokens[1:]
 
     indexer = ELMoTokenCharactersIndexer()
-    indices = indexer.tokens_to_indices(
-        [Token(token) for token in tokens], Vocabulary()
-    )["tokens"]
+    indices = indexer.tokens_to_indices([Token(token) for token in tokens], Vocabulary())["tokens"]
     sentences = []
     for k in range((len(indices) // 50) + 1):
         sentences.append(
