@@ -71,27 +71,38 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
     def forward(
         self, text_field_input: Dict[str, torch.Tensor], num_wrapping_dims: int = 0, **kwargs
     ) -> torch.Tensor:
-        embedder_keys = self._token_embedders.keys()
         input_keys = text_field_input.keys()
 
         # Check for unmatched keys
         if not self._allow_unmatched_keys:
-            if embedder_keys < input_keys:
+            consumed_keys = set()
+            for key in self._token_embedders.keys():
+                if self._embedder_to_indexer_map is not None and key in self._embedder_to_indexer_map:
+                    indexer_map = self._embedder_to_indexer_map[key]
+                    if isinstance(indexer_map, list):
+                        consumed_keys.update(indexer_key for indexer_key in indexer_map if indexer_key is not None)
+                    elif isinstance(indexer_map, dict):
+                        consumed_keys.update(indexer_map.values())
+                    else:
+                        raise NotImplementedError
+                else:
+                    consumed_keys.add(key)
+
+            if consumed_keys < input_keys:
                 # token embedder keys are a strict subset of text field input keys.
                 message = (
                     f"Your text field is generating more keys ({list(input_keys)}) "
-                    f"than you have token embedders ({list(embedder_keys)}. "
+                    f"than you use ({list(consumed_keys)}. "
                     f"If you are using a token embedder that requires multiple keys "
                     f"(for example, the OpenAI Transformer embedder or the BERT embedder) "
-                    f"you need to add allow_unmatched_keys = True "
-                    f"(and likely an embedder_to_indexer_map) to your "
+                    f"you likely need to add an embedder_to_indexer_map to your "
                     f"BasicTextFieldEmbedder configuration. "
                     f"Otherwise, you should check that there is a 1:1 embedding "
                     f"between your token indexers and token embedders."
                 )
                 raise ConfigurationError(message)
 
-            elif self._token_embedders.keys() != text_field_input.keys():
+            elif consumed_keys != input_keys:
                 # some other mismatch
                 message = "Mismatched token keys: %s and %s" % (
                     str(self._token_embedders.keys()),
@@ -100,8 +111,7 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
                 raise ConfigurationError(message)
 
         embedded_representations = []
-        keys = sorted(embedder_keys)
-        for key in keys:
+        for key in sorted(self._token_embedders.keys()):
             # Note: need to use getattr here so that the pytorch voodoo
             # with submodules works with multiple GPUs.
             embedder = getattr(self, "token_embedder_{}".format(key))
