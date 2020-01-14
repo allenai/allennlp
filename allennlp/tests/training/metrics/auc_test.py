@@ -50,6 +50,8 @@ class AucTest(AllenNlpTestCase):
         predictions = torch.randn(8).float()
         labels = torch.randint(3, 5, (8,)).long()
 
+        if 4 not in labels:
+            labels[torch.randint(0, 8, (1,))]=4
         auc(predictions, labels)
         computed_auc_value = auc.get_metric(reset=True)
 
