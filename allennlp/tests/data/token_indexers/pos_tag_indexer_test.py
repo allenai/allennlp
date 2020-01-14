@@ -35,7 +35,6 @@ class TestPosTagIndexer(AllenNlpTestCase):
         tokens[1] = Token("is", tag_="VBZ", pos_="VERB")
         vocab = Vocabulary()
         verb_index = vocab.add_token_to_namespace("VERB", namespace="pos_tags")
-        aux_index = vocab.add_token_to_namespace("AUX", namespace="pos_tags")
         cop_index = vocab.add_token_to_namespace("VBZ", namespace="pos_tags")
         none_index = vocab.add_token_to_namespace("NONE", namespace="pos_tags")
         # Have to add other tokens too, since we're calling `tokens_to_indices` on all of them

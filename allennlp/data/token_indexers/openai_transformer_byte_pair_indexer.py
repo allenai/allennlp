@@ -4,7 +4,6 @@ import tarfile
 import re
 
 from overrides import overrides
-import torch
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.file_utils import cached_path

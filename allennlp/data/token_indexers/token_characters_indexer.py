@@ -114,11 +114,10 @@ class TokenCharactersIndexer(TokenIndexer):
         self, tokens: IndexedTokenList, padding_lengths: Dict[str, int]
     ) -> Dict[str, torch.Tensor]:
         # Pad the tokens.
-        padding_token = lambda: []
         padded_tokens = pad_sequence_to_length(
             tokens["token_characters"],
             padding_lengths["token_characters"],
-            default_value=padding_token,
+            default_value=lambda: [],
         )
 
         # Pad the characters within the tokens.

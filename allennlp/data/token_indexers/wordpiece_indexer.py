@@ -2,7 +2,6 @@ from typing import Dict, List, Callable
 import logging
 
 from overrides import overrides
-import torch
 from pytorch_pretrained_bert.tokenization import BertTokenizer
 
 from allennlp.data.vocabulary import Vocabulary

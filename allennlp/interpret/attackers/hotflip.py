@@ -272,9 +272,6 @@ class Hotflip(Attacker):
                     break
                 flipped.append(index_of_token_to_flip)
 
-                # TODO(mattg): This is quite a bit of a hack for getting the vocab id...  I don't
-                # have better ideas at the moment, though.
-                indexer_name = self.namespace
                 text_field_tensors = text_field.as_tensor(text_field.get_padding_lengths())
                 input_tokens = util.get_token_ids_from_text_field_tensors(text_field_tensors)
                 original_id_of_token_to_flip = input_tokens[index_of_token_to_flip]

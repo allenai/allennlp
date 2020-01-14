@@ -1,4 +1,4 @@
-from typing import Dict, List, Union, Any
+from typing import Dict
 import inspect
 
 import torch
@@ -51,9 +51,6 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
     def forward(
         self, text_field_input: TextFieldTensors, num_wrapping_dims: int = 0, **kwargs
     ) -> torch.Tensor:
-        embedder_keys = self._token_embedders.keys()
-        input_keys = text_field_input.keys()
-
         if self._token_embedders.keys() != text_field_input.keys():
             message = "Mismatched token keys: %s and %s" % (
                 str(self._token_embedders.keys()),

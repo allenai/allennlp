@@ -91,7 +91,6 @@ class CharacterTokenIndexerTest(AllenNlpTestCase):
 
         indexer = TokenCharactersIndexer("characters", min_padding_length=10)
         indices = indexer.tokens_to_indices(tokens, vocab)
-        padding_lengths = indexer.get_padding_lengths(indices)
         padded = indexer.as_padded_tensor_dict(indices, indexer.get_padding_lengths(indices))
         assert padded["token_characters"].tolist() == [
             [2, 3, 3, 4, 5, 6, 7, 8, 0, 0],

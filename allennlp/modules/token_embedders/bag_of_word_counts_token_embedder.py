@@ -1,9 +1,9 @@
 import torch
-from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
-from allennlp.data import Vocabulary
-from allennlp.common import Params
-from allennlp.nn.util import get_text_field_mask
+
 from allennlp.common.checks import ConfigurationError
+from allennlp.data import Vocabulary
+from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
+from allennlp.nn.util import get_text_field_mask
 
 
 @TokenEmbedder.register("bag_of_word_counts")

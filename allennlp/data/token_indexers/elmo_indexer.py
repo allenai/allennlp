@@ -144,9 +144,12 @@ class ELMoTokenCharactersIndexer(TokenIndexer):
     def as_padded_tensor_dict(
         self, tokens: IndexedTokenList, padding_lengths: Dict[str, int]
     ) -> Dict[str, torch.Tensor]:
+        # Overriding this method only because we need a different padding token than the default.
         tensor_dict = {}
-        # Overriding only because we need a different padding token than the default.
-        padding_token = lambda: [0] * ELMoCharacterMapper.max_word_length
+
+        def padding_token():
+            return [0] * ELMoCharacterMapper.max_word_length
+
         tensor_dict["tokens"] = torch.LongTensor(
             pad_sequence_to_length(
                 tokens["tokens"], padding_lengths["tokens"], default_value=padding_token

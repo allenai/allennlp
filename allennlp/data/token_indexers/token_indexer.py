@@ -1,8 +1,6 @@
-from typing import Dict, List, TypeVar, Generic
-import warnings
+from typing import Dict, List
 
 import torch
-import numpy
 
 from allennlp.common import Registrable
 from allennlp.common.util import pad_sequence_to_length

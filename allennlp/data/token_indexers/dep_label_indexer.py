@@ -2,7 +2,6 @@ import logging
 from typing import Dict, List, Set
 
 from overrides import overrides
-import torch
 
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.data.tokenizers.token import Token

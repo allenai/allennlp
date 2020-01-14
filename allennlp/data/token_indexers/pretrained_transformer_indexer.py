@@ -3,7 +3,6 @@ import logging
 
 from overrides import overrides
 from transformers.tokenization_auto import AutoTokenizer
-import torch
 
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.data.tokenizers.token import Token

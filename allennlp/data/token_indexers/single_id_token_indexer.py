@@ -2,7 +2,6 @@ from typing import Dict, List
 import itertools
 
 from overrides import overrides
-import torch
 
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.data.tokenizers.token import Token

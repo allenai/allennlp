@@ -59,7 +59,8 @@ class SpacyTokenIndexer(TokenIndexer):
         self, tokens: IndexedTokenList, padding_lengths: Dict[str, int]
     ) -> Dict[str, torch.Tensor]:
 
-        padding_token = lambda: numpy.zeros(self._hidden_dim, dtype=numpy.float32)
+        def padding_token():
+            return numpy.zeros(self._hidden_dim, dtype=numpy.float32)
         tensor = torch.FloatTensor(
             pad_sequence_to_length(
                 tokens["tokens"], padding_lengths["tokens"], default_value=padding_token
