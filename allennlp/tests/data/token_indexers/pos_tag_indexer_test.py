@@ -14,6 +14,9 @@ class TestPosTagIndexer(AllenNlpTestCase):
     def test_count_vocab_items_uses_pos_tags(self):
         tokens = self.tokenizer.tokenize("This is a sentence.")
         tokens = [Token("<S>")] + [t for t in tokens] + [Token("</S>")]
+        # Hard-coding this because spacy's POS tagger keeps changing on us, wanting to call this AUX
+        # in some runs.
+        tokens[2] = Token("is", tag_="VBZ", pos_="VERB")
         indexer = PosTagIndexer()
         counter = defaultdict(lambda: defaultdict(int))
         for token in tokens:
@@ -29,6 +32,7 @@ class TestPosTagIndexer(AllenNlpTestCase):
     def test_tokens_to_indices_uses_pos_tags(self):
         tokens = self.tokenizer.tokenize("This is a sentence.")
         tokens = [t for t in tokens] + [Token("</S>")]
+        tokens[1] = Token("is", tag_="VBZ", pos_="VERB")
         vocab = Vocabulary()
         verb_index = vocab.add_token_to_namespace("VERB", namespace="pos_tags")
         aux_index = vocab.add_token_to_namespace("AUX", namespace="pos_tags")
