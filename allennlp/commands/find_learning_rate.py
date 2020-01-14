@@ -356,12 +356,15 @@ def _save_plot(learning_rates: List[float], losses: List[float], save_path: str)
 
     try:
         import matplotlib
+
         matplotlib.use("Agg")  # noqa
         import matplotlib.pyplot as plt
 
     except ModuleNotFoundError as error:
 
-        logger.warn("To use allennlp find-learning-rate, please install matplotlib: pip install matplotlib>=2.2.3 .")
+        logger.warn(
+            "To use allennlp find-learning-rate, please install matplotlib: pip install matplotlib>=2.2.3 ."
+        )
         raise error
 
     plt.ylabel("loss")
