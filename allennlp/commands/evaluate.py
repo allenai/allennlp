@@ -65,7 +65,6 @@ from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.iterators import DataIterator
 from allennlp.models.archival import load_archive
 from allennlp.training.util import evaluate
-from allennlp.common import Params
 
 logger = logging.getLogger(__name__)
 
@@ -171,7 +170,7 @@ def evaluate_from_args(args: argparse.Namespace) -> Dict[str, Any]:
     )
     if args.extend_vocab:
         logger.info("Vocabulary is being extended with test instances.")
-        model.vocab.extend_from_instances(Params({}), instances=instances)
+        model.vocab.extend_from_instances(instances=instances)
         model.extend_embedder_vocab(embedding_sources)
 
     iterator_params = config.pop("validation_iterator", None)

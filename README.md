@@ -13,7 +13,7 @@ for developing state-of-the-art deep learning models on a wide variety of lingui
 * [Forum](https://discourse.allennlp.org)
 * [Documentation](https://allenai.github.io/allennlp-docs/)
 * [Contributing Guidelines](CONTRIBUTING.md)
-* [Model List](MODELS.md)
+* [Pretrained Models](https://github.com/allenai/allennlp-hub/blob/master/allennlp_hub/pretrained/allennlp_pretrained.py)
 * [Continuous Build](http://build.allennlp.org/)
 
 ## Package Overview
@@ -140,23 +140,26 @@ $ allennlp
 Run AllenNLP
 
 optional arguments:
-  -h, --help    show this help message and exit
-  --version     show program's version number and exit
+  -h, --help     show this help message and exit
+  --version      show program's version number and exit
 
 Commands:
-
-    configure   Run the configuration wizard.
-    train       Train a model.
-    evaluate    Evaluate the specified model + dataset.
-    predict     Use a trained model to make predictions.
-    make-vocab  Create a vocabulary.
-    elmo        Create word vectors using a pretrained ELMo model.
-    fine-tune   Continue training a model on a new dataset.
-    dry-run     Create a vocabulary, compute dataset statistics and other
-                training utilities.
+  
+    train        Train a model.
+    evaluate     Evaluate the specified model + dataset.
+    predict      Use a trained model to make predictions.
+    elmo         Create word vectors using a pretrained ELMo model.
+    fine-tune    Continue training a model on a new dataset.
+    dry-run      Create a vocabulary, compute dataset statistics and other
+                 training utilities.
+    make-vocab   Create a vocabulary, compute dataset statistics and other
+                 training utilities.
     test-install
-                Run the unit tests.
-    find-lr     Find a learning rate range.
+                 Run the unit tests.
+    find-lr      Find a learning rate range.
+    print-results
+                 Print results from allennlp serialization directories to the
+                 console.
 ```
 
 ## Docker images

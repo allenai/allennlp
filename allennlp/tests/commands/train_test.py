@@ -177,7 +177,9 @@ class TestTrain(AllenNlpTestCase):
             {
                 "model": {
                     "type": "simple_tagger",
-                    "text_field_embedder": {"tokens": {"type": "embedding", "embedding_dim": 5}},
+                    "text_field_embedder": {
+                        "token_embedders": {"tokens": {"type": "embedding", "embedding_dim": 5}}
+                    },
                     "encoder": {"type": "lstm", "input_size": 5, "hidden_size": 7, "num_layers": 2},
                 },
                 "dataset_reader": {"type": "sequence_tagging"},
@@ -356,7 +358,7 @@ class TestTrainOnLazyDataset(AllenNlpTestCase):
         params["model"]["text_field_embedder"] = {
             "_pretrained": {"archive_file": model_archive, "module_path": "_text_field_embedder"}
         }
-        params["vocabulary"] = {"directory_path": snli_vocab_path, "extend": True}
+        params["vocabulary"] = {"type": "extend", "directory": snli_vocab_path}
 
         original_vocab = Vocabulary.from_files(snli_vocab_path)
 

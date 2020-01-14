@@ -286,7 +286,7 @@ def fine_tune_model(
         )
 
     vocabulary_params = params.pop("vocabulary", {})
-    if vocabulary_params.get("directory_path", None):
+    if vocabulary_params.get("type", None) == "from_files":
         logger.warning(
             "You passed `directory_path` in parameters for the vocabulary in "
             "your configuration file, but it will be ignored. "
@@ -306,13 +306,12 @@ def fine_tune_model(
             "Extending model vocabulary using %s data.", ", ".join(datasets_for_vocab_creation)
         )
         vocab.extend_from_instances(
-            vocabulary_params,
             (
                 instance
                 for key, dataset in all_datasets.items()
                 for instance in dataset
                 if key in datasets_for_vocab_creation
-            ),
+            )
         )
 
         model.extend_embedder_vocab(embedding_sources_mapping)

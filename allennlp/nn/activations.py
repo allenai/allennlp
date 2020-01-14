@@ -54,19 +54,19 @@ class Activation(Registrable):
 # If you want to instantiate it, you can do like this:
 # Activation.by_name('relu')()
 Registrable._registry[Activation] = {
-    "linear": lambda: lambda x: x,  # type: ignore
-    "relu": torch.nn.ReLU,
-    "relu6": torch.nn.ReLU6,
-    "elu": torch.nn.ELU,
-    "prelu": torch.nn.PReLU,
-    "leaky_relu": torch.nn.LeakyReLU,
-    "threshold": torch.nn.Threshold,
-    "hardtanh": torch.nn.Hardtanh,
-    "sigmoid": torch.nn.Sigmoid,
-    "tanh": torch.nn.Tanh,
-    "log_sigmoid": torch.nn.LogSigmoid,
-    "softplus": torch.nn.Softplus,
-    "softshrink": torch.nn.Softshrink,
-    "softsign": torch.nn.Softsign,
-    "tanhshrink": torch.nn.Tanhshrink,
+    "linear": (lambda: lambda x: x, None),  # type: ignore
+    "relu": (torch.nn.ReLU, None),
+    "relu6": (torch.nn.ReLU6, None),
+    "elu": (torch.nn.ELU, None),
+    "prelu": (torch.nn.PReLU, None),
+    "leaky_relu": (torch.nn.LeakyReLU, None),
+    "threshold": (torch.nn.Threshold, None),
+    "hardtanh": (torch.nn.Hardtanh, None),
+    "sigmoid": (torch.nn.Sigmoid, None),
+    "tanh": (torch.nn.Tanh, None),
+    "log_sigmoid": (torch.nn.LogSigmoid, None),
+    "softplus": (torch.nn.Softplus, None),
+    "softshrink": (torch.nn.Softshrink, None),
+    "softsign": (torch.nn.Softsign, None),
+    "tanhshrink": (torch.nn.Tanhshrink, None),
 }

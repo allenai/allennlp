@@ -5,7 +5,7 @@ an AllenNLP model.
 
 import logging
 import os
-from typing import Dict, Union, List, Set
+from typing import Dict, Union, List, Set, Type
 
 import numpy
 import torch
@@ -252,7 +252,8 @@ class Model(torch.nn.Module, Registrable):
         # If the config specifies a vocabulary subclass, we need to use it.
         vocab_params = config.get("vocabulary", Params({}))
         vocab_choice = vocab_params.pop_choice("type", Vocabulary.list_available(), True)
-        vocab = Vocabulary.by_name(vocab_choice).from_files(
+        vocab_class, _ = Vocabulary.resolve_class_name(vocab_choice)
+        vocab = vocab_class.from_files(
             vocab_dir, vocab_params.get("padding_token", None), vocab_params.get("oov_token", None)
         )
 
@@ -325,7 +326,8 @@ class Model(torch.nn.Module, Registrable):
         # Load using an overridable _load method.
         # This allows subclasses of Model to override _load.
 
-        return cls.by_name(model_type)._load(config, serialization_dir, weights_file, cuda_device)
+        model_class: Type[Model] = cls.by_name(model_type)  # type: ignore
+        return model_class._load(config, serialization_dir, weights_file, cuda_device)
 
     def extend_embedder_vocab(self, embedding_sources_mapping: Dict[str, str] = None) -> None:
         """
