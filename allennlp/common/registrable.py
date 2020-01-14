@@ -57,6 +57,52 @@ class Registrable(FromParams):
         exist_ok : ``bool``, optional (default=False)
             If True, overwrites any existing models registered under ``name``. Else,
             throws an error if a model is already registered under ``name``.
+
+        # Examples
+
+        To use this class, you would typically have a base class that inherits from `Registrable`:
+
+        ```python
+        class Vocabulary(Registrable):
+            ...
+        ```
+
+        Then, if you want to register a subclass, you decorate it like this:
+
+        ```python
+        @Vocabulary.register("my-vocabulary")
+        class MyVocabulary(Vocabulary):
+            def __init__(self, param1: int, param2: str):
+                ...
+        ```
+
+        Registering a class like this will let you instantiate a class from a config file, where you
+        give `"type": "my-vocabulary"`, and keys corresponding to the parameters of the `__init__`
+        method (note that for this to work, those parameters must have type annotations).
+
+        If you want to have the instantiation from a config file call a method other than the
+        constructor, either because you have several different construction paths that could be
+        taken for the same object (as we do in `Vocabulary`) or because you have logic you want to
+        happen before you get to the constructor (as we do in `Embedding`), you can register a
+        specific `@classmethod` as the constructor to use, like this:
+
+        ```python
+        @Vocabulary.register("my-vocabulary-from-instances", constructor="from_instances")
+        @Vocabulary.register("my-vocabulary-from-files", constructor="from_files")
+        class MyVocabulary(Vocabulary):
+            def __init__(self, some_params):
+                ...
+
+            @classmethod
+            def from_instances(cls, some_other_params) -> MyVocabulary:
+                ...  # construct some_params from instances
+                return cls(some_params)
+
+            @classmethod
+            def from_files(cls, still_other_params) -> MyVocabulary:
+                ...  # construct some_params from files
+                return cls(some_params)
+        ```
         """
         registry = Registrable._registry[cls]
 
