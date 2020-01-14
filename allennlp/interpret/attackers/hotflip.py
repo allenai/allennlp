@@ -131,7 +131,7 @@ class Hotflip(Attacker):
                 indexed_tokens = token_indexer.tokens_to_indices(
                     tokens, self.vocab, "token_characters"
                 )
-                padded_tokens = token_indexer.as_padded_tensor(
+                padded_tokens = token_indexer.as_padded_tensor_dict(
                     indexed_tokens, {"token_characters": len(tokens)}
                 )
                 inputs[indexer_name] = {

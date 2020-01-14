@@ -91,7 +91,7 @@ class TextField(SequenceField[TextFieldTensors]):
     def as_tensor(self, padding_lengths: Dict[str, int]) -> Dict[str, torch.Tensor]:
         tensors = {}
 
-        indexer_lengths = defaultdict(dict)
+        indexer_lengths: Dict[str, Dict[str, int]] = defaultdict(dict)
         for key, value in padding_lengths.items():
             # We want this to crash if the split fails. Should never happen, so I'm not
             # putting in a check, but if you fail on this line, open a github issue.
@@ -116,7 +116,7 @@ class TextField(SequenceField[TextFieldTensors]):
     def batch_tensors(self, tensor_list: List[TextFieldTensors]) -> TextFieldTensors:
         # This is creating a dict of {token_indexer_name: {token_indexer_outputs: batched_tensor}}
         # for each token indexer used to index this field.
-        indexer_lists = defaultdict(list)
+        indexer_lists: Dict[str, List[Dict[str, torch.Tensor]]] = defaultdict(list)
         for tensor_dict in tensor_list:
             for indexer_name, indexer_output in tensor_dict.items():
                 indexer_lists[indexer_name].append(indexer_output)

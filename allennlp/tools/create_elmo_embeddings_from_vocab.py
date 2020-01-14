@@ -45,13 +45,13 @@ def main(
 
     indexer = ELMoTokenCharactersIndexer()
     indices = indexer.tokens_to_indices(
-        [Token(token) for token in tokens], Vocabulary(), "indices"
-    )["indices"]
+        [Token(token) for token in tokens], Vocabulary()
+    )["tokens"]
     sentences = []
     for k in range((len(indices) // 50) + 1):
         sentences.append(
-            indexer.as_padded_tensor(
-                indices[(k * 50) : ((k + 1) * 50)], desired_num_tokens=50, padding_lengths={}
+            indexer.as_padded_tensor_dict(
+                indices[(k * 50) : ((k + 1) * 50)], padding_lengths={"tokens": 50}
             )
         )
 

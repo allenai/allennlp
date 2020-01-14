@@ -105,7 +105,7 @@ class TokenCharactersIndexer(TokenIndexer):
         )
         max_num_characters = self._min_padding_length
         for token in indexed_tokens["token_characters"]:
-            max_num_characters = max(len(token), max_num_characters)
+            max_num_characters = max(len(token), max_num_characters)  # type: ignore
         padding_lengths["num_token_characters"] = max_num_characters
         return padding_lengths
 
@@ -122,7 +122,7 @@ class TokenCharactersIndexer(TokenIndexer):
 
         # Pad the characters within the tokens.
         desired_token_length = padding_lengths["num_token_characters"]
-        longest_token: List[int] = max(tokens["token_characters"], key=len, default=[])
+        longest_token: List[int] = max(tokens["token_characters"], key=len, default=[])  # type: ignore
         padding_value = 0
         if desired_token_length > len(longest_token):
             # Since we want to pad to greater than the longest token, we add a
