@@ -2,14 +2,14 @@
 
 In this tutorial, we show how to use run the pretrained models in AllenNLP to make predictions.
 This tutorial uses the Named Entity Recognition model, but the same procedure applies to any of
-the models [available on our website](https://github.com/allenai/allennlp/blob/master/MODELS.md).
+[the available pretrained models](https://github.com/allenai/allennlp-hub/blob/master/allennlp_hub/pretrained/allennlp_pretrained.py).
 
 ## Making Predictions on the Command Line
 
-[The models page on the website](https://github.com/allenai/allennlp/blob/master/MODELS.md) lists all the models in AllenNLP,
-as well as examples for how to run the model on the command line.  For example, under the
-[Named Entity Recognition model](https://github.com/allenai/allennlp/blob/master/MODELS.md#named-entity-recognition) there
-is a "Prediction" button that reveals the following example.
+[Our demo](https://demo.allennlp.org) lists the featured models in AllenNLP,
+as well as examples for how to run the model on the command line.  For example, under the "Usage" tab of
+[Named Entity Recognition model](https://demo.allennlp.org/named-entity-recognition) there
+is a "Prediction" section that reveals the following example.
 
 ```bash
 echo '{"sentence": "Did Uriah honestly think he could beat The Legend of Zelda in under three hours?"}' > ner-examples.jsonl

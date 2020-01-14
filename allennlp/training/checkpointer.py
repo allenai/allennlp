@@ -8,7 +8,7 @@ import time
 
 import torch
 
-from allennlp.common.registrable import Registrable
+from allennlp.common import Registrable
 from allennlp.nn import util as nn_util
 
 logger = logging.getLogger(__name__)

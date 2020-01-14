@@ -149,7 +149,7 @@ class TrainerPieces(NamedTuple):
 
         if vocab:
             logger.info(f"Extending model vocabulary using {dataset_keys_to_use_str} data.")
-            vocab.extend_from_instances(vocabulary_params, instance_generator)
+            vocab.extend_from_instances(instances=instance_generator)
         else:
             logger.info(
                 "From dataset instances, %s will be considered for vocabulary creation.",
@@ -165,6 +165,6 @@ class TrainerPieces(NamedTuple):
             else:
                 # Using a generator comprehension here is important because, by being lazy,
                 # it allows us to not iterate over the dataset when directory_path is specified.
-                vocab = Vocabulary.from_params(vocabulary_params, instance_generator)
+                vocab = Vocabulary.from_params(vocabulary_params, instances=instance_generator)
 
         return vocab

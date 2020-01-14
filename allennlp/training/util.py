@@ -504,7 +504,7 @@ def make_vocab_from_params(params: Params, serialization_dir: str) -> Vocabulary
         if key in datasets_for_vocab_creation
     )
 
-    vocab = Vocabulary.from_params(vocab_params, instances)
+    vocab = Vocabulary.from_params(vocab_params, instances=instances)
 
     logger.info(f"writing the vocabulary to {vocab_dir}.")
     vocab.save_to_files(vocab_dir)

@@ -533,7 +533,7 @@ def is_master(rank: int = None, world_size: int = None) -> bool:
         Number of processes in the distributed group. If not
         given, this is obtained using `torch.distributed.get_world_size()`
     """
-    distributed = is_distributed()
+    distributed = dist.is_available() and dist.is_initialized()
 
     # In non-distributed case, a "master" process doesn't make any
     # sense. So instead of raising an error, returning True would

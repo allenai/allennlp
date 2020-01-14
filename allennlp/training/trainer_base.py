@@ -9,7 +9,7 @@ rather than instantiating a ``Trainer`` yourself.
 
 
 import logging
-from typing import Dict, Any
+from typing import Dict, Any, Type
 
 from allennlp.common import Params, Registrable
 from allennlp.common.util import is_master
@@ -105,7 +105,7 @@ class TrainerBase(Registrable):
                 validation_iterator=pieces.validation_iterator,
             )
         else:
-            klass = TrainerBase.by_name(typ3)
+            klass: Type[TrainerBase] = TrainerBase.by_name(typ3)  # type: ignore
             # Explicit check to prevent recursion.
             is_overriden = (
                 klass.from_params.__func__ != TrainerBase.from_params.__func__  # type: ignore

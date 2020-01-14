@@ -593,6 +593,9 @@ class Params(MutableMapping):
         hashed = zlib.adler32(dumped.encode())
         return str(hashed)
 
+    def __str__(self) -> str:
+        return f"{self.history}Params({self.params})"
+
 
 def pop_choice(
     params: Dict[str, Any],

@@ -95,7 +95,7 @@ class TestBasicTextFieldEmbedder(AllenNlpTestCase):
                 }
             }
         )
-        token_embedder = BasicTextFieldEmbedder.from_params(self.vocab, params)
+        token_embedder = BasicTextFieldEmbedder.from_params(vocab=self.vocab, params=params)
         inputs = {"elmo": (torch.rand(3, 6, 50) * 15).long()}
         kwargs = {"lang": "es"}
         token_embedder(inputs, **kwargs)
@@ -117,7 +117,7 @@ class TestBasicTextFieldEmbedder(AllenNlpTestCase):
                 "embedder_to_indexer_map": {"words": ["words"], "elmo": ["elmo", "words"]},
             }
         )
-        token_embedder = BasicTextFieldEmbedder.from_params(self.vocab, params)
+        token_embedder = BasicTextFieldEmbedder.from_params(vocab=self.vocab, params=params)
         inputs = {
             "words": (torch.rand(3, 6) * 20).long(),
             "elmo": (torch.rand(3, 6, 50) * 15).long(),
@@ -143,7 +143,7 @@ class TestBasicTextFieldEmbedder(AllenNlpTestCase):
                 },
             }
         )
-        token_embedder = BasicTextFieldEmbedder.from_params(self.vocab, params)
+        token_embedder = BasicTextFieldEmbedder.from_params(vocab=self.vocab, params=params)
         inputs = {"elmo": (torch.rand(3, 6, 50) * 15).long()}
         token_embedder(inputs)
 
@@ -168,7 +168,7 @@ class TestBasicTextFieldEmbedder(AllenNlpTestCase):
                 },
             }
         )
-        token_embedder = BasicTextFieldEmbedder.from_params(self.vocab, params)
+        token_embedder = BasicTextFieldEmbedder.from_params(vocab=self.vocab, params=params)
         inputs = {
             "words": (torch.rand(3, 6) * 20).long(),
             "elmo": (torch.rand(3, 6, 50) * 15).long(),
@@ -195,38 +195,10 @@ class TestBasicTextFieldEmbedder(AllenNlpTestCase):
                 "allow_unmatched_keys": True,
             }
         )
-        token_embedder = BasicTextFieldEmbedder.from_params(self.vocab, params)
+        token_embedder = BasicTextFieldEmbedder.from_params(vocab=self.vocab, params=params)
         inputs = {
             "bert": (torch.rand(3, 5) * 10).long(),
             "bert-offsets": (torch.rand(3, 5) * 1).long(),
             "token_characters": (torch.rand(3, 5, 5) * 1).long(),
         }
         token_embedder(inputs)
-
-    def test_old_from_params_new_from_params(self):
-        old_params = Params(
-            {
-                "words1": {"type": "embedding", "embedding_dim": 2},
-                "words2": {"type": "embedding", "embedding_dim": 5},
-                "words3": {"type": "embedding", "embedding_dim": 3},
-            }
-        )
-
-        # Allow loading the parameters in the old format
-        old_embedder = BasicTextFieldEmbedder.from_params(params=old_params, vocab=self.vocab)
-
-        new_params = Params(
-            {
-                "token_embedders": {
-                    "words1": {"type": "embedding", "embedding_dim": 2},
-                    "words2": {"type": "embedding", "embedding_dim": 5},
-                    "words3": {"type": "embedding", "embedding_dim": 3},
-                }
-            }
-        )
-
-        # But also allow loading the parameters in the new format
-        new_embedder = BasicTextFieldEmbedder.from_params(params=new_params, vocab=self.vocab)
-        assert old_embedder._token_embedders.keys() == new_embedder._token_embedders.keys()
-
-        assert new_embedder(self.inputs).size() == (1, 4, 10)
