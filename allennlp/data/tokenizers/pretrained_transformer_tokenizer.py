@@ -103,22 +103,22 @@ class PretrainedTransformerTokenizer(Tokenizer):
             tokens.append(Token(text=token_str, text_id=token_id, type_id=token_type_id))
 
         if self._calculate_character_offsets:
-            # The huggingface tokenizers produce tokens that may or may not be slices from the original text.
-            # Differences arise from lowercasing, Unicode normalization, and other kinds of normalization, as well
-            # as special characters that are included to denote various situations, such as "##" in BERT for word
-            # pieces from the middle of a word, or "Ġ" in RoBERTa for the beginning of words not at the start of a
-            # sentence.
-            # This code attempts to calculate character offsets while being tolerant to these differences. It
-            # scans through the text and the tokens in parallel, trying to match up positions in both. If it
-            # gets out of sync, it backs off to not adding any token indices, and attempts to catch back up
-            # afterwards. This procedure is approximate. Don't rely on precise results, especially in non-English
-            # languages that are far more affected by Unicode normalization.
+            # The huggingface tokenizers produce tokens that may or may not be slices from the
+            # original text.  Differences arise from lowercasing, Unicode normalization, and other
+            # kinds of normalization, as well as special characters that are included to denote
+            # various situations, such as "##" in BERT for word pieces from the middle of a word, or
+            # "Ġ" in RoBERTa for the beginning of words not at the start of a sentence.
+
+            # This code attempts to calculate character offsets while being tolerant to these
+            # differences. It scans through the text and the tokens in parallel, trying to match up
+            # positions in both. If it gets out of sync, it backs off to not adding any token
+            # indices, and attempts to catch back up afterwards. This procedure is approximate.
+            # Don't rely on precise results, especially in non-English languages that are far more
+            # affected by Unicode normalization.
 
             whole_text = sentence_1
             if sentence_2 is not None:
-                whole_text += (
-                    sentence_2
-                )  # Calculating character offsets with sentence pairs is sketchy at best.
+                whole_text += sentence_2  # Calculating character offsets with sentence pairs is sketchy at best.
             if self._tokenizer_lowercases:
                 whole_text = whole_text.lower()
 
