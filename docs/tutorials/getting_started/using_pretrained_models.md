@@ -6,7 +6,7 @@ This tutorial uses the Named Entity Recognition model, but the same procedure ap
 
 ## Making Predictions on the Command Line
 
-[Our demo](https://demo.allennlp.org) lists the featrured models in AllenNLP,
+[Our demo](https://demo.allennlp.org) lists the featured models in AllenNLP,
 as well as examples for how to run the model on the command line.  For example, under the
 [Named Entity Recognition model](https://demo.allennlp.org/named-entity-recognition) under the "Usage" tab there
 is a "Prediction" button that reveals the following example.
