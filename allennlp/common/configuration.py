@@ -194,7 +194,7 @@ def _get_config_type(cla55: type) -> Optional[str]:
         return "gru"
 
     for subclass_dict in Registrable._registry.values():
-        for name, subclass in subclass_dict.items():
+        for name, (subclass, _) in subclass_dict.items():
             if subclass == cla55:
                 return name
 
@@ -478,7 +478,7 @@ def _valid_choices(cla55: type) -> Dict[str, str]:
     if cla55 not in Registrable._registry:
         raise ValueError(f"{cla55} is not a known Registrable class")
 
-    for name, subclass in Registrable._registry[cla55].items():
+    for name, (subclass, _) in Registrable._registry[cla55].items():
         # These wrapper classes need special treatment
         if isinstance(subclass, (_Seq2SeqWrapper, _Seq2VecWrapper)):
             subclass = subclass._module_class

@@ -65,8 +65,8 @@ class DatasetReader(Registrable):
     All parameters necessary to _read the data apart from the filepath should be passed
     to the constructor of the ``DatasetReader``.
 
-    Parameters
-    ----------
+    # Parameters
+
     lazy : ``bool``, optional (default=False)
         If this is true, ``instances()`` will return an object whose ``__iter__`` method
         reloads the dataset each time it's called. Otherwise, ``instances()`` returns a list.

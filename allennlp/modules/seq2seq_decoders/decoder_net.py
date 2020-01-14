@@ -16,8 +16,8 @@ class DecoderNet(torch.nn.Module, Registrable):
     The outputs of this module would be likely used by ``allennlp.modules.seq2seq_decoders.seq_decoder.SeqDecoder``
     to apply the final output feedforward layer and softmax.
 
-    Parameters
-    ----------
+    # Parameters
+
     decoding_dim : ``int``, required
         Defines dimensionality of output vectors.
     target_embedding_dim : ``int``, required
@@ -48,15 +48,15 @@ class DecoderNet(torch.nn.Module, Registrable):
         """
         Initialize the encoded state to be passed to the first decoding time step.
 
-        Parameters
-        ----------
+        # Parameters
+
         batch_size : ``int``
             Size of batch
         final_encoder_output : ``torch.Tensor``
             Last state of the Encoder
 
-        Returns
-        -------
+        # Returns
+
         ``Dict[str, torch.Tensor]``
         Initial state
         """
@@ -76,8 +76,8 @@ class DecoderNet(torch.nn.Module, Registrable):
         The decoder output is a 3d tensor (group_size, steps_count, decoder_output_dim)
         if `self.decodes_parallel` is True, else it is a 2d tensor with (group_size, decoder_output_dim).
 
-        Parameters
-        ----------
+        # Parameters
+
         previous_steps_predictions : ``torch.Tensor``, required
             Embeddings of predictions on previous step.
             Shape: (group_size, steps_count, decoder_output_dim)
@@ -90,8 +90,8 @@ class DecoderNet(torch.nn.Module, Registrable):
         previous_state : ``Dict[str, torch.Tensor]``, required
             previous state of decoder
 
-        Returns
-        -------
+        # Returns
+
         Tuple[Dict[str, torch.Tensor], torch.Tensor]
         Tuple of new decoder state and decoder output. Output should be used to generate out sequence elements
        """

@@ -126,7 +126,7 @@ def dry_run_from_params(params: Params, serialization_dir: str) -> None:
         if key in datasets_for_vocab_creation
     ]
 
-    vocab = Vocabulary.from_params(vocab_params, instances)
+    vocab = Vocabulary.from_params(vocab_params, instances=instances)
     dataset = Batch(instances)
     dataset.index_instances(vocab)
     dataset.print_statistics()

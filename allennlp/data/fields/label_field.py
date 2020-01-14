@@ -20,8 +20,8 @@ class LabelField(Field[torch.Tensor]):
 
     This field will get converted into an integer index representing the class label.
 
-    Parameters
-    ----------
+    # Parameters
+
     label : ``Union[str, int]``
     label_namespace : ``str``, optional (default="labels")
         The namespace to use for converting label strings into integers.  We map label strings to

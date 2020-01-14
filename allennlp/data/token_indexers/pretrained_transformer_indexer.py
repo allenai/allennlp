@@ -22,8 +22,8 @@ class PretrainedTransformerIndexer(TokenIndexer[int]):
     corresponding :class:`PretrainedTransformerTokenizer` to tokenize your input.  Otherwise you'll
     have a mismatch between your tokens and your vocabulary, and you'll get a lot of UNK tokens.
 
-    Parameters
-    ----------
+    # Parameters
+
     model_name : ``str``
         The name of the ``transformers`` model to use.
     namespace : ``str``, optional (default=``tags``)

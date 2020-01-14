@@ -73,8 +73,8 @@ class Trainer(TrainerBase):
         for your model over some fixed number of epochs. You can also pass in a validation
         dataset and enable early stopping. There are many other bells and whistles as well.
 
-        Parameters
-        ----------
+        # Parameters
+
         model : ``Model``, required.
             An AllenNLP model to be optimized. Pytorch Modules can also be optimized if
             their ``forward`` method returns a dictionary with a "loss" key, containing a
@@ -663,8 +663,8 @@ class Trainer(TrainerBase):
         Saves a checkpoint of the model to self._serialization_dir.
         Is a no-op if self._serialization_dir is None.
 
-        Parameters
-        ----------
+        # Parameters
+
         epoch : Union[int, str], required.
             The epoch of training.  If the checkpoint is saved in the middle
             of an epoch, the parameter is a string with the epoch and timestamp.
@@ -710,8 +710,8 @@ class Trainer(TrainerBase):
         If ``self._serialization_dir`` does not exist or does not contain any checkpointed weights,
         this function will do nothing and return 0.
 
-        Returns
-        -------
+        # Returns
+
         epoch: int
             The epoch at which to resume training, which should be one after the epoch
             in the saved training state.

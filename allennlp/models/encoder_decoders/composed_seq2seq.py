@@ -24,8 +24,8 @@ class ComposedSeq2Seq(Model):
     The ``ComposedSeq2Seq`` class composes separate ``Seq2SeqEncoder`` and ``SeqDecoder`` classes.
     These parts are customizable and are independent from each other.
 
-    Parameters
-    ----------
+    # Parameters
+
     vocab : ``Vocabulary``, required
         Vocabulary containing source and target vocabularies. They may be under the same namespace
         (`tokens`) or the target tokens can have a different namespace, in which case it needs to
@@ -103,8 +103,8 @@ class ComposedSeq2Seq(Model):
         """
         Make foward pass on the encoder and decoder for producing the entire target sequence.
 
-        Parameters
-        ----------
+        # Parameters
+
         source_tokens : ``Dict[str, torch.LongTensor]``
            The output of `TextField.as_array()` applied on the source `TextField`. This will be
            passed through a `TextFieldEmbedder` and then through an encoder.
@@ -112,8 +112,8 @@ class ComposedSeq2Seq(Model):
            Output of `Textfield.as_array()` applied on target `TextField`. We assume that the
            target tokens are also represented as a `TextField`.
 
-        Returns
-        -------
+        # Returns
+
         Dict[str, torch.Tensor]
             The output tensors from the decoder.
         """
@@ -132,14 +132,14 @@ class ComposedSeq2Seq(Model):
         """
         Make foward pass on the encoder.
 
-        Parameters
-        ----------
+        # Parameters
+
         source_tokens : ``Dict[str, torch.LongTensor]``
            The output of `TextField.as_array()` applied on the source `TextField`. This will be
            passed through a `TextFieldEmbedder` and then through an encoder.
 
-        Returns
-        -------
+        # Returns
+
         Dict[str, torch.Tensor]
             Map consisting of the key `source_mask` with the mask over the
             `source_tokens` text field,

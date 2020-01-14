@@ -77,8 +77,8 @@ class TestDryRun(AllenNlpTestCase):
         vocab.save_to_files(existing_vocab_path)
 
         self.params["vocabulary"] = {}
-        self.params["vocabulary"]["directory_path"] = existing_vocab_path
-        self.params["vocabulary"]["extend"] = True
+        self.params["vocabulary"]["type"] = "extend"
+        self.params["vocabulary"]["directory"] = existing_vocab_path
         self.params["vocabulary"]["min_count"] = {"tokens": 3}
         dry_run_from_params(self.params, extended_serialization_dir)
 
@@ -128,8 +128,8 @@ class TestDryRun(AllenNlpTestCase):
         vocab.save_to_files(existing_vocab_path)
 
         self.params["vocabulary"] = {}
-        self.params["vocabulary"]["directory_path"] = existing_vocab_path
-        self.params["vocabulary"]["extend"] = False
+        self.params["vocabulary"]["type"] = "from_files"
+        self.params["vocabulary"]["directory"] = existing_vocab_path
         dry_run_from_params(self.params, extended_serialization_dir)
 
         with open(extended_vocab_path / "tokens.txt") as f:

@@ -72,8 +72,8 @@ class ConllCorefReader(DatasetReader):
     (a list of list of index pairs) and a ``SequenceLabelField`` of cluster ids for every span
     candidate.
 
-    Parameters
-    ----------
+    # Parameters
+
     max_span_width : ``int``, required.
         The maximum width of candidate spans to consider.
     token_indexers : ``Dict[str, TokenIndexer]``, optional
@@ -121,8 +121,8 @@ class ConllCorefReader(DatasetReader):
     ) -> Instance:
 
         """
-        Parameters
-        ----------
+        # Parameters
+
         sentences : ``List[List[str]]``, required.
             A list of lists representing the tokenised words and sentences in the document.
         gold_clusters : ``Optional[List[List[Tuple[int, int]]]]``, optional (default = None)
@@ -130,8 +130,8 @@ class ConllCorefReader(DatasetReader):
             contains some number of spans, which can be nested and overlap, but will never
             exactly match between clusters.
 
-        Returns
-        -------
+        # Returns
+
         An ``Instance`` containing the following ``Fields``:
             text : ``TextField``
                 The text of the full document.

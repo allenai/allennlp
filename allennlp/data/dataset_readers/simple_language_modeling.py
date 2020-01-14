@@ -22,8 +22,8 @@ class SimpleLanguageModelingDatasetReader(DatasetReader):
     Reads sentences, one per line, for language modeling. This does not handle arbitrarily formatted
     text with sentences spanning multiple lines.
 
-    Parameters
-    ----------
+    # Parameters
+
     tokenizer : ``Tokenizer``, optional
         Tokenizer to use to split the input sentences into words or other kinds of tokens. Defaults
         to ``SpacyTokenizer()``.

@@ -22,8 +22,8 @@ class TokenIndexer(Generic[TokenType], Registrable):
     or in some other way that you can come up with (e.g., if you have some structured input you
     want to represent in a special way in your data arrays, you can do that here).
 
-    Parameters
-    ----------
+    # Parameters
+
     token_min_padding_length : ``int``, optional (default=``0``)
         The minimum padding length required for the :class:`TokenIndexer`. For example,
         the minimum padding length of :class:`SingleIdTokenIndexer` is the largest size of

@@ -13,8 +13,8 @@ class BidirectionalLanguageModelTokenEmbedder(LanguageModelTokenEmbedder):
     by computing a learned scalar average of the layers from the LM. Typically the LM's weights
     will be fixed, but they can be fine tuned by setting ``requires_grad``.
 
-    Parameters
-    ----------
+    # Parameters
+
     archive_file : ``str``, required
         An archive file, typically model.tar.gz, from a BidirectionalLanguageModel. The
         contextualizer used by the LM must satisfy two requirements:

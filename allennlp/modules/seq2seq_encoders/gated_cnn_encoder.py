@@ -139,8 +139,8 @@ class GatedCnnEncoder(Seq2SeqEncoder):
     ]
 
 
-    Parameters
-    ----------
+    # Parameters
+
     input_dim : ``int``, required
         The dimension of the inputs.
     layers : ``Sequence[Sequence[Sequence[int]]]``, required

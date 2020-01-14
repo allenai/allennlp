@@ -19,8 +19,8 @@ class UniversalDependenciesDatasetReader(DatasetReader):
     """
     Reads a file in the conllu Universal Dependencies format.
 
-    Parameters
-    ----------
+    # Parameters
+
     token_indexers : ``Dict[str, TokenIndexer]``, optional (default=``{"tokens": SingleIdTokenIndexer()}``)
         The token indexers to be applied to the words TextField.
     use_language_specific_pos : ``bool``, optional (default = False)
@@ -77,8 +77,8 @@ class UniversalDependenciesDatasetReader(DatasetReader):
     ) -> Instance:
 
         """
-        Parameters
-        ----------
+        # Parameters
+
         words : ``List[str]``, required.
             The words in the sentence to be encoded.
         upos_tags : ``List[str]``, required.
@@ -88,8 +88,8 @@ class UniversalDependenciesDatasetReader(DatasetReader):
             meaning an index of 0 corresponds to that word being the root of
             the dependency tree.
 
-        Returns
-        -------
+        # Returns
+
         An instance containing words, upos tags, dependency head tags and head
         indices as fields.
         """

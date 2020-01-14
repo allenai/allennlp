@@ -336,8 +336,8 @@ class OpenaiTransformer(torch.nn.Module, FromParams):
     Openai transformer, as per https://blog.openai.com/language-unsupervised/.
     Default parameters are the ones for their pretrained model.
 
-    Parameters
-    ----------
+    # Parameters
+
     vocab_size : ``int`` (optional, default: 40478)
         The size of the vocabulary (number of byte pair embeddings)
         excluding the n_special embeddings (if any), and the positional embeddings.

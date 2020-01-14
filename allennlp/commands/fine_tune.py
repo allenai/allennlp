@@ -186,8 +186,8 @@ def fine_tune_model_from_file_paths(
     """
     A wrapper around :func:`fine_tune_model` which loads the model archive from a file.
 
-    Parameters
-    ----------
+    # Parameters
+
     model_archive_path : ``str``
         Path to a saved model archive that is the result of running the ``train`` command.
     config_file : ``str``
@@ -247,8 +247,8 @@ def fine_tune_model(
     here we do not worry about vocabulary construction or creating the model object.  Everything
     else is the same.
 
-    Parameters
-    ----------
+    # Parameters
+
     model : ``Model``
         A model to fine tune.
     params : ``Params``
@@ -286,7 +286,7 @@ def fine_tune_model(
         )
 
     vocabulary_params = params.pop("vocabulary", {})
-    if vocabulary_params.get("directory_path", None):
+    if vocabulary_params.get("type", None) == "from_files":
         logger.warning(
             "You passed `directory_path` in parameters for the vocabulary in "
             "your configuration file, but it will be ignored. "
@@ -306,13 +306,12 @@ def fine_tune_model(
             "Extending model vocabulary using %s data.", ", ".join(datasets_for_vocab_creation)
         )
         vocab.extend_from_instances(
-            vocabulary_params,
             (
                 instance
                 for key, dataset in all_datasets.items()
                 for instance in dataset
                 if key in datasets_for_vocab_creation
-            ),
+            )
         )
 
         model.extend_embedder_vocab(embedding_sources_mapping)

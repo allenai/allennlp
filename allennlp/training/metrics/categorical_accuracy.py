@@ -35,8 +35,8 @@ class CategoricalAccuracy(Metric):
         mask: Optional[torch.Tensor] = None,
     ):
         """
-        Parameters
-        ----------
+        # Parameters
+
         predictions : ``torch.Tensor``, required.
             A tensor of predictions of shape (batch_size, ..., num_classes).
         gold_labels : ``torch.Tensor``, required.
@@ -95,8 +95,8 @@ class CategoricalAccuracy(Metric):
 
     def get_metric(self, reset: bool = False):
         """
-        Returns
-        -------
+        # Returns
+
         The accumulated accuracy.
         """
         if self.total_count > 1e-12:

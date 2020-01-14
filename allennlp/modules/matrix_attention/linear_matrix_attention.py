@@ -28,8 +28,8 @@ class LinearMatrixAttention(MatrixAttention):
     similarity function is computed as `x * w * y + b` (with `w` the diagonal of `W`), you can
     accomplish that with this class by using "x*y" for `combination`.
 
-    Parameters
-    ----------
+    # Parameters
+
     tensor_1_dim : ``int``, required
         The dimension of the first tensor, ``x``, described above.  This is ``x.size()[-1]`` - the
         length of the vector that will go into the similarity computation.  We need this so we can

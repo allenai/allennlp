@@ -82,7 +82,7 @@ class _Seq2SeqWrapper:
         return self.from_params(Params(kwargs))
 
     # Logic requires custom from_params
-    def from_params(self, params: Params) -> PytorchSeq2SeqWrapper:
+    def from_params(self, params: Params, **extras) -> PytorchSeq2SeqWrapper:
         if not params.pop_bool("batch_first", True):
             raise ConfigurationError("Our encoder semantics assumes batch is always first!")
         if self._module_class in self.PYTORCH_MODELS:

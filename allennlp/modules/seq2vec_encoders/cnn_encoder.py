@@ -28,8 +28,8 @@ class CnnEncoder(Seq2VecEncoder):
     details, refer to "A Sensitivity Analysis of (and Practitioners’ Guide to) Convolutional Neural
     Networks for Sentence Classification", Zhang and Wallace 2016, particularly Figure 1.
 
-    Parameters
-    ----------
+    # Parameters
+
     embedding_dim : ``int``, required
         This is the input dimension to the encoder.  We need this because we can't do shape
         inference in pytorch, and we need to know what size filters to construct in the CNN.

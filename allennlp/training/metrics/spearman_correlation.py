@@ -31,8 +31,8 @@ class SpearmanCorrelation(Metric):
         mask: Optional[torch.Tensor] = None,
     ):
         """
-        Parameters
-        ----------
+        # Parameters
+
         predictions : ``torch.Tensor``, required.
             A tensor of predictions of shape (batch_size, ...).
         gold_labels : ``torch.Tensor``, required.
@@ -58,8 +58,8 @@ class SpearmanCorrelation(Metric):
     @overrides
     def get_metric(self, reset: bool = False):
         """
-        Returns
-        -------
+        # Returns
+
         The accumulated sample Spearman correlation.
         """
         spearman_correlation = stats.spearmanr(

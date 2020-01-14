@@ -29,8 +29,8 @@ class SimpleSeq2Seq(Model):
     seq2seq problem.  The model here is simple, but should be a decent starting place for
     implementing recent models for these tasks.
 
-    Parameters
-    ----------
+    # Parameters
+
     vocab : ``Vocabulary``, required
         Vocabulary containing source and target vocabularies. They may be under the same namespace
         (`tokens`) or the target tokens can have a different namespace, in which case it needs to
@@ -63,8 +63,8 @@ class SimpleSeq2Seq(Model):
         the predictions from the previous time step for the whole batch. If this value is 0.0
         (default), this corresponds to teacher forcing, and if it is 1.0, it corresponds to not
         using target side ground truth labels.  See the following paper for more information:
-        `Scheduled Sampling for Sequence Prediction with Recurrent Neural Networks. Bengio et al.,
-        2015 <https://arxiv.org/abs/1506.03099>`_.
+        [Scheduled Sampling for Sequence Prediction with Recurrent Neural Networks. Bengio et al.,
+        2015](https://arxiv.org/abs/1506.03099).
     use_bleu : ``bool``, optional (default = True)
         If True, the BLEU metric will be calculated during validation.
     """
@@ -161,8 +161,8 @@ class SimpleSeq2Seq(Model):
         """
         Take a decoding step. This is called by the beam search class.
 
-        Parameters
-        ----------
+        # Parameters
+
         last_predictions : ``torch.Tensor``
             A tensor of shape ``(group_size,)``, which gives the indices of the predictions
             during the last time step.
@@ -173,8 +173,8 @@ class SimpleSeq2Seq(Model):
             tensors has shape ``(group_size, *)``, where ``*`` can be any other number
             of dimensions.
 
-        Returns
-        -------
+        # Returns
+
         Tuple[torch.Tensor, Dict[str, torch.Tensor]]
             A tuple of ``(log_probabilities, updated_state)``, where ``log_probabilities``
             is a tensor of shape ``(group_size, num_classes)`` containing the predicted
@@ -206,8 +206,8 @@ class SimpleSeq2Seq(Model):
         """
         Make foward pass with decoder logic for producing the entire target sequence.
 
-        Parameters
-        ----------
+        # Parameters
+
         source_tokens : ``Dict[str, torch.LongTensor]``
            The output of `TextField.as_array()` applied on the source `TextField`. This will be
            passed through a `TextFieldEmbedder` and then through an encoder.
@@ -215,8 +215,8 @@ class SimpleSeq2Seq(Model):
            Output of `Textfield.as_array()` applied on target `TextField`. We assume that the
            target tokens are also represented as a `TextField`.
 
-        Returns
-        -------
+        # Returns
+
         Dict[str, torch.Tensor]
         """
         state = self._encode(source_tokens)

@@ -23,8 +23,8 @@ class MultiLabelField(Field[torch.Tensor]):
     This field will get converted into a vector of length equal to the vocabulary size with
     one hot encoding for the labels (all zeros, and ones for the labels).
 
-    Parameters
-    ----------
+    # Parameters
+
     labels : ``Sequence[Union[str, int]]``
     label_namespace : ``str``, optional (default="labels")
         The namespace to use for converting label strings into integers.  We map label strings to

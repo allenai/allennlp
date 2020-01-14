@@ -30,8 +30,8 @@ class SpanExtractor(torch.nn.Module, Registrable):
         such as concatenation of the start and end spans, attention over the
         vectors contained inside the span, etc.
 
-        Parameters
-        ----------
+        # Parameters
+
         sequence_tensor : ``torch.FloatTensor``, required.
             A tensor of shape (batch_size, sequence_length, embedding_size)
             representing an embedded sequence of words.
@@ -48,8 +48,8 @@ class SpanExtractor(torch.nn.Module, Registrable):
             sometimes it's easier to worry about masking after calling this
             function, rather than passing a mask directly.
 
-        Returns
-        -------
+        # Returns
+
         A tensor of shape ``(batch_size, num_spans, embedded_span_size)``,
         where ``embedded_span_size`` depends on the way spans are represented.
         """

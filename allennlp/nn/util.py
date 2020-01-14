@@ -79,8 +79,8 @@ def batch_tensor_dicts(
     Takes a list of tensor dictionaries, where each dictionary is assumed to have matching keys,
     and returns a single dictionary with all tensors with the same key batched together.
 
-    Parameters
-    ----------
+    # Parameters
+
     tensor_dicts : ``List[Dict[str, torch.Tensor]]``
         The list of tensor dictionaries to batch.
     remove_trailing_dimension : ``bool``
@@ -105,14 +105,14 @@ def get_lengths_from_binary_sequence_mask(mask: torch.Tensor):
     Compute sequence lengths for each batch element in a tensor using a
     binary mask.
 
-    Parameters
-    ----------
+    # Parameters
+
     mask : torch.Tensor, required.
         A 2D binary mask of shape (batch_size, sequence_length) to
         calculate the per-batch sequence lengths from.
 
-    Returns
-    -------
+    # Returns
+
     A torch.LongTensor of shape (batch_size,) representing the lengths
     of the sequences in the batch.
     """
@@ -140,16 +140,16 @@ def sort_batch_by_length(tensor: torch.Tensor, sequence_lengths: torch.Tensor):
     """
     Sort a batch first tensor by some specified lengths.
 
-    Parameters
-    ----------
+    # Parameters
+
     tensor : torch.FloatTensor, required.
         A batch first Pytorch tensor.
     sequence_lengths : torch.LongTensor, required.
         A tensor representing the lengths of some dimension of the tensor which
         we want to sort by.
 
-    Returns
-    -------
+    # Returns
+
     sorted_tensor : torch.FloatTensor
         The original tensor sorted along the batch dimension with respect to sequence_lengths.
     sorted_sequence_lengths : torch.LongTensor
@@ -216,15 +216,15 @@ def get_dropout_mask(dropout_probability: float, tensor_for_masking: torch.Tenso
     Note that the mask is NOT applied to the tensor - the tensor is passed to retain
     the correct CUDA tensor type for the mask.
 
-    Parameters
-    ----------
+    # Parameters
+
     dropout_probability : float, required.
         Probability of dropping a dimension of the input.
     tensor_for_masking : torch.Tensor, required.
 
 
-    Returns
-    -------
+    # Returns
+
     A torch.FloatTensor consisting of the binary mask scaled by 1/ (1 - dropout_probability).
     This scaling ensures expected values and variances of the output of applying this mask
      and the original tensor are the same.
@@ -320,8 +320,8 @@ def masked_max(
     """
     To calculate max along certain dimensions on masked values
 
-    Parameters
-    ----------
+    # Parameters
+
     vector : ``torch.Tensor``
         The vector to calculate max, assume unmasked parts are already zeros
     mask : ``torch.Tensor``
@@ -333,8 +333,8 @@ def masked_max(
     min_val : ``float``
         The minimal value for paddings
 
-    Returns
-    -------
+    # Returns
+
     A ``torch.Tensor`` of including the maximum values.
     """
     one_minus_mask = (1.0 - mask).to(dtype=torch.bool)
@@ -349,8 +349,8 @@ def masked_mean(
     """
     To calculate mean along certain dimensions on masked values
 
-    Parameters
-    ----------
+    # Parameters
+
     vector : ``torch.Tensor``
         The vector to calculate mean.
     mask : ``torch.Tensor``
@@ -362,8 +362,8 @@ def masked_mean(
     eps : ``float``
         A small value to avoid zero division problem.
 
-    Returns
-    -------
+    # Returns
+
     A ``torch.Tensor`` of including the mean values.
     """
     one_minus_mask = (1.0 - mask).to(dtype=torch.bool)
@@ -378,16 +378,16 @@ def masked_flip(padded_sequence: torch.Tensor, sequence_lengths: List[int]) -> t
     """
         Flips a padded tensor along the time dimension without affecting masked entries.
 
-        Parameters
-        ----------
+        # Parameters
+
         padded_sequence : ``torch.Tensor``
             The tensor to flip along the time dimension.
             Assumed to be of dimensions (batch size, num timesteps, ...)
         sequence_lengths : ``torch.Tensor``
             A list containing the lengths of each unpadded sequence in the batch.
 
-        Returns
-        -------
+        # Returns
+
         A ``torch.Tensor`` of the same shape as padded_sequence.
         """
     assert padded_sequence.size(0) == len(
@@ -416,8 +416,8 @@ def viterbi_decode(
     (sequence_length, num_tags) specifying unary potentials for possible tags per
     timestep.
 
-    Parameters
-    ----------
+    # Parameters
+
     tag_sequence : torch.Tensor, required.
         A tensor of shape (sequence_length, num_tags) representing scores for
         a set of tags over a given sequence.
@@ -445,8 +445,8 @@ def viterbi_decode(
         a tuple of two lists: top_k_paths, top_k_scores, For top_k==None, returns a flattened
         tuple with just the top path and its score (not in lists, for backwards compatibility).
 
-    Returns
-    -------
+    # Returns
+
     viterbi_path : List[int]
         The tag indices of the maximum likelihood tag sequence.
     viterbi_score : torch.Tensor
@@ -686,8 +686,8 @@ def sequence_cross_entropy_with_logits(
     classes; here we are weighting the loss contribution from particular elements
     in the sequence. This allows loss computations for models which use padding.
 
-    Parameters
-    ----------
+    # Parameters
+
     logits : ``torch.FloatTensor``, required.
         A ``torch.FloatTensor`` of size (batch_size, sequence_length, num_classes)
         which contains the unnormalized probability for each class.
@@ -719,8 +719,8 @@ def sequence_cross_entropy_with_logits(
         Dense Object Detection," 2017 IEEE International Conference on Computer
         Vision (ICCV), Venice, 2017, pp. 2999-3007.
 
-    Returns
-    -------
+    # Returns
+
     A torch.FloatTensor representing the cross entropy loss.
     If ``average=="batch"`` or ``average=="token"``, the returned loss is a scalar.
     If ``average is None``, the returned loss is a vector of shape (batch_size,).
@@ -925,13 +925,13 @@ def _rindex(sequence: Sequence[T], obj: T) -> int:
     Return zero-based index in the sequence of the last item whose value is equal to obj.  Raises a
     ValueError if there is no such item.
 
-    Parameters
-    ----------
+    # Parameters
+
     sequence : ``Sequence[T]``
     obj : ``T``
 
-    Returns
-    -------
+    # Returns
+
     zero-based index associated to the position of the last item equal to obj
     """
     for i in range(len(sequence) - 1, -1, -1):
@@ -972,8 +972,8 @@ def combine_tensors_and_multiply(
     large intermediate tensors during the combination, which is possible because we know that we're
     going to be multiplying by a weight vector in the end.
 
-    Parameters
-    ----------
+    # Parameters
+
     combination : ``str``
         Same as in :func:`combine_tensors`
     tensors : ``List[torch.Tensor]``
@@ -1060,8 +1060,8 @@ def get_combined_dim(combination: str, tensor_dims: List[int]) -> int:
     necessary for knowing the sizes of weight matrices when building models that use
     ``combine_tensors``.
 
-    Parameters
-    ----------
+    # Parameters
+
     combination : ``str``
         A comma-separated list of combination pieces, like ``"1,2,1*2"``, specified identically to
         ``combination`` in :func:`combine_tensors`.
@@ -1096,8 +1096,8 @@ def logsumexp(tensor: torch.Tensor, dim: int = -1, keepdim: bool = False) -> tor
     `tensor.exp().sum(dim, keep=keepdim).log()`.  This function is typically used for summing log
     probabilities.
 
-    Parameters
-    ----------
+    # Parameters
+
     tensor : torch.FloatTensor, required.
         A tensor of arbitrary size.
     dim : int, optional (default = -1)
@@ -1142,15 +1142,15 @@ def flatten_and_batch_shift_indices(indices: torch.Tensor, sequence_length: int)
         # the indices are applied.
         assert shifted_indices == [1, 1, 1, 11, 11, 11]
 
-    Parameters
-    ----------
+    # Parameters
+
     indices : ``torch.LongTensor``, required.
     sequence_length : ``int``, required.
         The length of the sequence the indices index into.
         This must be the second dimension of the tensor.
 
-    Returns
-    -------
+    # Returns
+
     offset_indices : ``torch.LongTensor``
     """
     # Shape: (batch_size)
@@ -1192,8 +1192,8 @@ def batched_index_select(
     tensors with an arbitrary number of dimensions (for example, in the coref model, we don't know
     a-priori how many spans we are looking up).
 
-    Parameters
-    ----------
+    # Parameters
+
     target : ``torch.Tensor``, required.
         A 3 dimensional tensor of shape (batch_size, sequence_length, embedding_size).
         This is the tensor to be indexed.
@@ -1205,8 +1205,8 @@ def batched_index_select(
         on ``indices``. This is helpful in the case that the indices can be flattened once and
         cached for many batch lookups.
 
-    Returns
-    -------
+    # Returns
+
     selected_targets : ``torch.Tensor``
         A tensor with shape [indices.size(), target.size(-1)] representing the embedded indices
         extracted from the batch flattened target tensor.
@@ -1233,16 +1233,16 @@ def flattened_index_select(target: torch.Tensor, indices: torch.LongTensor) -> t
     ``(batch_size, sequence_length, embedding_size)``, and the resulting selected tensor has size
     ``(batch_size, set_size, subset_size, embedding_size)``.
 
-    Parameters
-    ----------
+    # Parameters
+
     target : ``torch.Tensor``, required.
         A Tensor of shape (batch_size, sequence_length, embedding_size).
     indices : ``torch.LongTensor``, required.
         A LongTensor of shape (set_size, subset_size). All indices must be < sequence_length
         as this tensor is an index into the sequence_length dimension of the target.
 
-    Returns
-    -------
+    # Returns
+
     selected : ``torch.Tensor``, required.
         A Tensor of shape (batch_size, set_size, subset_size, embedding_size).
     """
@@ -1280,8 +1280,8 @@ def bucket_values(
     The default settings will bucket values into the following buckets:
     [0, 1, 2, 3, 4, 5-7, 8-15, 16-31, 32-63, 64+].
 
-    Parameters
-    ----------
+    # Parameters
+
     distances : ``torch.Tensor``, required.
         A Tensor of any size, to be bucketed.
     num_identity_buckets: int, optional (default = 4).
@@ -1289,8 +1289,8 @@ def bucket_values(
     num_total_buckets : int, (default = 10)
         The total number of buckets to bucket values into.
 
-    Returns
-    -------
+    # Returns
+
     A tensor of the same shape as the input, containing the indices of the buckets
     the values were placed in.
     """
@@ -1323,8 +1323,8 @@ def add_sentence_boundary_token_ids(
 
     Returns both the new tensor and updated mask.
 
-    Parameters
-    ----------
+    # Parameters
+
     tensor : ``torch.Tensor``
         A tensor of shape ``(batch_size, timesteps)`` or ``(batch_size, timesteps, dim)``
     mask : ``torch.Tensor``
@@ -1334,8 +1334,8 @@ def add_sentence_boundary_token_ids(
     sentence_end_token: Any (anything that can be broadcast in torch for assignment)
         For 2D input, a scalar with the </S> id. For 3D input, a tensor with length dim.
 
-    Returns
-    -------
+    # Returns
+
     tensor_with_boundary_tokens : ``torch.Tensor``
         The tensor with the appended and prepended boundary tokens. If the input was 2D,
         it has shape (batch_size, timesteps + 2) and if the input was 3D, it has shape
@@ -1383,15 +1383,15 @@ def remove_sentence_boundaries(
 
     This function is the inverse of ``add_sentence_boundary_token_ids``.
 
-    Parameters
-    ----------
+    # Parameters
+
     tensor : ``torch.Tensor``
         A tensor of shape ``(batch_size, timesteps, dim)``
     mask : ``torch.Tensor``
          A tensor of shape ``(batch_size, timesteps)``
 
-    Returns
-    -------
+    # Returns
+
     tensor_without_boundary_tokens : ``torch.Tensor``
         The tensor after removing the boundary tokens of shape ``(batch_size, timesteps - 2, dim)``
     new_mask : ``torch.Tensor``
@@ -1418,8 +1418,8 @@ def add_positional_features(
 
     """
     Implements the frequency-based positional encoding described
-    in `Attention is all you Need
-    <https://www.semanticscholar.org/paper/Attention-Is-All-You-Need-Vaswani-Shazeer/0737da0767d77606169cbf4187b83e1ab62f6077>`_ .
+    in [Attention is all you Need]
+    (https://www.semanticscholar.org/paper/Attention-Is-All-You-Need-Vaswani-Shazeer/0737da0767d77606169cbf4187b83e1ab62f6077).
 
     Adds sinusoids of different frequencies to a ``Tensor``. A sinusoid of a
     different frequency and phase is added to each dimension of the input ``Tensor``.
@@ -1430,8 +1430,8 @@ def add_positional_features(
     signals sin(timestep / timescale) and cos(timestep / timescale) are
     generated and concatenated along the hidden_dim dimension.
 
-    Parameters
-    ----------
+    # Parameters
+
     tensor : ``torch.Tensor``
         a Tensor with shape (batch_size, timesteps, hidden_dim).
     min_timescale : ``float``, optional (default = 1.0)
@@ -1439,8 +1439,8 @@ def add_positional_features(
     max_timescale : ``float``, optional (default = 1.0e4)
         The largest timescale to use.
 
-    Returns
-    -------
+    # Returns
+
     The input tensor augmented with the sinusoidal frequencies.
     """  # noqa
     _, timesteps, hidden_dim = tensor.size()

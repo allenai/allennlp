@@ -38,8 +38,8 @@ class Hotflip(Attacker):
     This also requires a model to `have` a token vocabulary in the first place, which can be
     problematic for models that only have character vocabularies.
 
-    Parameters
-    ----------
+    # Parameters
+
     predictor : ``Predictor``
         The model (inside a Predictor) that we're attacking.  We use this to get gradients and
         predictions.
@@ -126,6 +126,8 @@ class Hotflip(Attacker):
             elif isinstance(token_indexer, TokenCharactersIndexer):
                 tokens = [Token(x) for x in all_tokens]
                 max_token_length = max(len(x) for x in all_tokens)
+                # sometime max_token_length is too short for cnn encoder
+                max_token_length = max(max_token_length, token_indexer._min_padding_length)
                 indexed_tokens = token_indexer.tokens_to_indices(
                     tokens, self.vocab, "token_characters"
                 )
@@ -169,8 +171,8 @@ class Hotflip(Attacker):
         approximation of the loss.  This process is iteratively repeated until the prediction
         changes.  Once a token is replaced, it is not flipped again.
 
-        Parameters
-        ----------
+        # Parameters
+
         inputs : ``JsonDict``
             The model inputs, the same as what is passed to a ``Predictor``.
         input_field_to_attack : ``str``, optional (default='tokens')

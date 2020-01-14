@@ -16,8 +16,8 @@ class OntonotesSentence:
     """
     A class representing the annotations available for a single CONLL formatted sentence.
 
-    Parameters
-    ----------
+    # Parameters
+
     document_id : ``str``
         This is a variation on the document filename
     sentence_id : ``int``
@@ -88,8 +88,8 @@ class Ontonotes:
     """
     This DatasetReader is designed to read in the English OntoNotes v5.0 data
     in the format used by the CoNLL 2011/2012 shared tasks. In order to use this
-    Reader, you must follow the instructions provided `here (v12 release):
-    <https://cemantix.org/data/ontonotes.html>`_, which will allow you to download
+    Reader, you must follow the instructions provided [here (v12 release):]
+    (https://cemantix.org/data/ontonotes.html), which will allow you to download
     the CoNLL style annotations for the  OntoNotes v5.0 release -- LDC2013T19.tgz
     obtained from LDC.
 
@@ -377,8 +377,8 @@ class Ontonotes:
         ignore it, if it is outside of all spans. This method mutates the clusters and coref_stacks
         dictionaries.
 
-        Parameters
-        ----------
+        # Parameters
+
         label : ``str``
             The coref label for this word.
         word_index : ``int``
@@ -426,8 +426,8 @@ class Ontonotes:
         Given a sequence of different label types for a single word and the current
         span label we are inside, compute the BIO tag for each label and append to a list.
 
-        Parameters
-        ----------
+        # Parameters
+
         annotations : ``List[str]``
             A list of labels to compute BIO tags for.
         span_labels : ``List[List[str]]``

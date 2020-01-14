@@ -257,7 +257,7 @@ class MultiTaskTrainer(TrainerBase):
         datasets = {name: reader.read(train_file_paths[name]) for name, reader in readers.items()}
 
         instances = (instance for dataset in datasets.values() for instance in dataset)
-        vocab = Vocabulary.from_params(Params({}), instances)
+        vocab = Vocabulary.from_params(Params({}), instances=instances)
         model = Model.from_params(params.pop("model"), vocab=vocab)
         iterator = DataIterator.from_params(params.pop("iterator"))
         iterator.index_with(vocab)

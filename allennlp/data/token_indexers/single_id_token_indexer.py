@@ -15,8 +15,8 @@ class SingleIdTokenIndexer(TokenIndexer[int]):
     """
     This :class:`TokenIndexer` represents tokens as single integers.
 
-    Parameters
-    ----------
+    # Parameters
+
     namespace : ``str``, optional (default=``tokens``)
         We will use this namespace in the :class:`Vocabulary` to map strings to indices.
     lowercase_tokens : ``bool``, optional (default=``False``)

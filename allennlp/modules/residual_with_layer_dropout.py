@@ -3,8 +3,8 @@ import torch
 
 class ResidualWithLayerDropout(torch.nn.Module):
     """
-    A residual connection with the layer dropout technique `Deep Networks with Stochastic
-    Depth <https://arxiv.org/pdf/1603.09382.pdf>`_ .
+    A residual connection with the layer dropout technique [Deep Networks with Stochastic
+    Depth](https://arxiv.org/pdf/1603.09382.pdf).
 
     This module accepts the input and output of a layer, decides whether this layer should
     be stochastically dropped, returns either the input or output + input. During testing,
@@ -34,8 +34,8 @@ class ResidualWithLayerDropout(torch.nn.Module):
         dropout_prob = layer_index / total_layers * undecayed_dropout_prob if layer_idx and
         total_layers is specified, else it will use the undecayed_dropout_prob directly.
 
-        Parameters
-        ----------
+        # Parameters
+
         layer_input ``torch.FloatTensor`` required
             The input tensor of this layer.
         layer_output ``torch.FloatTensor`` required
@@ -46,8 +46,8 @@ class ResidualWithLayerDropout(torch.nn.Module):
         total_layers ``int``
             The total number of layers.
 
-        Returns
-        -------
+        # Returns
+
         output : ``torch.FloatTensor``
             A tensor with the same shape as `layer_input` and `layer_output`.
         """

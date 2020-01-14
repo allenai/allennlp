@@ -1,6 +1,7 @@
 import logging
 from typing import List, Optional
 
+from allennlp.common.util import sanitize_wordpiece
 from overrides import overrides
 from transformers.tokenization_auto import AutoTokenizer
 
@@ -27,8 +28,8 @@ class PretrainedTransformerTokenizer(Tokenizer):
     This tokenizer also indexes tokens and adds the indexes to the ``Token`` fields so that
     they can be picked up by ``PretrainedTransformerIndexer``.
 
-    Parameters
-    ----------
+    # Parameters
+
     model_name : ``str``
         The name of the pretrained wordpiece tokenizer to use.
     add_special_tokens : ``bool``, optional, (default=True)
@@ -128,10 +129,7 @@ class PretrainedTransformerTokenizer(Tokenizer):
                 token_text = tokens[token_index].text
                 if self._tokenizer_lowercases:
                     token_text = token_text.lower()
-                if token_text.startswith("##"):
-                    token_text = token_text[2:]
-                elif token_text.startswith("Ġ"):
-                    token_text = token_text[1:]
+                token_text = sanitize_wordpiece(token_text)
                 token_start_index = whole_text.find(token_text, text_index)
 
                 # Did we not find it at all?
