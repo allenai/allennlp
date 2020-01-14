@@ -28,12 +28,8 @@ class TestNerTagIndexer(AllenNlpTestCase):
         none_index = vocab.add_token_to_namespace("NONE", namespace="ner_tags")
         vocab.add_token_to_namespace("ORG", namespace="ner_tags")
         indexer = NerTagIndexer(namespace="ner_tags")
-        assert indexer.tokens_to_indices([tokens[1]], vocab) == {
-            "tokens": [person_index]
-        }
-        assert indexer.tokens_to_indices([tokens[-1]], vocab) == {
-            "tokens": [none_index]
-        }
+        assert indexer.tokens_to_indices([tokens[1]], vocab) == {"tokens": [person_index]}
+        assert indexer.tokens_to_indices([tokens[-1]], vocab) == {"tokens": [none_index]}
 
     def test_as_array_produces_token_sequence(self):
         indexer = NerTagIndexer()

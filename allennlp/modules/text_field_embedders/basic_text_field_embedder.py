@@ -30,10 +30,7 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
         the tensor passed to the TokenEmbedder.
     """
 
-    def __init__(
-        self,
-        token_embedders: Dict[str, TokenEmbedder],
-    ) -> None:
+    def __init__(self, token_embedders: Dict[str, TokenEmbedder]) -> None:
         super().__init__()
         # NOTE(mattg): I'd prefer to just use ModuleDict(token_embedders) here, but that changes
         # weight locations in torch state dictionaries and invalidates all prior models, just for a

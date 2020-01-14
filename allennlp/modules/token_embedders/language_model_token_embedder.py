@@ -108,9 +108,7 @@ class LanguageModelTokenEmbedder(TokenEmbedder):
             token_list = [Token(token) for token in bos_eos_tokens]
             # TODO(brendanr): Obtain these indices from the vocab once the
             # ELMoTokenCharactersIndexer adds the mappings.
-            bos_eos_indices = token_indexer.tokens_to_indices(token_list, self._lm.vocab)[
-                "tokens"
-            ]
+            bos_eos_indices = token_indexer.tokens_to_indices(token_list, self._lm.vocab)["tokens"]
             self._bos_indices = torch.LongTensor(bos_eos_indices[0])
             self._eos_indices = torch.LongTensor(bos_eos_indices[1])
         else:

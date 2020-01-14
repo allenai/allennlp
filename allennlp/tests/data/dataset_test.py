@@ -31,10 +31,7 @@ class TestDataset(AllenNlpTestCase):
         dataset = Batch(self.instances)
         dataset.index_instances(self.vocab)
         padding_lengths = dataset.get_padding_lengths()
-        assert padding_lengths == {
-            "text1": {"tokens___tokens": 5},
-            "text2": {"tokens___tokens": 6},
-        }
+        assert padding_lengths == {"text1": {"tokens___tokens": 5}, "text2": {"tokens___tokens": 6}}
 
     def test_as_tensor_dict(self):
         dataset = Batch(self.instances)

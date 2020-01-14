@@ -43,7 +43,7 @@ class TestPretrainedTransformerEmbedder(AllenNlpTestCase):
             {
                 "token_embedders": {
                     "bert": {"type": "pretrained_transformer", "model_name": "bert-base-uncased"}
-                },
+                }
             }
         )
         token_embedder = BasicTextFieldEmbedder.from_params(vocab=vocab, params=params)
@@ -61,7 +61,10 @@ class TestPretrainedTransformerEmbedder(AllenNlpTestCase):
 
         assert tokens["bert"]["token_ids"].shape == (2, max_length)
 
-        assert tokens["bert"]["mask"].tolist() == [[1, 1, 1, 1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1, 1, 0, 0]]
+        assert tokens["bert"]["mask"].tolist() == [
+            [1, 1, 1, 1, 1, 1, 1, 1, 1],
+            [1, 1, 1, 1, 1, 1, 1, 0, 0],
+        ]
 
         # Attention mask
         bert_vectors = token_embedder(tokens)

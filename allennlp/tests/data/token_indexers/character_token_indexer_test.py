@@ -66,7 +66,9 @@ class CharacterTokenIndexerTest(AllenNlpTestCase):
             "characters", start_tokens=["<s>"], end_tokens=["</s>"], min_padding_length=1
         )
         indices = indexer.tokens_to_indices([Token("sentential")], vocab)
-        assert indices == {"token_characters": [[8, 3, 9], [3, 4, 5, 6, 4, 5, 6, 1, 1, 1], [8, 10, 3, 9]]}
+        assert indices == {
+            "token_characters": [[8, 3, 9], [3, 4, 5, 6, 4, 5, 6, 1, 1, 1], [8, 10, 3, 9]]
+        }
 
     def test_min_padding_length(self):
         sentence = "AllenNLP is awesome ."
