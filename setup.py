@@ -119,7 +119,6 @@ setup(
         "pytest",
         "flaky",
         "responses>=0.7",
-        "numpydoc>=0.8.0",
         "conllu==1.3.1",
         "ftfy",
         "pytorch-pretrained-bert>=0.6.0",
