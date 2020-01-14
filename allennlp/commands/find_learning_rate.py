@@ -353,10 +353,16 @@ def _smooth(values: List[float], beta: float) -> List[float]:
 
 
 def _save_plot(learning_rates: List[float], losses: List[float], save_path: str):
-    import matplotlib
 
-    matplotlib.use("Agg")  # noqa
-    import matplotlib.pyplot as plt
+    try:
+        import matplotlib
+        matplotlib.use("Agg")  # noqa
+        import matplotlib.pyplot as plt
+
+    except ModuleNotFoundError as error:
+
+        logger.warn("To use allennlp find-learning-rate, please install matplotlib: pip install matplotlib>=2.2.3 .")
+        raise error
 
     plt.ylabel("loss")
     plt.xlabel("learning rate (log10 scale)")
