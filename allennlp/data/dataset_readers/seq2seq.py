@@ -25,13 +25,13 @@ class Seq2SeqDatasetReader(DatasetReader):
     Expected format for each input line: <source_sequence_string>\t<target_sequence_string>
 
     The output of ``read`` is a list of ``Instance`` s with the fields:
-        source_tokens: ``TextField`` and
-        target_tokens: ``TextField``
+        source_tokens : ``TextField`` and
+        target_tokens : ``TextField``
 
     `START_SYMBOL` and `END_SYMBOL` tokens are added to the source and target sequences.
 
-    Parameters
-    ----------
+    # Parameters
+
     source_tokenizer : ``Tokenizer``, optional
         Tokenizer to use to split the input sequences into words or other kinds of tokens. Defaults
         to ``SpacyTokenizer()``.

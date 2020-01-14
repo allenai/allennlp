@@ -27,9 +27,9 @@ class Attention(torch.nn.Module, Registrable):
 
     - attention: shape ``(batch_size, num_rows)``.
 
-    Parameters
-    ----------
-    normalize : ``bool``, optional (default: ``True``)
+    # Parameters
+
+    normalize : ``bool``, optional (default : ``True``)
         If true, we normalize the computed similarities with a softmax, to return a probability
         distribution for your attention.  If false, this is just computing a similarity score.
     """

@@ -31,8 +31,8 @@ class CoreferenceResolver(Model):
     span (if any) they are coreferent with. The resulting coreference links, after applying
     transitivity, imply a clustering of the spans in the document.
 
-    Parameters
-    ----------
+    # Parameters
+
     vocab : ``Vocabulary``
     text_field_embedder : ``TextFieldEmbedder``
         Used to embed the ``text`` ``TextField`` we get as input to the model.
@@ -41,19 +41,19 @@ class CoreferenceResolver(Model):
     mention_feedforward : ``FeedForward``
         This feedforward network is applied to the span representations which is then scored
         by a linear layer.
-    antecedent_feedforward: ``FeedForward``
+    antecedent_feedforward : ``FeedForward``
         This feedforward network is applied to pairs of span representation, along with any
         pairwise features, which is then scored by a linear layer.
-    feature_size: ``int``
+    feature_size : ``int``
         The embedding size for all the embedded features, such as distances or span widths.
-    max_span_width: ``int``
+    max_span_width : ``int``
         The maximum width of candidate spans.
     spans_per_word: float, required.
         A multiplier between zero and one which controls what percentage of candidate mention
         spans we retain with respect to the number of words in the document.
     max_antecedents: int, required.
         For each mention which survives the pruning stage, we consider this many antecedents.
-    lexical_dropout: ``int``
+    lexical_dropout : ``int``
         The probability of dropping out dimensions of the embedded text.
     initializer : ``InitializerApplicator``, optional (default=``InitializerApplicator()``)
         Used to initialize the model parameters.
@@ -127,8 +127,8 @@ class CoreferenceResolver(Model):
     ) -> Dict[str, torch.Tensor]:
 
         """
-        Parameters
-        ----------
+        # Parameters
+
         text : ``Dict[str, torch.LongTensor]``, required.
             The output of a ``TextField`` representing the text of
             the document.
@@ -144,8 +144,8 @@ class CoreferenceResolver(Model):
             from this dictionary, which respectively have the original text and the annotated gold coreference
             clusters for that instance.
 
-        Returns
-        -------
+        # Returns
+
         An output dictionary consisting of:
         top_spans : ``torch.IntTensor``
             A tensor of shape ``(batch_size, num_spans_to_keep, 2)`` representing
@@ -234,7 +234,11 @@ class CoreferenceResolver(Model):
         # (num_spans_to_keep, max_antecedents),
         # (1, max_antecedents),
         # (1, num_spans_to_keep, max_antecedents)
-        valid_antecedent_indices, valid_antecedent_offsets, valid_antecedent_log_mask = self._generate_valid_antecedents(  # noqa
+        (
+            valid_antecedent_indices,
+            valid_antecedent_offsets,
+            valid_antecedent_log_mask,
+        ) = self._generate_valid_antecedents(  # noqa
             num_spans_to_keep, max_antecedents, util.get_device_of(text_mask)
         )
         # Select tensors relating to the antecedent spans.
@@ -322,13 +326,13 @@ class CoreferenceResolver(Model):
         Converts the list of spans and predicted antecedent indices into clusters
         of spans for each element in the batch.
 
-        Parameters
-        ----------
+        # Parameters
+
         output_dict : ``Dict[str, torch.Tensor]``, required.
             The result of calling :func:`forward` on an instance or batch of instances.
 
-        Returns
-        -------
+        # Returns
+
         The same output dictionary, but with an additional ``clusters`` key:
 
         clusters : ``List[List[List[Tuple[int, int]]]]``
@@ -423,17 +427,17 @@ class CoreferenceResolver(Model):
         of shape (num_spans_to_keep, max_antecedents), where the (i,j)-th index is equal to
         (i - 1) - j if j <= i, or zero otherwise.
 
-        Parameters
-        ----------
+        # Parameters
+
         num_spans_to_keep : ``int``, required.
             The number of spans that were kept while pruning.
         max_antecedents : ``int``, required.
             The maximum number of antecedent spans to consider for every span.
-        device: ``int``, required.
+        device : ``int``, required.
             The CUDA device to use.
 
-        Returns
-        -------
+        # Returns
+
         valid_antecedent_indices : ``torch.IntTensor``
             The indices of every antecedent to consider with respect to the top k spans.
             Has shape ``(num_spans_to_keep, max_antecedents)``.
@@ -482,8 +486,8 @@ class CoreferenceResolver(Model):
         similarity of the span representations, and an embedding representation of the distance
         between the two spans.
 
-        Parameters
-        ----------
+        # Parameters
+
         top_span_embeddings : ``torch.FloatTensor``, required.
             Embedding representations of the top spans. Has shape
             (batch_size, num_spans_to_keep, embedding_size).
@@ -495,8 +499,8 @@ class CoreferenceResolver(Model):
             The offsets between each top span and its antecedent spans in terms
             of spans we are considering. Has shape (1, max_antecedents).
 
-        Returns
-        -------
+        # Returns
+
         span_pair_embeddings : ``torch.FloatTensor``
             Embedding representation of the pair of spans to consider. Has shape
             (batch_size, num_spans_to_keep, max_antecedents, embedding_size)
@@ -545,8 +549,8 @@ class CoreferenceResolver(Model):
         with a dummy antecedent at the zeroth position, which represents the prediction
         that a span does not have any antecedent.
 
-        Parameters
-        ----------
+        # Parameters
+
         top_span_labels : ``torch.IntTensor``, required.
             The cluster id label for every span. The id is arbitrary,
             as we just care about the clustering. Has shape (batch_size, num_spans_to_keep).
@@ -555,8 +559,8 @@ class CoreferenceResolver(Model):
             as we just care about the clustering. Has shape
             (batch_size, num_spans_to_keep, max_antecedents).
 
-        Returns
-        -------
+        # Returns
+
         pairwise_labels_with_dummy_label : ``torch.FloatTensor``
             A binary tensor representing whether a given pair of spans belong to
             the same cluster in the gold clustering.
@@ -591,23 +595,23 @@ class CoreferenceResolver(Model):
         antecedent. The factoring allows the model to blame many of the absent links on bad
         spans, enabling the pruning strategy used in the forward pass.
 
-        Parameters
-        ----------
-        pairwise_embeddings: ``torch.FloatTensor``, required.
+        # Parameters
+
+        pairwise_embeddings : ``torch.FloatTensor``, required.
             Embedding representations of pairs of spans. Has shape
             (batch_size, num_spans_to_keep, max_antecedents, encoding_dim)
-        top_span_mention_scores: ``torch.FloatTensor``, required.
+        top_span_mention_scores : ``torch.FloatTensor``, required.
             Mention scores for every span. Has shape
             (batch_size, num_spans_to_keep, max_antecedents).
-        antecedent_mention_scores: ``torch.FloatTensor``, required.
+        antecedent_mention_scores : ``torch.FloatTensor``, required.
             Mention scores for every antecedent. Has shape
             (batch_size, num_spans_to_keep, max_antecedents).
-        antecedent_log_mask: ``torch.FloatTensor``, required.
+        antecedent_log_mask : ``torch.FloatTensor``, required.
             The log of the mask for valid antecedents.
 
-        Returns
-        -------
-        coreference_scores: ``torch.FloatTensor``
+        # Returns
+
+        coreference_scores : ``torch.FloatTensor``
             A tensor of shape (batch_size, num_spans_to_keep, max_antecedents + 1),
             representing the unormalised score for each (span, antecedent) pair
             we considered.

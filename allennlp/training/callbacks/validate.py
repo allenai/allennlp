@@ -23,8 +23,8 @@ class Validate(Callback):
     Evaluates the trainer's ``Model`` using the provided validation dataset.
     Uses the results to populate trainer.val_metrics.
 
-    Parameters
-    ----------
+    # Parameters
+
     validation_data : ``Iterable[Instance]``
         The instances in the validation dataset.
     validation_iterator : ``DataIterator``

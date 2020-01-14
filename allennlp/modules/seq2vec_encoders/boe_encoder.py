@@ -14,11 +14,11 @@ class BagOfEmbeddingsEncoder(Seq2VecEncoder):
     of a sequence across the time dimension. The input to this module is of shape ``(batch_size, num_tokens,
     embedding_dim)``, and the output is of shape ``(batch_size, embedding_dim)``.
 
-    Parameters
-    ----------
-    embedding_dim: ``int``
+    # Parameters
+
+    embedding_dim : ``int``, required
         This is the input dimension to the encoder.
-    averaged: ``bool``, optional (default=``False``)
+    averaged : ``bool``, optional (default=``False``)
         If ``True``, this module will average the embeddings across time, rather than simply summing
         (ie. we will divide the summed embeddings by the length of the sentence).
     """

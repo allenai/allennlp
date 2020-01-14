@@ -73,8 +73,8 @@ class Trainer(TrainerBase):
         for your model over some fixed number of epochs. You can also pass in a validation
         dataset and enable early stopping. There are many other bells and whistles as well.
 
-        Parameters
-        ----------
+        # Parameters
+
         model : ``Model``, required.
             An AllenNLP model to be optimized. Pytorch Modules can also be optimized if
             their ``forward`` method returns a dictionary with a "loss" key, containing a
@@ -104,7 +104,7 @@ class Trainer(TrainerBase):
         validation_iterator : ``DataIterator``, optional (default=None)
             An iterator to use for the validation set.  If ``None``, then
             use the training `iterator`.
-        shuffle: ``bool``, optional (default=True)
+        shuffle : ``bool``, optional (default=True)
             Whether to shuffle the instances in the iterator or not.
         num_epochs : int, optional (default = 20)
             Number of training epochs.
@@ -149,7 +149,7 @@ class Trainer(TrainerBase):
         momentum_scheduler : ``MomentumScheduler``, optional (default = None)
             If specified, the momentum will be updated at the end of each batch or epoch
             according to the schedule.
-        summary_interval: ``int``, optional, (default = 100)
+        summary_interval : ``int``, optional, (default = 100)
             Number of batches between logging scalars to tensorboard
         histogram_interval : ``int``, optional, (default = ``None``)
             If not None, then log histograms to tensorboard every ``histogram_interval`` batches.
@@ -172,22 +172,22 @@ class Trainer(TrainerBase):
             Whether to send parameter specific learning rate to tensorboard.
         log_batch_size_period : ``int``, optional, (default = ``None``)
             If defined, how often to log the average batch size.
-        moving_average: ``MovingAverage``, optional, (default = None)
+        moving_average : ``MovingAverage``, optional, (default = None)
             If provided, we will maintain moving averages for all parameters. During training, we
             employ a shadow variable for each parameter, which maintains the moving average. During
             evaluation, we backup the original parameters and assign the moving averages to corresponding
             parameters. Be careful that when saving the checkpoint, we will save the moving averages of
             parameters. This is necessary because we want the saved model to perform as well as the validated
             model if we load it later. But this may cause problems if you restart the training from checkpoint.
-        distributed: ``bool``, optional, (default = False)
+        distributed : ``bool``, optional, (default = False)
             If set, PyTorch's `DistributedDataParallel` is used to train the model in multiple GPUs. This also
             requires `world_size` to be greater than 1.
-        rank: ``int``, optional, (default = 0)
+        rank : ``int``, optional, (default = 0)
             This is the unique identifier of the `Trainer` in a distributed process group. The GPU device id is
             used as the rank.
-        world_size: ``int``, (default = 1)
+        world_size : ``int``, (default = 1)
             The number of `Trainer` workers participating in the distributed training.
-        num_gradient_accumulation_steps: ``int``, optional, (default = 1)
+        num_gradient_accumulation_steps : ``int``, optional, (default = 1)
             Gradients are accumulated for the given number of steps before doing an optimizer step. This can
             be useful to accommodate batches that are larger than the RAM size. Refer Thomas Wolf's
             [post](https://tinyurl.com/y5mv44fw) for details on Gradient Accumulation.
@@ -284,7 +284,9 @@ class Trainer(TrainerBase):
         # normal case, reference to `Model` is retained. This reference is only used in
         # these places: `model.__call__`, `model.train` and `model.eval`.
         if self._distributed:
-            self._pytorch_model = DistributedDataParallel(self.model, device_ids=[self.cuda_device])
+            self._pytorch_model = DistributedDataParallel(
+                self.model, device_ids=[self.cuda_device], find_unused_parameters=True
+            )
         else:
             self._pytorch_model = self.model
 
@@ -661,8 +663,8 @@ class Trainer(TrainerBase):
         Saves a checkpoint of the model to self._serialization_dir.
         Is a no-op if self._serialization_dir is None.
 
-        Parameters
-        ----------
+        # Parameters
+
         epoch : Union[int, str], required.
             The epoch of training.  If the checkpoint is saved in the middle
             of an epoch, the parameter is a string with the epoch and timestamp.
@@ -708,8 +710,8 @@ class Trainer(TrainerBase):
         If ``self._serialization_dir`` does not exist or does not contain any checkpointed weights,
         this function will do nothing and return 0.
 
-        Returns
-        -------
+        # Returns
+
         epoch: int
             The epoch at which to resume training, which should be one after the epoch
             in the saved training state.

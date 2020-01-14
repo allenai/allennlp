@@ -13,8 +13,8 @@ class BilinearSimilarity(SimilarityFunction):
     function has a matrix of weights ``W`` and a bias ``b``, and the similarity between two vectors
     ``x`` and ``y`` is computed as ``x^T W y + b``.
 
-    Parameters
-    ----------
+    # Parameters
+
     tensor_1_dim : ``int``
         The dimension of the first tensor, ``x``, described above.  This is ``x.size()[-1]`` - the
         length of the vector that will go into the similarity computation.  We need this so we can

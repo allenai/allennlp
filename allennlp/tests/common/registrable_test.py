@@ -84,7 +84,6 @@ class TestRegistrable(AllenNlpTestCase):
         assert DatasetReader.by_name("snli").__name__ == "SnliReader"
         assert DatasetReader.by_name("sequence_tagging").__name__ == "SequenceTaggingDatasetReader"
         assert DatasetReader.by_name("language_modeling").__name__ == "LanguageModelingReader"
-        assert DatasetReader.by_name("squad").__name__ == "SquadReader"
 
     def test_registry_has_builtin_iterators(self):
         assert DataIterator.by_name("basic").__name__ == "BasicIterator"

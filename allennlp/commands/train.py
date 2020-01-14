@@ -179,8 +179,8 @@ def train_model_from_file(
     """
     A wrapper around :func:`train_model` which loads the params from a file.
 
-    Parameters
-    ----------
+    # Parameters
+
     parameter_filename : ``str``
         A json parameter file specifying an AllenNLP experiment.
     serialization_dir : ``str``
@@ -203,7 +203,7 @@ def train_model_from_file(
         For caching data pre-processing.  See :func:`allennlp.training.util.datasets_from_params`.
     node_rank : ``int``, optional
         Rank of the current node in distributed training
-    include_package: ``str``, optional
+    include_package : ``str``, optional
         In distributed mode, extra packages mentioned will be imported in trainer workers.
     """
     # Load the experiment config from a file and pass it to ``train_model``.
@@ -236,8 +236,8 @@ def train_model(
     Trains the model specified in the given :class:`Params` object, using the data and training
     parameters also specified in that object, and saves the results in ``serialization_dir``.
 
-    Parameters
-    ----------
+    # Parameters
+
     params : ``Params``
         A parameter object specifying an AllenNLP Experiment.
     serialization_dir : ``str``
@@ -255,14 +255,14 @@ def train_model(
         For caching data pre-processing.  See :func:`allennlp.training.util.datasets_from_params`.
     cache_prefix : ``str``, optional
         For caching data pre-processing.  See :func:`allennlp.training.util.datasets_from_params`.
-    node_rank: ``int``, optional
+    node_rank : ``int``, optional
         Rank of the current node in distributed training
-    include_package: ``List[str]``, optional
+    include_package : ``List[str]``, optional
         In distributed mode, extra packages mentioned will be imported in trainer workers.
 
-    Returns
-    -------
-    best_model: ``Model``
+    # Returns
+
+    best_model : ``Model``
         The model with the best epoch weights.
     """
     create_serialization_dir(params, serialization_dir, recover, force)
@@ -291,17 +291,17 @@ def train_model(
         # passed the wrong thing - cuda_devices are required.
         device_ids = distributed_params.pop("cuda_devices", None)
         multi_device = isinstance(device_ids, list) and len(device_ids) > 1
+        num_nodes = distributed_params.pop("num_nodes", 1)
 
-        if not multi_device:
+        if not (multi_device or num_nodes > 1):
             raise ConfigurationError(
-                "Multiple cuda devices need to be configured to run distributed training."
+                "Multiple cuda devices/nodes need to be configured to run distributed training."
             )
         check_for_gpu(device_ids)
 
         master_addr = distributed_params.pop("master_address", "127.0.0.1")
         master_port = distributed_params.pop("master_port", 29500)
         num_procs = len(device_ids)
-        num_nodes = distributed_params.pop("num_nodes", 1)
         world_size = num_nodes * num_procs
 
         os.environ["MASTER_ADDR"] = master_addr
@@ -368,8 +368,8 @@ def _train_worker(
     worker process. In a single GPU experiment, this returns the ``Model`` object and in distributed
     training, nothing is returned.
 
-    Parameters
-    ----------
+    # Parameters
+
     process_rank : ``int``
         The process index that is initialized using the GPU device id.
     params : ``Params``
@@ -387,18 +387,18 @@ def _train_worker(
         For caching data pre-processing.  See :func:`allennlp.training.util.datasets_from_params`.
     cache_prefix : ``str``, optional
         For caching data pre-processing.  See :func:`allennlp.training.util.datasets_from_params`.
-    include_package: ``List[str]``, optional
+    include_package : ``List[str]``, optional
         In distributed mode, since this function would have been spawned as a separate process,
         the extra imports need to be done again. NOTE: This does not have any effect in single
         GPU training.
-    node_rank: ``int``, optional
+    node_rank : ``int``, optional
         Rank of the node
-    world_size: ``int``, optional
+    world_size : ``int``, optional
         The number of processes involved in distributed training.
 
-    Returns
-    -------
-    best_model: ``Model``
+    # Returns
+
+    best_model : ``Model``
         The model with the best epoch weights.
     """
     prepare_global_logging(

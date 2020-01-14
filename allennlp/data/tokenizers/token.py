@@ -7,8 +7,8 @@ class Token(NamedTuple):
     taken from, POS tag, dependency relation, and similar information.  These fields match spacy's
     exactly, so we can just use a spacy token for this.
 
-    Parameters
-    ----------
+    # Parameters
+
     text : ``str``, optional
         The original text represented by this token.
     idx : ``int``, optional

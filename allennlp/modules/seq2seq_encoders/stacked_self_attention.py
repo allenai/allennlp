@@ -17,8 +17,8 @@ class StackedSelfAttentionEncoder(Seq2SeqEncoder):
 
     """
     Implements a stacked self-attention encoder similar to the Transformer
-    architecture in `Attention is all you Need
-    <https://www.semanticscholar.org/paper/Attention-Is-All-You-Need-Vaswani-Shazeer/0737da0767d77606169cbf4187b83e1ab62f6077>`_ .
+    architecture in [Attention is all you Need]
+    (https://www.semanticscholar.org/paper/Attention-Is-All-You-Need-Vaswani-Shazeer/0737da0767d77606169cbf4187b83e1ab62f6077).
 
     This encoder combines 3 layers in a 'block':
 
@@ -30,8 +30,8 @@ class StackedSelfAttentionEncoder(Seq2SeqEncoder):
 
     These are then stacked into ``num_layers`` layers.
 
-    Parameters
-    ----------
+    # Parameters
+
     input_dim : ``int``, required.
         The input dimension of the encoder.
     hidden_dim : ``int``, required.
@@ -46,7 +46,7 @@ class StackedSelfAttentionEncoder(Seq2SeqEncoder):
         The number of stacked self attention -> feedfoward -> layer normalisation blocks.
     num_attention_heads : ``int``, required.
         The number of attention heads to use per layer.
-    use_positional_encoding: ``bool``, optional, (default = True)
+    use_positional_encoding : ``bool``, optional, (default = True)
         Whether to add sinusoidal frequencies to the input tensor. This is strongly recommended,
         as without this feature, the self attention layers have no idea of absolute or relative
         position (as they are just computing pairwise similarity between vectors of elements),

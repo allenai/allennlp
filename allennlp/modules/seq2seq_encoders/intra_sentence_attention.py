@@ -23,9 +23,9 @@ class IntraSentenceAttentionEncoder(Seq2SeqEncoder):
     attended representations is also configurable (e.g., you can concatenate them, add them,
     multiply them, etc.).
 
-    Parameters
-    ----------
-    input_dim : ``int``
+    # Parameters
+
+    input_dim : ``int`` required
         The dimension of the vector for each element in the input sequence;
         ``input_tensor.size(-1)``.
     projection_dim : ``int``, optional
@@ -33,7 +33,7 @@ class IntraSentenceAttentionEncoder(Seq2SeqEncoder):
         performing the attention-weighted sum.
     similarity_function : ``SimilarityFunction``, optional
         The similarity function to use when computing attentions.  Default is to use a dot product.
-    num_attention_heads: ``int``, optional
+    num_attention_heads : ``int``, optional
         If this is greater than one (default is 1), we will split the input into several "heads" to
         compute multi-headed weighted sums.  Must be used with a multi-headed similarity function,
         and you almost certainly want to do a projection in conjunction with the multiple heads.

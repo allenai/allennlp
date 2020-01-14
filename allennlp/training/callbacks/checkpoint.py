@@ -19,8 +19,8 @@ class Checkpoint(Callback):
     """
     Callback that orchestrates checkpointing of your model and training state.
 
-    Parameters
-    ----------
+    # Parameters
+
     checkpointer : ``Checkpointer``
         The checkpoint reader and writer to use.
     model_save_interval : ``float``, optional (default=None)

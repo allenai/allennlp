@@ -25,8 +25,8 @@ class BertForClassification(Model):
     See `allennlp/tests/fixtures/bert/bert_for_classification.jsonnet`
     for an example of what your config might look like.
 
-    Parameters
-    ----------
+    # Parameters
+
     vocab : ``Vocabulary``
     bert_model : ``Union[str, BertModel]``
         The BERT model to be wrapped. If a string is provided, we will call
@@ -91,15 +91,15 @@ class BertForClassification(Model):
     ) -> Dict[str, torch.Tensor]:
 
         """
-        Parameters
-        ----------
+        # Parameters
+
         tokens : Dict[str, torch.LongTensor]
             From a ``TextField`` (that has a bert-pretrained token indexer)
         label : torch.IntTensor, optional (default = None)
             From a ``LabelField``
 
-        Returns
-        -------
+        # Returns
+
         An output dictionary consisting of:
 
         logits : torch.FloatTensor

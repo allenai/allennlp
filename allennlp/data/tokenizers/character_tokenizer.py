@@ -11,8 +11,8 @@ class CharacterTokenizer(Tokenizer):
     """
     A ``CharacterTokenizer`` splits strings into character tokens.
 
-    Parameters
-    ----------
+    # Parameters
+
     byte_encoding : str, optional (default=``None``)
         If not ``None``, we will use this encoding to encode the string as bytes, and use the byte
         sequence as characters, instead of the unicode characters in the python string.  E.g., the

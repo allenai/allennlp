@@ -25,8 +25,8 @@ from allennlp.training.metrics.srl_eval_scorer import SrlEvalScorer, DEFAULT_SRL
 class SemanticRoleLabeler(Model):
     """
     This model performs semantic role labeling using BIO tags using Propbank semantic roles.
-    Specifically, it is an implementation of `Deep Semantic Role Labeling - What works
-    and what's next <https://www.aclweb.org/anthology/P17-1044>`_ .
+    Specifically, it is an implementation of [Deep Semantic Role Labeling - What works
+    and what's next](https://www.aclweb.org/anthology/P17-1044).
 
     This implementation is effectively a series of stacked interleaved LSTMs with highway
     connections, applied to embedded sequences of words concatenated with a binary indicator
@@ -37,8 +37,8 @@ class SemanticRoleLabeler(Model):
     Specifically, the model expects and outputs IOB2-formatted tags, where the
     B- tag is used in the beginning of every chunk (i.e. all chunks start with the B- tag).
 
-    Parameters
-    ----------
+    # Parameters
+
     vocab : ``Vocabulary``, required
         A Vocabulary, required in order to compute sizes for input/output projections.
     text_field_embedder : ``TextFieldEmbedder``, required
@@ -54,9 +54,9 @@ class SemanticRoleLabeler(Model):
         If provided, will be used to calculate the regularization penalty during training.
     label_smoothing : ``float``, optional (default = 0.0)
         Whether or not to use label smoothing on the labels when computing cross entropy loss.
-    ignore_span_metric: ``bool``, optional (default = False)
+    ignore_span_metric : ``bool``, optional (default = False)
         Whether to calculate span loss, which is irrelevant when predicting BIO for Open Information Extraction.
-    srl_eval_path: ``str``, optional (default=``DEFAULT_SRL_EVAL_PATH``)
+    srl_eval_path : ``str``, optional (default=``DEFAULT_SRL_EVAL_PATH``)
         The path to the srl-eval.pl script. By default, will use the srl-eval.pl included with allennlp,
         which is located at allennlp/tools/srl-eval.pl . If ``None``, srl-eval.pl is not used.
     """
@@ -113,12 +113,12 @@ class SemanticRoleLabeler(Model):
     ) -> Dict[str, torch.Tensor]:
 
         """
-        Parameters
-        ----------
+        # Parameters
+
         tokens : Dict[str, torch.LongTensor], required
             The output of ``TextField.as_array()``, which should typically be passed directly to a
             ``TextFieldEmbedder``. This output is a dictionary mapping keys to ``TokenIndexer``
-            tensors.  At its most basic, using a ``SingleIdTokenIndexer`` this is: ``{"tokens":
+            tensors.  At its most basic, using a ``SingleIdTokenIndexer`` this is : ``{"tokens":
             Tensor(batch_size, num_tokens)}``. This dictionary will have the same keys as were used
             for the ``TokenIndexers`` when you created the ``TextField`` representing your
             sequence.  The dictionary is designed to be passed directly to a ``TextFieldEmbedder``,
@@ -135,8 +135,8 @@ class SemanticRoleLabeler(Model):
             metadata containg the original words in the sentence and the verb to compute the
             frame for, under 'words' and 'verb' keys, respectively.
 
-        Returns
-        -------
+        # Returns
+
         An output dictionary consisting of:
         logits : torch.FloatTensor
             A tensor of shape ``(batch_size, num_tokens, tag_vocab_size)`` representing
@@ -259,8 +259,8 @@ class SemanticRoleLabeler(Model):
         constraint, pairs of labels which do not satisfy this constraint have a
         pairwise potential of -inf.
 
-        Returns
-        -------
+        # Returns
+
         transition_matrix : torch.Tensor
             A (num_labels, num_labels) matrix of pairwise potentials.
         """
@@ -281,8 +281,8 @@ class SemanticRoleLabeler(Model):
         In the BIO sequence, we cannot start the sequence with an I-XXX tag.
         This transition sequence is passed to viterbi_decode to specify this constraint.
 
-        Returns
-        -------
+        # Returns
+
         start_transitions : torch.Tensor
             The pairwise potentials between a START token and
             the first token of the sequence.
@@ -316,13 +316,13 @@ def write_to_conll_eval_file(
     predicate in a sentence to two provided file references.
 
     The CoNLL SRL format is described in
-    `the shared task data README <https://www.lsi.upc.edu/~srlconll/conll05st-release/README>`_ .
+    [the shared task data README](https://www.lsi.upc.edu/~srlconll/conll05st-release/README).
 
     This function expects IOB2-formatted tags, where the B- tag is used in the beginning
     of every chunk (i.e. all chunks start with the B- tag).
 
-    Parameters
-    ----------
+    # Parameters
+
     prediction_file : TextIO, required.
         A file reference to print predictions to.
     gold_file : TextIO, required.

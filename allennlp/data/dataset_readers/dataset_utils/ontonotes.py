@@ -16,8 +16,8 @@ class OntonotesSentence:
     """
     A class representing the annotations available for a single CONLL formatted sentence.
 
-    Parameters
-    ----------
+    # Parameters
+
     document_id : ``str``
         This is a variation on the document filename
     sentence_id : ``int``
@@ -88,8 +88,8 @@ class Ontonotes:
     """
     This DatasetReader is designed to read in the English OntoNotes v5.0 data
     in the format used by the CoNLL 2011/2012 shared tasks. In order to use this
-    Reader, you must follow the instructions provided `here (v12 release):
-    <https://cemantix.org/data/ontonotes.html>`_, which will allow you to download
+    Reader, you must follow the instructions provided [here (v12 release):]
+    (https://cemantix.org/data/ontonotes.html), which will allow you to download
     the CoNLL style annotations for the  OntoNotes v5.0 release -- LDC2013T19.tgz
     obtained from LDC.
 
@@ -151,29 +151,29 @@ class Ontonotes:
         This is the Penn Treebank style part of speech. When parse information is missing,
         all part of speeches except the one for which there is some sense or proposition
         annotation are marked with a XX tag. The verb is marked with just a VERB tag.
-    6 Parse bit: ``str``
+    6 Parse bit : ``str``
         This is the bracketed structure broken before the first open parenthesis in the parse,
         and the word/part-of-speech leaf replaced with a ``*``. When the parse information is
         missing, the first word of a sentence is tagged as ``(TOP*`` and the last word is tagged
         as ``*)`` and all intermediate words are tagged with a ``*``.
-    7 Predicate lemma: ``str``
+    7 Predicate lemma : ``str``
         The predicate lemma is mentioned for the rows for which we have semantic role
         information or word sense information. All other rows are marked with a "-".
-    8 Predicate Frameset ID: ``int``
+    8 Predicate Frameset ID : ``int``
         The PropBank frameset ID of the predicate in Column 7.
-    9 Word sense: ``float``
+    9 Word sense : ``float``
         This is the word sense of the word in Column 3.
-    10 Speaker/Author: ``str``
+    10 Speaker/Author : ``str``
         This is the speaker or author name where available. Mostly in Broadcast Conversation
         and Web Log data. When not available the rows are marked with an "-".
-    11 Named Entities: ``str``
+    11 Named Entities : ``str``
         These columns identifies the spans representing various named entities. For documents
         which do not have named entity annotation, each line is represented with an ``*``.
-    12+ Predicate Arguments: ``str``
+    12+ Predicate Arguments : ``str``
         There is one column each of predicate argument structure information for the predicate
         mentioned in Column 7. If there are no predicates tagged in a sentence this is a
         single column with all rows marked with an ``*``.
-    -1 Co-reference: ``str``
+    -1 Co-reference : ``str``
         Co-reference chain information encoded in a parenthesis structure. For documents that do
          not have co-reference annotations, each line is represented with a "-".
     """
@@ -377,8 +377,8 @@ class Ontonotes:
         ignore it, if it is outside of all spans. This method mutates the clusters and coref_stacks
         dictionaries.
 
-        Parameters
-        ----------
+        # Parameters
+
         label : ``str``
             The coref label for this word.
         word_index : ``int``
@@ -386,7 +386,7 @@ class Ontonotes:
         clusters : ``DefaultDict[int, List[Tuple[int, int]]]``
             A dictionary mapping cluster ids to lists of inclusive spans into the
             sentence.
-        coref_stacks: ``DefaultDict[int, List[int]]``
+        coref_stacks : ``DefaultDict[int, List[int]]``
             Stacks for each cluster id to hold the start indices of active spans (spans
             which we are inside of when processing a given word). Spans with the same id
             can be nested, which is why we collect these opening spans on a stack, e.g:
@@ -426,9 +426,9 @@ class Ontonotes:
         Given a sequence of different label types for a single word and the current
         span label we are inside, compute the BIO tag for each label and append to a list.
 
-        Parameters
-        ----------
-        annotations: ``List[str]``
+        # Parameters
+
+        annotations : ``List[str]``
             A list of labels to compute BIO tags for.
         span_labels : ``List[List[str]]``
             A list of lists, one for each annotation, to incrementally collect

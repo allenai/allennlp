@@ -35,14 +35,14 @@ class CategoricalAccuracy(Metric):
         mask: Optional[torch.Tensor] = None,
     ):
         """
-        Parameters
-        ----------
+        # Parameters
+
         predictions : ``torch.Tensor``, required.
             A tensor of predictions of shape (batch_size, ..., num_classes).
         gold_labels : ``torch.Tensor``, required.
             A tensor of integer class label of shape (batch_size, ...). It must be the same
             shape as the ``predictions`` tensor without the ``num_classes`` dimension.
-        mask: ``torch.Tensor``, optional (default = None).
+        mask : ``torch.Tensor``, optional (default = None).
             A masking tensor the same size as ``gold_labels``.
         """
         predictions, gold_labels, mask = self.unwrap_to_tensors(predictions, gold_labels, mask)
@@ -95,8 +95,8 @@ class CategoricalAccuracy(Metric):
 
     def get_metric(self, reset: bool = False):
         """
-        Returns
-        -------
+        # Returns
+
         The accumulated accuracy.
         """
         if self.total_count > 1e-12:

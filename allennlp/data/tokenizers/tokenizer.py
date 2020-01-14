@@ -41,8 +41,8 @@ class Tokenizer(Registrable):
         """
         Actually implements splitting words into tokens.
 
-        Returns
-        -------
+        # Returns
+
         tokens : ``List[Token]``
         """
         raise NotImplementedError

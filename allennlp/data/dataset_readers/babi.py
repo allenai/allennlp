@@ -22,9 +22,9 @@ class BabiReader(DatasetReader):
     if one wants to load multiple tasks together it has to merge them into a
     single file and use this reader.
 
-    Parameters
-    ----------
-    keep_sentences: ``bool``, optional, (default = ``False``)
+    # Parameters
+
+    keep_sentences : ``bool``, optional, (default = ``False``)
         Whether to keep each sentence in the context or to concatenate them.
         Default is ``False`` that corresponds to concatenation.
     token_indexers : ``Dict[str, TokenIndexer]``, optional (default=``{"tokens": SingleIdTokenIndexer()}``)

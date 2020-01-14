@@ -30,15 +30,15 @@ class FeedForwardEncoder(Seq2SeqEncoder):
     @overrides
     def forward(self, inputs: torch.Tensor, mask: torch.LongTensor = None) -> torch.Tensor:
         """
-        Parameters
-        ----------
+        # Parameters
+
         inputs : ``torch.Tensor``, required.
             A tensor of shape (batch_size, timesteps, input_dim)
         mask : ``torch.LongTensor``, optional (default = None).
             A tensor of shape (batch_size, timesteps).
 
-        Returns
-        -------
+        # Returns
+
         A tensor of shape (batch_size, timesteps, output_dim).
         """
         if mask is None:

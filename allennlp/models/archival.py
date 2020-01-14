@@ -54,8 +54,8 @@ class Archive(NamedTuple):
                 [".*transferred_module_name.*", "prevent"]]
             ]
 
-        Parameters
-        ----------
+        # Parameters
+
         path : ``str``, required
             Path of target module to be loaded from the model.
             Eg. "_textfield_embedder.token_embedder_tokens"
@@ -105,13 +105,13 @@ def archive_model(
     vocabulary to `model.tar.gz`. Include the additional ``files_to_archive``
     if provided.
 
-    Parameters
-    ----------
-    serialization_dir: ``str``
+    # Parameters
+
+    serialization_dir : ``str``
         The directory where the weights and vocabulary are written out.
-    weights: ``str``, optional (default=_DEFAULT_WEIGHTS)
+    weights : ``str``, optional (default=_DEFAULT_WEIGHTS)
         Which weights file to include in the archive. The default is ``best.th``.
-    files_to_archive: ``Dict[str, str]``, optional (default=None)
+    files_to_archive : ``Dict[str, str]``, optional (default=None)
         A mapping {flattened_key -> filename} of supplementary files to include
         in the archive. That is, if you wanted to include ``params['model']['weights']``
         then you would specify the key as `"model.weights"`.
@@ -163,16 +163,16 @@ def load_archive(
     """
     Instantiates an Archive from an archived `tar.gz` file.
 
-    Parameters
-    ----------
-    archive_file: ``str``
+    # Parameters
+
+    archive_file : ``str``
         The archive file to load the model from.
-    weights_file: ``str``, optional (default = None)
+    weights_file : ``str``, optional (default = None)
         The weights file to use.  If unspecified, weights.th in the archive_file will be used.
-    cuda_device: ``int``, optional (default = -1)
+    cuda_device : ``int``, optional (default = -1)
         If `cuda_device` is >= 0, the model will be loaded onto the
         corresponding GPU. Otherwise it will be loaded onto the CPU.
-    overrides: ``str``, optional (default = "")
+    overrides : ``str``, optional (default = "")
         JSON overrides to apply to the unarchived ``Params`` object.
     """
     # redirect to the cache, if necessary

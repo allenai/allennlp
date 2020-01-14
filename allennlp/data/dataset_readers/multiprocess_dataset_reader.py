@@ -186,8 +186,8 @@ class MultiprocessDatasetReader(DatasetReader):
     up to non-determinism caused by using multiple worker processes. This can
     be avoided by setting ``num_workers`` to 1.
 
-    Parameters
-    ----------
+    # Parameters
+
     base_reader : ``DatasetReader``
         Each process will use this dataset reader to read zero or more files.
     num_workers : ``int``
@@ -198,7 +198,7 @@ class MultiprocessDatasetReader(DatasetReader):
         multiple-process case, it's possible that you'd want finished workers to continue on to the
         next epoch even while others are still finishing the previous epoch. Passing in a value
         larger than 1 allows that to happen.
-    output_queue_size: ``int``, (optional, default=1000)
+    output_queue_size : ``int``, (optional, default=1000)
         The size of the queue on which read instances are placed to be yielded.
         You might need to increase this if you're generating instances too quickly.
     """

@@ -14,8 +14,8 @@ class BeamSearch:
     """
     Implements the beam search algorithm for decoding the most likely sequences.
 
-    Parameters
-    ----------
+    # Parameters
+
     end_index : ``int``
         The index of the "stop" or "end" token in the target vocabulary.
     max_steps : ``int``, optional (default = 50)
@@ -27,8 +27,8 @@ class BeamSearch:
         The maximum number of candidates to consider per node, at each step in the search.
         If not given, this just defaults to ``beam_size``. Setting this parameter
         to a number smaller than ``beam_size`` may give better results, as it can introduce
-        more diversity into the search. See `Beam Search Strategies for Neural Machine Translation.
-        Freitag and Al-Onaizan, 2017 <https://arxiv.org/abs/1702.01806>`_.
+        more diversity into the search. See [Beam Search Strategies for Neural Machine Translation.
+        Freitag and Al-Onaizan, 2017](https://arxiv.org/abs/1702.01806).
     """
 
     def __init__(
@@ -60,8 +60,8 @@ class BeamSearch:
         Therefore if you're using a mask you may want to check the results from ``search``
         and potentially discard sequences with non-finite log probability.
 
-        Parameters
-        ----------
+        # Parameters
+
         start_predictions : ``torch.Tensor``
             A tensor containing the initial predictions with shape ``(batch_size,)``.
             Usually the initial predictions are just the index of the "start" token
@@ -84,8 +84,8 @@ class BeamSearch:
             element is the updated state. The tensor in the state should have shape
             ``(group_size, *)``, where ``*`` means any other number of dimensions.
 
-        Returns
-        -------
+        # Returns
+
         Tuple[torch.Tensor, torch.Tensor]
             Tuple of ``(predictions, log_probabilities)``, where ``predictions``
             has shape ``(batch_size, beam_size, max_steps)`` and ``log_probabilities``

@@ -39,15 +39,15 @@ class EvalbBracketingScorer(Metric):
     want to include it in your training loop; instead, you should calculate this on
     a validation set only.
 
-    Parameters
-    ----------
+    # Parameters
+
     evalb_directory_path : ``str``, required.
         The directory containing the EVALB executable.
-    evalb_param_filename: ``str``, optional (default = "COLLINS.prm")
+    evalb_param_filename : ``str``, optional (default = "COLLINS.prm")
         The relative name of the EVALB configuration file used when scoring the trees.
         By default, this uses the COLLINS.prm configuration file which comes with EVALB.
         This configuration ignores POS tags and some punctuation labels.
-    evalb_num_errors_to_kill: ``int``, optional (default = "10")
+    evalb_num_errors_to_kill : ``int``, optional (default = "10")
         The number of errors to tolerate from EVALB before terminating evaluation.
     """
 
@@ -84,8 +84,8 @@ class EvalbBracketingScorer(Metric):
     @overrides
     def __call__(self, predicted_trees: List[Tree], gold_trees: List[Tree]) -> None:  # type: ignore
         """
-        Parameters
-        ----------
+        # Parameters
+
         predicted_trees : ``List[Tree]``
             A list of predicted NLTK Trees to compute score for.
         gold_trees : ``List[Tree]``
@@ -148,8 +148,8 @@ class EvalbBracketingScorer(Metric):
     @overrides
     def get_metric(self, reset: bool = False):
         """
-        Returns
-        -------
+        # Returns
+
         The average precision, recall and f1.
         """
         recall = (

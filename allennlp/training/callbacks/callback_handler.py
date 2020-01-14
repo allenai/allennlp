@@ -29,8 +29,8 @@ class CallbackHandler:
     The callbacks take no parameters; instead they read from and write to this handler's
     ``state``, which should be a Trainer.
 
-    Parameters
-    ----------
+    # Parameters
+
     callbacks : ``Iterable[Callback]``
         The callbacks to be handled.
     state : ``TrainerBase``
