@@ -421,7 +421,7 @@ class AutoRegressiveSeqDecoder(SeqDecoder):
                     best_predictions = top_k_predictions[:, 0, :]
 
                     self._tensor_based_metric(  # type: ignore
-                        best_predictions, target_tokens["tokens"]
+                        best_predictions, target_tokens["tokens"]["tokens"]
                     )
 
                 if self._token_based_metric is not None:
@@ -429,7 +429,8 @@ class AutoRegressiveSeqDecoder(SeqDecoder):
                     predicted_tokens = output_dict["predicted_tokens"]
 
                     self._token_based_metric(  # type: ignore
-                        predicted_tokens, self.indices_to_tokens(target_tokens["tokens"][:, 1:])
+                        predicted_tokens,
+                        self.indices_to_tokens(target_tokens["tokens"]["tokens"][:, 1:]),
                     )
 
         return output_dict
