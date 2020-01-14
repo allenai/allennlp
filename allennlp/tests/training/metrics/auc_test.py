@@ -48,7 +48,7 @@ class AucTest(AllenNlpTestCase):
         auc = Auc(positive_label=4)
 
         predictions = torch.randn(8).float()
-        labels = torch.randint(0, 5, (8,)).long()
+        labels = torch.randint(3, 5, (8,)).long()
         # We make sure that the positive label is always present.
         labels[0] = 4
         auc(predictions, labels)
