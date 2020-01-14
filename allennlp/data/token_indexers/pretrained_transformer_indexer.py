@@ -120,7 +120,9 @@ class PretrainedTransformerIndexer(TokenIndexer[int]):
         return {
             key: torch.LongTensor(
                 pad_sequence_to_length(
-                    val, desired_num_tokens[key], default_value=lambda: self._padding_value
+                    val,
+                    desired_num_tokens[key],
+                    default_value=lambda: 0 if key in {"mask", "type_ids"} else self._padding_value
                 )
             )
             for key, val in tokens.items()
