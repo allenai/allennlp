@@ -136,7 +136,7 @@ class ELMoTokenCharactersIndexer(TokenIndexer[List[int]]):
 
         if any(text is None for text in texts):
             raise ConfigurationError(
-                "ELMoTokenCharactersIndexer needs a tokenizer " "that retains text"
+                "ELMoTokenCharactersIndexer needs a tokenizer that retains text"
             )
         return {index_name: [self._mapper.convert_word_to_char_ids(text) for text in texts]}
 

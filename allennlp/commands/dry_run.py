@@ -36,7 +36,7 @@ from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import Params
 from allennlp.common.util import log_frozen_and_tunable_parameter_names, prepare_environment
 from allennlp.data import Vocabulary
-from allennlp.data.dataset import Batch
+from allennlp.data.batch import Batch
 from allennlp.models import Model
 from allennlp.training.util import datasets_from_params
 
@@ -54,7 +54,7 @@ class DryRun(Subcommand):
         subparser = parser.add_parser(
             name,
             description=description,
-            help="Create a vocabulary, compute dataset statistics " "and other training utilities.",
+            help="Create a vocabulary, compute dataset statistics and other training utilities.",
         )
         subparser.add_argument(
             "param_path",

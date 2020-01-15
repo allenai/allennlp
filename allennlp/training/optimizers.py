@@ -114,7 +114,7 @@ class Optimizer(Registrable):
             for regex, count in regex_use_counts.items():
                 if count == 0:
                     logger.warning(
-                        "When constructing parameter groups, " " %s not match any parameter name",
+                        "When constructing parameter groups, %s does not match any parameter name",
                         regex,
                     )
 

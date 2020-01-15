@@ -6,7 +6,7 @@ import random
 from allennlp.common.util import lazy_groups_of
 from allennlp.data.instance import Instance
 from allennlp.data.iterators.data_iterator import DataIterator
-from allennlp.data.dataset import Batch
+from allennlp.data.batch import Batch
 
 logger = logging.getLogger(__name__)
 

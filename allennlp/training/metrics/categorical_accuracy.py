@@ -19,7 +19,7 @@ class CategoricalAccuracy(Metric):
     def __init__(self, top_k: int = 1, tie_break: bool = False) -> None:
         if top_k > 1 and tie_break:
             raise ConfigurationError(
-                "Tie break in Categorical Accuracy " "can be done only for maximum (top_k = 1)"
+                "Tie break in Categorical Accuracy can be done only for maximum (top_k = 1)"
             )
         if top_k <= 0:
             raise ConfigurationError("top_k passed to Categorical Accuracy must be > 0")
