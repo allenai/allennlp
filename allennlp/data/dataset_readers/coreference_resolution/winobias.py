@@ -40,16 +40,16 @@ class WinobiasReader(DatasetReader):
     [The salesperson] sold (some books) to the librarian because [she] was trying to sell (them).
 
 
-    Returns a list of ``Instances`` which have four fields: ``text``, a ``TextField``
+    Returns a list of ``Instances`` which have four fields : ``text``, a ``TextField``
     containing the full sentence text, ``spans``, a ``ListField[SpanField]`` of inclusive start and
     end indices for span candidates, and ``metadata``, a ``MetadataField`` that stores the instance's
     original text. For data with gold cluster labels, we also include the original ``clusters``
     (a list of list of index pairs) and a ``SequenceLabelField`` of cluster ids for every span
     candidate in the ``metadata`` also.
 
-    Parameters
-    ----------
-    max_span_width: ``int``, required.
+    # Parameters
+
+    max_span_width : ``int``, required.
         The maximum width of candidate spans to consider.
     token_indexers : ``Dict[str, TokenIndexer]``, optional
         This is used to index the words in the sentence.  See :class:`TokenIndexer`.
@@ -111,8 +111,8 @@ class WinobiasReader(DatasetReader):
     ) -> Instance:
 
         """
-        Parameters
-        ----------
+        # Parameters
+
         sentence : ``List[Token]``, required.
             The already tokenised sentence to analyse.
         gold_clusters : ``Optional[List[List[Tuple[int, int]]]]``, optional (default = None)
@@ -120,8 +120,8 @@ class WinobiasReader(DatasetReader):
             contains some number of spans, which can be nested and overlap, but will never
             exactly match between clusters.
 
-        Returns
-        -------
+        # Returns
+
         An ``Instance`` containing the following ``Fields``:
             text : ``TextField``
                 The text of the full sentence.

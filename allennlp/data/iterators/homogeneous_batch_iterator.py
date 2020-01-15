@@ -3,7 +3,7 @@ import random
 from collections import defaultdict
 
 from allennlp.common.util import lazy_groups_of
-from allennlp.data.dataset import Batch
+from allennlp.data.batch import Batch
 from allennlp.data.instance import Instance
 from allennlp.data.iterators.data_iterator import DataIterator
 
@@ -17,8 +17,8 @@ class HomogeneousBatchIterator(DataIterator):
     and bases its notion of homogeneity on that (and, in particular, not on
     inspecting the "field signature" of the instance.)
 
-    Parameters
-    ----------
+    # Parameters
+
     batch_size : ``int``, optional, (default = 32)
         The size of each batch of instances yielded when calling the iterator.
     instances_per_epoch : ``int``, optional, (default = None)

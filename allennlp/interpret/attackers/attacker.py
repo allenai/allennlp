@@ -33,8 +33,8 @@ class Attacker(Registrable):
         This function finds a modification to the input text that would change the model's
         prediction in some desired manner (e.g., an adversarial attack).
 
-        Parameters
-        ----------
+        # Parameters
+
         inputs : ``JsonDict``
             The input you want to attack (the same as the argument to a Predictor, e.g.,
             predict_json()).
@@ -51,8 +51,8 @@ class Attacker(Registrable):
             Perhaps that means we should make the API more crisp, but adding another class is not
             worth it.
 
-        Returns
-        -------
+        # Returns
+
         reduced_input : ``JsonDict``
             Contains the final, sanitized input after adversarial modification.
         """

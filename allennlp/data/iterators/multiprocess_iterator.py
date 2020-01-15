@@ -6,7 +6,7 @@ from typing import Iterable, Iterator, List, Optional
 from torch.multiprocessing import JoinableQueue, Process, Queue, get_logger
 
 from allennlp.common.checks import ConfigurationError
-from allennlp.data.dataset import Batch
+from allennlp.data.batch import Batch
 from allennlp.data.dataset_readers.multiprocess_dataset_reader import QIterable
 from allennlp.data.instance import Instance
 from allennlp.data.iterators.data_iterator import DataIterator, TensorDict
@@ -100,14 +100,14 @@ class MultiprocessIterator(DataIterator):
     Wraps another ```DataIterator``` and uses it to generate tensor dicts
     using multiple processes.
 
-    Parameters
-    ----------
+    # Parameters
+
     base_iterator : ``DataIterator``
         The ``DataIterator`` for generating tensor dicts. It will be shared among
         processes, so it should not be stateful in any way.
     num_workers : ``int``, optional (default = 1)
         The number of processes used for generating tensor dicts.
-    output_queue_size: ``int``, optional (default = 1000)
+    output_queue_size : ``int``, optional (default = 1000)
         The size of the output queue on which tensor dicts are placed to be consumed.
         You might need to increase this if you're generating tensor dicts too quickly.
     """

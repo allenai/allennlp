@@ -72,12 +72,12 @@ class ConstituencyParserPredictor(Predictor):
     def predict(self, sentence: str) -> JsonDict:
         """
         Predict a constituency parse for the given sentence.
-        Parameters
-        ----------
+        # Parameters
+
         sentence The sentence to parse.
 
-        Returns
-        -------
+        # Returns
+
         A dictionary representation of the constituency tree.
         """
         return self.predict_json({"sentence": sentence})
@@ -117,8 +117,8 @@ class ConstituencyParserPredictor(Predictor):
         Recursively builds a JSON dictionary from an NLTK ``Tree`` suitable for
         rendering trees using the `Hierplane library<https://allenai.github.io/hierplane/>`.
 
-        Parameters
-        ----------
+        # Parameters
+
         tree : ``Tree``, required.
             The tree to convert into Hierplane JSON.
         index : int, required.
@@ -127,8 +127,8 @@ class ConstituencyParserPredictor(Predictor):
             An indicator which allows us to add the outer Hierplane JSON which
             is required for rendering.
 
-        Returns
-        -------
+        # Returns
+
         A JSON dictionary render-able by Hierplane for the given tree.
         """
         children = []

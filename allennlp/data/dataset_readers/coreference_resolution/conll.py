@@ -65,16 +65,16 @@ class ConllCorefReader(DatasetReader):
     scripts/compile_coref_data.sh for more details of how to pre-process the Ontonotes 5.0 data
     into the correct format.
 
-    Returns a ``Dataset`` where the ``Instances`` have four fields: ``text``, a ``TextField``
+    Returns a ``Dataset`` where the ``Instances`` have four fields : ``text``, a ``TextField``
     containing the full document text, ``spans``, a ``ListField[SpanField]`` of inclusive start and
     end indices for span candidates, and ``metadata``, a ``MetadataField`` that stores the instance's
     original text. For data with gold cluster labels, we also include the original ``clusters``
     (a list of list of index pairs) and a ``SequenceLabelField`` of cluster ids for every span
     candidate.
 
-    Parameters
-    ----------
-    max_span_width: ``int``, required.
+    # Parameters
+
+    max_span_width : ``int``, required.
         The maximum width of candidate spans to consider.
     token_indexers : ``Dict[str, TokenIndexer]``, optional
         This is used to index the words in the document.  See :class:`TokenIndexer`.
@@ -121,8 +121,8 @@ class ConllCorefReader(DatasetReader):
     ) -> Instance:
 
         """
-        Parameters
-        ----------
+        # Parameters
+
         sentences : ``List[List[str]]``, required.
             A list of lists representing the tokenised words and sentences in the document.
         gold_clusters : ``Optional[List[List[Tuple[int, int]]]]``, optional (default = None)
@@ -130,8 +130,8 @@ class ConllCorefReader(DatasetReader):
             contains some number of spans, which can be nested and overlap, but will never
             exactly match between clusters.
 
-        Returns
-        -------
+        # Returns
+
         An ``Instance`` containing the following ``Fields``:
             text : ``TextField``
                 The text of the full document.

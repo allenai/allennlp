@@ -24,8 +24,8 @@ class MaskedLanguageModel(Model):
     our demo, so in principle it should be able to train a model, we just don't necessarily endorse
     that use.
 
-    Parameters
-    ----------
+    # Parameters
+
     vocab : ``Vocabulary``
     text_field_embedder : ``TextFieldEmbedder``
         Used to embed the indexed tokens we get in ``forward``.
@@ -77,8 +77,8 @@ class MaskedLanguageModel(Model):
         target_ids: Dict[str, torch.LongTensor] = None,
     ) -> Dict[str, torch.Tensor]:
         """
-        Parameters
-        ----------
+        # Parameters
+
         tokens : ``Dict[str, torch.LongTensor]``
             The output of ``TextField.as_tensor()`` for a batch of sentences.
         mask_positions : ``torch.LongTensor``

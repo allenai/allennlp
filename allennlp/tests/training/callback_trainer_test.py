@@ -426,7 +426,7 @@ class TestCallbackTrainer(ModelTestCase):
             np.testing.assert_almost_equal(metrics1[key], metrics2[key])
 
     def test_metric_only_considered_best_so_far_when_strictly_better_than_those_before_it_increasing_metric(
-        self
+        self,
     ):
         new_trainer = CallbackTrainer(
             self.model,
@@ -460,7 +460,7 @@ class TestCallbackTrainer(ModelTestCase):
         assert not new_tracker.is_best_so_far()
 
     def test_metric_only_considered_best_so_far_when_strictly_better_than_those_before_it_decreasing_metric(
-        self
+        self,
     ):
         new_trainer = CallbackTrainer(
             self.model,
@@ -927,7 +927,7 @@ class TestCallbackTrainer(ModelTestCase):
         assert best_validation_metrics_epoch_2 == best_validation_metrics_epoch_1
 
     def test_restored_training_returns_best_epoch_metrics_even_if_no_better_epoch_is_found_after_restoring(
-        self
+        self,
     ):
         # Instead of -loss, use +loss to assure 2nd epoch is considered worse.
         # Run 1 epoch of original training.

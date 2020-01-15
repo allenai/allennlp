@@ -21,8 +21,8 @@ class BasicClassifier(Model):
     ``Seq2SeqEncoder`` is not provided, we will pass the embedded text directly to the
     ``Seq2VecEncoder``.
 
-    Parameters
-    ----------
+    # Parameters
+
     vocab : ``Vocabulary``
     text_field_embedder : ``TextFieldEmbedder``
         Used to embed the input text into a ``TextField``
@@ -36,10 +36,10 @@ class BasicClassifier(Model):
         An optional feedforward layer to apply after the seq2vec_encoder.
     dropout : ``float``, optional (default = ``None``)
         Dropout percentage to use.
-    num_labels: ``int``, optional (default = ``None``)
+    num_labels : ``int``, optional (default = ``None``)
         Number of labels to project to in classification layer. By default, the classification layer will
         project to the size of the vocabulary namespace corresponding to labels.
-    label_namespace: ``str``, optional (default = "labels")
+    label_namespace : ``str``, optional (default = "labels")
         Vocabulary namespace corresponding to labels. By default, we use the "labels" namespace.
     initializer : ``InitializerApplicator``, optional (default=``InitializerApplicator()``)
         If provided, will be used to initialize the model parameters.
@@ -96,15 +96,15 @@ class BasicClassifier(Model):
     ) -> Dict[str, torch.Tensor]:
 
         """
-        Parameters
-        ----------
+        # Parameters
+
         tokens : Dict[str, torch.LongTensor]
             From a ``TextField``
         label : torch.IntTensor, optional (default = None)
             From a ``LabelField``
 
-        Returns
-        -------
+        # Returns
+
         An output dictionary consisting of:
 
         logits : torch.FloatTensor

@@ -15,7 +15,7 @@ class LinearSimilarity(SimilarityFunction):
     combination of the two input vectors, followed by an (optional) activation function.  The
     combination used is configurable.
 
-    If the two vectors are ``x`` and ``y``, we allow the following kinds of combinations: ``x``,
+    If the two vectors are ``x`` and ``y``, we allow the following kinds of combinations : ``x``,
     ``y``, ``x*y``, ``x+y``, ``x-y``, ``x/y``, where each of those binary operations is performed
     elementwise.  You can list as many combinations as you want, comma separated.  For example, you
     might give ``x,y,x*y`` as the ``combination`` parameter to this class.  The computed similarity
@@ -26,8 +26,8 @@ class LinearSimilarity(SimilarityFunction):
     similarity function is computed as `x * w * y + b` (with `w` the diagonal of `W`), you can
     accomplish that with this class by using "x*y" for `combination`.
 
-    Parameters
-    ----------
+    # Parameters
+
     tensor_1_dim : ``int``
         The dimension of the first tensor, ``x``, described above.  This is ``x.size()[-1]`` - the
         length of the vector that will go into the similarity computation.  We need this so we can

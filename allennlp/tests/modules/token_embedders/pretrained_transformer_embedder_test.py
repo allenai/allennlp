@@ -2,7 +2,7 @@ import torch
 
 from allennlp.common import Params
 from allennlp.data import Vocabulary
-from allennlp.data.dataset import Batch
+from allennlp.data.batch import Batch
 from allennlp.data.fields import TextField
 from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import PretrainedTransformerIndexer
@@ -48,7 +48,7 @@ class TestPretrainedTransformerEmbedder(AllenNlpTestCase):
                 "allow_unmatched_keys": True,
             }
         )
-        token_embedder = BasicTextFieldEmbedder.from_params(vocab, params)
+        token_embedder = BasicTextFieldEmbedder.from_params(vocab=vocab, params=params)
 
         instance1 = Instance({"tokens": TextField(tokens1, {"bert": token_indexer})})
         instance2 = Instance({"tokens": TextField(tokens2, {"bert": token_indexer})})

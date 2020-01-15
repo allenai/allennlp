@@ -51,13 +51,13 @@ class CorefPredictor(Predictor):
               ]
             }
 
-        Parameters
-        ----------
+        # Parameters
+
         document : ``str``
             A string representation of a document.
 
-        Returns
-        -------
+        # Returns
+
         A dictionary representation of the predicted coreference clusters.
         """
         return self.predict_json({"document": document})
@@ -66,13 +66,13 @@ class CorefPredictor(Predictor):
         """
         Predict the coreference clusters in the given document.
 
-        Parameters
-        ----------
+        # Parameters
+
         tokenized_document : ``List[str]``
             A list of words representation of a tokenized document.
 
-        Returns
-        -------
+        # Returns
+
         A dictionary representation of the predicted coreference clusters.
         """
         instance = self._words_list_to_instance(tokenized_document)
@@ -160,13 +160,13 @@ class CorefPredictor(Predictor):
         """
         Produce a document where each coreference is replaced by the its main mention
 
-        Parameters
-        ----------
+        # Parameters
+
         document : ``str``
             A string representation of a document.
 
-        Returns
-        -------
+        # Returns
+
         A string with each coference replaced by its main mention
         """
 

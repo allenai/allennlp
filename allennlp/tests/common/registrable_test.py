@@ -83,8 +83,6 @@ class TestRegistrable(AllenNlpTestCase):
     def test_registry_has_builtin_dataset_readers(self):
         assert DatasetReader.by_name("snli").__name__ == "SnliReader"
         assert DatasetReader.by_name("sequence_tagging").__name__ == "SequenceTaggingDatasetReader"
-        assert DatasetReader.by_name("language_modeling").__name__ == "LanguageModelingReader"
-        assert DatasetReader.by_name("squad").__name__ == "SquadReader"
 
     def test_registry_has_builtin_iterators(self):
         assert DataIterator.by_name("basic").__name__ == "BasicIterator"
@@ -131,7 +129,7 @@ class TestRegistrable(AllenNlpTestCase):
             assert LearningRateScheduler.by_name(key) == value
 
     def test_registry_has_builtin_token_embedders(self):
-        assert TokenEmbedder.by_name("embedding").__name__ == "Embedding"
+        assert TokenEmbedder.by_name("embedding").__name__ == "from_vocab_or_file"
         assert TokenEmbedder.by_name("character_encoding").__name__ == "TokenCharactersEncoder"
 
     def test_registry_has_builtin_text_field_embedders(self):

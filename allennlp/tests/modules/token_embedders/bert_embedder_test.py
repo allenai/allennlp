@@ -1,10 +1,12 @@
 import torch
 
 from pytorch_pretrained_bert.modeling import BertConfig, BertModel
+from typing import List, Dict
 
 from allennlp.common.testing import ModelTestCase
-from allennlp.data.dataset import Batch
-from allennlp.data.fields import TextField, ListField
+from allennlp.data import Token, TokenIndexer
+from allennlp.data.batch import Batch
+from allennlp.data.fields import TextField, ListField, MetadataField
 from allennlp.data.instance import Instance
 from allennlp.data.token_indexers.wordpiece_indexer import PretrainedBertIndexer
 from allennlp.data.tokenizers import SpacyTokenizer
@@ -138,9 +140,26 @@ class TestBertEmbedder(ModelTestCase):
         )
         question2 = "What did Broca discover in the human brain?"
 
-        from allennlp.data.dataset_readers.reading_comprehension.util import (
-            make_reading_comprehension_instance,
-        )
+        def make_reading_comprehension_instance(
+            question_tokens: List[Token],
+            passage_tokens: List[Token],
+            token_indexers: Dict[str, TokenIndexer],
+            passage_text: str,
+        ) -> Instance:
+            metadata = {
+                "original_passage": passage_text,
+                "token_offsets": [
+                    (token.idx, token.idx + len(token.text)) for token in passage_tokens
+                ],
+                "question_tokens": [token.text for token in question_tokens],
+                "passage_tokens": [token.text for token in passage_tokens],
+            }
+            fields = {
+                "passage": TextField(passage_tokens, token_indexers),
+                "question": TextField(question_tokens, token_indexers),
+                "metadata": MetadataField(metadata),
+            }
+            return Instance(fields)
 
         instance1 = make_reading_comprehension_instance(
             tokenizer.tokenize(question1),

@@ -15,11 +15,11 @@ class OpenaiTransformerEmbedder(TokenEmbedder):
 
 
 
-    Parameters
-    ----------
-    transformer: ``OpenaiTransformer``, required.
+    # Parameters
+
+    transformer : ``OpenaiTransformer``, required.
         The ``OpenaiTransformer`` module used for the embeddings.
-    top_layer_only: ``bool``, optional (default = ``False``)
+    top_layer_only : ``bool``, optional (default = ``False``)
         If ``True``, then only return the top layer instead of apply the scalar mix.
     """
 
@@ -39,17 +39,17 @@ class OpenaiTransformerEmbedder(TokenEmbedder):
 
     def forward(self, inputs: torch.Tensor, offsets: torch.Tensor = None) -> torch.Tensor:
         """
-        Parameters
-        ----------
-        inputs: ``torch.Tensor``, required
+        # Parameters
+
+        inputs : ``torch.Tensor``, required
             A ``(batch_size, num_timesteps)`` tensor representing the byte-pair encodings
             for the current batch.
-        offsets: ``torch.Tensor``, required
+        offsets : ``torch.Tensor``, required
             A ``(batch_size, max_sequence_length)`` tensor representing the word offsets
             for the current batch.
 
-        Returns
-        -------
+        # Returns
+
         ``[torch.Tensor]``
             An embedding representation of the input sequence
             having shape ``(batch_size, sequence_length, embedding_dim)``

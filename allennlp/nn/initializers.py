@@ -70,8 +70,8 @@ def uniform_unit_scaling(tensor: torch.Tensor, nonlinearity: str = "linear"):
     <https://www.semanticscholar.org/paper/Random-Walk-Initialization-for-Training-Very-Deep-Sussillo-Abbott/be9728a0728b6acf7a485225b1e41592176eda0b>`_
     for more information.
 
-    Parameters
-    ----------
+    # Parameters
+
     tensor : ``torch.Tensor``, required.
         The tensor to initialise.
     nonlinearity : ``str``, optional (default = "linear")
@@ -79,8 +79,8 @@ def uniform_unit_scaling(tensor: torch.Tensor, nonlinearity: str = "linear"):
         tensor is involved in. This must be the name of a function contained
         in the ``torch.nn.functional`` package.
 
-    Returns
-    -------
+    # Returns
+
     The initialised tensor.
     """
     size = 1.0
@@ -105,8 +105,8 @@ def block_orthogonal(tensor: torch.Tensor, split_sizes: List[int], gain: float =
     which can be computed efficiently if they are concatenated together. However, they are
     separate parameters which should be initialized independently.
 
-    Parameters
-    ----------
+    # Parameters
+
     tensor : ``torch.Tensor``, required.
         A tensor to initialize.
     split_sizes : List[int], required.
@@ -171,7 +171,7 @@ def _initializer_wrapper(init_function: Callable[..., None]) -> Type[Initializer
             return "Init: %s, with params: %s" % (self._init_function, self._kwargs)
 
         @classmethod
-        def from_params(cls, params: Params):  # type: ignore
+        def from_params(cls, params: Params, **extras):  # type: ignore
             return cls(**params.as_dict())
 
     return Init
@@ -179,21 +179,21 @@ def _initializer_wrapper(init_function: Callable[..., None]) -> Type[Initializer
 
 # There are no classes to decorate, so we hack these into Registrable._registry
 Registrable._registry[Initializer] = {
-    "normal": _initializer_wrapper(torch.nn.init.normal_),
-    "uniform": _initializer_wrapper(torch.nn.init.uniform_),
-    "orthogonal": _initializer_wrapper(torch.nn.init.orthogonal_),
-    "constant": _initializer_wrapper(torch.nn.init.constant_),
-    "dirac": _initializer_wrapper(torch.nn.init.dirac_),
-    "xavier_normal": _initializer_wrapper(torch.nn.init.xavier_normal_),
-    "xavier_uniform": _initializer_wrapper(torch.nn.init.xavier_uniform_),
-    "kaiming_normal": _initializer_wrapper(torch.nn.init.kaiming_normal_),
-    "kaiming_uniform": _initializer_wrapper(torch.nn.init.kaiming_uniform_),
-    "sparse": _initializer_wrapper(torch.nn.init.sparse_),
-    "eye": _initializer_wrapper(torch.nn.init.eye_),
-    "block_orthogonal": _initializer_wrapper(block_orthogonal),
-    "uniform_unit_scaling": _initializer_wrapper(uniform_unit_scaling),
-    "zero": _initializer_wrapper(zero),
-    "lstm_hidden_bias": _initializer_wrapper(lstm_hidden_bias),
+    "normal": (_initializer_wrapper(torch.nn.init.normal_), None),
+    "uniform": (_initializer_wrapper(torch.nn.init.uniform_), None),
+    "orthogonal": (_initializer_wrapper(torch.nn.init.orthogonal_), None),
+    "constant": (_initializer_wrapper(torch.nn.init.constant_), None),
+    "dirac": (_initializer_wrapper(torch.nn.init.dirac_), None),
+    "xavier_normal": (_initializer_wrapper(torch.nn.init.xavier_normal_), None),
+    "xavier_uniform": (_initializer_wrapper(torch.nn.init.xavier_uniform_), None),
+    "kaiming_normal": (_initializer_wrapper(torch.nn.init.kaiming_normal_), None),
+    "kaiming_uniform": (_initializer_wrapper(torch.nn.init.kaiming_uniform_), None),
+    "sparse": (_initializer_wrapper(torch.nn.init.sparse_), None),
+    "eye": (_initializer_wrapper(torch.nn.init.eye_), None),
+    "block_orthogonal": (_initializer_wrapper(block_orthogonal), None),
+    "uniform_unit_scaling": (_initializer_wrapper(uniform_unit_scaling), None),
+    "zero": (_initializer_wrapper(zero), None),
+    "lstm_hidden_bias": (_initializer_wrapper(lstm_hidden_bias), None),
 }
 
 
@@ -244,8 +244,8 @@ class PretrainedModelInitializer(Initializer):
                 }
             ]
 
-    Parameters
-    ----------
+    # Parameters
+
     weights_file_path : ``str``, required
         The path to the weights file which has the pretrained model parameters.
     parameter_name_overrides : ``Dict[str, str]``, optional (default = None)
@@ -290,8 +290,8 @@ class InitializerApplicator:
         self, initializers: List[Tuple[str, Initializer]] = None, prevent_regexes: List[str] = None
     ) -> None:
         """
-        Parameters
-        ----------
+        # Parameters
+
         initializers : ``List[Tuple[str, Initializer]]``, optional (default = [])
             A list mapping parameter regexes to initializers.  We will check each parameter against
             each regex in turn, and apply the initializer paired with the first matching regex, if
@@ -308,8 +308,8 @@ class InitializerApplicator:
         Applies an initializer to all parameters in a module that match one of the regexes we were
         given in this object's constructor.  Does nothing to parameters that do not match.
 
-        Parameters
-        ----------
+        # Parameters
+
         module : torch.nn.Module, required.
             The Pytorch module to apply the initializers to.
         """
@@ -367,8 +367,8 @@ class InitializerApplicator:
         torch.nn.init documentation. Only "prevent" is a special type which does not have corresponding
         initializer. Any parameter matching its corresponding regex will be overridden to NOT initialize.
 
-        Returns
-        -------
+        # Returns
+
         An InitializerApplicator containing the specified initializers.
         """
 

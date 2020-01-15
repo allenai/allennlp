@@ -47,8 +47,8 @@ class ExponentialMovingAverage(MovingAverage):
     """
     Create shadow variables and maintain exponential moving average for model parameters.
 
-    Parameters
-    ----------
+    # Parameters
+
     parameters : ``Iterable[Tuple[str, Parameter]]``, required
         The parameters whose averages we'll be tracking.
     decay : ``float``, optional (default = 0.9999)

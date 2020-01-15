@@ -15,8 +15,8 @@ class UpdateMovingAverage(Callback):
     """
     Callback that orchestrates checkpointing of your model and training state.
 
-    Parameters
-    ----------
+    # Parameters
+
     moving_aveage : ``MovingAverage``
         The MovingAverage object to update.
     """
@@ -29,7 +29,9 @@ class UpdateMovingAverage(Callback):
         self.moving_average.apply(trainer.batch_num_total)
 
     @classmethod
-    def from_params(cls, params: Params, model: Model) -> "UpdateMovingAverage":  # type: ignore
+    def from_params(  # type: ignore
+        cls, params: Params, model: Model, **extras
+    ) -> "UpdateMovingAverage":
 
         moving_average_params = params.pop("moving_average")
         model_parameters = [

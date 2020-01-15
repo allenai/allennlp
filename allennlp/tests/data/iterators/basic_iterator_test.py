@@ -4,7 +4,7 @@ from collections import Counter
 from allennlp.common import Params
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Instance, Token, Vocabulary
-from allennlp.data.dataset import Batch
+from allennlp.data.batch import Batch
 from allennlp.data.dataset_readers.dataset_reader import _LazyInstances
 from allennlp.data.fields import TextField
 from allennlp.data.iterators import BasicIterator

@@ -17,8 +17,8 @@ class PostToUrl(Callback):
     Posts to a URL when training finishes. Useful if you want to,
     for example, create a Slack webhook.
 
-    Parameters
-    ----------
+    # Parameters
+
     url : str
         The URL to post to.
     message : str, optional (default = "Your experiment has finished running!")

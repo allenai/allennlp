@@ -18,8 +18,8 @@ class TokenCharactersIndexer(TokenIndexer[List[int]]):
     """
     This :class:`TokenIndexer` represents tokens as lists of character indices.
 
-    Parameters
-    ----------
+    # Parameters
+
     namespace : ``str``, optional (default=``token_characters``)
         We will use this namespace in the :class:`Vocabulary` to map the characters in each token
         to indices.
@@ -32,7 +32,7 @@ class TokenCharactersIndexer(TokenIndexer[List[int]]):
         These are prepended to the tokens provided to ``tokens_to_indices``.
     end_tokens : ``List[str]``, optional (default=``None``)
         These are appended to the tokens provided to ``tokens_to_indices``.
-    min_padding_length: ``int``, optional (default=``0``)
+    min_padding_length : ``int``, optional (default=``0``)
         We use this value as the minimum length of padding. Usually used with :class:``CnnEncoder``, its
         value should be set to the maximum value of ``ngram_filter_sizes`` correspondingly.
     token_min_padding_length : ``int``, optional (default=``0``)

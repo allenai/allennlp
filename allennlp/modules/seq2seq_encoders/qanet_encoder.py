@@ -17,8 +17,8 @@ class QaNetEncoder(Seq2SeqEncoder):
     """
     Stack multiple QANetEncoderBlock into one sequence encoder.
 
-    Parameters
-    ----------
+    # Parameters
+
     input_dim : ``int``, required.
         The input dimension of the encoder.
     hidden_dim : ``int``, required.
@@ -31,13 +31,13 @@ class QaNetEncoder(Seq2SeqEncoder):
         dimensions are fixed to ensure sizes match up for the self attention layers.
     num_blocks : ``int``, required.
         The number of stacked encoder blocks.
-    num_convs_per_block: ``int``, required.
+    num_convs_per_block : ``int``, required.
         The number of convolutions in each block.
-    conv_kernel_size: ``int``, required.
+    conv_kernel_size : ``int``, required.
         The kernel size for convolution.
     num_attention_heads : ``int``, required.
         The number of attention heads to use per layer.
-    use_positional_encoding: ``bool``, optional, (default = True)
+    use_positional_encoding : ``bool``, optional, (default = True)
         Whether to add sinusoidal frequencies to the input tensor. This is strongly recommended,
         as without this feature, the self attention layers have no idea of absolute or relative
         position (as they are just computing pairwise similarity between vectors of elements),
@@ -120,8 +120,8 @@ class QaNetEncoder(Seq2SeqEncoder):
 @Seq2SeqEncoder.register("qanet_encoder_block")
 class QaNetEncoderBlock(Seq2SeqEncoder):
     """
-    Implements the encoder block described in `QANet: Combining Local Convolution with Global
-    Self-attention for Reading Comprehension <https://openreview.net/forum?id=B14TlG-RW>`_ .
+    Implements the encoder block described in [QANet: Combining Local Convolution with Global
+    Self-attention for Reading Comprehension](https://openreview.net/forum?id=B14TlG-RW).
 
     One encoder block mainly contains 4 parts:
 
@@ -132,8 +132,8 @@ class QaNetEncoderBlock(Seq2SeqEncoder):
            scaled by the square root of the sequence length.
         4. A two-layer FeedForward network.
 
-    Parameters
-    ----------
+    # Parameters
+
     input_dim : ``int``, required.
         The input dimension of the encoder.
     hidden_dim : ``int``, required.
@@ -144,13 +144,13 @@ class QaNetEncoderBlock(Seq2SeqEncoder):
     feedforward_hidden_dim : ``int``, required.
         The middle dimension of the FeedForward network. The input and output
         dimensions are fixed to ensure sizes match up for the self attention layers.
-    num_convs: ``int``, required.
+    num_convs : ``int``, required.
         The number of convolutions in each block.
-    conv_kernel_size: ``int``, required.
+    conv_kernel_size : ``int``, required.
         The kernel size for convolution.
     num_attention_heads : ``int``, required.
         The number of attention heads to use per layer.
-    use_positional_encoding: ``bool``, optional, (default = True)
+    use_positional_encoding : ``bool``, optional, (default = True)
         Whether to add sinusoidal frequencies to the input tensor. This is strongly recommended,
         as without this feature, the self attention layers have no idea of absolute or relative
         position (as they are just computing pairwise similarity between vectors of elements),

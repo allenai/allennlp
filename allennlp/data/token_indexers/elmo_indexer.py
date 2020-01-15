@@ -99,8 +99,8 @@ class ELMoTokenCharactersIndexer(TokenIndexer[List[int]]):
     """
     Convert a token to an array of character ids to compute ELMo representations.
 
-    Parameters
-    ----------
+    # Parameters
+
     namespace : ``str``, optional (default=``elmo_characters``)
     tokens_to_add : ``Dict[str, int]``, optional (default=``None``)
         If not None, then provides a mapping of special tokens to character
@@ -136,7 +136,7 @@ class ELMoTokenCharactersIndexer(TokenIndexer[List[int]]):
 
         if any(text is None for text in texts):
             raise ConfigurationError(
-                "ELMoTokenCharactersIndexer needs a tokenizer " "that retains text"
+                "ELMoTokenCharactersIndexer needs a tokenizer that retains text"
             )
         return {index_name: [self._mapper.convert_word_to_char_ids(text) for text in texts]}
 

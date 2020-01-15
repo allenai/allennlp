@@ -31,8 +31,8 @@ class NextTokenLmReader(DatasetReader):
     to use this setup for training language models, as it would be incredibly inefficient.  The
     only purpose of this class is for a demo.
 
-    Parameters
-    ----------
+    # Parameters
+
     tokenizer : ``Tokenizer``, optional (default=``WhitespaceTokenizer()``)
         We use this ``Tokenizer`` for the text.  See :class:`Tokenizer`.
     token_indexers : ``Dict[str, TokenIndexer]``, optional (default=``{"tokens": SingleIdTokenIndexer()}``)

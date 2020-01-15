@@ -9,10 +9,9 @@ rather than instantiating a ``Trainer`` yourself.
 
 
 import logging
-from typing import Dict, Any
+from typing import Dict, Any, Type
 
 from allennlp.common import Params, Registrable
-from allennlp.common.util import is_master
 from allennlp.common.checks import ConfigurationError, check_for_gpu
 from allennlp.models.model import Model
 
@@ -33,7 +32,7 @@ class TrainerBase(Registrable):
         serialization_dir: str,
         cuda_device: int = -1,
         distributed: bool = False,
-        rank: int = 0,
+        local_rank: int = 0,
         world_size: int = 1,
     ) -> None:
 
@@ -59,8 +58,8 @@ class TrainerBase(Registrable):
         self.cuda_device = cuda_device
 
         self._distributed = distributed
-        self._rank = rank
-        self._master = is_master()
+        self._rank = local_rank
+        self._master = self._rank == 0
         self._world_size = world_size
 
     def _move_to_gpu(self, model: Model) -> Model:
@@ -105,7 +104,7 @@ class TrainerBase(Registrable):
                 validation_iterator=pieces.validation_iterator,
             )
         else:
-            klass = TrainerBase.by_name(typ3)
+            klass: Type[TrainerBase] = TrainerBase.by_name(typ3)  # type: ignore
             # Explicit check to prevent recursion.
             is_overriden = (
                 klass.from_params.__func__ != TrainerBase.from_params.__func__  # type: ignore

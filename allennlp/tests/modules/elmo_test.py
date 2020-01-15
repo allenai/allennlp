@@ -13,7 +13,7 @@ from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.token_indexers.elmo_indexer import ELMoTokenCharactersIndexer
 from allennlp.data.token_indexers.single_id_token_indexer import SingleIdTokenIndexer
 from allennlp.data import Token, Vocabulary, Instance
-from allennlp.data.dataset import Batch
+from allennlp.data.batch import Batch
 from allennlp.data.iterators import BasicIterator
 from allennlp.modules.elmo import _ElmoBiLm, Elmo, _ElmoCharacterEncoder
 from allennlp.modules.token_embedders import ElmoTokenEmbedder
