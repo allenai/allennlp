@@ -10,7 +10,7 @@ mypy==0.730
 black
 
 # For creating git precommit hooks
-pre-commit==1.18.3
+pre-commit==1.21.0
 
 # Allows generation of coverage reports with pytest.
 pytest-cov
