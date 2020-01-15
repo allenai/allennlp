@@ -88,7 +88,7 @@ class TestPretrainedTransformerEmbedder(AllenNlpTestCase):
                     "bert": {
                         "type": "pretrained_transformer",
                         "model_name": "bert-base-uncased",
-                        "intra_word_tokenized": True
+                        "intra_word_tokenized": True,
                     }
                 }
             }

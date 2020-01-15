@@ -39,7 +39,7 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         token_ids: torch.LongTensor,
         mask: torch.LongTensor,
         wordpiece_mask: torch.LongTensor = None,
-        offsets: torch.LongTensor = None
+        offsets: torch.LongTensor = None,
     ) -> torch.Tensor:  # type: ignore
         """
         # Parameters

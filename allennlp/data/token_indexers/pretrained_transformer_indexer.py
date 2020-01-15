@@ -133,9 +133,13 @@ class PretrainedTransformerIndexer(TokenIndexer):
     ) -> Dict[str, torch.Tensor]:
         tensor_dict = {}
         for key, val in tokens.items():
-            tensor_dict[key] = torch.LongTensor(pad_sequence_to_length(
-                val, padding_lengths[key], default_value=lambda: (0, 0) if key == "offsets" else 0
-            ))
+            tensor_dict[key] = torch.LongTensor(
+                pad_sequence_to_length(
+                    val,
+                    padding_lengths[key],
+                    default_value=lambda: (0, 0) if key == "offsets" else 0,
+                )
+            )
         return tensor_dict
 
     def __eq__(self, other):
