@@ -76,7 +76,7 @@ class TrainerBase(Registrable):
 
     @classmethod
     def from_params(  # type: ignore
-        cls, params: Params, serialization_dir: str, recover: bool = False,
+        cls, params: Params, serialization_dir: str, recover: bool = False, **kwargs
     ):
 
         typ3 = params.get("trainer", {}).pop("type", "default")

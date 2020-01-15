@@ -11,9 +11,8 @@ import torch.distributed as dist
 import torch.optim.lr_scheduler
 from torch.nn.parallel import DistributedDataParallel
 
-from allennlp.common import Params
+from allennlp.common import Params, Lazy, Tqdm
 from allennlp.common.checks import ConfigurationError, parse_cuda_device, check_for_gpu
-from allennlp.common.tqdm import Tqdm
 from allennlp.common.util import dump_metrics, gpu_memory_mb, peak_memory_mb, lazy_groups_of
 from allennlp.data.instance import Instance
 from allennlp.data.iterators.data_iterator import DataIterator, TensorDict
@@ -32,7 +31,7 @@ from allennlp.training.trainer_base import TrainerBase
 logger = logging.getLogger(__name__)
 
 
-@TrainerBase.register("default")
+@TrainerBase.register("default", constructor="from_partial_objects")
 class Trainer(TrainerBase):
     def __init__(
         self,
@@ -759,29 +758,53 @@ class Trainer(TrainerBase):
 
         return epoch_to_return
 
-    # Requires custom from_params.
     @classmethod
-    def from_params(  # type: ignore
+    def from_partial_objects(
         cls,
         model: Model,
         serialization_dir: str,
         iterator: DataIterator,
         train_data: Iterable[Instance],
-        validation_data: Optional[Iterable[Instance]],
-        params: Params,
         validation_iterator: DataIterator = None,
+        validation_data: Iterable[Instance] = None,
         local_rank: int = 0,
+        patience: int = None,
+        validation_metric: str = "-loss",
+        shuffle: bool = True,
+        num_epochs: int = 20,
+        cuda_device: int = -1,
+        grad_norm: float = None,
+        grad_clipping: float = None,
+        model_save_interval: float = None,
+        summary_interval: int = 100,
+        histogram_interval: int = None,
+        should_log_parameter_statistics: bool = True,
+        should_log_learning_rate: bool = False,
+        log_batch_size_period: int = None,
+        distributed: bool = None,
+        world_size: int = 1,
+        num_gradient_accumulation_steps: int = 1,
+        optimizer: Lazy[Optimizer] = None,
+        learning_rate_scheduler: Lazy[LearningRateScheduler] = None,
+        momentum_scheduler: Lazy[MomentumScheduler] = None,
+        moving_average: Lazy[MovingAverage] = None,
+        checkpointer: Lazy[Checkpointer] = None,
     ) -> "Trainer":
+        """
+        This method exists so that we can have a documented method to construct this class using
+        `FromParams`. If you are not using `FromParams` or config files, you can safely ignore this
+        method.
 
-        patience = params.pop_int("patience", None)
-        validation_metric = params.pop("validation_metric", "-loss")
-        shuffle = params.pop_bool("shuffle", True)
-        num_epochs = params.pop_int("num_epochs", 20)
-        cuda_device = parse_cuda_device(params.pop("cuda_device", -1))
-        grad_norm = params.pop_float("grad_norm", None)
-        grad_clipping = params.pop_float("grad_clipping", None)
-        lr_scheduler_params = params.pop("learning_rate_scheduler", None)
-        momentum_scheduler_params = params.pop("momentum_scheduler", None)
+        The reason we can't just use `__init__` with `FromParams` here is because there are
+        sequential dependencies to this class's arguments.  Anything that has a `Lazy[]` type
+        annotation needs something from one of the non-`Lazy` arguments.  The `Optimizer` needs to
+        have the parameters from the `Model` before it's constructed, and the `Schedulers` need to
+        have the `Optimizer`. Because of this, the typical way we construct things `FromParams`
+        doesn't work, so we use `Lazy` to allow for constructing the objects sequentially.
+
+        If you're not using `FromParams`, you can just construct these arguments in the right order
+        yourself in your code and call the constructor directly.
+        """
 
         check_for_gpu(cuda_device)
         if cuda_device >= 0:
@@ -790,57 +813,26 @@ class Trainer(TrainerBase):
             model = model.cuda(cuda_device)
 
         parameters = [[n, p] for n, p in model.named_parameters() if p.requires_grad]
-        optimizer = Optimizer.from_params(parameters, params.pop("optimizer"))
-        if "moving_average" in params:
-            moving_average = MovingAverage.from_params(
-                params.pop("moving_average"), parameters=parameters
-            )
+        optimizer = optimizer.construct(parameters=parameters)
+        if moving_average:
+            moving_average_ = moving_average.construct(parametrs=parametrs)
         else:
-            moving_average = None
+            moving_average_ = None
 
-        if lr_scheduler_params:
-            lr_scheduler = LearningRateScheduler.from_params(optimizer, lr_scheduler_params)
+        if learning_rate_scheduler:
+            learning_rate_scheduler_ = learning_rate_scheduler.construct(optimizer)
         else:
-            lr_scheduler = None
-        if momentum_scheduler_params:
-            momentum_scheduler = MomentumScheduler.from_params(optimizer, momentum_scheduler_params)
+            learning_rate_scheduler_ = None
+
+        if momentum_scheduler:
+            momentum_scheduler_ = momentum_scheduler.construct(optimizer)
         else:
-            momentum_scheduler = None
+            momentum_scheduler_ = None
 
-        if "checkpointer" in params:
-            if (
-                "keep_serialized_model_every_num_seconds" in params
-                or "num_serialized_models_to_keep" in params
-            ):
-                raise ConfigurationError(
-                    "Checkpointer may be initialized either from the 'checkpointer' key or from the "
-                    "keys 'num_serialized_models_to_keep' and 'keep_serialized_model_every_num_seconds'"
-                    " but the passed config uses both methods."
-                )
-            checkpointer = Checkpointer.from_params(params.pop("checkpointer"))
+        if checkpointer:
+            checkpointer = checkpointer.construct(serialization_dir=serialization_dir)
         else:
-            num_serialized_models_to_keep = params.pop_int("num_serialized_models_to_keep", 20)
-            keep_serialized_model_every_num_seconds = params.pop_int(
-                "keep_serialized_model_every_num_seconds", None
-            )
-            checkpointer = Checkpointer(
-                serialization_dir=serialization_dir,
-                num_serialized_models_to_keep=num_serialized_models_to_keep,
-                keep_serialized_model_every_num_seconds=keep_serialized_model_every_num_seconds,
-            )
-        model_save_interval = params.pop_float("model_save_interval", None)
-        summary_interval = params.pop_int("summary_interval", 100)
-        histogram_interval = params.pop_int("histogram_interval", None)
-        should_log_parameter_statistics = params.pop_bool("should_log_parameter_statistics", True)
-        should_log_learning_rate = params.pop_bool("should_log_learning_rate", False)
-        log_batch_size_period = params.pop_int("log_batch_size_period", None)
-
-        distributed = params.pop_bool("distributed", False)
-        world_size = params.pop_int("world_size", 1)
-
-        num_gradient_accumulation_steps = params.pop("num_gradient_accumulation_steps", 1)
-
-        params.assert_empty(cls.__name__)
+            checkpointer = Checkpointer(serialization_dir)
         return cls(
             model,
             optimizer,

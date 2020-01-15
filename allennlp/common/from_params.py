@@ -46,6 +46,7 @@ import inspect
 import logging
 
 from allennlp.common.checks import ConfigurationError
+from allennlp.common.lazy import Lazy
 from allennlp.common.params import Params
 
 logger = logging.getLogger(__name__)
@@ -344,6 +345,12 @@ def construct_arg(
 
         # If none of them succeeded, we crash.
         raise ConfigurationError(f"Failed to construct argument {name} with type {annotation}")
+    elif origin == Lazy:
+        value_cls = annotation.__args__[0]
+        subextras = create_extras(value_cls, extras)
+        def constructor(**kwargs):
+            return value_cls.from_params(params=value_params, **kwargs, **subextras)
+        return Lazy(constructor)
     else:
         # Pass it on as is and hope for the best.   ¯\_(ツ)_/¯
         if optional:
