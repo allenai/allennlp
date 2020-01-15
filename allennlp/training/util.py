@@ -314,7 +314,7 @@ def create_serialization_dir(
                 fail = True
         if fail:
             raise ConfigurationError(
-                "Training configuration does not match the configuration we're " "recovering from."
+                "Training configuration does not match the configuration we're recovering from."
             )
     else:
         if recover:
@@ -482,7 +482,7 @@ def make_vocab_from_params(params: Params, serialization_dir: str) -> Vocabulary
 
     if os.path.isdir(vocab_dir) and os.listdir(vocab_dir) is not None:
         raise ConfigurationError(
-            "The 'vocabulary' directory in the provided " "serialization directory is non-empty"
+            "The 'vocabulary' directory in the provided serialization directory is non-empty"
         )
 
     all_datasets = datasets_from_params(params)

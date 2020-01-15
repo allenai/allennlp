@@ -55,7 +55,7 @@ class Checkpointer(Registrable):
 
             if is_best_so_far:
                 logger.info(
-                    "Best validation performance so far. " "Copying weights to '%s/best.th'.",
+                    "Best validation performance so far. Copying weights to '%s/best.th'.",
                     self._serialization_dir,
                 )
                 shutil.copyfile(model_path, os.path.join(self._serialization_dir, "best.th"))
