@@ -100,7 +100,7 @@ class _EncoderBase(torch.nn.Module):
             inputs,
             sequence_lengths + zero_length_seqs,  # TODO(Mark: remember to fix this output)
             batch_first=True,
-            enforce_sorted=False
+            enforce_sorted=False,
         )
         # Prepare the initial states.
         if not self.stateful:

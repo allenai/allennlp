@@ -79,46 +79,19 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
 
         batch_size, total_sequence_length = mask.size()
 
-        packed_sequence_output, final_states, restoration_indices = self.sort_and_run_forward(
+        packed_sequence_output, final_states = self.sort_and_run_forward(
             self._module, inputs, mask, hidden_state
         )
 
-        unpacked_sequence_tensor, _ = pad_packed_sequence(packed_sequence_output, batch_first=True)
-
-        num_valid = unpacked_sequence_tensor.size(0)
+        unpacked_sequence_tensor, _ = pad_packed_sequence(
+            packed_sequence_output, batch_first=True, total_length=total_sequence_length
+        )
         # Some RNNs (GRUs) only return one state as a Tensor.  Others (LSTMs) return two.
         # If one state, use a single element list to handle in a consistent manner below.
         if not isinstance(final_states, (list, tuple)) and self.stateful:
             final_states = [final_states]
 
-        # Add back invalid rows.
-        if num_valid < batch_size:
-            _, length, output_dim = unpacked_sequence_tensor.size()
-            zeros = unpacked_sequence_tensor.new_zeros(batch_size - num_valid, length, output_dim)
-            unpacked_sequence_tensor = torch.cat([unpacked_sequence_tensor, zeros], 0)
-
-            # The states also need to have invalid rows added back.
-            if self.stateful:
-                new_states = []
-                for state in final_states:
-                    num_layers, _, state_dim = state.size()
-                    zeros = state.new_zeros(num_layers, batch_size - num_valid, state_dim)
-                    new_states.append(torch.cat([state, zeros], 1))
-                final_states = new_states
-
-        # It's possible to need to pass sequences which are padded to longer than the
-        # max length of the sequence to a Seq2SeqEncoder. However, packing and unpacking
-        # the sequences mean that the returned tensor won't include these dimensions, because
-        # the RNN did not need to process them. We add them back on in the form of zeros here.
-        sequence_length_difference = total_sequence_length - unpacked_sequence_tensor.size(1)
-        if sequence_length_difference > 0:
-            zeros = unpacked_sequence_tensor.new_zeros(
-                batch_size, sequence_length_difference, unpacked_sequence_tensor.size(-1)
-            )
-            unpacked_sequence_tensor = torch.cat([unpacked_sequence_tensor, zeros], 1)
-
         if self.stateful:
-            self._update_states(final_states, restoration_indices)
+            self._update_states(final_states)
 
-        # Restore the original indices and return the sequence.
-        return unpacked_sequence_tensor.index_select(0, restoration_indices)
+        return unpacked_sequence_tensor

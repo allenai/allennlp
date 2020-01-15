@@ -32,10 +32,6 @@ class TestEncoderBase(AllenNlpTestCase):
 
         self.batch_size = 5
         self.num_valid = 3
-        sequence_lengths = get_lengths_from_binary_sequence_mask(mask)
-        _, _, restoration_indices, sorting_indices = sort_batch_by_length(tensor, sequence_lengths)
-        self.sorting_indices = sorting_indices
-        self.restoration_indices = restoration_indices
 
     def test_non_stateful_states_are_sorted_correctly(self):
         encoder_base = _EncoderBase(stateful=False)
@@ -56,20 +52,13 @@ class TestEncoderBase(AllenNlpTestCase):
 
     def test_get_initial_states(self):
         # First time we call it, there should be no state, so we should return None.
-        assert (
-            self.encoder_base._get_initial_states(
-                self.batch_size
-            )
-            is None
-        )
+        assert self.encoder_base._get_initial_states(self.batch_size) is None
 
         # First test the case that the previous state is _smaller_ than the current state input.
         initial_states = (torch.randn([1, 3, 7]), torch.randn([1, 3, 7]))
         self.encoder_base._states = initial_states
         # sorting indices are: [0, 1, 3, 2, 4]
-        _ = self.encoder_base._get_initial_states(
-            self.batch_size
-        )
+        _ = self.encoder_base._get_initial_states(self.batch_size)
 
         correct_expanded_states = [
             torch.cat([state, torch.zeros([1, 2, 7])], 1) for state in initial_states
@@ -86,9 +75,7 @@ class TestEncoderBase(AllenNlpTestCase):
         original_states = (torch.randn([1, 10, 7]), torch.randn([1, 10, 7]))
         self.encoder_base._states = original_states
         # sorting indices are: [0, 1, 3, 2, 4]
-        _ = self.encoder_base._get_initial_states(
-            self.batch_size
-        )
+        _ = self.encoder_base._get_initial_states(self.batch_size)
         # State should not have changed, as they were larger
         # than the batch size of the requested states.
         numpy.testing.assert_array_equal(
