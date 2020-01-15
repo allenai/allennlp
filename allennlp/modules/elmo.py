@@ -29,7 +29,7 @@ from allennlp.data.token_indexers.elmo_indexer import (
     ELMoCharacterMapper,
     ELMoTokenCharactersIndexer,
 )
-from allennlp.data.dataset import Batch
+from allennlp.data.batch import Batch
 from allennlp.data import Token, Vocabulary, Instance
 from allennlp.data.fields import TextField
 

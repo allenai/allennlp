@@ -103,7 +103,7 @@ setup(
     install_requires=[
         "torch>=1.2.0,!=1.3.0",
         "jsonnet>=0.10.0 ; sys.platform != 'win32'",
-        "overrides==2.0",
+        "overrides==2.8.0",
         "nltk",
         "spacy>=2.1.0,<2.3",
         "numpy",
@@ -118,7 +118,7 @@ setup(
         "pytest",
         "flaky",
         "responses>=0.7",
-        "conllu==1.3.1",
+        "conllu==2.2",
         "ftfy",
         "pytorch-pretrained-bert>=0.6.0",
         "transformers>=2.1.1,!=2.2.1,!=2.2.2",

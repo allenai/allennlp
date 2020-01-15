@@ -6,7 +6,7 @@ from typing import Iterable, Iterator, List, Optional
 from torch.multiprocessing import JoinableQueue, Process, Queue, get_logger
 
 from allennlp.common.checks import ConfigurationError
-from allennlp.data.dataset import Batch
+from allennlp.data.batch import Batch
 from allennlp.data.dataset_readers.multiprocess_dataset_reader import QIterable
 from allennlp.data.instance import Instance
 from allennlp.data.iterators.data_iterator import DataIterator, TensorDict
