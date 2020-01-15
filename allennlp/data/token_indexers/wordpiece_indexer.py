@@ -367,7 +367,7 @@ class PretrainedBertIndexer(WordpieceIndexer):
     ) -> None:
         if pretrained_model.endswith("-cased") and do_lowercase:
             logger.warning(
-                "Your BERT model appears to be cased, " "but your indexer is lowercasing tokens."
+                "Your BERT model appears to be cased, but your indexer is lowercasing tokens."
             )
         elif pretrained_model.endswith("-uncased") and not do_lowercase:
             logger.warning(

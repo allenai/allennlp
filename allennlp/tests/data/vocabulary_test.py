@@ -8,7 +8,7 @@ import shutil
 import pytest
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Instance, Token
-from allennlp.data.dataset import Batch
+from allennlp.data.batch import Batch
 from allennlp.data.fields import TextField
 from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenCharactersIndexer
 from allennlp.data.tokenizers import CharacterTokenizer

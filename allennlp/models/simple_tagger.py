@@ -87,7 +87,7 @@ class SimpleTagger(Model):
         # (label_encoding serves the same purpose).
         if calculate_span_f1 and not label_encoding:
             raise ConfigurationError(
-                "calculate_span_f1 is True, but " "no label_encoding was specified."
+                "calculate_span_f1 is True, but no label_encoding was specified."
             )
         self.metrics = {
             "accuracy": CategoricalAccuracy(),

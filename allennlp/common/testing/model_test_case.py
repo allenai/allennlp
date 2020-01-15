@@ -8,7 +8,7 @@ from allennlp.commands.train import train_model_from_file
 from allennlp.common import Params
 from allennlp.common.testing.test_case import AllenNlpTestCase
 from allennlp.data import DataIterator, DatasetReader, Vocabulary
-from allennlp.data.dataset import Batch
+from allennlp.data.batch import Batch
 from allennlp.models import Model, load_archive
 
 

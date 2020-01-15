@@ -269,7 +269,7 @@ def bioul_tags_to_spans(
 
 def iob1_to_bioul(tag_sequence: List[str]) -> List[str]:
     warnings.warn(
-        "iob1_to_bioul has been replaced with 'to_bioul' " "to allow more encoding options.",
+        "iob1_to_bioul has been replaced with 'to_bioul' to allow more encoding options.",
         FutureWarning,
     )
     return to_bioul(tag_sequence)

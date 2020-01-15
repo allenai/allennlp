@@ -5,7 +5,7 @@ from typing import List, Dict
 
 from allennlp.common.testing import ModelTestCase
 from allennlp.data import Token, TokenIndexer
-from allennlp.data.dataset import Batch
+from allennlp.data.batch import Batch
 from allennlp.data.fields import TextField, ListField, MetadataField
 from allennlp.data.instance import Instance
 from allennlp.data.token_indexers.wordpiece_indexer import PretrainedBertIndexer
