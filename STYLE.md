@@ -49,9 +49,9 @@ that are inseparable from a companion class can also go in the same file (often 
 private classes).
 
 To avoid verbosity when importing classes structured this way, classes should be imported from
-their module's `__init__.py`.  For example, the `Dataset` class is in `allennlp/data/dataset.py`,
+their module's `__init__.py`.  For example, the `Batch` class is in `allennlp/data/batch.py`,
 but `allennlp/data/__init__.py` imports the class, so that you can just do `from allennlp.data
-import Dataset`.
+import Batch`.
 
 Abstract classes typically go in a module containing the abstract class and all built-in
 implementations.  This includes things like `Field` (in `allennlp.data.fields`), `Seq2SeqEncoder`

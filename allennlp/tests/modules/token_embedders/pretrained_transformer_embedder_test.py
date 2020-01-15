@@ -2,7 +2,7 @@ import torch
 
 from allennlp.common import Params
 from allennlp.data import Vocabulary
-from allennlp.data.dataset import Batch
+from allennlp.data.batch import Batch
 from allennlp.data.fields import TextField
 from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import PretrainedTransformerIndexer
