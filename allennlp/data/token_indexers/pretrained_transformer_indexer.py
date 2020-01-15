@@ -179,6 +179,11 @@ class PretrainedTransformerIndexer(TokenIndexer):
         if not seen_token:
             raise ValueError("Can't determine the number of special tokens inserted.")
 
+        assert (
+            self._num_added_beginning_tokens + self._num_added_end_tokens
+            == self._wrapped_tokenizer.num_added_tokens()
+        )
+
     def _intra_word_tokenize(
         self, tokens: List[Token]
     ) -> Tuple[List[Token], List[Tuple[int, int]]]:
