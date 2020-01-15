@@ -8,6 +8,8 @@ Here we provide a thin wrapper to allow registering them and instantiating them 
 The available activation functions are
 
 * "linear"
+* `"mish" <https://arxiv.org/abs/1908.08681>`_
+* `"swish" <https://arxiv.org/abs/1710.05941>`_
 * `"relu" <https://pytorch.org/docs/master/nn.html#torch.nn.ReLU>`_
 * `"relu6" <https://pytorch.org/docs/master/nn.html#torch.nn.ReLU6>`_
 * `"elu" <https://pytorch.org/docs/master/nn.html#torch.nn.ELU>`_
@@ -55,6 +57,8 @@ class Activation(Registrable):
 # Activation.by_name('relu')()
 Registrable._registry[Activation] = {
     "linear": (lambda: lambda x: x, None),  # type: ignore
+    "mish": (lambda: lambda x: x * torch.tanh(torch.nn.functional.softplus(x)), None),  # type: ignore
+    "swish": (lambda: lambda x: x * torch.sigmoid(x), None),  # type: ignore
     "relu": (torch.nn.ReLU, None),
     "relu6": (torch.nn.ReLU6, None),
     "elu": (torch.nn.ELU, None),
