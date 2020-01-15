@@ -3,6 +3,7 @@ import torch
 from torch.nn.utils.rnn import pad_packed_sequence
 
 from allennlp.common.checks import ConfigurationError
+from allennlp.nn.util import get_lengths_from_binary_sequence_mask
 from allennlp.modules.seq2seq_encoders.seq2seq_encoder import Seq2SeqEncoder
 
 
@@ -78,6 +79,8 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
             return self._module(inputs, hidden_state)[0]
 
         batch_size, total_sequence_length = mask.size()
+        sequence_lengths = get_lengths_from_binary_sequence_mask(mask)
+        zero_length_seqs = sequence_lengths == 0
 
         packed_sequence_output, final_states = self.sort_and_run_forward(
             self._module, inputs, mask, hidden_state
@@ -86,12 +89,19 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
         unpacked_sequence_tensor, _ = pad_packed_sequence(
             packed_sequence_output, batch_first=True, total_length=total_sequence_length
         )
+
+        broadcastable_zero_length_sequences = zero_length_seqs.view(-1, 1, 1)
+        unpacked_sequence_tensor.masked_fill_(broadcastable_zero_length_sequences, 0.0)
+
         # Some RNNs (GRUs) only return one state as a Tensor.  Others (LSTMs) return two.
         # If one state, use a single element list to handle in a consistent manner below.
         if not isinstance(final_states, (list, tuple)) and self.stateful:
             final_states = [final_states]
 
         if self.stateful:
+            broadcastable_zero_length_sequences = zero_length_seqs.view(1, -1, 1)
+            for state in final_states:
+                state.masked_fill_(broadcastable_zero_length_sequences, 0.0)
             self._update_states(final_states)
 
         return unpacked_sequence_tensor

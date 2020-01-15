@@ -2,7 +2,7 @@ import torch
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.modules.seq2vec_encoders.seq2vec_encoder import Seq2VecEncoder
-
+from allennlp.nn.util import get_lengths_from_binary_sequence_mask
 
 class PytorchSeq2VecWrapper(Seq2VecEncoder):
     """
@@ -67,6 +67,8 @@ class PytorchSeq2VecWrapper(Seq2VecEncoder):
             # at the end of the max sequence length, so we have to use the state of the RNN below.
             return self._module(inputs, hidden_state)[0][:, -1, :]
 
+        sequence_lengths = get_lengths_from_binary_sequence_mask(mask)
+        zero_length_seqs = sequence_lengths == 0
         _, state = self.sort_and_run_forward(self._module, inputs, mask, hidden_state)
 
         # Deal with the fact the LSTM state is a tuple of (state, memory).
@@ -78,6 +80,8 @@ class PytorchSeq2VecWrapper(Seq2VecEncoder):
         # of the 'batch_first' flag, so we transpose and return them as a single
         # (batch_size, self.get_output_dim()) tensor.
         transposed_state = state.transpose(0, 1)
+        broadcastable_zero_length_sequences = zero_length_seqs.view(-1, 1, 1)
+        transposed_state.masked_fill_(broadcastable_zero_length_sequences, 0.0)
 
         # Extract the last hidden vector, including both forward and backward states
         # if the cell is bidirectional. Then reshape by concatenation (in the case

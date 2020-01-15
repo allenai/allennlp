@@ -111,10 +111,6 @@ class _EncoderBase(torch.nn.Module):
         # Actually call the module on the sorted PackedSequence.
         module_output, final_states = module(packed_sequence_input, initial_states)
 
-        broadcastable_zero_length_sequences = zero_length_seqs.view(1, -1, 1).bool()
-        for state in final_states:
-            state.masked_fill_(broadcastable_zero_length_sequences, 0.0)
-
         return module_output, final_states
 
     def _get_initial_states(self, batch_size: int) -> Optional[RnnState]:
