@@ -4,9 +4,7 @@ import inspect
 import torch
 from overrides import overrides
 
-from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
-from allennlp.data import Vocabulary
 from allennlp.modules.text_field_embedders.text_field_embedder import TextFieldEmbedder
 from allennlp.modules.time_distributed import TimeDistributed
 from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
@@ -22,8 +20,8 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
     representations, we take ``TokenEmbedders`` with corresponding names.  Each ``TokenEmbedders``
     embeds its input, and the result is concatenated in an arbitrary order.
 
-    Parameters
-    ----------
+    # Parameters
+
 
     token_embedders : ``Dict[str, TokenEmbedder]``, required.
         A dictionary mapping token embedder names to implementations.
@@ -139,43 +137,3 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
                 token_vectors = embedder(*tensors, **forward_params_values)
             embedded_representations.append(token_vectors)
         return torch.cat(embedded_representations, dim=-1)
-
-    # This is some unusual logic, it needs a custom from_params.
-    @classmethod
-    def from_params(  # type: ignore
-        cls, vocab: Vocabulary, params: Params
-    ) -> "BasicTextFieldEmbedder":
-        # The original `from_params` for this class was designed in a way that didn't agree
-        # with the constructor. The constructor wants a 'token_embedders' parameter that is a
-        # `Dict[str, TokenEmbedder]`, but the original `from_params` implementation expected those
-        # key-value pairs to be top-level in the params object.
-        #
-        # This breaks our 'configuration wizard' and configuration checks. Hence, going forward,
-        # the params need a 'token_embedders' key so that they line up with what the constructor wants.
-        # For now, the old behavior is still supported, but produces a DeprecationWarning.
-
-        embedder_to_indexer_map = params.pop("embedder_to_indexer_map", None)
-        if embedder_to_indexer_map is not None:
-            embedder_to_indexer_map = embedder_to_indexer_map.as_dict(quiet=True)
-        allow_unmatched_keys = params.pop_bool("allow_unmatched_keys", False)
-
-        token_embedder_params = params.pop("token_embedders", None)
-
-        if token_embedder_params is not None:
-            # New way: explicitly specified, so use it.
-            token_embedders = {
-                name: TokenEmbedder.from_params(subparams, vocab=vocab)
-                for name, subparams in token_embedder_params.items()
-            }
-
-        else:
-            token_embedders = {}
-            keys = list(params.keys())
-            for key in keys:
-                embedder_params = params.pop(key)
-                token_embedders[key] = TokenEmbedder.from_params(
-                    vocab=vocab, params=embedder_params
-                )
-
-        params.assert_empty(cls.__name__)
-        return cls(token_embedders, embedder_to_indexer_map, allow_unmatched_keys)

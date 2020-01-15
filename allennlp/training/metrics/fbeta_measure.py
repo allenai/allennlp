@@ -32,8 +32,8 @@ class FBetaMeasure(Metric):
 
     The support is the number of occurrences of each class in ``y_true``.
 
-    Parameters
-    ----------
+    # Parameters
+
     beta : ``float``, optional (default = 1.0)
         The strength of recall versus precision in the F-score.
 
@@ -92,14 +92,14 @@ class FBetaMeasure(Metric):
         mask: Optional[torch.Tensor] = None,
     ):
         """
-        Parameters
-        ----------
+        # Parameters
+
         predictions : ``torch.Tensor``, required.
             A tensor of predictions of shape (batch_size, ..., num_classes).
         gold_labels : ``torch.Tensor``, required.
             A tensor of integer class label of shape (batch_size, ...). It must be the same
             shape as the ``predictions`` tensor without the ``num_classes`` dimension.
-        mask: ``torch.Tensor``, optional (default = None).
+        mask : ``torch.Tensor``, optional (default = None).
             A masking tensor the same size as ``gold_labels``.
         """
         predictions, gold_labels, mask = self.unwrap_to_tensors(predictions, gold_labels, mask)
@@ -160,8 +160,8 @@ class FBetaMeasure(Metric):
     @overrides
     def get_metric(self, reset: bool = False):
         """
-        Returns
-        -------
+        # Returns
+
         A tuple of the following metrics based on the accumulated count statistics:
         precisions : List[float]
         recalls : List[float]

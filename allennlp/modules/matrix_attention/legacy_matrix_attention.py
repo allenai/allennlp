@@ -14,9 +14,9 @@ class LegacyMatrixAttention(MatrixAttention):
     It should be considered deprecated as it uses much more memory than the newer specialized
     ``MatrixAttention`` modules.
 
-    Parameters
-    ----------
-    similarity_function: ``SimilarityFunction``, optional (default=``DotProductSimilarity``)
+    # Parameters
+
+    similarity_function : ``SimilarityFunction``, optional (default=``DotProductSimilarity``)
         The similarity function to use when computing the attention.
     """
 

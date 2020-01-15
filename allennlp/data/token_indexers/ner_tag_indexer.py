@@ -18,8 +18,8 @@ class NerTagIndexer(TokenIndexer[int]):
     This :class:`TokenIndexer` represents tokens by their entity type (i.e., their NER tag), as
     determined by the ``ent_type_`` field on ``Token``.
 
-    Parameters
-    ----------
+    # Parameters
+
     namespace : ``str``, optional (default=``ner_tokens``)
         We will use this namespace in the :class:`Vocabulary` to map strings to indices.
     token_min_padding_length : ``int``, optional (default=``0``)

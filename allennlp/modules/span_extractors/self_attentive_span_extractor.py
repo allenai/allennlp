@@ -17,13 +17,13 @@ class SelfAttentiveSpanExtractor(SpanExtractor):
     corresponding vector representations of the words in the span by this distribution,
     returning a weighted representation of each span.
 
-    Parameters
-    ----------
+    # Parameters
+
     input_dim : ``int``, required.
         The final dimension of the ``sequence_tensor``.
 
-    Returns
-    -------
+    # Returns
+
     attended_text_embeddings : ``torch.FloatTensor``.
         A tensor of shape (batch_size, num_spans, input_dim), which each span representation
         is formed by locally normalising a global attention over the sequence. The only way
@@ -47,7 +47,6 @@ class SelfAttentiveSpanExtractor(SpanExtractor):
         self,
         sequence_tensor: torch.FloatTensor,
         span_indices: torch.LongTensor,
-        sequence_mask: torch.LongTensor = None,
         span_indices_mask: torch.LongTensor = None,
     ) -> torch.FloatTensor:
         # both of shape (batch_size, num_spans, 1)

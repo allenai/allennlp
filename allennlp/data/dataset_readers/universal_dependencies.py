@@ -19,8 +19,8 @@ class UniversalDependenciesDatasetReader(DatasetReader):
     """
     Reads a file in the conllu Universal Dependencies format.
 
-    Parameters
-    ----------
+    # Parameters
+
     token_indexers : ``Dict[str, TokenIndexer]``, optional (default=``{"tokens": SingleIdTokenIndexer()}``)
         The token indexers to be applied to the words TextField.
     use_language_specific_pos : ``bool``, optional (default = False)
@@ -55,8 +55,8 @@ class UniversalDependenciesDatasetReader(DatasetReader):
                 # CoNLLU annotations sometimes add back in words that have been elided
                 # in the original sentence; we remove these, as we're just predicting
                 # dependencies for the original sentence.
-                # We filter by None here as elided words have a non-integer word id,
-                # and are replaced with None by the conllu python library.
+                # We filter by integers here as elided words have a non-integer word id,
+                # as parsed by the conllu python library.
                 annotation = [x for x in annotation if isinstance(x["id"], int)]
 
                 heads = [x["head"] for x in annotation]
@@ -77,8 +77,8 @@ class UniversalDependenciesDatasetReader(DatasetReader):
     ) -> Instance:
 
         """
-        Parameters
-        ----------
+        # Parameters
+
         words : ``List[str]``, required.
             The words in the sentence to be encoded.
         upos_tags : ``List[str]``, required.
@@ -88,8 +88,8 @@ class UniversalDependenciesDatasetReader(DatasetReader):
             meaning an index of 0 corresponds to that word being the root of
             the dependency tree.
 
-        Returns
-        -------
+        # Returns
+
         An instance containing words, upos tags, dependency head tags and head
         indices as fields.
         """

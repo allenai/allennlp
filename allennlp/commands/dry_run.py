@@ -36,7 +36,7 @@ from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import Params
 from allennlp.common.util import prepare_environment, get_frozen_and_tunable_parameter_names
 from allennlp.data import Vocabulary
-from allennlp.data.dataset import Batch
+from allennlp.data.batch import Batch
 from allennlp.models import Model
 from allennlp.training.util import datasets_from_params
 
@@ -54,7 +54,7 @@ class DryRun(Subcommand):
         subparser = parser.add_parser(
             name,
             description=description,
-            help="Create a vocabulary, compute dataset statistics " "and other training utilities.",
+            help="Create a vocabulary, compute dataset statistics and other training utilities.",
         )
         subparser.add_argument(
             "param_path",
@@ -104,7 +104,7 @@ def dry_run_from_params(params: Params, serialization_dir: str) -> None:
 
     if os.path.isdir(vocab_dir) and os.listdir(vocab_dir) is not None:
         raise ConfigurationError(
-            "The 'vocabulary' directory in the provided " "serialization directory is non-empty"
+            "The 'vocabulary' directory in the provided serialization directory is non-empty"
         )
 
     all_datasets = datasets_from_params(params)
@@ -126,7 +126,7 @@ def dry_run_from_params(params: Params, serialization_dir: str) -> None:
         if key in datasets_for_vocab_creation
     ]
 
-    vocab = Vocabulary.from_params(vocab_params, instances)
+    vocab = Vocabulary.from_params(vocab_params, instances=instances)
     dataset = Batch(instances)
     dataset.index_instances(vocab)
     dataset.print_statistics()

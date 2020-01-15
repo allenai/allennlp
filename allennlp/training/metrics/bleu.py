@@ -14,12 +14,12 @@ class BLEU(Metric):
     Bilingual Evaluation Understudy (BLEU).
 
     BLEU is a common metric used for evaluating the quality of machine translations
-    against a set of reference translations. See `Papineni et. al.,
-    "BLEU: a method for automatic evaluation of machine translation", 2002
-    <https://www.semanticscholar.org/paper/8ff93cfd37dced279134c9d642337a2085b31f59/>`_.
+    against a set of reference translations. See [Papineni et. al.,
+    "BLEU: a method for automatic evaluation of machine translation", 2002]
+    (https://www.semanticscholar.org/paper/8ff93cfd37dced279134c9d642337a2085b31f59/).
 
-    Parameters
-    ----------
+    # Parameters
+
     ngram_weights : ``Iterable[float]``, optional (default = (0.25, 0.25, 0.25, 0.25))
         Weights to assign to scores for each ngram size.
     exclude_indices : ``Set[int]``, optional (default = None)
@@ -122,15 +122,15 @@ class BLEU(Metric):
         """
         Update precision counts.
 
-        Parameters
-        ----------
+        # Parameters
+
         predictions : ``torch.LongTensor``, required
             Batched predicted tokens of shape `(batch_size, max_sequence_length)`.
         references : ``torch.LongTensor``, required
             Batched reference (gold) translations with shape `(batch_size, max_gold_sequence_length)`.
 
-        Returns
-        -------
+        # Returns
+
         None
         """
         predictions, gold_targets = self.unwrap_to_tensors(predictions, gold_targets)

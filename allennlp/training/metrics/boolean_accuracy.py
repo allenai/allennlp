@@ -34,13 +34,13 @@ class BooleanAccuracy(Metric):
         mask: Optional[torch.Tensor] = None,
     ):
         """
-        Parameters
-        ----------
+        # Parameters
+
         predictions : ``torch.Tensor``, required.
             A tensor of predictions of shape (batch_size, ...).
         gold_labels : ``torch.Tensor``, required.
             A tensor of the same shape as ``predictions``.
-        mask: ``torch.Tensor``, optional (default = None).
+        mask : ``torch.Tensor``, optional (default = None).
             A tensor of the same shape as ``predictions``.
         """
         predictions, gold_labels, mask = self.unwrap_to_tensors(predictions, gold_labels, mask)
@@ -87,8 +87,8 @@ class BooleanAccuracy(Metric):
 
     def get_metric(self, reset: bool = False):
         """
-        Returns
-        -------
+        # Returns
+
         The accumulated accuracy.
         """
         if self._total_count > 0:

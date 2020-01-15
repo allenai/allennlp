@@ -14,13 +14,13 @@ class Metric(Registrable):
         self, predictions: torch.Tensor, gold_labels: torch.Tensor, mask: Optional[torch.Tensor]
     ):
         """
-        Parameters
-        ----------
+        # Parameters
+
         predictions : ``torch.Tensor``, required.
             A tensor of predictions.
         gold_labels : ``torch.Tensor``, required.
             A tensor corresponding to some gold label to evaluate against.
-        mask: ``torch.Tensor``, optional (default = None).
+        mask : ``torch.Tensor``, optional (default = None).
             A mask can be passed, in order to deal with metrics which are
             computed over potentially padded elements, such as sequence labels.
         """

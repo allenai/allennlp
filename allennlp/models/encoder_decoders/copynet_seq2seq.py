@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 @Model.register("copynet_seq2seq")
 class CopyNetSeq2Seq(Model):
     """
-    This is an implementation of `CopyNet <https://arxiv.org/pdf/1603.06393>`_.
+    This is an implementation of [CopyNet](https://arxiv.org/pdf/1603.06393).
     CopyNet is a sequence-to-sequence encoder-decoder model with a copying mechanism
     that can copy tokens from the source sentence into the target sentence instead of
     generating all target tokens only from the target vocabulary.
@@ -36,8 +36,8 @@ class CopyNetSeq2Seq(Model):
     in the source sentence, allowing it to predict tokens that are out-of-vocabulary (OOV)
     with respect to the actual target vocab.
 
-    Parameters
-    ----------
+    # Parameters
+
     vocab : ``Vocabulary``, required
         Vocabulary containing source and target vocabularies.
     source_embedder : ``TextFieldEmbedder``, required
@@ -169,8 +169,8 @@ class CopyNetSeq2Seq(Model):
         """
         Make foward pass with decoder logic for producing the entire target sequence.
 
-        Parameters
-        ----------
+        # Parameters
+
         source_tokens : ``Dict[str, torch.LongTensor]``, required
             The output of `TextField.as_array()` applied on the source `TextField`. This will be
             passed through a `TextFieldEmbedder` and then through an encoder.
@@ -192,8 +192,8 @@ class CopyNetSeq2Seq(Model):
             A tensor of shape `(batch_size, target_sequence_length)` which indicates which
             tokens in the target sequence match tokens in the source sequence.
 
-        Returns
-        -------
+        # Returns
+
         Dict[str, torch.Tensor]
         """
         state = self._encode(source_tokens)
@@ -246,8 +246,8 @@ class CopyNetSeq2Seq(Model):
         will be changed to the index of the first occurence in the source sentence,
         offset by the size of the target vocabulary.
 
-        Parameters
-        ----------
+        # Parameters
+
         target_tokens : ``torch.Tensor``
             Shape: `(batch_size, target_sequence_length)`.
         source_token_ids : ``torch.Tensor``
@@ -255,8 +255,8 @@ class CopyNetSeq2Seq(Model):
         target_token_ids : ``torch.Tensor``
             Shape: `(batch_size, target_sequence_length)`.
 
-        Returns
-        -------
+        # Returns
+
         torch.Tensor
             Modified `target_tokens` with OOV indices replaced by offset index
             of first match in source sentence.
@@ -375,8 +375,8 @@ class CopyNetSeq2Seq(Model):
         """
         Get the log-likelihood contribution from a single timestep.
 
-        Parameters
-        ----------
+        # Parameters
+
         generation_scores : ``torch.Tensor``
             Shape: `(batch_size, target_vocab_size)`
         generation_scores_mask : ``torch.Tensor``
@@ -390,8 +390,8 @@ class CopyNetSeq2Seq(Model):
         copy_mask : ``torch.Tensor``
             Shape: `(batch_size, trimmed_source_length)`
 
-        Returns
-        -------
+        # Returns
+
         Tuple[torch.Tensor, torch.Tensor]
             Shape: `(batch_size,), (batch_size, max_input_sequence_length)`
         """
@@ -564,14 +564,14 @@ class CopyNetSeq2Seq(Model):
         tokens that were copied, normalized to sum to 1. If no source tokens were copied,
         there will be all zeros.
 
-        Parameters
-        ----------
+        # Parameters
+
         last_predictions : ``torch.LongTensor``
             Shape: `(group_size,)`
         state : ``Dict[str, torch.Tensor]``
 
-        Returns
-        -------
+        # Returns
+
         Tuple[torch.LongTensor, torch.Tensor]
             `input_choices` (shape `(group_size,)`) and `selective_weights`
             (shape `(group_size, trimmed_source_length)`).
@@ -646,16 +646,16 @@ class CopyNetSeq2Seq(Model):
         """
         Combine copy probabilities with generation probabilities for matching tokens.
 
-        Parameters
-        ----------
+        # Parameters
+
         generation_log_probs : ``torch.Tensor``
             Shape: `(group_size, target_vocab_size)`
         copy_log_probs : ``torch.Tensor``
             Shape: `(group_size, trimmed_source_length)`
         state : ``Dict[str, torch.Tensor]``
 
-        Returns
-        -------
+        # Returns
+
         torch.Tensor
             Shape: `(group_size, target_vocab_size + trimmed_source_length)`.
         """
@@ -772,8 +772,8 @@ class CopyNetSeq2Seq(Model):
         actually only has non-zero values at the first occurence of each source token
         that is not in the target vocab.
 
-        Parameters
-        ----------
+        # Parameters
+
         last_predictions : ``torch.Tensor``
             Shape: `(group_size,)`
 

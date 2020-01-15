@@ -8,7 +8,7 @@ from allennlp.commands.train import train_model_from_file
 from allennlp.common import Params
 from allennlp.common.testing.test_case import AllenNlpTestCase
 from allennlp.data import DataIterator, DatasetReader, Vocabulary
-from allennlp.data.dataset import Batch
+from allennlp.data.batch import Batch
 from allennlp.models import Model, load_archive
 
 
@@ -52,8 +52,8 @@ class ModelTestCase(AllenNlpTestCase):
         disable_dropout: bool = True,
     ):
         """
-        Parameters
-        ----------
+        # Parameters
+
         param_file : ``str``
             Path to a training configuration file that we will use to train the model for this
             test.
@@ -235,8 +235,8 @@ class ModelTestCase(AllenNlpTestCase):
         Ensures that the model performs the same on a batch of instances as on individual instances.
         Ignores metrics matching the regexp .*loss.* and those specified explicitly.
 
-        Parameters
-        ----------
+        # Parameters
+
         keys_to_ignore : ``Iterable[str]``, optional (default=())
             Names of metrics that should not be taken into account, e.g. "batch_weight".
         """

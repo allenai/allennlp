@@ -21,8 +21,8 @@ class CrfTagger(Model):
     The ``CrfTagger`` encodes a sequence of text with a ``Seq2SeqEncoder``,
     then uses a Conditional Random Field model to predict a tag for each token in the sequence.
 
-    Parameters
-    ----------
+    # Parameters
+
     vocab : ``Vocabulary``, required
         A Vocabulary, required in order to compute sizes for input/output projections.
     text_field_embedder : ``TextFieldEmbedder``, required
@@ -118,7 +118,7 @@ class CrfTagger(Model):
         if constrain_crf_decoding:
             if not label_encoding:
                 raise ConfigurationError(
-                    "constrain_crf_decoding is True, but " "no label_encoding was specified."
+                    "constrain_crf_decoding is True, but no label_encoding was specified."
                 )
             labels = self.vocab.get_index_to_token_vocabulary(label_namespace)
             constraints = allowed_transitions(label_encoding, labels)
@@ -138,7 +138,7 @@ class CrfTagger(Model):
         if calculate_span_f1:
             if not label_encoding:
                 raise ConfigurationError(
-                    "calculate_span_f1 is True, but " "no label_encoding was specified."
+                    "calculate_span_f1 is True, but no label_encoding was specified."
                 )
             self._f1_metric = SpanBasedF1Measure(
                 vocab, tag_namespace=label_namespace, label_encoding=label_encoding
@@ -169,12 +169,12 @@ class CrfTagger(Model):
     ) -> Dict[str, torch.Tensor]:
 
         """
-        Parameters
-        ----------
+        # Parameters
+
         tokens : ``Dict[str, torch.LongTensor]``, required
             The output of ``TextField.as_array()``, which should typically be passed directly to a
             ``TextFieldEmbedder``. This output is a dictionary mapping keys to ``TokenIndexer``
-            tensors.  At its most basic, using a ``SingleIdTokenIndexer`` this is: ``{"tokens":
+            tensors.  At its most basic, using a ``SingleIdTokenIndexer`` this is : ``{"tokens":
             Tensor(batch_size, num_tokens)}``. This dictionary will have the same keys as were used
             for the ``TokenIndexers`` when you created the ``TextField`` representing your
             sequence.  The dictionary is designed to be passed directly to a ``TextFieldEmbedder``,
@@ -186,8 +186,8 @@ class CrfTagger(Model):
         metadata : ``List[Dict[str, Any]]``, optional, (default = None)
             metadata containg the original words in the sentence to be tagged under a 'words' key.
 
-        Returns
-        -------
+        # Returns
+
         An output dictionary consisting of:
 
         logits : ``torch.FloatTensor``

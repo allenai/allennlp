@@ -28,11 +28,11 @@ class Event2Mind(Model):
     sequence, encodes it, and then uses the encoded representation to decode
     several mental state sequences.
 
-    It is based on `the paper by Rashkin et al.
-    <https://www.semanticscholar.org/paper/Event2Mind/b89f8a9b2192a8f2018eead6b135ed30a1f2144d>`_
+    It is based on [the paper by Rashkin et al.](
+    https://www.semanticscholar.org/paper/Event2Mind/b89f8a9b2192a8f2018eead6b135ed30a1f2144d).
 
-    Parameters
-    ----------
+    # Parameters
+
     vocab : ``Vocabulary``, required
         Vocabulary containing source and target vocabularies. They may be under the same namespace
         (``tokens``) or the target tokens can have a different namespace, in which case it needs to
@@ -47,7 +47,7 @@ class Event2Mind(Model):
         Length of decoded sequences.
     beam_size : int, optional (default = 10)
         The width of the beam search.
-    target_names: ``List[str]``, optional, (default = ['xintent', 'xreact', 'oreact'])
+    target_names : ``List[str]``, optional, (default = ['xintent', 'xreact', 'oreact'])
         Names of the target fields matching those in the ``Instance`` objects.
     target_namespace : str, optional (default = 'tokens')
         If the target side vocabulary is different from the source side's, you need to specify the
@@ -146,8 +146,8 @@ class Event2Mind(Model):
         """
         Decoder logic for producing the target sequences.
 
-        Parameters
-        ----------
+        # Parameters
+
         source : ``Dict[str, torch.LongTensor]``
             The output of ``TextField.as_array()`` applied on the source
             ``TextField``. This will be passed through a ``TextFieldEmbedder``
@@ -221,17 +221,17 @@ class Event2Mind(Model):
         Greedily produces a sequence using the provided ``decoder_cell``.
         Returns the cross entropy between this sequence and ``target_tokens``.
 
-        Parameters
-        ----------
+        # Parameters
+
         final_encoder_output : ``torch.LongTensor``, required
             Vector produced by ``self._encoder``.
         target_tokens : ``Dict[str, torch.LongTensor]``, required
             The output of ``TextField.as_array()`` applied on some target ``TextField``.
         target_embedder : ``Embedding``, required
             Used to embed the target tokens.
-        decoder_cell: ``GRUCell``, required
+        decoder_cell : ``GRUCell``, required
             The recurrent cell used at each time step.
-        output_projection_layer: ``Linear``, required
+        output_projection_layer : ``Linear``, required
             Linear layer mapping to the desired number of classes.
         """
         num_decoding_steps = self._get_num_decoding_steps(target_tokens)
@@ -263,15 +263,15 @@ class Event2Mind(Model):
         Greedily produces a sequence using the provided ``decoder_cell``.
         Returns the predicted sequence.
 
-        Parameters
-        ----------
+        # Parameters
+
         final_encoder_output : ``torch.LongTensor``, required
             Vector produced by ``self._encoder``.
         target_embedder : ``Embedding``, required
             Used to embed the target tokens.
-        decoder_cell: ``GRUCell``, required
+        decoder_cell : ``GRUCell``, required
             The recurrent cell used at each time step.
-        output_projection_layer: ``Linear``, required
+        output_projection_layer : ``Linear``, required
             Linear layer mapping to the desired number of classes.
         """
         num_decoding_steps = self._max_decoding_steps

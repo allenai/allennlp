@@ -9,7 +9,7 @@ import torch
 
 from allennlp.common.registrable import Registrable
 from allennlp.common.util import is_lazy, lazy_groups_of, ensure_list
-from allennlp.data.dataset import Batch
+from allennlp.data.batch import Batch
 from allennlp.data.fields import MetadataField
 from allennlp.data.instance import Instance
 from allennlp.data.vocabulary import Vocabulary
@@ -32,8 +32,8 @@ class DataIterator(Registrable):
     """
     An abstract ``DataIterator`` class. ``DataIterators`` must override ``_create_batches()``.
 
-    Parameters
-    ----------
+    # Parameters
+
     batch_size : ``int``, optional, (default = 32)
         The size of each batch of instances yielded when calling the iterator.
     instances_per_epoch : ``int``, optional, (default = None)
@@ -96,8 +96,8 @@ class DataIterator(Registrable):
         for the given number of epochs. If ``num_epochs`` is not specified,
         it will yield batches forever.
 
-        Parameters
-        ----------
+        # Parameters
+
         instances : ``Iterable[Instance]``
             The instances in the dataset. IMPORTANT: this must be able to be
             iterated over *multiple times*. That is, it must be either a List
@@ -235,8 +235,8 @@ class DataIterator(Registrable):
         If self._maximum_samples_per_batch is specified, then split the batch
         into smaller sub-batches if it exceeds the maximum size.
 
-        Parameters
-        ----------
+        # Parameters
+
         batch_instances : ``Iterable[Instance]``
             A candidate batch.
         excess : ``Deque[Instance]``

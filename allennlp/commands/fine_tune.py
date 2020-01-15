@@ -186,8 +186,8 @@ def fine_tune_model_from_file_paths(
     """
     A wrapper around :func:`fine_tune_model` which loads the model archive from a file.
 
-    Parameters
-    ----------
+    # Parameters
+
     model_archive_path : ``str``
         Path to a saved model archive that is the result of running the ``train`` command.
     config_file : ``str``
@@ -199,14 +199,14 @@ def fine_tune_model_from_file_paths(
         :func:`fine_tune_model`.
     overrides : ``str``
         A JSON string that we will use to override values in the input parameter file.
-    extend_vocab: ``bool``, optional (default=False)
+    extend_vocab : ``bool``, optional (default=False)
         If ``True``, we use the new instances to extend your vocabulary.
     file_friendly_logging : ``bool``, optional (default=False)
         If ``True``, we make our output more friendly to saved model files.  We just pass this
         along to :func:`fine_tune_model`.
     batch_weight_key : ``str``, optional (default="")
         If non-empty, name of metric used to weight the loss on a per-batch basis.
-    embedding_sources_mapping: ``str``, optional (default="")
+    embedding_sources_mapping : ``str``, optional (default="")
         JSON string to define dict mapping from embedding paths used during training to
         the corresponding embedding filepaths available during fine-tuning.
     """
@@ -247,22 +247,22 @@ def fine_tune_model(
     here we do not worry about vocabulary construction or creating the model object.  Everything
     else is the same.
 
-    Parameters
-    ----------
+    # Parameters
+
     model : ``Model``
         A model to fine tune.
     params : ``Params``
         A parameter object specifying an AllenNLP Experiment
     serialization_dir : ``str``
         The directory in which to save results and logs.
-    extend_vocab: ``bool``, optional (default=False)
+    extend_vocab : ``bool``, optional (default=False)
         If ``True``, we use the new instances to extend your vocabulary.
     file_friendly_logging : ``bool``, optional (default=False)
         If ``True``, we add newlines to tqdm output, even on an interactive terminal, and we slow
         down tqdm's output to only once every 10 seconds.
     batch_weight_key : ``str``, optional (default="")
         If non-empty, name of metric used to weight the loss on a per-batch basis.
-    embedding_sources_mapping: ``Dict[str, str]``, optional (default=None)
+    embedding_sources_mapping : ``Dict[str, str]``, optional (default=None)
         mapping from model paths to the pretrained embedding filepaths
         used during fine-tuning.
     """
@@ -286,7 +286,7 @@ def fine_tune_model(
         )
 
     vocabulary_params = params.pop("vocabulary", {})
-    if vocabulary_params.get("directory_path", None):
+    if vocabulary_params.get("type", None) == "from_files":
         logger.warning(
             "You passed `directory_path` in parameters for the vocabulary in "
             "your configuration file, but it will be ignored. "
@@ -306,13 +306,12 @@ def fine_tune_model(
             "Extending model vocabulary using %s data.", ", ".join(datasets_for_vocab_creation)
         )
         vocab.extend_from_instances(
-            vocabulary_params,
             (
                 instance
                 for key, dataset in all_datasets.items()
                 for instance in dataset
                 if key in datasets_for_vocab_creation
-            ),
+            )
         )
 
         model.extend_embedder_vocab(embedding_sources_mapping)

@@ -5,7 +5,7 @@ an AllenNLP model.
 
 import logging
 import os
-from typing import Dict, Union, List, Set
+from typing import Dict, Union, List, Set, Type
 
 import numpy
 import torch
@@ -14,7 +14,7 @@ from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import Params
 from allennlp.common.registrable import Registrable
 from allennlp.data import Instance, Vocabulary
-from allennlp.data.dataset import Batch
+from allennlp.data.batch import Batch
 from allennlp.nn import util
 from allennlp.nn.regularizers import RegularizerApplicator
 
@@ -95,16 +95,16 @@ class Model(torch.nn.Module, Registrable):
                     output_dict["loss"] = loss
                 return output_dict
 
-        Parameters
-        ----------
+        # Parameters
+
         inputs:
             Tensors comprising everything needed to perform a training update, `including` labels,
             which should be optional (i.e have a default value of ``None``).  At inference time,
             simply pass the relevant inputs, not including the labels.
 
-        Returns
-        -------
-        output_dict: ``Dict[str, torch.Tensor]``
+        # Returns
+
+        output_dict : ``Dict[str, torch.Tensor]``
             The outputs from the model. In order to train a model using the
             :class:`~allennlp.training.Trainer` api, you must provide a "loss" key pointing to a
             scalar ``torch.Tensor`` representing the loss to be optimized.
@@ -132,13 +132,13 @@ class Model(torch.nn.Module, Registrable):
         this will be faster on a GPU (and conditionally, on a CPU) than repeated calls to
         :func:`forward_on_instance`.
 
-        Parameters
-        ----------
+        # Parameters
+
         instances : List[Instance], required
             The instances to run the model on.
 
-        Returns
-        -------
+        # Returns
+
         A list of the models output for each instance.
         """
         batch_size = len(instances)
@@ -207,8 +207,8 @@ class Model(torch.nn.Module, Registrable):
         This method checks the device of the model parameters to determine the cuda_device
         this model should be run on for predictions.  If there are no parameters, it returns -1.
 
-        Returns
-        -------
+        # Returns
+
         The cuda device this model should run on for predictions.
         """
         devices = {util.get_device_of(param) for param in self.parameters()}
@@ -252,7 +252,8 @@ class Model(torch.nn.Module, Registrable):
         # If the config specifies a vocabulary subclass, we need to use it.
         vocab_params = config.get("vocabulary", Params({}))
         vocab_choice = vocab_params.pop_choice("type", Vocabulary.list_available(), True)
-        vocab = Vocabulary.by_name(vocab_choice).from_files(
+        vocab_class, _ = Vocabulary.resolve_class_name(vocab_choice)
+        vocab = vocab_class.from_files(
             vocab_dir, vocab_params.get("padding_token", None), vocab_params.get("oov_token", None)
         )
 
@@ -293,8 +294,8 @@ class Model(torch.nn.Module, Registrable):
         Instantiates an already-trained model, based on the experiment
         configuration and some optional overrides.
 
-        Parameters
-        ----------
+        # Parameters
+
         config: Params
             The configuration that was used to train the model. It should definitely
             have a `model` section, and should probably have a `trainer` section
@@ -310,8 +311,8 @@ class Model(torch.nn.Module, Registrable):
             for GPU usage you can specify the id of your GPU here
 
 
-        Returns
-        -------
+        # Returns
+
         model: Model
             The model specified in the configuration, loaded with the serialized
             vocabulary and the trained weights.
@@ -325,7 +326,8 @@ class Model(torch.nn.Module, Registrable):
         # Load using an overridable _load method.
         # This allows subclasses of Model to override _load.
 
-        return cls.by_name(model_type)._load(config, serialization_dir, weights_file, cuda_device)
+        model_class: Type[Model] = cls.by_name(model_type)  # type: ignore
+        return model_class._load(config, serialization_dir, weights_file, cuda_device)
 
     def extend_embedder_vocab(self, embedding_sources_mapping: Dict[str, str] = None) -> None:
         """
@@ -335,8 +337,8 @@ class Model(torch.nn.Module, Registrable):
         fine-tuning/transfer-learning, it will have it work with extended vocabulary
         (original + new-data vocabulary).
 
-        Parameters
-        ----------
+        # Parameters
+
         embedding_sources_mapping : Dict[str, str], (optional, default=None)
             Mapping from model_path to pretrained-file path of the embedding
             modules. If pretrained-file used at time of embedding initialization

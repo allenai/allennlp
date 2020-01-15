@@ -11,8 +11,8 @@ class Pruner(torch.nn.Module):
     This module scores and prunes items in a list using a parameterised scoring function and a
     threshold.
 
-    Parameters
-    ----------
+    # Parameters
+
     scorer : ``torch.nn.Module``, required.
         A module which, given a tensor of shape (batch_size, num_items, embedding_size),
         produces a tensor of shape (batch_size, num_items, 1), representing a scalar score
@@ -37,8 +37,8 @@ class Pruner(torch.nn.Module):
         antecedents in a coreference resolution model). May use the same k for all sentences in
         minibatch, or different k for each.
 
-        Parameters
-        ----------
+        # Parameters
+
         embeddings : ``torch.FloatTensor``, required.
             A tensor of shape (batch_size, num_items, embedding_size), containing an embedding for
             each item in the list that we want to prune.
@@ -50,8 +50,8 @@ class Pruner(torch.nn.Module):
             individual sentence in minibatch.
             If an int, keep the same number of items for all sentences.
 
-        Returns
-        -------
+        # Returns
+
         top_embeddings : ``torch.FloatTensor``
             The representations of the top-k scoring items.
             Has shape (batch_size, max_num_items_to_keep, embedding_size).

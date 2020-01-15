@@ -159,24 +159,24 @@ def find_learning_rate_model(
     """
     Runs learning rate search for given `num_batches` and saves the results in ``serialization_dir``
 
-    Parameters
-    ----------
+    # Parameters
+
     params : ``Params``
         A parameter object specifying an AllenNLP Experiment.
     serialization_dir : ``str``
         The directory in which to save results.
-    start_lr: ``float``
+    start_lr : ``float``
         Learning rate to start the search.
-    end_lr: ``float``
+    end_lr : ``float``
         Learning rate upto which search is done.
-    num_batches: ``int``
+    num_batches : ``int``
         Number of mini-batches to run Learning rate finder.
-    linear_steps: ``bool``
+    linear_steps : ``bool``
         Increase learning rate linearly if False exponentially.
-    stopping_factor: ``float``
+    stopping_factor : ``float``
         Stop the search when the current loss exceeds the best loss recorded by
         multiple of stopping factor. If ``None`` search proceeds till the ``end_lr``
-    force: ``bool``
+    force : ``bool``
         If True and the serialization directory already exists, everything in it will
         be removed prior to finding the learning rate.
     """
@@ -208,7 +208,7 @@ def find_learning_rate_model(
     )
     vocab = Vocabulary.from_params(
         params.pop("vocabulary", {}),
-        (
+        instances=(
             instance
             for key, dataset in all_datasets.items()
             for instance in dataset
@@ -270,23 +270,23 @@ def search_learning_rate(
     """
     Runs training loop on the model using :class:`~allennlp.training.trainer.Trainer`
     increasing learning rate from ``start_lr`` to ``end_lr`` recording the losses.
-    Parameters
-    ----------
+    # Parameters
+
     trainer: :class:`~allennlp.training.trainer.Trainer`
-    start_lr: ``float``
+    start_lr : ``float``
         The learning rate to start the search.
-    end_lr: ``float``
+    end_lr : ``float``
         The learning rate upto which search is done.
-    num_batches: ``int``
+    num_batches : ``int``
         Number of batches to run the learning rate finder.
-    linear_steps: ``bool``
+    linear_steps : ``bool``
         Increase learning rate linearly if False exponentially.
-    stopping_factor: ``float``
+    stopping_factor : ``float``
         Stop the search when the current loss exceeds the best loss recorded by
         multiple of stopping factor. If ``None`` search proceeds till the ``end_lr``
-    Returns
-    -------
-    (learning_rates, losses): ``Tuple[List[float], List[float]]``
+    # Returns
+
+    (learning_rates, losses) : ``Tuple[List[float], List[float]]``
         Returns list of learning rates and corresponding losses.
         Note: The losses are recorded before applying the corresponding learning rate
     """
@@ -353,10 +353,19 @@ def _smooth(values: List[float], beta: float) -> List[float]:
 
 
 def _save_plot(learning_rates: List[float], losses: List[float], save_path: str):
-    import matplotlib
 
-    matplotlib.use("Agg")  # noqa
-    import matplotlib.pyplot as plt
+    try:
+        import matplotlib
+
+        matplotlib.use("Agg")  # noqa
+        import matplotlib.pyplot as plt
+
+    except ModuleNotFoundError as error:
+
+        logger.warn(
+            "To use allennlp find-learning-rate, please install matplotlib: pip install matplotlib>=2.2.3 ."
+        )
+        raise error
 
     plt.ylabel("loss")
     plt.xlabel("learning rate (log10 scale)")

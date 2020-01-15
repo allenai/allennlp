@@ -14,8 +14,8 @@ class LstmCellDecoderNet(DecoderNet):
     """
     This decoder net implements simple decoding network with LSTMCell and Attention.
 
-    Parameters
-    ----------
+    # Parameters
+
     decoding_dim : ``int``, required
         Defines dimensionality of output vectors.
     target_embedding_dim : ``int``, required

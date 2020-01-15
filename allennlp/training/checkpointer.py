@@ -8,7 +8,7 @@ import time
 
 import torch
 
-from allennlp.common.registrable import Registrable
+from allennlp.common import Registrable
 from allennlp.nn import util as nn_util
 
 logger = logging.getLogger(__name__)
@@ -55,7 +55,7 @@ class Checkpointer(Registrable):
 
             if is_best_so_far:
                 logger.info(
-                    "Best validation performance so far. " "Copying weights to '%s/best.th'.",
+                    "Best validation performance so far. Copying weights to '%s/best.th'.",
                     self._serialization_dir,
                 )
                 shutil.copyfile(model_path, os.path.join(self._serialization_dir, "best.th"))
@@ -144,8 +144,8 @@ class Checkpointer(Registrable):
         If ``self._serialization_dir`` does not exist or does not contain any checkpointed weights,
         this function will do nothing and return empty dicts.
 
-        Returns
-        -------
+        # Returns
+
         states: Tuple[Dict[str, Any], Dict[str, Any]]
             The model state and the training state.
         """

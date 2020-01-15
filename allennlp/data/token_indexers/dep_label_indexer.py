@@ -18,8 +18,8 @@ class DepLabelIndexer(TokenIndexer[int]):
     This :class:`TokenIndexer` represents tokens by their syntactic dependency label, as determined
     by the ``dep_`` field on ``Token``.
 
-    Parameters
-    ----------
+    # Parameters
+
     namespace : ``str``, optional (default=``dep_labels``)
         We will use this namespace in the :class:`Vocabulary` to map strings to indices.
     token_min_padding_length : ``int``, optional (default=``0``)

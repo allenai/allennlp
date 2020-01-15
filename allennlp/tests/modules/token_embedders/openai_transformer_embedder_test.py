@@ -6,7 +6,7 @@ import h5py
 
 from allennlp.common.testing import ModelTestCase, AllenNlpTestCase
 from allennlp.common.params import Params
-from allennlp.data.dataset import Batch
+from allennlp.data.batch import Batch
 from allennlp.data import Token
 from allennlp.data.token_indexers import OpenaiTransformerBytePairIndexer
 from allennlp.data.token_indexers.openai_transformer_byte_pair_indexer import text_standardize

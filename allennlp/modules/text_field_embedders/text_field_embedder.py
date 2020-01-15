@@ -29,8 +29,8 @@ class TextFieldEmbedder(torch.nn.Module, Registrable):
         self, text_field_input: Dict[str, torch.Tensor], num_wrapping_dims: int = 0, **kwargs
     ) -> torch.Tensor:
         """
-        Parameters
-        ----------
+        # Parameters
+
         text_field_input : ``Dict[str, torch.Tensor]``
             A dictionary that was the output of a call to ``TextField.as_tensor``.  Each tensor in
             here is assumed to have a shape roughly similar to ``(batch_size, sequence_length)``

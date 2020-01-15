@@ -5,7 +5,7 @@ from typing import Iterable, NamedTuple
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
-from allennlp.common.util import get_frozen_and_tunable_parameter_names, is_distributed, is_master
+from allennlp.common.util import get_frozen_and_tunable_parameter_names, is_master
 from allennlp.data.instance import Instance
 from allennlp.data.iterators.data_iterator import DataIterator
 from allennlp.data.vocabulary import Vocabulary
@@ -67,7 +67,7 @@ class TrainerPieces(NamedTuple):
                 # Using a generator comprehension here is important
                 # because, being lazy, it allows us to not iterate over the
                 # dataset when directory_path is specified.
-                (
+                instances=(
                     instance
                     for key, dataset in all_datasets.items()
                     if key in datasets_for_vocab_creation
@@ -82,8 +82,9 @@ class TrainerPieces(NamedTuple):
         model.extend_embedder_vocab()
 
         # Initializing the model can have side effect of expanding the vocabulary
-        # Save the vocab only in the master
-        if not is_distributed() or is_master():
+        # Save the vocab only in the master. In the degenerate non-distributed
+        # case, we're trivially the master.
+        if is_master():
             vocab.save_to_files(os.path.join(serialization_dir, "vocabulary"))
 
         iterator = DataIterator.from_params(params.pop("iterator"))

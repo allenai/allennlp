@@ -16,7 +16,7 @@ FIELDS = ["id", "form", "lemma", "pos", "head", "deprel", "top", "pred", "frame"
 
 
 def parse_sentence(
-    sentence_blob: str
+    sentence_blob: str,
 ) -> Tuple[List[Dict[str, str]], List[Tuple[int, int]], List[str]]:
     """
     Parses a chunk of text in the SemEval SDP format.
@@ -74,8 +74,8 @@ class SemanticDependenciesDatasetReader(DatasetReader):
     Reads a file in the SemEval 2015 Task 18 (Broad-coverage Semantic Dependency Parsing)
     format.
 
-    Parameters
-    ----------
+    # Parameters
+
     token_indexers : ``Dict[str, TokenIndexer]``, optional (default=``{"tokens": SingleIdTokenIndexer()}``)
         The token indexers to be applied to the words TextField.
     """

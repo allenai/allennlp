@@ -92,12 +92,12 @@ class BiaffineDependencyParserPredictor(Predictor):
     def predict(self, sentence: str) -> JsonDict:
         """
         Predict a dependency parse for the given sentence.
-        Parameters
-        ----------
+        # Parameters
+
         sentence The sentence to parse.
 
-        Returns
-        -------
+        # Returns
+
         A dictionary representation of the dependency tree.
         """
         return self.predict_json({"sentence": sentence})
@@ -144,8 +144,8 @@ class BiaffineDependencyParserPredictor(Predictor):
         words: List[str], heads: List[int], tags: List[str], pos: List[str]
     ) -> Dict[str, Any]:
         """
-        Returns
-        -------
+        # Returns
+
         A JSON dictionary render-able by Hierplane for the given tree.
         """
 

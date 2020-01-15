@@ -8,8 +8,8 @@ def get_fields_to_compare(
     """
     Gets a list of the fields that should be checked for equality after an attack is performed.
 
-    Parameters
-    ----------
+    # Parameters
+
     inputs : ``JsonDict``
         The input you want to attack, similar to the argument to a Predictor, e.g., predict_json().
     instance : ``Instance``
@@ -17,8 +17,8 @@ def get_fields_to_compare(
     input_field_to_attack : ``str``
         The key in the inputs JsonDict you want to attack, e.g., tokens.
 
-    Returns
-    -------
+    # Returns
+
     fields : ``JsonDict``
         The fields that must be compared for equality.
     """
