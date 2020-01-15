@@ -9,20 +9,19 @@ from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
 class PretrainedTransformerEmbedder(TokenEmbedder):
     """
     Uses a pretrained model from `transformers` as a `TokenEmbedder`.
+
+    # Parameters
+
+    model_name : `str`, required.
+        The name of the transformer model to use.
+    intra_word_tokenized: `bool`, optional (default = False)
+        Whether or not the input comes from intra-word tokenization in the indexer. If so, we
+        pool representations of wordpieces of a word to get word-level representations, and
+        `offsets` must be provided in `forward()`. Should be set to the same value as the
+        `intra_word_tokenization` option on the :class:`PretrainedTransformerIndexer`.
     """
 
     def __init__(self, model_name: str, intra_word_tokenized: bool = False) -> None:
-        """
-        # Parameters
-
-        model_name : ``str``, required.
-            The name of the transformer model to use.
-        intra_word_tokenized: ``bool``, optional (default = False)
-            Whether or not the input comes from intra-word tokenization in the indexer. If so, we
-            pool representations of wordpieces of a word to get word-level representations, and
-            `offsets` must be provided in `forward()`. Should be set to the same value as the
-            ``intra_word_tokenization`` option on the :class:`PretrainedTransformerIndexer`.
-        """
         super().__init__()
         self.transformer_model = AutoModel.from_pretrained(model_name)
         self._intra_word_tokenized = intra_word_tokenized
