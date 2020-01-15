@@ -36,7 +36,7 @@ from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import Params
 from allennlp.common.util import prepare_environment, get_frozen_and_tunable_parameter_names
 from allennlp.data import Vocabulary
-from allennlp.data.dataset import Batch
+from allennlp.data.batch import Batch
 from allennlp.models import Model
 from allennlp.training.util import datasets_from_params
 

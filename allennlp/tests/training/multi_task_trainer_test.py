@@ -21,7 +21,7 @@ from allennlp.common import Registrable
 from allennlp.common.params import Params
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Instance
-from allennlp.data.dataset import Batch
+from allennlp.data.batch import Batch
 from allennlp.data.iterators import DataIterator
 from allennlp.data.dataset_readers import DatasetReader
 from allennlp.data.fields import TextField, MetadataField
