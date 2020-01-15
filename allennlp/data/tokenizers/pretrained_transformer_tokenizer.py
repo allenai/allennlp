@@ -172,26 +172,3 @@ class PretrainedTransformerTokenizer(Tokenizer):
         Refer to the `tokenize_sentence_pair` method if you have a sentence pair.
         """
         return self._tokenize(text)
-
-    def build_inputs_with_special_tokens(self, sentence: List[Token]) -> List[Token]:
-        """
-        Appends special tokens to a single sentence with `Token`s. Similar to
-        `self.tokenizer.build_inputs_with_special_tokens`, except this function (a) operates on
-        `Token`s, and (b) only takes one sentence as input.
-
-        The sentence should come from `self.tokenize()` with `add_special_tokens=False`.
-        """
-        token_ids = [token.text_id for token in sentence]
-        if any([token_id is None for token_id in token_ids]):
-            raise ValueError("Please use output from `self.tokenize()` as input.")
-
-        new_token_ids = self.tokenizer.build_inputs_with_special_tokens(token_ids)
-        token_type_ids = self.tokenizer.create_token_type_ids_from_sequences(token_ids)
-        assert len(new_token_ids) == len(token_type_ids)
-
-        tokens = []
-        for token_id, token_type_id in zip(new_token_ids, token_type_ids):
-            token_str = self.tokenizer.convert_ids_to_tokens(token_id, skip_special_tokens=False)
-            tokens.append(Token(text=token_str, text_id=token_id, type_id=token_type_id))
-
-        return tokens

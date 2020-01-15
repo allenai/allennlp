@@ -113,6 +113,14 @@ class PretrainedTransformerIndexer(TokenIndexer):
                     f" for the following token: {token.text}"
                 )
 
+        if self._intra_word_tokenization:
+            # self._intra_word_tokenize() does not insert special tokens, so we need to do it here
+            indices = self._wrapped_tokenizer.build_inputs_with_special_tokens(indices)
+            offsets = [
+                (start + self._num_added_beginning_tokens, end + self._num_added_end_tokens)
+                for start, end in offsets
+            ]
+
         output = {"token_ids": indices, "mask": mask}
         if self._intra_word_tokenization:
             output["wordpiece_mask"] = [1] * len(indices)
@@ -190,10 +198,11 @@ class PretrainedTransformerIndexer(TokenIndexer):
         """
         Tokenizes each word into wordpieces separately. Also calculates offsets such that
         wordpices[offsets[i][0]:offsets[i][1]] corresponds to the original i-th token.
+        Does not insert special tokens.
         """
         wordpieces: List[Token] = []
         offsets = []
-        cumulative = self._num_added_beginning_tokens
+        cumulative = 0
         for token in tokens:
             subword_wordpieces = self._tokenizer.tokenize(token.text)
             wordpieces.extend(subword_wordpieces)
@@ -202,8 +211,5 @@ class PretrainedTransformerIndexer(TokenIndexer):
             cumulative += len(subword_wordpieces)
             end_offset = cumulative - 1  # inclusive
             offsets.append((start_offset, end_offset))
-
-        wordpieces = self._tokenizer.build_inputs_with_special_tokens(wordpieces)
-        assert len(wordpieces) == cumulative + self._num_added_end_tokens
 
         return wordpieces, offsets
