@@ -118,7 +118,7 @@ class CrfTagger(Model):
         if constrain_crf_decoding:
             if not label_encoding:
                 raise ConfigurationError(
-                    "constrain_crf_decoding is True, but " "no label_encoding was specified."
+                    "constrain_crf_decoding is True, but no label_encoding was specified."
                 )
             labels = self.vocab.get_index_to_token_vocabulary(label_namespace)
             constraints = allowed_transitions(label_encoding, labels)
@@ -138,7 +138,7 @@ class CrfTagger(Model):
         if calculate_span_f1:
             if not label_encoding:
                 raise ConfigurationError(
-                    "calculate_span_f1 is True, but " "no label_encoding was specified."
+                    "calculate_span_f1 is True, but no label_encoding was specified."
                 )
             self._f1_metric = SpanBasedF1Measure(
                 vocab, tag_namespace=label_namespace, label_encoding=label_encoding

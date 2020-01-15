@@ -92,7 +92,7 @@ class TextField(SequenceField[Dict[str, torch.Tensor]]):
         lengths = []
         if self._indexed_tokens is None:
             raise ConfigurationError(
-                "You must call .index(vocabulary) on a " "field before determining padding lengths."
+                "You must call .index(vocabulary) on a field before determining padding lengths."
             )
 
         # Each indexer can return a different sequence length, and for indexers that return

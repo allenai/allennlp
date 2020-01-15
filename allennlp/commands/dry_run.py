@@ -54,7 +54,7 @@ class DryRun(Subcommand):
         subparser = parser.add_parser(
             name,
             description=description,
-            help="Create a vocabulary, compute dataset statistics " "and other training utilities.",
+            help="Create a vocabulary, compute dataset statistics and other training utilities.",
         )
         subparser.add_argument(
             "param_path",
@@ -104,7 +104,7 @@ def dry_run_from_params(params: Params, serialization_dir: str) -> None:
 
     if os.path.isdir(vocab_dir) and os.listdir(vocab_dir) is not None:
         raise ConfigurationError(
-            "The 'vocabulary' directory in the provided " "serialization directory is non-empty"
+            "The 'vocabulary' directory in the provided serialization directory is non-empty"
         )
 
     all_datasets = datasets_from_params(params)

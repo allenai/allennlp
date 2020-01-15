@@ -727,7 +727,7 @@ def sequence_cross_entropy_with_logits(
 
     """
     if average not in {None, "token", "batch"}:
-        raise ValueError("Got average f{average}, expected one of " "None, 'token', or 'batch'")
+        raise ValueError("Got average f{average}, expected one of None, 'token', or 'batch'")
 
     # make sure weights are float
     weights = weights.float()
@@ -774,9 +774,9 @@ def sequence_cross_entropy_with_logits(
                 alpha_factor = torch.cat([1 - alpha_factor, alpha_factor])
         else:
             raise TypeError(
-                (
-                    "alpha must be float, list of float, or torch.FloatTensor, " "{} provided."
-                ).format(type(alpha))
+                ("alpha must be float, list of float, or torch.FloatTensor, {} provided.").format(
+                    type(alpha)
+                )
             )
         # shape : (batch, max_len)
         alpha_factor = torch.gather(alpha_factor, dim=0, index=targets_flat.view(-1)).view(

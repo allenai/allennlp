@@ -88,7 +88,7 @@ def main(serialization_directory: int, device: int, data: str, prefix: str, doma
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(
-        description="write conll format srl predictions" " to file from a pretrained model."
+        description="write conll format srl predictions to file from a pretrained model."
     )
     parser.add_argument("--path", type=str, help="the serialization directory.")
     parser.add_argument("--device", type=int, default=-1, help="the device to load the model onto.")
