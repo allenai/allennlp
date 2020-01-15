@@ -1,4 +1,4 @@
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Iterable
 
 import numpy
 from overrides import overrides
@@ -67,6 +67,8 @@ class SimpleSeq2Seq(Model):
         2015](https://arxiv.org/abs/1506.03099).
     use_bleu : ``bool``, optional (default = True)
         If True, the BLEU metric will be calculated during validation.
+    ngram_weights : ``Iterable[float]``, optional (default = (0.25, 0.25, 0.25, 0.25))
+        Weights to assign to scores for each ngram size.
     """
 
     def __init__(
@@ -82,6 +84,7 @@ class SimpleSeq2Seq(Model):
         target_embedding_dim: int = None,
         scheduled_sampling_ratio: float = 0.0,
         use_bleu: bool = True,
+        bleu_ngram_weights: Iterable[float] = (0.25, 0.25, 0.25, 0.25),
     ) -> None:
         super().__init__(vocab)
         self._target_namespace = target_namespace
@@ -96,7 +99,9 @@ class SimpleSeq2Seq(Model):
             pad_index = self.vocab.get_token_index(
                 self.vocab._padding_token, self._target_namespace
             )
-            self._bleu = BLEU(exclude_indices={pad_index, self._end_index, self._start_index})
+            self._bleu = BLEU(
+                bleu_ngram_weights, exclude_indices={pad_index, self._end_index, self._start_index}
+            )
         else:
             self._bleu = None
 
