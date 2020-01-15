@@ -304,10 +304,6 @@ def train_model(
         num_procs = len(device_ids)
         world_size = num_nodes * num_procs
 
-        os.environ["MASTER_ADDR"] = master_addr
-        os.environ["MASTER_PORT"] = str(master_port)
-        os.environ["WORLD_SIZE"] = str(world_size)
-
         logging.info(
             f"Switching to distributed training mode since multiple GPUs are configured"
             f"Master is at: {master_addr}:{master_port} | Rank of this node: {node_rank} | "
@@ -426,6 +422,10 @@ def _train_worker(
         # the process group using `init_process_group`
         global_rank = node_rank * num_procs_per_node + process_rank
 
+        # Number of processes per node is useful to know if a process
+        # is a master in the local node(node in which it is running)
+        os.environ["ALLENNLP_PROCS_PER_NODE"] = str(num_procs_per_node)
+
         # In distributed training, the configured device is always going to be a list.
         # The corresponding gpu id for the particular worker is obtained by picking the id
         # from the device list with the rank as index
@@ -464,6 +464,7 @@ def _train_worker(
             validation_data=pieces.validation_dataset,
             params=pieces.params,
             validation_iterator=pieces.validation_iterator,
+            local_rank=process_rank,
         )
 
         evaluation_iterator = pieces.validation_iterator or pieces.iterator
