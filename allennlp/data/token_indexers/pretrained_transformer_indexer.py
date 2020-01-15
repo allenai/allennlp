@@ -1,12 +1,12 @@
-from typing import Dict, List
+from typing import Dict, List, Tuple
 import logging
 
 from overrides import overrides
-from transformers.tokenization_auto import AutoTokenizer
 
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.data.tokenizers.token import Token
 from allennlp.data.token_indexers.token_indexer import TokenIndexer, IndexedTokenList
+from allennlp.data.tokenizers import PretrainedTransformerTokenizer
 
 logger = logging.getLogger(__name__)
 
@@ -29,17 +29,28 @@ class PretrainedTransformerIndexer(TokenIndexer):
         We use a somewhat confusing default value of `tags` so that we do not add padding or UNK
         tokens to this namespace, which would break on loading because we wouldn't find our default
         OOV token.
+    intra_word_tokenization: ``bool``, optional (default=False)
+        If True, further tokenize each token into subword tokens using the corresponding tokenizer.
+        Should be set to the same value as the ``intra_word_tokenized`` option on the
+        :class:`PretrainedTransformerEmbedder`.
     """
 
     def __init__(
-        self, model_name: str, namespace: str = "tags", token_min_padding_length: int = 0
+        self,
+        model_name: str,
+        namespace: str = "tags",
+        intra_word_tokenization: bool = False,
+        token_min_padding_length: int = 0,
     ) -> None:
         super().__init__(token_min_padding_length)
         self._namespace = namespace
-        self._tokenizer = AutoTokenizer.from_pretrained(model_name)
-        self._padding_value = self._tokenizer.convert_tokens_to_ids([self._tokenizer.pad_token])[0]
-        logger.info(f"Using token indexer padding value of {self._padding_value}")
+        # add_special_tokens=False for intra_word_tokenization
+        self._tokenizer = PretrainedTransformerTokenizer(model_name, add_special_tokens=False)
+        self._wrapped_tokenizer = self._tokenizer.tokenizer  # wrapped huggingface tokenizer
+        self._determine_num_special_tokens()
         self._added_to_vocabulary = False
+
+        self._intra_word_tokenization = intra_word_tokenization
 
     def _add_encoding_to_vocabulary(self, vocab: Vocabulary) -> None:
         """
@@ -47,9 +58,9 @@ class PretrainedTransformerIndexer(TokenIndexer):
         Transformers vocab is taken from the <vocab>/<encoder> keys of the tokenizer object.
         """
         vocab_field_name = None
-        if hasattr(self._tokenizer, "vocab"):
+        if hasattr(self._wrapped_tokenizer, "vocab"):
             vocab_field_name = "vocab"
-        elif hasattr(self._tokenizer, "encoder"):
+        elif hasattr(self._wrapped_tokenizer, "encoder"):
             vocab_field_name = "encoder"
         else:
             logger.warning(
@@ -58,7 +69,7 @@ class PretrainedTransformerIndexer(TokenIndexer):
                 Your tokens will still be correctly indexed, but vocabulary file will not be saved."""
             )
         if vocab_field_name is not None:
-            pretrained_vocab = getattr(self._tokenizer, vocab_field_name)
+            pretrained_vocab = getattr(self._wrapped_tokenizer, vocab_field_name)
             for word, idx in pretrained_vocab.items():
                 vocab._token_to_index[self._namespace][word] = idx
                 vocab._index_to_token[self._namespace][idx] = word
@@ -76,6 +87,15 @@ class PretrainedTransformerIndexer(TokenIndexer):
             self._add_encoding_to_vocabulary(vocabulary)
             self._added_to_vocabulary = True
 
+        # The mask has 1 for real tokens and 0 for padding tokens. Only real tokens are attended to.
+        # We need to do this before intra word tokenization because we always want it to be
+        # token-level masks. We create a separate wordpiece-level mask below.
+        mask = [1] * len(tokens)
+
+        offsets = None
+        if self._intra_word_tokenization:
+            tokens, offsets = self._intra_word_tokenize(tokens)
+
         indices: List[int] = []
         for token in tokens:
             if getattr(token, "text_id", None) is not None:
@@ -89,15 +109,19 @@ class PretrainedTransformerIndexer(TokenIndexer):
                     f" for the following token: {token.text}"
                 )
 
-        # The mask has 1 for real tokens and 0 for padding tokens. Only real
-        # tokens are attended to.
-        attention_mask = [1] * len(indices)
-
-        return {"token_ids": indices, "mask": attention_mask}
+        output = {"token_ids": indices, "mask": mask}
+        if self._intra_word_tokenization:
+            output["wordpiece_mask"] = [1] * len(indices)
+            output["offsets"] = offsets
+        return output
 
     @overrides
     def get_empty_token_list(self) -> IndexedTokenList:
-        return {"token_ids": [], "mask": []}
+        output = {"token_ids": [], "mask": []}
+        if self._intra_word_tokenization:
+            output["wordpiece_mask"] = []
+            output["offsets"] = []
+        return output
 
     def __eq__(self, other):
         if isinstance(other, PretrainedTransformerIndexer):
@@ -110,3 +134,51 @@ class PretrainedTransformerIndexer(TokenIndexer):
                     return False
             return True
         return NotImplemented
+
+    def _determine_num_special_tokens(self):
+        """
+        Tries to determine the number of special tokens the self._wrapped_tokenizer inserts for a
+        single sentence. There's self._wrapped_tokenizer.num_added_tokens for this purpose, but
+        it can't distinguish between the number added in the front vs. back.
+        """
+        token = 1000  # uses a higher index just in case special tokens are treated differently
+        result = self._wrapped_tokenizer.build_inputs_with_special_tokens([token])
+
+        self._num_added_beginning_tokens = 0
+        self._num_added_ending_tokens = 0
+        seen_token = False
+        for t in result:
+            if t == token:
+                if seen_token:
+                    raise ValueError("Can't determine the number of special tokens inserted.")
+                seen_token = True
+            if not seen_token:
+                self._num_added_beginning_tokens += 1
+            else:
+                self._num_added_ending_tokens += 1
+        if not seen_token:
+            raise ValueError("Can't determine the number of special tokens inserted.")
+
+    def _intra_word_tokenize(
+        self, tokens: List[Token]
+    ) -> Tuple[List[Token], List[Tuple[int, int]]]:
+        """
+        Tokenizes each word into wordpieces separately. Also calculates offsets such that
+        wordpices[offsets[i][0]:offsets[i][1]] corresponds to the original i-th token.
+        """
+        wordpieces: List[Token] = []
+        offsets = []
+        cumulative = self._num_added_beginning_tokens
+        for token in tokens:
+            subword_wordpieces = self._tokenizer.tokenize(token.text)
+            wordpieces.extend(subword_wordpieces)
+
+            start_offset = cumulative
+            cumulative += len(subword_wordpieces)
+            end_offset = cumulative - 1  # inclusive
+            offsets.append((start_offset, end_offset))
+
+        wordpieces = self._tokenizer.build_inputs_with_special_tokens(wordpieces)
+        assert len(wordpieces) == cumulative + self._num_added_ending_tokens
+
+        return wordpieces, offsets
