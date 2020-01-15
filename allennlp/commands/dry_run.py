@@ -34,7 +34,7 @@ import re
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import Params
-from allennlp.common.util import prepare_environment, get_frozen_and_tunable_parameter_names
+from allennlp.common.util import log_frozen_and_tunable_parameter_names, prepare_environment
 from allennlp.data import Vocabulary
 from allennlp.data.batch import Batch
 from allennlp.models import Model
@@ -142,10 +142,4 @@ def dry_run_from_params(params: Params, serialization_dir: str) -> None:
         if any(re.search(regex, name) for regex in no_grad_regexes):
             parameter.requires_grad_(False)
 
-    frozen_parameter_names, tunable_parameter_names = get_frozen_and_tunable_parameter_names(model)
-    logger.info("Following parameters are Frozen  (without gradient):")
-    for name in frozen_parameter_names:
-        logger.info(name)
-    logger.info("Following parameters are Tunable (with gradient):")
-    for name in tunable_parameter_names:
-        logger.info(name)
+    log_frozen_and_tunable_parameter_names(model)

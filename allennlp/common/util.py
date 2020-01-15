@@ -1,5 +1,5 @@
 """
-Various utilities that don't fit anwhere else.
+Various utilities that don't fit anywhere else.
 """
 import importlib
 import json
@@ -9,10 +9,11 @@ import pkgutil
 import random
 import subprocess
 import sys
-import torch.distributed as dist
 from itertools import zip_longest, islice
 from logging import Filter
-from typing import Any, Callable, Dict, List, Tuple, TypeVar, Iterable, Iterator
+from typing import Any, Callable, Dict, Iterable, Iterator, List, Optional, Tuple, TypeVar
+
+import torch.distributed as dist
 
 try:
     import resource
@@ -481,21 +482,35 @@ def is_lazy(iterable: Iterable[A]) -> bool:
     return not isinstance(iterable, list)
 
 
-def get_frozen_and_tunable_parameter_names(model: torch.nn.Module) -> List:
-    frozen_parameter_names = []
-    tunable_parameter_names = []
-    for name, parameter in model.named_parameters():
-        if not parameter.requires_grad:
-            frozen_parameter_names.append(name)
-        else:
-            tunable_parameter_names.append(name)
-    return [frozen_parameter_names, tunable_parameter_names]
+def log_frozen_and_tunable_parameter_names(model: torch.nn.Module) -> None:
+    frozen_parameter_names, tunable_parameter_names = get_frozen_and_tunable_parameter_names(model)
+
+    logger.info("The following parameters are Frozen (without gradient):")
+    for name in frozen_parameter_names:
+        logger.info(name)
+
+    logger.info("The following parameters are Tunable (with gradient):")
+    for name in tunable_parameter_names:
+        logger.info(name)
 
 
-def dump_metrics(file_path: str, metrics: Dict[str, Any], log: bool = False) -> None:
+def get_frozen_and_tunable_parameter_names(
+    model: torch.nn.Module,
+) -> Tuple[Iterable[str], Iterable[str]]:
+    frozen_parameter_names = (
+        name for name, parameter in model.named_parameters() if not parameter.requires_grad
+    )
+    tunable_parameter_names = (
+        name for name, parameter in model.named_parameters() if parameter.requires_grad
+    )
+    return frozen_parameter_names, tunable_parameter_names
+
+
+def dump_metrics(file_path: Optional[str], metrics: Dict[str, Any], log: bool = False) -> None:
     metrics_json = json.dumps(metrics, indent=2)
-    with open(file_path, "w") as metrics_file:
-        metrics_file.write(metrics_json)
+    if file_path:
+        with open(file_path, "w") as metrics_file:
+            metrics_file.write(metrics_json)
     if log:
         logger.info("Metrics: %s", metrics_json)
 

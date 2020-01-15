@@ -47,7 +47,7 @@ which to write the results.
 import argparse
 import logging
 import os
-from typing import Optional, List
+from typing import Dict, List, Optional
 
 import torch
 import torch.distributed as dist
@@ -55,15 +55,15 @@ import torch.multiprocessing as mp
 
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common import Params
-from allennlp.common.checks import ConfigurationError, check_for_gpu
+from allennlp.common.checks import check_for_gpu, ConfigurationError
 from allennlp.common.util import (
-    prepare_environment,
-    prepare_global_logging,
     dump_metrics,
     import_submodules,
+    prepare_environment,
+    prepare_global_logging,
 )
 from allennlp.models.archival import archive_model, CONFIG_NAME
-from allennlp.models.model import Model, _DEFAULT_WEIGHTS
+from allennlp.models.model import _DEFAULT_WEIGHTS, Model
 from allennlp.training.trainer import Trainer
 from allennlp.training.trainer_base import TrainerBase
 from allennlp.training.trainer_pieces import TrainerPieces
@@ -151,16 +151,16 @@ def train_model_from_args(args: argparse.Namespace):
     Just converts from an ``argparse.Namespace`` object to string paths.
     """
     train_model_from_file(
-        args.param_path,
-        args.serialization_dir,
-        args.overrides,
-        args.file_friendly_logging,
-        args.recover,
-        args.force,
-        args.cache_directory,
-        args.cache_prefix,
-        args.node_rank,
-        args.include_package,
+        parameter_filename=args.param_path,
+        serialization_dir=args.serialization_dir,
+        overrides=args.overrides,
+        file_friendly_logging=args.file_friendly_logging,
+        recover=args.recover,
+        force=args.force,
+        cache_directory=args.cache_directory,
+        cache_prefix=args.cache_prefix,
+        node_rank=args.node_rank,
+        include_package=args.include_package,
     )
 
 
@@ -209,15 +209,15 @@ def train_model_from_file(
     # Load the experiment config from a file and pass it to ``train_model``.
     params = Params.from_file(parameter_filename, overrides)
     return train_model(
-        params,
-        serialization_dir,
-        file_friendly_logging,
-        recover,
-        force,
-        cache_directory,
-        cache_prefix,
-        node_rank,
-        include_package,
+        params=params,
+        serialization_dir=serialization_dir,
+        file_friendly_logging=file_friendly_logging,
+        recover=recover,
+        force=force,
+        cache_directory=cache_directory,
+        cache_prefix=cache_prefix,
+        node_rank=node_rank,
+        include_package=include_package,
     )
 
 
@@ -231,6 +231,11 @@ def train_model(
     cache_prefix: str = None,
     node_rank: int = 0,
     include_package: List[str] = None,
+    batch_weight_key: str = "",
+    # For fine-tuning:
+    model: Model = None,
+    extend_vocab: bool = False,
+    embedding_sources_mapping: Dict[str, str] = None,
 ) -> Model:
     """
     Trains the model specified in the given :class:`Params` object, using the data and training
@@ -259,6 +264,16 @@ def train_model(
         Rank of the current node in distributed training
     include_package : ``List[str]``, optional
         In distributed mode, extra packages mentioned will be imported in trainer workers.
+    batch_weight_key : ``str``, optional (default="")
+        If non-empty, name of metric used to weight the loss on a per-batch basis.
+    model : ``Model``, optional
+        A model to fine tune.
+    extend_vocab : ``bool``, optional (default=False)
+        If ``True``, we use the new instances to extend your vocabulary.
+        Used only when fine-tuning.
+    embedding_sources_mapping : ``Dict[str, str]``, optional (default=None)
+        Mapping from model paths to the pretrained embedding filepaths.
+        Used only when fine-tuning.
 
     # Returns
 
@@ -281,6 +296,10 @@ def train_model(
             cache_directory=cache_directory,
             cache_prefix=cache_prefix,
             include_package=include_package,
+            batch_weight_key=batch_weight_key,
+            model=model,
+            extend_vocab=extend_vocab,
+            embedding_sources_mapping=embedding_sources_mapping,
         )
         archive_model(serialization_dir, files_to_archive=params.files_to_archive)
         return model
@@ -331,11 +350,15 @@ def train_model(
                 cache_directory,
                 cache_prefix,
                 include_package,
+                batch_weight_key,
                 node_rank,
                 master_addr,
                 master_port,
                 world_size,
                 device_ids,
+                model,
+                extend_vocab,
+                embedding_sources_mapping,
             ),
             nprocs=num_procs,
         )
@@ -353,11 +376,16 @@ def _train_worker(
     cache_directory: str = None,
     cache_prefix: str = None,
     include_package: List[str] = None,
+    batch_weight_key: str = "",
     node_rank: int = 0,
     master_addr: str = "127.0.0.1",
     master_port: int = 29500,
     world_size: int = 1,
     distributed_device_ids: List[str] = None,
+    # For fine-tuning:
+    model: Model = None,
+    extend_vocab: bool = False,
+    embedding_sources_mapping: Dict[str, str] = None,
 ) -> Optional[Model]:
     """
     Helper to train the configured model/experiment. In distributed mode, this is spawned as a
@@ -437,7 +465,7 @@ def _train_worker(
         params["trainer"]["world_size"] = world_size
         params["trainer"]["distributed"] = True
 
-        torch.cuda.set_device(gpu_id)
+        torch.cuda.set_device(int(gpu_id))
         dist.init_process_group(
             backend="nccl",
             init_method=f"tcp://{master_addr}:{master_port}",
@@ -454,7 +482,14 @@ def _train_worker(
     if trainer_type == "default":
         # Special logic to instantiate backward-compatible trainer.
         pieces = TrainerPieces.from_params(
-            params, serialization_dir, recover, cache_directory, cache_prefix
+            params=params,
+            serialization_dir=serialization_dir,
+            recover=recover,
+            cache_directory=cache_directory,
+            cache_prefix=cache_prefix,
+            model=model,
+            embedding_sources_mapping=embedding_sources_mapping,
+            extend_vocab=extend_vocab,
         )
         trainer = Trainer.from_params(
             model=pieces.model,
@@ -483,6 +518,7 @@ def _train_worker(
             params, serialization_dir, recover, cache_directory, cache_prefix
         )
         evaluation_dataset = None
+        evaluation_iterator = None
 
     params.assert_empty("base train command")
 
@@ -509,8 +545,7 @@ def _train_worker(
                 evaluation_dataset,
                 evaluation_iterator,
                 cuda_device=trainer.cuda_device,
-                # TODO(brendanr): Pass in an arg following Joel's trainer refactor.
-                batch_weight_key="",
+                batch_weight_key=batch_weight_key,
             )
 
             for key, value in test_metrics.items():

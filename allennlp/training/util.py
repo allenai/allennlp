@@ -274,7 +274,7 @@ def create_serialization_dir(
         if not recover:
             raise ConfigurationError(
                 f"Serialization directory ({serialization_dir}) already exists and is "
-                f"not empty. Specify --recover to recover training from existing output."
+                f"not empty. Specify --recover to recover from an existing output folder."
             )
 
         logger.info(f"Recovering from prior training at {serialization_dir}.")

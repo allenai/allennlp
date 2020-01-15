@@ -1,11 +1,15 @@
 import codecs
-import pickle
+import copy
 import gzip
+import pickle
+import shutil
 import zipfile
 from copy import deepcopy
-import copy
-import shutil
+
 import pytest
+
+from allennlp.common.checks import ConfigurationError
+from allennlp.common.params import Params
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Instance, Token
 from allennlp.data.batch import Batch
@@ -13,13 +17,11 @@ from allennlp.data.fields import TextField
 from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenCharactersIndexer
 from allennlp.data.tokenizers import CharacterTokenizer
 from allennlp.data.vocabulary import (
-    Vocabulary,
     _NamespaceDependentDefaultDict,
-    DEFAULT_OOV_TOKEN,
     _read_pretrained_tokens,
+    DEFAULT_OOV_TOKEN,
+    Vocabulary,
 )
-from allennlp.common.params import Params
-from allennlp.common.checks import ConfigurationError
 from allennlp.modules.token_embedders.embedding import format_embeddings_file_uri
 
 
