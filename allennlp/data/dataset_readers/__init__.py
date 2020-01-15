@@ -15,7 +15,6 @@ from allennlp.data.dataset_readers.coreference_resolution import ConllCorefReade
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.dataset_readers.event2mind import Event2MindDatasetReader
 from allennlp.data.dataset_readers.interleaving_dataset_reader import InterleavingDatasetReader
-from allennlp.data.dataset_readers.language_modeling import LanguageModelingReader
 from allennlp.data.dataset_readers.masked_language_modeling import MaskedLanguageModelingReader
 from allennlp.data.dataset_readers.next_token_lm import NextTokenLmReader
 from allennlp.data.dataset_readers.multiprocess_dataset_reader import MultiprocessDatasetReader
