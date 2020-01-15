@@ -17,8 +17,8 @@ class CosineWithRestarts(LearningRateScheduler):
     This is described in the paper https://arxiv.org/abs/1608.03983. Note that early
     stopping should typically be avoided when using this schedule.
 
-    Parameters
-    ----------
+    # Parameters
+
     optimizer : ``torch.optim.Optimizer``
     t_initial : ``int``
         The number of iterations (epochs) within the first cycle.

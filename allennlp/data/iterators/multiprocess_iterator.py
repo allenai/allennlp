@@ -100,8 +100,8 @@ class MultiprocessIterator(DataIterator):
     Wraps another ```DataIterator``` and uses it to generate tensor dicts
     using multiple processes.
 
-    Parameters
-    ----------
+    # Parameters
+
     base_iterator : ``DataIterator``
         The ``DataIterator`` for generating tensor dicts. It will be shared among
         processes, so it should not be stateful in any way.

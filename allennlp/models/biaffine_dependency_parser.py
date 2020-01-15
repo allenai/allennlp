@@ -33,8 +33,8 @@ POS_TO_IGNORE = {"``", "''", ":", ",", ".", "PU", "PUNCT", "SYM"}
 class BiaffineDependencyParser(Model):
     """
     This dependency parser follows the model of
-    ` Deep Biaffine Attention for Neural Dependency Parsing (Dozat and Manning, 2016)
-    <https://arxiv.org/abs/1611.01734>`_ .
+    [Deep Biaffine Attention for Neural Dependency Parsing (Dozat and Manning, 2016)]
+    (https://arxiv.org/abs/1611.01734) .
 
     Word representations are generated using a bidirectional LSTM,
     followed by separate biaffine classifiers for pairs of words,
@@ -45,8 +45,8 @@ class BiaffineDependencyParser(Model):
     a MST on a fully connected graph, where nodes are words and edges
     are scored dependency arcs.
 
-    Parameters
-    ----------
+    # Parameters
+
     vocab : ``Vocabulary``, required
         A Vocabulary, required in order to compute sizes for input/output projections.
     text_field_embedder : ``TextFieldEmbedder``, required
@@ -177,8 +177,8 @@ class BiaffineDependencyParser(Model):
     ) -> Dict[str, torch.Tensor]:
 
         """
-        Parameters
-        ----------
+        # Parameters
+
         words : Dict[str, torch.LongTensor], required
             The output of ``TextField.as_array()``, which should typically be passed directly to a
             ``TextFieldEmbedder``. This output is a dictionary mapping keys to ``TokenIndexer``
@@ -206,8 +206,8 @@ class BiaffineDependencyParser(Model):
             A torch tensor representing the sequence of integer indices denoting the parent of every
             word in the dependency parse. Has shape ``(batch_size, sequence_length)``.
 
-        Returns
-        -------
+        # Returns
+
         An output dictionary consisting of:
         loss : ``torch.FloatTensor``, optional
             A scalar loss to be optimised.
@@ -368,8 +368,8 @@ class BiaffineDependencyParser(Model):
         """
         Computes the arc and tag loss for a sequence given gold head indices and tags.
 
-        Parameters
-        ----------
+        # Parameters
+
         head_tag_representation : ``torch.Tensor``, required.
             A tensor of shape (batch_size, sequence_length, tag_representation_dim),
             which will be used to generate predictions for the dependency tags
@@ -391,8 +391,8 @@ class BiaffineDependencyParser(Model):
             A mask of shape (batch_size, sequence_length), denoting unpadded
             elements in the sequence.
 
-        Returns
-        -------
+        # Returns
+
         arc_nll : ``torch.Tensor``, required.
             The negative log likelihood from the arc loss.
         tag_nll : ``torch.Tensor``, required.
@@ -451,8 +451,8 @@ class BiaffineDependencyParser(Model):
         is not guaranteed to produce trees (i.e. there maybe be multiple roots,
         or cycles when children are attached to their parents).
 
-        Parameters
-        ----------
+        # Parameters
+
         head_tag_representation : ``torch.Tensor``, required.
             A tensor of shape (batch_size, sequence_length, tag_representation_dim),
             which will be used to generate predictions for the dependency tags
@@ -465,8 +465,8 @@ class BiaffineDependencyParser(Model):
             A tensor of shape (batch_size, sequence_length, sequence_length) used to generate
             a distribution over attachments of a given word to all other words.
 
-        Returns
-        -------
+        # Returns
+
         heads : ``torch.Tensor``
             A tensor of shape (batch_size, sequence_length) representing the
             greedily decoded heads of each word.
@@ -510,8 +510,8 @@ class BiaffineDependencyParser(Model):
         to the most likely dependency label probability for that arc. The MST is
         then generated from this directed graph.
 
-        Parameters
-        ----------
+        # Parameters
+
         head_tag_representation : ``torch.Tensor``, required.
             A tensor of shape (batch_size, sequence_length, tag_representation_dim),
             which will be used to generate predictions for the dependency tags
@@ -524,8 +524,8 @@ class BiaffineDependencyParser(Model):
             A tensor of shape (batch_size, sequence_length, sequence_length) used to generate
             a distribution over attachments of a given word to all other words.
 
-        Returns
-        -------
+        # Returns
+
         heads : ``torch.Tensor``
             A tensor of shape (batch_size, sequence_length) representing the
             greedily decoded heads of each word.
@@ -611,8 +611,8 @@ class BiaffineDependencyParser(Model):
         either gold or predicted heads, depending on whether this function is
         being called to compute the loss, or if it's being called during inference.
 
-        Parameters
-        ----------
+        # Parameters
+
         head_tag_representation : ``torch.Tensor``, required.
             A tensor of shape (batch_size, sequence_length, tag_representation_dim),
             which will be used to generate predictions for the dependency tags
@@ -625,8 +625,8 @@ class BiaffineDependencyParser(Model):
             A tensor of shape (batch_size, sequence_length). The indices of the heads
             for every word.
 
-        Returns
-        -------
+        # Returns
+
         head_tag_logits : ``torch.Tensor``
             A tensor of shape (batch_size, sequence_length, num_head_tags),
             representing logits for predicting a distribution over tags
@@ -661,15 +661,15 @@ class BiaffineDependencyParser(Model):
         Here, we create a new mask to exclude word indices which
         have a "punctuation-like" part of speech tag.
 
-        Parameters
-        ----------
+        # Parameters
+
         mask : ``torch.LongTensor``, required.
             The original mask.
         pos_tags : ``torch.LongTensor``, required.
             The pos tags for the sequence.
 
-        Returns
-        -------
+        # Returns
+
         A new mask, where any indices equal to labels
         we should be ignoring are masked.
         """

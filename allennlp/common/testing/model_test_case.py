@@ -52,8 +52,8 @@ class ModelTestCase(AllenNlpTestCase):
         disable_dropout: bool = True,
     ):
         """
-        Parameters
-        ----------
+        # Parameters
+
         param_file : ``str``
             Path to a training configuration file that we will use to train the model for this
             test.
@@ -235,8 +235,8 @@ class ModelTestCase(AllenNlpTestCase):
         Ensures that the model performs the same on a batch of instances as on individual instances.
         Ignores metrics matching the regexp .*loss.* and those specified explicitly.
 
-        Parameters
-        ----------
+        # Parameters
+
         keys_to_ignore : ``Iterable[str]``, optional (default=())
             Names of metrics that should not be taken into account, e.g. "batch_weight".
         """

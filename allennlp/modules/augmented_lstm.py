@@ -22,8 +22,8 @@ class AugmentedLstm(torch.nn.Module):
     optimizations for stacked RNNs due to the highway layers and
     variational dropout.
 
-    Parameters
-    ----------
+    # Parameters
+
     input_size : ``int``, required.
         The dimension of the inputs to the LSTM.
     hidden_size : ``int``, required.
@@ -33,8 +33,8 @@ class AugmentedLstm(torch.nn.Module):
         Forwards by default, or backwards if False.
     recurrent_dropout_probability : ``float``, optional (default = 0.0)
         The dropout probability to be used in a dropout scheme as stated in
-        `A Theoretically Grounded Application of Dropout in Recurrent Neural Networks
-        <https://arxiv.org/abs/1512.05287>`_ . Implementation wise, this simply
+        [A Theoretically Grounded Application of Dropout in Recurrent Neural Networks]
+        (https://arxiv.org/abs/1512.05287). Implementation wise, this simply
         applies a fixed dropout mask per sequence to the recurrent connection of the
         LSTM. Dropout is not applied to the output sequence nor the last hidden
         state that is returned, it is only applied to all previous hidden states.
@@ -49,8 +49,8 @@ class AugmentedLstm(torch.nn.Module):
         for backwards compatibility reasons and will be removed (and set to False)
         in future releases.
 
-    Returns
-    -------
+    # Returns
+
     output_accumulator : PackedSequence
         The outputs of the LSTM for each timestep. A tensor of shape
         (batch_size, max_timesteps, hidden_size) where for a given batch
@@ -107,8 +107,8 @@ class AugmentedLstm(torch.nn.Module):
         initial_state: Optional[Tuple[torch.Tensor, torch.Tensor]] = None,
     ):
         """
-        Parameters
-        ----------
+        # Parameters
+
         inputs : ``PackedSequence``, required.
             A tensor of shape (batch_size, num_timesteps, input_size)
             to apply the LSTM over.
@@ -117,8 +117,8 @@ class AugmentedLstm(torch.nn.Module):
             A tuple (state, memory) representing the initial hidden state and memory
             of the LSTM. Each tensor has shape (1, batch_size, output_dimension).
 
-        Returns
-        -------
+        # Returns
+
         A PackedSequence containing a torch.FloatTensor of shape
         (batch_size, num_timesteps, output_dimension) representing
         the outputs of the LSTM per timestep and a tuple containing

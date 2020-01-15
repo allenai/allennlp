@@ -38,8 +38,8 @@ class Event2MindDatasetReader(DatasetReader):
 
     `START_SYMBOL` and `END_SYMBOL` tokens are added to the source and target sequences.
 
-    Parameters
-    ----------
+    # Parameters
+
     source_tokenizer : ``Tokenizer``, optional
         Tokenizer to use to split the input sequences into words or other kinds of tokens. Defaults
         to ``SpacyTokenizer()``.

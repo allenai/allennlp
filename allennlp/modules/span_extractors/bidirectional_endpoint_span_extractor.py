@@ -36,8 +36,8 @@ class BidirectionalEndpointSpanExtractor(SpanExtractor):
     The computed similarity function would then be ``[x; y; x*y]``, which can then be optionally
     concatenated with an embedded representation of the width of the span.
 
-    Parameters
-    ----------
+    # Parameters
+
     input_dim : ``int``, required
         The final dimension of the ``sequence_tensor``.
     forward_combination : ``str``, optional (default = "y-x").

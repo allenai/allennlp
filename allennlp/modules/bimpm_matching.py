@@ -25,8 +25,8 @@ def multi_perspective_match(
     Calculate multi-perspective cosine matching between time-steps of vectors
     of the same length.
 
-    Parameters
-    ----------
+    # Parameters
+
     vector1 : ``torch.Tensor``
         A tensor of shape ``(batch, seq_len, hidden_size)``
     vector2 : ``torch.Tensor``
@@ -34,8 +34,8 @@ def multi_perspective_match(
     weight : ``torch.Tensor``
         A tensor of shape ``(num_perspectives, hidden_size)``
 
-    Returns
-    -------
+    # Returns
+
     A tuple of two tensors consisting multi-perspective matching results.
     The first one is of the shape (batch, seq_len, 1), the second one is of shape
     (batch, seq_len, num_perspectives)
@@ -65,8 +65,8 @@ def multi_perspective_match_pairwise(
     Calculate multi-perspective cosine matching between each time step of
     one vector and each time step of another vector.
 
-    Parameters
-    ----------
+    # Parameters
+
     vector1 : ``torch.Tensor``
         A tensor of shape ``(batch, seq_len1, hidden_size)``
     vector2 : ``torch.Tensor``
@@ -76,8 +76,8 @@ def multi_perspective_match_pairwise(
     eps : ``float`` optional, (default = 1e-8)
         A small value to avoid zero division problem
 
-    Returns
-    -------
+    # Returns
+
     A tensor of shape (batch, seq_len1, seq_len2, num_perspectives) consisting
     multi-perspective matching results
     """
@@ -104,14 +104,14 @@ def multi_perspective_match_pairwise(
 
 class BiMpmMatching(nn.Module, FromParams):
     """
-    This ``Module`` implements the matching layer of BiMPM model described in `Bilateral
-    Multi-Perspective Matching for Natural Language Sentences <https://arxiv.org/abs/1702.03814>`_
+    This ``Module`` implements the matching layer of BiMPM model described in [Bilateral
+    Multi-Perspective Matching for Natural Language Sentences](https://arxiv.org/abs/1702.03814)
     by Zhiguo Wang et al., 2017.
-    Also please refer to the `TensorFlow implementation <https://github.com/zhiguowang/BiMPM/>`_ and
-    `PyTorch implementation <https://github.com/galsang/BIMPM-pytorch>`_.
+    Also please refer to the [TensorFlow implementation](https://github.com/zhiguowang/BiMPM/) and
+    [PyTorch implementation](https://github.com/galsang/BIMPM-pytorch).
 
-    Parameters
-    ----------
+    # Parameters
+
     hidden_dim : ``int``, optional (default = 100)
         The hidden dimension of the representations
     num_perspectives : ``int``, optional (default = 20)
@@ -213,8 +213,8 @@ class BiMpmMatching(nn.Module, FromParams):
         Given the forward (or backward) representations of sentence1 and sentence2, apply four bilateral
         matching functions between them in one direction.
 
-        Parameters
-        ----------
+        # Parameters
+
         context_1 : ``torch.Tensor``
             Tensor of shape (batch_size, seq_len1, hidden_dim) representing the encoding of the first sentence.
         mask_1 : ``torch.Tensor``
@@ -226,8 +226,8 @@ class BiMpmMatching(nn.Module, FromParams):
             Binary Tensor of shape (batch_size, seq_len2), indicating which
             positions in the second sentence are padding (0) and which are not (1).
 
-        Returns
-        -------
+        # Returns
+
         A tuple of matching vectors for the two sentences. Each of which is a list of
         matching vectors of shape (batch, seq_len, num_perspectives or 1)
         """

@@ -10,7 +10,7 @@ mypy==0.730
 black
 
 # For creating git precommit hooks
-pre-commit==1.18.3
+pre-commit==1.21.0
 
 # Allows generation of coverage reports with pytest.
 pytest-cov
@@ -24,17 +24,19 @@ aiohttp
 
 #### DOC-RELATED PACKAGES ####
 
-# Builds our documentation.
-sphinx>=2.1.1
+# YAML manipulation
+ruamel.yaml
 
-# Watches the documentation directory and rebuilds on changes.
-sphinx-autobuild
-
-# doc theme
-sphinx_rtd_theme
+pydoc-markdown==2.0.5
+markdown-include==0.5.1
+# Package for the material theme for mkdocs
+mkdocs-material==4.6.0
 
 # Only used to convert our readme to reStructuredText on Pypi.
 pypandoc
 
 # Pypi uploads
 twine>=1.11.0
+
+# Optional dependencies, which we install for testing purposes.
+matplotlib>=2.2.3

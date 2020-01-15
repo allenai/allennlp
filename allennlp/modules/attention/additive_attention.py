@@ -15,8 +15,8 @@ class AdditiveAttention(Attention):
     This attention is often referred as concat or additive attention. It was introduced in
     <https://arxiv.org/abs/1409.0473> by Bahdanau et al.
 
-    Parameters
-    ----------
+    # Parameters
+
     vector_dim : ``int``, required
         The dimension of the vector, ``x``, described above.  This is ``x.size()[-1]`` - the length
         of the vector that will go into the similarity computation.  We need this so we can build

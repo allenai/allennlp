@@ -1,5 +1,5 @@
 """
-A `Highway layer <https://arxiv.org/abs/1505.00387>`_ that does a gated combination of a linear
+A [Highway layer](https://arxiv.org/abs/1505.00387) that does a gated combination of a linear
 transformation and a non-linear transformation of its input.
 """
 
@@ -11,7 +11,7 @@ from overrides import overrides
 
 class Highway(torch.nn.Module):
     """
-    A `Highway layer <https://arxiv.org/abs/1505.00387>`_ does a gated combination of a linear
+    A [Highway layer](https://arxiv.org/abs/1505.00387) does a gated combination of a linear
     transformation and a non-linear transformation of its input.  :math:`y = g * x + (1 - g) *
     f(A(x))`, where :math:`A` is a linear transformation, :math:`f` is an element-wise
     non-linearity, and :math:`g` is an element-wise gate, computed as :math:`sigmoid(B(x))`.
@@ -19,8 +19,8 @@ class Highway(torch.nn.Module):
     This module will apply a fixed number of highway layers to its input, returning the final
     result.
 
-    Parameters
-    ----------
+    # Parameters
+
     input_dim : ``int``, required
         The dimensionality of :math:`x`.  We assume the input has shape ``(batch_size, ...,
         input_dim)``.

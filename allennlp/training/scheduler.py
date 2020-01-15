@@ -59,8 +59,8 @@ class Scheduler:
         """
         Load the schedulers state.
 
-        Parameters
-        ----------
+        # Parameters
+
         state_dict : ``Dict[str, Any]``
             Scheduler state. Should be an object returned from a call to ``state_dict``.
         """

@@ -36,13 +36,13 @@ class SemanticRoleLabelerPredictor(Predictor):
                 {"verb": "...", "description": "...", "tags": [...]},
             ]}
 
-        Parameters
-        ----------
+        # Parameters
+
         sentence, ``str``
             The sentence to parse via semantic role labeling.
 
-        Returns
-        -------
+        # Returns
+
         A dictionary representation of the semantic roles in the sentence.
         """
         return self.predict_json({"sentence": sentence})
@@ -52,13 +52,13 @@ class SemanticRoleLabelerPredictor(Predictor):
         Predicts the semantic roles of the supplied sentence tokens and returns a dictionary
         with the results.
 
-        Parameters
-        ----------
+        # Parameters
+
         tokenized_sentence, ``List[str]``
             The sentence tokens to parse via semantic role labeling.
 
-        Returns
-        -------
+        # Returns
+
         A dictionary representation of the semantic roles in the sentence.
         """
         spacy_doc = Doc(self._tokenizer.spacy.vocab, words=tokenized_sentence)
@@ -120,13 +120,13 @@ class SemanticRoleLabelerPredictor(Predictor):
         after being passed through the model (as really we care about all the frames of the sentence
         together, rather than separately).
 
-        Parameters
-        ----------
+        # Parameters
+
         json_dict : ``JsonDict``, required.
             JSON that looks like ``{"sentence": "..."}``.
 
-        Returns
-        -------
+        # Returns
+
         instances : ``List[Instance]``
             One instance per verb.
         """

@@ -17,8 +17,8 @@ class ElmoTokenEmbedder(TokenEmbedder):
     ELMo representations at the input of your network.  It's essentially a wrapper
     around Elmo(num_output_representations=1, ...)
 
-    Parameters
-    ----------
+    # Parameters
+
     options_file : ``str``, required.
         An ELMo JSON options file.
     weight_file : ``str``, required.
@@ -82,16 +82,16 @@ class ElmoTokenEmbedder(TokenEmbedder):
 
     def forward(self, inputs: torch.Tensor, word_inputs: torch.Tensor = None) -> torch.Tensor:
         """
-        Parameters
-        ----------
+        # Parameters
+
         inputs : ``torch.Tensor``
             Shape ``(batch_size, timesteps, 50)`` of character ids representing the current batch.
         word_inputs : ``torch.Tensor``, optional.
             If you passed a cached vocab, you can in addition pass a tensor of shape
             ``(batch_size, timesteps)``, which represent word ids which have been pre-cached.
 
-        Returns
-        -------
+        # Returns
+
         The ELMo representations for the input sequence, shape
         ``(batch_size, timesteps, embedding_dim)``
         """
@@ -106,7 +106,9 @@ class ElmoTokenEmbedder(TokenEmbedder):
 
     # Custom vocab_to_cache logic requires a from_params implementation.
     @classmethod
-    def from_params(cls, vocab: Vocabulary, params: Params) -> "ElmoTokenEmbedder":  # type: ignore
+    def from_params(  # type: ignore
+        cls, vocab: Vocabulary, params: Params, **extras
+    ) -> "ElmoTokenEmbedder":
 
         params.add_file_to_archive("options_file")
         params.add_file_to_archive("weight_file")

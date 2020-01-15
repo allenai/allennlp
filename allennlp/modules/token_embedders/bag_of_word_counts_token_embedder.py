@@ -17,8 +17,8 @@ class BagOfWordCountsTokenEmbedder(TokenEmbedder):
 
     By default, we ignore padding tokens.
 
-    Parameters
-    ----------
+    # Parameters
+
     vocab : ``Vocabulary``
     vocab_namespace : ``str``
         namespace of vocabulary to embed
@@ -57,14 +57,14 @@ class BagOfWordCountsTokenEmbedder(TokenEmbedder):
 
     def forward(self, inputs: torch.Tensor) -> torch.Tensor:
         """
-        Parameters
-        ----------
+        # Parameters
+
         inputs : ``torch.Tensor``
             Shape ``(batch_size, timesteps, sequence_length)`` of word ids
             representing the current batch.
 
-        Returns
-        -------
+        # Returns
+
         The bag-of-words representations for the input sequence, shape
         ``(batch_size, vocab_size)``
         """

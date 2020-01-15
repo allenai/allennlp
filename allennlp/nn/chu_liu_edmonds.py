@@ -14,8 +14,8 @@ def decode_mst(
     Decode the optimal MST tree with the Chu-Liu-Edmonds algorithm for
     maximum spanning arborescences on graphs.
 
-    Parameters
-    ----------
+    # Parameters
+
     energy : ``numpy.ndarray``, required.
         A tensor with shape (num_labels, timesteps, timesteps)
         containing the energy of each edge. If has_labels is ``False``,
@@ -102,8 +102,8 @@ def chu_liu_edmonds(
     Note that this function operates in place, so variables
     will be modified.
 
-    Parameters
-    ----------
+    # Parameters
+
     length : ``int``, required.
         The number of nodes.
     score_matrix : ``numpy.ndarray``, required.
@@ -123,8 +123,8 @@ def chu_liu_edmonds(
         A list containing the nodes that a particular node
         is representing at this iteration in the graph.
 
-    Returns
-    -------
+    # Returns
+
     Nothing - all variables are modified in place.
 
     """

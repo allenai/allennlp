@@ -21,8 +21,8 @@ class CrfTagger(Model):
     The ``CrfTagger`` encodes a sequence of text with a ``Seq2SeqEncoder``,
     then uses a Conditional Random Field model to predict a tag for each token in the sequence.
 
-    Parameters
-    ----------
+    # Parameters
+
     vocab : ``Vocabulary``, required
         A Vocabulary, required in order to compute sizes for input/output projections.
     text_field_embedder : ``TextFieldEmbedder``, required
@@ -169,8 +169,8 @@ class CrfTagger(Model):
     ) -> Dict[str, torch.Tensor]:
 
         """
-        Parameters
-        ----------
+        # Parameters
+
         tokens : ``Dict[str, torch.LongTensor]``, required
             The output of ``TextField.as_array()``, which should typically be passed directly to a
             ``TextFieldEmbedder``. This output is a dictionary mapping keys to ``TokenIndexer``
@@ -186,8 +186,8 @@ class CrfTagger(Model):
         metadata : ``List[Dict[str, Any]]``, optional, (default = None)
             metadata containg the original words in the sentence to be tagged under a 'words' key.
 
-        Returns
-        -------
+        # Returns
+
         An output dictionary consisting of:
 
         logits : ``torch.FloatTensor``

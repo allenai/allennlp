@@ -14,8 +14,8 @@ class Metric(Registrable):
         self, predictions: torch.Tensor, gold_labels: torch.Tensor, mask: Optional[torch.Tensor]
     ):
         """
-        Parameters
-        ----------
+        # Parameters
+
         predictions : ``torch.Tensor``, required.
             A tensor of predictions.
         gold_labels : ``torch.Tensor``, required.

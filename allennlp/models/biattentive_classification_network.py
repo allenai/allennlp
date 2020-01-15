@@ -6,7 +6,6 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 
-from allennlp.common import Params
 from allennlp.common.checks import check_dimensions_match, ConfigurationError
 from allennlp.data import Vocabulary
 from allennlp.modules import Elmo, FeedForward, Maxout, Seq2SeqEncoder, TextFieldEmbedder
@@ -20,8 +19,8 @@ from allennlp.training.metrics import CategoricalAccuracy
 class BiattentiveClassificationNetwork(Model):
     """
     This class implements the Biattentive Classification Network model described
-    in section 5 of `Learned in Translation: Contextualized Word Vectors (NIPS 2017)
-    <https://arxiv.org/abs/1708.00107>`_ for text classification. We assume we're
+    in section 5 of [Learned in Translation: Contextualized Word Vectors (NIPS 2017)]
+    (https://arxiv.org/abs/1708.00107) for text classification. We assume we're
     given a piece of text, and we predict some output label.
 
     At a high level, the model starts by embedding the tokens and running them through
@@ -36,8 +35,8 @@ class BiattentiveClassificationNetwork(Model):
     which is passed through a maxout network or some feed-forward layers
     to output a classification (``output_layer``).
 
-    Parameters
-    ----------
+    # Parameters
+
     vocab : ``Vocabulary``, required
         A Vocabulary, required in order to compute sizes for input/output projections.
     text_field_embedder : ``TextFieldEmbedder``, required
@@ -81,7 +80,7 @@ class BiattentiveClassificationNetwork(Model):
         integrator: Seq2SeqEncoder,
         integrator_dropout: float,
         output_layer: Union[FeedForward, Maxout],
-        elmo: Elmo,
+        elmo: Elmo = None,
         use_input_elmo: bool = False,
         use_integrator_output_elmo: bool = False,
         initializer: InitializerApplicator = InitializerApplicator(),
@@ -210,14 +209,14 @@ class BiattentiveClassificationNetwork(Model):
     ) -> Dict[str, torch.Tensor]:
 
         """
-        Parameters
-        ----------
+        # Parameters
+
         tokens : Dict[str, torch.LongTensor], required
             The output of ``TextField.as_array()``.
         label : torch.LongTensor, optional (default = None)
             A variable representing the label for each instance in the batch.
-        Returns
-        -------
+        # Returns
+
         An output dictionary consisting of:
         class_probabilities : torch.FloatTensor
             A tensor of shape ``(batch_size, num_classes)`` representing a
@@ -331,49 +330,3 @@ class BiattentiveClassificationNetwork(Model):
         return {
             metric_name: metric.get_metric(reset) for metric_name, metric in self.metrics.items()
         }
-
-    # The FeedForward vs Maxout logic here requires a custom from_params.
-    @classmethod
-    def from_params(  # type: ignore
-        cls, vocab: Vocabulary, params: Params
-    ) -> "BiattentiveClassificationNetwork":
-
-        embedder_params = params.pop("text_field_embedder")
-        text_field_embedder = TextFieldEmbedder.from_params(vocab=vocab, params=embedder_params)
-        embedding_dropout = params.pop("embedding_dropout")
-        pre_encode_feedforward = FeedForward.from_params(params.pop("pre_encode_feedforward"))
-        encoder = Seq2SeqEncoder.from_params(params.pop("encoder"))
-        integrator = Seq2SeqEncoder.from_params(params.pop("integrator"))
-        integrator_dropout = params.pop("integrator_dropout")
-
-        output_layer_params = params.pop("output_layer")
-        if "activations" in output_layer_params:
-            output_layer = FeedForward.from_params(output_layer_params)
-        else:
-            output_layer = Maxout.from_params(output_layer_params)
-
-        elmo = params.pop("elmo", None)
-        if elmo is not None:
-            elmo = Elmo.from_params(elmo)
-        use_input_elmo = params.pop_bool("use_input_elmo", False)
-        use_integrator_output_elmo = params.pop_bool("use_integrator_output_elmo", False)
-
-        initializer = InitializerApplicator.from_params(params.pop("initializer", []))
-        regularizer = RegularizerApplicator.from_params(params.pop("regularizer", []))
-        params.assert_empty(cls.__name__)
-
-        return cls(
-            vocab=vocab,
-            text_field_embedder=text_field_embedder,
-            embedding_dropout=embedding_dropout,
-            pre_encode_feedforward=pre_encode_feedforward,
-            encoder=encoder,
-            integrator=integrator,
-            integrator_dropout=integrator_dropout,
-            output_layer=output_layer,
-            elmo=elmo,
-            use_input_elmo=use_input_elmo,
-            use_integrator_output_elmo=use_integrator_output_elmo,
-            initializer=initializer,
-            regularizer=regularizer,
-        )

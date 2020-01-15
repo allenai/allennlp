@@ -17,8 +17,8 @@ class QaNetEncoder(Seq2SeqEncoder):
     """
     Stack multiple QANetEncoderBlock into one sequence encoder.
 
-    Parameters
-    ----------
+    # Parameters
+
     input_dim : ``int``, required.
         The input dimension of the encoder.
     hidden_dim : ``int``, required.
@@ -120,8 +120,8 @@ class QaNetEncoder(Seq2SeqEncoder):
 @Seq2SeqEncoder.register("qanet_encoder_block")
 class QaNetEncoderBlock(Seq2SeqEncoder):
     """
-    Implements the encoder block described in `QANet: Combining Local Convolution with Global
-    Self-attention for Reading Comprehension <https://openreview.net/forum?id=B14TlG-RW>`_ .
+    Implements the encoder block described in [QANet: Combining Local Convolution with Global
+    Self-attention for Reading Comprehension](https://openreview.net/forum?id=B14TlG-RW).
 
     One encoder block mainly contains 4 parts:
 
@@ -132,8 +132,8 @@ class QaNetEncoderBlock(Seq2SeqEncoder):
            scaled by the square root of the sequence length.
         4. A two-layer FeedForward network.
 
-    Parameters
-    ----------
+    # Parameters
+
     input_dim : ``int``, required.
         The input dimension of the encoder.
     hidden_dim : ``int``, required.

@@ -53,8 +53,8 @@ class SampledSoftmaxLoss(torch.nn.Module):
     For the (tie_embeddings=True and use_character_inputs=False) case,
     then the embeddings DO include the extra 0 padding, to be consistent with the word embedding layer.
 
-    Parameters
-    ----------
+    # Parameters
+
     num_words, ``int``, required
         The number of words in the vocabulary
     embedding_dim, ``int``, required

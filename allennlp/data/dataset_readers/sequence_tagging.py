@@ -25,8 +25,8 @@ class SequenceTaggingDatasetReader(DatasetReader):
     and converts it into a ``Dataset`` suitable for sequence tagging. You can also specify
     alternative delimiters in the constructor.
 
-    Parameters
-    ----------
+    # Parameters
+
     word_tag_delimiter: ``str``, optional (default=``"###"``)
         The text that separates each WORD from its TAG.
     token_delimiter: ``str``, optional (default=``None``)

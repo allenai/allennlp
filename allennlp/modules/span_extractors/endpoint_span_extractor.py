@@ -24,8 +24,8 @@ class EndpointSpanExtractor(SpanExtractor):
     The computed similarity function would then be ``[x; y; x*y]``, which can then be optionally
     concatenated with an embedded representation of the width of the span.
 
-    Parameters
-    ----------
+    # Parameters
+
     input_dim : ``int``, required.
         The final dimension of the ``sequence_tensor``.
     combination : ``str``, optional (default = "x,y").
@@ -107,6 +107,11 @@ class EndpointSpanExtractor(SpanExtractor):
             span_ends = span_ends * span_indices_mask
 
         if not self._use_exclusive_start_indices:
+            if sequence_tensor.size(-1) != self._input_dim:
+                raise ValueError(
+                    f"Dimension mismatch expected ({sequence_tensor.size(-1)}) "
+                    f"received ({self._input_dim})."
+                )
             start_embeddings = util.batched_index_select(sequence_tensor, span_starts)
             end_embeddings = util.batched_index_select(sequence_tensor, span_ends)
 

@@ -21,8 +21,8 @@ class LogToTensorboard(Callback):
     """
     Callback that handles all Tensorboard logging.
 
-    Parameters
-    ----------
+    # Parameters
+
     tensorboard : ``TensorboardWriter``
         The TensorboardWriter instance to write to.
     log_batch_size_period : int, optional (default: None)
@@ -117,10 +117,12 @@ class LogToTensorboard(Callback):
 
     @classmethod
     def from_params(  # type: ignore
-        cls, serialization_dir: str, params: Params
+        cls, serialization_dir: str, params: Params, **extras
     ) -> "LogToTensorboard":
         log_batch_size_period = params.pop_int("log_batch_size_period", None)
         tensorboard = TensorboardWriter.from_params(
             params=params, serialization_dir=serialization_dir, get_batch_num_total=lambda: None
         )
+        # TODO(mattg): remove get_batch_num_total from TensorboardWriter, and instead just add a
+        # method / arguments to tell the writer what batch num we're at.
         return LogToTensorboard(tensorboard, log_batch_size_period)

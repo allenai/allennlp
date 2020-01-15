@@ -18,8 +18,8 @@ class LstmCellWithProjection(torch.nn.Module):
     it cannot make use of CUDNN optimizations for stacked RNNs due to and
     variational dropout and the custom nature of the cell state.
 
-    Parameters
-    ----------
+    # Parameters
+
     input_size : ``int``, required.
         The dimension of the inputs to the LSTM.
     hidden_size : ``int``, required.
@@ -31,8 +31,8 @@ class LstmCellWithProjection(torch.nn.Module):
         Forwards by default, or backwards if False.
     recurrent_dropout_probability : ``float``, optional (default = 0.0)
         The dropout probability to be used in a dropout scheme as stated in
-        `A Theoretically Grounded Application of Dropout in Recurrent Neural Networks
-        <https://arxiv.org/abs/1512.05287>`_ . Implementation wise, this simply
+        [A Theoretically Grounded Application of Dropout in Recurrent Neural Networks]
+        (https://arxiv.org/abs/1512.05287). Implementation wise, this simply
         applies a fixed dropout mask per sequence to the recurrent connection of the
         LSTM.
     state_projection_clip_value : ``float``, optional, (default = None)
@@ -40,8 +40,8 @@ class LstmCellWithProjection(torch.nn.Module):
     memory_cell_clip_value : ``float``, optional, (default = None)
         The magnitude with which to clip the memory cell.
 
-    Returns
-    -------
+    # Returns
+
     output_accumulator : ``torch.FloatTensor``
         The outputs of the LSTM for each timestep. A tensor of shape
         (batch_size, max_timesteps, hidden_size) where for a given batch
@@ -100,8 +100,8 @@ class LstmCellWithProjection(torch.nn.Module):
         initial_state: Optional[Tuple[torch.Tensor, torch.Tensor]] = None,
     ):
         """
-        Parameters
-        ----------
+        # Parameters
+
         inputs : ``torch.FloatTensor``, required.
             A tensor of shape (batch_size, num_timesteps, input_size)
             to apply the LSTM over.
@@ -112,8 +112,8 @@ class LstmCellWithProjection(torch.nn.Module):
             of the LSTM. The ``state`` has shape (1, batch_size, hidden_size) and the
             ``memory`` has shape (1, batch_size, cell_size).
 
-        Returns
-        -------
+        # Returns
+
         output_accumulator : ``torch.FloatTensor``
             The outputs of the LSTM for each timestep. A tensor of shape
             (batch_size, max_timesteps, hidden_size) where for a given batch

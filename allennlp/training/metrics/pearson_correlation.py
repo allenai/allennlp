@@ -46,8 +46,8 @@ class PearsonCorrelation(Metric):
         mask: Optional[torch.Tensor] = None,
     ):
         """
-        Parameters
-        ----------
+        # Parameters
+
         predictions : ``torch.Tensor``, required.
             A tensor of predictions of shape (batch_size, ...).
         gold_labels : ``torch.Tensor``, required.
@@ -62,8 +62,8 @@ class PearsonCorrelation(Metric):
 
     def get_metric(self, reset: bool = False):
         """
-        Returns
-        -------
+        # Returns
+
         The accumulated sample Pearson correlation.
         """
         covariance = self._predictions_labels_covariance.get_metric(reset=reset)

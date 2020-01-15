@@ -186,8 +186,8 @@ class MultiprocessDatasetReader(DatasetReader):
     up to non-determinism caused by using multiple worker processes. This can
     be avoided by setting ``num_workers`` to 1.
 
-    Parameters
-    ----------
+    # Parameters
+
     base_reader : ``DatasetReader``
         Each process will use this dataset reader to read zero or more files.
     num_workers : ``int``

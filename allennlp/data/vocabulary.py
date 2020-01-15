@@ -11,7 +11,7 @@ from collections import defaultdict
 from typing import Any, Callable, Dict, Iterable, List, Optional, Set, Union, TYPE_CHECKING
 
 from allennlp.common.util import namespace_match
-from allennlp.common import Params, Registrable
+from allennlp.common import Registrable
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.tqdm import Tqdm
 
@@ -29,8 +29,8 @@ NAMESPACE_PADDING_FILE = "non_padded_namespaces.txt"
 
 class _NamespaceDependentDefaultDict(defaultdict):
     """
-    This is a `defaultdict
-    <https://docs.python.org/2/library/collections.html#collections.defaultdict>`_ where the
+    This is a [defaultdict]
+    (https://docs.python.org/2/library/collections.html#collections.defaultdict) where the
     default value is dependent on the key that is passed.
 
     We use "namespaces" in the :class:`Vocabulary` object to keep track of several different
@@ -47,8 +47,8 @@ class _NamespaceDependentDefaultDict(defaultdict):
     ``passage_tags``, ``question_tags``, etc. (anything that ends with ``tags``) will have the
     ``non_padded`` default value.
 
-    Parameters
-    ----------
+    # Parameters
+
     non_padded_namespaces : ``Iterable[str]``
         A set / list / tuple of strings describing which namespaces are not padded.  If a namespace
         (key) is missing from this dictionary, we will use :func:`namespace_match` to see whether
@@ -119,26 +119,6 @@ def _read_pretrained_tokens(embeddings_file_uri: str) -> List[str]:
     return tokens
 
 
-def pop_max_vocab_size(params: Params) -> Union[int, Dict[str, int]]:
-    """
-    max_vocab_size limits the size of the vocabulary, not including the @@UNKNOWN@@ token.
-
-    max_vocab_size is allowed to be either an int or a Dict[str, int] (or nothing).
-    But it could also be a string representing an int (in the case of environment variable
-    substitution). So we need some complex logic to handle it.
-    """
-    size = params.pop("max_vocab_size", None, keep_as_dict=True)
-
-    if isinstance(size, dict):
-        # This is the Dict[str, int] case.
-        return size
-    elif size is not None:
-        # This is the int / str case.
-        return int(size)
-    else:
-        return None
-
-
 class Vocabulary(Registrable):
     """
     A Vocabulary maps strings to integers, allowing for strings to be mapped to an
@@ -153,8 +133,8 @@ class Vocabulary(Registrable):
     methods on this class allow you to pass in a namespace; by default we use the 'tokens'
     namespace, and you can omit the namespace argument everywhere and just use the default.
 
-    Parameters
-    ----------
+    # Parameters
+
     counter : ``Dict[str, Dict[str, int]]``, optional (default=``None``)
         A collection of counts from which to initialize this vocabulary.  We will examine the
         counts and, together with the other parameters to this class, use them to decide which
@@ -214,7 +194,7 @@ class Vocabulary(Registrable):
         If given, this the string used for the out of vocabulary (OOVs) tokens.
     """
 
-    default_implementation = "default"
+    default_implementation = "from_instances"
 
     def __init__(
         self,
@@ -242,6 +222,7 @@ class Vocabulary(Registrable):
         )
 
         self._retained_counter: Optional[Dict[str, Dict[str, int]]] = None
+
         # Made an empty vocabulary, now extend it.
         self._extend(
             counter,
@@ -253,167 +234,6 @@ class Vocabulary(Registrable):
             tokens_to_add,
             min_pretrained_embeddings,
         )
-
-    def __getstate__(self):
-        """
-        Need to sanitize defaultdict and defaultdict-like objects
-        by converting them to vanilla dicts when we pickle the vocabulary.
-        """
-        state = copy.copy(self.__dict__)
-        state["_token_to_index"] = dict(state["_token_to_index"])
-        state["_index_to_token"] = dict(state["_index_to_token"])
-
-        if "_retained_counter" in state:
-            state["_retained_counter"] = {
-                key: dict(value) for key, value in state["_retained_counter"].items()
-            }
-
-        return state
-
-    def __setstate__(self, state):
-        """
-        Conversely, when we unpickle, we need to reload the plain dicts
-        into our special DefaultDict subclasses.
-        """
-
-        self.__dict__ = copy.copy(state)
-        self._token_to_index = _TokenToIndexDefaultDict(
-            self._non_padded_namespaces, self._padding_token, self._oov_token
-        )
-        self._token_to_index.update(state["_token_to_index"])
-        self._index_to_token = _IndexToTokenDefaultDict(
-            self._non_padded_namespaces, self._padding_token, self._oov_token
-        )
-        self._index_to_token.update(state["_index_to_token"])
-
-    def save_to_files(self, directory: str) -> None:
-        """
-        Persist this Vocabulary to files so it can be reloaded later.
-        Each namespace corresponds to one file.
-
-        Parameters
-        ----------
-        directory : ``str``
-            The directory where we save the serialized vocabulary.
-        """
-        os.makedirs(directory, exist_ok=True)
-        if os.listdir(directory):
-            logging.warning("vocabulary serialization directory %s is not empty", directory)
-
-        with codecs.open(
-            os.path.join(directory, NAMESPACE_PADDING_FILE), "w", "utf-8"
-        ) as namespace_file:
-            for namespace_str in self._non_padded_namespaces:
-                print(namespace_str, file=namespace_file)
-
-        for namespace, mapping in self._index_to_token.items():
-            # Each namespace gets written to its own file, in index order.
-            with codecs.open(
-                os.path.join(directory, namespace + ".txt"), "w", "utf-8"
-            ) as token_file:
-                num_tokens = len(mapping)
-                start_index = 1 if mapping[0] == self._padding_token else 0
-                for i in range(start_index, num_tokens):
-                    print(mapping[i].replace("\n", "@@NEWLINE@@"), file=token_file)
-
-    @classmethod
-    def from_files(
-        cls,
-        directory: str,
-        padding_token: Optional[str] = DEFAULT_PADDING_TOKEN,
-        oov_token: Optional[str] = DEFAULT_OOV_TOKEN,
-    ) -> "Vocabulary":
-        """
-        Loads a ``Vocabulary`` that was serialized using ``save_to_files``.
-
-        Parameters
-        ----------
-        directory : ``str``
-            The directory containing the serialized vocabulary.
-        """
-        logger.info("Loading token dictionary from %s.", directory)
-        padding_token = padding_token if padding_token is not None else DEFAULT_PADDING_TOKEN
-        oov_token = oov_token if oov_token is not None else DEFAULT_OOV_TOKEN
-        with codecs.open(
-            os.path.join(directory, NAMESPACE_PADDING_FILE), "r", "utf-8"
-        ) as namespace_file:
-            non_padded_namespaces = [namespace_str.strip() for namespace_str in namespace_file]
-
-        vocab = cls(
-            non_padded_namespaces=non_padded_namespaces,
-            padding_token=padding_token,
-            oov_token=oov_token,
-        )
-
-        # Check every file in the directory.
-        for namespace_filename in os.listdir(directory):
-            if namespace_filename == NAMESPACE_PADDING_FILE:
-                continue
-            if namespace_filename.startswith("."):
-                continue
-            namespace = namespace_filename.replace(".txt", "")
-            if any(namespace_match(pattern, namespace) for pattern in non_padded_namespaces):
-                is_padded = False
-            else:
-                is_padded = True
-            filename = os.path.join(directory, namespace_filename)
-            vocab.set_from_file(filename, is_padded, namespace=namespace, oov_token=oov_token)
-
-        return vocab
-
-    def set_from_file(
-        self,
-        filename: str,
-        is_padded: bool = True,
-        oov_token: str = DEFAULT_OOV_TOKEN,
-        namespace: str = "tokens",
-    ):
-        """
-        If you already have a vocabulary file for a trained model somewhere, and you really want to
-        use that vocabulary file instead of just setting the vocabulary from a dataset, for
-        whatever reason, you can do that with this method.  You must specify the namespace to use,
-        and we assume that you want to use padding and OOV tokens for this.
-
-        Parameters
-        ----------
-        filename : ``str``
-            The file containing the vocabulary to load.  It should be formatted as one token per
-            line, with nothing else in the line.  The index we assign to the token is the line
-            number in the file (1-indexed if ``is_padded``, 0-indexed otherwise).  Note that this
-            file should contain the OOV token string!
-        is_padded : ``bool``, optional (default=True)
-            Is this vocabulary padded?  For token / word / character vocabularies, this should be
-            ``True``; while for tag or label vocabularies, this should typically be ``False``.  If
-            ``True``, we add a padding token with index 0, and we enforce that the ``oov_token`` is
-            present in the file.
-        oov_token : ``str``, optional (default=DEFAULT_OOV_TOKEN)
-            What token does this vocabulary use to represent out-of-vocabulary characters?  This
-            must show up as a line in the vocabulary file.  When we find it, we replace
-            ``oov_token`` with ``self._oov_token``, because we only use one OOV token across
-            namespaces.
-        namespace : ``str``, optional (default="tokens")
-            What namespace should we overwrite with this vocab file?
-        """
-        if is_padded:
-            self._token_to_index[namespace] = {self._padding_token: 0}
-            self._index_to_token[namespace] = {0: self._padding_token}
-        else:
-            self._token_to_index[namespace] = {}
-            self._index_to_token[namespace] = {}
-        with codecs.open(filename, "r", "utf-8") as input_file:
-            lines = input_file.read().split("\n")
-            # Be flexible about having final newline or not
-            if lines and lines[-1] == "":
-                lines = lines[:-1]
-            for i, line in enumerate(lines):
-                index = i + 1 if is_padded else i
-                token = line.replace("@@NEWLINE@@", "\n")
-                if token == oov_token:
-                    token = self._oov_token
-                self._token_to_index[namespace][token] = index
-                self._index_to_token[namespace][index] = token
-        if is_padded:
-            assert self._oov_token in self._token_to_index[namespace], "OOV token not found!"
 
     @classmethod
     def from_instances(
@@ -455,89 +275,76 @@ class Vocabulary(Registrable):
             oov_token=oov_token,
         )
 
-    # There's enough logic here to require a custom from_params.
     @classmethod
-    def from_params(  # type: ignore
-        cls, params: Params, instances: Iterable["adi.Instance"] = None
-    ):
+    def from_files(
+        cls,
+        directory: str,
+        padding_token: Optional[str] = DEFAULT_PADDING_TOKEN,
+        oov_token: Optional[str] = DEFAULT_OOV_TOKEN,
+    ) -> "Vocabulary":
         """
-        There are two possible ways to build a vocabulary; from a
-        collection of instances, using :func:`Vocabulary.from_instances`, or
-        from a pre-saved vocabulary, using :func:`Vocabulary.from_files`.
-        You can also extend pre-saved vocabulary with collection of instances
-        using this method. This method wraps these options, allowing their
-        specification from a ``Params`` object, generated from a JSON
-        configuration file.
+        Loads a ``Vocabulary`` that was serialized using ``save_to_files``.
 
-        Parameters
-        ----------
-        params: Params, required.
-        instances: Iterable['adi.Instance'], optional
-            If ``params`` doesn't contain a ``directory_path`` key,
-            the ``Vocabulary`` can be built directly from a collection of
-            instances (i.e. a dataset). If ``extend`` key is set False,
-            dataset instances will be ignored and final vocabulary will be
-            one loaded from ``directory_path``. If ``extend`` key is set True,
-            dataset instances will be used to extend the vocabulary loaded
-            from ``directory_path`` and that will be final vocabulary used.
+        # Parameters
 
-        Returns
-        -------
-        A ``Vocabulary``.
+        directory : ``str``
+            The directory containing the serialized vocabulary.
         """
+        logger.info("Loading token dictionary from %s.", directory)
+        padding_token = padding_token if padding_token is not None else DEFAULT_PADDING_TOKEN
+        oov_token = oov_token if oov_token is not None else DEFAULT_OOV_TOKEN
+        with codecs.open(
+            os.path.join(directory, NAMESPACE_PADDING_FILE), "r", "utf-8"
+        ) as namespace_file:
+            non_padded_namespaces = [namespace_str.strip() for namespace_str in namespace_file]
 
-        # Vocabulary is ``Registrable`` so that you can configure a custom subclass,
-        # but (unlike most of our registrables) almost everyone will want to use the
-        # base implementation. So instead of having an abstract ``VocabularyBase`` or
-        # such, we just add the logic for instantiating a registered subclass here,
-        # so that most users can continue doing what they were doing.
-        vocab_type = params.pop("type", None)
-        if vocab_type is not None:
-            return cls.by_name(vocab_type).from_params(params=params, instances=instances)
+        vocab = cls(
+            non_padded_namespaces=non_padded_namespaces,
+            padding_token=padding_token,
+            oov_token=oov_token,
+        )
 
-        extend = params.pop("extend", False)
-        vocabulary_directory = params.pop("directory_path", None)
-        if not vocabulary_directory and not instances:
-            raise ConfigurationError(
-                "You must provide either a Params object containing a "
-                "vocab_directory key or a Dataset to build a vocabulary from."
-            )
-        if extend and not instances:
-            raise ConfigurationError(
-                "'extend' is true but there are not instances passed to extend."
-            )
-        if extend and not vocabulary_directory:
-            raise ConfigurationError(
-                "'extend' is true but there is not 'directory_path' to extend from."
-            )
-
-        if vocabulary_directory and instances:
-            if extend:
-                logger.info("Loading Vocab from files and extending it with dataset.")
+        # Check every file in the directory.
+        for namespace_filename in os.listdir(directory):
+            if namespace_filename == NAMESPACE_PADDING_FILE:
+                continue
+            if namespace_filename.startswith("."):
+                continue
+            namespace = namespace_filename.replace(".txt", "")
+            if any(namespace_match(pattern, namespace) for pattern in non_padded_namespaces):
+                is_padded = False
             else:
-                logger.info("Loading Vocab from files instead of dataset.")
+                is_padded = True
+            filename = os.path.join(directory, namespace_filename)
+            vocab.set_from_file(filename, is_padded, namespace=namespace, oov_token=oov_token)
 
-        padding_token = params.pop("padding_token", DEFAULT_PADDING_TOKEN)
-        oov_token = params.pop("oov_token", DEFAULT_OOV_TOKEN)
+        return vocab
 
-        if vocabulary_directory:
-            vocab = cls.from_files(vocabulary_directory, padding_token, oov_token)
-            if not extend:
-                params.assert_empty("Vocabulary - from files")
-                return vocab
-        if extend:
-            vocab.extend_from_instances(params, instances=instances)
-            return vocab
-        min_count = params.pop("min_count", None, keep_as_dict=True)
-        max_vocab_size = pop_max_vocab_size(params)
-        non_padded_namespaces = params.pop("non_padded_namespaces", DEFAULT_NON_PADDED_NAMESPACES)
-        pretrained_files = params.pop("pretrained_files", {}, keep_as_dict=True)
-        min_pretrained_embeddings = params.pop("min_pretrained_embeddings", None)
-        only_include_pretrained_words = params.pop_bool("only_include_pretrained_words", False)
-        tokens_to_add = params.pop("tokens_to_add", None)
-        params.assert_empty("Vocabulary - from dataset")
-        return cls.from_instances(
-            instances=instances,
+    @classmethod
+    def from_files_and_instances(
+        cls,
+        instances: Iterable["adi.Instance"],
+        directory: str,
+        padding_token: Optional[str] = DEFAULT_PADDING_TOKEN,
+        oov_token: Optional[str] = DEFAULT_OOV_TOKEN,
+        min_count: Dict[str, int] = None,
+        max_vocab_size: Union[int, Dict[str, int]] = None,
+        non_padded_namespaces: Iterable[str] = DEFAULT_NON_PADDED_NAMESPACES,
+        pretrained_files: Optional[Dict[str, str]] = None,
+        only_include_pretrained_words: bool = False,
+        tokens_to_add: Dict[str, List[str]] = None,
+        min_pretrained_embeddings: Dict[str, int] = None,
+    ) -> "Vocabulary":
+        """
+        Extends an already generated vocabulary using a collection of instances.
+        """
+        vocab = cls.from_files(directory, padding_token, oov_token)
+        logger.info("Fitting token dictionary from dataset.")
+        namespace_token_counts: Dict[str, Dict[str, int]] = defaultdict(lambda: defaultdict(int))
+        for instance in Tqdm.tqdm(instances):
+            instance.count_vocab_items(namespace_token_counts)
+        vocab._extend(
+            counter=namespace_token_counts,
             min_count=min_count,
             max_vocab_size=max_vocab_size,
             non_padded_namespaces=non_padded_namespaces,
@@ -545,9 +352,69 @@ class Vocabulary(Registrable):
             only_include_pretrained_words=only_include_pretrained_words,
             tokens_to_add=tokens_to_add,
             min_pretrained_embeddings=min_pretrained_embeddings,
-            padding_token=padding_token,
-            oov_token=oov_token,
         )
+        return vocab
+
+    def set_from_file(
+        self,
+        filename: str,
+        is_padded: bool = True,
+        oov_token: str = DEFAULT_OOV_TOKEN,
+        namespace: str = "tokens",
+    ):
+        """
+        If you already have a vocabulary file for a trained model somewhere, and you really want to
+        use that vocabulary file instead of just setting the vocabulary from a dataset, for
+        whatever reason, you can do that with this method.  You must specify the namespace to use,
+        and we assume that you want to use padding and OOV tokens for this.
+
+        # Parameters
+
+        filename : ``str``
+            The file containing the vocabulary to load.  It should be formatted as one token per
+            line, with nothing else in the line.  The index we assign to the token is the line
+            number in the file (1-indexed if ``is_padded``, 0-indexed otherwise).  Note that this
+            file should contain the OOV token string!
+        is_padded : ``bool``, optional (default=True)
+            Is this vocabulary padded?  For token / word / character vocabularies, this should be
+            ``True``; while for tag or label vocabularies, this should typically be ``False``.  If
+            ``True``, we add a padding token with index 0, and we enforce that the ``oov_token`` is
+            present in the file.
+        oov_token : ``str``, optional (default=DEFAULT_OOV_TOKEN)
+            What token does this vocabulary use to represent out-of-vocabulary characters?  This
+            must show up as a line in the vocabulary file.  When we find it, we replace
+            ``oov_token`` with ``self._oov_token``, because we only use one OOV token across
+            namespaces.
+        namespace : ``str``, optional (default="tokens")
+            What namespace should we overwrite with this vocab file?
+        """
+        if is_padded:
+            self._token_to_index[namespace] = {self._padding_token: 0}
+            self._index_to_token[namespace] = {0: self._padding_token}
+        else:
+            self._token_to_index[namespace] = {}
+            self._index_to_token[namespace] = {}
+        with codecs.open(filename, "r", "utf-8") as input_file:
+            lines = input_file.read().split("\n")
+            # Be flexible about having final newline or not
+            if lines and lines[-1] == "":
+                lines = lines[:-1]
+            for i, line in enumerate(lines):
+                index = i + 1 if is_padded else i
+                token = line.replace("@@NEWLINE@@", "\n")
+                if token == oov_token:
+                    token = self._oov_token
+                self._token_to_index[namespace][token] = index
+                self._index_to_token[namespace][index] = token
+        if is_padded:
+            assert self._oov_token in self._token_to_index[namespace], "OOV token not found!"
+
+    def extend_from_instances(self, instances: Iterable["adi.Instance"]) -> None:
+        logger.info("Fitting token dictionary from dataset.")
+        namespace_token_counts: Dict[str, Dict[str, int]] = defaultdict(lambda: defaultdict(int))
+        for instance in Tqdm.tqdm(instances):
+            instance.count_vocab_items(namespace_token_counts)
+        self._extend(counter=namespace_token_counts)
 
     def _extend(
         self,
@@ -561,10 +428,10 @@ class Vocabulary(Registrable):
         min_pretrained_embeddings: Dict[str, int] = None,
     ) -> None:
         """
-        This method can be used for extending already generated vocabulary.
-        It takes same parameters as Vocabulary initializer. The token2index
-        and indextotoken mappings of calling vocabulary will be retained.
-        It is an inplace operation so None will be returned.
+        This method can be used for extending already generated vocabulary.  It takes same
+        parameters as Vocabulary initializer. The ``_token_to_index`` and ``_index_to_token``
+        mappings of calling vocabulary will be retained.  It is an inplace operation so None will be
+        returned.
         """
         if not isinstance(max_vocab_size, dict):
             int_max_vocab_size = max_vocab_size
@@ -635,35 +502,67 @@ class Vocabulary(Registrable):
             for token in tokens:
                 self.add_token_to_namespace(token, namespace)
 
-    def extend_from_instances(
-        self, params: Params, instances: Iterable["adi.Instance"] = ()
-    ) -> None:
+    def __getstate__(self):
         """
-        Extends an already generated vocabulary using a collection of instances.
+        Need to sanitize defaultdict and defaultdict-like objects
+        by converting them to vanilla dicts when we pickle the vocabulary.
         """
-        min_count = params.pop("min_count", None)
-        max_vocab_size = pop_max_vocab_size(params)
-        non_padded_namespaces = params.pop("non_padded_namespaces", DEFAULT_NON_PADDED_NAMESPACES)
-        pretrained_files = params.pop("pretrained_files", {})
-        min_pretrained_embeddings = params.pop("min_pretrained_embeddings", None)
-        only_include_pretrained_words = params.pop_bool("only_include_pretrained_words", False)
-        tokens_to_add = params.pop("tokens_to_add", None)
-        params.assert_empty("Vocabulary - from dataset")
+        state = copy.copy(self.__dict__)
+        state["_token_to_index"] = dict(state["_token_to_index"])
+        state["_index_to_token"] = dict(state["_index_to_token"])
 
-        logger.info("Fitting token dictionary from dataset.")
-        namespace_token_counts: Dict[str, Dict[str, int]] = defaultdict(lambda: defaultdict(int))
-        for instance in Tqdm.tqdm(instances):
-            instance.count_vocab_items(namespace_token_counts)
-        self._extend(
-            counter=namespace_token_counts,
-            min_count=min_count,
-            max_vocab_size=max_vocab_size,
-            non_padded_namespaces=non_padded_namespaces,
-            pretrained_files=pretrained_files,
-            only_include_pretrained_words=only_include_pretrained_words,
-            tokens_to_add=tokens_to_add,
-            min_pretrained_embeddings=min_pretrained_embeddings,
+        if "_retained_counter" in state:
+            state["_retained_counter"] = {
+                key: dict(value) for key, value in state["_retained_counter"].items()
+            }
+
+        return state
+
+    def __setstate__(self, state):
+        """
+        Conversely, when we unpickle, we need to reload the plain dicts
+        into our special DefaultDict subclasses.
+        """
+
+        self.__dict__ = copy.copy(state)
+        self._token_to_index = _TokenToIndexDefaultDict(
+            self._non_padded_namespaces, self._padding_token, self._oov_token
         )
+        self._token_to_index.update(state["_token_to_index"])
+        self._index_to_token = _IndexToTokenDefaultDict(
+            self._non_padded_namespaces, self._padding_token, self._oov_token
+        )
+        self._index_to_token.update(state["_index_to_token"])
+
+    def save_to_files(self, directory: str) -> None:
+        """
+        Persist this Vocabulary to files so it can be reloaded later.
+        Each namespace corresponds to one file.
+
+        # Parameters
+
+        directory : ``str``
+            The directory where we save the serialized vocabulary.
+        """
+        os.makedirs(directory, exist_ok=True)
+        if os.listdir(directory):
+            logging.warning("vocabulary serialization directory %s is not empty", directory)
+
+        with codecs.open(
+            os.path.join(directory, NAMESPACE_PADDING_FILE), "w", "utf-8"
+        ) as namespace_file:
+            for namespace_str in self._non_padded_namespaces:
+                print(namespace_str, file=namespace_file)
+
+        for namespace, mapping in self._index_to_token.items():
+            # Each namespace gets written to its own file, in index order.
+            with codecs.open(
+                os.path.join(directory, namespace + ".txt"), "w", "utf-8"
+            ) as token_file:
+                num_tokens = len(mapping)
+                start_index = 1 if mapping[0] == self._padding_token else 0
+                for i in range(start_index, num_tokens):
+                    print(mapping[i].replace("\n", "@@NEWLINE@@"), file=token_file)
 
     def is_padded(self, namespace: str) -> bool:
         """
@@ -776,4 +675,6 @@ class Vocabulary(Registrable):
 
 
 # the tricky part is that `Vocabulary` is both the base class and the default implementation
-Vocabulary.register("default")(Vocabulary)
+Vocabulary.register("from_instances", constructor="from_instances")(Vocabulary)
+Vocabulary.register("from_files", constructor="from_files")(Vocabulary)
+Vocabulary.register("extend", constructor="from_files_and_instances")(Vocabulary)

@@ -186,9 +186,8 @@ class ElmoEmbedder:
         cuda_device: int = -1,
     ) -> None:
         """
-        Parameters
-        ----------
-        options_file : ``str``, optional
+        # Parameters
+                 options_file : ``str``, optional
             A path or URL to an ELMo options file.
         weight_file : ``str``, optional
             A path or URL to an ELMo weights file.
@@ -206,13 +205,13 @@ class ElmoEmbedder:
 
     def batch_to_embeddings(self, batch: List[List[str]]) -> Tuple[torch.Tensor, torch.Tensor]:
         """
-        Parameters
-        ----------
+        # Parameters
+
         batch : ``List[List[str]]``, required
             A list of tokenized sentences.
 
-        Returns
-        -------
+        # Returns
+
             A tuple of tensors, the first representing activations (batch_size, 3, num_timesteps, 1024) and
         the second a mask (batch_size, num_timesteps).
         """
@@ -244,13 +243,13 @@ class ElmoEmbedder:
         Please note that ELMo has internal state and will give different results for the same input.
         See the comment under the class definition.
 
-        Parameters
-        ----------
+        # Parameters
+
         sentence : ``List[str]``, required
             A tokenized sentence.
 
-        Returns
-        -------
+        # Returns
+
         A tensor containing the ELMo vectors.
         """
 
@@ -263,13 +262,13 @@ class ElmoEmbedder:
         Please note that ELMo has internal state and will give different results for the same input.
         See the comment under the class definition.
 
-        Parameters
-        ----------
+        # Parameters
+
         batch : ``List[List[str]]``, required
             A list of tokenized sentences.
 
-        Returns
-        -------
+        # Returns
+
             A list of tensors, each representing the ELMo vectors for the input sentence at the same index.
         """
         elmo_embeddings = []
@@ -299,15 +298,15 @@ class ElmoEmbedder:
         Please note that ELMo has internal state and will give different results for the same input.
         See the comment under the class definition.
 
-        Parameters
-        ----------
+        # Parameters
+
         sentences : ``Iterable[List[str]]``, required
             An iterable of tokenized sentences.
         batch_size : ``int``, required
             The number of sentences ELMo should process at once.
 
-        Returns
-        -------
+        # Returns
+
             A list of tensors, each representing the ELMo vectors for the input sentence at the same index.
         """
         for batch in lazy_groups_of(iter(sentences), batch_size):
@@ -327,8 +326,8 @@ class ElmoEmbedder:
         The ELMo embeddings are written out in HDF5 format, where each sentence embedding
         is saved in a dataset with the line number in the original file as the key.
 
-        Parameters
-        ----------
+        # Parameters
+
         input_file : ``IO``, required
             A file with one tokenized sentence per line.
         output_file_path : ``str``, required

@@ -33,8 +33,8 @@ class SrlEvalScorer(Metric):
     once per batch. You probably don't want to include it in your training loop;
     instead, you should calculate this on a validation set only.
 
-    Parameters
-    ----------
+    # Parameters
+
     srl_eval_path : ``str``, optional.
         The path to the srl-eval.pl script.
     ignore_classes : ``List[str]``, optional (default=``None``).
@@ -61,8 +61,8 @@ class SrlEvalScorer(Metric):
     ) -> None:
 
         """
-        Parameters
-        ----------
+        # Parameters
+
         batch_verb_indices : ``List[Optional[int]]``, required.
             The indices of the verbal predicate in the sentences which
             the gold labels are the arguments for, or None if the sentence
@@ -125,8 +125,8 @@ class SrlEvalScorer(Metric):
 
     def get_metric(self, reset: bool = False):
         """
-        Returns
-        -------
+        # Returns
+
         A Dict per label containing following the span based metrics:
         precision : float
         recall : float

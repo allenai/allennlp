@@ -26,8 +26,8 @@ class GraphParser(Model):
     """
     A Parser for arbitrary graph structures.
 
-    Parameters
-    ----------
+    # Parameters
+
     vocab : ``Vocabulary``, required
         A Vocabulary, required in order to compute sizes for input/output projections.
     text_field_embedder : ``TextFieldEmbedder``, required
@@ -150,8 +150,8 @@ class GraphParser(Model):
     ) -> Dict[str, torch.Tensor]:
 
         """
-        Parameters
-        ----------
+        # Parameters
+
         tokens : Dict[str, torch.LongTensor], required
             The output of ``TextField.as_array()``.
         pos_tags : torch.LongTensor, optional (default = None)
@@ -164,8 +164,8 @@ class GraphParser(Model):
             A torch tensor representing the sequence of integer indices denoting the parent of every
             word in the dependency parse. Has shape ``(batch_size, sequence_length, sequence_length)``.
 
-        Returns
-        -------
+        # Returns
+
         An output dictionary.
         """
         embedded_text_input = self.text_field_embedder(tokens)
@@ -266,8 +266,8 @@ class GraphParser(Model):
         """
         Computes the arc and tag loss for an adjacency matrix.
 
-        Parameters
-        ----------
+        # Parameters
+
         arc_scores : ``torch.Tensor``, required.
             A tensor of shape (batch_size, sequence_length, sequence_length) used to generate a
             binary classification decision for whether an edge is present between two words.
@@ -281,8 +281,8 @@ class GraphParser(Model):
             A mask of shape (batch_size, sequence_length), denoting unpadded
             elements in the sequence.
 
-        Returns
-        -------
+        # Returns
+
         arc_nll : ``torch.Tensor``, required.
             The negative log likelihood from the arc loss.
         tag_nll : ``torch.Tensor``, required.
@@ -325,8 +325,8 @@ class GraphParser(Model):
         independently for each word and then again, predicting the head tags of
         these greedily chosen arcs independently.
 
-        Parameters
-        ----------
+        # Parameters
+
         arc_scores : ``torch.Tensor``, required.
             A tensor of shape (batch_size, sequence_length, sequence_length) used to generate
             a distribution over attachments of a given word to all other words.
@@ -336,8 +336,8 @@ class GraphParser(Model):
         mask : ``torch.Tensor``, required.
             A mask of shape (batch_size, sequence_length).
 
-        Returns
-        -------
+        # Returns
+
         arc_probs : ``torch.Tensor``
             A tensor of shape (batch_size, sequence_length, sequence_length) representing the
             probability of an arc being present for this edge.

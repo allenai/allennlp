@@ -18,8 +18,8 @@ class CnnHighwayEncoder(Seq2VecEncoder):
     https://arxiv.org/abs/1508.06615
     with an optional projection.
 
-    Parameters
-    ----------
+    # Parameters
+
     embedding_dim : ``int``, required
         The dimension of the initial character embedding.
     filters : ``Sequence[Sequence[int]]``, required
@@ -102,8 +102,8 @@ class CnnHighwayEncoder(Seq2VecEncoder):
         """
         Compute context insensitive token embeddings for ELMo representations.
 
-        Parameters
-        ----------
+        # Parameters
+
         inputs:
             Shape ``(batch_size, num_characters, embedding_dim)``
             Character embeddings representing the current batch.
@@ -111,8 +111,8 @@ class CnnHighwayEncoder(Seq2VecEncoder):
             Shape ``(batch_size, num_characters)``
             Currently unused. The mask for characters is implicit. See TokenCharactersEncoder.forward.
 
-        Returns
-        -------
+        # Returns
+
         ``encoding``:
             Shape ``(batch_size, projection_dim)`` tensor with context-insensitive token representations.
         """
