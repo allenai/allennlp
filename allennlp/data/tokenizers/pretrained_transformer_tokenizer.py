@@ -181,12 +181,12 @@ class PretrainedTransformerTokenizer(Tokenizer):
 
         The sentence should come from `self.tokenize()` with `add_special_tokens=False`.
         """
-        token_ids = [token.text_id is None for token in sentence]
+        token_ids = [token.text_id for token in sentence]
         if any([token_id is None for token_id in token_ids]):
             raise ValueError("Please use output from `self.tokenize()` as input.")
 
         new_token_ids = self.tokenizer.build_inputs_with_special_tokens(token_ids)
-        token_type_ids = self.tokenizer.create_token_type_ids_from_sequence(token_ids)
+        token_type_ids = self.tokenizer.create_token_type_ids_from_sequences(token_ids)
         assert len(new_token_ids) == len(token_type_ids)
 
         tokens = []

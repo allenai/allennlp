@@ -77,15 +77,15 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
             orig_embeddings = torch.FloatTensor(batch_size, num_orig_tokens, embedding_size)
             for batch_idx in range(batch_size):  # TODO: do we have to use loops?
                 for token_idx in range(num_orig_tokens):
+                    if not mask[batch_idx, token_idx]:
+                        continue
+
                     start_offset, end_offset = offsets[batch_idx, token_idx]
-                    assert (
-                        wordpiece_mask[batch_idx, start_offset:end_offset].any()
-                        == wordpiece_mask[batch_idx, start_offset:end_offset].all()
-                        == mask[batch_idx, token_idx]
-                    )
-                    if mask[batch_idx, token_idx]:  # no need to update if it's padding
-                        embedding = embeddings[batch_idx, start_offset:end_offset].mean()
-                        orig_embeddings[batch_idx, token_idx] = embedding
+                    end_offset += 1  # inclusive to exclusive
+                    assert wordpiece_mask[batch_idx, start_offset:end_offset].bool().all()
+                    embedding = embeddings[batch_idx, start_offset:end_offset].mean(0)
+                    orig_embeddings[batch_idx, token_idx] = embedding
+
             embeddings = orig_embeddings
 
         return embeddings

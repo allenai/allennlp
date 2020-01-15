@@ -122,3 +122,17 @@ class TestPretrainedTransformerIndexer(AllenNlpTestCase):
         expected_masks = expected_masks + ([0] * padding_length)
         assert len(padded_tokens["mask"]) == max_length
         assert padded_tokens["mask"].tolist() == expected_masks
+
+    def test_intra_word_tokenization(self):
+        tokenizer = AutoTokenizer.from_pretrained("bert-base-cased")
+        indexer = PretrainedTransformerIndexer("bert-base-cased", intra_word_tokenization=True)
+        text = ["AllenNLP", "is", "great"]
+        tokens = tokenizer.tokenize(" ".join(["[CLS]"] + text + ["[SEP]"]))
+        expected_ids = tokenizer.convert_tokens_to_ids(tokens)
+        vocab = Vocabulary()
+        indexed = indexer.tokens_to_indices([Token(word) for word in text], vocab)
+        assert indexed["token_ids"] == expected_ids
+        assert len(indexed["mask"]) == sum(indexed["mask"]) == len(text)
+        # Hardcoding a few things because we know how BERT tokenization works
+        assert len(indexed["wordpiece_mask"]) == sum(indexed["wordpiece_mask"]) == 7
+        assert indexed["offsets"] == [(1, 3), (4, 4), (5, 5)]

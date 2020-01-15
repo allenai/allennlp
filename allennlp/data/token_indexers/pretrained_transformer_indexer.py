@@ -2,7 +2,9 @@ from typing import Dict, List, Tuple
 import logging
 
 from overrides import overrides
+import torch
 
+from allennlp.common.util import pad_sequence_to_length
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.data.tokenizers.token import Token
 from allennlp.data.token_indexers.token_indexer import TokenIndexer, IndexedTokenList
@@ -88,8 +90,10 @@ class PretrainedTransformerIndexer(TokenIndexer):
             self._added_to_vocabulary = True
 
         # The mask has 1 for real tokens and 0 for padding tokens. Only real tokens are attended to.
-        # We need to do this before intra word tokenization because we always want it to be
-        # token-level masks. We create a separate wordpiece-level mask below.
+        # We need to do this before intra-word tokenization because we always want it to be
+        # token-level masks. We create a separate wordpiece-level mask below. Note that in the case
+        # of intra-word tokenization, wordpiece-lebel masks include special tokens while word-level
+        # masks do not.
         mask = [1] * len(tokens)
 
         offsets = None
@@ -123,6 +127,17 @@ class PretrainedTransformerIndexer(TokenIndexer):
             output["offsets"] = []
         return output
 
+    @overrides
+    def as_padded_tensor_dict(
+        self, tokens: IndexedTokenList, padding_lengths: Dict[str, int]
+    ) -> Dict[str, torch.Tensor]:
+        tensor_dict = {}
+        for key, val in tokens.items():
+            tensor_dict[key] = torch.LongTensor(pad_sequence_to_length(
+                val, padding_lengths[key], default_value=lambda: (0, 0) if key == "offsets" else 0
+            ))
+        return tensor_dict
+
     def __eq__(self, other):
         if isinstance(other, PretrainedTransformerIndexer):
             for key in self.__dict__:
@@ -139,23 +154,24 @@ class PretrainedTransformerIndexer(TokenIndexer):
         """
         Tries to determine the number of special tokens the self._wrapped_tokenizer inserts for a
         single sentence. There's self._wrapped_tokenizer.num_added_tokens for this purpose, but
-        it can't distinguish between the number added in the front vs. back.
+        it can't distinguish between the number added in the beginning vs. end.
         """
         token = 1000  # uses a higher index just in case special tokens are treated differently
         result = self._wrapped_tokenizer.build_inputs_with_special_tokens([token])
 
         self._num_added_beginning_tokens = 0
-        self._num_added_ending_tokens = 0
+        self._num_added_end_tokens = 0
         seen_token = False
         for t in result:
             if t == token:
                 if seen_token:
                     raise ValueError("Can't determine the number of special tokens inserted.")
                 seen_token = True
+                continue
             if not seen_token:
                 self._num_added_beginning_tokens += 1
             else:
-                self._num_added_ending_tokens += 1
+                self._num_added_end_tokens += 1
         if not seen_token:
             raise ValueError("Can't determine the number of special tokens inserted.")
 
@@ -179,6 +195,6 @@ class PretrainedTransformerIndexer(TokenIndexer):
             offsets.append((start_offset, end_offset))
 
         wordpieces = self._tokenizer.build_inputs_with_special_tokens(wordpieces)
-        assert len(wordpieces) == cumulative + self._num_added_ending_tokens
+        assert len(wordpieces) == cumulative + self._num_added_end_tokens
 
         return wordpieces, offsets
