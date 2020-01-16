@@ -31,6 +31,10 @@ class PretrainedTransformerIndexer(TokenIndexer):
         We use a somewhat confusing default value of `tags` so that we do not add padding or UNK
         tokens to this namespace, which would break on loading because we wouldn't find our default
         OOV token.
+    num_added_start_tokens: ``int``, optional (default=1)
+        The number of start tokens that the tokenizer adds to a sequence.
+    num_added_end_tokens: ``int``, optional (default=1)
+        The number of end tokens that the tokenizer adds to a sequence.
     intra_word_tokenization: ``bool``, optional (default=False)
         If True, further tokenize each token into subword tokens using the corresponding tokenizer.
         Should be set to the same value as the ``intra_word_tokenized`` option on the
@@ -41,6 +45,8 @@ class PretrainedTransformerIndexer(TokenIndexer):
         self,
         model_name: str,
         namespace: str = "tags",
+        num_added_start_tokens: int = 1,
+        num_added_end_tokens: int = 1,
         intra_word_tokenization: bool = False,
         token_min_padding_length: int = 0,
     ) -> None:
@@ -49,7 +55,13 @@ class PretrainedTransformerIndexer(TokenIndexer):
         # add_special_tokens=False for intra_word_tokenization
         self._tokenizer = PretrainedTransformerTokenizer(model_name, add_special_tokens=False)
         self._wrapped_tokenizer = self._tokenizer.tokenizer  # wrapped huggingface tokenizer
-        self._determine_num_special_tokens()
+        self._num_added_start_tokens = num_added_start_tokens
+        self._num_added_end_tokens = num_added_end_tokens
+        assert (
+            self._num_added_start_tokens + self._num_added_end_tokens
+            == self._wrapped_tokenizer.num_added_tokens()
+        )
+
         self._added_to_vocabulary = False
 
         self._intra_word_tokenization = intra_word_tokenization
@@ -117,7 +129,7 @@ class PretrainedTransformerIndexer(TokenIndexer):
             # self._intra_word_tokenize() does not insert special tokens, so we need to do it here
             indices = self._wrapped_tokenizer.build_inputs_with_special_tokens(indices)
             offsets = [
-                (start + self._num_added_beginning_tokens, end + self._num_added_end_tokens)
+                (start + self._num_added_start_tokens, end + self._num_added_start_tokens)
                 for start, end in offsets
             ]
 
@@ -161,36 +173,6 @@ class PretrainedTransformerIndexer(TokenIndexer):
                     return False
             return True
         return NotImplemented
-
-    def _determine_num_special_tokens(self):
-        """
-        Tries to determine the number of special tokens the self._wrapped_tokenizer inserts for a
-        single sentence. There's self._wrapped_tokenizer.num_added_tokens for this purpose, but
-        it can't distinguish between the number added in the beginning vs. end.
-        """
-        token = 1000  # uses a higher index just in case special tokens are treated differently
-        result = self._wrapped_tokenizer.build_inputs_with_special_tokens([token])
-
-        self._num_added_beginning_tokens = 0
-        self._num_added_end_tokens = 0
-        seen_token = False
-        for t in result:
-            if t == token:
-                if seen_token:
-                    raise ValueError("Can't determine the number of special tokens inserted.")
-                seen_token = True
-                continue
-            if not seen_token:
-                self._num_added_beginning_tokens += 1
-            else:
-                self._num_added_end_tokens += 1
-        if not seen_token:
-            raise ValueError("Can't determine the number of special tokens inserted.")
-
-        assert (
-            self._num_added_beginning_tokens + self._num_added_end_tokens
-            == self._wrapped_tokenizer.num_added_tokens()
-        )
 
     def _intra_word_tokenize(
         self, tokens: List[Token]
