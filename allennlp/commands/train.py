@@ -7,8 +7,7 @@ which to write the results.
 
    $ allennlp train --help
     usage: allennlp train [-h] -s SERIALIZATION_DIR [-r] [-f] [-o OVERRIDES]
-                          [--file-friendly-logging]
-                          [--node-rank NODE_RANK]
+                          [--file-friendly-logging] [--node-rank NODE_RANK]
                           [--include-package INCLUDE_PACKAGE]
                           param_path
 
