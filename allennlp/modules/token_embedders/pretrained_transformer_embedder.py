@@ -46,7 +46,7 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         token_ids: torch.LongTensor
             Shape: [batch_size, num_wordpieces].
         mask: torch.LongTensor
-            Shape: [batch_size, num_orig_tokens].
+            Shape: [batch_size, num_orig_tokens if self._intra_word_tokenized else num_wordpieces].
         wordpiece_mask: torch.LongTensor
             Shape: [batch_size, num_wordpieces].
         offsets: torch.LongTensor
@@ -55,7 +55,11 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
             from the i-th batch.
 
         # Returns:
-        Shape: [batch_size, (num_wordpieces or num_orig_tokens), embedding_size].
+        Shape: [
+            batch_size,
+            num_orig_tokens if self._intra_word_tokenized else num_wordpieces,
+            embedding_size,
+        ].
         """
         if self._intra_word_tokenized:
             if wordpiece_mask is None or offsets is None:
@@ -63,11 +67,9 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
                     "`wordpiece_mask` and `offsets` must be set if `intra_word_tokenized == True`."
                 )
 
+        transformer_mask = wordpiece_mask if self._intra_word_tokenized else mask
         # Shape: [batch_size, num_wordpieces, embedding_size].
-        embeddings = self.transformer_model(
-            input_ids=token_ids,
-            attention_mask=(wordpiece_mask if self._intra_word_tokenized else mask),
-        )[0]
+        embeddings = self.transformer_model(input_ids=token_ids, attention_mask=transformer_mask)[0]
 
         if self._intra_word_tokenized:
             batch_size, _, embedding_size = embeddings.size()
