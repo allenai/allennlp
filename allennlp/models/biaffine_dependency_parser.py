@@ -9,7 +9,7 @@ from torch.nn.modules import Dropout
 import numpy
 
 from allennlp.common.checks import check_dimensions_match, ConfigurationError
-from allennlp.data import Vocabulary
+from allennlp.data import TextFieldTensors, Vocabulary
 from allennlp.modules import Seq2SeqEncoder, TextFieldEmbedder, Embedding, InputVariationalDropout
 from allennlp.modules.matrix_attention.bilinear_matrix_attention import BilinearMatrixAttention
 from allennlp.modules import FeedForward
@@ -169,7 +169,7 @@ class BiaffineDependencyParser(Model):
     @overrides
     def forward(
         self,  # type: ignore
-        words: Dict[str, torch.LongTensor],
+        words: TextFieldTensors,
         pos_tags: torch.LongTensor,
         metadata: List[Dict[str, Any]],
         head_tags: torch.LongTensor = None,
@@ -179,7 +179,7 @@ class BiaffineDependencyParser(Model):
         """
         # Parameters
 
-        words : Dict[str, torch.LongTensor], required
+        words : TextFieldTensors, required
             The output of ``TextField.as_array()``, which should typically be passed directly to a
             ``TextFieldEmbedder``. This output is a dictionary mapping keys to ``TokenIndexer``
             tensors.  At its most basic, using a ``SingleIdTokenIndexer`` this is : ``{"tokens":

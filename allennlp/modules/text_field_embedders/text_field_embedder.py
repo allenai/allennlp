@@ -3,6 +3,7 @@ from typing import Dict
 import torch
 
 from allennlp.common import Registrable
+from allennlp.data import TextFieldTensors
 
 
 class TextFieldEmbedder(torch.nn.Module, Registrable):
@@ -26,7 +27,7 @@ class TextFieldEmbedder(torch.nn.Module, Registrable):
     default_implementation = "basic"
 
     def forward(
-        self, text_field_input: Dict[str, torch.Tensor], num_wrapping_dims: int = 0, **kwargs
+        self, text_field_input: TextFieldTensors, num_wrapping_dims: int = 0, **kwargs
     ) -> torch.Tensor:
         """
         # Parameters

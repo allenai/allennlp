@@ -8,7 +8,7 @@ from torch.nn.modules.linear import Linear
 from torch.nn.modules.rnn import LSTMCell
 
 from allennlp.common.util import START_SYMBOL, END_SYMBOL
-from allennlp.data.vocabulary import Vocabulary
+from allennlp.data import TextFieldTensors, Vocabulary
 from allennlp.models.model import Model
 from allennlp.modules import Attention, TextFieldEmbedder, Seq2SeqEncoder
 from allennlp.modules.token_embedders import Embedding
@@ -158,11 +158,11 @@ class CopyNetSeq2Seq(Model):
     @overrides
     def forward(
         self,  # type: ignore
-        source_tokens: Dict[str, torch.LongTensor],
+        source_tokens: TextFieldTensors,
         source_token_ids: torch.Tensor,
         source_to_target: torch.Tensor,
         metadata: List[Dict[str, Any]],
-        target_tokens: Dict[str, torch.LongTensor] = None,
+        target_tokens: TextFieldTensors = None,
         target_token_ids: torch.Tensor = None,
     ) -> Dict[str, torch.Tensor]:
 
@@ -171,7 +171,7 @@ class CopyNetSeq2Seq(Model):
 
         # Parameters
 
-        source_tokens : ``Dict[str, torch.LongTensor]``, required
+        source_tokens : ``TextFieldTensors``, required
             The output of `TextField.as_array()` applied on the source `TextField`. This will be
             passed through a `TextFieldEmbedder` and then through an encoder.
         source_token_ids : ``torch.Tensor``, required
@@ -184,7 +184,7 @@ class CopyNetSeq2Seq(Model):
             Metadata field that contains the original source tokens with key 'source_tokens'
             and any other meta fields. When 'target_tokens' is also passed, the metadata
             should also contain the original target tokens with key 'target_tokens'.
-        target_tokens : ``Dict[str, torch.LongTensor]``, optional (default = None)
+        target_tokens : ``TextFieldTensors``, optional (default = None)
             Output of `Textfield.as_array()` applied on target `TextField`. We assume that the
             target tokens are also represented as a `TextField` which must contain a "tokens"
             key that uses single ids.
@@ -438,7 +438,7 @@ class CopyNetSeq2Seq(Model):
 
     def _forward_loss(
         self,
-        target_tokens: Dict[str, torch.LongTensor],
+        target_tokens: TextFieldTensors,
         target_token_ids: torch.Tensor,
         state: Dict[str, torch.Tensor],
     ) -> Dict[str, torch.Tensor]:

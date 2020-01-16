@@ -254,7 +254,7 @@ class LanguageModel(Model):
 
         # Parameters
 
-        source : ``Dict[str, torch.LongTensor]``, required.
+        source : ``TextFieldTensors``, required.
             The output of ``Batch.as_tensor_dict()`` for a batch of sentences. By convention,
             it's required to have at least a ``"tokens"`` entry that's the output of a
             ``SingleIdTokenIndexer``, which is used to compute the language model targets.

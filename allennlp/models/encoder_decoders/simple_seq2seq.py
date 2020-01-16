@@ -9,7 +9,7 @@ from torch.nn.modules.rnn import LSTMCell
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.util import START_SYMBOL, END_SYMBOL
-from allennlp.data.vocabulary import Vocabulary
+from allennlp.data import TextFieldTensors, Vocabulary
 from allennlp.modules.attention import LegacyAttention
 from allennlp.modules import Attention, TextFieldEmbedder, Seq2SeqEncoder
 from allennlp.modules.similarity_functions import SimilarityFunction
@@ -204,8 +204,8 @@ class SimpleSeq2Seq(Model):
     @overrides
     def forward(
         self,  # type: ignore
-        source_tokens: Dict[str, torch.LongTensor],
-        target_tokens: Dict[str, torch.LongTensor] = None,
+        source_tokens: TextFieldTensors,
+        target_tokens: TextFieldTensors = None,
     ) -> Dict[str, torch.Tensor]:
 
         """
@@ -213,10 +213,10 @@ class SimpleSeq2Seq(Model):
 
         # Parameters
 
-        source_tokens : ``Dict[str, torch.LongTensor]``
+        source_tokens : ``TextFieldTensors``
            The output of `TextField.as_array()` applied on the source `TextField`. This will be
            passed through a `TextFieldEmbedder` and then through an encoder.
-        target_tokens : ``Dict[str, torch.LongTensor]``, optional (default = None)
+        target_tokens : ``TextFieldTensors``, optional (default = None)
            Output of `Textfield.as_array()` applied on target `TextField`. We assume that the
            target tokens are also represented as a `TextField`.
 
@@ -305,7 +305,7 @@ class SimpleSeq2Seq(Model):
         return state
 
     def _forward_loop(
-        self, state: Dict[str, torch.Tensor], target_tokens: Dict[str, torch.LongTensor] = None
+        self, state: Dict[str, torch.Tensor], target_tokens: TextFieldTensors = None
     ) -> Dict[str, torch.Tensor]:
         """
         Make forward pass during training or do greedy search during prediction.

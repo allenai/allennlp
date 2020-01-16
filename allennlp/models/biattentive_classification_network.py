@@ -7,7 +7,7 @@ from torch import nn
 import torch.nn.functional as F
 
 from allennlp.common.checks import check_dimensions_match, ConfigurationError
-from allennlp.data import Vocabulary
+from allennlp.data import TextFieldTensors, Vocabulary
 from allennlp.modules import Elmo, FeedForward, Maxout, Seq2SeqEncoder, TextFieldEmbedder
 from allennlp.models.model import Model
 from allennlp.nn import InitializerApplicator, RegularizerApplicator
@@ -204,14 +204,14 @@ class BiattentiveClassificationNetwork(Model):
     @overrides
     def forward(
         self,  # type: ignore
-        tokens: Dict[str, torch.LongTensor],
+        tokens: TextFieldTensors,
         label: torch.LongTensor = None,
     ) -> Dict[str, torch.Tensor]:
 
         """
         # Parameters
 
-        tokens : Dict[str, torch.LongTensor], required
+        tokens : TextFieldTensors, required
             The output of ``TextField.as_array()``.
         label : torch.LongTensor, optional (default = None)
             A variable representing the label for each instance in the batch.

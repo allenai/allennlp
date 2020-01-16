@@ -10,7 +10,8 @@ class EmptyEmbedder(TokenEmbedder):
 
     You should almost never need to use this; normally you would just not use a particular
     `TokenIndexer`. It's only in very rare cases, like simplicity in data processing for language
-    modeling, where you might want to use this.
+    modeling (where we use just one `TextField` to handle input embedding and computing target ids),
+    where you might want to use this.
     """
 
     def __init__(self) -> None:

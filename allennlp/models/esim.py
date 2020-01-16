@@ -3,7 +3,7 @@ from typing import Dict, Optional, List, Any
 import torch
 
 from allennlp.common.checks import check_dimensions_match
-from allennlp.data import Vocabulary
+from allennlp.data import TextFieldTensors, Vocabulary
 from allennlp.models.model import Model
 from allennlp.modules import FeedForward, InputVariationalDropout
 from allennlp.modules.matrix_attention.legacy_matrix_attention import LegacyMatrixAttention
@@ -114,8 +114,8 @@ class ESIM(Model):
 
     def forward(  # type: ignore
         self,
-        premise: Dict[str, torch.LongTensor],
-        hypothesis: Dict[str, torch.LongTensor],
+        premise: TextFieldTensors,
+        hypothesis: TextFieldTensors,
         label: torch.IntTensor = None,
         metadata: List[Dict[str, Any]] = None,
     ) -> Dict[str, torch.Tensor]:
@@ -123,9 +123,9 @@ class ESIM(Model):
         """
         # Parameters
 
-        premise : Dict[str, torch.LongTensor]
+        premise : TextFieldTensors
             From a ``TextField``
-        hypothesis : Dict[str, torch.LongTensor]
+        hypothesis : TextFieldTensors
             From a ``TextField``
         label : torch.IntTensor, optional (default = None)
             From a ``LabelField``

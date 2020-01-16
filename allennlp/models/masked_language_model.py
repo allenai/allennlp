@@ -4,7 +4,7 @@ from overrides import overrides
 import torch
 
 from allennlp.common.checks import check_dimensions_match
-from allennlp.data.vocabulary import Vocabulary
+from allennlp.data import TextFieldTensors, Vocabulary
 from allennlp.models.model import Model
 from allennlp.modules import LanguageModelHead, Seq2SeqEncoder, TextFieldEmbedder
 from allennlp.nn import util, InitializerApplicator
@@ -72,19 +72,19 @@ class MaskedLanguageModel(Model):
 
     def forward(  # type: ignore
         self,
-        tokens: Dict[str, torch.LongTensor],
+        tokens: TextFieldTensors,
         mask_positions: torch.LongTensor,
-        target_ids: Dict[str, torch.LongTensor] = None,
+        target_ids: TextFieldTensors = None,
     ) -> Dict[str, torch.Tensor]:
         """
         # Parameters
 
-        tokens : ``Dict[str, torch.LongTensor]``
+        tokens : ``TextFieldTensors``
             The output of ``TextField.as_tensor()`` for a batch of sentences.
         mask_positions : ``torch.LongTensor``
             The positions in ``tokens`` that correspond to [MASK] tokens that we should try to fill
             in.  Shape should be (batch_size, num_masks).
-        target_ids : ``Dict[str, torch.LongTensor]``
+        target_ids : ``TextFieldTensors``
             This is a list of token ids that correspond to the mask positions we're trying to fill.
             It is the output of a ``TextField``, purely for convenience, so we can handle wordpiece
             tokenizers and such without having to do crazy things in the dataset reader.  We assume

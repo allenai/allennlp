@@ -4,7 +4,7 @@ from overrides import overrides
 import torch
 
 from allennlp.common.checks import check_dimensions_match
-from allennlp.data.vocabulary import Vocabulary
+from allennlp.data import TextFieldTensors, Vocabulary
 from allennlp.models.model import Model
 from allennlp.modules import LanguageModelHead, Seq2SeqEncoder, TextFieldEmbedder
 from allennlp.nn import util, InitializerApplicator
@@ -72,7 +72,7 @@ class NextTokenLM(Model):
             initializer(self)
 
     def forward(  # type: ignore
-        self, tokens: Dict[str, torch.LongTensor], target_ids: Dict[str, torch.LongTensor] = None
+        self, tokens: TextFieldTensors, target_ids: TextFieldTensors = None
     ) -> Dict[str, torch.Tensor]:
 
         # Shape: (batch_size, num_tokens, embedding_dim)

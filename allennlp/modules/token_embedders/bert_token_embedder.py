@@ -136,7 +136,9 @@ class BertEmbedder(TokenEmbedder):
             (the default BertIndexer doesn't) then it's assumed to be all 0s.
         mask : ``torch.LongTensor``, optional
             This is not actually used here, but is needed for compatibility with other parts of the
-            code.
+            code.  We pass all tensors created by a `TokenIndexer` by name to its corresponding
+            `TokenEmbedder`, but the `WordpieceIndexer` creates this `mask` that is intended for use
+            _outside_ of the `TokenEmbedder`, by `nn.util.get_text_field_mask`.
         """
 
         batch_size, full_seq_len = input_ids.size(0), input_ids.size(-1)

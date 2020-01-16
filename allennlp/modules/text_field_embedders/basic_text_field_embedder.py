@@ -77,7 +77,7 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
 
             tensors: Dict[str, torch.Tensor] = text_field_input[key]
             if len(tensors) == 1 and len(missing_tensor_args) == 1:
-                # If there's only one tensor argumnt to the embedder, and we just have one tensor to
+                # If there's only one tensor argument to the embedder, and we just have one tensor to
                 # embed, we can just pass in that tensor, without requiring a name match.
                 token_vectors = embedder(list(tensors.values())[0], **forward_params_values)
             else:

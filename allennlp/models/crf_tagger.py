@@ -5,7 +5,7 @@ import torch
 from torch.nn.modules.linear import Linear
 
 from allennlp.common.checks import check_dimensions_match, ConfigurationError
-from allennlp.data import Vocabulary
+from allennlp.data import TextFieldTensors, Vocabulary
 from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder
 from allennlp.modules import ConditionalRandomField, FeedForward
 from allennlp.modules.conditional_random_field import allowed_transitions
@@ -162,7 +162,7 @@ class CrfTagger(Model):
     @overrides
     def forward(
         self,  # type: ignore
-        tokens: Dict[str, torch.LongTensor],
+        tokens: TextFieldTensors,
         tags: torch.LongTensor = None,
         metadata: List[Dict[str, Any]] = None,
         **kwargs
@@ -171,7 +171,7 @@ class CrfTagger(Model):
         """
         # Parameters
 
-        tokens : ``Dict[str, torch.LongTensor]``, required
+        tokens : ``TextFieldTensors``, required
             The output of ``TextField.as_array()``, which should typically be passed directly to a
             ``TextFieldEmbedder``. This output is a dictionary mapping keys to ``TokenIndexer``
             tensors.  At its most basic, using a ``SingleIdTokenIndexer`` this is : ``{"tokens":
