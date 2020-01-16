@@ -17,7 +17,6 @@ class BertSrlTest(ModelTestCase):
         config_path = self.FIXTURES_ROOT / "bert" / "config.json"
         vocab_path = self.FIXTURES_ROOT / "bert" / "vocab.txt"
         config = BertConfig.from_json_file(config_path)
-        print(config)
         self.monkeypatch.setattr(BertModel, "from_pretrained", lambda _: BertModel(config))
         self.monkeypatch.setattr(
             BertTokenizer, "from_pretrained", lambda _: BertTokenizer(vocab_path)

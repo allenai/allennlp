@@ -193,7 +193,6 @@ class BertEmbedder(TokenEmbedder):
             token_type_ids=util.combine_initial_dims(token_type_ids),
             attention_mask=util.combine_initial_dims(input_mask),
         )
-        print([x.shape for x in all_encoder_layers])
         all_encoder_layers = torch.stack(all_encoder_layers)
 
         if needs_split:
