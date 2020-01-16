@@ -93,7 +93,7 @@ class TestPretrainedTransformerEmbedder(AllenNlpTestCase):
                 }
             }
         )
-        token_embedder = BasicTextFieldEmbedder.from_params(vocab, params)
+        token_embedder = BasicTextFieldEmbedder.from_params(vocab=vocab, params=params)
 
         instance1 = Instance({"tokens": TextField(tokens1, {"bert": token_indexer})})
         instance2 = Instance({"tokens": TextField(tokens2, {"bert": token_indexer})})
