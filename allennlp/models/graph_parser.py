@@ -8,7 +8,7 @@ from torch.nn.modules import Dropout
 import numpy
 
 from allennlp.common.checks import check_dimensions_match, ConfigurationError
-from allennlp.data import Vocabulary
+from allennlp.data import TextFieldTensors, Vocabulary
 from allennlp.modules import Seq2SeqEncoder, TextFieldEmbedder, Embedding, InputVariationalDropout
 from allennlp.modules.matrix_attention.bilinear_matrix_attention import BilinearMatrixAttention
 from allennlp.modules import FeedForward
@@ -143,7 +143,7 @@ class GraphParser(Model):
     @overrides
     def forward(
         self,  # type: ignore
-        tokens: Dict[str, torch.LongTensor],
+        tokens: TextFieldTensors,
         pos_tags: torch.LongTensor = None,
         metadata: List[Dict[str, Any]] = None,
         arc_tags: torch.LongTensor = None,
@@ -152,7 +152,7 @@ class GraphParser(Model):
         """
         # Parameters
 
-        tokens : Dict[str, torch.LongTensor], required
+        tokens : TextFieldTensors, required
             The output of ``TextField.as_array()``.
         pos_tags : torch.LongTensor, optional (default = None)
             The output of a ``SequenceLabelField`` containing POS tags.

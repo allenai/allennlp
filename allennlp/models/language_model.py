@@ -4,7 +4,7 @@ import torch
 import numpy as np
 
 from allennlp.common.checks import ConfigurationError
-from allennlp.data.vocabulary import Vocabulary
+from allennlp.data import TextFieldTensors, Vocabulary
 from allennlp.models.model import Model
 from allennlp.modules.text_field_embedders import TextFieldEmbedder
 from allennlp.modules.sampled_softmax_loss import SampledSoftmaxLoss
@@ -246,7 +246,7 @@ class LanguageModel(Model):
             )
 
     def forward(  # type: ignore
-        self, source: Dict[str, torch.LongTensor]
+        self, source: TextFieldTensors
     ) -> Dict[str, torch.Tensor]:
         """
         Computes the averaged forward (and backward, if language model is bidirectional)
@@ -254,7 +254,7 @@ class LanguageModel(Model):
 
         # Parameters
 
-        source : ``Dict[str, torch.LongTensor]``, required.
+        source : ``TextFieldTensors``, required.
             The output of ``Batch.as_tensor_dict()`` for a batch of sentences. By convention,
             it's required to have at least a ``"tokens"`` entry that's the output of a
             ``SingleIdTokenIndexer``, which is used to compute the language model targets.
@@ -294,8 +294,9 @@ class LanguageModel(Model):
         return_dict = {}
 
         # If we have target tokens, calculate the loss.
-        token_ids = source.get("tokens")
-        if token_ids is not None:
+        token_id_dict = source.get("tokens")
+        if token_id_dict is not None:
+            token_ids = token_id_dict["tokens"]
             assert isinstance(contextual_embeddings, torch.Tensor)
 
             # Use token_ids to compute targets

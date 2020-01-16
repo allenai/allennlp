@@ -11,7 +11,7 @@ from torch import nn
 import torch.nn.functional as F
 
 from allennlp.common.util import START_SYMBOL, END_SYMBOL
-from allennlp.data.vocabulary import Vocabulary
+from allennlp.data import TextFieldTensors, Vocabulary
 from allennlp.modules import Seq2VecEncoder, TextFieldEmbedder
 from allennlp.modules.token_embedders import Embedding
 from allennlp.models.model import Model
@@ -113,10 +113,10 @@ class Event2Mind(Model):
     def _update_recall(
         self,
         all_top_k_predictions: torch.Tensor,
-        target_tokens: Dict[str, torch.LongTensor],
+        target_tokens: TextFieldTensors,
         target_recall: UnigramRecall,
     ) -> None:
-        targets = target_tokens["tokens"]
+        targets = target_tokens["tokens"]["tokens"]
         target_mask = get_text_field_mask(target_tokens)
         # See comment in _get_loss.
         # TODO(brendanr): Do we need contiguous here?
@@ -124,9 +124,9 @@ class Event2Mind(Model):
         relevant_mask = target_mask[:, 1:].contiguous()
         target_recall(all_top_k_predictions, relevant_targets, relevant_mask, self._end_index)
 
-    def _get_num_decoding_steps(self, target_tokens: Optional[Dict[str, torch.LongTensor]]) -> int:
+    def _get_num_decoding_steps(self, target_tokens: Optional[TextFieldTensors]) -> int:
         if target_tokens:
-            targets = target_tokens["tokens"]
+            targets = target_tokens["tokens"]["tokens"]
             target_sequence_length = targets.size()[1]
             # The last input from the target is either padding or the end
             # symbol.  Either way, we don't have to process it. (To be clear,
@@ -139,8 +139,8 @@ class Event2Mind(Model):
     @overrides
     def forward(
         self,  # type: ignore
-        source: Dict[str, torch.LongTensor],
-        **target_tokens: Dict[str, Dict[str, torch.LongTensor]],
+        source: TextFieldTensors,
+        **target_tokens: Dict[str, TextFieldTensors],
     ) -> Dict[str, torch.Tensor]:
 
         """
@@ -148,11 +148,11 @@ class Event2Mind(Model):
 
         # Parameters
 
-        source : ``Dict[str, torch.LongTensor]``
+        source : ``TextFieldTensors``
             The output of ``TextField.as_array()`` applied on the source
             ``TextField``. This will be passed through a ``TextFieldEmbedder``
             and then through an encoder.
-        target_tokens : ``Dict[str, Dict[str, torch.LongTensor]]``:
+        target_tokens : ``Dict[str, TextFieldTensors]``:
             Dictionary from name to output of ``Textfield.as_array()`` applied
             on target ``TextField``. We assume that the target tokens are also
             represented as a ``TextField``.
@@ -212,7 +212,7 @@ class Event2Mind(Model):
     def greedy_search(
         self,
         final_encoder_output: torch.LongTensor,
-        target_tokens: Dict[str, torch.LongTensor],
+        target_tokens: TextFieldTensors,
         target_embedder: Embedding,
         decoder_cell: GRUCell,
         output_projection_layer: Linear,
@@ -225,7 +225,7 @@ class Event2Mind(Model):
 
         final_encoder_output : ``torch.LongTensor``, required
             Vector produced by ``self._encoder``.
-        target_tokens : ``Dict[str, torch.LongTensor]``, required
+        target_tokens : ``TextFieldTensors``, required
             The output of ``TextField.as_array()`` applied on some target ``TextField``.
         target_embedder : ``Embedding``, required
             Used to embed the target tokens.
@@ -235,7 +235,7 @@ class Event2Mind(Model):
             Linear layer mapping to the desired number of classes.
         """
         num_decoding_steps = self._get_num_decoding_steps(target_tokens)
-        targets = target_tokens["tokens"]
+        targets = target_tokens["tokens"]["tokens"]
         decoder_hidden = final_encoder_output
         step_logits = []
         for timestep in range(num_decoding_steps):

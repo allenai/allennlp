@@ -29,7 +29,7 @@ class SpanConstituencyParserTest(ModelTestCase):
         # A very annoying edge case: the PTB has several single word sentences.
         # when running with a batch size 1, we have to be very careful
         # about how we .squeeze/.unsqueeze things to make sure it still runs.
-        text = {"tokens": torch.LongTensor([[1]])}
+        text = {"tokens": {"tokens": torch.LongTensor([[1]])}}
         pos_tags = torch.LongTensor([[1]])
         spans = torch.LongTensor([[[0, 0]]])
         label = torch.LongTensor([[1]])

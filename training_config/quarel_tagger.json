@@ -27,11 +27,13 @@
     "dropout": 0.2,
     "include_start_end_transitions": false,
     "text_field_embedder": {
-      "tokens": {
-        "type": "embedding",
-        "pretrained_file": "/inputs/glove/glove.6B.100d.txt.gz",
-        "embedding_dim": 100,
-        "trainable": false
+      "token_embedders": {
+        "tokens": {
+          "type": "embedding",
+          "pretrained_file": "/inputs/glove/glove.6B.100d.txt.gz",
+          "embedding_dim": 100,
+          "trainable": false
+        }
       }
     },
     "encoder": {

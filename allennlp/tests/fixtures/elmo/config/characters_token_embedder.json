@@ -25,7 +25,7 @@
               "elmo": {
                 "type": "elmo_token_embedder",
                 "options_file": "allennlp/tests/fixtures/elmo/options.json",
-                "weight_file": "allennlp/tests/fixtures/elmo/lm_weights.hdf5",
+                "weight_file": "allennlp/tests/fixtures/elmo/lm_weights.hdf5"
               }
           }
       },

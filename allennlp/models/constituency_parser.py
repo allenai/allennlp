@@ -6,7 +6,7 @@ from torch.nn.modules.linear import Linear
 from nltk import Tree
 
 from allennlp.common.checks import check_dimensions_match
-from allennlp.data import Vocabulary
+from allennlp.data import TextFieldTensors, Vocabulary
 from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder, FeedForward
 from allennlp.modules.token_embedders import Embedding
 from allennlp.modules.span_extractors.span_extractor import SpanExtractor
@@ -139,17 +139,17 @@ class SpanConstituencyParser(Model):
     @overrides
     def forward(
         self,  # type: ignore
-        tokens: Dict[str, torch.LongTensor],
+        tokens: TextFieldTensors,
         spans: torch.LongTensor,
         metadata: List[Dict[str, Any]],
-        pos_tags: Dict[str, torch.LongTensor] = None,
+        pos_tags: TextFieldTensors = None,
         span_labels: torch.LongTensor = None,
     ) -> Dict[str, torch.Tensor]:
 
         """
         # Parameters
 
-        tokens : Dict[str, torch.LongTensor], required
+        tokens : TextFieldTensors, required
             The output of ``TextField.as_array()``, which should typically be passed directly to a
             ``TextFieldEmbedder``. This output is a dictionary mapping keys to ``TokenIndexer``
             tensors.  At its most basic, using a ``SingleIdTokenIndexer`` this is : ``{"tokens":

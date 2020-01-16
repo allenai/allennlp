@@ -7,7 +7,7 @@ import torch
 import numpy
 
 from allennlp.common.checks import ConfigurationError
-from allennlp.data import Vocabulary
+from allennlp.data import TextFieldTensors, Vocabulary
 from allennlp.modules import Seq2SeqEncoder, TextFieldEmbedder, Embedding
 from allennlp.modules import FeedForward
 from allennlp.models.model import Model
@@ -115,7 +115,7 @@ class BiaffineDependencyParserMultiLang(BiaffineDependencyParser):
     @overrides
     def forward(
         self,  # type: ignore
-        words: Dict[str, torch.LongTensor],
+        words: TextFieldTensors,
         pos_tags: torch.LongTensor,
         metadata: List[Dict[str, Any]],
         head_tags: torch.LongTensor = None,

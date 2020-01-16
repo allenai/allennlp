@@ -80,11 +80,11 @@ class ElmoTokenEmbedder(TokenEmbedder):
     def get_output_dim(self) -> int:
         return self.output_dim
 
-    def forward(self, inputs: torch.Tensor, word_inputs: torch.Tensor = None) -> torch.Tensor:
+    def forward(self, tokens: torch.Tensor, word_inputs: torch.Tensor = None) -> torch.Tensor:
         """
         # Parameters
 
-        inputs : ``torch.Tensor``
+        tokens : ``torch.Tensor``
             Shape ``(batch_size, timesteps, 50)`` of character ids representing the current batch.
         word_inputs : ``torch.Tensor``, optional.
             If you passed a cached vocab, you can in addition pass a tensor of shape
@@ -95,7 +95,7 @@ class ElmoTokenEmbedder(TokenEmbedder):
         The ELMo representations for the input sequence, shape
         ``(batch_size, timesteps, embedding_dim)``
         """
-        elmo_output = self._elmo(inputs, word_inputs)
+        elmo_output = self._elmo(tokens, word_inputs)
         elmo_representations = elmo_output["elmo_representations"][0]
         if self._projection:
             projection = self._projection

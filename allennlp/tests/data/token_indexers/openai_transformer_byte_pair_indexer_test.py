@@ -81,7 +81,7 @@ class TestOpenaiTransformerBytePairIndexer(AllenNlpTestCase):
         assert "openai_transformer" not in self.vocab._index_to_token
         assert "openai_transformer" not in self.vocab._token_to_index
 
-        indices = self.indexer.tokens_to_indices(tokens, self.vocab, "test")
+        indices = self.indexer.tokens_to_indices(tokens, self.vocab)
 
         # vocab should be full now
         i2t = self.vocab._index_to_token.get("openai_transformer")
@@ -89,10 +89,10 @@ class TestOpenaiTransformerBytePairIndexer(AllenNlpTestCase):
         assert len(i2t) == 5 * 5 * 2
         assert len(t2i) == 5 * 5 * 2
 
-        assert set(indices.keys()) == {"test", "test-offsets", "mask"}
+        assert set(indices.keys()) == {"inputs", "offsets", "mask"}
 
-        text_tokens = indices["test"]
-        offsets = indices["test-offsets"]
+        text_tokens = indices["inputs"]
+        offsets = indices["offsets"]
 
         assert text_tokens[:6] == [
             self.indexer.encoder.get(symbol, 0)
@@ -112,7 +112,7 @@ class TestOpenaiTransformerBytePairIndexer(AllenNlpTestCase):
         tokens = [Token("a") for _ in range(513)]
 
         with pytest.raises(RuntimeError):
-            self.indexer.tokens_to_indices(tokens, self.vocab, "should-fail")
+            self.indexer.tokens_to_indices(tokens, self.vocab)
 
     def test_with_extra_tokens(self):
         self._create_indexer_vocab(tokens_to_add=["<start>", "<predict>"])
@@ -124,8 +124,8 @@ class TestOpenaiTransformerBytePairIndexer(AllenNlpTestCase):
             Token("ee"),
             Token("<predict>"),
         ]
-        indices = self.indexer.tokens_to_indices(tokens, self.vocab, "openai")
-        assert indices["openai"][:9] == [50, 4, 21, 31, 4, 0, 1, 51, 0]
+        indices = self.indexer.tokens_to_indices(tokens, self.vocab)
+        assert indices["inputs"][:9] == [50, 4, 21, 31, 4, 0, 1, 51, 0]
 
     @pytest.mark.skip()
     def test_for_correctness_with_fixture(self):
@@ -144,8 +144,6 @@ class TestOpenaiTransformerBytePairIndexer(AllenNlpTestCase):
 
         for k, sentence in enumerate(sentences):
             tokens = [token.text for token in nlp(text_standardize(sentence)) if not token.is_space]
-            indices = indexer.tokens_to_indices(
-                [Token(token) for token in tokens], Vocabulary(), "openai_indexer"
-            )
-            non_padded_indices = [i for i in indices["openai_indexer"] if i != 0]
+            indices = indexer.tokens_to_indices([Token(token) for token in tokens], Vocabulary())
+            non_padded_indices = [i for i in indices["tokens"] if i != 0]
             assert non_padded_indices == expected_indices[k]

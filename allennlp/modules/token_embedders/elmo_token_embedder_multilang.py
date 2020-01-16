@@ -111,12 +111,12 @@ class ElmoTokenEmbedderMultiLang(TokenEmbedder):
         return self.output_dim
 
     def forward(
-        self, inputs: torch.Tensor, lang: str, word_inputs: torch.Tensor = None
+        self, tokens: torch.Tensor, lang: str, word_inputs: torch.Tensor = None
     ) -> torch.Tensor:
         """
         # Parameters
 
-        inputs : ``torch.Tensor``
+        tokens : ``torch.Tensor``
             Shape ``(batch_size, timesteps, 50)`` of character ids representing the current batch.
         lang : ``str``, , required.
             The language of the ELMo embedder to use.
@@ -130,7 +130,7 @@ class ElmoTokenEmbedderMultiLang(TokenEmbedder):
         ``(batch_size, timesteps, embedding_dim)``
         """
         elmo = getattr(self, "elmo_{}".format(lang))
-        elmo_output = elmo(inputs, word_inputs)
+        elmo_output = elmo(tokens, word_inputs)
         elmo_representations = elmo_output["elmo_representations"][0]
         aligning = getattr(self, "aligning_{}".format(lang))
         elmo_representations = aligning(elmo_representations)

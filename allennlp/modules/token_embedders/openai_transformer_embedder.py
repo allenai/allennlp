@@ -37,7 +37,9 @@ class OpenaiTransformerEmbedder(TokenEmbedder):
         """
         return self._transformer.embed.embedding_dim
 
-    def forward(self, inputs: torch.Tensor, offsets: torch.Tensor = None) -> torch.Tensor:
+    def forward(
+        self, inputs: torch.Tensor, offsets: torch.Tensor = None, mask: torch.Tensor = None
+    ) -> torch.Tensor:
         """
         # Parameters
 

@@ -63,9 +63,10 @@ local BASE_ITERATOR = {
     "num_samples": 8192,
     "sparse_embeddings": true,
     "text_field_embedder": {
-      // Note: This is because we only use the token_characters during embedding, not the tokens themselves.
-      "allow_unmatched_keys": true,
       "token_embedders": {
+        "tokens": {
+          "type": "empty"
+        },
         "token_characters": {
             "type": "character_encoding",
             "embedding": {

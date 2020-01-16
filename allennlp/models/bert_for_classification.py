@@ -4,7 +4,7 @@ from overrides import overrides
 import torch
 from transformers.modeling_bert import BertModel
 
-from allennlp.data.vocabulary import Vocabulary
+from allennlp.data import TextFieldTensors, Vocabulary
 from allennlp.models.model import Model
 from allennlp.modules.token_embedders.bert_token_embedder import PretrainedBertModel
 from allennlp.nn.initializers import InitializerApplicator
@@ -87,13 +87,13 @@ class BertForClassification(Model):
         initializer(self._classification_layer)
 
     def forward(  # type: ignore
-        self, tokens: Dict[str, torch.LongTensor], label: torch.IntTensor = None
+        self, tokens: TextFieldTensors, label: torch.IntTensor = None
     ) -> Dict[str, torch.Tensor]:
 
         """
         # Parameters
 
-        tokens : Dict[str, torch.LongTensor]
+        tokens : TextFieldTensors
             From a ``TextField`` (that has a bert-pretrained token indexer)
         label : torch.IntTensor, optional (default = None)
             From a ``LabelField``
@@ -111,8 +111,9 @@ class BertForClassification(Model):
         loss : torch.FloatTensor, optional
             A scalar loss to be optimised.
         """
-        input_ids = tokens[self._index]
-        token_type_ids = tokens[f"{self._index}-type-ids"]
+        inputs = tokens[self._index]
+        input_ids = inputs["input_ids"]
+        token_type_ids = inputs["token_type_ids"]
         input_mask = (input_ids != 0).long()
 
         _, pooled = self.bert_model(

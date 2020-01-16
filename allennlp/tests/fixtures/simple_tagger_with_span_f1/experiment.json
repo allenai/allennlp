@@ -15,11 +15,8 @@
     "token_indexers": {
       "tokens": {
         "type": "single_id",
+        "namespace": "test_tokens",
         "lowercase_tokens": true
-      },
-      "tokens_again_for_testing": {
-        "type": "single_id",
-        "lowercase_tokens": false
       }
     }
   },
@@ -29,7 +26,6 @@
     "type": "simple_tagger",
     "label_encoding": "IOB1",
     "text_field_embedder": {
-      "allow_unmatched_keys": true,
       "token_embedders": {
         "tokens": {
             "type": "embedding",
@@ -49,7 +45,6 @@
   },
   "iterator": {
     "type": "bucket",
-    "sorting_keys": [["tokens", "num_tokens"]],
     "padding_noise": 0.0,
     "batch_size" : 80
   },

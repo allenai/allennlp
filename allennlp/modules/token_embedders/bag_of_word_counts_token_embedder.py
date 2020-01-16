@@ -1,9 +1,9 @@
 import torch
-from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
-from allennlp.data import Vocabulary
-from allennlp.common import Params
-from allennlp.nn.util import get_text_field_mask
+
 from allennlp.common.checks import ConfigurationError
+from allennlp.data import Vocabulary
+from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
+from allennlp.nn.util import get_text_field_mask
 
 
 @TokenEmbedder.register("bag_of_word_counts")
@@ -20,7 +20,7 @@ class BagOfWordCountsTokenEmbedder(TokenEmbedder):
     # Parameters
 
     vocab : ``Vocabulary``
-    vocab_namespace : ``str``
+    vocab_namespace : ``str``, optional (default = "tokens")
         namespace of vocabulary to embed
     projection_dim : ``int``, optional (default = ``None``)
         if specified, will project the resulting bag of words representation
@@ -32,7 +32,7 @@ class BagOfWordCountsTokenEmbedder(TokenEmbedder):
     def __init__(
         self,
         vocab: Vocabulary,
-        vocab_namespace: str,
+        vocab_namespace: str = "tokens",
         projection_dim: int = None,
         ignore_oov: bool = False,
     ) -> None:
@@ -70,7 +70,7 @@ class BagOfWordCountsTokenEmbedder(TokenEmbedder):
         """
         bag_of_words_vectors = []
 
-        mask = get_text_field_mask({"tokens": inputs})
+        mask = get_text_field_mask({"tokens": {"tokens": inputs}})
         if self._ignore_oov:
             # also mask out positions corresponding to oov
             mask *= (inputs != self._oov_idx).long()
@@ -85,24 +85,3 @@ class BagOfWordCountsTokenEmbedder(TokenEmbedder):
             projection = self._projection
             bag_of_words_output = projection(bag_of_words_output)
         return bag_of_words_output
-
-    @classmethod
-    def from_params(  # type: ignore
-        cls, vocab: Vocabulary, params: Params
-    ) -> "BagOfWordCountsTokenEmbedder":
-
-        """
-        we look for a ``vocab_namespace`` key in the parameter dictionary
-        to know which vocabulary to use.
-        """
-
-        vocab_namespace = params.pop("vocab_namespace", "tokens")
-        projection_dim = params.pop_int("projection_dim", None)
-        ignore_oov = params.pop_bool("ignore_oov", False)
-        params.assert_empty(cls.__name__)
-        return cls(
-            vocab=vocab,
-            vocab_namespace=vocab_namespace,
-            ignore_oov=ignore_oov,
-            projection_dim=projection_dim,
-        )

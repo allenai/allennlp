@@ -8,7 +8,7 @@ from torch.nn.modules.linear import Linear
 from torch.nn.modules.rnn import LSTMCell
 
 from allennlp.common.util import START_SYMBOL, END_SYMBOL
-from allennlp.data.vocabulary import Vocabulary
+from allennlp.data import TextFieldTensors, Vocabulary
 from allennlp.models.model import Model
 from allennlp.modules import Attention, TextFieldEmbedder, Seq2SeqEncoder
 from allennlp.modules.token_embedders import Embedding
@@ -158,11 +158,11 @@ class CopyNetSeq2Seq(Model):
     @overrides
     def forward(
         self,  # type: ignore
-        source_tokens: Dict[str, torch.LongTensor],
+        source_tokens: TextFieldTensors,
         source_token_ids: torch.Tensor,
         source_to_target: torch.Tensor,
         metadata: List[Dict[str, Any]],
-        target_tokens: Dict[str, torch.LongTensor] = None,
+        target_tokens: TextFieldTensors = None,
         target_token_ids: torch.Tensor = None,
     ) -> Dict[str, torch.Tensor]:
 
@@ -171,7 +171,7 @@ class CopyNetSeq2Seq(Model):
 
         # Parameters
 
-        source_tokens : ``Dict[str, torch.LongTensor]``, required
+        source_tokens : ``TextFieldTensors``, required
             The output of `TextField.as_array()` applied on the source `TextField`. This will be
             passed through a `TextFieldEmbedder` and then through an encoder.
         source_token_ids : ``torch.Tensor``, required
@@ -184,7 +184,7 @@ class CopyNetSeq2Seq(Model):
             Metadata field that contains the original source tokens with key 'source_tokens'
             and any other meta fields. When 'target_tokens' is also passed, the metadata
             should also contain the original target tokens with key 'target_tokens'.
-        target_tokens : ``Dict[str, torch.LongTensor]``, optional (default = None)
+        target_tokens : ``TextFieldTensors``, optional (default = None)
             Output of `Textfield.as_array()` applied on target `TextField`. We assume that the
             target tokens are also represented as a `TextField` which must contain a "tokens"
             key that uses single ids.
@@ -220,7 +220,7 @@ class CopyNetSeq2Seq(Model):
                     best_predictions = top_k_predictions[:, 0, :]
                     # shape: (batch_size, target_sequence_length)
                     gold_tokens = self._gather_extended_gold_tokens(
-                        target_tokens["tokens"], source_token_ids, target_token_ids
+                        target_tokens["tokens"]["tokens"], source_token_ids, target_token_ids
                     )
                     self._tensor_based_metric(best_predictions, gold_tokens)  # type: ignore
                 if self._token_based_metric is not None:
@@ -438,14 +438,14 @@ class CopyNetSeq2Seq(Model):
 
     def _forward_loss(
         self,
-        target_tokens: Dict[str, torch.LongTensor],
+        target_tokens: TextFieldTensors,
         target_token_ids: torch.Tensor,
         state: Dict[str, torch.Tensor],
     ) -> Dict[str, torch.Tensor]:
         """
         Calculate the loss against gold targets.
         """
-        batch_size, target_sequence_length = target_tokens["tokens"].size()
+        batch_size, target_sequence_length = target_tokens["tokens"]["tokens"].size()
 
         # shape: (batch_size, max_input_sequence_length)
         source_mask = state["source_mask"]
@@ -477,7 +477,7 @@ class CopyNetSeq2Seq(Model):
         step_log_likelihoods = []
         for timestep in range(num_decoding_steps):
             # shape: (batch_size,)
-            input_choices = target_tokens["tokens"][:, timestep]
+            input_choices = target_tokens["tokens"]["tokens"][:, timestep]
             # If the previous target token was copied, we use the special copy token.
             # But the end target token will always be THE end token, so we know
             # it was not copied.
@@ -503,7 +503,7 @@ class CopyNetSeq2Seq(Model):
             # shape: (batch_size, trimmed_source_length)
             copy_scores = self._get_copy_scores(state)
             # shape: (batch_size,)
-            step_target_tokens = target_tokens["tokens"][:, timestep + 1]
+            step_target_tokens = target_tokens["tokens"]["tokens"][:, timestep + 1]
             step_log_likelihood, selective_weights = self._get_ll_contrib(
                 generation_scores,
                 generation_scores_mask,

@@ -6,10 +6,10 @@ from torch.nn.modules import Linear, Dropout
 import torch.nn.functional as F
 from transformers.modeling_bert import BertModel
 
-from allennlp.data import Vocabulary
+from allennlp.data import TextFieldTensors, Vocabulary
 from allennlp.models.model import Model
 from allennlp.models.srl_util import convert_bio_tags_to_conll_format
-from allennlp.nn import InitializerApplicator, RegularizerApplicator
+from allennlp.nn import InitializerApplicator, RegularizerApplicator, util
 from allennlp.nn.util import get_text_field_mask, sequence_cross_entropy_with_logits
 from allennlp.nn.util import get_lengths_from_binary_sequence_mask, viterbi_decode
 from allennlp.training.metrics.srl_eval_scorer import SrlEvalScorer, DEFAULT_SRL_EVAL_PATH
@@ -72,7 +72,7 @@ class SrlBert(Model):
 
     def forward(  # type: ignore
         self,
-        tokens: Dict[str, torch.Tensor],
+        tokens: TextFieldTensors,
         verb_indicator: torch.Tensor,
         metadata: List[Any],
         tags: torch.LongTensor = None,
@@ -81,7 +81,7 @@ class SrlBert(Model):
         """
         # Parameters
 
-        tokens : Dict[str, torch.LongTensor], required
+        tokens : TextFieldTensors, required
             The output of ``TextField.as_array()``, which should typically be passed directly to a
             ``TextFieldEmbedder``. For this model, this must be a `SingleIdTokenIndexer` which
             indexes wordpieces from the BERT vocabulary.
@@ -111,7 +111,9 @@ class SrlBert(Model):
         """
         mask = get_text_field_mask(tokens)
         bert_embeddings, _ = self.bert_model(
-            input_ids=tokens["tokens"], token_type_ids=verb_indicator, attention_mask=mask,
+            input_ids=util.get_token_ids_from_text_field_tensors(tokens),
+            token_type_ids=verb_indicator,
+            attention_mask=mask,
         )
 
         embedded_text_input = self.embedding_dropout(bert_embeddings)

@@ -4,7 +4,9 @@ import torch
 
 from allennlp.data.vocabulary import Vocabulary
 
-DataArray = TypeVar("DataArray", torch.Tensor, Dict[str, torch.Tensor])
+DataArray = TypeVar(
+    "DataArray", torch.Tensor, Dict[str, torch.Tensor], Dict[str, Dict[str, torch.Tensor]]
+)
 
 
 class Field(Generic[DataArray]):

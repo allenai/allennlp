@@ -14,10 +14,12 @@
   "model": {
     "type": "atis_parser",
     "utterance_embedder": {
-      "tokens": {
-        "type": "embedding",
-        "embedding_dim": 400,
-        "trainable": true
+      "token_embedders": {
+        "tokens": {
+          "type": "embedding",
+          "embedding_dim": 400,
+          "trainable": true
+        }
       }
     },
     "action_embedding_dim": 200,
