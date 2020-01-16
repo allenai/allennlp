@@ -7,9 +7,7 @@ which to write the results.
 
    $ allennlp train --help
     usage: allennlp train [-h] -s SERIALIZATION_DIR [-r] [-f] [-o OVERRIDES]
-                          [--file-friendly-logging]
-                          [--cache-directory CACHE_DIRECTORY]
-                          [--cache-prefix CACHE_PREFIX] [--node-rank NODE_RANK]
+                          [--file-friendly-logging] [--node-rank NODE_RANK]
                           [--include-package INCLUDE_PACKAGE]
                           param_path
 
@@ -31,12 +29,6 @@ which to write the results.
       --file-friendly-logging
                             outputs tqdm status on separate lines and slows tqdm
                             refresh rate
-      --cache-directory CACHE_DIRECTORY
-                            Location to store cache of data preprocessing
-      --cache-prefix CACHE_PREFIX
-                            Prefix to use for data caching, giving current
-                            parameter settings a name in the cache, instead of
-                            computing a hash
       --node-rank NODE_RANK
                             Rank of this node in the distributed setup (default =
                             0)
@@ -123,21 +115,6 @@ class Train(Subcommand):
         )
 
         subparser.add_argument(
-            "--cache-directory",
-            type=str,
-            default="",
-            help="Location to store cache of data preprocessing",
-        )
-
-        subparser.add_argument(
-            "--cache-prefix",
-            type=str,
-            default="",
-            help="Prefix to use for data caching, giving current parameter "
-            "settings a name in the cache, instead of computing a hash",
-        )
-
-        subparser.add_argument(
             "--node-rank", type=int, default=0, help="Rank of this node in the distributed setup"
         )
 
@@ -157,8 +134,6 @@ def train_model_from_args(args: argparse.Namespace):
         file_friendly_logging=args.file_friendly_logging,
         recover=args.recover,
         force=args.force,
-        cache_directory=args.cache_directory,
-        cache_prefix=args.cache_prefix,
         node_rank=args.node_rank,
         include_package=args.include_package,
     )
@@ -171,8 +146,6 @@ def train_model_from_file(
     file_friendly_logging: bool = False,
     recover: bool = False,
     force: bool = False,
-    cache_directory: str = None,
-    cache_prefix: str = None,
     node_rank: int = 0,
     include_package: List[str] = None,
 ) -> Model:
@@ -197,10 +170,6 @@ def train_model_from_file(
         of a run.  For continuing training a model on new data, see the ``fine-tune`` command.
     force : ``bool``, optional (default=False)
         If ``True``, we will overwrite the serialization directory if it already exists.
-    cache_directory : ``str``, optional
-        For caching data pre-processing.  See :func:`allennlp.training.util.datasets_from_params`.
-    cache_prefix : ``str``, optional
-        For caching data pre-processing.  See :func:`allennlp.training.util.datasets_from_params`.
     node_rank : ``int``, optional
         Rank of the current node in distributed training
     include_package : ``str``, optional
@@ -214,8 +183,6 @@ def train_model_from_file(
         file_friendly_logging=file_friendly_logging,
         recover=recover,
         force=force,
-        cache_directory=cache_directory,
-        cache_prefix=cache_prefix,
         node_rank=node_rank,
         include_package=include_package,
     )
@@ -227,8 +194,6 @@ def train_model(
     file_friendly_logging: bool = False,
     recover: bool = False,
     force: bool = False,
-    cache_directory: str = None,
-    cache_prefix: str = None,
     node_rank: int = 0,
     include_package: List[str] = None,
     batch_weight_key: str = "",
@@ -256,10 +221,6 @@ def train_model(
         of a run.  For continuing training a model on new data, see the ``fine-tune`` command.
     force : ``bool``, optional (default=False)
         If ``True``, we will overwrite the serialization directory if it already exists.
-    cache_directory : ``str``, optional
-        For caching data pre-processing.  See :func:`allennlp.training.util.datasets_from_params`.
-    cache_prefix : ``str``, optional
-        For caching data pre-processing.  See :func:`allennlp.training.util.datasets_from_params`.
     node_rank : ``int``, optional
         Rank of the current node in distributed training
     include_package : ``List[str]``, optional
@@ -293,8 +254,6 @@ def train_model(
             serialization_dir=serialization_dir,
             file_friendly_logging=file_friendly_logging,
             recover=recover,
-            cache_directory=cache_directory,
-            cache_prefix=cache_prefix,
             include_package=include_package,
             batch_weight_key=batch_weight_key,
             model=model,
@@ -347,8 +306,6 @@ def train_model(
                 serialization_dir,
                 file_friendly_logging,
                 recover,
-                cache_directory,
-                cache_prefix,
                 include_package,
                 batch_weight_key,
                 node_rank,
@@ -373,8 +330,6 @@ def _train_worker(
     serialization_dir: str,
     file_friendly_logging: bool = False,
     recover: bool = False,
-    cache_directory: str = None,
-    cache_prefix: str = None,
     include_package: List[str] = None,
     batch_weight_key: str = "",
     node_rank: int = 0,
@@ -407,10 +362,6 @@ def _train_worker(
         If ``True``, we will try to recover a training run from an existing serialization
         directory.  This is only intended for use when something actually crashed during the middle
         of a run.  For continuing training a model on new data, see the ``fine-tune`` command.
-    cache_directory : ``str``, optional
-        For caching data pre-processing.  See :func:`allennlp.training.util.datasets_from_params`.
-    cache_prefix : ``str``, optional
-        For caching data pre-processing.  See :func:`allennlp.training.util.datasets_from_params`.
     include_package : ``List[str]``, optional
         In distributed mode, since this function would have been spawned as a separate process,
         the extra imports need to be done again. NOTE: This does not have any effect in single
@@ -485,8 +436,6 @@ def _train_worker(
             params=params,
             serialization_dir=serialization_dir,
             recover=recover,
-            cache_directory=cache_directory,
-            cache_prefix=cache_prefix,
             model=model,
             embedding_sources_mapping=embedding_sources_mapping,
             extend_vocab=extend_vocab,
@@ -514,9 +463,7 @@ def _train_worker(
                 "to run allennlp evaluate separately."
             )
 
-        trainer = TrainerBase.from_params(
-            params, serialization_dir, recover, cache_directory, cache_prefix
-        )
+        trainer = TrainerBase.from_params(params, serialization_dir, recover)
         evaluation_dataset = None
         evaluation_iterator = None
 

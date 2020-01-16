@@ -101,9 +101,9 @@ class CopyNetDatasetReader(DatasetReader):
         source_tokenizer: Tokenizer = None,
         target_tokenizer: Tokenizer = None,
         source_token_indexers: Dict[str, TokenIndexer] = None,
-        lazy: bool = False,
+        **kwargs,
     ) -> None:
-        super().__init__(lazy)
+        super().__init__(**kwargs)
         self._target_namespace = target_namespace
         self._source_tokenizer = source_tokenizer or SpacyTokenizer()
         self._target_tokenizer = target_tokenizer or self._source_tokenizer

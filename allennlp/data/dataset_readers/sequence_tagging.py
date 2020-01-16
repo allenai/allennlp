@@ -43,9 +43,9 @@ class SequenceTaggingDatasetReader(DatasetReader):
         word_tag_delimiter: str = DEFAULT_WORD_TAG_DELIMITER,
         token_delimiter: str = None,
         token_indexers: Dict[str, TokenIndexer] = None,
-        lazy: bool = False,
+        **kwargs,
     ) -> None:
-        super().__init__(lazy)
+        super().__init__(**kwargs)
         self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
         self._word_tag_delimiter = word_tag_delimiter
         self._token_delimiter = token_delimiter

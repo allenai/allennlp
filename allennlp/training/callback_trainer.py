@@ -296,16 +296,9 @@ class CallbackTrainer(TrainerBase):
     # Requires custom from_params.
     @classmethod
     def from_params(  # type: ignore
-        cls,
-        params: Params,
-        serialization_dir: str,
-        recover: bool = False,
-        cache_directory: str = None,
-        cache_prefix: str = None,
+        cls, params: Params, serialization_dir: str, recover: bool = False,
     ) -> "CallbackTrainer":
-        pieces = TrainerPieces.from_params(
-            params, serialization_dir, recover, cache_directory, cache_prefix
-        )
+        pieces = TrainerPieces.from_params(params, serialization_dir, recover)
         model = pieces.model
         params = pieces.params
         validation_iterator = pieces.validation_iterator or pieces.iterator

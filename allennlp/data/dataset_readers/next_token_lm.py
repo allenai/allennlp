@@ -41,12 +41,9 @@ class NextTokenLmReader(DatasetReader):
     """
 
     def __init__(
-        self,
-        tokenizer: Tokenizer = None,
-        token_indexers: Dict[str, TokenIndexer] = None,
-        lazy: bool = False,
+        self, tokenizer: Tokenizer = None, token_indexers: Dict[str, TokenIndexer] = None, **kwargs,
     ) -> None:
-        super().__init__(lazy)
+        super().__init__(**kwargs)
         self._tokenizer = tokenizer or WhitespaceTokenizer()
         self._targets_tokenizer: Tokenizer
         if isinstance(self._tokenizer, PretrainedTransformerTokenizer):
