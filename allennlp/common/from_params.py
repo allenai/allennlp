@@ -142,7 +142,7 @@ def create_kwargs(
         # first superclass, and so on.  Taking the first superclass should work in all cases that
         # we're looking for here.
         superclass = cls.mro()[1]
-        superclass_signature = inspect.signature(superclass.__init__)
+        superclass_signature = inspect.signature(superclass.__init__)  # type: ignore
         for param_name, param in superclass_signature.parameters.items():
             if param_name == "self":
                 continue
