@@ -4,7 +4,7 @@ from overrides import overrides
 import torch
 from torch.nn.modules import Linear, Dropout
 import torch.nn.functional as F
-from pytorch_pretrained_bert.modeling import BertModel
+from transformers.modeling_bert import BertModel
 
 from allennlp.data import Vocabulary
 from allennlp.models.model import Model
@@ -111,10 +111,7 @@ class SrlBert(Model):
         """
         mask = get_text_field_mask(tokens)
         bert_embeddings, _ = self.bert_model(
-            input_ids=tokens["tokens"],
-            token_type_ids=verb_indicator,
-            attention_mask=mask,
-            output_all_encoded_layers=False,
+            input_ids=tokens["tokens"], token_type_ids=verb_indicator, attention_mask=mask,
         )
 
         embedded_text_input = self.embedding_dropout(bert_embeddings)

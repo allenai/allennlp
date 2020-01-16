@@ -3,7 +3,7 @@ from overrides import overrides
 
 import spacy
 import ftfy
-from pytorch_pretrained_bert.tokenization import BasicTokenizer as BertTokenizer
+from transformers.tokenization_bert import BasicTokenizer as BertTokenizer
 
 from allennlp.common.util import get_spacy_model
 from allennlp.data.tokenizers.token import Token

@@ -2,7 +2,7 @@ from typing import Dict, Union, Optional
 
 from overrides import overrides
 import torch
-from pytorch_pretrained_bert.modeling import BertModel
+from transformers.modeling_bert import BertModel
 
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.models.model import Model

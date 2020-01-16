@@ -13,7 +13,7 @@ import logging
 import torch
 import torch.nn.functional as F
 
-from pytorch_pretrained_bert.modeling import BertModel
+from transformers.modeling_bert import BertModel
 
 from allennlp.modules.scalar_mix import ScalarMix
 from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
@@ -91,13 +91,15 @@ class BertEmbedder(TokenEmbedder):
 
         if not top_layer_only:
             self._scalar_mix = ScalarMix(
-                bert_model.config.num_hidden_layers,
+                bert_model.config.num_hidden_layers + 1,
                 do_layer_norm=False,
                 initial_scalar_parameters=scalar_mix_parameters,
                 trainable=scalar_mix_parameters is None,
             )
         else:
             self._scalar_mix = None
+
+        self.bert_model.encoder.output_hidden_states = True
 
     def get_output_dim(self) -> int:
         return self.output_dim
@@ -180,11 +182,12 @@ class BertEmbedder(TokenEmbedder):
 
         # input_ids may have extra dimensions, so we reshape down to 2-d
         # before calling the BERT model and then reshape back at the end.
-        all_encoder_layers, _ = self.bert_model(
+        _, _, all_encoder_layers = self.bert_model(
             input_ids=util.combine_initial_dims(input_ids),
             token_type_ids=util.combine_initial_dims(token_type_ids),
             attention_mask=util.combine_initial_dims(input_mask),
         )
+        print([x.shape for x in all_encoder_layers])
         all_encoder_layers = torch.stack(all_encoder_layers)
 
         if needs_split:
@@ -270,7 +273,7 @@ class PretrainedBertEmbedder(BertEmbedder):
         or the path to the .tar.gz file with the model weights.
 
         If the name is a key in the list of pretrained models at
-        https://github.com/huggingface/pytorch-pretrained-BERT/blob/master/pytorch_pretrained_bert/modeling.py#L41
+        https://github.com/huggingface/transformers/blob/master/src/transformers/modeling_bert.py#L34
         the corresponding path will be used; otherwise it will be interpreted as a path or URL.
     requires_grad : ``bool``, optional (default = False)
         If True, compute gradient of BERT parameters for fine tuning.
