@@ -84,11 +84,6 @@ class LanguageModelTokenEmbedder(TokenEmbedder):
             # Note: We only care about embedded indices. This does not include "tokens" which
             # is just used to compute the loss in LanguageModel.
             raise ConfigurationError(f"LM from {archive_file} trained with multiple embedders!")
-        if "embedder_to_indexer_map" in text_field_embedder:
-            # Similarly we don't support multiple indexers per embedder.
-            raise ConfigurationError(
-                f"LM from {archive_file} trained with embedder_to_indexer_map!"
-            )
         self._token_name = token_names[0]
 
         # TODO(brendanr): Find a way to remove this hack. The issue fundamentally is that the
