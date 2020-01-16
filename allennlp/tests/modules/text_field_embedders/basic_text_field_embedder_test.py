@@ -95,7 +95,7 @@ class TestBasicTextFieldEmbedder(AllenNlpTestCase):
                 }
             }
         )
-        token_embedder = BasicTextFieldEmbedder.from_params(vocab=self.vocab, params)
+        token_embedder = BasicTextFieldEmbedder.from_params(vocab=self.vocab, params=params)
         inputs = {"elmo": {"tokens": (torch.rand(3, 6, 50) * 15).long()}}
         kwargs = {"lang": "es"}
         token_embedder(inputs, **kwargs)
@@ -138,7 +138,7 @@ class TestBasicTextFieldEmbedder(AllenNlpTestCase):
                 }
             }
         )
-        token_embedder = BasicTextFieldEmbedder.from_params(vocab=self.vocab, params)
+        token_embedder = BasicTextFieldEmbedder.from_params(vocab=self.vocab, params=params)
         inputs = {"elmo": {"tokens": (torch.rand(3, 6, 50) * 15).long()}}
         token_embedder(inputs)
 
