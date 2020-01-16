@@ -136,12 +136,12 @@ class PretrainedTransformerIndexer(TokenIndexer):
         output = {"token_ids": indices, "mask": mask}
         if self._intra_word_tokenization:
             output["wordpiece_mask"] = [1] * len(indices)
-            output["offsets"] = offsets
+            output["offsets"] = offsets  # type: ignore
         return output
 
     @overrides
     def get_empty_token_list(self) -> IndexedTokenList:
-        output = {"token_ids": [], "mask": []}
+        output: IndexedTokenList = {"token_ids": [], "mask": []}
         if self._intra_word_tokenization:
             output["wordpiece_mask"] = []
             output["offsets"] = []
