@@ -56,8 +56,6 @@ class PennTreeBankConstituencySpanDatasetReader(DatasetReader):
     convert_parentheses : ``bool``, optional, (default = ``False``)
         Whether or not to convert special PTB parentheses tokens (e.g., "-LRB-")
         to the corresponding parentheses tokens (i.e., "(").
-    lazy : ``bool``, optional, (default = ``False``)
-        Whether or not instances can be consumed lazily.
     label_namespace_prefix : ``str``, optional, (default = ``""``)
         Prefix used for the label namespace.  The ``span_labels`` will use
         namespace ``label_namespace_prefix + 'labels'``, and if using POS
@@ -71,11 +69,11 @@ class PennTreeBankConstituencySpanDatasetReader(DatasetReader):
         token_indexers: Dict[str, TokenIndexer] = None,
         use_pos_tags: bool = True,
         convert_parentheses: bool = False,
-        lazy: bool = False,
         label_namespace_prefix: str = "",
         pos_label_namespace: str = "pos",
+        **kwargs,
     ) -> None:
-        super().__init__(lazy=lazy)
+        super().__init__(**kwargs)
         self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
         self._use_pos_tags = use_pos_tags
         self._convert_parentheses = convert_parentheses

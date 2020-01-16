@@ -36,9 +36,9 @@ class UniversalDependenciesDatasetReader(DatasetReader):
         token_indexers: Dict[str, TokenIndexer] = None,
         use_language_specific_pos: bool = False,
         tokenizer: Tokenizer = None,
-        lazy: bool = False,
+        **kwargs,
     ) -> None:
-        super().__init__(lazy)
+        super().__init__(**kwargs)
         self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
         self.use_language_specific_pos = use_language_specific_pos
         self.tokenizer = tokenizer

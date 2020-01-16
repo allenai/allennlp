@@ -6,7 +6,7 @@ import torch
 from allennlp.common import Params
 from allennlp.common.from_params import FromParams, takes_arg, remove_optional, create_kwargs
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.data.tokenizers import Tokenizer
+from allennlp.data import DatasetReader, Tokenizer
 from allennlp.models import Model
 from allennlp.models.archival import load_archive
 from allennlp.common.checks import ConfigurationError
@@ -69,7 +69,7 @@ class TestFromParams(AllenNlpTestCase):
 
     def test_create_kwargs(self):
         kwargs = create_kwargs(
-            MyClass, "MyClass", Params({"my_int": 5}), my_bool=True, my_float=4.4
+            MyClass, MyClass, Params({"my_int": 5}), my_bool=True, my_float=4.4
         )
 
         # my_float should not be included because it's not a param of the MyClass constructor
@@ -547,3 +547,11 @@ class TestFromParams(AllenNlpTestCase):
         }
         with pytest.raises(ConfigurationError):
             Model.from_params(vocab=trained_model.vocab, params=Params(model_params))
+
+    def test_kwargs_are_passed_to_superclass(self):
+        params = Params(
+            {"type": "text_classification_json", "lazy": True, "cache_directory": "tmp"}
+        )
+        reader = DatasetReader.from_params(params)
+        assert reader.lazy == True
+        assert str(reader._cache_directory) == "tmp"

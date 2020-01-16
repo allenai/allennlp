@@ -48,9 +48,9 @@ class MaskedLanguageModelingReader(DatasetReader):
         self,
         tokenizer: Tokenizer = None,
         token_indexers: Dict[str, TokenIndexer] = None,
-        lazy: bool = False,
+        **kwargs,
     ) -> None:
-        super().__init__(lazy)
+        super().__init__(**kwargs)
         self._tokenizer = tokenizer or WhitespaceTokenizer()
         # temporary hack to not to add special tokens
         self._targets_tokenizer: Tokenizer

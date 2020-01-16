@@ -85,12 +85,12 @@ class UniversalDependenciesMultiLangDatasetReader(DatasetReader):
         languages: List[str],
         token_indexers: Dict[str, TokenIndexer] = None,
         use_language_specific_pos: bool = False,
-        lazy: bool = False,
         alternate: bool = True,
         is_first_pass_for_vocab: bool = True,
         instances_per_file: int = 32,
+        **kwargs,
     ) -> None:
-        super().__init__(lazy)
+        super().__init__(**kwargs)
         self._languages = languages
         self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
         self._use_language_specific_pos = use_language_specific_pos

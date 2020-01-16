@@ -65,11 +65,11 @@ class Conll2000DatasetReader(DatasetReader):
         token_indexers: Dict[str, TokenIndexer] = None,
         tag_label: str = "chunk",
         feature_labels: Sequence[str] = (),
-        lazy: bool = False,
         coding_scheme: str = "BIO",
         label_namespace: str = "labels",
+        **kwargs,
     ) -> None:
-        super().__init__(lazy)
+        super().__init__(**kwargs)
         self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
         if tag_label is not None and tag_label not in self._VALID_LABELS:
             raise ConfigurationError("unknown tag label type: {}".format(tag_label))

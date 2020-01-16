@@ -209,9 +209,11 @@ class MultiprocessDatasetReader(DatasetReader):
         num_workers: int,
         epochs_per_read: int = 1,
         output_queue_size: int = 1000,
+        **kwargs,
     ) -> None:
         # Multiprocess reader is intrinsically lazy.
-        super().__init__(lazy=True)
+        kwags["lazy"] = True
+        super().__init__(**kwargs)
 
         self.reader = base_reader
         self.num_workers = num_workers

@@ -57,43 +57,40 @@ class _LazyInstances(Iterable):
 
 class DatasetReader(Registrable):
     """
-    A ``DatasetReader`` knows how to turn a file containing a dataset into a collection
-    of ``Instance`` s.  To implement your own, just override the `_read(file_path)` method
-    to return an ``Iterable`` of the instances. This could be a list containing the instances
+    A `DatasetReader` knows how to turn a file containing a dataset into a collection
+    of `Instances`.  To implement your own, just override the `_read(file_path)` method
+    to return an `Iterable` of the instances. This could be a list containing the instances
     or a lazy generator that returns them one at a time.
 
     All parameters necessary to _read the data apart from the filepath should be passed
-    to the constructor of the ``DatasetReader``.
+    to the constructor of the `DatasetReader`.
 
     # Parameters
 
-    lazy : ``bool``, optional (default=False)
-        If this is true, ``instances()`` will return an object whose ``__iter__`` method
-        reloads the dataset each time it's called. Otherwise, ``instances()`` returns a list.
+    lazy : `bool`, optional (default=False)
+        If this is true, `instances()` will return an object whose `__iter__` method
+        reloads the dataset each time it's called. Otherwise, `instances()` returns a list.
+    cache_directory : `str`, optional (default=None)
+        If given, we will use this directory to store a cache of already-processed `Instances` in
+        every file passed to :func:`read`, serialized (by default, though you can override this) as
+        one string-formatted `Instance` per line.  If the cache file for a given `file_path` exists,
+        we read the `Instances` from the cache instead of re-processing the data (using
+        :func:`_instances_from_cache_file`).  If the cache file does _not_ exist, we will _create_
+        it on our first pass through the data (using :func:`_instances_to_cache_file`).
+
+        IMPORTANT CAVEAT: It is the _caller's_ responsibility to make sure that this directory is
+        unique for any combination of code and parameters that you use.  That is, if you pass a
+        directory here, we will use any existing cache files in that directory _regardless of the
+        parameters you set for this DatasetReader!_
     """
 
-    def __init__(self, lazy: bool = False) -> None:
+    def __init__(self, lazy: bool = False, cache_directory: str = None) -> None:
         self.lazy = lazy
-        self._cache_directory: pathlib.Path = None
-
-    def cache_data(self, cache_directory: str) -> None:
-        """
-        When you call this method, we will use this directory to store a cache of already-processed
-        ``Instances`` in every file passed to :func:`read`, serialized as one string-formatted
-        ``Instance`` per line.  If the cache file for a given ``file_path`` exists, we read the
-        ``Instances`` from the cache instead of re-processing the data (using
-        :func:`deserialize_instance`).  If the cache file does `not` exist, we will `create` it on
-        our first pass through the data (using :func:`serialize_instance`).
-
-        IMPORTANT CAVEAT: It is the `caller's` responsibility to make sure that this directory is
-        unique for any combination of code and parameters that you use.  That is, if you call this
-        method, we will use any existing cache files in that directory `regardless of the
-        parameters you set for this DatasetReader!`  If you use our commands, the ``Train`` command
-        is responsible for calling this method and ensuring that unique parameters correspond to
-        unique cache directories.  If you don't use our commands, that is your responsibility.
-        """
-        self._cache_directory = pathlib.Path(cache_directory)
-        os.makedirs(self._cache_directory, exist_ok=True)
+        if cache_directory:
+            self._cache_directory = pathlib.Path(cache_directory)
+            os.makedirs(self._cache_directory, exist_ok=True)
+        else:
+            self._cache_dirctory = None
 
     def read(self, file_path: str) -> Iterable[Instance]:
         """

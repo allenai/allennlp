@@ -45,8 +45,12 @@ class SimpleLanguageModelingDatasetReader(DatasetReader):
         max_sequence_length: int = None,
         start_tokens: List[str] = None,
         end_tokens: List[str] = None,
+        **kwargs,
     ) -> None:
-        super().__init__(True)
+        if "lazy" not in kwargs:
+            # We typically want language modeling data to be read lazily.
+            kwargs["lazy"] = True
+        super().__init__(**kwargs)
         self._tokenizer = tokenizer or SpacyTokenizer()
         self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
         if max_sequence_length is not None:

@@ -85,9 +85,9 @@ class ConllCorefReader(DatasetReader):
         self,
         max_span_width: int,
         token_indexers: Dict[str, TokenIndexer] = None,
-        lazy: bool = False,
+        **kwargs,
     ) -> None:
-        super().__init__(lazy)
+        super().__init__(**kwargs)
         self._max_span_width = max_span_width
         self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
 
