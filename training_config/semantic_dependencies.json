@@ -8,12 +8,14 @@
     "model": {
       "type": "graph_parser",
       "text_field_embedder": {
-        "tokens": {
-          "type": "embedding",
-          "embedding_dim": 100,
-          "pretrained_file": "/home/markn/data/glove/glove.6B/glove.6B.100d.txt",
-          "trainable": true,
-          "sparse": true
+        "token_embedders": {
+          "tokens": {
+            "type": "embedding",
+            "embedding_dim": 100,
+            "pretrained_file": "/home/markn/data/glove/glove.6B/glove.6B.100d.txt",
+            "trainable": true,
+            "sparse": true
+          }
         }
       },
       "pos_tag_embedding":{

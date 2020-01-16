@@ -4,7 +4,7 @@ from overrides import overrides
 import torch
 
 from allennlp.common.checks import check_dimensions_match
-from allennlp.data.vocabulary import Vocabulary
+from allennlp.data import TextFieldTensors, Vocabulary
 from allennlp.models.model import Model
 from allennlp.modules import LanguageModelHead, Seq2SeqEncoder, TextFieldEmbedder
 from allennlp.nn import util, InitializerApplicator
@@ -72,7 +72,7 @@ class NextTokenLM(Model):
             initializer(self)
 
     def forward(  # type: ignore
-        self, tokens: Dict[str, torch.LongTensor], target_ids: Dict[str, torch.LongTensor] = None
+        self, tokens: TextFieldTensors, target_ids: TextFieldTensors = None
     ) -> Dict[str, torch.Tensor]:
 
         # Shape: (batch_size, num_tokens, embedding_dim)
@@ -96,12 +96,10 @@ class NextTokenLM(Model):
 
         output_dict = {"probabilities": top_probs, "top_indices": top_indices}
 
-        # Using the namespace here is a hack...
-        output_dict["token_ids"] = tokens[self._target_namespace]
+        output_dict["token_ids"] = util.get_token_ids_from_text_field_tensors(tokens)
 
         if target_ids is not None:
-            # Hack - we're assuming you only have one target indexer.
-            targets = list(target_ids.values())[0].view(batch_size)
+            targets = util.get_token_ids_from_text_field_tensors(target_ids).view(batch_size)
             target_logits = target_logits.view(batch_size, vocab_size)
             loss = torch.nn.functional.cross_entropy(target_logits, targets)
             self._perplexity(loss)
@@ -128,6 +126,7 @@ class NextTokenLM(Model):
             )
             output_dict["words"] = top_words
         tokens = []
+        print(output_dict["token_ids"])
         for instance_tokens in output_dict["token_ids"]:
             tokens.append(
                 [

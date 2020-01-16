@@ -2,13 +2,11 @@ from typing import Dict, List, Callable
 import logging
 
 from overrides import overrides
-import torch
 from pytorch_pretrained_bert.tokenization import BertTokenizer
 
-from allennlp.common.util import pad_sequence_to_length
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.data.tokenizers.token import Token
-from allennlp.data.token_indexers.token_indexer import TokenIndexer
+from allennlp.data.token_indexers.token_indexer import TokenIndexer, IndexedTokenList
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +16,7 @@ logger = logging.getLogger(__name__)
 _NEVER_LOWERCASE = ["[UNK]", "[SEP]", "[PAD]", "[CLS]", "[MASK]"]
 
 
-class WordpieceIndexer(TokenIndexer[int]):
+class WordpieceIndexer(TokenIndexer):
     """
     A token indexer that does the wordpiece-tokenization (e.g. for BERT embeddings).
     If you are using one of the pretrained BERT models, you'll want to use the ``PretrainedBertIndexer``
@@ -142,7 +140,7 @@ class WordpieceIndexer(TokenIndexer[int]):
 
     @overrides
     def tokens_to_indices(
-        self, tokens: List[Token], vocabulary: Vocabulary, index_name: str
+        self, tokens: List[Token], vocabulary: Vocabulary
     ) -> Dict[str, List[int]]:
         if not self._added_to_vocabulary:
             self._add_encoding_to_vocabulary(vocabulary)
@@ -274,11 +272,15 @@ class WordpieceIndexer(TokenIndexer[int]):
         mask = [1 for _ in offsets]
 
         return {
-            index_name: wordpiece_ids,
-            f"{index_name}-offsets": offsets,
-            f"{index_name}-type-ids": token_type_ids,
+            "input_ids": wordpiece_ids,
+            "offsets": offsets,
+            "token_type_ids": token_type_ids,
             "mask": mask,
         }
+
+    @overrides
+    def get_empty_token_list(self) -> IndexedTokenList:
+        return {"input_ids": [], "offsets": [], "token_type_ids": [], "mask": []}
 
     def _add_start_and_end(self, wordpiece_ids: List[int]) -> List[int]:
         return self._start_piece_ids + wordpiece_ids + self._end_piece_ids
@@ -295,30 +297,6 @@ class WordpieceIndexer(TokenIndexer[int]):
             + token_type_ids
             + [last for _ in self._end_piece_ids]
         )
-
-    @overrides
-    def get_padding_lengths(self, token: int) -> Dict[str, int]:
-        return {}
-
-    @overrides
-    def as_padded_tensor(
-        self,
-        tokens: Dict[str, List[int]],
-        desired_num_tokens: Dict[str, int],
-        padding_lengths: Dict[str, int],
-    ) -> Dict[str, torch.Tensor]:
-        return {
-            key: torch.LongTensor(pad_sequence_to_length(val, desired_num_tokens[key]))
-            for key, val in tokens.items()
-        }
-
-    @overrides
-    def get_keys(self, index_name: str) -> List[str]:
-        """
-        We need to override this because the indexer generates multiple keys.
-        """
-
-        return [index_name, f"{index_name}-offsets", f"{index_name}-type-ids", "mask"]
 
 
 @TokenIndexer.register("bert-pretrained")

@@ -15,7 +15,6 @@
     "iterator": {
         "type": "same_language",
         "batch_size": 8,
-        "sorting_keys": [["words", "num_tokens"]],
         "instances_per_epoch": 8
     },
     "model": {
@@ -84,7 +83,6 @@
     },
     "validation_iterator": {
         "type": "same_language",
-        "sorting_keys": [["words", "num_tokens"]],
         "batch_size": 8
     }
 }

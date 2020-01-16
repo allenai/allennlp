@@ -107,6 +107,7 @@ class BertEmbedder(TokenEmbedder):
         input_ids: torch.LongTensor,
         offsets: torch.LongTensor = None,
         token_type_ids: torch.LongTensor = None,
+        mask: torch.LongTensor = None,
     ) -> torch.Tensor:
         """
         # Parameters
@@ -133,6 +134,11 @@ class BertEmbedder(TokenEmbedder):
             tokens from the first sentence should have type 0 and tokens from
             the second sentence should have type 1.  If you don't provide this
             (the default BertIndexer doesn't) then it's assumed to be all 0s.
+        mask : ``torch.LongTensor``, optional
+            This is not actually used here, but is needed for compatibility with other parts of the
+            code.  We pass all tensors created by a `TokenIndexer` by name to its corresponding
+            `TokenEmbedder`, but the `WordpieceIndexer` creates this `mask` that is intended for use
+            _outside_ of the `TokenEmbedder`, by `nn.util.get_text_field_mask`.
         """
 
         batch_size, full_seq_len = input_ids.size(0), input_ids.size(-1)

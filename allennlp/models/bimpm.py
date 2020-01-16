@@ -9,7 +9,7 @@ import torch
 import numpy
 
 from allennlp.common.checks import check_dimensions_match
-from allennlp.data import Vocabulary
+from allennlp.data import TextFieldTensors, Vocabulary
 from allennlp.modules import FeedForward, Seq2SeqEncoder, Seq2VecEncoder, TextFieldEmbedder
 from allennlp.models.model import Model
 from allennlp.nn import InitializerApplicator, RegularizerApplicator
@@ -120,8 +120,8 @@ class BiMpm(Model):
     @overrides
     def forward(
         self,  # type: ignore
-        premise: Dict[str, torch.LongTensor],
-        hypothesis: Dict[str, torch.LongTensor],
+        premise: TextFieldTensors,
+        hypothesis: TextFieldTensors,
         label: torch.LongTensor = None,
         metadata: List[Dict[str, Any]] = None,
     ) -> Dict[str, torch.Tensor]:
@@ -129,9 +129,9 @@ class BiMpm(Model):
 
         # Parameters
 
-        premise : Dict[str, torch.LongTensor]
+        premise : TextFieldTensors
             The premise from a ``TextField``
-        hypothesis : Dict[str, torch.LongTensor]
+        hypothesis : TextFieldTensors
             The hypothesis from a ``TextField``
         label : torch.LongTensor, optional (default = None)
             The label for the pair of the premise and the hypothesis

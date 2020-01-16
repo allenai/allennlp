@@ -19,11 +19,6 @@
     "model": {
         "type": "crf_tagger",
         "text_field_embedder": {
-            "allow_unmatched_keys": true,
-            "embedder_to_indexer_map": {
-                "tokens": ["tokens"],
-                "openai_transformer": ["openai_transformer", "openai_transformer-offsets"]
-            },
             "token_embedders": {
                 "tokens": {
                     "type": "embedding",

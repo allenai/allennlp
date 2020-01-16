@@ -97,7 +97,7 @@ class TestAutoRegressiveSeqDecoder(AllenNlpTestCase):
 
         encoded_state = torch.rand(batch_size, time_steps, decoder_inout_dim)
         source_mask = torch.ones(batch_size, time_steps).long()
-        target_tokens = {"tokens": torch.ones(batch_size, time_steps).long()}
+        target_tokens = {"tokens": {"tokens": torch.ones(batch_size, time_steps).long()}}
         source_mask[0, 1:] = 0
         encoder_out = {"source_mask": source_mask, "encoder_outputs": encoded_state}
 
@@ -157,7 +157,7 @@ class TestAutoRegressiveSeqDecoder(AllenNlpTestCase):
 
         encoded_state = torch.randn(batch_size, time_steps, decoder_inout_dim)
         source_mask = torch.ones(batch_size, time_steps).long()
-        target_tokens = {"tokens": torch.ones(batch_size, time_steps).long()}
+        target_tokens = {"tokens": {"tokens": torch.ones(batch_size, time_steps).long()}}
         source_mask[0, 1:] = 0
         encoder_out = {"source_mask": source_mask, "encoder_outputs": encoded_state}
 

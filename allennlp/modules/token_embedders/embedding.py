@@ -136,16 +136,16 @@ class Embedding(TokenEmbedder, Registrable):
         return self.output_dim
 
     @overrides
-    def forward(self, inputs):
-        # inputs may have extra dimensions (batch_size, d1, ..., dn, sequence_length),
-        # but embedding expects (batch_size, sequence_length), so pass inputs to
+    def forward(self, tokens: torch.Tensor) -> torch.Tensor:
+        # tokens may have extra dimensions (batch_size, d1, ..., dn, sequence_length),
+        # but embedding expects (batch_size, sequence_length), so pass tokens to
         # util.combine_initial_dims (which is a no-op if there are no extra dimensions).
         # Remember the original size.
-        original_size = inputs.size()
-        inputs = util.combine_initial_dims(inputs)
+        original_size = tokens.size()
+        tokens = util.combine_initial_dims(tokens)
 
         embedded = embedding(
-            inputs,
+            tokens,
             self.weight,
             padding_idx=self.padding_index,
             max_norm=self.max_norm,

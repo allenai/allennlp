@@ -78,7 +78,6 @@
     "type": "bucket",
     "padding_noise": 0.0,
     "batch_size" : 2,
-    "sorting_keys": [["source_tokens", "num_tokens"]]
   },
   "trainer": {
     "num_epochs": 2,

@@ -28,10 +28,12 @@
   "model": {
     "type": "wikitables_mml_parser",
     "question_embedder": {
-      "tokens": {
-        "type": "embedding",
-        "embedding_dim": 200,
-        "trainable": true
+      "token_embedders": {
+        "tokens": {
+          "type": "embedding",
+          "embedding_dim": 200,
+          "trainable": true
+        }
       }
     },
     "action_embedding_dim": 100,
