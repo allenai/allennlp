@@ -120,7 +120,6 @@ setup(
         "responses>=0.7",
         "conllu==2.2",
         "ftfy",
-        "pytorch-pretrained-bert>=0.6.0",
         "transformers>=2.1.1,!=2.2.1,!=2.2.2",
         "jsonpickle",
     ],
