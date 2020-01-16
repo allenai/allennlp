@@ -179,7 +179,7 @@ class PretrainedTransformerIndexer(TokenIndexer):
     ) -> Tuple[List[Token], List[Tuple[int, int]]]:
         """
         Tokenizes each word into wordpieces separately. Also calculates offsets such that
-        wordpices[offsets[i][0]:offsets[i][1]] corresponds to the original i-th token.
+        wordpices[offsets[i][0]:offsets[i][1] + 1] corresponds to the original i-th token.
         Does not insert special tokens.
         """
         wordpieces: List[Token] = []

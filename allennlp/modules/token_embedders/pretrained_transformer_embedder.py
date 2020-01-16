@@ -51,8 +51,8 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
             Shape: [batch_size, num_wordpieces].
         offsets: torch.LongTensor
             Shape: [batch_size, num_orig_tokens, 2].
-            token_ids[i][offsets[i][j][0]:offsets[i][j][1]] corresponds to the original j-th token
-            from the i-th batch.
+            token_ids[i][offsets[i][j][0]:offsets[i][j][1] + 1] corresponds to the original
+            j-th token from the i-th batch.
 
         # Returns:
         Shape: [
