@@ -71,9 +71,9 @@ class Event2MindDatasetReader(DatasetReader):
         target_token_indexers: Dict[str, TokenIndexer] = None,
         source_add_start_token: bool = True,
         dummy_instances_for_vocab_generation: bool = False,
-        lazy: bool = False,
+        **kwargs,
     ) -> None:
-        super().__init__(lazy)
+        super().__init__(**kwargs)
         self._source_tokenizer = source_tokenizer or SpacyTokenizer()
         self._target_tokenizer = target_tokenizer or self._source_tokenizer
         self._source_token_indexers = source_token_indexers or {"tokens": SingleIdTokenIndexer()}

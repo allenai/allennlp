@@ -111,7 +111,7 @@ def remove_optional(annotation: type):
 
 
 def create_kwargs(
-    constructor: Callable[..., T], class_name: str, params: Params, **extras
+    constructor: Callable[..., T], cls: Type[T], params: Params, **extras
 ) -> Dict[str, Any]:
     """
     Given some class, a `Params` object, and potentially other keyword arguments,
@@ -128,12 +128,35 @@ def create_kwargs(
     signature = inspect.signature(constructor)
     kwargs: Dict[str, Any] = {}
 
+    parameters = dict(signature.parameters)
+
+    # First we check for the presence of a **kwargs parameter.  If we find one, we look in the
+    # superclass constructor, to see if there are arguments there that we should try to also
+    # constructor.
+    has_kwargs = False
+    for param in parameters.values():
+        if param.kind == param.VAR_KEYWORD:
+            has_kwargs = True
+    if has_kwargs:
+        # "mro" is "method resolution order".  The first one is the current class, the next is the
+        # first superclass, and so on.  Taking the first superclass should work in all cases that
+        # we're looking for here.
+        superclass = cls.mro()[1]
+        superclass_signature = inspect.signature(superclass.__init__)  # type: ignore
+        for param_name, param in superclass_signature.parameters.items():
+            if param_name == "self":
+                continue
+            parameters[param_name] = param
+
     # Iterate over all the constructor parameters and their annotations.
-    for param_name, param in signature.parameters.items():
+    for param_name, param in parameters.items():
         # Skip "self". You're not *required* to call the first parameter "self",
         # so in theory this logic is fragile, but if you don't call the self parameter
         # "self" you kind of deserve what happens.
         if param_name == "self":
+            continue
+        # Also skip **kwargs parameters; we handled them above.
+        if param.kind == param.VAR_KEYWORD:
             continue
 
         # If the annotation is a compound type like typing.Dict[str, int],
@@ -141,10 +164,10 @@ def create_kwargs(
         # and an __args__ field indicating `(str, int)`. We capture both.
         annotation = remove_optional(param.annotation)
         kwargs[param_name] = construct_arg(
-            class_name, param_name, annotation, param.default, params, **extras
+            cls.__name__, param_name, annotation, param.default, params, **extras
         )
 
-    params.assert_empty(class_name)
+    params.assert_empty(cls.__name__)
     return kwargs
 
 
@@ -437,6 +460,6 @@ class FromParams:
                 kwargs: Dict[str, Any] = {}
             else:
                 # This class has a constructor, so create kwargs for it.
-                kwargs = create_kwargs(constructor_to_inspect, cls.__name__, params, **extras)
+                kwargs = create_kwargs(constructor_to_inspect, cls, params, **extras)
 
             return constructor_to_call(**kwargs)  # type: ignore

@@ -129,10 +129,10 @@ class SrlReader(DatasetReader):
         self,
         token_indexers: Dict[str, TokenIndexer] = None,
         domain_identifier: str = None,
-        lazy: bool = False,
         bert_model_name: str = None,
+        **kwargs,
     ) -> None:
-        super().__init__(lazy)
+        super().__init__(**kwargs)
         self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
         self._domain_identifier = domain_identifier
 

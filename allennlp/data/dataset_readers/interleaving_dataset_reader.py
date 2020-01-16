@@ -33,9 +33,6 @@ class InterleavingDatasetReader(DatasetReader):
         and "all_at_once", which yields all the instances from the first dataset,
         then all the instances from the second dataset, and so on. You could imagine also
         implementing some sort of over- or under-sampling, although hasn't been done.
-    lazy : bool, optional (default = False)
-        If this is true, ``instances()`` will return an object whose ``__iter__`` method
-        reloads the dataset each time it's called. Otherwise, ``instances()`` returns a list.
     """
 
     def __init__(
@@ -43,9 +40,9 @@ class InterleavingDatasetReader(DatasetReader):
         readers: Dict[str, DatasetReader],
         dataset_field_name: str = "dataset",
         scheme: str = "round_robin",
-        lazy: bool = False,
+        **kwargs,
     ) -> None:
-        super().__init__(lazy)
+        super().__init__(**kwargs)
         self._readers = readers
         self._dataset_field_name = dataset_field_name
 

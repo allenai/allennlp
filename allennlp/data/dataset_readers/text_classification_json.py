@@ -40,8 +40,6 @@ class TextClassificationJsonReader(DatasetReader):
     skip_label_indexing : ``bool``, optional (default = ``False``)
         Whether or not to skip label indexing. You might want to skip label indexing if your
         labels are numbers, so the dataset reader doesn't re-number them starting from 0.
-    lazy : ``bool``, optional, (default = ``False``)
-        Whether or not instances can be read lazily.
     """
 
     def __init__(
@@ -51,9 +49,9 @@ class TextClassificationJsonReader(DatasetReader):
         segment_sentences: bool = False,
         max_sequence_length: int = None,
         skip_label_indexing: bool = False,
-        lazy: bool = False,
+        **kwargs,
     ) -> None:
-        super().__init__(lazy=lazy)
+        super().__init__(**kwargs)
         self._tokenizer = tokenizer or SpacyTokenizer()
         self._segment_sentences = segment_sentences
         self._max_sequence_length = max_sequence_length

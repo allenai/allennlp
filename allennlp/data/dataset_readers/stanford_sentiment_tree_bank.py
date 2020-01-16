@@ -46,8 +46,6 @@ class StanfordSentimentTreeBankDatasetReader(DatasetReader):
     granularity : ``str``, optional (default = ``"5-class"``)
         One of ``"5-class"``, ``"3-class"``, or ``"2-class"``, indicating the number
         of sentiment labels to use.
-    lazy : ``bool``, optional, (default = ``False``)
-        Whether or not instances can be read lazily.
     """
 
     def __init__(
@@ -55,9 +53,9 @@ class StanfordSentimentTreeBankDatasetReader(DatasetReader):
         token_indexers: Dict[str, TokenIndexer] = None,
         use_subtrees: bool = False,
         granularity: str = "5-class",
-        lazy: bool = False,
+        **kwargs,
     ) -> None:
-        super().__init__(lazy=lazy)
+        super().__init__(**kwargs)
         self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
         self._use_subtrees = use_subtrees
         allowed_granularities = ["5-class", "3-class", "2-class"]

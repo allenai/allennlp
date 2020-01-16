@@ -80,8 +80,8 @@ class SemanticDependenciesDatasetReader(DatasetReader):
         The token indexers to be applied to the words TextField.
     """
 
-    def __init__(self, token_indexers: Dict[str, TokenIndexer] = None, lazy: bool = False) -> None:
-        super().__init__(lazy)
+    def __init__(self, token_indexers: Dict[str, TokenIndexer] = None, **kwargs) -> None:
+        super().__init__(**kwargs)
         self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
 
     @overrides

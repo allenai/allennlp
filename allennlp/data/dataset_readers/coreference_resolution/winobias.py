@@ -57,12 +57,9 @@ class WinobiasReader(DatasetReader):
     """
 
     def __init__(
-        self,
-        max_span_width: int,
-        token_indexers: Dict[str, TokenIndexer] = None,
-        lazy: bool = False,
+        self, max_span_width: int, token_indexers: Dict[str, TokenIndexer] = None, **kwargs,
     ) -> None:
-        super().__init__(lazy)
+        super().__init__(**kwargs)
         self._max_span_width = max_span_width
         self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
 
