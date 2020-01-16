@@ -39,13 +39,11 @@ class TrainerPieces(NamedTuple):
         params: Params,
         serialization_dir: str,
         recover: bool = False,
-        cache_directory: str = None,
-        cache_prefix: str = None,
         model: Model = None,
         embedding_sources_mapping: Dict[str, str] = None,
         extend_vocab: bool = False,
     ) -> "TrainerPieces":
-        all_datasets = training_util.datasets_from_params(params, cache_directory, cache_prefix)
+        all_datasets = training_util.datasets_from_params(params)
 
         vocabulary_params = params.pop("vocabulary", {})
 

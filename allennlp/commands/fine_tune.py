@@ -171,8 +171,6 @@ def fine_tune_model_from_file_paths(
     file_friendly_logging: bool = False,
     recover: bool = False,
     force: bool = False,
-    cache_directory: str = None,
-    cache_prefix: str = None,
     batch_weight_key: str = "",
     embedding_sources_mapping: Dict[str, str] = None,
 ) -> Model:
@@ -203,10 +201,6 @@ def fine_tune_model_from_file_paths(
         of a run.  For continuing training a model on new data, see the ``fine-tune`` command.
     force : ``bool``, optional (default=False)
         If ``True``, we will overwrite the serialization directory if it already exists.
-    cache_directory : ``str``, optional
-        For caching data pre-processing.  See :func:`allennlp.training.util.datasets_from_params`.
-    cache_prefix : ``str``, optional
-        For caching data pre-processing.  See :func:`allennlp.training.util.datasets_from_params`.
     batch_weight_key : ``str``, optional (default="")
         If non-empty, name of metric used to weight the loss on a per-batch basis.
     embedding_sources_mapping : ``Dict[str, str]``, optional (default=None)
@@ -224,8 +218,6 @@ def fine_tune_model_from_file_paths(
         file_friendly_logging=file_friendly_logging,
         recover=recover,
         force=force,
-        cache_directory=cache_directory,
-        cache_prefix=cache_prefix,
         batch_weight_key=batch_weight_key,
         embedding_sources_mapping=embedding_sources_mapping,
     )

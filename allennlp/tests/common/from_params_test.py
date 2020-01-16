@@ -551,5 +551,5 @@ class TestFromParams(AllenNlpTestCase):
             {"type": "text_classification_json", "lazy": True, "cache_directory": "tmp"}
         )
         reader = DatasetReader.from_params(params)
-        assert reader.lazy == True
+        assert reader.lazy is True
         assert str(reader._cache_directory) == "tmp"
