@@ -41,10 +41,7 @@ class NextTokenLmReader(DatasetReader):
     """
 
     def __init__(
-        self,
-        tokenizer: Tokenizer = None,
-        token_indexers: Dict[str, TokenIndexer] = None,
-        **kwargs,
+        self, tokenizer: Tokenizer = None, token_indexers: Dict[str, TokenIndexer] = None, **kwargs,
     ) -> None:
         super().__init__(**kwargs)
         self._tokenizer = tokenizer or WhitespaceTokenizer()
