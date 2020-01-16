@@ -90,7 +90,7 @@ class DatasetReader(Registrable):
             self._cache_directory = pathlib.Path(cache_directory)
             os.makedirs(self._cache_directory, exist_ok=True)
         else:
-            self._cache_dirctory = None
+            self._cache_directory = None
 
     def read(self, file_path: str) -> Iterable[Instance]:
         """
