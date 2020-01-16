@@ -211,7 +211,7 @@ class MultiprocessDatasetReader(DatasetReader):
         **kwargs,
     ) -> None:
         # Multiprocess reader is intrinsically lazy.
-        kwags["lazy"] = True
+        kwargs["lazy"] = True
         super().__init__(**kwargs)
 
         self.reader = base_reader
