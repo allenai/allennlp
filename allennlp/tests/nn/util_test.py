@@ -1056,11 +1056,13 @@ class TestNnUtil(AllenNlpTestCase):
     def test_batched_span_select(self):
         # Each element is a vector of it's index.
         targets = torch.ones([3, 12, 2]).cumsum(1) - 1
-        spans = torch.LongTensor([
-            [[0, 0], [1, 2], [5, 8], [10, 10]],
-            [[i, i] for i in range(3, -1, -1)],
-            [[0, 3], [1, 4], [2, 5], [10, 11]],
-        ])
+        spans = torch.LongTensor(
+            [
+                [[0, 0], [1, 2], [5, 8], [10, 10]],
+                [[i, i] for i in range(3, -1, -1)],
+                [[0, 3], [1, 4], [2, 5], [10, 11]],
+            ]
+        )
         selected, mask = util.batched_span_select(targets, spans)
 
         selected = torch.where(
@@ -1077,16 +1079,14 @@ class TestNnUtil(AllenNlpTestCase):
                     [[8, 8], [7, 7], [6, 6], [5, 5]],
                     [[10, 10], [-1, -1], [-1, -1], [-1, -1]],
                 ],
-                [
-                    [[i, i], [-1, -1], [-1, -1], [-1, -1]] for i in range(3, -1, -1)
-                ],
+                [[[i, i], [-1, -1], [-1, -1], [-1, -1]] for i in range(3, -1, -1)],
                 [
                     [[3, 3], [2, 2], [1, 1], [0, 0]],
                     [[4, 4], [3, 3], [2, 2], [1, 1]],
                     [[5, 5], [4, 4], [3, 3], [2, 2]],
                     [[11, 11], [10, 10], [-1, -1], [-1, -1]],
                 ],
-            ]
+            ],
         )
 
     def test_flattened_index_select(self):
