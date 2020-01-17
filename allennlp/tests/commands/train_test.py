@@ -243,6 +243,12 @@ class TestTrain(AllenNlpTestCase):
             args = parser.parse_args(["train", "path/to/params"])
             assert cm.exception.code == 2  # argparse code for incorrect usage
 
+    def test_train_model_can_instantiate_from_params(self):
+        params = Params.from_file(self.FIXTURES_ROOT / "simple_tagger" / "experiment.json")
+
+        # Can instantiate from base class params
+        TrainModel.from_params(parapms=params, serialization_dir=self.TEST_DIR, local_rank=0)
+
 
 @DatasetReader.register("lazy-test")
 class LazyFakeReader(DatasetReader):

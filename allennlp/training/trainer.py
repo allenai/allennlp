@@ -813,24 +813,24 @@ class Trainer(TrainerBase):
             model = model.cuda(cuda_device)
 
         parameters = [[n, p] for n, p in model.named_parameters() if p.requires_grad]
-        optimizer = optimizer.construct(parameters=parameters)
+        optimizer = optimizer.construct(model_parameters=parameters)
         if moving_average:
-            moving_average_ = moving_average.construct(parametrs=parametrs)
+            moving_average_ = moving_average.construct(parameters=parameters)
         else:
             moving_average_ = None
 
         if learning_rate_scheduler:
-            learning_rate_scheduler_ = learning_rate_scheduler.construct(optimizer)
+            learning_rate_scheduler_ = learning_rate_scheduler.construct(optimizer=optimizer)
         else:
             learning_rate_scheduler_ = None
 
         if momentum_scheduler:
-            momentum_scheduler_ = momentum_scheduler.construct(optimizer)
+            momentum_scheduler_ = momentum_scheduler.construct(optimizer=optimizer)
         else:
             momentum_scheduler_ = None
 
         if checkpointer:
-            checkpointer = checkpointer.construct(serialization_dir=serialization_dir)
+            checkpointer = checkpointer.construct()
         else:
             checkpointer = Checkpointer(serialization_dir)
         return cls(
@@ -848,8 +848,8 @@ class Trainer(TrainerBase):
             cuda_device=cuda_device,
             grad_norm=grad_norm,
             grad_clipping=grad_clipping,
-            learning_rate_scheduler=lr_scheduler,
-            momentum_scheduler=momentum_scheduler,
+            learning_rate_scheduler=learning_rate_scheduler_,
+            momentum_scheduler=momentum_scheduler_,
             checkpointer=checkpointer,
             model_save_interval=model_save_interval,
             summary_interval=summary_interval,
@@ -857,7 +857,7 @@ class Trainer(TrainerBase):
             should_log_parameter_statistics=should_log_parameter_statistics,
             should_log_learning_rate=should_log_learning_rate,
             log_batch_size_period=log_batch_size_period,
-            moving_average=moving_average,
+            moving_average=moving_average_,
             distributed=distributed,
             local_rank=local_rank,
             world_size=world_size,

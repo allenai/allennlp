@@ -39,27 +39,21 @@ which to write the results.
 import argparse
 import logging
 import os
-from typing import Dict, List, Optional
+from typing import Any, Dict, Iterable, List, Optional
 
 import torch
 import torch.distributed as dist
 import torch.multiprocessing as mp
 
 from allennlp.commands.subcommand import Subcommand
-from allennlp.common import Params
+from allennlp.common import Params, Registrable, Lazy
 from allennlp.common.checks import check_for_gpu, ConfigurationError
-from allennlp.common.util import (
-    dump_metrics,
-    import_submodules,
-    prepare_environment,
-    prepare_global_logging,
-)
+from allennlp.common import util as common_util
+from allennlp.data import DataIterator, DatasetReader, Instance, Vocabulary
 from allennlp.models.archival import archive_model, CONFIG_NAME
 from allennlp.models.model import _DEFAULT_WEIGHTS, Model
-from allennlp.training.trainer import Trainer
 from allennlp.training.trainer_base import TrainerBase
-from allennlp.training.trainer_pieces import TrainerPieces
-from allennlp.training.util import create_serialization_dir, evaluate, make_vocab_from_params
+from allennlp.training import util as training_util
 
 logger = logging.getLogger(__name__)
 
@@ -241,7 +235,7 @@ def train_model(
     best_model : ``Model``
         The model with the best epoch weights.
     """
-    create_serialization_dir(params, serialization_dir, recover, force)
+    training_util.create_serialization_dir(params, serialization_dir, recover, force)
     params.to_file(os.path.join(serialization_dir, CONFIG_NAME))
 
     distributed_params = params.params.pop("distributed", None)
@@ -293,10 +287,12 @@ def train_model(
         # in each worker will yield only `rank` specific instances. Hence it is safe to construct
         # the vocabulary and write it to disk before initializing the distributed context. The workers
         # will load the vocabulary from the path specified.
-        make_vocab_from_params(params.duplicate(), serialization_dir)
+        vocab = training_util.make_vocab_from_params(params.duplicate(), serialization_dir)
         params["vocabulary"] = {
             "type": "from_files",
             "directory": os.path.join(serialization_dir, "vocabulary"),
+            "padding_token": vocab._padding_token,
+            "oov_token": vocab._oov_token,
         }
 
         mp.spawn(
@@ -376,24 +372,22 @@ def _train_worker(
     best_model : ``Model``
         The model with the best epoch weights.
     """
-    prepare_global_logging(
+    common_util.prepare_global_logging(
         serialization_dir, file_friendly_logging, rank=process_rank, world_size=world_size
     )
-    prepare_environment(params)
+    common_util.prepare_environment(params)
 
     distributed = world_size > 1
 
     # not using `allennlp.common.util.is_master` as the process group is yet to be initialized
     master = process_rank == 0
 
-    evaluate_on_test = params.pop_bool("evaluate_on_test", False)
-
     if distributed:
         # Since the worker is spawned and not forked, the extra imports
         # need to be done again.
         if include_package is not None:
             for package_name in include_package:
-                import_submodules(package_name)
+                common_util.import_submodules(package_name)
 
         num_procs_per_node = len(distributed_device_ids)
         # The Unique identifier of the worker process among all the processes in the
@@ -428,52 +422,18 @@ def _train_worker(
             f"for distributed training in worker {global_rank}"
         )
 
-    trainer_type = params.get("trainer", {}).get("type", "default")
-
-    if trainer_type == "default":
-        # Special logic to instantiate backward-compatible trainer.
-        pieces = TrainerPieces.from_params(
-            params=params,
-            serialization_dir=serialization_dir,
-            recover=recover,
-            model=model,
-            embedding_sources_mapping=embedding_sources_mapping,
-            extend_vocab=extend_vocab,
-        )
-        trainer = Trainer.from_params(
-            model=pieces.model,
-            serialization_dir=serialization_dir,
-            iterator=pieces.iterator,
-            train_data=pieces.train_dataset,
-            validation_data=pieces.validation_dataset,
-            params=pieces.params,
-            validation_iterator=pieces.validation_iterator,
-            local_rank=process_rank,
-        )
-
-        evaluation_iterator = pieces.validation_iterator or pieces.iterator
-        evaluation_dataset = pieces.test_dataset
-
-    else:
-        if evaluate_on_test:
-            raise ValueError(
-                "--evaluate-on-test only works with the default Trainer. "
-                "If you're using the CallbackTrainer you can use a callback "
-                "to evaluate at Events.TRAINING_END; otherwise you'll have "
-                "to run allennlp evaluate separately."
-            )
-
-        trainer = TrainerBase.from_params(params, serialization_dir, recover)
-        evaluation_dataset = None
-        evaluation_iterator = None
-
-    params.assert_empty("base train command")
+    train_loop = TrainModel.from_params(
+        params=params,
+        serialization_dir=serialization_dir,
+        local_rank=process_rank,
+        batch_weight_key=batch_weight_key,
+    )
 
     try:
         if distributed:  # let the setup get ready for all the workers
             dist.barrier()
 
-        metrics = trainer.train()
+        metrics = train_loop.run()
     except KeyboardInterrupt:
         # if we have completed an epoch, try to create a model archive.
         if master and os.path.exists(os.path.join(serialization_dir, _DEFAULT_WEIGHTS)):
@@ -485,26 +445,138 @@ def _train_worker(
         raise
 
     if master:
-        if evaluation_dataset and evaluate_on_test:
+        train_loop.finish(metrics)
+
+    if not distributed:
+        return train_loop.trainer.model
+
+    return None  # to make mypy happy
+
+
+class TrainModel(Registrable):
+    default_implementation = "default"
+
+    def __init__(
+        self,
+        serialization_dir: str,
+        trainer: TrainerBase,
+        evaluation_dataset: Iterable[Instance] = None,
+        evaluation_iterator: DataIterator = None,
+        evaluate_on_test: bool = False,
+        batch_weight_key: str = "",
+    ) -> None:
+        self.serialization_dir = serialization_dir
+        self.trainer = trainer
+        self.evaluation_dataset = evaluation_dataset
+        self.evaluate_on_test = evaluate_on_test
+        self.batch_weight_key = batch_weight_key
+
+    def run(self) -> Dict[str, Any]:
+        return self.trainer.train()
+
+    def finish(self, metrics: Dict[str, Any]):
+        if self.evaluation_dataset and self.evaluate_on_test:
             logger.info("The model will be evaluated using the best epoch weights.")
-            test_metrics = evaluate(
-                trainer.model,
-                evaluation_dataset,
-                evaluation_iterator,
-                cuda_device=trainer.cuda_device,
-                batch_weight_key=batch_weight_key,
+            test_metrics = training_util.evaluate(
+                self.trainer.model,
+                self.evaluation_dataset,
+                self.evaluation_iterator,
+                cuda_device=self.trainer.cuda_device,
+                batch_weight_key=self.batch_weight_key,
             )
 
             for key, value in test_metrics.items():
                 metrics["test_" + key] = value
-        elif evaluation_dataset:
+        elif self.evaluation_dataset:
             logger.info(
                 "To evaluate on the test set after training, pass the "
                 "'evaluate_on_test' flag, or use the 'allennlp evaluate' command."
             )
-        dump_metrics(os.path.join(serialization_dir, "metrics.json"), metrics, log=True)
+        common_util.dump_metrics(
+            os.path.join(self.serialization_dir, "metrics.json"), metrics, log=True
+        )
 
-    if not distributed:
-        return trainer.model
+    @classmethod
+    def from_partial_objects(
+        cls,
+        serialization_dir: str,
+        local_rank: int,
+        dataset_reader: DatasetReader,
+        train_data_path: str,
+        vocab: Lazy[Vocabulary],
+        model: Lazy[Model],
+        iterator: DataIterator,
+        trainer: Lazy[TrainerBase],
+        datasets_for_vocab_creation: List[str] = None,
+        validation_dataset_reader: DatasetReader = None,
+        validation_data_path: str = None,
+        validation_iterator: DataIterator = None,
+        test_data_path: str = None,
+        evaluate_on_test: bool = False,
+        no_grad_regexes: List[str] = None,
+        batch_weight_key: str = "",
+    ) -> "TrainModel":
 
-    return None  # to make mypy happy
+        datasets = training_util.read_all_datasets(
+            train_data_path=train_data_path,
+            dataset_reader=dataset_reader,
+            validation_dataset_reader=validation_dataset_reader,
+            validation_data_path=validation_data_path,
+            test_data_path=test_data_path,
+        )
+
+        if datasets_for_vocab_creation:
+            for key in datasets_for_vocab_creation:
+                if key not in datasets:
+                    raise ConfigurationError(f"invalid 'dataset_for_vocab_creation' {key}")
+
+        instance_generator = (
+            instance
+            for key, dataset in datasets.items()
+            if not datasets_for_vocab_creation or key in datasets_for_vocab_creation
+            for instance in dataset
+        )
+
+        vocab = vocab.construct(instances=instance_generator)
+        model = model.construct(vocab=vocab)
+
+        # Initializing the model can have side effect of expanding the vocabulary.
+        # Save the vocab only in the master. In the degenerate non-distributed
+        # case, we're trivially the master.
+        if common_util.is_master():
+            vocabulary_path = os.path.join(serialization_dir, "vocabulary")
+            vocab.save_to_files(vocabulary_path)
+
+        iterator.index_with(model.vocab)
+        validation_iterator = validation_iterator or iterator
+        validation_iterator.index_with(model.vocab)  # it is ok to call this twice
+
+        if no_grad_regexes:
+            for name, parameter in model.named_parameters():
+                if any(re.search(regex, name) for regex in no_grad_regexes):
+                    parameter.requires_grad_(False)
+
+        common_util.log_frozen_and_tunable_parameter_names(model)
+
+        # We don't need to pass serialization_dir and local_rank here, because they will have been
+        # passed through the trainer by from_params already, because they were keyword arguments to
+        # construct this class in the first place.
+        trainer = trainer.construct(
+            model=model,
+            iterator=iterator,
+            train_data=datasets["train"],
+            validation_iterator=validation_iterator,
+            validation_data=datasets.get("validation"),
+        )
+
+        return cls(
+            serialization_dir=serialization_dir,
+            trainer=trainer,
+            evaluation_dataset=datasets.get("test"),
+            evaluation_iterator=validation_iterator,
+            evaluate_on_test=evaluate_on_test,
+            batch_weight_key=batch_weight_key,
+        )
+
+
+TrainModel.register("default", constructor="from_partial_objects")(TrainModel)

@@ -21,7 +21,6 @@ from allennlp.training.callbacks.callback import Callback
 from allennlp.training.callbacks.callback_handler import CallbackHandler
 from allennlp.training.callbacks.events import Events
 from allennlp.training.optimizers import Optimizer
-from allennlp.training.trainer_pieces import TrainerPieces
 from allennlp.training.trainer_base import TrainerBase
 
 from torch.nn.parallel import DistributedDataParallel

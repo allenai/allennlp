@@ -346,10 +346,15 @@ def construct_arg(
         # If none of them succeeded, we crash.
         raise ConfigurationError(f"Failed to construct argument {name} with type {annotation}")
     elif origin == Lazy:
+        if name not in params and optional:
+            return Lazy(lambda **kwargs: default)
         value_cls = annotation.__args__[0]
+        value_params = params.pop(name, Params({}))
         subextras = create_extras(value_cls, extras)
+
         def constructor(**kwargs):
             return value_cls.from_params(params=value_params, **kwargs, **subextras)
+
         return Lazy(constructor)
     else:
         # Pass it on as is and hope for the best.   ¯\_(ツ)_/¯
