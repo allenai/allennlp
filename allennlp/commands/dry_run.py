@@ -4,6 +4,7 @@ dataset statistics and other training utilities without actually training
 a model.
 
 
+```
     $ allennlp dry-run --help
     usage: allennlp dry-run [-h] -s SERIALIZATION_DIR [-o OVERRIDES]
                             [--include-package INCLUDE_PACKAGE]
@@ -24,6 +25,7 @@ a model.
                             configuration
       --include-package INCLUDE_PACKAGE
                             additional packages to include
+```
 """
 import argparse
 import logging

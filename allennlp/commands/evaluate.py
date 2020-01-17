@@ -3,7 +3,7 @@ The `evaluate` subcommand can be used to
 evaluate a trained model against a dataset
 and report any metrics calculated by the model.
 
-
+```
     $ allennlp evaluate --help
     usage: allennlp evaluate [-h] [--output-file OUTPUT_FILE]
                              [--weights-file WEIGHTS_FILE]
@@ -50,6 +50,7 @@ and report any metrics calculated by the model.
                             will use random vectors for embedding extension.
       --include-package INCLUDE_PACKAGE
                             additional packages to include
+```
 """
 import argparse
 import json
