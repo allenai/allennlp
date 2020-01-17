@@ -47,6 +47,7 @@ class BertPreTokenizer(Tokenizer):
     This is used to split a sentence into words.
     Then the ``BertTokenIndexer`` converts each word into wordpieces.
     """
+
     default_never_split = ["[UNK]", "[SEP]", "[PAD]", "[CLS]", "[MASK]"]
 
     def __init__(self, do_lower_case: bool = True, never_split: Optional[List[str]] = None) -> None:
