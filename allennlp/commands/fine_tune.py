@@ -1,7 +1,56 @@
 """
-The `fine-tune` subcommand is used to continue training (or `fine-tune`) a model on a `different
+The ``fine-tune`` subcommand is used to continue training (or `fine-tune`) a model on a `different
 dataset` than the one it was originally trained on.  It requires a saved model archive file, a path
 to the data you will continue training with, and a directory in which to write the results.
+
+.. code-block:: bash
+
+   $ allennlp fine-tune --help
+    usage: allennlp fine-tune [-h] -m MODEL_ARCHIVE -c CONFIG_FILE -s
+                              SERIALIZATION_DIR [-o OVERRIDES] [--extend-vocab]
+                              [--file-friendly-logging]
+                              [--batch-weight-key BATCH_WEIGHT_KEY]
+                              [--embedding-sources-mapping EMBEDDING_SOURCES_MAPPING]
+                              [--include-package INCLUDE_PACKAGE]
+
+    Continues training a saved model on a new dataset.
+
+    optional arguments:
+      -h, --help            show this help message and exit
+      -m MODEL_ARCHIVE, --model-archive MODEL_ARCHIVE
+                            path to the saved model archive from training on the
+                            original data
+      -c CONFIG_FILE, --config-file CONFIG_FILE
+                            configuration file to use for training. Format is the
+                            same as for the "train" command, but the "model"
+                            section is ignored.
+      -s SERIALIZATION_DIR, --serialization-dir SERIALIZATION_DIR
+                            directory in which to save the fine-tuned model and
+                            its logs
+      -o OVERRIDES, --overrides OVERRIDES
+                            a JSON structure used to override the training
+                            configuration (only affects the config_file, _not_ the
+                            model_archive)
+      --extend-vocab        if specified, we will use the instances in your new
+                            dataset to extend your vocabulary. If pretrained-file
+                            was used to initialize embedding layers, you may also
+                            need to pass --embedding-sources-mapping.
+      --file-friendly-logging
+                            outputs tqdm status on separate lines and slows tqdm
+                            refresh rate
+      --batch-weight-key BATCH_WEIGHT_KEY
+                            If non-empty, name of metric used to weight the loss
+                            on a per-batch basis.
+      --embedding-sources-mapping EMBEDDING_SOURCES_MAPPING
+                            a JSON dict defining mapping from embedding module
+                            path to embedding pretrained-file used during
+                            training. If not passed, and embedding needs to be
+                            extended, we will try to use the original file paths
+                            used during training. If they are not available we
+                            will use random vectors for embedding extension.
+                            (default = {})
+      --include-package INCLUDE_PACKAGE
+                            additional packages to include
 """
 import argparse
 import json
@@ -99,7 +148,7 @@ class FineTune(Subcommand):
 
 def fine_tune_model_from_args(args: argparse.Namespace):
     """
-    Just converts from an `argparse.Namespace` object to string paths.
+    Just converts from an ``argparse.Namespace`` object to string paths.
     """
     fine_tune_model_from_file_paths(
         model_archive_path=args.model_archive,
@@ -130,31 +179,31 @@ def fine_tune_model_from_file_paths(
 
     # Parameters
 
-    model_archive_path : `str`
-        Path to a saved model archive that is the result of running the `train` command.
-    config_file : `str`
+    model_archive_path : ``str``
+        Path to a saved model archive that is the result of running the ``train`` command.
+    config_file : ``str``
         A configuration file specifying how to continue training.  The format is identical to the
-        configuration file for the `train` command, but any contents in the `model` section is
+        configuration file for the ``train`` command, but any contents in the ``model`` section is
         ignored (as we are using the provided model archive instead).
-    serialization_dir : `str`
+    serialization_dir : ``str``
         The directory in which to save results and logs. We just pass this along to
         :func:`fine_tune_model`.
-    overrides : `str`
+    overrides : ``str``
         A JSON string that we will use to override values in the input parameter file.
-    extend_vocab : `bool`, optional (default=False)
-        If `True`, we use the new instances to extend your vocabulary.
-    file_friendly_logging : `bool`, optional (default=False)
-        If `True`, we make our output more friendly to saved model files.  We just pass this
+    extend_vocab : ``bool``, optional (default=False)
+        If ``True``, we use the new instances to extend your vocabulary.
+    file_friendly_logging : ``bool``, optional (default=False)
+        If ``True``, we make our output more friendly to saved model files.  We just pass this
         along to :func:`fine_tune_model`.
-    recover : `bool`, optional (default=False)
-        If `True`, we will try to recover a training run from an existing serialization
+    recover : ``bool``, optional (default=False)
+        If ``True``, we will try to recover a training run from an existing serialization
         directory.  This is only intended for use when something actually crashed during the middle
-        of a run.  For continuing training a model on new data, see the `fine-tune` command.
-    force : `bool`, optional (default=False)
-        If `True`, we will overwrite the serialization directory if it already exists.
-    batch_weight_key : `str`, optional (default="")
+        of a run.  For continuing training a model on new data, see the ``fine-tune`` command.
+    force : ``bool``, optional (default=False)
+        If ``True``, we will overwrite the serialization directory if it already exists.
+    batch_weight_key : ``str``, optional (default="")
         If non-empty, name of metric used to weight the loss on a per-batch basis.
-    embedding_sources_mapping : `Dict[str, str]`, optional (default=None)
+    embedding_sources_mapping : ``Dict[str, str]``, optional (default=None)
         Mapping from model paths to the pretrained embedding filepaths.
     """
     # We don't need to pass in `cuda_device` here, because the trainer will call `model.cuda()` if

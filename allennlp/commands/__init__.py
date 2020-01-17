@@ -97,9 +97,9 @@ def create_parser(
 
 def main(prog: str = None, subcommand_overrides: Dict[str, Subcommand] = None) -> None:
     """
-    The :mod:`~allennlp.run` command only knows about the registered classes in the `allennlp`
-    codebase. In particular, once you start creating your own `Model` s and so forth, it won't
-    work for them, unless you use the `--include-package` flag.
+    The :mod:`~allennlp.run` command only knows about the registered classes in the ``allennlp``
+    codebase. In particular, once you start creating your own ``Model`` s and so forth, it won't
+    work for them, unless you use the ``--include-package`` flag.
     """
     if subcommand_overrides is None:
         subcommand_overrides = {}
