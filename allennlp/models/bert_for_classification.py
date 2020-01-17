@@ -2,7 +2,7 @@ from typing import Dict, Union, Optional
 
 from overrides import overrides
 import torch
-from pytorch_pretrained_bert.modeling import BertModel
+from transformers.modeling_bert import BertModel
 
 from allennlp.data import TextFieldTensors, Vocabulary
 from allennlp.models.model import Model
@@ -116,7 +116,7 @@ class BertForClassification(Model):
         token_type_ids = inputs["token_type_ids"]
         input_mask = (input_ids != 0).long()
 
-        _, pooled = self.bert_model(
+        _, pooled, *_ = self.bert_model(
             input_ids=input_ids, token_type_ids=token_type_ids, attention_mask=input_mask
         )
 
