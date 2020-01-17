@@ -114,7 +114,6 @@ setup(
         "h5py",
         "scikit-learn",
         "scipy",
-        "pytz>=2017.3",
         "pytest",
         "flaky",
         "responses>=0.7",
