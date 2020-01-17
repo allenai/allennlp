@@ -19,7 +19,8 @@ class PretrainedTransformerPretokenizedIndexer(PretrainedTransformerIndexer):
     """
     Use this indexer when input comes from pre-tokenized text and therefore
     `PretrainedTransformerTokenizer` was not used in the dataset loader. It tokenizes each token
-    into wordpieces independently and concatenate them back together.
+    into wordpieces independently and concatenate them back together. Use it along with
+    `PretrainedTransformerPretokenizedEmbedder`.
     """
 
     def __init__(
