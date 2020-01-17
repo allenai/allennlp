@@ -6,7 +6,7 @@ import h5py
 
 from allennlp.common.testing import ModelTestCase, AllenNlpTestCase
 from allennlp.common.params import Params
-from allennlp.data.dataset import Batch
+from allennlp.data.batch import Batch
 from allennlp.data import Token
 from allennlp.data.token_indexers import OpenaiTransformerBytePairIndexer
 from allennlp.data.token_indexers.openai_transformer_byte_pair_indexer import text_standardize
@@ -56,9 +56,11 @@ class TestOpenaiTransformerEmbedderSmall(ModelTestCase):
         self.ensure_model_can_train_save_and_load(self.param_file)
 
     def _get_training_tensors(self):
-        dataset = Batch(self.instances)
-        dataset.index_instances(self.vocab)
-        return dataset.as_tensor_dict()
+        batch = Batch(self.instances)
+        batch.index_instances(self.vocab)
+        padding = batch.get_padding_lengths()
+        print(padding)
+        return batch.as_tensor_dict(batch.get_padding_lengths())
 
     def test_tagger_with_openai_token_embedder_forward_pass_runs_correctly(self):
         training_tensors = self._get_training_tensors()
@@ -88,10 +90,7 @@ class TestOpenaiTransformerEmbedderSmall(ModelTestCase):
         )
         embedder = OpenaiTransformerEmbedder.from_params(params)
         training_tensors = self._get_training_tensors()
-        output = embedder(
-            training_tensors["tokens"]["openai_transformer"],
-            training_tensors["tokens"]["openai_transformer-offsets"],
-        )
+        output = embedder(**training_tensors["tokens"]["openai_transformer"])
         assert list(output.shape) == [2, 7, 10]
 
     def test_openai_can_run_with_no_offsets(self):
@@ -109,7 +108,7 @@ class TestOpenaiTransformerEmbedderSmall(ModelTestCase):
         )
         embedder = OpenaiTransformerEmbedder.from_params(params)
         training_tensors = self._get_training_tensors()
-        output = embedder(training_tensors["tokens"]["openai_transformer"])
+        output = embedder(training_tensors["tokens"]["openai_transformer"]["inputs"])
         assert list(output.shape) == [2, 2, 10]
 
 

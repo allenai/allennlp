@@ -3,7 +3,7 @@ from typing import Dict, Optional
 from overrides import overrides
 import torch
 
-from allennlp.data import Vocabulary
+from allennlp.data import TextFieldTensors, Vocabulary
 from allennlp.models.model import Model
 from allennlp.modules import FeedForward, Seq2SeqEncoder, Seq2VecEncoder, TextFieldEmbedder
 from allennlp.nn import InitializerApplicator, RegularizerApplicator
@@ -92,13 +92,13 @@ class BasicClassifier(Model):
         initializer(self)
 
     def forward(  # type: ignore
-        self, tokens: Dict[str, torch.LongTensor], label: torch.IntTensor = None
+        self, tokens: TextFieldTensors, label: torch.IntTensor = None
     ) -> Dict[str, torch.Tensor]:
 
         """
         # Parameters
 
-        tokens : Dict[str, torch.LongTensor]
+        tokens : TextFieldTensors
             From a ``TextField``
         label : torch.IntTensor, optional (default = None)
             From a ``LabelField``

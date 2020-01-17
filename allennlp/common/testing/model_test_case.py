@@ -8,7 +8,7 @@ from allennlp.commands.train import train_model_from_file
 from allennlp.common import Params
 from allennlp.common.testing.test_case import AllenNlpTestCase
 from allennlp.data import DataIterator, DatasetReader, Vocabulary
-from allennlp.data.dataset import Batch
+from allennlp.data.batch import Batch
 from allennlp.models import Model, load_archive
 
 
@@ -102,10 +102,12 @@ class ModelTestCase(AllenNlpTestCase):
 
         # We'll check that even if we index the dataset with each model separately, we still get
         # the same result out.
+        print("Reading with original model")
         model_dataset = reader.read(params["validation_data_path"])
         iterator.index_with(model.vocab)
         model_batch = next(iterator(model_dataset, shuffle=False))
 
+        print("Reading with loaded model")
         loaded_dataset = reader.read(params["validation_data_path"])
         iterator2.index_with(loaded_model.vocab)
         loaded_batch = next(iterator2(loaded_dataset, shuffle=False))
@@ -130,7 +132,9 @@ class ModelTestCase(AllenNlpTestCase):
             for module in model_.modules():
                 if hasattr(module, "stateful") and module.stateful:
                     module.reset_states()
+        print("Predicting with original model")
         model_predictions = model(**model_batch)
+        print("Predicting with loaded model")
         loaded_model_predictions = loaded_model(**loaded_batch)
 
         # Check loaded model's loss exists and we can compute gradients, for continuing training.

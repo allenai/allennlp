@@ -80,11 +80,6 @@ class TestRegistrable(AllenNlpTestCase):
 
     # TODO(mattg): maybe move all of these into tests for the base class?
 
-    def test_registry_has_builtin_dataset_readers(self):
-        assert DatasetReader.by_name("snli").__name__ == "SnliReader"
-        assert DatasetReader.by_name("sequence_tagging").__name__ == "SequenceTaggingDatasetReader"
-        assert DatasetReader.by_name("language_modeling").__name__ == "LanguageModelingReader"
-
     def test_registry_has_builtin_iterators(self):
         assert DataIterator.by_name("basic").__name__ == "BasicIterator"
         assert DataIterator.by_name("bucket").__name__ == "BucketIterator"

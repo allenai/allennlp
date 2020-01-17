@@ -40,8 +40,6 @@ class CcgBankDatasetReader(DatasetReader):
         We use this to define the input representation for the text.  See :class:`TokenIndexer`.
         Note that the `output` tags will always correspond to single token IDs based on how they
         are pre-tokenised in the data file.
-    lazy : ``bool``, optional, (default = ``False``)
-        Whether or not instances can be consumed lazily.
     tag_label : ``str``, optional (default=``ccg``)
         Specify ``ccg``, ``modified_pos``, ``original_pos``, or ``predicate_arg`` to
         have that tag loaded into the instance field ``tag``.
@@ -62,9 +60,9 @@ class CcgBankDatasetReader(DatasetReader):
         tag_label: str = "ccg",
         feature_labels: Sequence[str] = (),
         label_namespace: str = "labels",
-        lazy: bool = False,
+        **kwargs,
     ) -> None:
-        super().__init__(lazy=lazy)
+        super().__init__(**kwargs)
         self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
         self.tag_label = tag_label
         if tag_label is not None and tag_label not in _VALID_LABELS:

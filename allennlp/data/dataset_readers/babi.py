@@ -29,18 +29,16 @@ class BabiReader(DatasetReader):
         Default is ``False`` that corresponds to concatenation.
     token_indexers : ``Dict[str, TokenIndexer]``, optional (default=``{"tokens": SingleIdTokenIndexer()}``)
         We use this to define the input representation for the text.  See :class:`TokenIndexer`.
-    lazy : ``bool``, optional, (default = ``False``)
-        Whether or not instances can be consumed lazily.
     """
 
     def __init__(
         self,
         keep_sentences: bool = False,
         token_indexers: Dict[str, TokenIndexer] = None,
-        lazy: bool = False,
+        **kwargs,
     ) -> None:
 
-        super().__init__(lazy)
+        super().__init__(**kwargs)
         self._keep_sentences = keep_sentences
         self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
 

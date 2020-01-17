@@ -4,7 +4,7 @@ from overrides import overrides
 import torch
 
 from allennlp.common.checks import check_dimensions_match
-from allennlp.data.vocabulary import Vocabulary
+from allennlp.data import TextFieldTensors, Vocabulary
 from allennlp.models.model import Model
 from allennlp.modules import LanguageModelHead, Seq2SeqEncoder, TextFieldEmbedder
 from allennlp.nn import util, InitializerApplicator
@@ -72,19 +72,19 @@ class MaskedLanguageModel(Model):
 
     def forward(  # type: ignore
         self,
-        tokens: Dict[str, torch.LongTensor],
+        tokens: TextFieldTensors,
         mask_positions: torch.LongTensor,
-        target_ids: Dict[str, torch.LongTensor] = None,
+        target_ids: TextFieldTensors = None,
     ) -> Dict[str, torch.Tensor]:
         """
         # Parameters
 
-        tokens : ``Dict[str, torch.LongTensor]``
+        tokens : ``TextFieldTensors``
             The output of ``TextField.as_tensor()`` for a batch of sentences.
         mask_positions : ``torch.LongTensor``
             The positions in ``tokens`` that correspond to [MASK] tokens that we should try to fill
             in.  Shape should be (batch_size, num_masks).
-        target_ids : ``Dict[str, torch.LongTensor]``
+        target_ids : ``TextFieldTensors``
             This is a list of token ids that correspond to the mask positions we're trying to fill.
             It is the output of a ``TextField``, purely for convenience, so we can handle wordpiece
             tokenizers and such without having to do crazy things in the dataset reader.  We assume
@@ -96,9 +96,9 @@ class MaskedLanguageModel(Model):
         if target_ids is not None:
             # A bit of a hack to get the right targets out of the TextField output...
             if len(target_ids) != 1:
-                targets = target_ids["bert"]
+                targets = target_ids["bert"]["token_ids"]
             else:
-                targets = list(target_ids.values())[0]
+                targets = list(target_ids.values())[0]["tokens"]
         mask_positions = mask_positions.squeeze(-1)
         batch_size, num_masks = mask_positions.size()
         if targets is not None and targets.size() != mask_positions.size():
@@ -131,8 +131,7 @@ class MaskedLanguageModel(Model):
 
         output_dict = {"probabilities": top_probs, "top_indices": top_indices}
 
-        # Using the namespace here is a hack...
-        output_dict["token_ids"] = tokens[self._target_namespace]
+        output_dict["token_ids"] = util.get_token_ids_from_text_field_tensors(tokens)
 
         if targets is not None:
             target_logits = target_logits.view(batch_size * num_masks, vocab_size)

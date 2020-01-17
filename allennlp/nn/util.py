@@ -582,7 +582,7 @@ def viterbi_decode(
 
 
 def get_text_field_mask(
-    text_field_tensors: Dict[str, torch.Tensor], num_wrapping_dims: int = 0
+    text_field_tensors: Dict[str, Dict[str, torch.Tensor]], num_wrapping_dims: int = 0
 ) -> torch.LongTensor:
     """
     Takes the dictionary of tensors produced by a ``TextField`` and returns a mask
@@ -614,10 +614,23 @@ def get_text_field_mask(
     >>> var_mask = torch.autograd.V(mask)
     >>> var_mask.sum() # equals 4, due to 8 bit precision - the sum overflows.
     """
-    if "mask" in text_field_tensors:
-        return text_field_tensors["mask"]
+    masks = []
+    for indexer_name, indexer_tensors in text_field_tensors.items():
+        if "mask" in indexer_tensors:
+            masks.append(indexer_tensors["mask"])
+    if len(masks) == 1:
+        return masks[0]
+    elif len(masks) > 1:
+        # TODO(mattg): My guess is this will basically never happen, so I'm not writing logic to
+        # handle it.  Should be straightforward to handle, though.  If you see this error in
+        # practice, open an issue on github.
+        raise ValueError("found two mask outputs; not sure which to use!")
 
-    tensor_dims = [(tensor.dim(), tensor) for tensor in text_field_tensors.values()]
+    tensor_dims = [
+        (tensor.dim(), tensor)
+        for indexer_output in text_field_tensors.values()
+        for tensor in indexer_output.values()
+    ]
     tensor_dims.sort(key=lambda x: x[0])
 
     smallest_dim = tensor_dims[0][0] - num_wrapping_dims
@@ -629,6 +642,27 @@ def get_text_field_mask(
         return ((character_tensor > 0).long().sum(dim=-1) > 0).long()
     else:
         raise ValueError("Expected a tensor with dimension 2 or 3, found {}".format(smallest_dim))
+
+
+def get_token_ids_from_text_field_tensors(
+    text_field_tensors: Dict[str, Dict[str, torch.Tensor]],
+) -> torch.Tensor:
+    """
+    Our `TextFieldTensors` are complex output structures, because they try to handle a lot of
+    potential variation. Sometimes, you just want to grab the token ids from this data structure,
+    and that's not trivial without hard-coding assumptions about your data processing, which defeats
+    the entire purpose of that generality. This method tries to let you get the token ids out of the
+    data structure in your model without hard-coding any assumptions.
+    """
+    for indexer_name, indexer_tensors in text_field_tensors.items():
+        for argument_name, tensor in indexer_tensors.items():
+            if argument_name in ["tokens", "token_ids", "input_ids"]:
+                return tensor
+    raise NotImplementedError(
+        "Our heuristic for guessing the right token ids failed. Please open an issue on "
+        "github with more detail on how you got this error, so we can implement more robust "
+        "logic in this method."
+    )
 
 
 def weighted_sum(matrix: torch.Tensor, attention: torch.Tensor) -> torch.Tensor:
@@ -727,7 +761,7 @@ def sequence_cross_entropy_with_logits(
 
     """
     if average not in {None, "token", "batch"}:
-        raise ValueError("Got average f{average}, expected one of " "None, 'token', or 'batch'")
+        raise ValueError("Got average f{average}, expected one of None, 'token', or 'batch'")
 
     # make sure weights are float
     weights = weights.float()
@@ -774,9 +808,9 @@ def sequence_cross_entropy_with_logits(
                 alpha_factor = torch.cat([1 - alpha_factor, alpha_factor])
         else:
             raise TypeError(
-                (
-                    "alpha must be float, list of float, or torch.FloatTensor, " "{} provided."
-                ).format(type(alpha))
+                ("alpha must be float, list of float, or torch.FloatTensor, {} provided.").format(
+                    type(alpha)
+                )
             )
         # shape : (batch, max_len)
         alpha_factor = torch.gather(alpha_factor, dim=0, index=targets_flat.view(-1)).view(

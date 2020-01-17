@@ -7,7 +7,7 @@ from torch.nn.modules.linear import Linear
 import torch.nn.functional as F
 
 from allennlp.common.checks import check_dimensions_match, ConfigurationError
-from allennlp.data import Vocabulary
+from allennlp.data import TextFieldTensors, Vocabulary
 from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder
 from allennlp.models.model import Model
 from allennlp.nn import InitializerApplicator, RegularizerApplicator
@@ -87,7 +87,7 @@ class SimpleTagger(Model):
         # (label_encoding serves the same purpose).
         if calculate_span_f1 and not label_encoding:
             raise ConfigurationError(
-                "calculate_span_f1 is True, but " "no label_encoding was specified."
+                "calculate_span_f1 is True, but no label_encoding was specified."
             )
         self.metrics = {
             "accuracy": CategoricalAccuracy(),
@@ -106,7 +106,7 @@ class SimpleTagger(Model):
     @overrides
     def forward(
         self,  # type: ignore
-        tokens: Dict[str, torch.LongTensor],
+        tokens: TextFieldTensors,
         tags: torch.LongTensor = None,
         metadata: List[Dict[str, Any]] = None,
     ) -> Dict[str, torch.Tensor]:
@@ -114,7 +114,7 @@ class SimpleTagger(Model):
         """
         # Parameters
 
-        tokens : Dict[str, torch.LongTensor], required
+        tokens : TextFieldTensors, required
             The output of ``TextField.as_array()``, which should typically be passed directly to a
             ``TextFieldEmbedder``. This output is a dictionary mapping keys to ``TokenIndexer``
             tensors.  At its most basic, using a ``SingleIdTokenIndexer`` this is : ``{"tokens":

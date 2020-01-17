@@ -1,4 +1,4 @@
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Iterable
 
 import numpy
 from overrides import overrides
@@ -9,7 +9,7 @@ from torch.nn.modules.rnn import LSTMCell
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.util import START_SYMBOL, END_SYMBOL
-from allennlp.data.vocabulary import Vocabulary
+from allennlp.data import TextFieldTensors, Vocabulary
 from allennlp.modules.attention import LegacyAttention
 from allennlp.modules import Attention, TextFieldEmbedder, Seq2SeqEncoder
 from allennlp.modules.similarity_functions import SimilarityFunction
@@ -67,6 +67,8 @@ class SimpleSeq2Seq(Model):
         2015](https://arxiv.org/abs/1506.03099).
     use_bleu : ``bool``, optional (default = True)
         If True, the BLEU metric will be calculated during validation.
+    ngram_weights : ``Iterable[float]``, optional (default = (0.25, 0.25, 0.25, 0.25))
+        Weights to assign to scores for each ngram size.
     """
 
     def __init__(
@@ -82,6 +84,7 @@ class SimpleSeq2Seq(Model):
         target_embedding_dim: int = None,
         scheduled_sampling_ratio: float = 0.0,
         use_bleu: bool = True,
+        bleu_ngram_weights: Iterable[float] = (0.25, 0.25, 0.25, 0.25),
     ) -> None:
         super().__init__(vocab)
         self._target_namespace = target_namespace
@@ -96,7 +99,9 @@ class SimpleSeq2Seq(Model):
             pad_index = self.vocab.get_token_index(
                 self.vocab._padding_token, self._target_namespace
             )
-            self._bleu = BLEU(exclude_indices={pad_index, self._end_index, self._start_index})
+            self._bleu = BLEU(
+                bleu_ngram_weights, exclude_indices={pad_index, self._end_index, self._start_index}
+            )
         else:
             self._bleu = None
 
@@ -199,8 +204,8 @@ class SimpleSeq2Seq(Model):
     @overrides
     def forward(
         self,  # type: ignore
-        source_tokens: Dict[str, torch.LongTensor],
-        target_tokens: Dict[str, torch.LongTensor] = None,
+        source_tokens: TextFieldTensors,
+        target_tokens: TextFieldTensors = None,
     ) -> Dict[str, torch.Tensor]:
 
         """
@@ -208,10 +213,10 @@ class SimpleSeq2Seq(Model):
 
         # Parameters
 
-        source_tokens : ``Dict[str, torch.LongTensor]``
+        source_tokens : ``TextFieldTensors``
            The output of `TextField.as_array()` applied on the source `TextField`. This will be
            passed through a `TextFieldEmbedder` and then through an encoder.
-        target_tokens : ``Dict[str, torch.LongTensor]``, optional (default = None)
+        target_tokens : ``TextFieldTensors``, optional (default = None)
            Output of `Textfield.as_array()` applied on target `TextField`. We assume that the
            target tokens are also represented as a `TextField`.
 
@@ -238,7 +243,7 @@ class SimpleSeq2Seq(Model):
                 top_k_predictions = output_dict["predictions"]
                 # shape: (batch_size, max_predicted_sequence_length)
                 best_predictions = top_k_predictions[:, 0, :]
-                self._bleu(best_predictions, target_tokens["tokens"])
+                self._bleu(best_predictions, target_tokens["tokens"]["tokens"])
 
         return output_dict
 
@@ -300,7 +305,7 @@ class SimpleSeq2Seq(Model):
         return state
 
     def _forward_loop(
-        self, state: Dict[str, torch.Tensor], target_tokens: Dict[str, torch.LongTensor] = None
+        self, state: Dict[str, torch.Tensor], target_tokens: TextFieldTensors = None
     ) -> Dict[str, torch.Tensor]:
         """
         Make forward pass during training or do greedy search during prediction.
@@ -317,7 +322,7 @@ class SimpleSeq2Seq(Model):
 
         if target_tokens:
             # shape: (batch_size, max_target_sequence_length)
-            targets = target_tokens["tokens"]
+            targets = target_tokens["tokens"]["tokens"]
 
             _, target_sequence_length = targets.size()
 

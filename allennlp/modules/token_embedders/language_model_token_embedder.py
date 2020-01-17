@@ -84,11 +84,6 @@ class LanguageModelTokenEmbedder(TokenEmbedder):
             # Note: We only care about embedded indices. This does not include "tokens" which
             # is just used to compute the loss in LanguageModel.
             raise ConfigurationError(f"LM from {archive_file} trained with multiple embedders!")
-        if "embedder_to_indexer_map" in text_field_embedder:
-            # Similarly we don't support multiple indexers per embedder.
-            raise ConfigurationError(
-                f"LM from {archive_file} trained with embedder_to_indexer_map!"
-            )
         self._token_name = token_names[0]
 
         # TODO(brendanr): Find a way to remove this hack. The issue fundamentally is that the
@@ -108,11 +103,9 @@ class LanguageModelTokenEmbedder(TokenEmbedder):
             token_list = [Token(token) for token in bos_eos_tokens]
             # TODO(brendanr): Obtain these indices from the vocab once the
             # ELMoTokenCharactersIndexer adds the mappings.
-            bos_eos_indices = token_indexer.tokens_to_indices(token_list, self._lm.vocab, "key")[
-                "key"
-            ]
-            self._bos_indices = torch.Tensor(bos_eos_indices[0])
-            self._eos_indices = torch.Tensor(bos_eos_indices[1])
+            bos_eos_indices = token_indexer.tokens_to_indices(token_list, self._lm.vocab)["tokens"]
+            self._bos_indices = torch.LongTensor(bos_eos_indices[0])
+            self._eos_indices = torch.LongTensor(bos_eos_indices[1])
         else:
             self._bos_indices = None
             self._eos_indices = None
@@ -151,12 +144,12 @@ class LanguageModelTokenEmbedder(TokenEmbedder):
 
     def forward(
         self,  # type: ignore
-        inputs: torch.Tensor,
+        tokens: torch.Tensor,
     ) -> Dict[str, torch.Tensor]:
         """
         # Parameters
 
-        inputs : ``torch.Tensor``
+        tokens : ``torch.Tensor``
             Shape ``(batch_size, timesteps, ...)`` of token ids representing the current batch.
             These must have been produced using the same indexer the LM was trained on.
 
@@ -167,12 +160,13 @@ class LanguageModelTokenEmbedder(TokenEmbedder):
         """
 
         if self._bos_indices is not None:
-            mask = get_text_field_mask({"": inputs})
-            inputs, mask = add_sentence_boundary_token_ids(
-                inputs, mask, self._bos_indices, self._eos_indices
+            num_wrapping_dims = max(tokens.dim() - 2, 0)
+            mask = get_text_field_mask({"": {"": tokens}}, num_wrapping_dims=num_wrapping_dims)
+            tokens, mask = add_sentence_boundary_token_ids(
+                tokens, mask, self._bos_indices, self._eos_indices
             )
 
-        source = {self._token_name: inputs}
+        source = {self._token_name: {"token_characters": tokens}}
         result_dict = self._lm(source)
 
         # shape (batch_size, timesteps, embedding_size)

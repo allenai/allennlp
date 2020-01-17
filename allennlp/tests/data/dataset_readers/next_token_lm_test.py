@@ -19,8 +19,8 @@ class TestNextTokenLmReader(AllenNlpTestCase):
         instance.index_fields(vocab)
         tensor_dict = instance.as_tensor_dict(instance.get_padding_lengths())
         assert tensor_dict.keys() == {"tokens", "target_ids"}
-        assert tensor_dict["tokens"]["tokens"].numpy().tolist() == [2, 3, 4]
-        assert tensor_dict["target_ids"]["tokens"].numpy().tolist() == [2]
+        assert tensor_dict["tokens"]["tokens"]["tokens"].numpy().tolist() == [2, 3, 4]
+        assert tensor_dict["target_ids"]["tokens"]["tokens"].numpy().tolist() == [2]
 
     def test_text_to_instance_with_bert_tokenizer_and_indexer(self):
         tokenizer = PretrainedTransformerTokenizer("bert-base-cased")
@@ -42,8 +42,8 @@ class TestNextTokenLmReader(AllenNlpTestCase):
         instance.index_fields(vocab)
         tensor_dict = instance.as_tensor_dict(instance.get_padding_lengths())
         assert tensor_dict.keys() == {"tokens", "target_ids"}
-        bert_token_ids = tensor_dict["tokens"]["bert"].numpy().tolist()
-        target_ids = tensor_dict["target_ids"]["bert"].numpy().tolist()
+        bert_token_ids = tensor_dict["tokens"]["bert"]["token_ids"].numpy().tolist()
+        target_ids = tensor_dict["target_ids"]["bert"]["token_ids"].numpy().tolist()
         # I don't know what wordpiece id BERT is going to assign to 'This', but it at least should
         # be the same between the input and the target.
         assert target_ids[0] == bert_token_ids[5]

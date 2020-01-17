@@ -1,5 +1,5 @@
 from allennlp.common.testing import ModelTestCase
-from allennlp.data.dataset import Batch
+from allennlp.data.batch import Batch
 
 
 class TestLanguageModelTokenEmbedder(ModelTestCase):

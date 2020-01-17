@@ -29,7 +29,7 @@ from allennlp.data.token_indexers.elmo_indexer import (
     ELMoCharacterMapper,
     ELMoTokenCharactersIndexer,
 )
-from allennlp.data.dataset import Batch
+from allennlp.data.batch import Batch
 from allennlp.data import Token, Vocabulary, Instance
 from allennlp.data.fields import TextField
 
@@ -274,7 +274,7 @@ def batch_to_ids(batch: List[List[str]]) -> torch.Tensor:
     dataset = Batch(instances)
     vocab = Vocabulary()
     dataset.index_instances(vocab)
-    return dataset.as_tensor_dict()["elmo"]["character_ids"]
+    return dataset.as_tensor_dict()["elmo"]["character_ids"]["tokens"]
 
 
 class _ElmoCharacterEncoder(torch.nn.Module):

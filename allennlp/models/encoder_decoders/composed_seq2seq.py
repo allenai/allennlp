@@ -4,7 +4,7 @@ import torch
 from overrides import overrides
 
 from allennlp.common.checks import ConfigurationError
-from allennlp.data.vocabulary import Vocabulary
+from allennlp.data import TextFieldTensors, Vocabulary
 from allennlp.models.model import Model
 from allennlp.modules import TextFieldEmbedder, Seq2SeqEncoder, Embedding
 from allennlp.modules.text_field_embedders import BasicTextFieldEmbedder
@@ -96,8 +96,8 @@ class ComposedSeq2Seq(Model):
     @overrides
     def forward(
         self,  # type: ignore
-        source_tokens: Dict[str, torch.LongTensor],
-        target_tokens: Dict[str, torch.LongTensor] = None,
+        source_tokens: TextFieldTensors,
+        target_tokens: TextFieldTensors = None,
     ) -> Dict[str, torch.Tensor]:
 
         """
@@ -105,10 +105,10 @@ class ComposedSeq2Seq(Model):
 
         # Parameters
 
-        source_tokens : ``Dict[str, torch.LongTensor]``
+        source_tokens : ``TextFieldTensors``
            The output of `TextField.as_array()` applied on the source `TextField`. This will be
            passed through a `TextFieldEmbedder` and then through an encoder.
-        target_tokens : ``Dict[str, torch.LongTensor]``, optional (default = None)
+        target_tokens : ``TextFieldTensors``, optional (default = None)
            Output of `Textfield.as_array()` applied on target `TextField`. We assume that the
            target tokens are also represented as a `TextField`.
 
@@ -134,7 +134,7 @@ class ComposedSeq2Seq(Model):
 
         # Parameters
 
-        source_tokens : ``Dict[str, torch.LongTensor]``
+        source_tokens : ``TextFieldTensors``
            The output of `TextField.as_array()` applied on the source `TextField`. This will be
            passed through a `TextFieldEmbedder` and then through an encoder.
 

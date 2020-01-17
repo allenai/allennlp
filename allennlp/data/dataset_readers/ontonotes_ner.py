@@ -61,9 +61,9 @@ class OntonotesNamedEntityRecognition(DatasetReader):
         token_indexers: Dict[str, TokenIndexer] = None,
         domain_identifier: str = None,
         coding_scheme: str = "BIO",
-        lazy: bool = False,
+        **kwargs,
     ) -> None:
-        super().__init__(lazy)
+        super().__init__(**kwargs)
         self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
         self._domain_identifier = domain_identifier
         if domain_identifier == "pt":

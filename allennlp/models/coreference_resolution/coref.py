@@ -6,7 +6,7 @@ import torch
 import torch.nn.functional as F
 from overrides import overrides
 
-from allennlp.data import Vocabulary
+from allennlp.data import TextFieldTensors, Vocabulary
 from allennlp.models.model import Model
 from allennlp.modules.token_embedders import Embedding
 from allennlp.modules import FeedForward
@@ -120,7 +120,7 @@ class CoreferenceResolver(Model):
     @overrides
     def forward(
         self,  # type: ignore
-        text: Dict[str, torch.LongTensor],
+        text: TextFieldTensors,
         spans: torch.IntTensor,
         span_labels: torch.IntTensor = None,
         metadata: List[Dict[str, Any]] = None,
@@ -129,7 +129,7 @@ class CoreferenceResolver(Model):
         """
         # Parameters
 
-        text : ``Dict[str, torch.LongTensor]``, required.
+        text : ``TextFieldTensors``, required.
             The output of a ``TextField`` representing the text of
             the document.
         spans : ``torch.IntTensor``, required.

@@ -44,23 +44,21 @@ and report any metrics calculated by the model.
                             need to pass --embedding-sources-mapping.
       --embedding-sources-mapping EMBEDDING_SOURCES_MAPPING
                             a JSON dict defining mapping from embedding module
-                            path to embeddingpretrained-file used during training.
-                            If not passed, and embedding needs to be extended, we
-                            will try to use the original file paths used during
-                            training. If they are not available we will use random
-                            vectors for embedding extension.
+                            path to embedding pretrained-file used during
+                            training. If not passed, and embedding needs to be
+                            extended, we will try to use the original file paths
+                            used during training. If they are not available we
+                            will use random vectors for embedding extension.
       --include-package INCLUDE_PACKAGE
                             additional packages to include
 """
-from typing import Dict, Any
 import argparse
-import logging
 import json
-
+import logging
+from typing import Any, Dict
 
 from allennlp.commands.subcommand import Subcommand
-from allennlp.common.util import prepare_environment
-
+from allennlp.common.util import dump_metrics, prepare_environment
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.iterators import DataIterator
 from allennlp.models.archival import load_archive
@@ -128,7 +126,7 @@ class Evaluate(Subcommand):
             "--embedding-sources-mapping",
             type=str,
             default="",
-            help="a JSON dict defining mapping from embedding module path to embedding"
+            help="a JSON dict defining mapping from embedding module path to embedding "
             "pretrained-file used during training. If not passed, and embedding needs to be "
             "extended, we will try to use the original file paths used during training. If "
             "they are not available we will use random vectors for embedding extension.",
@@ -165,9 +163,10 @@ def evaluate_from_args(args: argparse.Namespace) -> Dict[str, Any]:
     logger.info("Reading evaluation data from %s", evaluation_data_path)
     instances = dataset_reader.read(evaluation_data_path)
 
-    embedding_sources: Dict[str, str] = (
+    embedding_sources = (
         json.loads(args.embedding_sources_mapping) if args.embedding_sources_mapping else {}
     )
+
     if args.extend_vocab:
         logger.info("Vocabulary is being extended with test instances.")
         model.vocab.extend_from_instances(instances=instances)
@@ -184,12 +183,7 @@ def evaluate_from_args(args: argparse.Namespace) -> Dict[str, Any]:
     metrics = evaluate(model, instances, iterator, args.cuda_device, args.batch_weight_key)
 
     logger.info("Finished evaluating.")
-    logger.info("Metrics:")
-    for key, metric in metrics.items():
-        logger.info("%s: %s", key, metric)
 
-    output_file = args.output_file
-    if output_file:
-        with open(output_file, "w") as file:
-            json.dump(metrics, file, indent=4)
+    dump_metrics(args.output_file, metrics, log=True)
+
     return metrics

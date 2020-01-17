@@ -29,9 +29,7 @@ class NoOpTrainer(TrainerBase):
         cache_prefix: str = None,
     ):
 
-        pieces = TrainerPieces.from_params(
-            params, serialization_dir, recover, cache_directory, cache_prefix
-        )
+        pieces = TrainerPieces.from_params(params, serialization_dir, recover)
         return NoOpTrainer(serialization_dir, pieces.model)
 
     def train(self) -> Dict[str, Any]:

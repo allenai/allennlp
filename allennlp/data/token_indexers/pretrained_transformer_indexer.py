@@ -3,18 +3,16 @@ import logging
 
 from overrides import overrides
 from transformers.tokenization_auto import AutoTokenizer
-import torch
 
-from allennlp.common.util import pad_sequence_to_length
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.data.tokenizers.token import Token
-from allennlp.data.token_indexers.token_indexer import TokenIndexer
+from allennlp.data.token_indexers.token_indexer import TokenIndexer, IndexedTokenList
 
 logger = logging.getLogger(__name__)
 
 
 @TokenIndexer.register("pretrained_transformer")
-class PretrainedTransformerIndexer(TokenIndexer[int]):
+class PretrainedTransformerIndexer(TokenIndexer):
     """
     This ``TokenIndexer`` assumes that Tokens already have their indexes in them (see ``text_id`` field).
     We still require ``model_name`` because we want to form allennlp vocabulary from pretrained one.
@@ -72,7 +70,7 @@ class PretrainedTransformerIndexer(TokenIndexer[int]):
 
     @overrides
     def tokens_to_indices(
-        self, tokens: List[Token], vocabulary: Vocabulary, index_name: str
+        self, tokens: List[Token], vocabulary: Vocabulary
     ) -> Dict[str, List[int]]:
         if not self._added_to_vocabulary:
             self._add_encoding_to_vocabulary(vocabulary)
@@ -101,14 +99,14 @@ class PretrainedTransformerIndexer(TokenIndexer[int]):
         # tokens are attended to.
         attention_mask = [1] * len(indices)
 
-        result = {index_name: indices, "mask": attention_mask}
+        result = {"token_ids": indices, "mask": attention_mask}
         if type_ids is not None:
             result["type_ids"] = type_ids
         return result
 
     @overrides
-    def get_padding_lengths(self, token: int) -> Dict[str, int]:
-        return {}
+    def get_empty_token_list(self) -> IndexedTokenList:
+        return {"token_ids": [], "mask": [], "type_ids": []}
 
     @overrides
     def as_padded_tensor(

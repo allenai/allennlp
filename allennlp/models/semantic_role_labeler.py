@@ -7,7 +7,7 @@ from torch.nn.modules import Linear, Dropout
 import torch.nn.functional as F
 
 from allennlp.common.checks import check_dimensions_match
-from allennlp.data import Vocabulary
+from allennlp.data import TextFieldTensors, Vocabulary
 from allennlp.models.srl_util import (
     convert_bio_tags_to_conll_format,
     write_bio_formatted_tags_to_file,
@@ -106,7 +106,7 @@ class SemanticRoleLabeler(Model):
 
     def forward(  # type: ignore
         self,
-        tokens: Dict[str, torch.LongTensor],
+        tokens: TextFieldTensors,
         verb_indicator: torch.LongTensor,
         tags: torch.LongTensor = None,
         metadata: List[Dict[str, Any]] = None,
@@ -115,7 +115,7 @@ class SemanticRoleLabeler(Model):
         """
         # Parameters
 
-        tokens : Dict[str, torch.LongTensor], required
+        tokens : TextFieldTensors, required
             The output of ``TextField.as_array()``, which should typically be passed directly to a
             ``TextFieldEmbedder``. This output is a dictionary mapping keys to ``TokenIndexer``
             tensors.  At its most basic, using a ``SingleIdTokenIndexer`` this is : ``{"tokens":

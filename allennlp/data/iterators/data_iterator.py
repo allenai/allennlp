@@ -9,7 +9,7 @@ import torch
 
 from allennlp.common.registrable import Registrable
 from allennlp.common.util import is_lazy, lazy_groups_of, ensure_list
-from allennlp.data.dataset import Batch
+from allennlp.data.batch import Batch
 from allennlp.data.fields import MetadataField
 from allennlp.data.instance import Instance
 from allennlp.data.vocabulary import Vocabulary

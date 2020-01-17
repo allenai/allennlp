@@ -1,5 +1,5 @@
 """
-Various utilities that don't fit anwhere else.
+Various utilities that don't fit anywhere else.
 """
 import importlib
 import json
@@ -9,14 +9,13 @@ import pkgutil
 import random
 import subprocess
 import sys
-import torch.distributed as dist
 from itertools import zip_longest, islice
 from logging import Filter
-from typing import Any, Callable, Dict, List, Tuple, TypeVar, Iterable, Iterator, Generator
-
+from typing import Any, Callable, Dict, Iterable, Iterator, List, Optional, Tuple, TypeVar, Generator
 from queue import Queue
-
 from threading import Thread
+
+import torch.distributed as dist
 
 try:
     import resource
@@ -485,21 +484,35 @@ def is_lazy(iterable: Iterable[A]) -> bool:
     return not isinstance(iterable, list)
 
 
-def get_frozen_and_tunable_parameter_names(model: torch.nn.Module) -> List:
-    frozen_parameter_names = []
-    tunable_parameter_names = []
-    for name, parameter in model.named_parameters():
-        if not parameter.requires_grad:
-            frozen_parameter_names.append(name)
-        else:
-            tunable_parameter_names.append(name)
-    return [frozen_parameter_names, tunable_parameter_names]
+def log_frozen_and_tunable_parameter_names(model: torch.nn.Module) -> None:
+    frozen_parameter_names, tunable_parameter_names = get_frozen_and_tunable_parameter_names(model)
+
+    logger.info("The following parameters are Frozen (without gradient):")
+    for name in frozen_parameter_names:
+        logger.info(name)
+
+    logger.info("The following parameters are Tunable (with gradient):")
+    for name in tunable_parameter_names:
+        logger.info(name)
 
 
-def dump_metrics(file_path: str, metrics: Dict[str, Any], log: bool = False) -> None:
+def get_frozen_and_tunable_parameter_names(
+    model: torch.nn.Module,
+) -> Tuple[Iterable[str], Iterable[str]]:
+    frozen_parameter_names = (
+        name for name, parameter in model.named_parameters() if not parameter.requires_grad
+    )
+    tunable_parameter_names = (
+        name for name, parameter in model.named_parameters() if parameter.requires_grad
+    )
+    return frozen_parameter_names, tunable_parameter_names
+
+
+def dump_metrics(file_path: Optional[str], metrics: Dict[str, Any], log: bool = False) -> None:
     metrics_json = json.dumps(metrics, indent=2)
-    with open(file_path, "w") as metrics_file:
-        metrics_file.write(metrics_json)
+    if file_path:
+        with open(file_path, "w") as metrics_file:
+            metrics_file.write(metrics_json)
     if log:
         logger.info("Metrics: %s", metrics_json)
 
@@ -508,19 +521,23 @@ def flatten_filename(file_path: str) -> str:
     return file_path.replace("/", "_SLASH_")
 
 
-def is_master(rank: int = None, world_size: int = None) -> bool:
+def is_master(
+    global_rank: int = None, world_size: int = None, num_procs_per_node: int = None
+) -> bool:
     """
-    Checks if the process is a "master" in a distributed process group. If a
+    Checks if the process is a "master" of its node in a distributed process group. If a
     process group is not initialized, this returns `True`.
 
     # Parameters
 
-    rank : int ( default = None )
+    global_rank : int ( default = None )
         Global rank of the process if in a distributed process group. If not
         given, rank is obtained using `torch.distributed.get_rank()`
     world_size : int ( default = None )
         Number of processes in the distributed group. If not
         given, this is obtained using `torch.distributed.get_world_size()`
+    num_procs_per_node: int ( default = None ),
+        Number of GPU processes running per node
     """
     distributed = dist.is_available() and dist.is_initialized()
 
@@ -530,16 +547,19 @@ def is_master(rank: int = None, world_size: int = None) -> bool:
     if not distributed:
         return True
 
-    if rank is None:
-        rank = dist.get_rank()
+    if global_rank is None:
+        global_rank = dist.get_rank()
 
     if world_size is None:
         world_size = dist.get_world_size()
 
+    if num_procs_per_node is None and os.environ:
+        num_procs_per_node = int(os.environ.get("ALLENNLP_PROCS_PER_NODE"), world_size)
+
     # rank == 0 would do in a single-node multi-GPU setup. However,
     # in a multi-node case, every node has a logical master and hence
     # the mod(%) op.
-    return rank % world_size == 0
+    return global_rank % (world_size / num_procs_per_node) == 0
 
 
 def is_distributed() -> bool:

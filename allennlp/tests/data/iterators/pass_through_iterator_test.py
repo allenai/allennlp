@@ -25,4 +25,4 @@ class TestPassThroughIterator(IteratorTest):
         iterator.index_with(self.vocab)
         generator = iterator(self.instances)
         tensor_dict = next(generator)
-        self.assertEqual(tensor_dict["text"]["tokens"].size(), (4,))
+        self.assertEqual(tensor_dict["text"]["tokens"]["tokens"].size(), (4,))
