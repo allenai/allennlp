@@ -123,6 +123,10 @@ class TestPretrainedTransformerIndexer(AllenNlpTestCase):
         assert len(padded_tokens["mask"]) == max_length
         assert padded_tokens["mask"].tolist() == expected_masks
 
+    def test_auto_determining_num_tokens_added(self):
+        indexer = PretrainedTransformerIndexer("bert-base-cased")
+        assert indexer._determine_num_special_tokens_added() == (1, 1)
+
     def test_intra_word_tokenization(self):
         tokenizer = AutoTokenizer.from_pretrained("bert-base-cased")
         indexer = PretrainedTransformerIndexer("bert-base-cased", intra_word_tokenization=True)

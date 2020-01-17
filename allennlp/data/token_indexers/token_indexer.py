@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Any, Dict, List
 
 import torch
 
@@ -11,10 +11,8 @@ from allennlp.data.vocabulary import Vocabulary
 # corresponding to this TokenIndexer.  Each argument that the TokenEmbedder needs will have one
 # entry in the IndexedTokenList dictionary, and that argument will typically be a list of integers
 # (for single ID word embeddings) or a nested list of integers (for character ID word embeddings),
-# though it could also be a mask, or any other data that you want to pass.  We're labeling this as
-# `Dict[str, List[int]]` just for convenience here, as it's the typical case.  The `List[int]` could
-# actually have arbitrary type.
-IndexedTokenList = Dict[str, List[int]]
+# though it could also be a mask, or any other data that you want to pass.
+IndexedTokenList = Dict[str, List[Any]]
 
 
 class TokenIndexer(Registrable):
