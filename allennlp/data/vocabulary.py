@@ -433,6 +433,13 @@ class Vocabulary(Registrable):
         mappings of calling vocabulary will be retained.  It is an inplace operation so None will be
         returned.
         """
+        if min_count:
+            for key in min_count:
+                if key not in counter:
+                    raise ConfigurationError(
+                        f"The key '{key}' is present in min_count but not in counter"
+                    )
+
         if not isinstance(max_vocab_size, dict):
             int_max_vocab_size = max_vocab_size
             max_vocab_size = defaultdict(lambda: int_max_vocab_size)  # type: ignore
