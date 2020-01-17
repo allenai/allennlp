@@ -1,6 +1,6 @@
 import torch
 
-from pytorch_pretrained_bert.modeling import BertConfig, BertModel
+from transformers.modeling_bert import BertConfig, BertModel
 from typing import List, Dict
 
 from allennlp.common.testing import ModelTestCase
@@ -23,7 +23,7 @@ class TestBertEmbedder(ModelTestCase):
         self.token_indexer = PretrainedBertIndexer(str(vocab_path))
 
         config_path = self.FIXTURES_ROOT / "bert" / "config.json"
-        config = BertConfig(str(config_path))
+        config = BertConfig.from_json_file(str(config_path))
         self.bert_model = BertModel(config)
         self.token_embedder = BertEmbedder(self.bert_model)
 
@@ -273,7 +273,7 @@ class TestBertEmbedder(ModelTestCase):
         )
 
         config_path = self.FIXTURES_ROOT / "bert" / "config.json"
-        config = BertConfig(str(config_path))
+        config = BertConfig.from_json_file(str(config_path))
         bert_model = BertModel(config)
         token_embedder = BertEmbedder(bert_model, max_pieces=8)
 
@@ -320,7 +320,7 @@ class TestBertEmbedder(ModelTestCase):
         )
 
         config_path = self.FIXTURES_ROOT / "bert" / "config.json"
-        config = BertConfig(str(config_path))
+        config = BertConfig.from_json_file(str(config_path))
         bert_model = BertModel(config)
         token_embedder = BertEmbedder(bert_model, max_pieces=8)
 

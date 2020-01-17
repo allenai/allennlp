@@ -32,6 +32,6 @@ class TestBertPreTokenizer(AllenNlpTestCase):
         # BertPreTokenizer makes every token not in `never_split` to lowercase by default
         word_tokenizer = BertPreTokenizer(never_split=["[UNUSED0]"])
         sentence = "[UNUSED0] [UNK] [unused0]"
-        expected_tokens = ["[UNUSED0]", "[", "unk", "]", "[", "unused0", "]"]
+        expected_tokens = ["[UNUSED0]", "[UNK]", "[", "unused0", "]"]
         tokens = [token.text for token in word_tokenizer.tokenize(sentence)]
         assert tokens == expected_tokens
