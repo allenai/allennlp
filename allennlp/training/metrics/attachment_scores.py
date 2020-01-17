@@ -17,7 +17,7 @@ class AttachmentScores(Metric):
 
     # Parameters
 
-    ignore_classes : ``List[int]``, optional (default = None)
+    ignore_classes : `List[int]`, optional (default = None)
         A list of label ids to ignore when computing metrics.
     """
 
@@ -42,16 +42,16 @@ class AttachmentScores(Metric):
         """
         # Parameters
 
-        predicted_indices : ``torch.Tensor``, required.
+        predicted_indices : `torch.Tensor`, required.
             A tensor of head index predictions of shape (batch_size, timesteps).
-        predicted_labels : ``torch.Tensor``, required.
+        predicted_labels : `torch.Tensor`, required.
             A tensor of arc label predictions of shape (batch_size, timesteps).
-        gold_indices : ``torch.Tensor``, required.
-            A tensor of the same shape as ``predicted_indices``.
-        gold_labels : ``torch.Tensor``, required.
-            A tensor of the same shape as ``predicted_labels``.
-        mask : ``torch.Tensor``, optional (default = None).
-            A tensor of the same shape as ``predicted_indices``.
+        gold_indices : `torch.Tensor`, required.
+            A tensor of the same shape as `predicted_indices`.
+        gold_labels : `torch.Tensor`, required.
+            A tensor of the same shape as `predicted_labels`.
+        mask : `torch.Tensor`, optional (default = None).
+            A tensor of the same shape as `predicted_indices`.
         """
         unwrapped = self.unwrap_to_tensors(
             predicted_indices, predicted_labels, gold_indices, gold_labels, mask

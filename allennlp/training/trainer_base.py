@@ -4,7 +4,7 @@ A :class:`~allennlp.training.trainer.Trainer` is responsible for training a
 
 Typically you might create a configuration file specifying the model and
 training parameters and then use :mod:`~allennlp.commands.train`
-rather than instantiating a ``Trainer`` yourself.
+rather than instantiating a `Trainer` yourself.
 """
 
 
@@ -21,8 +21,8 @@ logger = logging.getLogger(__name__)
 class TrainerBase(Registrable):
     """
     The base class for an AllenNLP trainer. It can do pretty much
-    anything you want. Your subclass should implement ``train``
-    and also probably ``from_params``.
+    anything you want. Your subclass should implement `train`
+    and also probably `from_params`.
     """
 
     default_implementation = "default"

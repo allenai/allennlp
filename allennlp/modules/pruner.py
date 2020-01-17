@@ -13,7 +13,7 @@ class Pruner(torch.nn.Module):
 
     # Parameters
 
-    scorer : ``torch.nn.Module``, required.
+    scorer : `torch.nn.Module`, required.
         A module which, given a tensor of shape (batch_size, num_items, embedding_size),
         produces a tensor of shape (batch_size, num_items, 1), representing a scalar score
         per item in the tensor.
@@ -39,31 +39,31 @@ class Pruner(torch.nn.Module):
 
         # Parameters
 
-        embeddings : ``torch.FloatTensor``, required.
+        embeddings : `torch.FloatTensor`, required.
             A tensor of shape (batch_size, num_items, embedding_size), containing an embedding for
             each item in the list that we want to prune.
-        mask : ``torch.LongTensor``, required.
+        mask : `torch.LongTensor`, required.
             A tensor of shape (batch_size, num_items), denoting unpadded elements of
-            ``embeddings``.
-        num_items_to_keep : ``Union[int, torch.LongTensor]``, required.
+            `embeddings`.
+        num_items_to_keep : `Union[int, torch.LongTensor]`, required.
             If a tensor of shape (batch_size), specifies the number of items to keep for each
             individual sentence in minibatch.
             If an int, keep the same number of items for all sentences.
 
         # Returns
 
-        top_embeddings : ``torch.FloatTensor``
+        top_embeddings : `torch.FloatTensor`
             The representations of the top-k scoring items.
             Has shape (batch_size, max_num_items_to_keep, embedding_size).
-        top_mask : ``torch.LongTensor``
-            The corresponding mask for ``top_embeddings``.
+        top_mask : `torch.LongTensor`
+            The corresponding mask for `top_embeddings`.
             Has shape (batch_size, max_num_items_to_keep).
-        top_indices : ``torch.IntTensor``
-            The indices of the top-k scoring items into the original ``embeddings``
+        top_indices : `torch.IntTensor`
+            The indices of the top-k scoring items into the original `embeddings`
             tensor. This is returned because it can be useful to retain pointers to
             the original items, if each item is being scored by multiple distinct
             scorers, for instance. Has shape (batch_size, max_num_items_to_keep).
-        top_item_scores : ``torch.FloatTensor``
+        top_item_scores : `torch.FloatTensor`
             The values of the top-k scoring items.
             Has shape (batch_size, max_num_items_to_keep, 1).
         """
@@ -112,7 +112,7 @@ class Pruner(torch.nn.Module):
 
         # Now we order the selected indices in increasing order with
         # respect to their indices (and hence, with respect to the
-        # order they originally appeared in the ``embeddings`` tensor).
+        # order they originally appeared in the `embeddings` tensor).
         top_indices, _ = torch.sort(top_indices, 1)
 
         # Shape: (batch_size * max_num_items_to_keep)

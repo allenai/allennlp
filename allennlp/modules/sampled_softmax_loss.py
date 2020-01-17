@@ -10,7 +10,7 @@ from allennlp.common.checks import ConfigurationError
 
 def _choice(num_words: int, num_samples: int) -> Tuple[np.ndarray, int]:
     """
-    Chooses ``num_samples`` samples without replacement from [0, ..., num_words).
+    Chooses `num_samples` samples without replacement from [0, ..., num_words).
     Returns a tuple (samples, num_tries).
     """
     num_tries = 0
@@ -55,19 +55,19 @@ class SampledSoftmaxLoss(torch.nn.Module):
 
     # Parameters
 
-    num_words, ``int``, required
+    num_words, `int`, required
         The number of words in the vocabulary
-    embedding_dim, ``int``, required
+    embedding_dim, `int`, required
         The dimension to softmax over
-    num_samples, ``int``, required
+    num_samples, `int`, required
         During training take this many samples. Must be less than num_words.
-    sparse, ``bool``, optional (default = False)
+    sparse, `bool`, optional (default = False)
         If this is true, we use a sparse embedding matrix.
-    unk_id, ``int``, optional (default = None)
+    unk_id, `int`, optional (default = None)
         If provided, the id that represents unknown characters.
-    use_character_inputs, ``bool``, optional (default = True)
+    use_character_inputs, `bool`, optional (default = True)
         Whether to use character inputs
-    use_fast_sampler, ``bool``, optional (default = False)
+    use_fast_sampler, `bool`, optional (default = False)
         Whether to use the fast cython sampler.
     """
 

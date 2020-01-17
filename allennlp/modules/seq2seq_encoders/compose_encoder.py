@@ -14,7 +14,7 @@ class ComposeEncoder(Seq2SeqEncoder):
 
     # Parameters
 
-    encoders : ``List[Seq2SeqEncoder]``, required.
+    encoders : `List[Seq2SeqEncoder]`, required.
         A non-empty list of encoders to compose. The encoders must match in bidirectionality.
     """
 
@@ -50,9 +50,9 @@ class ComposeEncoder(Seq2SeqEncoder):
         """
         # Parameters
 
-        inputs : ``torch.Tensor``, required.
+        inputs : `torch.Tensor`, required.
             A tensor of shape (batch_size, timesteps, input_dim)
-        mask : ``torch.LongTensor``, optional (default = None).
+        mask : `torch.LongTensor`, optional (default = None).
             A tensor of shape (batch_size, timesteps).
 
         # Returns

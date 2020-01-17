@@ -36,22 +36,22 @@ class CcgBankDatasetReader(DatasetReader):
 
     # Parameters
 
-    token_indexers : ``Dict[str, TokenIndexer]``, optional (default=``{"tokens": SingleIdTokenIndexer()}``)
+    token_indexers : `Dict[str, TokenIndexer]`, optional (default=`{"tokens": SingleIdTokenIndexer()}`)
         We use this to define the input representation for the text.  See :class:`TokenIndexer`.
         Note that the `output` tags will always correspond to single token IDs based on how they
         are pre-tokenised in the data file.
-    tag_label : ``str``, optional (default=``ccg``)
-        Specify ``ccg``, ``modified_pos``, ``original_pos``, or ``predicate_arg`` to
-        have that tag loaded into the instance field ``tag``.
-    feature_labels : ``Sequence[str]``, optional (default=``()``)
+    tag_label : `str`, optional (default=`ccg`)
+        Specify `ccg`, `modified_pos`, `original_pos`, or `predicate_arg` to
+        have that tag loaded into the instance field `tag`.
+    feature_labels : `Sequence[str]`, optional (default=`()`)
         These labels will be loaded as features into the corresponding instance fields:
-        ``ccg`` -> ``ccg_tags``, ``modified_pos`` -> ``modified_pos_tags``,
-        ``original_pos`` -> ``original_pos_tags``, or ``predicate_arg`` -> ``predicate_arg_tags``
-        Each will have its own namespace : ``ccg_tags``, ``modified_pos_tags``,
-        ``original_pos_tags``, ``predicate_arg_tags``. If you want to use one of the tags
+        `ccg` -> `ccg_tags`, `modified_pos` -> `modified_pos_tags`,
+        `original_pos` -> `original_pos_tags`, or `predicate_arg` -> `predicate_arg_tags`
+        Each will have its own namespace : `ccg_tags`, `modified_pos_tags`,
+        `original_pos_tags`, `predicate_arg_tags`. If you want to use one of the tags
         as a feature in your model, it should be specified here.
-    label_namespace : ``str``, optional (default=``labels``)
-        Specifies the namespace for the chosen ``tag_label``.
+    label_namespace : `str`, optional (default=`labels`)
+        Specifies the namespace for the chosen `tag_label`.
     """
 
     def __init__(
@@ -122,28 +122,28 @@ class CcgBankDatasetReader(DatasetReader):
 
         # Parameters
 
-        tokens : ``List[str]``, required.
+        tokens : `List[str]`, required.
             The tokens in a given sentence.
-        ccg_categories : ``List[str]``, optional, (default = None).
+        ccg_categories : `List[str]`, optional, (default = None).
             The CCG categories for the words in the sentence. (e.g. N/N)
-        original_pos_tags : ``List[str]``, optional, (default = None).
+        original_pos_tags : `List[str]`, optional, (default = None).
             The tag assigned to the word in the Penn Treebank.
-        modified_pos_tags : ``List[str]``, optional, (default = None).
+        modified_pos_tags : `List[str]`, optional, (default = None).
             The POS tag might have changed during the translation to CCG.
-        predicate_arg_categories : ``List[str]``, optional, (default = None).
+        predicate_arg_categories : `List[str]`, optional, (default = None).
             Encodes the word-word dependencies in the underlying predicate-
             argument structure.
 
         # Returns
 
-        An ``Instance`` containing the following fields:
-            tokens : ``TextField``
+        An `Instance` containing the following fields:
+            tokens : `TextField`
                 The tokens in the sentence.
-            tags : ``SequenceLabelField``
-                The tags corresponding to the ``tag_label`` constructor argument.
-            feature_label_tags : ``SequenceLabelField``
+            tags : `SequenceLabelField`
+                The tags corresponding to the `tag_label` constructor argument.
+            feature_label_tags : `SequenceLabelField`
                 Tags corresponding to each feature_label (if any) specified in the
-                ``feature_labels`` constructor argument.
+                `feature_labels` constructor argument.
         """
 
         text_field = TextField([Token(x) for x in tokens], token_indexers=self._token_indexers)

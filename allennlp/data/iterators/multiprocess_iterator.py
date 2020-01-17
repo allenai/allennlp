@@ -20,8 +20,8 @@ def _create_tensor_dicts_from_queue(
     input_queue: Queue, output_queue: Queue, iterator: DataIterator, shuffle: bool, index: int
 ) -> None:
     """
-    Pulls instances from ``input_queue``, converts them into ``TensorDict``s
-    using ``iterator``, and puts them on the ``output_queue``.
+    Pulls instances from `input_queue`, converts them into `TensorDict`s
+    using `iterator`, and puts them on the `output_queue`.
     """
     logger.info(f"Iterator worker: {index} PID: {os.getpid()}")
 
@@ -50,8 +50,8 @@ def _create_tensor_dicts_from_qiterable(
     qiterable: QIterable, output_queue: Queue, iterator: DataIterator, shuffle: bool, index: int
 ) -> None:
     """
-    Pulls instances from ``qiterable.output_queue``, converts them into
-    ``TensorDict``s using ``iterator``, and puts them on the ``output_queue``.
+    Pulls instances from `qiterable.output_queue`, converts them into
+    `TensorDict`s using `iterator`, and puts them on the `output_queue`.
     """
     logger.info(f"Iterator worker: {index} PID: {os.getpid()}")
 
@@ -97,17 +97,17 @@ def _queuer(
 @DataIterator.register("multiprocess")
 class MultiprocessIterator(DataIterator):
     """
-    Wraps another ```DataIterator``` and uses it to generate tensor dicts
+    Wraps another `DataIterator` and uses it to generate tensor dicts
     using multiple processes.
 
     # Parameters
 
-    base_iterator : ``DataIterator``
-        The ``DataIterator`` for generating tensor dicts. It will be shared among
+    base_iterator : `DataIterator`
+        The `DataIterator` for generating tensor dicts. It will be shared among
         processes, so it should not be stateful in any way.
-    num_workers : ``int``, optional (default = 1)
+    num_workers : `int`, optional (default = 1)
         The number of processes used for generating tensor dicts.
-    output_queue_size : ``int``, optional (default = 1000)
+    output_queue_size : `int`, optional (default = 1000)
         The size of the output queue on which tensor dicts are placed to be consumed.
         You might need to increase this if you're generating tensor dicts too quickly.
     """

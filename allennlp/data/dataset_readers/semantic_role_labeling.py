@@ -99,22 +99,22 @@ class SrlReader(DatasetReader):
     for semantic role labelling. It returns a dataset of instances with the
     following fields:
 
-    tokens : ``TextField``
+    tokens : `TextField`
         The tokens in the sentence.
-    verb_indicator : ``SequenceLabelField``
+    verb_indicator : `SequenceLabelField`
         A sequence of binary indicators for whether the word is the verb for this frame.
-    tags : ``SequenceLabelField``
+    tags : `SequenceLabelField`
         A sequence of Propbank tags for the given verb in a BIO format.
 
     # Parameters
 
-    token_indexers : ``Dict[str, TokenIndexer]``, optional
+    token_indexers : `Dict[str, TokenIndexer]`, optional
         We similarly use this for both the premise and the hypothesis.  See :class:`TokenIndexer`.
-        Default is ``{"tokens": SingleIdTokenIndexer()}``.
-    domain_identifier : ``str``, (default = None)
+        Default is `{"tokens": SingleIdTokenIndexer()}`.
+    domain_identifier : `str`, (default = None)
         A string denoting a sub-domain of the Ontonotes 5.0 dataset to use. If present, only
         conll files under paths containing this domain identifier will be processed.
-    bert_model_name : ``Optional[str]``, (default = None)
+    bert_model_name : `Optional[str]`, (default = None)
         The BERT model to be wrapped. If you specify a bert_model here, then we will
         assume you want to use BERT throughout; we will use the bert tokenizer,
         and will expand your tags and verb indicators accordingly. If not,
@@ -122,7 +122,7 @@ class SrlReader(DatasetReader):
 
     # Returns
 
-    A ``Dataset`` of ``Instances`` for Semantic Role Labelling.
+    A `Dataset` of `Instances` for Semantic Role Labelling.
     """
 
     def __init__(

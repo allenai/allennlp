@@ -10,16 +10,16 @@ def get_fields_to_compare(
 
     # Parameters
 
-    inputs : ``JsonDict``
+    inputs : `JsonDict`
         The input you want to attack, similar to the argument to a Predictor, e.g., predict_json().
-    instance : ``Instance``
+    instance : `Instance`
         A labeled instance that is output from json_to_labeled_instances().
-    input_field_to_attack : ``str``
+    input_field_to_attack : `str`
         The key in the inputs JsonDict you want to attack, e.g., tokens.
 
     # Returns
 
-    fields : ``JsonDict``
+    fields : `JsonDict`
         The fields that must be compared for equality.
     """
     # TODO(mattg): this really should live on the Predictor.  We have some messy stuff for, e.g.,

@@ -19,12 +19,12 @@ class SelfAttentiveSpanExtractor(SpanExtractor):
 
     # Parameters
 
-    input_dim : ``int``, required.
-        The final dimension of the ``sequence_tensor``.
+    input_dim : `int`, required.
+        The final dimension of the `sequence_tensor`.
 
     # Returns
 
-    attended_text_embeddings : ``torch.FloatTensor``.
+    attended_text_embeddings : `torch.FloatTensor`.
         A tensor of shape (batch_size, num_spans, input_dim), which each span representation
         is formed by locally normalising a global attention over the sequence. The only way
         in which the attention distribution differs over different spans is in the set of words

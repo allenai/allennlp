@@ -16,7 +16,7 @@ from allennlp.training.metrics import CategoricalAccuracy
 @Model.register("decomposable_attention")
 class DecomposableAttention(Model):
     """
-    This ``Model`` implements the Decomposable Attention model described in [A Decomposable
+    This `Model` implements the Decomposable Attention model described in [A Decomposable
     Attention Model for Natural Language Inference](
     https://www.semanticscholar.org/paper/A-Decomposable-Attention-Model-for-Natural-Languag-Parikh-T%C3%A4ckstr%C3%B6m/07a9478e87a8304fc3267fa16e83e9f3bbd98b27)
     by Parikh et al., 2016, with some optional enhancements before the decomposable attention
@@ -32,32 +32,32 @@ class DecomposableAttention(Model):
 
     # Parameters
 
-    vocab : ``Vocabulary``
-    text_field_embedder : ``TextFieldEmbedder``
-        Used to embed the ``premise`` and ``hypothesis`` ``TextFields`` we get as input to the
+    vocab : `Vocabulary`
+    text_field_embedder : `TextFieldEmbedder`
+        Used to embed the `premise` and `hypothesis` `TextFields` we get as input to the
         model.
-    attend_feedforward : ``FeedForward``
+    attend_feedforward : `FeedForward`
         This feedforward network is applied to the encoded sentence representations before the
         similarity matrix is computed between words in the premise and words in the hypothesis.
-    similarity_function : ``SimilarityFunction``
+    similarity_function : `SimilarityFunction`
         This is the similarity function used when computing the similarity matrix between words in
         the premise and words in the hypothesis.
-    compare_feedforward : ``FeedForward``
+    compare_feedforward : `FeedForward`
         This feedforward network is applied to the aligned premise and hypothesis representations,
         individually.
-    aggregate_feedforward : ``FeedForward``
+    aggregate_feedforward : `FeedForward`
         This final feedforward network is applied to the concatenated, summed result of the
-        ``compare_feedforward`` network, and its output is used as the entailment class logits.
-    premise_encoder : ``Seq2SeqEncoder``, optional (default=``None``)
-        After embedding the premise, we can optionally apply an encoder.  If this is ``None``, we
+        `compare_feedforward` network, and its output is used as the entailment class logits.
+    premise_encoder : `Seq2SeqEncoder`, optional (default=`None`)
+        After embedding the premise, we can optionally apply an encoder.  If this is `None`, we
         will do nothing.
-    hypothesis_encoder : ``Seq2SeqEncoder``, optional (default=``None``)
-        After embedding the hypothesis, we can optionally apply an encoder.  If this is ``None``,
-        we will use the ``premise_encoder`` for the encoding (doing nothing if ``premise_encoder``
-        is also ``None``).
-    initializer : ``InitializerApplicator``, optional (default=``InitializerApplicator()``)
+    hypothesis_encoder : `Seq2SeqEncoder`, optional (default=`None`)
+        After embedding the hypothesis, we can optionally apply an encoder.  If this is `None`,
+        we will use the `premise_encoder` for the encoding (doing nothing if `premise_encoder`
+        is also `None`).
+    initializer : `InitializerApplicator`, optional (default=`InitializerApplicator()`)
         Used to initialize the model parameters.
-    regularizer : ``RegularizerApplicator``, optional (default=``None``)
+    regularizer : `RegularizerApplicator`, optional (default=`None`)
         If provided, will be used to calculate the regularization penalty during training.
     """
 
@@ -116,12 +116,12 @@ class DecomposableAttention(Model):
         # Parameters
 
         premise : TextFieldTensors
-            From a ``TextField``
+            From a `TextField`
         hypothesis : TextFieldTensors
-            From a ``TextField``
+            From a `TextField`
         label : torch.IntTensor, optional, (default = None)
-            From a ``LabelField``
-        metadata : ``List[Dict[str, Any]]``, optional, (default = None)
+            From a `LabelField`
+        metadata : `List[Dict[str, Any]]`, optional, (default = None)
             Metadata containing the original tokenization of the premise and
             hypothesis with 'premise_tokens' and 'hypothesis_tokens' keys respectively.
         # Returns
@@ -129,10 +129,10 @@ class DecomposableAttention(Model):
         An output dictionary consisting of:
 
         label_logits : torch.FloatTensor
-            A tensor of shape ``(batch_size, num_labels)`` representing unnormalised log
+            A tensor of shape `(batch_size, num_labels)` representing unnormalised log
             probabilities of the entailment label.
         label_probs : torch.FloatTensor
-            A tensor of shape ``(batch_size, num_labels)`` representing probabilities of the
+            A tensor of shape `(batch_size, num_labels)` representing probabilities of the
             entailment label.
         loss : torch.FloatTensor, optional
             A scalar loss to be optimised.

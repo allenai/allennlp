@@ -40,28 +40,28 @@ PTB_PARENTHESES = {
 class PennTreeBankConstituencySpanDatasetReader(DatasetReader):
     """
     Reads constituency parses from the WSJ part of the Penn Tree Bank from the LDC.
-    This ``DatasetReader`` is designed for use with a span labelling model, so
+    This `DatasetReader` is designed for use with a span labelling model, so
     it enumerates all possible spans in the sentence and returns them, along with gold
     labels for the relevant spans present in a gold tree, if provided.
 
     # Parameters
 
-    token_indexers : ``Dict[str, TokenIndexer]``, optional (default=``{"tokens": SingleIdTokenIndexer()}``)
+    token_indexers : `Dict[str, TokenIndexer]`, optional (default=`{"tokens": SingleIdTokenIndexer()}`)
         We use this to define the input representation for the text.  See :class:`TokenIndexer`.
         Note that the `output` tags will always correspond to single token IDs based on how they
         are pre-tokenised in the data file.
-    use_pos_tags : ``bool``, optional, (default = ``True``)
+    use_pos_tags : `bool`, optional, (default = `True`)
         Whether or not the instance should contain gold POS tags
         as a field.
-    convert_parentheses : ``bool``, optional, (default = ``False``)
+    convert_parentheses : `bool`, optional, (default = `False`)
         Whether or not to convert special PTB parentheses tokens (e.g., "-LRB-")
         to the corresponding parentheses tokens (i.e., "(").
-    label_namespace_prefix : ``str``, optional, (default = ``""``)
-        Prefix used for the label namespace.  The ``span_labels`` will use
-        namespace ``label_namespace_prefix + 'labels'``, and if using POS
-        tags their namespace is ``label_namespace_prefix + pos_label_namespace``.
-    pos_label_namespace : ``str``, optional, (default = ``"pos"``)
-        The POS tag namespace is ``label_namespace_prefix + pos_label_namespace``.
+    label_namespace_prefix : `str`, optional, (default = `""`)
+        Prefix used for the label namespace.  The `span_labels` will use
+        namespace `label_namespace_prefix + 'labels'`, and if using POS
+        tags their namespace is `label_namespace_prefix + pos_label_namespace`.
+    pos_label_namespace : `str`, optional, (default = `"pos"`)
+        The POS tag namespace is `label_namespace_prefix + pos_label_namespace`.
     """
 
     def __init__(
@@ -108,29 +108,29 @@ class PennTreeBankConstituencySpanDatasetReader(DatasetReader):
 
         # Parameters
 
-        tokens : ``List[str]``, required.
+        tokens : `List[str]`, required.
             The tokens in a given sentence.
-        pos_tags : ``List[str]``, optional, (default = None).
+        pos_tags : `List[str]`, optional, (default = None).
             The POS tags for the words in the sentence.
-        gold_tree : ``Tree``, optional (default = None).
+        gold_tree : `Tree`, optional (default = None).
             The gold parse tree to create span labels from.
 
         # Returns
 
-        An ``Instance`` containing the following fields:
-            tokens : ``TextField``
+        An `Instance` containing the following fields:
+            tokens : `TextField`
                 The tokens in the sentence.
-            pos_tags : ``SequenceLabelField``
+            pos_tags : `SequenceLabelField`
                 The POS tags of the words in the sentence.
-                Only returned if ``use_pos_tags`` is ``True``
-            spans : ``ListField[SpanField]``
+                Only returned if `use_pos_tags` is `True`
+            spans : `ListField[SpanField]`
                 A ListField containing all possible subspans of the
                 sentence.
-            span_labels : ``SequenceLabelField``, optional.
+            span_labels : `SequenceLabelField`, optional.
                 The constituency tags for each of the possible spans, with
                 respect to a gold parse tree. If a span is not contained
-                within the tree, a span will have a ``NO-LABEL`` label.
-            gold_tree : ``MetadataField(Tree)``
+                within the tree, a span will have a `NO-LABEL` label.
+            gold_tree : `MetadataField(Tree)`
                 The gold NLTK parse tree for use in evaluation.
         """
 
@@ -199,11 +199,11 @@ class PennTreeBankConstituencySpanDatasetReader(DatasetReader):
         self, tree: Tree, index: int, typed_spans: Dict[Tuple[int, int], str]
     ) -> int:
         """
-        Recursively construct the gold spans from an nltk ``Tree``.
+        Recursively construct the gold spans from an nltk `Tree`.
         Labels are the constituents, and in the case of nested constituents
         with the same spans, labels are concatenated in parent-child order.
-        For example, ``(S (NP (D the) (N man)))`` would have an ``S-NP`` label
-        for the outer span, as it has both ``S`` and ``NP`` label.
+        For example, `(S (NP (D the) (N man)))` would have an `S-NP` label
+        for the outer span, as it has both `S` and `NP` label.
         Spans are inclusive.
 
         TODO(Mark): If we encounter a gold nested labelling at test time
@@ -212,16 +212,16 @@ class PennTreeBankConstituencySpanDatasetReader(DatasetReader):
 
         # Parameters
 
-        tree : ``Tree``, required.
+        tree : `Tree`, required.
             An NLTK parse tree to extract spans from.
-        index : ``int``, required.
+        index : `int`, required.
             The index of the current span in the sentence being considered.
-        typed_spans : ``Dict[Tuple[int, int], str]``, required.
+        typed_spans : `Dict[Tuple[int, int], str]`, required.
             A dictionary mapping spans to span labels.
 
         # Returns
 
-        typed_spans : ``Dict[Tuple[int, int], str]``.
+        typed_spans : `Dict[Tuple[int, int], str]`.
             A dictionary mapping all subtree spans in the parse tree
             to their constituency labels. POS tags are ignored.
         """

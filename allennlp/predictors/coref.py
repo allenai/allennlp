@@ -53,7 +53,7 @@ class CorefPredictor(Predictor):
 
         # Parameters
 
-        document : ``str``
+        document : `str`
             A string representation of a document.
 
         # Returns
@@ -68,7 +68,7 @@ class CorefPredictor(Predictor):
 
         # Parameters
 
-        tokenized_document : ``List[str]``
+        tokenized_document : `List[str]`
             A list of words representation of a tokenized document.
 
         # Returns
@@ -83,7 +83,7 @@ class CorefPredictor(Predictor):
         self, instance: Instance, outputs: Dict[str, numpy.ndarray]
     ) -> List[Instance]:
         """
-        Takes each predicted cluster and makes it into a labeled ``Instance`` with only that
+        Takes each predicted cluster and makes it into a labeled `Instance` with only that
         cluster labeled, so we can compute gradients of the loss `on the model's prediction of that
         cluster`.  This lets us run interpretation methods using those gradients.  See superclass
         docstring for more info.
@@ -162,7 +162,7 @@ class CorefPredictor(Predictor):
 
         # Parameters
 
-        document : ``str``
+        document : `str`
             A string representation of a document.
 
         # Returns
@@ -195,7 +195,7 @@ class CorefPredictor(Predictor):
     @overrides
     def _json_to_instance(self, json_dict: JsonDict) -> Instance:
         """
-        Expects JSON that looks like ``{"document": "string of document text"}``
+        Expects JSON that looks like `{"document": "string of document text"}`
         """
         document = json_dict["document"]
         spacy_document = self._spacy(document)

@@ -38,12 +38,12 @@ def sparse_clip_norm(parameters, max_norm, norm_type=2) -> float:
 
     # Parameters
 
-    parameters : ``(Iterable[torch.Tensor])``
+    parameters : `(Iterable[torch.Tensor])`
         An iterable of Tensors that will have gradients normalized.
-    max_norm : ``float``
+    max_norm : `float`
         The max norm of the gradients.
-    norm_type : ``float``
-        The type of the used p-norm. Can be ``'inf'`` for infinity norm.
+    norm_type : `float`
+        The type of the used p-norm. Can be `'inf'` for infinity norm.
 
     # Returns
 
@@ -132,26 +132,26 @@ def datasets_from_params(params: Params) -> Dict[str, Iterable[Instance]]:
 
     # Parameters
 
-    params : ``Params``
-    cache_directory : ``str``, optional
-        If given, we will instruct the ``DatasetReaders`` that we construct to cache their
+    params : `Params`
+    cache_directory : `str`, optional
+        If given, we will instruct the `DatasetReaders` that we construct to cache their
         instances in this location (or read their instances from caches in this location, if a
         suitable cache already exists).  This is essentially a `base` directory for the cache, as
-        we will additionally add the ``cache_prefix`` to this directory, giving an actual cache
-        location of ``cache_directory + cache_prefix``.
-    cache_prefix : ``str``, optional
-        This works in conjunction with the ``cache_directory``.  The idea is that the
-        ``cache_directory`` contains caches for all different parameter settings, while the
-        ``cache_prefix`` captures a specific set of parameters that led to a particular cache file.
-        That is, if you change the tokenization settings inside your ``DatasetReader``, you don't
+        we will additionally add the `cache_prefix` to this directory, giving an actual cache
+        location of `cache_directory + cache_prefix`.
+    cache_prefix : `str`, optional
+        This works in conjunction with the `cache_directory`.  The idea is that the
+        `cache_directory` contains caches for all different parameter settings, while the
+        `cache_prefix` captures a specific set of parameters that led to a particular cache file.
+        That is, if you change the tokenization settings inside your `DatasetReader`, you don't
         want to read cached data that used the old settings.  In order to avoid this, we compute a
-        hash of the parameters used to construct each ``DatasetReader`` and use that as a "prefix"
-        to the cache files inside the base ``cache_directory``.  So, a given ``input_file`` would
-        be cached essentially as ``cache_directory + cache_prefix + input_file``, where you specify
-        a ``cache_directory``, the ``cache_prefix`` is based on the dataset reader parameters, and
-        the ``input_file`` is whatever path you provided to ``DatasetReader.read()``.  In order to
+        hash of the parameters used to construct each `DatasetReader` and use that as a "prefix"
+        to the cache files inside the base `cache_directory`.  So, a given `input_file` would
+        be cached essentially as `cache_directory + cache_prefix + input_file`, where you specify
+        a `cache_directory`, the `cache_prefix` is based on the dataset reader parameters, and
+        the `input_file` is whatever path you provided to `DatasetReader.read()`.  In order to
         allow you to give recognizable names to these prefixes if you want them, you can manually
-        specify the ``cache_prefix``.  Note that in some rare cases this can be dangerous, as we'll
+        specify the `cache_prefix`.  Note that in some rare cases this can be dangerous, as we'll
         use the `same` prefix for both train and validation dataset readers.
     """
     dataset_reader_params = params.pop("dataset_reader")
@@ -196,15 +196,15 @@ def create_serialization_dir(
 
     # Parameters
 
-    params : ``Params``
+    params : `Params`
         A parameter object specifying an AllenNLP Experiment.
-    serialization_dir : ``str``
+    serialization_dir : `str`
         The directory in which to save results and logs.
-    recover : ``bool``
-        If ``True``, we will try to recover from an existing serialization directory, and crash if
+    recover : `bool`
+        If `True`, we will try to recover from an existing serialization directory, and crash if
         the directory doesn't exist, or doesn't match the configuration we're given.
-    force : ``bool``
-        If ``True``, we will overwrite the serialization directory if it already exists.
+    force : `bool`
+        If `True`, we will overwrite the serialization directory if it already exists.
     """
     if recover and force:
         raise ConfigurationError("Illegal arguments: both force and recover are true.")
@@ -297,9 +297,9 @@ def get_metrics(
     cuda_device: Union[int, List] = 0,
 ) -> Dict[str, float]:
     """
-    Gets the metrics but sets ``"loss"`` to
-    the total loss divided by the ``num_batches`` so that
-    the ``"loss"`` metric is "average loss per batch".
+    Gets the metrics but sets `"loss"` to
+    the total loss divided by the `num_batches` so that
+    the `"loss"` metric is "average loss per batch".
     """
     metrics = model.get_metrics(reset=reset)
     metrics["loss"] = float(total_loss / num_batches) if num_batches > 0 else 0.0
