@@ -1069,7 +1069,6 @@ class TestNnUtil(AllenNlpTestCase):
             mask.unsqueeze(-1).bool(), selected, torch.empty_like(selected).fill_(-1)
         )
 
-        # breakpoint()
         numpy.testing.assert_array_equal(
             selected,
             [
