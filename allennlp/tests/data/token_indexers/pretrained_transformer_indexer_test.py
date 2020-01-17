@@ -132,7 +132,7 @@ class TestPretrainedTransformerIndexer(AllenNlpTestCase):
         vocab = Vocabulary()
         indexed = indexer.tokens_to_indices([Token(word) for word in text], vocab)
         assert indexed["token_ids"] == expected_ids
-        assert len(indexed["mask"]) == sum(indexed["mask"]) == len(text)
+        assert indexed["mask"] == [1] * len(text)
         # Hardcoding a few things because we know how BERT tokenization works
-        assert len(indexed["wordpiece_mask"]) == sum(indexed["wordpiece_mask"]) == 7
+        assert indexed["wordpiece_mask"] == [1] * len(expected_ids)
         assert indexed["offsets"] == [(1, 3), (4, 4), (5, 5)]

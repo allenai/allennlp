@@ -31,6 +31,8 @@ class PretrainedTransformerIndexer(TokenIndexer):
         We use a somewhat confusing default value of `tags` so that we do not add padding or UNK
         tokens to this namespace, which would break on loading because we wouldn't find our default
         OOV token.
+    intra_word_tokenization: ``bool``, optional (default=False)
+        See superclass.
     num_added_start_tokens: ``int``, optional (default=1)
         The number of start tokens that the tokenizer adds to a sequence.
     num_added_end_tokens: ``int``, optional (default=1)
@@ -45,21 +47,21 @@ class PretrainedTransformerIndexer(TokenIndexer):
         self,
         model_name: str,
         namespace: str = "tags",
+        token_min_padding_length: int = 0,
         num_added_start_tokens: int = 1,
         num_added_end_tokens: int = 1,
         intra_word_tokenization: bool = False,
-        token_min_padding_length: int = 0,
     ) -> None:
         super().__init__(token_min_padding_length)
         self._namespace = namespace
         # add_special_tokens=False for intra_word_tokenization
         self._tokenizer = PretrainedTransformerTokenizer(model_name, add_special_tokens=False)
-        self._wrapped_tokenizer = self._tokenizer.tokenizer  # wrapped huggingface tokenizer
+        self._underlying_tokenizer = self._tokenizer.tokenizer  # wrapped huggingface tokenizer
         self._num_added_start_tokens = num_added_start_tokens
         self._num_added_end_tokens = num_added_end_tokens
         assert (
             self._num_added_start_tokens + self._num_added_end_tokens
-            == self._wrapped_tokenizer.num_added_tokens()
+            == self._underlying_tokenizer.num_added_tokens()
         )
 
         self._added_to_vocabulary = False
@@ -72,9 +74,9 @@ class PretrainedTransformerIndexer(TokenIndexer):
         Transformers vocab is taken from the <vocab>/<encoder> keys of the tokenizer object.
         """
         vocab_field_name = None
-        if hasattr(self._wrapped_tokenizer, "vocab"):
+        if hasattr(self._underlying_tokenizer, "vocab"):
             vocab_field_name = "vocab"
-        elif hasattr(self._wrapped_tokenizer, "encoder"):
+        elif hasattr(self._underlying_tokenizer, "encoder"):
             vocab_field_name = "encoder"
         else:
             logger.warning(
@@ -83,7 +85,7 @@ class PretrainedTransformerIndexer(TokenIndexer):
                 Your tokens will still be correctly indexed, but vocabulary file will not be saved."""
             )
         if vocab_field_name is not None:
-            pretrained_vocab = getattr(self._wrapped_tokenizer, vocab_field_name)
+            pretrained_vocab = getattr(self._underlying_tokenizer, vocab_field_name)
             for word, idx in pretrained_vocab.items():
                 vocab._token_to_index[self._namespace][word] = idx
                 vocab._index_to_token[self._namespace][idx] = word
@@ -104,7 +106,7 @@ class PretrainedTransformerIndexer(TokenIndexer):
         # The mask has 1 for real tokens and 0 for padding tokens. Only real tokens are attended to.
         # We need to do this before intra-word tokenization because we always want it to be
         # token-level masks. We create a separate wordpiece-level mask below. Note that in the case
-        # of intra-word tokenization, wordpiece-lebel masks include special tokens while word-level
+        # of intra-word tokenization, wordpiece-level masks include special tokens while word-level
         # masks do not.
         mask = [1] * len(tokens)
 
@@ -127,7 +129,7 @@ class PretrainedTransformerIndexer(TokenIndexer):
 
         if self._intra_word_tokenization:
             # self._intra_word_tokenize() does not insert special tokens, so we need to do it here
-            indices = self._wrapped_tokenizer.build_inputs_with_special_tokens(indices)
+            indices = self._underlying_tokenizer.build_inputs_with_special_tokens(indices)
             offsets = [
                 (start + self._num_added_start_tokens, end + self._num_added_start_tokens)
                 for start, end in offsets
