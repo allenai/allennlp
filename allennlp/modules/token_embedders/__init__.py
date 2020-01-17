@@ -11,7 +11,6 @@ from allennlp.modules.token_embedders.elmo_token_embedder_multilang import (
     ElmoTokenEmbedderMultiLang,
 )
 from allennlp.modules.token_embedders.empty_embedder import EmptyEmbedder
-from allennlp.modules.token_embedders.openai_transformer_embedder import OpenaiTransformerEmbedder
 from allennlp.modules.token_embedders.bert_token_embedder import (
     BertEmbedder,
     PretrainedBertEmbedder,
