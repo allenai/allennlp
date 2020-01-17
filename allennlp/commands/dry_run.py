@@ -3,7 +3,6 @@ The ``dry-run`` command creates a vocabulary, informs you of
 dataset statistics and other training utilities without actually training
 a model.
 
-.. code-block:: bash
 
     $ allennlp dry-run --help
     usage: allennlp dry-run [-h] -s SERIALIZATION_DIR [-o OVERRIDES]
