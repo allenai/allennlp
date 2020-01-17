@@ -1,5 +1,7 @@
 from typing import Dict, List
 import logging
+import torch
+from allennlp.common.util import pad_sequence_to_length
 
 from overrides import overrides
 from transformers.tokenization_auto import AutoTokenizer
@@ -109,17 +111,16 @@ class PretrainedTransformerIndexer(TokenIndexer):
         return {"token_ids": [], "mask": [], "type_ids": []}
 
     @overrides
-    def as_padded_tensor(
+    def as_padded_tensor_dict(
         self,
-        tokens: Dict[str, List[int]],
-        desired_num_tokens: Dict[str, int],
+        tokens: IndexedTokenList,
         padding_lengths: Dict[str, int],
     ) -> Dict[str, torch.Tensor]:
         return {
             key: torch.LongTensor(
                 pad_sequence_to_length(
                     val,
-                    desired_num_tokens[key],
+                    padding_lengths[key],
                     default_value=lambda: 0 if key in {"mask", "type_ids"} else self._padding_value
                 )
             )
