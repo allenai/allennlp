@@ -3,7 +3,7 @@ An :class:`Activation` is just a function
 that takes some parameters and returns an element-wise activation function.
 For the most part we just use
 `PyTorch activations <https://pytorch.org/docs/master/nn.html#non-linear-activations>`_.
-Here we provide a thin wrapper to allow registering them and instantiating them ``from_params``.
+Here we provide a thin wrapper to allow registering them and instantiating them `from_params`.
 
 The available activation functions are
 
@@ -34,8 +34,8 @@ from allennlp.common import Registrable
 class Activation(Registrable):
     """
     Pytorch has a number of built-in activation functions.  We group those here under a common
-    type, just to make it easier to configure and instantiate them ``from_params`` using
-    ``Registrable``.
+    type, just to make it easier to configure and instantiate them `from_params` using
+    `Registrable`.
 
     Note that we're only including element-wise activation functions in this list.  You really need
     to think about masking when you do a softmax or other similar activation function, so it
@@ -46,7 +46,7 @@ class Activation(Registrable):
         """
         This function is here just to make mypy happy.  We expect activation functions to follow
         this API; the builtin pytorch activation functions follow this just fine, even though they
-        don't subclass ``Activation``.  We're just making it explicit here, so mypy knows that
+        don't subclass `Activation`.  We're just making it explicit here, so mypy knows that
         activations are callable like this.
         """
         raise NotImplementedError

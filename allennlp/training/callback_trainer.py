@@ -1,5 +1,5 @@
 """
-The ``CallbackTrainer`` should be considered experimental code.
+The `CallbackTrainer` should be considered experimental code.
 Its API may change at any time, and it may disappear altogether.
 """
 import logging
@@ -61,7 +61,7 @@ class CallbackTrainer(TrainerBase):
     ) -> None:
         """
         A trainer for doing supervised learning. It just takes a labeled dataset
-        and a ``DataIterator``, and uses the supplied ``Optimizer`` to learn the weights
+        and a `DataIterator`, and uses the supplied `Optimizer` to learn the weights
         for your model over some fixed number of epochs. It uses callbacks to handle various
         things ancillary to training, like tracking metrics, validation, early stopping,
         logging to tensorboard, and so on.
@@ -72,19 +72,19 @@ class CallbackTrainer(TrainerBase):
 
         # Parameters
 
-        model : ``Model``, required.
+        model : `Model`, required.
             An AllenNLP model to be optimized. Pytorch Modules can also be optimized if
-            their ``forward`` method returns a dictionary with a "loss" key, containing a
+            their `forward` method returns a dictionary with a "loss" key, containing a
             scalar tensor representing the loss function to be optimized.
 
             If you are training your model using GPUs, your model should already be
             on the correct device. (If you use `Trainer.from_params` this will be
             handled for you.)
-        training_data : ``Iterable[Instance]``, required
+        training_data : `Iterable[Instance]`, required
             The instances that you want to train your model on.
-        iterator : ``DataIterator``, required
+        iterator : `DataIterator`, required
             The iterator for batching / epoch-ing the instances.
-        optimizer : ``torch.nn.Optimizer``, required.
+        optimizer : `torch.nn.Optimizer`, required.
             An instance of a Pytorch Optimizer, instantiated with the parameters of the
             model to be optimized.
         num_epochs : int, optional (default=20)
@@ -94,11 +94,11 @@ class CallbackTrainer(TrainerBase):
         serialization_dir : str, optional (default=None)
             Path to directory for saving and loading model files. Models will not be saved if
             this parameter is not passed.
-        cuda_device : ``int``, optional (default=-1)
+        cuda_device : `int`, optional (default=-1)
             An integer or list of integers specifying the CUDA device(s) to use. If -1, the CPU is used.
             Data parallelism is controlled at the allennlp train level, so each trainer will have a single
             GPU.
-        callbacks : ``List[Callback]``, optional (default=None)
+        callbacks : `List[Callback]`, optional (default=None)
             A list of callbacks that will be called based on training events.
         """
         super().__init__(serialization_dir, cuda_device, distributed, rank, world_size)
@@ -171,8 +171,8 @@ class CallbackTrainer(TrainerBase):
 
     def batch_loss(self, batch: TensorDict, for_training: bool) -> torch.Tensor:
         """
-        Does a forward pass on the given batches and returns the ``loss`` value in the result.
-        If ``for_training`` is `True` also applies regularization penalty.
+        Does a forward pass on the given batches and returns the `loss` value in the result.
+        If `for_training` is `True` also applies regularization penalty.
 
         This is a method on the trainer so that it can be used both in training and validation
         (which are handled separately).

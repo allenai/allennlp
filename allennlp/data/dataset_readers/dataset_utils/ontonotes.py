@@ -18,37 +18,37 @@ class OntonotesSentence:
 
     # Parameters
 
-    document_id : ``str``
+    document_id : `str`
         This is a variation on the document filename
-    sentence_id : ``int``
+    sentence_id : `int`
         The integer ID of the sentence within a document.
-    words : ``List[str]``
+    words : `List[str]`
         This is the tokens as segmented/tokenized in the Treebank.
-    pos_tags : ``List[str]``
+    pos_tags : `List[str]`
         This is the Penn-Treebank-style part of speech. When parse information is missing,
         all parts of speech except the one for which there is some sense or proposition
         annotation are marked with a XX tag. The verb is marked with just a VERB tag.
-    parse_tree : ``nltk.Tree``
+    parse_tree : `nltk.Tree`
         An nltk Tree representing the parse. It includes POS tags as pre-terminal nodes.
-        When the parse information is missing, the parse will be ``None``.
-    predicate_lemmas : ``List[Optional[str]]``
+        When the parse information is missing, the parse will be `None`.
+    predicate_lemmas : `List[Optional[str]]`
         The predicate lemma of the words for which we have semantic role
-        information or word sense information. All other indices are ``None``.
-    predicate_framenet_ids : ``List[Optional[int]]``
-        The PropBank frameset ID of the lemmas in ``predicate_lemmas``, or ``None``.
-    word_senses : ``List[Optional[float]]``
-        The word senses for the words in the sentence, or ``None``. These are floats
-        because the word sense can have values after the decimal, like ``1.1``.
-    speakers : ``List[Optional[str]]``
-        The speaker information for the words in the sentence, if present, or ``None``
+        information or word sense information. All other indices are `None`.
+    predicate_framenet_ids : `List[Optional[int]]`
+        The PropBank frameset ID of the lemmas in `predicate_lemmas`, or `None`.
+    word_senses : `List[Optional[float]]`
+        The word senses for the words in the sentence, or `None`. These are floats
+        because the word sense can have values after the decimal, like `1.1`.
+    speakers : `List[Optional[str]]`
+        The speaker information for the words in the sentence, if present, or `None`
         This is the speaker or author name where available. Mostly in Broadcast Conversation
         and Web Log data. When not available the rows are marked with an "-".
-    named_entities : ``List[str]``
+    named_entities : `List[str]`
         The BIO tags for named entities in the sentence.
-    srl_frames : ``List[Tuple[str, List[str]]]``
+    srl_frames : `List[Tuple[str, List[str]]]`
         A dictionary keyed by the verb in the sentence for the given
         Propbank frame labels, in a BIO format.
-    coref_spans : ``Set[TypedSpan]``
+    coref_spans : `Set[TypedSpan]`
         The spans for entity mentions involved in coreference resolution within the sentence.
         Each element is a tuple composed of (cluster_id, (start_index, end_index)). Indices
         are `inclusive`.
@@ -137,43 +137,43 @@ class Ontonotes:
 
     The data has the following format, ordered by column.
 
-    1 Document ID : ``str``
+    1 Document ID : `str`
         This is a variation on the document filename
-    2 Part number : ``int``
+    2 Part number : `int`
         Some files are divided into multiple parts numbered as 000, 001, 002, ... etc.
-    3 Word number : ``int``
+    3 Word number : `int`
         This is the word index of the word in that sentence.
-    4 Word : ``str``
-        This is the token as segmented/tokenized in the Treebank. Initially the ``*_skel`` file
+    4 Word : `str`
+        This is the token as segmented/tokenized in the Treebank. Initially the `*_skel` file
         contain the placeholder [WORD] which gets replaced by the actual token from the
         Treebank which is part of the OntoNotes release.
-    5 POS Tag : ``str``
+    5 POS Tag : `str`
         This is the Penn Treebank style part of speech. When parse information is missing,
         all part of speeches except the one for which there is some sense or proposition
         annotation are marked with a XX tag. The verb is marked with just a VERB tag.
-    6 Parse bit : ``str``
+    6 Parse bit : `str`
         This is the bracketed structure broken before the first open parenthesis in the parse,
-        and the word/part-of-speech leaf replaced with a ``*``. When the parse information is
-        missing, the first word of a sentence is tagged as ``(TOP*`` and the last word is tagged
-        as ``*)`` and all intermediate words are tagged with a ``*``.
-    7 Predicate lemma : ``str``
+        and the word/part-of-speech leaf replaced with a `*`. When the parse information is
+        missing, the first word of a sentence is tagged as `(TOP*` and the last word is tagged
+        as `*)` and all intermediate words are tagged with a `*`.
+    7 Predicate lemma : `str`
         The predicate lemma is mentioned for the rows for which we have semantic role
         information or word sense information. All other rows are marked with a "-".
-    8 Predicate Frameset ID : ``int``
+    8 Predicate Frameset ID : `int`
         The PropBank frameset ID of the predicate in Column 7.
-    9 Word sense : ``float``
+    9 Word sense : `float`
         This is the word sense of the word in Column 3.
-    10 Speaker/Author : ``str``
+    10 Speaker/Author : `str`
         This is the speaker or author name where available. Mostly in Broadcast Conversation
         and Web Log data. When not available the rows are marked with an "-".
-    11 Named Entities : ``str``
+    11 Named Entities : `str`
         These columns identifies the spans representing various named entities. For documents
-        which do not have named entity annotation, each line is represented with an ``*``.
-    12+ Predicate Arguments : ``str``
+        which do not have named entity annotation, each line is represented with an `*`.
+    12+ Predicate Arguments : `str`
         There is one column each of predicate argument structure information for the predicate
         mentioned in Column 7. If there are no predicates tagged in a sentence this is a
-        single column with all rows marked with an ``*``.
-    -1 Co-reference : ``str``
+        single column with all rows marked with an `*`.
+    -1 Co-reference : `str`
         Co-reference chain information encoded in a parenthesis structure. For documents that do
          not have co-reference annotations, each line is represented with a "-".
     """
@@ -379,14 +379,14 @@ class Ontonotes:
 
         # Parameters
 
-        label : ``str``
+        label : `str`
             The coref label for this word.
-        word_index : ``int``
+        word_index : `int`
             The word index into the sentence.
-        clusters : ``DefaultDict[int, List[Tuple[int, int]]]``
+        clusters : `DefaultDict[int, List[Tuple[int, int]]]`
             A dictionary mapping cluster ids to lists of inclusive spans into the
             sentence.
-        coref_stacks : ``DefaultDict[int, List[int]]``
+        coref_stacks : `DefaultDict[int, List[int]]`
             Stacks for each cluster id to hold the start indices of active spans (spans
             which we are inside of when processing a given word). Spans with the same id
             can be nested, which is why we collect these opening spans on a stack, e.g:
@@ -428,13 +428,13 @@ class Ontonotes:
 
         # Parameters
 
-        annotations : ``List[str]``
+        annotations : `List[str]`
             A list of labels to compute BIO tags for.
-        span_labels : ``List[List[str]]``
+        span_labels : `List[List[str]]`
             A list of lists, one for each annotation, to incrementally collect
             the BIO tags for a sequence.
-        current_span_labels : ``List[Optional[str]]``
-            The currently open span per annotation type, or ``None`` if there is no open span.
+        current_span_labels : `List[Optional[str]]`
+            The currently open span per annotation type, or `None` if there is no open span.
         """
         for annotation_index, annotation in enumerate(annotations):
             # strip all bracketing information to

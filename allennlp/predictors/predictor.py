@@ -36,7 +36,7 @@ DEFAULT_PREDICTORS = {
 
 class Predictor(Registrable):
     """
-    a ``Predictor`` is a thin wrapper around an AllenNLP model that handles JSON -> JSON predictions
+    a `Predictor` is a thin wrapper around an AllenNLP model that handles JSON -> JSON predictions
     that can be used for serving models through the web API or making predictions in bulk.
     """
 
@@ -91,12 +91,12 @@ class Predictor(Registrable):
 
         Tuple[Dict[str, Any], Dict[str, Any]]
         The first item is a Dict of gradient entries for each input.
-        The keys have the form  ``{grad_input_1: ..., grad_input_2: ... }``
+        The keys have the form  `{grad_input_1: ..., grad_input_2: ... }`
         up to the number of inputs given. The second item is the model's output.
 
         Notes
         -----
-        Takes a ``JsonDict`` representing the inputs of the model and converts
+        Takes a `JsonDict` representing the inputs of the model and converts
         them to :class:`~allennlp.data.instance.Instance`s, sends these through
         the model :func:`forward` function after registering hooks on the embedding
         layer of the model. Calls :func:`backward` on the loss and then removes the
@@ -204,7 +204,7 @@ class Predictor(Registrable):
     def _json_to_instance(self, json_dict: JsonDict) -> Instance:
         """
         Converts a JSON object into an :class:`~allennlp.data.instance.Instance`
-        and a ``JsonDict`` of information which the ``Predictor`` should pass through,
+        and a `JsonDict` of information which the `Predictor` should pass through,
         such as tokenised inputs.
         """
         raise NotImplementedError
@@ -247,15 +247,15 @@ class Predictor(Registrable):
 
         # Parameters
 
-        archive_path : ``str``
+        archive_path : `str`
             The path to the archive.
-        predictor_name : ``str``, optional (default=None)
+        predictor_name : `str`, optional (default=None)
             Name that the predictor is registered as, or None to use the
             predictor associated with the model.
-        cuda_device : ``int``, optional (default=-1)
+        cuda_device : `int`, optional (default=-1)
             If `cuda_device` is >= 0, the model will be loaded onto the
             corresponding GPU. Otherwise it will be loaded onto the CPU.
-        dataset_reader_to_load : ``str``, optional (default="validation")
+        dataset_reader_to_load : `str`, optional (default="validation")
             Which dataset reader to load from the archive, either "train" or
             "validation".
 

@@ -39,11 +39,11 @@ class OpenaiTransformerBytePairIndexer(TokenIndexer):
     indexing is not based on a `Vocabulary` but on a fixed
     set of mappings that are loaded by the constructor.
 
-    Note: recommend using ``OpenAIPreTokenizer`` tokenizer with this indexer,
+    Note: recommend using `OpenAIPreTokenizer` tokenizer with this indexer,
     as it applies the same text normalization as the original implementation.
 
-    Note 2: when ``tokens_to_add`` is not None, be sure to set
-    ``n_special=len(tokens_to_add)`` in ``OpenaiTransformer``, otherwise
+    Note 2: when `tokens_to_add` is not None, be sure to set
+    `n_special=len(tokens_to_add)` in `OpenaiTransformer`, otherwise
     behavior is undefined.
     """
 

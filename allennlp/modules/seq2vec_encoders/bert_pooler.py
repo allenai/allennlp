@@ -21,18 +21,18 @@ class BertPooler(Seq2VecEncoder):
     (For example, if you want to experiment with other embedding / encoding combinations.)
 
     If you just want to train a BERT classifier, it's simpler to just use the
-    ``BertForClassification`` model.
+    `BertForClassification` model.
 
     # Parameters
 
-    pretrained_model : ``Union[str, BertModel]``, required
+    pretrained_model : `Union[str, BertModel]`, required
         The pretrained BERT model to use. If this is a string,
-        we will call ``BertModel.from_pretrained(pretrained_model)``
+        we will call `BertModel.from_pretrained(pretrained_model)`
         and use that.
-    requires_grad : ``bool``, optional, (default = True)
+    requires_grad : `bool`, optional, (default = True)
         If True, the weights of the pooler will be updated during training.
         Otherwise they will not.
-    dropout : ``float``, optional, (default = 0.0)
+    dropout : `float`, optional, (default = 0.0)
         Amount of dropout to apply after pooling
     """
 

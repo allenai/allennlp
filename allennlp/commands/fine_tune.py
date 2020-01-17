@@ -1,5 +1,5 @@
 """
-The ``fine-tune`` subcommand is used to continue training (or `fine-tune`) a model on a `different
+The `fine-tune` subcommand is used to continue training (or `fine-tune`) a model on a `different
 dataset` than the one it was originally trained on.  It requires a saved model archive file, a path
 to the data you will continue training with, and a directory in which to write the results.
 
@@ -147,7 +147,7 @@ class FineTune(Subcommand):
 
 def fine_tune_model_from_args(args: argparse.Namespace):
     """
-    Just converts from an ``argparse.Namespace`` object to string paths.
+    Just converts from an `argparse.Namespace` object to string paths.
     """
     fine_tune_model_from_file_paths(
         model_archive_path=args.model_archive,
@@ -178,31 +178,31 @@ def fine_tune_model_from_file_paths(
 
     # Parameters
 
-    model_archive_path : ``str``
-        Path to a saved model archive that is the result of running the ``train`` command.
-    config_file : ``str``
+    model_archive_path : `str`
+        Path to a saved model archive that is the result of running the `train` command.
+    config_file : `str`
         A configuration file specifying how to continue training.  The format is identical to the
-        configuration file for the ``train`` command, but any contents in the ``model`` section is
+        configuration file for the `train` command, but any contents in the `model` section is
         ignored (as we are using the provided model archive instead).
-    serialization_dir : ``str``
+    serialization_dir : `str`
         The directory in which to save results and logs. We just pass this along to
         :func:`fine_tune_model`.
-    overrides : ``str``
+    overrides : `str`
         A JSON string that we will use to override values in the input parameter file.
-    extend_vocab : ``bool``, optional (default=False)
-        If ``True``, we use the new instances to extend your vocabulary.
-    file_friendly_logging : ``bool``, optional (default=False)
-        If ``True``, we make our output more friendly to saved model files.  We just pass this
+    extend_vocab : `bool`, optional (default=False)
+        If `True`, we use the new instances to extend your vocabulary.
+    file_friendly_logging : `bool`, optional (default=False)
+        If `True`, we make our output more friendly to saved model files.  We just pass this
         along to :func:`fine_tune_model`.
-    recover : ``bool``, optional (default=False)
-        If ``True``, we will try to recover a training run from an existing serialization
+    recover : `bool`, optional (default=False)
+        If `True`, we will try to recover a training run from an existing serialization
         directory.  This is only intended for use when something actually crashed during the middle
-        of a run.  For continuing training a model on new data, see the ``fine-tune`` command.
-    force : ``bool``, optional (default=False)
-        If ``True``, we will overwrite the serialization directory if it already exists.
-    batch_weight_key : ``str``, optional (default="")
+        of a run.  For continuing training a model on new data, see the `fine-tune` command.
+    force : `bool`, optional (default=False)
+        If `True`, we will overwrite the serialization directory if it already exists.
+    batch_weight_key : `str`, optional (default="")
         If non-empty, name of metric used to weight the loss on a per-batch basis.
-    embedding_sources_mapping : ``Dict[str, str]``, optional (default=None)
+    embedding_sources_mapping : `Dict[str, str]`, optional (default=None)
         Mapping from model paths to the pretrained embedding filepaths.
     """
     # We don't need to pass in `cuda_device` here, because the trainer will call `model.cuda()` if

@@ -16,7 +16,7 @@ class OpenAIPreTokenizer(Tokenizer):
     """
     For OpenAI transformer
     This is used to split a sentence into words.
-    Then the ``OpenaiTransformerBytePairIndexer`` converts each word into wordpieces.
+    Then the `OpenaiTransformerBytePairIndexer` converts each word into wordpieces.
     """
 
     def __init__(self, language: str = "en_core_web_sm") -> None:
@@ -43,9 +43,9 @@ class OpenAIPreTokenizer(Tokenizer):
 @Tokenizer.register("bert-basic")
 class BertPreTokenizer(Tokenizer):
     """
-    The ``BasicTokenizer`` from the BERT implementation.
+    The `BasicTokenizer` from the BERT implementation.
     This is used to split a sentence into words.
-    Then the ``BertTokenIndexer`` converts each word into wordpieces.
+    Then the `BertTokenIndexer` converts each word into wordpieces.
     """
 
     default_never_split = ["[UNK]", "[SEP]", "[PAD]", "[CLS]", "[MASK]"]

@@ -26,9 +26,9 @@ def get_file_paths(pathname: str, languages: List[str]):
 
     # Parameters
 
-    pathname :  ``str``, required.
+    pathname :  `str`, required.
         An absolute or relative pathname (can contain shell-style wildcards)
-    languages : ``List[str]``, required
+    languages : `List[str]`, required
         The language identifiers to use.
 
     # Returns
@@ -59,24 +59,24 @@ class UniversalDependenciesMultiLangDatasetReader(DatasetReader):
     this behaviour for the first pass (could be useful for a single full path
     over the dataset in order to generate a vocabulary).
 
-    Notice: when using the alternate option, one should also use the ``instances_per_epoch``
+    Notice: when using the alternate option, one should also use the `instances_per_epoch`
     option for the iterator. Otherwise, each epoch will loop infinitely.
 
     # Parameters
 
-    languages : ``List[str]``, required
+    languages : `List[str]`, required
         The language identifiers to use.
-    token_indexers : ``Dict[str, TokenIndexer]``, optional (default=``{"tokens": SingleIdTokenIndexer()}``)
+    token_indexers : `Dict[str, TokenIndexer]`, optional (default=`{"tokens": SingleIdTokenIndexer()}`)
         The token indexers to be applied to the words TextField.
-    use_language_specific_pos : ``bool``, optional (default = False)
+    use_language_specific_pos : `bool`, optional (default = False)
         Whether to use UD POS tags, or to use the language specific POS tags
         provided in the conllu format.
-    alternate : ``bool``, optional (default = True)
+    alternate : `bool`, optional (default = True)
         Whether to alternate between input files.
-    is_first_pass_for_vocab : ``bool``, optional (default = True)
+    is_first_pass_for_vocab : `bool`, optional (default = True)
         Whether the first pass will be for generating the vocab. If true,
         the first pass will run over the entire dataset of each file (even if alternate is on).
-    instances_per_file : ``int``, optional (default = 32)
+    instances_per_file : `int`, optional (default = 32)
         The amount of consecutive cases to sample from each input file when alternating.
     """
 
@@ -167,13 +167,13 @@ class UniversalDependenciesMultiLangDatasetReader(DatasetReader):
         """
         # Parameters
 
-        lang : ``str``, required.
+        lang : `str`, required.
             The language identifier.
-        words : ``List[str]``, required.
+        words : `List[str]`, required.
             The words in the sentence to be encoded.
-        upos_tags : ``List[str]``, required.
+        upos_tags : `List[str]`, required.
             The universal dependencies POS tags for each word.
-        dependencies ``List[Tuple[str, int]]``, optional (default = None)
+        dependencies `List[Tuple[str, int]]`, optional (default = None)
             A list of  (head tag, head index) tuples. Indices are 1 indexed,
             meaning an index of 0 corresponds to that word being the root of
             the dependency tree.

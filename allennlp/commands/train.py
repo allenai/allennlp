@@ -1,5 +1,5 @@
 """
-The ``train`` subcommand can be used to train a model.
+The `train` subcommand can be used to train a model.
 It requires a configuration file and a directory in
 which to write the results.
 
@@ -124,7 +124,7 @@ class Train(Subcommand):
 
 def train_model_from_args(args: argparse.Namespace):
     """
-    Just converts from an ``argparse.Namespace`` object to string paths.
+    Just converts from an `argparse.Namespace` object to string paths.
     """
     train_model_from_file(
         parameter_filename=args.param_path,
@@ -153,28 +153,28 @@ def train_model_from_file(
 
     # Parameters
 
-    parameter_filename : ``str``
+    parameter_filename : `str`
         A json parameter file specifying an AllenNLP experiment.
-    serialization_dir : ``str``
+    serialization_dir : `str`
         The directory in which to save results and logs. We just pass this along to
         :func:`train_model`.
-    overrides : ``str``
+    overrides : `str`
         A JSON string that we will use to override values in the input parameter file.
-    file_friendly_logging : ``bool``, optional (default=False)
-        If ``True``, we make our output more friendly to saved model files.  We just pass this
+    file_friendly_logging : `bool`, optional (default=False)
+        If `True`, we make our output more friendly to saved model files.  We just pass this
         along to :func:`train_model`.
-    recover : ``bool`, optional (default=False)
-        If ``True``, we will try to recover a training run from an existing serialization
+    recover : `bool`, optional (default=False)
+        If `True`, we will try to recover a training run from an existing serialization
         directory.  This is only intended for use when something actually crashed during the middle
-        of a run.  For continuing training a model on new data, see the ``fine-tune`` command.
-    force : ``bool``, optional (default=False)
-        If ``True``, we will overwrite the serialization directory if it already exists.
-    node_rank : ``int``, optional
+        of a run.  For continuing training a model on new data, see the `fine-tune` command.
+    force : `bool`, optional (default=False)
+        If `True`, we will overwrite the serialization directory if it already exists.
+    node_rank : `int`, optional
         Rank of the current node in distributed training
-    include_package : ``str``, optional
+    include_package : `str`, optional
         In distributed mode, extra packages mentioned will be imported in trainer workers.
     """
-    # Load the experiment config from a file and pass it to ``train_model``.
+    # Load the experiment config from a file and pass it to `train_model`.
     params = Params.from_file(parameter_filename, overrides)
     return train_model(
         params=params,
@@ -203,41 +203,41 @@ def train_model(
 ) -> Model:
     """
     Trains the model specified in the given :class:`Params` object, using the data and training
-    parameters also specified in that object, and saves the results in ``serialization_dir``.
+    parameters also specified in that object, and saves the results in `serialization_dir`.
 
     # Parameters
 
-    params : ``Params``
+    params : `Params`
         A parameter object specifying an AllenNLP Experiment.
-    serialization_dir : ``str``
+    serialization_dir : `str`
         The directory in which to save results and logs.
-    file_friendly_logging : ``bool``, optional (default=False)
-        If ``True``, we add newlines to tqdm output, even on an interactive terminal, and we slow
+    file_friendly_logging : `bool`, optional (default=False)
+        If `True`, we add newlines to tqdm output, even on an interactive terminal, and we slow
         down tqdm's output to only once every 10 seconds.
-    recover : ``bool``, optional (default=False)
-        If ``True``, we will try to recover a training run from an existing serialization
+    recover : `bool`, optional (default=False)
+        If `True`, we will try to recover a training run from an existing serialization
         directory.  This is only intended for use when something actually crashed during the middle
-        of a run.  For continuing training a model on new data, see the ``fine-tune`` command.
-    force : ``bool``, optional (default=False)
-        If ``True``, we will overwrite the serialization directory if it already exists.
-    node_rank : ``int``, optional
+        of a run.  For continuing training a model on new data, see the `fine-tune` command.
+    force : `bool`, optional (default=False)
+        If `True`, we will overwrite the serialization directory if it already exists.
+    node_rank : `int`, optional
         Rank of the current node in distributed training
-    include_package : ``List[str]``, optional
+    include_package : `List[str]`, optional
         In distributed mode, extra packages mentioned will be imported in trainer workers.
-    batch_weight_key : ``str``, optional (default="")
+    batch_weight_key : `str`, optional (default="")
         If non-empty, name of metric used to weight the loss on a per-batch basis.
-    model : ``Model``, optional
+    model : `Model`, optional
         A model to fine tune.
-    extend_vocab : ``bool``, optional (default=False)
-        If ``True``, we use the new instances to extend your vocabulary.
+    extend_vocab : `bool`, optional (default=False)
+        If `True`, we use the new instances to extend your vocabulary.
         Used only when fine-tuning.
-    embedding_sources_mapping : ``Dict[str, str]``, optional (default=None)
+    embedding_sources_mapping : `Dict[str, str]`, optional (default=None)
         Mapping from model paths to the pretrained embedding filepaths.
         Used only when fine-tuning.
 
     # Returns
 
-    best_model : ``Model``
+    best_model : `Model`
         The model with the best epoch weights.
     """
     create_serialization_dir(params, serialization_dir, recover, force)
@@ -343,36 +343,36 @@ def _train_worker(
 ) -> Optional[Model]:
     """
     Helper to train the configured model/experiment. In distributed mode, this is spawned as a
-    worker process. In a single GPU experiment, this returns the ``Model`` object and in distributed
+    worker process. In a single GPU experiment, this returns the `Model` object and in distributed
     training, nothing is returned.
 
     # Parameters
 
-    process_rank : ``int``
+    process_rank : `int`
         The process index that is initialized using the GPU device id.
-    params : ``Params``
+    params : `Params`
         A parameter object specifying an AllenNLP Experiment.
-    serialization_dir : ``str``
+    serialization_dir : `str`
         The directory in which to save results and logs.
-    file_friendly_logging : ``bool``, optional (default=False)
-        If ``True``, we add newlines to tqdm output, even on an interactive terminal, and we slow
+    file_friendly_logging : `bool`, optional (default=False)
+        If `True`, we add newlines to tqdm output, even on an interactive terminal, and we slow
         down tqdm's output to only once every 10 seconds.
-    recover : ``bool``, optional (default=False)
-        If ``True``, we will try to recover a training run from an existing serialization
+    recover : `bool`, optional (default=False)
+        If `True`, we will try to recover a training run from an existing serialization
         directory.  This is only intended for use when something actually crashed during the middle
-        of a run.  For continuing training a model on new data, see the ``fine-tune`` command.
-    include_package : ``List[str]``, optional
+        of a run.  For continuing training a model on new data, see the `fine-tune` command.
+    include_package : `List[str]`, optional
         In distributed mode, since this function would have been spawned as a separate process,
         the extra imports need to be done again. NOTE: This does not have any effect in single
         GPU training.
-    node_rank : ``int``, optional
+    node_rank : `int`, optional
         Rank of the node
-    world_size : ``int``, optional
+    world_size : `int`, optional
         The number of processes involved in distributed training.
 
     # Returns
 
-    best_model : ``Model``
+    best_model : `Model`
         The model with the best epoch weights.
     """
     prepare_global_logging(

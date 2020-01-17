@@ -15,16 +15,16 @@ class SingleIdTokenIndexer(TokenIndexer):
 
     # Parameters
 
-    namespace : ``str``, optional (default=``tokens``)
+    namespace : `str`, optional (default=`tokens`)
         We will use this namespace in the :class:`Vocabulary` to map strings to indices.
-    lowercase_tokens : ``bool``, optional (default=``False``)
-        If ``True``, we will call ``token.lower()`` before getting an index for the token from the
+    lowercase_tokens : `bool`, optional (default=`False`)
+        If `True`, we will call `token.lower()` before getting an index for the token from the
         vocabulary.
-    start_tokens : ``List[str]``, optional (default=``None``)
-        These are prepended to the tokens provided to ``tokens_to_indices``.
-    end_tokens : ``List[str]``, optional (default=``None``)
-        These are appended to the tokens provided to ``tokens_to_indices``.
-    token_min_padding_length : ``int``, optional (default=``0``)
+    start_tokens : `List[str]`, optional (default=`None`)
+        These are prepended to the tokens provided to `tokens_to_indices`.
+    end_tokens : `List[str]`, optional (default=`None`)
+        These are appended to the tokens provided to `tokens_to_indices`.
+    token_min_padding_length : `int`, optional (default=`0`)
         See :class:`TokenIndexer`.
     """
 

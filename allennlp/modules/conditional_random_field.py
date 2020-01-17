@@ -19,16 +19,16 @@ def allowed_transitions(constraint_type: str, labels: Dict[int, str]) -> List[Tu
 
     # Parameters
 
-    constraint_type : ``str``, required
+    constraint_type : `str`, required
         Indicates which constraint to apply. Current choices are
         "BIO", "IOB1", "BIOUL", and "BMES".
-    labels : ``Dict[int, str]``, required
+    labels : `Dict[int, str]`, required
         A mapping {label_id -> label}. Most commonly this would be the value from
         Vocabulary.get_index_to_token_vocabulary()
 
     # Returns
 
-    ``List[Tuple[int, int]]``
+    `List[Tuple[int, int]]`
         The allowed transitions (from_label_id, to_label_id).
     """
     num_labels = len(labels)
@@ -60,32 +60,32 @@ def is_transition_allowed(
     constraint_type: str, from_tag: str, from_entity: str, to_tag: str, to_entity: str
 ):
     """
-    Given a constraint type and strings ``from_tag`` and ``to_tag`` that
+    Given a constraint type and strings `from_tag` and `to_tag` that
     represent the origin and destination of the transition, return whether
     the transition is allowed under the given constraint type.
 
     # Parameters
 
-    constraint_type : ``str``, required
+    constraint_type : `str`, required
         Indicates which constraint to apply. Current choices are
         "BIO", "IOB1", "BIOUL", and "BMES".
-    from_tag : ``str``, required
+    from_tag : `str`, required
         The tag that the transition originates from. For example, if the
-        label is ``I-PER``, the ``from_tag`` is ``I``.
-    from_entity : ``str``, required
-        The entity corresponding to the ``from_tag``. For example, if the
-        label is ``I-PER``, the ``from_entity`` is ``PER``.
-    to_tag : ``str``, required
+        label is `I-PER`, the `from_tag` is `I`.
+    from_entity : `str`, required
+        The entity corresponding to the `from_tag`. For example, if the
+        label is `I-PER`, the `from_entity` is `PER`.
+    to_tag : `str`, required
         The tag that the transition leads to. For example, if the
-        label is ``I-PER``, the ``to_tag`` is ``I``.
-    to_entity : ``str``, required
-        The entity corresponding to the ``to_tag``. For example, if the
-        label is ``I-PER``, the ``to_entity`` is ``PER``.
+        label is `I-PER`, the `to_tag` is `I`.
+    to_entity : `str`, required
+        The entity corresponding to the `to_tag`. For example, if the
+        label is `I-PER`, the `to_entity` is `PER`.
 
     # Returns
 
-    ``bool``
-        Whether the transition is allowed under the given ``constraint_type``.
+    `bool`
+        Whether the transition is allowed under the given `constraint_type`.
     """
 
     if to_tag == "START" or from_tag == "END":
@@ -165,14 +165,14 @@ class ConditionalRandomField(torch.nn.Module):
 
     # Parameters
 
-    num_tags : ``int``, required
+    num_tags : `int`, required
         The number of tags.
-    constraints : ``List[Tuple[int, int]]``, optional (default: None)
+    constraints : `List[Tuple[int, int]]`, optional (default: None)
         An optional list of allowed transitions (from_tag_id, to_tag_id).
-        These are applied to ``viterbi_tags()`` but do not affect ``forward()``.
+        These are applied to `viterbi_tags()` but do not affect `forward()`.
         These should be derived from `allowed_transitions` so that the
         start and end transitions are handled correctly for your tag type.
-    include_start_end_transitions : ``bool``, optional (default: True)
+    include_start_end_transitions : `bool`, optional (default: True)
         Whether to include the start and end transition parameters.
     """
 
@@ -247,7 +247,7 @@ class ConditionalRandomField(torch.nn.Module):
             inner = broadcast_alpha + emit_scores + transition_scores
 
             # In valid positions (mask == 1) we want to take the logsumexp over the current_tag dimension
-            # of ``inner``. Otherwise (mask == 0) we want to retain the previous alpha.
+            # of `inner`. Otherwise (mask == 0) we want to retain the previous alpha.
             alpha = util.logsumexp(inner, 1) * mask[i].view(batch_size, 1) + alpha * (
                 1 - mask[i]
             ).view(batch_size, 1)
@@ -406,7 +406,7 @@ class ConditionalRandomField(torch.nn.Module):
             # And at the last timestep we must have the END_TAG
             tag_sequence[sequence_length + 1, end_tag] = 0.0
 
-            # We pass the tags and the transitions to ``viterbi_decode``.
+            # We pass the tags and the transitions to `viterbi_decode`.
             viterbi_paths, viterbi_scores = util.viterbi_decode(
                 tag_sequence=tag_sequence[: (sequence_length + 2)],
                 transition_matrix=transitions,

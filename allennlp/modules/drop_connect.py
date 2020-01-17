@@ -7,7 +7,7 @@ import torch.nn.functional as F
 
 class _Match:
     """
-    Helper object that stores ``Parameter`` objects along with their parent ``Module`` objects
+    Helper object that stores `Parameter` objects along with their parent `Module` objects
     and associated names.
     """
 
@@ -39,11 +39,11 @@ class DropConnect(torch.nn.Module):
 
     # Parameters
     ==========
-    module : ``torch.nn.Module``, required
+    module : `torch.nn.Module`, required
         Module to apply weight dropout to.
-    parameter_regex : ``str``, required
+    parameter_regex : `str`, required
         Regular expression identifying which parameters to apply weight dropout to.
-    dropout : ``float``, optional (default = 0.0)
+    dropout : `float`, optional (default = 0.0)
         Probability that a given weight is dropped.
     """
 

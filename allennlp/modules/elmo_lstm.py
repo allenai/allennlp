@@ -27,7 +27,7 @@ class ElmoLstm(_EncoderBase):
     states are not concatenated between layers.
 
     Additionally, this LSTM maintains its `own` state, which is updated every time
-    ``forward`` is called. It is dynamically resized for different batch sizes and is
+    `forward` is called. It is dynamically resized for different batch sizes and is
     designed for use with non-continuous inputs (i.e inputs which aren't formatted as a stream,
     such as text used for a language modeling task, which is how stateful RNNs are typically used).
     This is non-standard, but can be thought of as having an "end of sentence" state, which is
@@ -35,24 +35,24 @@ class ElmoLstm(_EncoderBase):
 
     # Parameters
 
-    input_size : ``int``, required
+    input_size : `int`, required
         The dimension of the inputs to the LSTM.
-    hidden_size : ``int``, required
+    hidden_size : `int`, required
         The dimension of the outputs of the LSTM.
-    cell_size : ``int``, required.
+    cell_size : `int`, required.
         The dimension of the memory cell of the
         :class:`~allennlp.modules.lstm_cell_with_projection.LstmCellWithProjection`.
-    num_layers : ``int``, required
+    num_layers : `int`, required
         The number of bidirectional LSTMs to use.
-    requires_grad : ``bool``, optional
+    requires_grad : `bool`, optional
         If True, compute gradient of ELMo parameters for fine tuning.
-    recurrent_dropout_probability : ``float``, optional (default = 0.0)
+    recurrent_dropout_probability : `float`, optional (default = 0.0)
         The dropout probability to be used in a dropout scheme as stated in
         [A Theoretically Grounded Application of Dropout in Recurrent Neural Networks]
         (https://arxiv.org/abs/1512.05287).
-    state_projection_clip_value : ``float``, optional, (default = None)
+    state_projection_clip_value : `float`, optional, (default = None)
         The magnitude with which to clip the hidden_state after projecting it.
-    memory_cell_clip_value : ``float``, optional, (default = None)
+    memory_cell_clip_value : `float`, optional, (default = None)
         The magnitude with which to clip the memory cell.
     """
 
@@ -113,15 +113,15 @@ class ElmoLstm(_EncoderBase):
         """
         # Parameters
 
-        inputs : ``torch.Tensor``, required.
-            A Tensor of shape ``(batch_size, sequence_length, hidden_size)``.
-        mask : ``torch.LongTensor``, required.
-            A binary mask of shape ``(batch_size, sequence_length)`` representing the
+        inputs : `torch.Tensor`, required.
+            A Tensor of shape `(batch_size, sequence_length, hidden_size)`.
+        mask : `torch.LongTensor`, required.
+            A binary mask of shape `(batch_size, sequence_length)` representing the
             non-padded elements in each sequence in the batch.
 
         # Returns
 
-        A ``torch.Tensor`` of shape (num_layers, batch_size, sequence_length, hidden_size),
+        A `torch.Tensor` of shape (num_layers, batch_size, sequence_length, hidden_size),
         where the num_layers dimension represents the LSTM output from that layer.
         """
         batch_size, total_sequence_length = mask.size()
@@ -173,18 +173,18 @@ class ElmoLstm(_EncoderBase):
         """
         # Parameters
 
-        inputs : ``PackedSequence``, required.
-            A batch first ``PackedSequence`` to run the stacked LSTM over.
-        initial_state : ``Tuple[torch.Tensor, torch.Tensor]``, optional, (default = None)
+        inputs : `PackedSequence`, required.
+            A batch first `PackedSequence` to run the stacked LSTM over.
+        initial_state : `Tuple[torch.Tensor, torch.Tensor]`, optional, (default = None)
             A tuple (state, memory) representing the initial hidden state and memory
             of the LSTM, with shape (num_layers, batch_size, 2 * hidden_size) and
             (num_layers, batch_size, 2 * cell_size) respectively.
 
         # Returns
 
-        output_sequence : ``torch.FloatTensor``
+        output_sequence : `torch.FloatTensor`
             The encoded sequence of shape (num_layers, batch_size, sequence_length, hidden_size)
-        final_states : ``Tuple[torch.FloatTensor, torch.FloatTensor]``
+        final_states : `Tuple[torch.FloatTensor, torch.FloatTensor]`
             The per-layer final (state, memory) states of the LSTM, with shape
             (num_layers, batch_size, 2 * hidden_size) and  (num_layers, batch_size, 2 * cell_size)
             respectively. The last dimension is duplicated because it contains the state/memory

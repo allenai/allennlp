@@ -1,5 +1,5 @@
 """
-The ``dry-run`` command creates a vocabulary, informs you of
+The `dry-run` command creates a vocabulary, informs you of
 dataset statistics and other training utilities without actually training
 a model.
 
@@ -83,7 +83,7 @@ class DryRun(Subcommand):
 
 def dry_run_from_args(args: argparse.Namespace):
     """
-    Just converts from an ``argparse.Namespace`` object to params.
+    Just converts from an `argparse.Namespace` object to params.
     """
     parameter_path = args.param_path
     serialization_dir = args.serialization_dir

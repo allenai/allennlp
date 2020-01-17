@@ -1,5 +1,5 @@
 """
-The ``print-results`` subcommand allows you to print results from multiple
+The `print-results` subcommand allows you to print results from multiple
 allennlp serialization directories to the console in a helpful csv format.
 
 
@@ -77,7 +77,7 @@ class PrintResults(Subcommand):
 
 def print_results_from_args(args: argparse.Namespace):
     """
-    Prints results from an ``argparse.Namespace`` object.
+    Prints results from an `argparse.Namespace` object.
     """
     path = args.path
     metrics_name = args.metrics_filename

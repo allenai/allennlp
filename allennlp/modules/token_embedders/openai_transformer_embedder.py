@@ -10,17 +10,17 @@ from allennlp.nn.util import get_range_vector, get_device_of
 class OpenaiTransformerEmbedder(TokenEmbedder):
     """
     Takes a byte-pair representation of a batch of sentences
-    (as produced by the ``OpenaiTransformerBytePairIndexer``)
+    (as produced by the `OpenaiTransformerBytePairIndexer`)
     and generates a `ScalarMix` of the corresponding contextual embeddings.
 
 
 
     # Parameters
 
-    transformer : ``OpenaiTransformer``, required.
-        The ``OpenaiTransformer`` module used for the embeddings.
-    top_layer_only : ``bool``, optional (default = ``False``)
-        If ``True``, then only return the top layer instead of apply the scalar mix.
+    transformer : `OpenaiTransformer`, required.
+        The `OpenaiTransformer` module used for the embeddings.
+    top_layer_only : `bool`, optional (default = `False`)
+        If `True`, then only return the top layer instead of apply the scalar mix.
     """
 
     def __init__(self, transformer: OpenaiTransformer, top_layer_only: bool = False) -> None:
@@ -43,18 +43,18 @@ class OpenaiTransformerEmbedder(TokenEmbedder):
         """
         # Parameters
 
-        inputs : ``torch.Tensor``, required
-            A ``(batch_size, num_timesteps)`` tensor representing the byte-pair encodings
+        inputs : `torch.Tensor`, required
+            A `(batch_size, num_timesteps)` tensor representing the byte-pair encodings
             for the current batch.
-        offsets : ``torch.Tensor``, required
-            A ``(batch_size, max_sequence_length)`` tensor representing the word offsets
+        offsets : `torch.Tensor`, required
+            A `(batch_size, max_sequence_length)` tensor representing the word offsets
             for the current batch.
 
         # Returns
 
-        ``[torch.Tensor]``
+        `[torch.Tensor]`
             An embedding representation of the input sequence
-            having shape ``(batch_size, sequence_length, embedding_dim)``
+            having shape `(batch_size, sequence_length, embedding_dim)`
         """
 
         batch_size, num_timesteps = inputs.size()
@@ -91,7 +91,7 @@ class OpenaiTransformerEmbedder(TokenEmbedder):
 
         # These embeddings are one per byte-pair, but we want one per original _word_.
         # So we choose the embedding corresponding to the last byte pair for each word,
-        # which is captured by the ``offsets`` input.
+        # which is captured by the `offsets` input.
         if offsets is not None:
             range_vector = get_range_vector(batch_size, device=get_device_of(mix)).unsqueeze(1)
             last_byte_pair_embeddings = mix[range_vector, offsets]

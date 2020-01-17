@@ -13,25 +13,25 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
     wrapper pulls out that output, and adds a :func:`get_output_dim` method, which is useful if you
     want to, e.g., define a linear + softmax layer on top of this to get some distribution over a
     set of labels.  The linear layer needs to know its input dimension before it is called, and you
-    can get that from ``get_output_dim``.
+    can get that from `get_output_dim`.
 
     In order to be wrapped with this wrapper, a class must have the following members:
 
-        - ``self.input_size: int``
-        - ``self.hidden_size: int``
-        - ``def forward(inputs: PackedSequence, hidden_state: torch.Tensor) ->
-          Tuple[PackedSequence, torch.Tensor]``.
-        - ``self.bidirectional: bool`` (optional)
+        - `self.input_size: int`
+        - `self.hidden_size: int`
+        - `def forward(inputs: PackedSequence, hidden_state: torch.Tensor) ->
+          Tuple[PackedSequence, torch.Tensor]`.
+        - `self.bidirectional: bool` (optional)
 
     This is what pytorch's RNN's look like - just make sure your class looks like those, and it
     should work.
 
     Note that we *require* you to pass a binary mask of shape (batch_size, sequence_length)
     when you call this module, to avoid subtle bugs around masking.  If you already have a
-    ``PackedSequence`` you can pass ``None`` as the second parameter.
+    `PackedSequence` you can pass `None` as the second parameter.
 
     We support stateful RNNs where the final state from each batch is used as the initial
-    state for the subsequent batch by passing ``stateful=True`` to the constructor.
+    state for the subsequent batch by passing `stateful=True` to the constructor.
     """
 
     def __init__(self, module: torch.nn.Module, stateful: bool = False) -> None:

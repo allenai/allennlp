@@ -9,7 +9,7 @@ from allennlp.training.metrics.metric import Metric
 @Metric.register("mean_absolute_error")
 class MeanAbsoluteError(Metric):
     """
-    This ``Metric`` calculates the mean absolute error (MAE) between two tensors.
+    This `Metric` calculates the mean absolute error (MAE) between two tensors.
     """
 
     def __init__(self) -> None:
@@ -25,12 +25,12 @@ class MeanAbsoluteError(Metric):
         """
         # Parameters
 
-        predictions : ``torch.Tensor``, required.
+        predictions : `torch.Tensor`, required.
             A tensor of predictions of shape (batch_size, ...).
-        gold_labels : ``torch.Tensor``, required.
-            A tensor of the same shape as ``predictions``.
-        mask : ``torch.Tensor``, optional (default = None).
-            A tensor of the same shape as ``predictions``.
+        gold_labels : `torch.Tensor`, required.
+            A tensor of the same shape as `predictions`.
+        mask : `torch.Tensor`, optional (default = None).
+            A tensor of the same shape as `predictions`.
         """
         predictions, gold_labels, mask = self.unwrap_to_tensors(predictions, gold_labels, mask)
 

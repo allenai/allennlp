@@ -1,5 +1,5 @@
 """
-A ``TokenIndexer`` determines how string tokens get represented as arrays of indices in a model.
+A `TokenIndexer` determines how string tokens get represented as arrays of indices in a model.
 """
 
 from allennlp.data.token_indexers.dep_label_indexer import DepLabelIndexer

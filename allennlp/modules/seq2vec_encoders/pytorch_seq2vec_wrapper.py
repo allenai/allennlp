@@ -11,7 +11,7 @@ class PytorchSeq2VecWrapper(Seq2VecEncoder):
     wrapper pulls out that output, and adds a :func:`get_output_dim` method, which is useful if you
     want to, e.g., define a linear + softmax layer on top of this to get some distribution over a
     set of labels.  The linear layer needs to know its input dimension before it is called, and you
-    can get that from ``get_output_dim``.
+    can get that from `get_output_dim`.
 
     Also, there are lots of ways you could imagine going from an RNN hidden state at every
     timestep to a single vector - you could take the last vector at all layers in the stack, do
@@ -22,17 +22,17 @@ class PytorchSeq2VecWrapper(Seq2VecEncoder):
 
     In order to be wrapped with this wrapper, a class must have the following members:
 
-        - ``self.input_size: int``
-        - ``self.hidden_size: int``
-        - ``def forward(inputs: PackedSequence, hidden_state: torch.tensor) ->
-          Tuple[PackedSequence, torch.Tensor]``.
-        - ``self.bidirectional: bool`` (optional)
+        - `self.input_size: int`
+        - `self.hidden_size: int`
+        - `def forward(inputs: PackedSequence, hidden_state: torch.tensor) ->
+          Tuple[PackedSequence, torch.Tensor]`.
+        - `self.bidirectional: bool` (optional)
 
     This is what pytorch's RNN's look like - just make sure your class looks like those, and it
     should work.
 
     Note that we *require* you to pass sequence lengths when you call this module, to avoid subtle
-    bugs around masking.  If you already have a ``PackedSequence`` you can pass ``None`` as the
+    bugs around masking.  If you already have a `PackedSequence` you can pass `None` as the
     second parameter.
     """
 

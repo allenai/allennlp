@@ -27,12 +27,12 @@ def multi_perspective_match(
 
     # Parameters
 
-    vector1 : ``torch.Tensor``
-        A tensor of shape ``(batch, seq_len, hidden_size)``
-    vector2 : ``torch.Tensor``
-        A tensor of shape ``(batch, seq_len or 1, hidden_size)``
-    weight : ``torch.Tensor``
-        A tensor of shape ``(num_perspectives, hidden_size)``
+    vector1 : `torch.Tensor`
+        A tensor of shape `(batch, seq_len, hidden_size)`
+    vector2 : `torch.Tensor`
+        A tensor of shape `(batch, seq_len or 1, hidden_size)`
+    weight : `torch.Tensor`
+        A tensor of shape `(num_perspectives, hidden_size)`
 
     # Returns
 
@@ -67,13 +67,13 @@ def multi_perspective_match_pairwise(
 
     # Parameters
 
-    vector1 : ``torch.Tensor``
-        A tensor of shape ``(batch, seq_len1, hidden_size)``
-    vector2 : ``torch.Tensor``
-        A tensor of shape ``(batch, seq_len2, hidden_size)``
-    weight : ``torch.Tensor``
-        A tensor of shape ``(num_perspectives, hidden_size)``
-    eps : ``float`` optional, (default = 1e-8)
+    vector1 : `torch.Tensor`
+        A tensor of shape `(batch, seq_len1, hidden_size)`
+    vector2 : `torch.Tensor`
+        A tensor of shape `(batch, seq_len2, hidden_size)`
+    weight : `torch.Tensor`
+        A tensor of shape `(num_perspectives, hidden_size)`
+    eps : `float` optional, (default = 1e-8)
         A small value to avoid zero division problem
 
     # Returns
@@ -104,7 +104,7 @@ def multi_perspective_match_pairwise(
 
 class BiMpmMatching(nn.Module, FromParams):
     """
-    This ``Module`` implements the matching layer of BiMPM model described in [Bilateral
+    This `Module` implements the matching layer of BiMPM model described in [Bilateral
     Multi-Perspective Matching for Natural Language Sentences](https://arxiv.org/abs/1702.03814)
     by Zhiguo Wang et al., 2017.
     Also please refer to the [TensorFlow implementation](https://github.com/zhiguowang/BiMPM/) and
@@ -112,23 +112,23 @@ class BiMpmMatching(nn.Module, FromParams):
 
     # Parameters
 
-    hidden_dim : ``int``, optional (default = 100)
+    hidden_dim : `int`, optional (default = 100)
         The hidden dimension of the representations
-    num_perspectives : ``int``, optional (default = 20)
+    num_perspectives : `int`, optional (default = 20)
         The number of perspectives for matching
-    share_weights_between_directions : ``bool``, optional (default = True)
+    share_weights_between_directions : `bool`, optional (default = True)
         If True, share weight between matching from sentence1 to sentence2 and from sentence2
         to sentence1, useful for non-symmetric tasks
-    is_forward : ``bool``, optional (default = None)
+    is_forward : `bool`, optional (default = None)
         Whether the matching is for forward sequence or backward sequence, useful in finding last
         token in full matching. It can not be None if with_full_match is True.
-    with_full_match : ``bool``, optional (default = True)
+    with_full_match : `bool`, optional (default = True)
         If True, include full match
-    with_maxpool_match : ``bool``, optional (default = True)
+    with_maxpool_match : `bool`, optional (default = True)
         If True, include max pool match
-    with_attentive_match : ``bool``, optional (default = True)
+    with_attentive_match : `bool`, optional (default = True)
         If True, include attentive match
-    with_max_attentive_match : ``bool``, optional (default = True)
+    with_max_attentive_match : `bool`, optional (default = True)
         If True, include max attentive match
     """
 
@@ -215,14 +215,14 @@ class BiMpmMatching(nn.Module, FromParams):
 
         # Parameters
 
-        context_1 : ``torch.Tensor``
+        context_1 : `torch.Tensor`
             Tensor of shape (batch_size, seq_len1, hidden_dim) representing the encoding of the first sentence.
-        mask_1 : ``torch.Tensor``
+        mask_1 : `torch.Tensor`
             Binary Tensor of shape (batch_size, seq_len1), indicating which
             positions in the first sentence are padding (0) and which are not (1).
-        context_2 : ``torch.Tensor``
+        context_2 : `torch.Tensor`
             Tensor of shape (batch_size, seq_len2, hidden_dim) representing the encoding of the second sentence.
-        mask_2 : ``torch.Tensor``
+        mask_2 : `torch.Tensor`
             Binary Tensor of shape (batch_size, seq_len2), indicating which
             positions in the second sentence are padding (0) and which are not (1).
 
