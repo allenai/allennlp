@@ -1262,28 +1262,28 @@ def batched_index_select(
 
 def batched_span_select(target: torch.Tensor, spans: torch.LongTensor) -> torch.Tensor:
     """
-    The given ``spans`` of size ``(batch_size, num_spans, 2)`` indexes into the sequence
-    dimension (dimension 2) of the target, which has size ``(batch_size, sequence_length,
-    embedding_size)``.
+    The given `spans` of size `(batch_size, num_spans, 2)` indexes into the sequence
+    dimension (dimension 2) of the target, which has size `(batch_size, sequence_length,
+    embedding_size)`.
 
     This function returns segmented spans in the target with respect to the provided span indices.
     It does not guarantee element order within each span.
 
     # Parameters
 
-    target : ``torch.Tensor``, required.
+    target : `torch.Tensor`, required.
         A 3 dimensional tensor of shape (batch_size, sequence_length, embedding_size).
         This is the tensor to be indexed.
-    indices : ``torch.LongTensor``
+    indices : `torch.LongTensor`
         A 3 dimensional tensor of shape (batch_size, num_spans, 2) representing start and end
-        indices (both inclusive) into the ``sequence_length`` dimension of the ``target`` tensor.
+        indices (both inclusive) into the `sequence_length` dimension of the `target` tensor.
 
     # Returns
 
-    span_embeddings : ``torch.Tensor``
+    span_embeddings : `torch.Tensor`
         A tensor with shape (batch_size, num_spans, max_batch_span_width, embedding_size]
         representing the embedded spans extracted from the batch flattened target tensor.
-    span_mask: ``torch.LongTensor``
+    span_mask: `torch.LongTensor`
         A tensor with shape (batch_size, num_spans, max_batch_span_width) representing the mask on
         the returned span embeddings.
     """
