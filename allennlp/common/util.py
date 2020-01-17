@@ -11,7 +11,18 @@ import subprocess
 import sys
 from itertools import zip_longest, islice
 from logging import Filter
-from typing import Any, Callable, Dict, Iterable, Iterator, List, Optional, Tuple, TypeVar, Generator
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Iterable,
+    Iterator,
+    List,
+    Optional,
+    Tuple,
+    TypeVar,
+    Generator,
+)
 from queue import Queue
 from threading import Thread
 

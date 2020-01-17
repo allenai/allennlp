@@ -112,16 +112,14 @@ class PretrainedTransformerIndexer(TokenIndexer):
 
     @overrides
     def as_padded_tensor_dict(
-        self,
-        tokens: IndexedTokenList,
-        padding_lengths: Dict[str, int],
+        self, tokens: IndexedTokenList, padding_lengths: Dict[str, int],
     ) -> Dict[str, torch.Tensor]:
         return {
             key: torch.LongTensor(
                 pad_sequence_to_length(
                     val,
                     padding_lengths[key],
-                    default_value=lambda: 0 if key in {"mask", "type_ids"} else self._padding_value
+                    default_value=lambda: 0 if key in {"mask", "type_ids"} else self._padding_value,
                 )
             )
             for key, val in tokens.items()

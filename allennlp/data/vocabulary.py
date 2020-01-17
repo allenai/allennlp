@@ -14,7 +14,6 @@ from allennlp.common.util import namespace_match
 from allennlp.common import Registrable
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.tqdm import Tqdm
-from transformers import AutoTokenizer
 
 if TYPE_CHECKING:
     from allennlp.data import instance as adi  # noqa
