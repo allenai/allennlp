@@ -2,7 +2,7 @@ import logging
 from typing import Dict, List, Iterable, Tuple, Any
 
 from overrides import overrides
-from pytorch_pretrained_bert.tokenization import BertTokenizer
+from transformers.tokenization_bert import BertTokenizer
 
 from allennlp.common.file_utils import cached_path
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader

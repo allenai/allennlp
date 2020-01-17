@@ -2,7 +2,7 @@ from typing import Dict, List, Callable
 import logging
 
 from overrides import overrides
-from pytorch_pretrained_bert.tokenization import BertTokenizer
+from transformers.tokenization_bert import BertTokenizer
 
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.data.tokenizers.token import Token
@@ -312,7 +312,7 @@ class PretrainedBertIndexer(WordpieceIndexer):
         or the path to the .txt file with its vocabulary.
 
         If the name is a key in the list of pretrained models at
-        https://github.com/huggingface/pytorch-pretrained-BERT/blob/master/pytorch_pretrained_bert/tokenization.py#L33
+        https://github.com/huggingface/transformers/blob/master/src/transformers/tokenization_bert.py#L32
         the corresponding path will be used; otherwise it will be interpreted as a path or URL.
     use_starting_offsets: bool, optional (default: False)
         By default, the "offsets" created by the token indexer correspond to the

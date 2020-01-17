@@ -24,7 +24,6 @@ import math
 from typing import List, Any, Dict, Type
 
 import torch
-from pytorch_pretrained_bert.optimization import BertAdam
 import transformers
 
 from allennlp.common import Params, Registrable
@@ -158,7 +157,6 @@ Registrable._registry[Optimizer] = {
     "rmsprop": (torch.optim.RMSprop, None),
     "adamax": (torch.optim.Adamax, None),
     "averaged_sgd": (torch.optim.ASGD, None),
-    "bert_adam": (BertAdam, None),
 }
 
 
