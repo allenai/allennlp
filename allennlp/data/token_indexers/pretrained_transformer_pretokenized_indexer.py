@@ -43,19 +43,19 @@ class PretrainedTransformerPretokenizedIndexer(PretrainedTransformerIndexer):
 
         # self._intra_word_tokenize() does not insert special tokens, so we need to do it here
         output["token_ids"] = self._tokenizer.build_inputs_with_special_tokens(output["token_ids"])
-        output["mask"] = [1] * len(output["token_ids"])
+        output["mask"] = orig_token_mask
         output["offsets"] = [
             (start + self._num_added_start_tokens, end + self._num_added_start_tokens)
             for start, end in offsets
         ]
-        output["orig_token_mask"] = orig_token_mask
+        output["wordpiece_mask"] = [1] * len(output["token_ids"])
         return output
 
     @overrides
     def get_empty_token_list(self) -> IndexedTokenList:
         output = super.get_empty_token_list()
         output["offsets"] = []
-        output["orig_token_mask"] = []
+        output["wordpiece_mask"] = []
         return output
 
     @overrides
