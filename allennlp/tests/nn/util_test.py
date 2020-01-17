@@ -1024,9 +1024,9 @@ class TestNnUtil(AllenNlpTestCase):
 
     def test_batched_index_select(self):
         indices = numpy.array([[[1, 2], [3, 4]], [[5, 6], [7, 8]]])
-        # Each element is a vector of it's index.
+        # Each element is a vector of its index.
         targets = torch.ones([2, 10, 3]).cumsum(1) - 1
-        # Make the second batch double it's index so they're different.
+        # Make the second batch double its index so they're different.
         targets[1, :, :] *= 2
         indices = torch.tensor(indices, dtype=torch.long)
         selected = util.batched_index_select(targets, indices)
@@ -1054,7 +1054,7 @@ class TestNnUtil(AllenNlpTestCase):
             util.batched_index_select(targets, indices)
 
     def test_batched_span_select(self):
-        # Each element is a vector of it's index.
+        # Each element is a vector of its index.
         targets = torch.ones([3, 12, 2]).cumsum(1) - 1
         spans = torch.LongTensor(
             [
@@ -1091,7 +1091,7 @@ class TestNnUtil(AllenNlpTestCase):
     def test_flattened_index_select(self):
         indices = numpy.array([[1, 2], [3, 4]])
         targets = torch.ones([2, 6, 3]).cumsum(1) - 1
-        # Make the second batch double it's index so they're different.
+        # Make the second batch double its index so they're different.
         targets[1, :, :] *= 2
         indices = torch.tensor(indices, dtype=torch.long)
 
