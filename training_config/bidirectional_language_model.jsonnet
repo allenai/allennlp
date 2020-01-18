@@ -49,7 +49,8 @@ local BASE_ITERATOR = {
 
   "vocabulary": {
       // Use a prespecified vocabulary for efficiency.
-      "directory_path": std.extVar("BIDIRECTIONAL_LM_VOCAB_PATH")
+      "type": "from_files",
+      "directory": std.extVar("BIDIRECTIONAL_LM_VOCAB_PATH"),
       // Plausible config for generating the vocabulary.
       // "tokens_to_add": {
       //     "tokens": ["<S>", "</S>"],
