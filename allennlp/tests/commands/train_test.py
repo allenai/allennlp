@@ -247,7 +247,7 @@ class TestTrain(AllenNlpTestCase):
         params = Params.from_file(self.FIXTURES_ROOT / "simple_tagger" / "experiment.json")
 
         # Can instantiate from base class params
-        TrainModel.from_params(parapms=params, serialization_dir=self.TEST_DIR, local_rank=0)
+        TrainModel.from_params(params=params, serialization_dir=self.TEST_DIR, local_rank=0)
 
 
 @DatasetReader.register("lazy-test")
