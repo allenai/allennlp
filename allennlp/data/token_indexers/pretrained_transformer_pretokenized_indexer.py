@@ -62,15 +62,12 @@ class PretrainedTransformerPretokenizedIndexer(PretrainedTransformerIndexer):
     def as_padded_tensor_dict(
         self, tokens: IndexedTokenList, padding_lengths: Dict[str, int]
     ) -> Dict[str, torch.Tensor]:
-        tensor_dict = {}
-        for key, val in tokens.items():
-            tensor_dict[key] = torch.LongTensor(
-                pad_sequence_to_length(
-                    val,
-                    padding_lengths[key],
-                    default_value=lambda: (0, 0) if key == "offsets" else 0,
-                )
+        tensor_dict = super().as_padded_tensor_dict(tokens, padding_lengths)
+        tensor_dict["offsets"] = torch.LongTensor(
+            pad_sequence_to_length(
+                tokens["offsets"], padding_lengths["offsets"], default_value=lambda: (0, 0)
             )
+        )
         return tensor_dict
 
     def _intra_word_tokenize(
