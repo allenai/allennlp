@@ -14,9 +14,9 @@ class LayerNorm(torch.nn.Module):
 
     # Parameters
 
-    dimension : ``int``, required.
+    dimension : `int`, required.
         The dimension of the layer output to normalize.
-    eps : ``float``, optional, (default = 1e-6)
+    eps : `float`, optional, (default = 1e-6)
         An epsilon to prevent dividing by zero in the case
         the layer has zero variance.
 

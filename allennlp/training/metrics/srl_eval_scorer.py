@@ -35,9 +35,9 @@ class SrlEvalScorer(Metric):
 
     # Parameters
 
-    srl_eval_path : ``str``, optional.
+    srl_eval_path : `str`, optional.
         The path to the srl-eval.pl script.
-    ignore_classes : ``List[str]``, optional (default=``None``).
+    ignore_classes : `List[str]`, optional (default=`None`).
         A list of classes to ignore.
     """
 
@@ -63,18 +63,18 @@ class SrlEvalScorer(Metric):
         """
         # Parameters
 
-        batch_verb_indices : ``List[Optional[int]]``, required.
+        batch_verb_indices : `List[Optional[int]]`, required.
             The indices of the verbal predicate in the sentences which
             the gold labels are the arguments for, or None if the sentence
             contains no verbal predicate.
-        batch_sentences : ``List[List[str]]``, required.
+        batch_sentences : `List[List[str]]`, required.
             The word tokens for each instance in the batch.
-        batch_conll_formatted_predicted_tags : ``List[List[str]]``, required.
+        batch_conll_formatted_predicted_tags : `List[List[str]]`, required.
             A list of predicted CoNLL-formatted SRL tags (itself a list) to compute score for.
             Use allennlp.models.semantic_role_labeler.convert_bio_tags_to_conll_format
             to convert from BIO to CoNLL format before passing the tags into the metric,
             if applicable.
-        batch_conll_formatted_gold_tags : ``List[List[str]]``, required.
+        batch_conll_formatted_gold_tags : `List[List[str]]`, required.
             A list of gold CoNLL-formatted SRL tags (itself a list) to use as a reference.
             Use allennlp.models.semantic_role_labeler.convert_bio_tags_to_conll_format
             to convert from BIO to CoNLL format before passing the
@@ -132,7 +132,7 @@ class SrlEvalScorer(Metric):
         recall : float
         f1-measure : float
 
-        Additionally, an ``overall`` key is included, which provides the precision,
+        Additionally, an `overall` key is included, which provides the precision,
         recall and f1-measure for all spans.
         """
         all_tags: Set[str] = set()

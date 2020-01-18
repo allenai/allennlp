@@ -237,8 +237,8 @@ class TestParams(AllenNlpTestCase):
         open(my_file, "w").close()
         open(my_other_file, "w").close()
 
-        # Some nested classes just to exercise the ``from_params``
-        # and ``add_file_to_archive`` methods.
+        # Some nested classes just to exercise the `from_params`
+        # and `add_file_to_archive` methods.
 
         class C:
             def __init__(self, c_file: str) -> None:
@@ -277,7 +277,7 @@ class TestParams(AllenNlpTestCase):
 
         params = Params({"a": {"b": {"filename": my_file, "c": {"c_file": my_other_file}}}})
 
-        # Construct ``A`` from params but then just throw it away.
+        # Construct `A` from params but then just throw it away.
         A.from_params(params.pop("a"))
 
         assert params.files_to_archive == {"a.b.filename": my_file, "a.b.c.c_file": my_other_file}
@@ -291,8 +291,8 @@ class TestParams(AllenNlpTestCase):
         open(my_file, "w").close()
         open(my_other_file, "w").close()
 
-        # Some nested classes just to exercise the ``from_params``
-        # and ``add_file_to_archive`` methods.
+        # Some nested classes just to exercise the `from_params`
+        # and `add_file_to_archive` methods.
 
         class C:
             def __init__(self, c_file: str) -> None:
@@ -331,7 +331,7 @@ class TestParams(AllenNlpTestCase):
 
         params = Params({"a": {"bs": [{"filename": my_file, "c": {"c_file": my_other_file}}]}})
 
-        # Construct ``A`` from params but then just throw it away.
+        # Construct `A` from params but then just throw it away.
         A.from_params(params.pop("a"))
 
         assert params.files_to_archive == {

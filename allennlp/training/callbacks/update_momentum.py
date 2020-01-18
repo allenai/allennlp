@@ -18,7 +18,7 @@ class UpdateMomentum(Callback):
 
     # Parameters
 
-    momentum_scheduler : ``MomentumScheduler``
+    momentum_scheduler : `MomentumScheduler`
         The momentum scheduler to run.
     """
 

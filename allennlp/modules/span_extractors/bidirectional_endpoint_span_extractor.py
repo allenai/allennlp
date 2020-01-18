@@ -17,8 +17,8 @@ class BidirectionalEndpointSpanExtractor(SpanExtractor):
     because when you consider the forward and backward directions separately, the end index
     of the span for the backward direction's representation is actually the start index.
 
-    By default, this ``SpanExtractor`` represents spans as
-    ``sequence_tensor[inclusive_span_end] - sequence_tensor[exclusive_span_start]``
+    By default, this `SpanExtractor` represents spans as
+    `sequence_tensor[inclusive_span_end] - sequence_tensor[exclusive_span_start]`
     meaning that the representation is the difference between the the last word in the span
     and the word `before` the span started. Note that the start and end indices are with
     respect to the direction that the RNN is going in, so for the backward direction, the
@@ -28,36 +28,36 @@ class BidirectionalEndpointSpanExtractor(SpanExtractor):
     final combination.
 
     The following other types of representation are supported for both the forward and backward
-    directions, assuming that ``x = span_start_embeddings`` and ``y = span_end_embeddings``.
+    directions, assuming that `x = span_start_embeddings` and `y = span_end_embeddings`.
 
-    ``x``, ``y``, ``x*y``, ``x+y``, ``x-y``, ``x/y``, where each of those binary operations
+    `x`, `y`, `x*y`, `x+y`, `x-y`, `x/y`, where each of those binary operations
     is performed elementwise.  You can list as many combinations as you want, comma separated.
-    For example, you might give ``x,y,x*y`` as the ``combination`` parameter to this class.
-    The computed similarity function would then be ``[x; y; x*y]``, which can then be optionally
+    For example, you might give `x,y,x*y` as the `combination` parameter to this class.
+    The computed similarity function would then be `[x; y; x*y]`, which can then be optionally
     concatenated with an embedded representation of the width of the span.
 
     # Parameters
 
-    input_dim : ``int``, required
-        The final dimension of the ``sequence_tensor``.
-    forward_combination : ``str``, optional (default = "y-x").
-        The method used to combine the ``forward_start_embeddings`` and ``forward_end_embeddings``
+    input_dim : `int`, required
+        The final dimension of the `sequence_tensor`.
+    forward_combination : `str`, optional (default = "y-x").
+        The method used to combine the `forward_start_embeddings` and `forward_end_embeddings`
         for the forward direction of the bidirectional representation.
         See above for a full description.
-    backward_combination : ``str``, optional (default = "x-y").
-        The method used to combine the ``backward_start_embeddings`` and ``backward_end_embeddings``
+    backward_combination : `str`, optional (default = "x-y").
+        The method used to combine the `backward_start_embeddings` and `backward_end_embeddings`
         for the backward direction of the bidirectional representation.
         See above for a full description.
-    num_width_embeddings : ``int``, optional (default = None).
+    num_width_embeddings : `int`, optional (default = None).
         Specifies the number of buckets to use when representing
         span width features.
-    span_width_embedding_dim : ``int``, optional (default = None).
+    span_width_embedding_dim : `int`, optional (default = None).
         The embedding size for the span_width features.
-    bucket_widths : ``bool``, optional (default = False).
-        Whether to bucket the span widths into log-space buckets. If ``False``,
+    bucket_widths : `bool`, optional (default = False).
+        Whether to bucket the span widths into log-space buckets. If `False`,
         the raw span widths are used.
-    use_sentinels : ``bool``, optional (default = ``True``).
-        If ``True``, sentinels are used to represent exclusive span indices for the elements
+    use_sentinels : `bool`, optional (default = `True`).
+        If `True`, sentinels are used to represent exclusive span indices for the elements
         in the first and last positions in the sequence (as the exclusive indices for these
         elements are outside of the the sequence boundary). This is not strictly necessary,
         as you may know that your exclusive start and end indices are always within your sequence
@@ -145,7 +145,7 @@ class BidirectionalEndpointSpanExtractor(SpanExtractor):
             span_starts = span_starts * span_indices_mask
             span_ends = span_ends * span_indices_mask
         # We want `exclusive` span starts, so we remove 1 from the forward span starts
-        # as the AllenNLP ``SpanField`` is inclusive.
+        # as the AllenNLP `SpanField` is inclusive.
         # shape (batch_size, num_spans)
         exclusive_span_starts = span_starts - 1
         # shape (batch_size, num_spans, 1)
@@ -153,7 +153,7 @@ class BidirectionalEndpointSpanExtractor(SpanExtractor):
 
         # We want `exclusive` span ends for the backward direction
         # (so that the `start` of the span in that direction is exlusive), so
-        # we add 1 to the span ends as the AllenNLP ``SpanField`` is inclusive.
+        # we add 1 to the span ends as the AllenNLP `SpanField` is inclusive.
         exclusive_span_ends = span_ends + 1
 
         if sequence_mask is not None:

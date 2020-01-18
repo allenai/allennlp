@@ -11,15 +11,15 @@ from allennlp.data.fields.field import Field
 
 class NamespaceSwappingField(Field[torch.Tensor]):
     """
-    A ``NamespaceSwappingField`` is used to map tokens in one namespace to tokens in another namespace.
+    A `NamespaceSwappingField` is used to map tokens in one namespace to tokens in another namespace.
     It is used by seq2seq models with a copy mechanism that copies tokens from the source
     sentence into the target sentence.
 
     # Parameters
 
-    source_tokens : ``List[Token]``
+    source_tokens : `List[Token]`
         The tokens from the source sentence.
-    target_namespace : ``str``
+    target_namespace : `str`
         The namespace that the tokens from the source sentence will be mapped to.
     """
 

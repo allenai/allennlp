@@ -23,9 +23,9 @@ class MetricTracker:
         If provided, it's used to infer whether we expect the metric values to
         increase (if it starts with "+") or decrease (if it starts with "-").
         It's an error if it doesn't start with one of those. If it's not provided,
-        you should specify ``should_decrease`` instead.
+        you should specify `should_decrease` instead.
     should_decrease : str, optional (default = None)
-        If ``metric_name`` isn't provided (in which case we can't infer ``should_decrease``),
+        If `metric_name` isn't provided (in which case we can't infer `should_decrease`),
         then you have to specify it here.
     """
 
@@ -73,7 +73,7 @@ class MetricTracker:
 
     def state_dict(self) -> Dict[str, Any]:
         """
-        A ``Trainer`` can use this to serialize the state of the metric tracker.
+        A `Trainer` can use this to serialize the state of the metric tracker.
         """
         return {
             "best_so_far": self._best_so_far,
@@ -88,7 +88,7 @@ class MetricTracker:
 
     def load_state_dict(self, state_dict: Dict[str, Any]) -> None:
         """
-        A ``Trainer`` can use this to hydrate a metric tracker from a serialized state.
+        A `Trainer` can use this to hydrate a metric tracker from a serialized state.
         """
         self._best_so_far = state_dict["best_so_far"]
         self._patience = state_dict["patience"]

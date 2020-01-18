@@ -18,7 +18,7 @@ class Checkpointer(Registrable):
     """
     This class implements the functionality for checkpointing your model and trainer state
     during training. It is agnostic as to what those states look like (they are typed as
-    Dict[str, Any]), but they will be fed to ``torch.save`` so they should be serializable
+    Dict[str, Any]), but they will be fed to `torch.save` so they should be serializable
     in that sense. They will also be restored as Dict[str, Any], which means the calling
     code is responsible for knowing what to do with them.
     """
@@ -139,9 +139,9 @@ class Checkpointer(Registrable):
         which is serialized separately from  model parameters. This function should only be used to
         continue training - if you wish to load a model for inference/load parts of a model into a new
         computation graph, you should use the native Pytorch functions:
-        `` model.load_state_dict(torch.load("/path/to/model/weights.th"))``
+        ` model.load_state_dict(torch.load("/path/to/model/weights.th"))`
 
-        If ``self._serialization_dir`` does not exist or does not contain any checkpointed weights,
+        If `self._serialization_dir` does not exist or does not contain any checkpointed weights,
         this function will do nothing and return empty dicts.
 
         # Returns

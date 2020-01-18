@@ -27,28 +27,28 @@ class StackedSelfAttentionDecoderNet(DecoderNet):
 
     # Parameters
 
-    decoding_dim : ``int``, required
+    decoding_dim : `int`, required
         Defines dimensionality of output vectors.
-    target_embedding_dim : ``int``, required
+    target_embedding_dim : `int`, required
         Defines dimensionality of input target embeddings.  Since this model takes it's output on a previous step
         as input of following step, this is also an input dimensionality.
-    feedforward_hidden_dim : ``int``, required.
+    feedforward_hidden_dim : `int`, required.
         The middle dimension of the FeedForward network. The input and output
         dimensions are fixed to ensure sizes match up for the self attention layers.
-    num_layers : ``int``, required.
+    num_layers : `int`, required.
         The number of stacked self attention -> feedfoward -> layer normalisation blocks.
-    num_attention_heads : ``int``, required.
+    num_attention_heads : `int`, required.
         The number of attention heads to use per layer.
-    use_positional_encoding : ``bool``, optional, (default = True)
+    use_positional_encoding : `bool`, optional, (default = True)
         Whether to add sinusoidal frequencies to the input tensor. This is strongly recommended,
         as without this feature, the self attention layers have no idea of absolute or relative
         position (as they are just computing pairwise similarity between vectors of elements),
         which can be important features for many tasks.
-    dropout_prob : ``float``, optional, (default = 0.1)
+    dropout_prob : `float`, optional, (default = 0.1)
         The dropout probability for the feedforward network.
-    residual_dropout_prob : ``float``, optional, (default = 0.2)
+    residual_dropout_prob : `float`, optional, (default = 0.2)
         The dropout probability for the residual connections.
-    attention_dropout_prob : ``float``, optional, (default = 0.1)
+    attention_dropout_prob : `float`, optional, (default = 0.1)
         The dropout probability for the attention distributions in each attention layer.
     """
 

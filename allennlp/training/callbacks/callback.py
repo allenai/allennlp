@@ -19,7 +19,7 @@ class Callback(Registrable):
     there is no other "API".
 
     In a subclass you would register methods to handle specific events
-    using the ``handle_event`` decorator defined above; for example
+    using the `handle_event` decorator defined above; for example
 
     ::
 

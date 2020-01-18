@@ -20,9 +20,9 @@ class BLEU(Metric):
 
     # Parameters
 
-    ngram_weights : ``Iterable[float]``, optional (default = (0.25, 0.25, 0.25, 0.25))
+    ngram_weights : `Iterable[float]`, optional (default = (0.25, 0.25, 0.25, 0.25))
         Weights to assign to scores for each ngram size.
-    exclude_indices : ``Set[int]``, optional (default = None)
+    exclude_indices : `Set[int]`, optional (default = None)
         Indices to exclude when calculating ngrams. This should usually include
         the indices of the start, end, and pad tokens.
 
@@ -124,9 +124,9 @@ class BLEU(Metric):
 
         # Parameters
 
-        predictions : ``torch.LongTensor``, required
+        predictions : `torch.LongTensor`, required
             Batched predicted tokens of shape `(batch_size, max_sequence_length)`.
-        references : ``torch.LongTensor``, required
+        references : `torch.LongTensor`, required
             Batched reference (gold) translations with shape `(batch_size, max_gold_sequence_length)`.
 
         # Returns

@@ -12,11 +12,11 @@ from allennlp.nn import InitializerApplicator, RegularizerApplicator
 @Model.register("bidirectional_language_model")
 class BidirectionalLanguageModel(LanguageModel):
     """
-    The ``BidirectionalLanguageModel`` applies a bidirectional "contextualizing"
-    ``Seq2SeqEncoder`` to uncontextualized embeddings, using a ``SoftmaxLoss``
+    The `BidirectionalLanguageModel` applies a bidirectional "contextualizing"
+    `Seq2SeqEncoder` to uncontextualized embeddings, using a `SoftmaxLoss`
     module (defined above) to compute the language modeling loss.
 
-    It is IMPORTANT that your bidirectional ``Seq2SeqEncoder`` does not do any
+    It is IMPORTANT that your bidirectional `Seq2SeqEncoder` does not do any
     "peeking ahead". That is, for its forward direction it should only consider
     embeddings at previous timesteps, and for its backward direction only embeddings
     at subsequent timesteps. If this condition is not met, your language model is
@@ -24,22 +24,22 @@ class BidirectionalLanguageModel(LanguageModel):
 
     # Parameters
 
-    vocab : ``Vocabulary``
-    text_field_embedder : ``TextFieldEmbedder``
-        Used to embed the indexed tokens we get in ``forward``.
-    contextualizer : ``Seq2SeqEncoder``
+    vocab : `Vocabulary`
+    text_field_embedder : `TextFieldEmbedder`
+        Used to embed the indexed tokens we get in `forward`.
+    contextualizer : `Seq2SeqEncoder`
         Used to "contextualize" the embeddings. As described above,
         this encoder must not cheat by peeking ahead.
-    dropout : ``float``, optional (default: None)
+    dropout : `float`, optional (default: None)
         If specified, dropout is applied to the contextualized embeddings before computation of
         the softmax. The contextualized embeddings themselves are returned without dropout.
-    num_samples : ``int``, optional (default: None)
-        If provided, the model will use ``SampledSoftmaxLoss``
+    num_samples : `int`, optional (default: None)
+        If provided, the model will use `SampledSoftmaxLoss`
         with the specified number of samples. Otherwise, it will use
-        the full ``_SoftmaxLoss`` defined above.
-    sparse_embeddings : ``bool``, optional (default: False)
-        Passed on to ``SampledSoftmaxLoss`` if True.
-    regularizer : ``RegularizerApplicator``, optional (default=``None``)
+        the full `_SoftmaxLoss` defined above.
+    sparse_embeddings : `bool`, optional (default: False)
+        Passed on to `SampledSoftmaxLoss` if True.
+    regularizer : `RegularizerApplicator`, optional (default=`None`)
         If provided, will be used to calculate the regularization penalty during training.
     """
 

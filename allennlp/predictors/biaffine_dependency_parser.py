@@ -105,7 +105,7 @@ class BiaffineDependencyParserPredictor(Predictor):
     @overrides
     def _json_to_instance(self, json_dict: JsonDict) -> Instance:
         """
-        Expects JSON that looks like ``{"sentence": "..."}``.
+        Expects JSON that looks like `{"sentence": "..."}`.
         """
         spacy_tokens = self._tokenizer.tokenize(json_dict["sentence"])
         sentence_text = [token.text for token in spacy_tokens]

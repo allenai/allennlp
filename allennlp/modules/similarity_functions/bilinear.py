@@ -10,21 +10,21 @@ from allennlp.nn import Activation
 class BilinearSimilarity(SimilarityFunction):
     """
     This similarity function performs a bilinear transformation of the two input vectors.  This
-    function has a matrix of weights ``W`` and a bias ``b``, and the similarity between two vectors
-    ``x`` and ``y`` is computed as ``x^T W y + b``.
+    function has a matrix of weights `W` and a bias `b`, and the similarity between two vectors
+    `x` and `y` is computed as `x^T W y + b`.
 
     # Parameters
 
-    tensor_1_dim : ``int``
-        The dimension of the first tensor, ``x``, described above.  This is ``x.size()[-1]`` - the
+    tensor_1_dim : `int`
+        The dimension of the first tensor, `x`, described above.  This is `x.size()[-1]` - the
         length of the vector that will go into the similarity computation.  We need this so we can
         build the weight matrix correctly.
-    tensor_2_dim : ``int``
-        The dimension of the second tensor, ``y``, described above.  This is ``y.size()[-1]`` - the
+    tensor_2_dim : `int`
+        The dimension of the second tensor, `y`, described above.  This is `y.size()[-1]` - the
         length of the vector that will go into the similarity computation.  We need this so we can
         build the weight matrix correctly.
-    activation : ``Activation``, optional (default=linear (i.e. no activation))
-        An activation function applied after the ``x^T W y + b`` calculation.  Default is no
+    activation : `Activation`, optional (default=linear (i.e. no activation))
+        An activation function applied after the `x^T W y + b` calculation.  Default is no
         activation.
     """
 

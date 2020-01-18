@@ -8,7 +8,7 @@ from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
 @TokenEmbedder.register("pretrained_transformer")
 class PretrainedTransformerEmbedder(TokenEmbedder):
     """
-    Uses a pretrained model from ``transformers`` as a ``TokenEmbedder``.
+    Uses a pretrained model from `transformers` as a `TokenEmbedder`.
     """
 
     def __init__(self, model_name: str) -> None:
