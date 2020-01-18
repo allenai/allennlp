@@ -33,7 +33,7 @@ class PretrainedTransformerPretokenizedEmbedder(PretrainedTransformerEmbedder):
             Maps indices for the original tokens, i.e. those given as input to the indexer,
             to a span in token_ids. `token_ids[i][offsets[i][j][0]:offsets[i][j][1] + 1]`
             corresponds to the original j-th token from the i-th batch.
-        orig_token_mask: torch.LongTensor
+        wordpiece_mask: torch.LongTensor
             Shape: [batch_size, num_wordpieces].
 
         # Returns:

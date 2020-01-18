@@ -117,7 +117,7 @@ class PretrainedTransformerIndexer(TokenIndexer):
         Determines the number of tokens self._tokenizer adds to a sequence (currently doesn't
         consider sequence pairs) in the start & end.
         """
-        # Uses a slightly higher index to avoid tokenizer does special things to lower-indexed
+        # Uses a slightly higher index to avoid tokenizer doing special things to lower-indexed
         # tokens which might be special.
         dummy = [1000]
         inserted = self._tokenizer.build_inputs_with_special_tokens(dummy)
