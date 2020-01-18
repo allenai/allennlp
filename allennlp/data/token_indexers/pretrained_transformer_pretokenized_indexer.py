@@ -53,7 +53,7 @@ class PretrainedTransformerPretokenizedIndexer(PretrainedTransformerIndexer):
 
     @overrides
     def get_empty_token_list(self) -> IndexedTokenList:
-        output = super.get_empty_token_list()
+        output = super().get_empty_token_list()
         output["offsets"] = []
         output["wordpiece_mask"] = []
         return output
