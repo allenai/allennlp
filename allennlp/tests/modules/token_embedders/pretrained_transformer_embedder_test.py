@@ -1,7 +1,7 @@
 import torch
 
 from allennlp.common import Params
-from allennlp.data import Token, Vocabulary
+from allennlp.data import Vocabulary
 from allennlp.data.batch import Batch
 from allennlp.data.fields import TextField
 from allennlp.data.instance import Instance

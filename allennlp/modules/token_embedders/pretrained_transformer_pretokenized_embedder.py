@@ -14,6 +14,7 @@ class PretrainedTransformerPretokenizedEmbedder(PretrainedTransformerEmbedder):
     to get word-level representations.
     """
 
+    @overrides
     def forward(
         self,
         token_ids: torch.LongTensor,

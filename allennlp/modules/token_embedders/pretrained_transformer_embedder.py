@@ -22,6 +22,7 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
     def get_output_dim(self):
         return self.output_dim
 
+    @overrides
     def forward(
         self, token_ids: torch.LongTensor, mask: torch.LongTensor
     ) -> torch.Tensor:  # type: ignore
