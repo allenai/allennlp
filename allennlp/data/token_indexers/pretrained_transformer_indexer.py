@@ -29,7 +29,7 @@ class PretrainedTransformerIndexer(TokenIndexer):
         We use a somewhat confusing default value of `tags` so that we do not add padding or UNK
         tokens to this namespace, which would break on loading because we wouldn't find our default
         OOV token.
-    token_min_padding_length: ``int``, optional (default=0)
+    token_min_padding_length: `int`, optional (default=0)
         See superclass.
     """
 
