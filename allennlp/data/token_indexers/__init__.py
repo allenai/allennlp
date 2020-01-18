@@ -13,5 +13,5 @@ from allennlp.data.token_indexers.wordpiece_indexer import WordpieceIndexer, Pre
 from allennlp.data.token_indexers.spacy_indexer import SpacyTokenIndexer
 from allennlp.data.token_indexers.pretrained_transformer_indexer import PretrainedTransformerIndexer
 from allennlp.data.token_indexers.pretrained_transformer_pretokenized_indexer import (
-    PretrainedTransformerPretokenizedIndexer
+    PretrainedTransformerPretokenizedIndexer,
 )

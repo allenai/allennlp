@@ -42,7 +42,8 @@ class PretrainedTransformerIndexer(TokenIndexer):
         self._added_to_vocabulary = False
 
         (
-            self._num_added_start_tokens, self._num_added_end_tokens
+            self._num_added_start_tokens,
+            self._num_added_end_tokens,
         ) = self._determine_num_special_tokens_added()
 
     def _add_encoding_to_vocabulary(self, vocab: Vocabulary) -> None:

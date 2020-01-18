@@ -12,9 +12,7 @@ from allennlp.common.testing import AllenNlpTestCase
 
 class TestPretrainedTransformerEmbedder(AllenNlpTestCase):
     def test_end_to_end(self):
-        token_indexer = PretrainedTransformerPretokenizedIndexer(
-            "bert-base-uncased"
-        )
+        token_indexer = PretrainedTransformerPretokenizedIndexer("bert-base-uncased")
 
         sentence1 = ["A", ",", "AllenNLP", "sentence", "."]
         sentence2 = ["AllenNLP", "is", "great"]
