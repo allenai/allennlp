@@ -126,17 +126,3 @@ class TestPretrainedTransformerIndexer(AllenNlpTestCase):
     def test_auto_determining_num_tokens_added(self):
         indexer = PretrainedTransformerIndexer("bert-base-cased")
         assert indexer._determine_num_special_tokens_added() == (1, 1)
-
-    def test_intra_word_tokenization(self):
-        tokenizer = AutoTokenizer.from_pretrained("bert-base-cased")
-        indexer = PretrainedTransformerIndexer("bert-base-cased", intra_word_tokenization=True)
-        text = ["AllenNLP", "is", "great"]
-        tokens = tokenizer.tokenize(" ".join(["[CLS]"] + text + ["[SEP]"]))
-        expected_ids = tokenizer.convert_tokens_to_ids(tokens)
-        vocab = Vocabulary()
-        indexed = indexer.tokens_to_indices([Token(word) for word in text], vocab)
-        assert indexed["token_ids"] == expected_ids
-        assert indexed["mask"] == [1] * len(text)
-        # Hardcoding a few things because we know how BERT tokenization works
-        assert indexed["wordpiece_mask"] == [1] * len(expected_ids)
-        assert indexed["offsets"] == [(1, 3), (4, 4), (5, 5)]
