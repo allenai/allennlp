@@ -110,9 +110,7 @@ def remove_optional(annotation: type):
         return annotation
 
 
-def infer_params(cls: Type[T],
-                 constructor: Callable[..., T] = None,
-                 ):
+def infer_params(cls: Type[T], constructor: Callable[..., T] = None):
     if constructor is None:
         constructor = cls.__init__
 
@@ -130,10 +128,7 @@ def infer_params(cls: Type[T],
     super_class = cls.mro()[1]
     super_parameters = infer_params(super_class)
 
-    return {
-        **super_parameters,
-        **parameters  # Subclass parameters overwrite superclass ones
-    }
+    return {**super_parameters, **parameters}  # Subclass parameters overwrite superclass ones
 
 
 def create_kwargs(
