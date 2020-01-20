@@ -32,6 +32,11 @@ class PretrainedTransformerPretokenizedIndexer(PretrainedTransformerIndexer):
             model_name, add_special_tokens=False
         )
 
+        (
+            self._num_added_start_tokens,
+            self._num_added_end_tokens,
+        ) = self._determine_num_special_tokens_added()
+
     @overrides
     def tokens_to_indices(self, tokens: List[Token], vocabulary: Vocabulary) -> IndexedTokenList:
         orig_token_mask = [1] * len(tokens)
@@ -93,3 +98,30 @@ class PretrainedTransformerPretokenizedIndexer(PretrainedTransformerIndexer):
             offsets.append((start_offset, end_offset))
 
         return wordpieces, offsets
+
+    def _determine_num_special_tokens_added(self):
+        """
+        Determines the number of tokens self._tokenizer adds to a sequence (currently doesn't
+        consider sequence pairs) in the start & end.
+        """
+        # Uses a slightly higher index to avoid tokenizer doing special things to lower-indexed
+        # tokens which might be special.
+        dummy = [1000]
+        inserted = self._tokenizer.build_inputs_with_special_tokens(dummy)
+
+        num_start = num_end = 0
+        seen_dummy = False
+        for idx in inserted:
+            if idx == dummy[0]:
+                if seen_dummy:  # seeing it twice
+                    raise ValueError("Cannot auto-determine the number of special tokens added.")
+                seen_dummy = True
+                continue
+
+            if not seen_dummy:
+                num_start += 1
+            else:
+                num_end += 1
+
+        assert num_start + num_end == self._tokenizer.num_added_tokens()
+        return num_start, num_end
