@@ -296,7 +296,7 @@ def train_model(
         make_vocab_from_params(params.duplicate(), serialization_dir)
         params["vocabulary"] = {
             "type": "from_files",
-            "directory": os.path.join(serialization_dir, "vocabulary")
+            "directory": os.path.join(serialization_dir, "vocabulary"),
         }
 
         mp.spawn(
