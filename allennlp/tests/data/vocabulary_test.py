@@ -20,8 +20,7 @@ from allennlp.data.vocabulary import (
     _NamespaceDependentDefaultDict,
     _read_pretrained_tokens,
     DEFAULT_OOV_TOKEN,
-    Vocabulary,
-    TransformerVocabulary,
+    Vocabulary
 )
 from allennlp.modules.token_embedders.embedding import format_embeddings_file_uri
 from transformers import AutoTokenizer
@@ -782,27 +781,3 @@ class TestVocabulary(AllenNlpTestCase):
             vocab = Vocabulary.from_params(Params({"type": "from_files", "directory": vocab_dir}))
 
         assert "OOV token not found!" in str(excinfo.value)
-
-    def test_transformer_vocab(self):
-        # Testing three different cases: Bert's uncased and cased vocabs are different, and RoBERTa has a non-zero
-        # padding token.
-        for model_name in ["bert-base-cased", "bert-base-uncased", "roberta-base"]:
-            transformers_tokenizer = AutoTokenizer.from_pretrained(model_name)
-            vocab = TransformerVocabulary(model_name=model_name)
-
-            vocab.add_token_to_namespace("cc", namespace="tags")
-            vocab.add_token_to_namespace("cd", namespace="tags")
-            vocab.add_token_to_namespace("dt", namespace="tags")
-
-            assert vocab.get_token_from_index(1998) == transformers_tokenizer.convert_ids_to_tokens(
-                1998
-            )
-            assert vocab.get_token_index("the") == transformers_tokenizer.convert_tokens_to_ids(
-                "the"
-            )
-
-            # Make sure adding new namespaces still works.
-            assert vocab.get_token_from_index(vocab.get_token_index("dt", "tags"), "tags") == "dt"
-
-            assert vocab.get_token_index(vocab.cls_token()) == vocab.cls_token_index()
-            assert (vocab.eos_token() is not None) or (vocab.eos_token_index() is None)
