@@ -27,7 +27,6 @@ class PretrainedTransformerPretokenizedIndexer(PretrainedTransformerIndexer):
         self, model_name: str, namespace: str = "tags", token_min_padding_length: int = 0
     ) -> None:
         super().__init__(model_name, namespace, token_min_padding_length)
-        self._namespace = namespace
         # add_special_tokens=False sicne we don't want wordpieces to be surrounded by special tokens
         self._allennlp_tokenizer = PretrainedTransformerTokenizer(
             model_name, add_special_tokens=False
