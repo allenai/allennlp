@@ -6,7 +6,6 @@ that are used as components in AllenNLP
 """
 
 from allennlp.modules.conditional_random_field import ConditionalRandomField
-from allennlp.modules.drop_connect import DropConnect
 from allennlp.modules.elmo import Elmo
 from allennlp.modules.feedforward import FeedForward
 from allennlp.modules.highway import Highway
