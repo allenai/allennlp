@@ -17,10 +17,12 @@ logger = logging.getLogger(__name__)
 @TokenIndexer.register("pretrained_transformer_mismatched")
 class PretrainedTransformerMismatchedIndexer(PretrainedTransformerIndexer):
     """
-    Use this indexer when input comes from pre-tokenized text and therefore
-    `PretrainedTransformerTokenizer` was not used in the dataset loader. It tokenizes each token
-    into wordpieces independently and concatenate them back together. Use it along with
-    `PretrainedTransformerMismatchedEmbedder`.
+    Use this indexer when (for whatever reason) you are not using a corresponding
+    `PretrainedTransformerTokenizer` on your input. We assume that you used a tokenizer that splits
+    strings into words, while the transformer expects wordpieces as input. This indexer splits the
+    words into wordpieces and flattens them out. You should use the corresponding
+    `PretrainedTransformerMismatchedEmbedder` to embed these wordpieces and then pull out a single
+    vector for each original word.
     """
 
     def __init__(

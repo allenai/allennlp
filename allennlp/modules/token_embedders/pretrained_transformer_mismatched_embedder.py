@@ -8,10 +8,8 @@ from allennlp.nn import util
 @TokenEmbedder.register("pretrained_transformer_mismatched")
 class PretrainedTransformerMismatchedEmbedder(PretrainedTransformerEmbedder):
     """
-    Use this embedder when input comes from pre-tokenized text, `PretrainedTransformerTokenizer` was
-    not used in the dataset loader, and `PretrainedTransformerMismatchedIndexer` independently
-    tokenized each word into subword wordpieces. This embedder sums the wordpiece representations
-    to get word-level representations.
+    Use this embedder to embed wordpieces given by `PretrainedTransformerMismatchedIndexer`
+    and to pool the resulting vectors to get word-level representations.
     """
 
     @overrides
