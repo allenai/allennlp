@@ -6,11 +6,23 @@ from allennlp.nn import util
 
 
 @TokenEmbedder.register("pretrained_transformer_mismatched")
-class PretrainedTransformerMismatchedEmbedder(PretrainedTransformerEmbedder):
+class PretrainedTransformerMismatchedEmbedder(TokenEmbedder):
     """
     Use this embedder to embed wordpieces given by `PretrainedTransformerMismatchedIndexer`
     and to pool the resulting vectors to get word-level representations.
     """
+
+    def __init__(self, model_name: str) -> None:
+        super().__init__()
+        # Matched embedder vs. mismatched
+        self._matched_embedder = PretrainedTransformerEmbedder(model_name)
+        # I'm not sure if this works for all models; open an issue on github if you find a case
+        # where it doesn't work.
+        self.output_dim = self.transformer_model.config.hidden_size
+
+    @overrides
+    def get_output_dim(self):
+        return self.output_dim
 
     @overrides
     def forward(
@@ -40,7 +52,7 @@ class PretrainedTransformerMismatchedEmbedder(PretrainedTransformerEmbedder):
         Shape: [batch_size, num_orig_tokens, embedding_size].
         """
         # Shape: [batch_size, num_wordpieces, embedding_size].
-        embeddings = super().forward(token_ids, wordpiece_mask)
+        embeddings = self._matched_embedder(token_ids, wordpiece_mask)
 
         # span_embeddings: (batch_size, num_orig_tokens, max_span_length, embedding_size)
         # span_mask: (batch_size, num_orig_tokens, max_span_length)
