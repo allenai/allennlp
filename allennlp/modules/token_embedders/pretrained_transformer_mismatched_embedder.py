@@ -16,13 +16,10 @@ class PretrainedTransformerMismatchedEmbedder(TokenEmbedder):
         super().__init__()
         # The matched version v.s. mismatched
         self._matched_embedder = PretrainedTransformerEmbedder(model_name)
-        # I'm not sure if this works for all models; open an issue on github if you find a case
-        # where it doesn't work.
-        self.output_dim = self.transformer_model.config.hidden_size
 
     @overrides
     def get_output_dim(self):
-        return self.output_dim
+        return self._matched_embedder.get_output_dim()
 
     @overrides
     def forward(
