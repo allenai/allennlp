@@ -29,14 +29,10 @@ class PretrainedTransformerIndexer(TokenIndexer):
         We use a somewhat confusing default value of `tags` so that we do not add padding or UNK
         tokens to this namespace, which would break on loading because we wouldn't find our default
         OOV token.
-    token_min_padding_length: `int`, optional (default=0)
-        See superclass.
     """
 
-    def __init__(
-        self, model_name: str, namespace: str = "tags", token_min_padding_length: int = 0
-    ) -> None:
-        super().__init__(token_min_padding_length)
+    def __init__(self, model_name: str, namespace: str = "tags", **kwargs) -> None:
+        super().__init__(**kwargs)
         self._namespace = namespace
         self._tokenizer = AutoTokenizer.from_pretrained(model_name)
         self._added_to_vocabulary = False

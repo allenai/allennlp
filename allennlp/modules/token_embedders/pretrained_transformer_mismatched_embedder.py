@@ -14,7 +14,7 @@ class PretrainedTransformerMismatchedEmbedder(TokenEmbedder):
 
     def __init__(self, model_name: str) -> None:
         super().__init__()
-        # Matched embedder vs. mismatched
+        # The matched version v.s. mismatched
         self._matched_embedder = PretrainedTransformerEmbedder(model_name)
         # I'm not sure if this works for all models; open an issue on github if you find a case
         # where it doesn't work.

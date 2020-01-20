@@ -23,15 +23,22 @@ class PretrainedTransformerMismatchedIndexer(TokenIndexer):
     words into wordpieces and flattens them out. You should use the corresponding
     `PretrainedTransformerMismatchedEmbedder` to embed these wordpieces and then pull out a single
     vector for each original word.
+
+    # Parameters
+
+    model_name : `str`
+        The name of the `transformers` model to use.
+    namespace : `str`, optional (default=`tags`)
+        We will add the tokens in the pytorch_transformer vocabulary to this vocabulary namespace.
+        We use a somewhat confusing default value of `tags` so that we do not add padding or UNK
+        tokens to this namespace, which would break on loading because we wouldn't find our default
+        OOV token.
     """
 
-    def __init__(
-        self, model_name: str, namespace: str = "tags", token_min_padding_length: int = 0
-    ) -> None:
-        super().__init__(token_min_padding_length)
-        self._matched_indexer = PretrainedTransformerIndexer(  # the matched version v.s. mismatched
-            model_name, namespace, token_min_padding_length
-        )
+    def __init__(self, model_name: str, namespace: str = "tags", **kwargs) -> None:
+        super().__init__(**kwargs)
+        # The matched version v.s. mismatched
+        self._matched_indexer = PretrainedTransformerIndexer(model_name, namespace, **kwargs)
 
         # add_special_tokens=False sicne we don't want wordpieces to be surrounded by special tokens
         self._allennlp_tokenizer = PretrainedTransformerTokenizer(
