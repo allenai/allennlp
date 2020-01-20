@@ -122,7 +122,3 @@ class TestPretrainedTransformerIndexer(AllenNlpTestCase):
         expected_masks = expected_masks + ([0] * padding_length)
         assert len(padded_tokens["mask"]) == max_length
         assert padded_tokens["mask"].tolist() == expected_masks
-
-    def test_auto_determining_num_tokens_added(self):
-        indexer = PretrainedTransformerIndexer("bert-base-cased")
-        assert indexer._determine_num_special_tokens_added() == (1, 1)

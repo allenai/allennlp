@@ -19,3 +19,7 @@ class TestPretrainedTransformerMismatchedIndexer(AllenNlpTestCase):
         # Hardcoding a few things because we know how BERT tokenization works
         assert indexed["offsets"] == [(1, 3), (4, 4), (5, 5)]
         assert indexed["wordpiece_mask"] == [1] * len(expected_ids)
+
+    def test_auto_determining_num_tokens_added(self):
+        indexer = PretrainedTransformerMismatchedIndexer("bert-base-cased")
+        assert indexer._determine_num_special_tokens_added() == (1, 1)
