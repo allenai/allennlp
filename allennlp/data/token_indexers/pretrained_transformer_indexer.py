@@ -84,7 +84,7 @@ class PretrainedTransformerIndexer(TokenIndexer):
                 )
 
         # The mask has 1 for real tokens and 0 for padding tokens. Only real tokens are attended to.
-        mask = [1] * len(tokens)
+        mask = [1] * len(indices)
 
         return {"token_ids": indices, "mask": mask}
 
