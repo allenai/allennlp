@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 @TokenIndexer.register("pretrained_transformer_mismatched")
-class PretrainedTransformerMismatchedIndexer(PretrainedTransformerIndexer):
+class PretrainedTransformerMismatchedIndexer(TokenIndexer):
     """
     Use this indexer when (for whatever reason) you are not using a corresponding
     `PretrainedTransformerTokenizer` on your input. We assume that you used a tokenizer that splits
@@ -28,11 +28,16 @@ class PretrainedTransformerMismatchedIndexer(PretrainedTransformerIndexer):
     def __init__(
         self, model_name: str, namespace: str = "tags", token_min_padding_length: int = 0
     ) -> None:
-        super().__init__(model_name, namespace, token_min_padding_length)
+        super().__init__(token_min_padding_length)
+        self._matched_indexer = PretrainedTransformerIndexer(  # the matched version v.s. mismatched
+            model_name, namespace, token_min_padding_length
+        )
+
         # add_special_tokens=False sicne we don't want wordpieces to be surrounded by special tokens
         self._allennlp_tokenizer = PretrainedTransformerTokenizer(
             model_name, add_special_tokens=False
         )
+        self._tokenizer = self._allennlp_tokenizer.tokenizer
 
         (
             self._num_added_start_tokens,
@@ -40,12 +45,16 @@ class PretrainedTransformerMismatchedIndexer(PretrainedTransformerIndexer):
         ) = self._determine_num_special_tokens_added()
 
     @overrides
+    def count_vocab_items(self, token: Token, counter: Dict[str, Dict[str, int]]):
+        return self._matched_indexer.count_vocab_items(token, counter)
+
+    @overrides
     def tokens_to_indices(self, tokens: List[Token], vocabulary: Vocabulary) -> IndexedTokenList:
         orig_token_mask = [1] * len(tokens)
         tokens, offsets = self._intra_word_tokenize(tokens)
 
         # {"token_ids": ..., "mask": ...}
-        output = super().tokens_to_indices(tokens, vocabulary)
+        output = self._matched_indexer.tokens_to_indices(tokens, vocabulary)
 
         # self._intra_word_tokenize() does not insert special tokens, so we need to do it here
         output["token_ids"] = self._tokenizer.build_inputs_with_special_tokens(output["token_ids"])
@@ -59,7 +68,7 @@ class PretrainedTransformerMismatchedIndexer(PretrainedTransformerIndexer):
 
     @overrides
     def get_empty_token_list(self) -> IndexedTokenList:
-        output = super().get_empty_token_list()
+        output = self._matched_indexer.get_empty_token_list()
         output["offsets"] = []
         output["wordpiece_mask"] = []
         return output
@@ -71,13 +80,25 @@ class PretrainedTransformerMismatchedIndexer(PretrainedTransformerIndexer):
         offsets_tokens = tokens.pop("offsets")
         offsets_padding_lengths = padding_lengths.pop("offsets")
 
-        tensor_dict = super().as_padded_tensor_dict(tokens, padding_lengths)
+        tensor_dict = self._matched_indexer.as_padded_tensor_dict(tokens, padding_lengths)
         tensor_dict["offsets"] = torch.LongTensor(
             pad_sequence_to_length(
                 offsets_tokens, offsets_padding_lengths, default_value=lambda: (0, 0)
             )
         )
         return tensor_dict
+
+    def __eq__(self, other):
+        if isinstance(other, PretrainedTransformerMismatchedIndexer):
+            for key in self.__dict__:
+                if key == "tokenizer":
+                    # This is a reference to a function in the huggingface code, which we can't
+                    # really modify to make this clean.  So we special-case it.
+                    continue
+                if self.__dict__[key] != other.__dict__[key]:
+                    return False
+            return True
+        return NotImplemented
 
     def _intra_word_tokenize(
         self, tokens: List[Token]
