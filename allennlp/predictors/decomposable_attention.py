@@ -13,23 +13,23 @@ from allennlp.data.fields import LabelField
 @Predictor.register("textual-entailment")
 class DecomposableAttentionPredictor(Predictor):
     """
-    Predictor for the :class:`~allennlp.models.bidaf.DecomposableAttention` model.
+    Predictor for the :class:`~allennlp.models.DecomposableAttention` model.
     """
 
     def predict(self, premise: str, hypothesis: str) -> JsonDict:
         """
         Predicts whether the hypothesis is entailed by the premise text.
 
-        Parameters
-        ----------
-        premise : ``str``
+        # Parameters
+
+        premise : `str`
             A passage representing what is assumed to be true.
 
-        hypothesis : ``str``
+        hypothesis : `str`
             A sentence that may be entailed by the premise.
 
-        Returns
-        -------
+        # Returns
+
         A dictionary where the key "label_probs" determines the probabilities of each of
         [entailment, contradiction, neutral].
         """
@@ -38,7 +38,7 @@ class DecomposableAttentionPredictor(Predictor):
     @overrides
     def _json_to_instance(self, json_dict: JsonDict) -> Instance:
         """
-        Expects JSON that looks like ``{"premise": "...", "hypothesis": "..."}``.
+        Expects JSON that looks like `{"premise": "...", "hypothesis": "..."}`.
         """
         premise_text = json_dict["premise"]
         hypothesis_text = json_dict["hypothesis"]

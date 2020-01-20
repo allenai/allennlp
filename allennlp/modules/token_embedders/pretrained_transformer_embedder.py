@@ -8,7 +8,7 @@ from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
 @TokenEmbedder.register("pretrained_transformer")
 class PretrainedTransformerEmbedder(TokenEmbedder):
     """
-    Uses a pretrained model from ``transformers`` as a ``TokenEmbedder``.
+    Uses a pretrained model from `transformers` as a `TokenEmbedder`.
     """
 
     def __init__(self, model_name: str) -> None:
@@ -23,7 +23,7 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         return self.output_dim
 
     def forward(
-        self, token_ids: torch.LongTensor, attention_mask: torch.LongTensor
+        self, token_ids: torch.LongTensor, mask: torch.LongTensor
     ) -> torch.Tensor:  # type: ignore
 
-        return self.transformer_model(input_ids=token_ids, attention_mask=attention_mask)[0]
+        return self.transformer_model(input_ids=token_ids, attention_mask=mask)[0]

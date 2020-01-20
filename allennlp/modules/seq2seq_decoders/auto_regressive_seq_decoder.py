@@ -23,34 +23,34 @@ class AutoRegressiveSeqDecoder(SeqDecoder):
     """
     An autoregressive decoder that can be used for most seq2seq tasks.
 
-    Parameters
-    ----------
-    vocab : ``Vocabulary``, required
+    # Parameters
+
+    vocab : `Vocabulary`, required
         Vocabulary containing source and target vocabularies. They may be under the same namespace
         (`tokens`) or the target tokens can have a different namespace, in which case it needs to
         be specified as `target_namespace`.
-    decoder_net : ``DecoderNet``, required
+    decoder_net : `DecoderNet`, required
         Module that contains implementation of neural network for decoding output elements
-    max_decoding_steps : ``int``
+    max_decoding_steps : `int`, required
         Maximum length of decoded sequences.
-    target_embedder : ``Embedding``
+    target_embedder : `Embedding`
         Embedder for target tokens.
-    target_namespace : ``str``, optional (default = 'tokens')
+    target_namespace : `str`, optional (default = 'tokens')
         If the target side vocabulary is different from the source side's, you need to specify the
         target's namespace here. If not, we'll assume it is "tokens", which is also the default
         choice for the source side, and this might cause them to share vocabularies.
-    beam_size : ``int``, optional (default = 4)
+    beam_size : `int`, optional (default = 4)
         Width of the beam for beam search.
-    tensor_based_metric : ``Metric``, optional (default = None)
+    tensor_based_metric : `Metric`, optional (default = None)
         A metric to track on validation data that takes raw tensors when its called.
         This metric must accept two arguments when called: a batched tensor
         of predicted token indices, and a batched tensor of gold token indices.
-    token_based_metric : ``Metric``, optional (default = None)
+    token_based_metric : `Metric`, optional (default = None)
         A metric to track on validation data that takes lists of lists of tokens
         as input. This metric must accept two arguments when called, both
         of type `List[List[str]]`. The first is a predicted sequence for each item
         in the batch and the second is a gold sequence for each item in the batch.
-    scheduled_sampling_ratio : ``float`` optional (default = 0)
+    scheduled_sampling_ratio : `float` optional (default = 0)
         Defines ratio between teacher forced training and real output usage. If its zero
         (teacher forcing only) and `decoder_net`supports parallel decoding, we get the output
         predictions in a single forward pass of the `decoder_net`.
@@ -154,7 +154,7 @@ class AutoRegressiveSeqDecoder(SeqDecoder):
         source_mask = state["source_mask"]
 
         # shape: (batch_size, max_target_sequence_length)
-        targets = target_tokens["tokens"]
+        targets = target_tokens["tokens"]["tokens"]
 
         # Prepare embeddings for targets. They will be used as gold embeddings during decoder training
         # shape: (batch_size, max_target_sequence_length, embedding_dim)
@@ -229,7 +229,7 @@ class AutoRegressiveSeqDecoder(SeqDecoder):
 
                 # This step is required, since we want to keep up two different prediction history: gold and real
                 if steps_embeddings.shape[-1] == 0:
-                    # There is no previous steps, except for start vectors in ``last_predictions``
+                    # There is no previous steps, except for start vectors in `last_predictions`
                     # shape: (group_size, 1, target_embedding_dim)
                     steps_embeddings = last_predictions_embeddings
                 else:
@@ -273,7 +273,7 @@ class AutoRegressiveSeqDecoder(SeqDecoder):
         last_predictions_embeddings = self.target_embedder(last_predictions).unsqueeze(1)
 
         if previous_steps_predictions is None or previous_steps_predictions.shape[-1] == 0:
-            # There is no previous steps, except for start vectors in ``last_predictions``
+            # There is no previous steps, except for start vectors in `last_predictions`
             # shape: (group_size, 1, target_embedding_dim)
             previous_steps_predictions = last_predictions_embeddings
         else:
@@ -312,9 +312,9 @@ class AutoRegressiveSeqDecoder(SeqDecoder):
         and corresponding masks of size (batch_size, num_decoding_steps+1) steps and computes cross
         entropy loss while taking the mask into account.
 
-        The length of ``targets`` is expected to be greater than that of ``logits`` because the
+        The length of `targets` is expected to be greater than that of `logits` because the
         decoder does not need to compute the output corresponding to the last timestep of
-        ``targets``. This method aligns the inputs appropriately to compute the loss.
+        `targets`. This method aligns the inputs appropriately to compute the loss.
 
         During training, we want the logit corresponding to timestep i to be similar to the target
         token from timestep i + 1. That is, the targets should be shifted by one timestep for
@@ -348,31 +348,31 @@ class AutoRegressiveSeqDecoder(SeqDecoder):
         """
         Take a decoding step. This is called by the beam search class.
 
-        Parameters
-        ----------
-        last_predictions : ``torch.Tensor``
-            A tensor of shape ``(group_size,)``, which gives the indices of the predictions
+        # Parameters
+
+        last_predictions : `torch.Tensor`
+            A tensor of shape `(group_size,)`, which gives the indices of the predictions
             during the last time step.
-        state : ``Dict[str, torch.Tensor]``
+        state : `Dict[str, torch.Tensor]`
             A dictionary of tensors that contain the current state information
             needed to predict the next step, which includes the encoder outputs,
             the source mask, and the decoder hidden state and context. Each of these
-            tensors has shape ``(group_size, *)``, where ``*`` can be any other number
+            tensors has shape `(group_size, *)`, where `*` can be any other number
             of dimensions.
 
-        Returns
-        -------
+        # Returns
+
         Tuple[torch.Tensor, Dict[str, torch.Tensor]]
-            A tuple of ``(log_probabilities, updated_state)``, where ``log_probabilities``
-            is a tensor of shape ``(group_size, num_classes)`` containing the predicted
+            A tuple of `(log_probabilities, updated_state)`, where `log_probabilities`
+            is a tensor of shape `(group_size, num_classes)` containing the predicted
             log probability of each class for the next step, for each item in the group,
-            while ``updated_state`` is a dictionary of tensors containing the encoder outputs,
+            while `updated_state` is a dictionary of tensors containing the encoder outputs,
             source mask, and updated decoder hidden state and context.
 
         Notes
         -----
-            We treat the inputs as a batch, even though ``group_size`` is not necessarily
-            equal to ``batch_size``, since the group may contain multiple states
+            We treat the inputs as a batch, even though `group_size` is not necessarily
+            equal to `batch_size`, since the group may contain multiple states
             for each source sentence in the batch.
         """
         # shape: (group_size, num_classes)
@@ -423,7 +423,7 @@ class AutoRegressiveSeqDecoder(SeqDecoder):
                     best_predictions = top_k_predictions[:, 0, :]
 
                     self._tensor_based_metric(  # type: ignore
-                        best_predictions, target_tokens["tokens"]
+                        best_predictions, target_tokens["tokens"]["tokens"]
                     )
 
                 if self._token_based_metric is not None:
@@ -431,7 +431,8 @@ class AutoRegressiveSeqDecoder(SeqDecoder):
                     predicted_tokens = output_dict["predicted_tokens"]
 
                     self._token_based_metric(  # type: ignore
-                        predicted_tokens, self.indices_to_tokens(target_tokens["tokens"][:, 1:])
+                        predicted_tokens,
+                        self.indices_to_tokens(target_tokens["tokens"]["tokens"][:, 1:]),
                     )
 
         return output_dict
@@ -440,7 +441,7 @@ class AutoRegressiveSeqDecoder(SeqDecoder):
     def post_process(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         """
         This method trims the output predictions to the first end symbol, replaces indices with
-        corresponding tokens, and adds a field called ``predicted_tokens`` to the ``output_dict``.
+        corresponding tokens, and adds a field called `predicted_tokens` to the `output_dict`.
         """
         predicted_indices = output_dict["predictions"]
         all_predicted_tokens = self.indices_to_tokens(predicted_indices)

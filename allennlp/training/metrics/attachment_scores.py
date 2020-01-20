@@ -15,9 +15,9 @@ class AttachmentScores(Metric):
     to this metric is the sampled predictions, not the distribution
     itself.
 
-    Parameters
-    ----------
-    ignore_classes : ``List[int]``, optional (default = None)
+    # Parameters
+
+    ignore_classes : `List[int]`, optional (default = None)
         A list of label ids to ignore when computing metrics.
     """
 
@@ -40,18 +40,18 @@ class AttachmentScores(Metric):
         mask: Optional[torch.Tensor] = None,
     ):
         """
-        Parameters
-        ----------
-        predicted_indices : ``torch.Tensor``, required.
+        # Parameters
+
+        predicted_indices : `torch.Tensor`, required.
             A tensor of head index predictions of shape (batch_size, timesteps).
-        predicted_labels : ``torch.Tensor``, required.
+        predicted_labels : `torch.Tensor`, required.
             A tensor of arc label predictions of shape (batch_size, timesteps).
-        gold_indices : ``torch.Tensor``, required.
-            A tensor of the same shape as ``predicted_indices``.
-        gold_labels : ``torch.Tensor``, required.
-            A tensor of the same shape as ``predicted_labels``.
-        mask: ``torch.Tensor``, optional (default = None).
-            A tensor of the same shape as ``predicted_indices``.
+        gold_indices : `torch.Tensor`, required.
+            A tensor of the same shape as `predicted_indices`.
+        gold_labels : `torch.Tensor`, required.
+            A tensor of the same shape as `predicted_labels`.
+        mask : `torch.Tensor`, optional (default = None).
+            A tensor of the same shape as `predicted_indices`.
         """
         unwrapped = self.unwrap_to_tensors(
             predicted_indices, predicted_labels, gold_indices, gold_labels, mask
@@ -85,8 +85,8 @@ class AttachmentScores(Metric):
 
     def get_metric(self, reset: bool = False):
         """
-        Returns
-        -------
+        # Returns
+
         The accumulated metrics as a dictionary.
         """
         unlabeled_attachment_score = 0.0

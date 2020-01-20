@@ -30,7 +30,6 @@ per-file-ignores =
     scripts/**:E501,E402,E302
 
     # here are a few files that get to ignore line-too-long, lucky them
-    allennlp/modules/openai_transformer.py:E501
     allennlp/pretrained.py:E501
 
     # here are some files that get to ignore E402 module level import not at top of file

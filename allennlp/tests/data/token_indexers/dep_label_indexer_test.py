@@ -35,16 +35,10 @@ class TestDepLabelIndexer(AllenNlpTestCase):
         root_index = vocab.add_token_to_namespace("ROOT", namespace="dep_labels")
         none_index = vocab.add_token_to_namespace("NONE", namespace="dep_labels")
         indexer = DepLabelIndexer()
-        assert indexer.tokens_to_indices([tokens[1]], vocab, "tokens1") == {"tokens1": [root_index]}
-        assert indexer.tokens_to_indices([tokens[-1]], vocab, "tokens-1") == {
-            "tokens-1": [none_index]
-        }
-
-    def test_padding_functions(self):
-        indexer = DepLabelIndexer()
-        assert indexer.get_padding_lengths(0) == {}
+        assert indexer.tokens_to_indices([tokens[1]], vocab) == {"tokens": [root_index]}
+        assert indexer.tokens_to_indices([tokens[-1]], vocab) == {"tokens": [none_index]}
 
     def test_as_array_produces_token_sequence(self):
         indexer = DepLabelIndexer()
-        padded_tokens = indexer.as_padded_tensor({"key": [1, 2, 3, 4, 5]}, {"key": 10}, {})
-        assert padded_tokens["key"].tolist() == [1, 2, 3, 4, 5, 0, 0, 0, 0, 0]
+        padded_tokens = indexer.as_padded_tensor_dict({"tokens": [1, 2, 3, 4, 5]}, {"tokens": 10})
+        assert padded_tokens["tokens"].tolist() == [1, 2, 3, 4, 5, 0, 0, 0, 0, 0]

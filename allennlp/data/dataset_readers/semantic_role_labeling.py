@@ -2,7 +2,7 @@ import logging
 from typing import Dict, List, Iterable, Tuple, Any
 
 from overrides import overrides
-from pytorch_pretrained_bert.tokenization import BertTokenizer
+from transformers.tokenization_bert import BertTokenizer
 
 from allennlp.common.file_utils import cached_path
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
@@ -24,15 +24,15 @@ def _convert_tags_to_wordpiece_tags(tags: List[str], offsets: List[int]) -> List
 
     This is only used if you pass a `bert_model_name` to the dataset reader below.
 
-    Parameters
-    ----------
+    # Parameters
+
     tags : `List[str]`
         The BIO formatted tags to convert to BIO tags for wordpieces
     offsets : `List[int]`
         The wordpiece offsets.
 
-    Returns
-    -------
+    # Returns
+
     The new BIO tags.
     """
     new_tags = []
@@ -69,15 +69,15 @@ def _convert_verb_indices_to_wordpiece_indices(verb_indices: List[int], offsets:
 
     This is only used if you pass a `bert_model_name` to the dataset reader below.
 
-    Parameters
-    ----------
+    # Parameters
+
     verb_indices : `List[int]`
         The binary verb indicators, 0 for not a verb, 1 for verb.
     offsets : `List[int]`
         The wordpiece offsets.
 
-    Returns
-    -------
+    # Returns
+
     The new verb indices.
     """
     j = 0
@@ -99,40 +99,40 @@ class SrlReader(DatasetReader):
     for semantic role labelling. It returns a dataset of instances with the
     following fields:
 
-    tokens : ``TextField``
+    tokens : `TextField`
         The tokens in the sentence.
-    verb_indicator : ``SequenceLabelField``
+    verb_indicator : `SequenceLabelField`
         A sequence of binary indicators for whether the word is the verb for this frame.
-    tags : ``SequenceLabelField``
+    tags : `SequenceLabelField`
         A sequence of Propbank tags for the given verb in a BIO format.
 
-    Parameters
-    ----------
-    token_indexers : ``Dict[str, TokenIndexer]``, optional
+    # Parameters
+
+    token_indexers : `Dict[str, TokenIndexer]`, optional
         We similarly use this for both the premise and the hypothesis.  See :class:`TokenIndexer`.
-        Default is ``{"tokens": SingleIdTokenIndexer()}``.
-    domain_identifier: ``str``, (default = None)
+        Default is `{"tokens": SingleIdTokenIndexer()}`.
+    domain_identifier : `str`, (default = None)
         A string denoting a sub-domain of the Ontonotes 5.0 dataset to use. If present, only
         conll files under paths containing this domain identifier will be processed.
-    bert_model_name : ``Optional[str]``, (default = None)
+    bert_model_name : `Optional[str]`, (default = None)
         The BERT model to be wrapped. If you specify a bert_model here, then we will
         assume you want to use BERT throughout; we will use the bert tokenizer,
         and will expand your tags and verb indicators accordingly. If not,
         the tokens will be indexed as normal with the token_indexers.
 
-    Returns
-    -------
-    A ``Dataset`` of ``Instances`` for Semantic Role Labelling.
+    # Returns
+
+    A `Dataset` of `Instances` for Semantic Role Labelling.
     """
 
     def __init__(
         self,
         token_indexers: Dict[str, TokenIndexer] = None,
         domain_identifier: str = None,
-        lazy: bool = False,
         bert_model_name: str = None,
+        **kwargs,
     ) -> None:
-        super().__init__(lazy)
+        super().__init__(**kwargs)
         self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
         self._domain_identifier = domain_identifier
 
@@ -168,8 +168,8 @@ class SrlReader(DatasetReader):
         _first_ wordpiece label to be the label for the token, because otherwise
         we may end up with invalid tag sequences (we cannot start a new tag with an I).
 
-        Returns
-        -------
+        # Returns
+
         wordpieces : List[str]
             The BERT wordpieces from the words in the sentence.
         end_offsets : List[int]

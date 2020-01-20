@@ -2,13 +2,11 @@ from typing import Dict, List, Callable
 import logging
 
 from overrides import overrides
-import torch
-from pytorch_pretrained_bert.tokenization import BertTokenizer
+from transformers.tokenization_bert import BertTokenizer
 
-from allennlp.common.util import pad_sequence_to_length
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.data.tokenizers.token import Token
-from allennlp.data.token_indexers.token_indexer import TokenIndexer
+from allennlp.data.token_indexers.token_indexer import TokenIndexer, IndexedTokenList
 
 logger = logging.getLogger(__name__)
 
@@ -18,49 +16,49 @@ logger = logging.getLogger(__name__)
 _NEVER_LOWERCASE = ["[UNK]", "[SEP]", "[PAD]", "[CLS]", "[MASK]"]
 
 
-class WordpieceIndexer(TokenIndexer[int]):
+class WordpieceIndexer(TokenIndexer):
     """
     A token indexer that does the wordpiece-tokenization (e.g. for BERT embeddings).
-    If you are using one of the pretrained BERT models, you'll want to use the ``PretrainedBertIndexer``
+    If you are using one of the pretrained BERT models, you'll want to use the `PretrainedBertIndexer`
     subclass rather than this base class.
 
-    Parameters
-    ----------
-    vocab : ``Dict[str, int]``
-        The mapping {wordpiece -> id}.  Note this is not an AllenNLP ``Vocabulary``.
-    wordpiece_tokenizer : ``Callable[[str], List[str]]``
+    # Parameters
+
+    vocab : `Dict[str, int]`
+        The mapping {wordpiece -> id}.  Note this is not an AllenNLP `Vocabulary`.
+    wordpiece_tokenizer : `Callable[[str], List[str]]`
         A function that does the actual tokenization.
     namespace : str, optional (default: "wordpiece")
-        The namespace in the AllenNLP ``Vocabulary`` into which the wordpieces
+        The namespace in the AllenNLP `Vocabulary` into which the wordpieces
         will be loaded.
     use_starting_offsets : bool, optional (default: False)
         By default, the "offsets" created by the token indexer correspond to the
-        last wordpiece in each word. If ``use_starting_offsets`` is specified,
+        last wordpiece in each word. If `use_starting_offsets` is specified,
         they will instead correspond to the first wordpiece in each word.
     max_pieces : int, optional (default: 512)
         The BERT embedder uses positional embeddings and so has a corresponding
         maximum length for its input ids. Any inputs longer than this will
         either be truncated (default), or be split apart and batched using a
         sliding window.
-    do_lowercase : ``bool``, optional (default=``False``)
+    do_lowercase : `bool`, optional (default=`False`)
         Should we lowercase the provided tokens before getting the indices?
         You would need to do this if you are using an -uncased BERT model
         but your DatasetReader is not lowercasing tokens (which might be the
         case if you're also using other embeddings based on cased tokens).
-    never_lowercase: ``List[str]``, optional
+    never_lowercase : `List[str]`, optional
         Tokens that should never be lowercased. Default is
         ['[UNK]', '[SEP]', '[PAD]', '[CLS]', '[MASK]'].
-    start_tokens : ``List[str]``, optional (default=``None``)
-        These are prepended to the tokens provided to ``tokens_to_indices``.
-    end_tokens : ``List[str]``, optional (default=``None``)
-        These are appended to the tokens provided to ``tokens_to_indices``.
-    separator_token : ``str``, optional (default=``[SEP]``)
+    start_tokens : `List[str]`, optional (default=`None`)
+        These are prepended to the tokens provided to `tokens_to_indices`.
+    end_tokens : `List[str]`, optional (default=`None`)
+        These are appended to the tokens provided to `tokens_to_indices`.
+    separator_token : `str`, optional (default=`[SEP]`)
         This token indicates the segments in the sequence.
-    truncate_long_sequences : ``bool``, optional (default=``True``)
+    truncate_long_sequences : `bool`, optional (default=`True`)
         By default, long sequences will be truncated to the maximum sequence
         length. Otherwise, they will be split apart and batched using a
         sliding window.
-    token_min_padding_length : ``int``, optional (default=``0``)
+    token_min_padding_length : `int`, optional (default=`0`)
         See :class:`TokenIndexer`.
     """
 
@@ -84,7 +82,7 @@ class WordpieceIndexer(TokenIndexer[int]):
 
         # The BERT code itself does a two-step tokenization:
         #    sentence -> [words], and then word -> [wordpieces]
-        # In AllenNLP, the first step is implemented as the ``BertBasicWordSplitter``,
+        # In AllenNLP, the first step is implemented as the `BertBasicWordSplitter`,
         # and this token indexer handles the second.
         self.wordpiece_tokenizer = wordpiece_tokenizer
 
@@ -142,7 +140,7 @@ class WordpieceIndexer(TokenIndexer[int]):
 
     @overrides
     def tokens_to_indices(
-        self, tokens: List[Token], vocabulary: Vocabulary, index_name: str
+        self, tokens: List[Token], vocabulary: Vocabulary
     ) -> Dict[str, List[int]]:
         if not self._added_to_vocabulary:
             self._add_encoding_to_vocabulary(vocabulary)
@@ -216,13 +214,13 @@ class WordpieceIndexer(TokenIndexer[int]):
             ):
                 break
 
-            # For initial offsets, the current value of ``offset`` is the start of
-            # the current wordpiece, so add it to ``offsets`` and then increment it.
+            # For initial offsets, the current value of `offset` is the start of
+            # the current wordpiece, so add it to `offsets` and then increment it.
             if self.use_starting_offsets:
                 offsets.append(offset)
                 offset += len(token)
-            # For final offsets, the current value of ``offset`` is the end of
-            # the previous wordpiece, so increment it and then add it to ``offsets``.
+            # For final offsets, the current value of `offset` is the end of
+            # the previous wordpiece, so increment it and then add it to `offsets`.
             else:
                 offset += len(token)
                 offsets.append(offset)
@@ -274,11 +272,15 @@ class WordpieceIndexer(TokenIndexer[int]):
         mask = [1 for _ in offsets]
 
         return {
-            index_name: wordpiece_ids,
-            f"{index_name}-offsets": offsets,
-            f"{index_name}-type-ids": token_type_ids,
+            "input_ids": wordpiece_ids,
+            "offsets": offsets,
+            "token_type_ids": token_type_ids,
             "mask": mask,
         }
+
+    @overrides
+    def get_empty_token_list(self) -> IndexedTokenList:
+        return {"input_ids": [], "offsets": [], "token_type_ids": [], "mask": []}
 
     def _add_start_and_end(self, wordpiece_ids: List[int]) -> List[int]:
         return self._start_piece_ids + wordpiece_ids + self._end_piece_ids
@@ -296,53 +298,29 @@ class WordpieceIndexer(TokenIndexer[int]):
             + [last for _ in self._end_piece_ids]
         )
 
-    @overrides
-    def get_padding_lengths(self, token: int) -> Dict[str, int]:
-        return {}
-
-    @overrides
-    def as_padded_tensor(
-        self,
-        tokens: Dict[str, List[int]],
-        desired_num_tokens: Dict[str, int],
-        padding_lengths: Dict[str, int],
-    ) -> Dict[str, torch.Tensor]:
-        return {
-            key: torch.LongTensor(pad_sequence_to_length(val, desired_num_tokens[key]))
-            for key, val in tokens.items()
-        }
-
-    @overrides
-    def get_keys(self, index_name: str) -> List[str]:
-        """
-        We need to override this because the indexer generates multiple keys.
-        """
-
-        return [index_name, f"{index_name}-offsets", f"{index_name}-type-ids", "mask"]
-
 
 @TokenIndexer.register("bert-pretrained")
 class PretrainedBertIndexer(WordpieceIndexer):
 
     """
-    A ``TokenIndexer`` corresponding to a pretrained BERT model.
+    A `TokenIndexer` corresponding to a pretrained BERT model.
 
-    Parameters
-    ----------
-    pretrained_model: ``str``
+    # Parameters
+
+    pretrained_model : `str`
         Either the name of the pretrained model to use (e.g. 'bert-base-uncased'),
         or the path to the .txt file with its vocabulary.
 
         If the name is a key in the list of pretrained models at
-        https://github.com/huggingface/pytorch-pretrained-BERT/blob/master/pytorch_pretrained_bert/tokenization.py#L33
+        https://github.com/huggingface/transformers/blob/master/src/transformers/tokenization_bert.py#L32
         the corresponding path will be used; otherwise it will be interpreted as a path or URL.
     use_starting_offsets: bool, optional (default: False)
         By default, the "offsets" created by the token indexer correspond to the
-        last wordpiece in each word. If ``use_starting_offsets`` is specified,
+        last wordpiece in each word. If `use_starting_offsets` is specified,
         they will instead correspond to the first wordpiece in each word.
-    do_lowercase: ``bool``, optional (default = True)
+    do_lowercase : `bool`, optional (default = True)
         Whether to lowercase the tokens before converting to wordpiece ids.
-    never_lowercase: ``List[str]``, optional
+    never_lowercase : `List[str]`, optional
         Tokens that should never be lowercased. Default is
         ['[UNK]', '[SEP]', '[PAD]', '[CLS]', '[MASK]'].
     max_pieces: int, optional (default: 512)
@@ -350,7 +328,7 @@ class PretrainedBertIndexer(WordpieceIndexer):
         maximum length for its input ids. Any inputs longer than this will
         either be truncated (default), or be split apart and batched using a
         sliding window.
-    truncate_long_sequences : ``bool``, optional (default=``True``)
+    truncate_long_sequences : `bool`, optional (default=`True`)
         By default, long sequences will be truncated to the maximum sequence
         length. Otherwise, they will be split apart and batched using a
         sliding window.
@@ -367,7 +345,7 @@ class PretrainedBertIndexer(WordpieceIndexer):
     ) -> None:
         if pretrained_model.endswith("-cased") and do_lowercase:
             logger.warning(
-                "Your BERT model appears to be cased, " "but your indexer is lowercasing tokens."
+                "Your BERT model appears to be cased, but your indexer is lowercasing tokens."
             )
         elif pretrained_model.endswith("-uncased") and not do_lowercase:
             logger.warning(

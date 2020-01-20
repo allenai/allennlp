@@ -2,27 +2,25 @@ import logging
 from typing import Dict, List
 
 from overrides import overrides
-import torch
 
-from allennlp.common.util import pad_sequence_to_length
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.data.tokenizers.token import Token
-from allennlp.data.token_indexers.token_indexer import TokenIndexer
+from allennlp.data.token_indexers.token_indexer import TokenIndexer, IndexedTokenList
 
 logger = logging.getLogger(__name__)
 
 
 @TokenIndexer.register("ner_tag")
-class NerTagIndexer(TokenIndexer[int]):
+class NerTagIndexer(TokenIndexer):
     """
     This :class:`TokenIndexer` represents tokens by their entity type (i.e., their NER tag), as
-    determined by the ``ent_type_`` field on ``Token``.
+    determined by the `ent_type_` field on `Token`.
 
-    Parameters
-    ----------
-    namespace : ``str``, optional (default=``ner_tokens``)
+    # Parameters
+
+    namespace : `str`, optional (default=`ner_tokens`)
         We will use this namespace in the :class:`Vocabulary` to map strings to indices.
-    token_min_padding_length : ``int``, optional (default=``0``)
+    token_min_padding_length : `int`, optional (default=`0`)
         See :class:`TokenIndexer`.
     """
 
@@ -39,24 +37,12 @@ class NerTagIndexer(TokenIndexer[int]):
 
     @overrides
     def tokens_to_indices(
-        self, tokens: List[Token], vocabulary: Vocabulary, index_name: str
+        self, tokens: List[Token], vocabulary: Vocabulary
     ) -> Dict[str, List[int]]:
         tags = ["NONE" if not token.ent_type_ else token.ent_type_ for token in tokens]
 
-        return {index_name: [vocabulary.get_token_index(tag, self._namespace) for tag in tags]}
+        return {"tokens": [vocabulary.get_token_index(tag, self._namespace) for tag in tags]}
 
     @overrides
-    def get_padding_lengths(self, token: int) -> Dict[str, int]:
-        return {}
-
-    @overrides
-    def as_padded_tensor(
-        self,
-        tokens: Dict[str, List[int]],
-        desired_num_tokens: Dict[str, int],
-        padding_lengths: Dict[str, int],
-    ) -> Dict[str, torch.Tensor]:
-        return {
-            key: torch.LongTensor(pad_sequence_to_length(val, desired_num_tokens[key]))
-            for key, val in tokens.items()
-        }
+    def get_empty_token_list(self) -> IndexedTokenList:
+        return {"tokens": []}

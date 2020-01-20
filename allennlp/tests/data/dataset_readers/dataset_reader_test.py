@@ -17,8 +17,7 @@ class DatasetReaderTest(AllenNlpTestCase):
 
     def test_read_creates_cache_file_when_not_present(self):
         snli_file = self.FIXTURES_ROOT / "data" / "snli.jsonl"
-        reader = SnliReader()
-        reader.cache_data(self.cache_directory)
+        reader = SnliReader(cache_directory=self.cache_directory)
         cache_file = reader._get_cache_location_for_file_path(snli_file)
         assert not os.path.exists(cache_file)
         reader.read(snli_file)
@@ -28,8 +27,7 @@ class DatasetReaderTest(AllenNlpTestCase):
         snli_file = self.FIXTURES_ROOT / "data" / "snli.jsonl"
         snli_copy_file = str(snli_file) + ".copy"
         shutil.copyfile(snli_file, snli_copy_file)
-        reader = SnliReader()
-        reader.cache_data(self.cache_directory)
+        reader = SnliReader(cache_directory=self.cache_directory)
 
         # The first read will create the cache.
         instances = reader.read(snli_copy_file)
@@ -43,8 +41,7 @@ class DatasetReaderTest(AllenNlpTestCase):
 
     def test_read_only_creates_cache_file_once(self):
         snli_file = self.FIXTURES_ROOT / "data" / "snli.jsonl"
-        reader = SnliReader()
-        reader.cache_data(self.cache_directory)
+        reader = SnliReader(cache_directory=self.cache_directory)
         cache_file = reader._get_cache_location_for_file_path(snli_file)
 
         # The first read will create the cache.
@@ -67,8 +64,7 @@ class DatasetReaderTest(AllenNlpTestCase):
         snli_file = self.FIXTURES_ROOT / "data" / "snli.jsonl"
         snli_copy_file = str(snli_file) + ".copy"
         shutil.copyfile(snli_file, snli_copy_file)
-        reader = SnliReader(lazy=True)
-        reader.cache_data(self.cache_directory)
+        reader = SnliReader(lazy=True, cache_directory=self.cache_directory)
         cache_file = reader._get_cache_location_for_file_path(snli_copy_file)
 
         # The call to read() will give us an _iterator_.  We'll iterate over it multiple times,
@@ -97,8 +93,7 @@ class DatasetReaderTest(AllenNlpTestCase):
         # And just to be super paranoid, in case the second pass somehow bypassed the cache
         # because of a bug in `_CachedLazyInstance` that's hard to detect, we'll read the
         # instances from the cache with a non-lazy iterator and make sure they're the same.
-        reader = SnliReader(lazy=False)
-        reader.cache_data(self.cache_directory)
+        reader = SnliReader(lazy=False, cache_directory=self.cache_directory)
         cached_instances = reader.read(snli_copy_file)
         assert len(first_pass_instances) == len(cached_instances)
         for instance, cached_instance in zip(first_pass_instances, cached_instances):

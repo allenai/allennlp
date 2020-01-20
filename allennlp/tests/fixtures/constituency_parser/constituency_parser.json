@@ -40,7 +40,6 @@
     },
     "iterator": {
       "type": "bucket",
-      "sorting_keys": [["tokens", "num_tokens"]],
       "padding_noise": 0.0,
       "batch_size" : 5
     },

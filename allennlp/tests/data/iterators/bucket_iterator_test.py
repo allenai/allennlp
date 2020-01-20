@@ -2,6 +2,8 @@ import pytest
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
+from allennlp.data import Instance, Token
+from allennlp.data.fields import TextField
 from allennlp.data.iterators import BucketIterator
 from allennlp.tests.data.iterators.basic_iterator_test import IteratorTest
 
@@ -9,7 +11,7 @@ from allennlp.tests.data.iterators.basic_iterator_test import IteratorTest
 class TestBucketIterator(IteratorTest):
     def test_create_batches_groups_correctly(self):
         iterator = BucketIterator(
-            batch_size=2, padding_noise=0, sorting_keys=[("text", "num_tokens")]
+            batch_size=2, padding_noise=0, sorting_keys=[("text", "tokens___tokens")]
         )
         iterator.index_with(self.vocab)
         batches = list(iterator._create_batches(self.instances, shuffle=False))
@@ -20,6 +22,40 @@ class TestBucketIterator(IteratorTest):
             [self.instances[3]],
         ]
 
+    def test_guess_sorting_key_picks_the_longest_key(self):
+        iterator = BucketIterator(batch_size=2, padding_noise=0)
+        iterator.index_with(self.vocab)
+        instances = []
+        short_tokens = [Token(t) for t in ["what", "is", "this", "?"]]
+        long_tokens = [Token(t) for t in ["this", "is", "a", "not", "very", "long", "passage"]]
+        instances.append(
+            Instance(
+                {
+                    "question": TextField(short_tokens, self.token_indexers),
+                    "passage": TextField(long_tokens, self.token_indexers),
+                }
+            )
+        )
+        instances.append(
+            Instance(
+                {
+                    "question": TextField(short_tokens, self.token_indexers),
+                    "passage": TextField(long_tokens, self.token_indexers),
+                }
+            )
+        )
+        instances.append(
+            Instance(
+                {
+                    "question": TextField(short_tokens, self.token_indexers),
+                    "passage": TextField(long_tokens, self.token_indexers),
+                }
+            )
+        )
+        assert iterator._sorting_keys is None
+        iterator._guess_sorting_keys(instances)
+        assert iterator._sorting_keys == [("passage", "tokens___tokens")]
+
     def test_create_batches_groups_correctly_with_max_instances(self):
         # If we knew all the instances, the correct order is 4 -> 2 -> 0 -> 1 -> 3.
         # Here max_instances_in_memory is 3, so we load instances [0, 1, 2]
@@ -28,7 +64,7 @@ class TestBucketIterator(IteratorTest):
         iterator = BucketIterator(
             batch_size=2,
             padding_noise=0,
-            sorting_keys=[("text", "num_tokens")],
+            sorting_keys=[("text", "tokens___tokens")],
             max_instances_in_memory=3,
         )
         iterator.index_with(self.vocab)
@@ -45,7 +81,7 @@ class TestBucketIterator(IteratorTest):
         iterator = BucketIterator(
             batch_size=2,
             padding_noise=0,
-            sorting_keys=[("text", "num_tokens")],
+            sorting_keys=[("text", "tokens___tokens")],
             biggest_batch_first=True,
         )
         iterator.index_with(self.vocab)
@@ -60,9 +96,6 @@ class TestBucketIterator(IteratorTest):
     def test_from_params(self):
 
         params = Params({})
-
-        with pytest.raises(ConfigurationError):
-            iterator = BucketIterator.from_params(params)
 
         sorting_keys = [("s1", "nt"), ("s2", "nt2")]
         params["sorting_keys"] = sorting_keys
@@ -95,8 +128,8 @@ class TestBucketIterator(IteratorTest):
         iterator = BucketIterator(
             batch_size=3,
             padding_noise=0,
-            sorting_keys=[("text", "num_tokens")],
-            maximum_samples_per_batch=["num_tokens", 9],
+            sorting_keys=[("text", "tokens___tokens")],
+            maximum_samples_per_batch=["tokens___tokens", 9],
         )
         iterator.index_with(self.vocab)
         batches = list(iterator._create_batches(self.instances, shuffle=False))
@@ -118,8 +151,8 @@ class TestBucketIterator(IteratorTest):
         iterator = BucketIterator(
             batch_size=3,
             padding_noise=0,
-            sorting_keys=[("text", "num_tokens")],
-            maximum_samples_per_batch=["num_tokens", 11],
+            sorting_keys=[("text", "tokens___tokens")],
+            maximum_samples_per_batch=["tokens___tokens", 11],
         )
         iterator.index_with(self.vocab)
         batches = list(iterator._create_batches(test_instances, shuffle=False))
@@ -138,7 +171,7 @@ class TestBucketIterator(IteratorTest):
         iterator = BucketIterator(
             batch_size=2,
             padding_noise=0,
-            sorting_keys=[("text", "num_tokens")],
+            sorting_keys=[("text", "tokens___tokens")],
             skip_smaller_batches=True,
         )
         iterator.index_with(self.vocab)

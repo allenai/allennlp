@@ -20,18 +20,18 @@ class TestBertIndexer(ModelTestCase):
         vocab_path = self.FIXTURES_ROOT / "bert" / "vocab.txt"
         token_indexer = PretrainedBertIndexer(str(vocab_path))
 
-        indexed_tokens = token_indexer.tokens_to_indices(tokens, vocab, "bert")
+        indexed_tokens = token_indexer.tokens_to_indices(tokens, vocab)
 
         # 16 = [CLS], 17 = [SEP]
-        assert indexed_tokens["bert"] == [16, 2, 3, 5, 6, 8, 9, 2, 15, 10, 11, 14, 1, 17]
-        assert indexed_tokens["bert-offsets"] == [1, 2, 3, 4, 5, 6, 7, 10, 11, 12]
+        assert indexed_tokens["input_ids"] == [16, 2, 3, 5, 6, 8, 9, 2, 15, 10, 11, 14, 1, 17]
+        assert indexed_tokens["offsets"] == [1, 2, 3, 4, 5, 6, 7, 10, 11, 12]
 
         token_indexer = PretrainedBertIndexer(str(vocab_path), use_starting_offsets=True)
 
-        indexed_tokens = token_indexer.tokens_to_indices(tokens, vocab, "bert")
+        indexed_tokens = token_indexer.tokens_to_indices(tokens, vocab)
 
-        assert indexed_tokens["bert"] == [16, 2, 3, 5, 6, 8, 9, 2, 15, 10, 11, 14, 1, 17]
-        assert indexed_tokens["bert-offsets"] == [1, 2, 3, 4, 5, 6, 7, 8, 11, 12]
+        assert indexed_tokens["input_ids"] == [16, 2, 3, 5, 6, 8, 9, 2, 15, 10, 11, 14, 1, 17]
+        assert indexed_tokens["offsets"] == [1, 2, 3, 4, 5, 6, 7, 8, 11, 12]
 
     def test_eq(self):
         vocab_path = self.FIXTURES_ROOT / "bert" / "vocab.txt"
@@ -52,17 +52,17 @@ class TestBertIndexer(ModelTestCase):
         vocab_path = self.FIXTURES_ROOT / "bert" / "vocab.txt"
         token_indexer = PretrainedBertIndexer(str(vocab_path), do_lowercase=False)
 
-        indexed_tokens = token_indexer.tokens_to_indices(tokens, vocab, "bert")
+        indexed_tokens = token_indexer.tokens_to_indices(tokens, vocab)
 
         # Quick should get 1 == OOV
-        assert indexed_tokens["bert"] == [16, 2, 1, 5, 6, 8, 9, 2, 15, 10, 11, 14, 1, 17]
+        assert indexed_tokens["input_ids"] == [16, 2, 1, 5, 6, 8, 9, 2, 15, 10, 11, 14, 1, 17]
 
         # Does lowercasing by default
         token_indexer = PretrainedBertIndexer(str(vocab_path))
-        indexed_tokens = token_indexer.tokens_to_indices(tokens, vocab, "bert")
+        indexed_tokens = token_indexer.tokens_to_indices(tokens, vocab)
 
         # Now Quick should get indexed correctly as 3 ( == "quick")
-        assert indexed_tokens["bert"] == [16, 2, 3, 5, 6, 8, 9, 2, 15, 10, 11, 14, 1, 17]
+        assert indexed_tokens["input_ids"] == [16, 2, 3, 5, 6, 8, 9, 2, 15, 10, 11, 14, 1, 17]
 
     def test_never_lowercase(self):
         # Our default tokenizer doesn't handle lowercasing.
@@ -78,19 +78,19 @@ class TestBertIndexer(ModelTestCase):
         vocab_path = self.FIXTURES_ROOT / "bert" / "vocab.txt"
         token_indexer = PretrainedBertIndexer(str(vocab_path), do_lowercase=True)
 
-        indexed_tokens = token_indexer.tokens_to_indices(tokens, vocab, "bert")
+        indexed_tokens = token_indexer.tokens_to_indices(tokens, vocab)
 
         # PAD should get recognized and not lowercased      # [PAD]
-        assert indexed_tokens["bert"] == [16, 2, 15, 10, 11, 6, 0, 17]
+        assert indexed_tokens["input_ids"] == [16, 2, 15, 10, 11, 6, 0, 17]
 
         # Unless we manually override the never lowercases
         token_indexer = PretrainedBertIndexer(
             str(vocab_path), do_lowercase=True, never_lowercase=()
         )
-        indexed_tokens = token_indexer.tokens_to_indices(tokens, vocab, "bert")
+        indexed_tokens = token_indexer.tokens_to_indices(tokens, vocab)
 
         # now PAD should get lowercased and be UNK          # [UNK]
-        assert indexed_tokens["bert"] == [16, 2, 15, 10, 11, 6, 1, 17]
+        assert indexed_tokens["input_ids"] == [16, 2, 15, 10, 11, 6, 1, 17]
 
     def test_get_token_type_ids(self):
         wordpiece_ids = [0, 1, 2, 3, 4, 5]
@@ -149,10 +149,10 @@ class TestBertIndexer(ModelTestCase):
         vocab_path = self.FIXTURES_ROOT / "bert" / "vocab.txt"
         token_indexer = PretrainedBertIndexer(str(vocab_path))
 
-        indexed_tokens = token_indexer.tokens_to_indices(tokens, vocab, "bert")
+        indexed_tokens = token_indexer.tokens_to_indices(tokens, vocab)
 
         #                                          [CLS] 2, 15, 10, 11, 6, 17, 2  15, 10, 11, 6, [SEP]
-        assert indexed_tokens["bert-type-ids"] == [0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1]
+        assert indexed_tokens["token_type_ids"] == [0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1]
 
     def test_sliding_window(self):
         tokenizer = BertPreTokenizer()
@@ -169,12 +169,12 @@ class TestBertIndexer(ModelTestCase):
             max_pieces=10,
         )
 
-        indexed_tokens = token_indexer.tokens_to_indices(tokens, vocab, "bert")
+        indexed_tokens = token_indexer.tokens_to_indices(tokens, vocab)
 
         # 16 = [CLS], 17 = [SEP]
         # 1 full window + 1 half window with start/end tokens
         # [CLS] the quick est quick brown [SEP] jumped over [SEP]
-        assert indexed_tokens["bert"] == [
+        assert indexed_tokens["input_ids"] == [
             16,
             2,
             3,
@@ -196,11 +196,11 @@ class TestBertIndexer(ModelTestCase):
             12,
             17,
         ]
-        assert indexed_tokens["bert-offsets"] == [1, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+        assert indexed_tokens["offsets"] == [1, 3, 4, 5, 6, 7, 8, 9, 10, 11]
 
         # The extra [SEP]s shouldn't pollute the token-type-ids
         # [CLS] the quick est quick brown [SEP] jumped over [SEP]
-        assert indexed_tokens["bert-type-ids"] == [
+        assert indexed_tokens["token_type_ids"] == [
             0,
             0,
             0,
@@ -235,24 +235,24 @@ class TestBertIndexer(ModelTestCase):
             str(vocab_path), truncate_long_sequences=True, use_starting_offsets=True, max_pieces=10
         )
 
-        indexed_tokens = token_indexer.tokens_to_indices(tokens, vocab, "bert")
+        indexed_tokens = token_indexer.tokens_to_indices(tokens, vocab)
 
         # 16 = [CLS], 17 = [SEP]
         # 1 full window + 1 half window with start/end tokens
-        assert indexed_tokens["bert"] == [16, 2, 3, 4, 3, 5, 6, 8, 9, 17]
-        assert indexed_tokens["bert-offsets"] == [1, 2, 4, 5, 6, 7, 8]
-        assert indexed_tokens["bert-type-ids"] == [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        assert indexed_tokens["input_ids"] == [16, 2, 3, 4, 3, 5, 6, 8, 9, 17]
+        assert indexed_tokens["offsets"] == [1, 2, 4, 5, 6, 7, 8]
+        assert indexed_tokens["token_type_ids"] == [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
         token_indexer = PretrainedBertIndexer(
             str(vocab_path), truncate_long_sequences=True, use_starting_offsets=False, max_pieces=10
         )
 
-        indexed_tokens = token_indexer.tokens_to_indices(tokens, vocab, "bert")
+        indexed_tokens = token_indexer.tokens_to_indices(tokens, vocab)
 
         # 16 = [CLS], 17 = [SEP]
         # 1 full window + 1 half window with start/end tokens
-        assert indexed_tokens["bert"] == [16, 2, 3, 4, 3, 5, 6, 8, 9, 17]
-        assert indexed_tokens["bert-offsets"] == [1, 3, 4, 5, 6, 7, 8]
+        assert indexed_tokens["input_ids"] == [16, 2, 3, 4, 3, 5, 6, 8, 9, 17]
+        assert indexed_tokens["offsets"] == [1, 3, 4, 5, 6, 7, 8]
 
     def test_truncate_window_dont_split_wordpieces(self):
         """
@@ -271,28 +271,28 @@ class TestBertIndexer(ModelTestCase):
             str(vocab_path), truncate_long_sequences=True, use_starting_offsets=True, max_pieces=12
         )
 
-        indexed_tokens = token_indexer.tokens_to_indices(tokens, vocab, "bert")
+        indexed_tokens = token_indexer.tokens_to_indices(tokens, vocab)
 
         # 16 = [CLS], 17 = [SEP]
         # 1 full window + 1 half window with start/end tokens
-        assert indexed_tokens["bert"] == [16, 2, 3, 4, 3, 5, 6, 8, 9, 2, 17]
+        assert indexed_tokens["input_ids"] == [16, 2, 3, 4, 3, 5, 6, 8, 9, 2, 17]
         # We could fit one more piece here, but we don't, not to have a cut
         # in the middle of the word
-        assert indexed_tokens["bert-offsets"] == [1, 2, 4, 5, 6, 7, 8, 9]
-        assert indexed_tokens["bert-type-ids"] == [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        assert indexed_tokens["offsets"] == [1, 2, 4, 5, 6, 7, 8, 9]
+        assert indexed_tokens["token_type_ids"] == [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
         token_indexer = PretrainedBertIndexer(
             str(vocab_path), truncate_long_sequences=True, use_starting_offsets=False, max_pieces=12
         )
 
-        indexed_tokens = token_indexer.tokens_to_indices(tokens, vocab, "bert")
+        indexed_tokens = token_indexer.tokens_to_indices(tokens, vocab)
 
         # 16 = [CLS], 17 = [SEP]
         # 1 full window + 1 half window with start/end tokens
-        assert indexed_tokens["bert"] == [16, 2, 3, 4, 3, 5, 6, 8, 9, 2, 17]
+        assert indexed_tokens["input_ids"] == [16, 2, 3, 4, 3, 5, 6, 8, 9, 2, 17]
         # We could fit one more piece here, but we don't, not to have a cut
         # in the middle of the word
-        assert indexed_tokens["bert-offsets"] == [1, 3, 4, 5, 6, 7, 8, 9]
+        assert indexed_tokens["offsets"] == [1, 3, 4, 5, 6, 7, 8, 9]
 
     def test_truncate_window_fit_two_wordpieces(self):
         """
@@ -311,34 +311,34 @@ class TestBertIndexer(ModelTestCase):
             str(vocab_path), truncate_long_sequences=True, use_starting_offsets=True, max_pieces=13
         )
 
-        indexed_tokens = token_indexer.tokens_to_indices(tokens, vocab, "bert")
+        indexed_tokens = token_indexer.tokens_to_indices(tokens, vocab)
 
         # 16 = [CLS], 17 = [SEP]
         # 1 full window + 1 half window with start/end tokens
-        assert indexed_tokens["bert"] == [16, 2, 3, 4, 3, 5, 6, 8, 9, 2, 3, 4, 17]
-        assert indexed_tokens["bert-offsets"] == [1, 2, 4, 5, 6, 7, 8, 9, 10]
-        assert indexed_tokens["bert-type-ids"] == [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        assert indexed_tokens["input_ids"] == [16, 2, 3, 4, 3, 5, 6, 8, 9, 2, 3, 4, 17]
+        assert indexed_tokens["offsets"] == [1, 2, 4, 5, 6, 7, 8, 9, 10]
+        assert indexed_tokens["token_type_ids"] == [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
         token_indexer = PretrainedBertIndexer(
             str(vocab_path), truncate_long_sequences=True, use_starting_offsets=False, max_pieces=13
         )
 
-        indexed_tokens = token_indexer.tokens_to_indices(tokens, vocab, "bert")
+        indexed_tokens = token_indexer.tokens_to_indices(tokens, vocab)
 
         # 16 = [CLS], 17 = [SEP]
         # 1 full window + 1 half window with start/end tokens
-        assert indexed_tokens["bert"] == [16, 2, 3, 4, 3, 5, 6, 8, 9, 2, 3, 4, 17]
-        assert indexed_tokens["bert-offsets"] == [1, 3, 4, 5, 6, 7, 8, 9, 11]
+        assert indexed_tokens["input_ids"] == [16, 2, 3, 4, 3, 5, 6, 8, 9, 2, 3, 4, 17]
+        assert indexed_tokens["offsets"] == [1, 3, 4, 5, 6, 7, 8, 9, 11]
 
     def test_indexes_empty_sequence(self):
         vocab = Vocabulary()
         vocab_path = self.FIXTURES_ROOT / "bert" / "vocab.txt"
         token_indexer = PretrainedBertIndexer(str(vocab_path))
 
-        indexed_tokens = token_indexer.tokens_to_indices([], vocab, "bert")
+        indexed_tokens = token_indexer.tokens_to_indices([], vocab)
         assert indexed_tokens == {
-            "bert": [16, 17],  # [CLS], [SEP]
-            "bert-offsets": [],  # no tokens => no offsets
-            "bert-type-ids": [0, 0],  # just 0s for start and end
+            "input_ids": [16, 17],  # [CLS], [SEP]
+            "offsets": [],  # no tokens => no offsets
+            "token_type_ids": [0, 0],  # just 0s for start and end
             "mask": [],  # no tokens => no mask
         }

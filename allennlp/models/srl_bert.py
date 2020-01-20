@@ -4,12 +4,12 @@ from overrides import overrides
 import torch
 from torch.nn.modules import Linear, Dropout
 import torch.nn.functional as F
-from pytorch_pretrained_bert.modeling import BertModel
+from transformers.modeling_bert import BertModel
 
-from allennlp.data import Vocabulary
+from allennlp.data import TextFieldTensors, Vocabulary
 from allennlp.models.model import Model
 from allennlp.models.srl_util import convert_bio_tags_to_conll_format
-from allennlp.nn import InitializerApplicator, RegularizerApplicator
+from allennlp.nn import InitializerApplicator, RegularizerApplicator, util
 from allennlp.nn.util import get_text_field_mask, sequence_cross_entropy_with_logits
 from allennlp.nn.util import get_lengths_from_binary_sequence_mask, viterbi_decode
 from allennlp.training.metrics.srl_eval_scorer import SrlEvalScorer, DEFAULT_SRL_EVAL_PATH
@@ -19,23 +19,23 @@ from allennlp.training.metrics.srl_eval_scorer import SrlEvalScorer, DEFAULT_SRL
 class SrlBert(Model):
     """
 
-    Parameters
-    ----------
-    vocab : ``Vocabulary``, required
+    # Parameters
+
+    vocab : `Vocabulary`, required
         A Vocabulary, required in order to compute sizes for input/output projections.
-    model : ``Union[str, BertModel]``, required.
+    model : `Union[str, BertModel]`, required.
         A string describing the BERT model to load or an already constructed BertModel.
-    initializer : ``InitializerApplicator``, optional (default=``InitializerApplicator()``)
+    initializer : `InitializerApplicator`, optional (default=`InitializerApplicator()`)
         Used to initialize the model parameters.
-    regularizer : ``RegularizerApplicator``, optional (default=``None``)
+    regularizer : `RegularizerApplicator`, optional (default=`None`)
         If provided, will be used to calculate the regularization penalty during training.
-    label_smoothing : ``float``, optional (default = 0.0)
+    label_smoothing : `float`, optional (default = 0.0)
         Whether or not to use label smoothing on the labels when computing cross entropy loss.
-    ignore_span_metric: ``bool``, optional (default = False)
+    ignore_span_metric : `bool`, optional (default = False)
         Whether to calculate span loss, which is irrelevant when predicting BIO for Open Information Extraction.
-    srl_eval_path: ``str``, optional (default=``DEFAULT_SRL_EVAL_PATH``)
+    srl_eval_path : `str`, optional (default=`DEFAULT_SRL_EVAL_PATH`)
         The path to the srl-eval.pl script. By default, will use the srl-eval.pl included with allennlp,
-        which is located at allennlp/tools/srl-eval.pl . If ``None``, srl-eval.pl is not used.
+        which is located at allennlp/tools/srl-eval.pl . If `None`, srl-eval.pl is not used.
     """
 
     def __init__(
@@ -72,49 +72,48 @@ class SrlBert(Model):
 
     def forward(  # type: ignore
         self,
-        tokens: Dict[str, torch.Tensor],
+        tokens: TextFieldTensors,
         verb_indicator: torch.Tensor,
         metadata: List[Any],
         tags: torch.LongTensor = None,
     ):
 
         """
-        Parameters
-        ----------
-        tokens : Dict[str, torch.LongTensor], required
-            The output of ``TextField.as_array()``, which should typically be passed directly to a
-            ``TextFieldEmbedder``. For this model, this must be a `SingleIdTokenIndexer` which
+        # Parameters
+
+        tokens : TextFieldTensors, required
+            The output of `TextField.as_array()`, which should typically be passed directly to a
+            `TextFieldEmbedder`. For this model, this must be a `SingleIdTokenIndexer` which
             indexes wordpieces from the BERT vocabulary.
         verb_indicator: torch.LongTensor, required.
-            An integer ``SequenceFeatureField`` representation of the position of the verb
+            An integer `SequenceFeatureField` representation of the position of the verb
             in the sentence. This should have shape (batch_size, num_tokens) and importantly, can be
             all zeros, in the case that the sentence has no verbal predicate.
         tags : torch.LongTensor, optional (default = None)
             A torch tensor representing the sequence of integer gold class labels
-            of shape ``(batch_size, num_tokens)``
-        metadata : ``List[Dict[str, Any]]``, optional, (default = None)
+            of shape `(batch_size, num_tokens)`
+        metadata : `List[Dict[str, Any]]`, optional, (default = None)
             metadata containg the original words in the sentence, the verb to compute the
             frame for, and start offsets for converting wordpieces back to a sequence of words,
             under 'words', 'verb' and 'offsets' keys, respectively.
 
-        Returns
-        -------
+        # Returns
+
         An output dictionary consisting of:
         logits : torch.FloatTensor
-            A tensor of shape ``(batch_size, num_tokens, tag_vocab_size)`` representing
+            A tensor of shape `(batch_size, num_tokens, tag_vocab_size)` representing
             unnormalised log probabilities of the tag classes.
         class_probabilities : torch.FloatTensor
-            A tensor of shape ``(batch_size, num_tokens, tag_vocab_size)`` representing
+            A tensor of shape `(batch_size, num_tokens, tag_vocab_size)` representing
             a distribution of the tag classes per word.
         loss : torch.FloatTensor, optional
             A scalar loss to be optimised.
         """
         mask = get_text_field_mask(tokens)
         bert_embeddings, _ = self.bert_model(
-            input_ids=tokens["tokens"],
+            input_ids=util.get_token_ids_from_text_field_tensors(tokens),
             token_type_ids=verb_indicator,
             attention_mask=mask,
-            output_all_encoded_layers=False,
         )
 
         embedded_text_input = self.embedding_dropout(bert_embeddings)
@@ -172,7 +171,7 @@ class SrlBert(Model):
         """
         Does constrained viterbi decoding on class probabilities output in :func:`forward`.  The
         constraint simply specifies that the output tags must be a valid BIO sequence.  We add a
-        ``"tags"`` key to the dictionary with the result.
+        `"tags"` key to the dictionary with the result.
 
         NOTE: First, we decode a BIO sequence on top of the wordpieces. This is important; viterbi
         decoding produces low quality output if you decode on top of word representations directly,
@@ -239,8 +238,8 @@ class SrlBert(Model):
         constraint, pairs of labels which do not satisfy this constraint have a
         pairwise potential of -inf.
 
-        Returns
-        -------
+        # Returns
+
         transition_matrix : torch.Tensor
             A (num_labels, num_labels) matrix of pairwise potentials.
         """
@@ -261,8 +260,8 @@ class SrlBert(Model):
         In the BIO sequence, we cannot start the sequence with an I-XXX tag.
         This transition sequence is passed to viterbi_decode to specify this constraint.
 
-        Returns
-        -------
+        # Returns
+
         start_transitions : torch.Tensor
             The pairwise potentials between a START token and
             the first token of the sequence.

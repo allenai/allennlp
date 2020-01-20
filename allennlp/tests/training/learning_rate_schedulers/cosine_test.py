@@ -97,7 +97,7 @@ class CosineWithRestartsTest(AllenNlpTestCase):
         )
 
     def test_from_params(self):
-        """Make sure ``from_params`` initializes an instance properly."""
+        """Make sure `from_params` initializes an instance properly."""
         optim = self._get_optimizer()
         sched = LearningRateScheduler.from_params(optim, Params({"type": "cosine", "t_initial": 5}))
 

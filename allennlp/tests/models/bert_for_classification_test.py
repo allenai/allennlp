@@ -1,6 +1,6 @@
 from typing import Dict
 
-from pytorch_pretrained_bert.modeling import BertConfig, BertModel
+from transformers.modeling_bert import BertConfig, BertModel
 from _pytest.monkeypatch import MonkeyPatch
 
 from allennlp.common.testing import ModelTestCase
@@ -52,7 +52,7 @@ class TestBertForClassification(ModelTestCase):
 
         # monkeypatch the PretrainedBertModel to return the tiny test fixture model
         config_path = self.FIXTURES_ROOT / "bert" / "config.json"
-        config = BertConfig(str(config_path))
+        config = BertConfig.from_json_file(str(config_path))
         self.monkeypatch.setattr(BertModel, "from_pretrained", lambda _: BertModel(config))
 
     def tearDown(self):

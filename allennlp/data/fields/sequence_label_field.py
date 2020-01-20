@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 class SequenceLabelField(Field[torch.Tensor]):
     """
-    A ``SequenceLabelField`` assigns a categorical label to each element in a
+    A `SequenceLabelField` assigns a categorical label to each element in a
     :class:`~allennlp.data.fields.sequence_field.SequenceField`.
     Because it's a labeling of some other field, we take that field as input here, and we use it to
     determine our padding and other things.
@@ -24,18 +24,18 @@ class SequenceLabelField(Field[torch.Tensor]):
     This field will get converted into a list of integer class ids, representing the correct class
     for each element in the sequence.
 
-    Parameters
-    ----------
-    labels : ``Union[List[str], List[int]]``
+    # Parameters
+
+    labels : `Union[List[str], List[int]]`
         A sequence of categorical labels, encoded as strings or integers.  These could be POS tags like [NN,
         JJ, ...], BIO tags like [B-PERS, I-PERS, O, O, ...], or any other categorical tag sequence. If the
         labels are encoded as integers, they will not be indexed using a vocab.
-    sequence_field : ``SequenceField``
-        A field containing the sequence that this ``SequenceLabelField`` is labeling.  Most often, this is a
-        ``TextField``, for tagging individual tokens in a sentence.
-    label_namespace : ``str``, optional (default='labels')
+    sequence_field : `SequenceField`
+        A field containing the sequence that this `SequenceLabelField` is labeling.  Most often, this is a
+        `TextField`, for tagging individual tokens in a sentence.
+    label_namespace : `str`, optional (default='labels')
         The namespace to use for converting tag strings into integers.  We convert tag strings to
-        integers for you, and this parameter tells the ``Vocabulary`` object which mapping from
+        integers for you, and this parameter tells the `Vocabulary` object which mapping from
         strings to integers to use (so that "O" as a tag doesn't get the same id as "O" as a word).
     """
 

@@ -8,7 +8,7 @@ from flaky import flaky
 from allennlp.commands.evaluate import evaluate_from_args, Evaluate, evaluate
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import DataIterator, Instance
-from allennlp.data.dataset import Batch
+from allennlp.data.batch import Batch
 from allennlp.data.iterators.data_iterator import TensorDict
 from allennlp.models import Model
 
@@ -66,22 +66,33 @@ class TestEvaluate(AllenNlpTestCase):
     def test_evaluate_from_args(self):
         kebab_args = [
             "evaluate",
-            str(self.FIXTURES_ROOT / "bidaf" / "serialization" / "model.tar.gz"),
-            str(self.FIXTURES_ROOT / "data" / "squad.json"),
+            str(
+                self.FIXTURES_ROOT / "simple_tagger_with_span_f1" / "serialization" / "model.tar.gz"
+            ),
+            str(self.FIXTURES_ROOT / "data" / "conll2003.txt"),
             "--cuda-device",
             "-1",
         ]
 
         args = self.parser.parse_args(kebab_args)
         metrics = evaluate_from_args(args)
-        assert metrics.keys() == {"span_acc", "end_acc", "start_acc", "em", "f1", "loss"}
+        assert metrics.keys() == {
+            "accuracy",
+            "accuracy3",
+            "precision-overall",
+            "recall-overall",
+            "f1-measure-overall",
+            "loss",
+        }
 
     def test_output_file_evaluate_from_args(self):
         output_file = str(self.TEST_DIR / "metrics.json")
         kebab_args = [
             "evaluate",
-            str(self.FIXTURES_ROOT / "bidaf" / "serialization" / "model.tar.gz"),
-            str(self.FIXTURES_ROOT / "data" / "squad.json"),
+            str(
+                self.FIXTURES_ROOT / "simple_tagger_with_span_f1" / "serialization" / "model.tar.gz"
+            ),
+            str(self.FIXTURES_ROOT / "data" / "conll2003.txt"),
             "--cuda-device",
             "-1",
             "--output-file",

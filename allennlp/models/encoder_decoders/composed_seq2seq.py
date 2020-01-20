@@ -4,7 +4,7 @@ import torch
 from overrides import overrides
 
 from allennlp.common.checks import ConfigurationError
-from allennlp.data.vocabulary import Vocabulary
+from allennlp.data import TextFieldTensors, Vocabulary
 from allennlp.models.model import Model
 from allennlp.modules import TextFieldEmbedder, Seq2SeqEncoder, Embedding
 from allennlp.modules.text_field_embedders import BasicTextFieldEmbedder
@@ -15,33 +15,33 @@ from allennlp.nn import util, InitializerApplicator, RegularizerApplicator
 @Model.register("composed_seq2seq")
 class ComposedSeq2Seq(Model):
     """
-    This ``ComposedSeq2Seq`` class is a :class:`Model` which takes a sequence, encodes it, and then
+    This `ComposedSeq2Seq` class is a :class:`Model` which takes a sequence, encodes it, and then
     uses the encoded representations to decode another sequence.  You can use this as the basis for
     a neural machine translation system, an abstractive summarization system, or any other common
     seq2seq problem.  The model here is simple, but should be a decent starting place for
     implementing recent models for these tasks.
 
-    The ``ComposedSeq2Seq`` class composes separate ``Seq2SeqEncoder`` and ``SeqDecoder`` classes.
+    The `ComposedSeq2Seq` class composes separate `Seq2SeqEncoder` and `SeqDecoder` classes.
     These parts are customizable and are independent from each other.
 
-    Parameters
-    ----------
-    vocab : ``Vocabulary``, required
+    # Parameters
+
+    vocab : `Vocabulary`, required
         Vocabulary containing source and target vocabularies. They may be under the same namespace
         (`tokens`) or the target tokens can have a different namespace, in which case it needs to
         be specified as `target_namespace`.
-    source_text_embedders : ``TextFieldEmbedder``, required
+    source_text_embedders : `TextFieldEmbedder`, required
         Embedders for source side sequences
-    encoder : ``Seq2SeqEncoder``, required
+    encoder : `Seq2SeqEncoder`, required
         The encoder of the "encoder/decoder" model
-    decoder : ``SeqDecoder``, required
+    decoder : `SeqDecoder`, required
         The decoder of the "encoder/decoder" model
-    tied_source_embedder_key : ``str``, optional (default=``None``)
+    tied_source_embedder_key : `str`, optional (default=`None`)
         If specified, this key is used to obtain token_embedder in `source_text_embedder` and
         the weights are shared/tied with the decoder's target embedding weights.
-    initializer : ``InitializerApplicator``, optional (default=``InitializerApplicator()``)
+    initializer : `InitializerApplicator`, optional (default=`InitializerApplicator()`)
         Used to initialize the model parameters.
-    regularizer : ``RegularizerApplicator``, optional (default=``None``)
+    regularizer : `RegularizerApplicator`, optional (default=`None`)
         If provided, will be used to calculate the regularization penalty during training.
     """
 
@@ -96,24 +96,24 @@ class ComposedSeq2Seq(Model):
     @overrides
     def forward(
         self,  # type: ignore
-        source_tokens: Dict[str, torch.LongTensor],
-        target_tokens: Dict[str, torch.LongTensor] = None,
+        source_tokens: TextFieldTensors,
+        target_tokens: TextFieldTensors = None,
     ) -> Dict[str, torch.Tensor]:
 
         """
         Make foward pass on the encoder and decoder for producing the entire target sequence.
 
-        Parameters
-        ----------
-        source_tokens : ``Dict[str, torch.LongTensor]``
+        # Parameters
+
+        source_tokens : `TextFieldTensors`
            The output of `TextField.as_array()` applied on the source `TextField`. This will be
            passed through a `TextFieldEmbedder` and then through an encoder.
-        target_tokens : ``Dict[str, torch.LongTensor]``, optional (default = None)
+        target_tokens : `TextFieldTensors`, optional (default = None)
            Output of `Textfield.as_array()` applied on target `TextField`. We assume that the
            target tokens are also represented as a `TextField`.
 
-        Returns
-        -------
+        # Returns
+
         Dict[str, torch.Tensor]
             The output tensors from the decoder.
         """
@@ -132,14 +132,14 @@ class ComposedSeq2Seq(Model):
         """
         Make foward pass on the encoder.
 
-        Parameters
-        ----------
-        source_tokens : ``Dict[str, torch.LongTensor]``
+        # Parameters
+
+        source_tokens : `TextFieldTensors`
            The output of `TextField.as_array()` applied on the source `TextField`. This will be
            passed through a `TextFieldEmbedder` and then through an encoder.
 
-        Returns
-        -------
+        # Returns
+
         Dict[str, torch.Tensor]
             Map consisting of the key `source_mask` with the mask over the
             `source_tokens` text field,

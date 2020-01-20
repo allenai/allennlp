@@ -5,7 +5,7 @@ from allennlp.common import Registrable
 
 class SimilarityFunction(torch.nn.Module, Registrable):
     """
-    A ``SimilarityFunction`` takes a pair of tensors with the same shape, and computes a similarity
+    A `SimilarityFunction` takes a pair of tensors with the same shape, and computes a similarity
     function on the vectors in the last dimension.  For example, the tensors might both have shape
     `(batch_size, sentence_length, embedding_dim)`, and we will compute some function of the two
     vectors of length `embedding_dim` for each position `(batch_size, sentence_length)`, returning a
@@ -25,8 +25,8 @@ class SimilarityFunction(torch.nn.Module, Registrable):
     def forward(self, tensor_1: torch.Tensor, tensor_2: torch.Tensor) -> torch.Tensor:
 
         """
-        Takes two tensors of the same shape, such as ``(batch_size, length_1, length_2,
-        embedding_dim)``.  Computes a (possibly parameterized) similarity on the final dimension
-        and returns a tensor with one less dimension, such as ``(batch_size, length_1, length_2)``.
+        Takes two tensors of the same shape, such as `(batch_size, length_1, length_2,
+        embedding_dim)`.  Computes a (possibly parameterized) similarity on the final dimension
+        and returns a tensor with one less dimension, such as `(batch_size, length_1, length_2)`.
         """
         raise NotImplementedError

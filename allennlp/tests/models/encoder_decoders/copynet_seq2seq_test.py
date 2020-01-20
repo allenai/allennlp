@@ -25,8 +25,8 @@ class CopyNetTest(ModelTestCase):
 
     def test_train_instances(self):
         inputs = self.instances[0].as_tensor_dict()
-        source_tokens = inputs["source_tokens"]
-        target_tokens = inputs["target_tokens"]
+        source_tokens = inputs["source_tokens"]["tokens"]
+        target_tokens = inputs["target_tokens"]["tokens"]
 
         assert list(source_tokens["tokens"].size()) == [11]
         assert list(target_tokens["tokens"].size()) == [10]

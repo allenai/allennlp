@@ -4,7 +4,7 @@ from collections import Counter
 from allennlp.common import Params
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Instance, Token, Vocabulary
-from allennlp.data.dataset import Batch
+from allennlp.data.batch import Batch
 from allennlp.data.dataset_readers.dataset_reader import _LazyInstances
 from allennlp.data.fields import TextField
 from allennlp.data.iterators import BasicIterator
@@ -61,7 +61,7 @@ class IteratorTest(AllenNlpTestCase):
         for batch in batches:
             batch_sequence_length = max(
                 [
-                    instance.get_padding_lengths()["text"]["num_tokens"]
+                    instance.get_padding_lengths()["text"]["tokens___tokens"]
                     for instance in batch.instances
                 ]
             )
@@ -80,7 +80,8 @@ class IteratorTest(AllenNlpTestCase):
             tuple(w for w in instance if w != 0) for instance in candidate_instances
         ]
         expected_instances = [
-            tuple(instance.fields["text"]._indexed_tokens["tokens"]) for instance in self.instances
+            tuple(instance.fields["text"]._indexed_tokens["tokens"]["tokens"])
+            for instance in self.instances
         ]
         assert set(candidate_instances) == set(expected_instances)
 
@@ -113,7 +114,7 @@ class TestBasicIterator(IteratorTest):
             instances = [
                 tuple(instance.detach().cpu().numpy())
                 for batch in batches
-                for instance in batch["text"]["tokens"]
+                for instance in batch["text"]["tokens"]["tokens"]
             ]
             assert len(instances) == 5
             self.assert_instances_are_correct(instances)
@@ -128,7 +129,7 @@ class TestBasicIterator(IteratorTest):
             instances = [
                 tuple(instance.detach().cpu().numpy())
                 for batch in batches
-                for instance in batch["text"]["tokens"]
+                for instance in batch["text"]["tokens"]["tokens"]
             ]
             assert len(instances) == 5 * 6
             self.assert_instances_are_correct(instances)
@@ -309,7 +310,7 @@ class TestBasicIterator(IteratorTest):
     def test_maximum_samples_per_batch(self):
         for test_instances in (self.instances, self.lazy_instances):
 
-            iterator = BasicIterator(batch_size=3, maximum_samples_per_batch=["num_tokens", 9])
+            iterator = BasicIterator(batch_size=3, maximum_samples_per_batch=["tokens___tokens", 9])
             iterator.index_with(self.vocab)
             batches = list(iterator._create_batches(test_instances, shuffle=False))
             stats = self.get_batches_stats(batches)
@@ -328,7 +329,7 @@ class TestBasicIterator(IteratorTest):
         token_counts = [10, 4, 3]
         test_instances = self.create_instances_from_token_counts(token_counts)
 
-        iterator = BasicIterator(batch_size=3, maximum_samples_per_batch=["num_tokens", 11])
+        iterator = BasicIterator(batch_size=3, maximum_samples_per_batch=["tokens___tokens", 11])
         iterator.index_with(self.vocab)
         batches = list(iterator._create_batches(test_instances, shuffle=False))
         stats = self.get_batches_stats(batches)

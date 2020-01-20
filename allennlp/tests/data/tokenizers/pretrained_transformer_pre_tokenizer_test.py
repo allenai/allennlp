@@ -1,20 +1,5 @@
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.data.tokenizers.pretrained_transformer_pre_tokenizer import (
-    OpenAIPreTokenizer,
-    BertPreTokenizer,
-)
-
-
-class TestOpenAiPreTokenizer(AllenNlpTestCase):
-    def setUp(self):
-        super().setUp()
-        self.word_tokenizer = OpenAIPreTokenizer()
-
-    def test_tokenize_handles_complex_punctuation(self):
-        sentence = "This sentence ?a!?!"
-        expected_tokens = ["This", "sentence", "?", "a", "!", "?", "!"]
-        tokens = [t.text for t in self.word_tokenizer.tokenize(sentence)]
-        assert tokens == expected_tokens
+from allennlp.data.tokenizers.pretrained_transformer_pre_tokenizer import BertPreTokenizer
 
 
 class TestBertPreTokenizer(AllenNlpTestCase):
@@ -32,6 +17,6 @@ class TestBertPreTokenizer(AllenNlpTestCase):
         # BertPreTokenizer makes every token not in `never_split` to lowercase by default
         word_tokenizer = BertPreTokenizer(never_split=["[UNUSED0]"])
         sentence = "[UNUSED0] [UNK] [unused0]"
-        expected_tokens = ["[UNUSED0]", "[", "unk", "]", "[", "unused0", "]"]
+        expected_tokens = ["[UNUSED0]", "[UNK]", "[", "unused0", "]"]
         tokens = [token.text for token in word_tokenizer.tokenize(sentence)]
         assert tokens == expected_tokens

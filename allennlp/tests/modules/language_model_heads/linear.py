@@ -8,7 +8,7 @@ from allennlp.modules.language_model_heads.language_model_head import LanguageMo
 @LanguageModelHead.register("linear")
 class LinearLanguageModelHead(LanguageModelHead):
     """
-    Uses ``torch.nn.Linear`` as a language model head.  Does nothing else fancy.  This was intended
+    Uses `torch.nn.Linear` as a language model head.  Does nothing else fancy.  This was intended
     largely for testing code with small models and simple components.  It's likely that you would
     want something nicer for actually training a language model, such as tying weights with an
     input embedding, or an adaptive softmax, or something.  But, if you find this class useful for

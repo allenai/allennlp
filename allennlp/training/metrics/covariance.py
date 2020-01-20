@@ -9,7 +9,7 @@ from allennlp.training.metrics.metric import Metric
 @Metric.register("covariance")
 class Covariance(Metric):
     """
-    This ``Metric`` calculates the unbiased sample covariance between two tensors.
+    This `Metric` calculates the unbiased sample covariance between two tensors.
     Each element in the two tensors is assumed to be a different observation of the
     variable (i.e., the input tensors are implicitly flattened into vectors and the
     covariance is calculated between the vectors).
@@ -39,14 +39,14 @@ class Covariance(Metric):
         mask: Optional[torch.Tensor] = None,
     ):
         """
-        Parameters
-        ----------
-        predictions : ``torch.Tensor``, required.
+        # Parameters
+
+        predictions : `torch.Tensor`, required.
             A tensor of predictions of shape (batch_size, ...).
-        gold_labels : ``torch.Tensor``, required.
-            A tensor of the same shape as ``predictions``.
-        mask: ``torch.Tensor``, optional (default = None).
-            A tensor of the same shape as ``predictions``.
+        gold_labels : `torch.Tensor`, required.
+            A tensor of the same shape as `predictions`.
+        mask : `torch.Tensor`, optional (default = None).
+            A tensor of the same shape as `predictions`.
         """
         predictions, gold_labels, mask = self.unwrap_to_tensors(predictions, gold_labels, mask)
         # Flatten predictions, gold_labels, and mask. We calculate the covariance between
@@ -100,8 +100,8 @@ class Covariance(Metric):
 
     def get_metric(self, reset: bool = False):
         """
-        Returns
-        -------
+        # Returns
+
         The accumulated covariance.
         """
         covariance = self._total_co_moment / (self._total_count - 1)
