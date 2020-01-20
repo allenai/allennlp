@@ -1,6 +1,7 @@
 """
 Helper functions for Trainers
 """
+import torch.distributed as dist
 from typing import Any, Union, Dict, Iterable, List, Optional, Tuple
 import datetime
 import json
@@ -10,16 +11,13 @@ import os
 import shutil
 
 import torch
-from torch.nn.parallel import replicate, parallel_apply
-from torch.nn.parallel.scatter_gather import gather
 
 from allennlp.common.checks import ConfigurationError, check_for_gpu
 from allennlp.common.params import Params
 from allennlp.common.tqdm import Tqdm
 from allennlp.data.dataset_readers import DatasetReader
-from allennlp.data import Instance
+from allennlp.data import Instance, Vocabulary
 from allennlp.data.iterators import DataIterator
-from allennlp.data.iterators.data_iterator import TensorDict
 from allennlp.models.model import Model
 from allennlp.models.archival import CONFIG_NAME
 from allennlp.nn import util as nn_util
@@ -327,36 +325,6 @@ def create_serialization_dir(
         os.makedirs(serialization_dir, exist_ok=True)
 
 
-def data_parallel(
-    batch_group: List[TensorDict], model: Model, cuda_devices: List
-) -> Dict[str, torch.Tensor]:
-    """
-    Performs a forward pass using multiple GPUs.  This is a simplification
-    of torch.nn.parallel.data_parallel to support the allennlp model
-    interface.
-    """
-    assert len(batch_group) <= len(cuda_devices)
-
-    moved = [
-        nn_util.move_to_device(batch, device) for batch, device in zip(batch_group, cuda_devices)
-    ]
-
-    used_device_ids = cuda_devices[: len(moved)]
-    # Counterintuitively, it appears replicate expects the source device id to be the first element
-    # in the device id list. See torch.cuda.comm.broadcast_coalesced, which is called indirectly.
-    replicas = replicate(model, used_device_ids)
-
-    # We pass all our arguments as kwargs. Create a list of empty tuples of the
-    # correct shape to serve as (non-existent) positional arguments.
-    inputs = [()] * len(batch_group)
-    outputs = parallel_apply(replicas, inputs, moved, used_device_ids)
-
-    # Only the 'loss' is needed.
-    # a (num_gpu, ) tensor with loss on each GPU
-    losses = gather([output["loss"].unsqueeze(0) for output in outputs], used_device_ids[0], 0)
-    return {"loss": losses.mean()}
-
-
 def enable_gradient_clipping(model: Model, grad_clipping: Optional[float]) -> None:
     if grad_clipping is not None:
         for parameter in model.parameters():
@@ -379,7 +347,12 @@ def rescale_gradients(model: Model, grad_norm: Optional[float] = None) -> Option
 
 
 def get_metrics(
-    model: Model, total_loss: float, num_batches: int, reset: bool = False
+    model: Model,
+    total_loss: float,
+    num_batches: int,
+    reset: bool = False,
+    world_size: int = 1,
+    cuda_device: Union[int, List] = 0,
 ) -> Dict[str, float]:
     """
     Gets the metrics but sets ``"loss"`` to
@@ -388,7 +361,21 @@ def get_metrics(
     """
     metrics = model.get_metrics(reset=reset)
     metrics["loss"] = float(total_loss / num_batches) if num_batches > 0 else 0.0
-    return metrics
+
+    if world_size > 1:
+        # In distributed mode, average out all metrics across GPUs
+        aggregated_metrics = {}
+        for metric_name, metric_val in metrics.items():
+            if isinstance(cuda_device, list):
+                metric_tensor = torch.tensor(metric_val).to(torch.device(cuda_device[0]))
+            else:
+                metric_tensor = torch.tensor(metric_val).to(torch.device(cuda_device))
+            dist.all_reduce(metric_tensor, op=dist.ReduceOp.SUM)
+            reduced_metric = metric_tensor.item() / world_size
+            aggregated_metrics[metric_name] = reduced_metric
+        return aggregated_metrics
+    else:
+        return metrics
 
 
 def evaluate(
@@ -485,3 +472,42 @@ def description_from_metrics(metrics: Dict[str, float]) -> str:
         )
         + " ||"
     )
+
+
+def make_vocab_from_params(params: Params, serialization_dir: str) -> Vocabulary:
+
+    vocab_params = params.pop("vocabulary", {})
+    os.makedirs(serialization_dir, exist_ok=True)
+    vocab_dir = os.path.join(serialization_dir, "vocabulary")
+
+    if os.path.isdir(vocab_dir) and os.listdir(vocab_dir) is not None:
+        raise ConfigurationError(
+            "The 'vocabulary' directory in the provided " "serialization directory is non-empty"
+        )
+
+    all_datasets = datasets_from_params(params)
+    datasets_for_vocab_creation = set(params.pop("datasets_for_vocab_creation", all_datasets))
+
+    for dataset in datasets_for_vocab_creation:
+        if dataset not in all_datasets:
+            raise ConfigurationError(f"invalid 'dataset_for_vocab_creation' {dataset}")
+
+    logger.info(
+        "From dataset instances, %s will be considered for vocabulary creation.",
+        ", ".join(datasets_for_vocab_creation),
+    )
+
+    instances = (
+        instance
+        for key, dataset in all_datasets.items()
+        for instance in dataset
+        if key in datasets_for_vocab_creation
+    )
+
+    vocab = Vocabulary.from_params(vocab_params, instances)
+
+    logger.info(f"writing the vocabulary to {vocab_dir}.")
+    vocab.save_to_files(vocab_dir)
+    logger.info("done creating vocab")
+
+    return vocab

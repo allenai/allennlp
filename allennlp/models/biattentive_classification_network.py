@@ -129,13 +129,10 @@ class BiattentiveClassificationNetwork(Model):
 
             if len(self._elmo._scalar_mixes) != self._num_elmo_layers:
                 raise ConfigurationError(
-                    "Elmo object has num_output_representations=%s, but this does not "
-                    "match the number of use_*_elmo flags set to true. use_input_elmo "
-                    "is %s, and use_integrator_output_elmo is %s".format(
-                        str(len(self._elmo._scalar_mixes)),
-                        str(self._use_input_elmo),
-                        str(self._use_integrator_output_elmo),
-                    )
+                    f"Elmo object has num_output_representations={len(self._elmo._scalar_mixes)}, but this "
+                    f"does not match the number of use_*_elmo flags set to true. use_input_elmo "
+                    f"is {self._use_input_elmo}, and use_integrator_output_elmo "
+                    f"is {self._use_integrator_output_elmo}"
                 )
 
         # Calculate combined integrator output dim, taking into account elmo

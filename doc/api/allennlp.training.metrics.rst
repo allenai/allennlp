@@ -22,6 +22,7 @@ allennlp.training.metrics
 * :ref:`MeanAbsoluteError<mean-absolute-error>`
 * :ref:`MentionRecall<mention-recall>`
 * :ref:`PearsonCorrelation<pearson-correlation>`
+* :ref:`SpearmanCorrelation<spearman-correlation>`
 * :ref:`SequenceAccuracy<sequence-accuracy>`
 * :ref:`SpanBasedF1Measure<span-based-f1-measure>`
 * :ref:`SquadEmAndF1<squad-em-and-f1>`
@@ -127,6 +128,12 @@ allennlp.training.metrics
 
 .. _pearson-correlation:
 .. automodule:: allennlp.training.metrics.pearson_correlation
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. _spearman-correlation:
+.. automodule:: allennlp.training.metrics.spearman_correlation
    :members:
    :undoc-members:
    :show-inheritance:

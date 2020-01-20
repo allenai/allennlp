@@ -182,7 +182,7 @@ class DatasetReader(Registrable):
         """
         Does whatever tokenization or processing is necessary to go from textual input to an
         ``Instance``.  The primary intended use for this is with a
-        :class:`~allennlp.service.predictors.predictor.Predictor`, which gets text input as a JSON
+        :class:`~allennlp.predictors.predictor.Predictor`, which gets text input as a JSON
         object and needs to process it to be input to a model.
 
         The intent here is to share code between :func:`_read` and what happens at

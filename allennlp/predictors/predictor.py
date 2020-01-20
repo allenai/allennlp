@@ -5,6 +5,7 @@ from contextlib import contextmanager
 import numpy
 from torch.utils.hooks import RemovableHandle
 from torch import Tensor
+from torch import backends
 
 from allennlp.common import Registrable
 from allennlp.common.checks import ConfigurationError
@@ -47,6 +48,7 @@ class Predictor(Registrable):
     def __init__(self, model: Model, dataset_reader: DatasetReader) -> None:
         self._model = model
         self._dataset_reader = dataset_reader
+        self.cuda_device = next(self._model.named_parameters())[1].get_device()
 
     def load_line(self, line: str) -> JsonDict:
         """
@@ -110,13 +112,16 @@ class Predictor(Registrable):
 
         dataset = Batch(instances)
         dataset.index_instances(self._model.vocab)
-        outputs = self._model.decode(
-            self._model.forward(**dataset.as_tensor_dict())  # type: ignore
-        )
+        dataset_tensor_dict = util.move_to_device(dataset.as_tensor_dict(), self.cuda_device)
+        # To bypass "RuntimeError: cudnn RNN backward can only be called in training mode"
+        with backends.cudnn.flags(enabled=False):
+            outputs = self._model.decode(
+                self._model.forward(**dataset_tensor_dict)  # type: ignore
+            )
 
-        loss = outputs["loss"]
-        self._model.zero_grad()
-        loss.backward()
+            loss = outputs["loss"]
+            self._model.zero_grad()
+            loss.backward()
 
         for hook in hooks:
             hook.remove()
