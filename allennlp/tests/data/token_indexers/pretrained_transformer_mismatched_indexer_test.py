@@ -2,13 +2,13 @@ from transformers.tokenization_auto import AutoTokenizer
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Token, Vocabulary
-from allennlp.data.token_indexers import PretrainedTransformerPretokenizedIndexer
+from allennlp.data.token_indexers import PretrainedTransformerMismatchedIndexer
 
 
-class TestPretrainedTransformerIndexer(AllenNlpTestCase):
-    def test_pretokenized_behavior(self):
+class TestPretrainedTransformerMismatchedIndexer(AllenNlpTestCase):
+    def test_mismatched_behavior(self):
         tokenizer = AutoTokenizer.from_pretrained("bert-base-cased")
-        indexer = PretrainedTransformerPretokenizedIndexer("bert-base-cased")
+        indexer = PretrainedTransformerMismatchedIndexer("bert-base-cased")
         text = ["AllenNLP", "is", "great"]
         tokens = tokenizer.tokenize(" ".join(["[CLS]"] + text + ["[SEP]"]))
         expected_ids = tokenizer.convert_tokens_to_ids(tokens)

@@ -5,14 +5,14 @@ from allennlp.data import Token, Vocabulary
 from allennlp.data.batch import Batch
 from allennlp.data.fields import TextField
 from allennlp.data.instance import Instance
-from allennlp.data.token_indexers import PretrainedTransformerPretokenizedIndexer
+from allennlp.data.token_indexers import PretrainedTransformerMismatchedIndexer
 from allennlp.modules.text_field_embedders import BasicTextFieldEmbedder
 from allennlp.common.testing import AllenNlpTestCase
 
 
-class TestPretrainedTransformerEmbedder(AllenNlpTestCase):
+class TestPretrainedTransformerMismatchedEmbedder(AllenNlpTestCase):
     def test_end_to_end(self):
-        token_indexer = PretrainedTransformerPretokenizedIndexer("bert-base-uncased")
+        token_indexer = PretrainedTransformerMismatchedIndexer("bert-base-uncased")
 
         sentence1 = ["A", ",", "AllenNLP", "sentence", "."]
         sentence2 = ["AllenNLP", "is", "great"]
@@ -25,7 +25,7 @@ class TestPretrainedTransformerEmbedder(AllenNlpTestCase):
             {
                 "token_embedders": {
                     "bert": {
-                        "type": "pretrained_transformer_pretokenized",
+                        "type": "pretrained_transformer_mismatched",
                         "model_name": "bert-base-uncased",
                     }
                 }

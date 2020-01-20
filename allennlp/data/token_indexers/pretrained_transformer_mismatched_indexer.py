@@ -14,13 +14,13 @@ from allennlp.data.tokenizers import PretrainedTransformerTokenizer
 logger = logging.getLogger(__name__)
 
 
-@TokenIndexer.register("pretrained_transformer_pretokenized")
-class PretrainedTransformerPretokenizedIndexer(PretrainedTransformerIndexer):
+@TokenIndexer.register("pretrained_transformer_mismatched")
+class PretrainedTransformerMismatchedIndexer(PretrainedTransformerIndexer):
     """
     Use this indexer when input comes from pre-tokenized text and therefore
     `PretrainedTransformerTokenizer` was not used in the dataset loader. It tokenizes each token
     into wordpieces independently and concatenate them back together. Use it along with
-    `PretrainedTransformerPretokenizedEmbedder`.
+    `PretrainedTransformerMismatchedEmbedder`.
     """
 
     def __init__(
