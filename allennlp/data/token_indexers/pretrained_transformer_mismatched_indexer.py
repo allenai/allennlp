@@ -47,9 +47,9 @@ class PretrainedTransformerMismatchedIndexer(TokenIndexer):
         self._matched_indexer = PretrainedTransformerIndexer(
             model_name, namespace, max_len, **kwargs
         )
+        self._tokenizer = self._matched_indexer._tokenizer
         self._num_added_start_tokens = self._matched_indexer._num_added_start_tokens
         self._num_added_end_tokens = self._matched_indexer._num_added_end_tokens
-        self._tokenizer = self._matched_indexer._tokenizer
 
     @overrides
     def count_vocab_items(self, token: Token, counter: Dict[str, Dict[str, int]]):

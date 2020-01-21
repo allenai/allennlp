@@ -91,7 +91,7 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
 
             def fold(tensor):  # Shape: [batch_size, num_segment_concat_wordpieces]
                 # Shape: [batch_size, num_segments * self._max_len]
-                tensor = F.pad(tensor, [0, length_to_pad])
+                tensor = F.pad(tensor, [0, length_to_pad], value=0)
                 # Shape: [batch_size * num_segments, self._max_len]
                 return tensor.reshape(-1, self._max_len)
 
