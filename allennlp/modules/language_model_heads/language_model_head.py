@@ -5,7 +5,7 @@ from allennlp.common import Registrable
 
 class LanguageModelHead(torch.nn.Module, Registrable):
     """
-    A ``LanguageModelHead`` encapsulates a function that goes from some hidden state to logits over
+    A `LanguageModelHead` encapsulates a function that goes from some hidden state to logits over
     a vocabulary.
     """
 

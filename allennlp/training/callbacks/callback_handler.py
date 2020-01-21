@@ -22,18 +22,18 @@ def _is_event_handler(member) -> bool:
 
 class CallbackHandler:
     """
-    A ``CallbackHandler`` owns zero or more ``Callback``s, each of which is associated
-    with some "event". It then exposes a ``fire_event`` method, which calls each
+    A `CallbackHandler` owns zero or more `Callback`s, each of which is associated
+    with some "event". It then exposes a `fire_event` method, which calls each
     callback associated with that event ordered by their priorities.
 
     The callbacks take no parameters; instead they read from and write to this handler's
-    ``state``, which should be a Trainer.
+    `state`, which should be a Trainer.
 
     # Parameters
 
-    callbacks : ``Iterable[Callback]``
+    callbacks : `Iterable[Callback]`
         The callbacks to be handled.
-    state : ``TrainerBase``
+    state : `TrainerBase`
         The trainer from which the callbacks will read state
         and to which the callbacks will write state.
     verbose : bool, optional (default = False)

@@ -21,9 +21,9 @@ class Entropy(Metric):
         """
         # Parameters
 
-        logits : ``torch.Tensor``, required.
+        logits : `torch.Tensor`, required.
             A tensor of unnormalized log probabilities of shape (batch_size, ..., num_classes).
-        mask : ``torch.Tensor``, optional (default = None).
+        mask : `torch.Tensor`, optional (default = None).
             A masking tensor of shape (batch_size, ...).
         """
         logits, mask = self.unwrap_to_tensors(logits, mask)

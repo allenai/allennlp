@@ -9,14 +9,14 @@ from allennlp.modules.matrix_attention.matrix_attention import MatrixAttention
 @MatrixAttention.register("legacy")
 class LegacyMatrixAttention(MatrixAttention):
     """
-    The legacy implementation of ``MatrixAttention``.
+    The legacy implementation of `MatrixAttention`.
 
     It should be considered deprecated as it uses much more memory than the newer specialized
-    ``MatrixAttention`` modules.
+    `MatrixAttention` modules.
 
     # Parameters
 
-    similarity_function : ``SimilarityFunction``, optional (default=``DotProductSimilarity``)
+    similarity_function : `SimilarityFunction`, optional (default=`DotProductSimilarity`)
         The similarity function to use when computing the attention.
     """
 

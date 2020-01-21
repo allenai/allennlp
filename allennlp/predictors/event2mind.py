@@ -27,14 +27,14 @@ class Event2MindPredictor(Predictor):
                 `${target_type}_top_k_log_probabilities`: [-0.301, -0.046, ...]
             }
 
-        By default ``target_type`` can be xreact, oreact and xintent.
+        By default `target_type` can be xreact, oreact and xintent.
         """
         return self.predict_json({"source": source})
 
     @overrides
     def _json_to_instance(self, json_dict: JsonDict) -> Instance:
         """
-        Expects JSON that looks like ``{"source": "..."}``.
+        Expects JSON that looks like `{"source": "..."}`.
         """
         source = json_dict["source"]
         return self._dataset_reader.text_to_instance(source)

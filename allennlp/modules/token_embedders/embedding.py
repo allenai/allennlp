@@ -37,7 +37,7 @@ class Embedding(TokenEmbedder, Registrable):
         3. use a non-trainable embedding
         4. project the resultant embeddings to some other dimension (which only makes sense with
            non-trainable embeddings).
-        5. build all of this easily ``from_params``
+        5. build all of this easily `from_params`
 
     Note that if you are using our data API and are trying to embed a
     :class:`~allennlp.data.fields.TextField`, you should use a
@@ -45,38 +45,38 @@ class Embedding(TokenEmbedder, Registrable):
 
     # Parameters
 
-    num_embeddings : ``int``
+    num_embeddings : `int`
         Size of the dictionary of embeddings (vocabulary size).
-    embedding_dim : ``int``
+    embedding_dim : `int`
         The size of each embedding vector.
-    projection_dim : ``int``, (optional, default=None)
+    projection_dim : `int`, (optional, default=None)
         If given, we add a projection layer after the embedding layer.  This really only makes
-        sense if ``trainable`` is ``False``.
-    weight : ``torch.FloatTensor``, (optional, default=None)
+        sense if `trainable` is `False`.
+    weight : `torch.FloatTensor`, (optional, default=None)
         A pre-initialised weight matrix for the embedding lookup, allowing the use of
         pretrained vectors.
-    padding_index : ``int``, (optional, default=None)
+    padding_index : `int`, (optional, default=None)
         If given, pads the output with zeros whenever it encounters the index.
-    trainable : ``bool``, (optional, default=True)
+    trainable : `bool`, (optional, default=True)
         Whether or not to optimize the embedding parameters.
-    max_norm : ``float``, (optional, default=None)
+    max_norm : `float`, (optional, default=None)
         If given, will renormalize the embeddings to always have a norm lesser than this
-    norm_type : ``float``, (optional, default=2)
+    norm_type : `float`, (optional, default=2)
         The p of the p-norm to compute for the max_norm option
-    scale_grad_by_freq : ``bool``, (optional, default=False)
+    scale_grad_by_freq : `bool`, (optional, default=False)
         If given, this will scale gradients by the frequency of the words in the mini-batch.
-    sparse : ``bool``, (optional, default=False)
+    sparse : `bool`, (optional, default=False)
         Whether or not the Pytorch backend should use a sparse representation of the embedding weight.
-    vocab_namespace : ``str``, (optional, default=None)
+    vocab_namespace : `str`, (optional, default=None)
         In case of fine-tuning/transfer learning, the model's embedding matrix needs to be
         extended according to the size of extended-vocabulary. To be able to know how much to
         extend the embedding-matrix, it's necessary to know which vocab_namspace was used to
         construct it in the original training. We store vocab_namespace used during the original
         training as an attribute, so that it can be retrieved during fine-tuning.
-    pretrained_file : ``str``, (optional, default=None)
+    pretrained_file : `str`, (optional, default=None)
         Used to keep track of what is the source of the weights and loading more embeddings at test time.
         **It does not load the weights from this pretrained_file.** For that purpose, use
-        ``Embedding.from_params``.
+        `Embedding.from_params`.
 
     # Returns
 
@@ -179,19 +179,19 @@ class Embedding(TokenEmbedder, Registrable):
 
         # Parameters
 
-        extended_vocab : ``Vocabulary``
+        extended_vocab : `Vocabulary`
             Vocabulary extended from original vocabulary used to construct
-            this ``Embedding``.
-        vocab_namespace : ``str``, (optional, default=None)
+            this `Embedding`.
+        vocab_namespace : `str`, (optional, default=None)
             In case you know what vocab_namespace should be used for extension, you
             can pass it. If not passed, it will check if vocab_namespace used at the
-            time of ``Embedding`` construction is available. If so, this namespace
+            time of `Embedding` construction is available. If so, this namespace
             will be used or else extend_vocab will be a no-op.
-        extension_pretrained_file : ``str``, (optional, default=None)
+        extension_pretrained_file : `str`, (optional, default=None)
             A file containing pretrained embeddings can be specified here. It can be
             the path to a local file or an URL of a (cached) remote file. Check format
-            details in ``from_params`` of ``Embedding`` class.
-        model_path : ``str``, (optional, default=None)
+            details in `from_params` of `Embedding` class.
+        model_path : `str`, (optional, default=None)
             Path traversing the model attributes upto this embedding module.
             Eg. "_text_field_embedder.token_embedder_tokens". This is only useful
             to give helpful error message when extend_vocab is implicitly called
@@ -285,19 +285,19 @@ class Embedding(TokenEmbedder, Registrable):
         sparse: bool = False,
     ) -> "Embedding":
         """
-        Similar to ``__init__``, but does two functions on top of what's there: (1) if
-        ``num_embeddings`` is not given, it checks the vocabulary for how many embeddings to
+        Similar to `__init__`, but does two functions on top of what's there: (1) if
+        `num_embeddings` is not given, it checks the vocabulary for how many embeddings to
         construct; and (2) if a pretrained file is given, it loads weights from that file (while
-        looking at the given vocabulary) and passes those weights to ``__init__``.
+        looking at the given vocabulary) and passes those weights to `__init__`.
 
         We need the vocabulary here to know how many items we need to embed, and we look for a
-        ``vocab_namespace`` key in the parameter dictionary to know which vocabulary to use.  If
+        `vocab_namespace` key in the parameter dictionary to know which vocabulary to use.  If
         you know beforehand exactly how many embeddings you need, or aren't using a vocabulary
-        mapping for the things getting embedded here, then you can pass in the ``num_embeddings``
+        mapping for the things getting embedded here, then you can pass in the `num_embeddings`
         key directly, and the vocabulary will be ignored.
 
         A file containing pretrained embeddings can be specified using the parameter
-        ``"pretrained_file"``.
+        `"pretrained_file"`.
         It can be the path to a local file or an URL of a (cached) remote file.
         Two formats are supported:
 
@@ -313,7 +313,7 @@ class Embedding(TokenEmbedder, Registrable):
 
                     "(archive_uri)#file_path_inside_the_archive"
 
-              where ``archive_uri`` can be a file system path or a URL. For example::
+              where `archive_uri` can be a file system path or a URL. For example::
 
                     "(https://nlp.stanford.edu/data/glove.twitter.27B.zip)#glove.twitter.27B.200d.txt"
         """
@@ -366,7 +366,7 @@ def _read_pretrained_embeddings_file(
 
         * text format - utf-8 encoded text file with space separated fields: [word] [dim 1] [dim 2] ...
           The text file can eventually be compressed, and even resides in an archive with multiple files.
-          If the file resides in an archive with other files, then ``embeddings_filename`` must
+          If the file resides in an archive with other files, then `embeddings_filename` must
           be a URI "(archive_uri)#file_path_inside_the_archive"
 
         * hdf5 format - hdf5 file containing an embedding matrix in the form of a torch.Tensor.
@@ -376,26 +376,26 @@ def _read_pretrained_embeddings_file(
 
     # Parameters
 
-    file_uri : ``str``, required.
+    file_uri : `str`, required.
         It can be:
 
         * a file system path or a URL of an eventually compressed text file or a zip/tar archive
           containing a single file.
 
-        * URI of the type ``(archive_path_or_url)#file_path_inside_archive`` if the text file
+        * URI of the type `(archive_path_or_url)#file_path_inside_archive` if the text file
           is contained in a multi-file archive.
 
-    vocab : ``Vocabulary``, required.
+    vocab : `Vocabulary`, required.
         A Vocabulary object.
-    namespace : ``str``, (optional, default=tokens)
+    namespace : `str`, (optional, default=tokens)
         The namespace of the vocabulary to find pretrained embeddings for.
-    trainable : ``bool``, (optional, default=True)
+    trainable : `bool`, (optional, default=True)
         Whether or not the embedding parameters should be optimized.
 
     # Returns
 
     A weight matrix with embeddings initialized from the read file.  The matrix has shape
-    ``(vocab.get_vocab_size(namespace), embedding_dim)``, where the indices of words appearing in
+    `(vocab.get_vocab_size(namespace), embedding_dim)`, where the indices of words appearing in
     the pretrained embedding file are initialized to the pretrained embedding value.
     """
     file_ext = get_file_extension(file_uri)
@@ -413,9 +413,9 @@ def _read_embeddings_from_text_file(
     inside an archive with multiple files. The text file is assumed to be utf-8 encoded with
     space-separated fields: [word] [dim 1] [dim 2] ...
 
-    Lines that contain more numerical tokens than ``embedding_dim`` raise a warning and are skipped.
+    Lines that contain more numerical tokens than `embedding_dim` raise a warning and are skipped.
 
-    The remainder of the docstring is identical to ``_read_pretrained_embeddings_file``.
+    The remainder of the docstring is identical to `_read_pretrained_embeddings_file`.
     """
     tokens_to_keep = set(vocab.get_index_to_token_vocabulary(namespace).values())
     vocab_size = vocab.get_vocab_size(namespace)
@@ -491,7 +491,7 @@ def _read_embeddings_from_hdf5(
 ) -> torch.FloatTensor:
     """
     Reads from a hdf5 formatted file. The embedding matrix is assumed to
-    be keyed by 'embedding' and of size ``(num_tokens, embedding_dim)``.
+    be keyed by 'embedding' and of size `(num_tokens, embedding_dim)`.
     """
     with h5py.File(embeddings_filename, "r") as fin:
         embeddings = fin["embedding"][...]
@@ -535,16 +535,16 @@ class EmbeddingsTextFile(Iterator[str]):
 
     # Parameters
 
-    file_uri : ``str``
+    file_uri : `str`
         It can be:
 
         * a file system path or a URL of an eventually compressed text file or a zip/tar archive
           containing a single file.
-        * URI of the type ``(archive_path_or_url)#file_path_inside_archive`` if the text file
+        * URI of the type `(archive_path_or_url)#file_path_inside_archive` if the text file
           is contained in a multi-file archive.
 
-    encoding : ``str``
-    cache_dir : ``str``
+    encoding : `str`
+    cache_dir : `str`
     """
 
     DEFAULT_ENCODING = "utf-8"
@@ -665,7 +665,7 @@ class EmbeddingsTextFile(Iterator[str]):
         return next(self._iterator)
 
     def __len__(self) -> Optional[int]:
-        """ Hack for tqdm: no need for explicitly passing ``total=file.num_tokens`` """
+        """ Hack for tqdm: no need for explicitly passing `total=file.num_tokens` """
         if self.num_tokens:
             return self.num_tokens
         raise AttributeError(

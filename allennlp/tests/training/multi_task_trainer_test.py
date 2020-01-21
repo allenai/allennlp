@@ -5,9 +5,9 @@ not the only way to do multi-task training using AllenNLP.
 
 Note that you could almost fit this whole setup into
 the "SingleTaskTrainer" paradigm, if you just wrote like a
-``MinglingDatasetReader`` that wrapped multiple dataset readers.
-The main problem is that the ``SingleTaskTrainer`` expects
-a single ``train_path``. (Even that you could fudge by passing
+`MinglingDatasetReader` that wrapped multiple dataset readers.
+The main problem is that the `SingleTaskTrainer` expects
+a single `train_path`. (Even that you could fudge by passing
 in a Dict[str, str] serialized as JSON, but that's really hacky.)
 """
 from typing import List, Dict, Iterable, Any, Set
@@ -38,7 +38,7 @@ from allennlp.training.trainer_base import TrainerBase
 class MyReader(DatasetReader):
     """
     Just reads in a text file and sticks each line
-    in a ``TextField`` with the specified name.
+    in a `TextField` with the specified name.
     """
 
     def __init__(self, field_name: str) -> None:
@@ -60,11 +60,11 @@ class MyReader(DatasetReader):
 
 class DatasetMingler(Registrable):
     """
-    Our ``DataIterator`` class expects a single dataset;
+    Our `DataIterator` class expects a single dataset;
     this is an abstract class for combining multiple datasets into one.
 
     You could imagine an alternate design where there is a
-    ``MinglingDatasetReader`` that wraps multiple dataset readers,
+    `MinglingDatasetReader` that wraps multiple dataset readers,
     but then somehow you'd have to get it multiple file paths.
     """
 
@@ -75,7 +75,7 @@ class DatasetMingler(Registrable):
 @DatasetMingler.register("round-robin")
 class RoundRobinMingler(DatasetMingler):
     """
-    Cycle through datasets, ``take_at_time`` instances at a time.
+    Cycle through datasets, `take_at_time` instances at a time.
     """
 
     def __init__(self, dataset_name_field: str = "dataset", take_at_a_time: int = 1) -> None:
@@ -104,7 +104,7 @@ class HomogeneousBatchIterator(DataIterator):
     An iterator that takes instances of various types
     and yields single-type batches of them. There's a flag
     to allow mixed-type batches, but at that point you might
-    as well just use ``BasicIterator``?
+    as well just use `BasicIterator`?
     """
 
     def __init__(

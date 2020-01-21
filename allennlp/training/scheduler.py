@@ -5,13 +5,13 @@ import torch
 
 class Scheduler:
     """
-    A ``Scheduler`` is a generalization of PyTorch learning rate schedulers.
+    A `Scheduler` is a generalization of PyTorch learning rate schedulers.
 
     A scheduler can be used to update any field in an optimizer's parameter groups,
     not just the learning rate.
 
     During training using the AllenNLP `Trainer`, this is the API and calling
-    sequence for ``step`` and ``step_batch``::
+    sequence for `step` and `step_batch`::
 
        scheduler = ... # creates scheduler, calls self.step(epoch=-1) in __init__
 
@@ -51,7 +51,7 @@ class Scheduler:
 
     def state_dict(self) -> Dict[str, Any]:
         """
-        Returns the state of the scheduler as a ``dict``.
+        Returns the state of the scheduler as a `dict`.
         """
         return {key: value for key, value in self.__dict__.items() if key != "optimizer"}
 
@@ -61,8 +61,8 @@ class Scheduler:
 
         # Parameters
 
-        state_dict : ``Dict[str, Any]``
-            Scheduler state. Should be an object returned from a call to ``state_dict``.
+        state_dict : `Dict[str, Any]`
+            Scheduler state. Should be an object returned from a call to `state_dict`.
         """
         self.__dict__.update(state_dict)
 

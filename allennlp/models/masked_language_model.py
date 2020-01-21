@@ -14,7 +14,7 @@ from allennlp.training.metrics import Perplexity
 @Model.register("masked_language_model")
 class MaskedLanguageModel(Model):
     """
-    The ``MaskedLanguageModel`` embeds some input tokens (including some which are masked),
+    The `MaskedLanguageModel` embeds some input tokens (including some which are masked),
     contextualizes them, then predicts targets for the masked tokens, computing a loss against
     known targets.
 
@@ -26,18 +26,18 @@ class MaskedLanguageModel(Model):
 
     # Parameters
 
-    vocab : ``Vocabulary``
-    text_field_embedder : ``TextFieldEmbedder``
-        Used to embed the indexed tokens we get in ``forward``.
-    language_model_head : ``LanguageModelHead``
-        The ``torch.nn.Module`` that goes from the hidden states output by the contextualizer to
+    vocab : `Vocabulary`
+    text_field_embedder : `TextFieldEmbedder`
+        Used to embed the indexed tokens we get in `forward`.
+    language_model_head : `LanguageModelHead`
+        The `torch.nn.Module` that goes from the hidden states output by the contextualizer to
         logits over some output vocabulary.
-    contextualizer : ``Seq2SeqEncoder``, optional (default=None)
+    contextualizer : `Seq2SeqEncoder`, optional (default=None)
         Used to "contextualize" the embeddings.  This is optional because the contextualization
         might actually be done in the text field embedder.
-    target_namespace : ``str``, optional (default='bert')
-        Namespace to use to convert predicted token ids to strings in ``Model.decode``.
-    dropout : ``float``, optional (default=0.0)
+    target_namespace : `str`, optional (default='bert')
+        Namespace to use to convert predicted token ids to strings in `Model.decode`.
+    dropout : `float`, optional (default=0.0)
         If specified, dropout is applied to the contextualized embeddings before computation of
         the softmax. The contextualized embeddings themselves are returned without dropout.
     """
@@ -79,17 +79,17 @@ class MaskedLanguageModel(Model):
         """
         # Parameters
 
-        tokens : ``TextFieldTensors``
-            The output of ``TextField.as_tensor()`` for a batch of sentences.
-        mask_positions : ``torch.LongTensor``
-            The positions in ``tokens`` that correspond to [MASK] tokens that we should try to fill
+        tokens : `TextFieldTensors`
+            The output of `TextField.as_tensor()` for a batch of sentences.
+        mask_positions : `torch.LongTensor`
+            The positions in `tokens` that correspond to [MASK] tokens that we should try to fill
             in.  Shape should be (batch_size, num_masks).
-        target_ids : ``TextFieldTensors``
+        target_ids : `TextFieldTensors`
             This is a list of token ids that correspond to the mask positions we're trying to fill.
-            It is the output of a ``TextField``, purely for convenience, so we can handle wordpiece
+            It is the output of a `TextField`, purely for convenience, so we can handle wordpiece
             tokenizers and such without having to do crazy things in the dataset reader.  We assume
             that there is exactly one entry in the dictionary, and that it has a shape identical to
-            ``mask_positions`` - one target token per mask position.
+            `mask_positions` - one target token per mask position.
         """
 
         targets = None

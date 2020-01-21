@@ -14,8 +14,8 @@ class DotProductSimilarity(SimilarityFunction):
 
     # Parameters
 
-    scale_output : ``bool``, optional
-        If ``True``, we will scale the output by ``math.sqrt(tensor.size(-1))``, to reduce the
+    scale_output : `bool`, optional
+        If `True`, we will scale the output by `math.sqrt(tensor.size(-1))`, to reduce the
         variance in the result.
     """
 

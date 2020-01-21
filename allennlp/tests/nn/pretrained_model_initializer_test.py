@@ -61,7 +61,7 @@ class TestPretrainedModelInitializer(AllenNlpTestCase):
 
     def test_random_initialization(self):
         # The tests in the class rely on the fact that the parameters for
-        # ``self.net1`` and ``self.net2`` are randomly initialized and not
+        # `self.net1` and `self.net2` are randomly initialized and not
         # equal at the beginning. This test makes sure that's true
         assert not self._are_equal(self.net1.linear_1, self.net2.linear_1)
         assert not self._are_equal(self.net1.linear_2, self.net2.linear_3)

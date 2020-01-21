@@ -35,7 +35,7 @@ class BucketIterator(DataIterator):
         This should give reasonable results in most cases.
 
         When you need to specify this yourself, you can create an instance from your dataset and
-        call ``Instance.get_padding_lengths()`` to see a list of all keys used in your data.  You
+        call `Instance.get_padding_lengths()` to see a list of all keys used in your data.  You
         should give one or more of those as the sorting keys here.
     padding_noise : float, optional (default=.1)
         When sorting by padding length, we add a bit of noise to the lengths, so that the sorting
@@ -47,7 +47,7 @@ class BucketIterator(DataIterator):
         you're going to run out of memory, you know it early, instead of waiting through the whole
         epoch to find out at the end that you're going to crash.
 
-        Note that if you specify ``max_instances_in_memory``, the first batch will only be the
+        Note that if you specify `max_instances_in_memory`, the first batch will only be the
         biggest from among the first "max instances in memory" instances.
     batch_size : int, optional, (default = 32)
         The size of each batch of instances yielded when calling the iterator.
@@ -55,7 +55,7 @@ class BucketIterator(DataIterator):
         See :class:`BasicIterator`.
     max_instances_in_memory : int, optional, (default = None)
         See :class:`BasicIterator`.
-    maximum_samples_per_batch : ``Tuple[str, int]``, (default = None)
+    maximum_samples_per_batch : `Tuple[str, int]`, (default = None)
         See :class:`BasicIterator`.
     skip_smaller_batches : bool, optional, (default = False)
         When the number of data samples is not dividable by `batch_size`,
@@ -131,8 +131,8 @@ class BucketIterator(DataIterator):
     def _sort_by_padding(self, instances: List[Instance]) -> List[Instance]:
         """
         Sorts the instances by their padding lengths, using the keys in
-        ``sorting_keys`` (in the order in which they are provided).  ``sorting_keys`` is a list of
-        ``(field_name, padding_key)`` tuples.
+        `sorting_keys` (in the order in which they are provided).  `sorting_keys` is a list of
+        `(field_name, padding_key)` tuples.
         """
         if not self._sorting_keys:
             logger.info("No sorting keys given; trying to guess a good one")

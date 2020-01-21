@@ -10,20 +10,20 @@ This is implemented by giving each AllenNLP class a method
         ...
 
 that contains the logic for instantiating a class instance from a JSON-like
-``Params`` object. Historically you had to implement your own ``from_params``
+`Params` object. Historically you had to implement your own `from_params`
 method on every class you wanted to instantiate this way, even though
 most of the time you were simply popping off params and handing them to the
 constructor (making sure that you popped them using the same default values
 as in the constructor.)
 
-It turns out that in those simple cases, we can generate a ``from_params``
-method automatically. This implementation lives in the ``FromParams`` class.
-Every ``Registrable`` subclass automatically gets it, and you can have your
-non-``Registrable`` classes subclass from it as well.
+It turns out that in those simple cases, we can generate a `from_params`
+method automatically. This implementation lives in the `FromParams` class.
+Every `Registrable` subclass automatically gets it, and you can have your
+non-`Registrable` classes subclass from it as well.
 
-The inclusion of ``extras`` allows for non-FromParams parameters to be passed
-as well. For instance, all of our ``Model`` subclasses require a
-``Vocabulary`` parameter. Accordingly, the ``train`` command calls
+The inclusion of `extras` allows for non-FromParams parameters to be passed
+as well. For instance, all of our `Model` subclasses require a
+`Vocabulary` parameter. Accordingly, the `train` command calls
 
 ```
 model = Model.from_params(params=params.pop('model'), vocab=vocab)
@@ -207,12 +207,12 @@ def construct_arg(
 
     Here we're in the inner loop of iterating over the parameters to a particular constructor,
     trying to construct just one of them.  The information we get for that parameter is its name,
-    its type annotation, and its default value; we also get the full set of ``Params`` for
-    constructing the object (which we may mutate), and any ``extras`` that the constructor might
+    its type annotation, and its default value; we also get the full set of `Params` for
+    constructing the object (which we may mutate), and any `extras` that the constructor might
     need.
 
     We take the type annotation and default value here separately, instead of using an
-    ``inspect.Parameter`` object directly, so that we can handle ``Union`` types using recursion on
+    `inspect.Parameter` object directly, so that we can handle `Union` types using recursion on
     this method, trying the different annotation types in the union in turn.
     """
     from allennlp.models.archival import load_archive  # import here to avoid circular imports
@@ -377,16 +377,16 @@ class FromParams:
         If you need more complex logic in your from `from_params` method, you'll have to implement
         your own method that overrides this one.
 
-        The ``constructor_to_call`` and ``constructor_to_inspect`` arguments deal with a bit of
-        redirection that we do.  We allow you to register particular ``@classmethods`` on a class as
+        The `constructor_to_call` and `constructor_to_inspect` arguments deal with a bit of
+        redirection that we do.  We allow you to register particular `@classmethods` on a class as
         the constructor to use for a registered name.  This lets you, e.g., have a single
-        ``Vocabulary`` class that can be constructed in two different ways, with different names
+        `Vocabulary` class that can be constructed in two different ways, with different names
         registered to each constructor.  In order to handle this, we need to know not just the class
-        we're trying to construct (``cls``), but also what method we should inspect to find its
-        arguments (``constructor_to_inspect``), and what method to call when we're done constructing
-        arguments (``constructor_to_call``).  These two methods are the same when you've used a
-        ``@classmethod`` as your constructor, but they are `different` when you use the default
-        constructor (because you inspect ``__init__``, but call ``cls()``).
+        we're trying to construct (`cls`), but also what method we should inspect to find its
+        arguments (`constructor_to_inspect`), and what method to call when we're done constructing
+        arguments (`constructor_to_call`).  These two methods are the same when you've used a
+        `@classmethod` as your constructor, but they are `different` when you use the default
+        constructor (because you inspect `__init__`, but call `cls()`).
         """
 
         from allennlp.common.registrable import Registrable  # import here to avoid circular imports
@@ -405,7 +405,7 @@ class FromParams:
         registered_subclasses = Registrable._registry.get(cls)
 
         if registered_subclasses is not None and not constructor_to_call:
-            # We know ``cls`` inherits from Registrable, so we'll use a cast to make mypy happy.
+            # We know `cls` inherits from Registrable, so we'll use a cast to make mypy happy.
 
             as_registrable = cast(Type[Registrable], cls)
             default_to_first_choice = as_registrable.default_implementation is not None

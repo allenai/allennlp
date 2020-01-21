@@ -1,5 +1,5 @@
 """
-A :class:`~allennlp.modules.token_embedders.token_embedder.TokenEmbedder` is a ``Module`` that
+A :class:`~allennlp.modules.token_embedders.token_embedder.TokenEmbedder` is a `Module` that
 embeds one-hot-encoded tokens as vectors.
 """
 
@@ -27,4 +27,7 @@ from allennlp.modules.token_embedders.bag_of_word_counts_token_embedder import (
 from allennlp.modules.token_embedders.pass_through_token_embedder import PassThroughTokenEmbedder
 from allennlp.modules.token_embedders.pretrained_transformer_embedder import (
     PretrainedTransformerEmbedder,
+)
+from allennlp.modules.token_embedders.pretrained_transformer_mismatched_embedder import (
+    PretrainedTransformerMismatchedEmbedder,
 )

@@ -54,6 +54,7 @@ class TrainerPieces(NamedTuple):
                     "are ignoring them, using instead the loaded model parameters."
                 )
 
+            # TODO(mattg): This should be updated now that directory_path no longer exists.
             if vocabulary_params.get("directory_path", None):
                 logger.warning(
                     "You passed `directory_path` in parameters for the vocabulary in "

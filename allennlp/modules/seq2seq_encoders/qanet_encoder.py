@@ -19,36 +19,36 @@ class QaNetEncoder(Seq2SeqEncoder):
 
     # Parameters
 
-    input_dim : ``int``, required.
+    input_dim : `int`, required.
         The input dimension of the encoder.
-    hidden_dim : ``int``, required.
+    hidden_dim : `int`, required.
         The hidden dimension used for convolution output channels, multi-head attention output
         and the final output of feedforward layer.
-    attention_projection_dim : ``int``, required.
+    attention_projection_dim : `int`, required.
         The dimension of the linear projections for the self-attention layers.
-    feedforward_hidden_dim : ``int``, required.
+    feedforward_hidden_dim : `int`, required.
         The middle dimension of the FeedForward network. The input and output
         dimensions are fixed to ensure sizes match up for the self attention layers.
-    num_blocks : ``int``, required.
+    num_blocks : `int`, required.
         The number of stacked encoder blocks.
-    num_convs_per_block : ``int``, required.
+    num_convs_per_block : `int`, required.
         The number of convolutions in each block.
-    conv_kernel_size : ``int``, required.
+    conv_kernel_size : `int`, required.
         The kernel size for convolution.
-    num_attention_heads : ``int``, required.
+    num_attention_heads : `int`, required.
         The number of attention heads to use per layer.
-    use_positional_encoding : ``bool``, optional, (default = True)
+    use_positional_encoding : `bool`, optional, (default = True)
         Whether to add sinusoidal frequencies to the input tensor. This is strongly recommended,
         as without this feature, the self attention layers have no idea of absolute or relative
         position (as they are just computing pairwise similarity between vectors of elements),
         which can be important features for many tasks.
-    dropout_prob : ``float``, optional, (default = 0.1)
+    dropout_prob : `float`, optional, (default = 0.1)
         The dropout probability for the feedforward network.
-    layer_dropout_undecayed_prob : ``float``, optional, (default = 0.1)
+    layer_dropout_undecayed_prob : `float`, optional, (default = 0.1)
         The initial dropout probability for layer dropout, and this might decay w.r.t the depth
         of the layer. For each mini-batch, the convolution/attention/ffn sublayer is
         stochastically dropped according to its layer dropout probability.
-    attention_dropout_prob : ``float``, optional, (default = 0)
+    attention_dropout_prob : `float`, optional, (default = 0)
         The dropout probability for the attention distributions in the attention layer.
     """
 
@@ -134,34 +134,34 @@ class QaNetEncoderBlock(Seq2SeqEncoder):
 
     # Parameters
 
-    input_dim : ``int``, required.
+    input_dim : `int`, required.
         The input dimension of the encoder.
-    hidden_dim : ``int``, required.
+    hidden_dim : `int`, required.
         The hidden dimension used for convolution output channels, multi-head attention output
         and the final output of feedforward layer.
-    attention_projection_dim : ``int``, required.
+    attention_projection_dim : `int`, required.
         The dimension of the linear projections for the self-attention layers.
-    feedforward_hidden_dim : ``int``, required.
+    feedforward_hidden_dim : `int`, required.
         The middle dimension of the FeedForward network. The input and output
         dimensions are fixed to ensure sizes match up for the self attention layers.
-    num_convs : ``int``, required.
+    num_convs : `int`, required.
         The number of convolutions in each block.
-    conv_kernel_size : ``int``, required.
+    conv_kernel_size : `int`, required.
         The kernel size for convolution.
-    num_attention_heads : ``int``, required.
+    num_attention_heads : `int`, required.
         The number of attention heads to use per layer.
-    use_positional_encoding : ``bool``, optional, (default = True)
+    use_positional_encoding : `bool`, optional, (default = True)
         Whether to add sinusoidal frequencies to the input tensor. This is strongly recommended,
         as without this feature, the self attention layers have no idea of absolute or relative
         position (as they are just computing pairwise similarity between vectors of elements),
         which can be important features for many tasks.
-    dropout_prob : ``float``, optional, (default = 0.1)
+    dropout_prob : `float`, optional, (default = 0.1)
         The dropout probability for the feedforward network.
-    layer_dropout_undecayed_prob : ``float``, optional, (default = 0.1)
+    layer_dropout_undecayed_prob : `float`, optional, (default = 0.1)
         The initial dropout probability for layer dropout, and this might decay w.r.t the depth
         of the layer. For each mini-batch, the convolution/attention/ffn sublayer is randomly
         dropped according to its layer dropout probability.
-    attention_dropout_prob : ``float``, optional, (default = 0)
+    attention_dropout_prob : `float`, optional, (default = 0)
         The dropout probability for the attention distributions in the attention layer.
     """
 

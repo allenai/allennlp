@@ -46,7 +46,7 @@ class SpanBasedF1Measure(Metric):
         """
         # Parameters
 
-        vocabulary : ``Vocabulary``, required.
+        vocabulary : `Vocabulary`, required.
             A vocabulary containing the tag namespace.
         tag_namespace : str, required.
             This metric assumes that a BIO format is used in which the
@@ -56,7 +56,7 @@ class SpanBasedF1Measure(Metric):
             A "span label" is the part that comes after the BIO label, so it
             would be "ARG1" for the tag "B-ARG1". For example by passing:
 
-             ``ignore_classes=["V"]``
+             `ignore_classes=["V"]`
             the following sequence would not consider the "V" span at index (2, 3)
             when computing the precision, recall and F1 metrics.
 
@@ -64,11 +64,11 @@ class SpanBasedF1Measure(Metric):
 
             This is helpful for instance, to avoid computing metrics for "V"
             spans in a BIO tagging scheme which are typically not included.
-        label_encoding : ``str``, optional (default = "BIO")
+        label_encoding : `str`, optional (default = "BIO")
             The encoding used to specify label span endpoints in the sequence.
             Valid options are "BIO", "IOB1", "BIOUL" or "BMES".
-        tags_to_spans_function : ``Callable``, optional (default = ``None``)
-            If ``label_encoding`` is ``None``, ``tags_to_spans_function`` will be
+        tags_to_spans_function : `Callable`, optional (default = `None`)
+            If `label_encoding` is `None`, `tags_to_spans_function` will be
             used to generate spans.
         """
         if label_encoding and tags_to_spans_function:
@@ -106,18 +106,18 @@ class SpanBasedF1Measure(Metric):
         """
         # Parameters
 
-        predictions : ``torch.Tensor``, required.
+        predictions : `torch.Tensor`, required.
             A tensor of predictions of shape (batch_size, sequence_length, num_classes).
-        gold_labels : ``torch.Tensor``, required.
+        gold_labels : `torch.Tensor`, required.
             A tensor of integer class label of shape (batch_size, sequence_length). It must be the same
-            shape as the ``predictions`` tensor without the ``num_classes`` dimension.
-        mask : ``torch.Tensor``, optional (default = None).
-            A masking tensor the same size as ``gold_labels``.
-        prediction_map : ``torch.Tensor``, optional (default = None).
+            shape as the `predictions` tensor without the `num_classes` dimension.
+        mask : `torch.Tensor`, optional (default = None).
+            A masking tensor the same size as `gold_labels`.
+        prediction_map : `torch.Tensor`, optional (default = None).
             A tensor of size (batch_size, num_classes) which provides a mapping from the index of predictions
             to the indices of the label vocabulary. If provided, the output label at each timestep will be
-            ``vocabulary.get_index_to_token_vocabulary(prediction_map[batch, argmax(predictions[batch, t]))``,
-            rather than simply ``vocabulary.get_index_to_token_vocabulary(argmax(predictions[batch, t]))``.
+            `vocabulary.get_index_to_token_vocabulary(prediction_map[batch, argmax(predictions[batch, t]))`,
+            rather than simply `vocabulary.get_index_to_token_vocabulary(argmax(predictions[batch, t]))`.
             This is useful in cases where each Instance in the dataset is associated with a different possible
             subset of labels from a large label-space (IE FrameNet, where each frame has a different set of
             possible roles associated with it).
@@ -211,12 +211,12 @@ class SpanBasedF1Measure(Metric):
 
         # Parameters
 
-        spans : ``List[TypedStringSpan]``, required.
+        spans : `List[TypedStringSpan]`, required.
             A list of (label, (start, end)) spans.
 
         # Returns
 
-        A ``List[TypedStringSpan]`` with continued arguments replaced with a single span.
+        A `List[TypedStringSpan]` with continued arguments replaced with a single span.
         """
         span_set: Set[TypedStringSpan] = set(spans)
         continued_labels: List[str] = [
@@ -243,7 +243,7 @@ class SpanBasedF1Measure(Metric):
         recall : float
         f1-measure : float
 
-        Additionally, an ``overall`` key is included, which provides the precision,
+        Additionally, an `overall` key is included, which provides the precision,
         recall and f1-measure for all spans.
         """
         all_tags: Set[str] = set()

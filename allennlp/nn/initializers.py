@@ -2,7 +2,7 @@
 An initializer is just a PyTorch function.
 Here we implement a proxy class that allows us
 to register them and supply any additional function arguments
-(for example, the ``mean`` and ``std`` of a normal initializer)
+(for example, the `mean` and `std` of a normal initializer)
 as named arguments to the constructor.
 
 The available initialization functions are
@@ -43,7 +43,7 @@ logger = logging.getLogger(__name__)
 class Initializer(Registrable):
     """
     An initializer is really just a bare pytorch function. This class
-    is a proxy that allows us to implement ``Registerable`` for those functions.
+    is a proxy that allows us to implement `Registerable` for those functions.
     """
 
     default_implementation = "normal"
@@ -52,7 +52,7 @@ class Initializer(Registrable):
         """
         This function is here just to make mypy happy.  We expect initialization functions to
         follow this API; the builtin pytorch initialization functions follow this just fine, even
-        though they don't subclass ``Initialization``.  We're just making it explicit here, so mypy
+        though they don't subclass `Initialization`.  We're just making it explicit here, so mypy
         knows that initializers are callable like this.
         """
         raise NotImplementedError
@@ -62,8 +62,8 @@ def uniform_unit_scaling(tensor: torch.Tensor, nonlinearity: str = "linear"):
     """
     An initaliser which preserves output variance for approximately gaussian
     distributed inputs. This boils down to initialising layers using a uniform
-    distribution in the range ``(-sqrt(3/dim[0]) * scale, sqrt(3 / dim[0]) * scale)``, where
-    ``dim[0]`` is equal to the input dimension of the parameter and the ``scale``
+    distribution in the range `(-sqrt(3/dim[0]) * scale, sqrt(3 / dim[0]) * scale)`, where
+    `dim[0]` is equal to the input dimension of the parameter and the `scale`
     is a constant scaling factor which depends on the non-linearity used.
 
     See `Random Walk Initialisation for Training Very Deep Feedforward Networks
@@ -72,12 +72,12 @@ def uniform_unit_scaling(tensor: torch.Tensor, nonlinearity: str = "linear"):
 
     # Parameters
 
-    tensor : ``torch.Tensor``, required.
+    tensor : `torch.Tensor`, required.
         The tensor to initialise.
-    nonlinearity : ``str``, optional (default = "linear")
+    nonlinearity : `str`, optional (default = "linear")
         The non-linearity which is performed after the projection that this
         tensor is involved in. This must be the name of a function contained
-        in the ``torch.nn.functional`` package.
+        in the `torch.nn.functional` package.
 
     # Returns
 
@@ -107,11 +107,11 @@ def block_orthogonal(tensor: torch.Tensor, split_sizes: List[int], gain: float =
 
     # Parameters
 
-    tensor : ``torch.Tensor``, required.
+    tensor : `torch.Tensor`, required.
         A tensor to initialize.
     split_sizes : List[int], required.
-        A list of length ``tensor.ndim()`` specifying the size of the
-        blocks along that particular dimension. E.g. ``[10, 20]`` would
+        A list of length `tensor.ndim()` specifying the size of the
+        blocks along that particular dimension. E.g. `[10, 20]` would
         result in the tensor being split into chunks of size 10 along the
         first dimension and 20 along the second.
     gain : float, optional (default = 1.0)
@@ -201,25 +201,25 @@ Registrable._registry[Initializer] = {
 class PretrainedModelInitializer(Initializer):
     """
     An initializer which allows initializing parameters using a pretrained model. The
-    initializer will load all of the weights from the ``weights_file_path`` and use the
+    initializer will load all of the weights from the `weights_file_path` and use the
     name of the new parameters to index into the pretrained parameters. Therefore,
     by default, the names of the new and pretrained parameters must be the same.
-    However, this behavior can be overridden using the ``parameter_name_overrides``,
+    However, this behavior can be overridden using the `parameter_name_overrides`,
     which remaps the name of the new parameter to the key which should be used
     to index into the pretrained parameters.
 
-    The initializer will load all of the weights from the ``weights_file_path``
+    The initializer will load all of the weights from the `weights_file_path`
     regardless of which parameters will actually be used to initialize the new model.
     So, if you need to initialize several parameters using a pretrained model, the most
-    memory-efficient way to do this is to use one ``PretrainedModelInitializer`` per
+    memory-efficient way to do this is to use one `PretrainedModelInitializer` per
     weights file and use a regex to match all of the new parameters which need to be
     initialized.
 
     The below entry in the :class:`InitializerApplicator` parameters will initialize
-    ``linear_1.weight`` and ``linear_2.weight`` using a pretrained model.
-    ``linear_1.weight`` will be initialized to the pretrained
-    parameters called ``linear_1.weight``, but ``linear_2.weight`` will be initialized
-    to the pretrained parameters called ``linear_3.weight``::
+    `linear_1.weight` and `linear_2.weight` using a pretrained model.
+    `linear_1.weight` will be initialized to the pretrained
+    parameters called `linear_1.weight`, but `linear_2.weight` will be initialized
+    to the pretrained parameters called `linear_3.weight`::
 
        ["linear_1.weight|linear_2.weight",
            {
@@ -246,9 +246,9 @@ class PretrainedModelInitializer(Initializer):
 
     # Parameters
 
-    weights_file_path : ``str``, required
+    weights_file_path : `str`, required
         The path to the weights file which has the pretrained model parameters.
-    parameter_name_overrides : ``Dict[str, str]``, optional (default = None)
+    parameter_name_overrides : `Dict[str, str]`, optional (default = None)
         The mapping from the new parameter name to the name which should be used
         to index into the pretrained model parameters. If a parameter name is not
         specified, the initializer will use the parameter's default name as the key.
@@ -292,7 +292,7 @@ class InitializerApplicator:
         """
         # Parameters
 
-        initializers : ``List[Tuple[str, Initializer]]``, optional (default = [])
+        initializers : `List[Tuple[str, Initializer]]`, optional (default = [])
             A list mapping parameter regexes to initializers.  We will check each parameter against
             each regex in turn, and apply the initializer paired with the first matching regex, if
             any. If "prevent" is assigned to any regex, then it will override and prevent the matched
@@ -359,7 +359,7 @@ class InitializerApplicator:
             ]
 
         where the first item in each tuple is the regex that matches to parameters, and the second
-        item is a set of parameters that will be passed to ``Initialzer.from_params()``.  These
+        item is a set of parameters that will be passed to `Initialzer.from_params()`.  These
         values can either be strings, in which case they correspond to the names of initializers,
         or dictionaries, in which case they must contain the "type" key, corresponding to the name
         of an initializer.  In addition, they may contain auxiliary named parameters which will be

@@ -28,12 +28,12 @@ class QuoraParaphraseDatasetReader(DatasetReader):
 
     # Parameters
 
-    tokenizer : ``Tokenizer``, optional
+    tokenizer : `Tokenizer`, optional
         Tokenizer to use to split the premise and hypothesis into words or other kinds of tokens.
-        Defaults to ``WhitespaceTokenizer``.
-    token_indexers : ``Dict[str, TokenIndexer]``, optional
-        Indexers used to define input token representations. Defaults to ``{"tokens":
-        SingleIdTokenIndexer()}``.
+        Defaults to `WhitespaceTokenizer`.
+    token_indexers : `Dict[str, TokenIndexer]`, optional
+        Indexers used to define input token representations. Defaults to `{"tokens":
+        SingleIdTokenIndexer()}`.
     """
 
     def __init__(

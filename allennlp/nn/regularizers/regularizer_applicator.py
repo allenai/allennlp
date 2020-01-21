@@ -63,13 +63,13 @@ class RegularizerApplicator:
 
         # Parameters
 
-        params : ``Params``, required.
+        params : `Params`, required.
             A Params object containing a "regularizers" key.
 
         # Returns
 
         A RegularizerApplicator containing the specified Regularizers,
-        or ``None`` if no Regularizers are specified.
+        or `None` if no Regularizers are specified.
         """
         if not params:
             return None

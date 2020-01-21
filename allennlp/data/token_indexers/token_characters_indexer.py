@@ -20,22 +20,22 @@ class TokenCharactersIndexer(TokenIndexer):
 
     # Parameters
 
-    namespace : ``str``, optional (default=``token_characters``)
+    namespace : `str`, optional (default=`token_characters`)
         We will use this namespace in the :class:`Vocabulary` to map the characters in each token
         to indices.
-    character_tokenizer : ``CharacterTokenizer``, optional (default=``CharacterTokenizer()``)
+    character_tokenizer : `CharacterTokenizer`, optional (default=`CharacterTokenizer()`)
         We use a :class:`CharacterTokenizer` to handle splitting tokens into characters, as it has
         options for byte encoding and other things.  The default here is to instantiate a
-        ``CharacterTokenizer`` with its default parameters, which uses unicode characters and
+        `CharacterTokenizer` with its default parameters, which uses unicode characters and
         retains casing.
-    start_tokens : ``List[str]``, optional (default=``None``)
-        These are prepended to the tokens provided to ``tokens_to_indices``.
-    end_tokens : ``List[str]``, optional (default=``None``)
-        These are appended to the tokens provided to ``tokens_to_indices``.
-    min_padding_length : ``int``, optional (default=``0``)
-        We use this value as the minimum length of padding. Usually used with :class:``CnnEncoder``, its
-        value should be set to the maximum value of ``ngram_filter_sizes`` correspondingly.
-    token_min_padding_length : ``int``, optional (default=``0``)
+    start_tokens : `List[str]`, optional (default=`None`)
+        These are prepended to the tokens provided to `tokens_to_indices`.
+    end_tokens : `List[str]`, optional (default=`None`)
+        These are appended to the tokens provided to `tokens_to_indices`.
+    min_padding_length : `int`, optional (default=`0`)
+        We use this value as the minimum length of padding. Usually used with :class:`CnnEncoder`, its
+        value should be set to the maximum value of `ngram_filter_sizes` correspondingly.
+    token_min_padding_length : `int`, optional (default=`0`)
         See :class:`TokenIndexer`.
     """
 

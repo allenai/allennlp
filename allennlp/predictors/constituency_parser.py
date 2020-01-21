@@ -85,7 +85,7 @@ class ConstituencyParserPredictor(Predictor):
     @overrides
     def _json_to_instance(self, json_dict: JsonDict) -> Instance:
         """
-        Expects JSON that looks like ``{"sentence": "..."}``.
+        Expects JSON that looks like `{"sentence": "..."}`.
         """
         spacy_tokens = self._tokenizer.tokenize(json_dict["sentence"])
         sentence_text = [token.text for token in spacy_tokens]
@@ -114,12 +114,12 @@ class ConstituencyParserPredictor(Predictor):
 
     def _build_hierplane_tree(self, tree: Tree, index: int, is_root: bool) -> JsonDict:
         """
-        Recursively builds a JSON dictionary from an NLTK ``Tree`` suitable for
+        Recursively builds a JSON dictionary from an NLTK `Tree` suitable for
         rendering trees using the `Hierplane library<https://allenai.github.io/hierplane/>`.
 
         # Parameters
 
-        tree : ``Tree``, required.
+        tree : `Tree`, required.
             The tree to convert into Hierplane JSON.
         index : int, required.
             The character index into the tree, used for creating spans.

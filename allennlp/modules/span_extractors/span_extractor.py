@@ -32,32 +32,32 @@ class SpanExtractor(torch.nn.Module, Registrable):
 
         # Parameters
 
-        sequence_tensor : ``torch.FloatTensor``, required.
+        sequence_tensor : `torch.FloatTensor`, required.
             A tensor of shape (batch_size, sequence_length, embedding_size)
             representing an embedded sequence of words.
-        span_indices : ``torch.LongTensor``, required.
-            A tensor of shape ``(batch_size, num_spans, 2)``, where the last
+        span_indices : `torch.LongTensor`, required.
+            A tensor of shape `(batch_size, num_spans, 2)`, where the last
             dimension represents the inclusive start and end indices of the
-            span to be extracted from the ``sequence_tensor``.
-        sequence_mask : ``torch.LongTensor``, optional (default = ``None``).
+            span to be extracted from the `sequence_tensor`.
+        sequence_mask : `torch.LongTensor`, optional (default = `None`).
             A tensor of shape (batch_size, sequence_length) representing padded
             elements of the sequence.
-        span_indices_mask : ``torch.LongTensor``, optional (default = ``None``).
+        span_indices_mask : `torch.LongTensor`, optional (default = `None`).
             A tensor of shape (batch_size, num_spans) representing the valid
-            spans in the ``indices`` tensor. This mask is optional because
+            spans in the `indices` tensor. This mask is optional because
             sometimes it's easier to worry about masking after calling this
             function, rather than passing a mask directly.
 
         # Returns
 
-        A tensor of shape ``(batch_size, num_spans, embedded_span_size)``,
-        where ``embedded_span_size`` depends on the way spans are represented.
+        A tensor of shape `(batch_size, num_spans, embedded_span_size)`,
+        where `embedded_span_size` depends on the way spans are represented.
         """
         raise NotImplementedError
 
     def get_input_dim(self) -> int:
         """
-        Returns the expected final dimension of the ``sequence_tensor``.
+        Returns the expected final dimension of the `sequence_tensor`.
         """
         raise NotImplementedError
 

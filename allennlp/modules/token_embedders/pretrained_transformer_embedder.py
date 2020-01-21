@@ -10,7 +10,7 @@ from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
 @TokenEmbedder.register("pretrained_transformer")
 class PretrainedTransformerEmbedder(TokenEmbedder):
     """
-    Uses a pretrained model from ``transformers`` as a ``TokenEmbedder``.
+    Uses a pretrained model from `transformers` as a `TokenEmbedder`.
     """
 
     def __init__(self, model_name: str) -> None:
@@ -24,12 +24,25 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
     def get_output_dim(self):
         return self.output_dim
 
+    @overrides
     def forward(
         self,
         token_ids: torch.LongTensor,
         mask: torch.LongTensor,
         type_ids: Optional[torch.LongTensor],
     ) -> torch.Tensor:  # type: ignore
+        """
+        # Parameters
+
+        token_ids: torch.LongTensor
+            Shape: [batch_size, num_wordpieces].
+        mask: torch.LongTensor
+            Shape: [batch_size, num_wordpieces].
+
+        # Returns:
+
+        Shape: [batch_size, num_wordpieces, embedding_size].
+        """
         if self.transformer_model.embeddings.token_type_embeddings.num_embeddings == 1:
             type_ids = None  # RoBERTa doesn't have token type ids
         return self.transformer_model(

@@ -30,25 +30,25 @@ def add_epoch_number(batch: Batch, epoch: int) -> Batch:
 
 class DataIterator(Registrable):
     """
-    An abstract ``DataIterator`` class. ``DataIterators`` must override ``_create_batches()``.
+    An abstract `DataIterator` class. `DataIterators` must override `_create_batches()`.
 
     # Parameters
 
-    batch_size : ``int``, optional, (default = 32)
+    batch_size : `int`, optional, (default = 32)
         The size of each batch of instances yielded when calling the iterator.
-    instances_per_epoch : ``int``, optional, (default = None)
+    instances_per_epoch : `int`, optional, (default = None)
         If specified, each epoch will consist of precisely this many instances.
         If not specified, each epoch will consist of a single pass through the dataset.
-    max_instances_in_memory : ``int``, optional, (default = None)
+    max_instances_in_memory : `int`, optional, (default = None)
         If specified, the iterator will load this many instances at a time into an
         in-memory list and then produce batches from one such list at a time. This
         could be useful if your instances are read lazily from disk.
-    cache_instances : ``bool``, optional, (default = False)
+    cache_instances : `bool`, optional, (default = False)
         If true, the iterator will cache the tensorized instances in memory.
         If false, it will do the tensorization anew each iteration.
-    track_epoch : ``bool``, optional, (default = False)
-        If true, each instance will get a ``MetadataField`` containing the epoch number.
-    maximum_samples_per_batch : ``Tuple[str, int]``, (default = None)
+    track_epoch : `bool`, optional, (default = False)
+        If true, each instance will get a `MetadataField` containing the epoch number.
+    maximum_samples_per_batch : `Tuple[str, int]`, (default = None)
         If specified, then is a tuple (padding_key, limit) and we will ensure
         that every batch is such that batch_size * sequence_length <= limit
         where sequence_length is given by the padding_key. This is done by
@@ -93,21 +93,21 @@ class DataIterator(Registrable):
     ) -> Iterator[TensorDict]:
         """
         Returns a generator that yields batches over the given dataset
-        for the given number of epochs. If ``num_epochs`` is not specified,
+        for the given number of epochs. If `num_epochs` is not specified,
         it will yield batches forever.
 
         # Parameters
 
-        instances : ``Iterable[Instance]``
+        instances : `Iterable[Instance]`
             The instances in the dataset. IMPORTANT: this must be able to be
             iterated over *multiple times*. That is, it must be either a List
-            or some other object whose ``__iter__`` method returns a fresh iterator
+            or some other object whose `__iter__` method returns a fresh iterator
             each time it's called.
-        num_epochs : ``int``, optional (default=``None``)
-            How times should we iterate over this dataset?  If ``None``, we will iterate over it
+        num_epochs : `int`, optional (default=`None`)
+            How times should we iterate over this dataset?  If `None`, we will iterate over it
             forever.
-        shuffle : ``bool``, optional (default=``True``)
-            If ``True``, we will shuffle the instances in ``dataset`` before constructing batches
+        shuffle : `bool`, optional (default=`True`)
+            If `True`, we will shuffle the instances in `dataset` before constructing batches
             and iterating over the data.
         """
         # Instances is likely to be a list, which cannot be used as a key,
@@ -175,8 +175,8 @@ class DataIterator(Registrable):
         if max_instances is None:
             yield from iter(instances)
         else:
-            # If we don't have a cursor for this dataset, create one. We use ``id()``
-            # for the key because ``instances`` could be a list, which can't be used as a key.
+            # If we don't have a cursor for this dataset, create one. We use `id()`
+            # for the key because `instances` could be a list, which can't be used as a key.
             key = id(instances)
             iterator = self._cursors.get(key, iter(instances))
 
@@ -211,11 +211,11 @@ class DataIterator(Registrable):
         # We have four different cases to deal with:
 
         # With lazy instances and no guidance about how many to load into memory,
-        # we just load ``batch_size`` instances at a time:
+        # we just load `batch_size` instances at a time:
         if lazy and self._max_instances_in_memory is None:
             yield from lazy_groups_of(iterator, self._batch_size)
         # If we specified max instances in memory, lazy or not, we just
-        # load ``max_instances_in_memory`` instances at a time:
+        # load `max_instances_in_memory` instances at a time:
         elif self._max_instances_in_memory is not None:
             yield from lazy_groups_of(iterator, self._max_instances_in_memory)
         # If we have non-lazy instances, and we want all instances each epoch,
@@ -237,9 +237,9 @@ class DataIterator(Registrable):
 
         # Parameters
 
-        batch_instances : ``Iterable[Instance]``
+        batch_instances : `Iterable[Instance]`
             A candidate batch.
-        excess : ``Deque[Instance]``
+        excess : `Deque[Instance]`
             Instances that were not sufficient to form an entire batch
             previously. They will be used as part of the first sub-batch. This
             will be populated with instances from the end of batch_instances
@@ -300,8 +300,8 @@ class DataIterator(Registrable):
 
     def get_num_batches(self, instances: Iterable[Instance]) -> int:
         """
-        Returns the number of batches that ``dataset`` will be split into; if you want to track
-        progress through the batch with the generator produced by ``__call__``, this could be
+        Returns the number of batches that `dataset` will be split into; if you want to track
+        progress through the batch with the generator produced by `__call__`, this could be
         useful.
         """
         if is_lazy(instances) and self._instances_per_epoch is None:

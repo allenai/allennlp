@@ -20,14 +20,14 @@ logger = logging.getLogger(__name__)
 @Callback.register("validate")
 class Validate(Callback):
     """
-    Evaluates the trainer's ``Model`` using the provided validation dataset.
+    Evaluates the trainer's `Model` using the provided validation dataset.
     Uses the results to populate trainer.val_metrics.
 
     # Parameters
 
-    validation_data : ``Iterable[Instance]``
+    validation_data : `Iterable[Instance]`
         The instances in the validation dataset.
-    validation_iterator : ``DataIterator``
+    validation_iterator : `DataIterator`
         The iterator to use in the evaluation.
     """
 

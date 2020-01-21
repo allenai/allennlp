@@ -1,5 +1,5 @@
 """
-A ``TextField`` represents a string of text, the kind that you might want to represent with
+A `TextField` represents a string of text, the kind that you might want to represent with
 standard word vectors, or pass through an LSTM.
 """
 from collections import defaultdict
@@ -27,18 +27,18 @@ TextFieldTensors = Dict[str, Dict[str, torch.Tensor]]
 
 class TextField(SequenceField[TextFieldTensors]):
     """
-    This ``Field`` represents a list of string tokens.  Before constructing this object, you need
+    This `Field` represents a list of string tokens.  Before constructing this object, you need
     to tokenize raw strings using a :class:`~allennlp.data.tokenizers.tokenizer.Tokenizer`.
 
     Because string tokens can be represented as indexed arrays in a number of ways, we also take a
     dictionary of :class:`~allennlp.data.token_indexers.token_indexer.TokenIndexer`
     objects that will be used to convert the tokens into indices.
-    Each ``TokenIndexer`` could represent each token as a single ID, or a list of character IDs, or
+    Each `TokenIndexer` could represent each token as a single ID, or a list of character IDs, or
     something else.
 
-    This field will get converted into a dictionary of arrays, one for each ``TokenIndexer``.  A
-    ``SingleIdTokenIndexer`` produces an array of shape (num_tokens,), while a
-    ``TokenCharactersIndexer`` produces an array of shape (num_tokens, num_characters).
+    This field will get converted into a dictionary of arrays, one for each `TokenIndexer`.  A
+    `SingleIdTokenIndexer` produces an array of shape (num_tokens,), while a
+    `TokenCharactersIndexer` produces an array of shape (num_tokens, num_characters).
     """
 
     def __init__(self, tokens: List[Token], token_indexers: Dict[str, TokenIndexer]) -> None:
@@ -67,8 +67,8 @@ class TextField(SequenceField[TextFieldTensors]):
     @overrides
     def get_padding_lengths(self) -> Dict[str, int]:
         """
-        The ``TextField`` has a list of ``Tokens``, and each ``Token`` gets converted into arrays by
-        (potentially) several ``TokenIndexers``.  This method gets the max length (over tokens)
+        The `TextField` has a list of `Tokens`, and each `Token` gets converted into arrays by
+        (potentially) several `TokenIndexers`.  This method gets the max length (over tokens)
         associated with each of these arrays.
         """
         if self._indexed_tokens is None:

@@ -30,13 +30,13 @@ class Auc(Metric):
         """
         # Parameters
 
-        predictions : ``torch.Tensor``, required.
+        predictions : `torch.Tensor`, required.
             A one-dimensional tensor of prediction scores of shape (batch_size).
-        gold_labels : ``torch.Tensor``, required.
+        gold_labels : `torch.Tensor`, required.
             A one-dimensional label tensor of shape (batch_size), with {1, 0}
             entries for positive and negative class. If it's not binary,
             `positive_label` should be passed in the initialization.
-        mask : ``torch.Tensor``, optional (default = None).
+        mask : `torch.Tensor`, optional (default = None).
             A one-dimensional label tensor of shape (batch_size).
         """
 

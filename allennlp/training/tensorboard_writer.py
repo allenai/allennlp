@@ -19,7 +19,7 @@ class TensorboardWriter(FromParams):
 
     get_batch_num_total : Callable[[], int]
         A thunk that returns the number of batches so far. Most likely this will
-        be a closure around an instance variable in your ``Trainer`` class.
+        be a closure around an instance variable in your `Trainer` class.
     serialization_dir : str, optional (default = None)
         If provided, this is where the Tensorboard logs will be written.
     summary_interval : int, optional (default = 100)
@@ -226,7 +226,7 @@ class TensorboardWriter(FromParams):
 
     def close(self) -> None:
         """
-        Calls the ``close`` method of the ``SummaryWriter`` s which makes sure that pending
+        Calls the `close` method of the `SummaryWriter` s which makes sure that pending
         scalars are flushed to disk and the tensorboard event files are closed properly.
         """
         if self._train_log is not None:

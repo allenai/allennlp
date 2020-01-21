@@ -76,7 +76,7 @@ class SemanticDependenciesDatasetReader(DatasetReader):
 
     # Parameters
 
-    token_indexers : ``Dict[str, TokenIndexer]``, optional (default=``{"tokens": SingleIdTokenIndexer()}``)
+    token_indexers : `Dict[str, TokenIndexer]`, optional (default=`{"tokens": SingleIdTokenIndexer()}`)
         The token indexers to be applied to the words TextField.
     """
 

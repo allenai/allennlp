@@ -19,13 +19,13 @@ class BagOfWordCountsTokenEmbedder(TokenEmbedder):
 
     # Parameters
 
-    vocab : ``Vocabulary``
-    vocab_namespace : ``str``, optional (default = "tokens")
+    vocab : `Vocabulary`
+    vocab_namespace : `str`, optional (default = "tokens")
         namespace of vocabulary to embed
-    projection_dim : ``int``, optional (default = ``None``)
+    projection_dim : `int`, optional (default = `None`)
         if specified, will project the resulting bag of words representation
         to specified dimension.
-    ignore_oov : ``bool``, optional (default = ``False``)
+    ignore_oov : `bool`, optional (default = `False`)
         If true, we ignore the OOV token.
     """
 
@@ -59,14 +59,14 @@ class BagOfWordCountsTokenEmbedder(TokenEmbedder):
         """
         # Parameters
 
-        inputs : ``torch.Tensor``
-            Shape ``(batch_size, timesteps, sequence_length)`` of word ids
+        inputs : `torch.Tensor`
+            Shape `(batch_size, timesteps, sequence_length)` of word ids
             representing the current batch.
 
         # Returns
 
         The bag-of-words representations for the input sequence, shape
-        ``(batch_size, vocab_size)``
+        `(batch_size, vocab_size)`
         """
         bag_of_words_vectors = []
 

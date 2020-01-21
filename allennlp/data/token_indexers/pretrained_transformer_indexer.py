@@ -16,31 +16,27 @@ logger = logging.getLogger(__name__)
 @TokenIndexer.register("pretrained_transformer")
 class PretrainedTransformerIndexer(TokenIndexer):
     """
-    This ``TokenIndexer`` assumes that Tokens already have their indexes in them (see ``text_id`` field).
-    We still require ``model_name`` because we want to form allennlp vocabulary from pretrained one.
-    This ``Indexer`` is only really appropriate to use if you've also used a
+    This `TokenIndexer` assumes that Tokens already have their indexes in them (see `text_id` field).
+    We still require `model_name` because we want to form allennlp vocabulary from pretrained one.
+    This `Indexer` is only really appropriate to use if you've also used a
     corresponding :class:`PretrainedTransformerTokenizer` to tokenize your input.  Otherwise you'll
     have a mismatch between your tokens and your vocabulary, and you'll get a lot of UNK tokens.
 
     # Parameters
 
-    model_name : ``str``
-        The name of the ``transformers`` model to use.
-    namespace : ``str``, optional (default=``tags``)
+    model_name : `str`
+        The name of the `transformers` model to use.
+    namespace : `str`, optional (default=`tags`)
         We will add the tokens in the pytorch_transformer vocabulary to this vocabulary namespace.
-        We use a somewhat confusing default value of ``tags`` so that we do not add padding or UNK
+        We use a somewhat confusing default value of `tags` so that we do not add padding or UNK
         tokens to this namespace, which would break on loading because we wouldn't find our default
         OOV token.
     """
 
-    def __init__(
-        self, model_name: str, namespace: str = "tags", token_min_padding_length: int = 0
-    ) -> None:
-        super().__init__(token_min_padding_length)
+    def __init__(self, model_name: str, namespace: str = "tags", **kwargs) -> None:
+        super().__init__(**kwargs)
         self._namespace = namespace
         self._tokenizer = AutoTokenizer.from_pretrained(model_name)
-        self._padding_value = self._tokenizer.convert_tokens_to_ids([self._tokenizer.pad_token])[0]
-        logger.info(f"Using token indexer padding value of {self._padding_value}")
         self._added_to_vocabulary = False
 
     def _add_encoding_to_vocabulary(self, vocab: Vocabulary) -> None:
@@ -71,9 +67,7 @@ class PretrainedTransformerIndexer(TokenIndexer):
         pass
 
     @overrides
-    def tokens_to_indices(
-        self, tokens: List[Token], vocabulary: Vocabulary
-    ) -> Dict[str, List[int]]:
+    def tokens_to_indices(self, tokens: List[Token], vocabulary: Vocabulary) -> IndexedTokenList:
         if not self._added_to_vocabulary:
             self._add_encoding_to_vocabulary(vocabulary)
             self._added_to_vocabulary = True
@@ -97,11 +91,10 @@ class PretrainedTransformerIndexer(TokenIndexer):
             else:
                 type_ids = None
 
-        # The mask has 1 for real tokens and 0 for padding tokens. Only real
-        # tokens are attended to.
-        attention_mask = [1] * len(indices)
+        # The mask has 1 for real tokens and 0 for padding tokens. Only real tokens are attended to.
+        mask = [1] * len(indices)
 
-        result = {"token_ids": indices, "mask": attention_mask}
+        result = {"token_ids": indices, "mask": mask}
         if type_ids is not None:
             result["type_ids"] = type_ids
         return result

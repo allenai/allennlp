@@ -67,7 +67,7 @@ class SimpleSeq2SeqTest(ModelTestCase):
         training_tensors = self.dataset.as_tensor_dict()
         output_dict = self.model(**training_tensors)
         decode_output_dict = self.model.decode(output_dict)
-        # ``decode`` should have added a ``predicted_tokens`` field to ``output_dict``. Checking if it's there.
+        # `decode` should have added a `predicted_tokens` field to `output_dict`. Checking if it's there.
         assert "predicted_tokens" in decode_output_dict
 
         # The output of model.decode should still have 'predicted_tokens' after using

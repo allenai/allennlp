@@ -30,9 +30,9 @@ class OntonotesNamedEntityRecognition(DatasetReader):
     for fine-grained named entity recognition. It returns a dataset of instances with the
     following fields:
 
-    tokens : ``TextField``
+    tokens : `TextField`
         The tokens in the sentence.
-    tags : ``SequenceLabelField``
+    tags : `SequenceLabelField`
         A sequence of BIO tags for the NER classes.
 
     Note that the "/pt/" directory of the Onotonotes dataset representing annotations
@@ -41,18 +41,18 @@ class OntonotesNamedEntityRecognition(DatasetReader):
 
     # Parameters
 
-    token_indexers : ``Dict[str, TokenIndexer]``, optional
+    token_indexers : `Dict[str, TokenIndexer]`, optional
         We similarly use this for both the premise and the hypothesis.  See :class:`TokenIndexer`.
-        Default is ``{"tokens": SingleIdTokenIndexer()}``.
-    domain_identifier : ``str``, (default = None)
+        Default is `{"tokens": SingleIdTokenIndexer()}`.
+    domain_identifier : `str`, (default = None)
         A string denoting a sub-domain of the Ontonotes 5.0 dataset to use. If present, only
         conll files under paths containing this domain identifier will be processed.
-    coding_scheme : ``str``, (default = None).
+    coding_scheme : `str`, (default = None).
         The coding scheme to use for the NER labels. Valid options are "BIO" or "BIOUL".
 
     # Returns
 
-    A ``Dataset`` of ``Instances`` for Fine-Grained NER.
+    A `Dataset` of `Instances` for Fine-Grained NER.
 
     """
 

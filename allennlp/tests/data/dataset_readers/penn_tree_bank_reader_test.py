@@ -217,7 +217,7 @@ class TestPennTreeBankConstituencySpanReader(AllenNlpTestCase):
         tree = Tree.fromstring(
             """
             (S
-        (`` ``)
+        (` ``)
         (S-TPC
         (NP-SBJ (PRP We))
         (VP

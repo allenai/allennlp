@@ -56,10 +56,10 @@ class Archive(NamedTuple):
 
         # Parameters
 
-        path : ``str``, required
+        path : `str`, required
             Path of target module to be loaded from the model.
             Eg. "_textfield_embedder.token_embedder_tokens"
-        freeze : ``bool``, optional (default=True)
+        freeze : `bool`, optional (default=True)
             Whether to freeze the module parameters or not.
 
         """
@@ -85,8 +85,8 @@ class Archive(NamedTuple):
 # We archive a model by creating a tar.gz file with its weights, config, and vocabulary.
 #
 # We also may include other arbitrary files in the archive. In this case we store
-# the mapping { flattened_path -> filename } in ``files_to_archive.json`` and the files
-# themselves under the path ``fta/`` .
+# the mapping { flattened_path -> filename } in `files_to_archive.json` and the files
+# themselves under the path `fta/` .
 #
 # These constants are the *known names* under which we archive them.
 CONFIG_NAME = "config.json"
@@ -102,20 +102,20 @@ def archive_model(
 ) -> None:
     """
     Archive the model weights, its training configuration, and its
-    vocabulary to `model.tar.gz`. Include the additional ``files_to_archive``
+    vocabulary to `model.tar.gz`. Include the additional `files_to_archive`
     if provided.
 
     # Parameters
 
-    serialization_dir : ``str``
+    serialization_dir : `str`
         The directory where the weights and vocabulary are written out.
-    weights : ``str``, optional (default=_DEFAULT_WEIGHTS)
-        Which weights file to include in the archive. The default is ``best.th``.
-    files_to_archive : ``Dict[str, str]``, optional (default=None)
+    weights : `str`, optional (default=_DEFAULT_WEIGHTS)
+        Which weights file to include in the archive. The default is `best.th`.
+    files_to_archive : `Dict[str, str]`, optional (default=None)
         A mapping {flattened_key -> filename} of supplementary files to include
-        in the archive. That is, if you wanted to include ``params['model']['weights']``
+        in the archive. That is, if you wanted to include `params['model']['weights']`
         then you would specify the key as `"model.weights"`.
-    archive_path : ``str``, optional, (default = None)
+    archive_path : `str`, optional, (default = None)
         A full path to serialize the model to. The default is "model.tar.gz" inside the
         serialization_dir. If you pass a directory here, we'll serialize the model
         to "model.tar.gz" inside the directory.
@@ -165,15 +165,15 @@ def load_archive(
 
     # Parameters
 
-    archive_file : ``str``
+    archive_file : `str`
         The archive file to load the model from.
-    weights_file : ``str``, optional (default = None)
+    weights_file : `str`, optional (default = None)
         The weights file to use.  If unspecified, weights.th in the archive_file will be used.
-    cuda_device : ``int``, optional (default = -1)
+    cuda_device : `int`, optional (default = -1)
         If `cuda_device` is >= 0, the model will be loaded onto the
         corresponding GPU. Otherwise it will be loaded onto the CPU.
-    overrides : ``str``, optional (default = "")
-        JSON overrides to apply to the unarchived ``Params`` object.
+    overrides : `str`, optional (default = "")
+        JSON overrides to apply to the unarchived `Params` object.
     """
     # redirect to the cache, if necessary
     resolved_archive_file = cached_path(archive_file)

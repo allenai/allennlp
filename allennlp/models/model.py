@@ -28,7 +28,7 @@ _DEFAULT_WEIGHTS = "best.th"
 class Model(torch.nn.Module, Registrable):
     """
     This abstract class represents a model to be trained. Rather than relying completely
-    on the Pytorch Module, we modify the output spec of ``forward`` to be a dictionary.
+    on the Pytorch Module, we modify the output spec of `forward` to be a dictionary.
 
     Models built using this API are still compatible with other pytorch models and can
     be used naturally as modules within other models - outputs are dictionaries, which
@@ -99,15 +99,15 @@ class Model(torch.nn.Module, Registrable):
 
         inputs:
             Tensors comprising everything needed to perform a training update, `including` labels,
-            which should be optional (i.e have a default value of ``None``).  At inference time,
+            which should be optional (i.e have a default value of `None`).  At inference time,
             simply pass the relevant inputs, not including the labels.
 
         # Returns
 
-        output_dict : ``Dict[str, torch.Tensor]``
+        output_dict : `Dict[str, torch.Tensor]`
             The outputs from the model. In order to train a model using the
             :class:`~allennlp.training.Trainer` api, you must provide a "loss" key pointing to a
-            scalar ``torch.Tensor`` representing the loss to be optimized.
+            scalar `torch.Tensor` representing the loss to be optimized.
         """
         raise NotImplementedError
 
@@ -117,7 +117,7 @@ class Model(torch.nn.Module, Registrable):
         converts that text into arrays using this model's :class:`Vocabulary`, passes those arrays
         through :func:`self.forward()` and :func:`self.decode()` (which by default does nothing)
         and returns the result.  Before returning the result, we convert any
-        ``torch.Tensors`` into numpy arrays and remove the batch dimension.
+        `torch.Tensors` into numpy arrays and remove the batch dimension.
         """
         return self.forward_on_instances([instance])[0]
 
@@ -127,7 +127,7 @@ class Model(torch.nn.Module, Registrable):
         arrays using this model's :class:`Vocabulary`, passes those arrays through
         :func:`self.forward()` and :func:`self.decode()` (which by default does nothing)
         and returns the result.  Before returning the result, we convert any
-        ``torch.Tensors`` into numpy arrays and separate the
+        `torch.Tensors` into numpy arrays and separate the
         batched output into a list of individual dicts per instance. Note that typically
         this will be faster on a GPU (and conditionally, on a CPU) than repeated calls to
         :func:`forward_on_instance`.
@@ -173,8 +173,8 @@ class Model(torch.nn.Module, Registrable):
     def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         """
         Takes the result of :func:`forward` and runs inference / decoding / whatever
-        post-processing you need to do your model.  The intent is that ``model.forward()`` should
-        produce potentials or probabilities, and then ``model.decode()`` can take those results and
+        post-processing you need to do your model.  The intent is that `model.forward()` should
+        produce potentials or probabilities, and then `model.decode()` can take those results and
         run some kind of beam search or constrained inference or whatever is necessary.  This does
         not handle all possible decoding use cases, but it at least handles simple kinds of
         decoding.
@@ -195,7 +195,7 @@ class Model(torch.nn.Module, Registrable):
         as it is not required to implement metrics for a new model.  A boolean `reset` parameter is
         passed, as frequently a metric accumulator will have some state which should be reset
         between epochs. This is also compatible with :class:`~allennlp.training.Metric`s. Metrics
-        should be populated during the call to ``forward``, with the
+        should be populated during the call to `forward`, with the
         :class:`~allennlp.training.Metric` handling the accumulation of the metric until this
         method is called.
         """
@@ -225,7 +225,7 @@ class Model(torch.nn.Module, Registrable):
         """
         This method warns once if a user implements a model which returns a dictionary with
         values which we are unable to split back up into elements of the batch. This is controlled
-        by a class attribute ``_warn_for_unseperable_batches`` because it would be extremely verbose
+        by a class attribute `_warn_for_unseperable_batches` because it would be extremely verbose
         otherwise.
         """
         if output_key not in self._warn_for_unseparable_batches:

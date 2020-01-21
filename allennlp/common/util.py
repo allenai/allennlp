@@ -105,8 +105,8 @@ def sanitize(x: Any) -> Any:
 
 def group_by_count(iterable: List[Any], count: int, default_value: Any) -> List[List[Any]]:
     """
-    Takes a list and groups it into sublists of size ``count``, using ``default_value`` to pad the
-    list at the end if the list is not divisable by ``count``.
+    Takes a list and groups it into sublists of size `count`, using `default_value` to pad the
+    list at the end if the list is not divisable by `count`.
 
     For example:
     >>> group_by_count([1, 2, 3, 4, 5, 6, 7], 3, 0)
@@ -183,8 +183,8 @@ def pad_sequence_to_length(
 
 def add_noise_to_dict_values(dictionary: Dict[A, float], noise_param: float) -> Dict[A, float]:
     """
-    Returns a new dictionary with noise added to every key in ``dictionary``.  The noise is
-    uniformly distributed within ``noise_param`` percent of the value for every value in the
+    Returns a new dictionary with noise added to every key in `dictionary`.  The noise is
+    uniformly distributed within `noise_param` percent of the value for every value in the
     dictionary.
     """
     new_dict = {}
@@ -197,9 +197,9 @@ def add_noise_to_dict_values(dictionary: Dict[A, float], noise_param: float) -> 
 
 def namespace_match(pattern: str, namespace: str):
     """
-    Matches a namespace pattern against a namespace string.  For example, ``*tags`` matches
-    ``passage_tags`` and ``question_tags`` and ``tokens`` matches ``tokens`` but not
-    ``stemmed_tokens``.
+    Matches a namespace pattern against a namespace string.  For example, `*tags` matches
+    `passage_tags` and `question_tags` and `tokens` matches `tokens` but not
+    `stemmed_tokens`.
     """
     if pattern[0] == "*" and namespace.endswith(pattern[1:]):
         return True
@@ -221,7 +221,7 @@ def prepare_environment(params: Params):
     # Parameters
 
     params: Params object or dict, required.
-        A ``Params`` object or dict holding the json parameters.
+        A `Params` object or dict holding the json parameters.
     """
     seed = params.pop_int("random_seed", 13370)
     numpy_seed = params.pop_int("numpy_seed", 1337)
@@ -454,10 +454,10 @@ def gpu_memory_mb() -> Dict[int, int]:
 
     # Returns
 
-    ``Dict[int, int]``
+    `Dict[int, int]`
         Keys are device ids as integers.
         Values are memory usage as integers in MB.
-        Returns an empty ``dict`` if GPUs are not available.
+        Returns an empty `dict` if GPUs are not available.
     """
     try:
         result = subprocess.check_output(
@@ -565,7 +565,7 @@ def is_master(
         world_size = dist.get_world_size()
 
     if num_procs_per_node is None and os.environ:
-        num_procs_per_node = int(os.environ.get("ALLENNLP_PROCS_PER_NODE"), world_size)
+        num_procs_per_node = int(os.environ.get("ALLENNLP_PROCS_PER_NODE", world_size))
 
     # rank == 0 would do in a single-node multi-GPU setup. However,
     # in a multi-node case, every node has a logical master and hence

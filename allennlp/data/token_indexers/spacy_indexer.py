@@ -21,10 +21,10 @@ class SpacyTokenIndexer(TokenIndexer):
 
     # Parameters
 
-    hidden_dim : ``int``, optional (default=``96``)
+    hidden_dim : `int`, optional (default=`96`)
         The dimension of the vectors that spacy generates for
         representing words.
-    token_min_padding_length : ``int``, optional (default=``0``)
+    token_min_padding_length : `int`, optional (default=`0`)
         See :class:`TokenIndexer`.
     """
 

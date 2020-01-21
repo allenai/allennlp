@@ -1,7 +1,7 @@
 """
 AllenNLP just uses
 `PyTorch optimizers <https://pytorch.org/docs/master/optim.html>`_ ,
-with a thin wrapper to allow registering them and instantiating them ``from_params``.
+with a thin wrapper to allow registering them and instantiating them `from_params`.
 
 The available optimizers are
 
@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 
 class Optimizer(Registrable):
     """
-    This class just allows us to implement ``Registrable`` for Pytorch Optimizers.
+    This class just allows us to implement `Registrable` for Pytorch Optimizers.
     """
 
     default_implementation = "adam"
@@ -171,14 +171,14 @@ class DenseSparseAdam(torch.optim.Optimizer):
 
     # Parameters
 
-    params : ``iterable``
+    params : `iterable`
         iterable of parameters to optimize or dicts defining parameter groups
-    lr : ``float``, optional (default: 1e-3)
+    lr : `float`, optional (default: 1e-3)
         The learning rate.
-    betas : ``Tuple[float, float]``, optional (default: (0.9, 0.999))
+    betas : `Tuple[float, float]`, optional (default: (0.9, 0.999))
         coefficients used for computing running averages of gradient
         and its square.
-    eps : ``float``, optional, (default: 1e-8)
+    eps : `float`, optional, (default: 1e-8)
         A term added to the denominator to improve numerical stability.
     """
 
@@ -200,7 +200,7 @@ class DenseSparseAdam(torch.optim.Optimizer):
 
         # Parameters
 
-        closure : ``callable``, optional.
+        closure : `callable`, optional.
             A closure that reevaluates the model and returns the loss.
         """
         loss = None

@@ -25,18 +25,18 @@ class ConllCorefScores(Metric):
         """
         # Parameters
 
-        top_spans : ``torch.Tensor``
+        top_spans : `torch.Tensor`
             (start, end) indices for all spans kept after span pruning in the model.
             Expected shape: (batch_size, num_spans, 2)
-        antecedent_indices : ``torch.Tensor``
+        antecedent_indices : `torch.Tensor`
             For each span, the indices of all allowed antecedents for that span.  This is
             independent of the batch dimension, as it's just based on order in the document.
             Expected shape: (num_spans, num_antecedents)
-        predicted_antecedents : ``torch.Tensor``
+        predicted_antecedents : `torch.Tensor`
             For each span, this contains the index (into antecedent_indices) of the most likely
             antecedent for that span.
             Expected shape: (batch_size, num_spans)
-        metadata_list : ``List[Dict[str, Any]]``
+        metadata_list : `List[Dict[str, Any]]`
             A metadata dictionary for each instance in the batch.  We use the "clusters" key from
             this dictionary, which has the annotated gold coreference clusters for that instance.
         """

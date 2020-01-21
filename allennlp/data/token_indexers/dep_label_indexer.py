@@ -14,13 +14,13 @@ logger = logging.getLogger(__name__)
 class DepLabelIndexer(TokenIndexer):
     """
     This :class:`TokenIndexer` represents tokens by their syntactic dependency label, as determined
-    by the ``dep_`` field on ``Token``.
+    by the `dep_` field on `Token`.
 
     # Parameters
 
-    namespace : ``str``, optional (default=``dep_labels``)
+    namespace : `str`, optional (default=`dep_labels`)
         We will use this namespace in the :class:`Vocabulary` to map strings to indices.
-    token_min_padding_length : ``int``, optional (default=``0``)
+    token_min_padding_length : `int`, optional (default=`0`)
         See :class:`TokenIndexer`.
     """
 

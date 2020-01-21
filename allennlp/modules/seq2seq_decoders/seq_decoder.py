@@ -9,21 +9,21 @@ from allennlp.modules import Embedding
 
 class SeqDecoder(Module, Registrable):
     """
-    A ``SeqDecoder`` abstract class representing the entire decoder (embedding and neural network) of
+    A `SeqDecoder` abstract class representing the entire decoder (embedding and neural network) of
     a Seq2Seq architecture.
-    This is meant to be used with ``allennlp.models.encoder_decoder.composed_seq2seq.ComposedSeq2Seq``.
+    This is meant to be used with `allennlp.models.encoder_decoder.composed_seq2seq.ComposedSeq2Seq`.
 
     The implementation of this abstract class ideally uses a
-    decoder neural net ``allennlp.modules.seq2seq_decoders.decoder_net.DecoderNet`` for decoding.
+    decoder neural net `allennlp.modules.seq2seq_decoders.decoder_net.DecoderNet` for decoding.
 
     The `default_implementation`
-    ``allennlp.modules.seq2seq_decoders.seq_decoder.auto_regressive_seq_decoder.AutoRegressiveSeqDecoder``
+    `allennlp.modules.seq2seq_decoders.seq_decoder.auto_regressive_seq_decoder.AutoRegressiveSeqDecoder`
     covers most use cases. More likely that we will use the default implementation instead of creating a new
     implementation.
 
     # Parameters
 
-    target_embedder : ``Embedding``, required
+    target_embedder : `Embedding`, required
         Embedder for target tokens. Needed in the base class to enable weight tying.
     """
 
@@ -53,14 +53,14 @@ class SeqDecoder(Module, Registrable):
     ) -> Dict[str, torch.Tensor]:
         """
         Decoding from encoded states to sequence of outputs
-        also computes loss if ``target_tokens`` are given.
+        also computes loss if `target_tokens` are given.
 
         # Parameters
 
-        encoder_out : ``Dict[str, torch.LongTensor]``, required
+        encoder_out : `Dict[str, torch.LongTensor]`, required
             Dictionary with encoded state, ideally containing the encoded vectors and the
             source mask.
-        target_tokens : ``Dict[str, torch.LongTensor]``, optional
+        target_tokens : `Dict[str, torch.LongTensor]`, optional
             The output of `TextField.as_array()` applied on the target `TextField`.
 
        """
@@ -70,7 +70,7 @@ class SeqDecoder(Module, Registrable):
     def post_process(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         """
             Post processing for converting raw outputs to prediction during inference.
-            The composing models such ``allennlp.models.encoder_decoders.composed_seq2seq.ComposedSeq2Seq``
+            The composing models such `allennlp.models.encoder_decoders.composed_seq2seq.ComposedSeq2Seq`
             can call this method when `decode` is called.
         """
         raise NotImplementedError()

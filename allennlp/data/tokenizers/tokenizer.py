@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 class Tokenizer(Registrable):
     """
-    A ``Tokenizer`` splits strings of text into tokens.  Typically, this either splits text into
+    A `Tokenizer` splits strings of text into tokens.  Typically, this either splits text into
     word tokens or character tokens, and those are the two tokenizer subclasses we have implemented
     here, though you could imagine wanting to do other kinds of tokenization for structured or
     other inputs.
@@ -43,7 +43,7 @@ class Tokenizer(Registrable):
 
         # Returns
 
-        tokens : ``List[Token]``
+        tokens : `List[Token]`
         """
         raise NotImplementedError
 

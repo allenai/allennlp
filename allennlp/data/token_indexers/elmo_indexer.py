@@ -31,7 +31,7 @@ class ELMoCharacterMapper:
     character indexers.
 
     We allow to add optional additional special tokens with designated
-    character ids with ``tokens_to_add``.
+    character ids with `tokens_to_add`.
     """
 
     max_word_length = 50
@@ -101,12 +101,12 @@ class ELMoTokenCharactersIndexer(TokenIndexer):
 
     # Parameters
 
-    namespace : ``str``, optional (default=``elmo_characters``)
-    tokens_to_add : ``Dict[str, int]``, optional (default=``None``)
+    namespace : `str`, optional (default=`elmo_characters`)
+    tokens_to_add : `Dict[str, int]`, optional (default=`None`)
         If not None, then provides a mapping of special tokens to character
         ids. When using pre-trained models, then the character id must be
         less then 261, and we recommend using un-used ids (e.g. 1-32).
-    token_min_padding_length : ``int``, optional (default=``0``)
+    token_min_padding_length : `int`, optional (default=`0`)
         See :class:`TokenIndexer`.
     """
 

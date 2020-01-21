@@ -61,8 +61,8 @@ def url_to_filename(url: str, etag: str = None) -> str:
 
 def filename_to_url(filename: str, cache_dir: str = None) -> Tuple[str, str]:
     """
-    Return the url and etag (which may be ``None``) stored for `filename`.
-    Raise ``FileNotFoundError`` if `filename` or its stored metadata do not exist.
+    Return the url and etag (which may be `None`) stored for `filename`.
+    Raise `FileNotFoundError` if `filename` or its stored metadata do not exist.
     """
     if cache_dir is None:
         cache_dir = CACHE_DIRECTORY

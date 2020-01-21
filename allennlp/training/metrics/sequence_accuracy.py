@@ -27,12 +27,12 @@ class SequenceAccuracy(Metric):
         """
         # Parameters
 
-        predictions : ``torch.Tensor``, required.
+        predictions : `torch.Tensor`, required.
             A tensor of predictions of shape (batch_size, k, sequence_length).
-        gold_labels : ``torch.Tensor``, required.
+        gold_labels : `torch.Tensor`, required.
             A tensor of integer class label of shape (batch_size, sequence_length).
-        mask : ``torch.Tensor``, optional (default = None).
-            A masking tensor the same size as ``gold_labels``.
+        mask : `torch.Tensor`, optional (default = None).
+            A masking tensor the same size as `gold_labels`.
         """
         predictions, gold_labels, mask = self.unwrap_to_tensors(predictions, gold_labels, mask)
 

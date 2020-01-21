@@ -24,7 +24,7 @@ from allennlp.training.metrics import UnigramRecall
 @Model.register("event2mind")
 class Event2Mind(Model):
     """
-    This ``Event2Mind`` class is a :class:`Model` which takes an event
+    This `Event2Mind` class is a :class:`Model` which takes an event
     sequence, encodes it, and then uses the encoded representation to decode
     several mental state sequences.
 
@@ -33,22 +33,22 @@ class Event2Mind(Model):
 
     # Parameters
 
-    vocab : ``Vocabulary``, required
+    vocab : `Vocabulary`, required
         Vocabulary containing source and target vocabularies. They may be under the same namespace
-        (``tokens``) or the target tokens can have a different namespace, in which case it needs to
-        be specified as ``target_namespace``.
-    source_embedder : ``TextFieldEmbedder``, required
+        (`tokens`) or the target tokens can have a different namespace, in which case it needs to
+        be specified as `target_namespace`.
+    source_embedder : `TextFieldEmbedder`, required
         Embedder for source side sequences.
     embedding_dropout: float, required
         The amount of dropout to apply after the source tokens have been embedded.
-    encoder : ``Seq2VecEncoder``, required
+    encoder : `Seq2VecEncoder`, required
         The encoder of the "encoder/decoder" model.
     max_decoding_steps : int, required
         Length of decoded sequences.
     beam_size : int, optional (default = 10)
         The width of the beam search.
-    target_names : ``List[str]``, optional, (default = ['xintent', 'xreact', 'oreact'])
-        Names of the target fields matching those in the ``Instance`` objects.
+    target_names : `List[str]`, optional, (default = ['xintent', 'xreact', 'oreact'])
+        Names of the target fields matching those in the `Instance` objects.
     target_namespace : str, optional (default = 'tokens')
         If the target side vocabulary is different from the source side's, you need to specify the
         target's namespace here. If not, we'll assume it is "tokens", which is also the default
@@ -56,7 +56,7 @@ class Event2Mind(Model):
     target_embedding_dim : int, optional (default = source_embedding_dim)
         You can specify an embedding dimensionality for the target side. If not, we'll use the same
         value as the source embedder's.
-    regularizer : ``RegularizerApplicator``, optional (default=``None``)
+    regularizer : `RegularizerApplicator`, optional (default=`None`)
         If provided, will be used to calculate the regularization penalty during training.
     """
 
@@ -148,14 +148,14 @@ class Event2Mind(Model):
 
         # Parameters
 
-        source : ``TextFieldTensors``
-            The output of ``TextField.as_array()`` applied on the source
-            ``TextField``. This will be passed through a ``TextFieldEmbedder``
+        source : `TextFieldTensors`
+            The output of `TextField.as_array()` applied on the source
+            `TextField`. This will be passed through a `TextFieldEmbedder`
             and then through an encoder.
-        target_tokens : ``Dict[str, TextFieldTensors]``:
-            Dictionary from name to output of ``Textfield.as_array()`` applied
-            on target ``TextField``. We assume that the target tokens are also
-            represented as a ``TextField``.
+        target_tokens : `Dict[str, TextFieldTensors]`:
+            Dictionary from name to output of `Textfield.as_array()` applied
+            on target `TextField`. We assume that the target tokens are also
+            represented as a `TextField`.
         """
         # (batch_size, input_sequence_length, embedding_dim)
         embedded_input = self._embedding_dropout(self._source_embedder(source))
@@ -218,20 +218,20 @@ class Event2Mind(Model):
         output_projection_layer: Linear,
     ) -> torch.FloatTensor:
         """
-        Greedily produces a sequence using the provided ``decoder_cell``.
-        Returns the cross entropy between this sequence and ``target_tokens``.
+        Greedily produces a sequence using the provided `decoder_cell`.
+        Returns the cross entropy between this sequence and `target_tokens`.
 
         # Parameters
 
-        final_encoder_output : ``torch.LongTensor``, required
-            Vector produced by ``self._encoder``.
-        target_tokens : ``TextFieldTensors``, required
-            The output of ``TextField.as_array()`` applied on some target ``TextField``.
-        target_embedder : ``Embedding``, required
+        final_encoder_output : `torch.LongTensor`, required
+            Vector produced by `self._encoder`.
+        target_tokens : `TextFieldTensors`, required
+            The output of `TextField.as_array()` applied on some target `TextField`.
+        target_embedder : `Embedding`, required
             Used to embed the target tokens.
-        decoder_cell : ``GRUCell``, required
+        decoder_cell : `GRUCell`, required
             The recurrent cell used at each time step.
-        output_projection_layer : ``Linear``, required
+        output_projection_layer : `Linear`, required
             Linear layer mapping to the desired number of classes.
         """
         num_decoding_steps = self._get_num_decoding_steps(target_tokens)
@@ -260,18 +260,18 @@ class Event2Mind(Model):
         output_projection_layer: Linear,
     ) -> torch.Tensor:
         """
-        Greedily produces a sequence using the provided ``decoder_cell``.
+        Greedily produces a sequence using the provided `decoder_cell`.
         Returns the predicted sequence.
 
         # Parameters
 
-        final_encoder_output : ``torch.LongTensor``, required
-            Vector produced by ``self._encoder``.
-        target_embedder : ``Embedding``, required
+        final_encoder_output : `torch.LongTensor`, required
+            Vector produced by `self._encoder`.
+        target_embedder : `Embedding`, required
             Used to embed the target tokens.
-        decoder_cell : ``GRUCell``, required
+        decoder_cell : `GRUCell`, required
             The recurrent cell used at each time step.
-        output_projection_layer : ``Linear``, required
+        output_projection_layer : `Linear`, required
             Linear layer mapping to the desired number of classes.
         """
         num_decoding_steps = self._max_decoding_steps
@@ -305,9 +305,9 @@ class Event2Mind(Model):
         and corresponding masks of size (batch_size, num_decoding_steps+1) steps and computes cross
         entropy loss while taking the mask into account.
 
-        The length of ``targets`` is expected to be greater than that of ``logits`` because the
+        The length of `targets` is expected to be greater than that of `logits` because the
         decoder does not need to compute the output corresponding to the last timestep of
-        ``targets``. This method aligns the inputs appropriately to compute the loss.
+        `targets`. This method aligns the inputs appropriately to compute the loss.
 
         During training, we want the logit corresponding to timestep i to be similar to the target
         token from timestep i + 1. That is, the targets should be shifted by one timestep for
@@ -346,12 +346,12 @@ class Event2Mind(Model):
     @overrides
     def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, List[List[str]]]:
         """
-        This method overrides ``Model.decode``, which gets called after ``Model.forward``, at test
+        This method overrides `Model.decode`, which gets called after `Model.forward`, at test
         time, to finalize predictions. The logic for the decoder part of the encoder-decoder lives
-        within the ``forward`` method.
+        within the `forward` method.
 
         This method trims the output predictions to the first end symbol, replaces indices with
-        corresponding tokens, and adds fields for the tokens to the ``output_dict``.
+        corresponding tokens, and adds fields for the tokens to the `output_dict`.
         """
         for name in self._states:
             top_k_predicted_indices = output_dict[f"{name}_top_k_predictions"][0]

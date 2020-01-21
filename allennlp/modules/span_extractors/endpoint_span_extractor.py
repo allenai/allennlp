@@ -16,37 +16,37 @@ class EndpointSpanExtractor(SpanExtractor):
     the width of the spans can be embedded and concatenated on to the final combination.
 
     The following types of representation are supported, assuming that
-    ``x = span_start_embeddings`` and ``y = span_end_embeddings``.
+    `x = span_start_embeddings` and `y = span_end_embeddings`.
 
-    ``x``, ``y``, ``x*y``, ``x+y``, ``x-y``, ``x/y``, where each of those binary operations
+    `x`, `y`, `x*y`, `x+y`, `x-y`, `x/y`, where each of those binary operations
     is performed elementwise.  You can list as many combinations as you want, comma separated.
-    For example, you might give ``x,y,x*y`` as the ``combination`` parameter to this class.
-    The computed similarity function would then be ``[x; y; x*y]``, which can then be optionally
+    For example, you might give `x,y,x*y` as the `combination` parameter to this class.
+    The computed similarity function would then be `[x; y; x*y]`, which can then be optionally
     concatenated with an embedded representation of the width of the span.
 
     # Parameters
 
-    input_dim : ``int``, required.
-        The final dimension of the ``sequence_tensor``.
-    combination : ``str``, optional (default = "x,y").
-        The method used to combine the ``start_embedding`` and ``end_embedding``
+    input_dim : `int`, required.
+        The final dimension of the `sequence_tensor`.
+    combination : `str`, optional (default = "x,y").
+        The method used to combine the `start_embedding` and `end_embedding`
         representations. See above for a full description.
-    num_width_embeddings : ``int``, optional (default = None).
+    num_width_embeddings : `int`, optional (default = None).
         Specifies the number of buckets to use when representing
         span width features.
-    span_width_embedding_dim : ``int``, optional (default = None).
+    span_width_embedding_dim : `int`, optional (default = None).
         The embedding size for the span_width features.
-    bucket_widths : ``bool``, optional (default = False).
-        Whether to bucket the span widths into log-space buckets. If ``False``,
+    bucket_widths : `bool`, optional (default = False).
+        Whether to bucket the span widths into log-space buckets. If `False`,
         the raw span widths are used.
-    use_exclusive_start_indices : ``bool``, optional (default = ``False``).
-        If ``True``, the start indices extracted are converted to exclusive indices. Sentinels
+    use_exclusive_start_indices : `bool`, optional (default = `False`).
+        If `True`, the start indices extracted are converted to exclusive indices. Sentinels
         are used to represent exclusive span indices for the elements in the first
         position in the sequence (as the exclusive indices for these elements are outside
         of the the sequence boundary) so that start indices can be exclusive.
         NOTE: This option can be helpful to avoid the pathological case in which you
         want span differences for length 1 spans - if you use inclusive indices, you
-        will end up with an ``x - x`` operation for length 1 spans, which is not good.
+        will end up with an `x - x` operation for length 1 spans, which is not good.
     """
 
     def __init__(
@@ -117,7 +117,7 @@ class EndpointSpanExtractor(SpanExtractor):
 
         else:
             # We want `exclusive` span starts, so we remove 1 from the forward span starts
-            # as the AllenNLP ``SpanField`` is inclusive.
+            # as the AllenNLP `SpanField` is inclusive.
             # shape (batch_size, num_spans)
             exclusive_span_starts = span_starts - 1
             # shape (batch_size, num_spans, 1)

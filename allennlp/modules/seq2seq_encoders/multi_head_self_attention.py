@@ -20,20 +20,20 @@ class MultiHeadSelfAttention(Seq2SeqEncoder):
 
     # Parameters
 
-    num_heads : ``int``, required.
+    num_heads : `int`, required.
         The number of attention heads to use.
-    input_dim : ``int``, required.
+    input_dim : `int`, required.
         The size of the last dimension of the input tensor.
-    attention_dim ``int``, required.
+    attention_dim `int`, required.
         The total dimension of the query and key projections which comprise the
-        dot product attention function. Must be divisible by ``num_heads``.
-    values_dim : ``int``, required.
+        dot product attention function. Must be divisible by `num_heads`.
+    values_dim : `int`, required.
         The total dimension which the input is projected to for representing the values,
-        which are combined using the attention. Must be divisible by ``num_heads``.
-    output_projection_dim : ``int``, optional (default = None)
+        which are combined using the attention. Must be divisible by `num_heads`.
+    output_projection_dim : `int`, optional (default = None)
         The dimensionality of the final output projection. If this is not passed
         explicitly, the projection has size `input_size`.
-    attention_dropout_prob : ``float``, optional (default = 0.1).
+    attention_dropout_prob : `float`, optional (default = 0.1).
         The dropout probability applied to the normalised attention
         distributions.
     """  # noqa
@@ -88,9 +88,9 @@ class MultiHeadSelfAttention(Seq2SeqEncoder):
         """
         # Parameters
 
-        inputs : ``torch.FloatTensor``, required.
+        inputs : `torch.FloatTensor`, required.
             A tensor of shape (batch_size, timesteps, input_dim)
-        mask : ``torch.FloatTensor``, optional (default = None).
+        mask : `torch.FloatTensor`, optional (default = None).
             A tensor of shape (batch_size, timesteps).
 
         # Returns

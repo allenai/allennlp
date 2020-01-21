@@ -7,7 +7,7 @@ from allennlp.modules.seq2seq_encoders.seq2seq_encoder import Seq2SeqEncoder
 @Seq2SeqEncoder.register("pass_through")
 class PassThroughEncoder(Seq2SeqEncoder):
     """
-    This class allows you to specify skipping a ``Seq2SeqEncoder`` just
+    This class allows you to specify skipping a `Seq2SeqEncoder` just
     by changing a configuration file. This is useful for ablations and
     measuring the impact of different elements of your model.
     """
@@ -33,9 +33,9 @@ class PassThroughEncoder(Seq2SeqEncoder):
         """
         # Parameters
 
-        inputs : ``torch.Tensor``, required.
+        inputs : `torch.Tensor`, required.
             A tensor of shape (batch_size, timesteps, input_dim)
-        mask : ``torch.LongTensor``, optional (default = None).
+        mask : `torch.LongTensor`, optional (default = None).
             A tensor of shape (batch_size, timesteps).
 
         # Returns

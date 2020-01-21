@@ -17,7 +17,7 @@ class UpdateMovingAverage(Callback):
 
     # Parameters
 
-    moving_aveage : ``MovingAverage``
+    moving_aveage : `MovingAverage`
         The MovingAverage object to update.
     """
 

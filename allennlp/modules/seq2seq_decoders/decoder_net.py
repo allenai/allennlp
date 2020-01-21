@@ -9,21 +9,21 @@ class DecoderNet(torch.nn.Module, Registrable):
     This class abstracts the neural architectures for decoding the encoded states and
     embedded previous step prediction vectors into a new sequence of output vectors.
 
-    The implementations of ``DecoderNet`` is used by implementations of
-    ``allennlp.modules.seq2seq_decoders.seq_decoder.SeqDecoder`` such as
-    ``allennlp.modules.seq2seq_decoders.seq_decoder.auto_regressive_seq_decoder.AutoRegressiveSeqDecoder``.
+    The implementations of `DecoderNet` is used by implementations of
+    `allennlp.modules.seq2seq_decoders.seq_decoder.SeqDecoder` such as
+    `allennlp.modules.seq2seq_decoders.seq_decoder.auto_regressive_seq_decoder.AutoRegressiveSeqDecoder`.
 
-    The outputs of this module would be likely used by ``allennlp.modules.seq2seq_decoders.seq_decoder.SeqDecoder``
+    The outputs of this module would be likely used by `allennlp.modules.seq2seq_decoders.seq_decoder.SeqDecoder`
     to apply the final output feedforward layer and softmax.
 
     # Parameters
 
-    decoding_dim : ``int``, required
+    decoding_dim : `int`, required
         Defines dimensionality of output vectors.
-    target_embedding_dim : ``int``, required
+    target_embedding_dim : `int`, required
         Defines dimensionality of target embeddings. Since this model takes it's output on a previous step
         as input of following step, this is also an input dimensionality.
-    decodes_parallel : ``bool``, required
+    decodes_parallel : `bool`, required
         Defines whether the decoder generates multiple next step predictions at in a single `forward`.
     """
 
@@ -37,7 +37,7 @@ class DecoderNet(torch.nn.Module, Registrable):
 
     def get_output_dim(self) -> int:
         """
-        Returns the dimension of each vector in the sequence output by this ``DecoderNet``.
+        Returns the dimension of each vector in the sequence output by this `DecoderNet`.
         This is `not` the shape of the returned tensor, but the last element of that shape.
         """
         return self.decoding_dim
@@ -50,14 +50,14 @@ class DecoderNet(torch.nn.Module, Registrable):
 
         # Parameters
 
-        batch_size : ``int``
+        batch_size : `int`
             Size of batch
-        final_encoder_output : ``torch.Tensor``
+        final_encoder_output : `torch.Tensor`
             Last state of the Encoder
 
         # Returns
 
-        ``Dict[str, torch.Tensor]``
+        `Dict[str, torch.Tensor]`
         Initial state
         """
         raise NotImplementedError()
@@ -78,16 +78,16 @@ class DecoderNet(torch.nn.Module, Registrable):
 
         # Parameters
 
-        previous_steps_predictions : ``torch.Tensor``, required
+        previous_steps_predictions : `torch.Tensor`, required
             Embeddings of predictions on previous step.
             Shape: (group_size, steps_count, decoder_output_dim)
-        encoder_outputs : ``torch.Tensor``, required
+        encoder_outputs : `torch.Tensor`, required
             Vectors of all encoder outputs.
             Shape: (group_size, max_input_sequence_length, encoder_output_dim)
-        source_mask : ``torch.Tensor``, required
+        source_mask : `torch.Tensor`, required
             This tensor contains mask for each input sequence.
             Shape: (group_size, max_input_sequence_length)
-        previous_state : ``Dict[str, torch.Tensor]``, required
+        previous_state : `Dict[str, torch.Tensor]`, required
             previous state of decoder
 
         # Returns

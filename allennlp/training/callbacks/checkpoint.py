@@ -21,16 +21,16 @@ class Checkpoint(Callback):
 
     # Parameters
 
-    checkpointer : ``Checkpointer``
+    checkpointer : `Checkpointer`
         The checkpoint reader and writer to use.
-    model_save_interval : ``float``, optional (default=None)
-        If provided, then serialize models every ``model_save_interval``
+    model_save_interval : `float`, optional (default=None)
+        If provided, then serialize models every `model_save_interval`
         seconds within single epochs.  In all cases, models are also saved
-        at the end of every epoch if ``serialization_dir`` is provided.
-    state_dict_attrs : ``List[str]``, optional (default = ['optimizer'])
+        at the end of every epoch if `serialization_dir` is provided.
+    state_dict_attrs : `List[str]`, optional (default = ['optimizer'])
         The attributes of the Trainer state whose `.state_dict()`
         should be persisted at each checkpoint.
-    other_attrs : ``List[str]``, optional (default = ['batch_num_total'])
+    other_attrs : `List[str]`, optional (default = ['batch_num_total'])
         The attributes of the Trainer state that should be persisted
         as-is at each checkpoint.
     """
@@ -116,9 +116,9 @@ class Checkpoint(Callback):
         # from model parameters. This function should only be used to continue training -
         # if you wish to load a model for inference/load parts of a model into a new
         # computation graph, you should use the native Pytorch functions:
-        # `` model.load_state_dict(torch.load("/path/to/model/weights.th"))``
+        # ` model.load_state_dict(torch.load("/path/to/model/weights.th"))`
 
-        # If ``self._serialization_dir`` does not exist or does not contain any checkpointed weights,
+        # If `self._serialization_dir` does not exist or does not contain any checkpointed weights,
         # this will do nothing.
         try:
             model_state, training_state = self.checkpointer.restore_checkpoint()

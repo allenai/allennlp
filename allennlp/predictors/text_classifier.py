@@ -25,8 +25,8 @@ class TextClassifierPredictor(Predictor):
     @overrides
     def _json_to_instance(self, json_dict: JsonDict) -> Instance:
         """
-        Expects JSON that looks like ``{"sentence": "..."}``.
-        Runs the underlying model, and adds the ``"label"`` to the output.
+        Expects JSON that looks like `{"sentence": "..."}`.
+        Runs the underlying model, and adds the `"label"` to the output.
         """
         sentence = json_dict["sentence"]
         if not hasattr(self._dataset_reader, "tokenizer") and not hasattr(

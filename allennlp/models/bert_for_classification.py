@@ -27,23 +27,23 @@ class BertForClassification(Model):
 
     # Parameters
 
-    vocab : ``Vocabulary``
-    bert_model : ``Union[str, BertModel]``
+    vocab : `Vocabulary`
+    bert_model : `Union[str, BertModel]`
         The BERT model to be wrapped. If a string is provided, we will call
-        ``BertModel.from_pretrained(bert_model)`` and use the result.
-    num_labels : ``int``, optional (default: None)
+        `BertModel.from_pretrained(bert_model)` and use the result.
+    num_labels : `int`, optional (default: None)
         How many output classes to predict. If not provided, we'll use the
-        vocab_size for the ``label_namespace``.
-    index : ``str``, optional (default: "bert")
+        vocab_size for the `label_namespace`.
+    index : `str`, optional (default: "bert")
         The index of the token indexer that generates the BERT indices.
-    label_namespace : ``str``, optional (default : "labels")
-        Used to determine the number of classes if ``num_labels`` is not supplied.
-    trainable : ``bool``, optional (default : True)
+    label_namespace : `str`, optional (default : "labels")
+        Used to determine the number of classes if `num_labels` is not supplied.
+    trainable : `bool`, optional (default : True)
         If True, the weights of the pretrained BERT model will be updated during training.
         Otherwise, they will be frozen and only the final linear layer will be trained.
-    initializer : ``InitializerApplicator``, optional
+    initializer : `InitializerApplicator`, optional
         If provided, will be used to initialize the final linear layer *only*.
-    regularizer : ``RegularizerApplicator``, optional (default=``None``)
+    regularizer : `RegularizerApplicator`, optional (default=`None`)
         If provided, will be used to calculate the regularization penalty during training.
     """
 
@@ -94,19 +94,19 @@ class BertForClassification(Model):
         # Parameters
 
         tokens : TextFieldTensors
-            From a ``TextField`` (that has a bert-pretrained token indexer)
+            From a `TextField` (that has a bert-pretrained token indexer)
         label : torch.IntTensor, optional (default = None)
-            From a ``LabelField``
+            From a `LabelField`
 
         # Returns
 
         An output dictionary consisting of:
 
         logits : torch.FloatTensor
-            A tensor of shape ``(batch_size, num_labels)`` representing
+            A tensor of shape `(batch_size, num_labels)` representing
             unnormalized log probabilities of the label.
         probs : torch.FloatTensor
-            A tensor of shape ``(batch_size, num_labels)`` representing
+            A tensor of shape `(batch_size, num_labels)` representing
             probabilities of the label.
         loss : torch.FloatTensor, optional
             A scalar loss to be optimised.
@@ -140,7 +140,7 @@ class BertForClassification(Model):
     def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         """
         Does a simple argmax over the probabilities, converts index to string label, and
-        add ``"label"`` key to the dictionary with the result.
+        add `"label"` key to the dictionary with the result.
         """
         predictions = output_dict["probs"]
         if predictions.dim() == 2:

@@ -28,34 +28,34 @@ class StackedSelfAttentionEncoder(Seq2SeqEncoder):
        scaled by the square root of the sequence length.
     3. Layer Normalisation.
 
-    These are then stacked into ``num_layers`` layers.
+    These are then stacked into `num_layers` layers.
 
     # Parameters
 
-    input_dim : ``int``, required.
+    input_dim : `int`, required.
         The input dimension of the encoder.
-    hidden_dim : ``int``, required.
+    hidden_dim : `int`, required.
         The hidden dimension used for the _input_ to self attention layers
         and the _output_ from the feedforward layers.
-    projection_dim : ``int``, required.
+    projection_dim : `int`, required.
         The dimension of the linear projections for the self-attention layers.
-    feedforward_hidden_dim : ``int``, required.
+    feedforward_hidden_dim : `int`, required.
         The middle dimension of the FeedForward network. The input and output
         dimensions are fixed to ensure sizes match up for the self attention layers.
-    num_layers : ``int``, required.
+    num_layers : `int`, required.
         The number of stacked self attention -> feedfoward -> layer normalisation blocks.
-    num_attention_heads : ``int``, required.
+    num_attention_heads : `int`, required.
         The number of attention heads to use per layer.
-    use_positional_encoding : ``bool``, optional, (default = True)
+    use_positional_encoding : `bool`, optional, (default = True)
         Whether to add sinusoidal frequencies to the input tensor. This is strongly recommended,
         as without this feature, the self attention layers have no idea of absolute or relative
         position (as they are just computing pairwise similarity between vectors of elements),
         which can be important features for many tasks.
-    dropout_prob : ``float``, optional, (default = 0.1)
+    dropout_prob : `float`, optional, (default = 0.1)
         The dropout probability for the feedforward network.
-    residual_dropout_prob : ``float``, optional, (default = 0.2)
+    residual_dropout_prob : `float`, optional, (default = 0.2)
         The dropout probability for the residual connections.
-    attention_dropout_prob : ``float``, optional, (default = 0.1)
+    attention_dropout_prob : `float`, optional, (default = 0.1)
         The dropout probability for the attention distributions in each attention layer.
     """  # noqa
 

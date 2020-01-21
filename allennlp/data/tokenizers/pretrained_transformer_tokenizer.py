@@ -14,41 +14,41 @@ logger = logging.getLogger(__name__)
 @Tokenizer.register("pretrained_transformer")
 class PretrainedTransformerTokenizer(Tokenizer):
     """
-    A ``PretrainedTransformerTokenizer`` uses a model from HuggingFace's
-    ``transformers`` library to tokenize some input text.  This often means wordpieces
-    (where ``'AllenNLP is awesome'`` might get split into ``['Allen', '##NL', '##P', 'is',
-    'awesome']``), but it could also use byte-pair encoding, or some other tokenization, depending
+    A `PretrainedTransformerTokenizer` uses a model from HuggingFace's
+    `transformers` library to tokenize some input text.  This often means wordpieces
+    (where `'AllenNLP is awesome'` might get split into `['Allen', '##NL', '##P', 'is',
+    'awesome']`), but it could also use byte-pair encoding, or some other tokenization, depending
     on the pretrained model that you're using.
 
     We take a model name as an input parameter, which we will pass to
-    ``AutoTokenizer.from_pretrained``.
+    `AutoTokenizer.from_pretrained`.
 
     We also add special tokens relative to the pretrained model and truncate the sequences.
 
-    This tokenizer also indexes tokens and adds the indexes to the ``Token`` fields so that
-    they can be picked up by ``PretrainedTransformerIndexer``.
+    This tokenizer also indexes tokens and adds the indexes to the `Token` fields so that
+    they can be picked up by `PretrainedTransformerIndexer`.
 
     # Parameters
 
-    model_name : ``str``
+    model_name : `str`
         The name of the pretrained wordpiece tokenizer to use.
-    add_special_tokens : ``bool``, optional, (default=True)
-        If set to ``True``, the sequences will be encoded with the special tokens relative
+    add_special_tokens : `bool`, optional, (default=True)
+        If set to `True`, the sequences will be encoded with the special tokens relative
         to their model.
-    max_length : ``int``, optional (default=None)
+    max_length : `int`, optional (default=None)
         If set to a number, will limit the total sequence returned so that it has a maximum length.
         If there are overflowing tokens, those will be added to the returned dictionary
-    stride : ``int``, optional (default=0)
+    stride : `int`, optional (default=0)
         If set to a number along with max_length, the overflowing tokens returned will contain some tokens
         from the main sequence returned. The value of this argument defines the number of additional tokens.
-    truncation_strategy : ``str``, optional (default='longest_first')
+    truncation_strategy : `str`, optional (default='longest_first')
         String selected in the following options:
         - 'longest_first' (default) Iteratively reduce the inputs sequence until the input is under max_length
         starting from the longest one at each token (when there is a pair of input sequences)
         - 'only_first': Only truncate the first sequence
         - 'only_second': Only truncate the second sequence
         - 'do_not_truncate': Do not truncate (raise an error if the input sequence is longer than max_length)
-    calculate_character_offsets : ``bool``, optional (default=False)
+    calculate_character_offsets : `bool`, optional (default=False)
         Attempts to reconstruct character offsets for the instances of Token that this tokenizer produces.
 
     Argument descriptions are from
@@ -64,11 +64,11 @@ class PretrainedTransformerTokenizer(Tokenizer):
         truncation_strategy: str = "longest_first",
         calculate_character_offsets: bool = False,
     ) -> None:
-        self._tokenizer = AutoTokenizer.from_pretrained(model_name)
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
 
         # Huggingface tokenizers have different ways of remembering whether they lowercase or not. Detecting it
         # this way seems like the least brittle way to do it.
-        tokenized = self._tokenizer.tokenize(
+        tokenized = self.tokenizer.tokenize(
             "FOO"
         )  # Use a short word that's unlikely to be cut into word pieces.
         detokenized = " ".join(tokenized)
@@ -85,7 +85,7 @@ class PretrainedTransformerTokenizer(Tokenizer):
         This method works on both sentence and sentence pair.
         """
 
-        encoded_tokens = self._tokenizer.encode_plus(
+        encoded_tokens = self.tokenizer.encode_plus(
             text=sentence_1,
             text_pair=sentence_2,
             add_special_tokens=self._add_special_tokens,
@@ -99,7 +99,7 @@ class PretrainedTransformerTokenizer(Tokenizer):
 
         tokens = []
         for token_id, token_type_id in zip(token_ids, token_type_ids):
-            token_str = self._tokenizer.convert_ids_to_tokens(token_id, skip_special_tokens=False)
+            token_str = self.tokenizer.convert_ids_to_tokens(token_id, skip_special_tokens=False)
             tokens.append(Token(text=token_str, text_id=token_id, type_id=token_type_id))
 
         if self._calculate_character_offsets:
@@ -169,7 +169,7 @@ class PretrainedTransformerTokenizer(Tokenizer):
     def tokenize(self, text: str) -> List[Token]:
         """
         This method only handles a single sentence (or sequence) of text.
-        Refer to the ``tokenize_sentence_pair`` method if you have a sentence pair.
+        Refer to the `tokenize_sentence_pair` method if you have a sentence pair.
         """
         return self._tokenize(text)
 

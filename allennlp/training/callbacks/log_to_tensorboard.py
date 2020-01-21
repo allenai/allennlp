@@ -23,7 +23,7 @@ class LogToTensorboard(Callback):
 
     # Parameters
 
-    tensorboard : ``TensorboardWriter``
+    tensorboard : `TensorboardWriter`
         The TensorboardWriter instance to write to.
     log_batch_size_period : int, optional (default: None)
         If provided, we'll log the average batch sizes to Tensorboard
