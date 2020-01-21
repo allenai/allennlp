@@ -8,7 +8,7 @@ from allennlp.predictors.predictor import Predictor
 @Predictor.register("event2mind")
 class Event2MindPredictor(Predictor):
     """
-    Predictor for the :class:`~allennlp.models.event2mind` model.
+    Predictor for the [`event2mind`](../models/event2mind.md) model.
     """
 
     def predict(self, source: str) -> JsonDict:
