@@ -181,7 +181,8 @@ def sanitize_label(label: str) -> str:
 @Predictor.register("open-information-extraction")
 class OpenIePredictor(Predictor):
     """
-    Predictor for the :class: `models.SemanticRolelabeler` model (in its Open Information variant).
+    Predictor for the [`SemanticRolelabeler`](../models/semantic_role_labeler.md) model
+    (in its Open Information variant).
     Used by online demo and for prediction on an input file using command line.
     """
 
