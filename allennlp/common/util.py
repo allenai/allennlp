@@ -627,5 +627,7 @@ def threaded_generator(g: Iterable, maxsize: int = 8) -> Generator:
 
 
 def fake_threaded_generator(g, maxsize: int = 16):
-    """Just for debugging"""
+    """
+    A drop-in replacement for `threaded_generator()`, which does nothing. This is often handy for debugging.
+    """
     return g
