@@ -20,7 +20,7 @@ from allennlp.data.vocabulary import (
     _NamespaceDependentDefaultDict,
     _read_pretrained_tokens,
     DEFAULT_OOV_TOKEN,
-    Vocabulary
+    Vocabulary,
 )
 from allennlp.modules.token_embedders.embedding import format_embeddings_file_uri
 from transformers import AutoTokenizer
