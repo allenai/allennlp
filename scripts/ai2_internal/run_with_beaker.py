@@ -36,7 +36,8 @@ def main(param_file: str, args: argparse.Namespace):
     params = Params.from_file(param_file, overrides, ext_vars)
 
     # Write params as json. Otherwise Jsonnet's import feature breaks.
-    compiled_params_path = tempfile.mkstemp(".json", "config")[1]
+    params_dir = tempfile.mkdtemp(prefix="config")
+    compiled_params_path = os.path.join(params_dir, "config.json")
     params.to_file(compiled_params_path)
     print(f"Compiled jsonnet config written to {compiled_params_path}.")
 
@@ -66,14 +67,22 @@ def main(param_file: str, args: argparse.Namespace):
         print(f"  Image created: {docker_image}")
 
     config_dataset_id = subprocess.check_output(
-        f"beaker dataset create --quiet {compiled_params_path}", shell=True, universal_newlines=True
+        f"beaker dataset create --quiet {params_dir}/*", shell=True, universal_newlines=True
     ).strip()
 
     # Arguments that differ between preemptible and regular machine execution.
     if args.preemptible:
-        allennlp_prefix = ["/stage/allennlp/resumable_train.sh", "/output", "/config.json"]
+        allennlp_prefix = ["/stage/allennlp/resumable_train.sh", "/output", "/config/config.json"]
     else:
-        allennlp_prefix = ["python", "-m", "allennlp.run", "train", "/config.json", "-s", "/output"]
+        allennlp_prefix = [
+            "python",
+            "-m",
+            "allennlp.run",
+            "train",
+            "/config/config.json",
+            "-s",
+            "/output",
+        ]
 
     # All other arguments
     allennlp_suffix = ["--file-friendly-logging"]
@@ -84,7 +93,7 @@ def main(param_file: str, args: argparse.Namespace):
     allennlp_command = allennlp_prefix + allennlp_suffix
 
     dataset_mounts = []
-    for source in args.source + [f"{config_dataset_id}:/config.json"]:
+    for source in args.source + [f"{config_dataset_id}:/config"]:
         datasetId, containerPath = source.split(":")
         dataset_mounts.append({"datasetId": datasetId, "containerPath": containerPath})
 
@@ -152,7 +161,7 @@ def main(param_file: str, args: argparse.Namespace):
         experiment_id = subprocess.check_output(experiment_command, universal_newlines=True).strip()
         print(
             f"Experiment {experiment_id} submitted. "
-            f"See progress at https://allenai.beaker.org/ex/{experiment_id}"
+            f"See progress at https://beaker.org/ex/{experiment_id}"
         )
         if args.max_resumes > 0:
             print("Configuring auto-resumes:")
