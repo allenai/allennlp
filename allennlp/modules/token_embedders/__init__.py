@@ -28,3 +28,6 @@ from allennlp.modules.token_embedders.pass_through_token_embedder import PassThr
 from allennlp.modules.token_embedders.pretrained_transformer_embedder import (
     PretrainedTransformerEmbedder,
 )
+from allennlp.modules.token_embedders.pretrained_transformer_mismatched_embedder import (
+    PretrainedTransformerMismatchedEmbedder,
+)

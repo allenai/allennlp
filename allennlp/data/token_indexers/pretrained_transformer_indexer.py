@@ -31,14 +31,10 @@ class PretrainedTransformerIndexer(TokenIndexer):
         OOV token.
     """
 
-    def __init__(
-        self, model_name: str, namespace: str = "tags", token_min_padding_length: int = 0
-    ) -> None:
-        super().__init__(token_min_padding_length)
+    def __init__(self, model_name: str, namespace: str = "tags", **kwargs) -> None:
+        super().__init__(**kwargs)
         self._namespace = namespace
         self._tokenizer = AutoTokenizer.from_pretrained(model_name)
-        self._padding_value = self._tokenizer.convert_tokens_to_ids([self._tokenizer.pad_token])[0]
-        logger.info(f"Using token indexer padding value of {self._padding_value}")
         self._added_to_vocabulary = False
 
     def _add_encoding_to_vocabulary(self, vocab: Vocabulary) -> None:
@@ -69,9 +65,7 @@ class PretrainedTransformerIndexer(TokenIndexer):
         pass
 
     @overrides
-    def tokens_to_indices(
-        self, tokens: List[Token], vocabulary: Vocabulary
-    ) -> Dict[str, List[int]]:
+    def tokens_to_indices(self, tokens: List[Token], vocabulary: Vocabulary) -> IndexedTokenList:
         if not self._added_to_vocabulary:
             self._add_encoding_to_vocabulary(vocabulary)
             self._added_to_vocabulary = True
@@ -89,11 +83,10 @@ class PretrainedTransformerIndexer(TokenIndexer):
                     f" for the following token: {token.text}"
                 )
 
-        # The mask has 1 for real tokens and 0 for padding tokens. Only real
-        # tokens are attended to.
-        attention_mask = [1] * len(indices)
+        # The mask has 1 for real tokens and 0 for padding tokens. Only real tokens are attended to.
+        mask = [1] * len(indices)
 
-        return {"token_ids": indices, "mask": attention_mask}
+        return {"token_ids": indices, "mask": mask}
 
     @overrides
     def get_empty_token_list(self) -> IndexedTokenList:
