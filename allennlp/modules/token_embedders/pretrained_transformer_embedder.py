@@ -21,14 +21,14 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
     model_name : `str`
         The name of the `transformers` model to use. Should be the same as the corresponding
         `PretrainedTransformerIndexer`.
-    max_length : `int`, optional (default = -1)
+    max_length : `int`, optional (default = None)
         If positive, folds input token IDs into multiple segments of this length, pass them
         through the transformer model independently, and concatenate the final representations.
         Should be set to the same value as the `max_length` option on the
         `PretrainedTransformerIndexer`.
     """
 
-    def __init__(self, model_name: str, max_length: int = -1) -> None:
+    def __init__(self, model_name: str, max_length: int = None) -> None:
         super().__init__()
         self.transformer_model = AutoModel.from_pretrained(model_name)
         self._max_length = max_length
@@ -60,7 +60,7 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
 
         token_ids: torch.LongTensor
             Shape: [
-                batch_size, num_wordpieces if max_length <= 0 else num_segment_concat_wordpieces
+                batch_size, num_wordpieces if max_length is None else num_segment_concat_wordpieces
             ].
             num_segment_concat_wordpieces is num_wordpieces plus special tokens inserted in the
             middle, i.e. the length of: "[CLS] A B C [SEP] [CLS] D E F [SEP]" (see indexer logic).
@@ -83,7 +83,7 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
 
         batch_size = token_ids.size(0)
 
-        if self._max_length > 0:
+        if self._max_length is not None:
             # [ [CLS] A B C [SEP] [CLS] D E F [SEP] ] ->
             # [ [ [CLS] A B C [SEP] ], [ [CLS] D E F [SEP] ] ]
             num_segment_concat_wordpieces = token_ids.size(1)
@@ -100,15 +100,16 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
             token_ids = fold(token_ids)
             segment_concat_mask = fold(segment_concat_mask)
 
-        transformer_mask = segment_concat_mask if self._max_length > 0 else mask
+        transformer_mask = segment_concat_mask if self._max_length is not None else mask
         # Shape: [batch_size, num_wordpieces, embedding_size],
-        # or if self._max_length > 0: [batch_size * num_segments, self._max_len, embedding_size]
+        # or if self._max_length is not None:
+        # [batch_size * num_segments, self._max_len, embedding_size]
         embeddings = self.transformer_model(
             input_ids=token_ids, token_type_ids=type_ids, attention_mask=transformer_mask
         )[0]
         embedding_size = embeddings.size(2)
 
-        if self._max_length > 0:
+        if self._max_length is not None:
             # We truncate the start and end tokens for all segments, recombine the segments,
             # and manually add back the start tokens. We generally don't need to add back
             # the end tokens -- because the last segment is usually shorter than self._max_length,
