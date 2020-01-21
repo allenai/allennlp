@@ -23,7 +23,6 @@ from allennlp.data.vocabulary import (
     Vocabulary,
 )
 from allennlp.modules.token_embedders.embedding import format_embeddings_file_uri
-from transformers import AutoTokenizer
 
 
 class TestVocabulary(AllenNlpTestCase):
