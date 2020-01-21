@@ -124,17 +124,22 @@ class TestFindLearningRate(AllenNlpTestCase):
     @pytest.mark.skipif(torch.cuda.device_count() < 2, reason="Need multiple GPUs.")
     def test_find_learning_rate_multi_gpu(self):
         params = self.params()
-        params["trainer"]["cuda_device"] = [0, 1]
-        find_learning_rate_model(
-            params,
-            os.path.join(self.TEST_DIR, "test_find_learning_rate_multi_gpu"),
-            start_lr=1e-5,
-            end_lr=1,
-            num_batches=100,
-            linear_steps=True,
-            stopping_factor=None,
-            force=False,
-        )
+        del params["trainer"]["cuda_device"]
+        params["distributed"] = Params({})
+        params["distributed"]["cuda_devices"] = [0, 1]
+
+        with pytest.raises(AssertionError) as execinfo:
+            find_learning_rate_model(
+                params,
+                os.path.join(self.TEST_DIR, "test_find_learning_rate_multi_gpu"),
+                start_lr=1e-5,
+                end_lr=1,
+                num_batches=100,
+                linear_steps=True,
+                stopping_factor=None,
+                force=False,
+            )
+        assert "DistributedDataParallel" in str(execinfo.value)
 
 
 class TestSearchLearningRate(AllenNlpTestCase):
