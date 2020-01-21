@@ -9,7 +9,7 @@ from allennlp.predictors.seq2seq import Seq2SeqPredictor
 @Predictor.register("simple_seq2seq")
 class SimpleSeq2SeqPredictor(Seq2SeqPredictor):
     """
-    Predictor for the :class:`~allennlp.models.encoder_decoder.simple_seq2seq` model.
+    Predictor for the [`SimpleSeq2Seq`](../models/encoder_decoders/simple_seq2seq.md) model.
     """
 
     def __init__(self, model: Model, dataset_reader: DatasetReader) -> None:

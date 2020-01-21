@@ -1,5 +1,5 @@
 """
-A :class:`~allennlp.predictors.predictor.Predictor` is
+A `Predictor` is
 a wrapper for an AllenNLP `Model`
 that makes JSON predictions using JSON inputs. If you
 want to serve up a model through the web service

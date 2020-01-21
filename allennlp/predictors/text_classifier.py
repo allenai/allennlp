@@ -16,7 +16,7 @@ class TextClassifierPredictor(Predictor):
     """
     Predictor for any model that takes in a sentence and returns
     a single class for it.  In particular, it can be used with
-    the :class:`~allennlp.models.basic_classifier.BasicClassifier` model
+    the [`BasicClassifier`](../models/basic_classifier.md) model.
     """
 
     def predict(self, sentence: str) -> JsonDict:
