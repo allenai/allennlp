@@ -1,5 +1,5 @@
 """
-:class:`~allennlp.common.tqdm.Tqdm` wraps tqdm so we can add configurable
+`allennlp.common.tqdm.Tqdm` wraps tqdm so we can add configurable
 global defaults for certain tqdm parameters.
 """
 

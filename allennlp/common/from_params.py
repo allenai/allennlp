@@ -4,10 +4,11 @@ declarative language (JSON) for defining experiments and models.
 
 This is implemented by giving each AllenNLP class a method
 
-.. code-block
+```
     @classmethod
     def from_params(cls, params: Params, **extras) -> 'ClassName':
         ...
+```
 
 that contains the logic for instantiating a class instance from a JSON-like
 `Params` object. Historically you had to implement your own `from_params`

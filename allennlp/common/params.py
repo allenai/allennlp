@@ -1,5 +1,5 @@
 """
-The :class:`~allennlp.common.params.Params` class represents a dictionary of
+The `allennlp.common.params.Params` class represents a dictionary of
 parameters (e.g. for configuring a model), with added functionality around
 logging and validation.
 """
@@ -203,10 +203,10 @@ class Params(MutableMapping):
     There are currently two benefits of a `Params` object over a plain dictionary for parameter
     passing:
 
-    #. We handle a few kinds of parameter validation, including making sure that parameters
+    1. We handle a few kinds of parameter validation, including making sure that parameters
        representing discrete choices actually have acceptable values, and making sure no extra
        parameters are passed.
-    #. We log all parameter reads, including default values.  This gives a more complete
+    2. We log all parameter reads, including default values.  This gives a more complete
        specification of the actual parameters used than is given in a JSON file, because
        those may not specify what default values were used, whereas this will log them.
 
