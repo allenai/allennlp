@@ -1250,7 +1250,7 @@ def batched_index_select(
         flattened_indices = flatten_and_batch_shift_indices(indices, target.size(1))
 
     # Shape: (batch_size * sequence_length, embedding_size)
-    flattened_target = target.view(-1, target.size(-1))
+    flattened_target = target.reshape(-1, target.size(-1))
 
     # Shape: (batch_size * d_1 * ... * d_n, embedding_size)
     flattened_selected = flattened_target.index_select(0, flattened_indices)
