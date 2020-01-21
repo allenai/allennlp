@@ -129,9 +129,9 @@ class TestPretrainedTransformerIndexer(AllenNlpTestCase):
             padding_suffix = [allennlp_tokenizer.tokenizer.pad_token_id] * padding_length
             assert padded_tokens["token_ids"][-padding_length:].tolist() == padding_suffix
 
-    def test_auto_determining_num_tokens_added(self):
-        indexer = PretrainedTransformerIndexer("bert-base-cased")
-        assert indexer._determine_num_special_tokens_added() == (1, 1)
+    def test_determine_num_special_tokens_added(self):
+        tokenizer = AutoTokenizer.from_pretrained("bert-base-cased")
+        assert PretrainedTransformerIndexer.determine_num_special_tokens_added(tokenizer) == (1, 1)
 
     def test_long_sequence_folding(self):
         tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
