@@ -108,7 +108,7 @@ class GatedCnnEncoder(Seq2SeqEncoder):
     """
     **This is work-in-progress and has not been fully tested yet. Use at your own risk!**
 
-    A ``Seq2SeqEncoder`` that uses a Gated CNN.
+    A `Seq2SeqEncoder` that uses a Gated CNN.
 
     see
 
@@ -139,15 +139,15 @@ class GatedCnnEncoder(Seq2SeqEncoder):
     ]
 
 
-    Parameters
-    ----------
-    input_dim : int
+    # Parameters
+
+    input_dim : `int`, required
         The dimension of the inputs.
-    layers : ``Sequence[Sequence[Sequence[int]]]```
-        The layer dimensions for each ``ResidualBlock``.
-    dropout : float, optional (default = 0.0)
-        The dropout for each ``ResidualBlock``.
-    return_all_layers : bool, optional (default: False)
+    layers : `Sequence[Sequence[Sequence[int]]]`, required
+        The layer dimensions for each `ResidualBlock`.
+    dropout : `float`, optional (default = 0.0)
+        The dropout for each `ResidualBlock`.
+    return_all_layers : `bool`, optional (default = False)
         Whether to return all layers or just the last layer.
     """
 

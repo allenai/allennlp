@@ -1,0 +1,380 @@
+site_name: AllenNLP
+site_description: AllenNLP is a ..
+site_url: https://allennlp.org/
+
+theme:
+  name: material
+  palette:
+    primary: blue
+    accent: grey
+  logo: img/favicon.ico
+  favicon: img/favicon.ico
+  highlightjs: true
+  hljs_languages:
+  - python
+  - typescript
+  - json
+
+
+repo_name: allenai/allennlp
+repo_url: https://github.com/allenai/allennlp
+edit_uri: edit/master/docs/
+# TODO(markn): Consider adding GA here, if we care about it.
+
+nav:
+- AllenNLP: README.md
+- Tutorials:
+  - Predicting Paper Venues (pt1): tutorials/getting_started/predicting_paper_venues/predicting_paper_venues_pt1.md
+  - Predicting Paper Venues (pt2): tutorials/getting_started/predicting_paper_venues/predicting_paper_venues_pt2.md
+  - Walk Through:
+    - Configuration: tutorials/getting_started/walk_through_allennlp/configuration.md
+    - Creating a Model: tutorials/getting_started/walk_through_allennlp/creating_a_model.md
+    - Training/Evaluation: tutorials/getting_started/walk_through_allennlp/training_and_evaluating.md
+  - Using Pretrained Models: tutorials/getting_started/using_pretrained_models.md
+  - Semantic Parsing: tutorials/getting_started/semantic_parsing.md
+  - Laziness in AllenNLP: tutorials/getting_started/laziness.md
+- How To:
+  - Create a configuration: tutorials/how_to/create_a_configuration.md
+  - Use Elmo: tutorials/how_to/elmo.md
+  - Train Transformer Elmo: tutorials/how_to/training_transformer_elmo.md
+  - Use Span Representations: tutorials/how_to/span_representations.md
+  - Using a Debugger: tutorials/how_to/using_a_debugger.md
+  - Visualizing Model Internals: tutorials/how_to/visualizing_model_internals.md
+- API:
+  - commands:
+    - dry_run: api/commands/dry_run.md
+    - elmo: api/commands/elmo.md
+    - fine_tune: api/commands/fine_tune.md
+    - predict: api/commands/predict.md
+    - print_results: api/commands/print_results.md
+    - train: api/commands/train.md
+    - evaluate: api/commands/evaluate.md
+    - subcommand: api/commands/subcommand.md
+    - test_install: api/commands/test_install.md
+    - find_learning_rate: api/commands/find_learning_rate.md
+  - common:
+    - params: api/common/params.md
+    - util: api/common/util.md
+    - from_params: api/common/from_params.md
+    - checks: api/common/checks.md
+    - registrable: api/common/registrable.md
+    - tqdm: api/common/tqdm.md
+    - testing:
+      - model_test_case: api/common/testing/model_test_case.md
+      - test_case: api/common/testing/test_case.md
+    - file_utils: api/common/file_utils.md
+  - data:
+    - instance: api/data/instance.md
+    - tokenizers:
+      - sentence_splitter: api/data/tokenizers/sentence_splitter.md
+      - token: api/data/tokenizers/token.md
+      - pretrained_transformer_tokenizer: api/data/tokenizers/pretrained_transformer_tokenizer.md
+      - spacy_tokenizer: api/data/tokenizers/spacy_tokenizer.md
+      - tokenizer: api/data/tokenizers/tokenizer.md
+      - whitespace_tokenizer: api/data/tokenizers/whitespace_tokenizer.md
+      - pretrained_transformer_pre_tokenizer: api/data/tokenizers/pretrained_transformer_pre_tokenizer.md
+      - letters_digits_tokenizer: api/data/tokenizers/letters_digits_tokenizer.md
+      - character_tokenizer: api/data/tokenizers/character_tokenizer.md
+    - dataset_readers:
+      - semantic_dependency_parsing: api/data/dataset_readers/semantic_dependency_parsing.md
+      - multiprocess_dataset_reader: api/data/dataset_readers/multiprocess_dataset_reader.md
+      - masked_language_modeling: api/data/dataset_readers/masked_language_modeling.md
+      - conll2003: api/data/dataset_readers/conll2003.md
+      - interleaving_dataset_reader: api/data/dataset_readers/interleaving_dataset_reader.md
+      - ccgbank: api/data/dataset_readers/ccgbank.md
+      - simple_language_modeling: api/data/dataset_readers/simple_language_modeling.md
+      - babi: api/data/dataset_readers/babi.md
+      - sequence_tagging: api/data/dataset_readers/sequence_tagging.md
+      - universal_dependencies: api/data/dataset_readers/universal_dependencies.md
+      - copynet_seq2seq: api/data/dataset_readers/copynet_seq2seq.md
+      - text_classification_json: api/data/dataset_readers/text_classification_json.md
+      - semantic_role_labeling: api/data/dataset_readers/semantic_role_labeling.md
+      - snli: api/data/dataset_readers/snli.md
+      - universal_dependencies_multilang: api/data/dataset_readers/universal_dependencies_multilang.md
+      - event2mind: api/data/dataset_readers/event2mind.md
+      - next_token_lm: api/data/dataset_readers/next_token_lm.md
+      - dataset_reader: api/data/dataset_readers/dataset_reader.md
+      - coreference_resolution:
+        - conll: api/data/dataset_readers/coreference_resolution/conll.md
+        - winobias: api/data/dataset_readers/coreference_resolution/winobias.md
+      - stanford_sentiment_tree_bank: api/data/dataset_readers/stanford_sentiment_tree_bank.md
+      - ontonotes_ner: api/data/dataset_readers/ontonotes_ner.md
+      - penn_tree_bank: api/data/dataset_readers/penn_tree_bank.md
+      - dataset_utils:
+        - ontonotes: api/data/dataset_readers/dataset_utils/ontonotes.md
+        - span_utils: api/data/dataset_readers/dataset_utils/span_utils.md
+      - conll2000: api/data/dataset_readers/conll2000.md
+      - quora_paraphrase: api/data/dataset_readers/quora_paraphrase.md
+      - seq2seq: api/data/dataset_readers/seq2seq.md
+    - token_indexers:
+      - openai_transformer_byte_pair_indexer: api/data/token_indexers/openai_transformer_byte_pair_indexer.md
+      - single_id_token_indexer: api/data/token_indexers/single_id_token_indexer.md
+      - ner_tag_indexer: api/data/token_indexers/ner_tag_indexer.md
+      - token_indexer: api/data/token_indexers/token_indexer.md
+      - token_characters_indexer: api/data/token_indexers/token_characters_indexer.md
+      - elmo_indexer: api/data/token_indexers/elmo_indexer.md
+      - spacy_indexer: api/data/token_indexers/spacy_indexer.md
+      - wordpiece_indexer: api/data/token_indexers/wordpiece_indexer.md
+      - dep_label_indexer: api/data/token_indexers/dep_label_indexer.md
+      - pos_tag_indexer: api/data/token_indexers/pos_tag_indexer.md
+      - pretrained_transformer_indexer: api/data/token_indexers/pretrained_transformer_indexer.md
+    - batch: api/data/batch.md
+    - dataset: api/data/dataset.md
+    - fields:
+      - metadata_field: api/data/fields/metadata_field.md
+      - field: api/data/fields/field.md
+      - adjacency_field: api/data/fields/adjacency_field.md
+      - span_field: api/data/fields/span_field.md
+      - namespace_swapping_field: api/data/fields/namespace_swapping_field.md
+      - sequence_label_field: api/data/fields/sequence_label_field.md
+      - label_field: api/data/fields/label_field.md
+      - multilabel_field: api/data/fields/multilabel_field.md
+      - sequence_field: api/data/fields/sequence_field.md
+      - array_field: api/data/fields/array_field.md
+      - text_field: api/data/fields/text_field.md
+      - index_field: api/data/fields/index_field.md
+      - list_field: api/data/fields/list_field.md
+    - vocabulary: api/data/vocabulary.md
+    - iterators:
+      - data_iterator: api/data/iterators/data_iterator.md
+      - homogeneous_batch_iterator: api/data/iterators/homogeneous_batch_iterator.md
+      - multiprocess_iterator: api/data/iterators/multiprocess_iterator.md
+      - same_language_iterator: api/data/iterators/same_language_iterator.md
+      - pass_through_iterator: api/data/iterators/pass_through_iterator.md
+      - bucket_iterator: api/data/iterators/bucket_iterator.md
+      - basic_iterator: api/data/iterators/basic_iterator.md
+  - interpret:
+    - saliency_interpreters:
+      - integrated_gradient: api/interpret/saliency_interpreters/integrated_gradient.md
+      - saliency_interpreter: api/interpret/saliency_interpreters/saliency_interpreter.md
+      - smooth_gradient: api/interpret/saliency_interpreters/smooth_gradient.md
+      - simple_gradient: api/interpret/saliency_interpreters/simple_gradient.md
+    - attackers:
+      - utils: api/interpret/attackers/utils.md
+      - hotflip: api/interpret/attackers/hotflip.md
+      - input_reduction: api/interpret/attackers/input_reduction.md
+      - attacker: api/interpret/attackers/attacker.md
+  - models:
+    - crf_tagger: api/models/crf_tagger.md
+    - semantic_role_labeler: api/models/semantic_role_labeler.md
+    - decomposable_attention: api/models/decomposable_attention.md
+    - language_model: api/models/language_model.md
+    - biaffine_dependency_parser_multilang: api/models/biaffine_dependency_parser_multilang.md
+    - masked_language_model: api/models/masked_language_model.md
+    - biaffine_dependency_parser: api/models/biaffine_dependency_parser.md
+    - simple_tagger: api/models/simple_tagger.md
+    - graph_parser: api/models/graph_parser.md
+    - srl_bert: api/models/srl_bert.md
+    - encoder_decoders:
+      - simple_seq2seq: api/models/encoder_decoders/simple_seq2seq.md
+      - copynet_seq2seq: api/models/encoder_decoders/copynet_seq2seq.md
+      - composed_seq2seq: api/models/encoder_decoders/composed_seq2seq.md
+    - biattentive_classification_network: api/models/biattentive_classification_network.md
+    - model: api/models/model.md
+    - basic_classifier: api/models/basic_classifier.md
+    - bimpm: api/models/bimpm.md
+    - esim: api/models/esim.md
+    - event2mind: api/models/event2mind.md
+    - next_token_lm: api/models/next_token_lm.md
+    - ensemble: api/models/ensemble.md
+    - archival: api/models/archival.md
+    - coreference_resolution:
+      - coref: api/models/coreference_resolution/coref.md
+    - srl_util: api/models/srl_util.md
+    - constituency_parser: api/models/constituency_parser.md
+    - bidirectional_lm: api/models/bidirectional_lm.md
+    - bert_for_classification: api/models/bert_for_classification.md
+  - modules:
+    - openai_transformer: api/modules/openai_transformer.md
+    - scalar_mix: api/modules/scalar_mix.md
+    - seq2seq_encoders:
+      - compose_encoder: api/modules/seq2seq_encoders/compose_encoder.md
+      - seq2seq_encoder: api/modules/seq2seq_encoders/seq2seq_encoder.md
+      - pytorch_seq2seq_wrapper: api/modules/seq2seq_encoders/pytorch_seq2seq_wrapper.md
+      - feedforward_encoder: api/modules/seq2seq_encoders/feedforward_encoder.md
+      - pass_through_encoder: api/modules/seq2seq_encoders/pass_through_encoder.md
+      - stacked_self_attention: api/modules/seq2seq_encoders/stacked_self_attention.md
+      - bidirectional_language_model_transformer: api/modules/seq2seq_encoders/bidirectional_language_model_transformer.md
+      - multi_head_self_attention: api/modules/seq2seq_encoders/multi_head_self_attention.md
+      - intra_sentence_attention: api/modules/seq2seq_encoders/intra_sentence_attention.md
+      - gated_cnn_encoder: api/modules/seq2seq_encoders/gated_cnn_encoder.md
+      - qanet_encoder: api/modules/seq2seq_encoders/qanet_encoder.md
+    - attention:
+      - attention: api/modules/attention/attention.md
+      - bilinear_attention: api/modules/attention/bilinear_attention.md
+      - dot_product_attention: api/modules/attention/dot_product_attention.md
+      - legacy_attention: api/modules/attention/legacy_attention.md
+      - cosine_attention: api/modules/attention/cosine_attention.md
+      - linear_attention: api/modules/attention/linear_attention.md
+      - additive_attention: api/modules/attention/additive_attention.md
+    - stacked_alternating_lstm: api/modules/stacked_alternating_lstm.md
+    - encoder_base: api/modules/encoder_base.md
+    - seq2seq_decoders:
+      - decoder_net: api/modules/seq2seq_decoders/decoder_net.md
+      - auto_regressive_seq_decoder: api/modules/seq2seq_decoders/auto_regressive_seq_decoder.md
+      - stacked_self_attention_decoder_net: api/modules/seq2seq_decoders/stacked_self_attention_decoder_net.md
+      - lstm_cell_decoder_net: api/modules/seq2seq_decoders/lstm_cell_decoder_net.md
+      - seq_decoder: api/modules/seq2seq_decoders/seq_decoder.md
+    - maxout: api/modules/maxout.md
+    - elmo: api/modules/elmo.md
+    - text_field_embedders:
+      - basic_text_field_embedder: api/modules/text_field_embedders/basic_text_field_embedder.md
+      - text_field_embedder: api/modules/text_field_embedders/text_field_embedder.md
+    - time_distributed: api/modules/time_distributed.md
+    - similarity_functions:
+      - cosine: api/modules/similarity_functions/cosine.md
+      - similarity_function: api/modules/similarity_functions/similarity_function.md
+      - linear: api/modules/similarity_functions/linear.md
+      - bilinear: api/modules/similarity_functions/bilinear.md
+      - dot_product: api/modules/similarity_functions/dot_product.md
+      - multiheaded: api/modules/similarity_functions/multiheaded.md
+    - feedforward: api/modules/feedforward.md
+    - sampled_softmax_loss: api/modules/sampled_softmax_loss.md
+    - seq2vec_encoders:
+      - boe_encoder: api/modules/seq2vec_encoders/boe_encoder.md
+      - cnn_highway_encoder: api/modules/seq2vec_encoders/cnn_highway_encoder.md
+      - seq2vec_encoder: api/modules/seq2vec_encoders/seq2vec_encoder.md
+      - cnn_encoder: api/modules/seq2vec_encoders/cnn_encoder.md
+      - bert_pooler: api/modules/seq2vec_encoders/bert_pooler.md
+      - pytorch_seq2vec_wrapper: api/modules/seq2vec_encoders/pytorch_seq2vec_wrapper.md
+    - residual_with_layer_dropout: api/modules/residual_with_layer_dropout.md
+    - drop_connect: api/modules/drop_connect.md
+    - bimpm_matching: api/modules/bimpm_matching.md
+    - conditional_random_field: api/modules/conditional_random_field.md
+    - stacked_bidirectional_lstm: api/modules/stacked_bidirectional_lstm.md
+    - highway: api/modules/highway.md
+    - span_extractors:
+      - self_attentive_span_extractor: api/modules/span_extractors/self_attentive_span_extractor.md
+      - bidirectional_endpoint_span_extractor: api/modules/span_extractors/bidirectional_endpoint_span_extractor.md
+      - endpoint_span_extractor: api/modules/span_extractors/endpoint_span_extractor.md
+      - span_extractor: api/modules/span_extractors/span_extractor.md
+    - input_variational_dropout: api/modules/input_variational_dropout.md
+    - masked_layer_norm: api/modules/masked_layer_norm.md
+    - matrix_attention:
+      - linear_matrix_attention: api/modules/matrix_attention/linear_matrix_attention.md
+      - bilinear_matrix_attention: api/modules/matrix_attention/bilinear_matrix_attention.md
+      - dot_product_matrix_attention: api/modules/matrix_attention/dot_product_matrix_attention.md
+      - matrix_attention: api/modules/matrix_attention/matrix_attention.md
+      - cosine_matrix_attention: api/modules/matrix_attention/cosine_matrix_attention.md
+      - legacy_matrix_attention: api/modules/matrix_attention/legacy_matrix_attention.md
+    - elmo_lstm: api/modules/elmo_lstm.md
+    - pruner: api/modules/pruner.md
+    - lstm_cell_with_projection: api/modules/lstm_cell_with_projection.md
+    - language_model_heads:
+      - gpt2: api/modules/language_model_heads/gpt2.md
+      - language_model_head: api/modules/language_model_heads/language_model_head.md
+      - bert: api/modules/language_model_heads/bert.md
+    - token_embedders:
+      - pretrained_transformer_embedder: api/modules/token_embedders/pretrained_transformer_embedder.md
+      - openai_transformer_embedder: api/modules/token_embedders/openai_transformer_embedder.md
+      - bidirectional_language_model_token_embedder: api/modules/token_embedders/bidirectional_language_model_token_embedder.md
+      - embedding: api/modules/token_embedders/embedding.md
+      - bert_token_embedder: api/modules/token_embedders/bert_token_embedder.md
+      - token_characters_encoder: api/modules/token_embedders/token_characters_encoder.md
+      - elmo_token_embedder_multilang: api/modules/token_embedders/elmo_token_embedder_multilang.md
+      - pass_through_token_embedder: api/modules/token_embedders/pass_through_token_embedder.md
+      - empty_embedder: api/modules/token_embedders/empty_embedder.md
+      - bag_of_word_counts_token_embedder: api/modules/token_embedders/bag_of_word_counts_token_embedder.md
+      - elmo_token_embedder: api/modules/token_embedders/elmo_token_embedder.md
+      - language_model_token_embedder: api/modules/token_embedders/language_model_token_embedder.md
+      - token_embedder: api/modules/token_embedders/token_embedder.md
+    - augmented_lstm: api/modules/augmented_lstm.md
+    - layer_norm: api/modules/layer_norm.md
+  - nn:
+    - util: api/nn/util.md
+    - activations: api/nn/activations.md
+    - beam_search: api/nn/beam_search.md
+    - regularizers:
+      - regularizer_applicator: api/nn/regularizers/regularizer_applicator.md
+      - regularizers: api/nn/regularizers/regularizers.md
+      - regularizer: api/nn/regularizers/regularizer.md
+    - initializers: api/nn/initializers.md
+    - chu_liu_edmonds: api/nn/chu_liu_edmonds.md
+  - predictors:
+    - predictor: api/predictors/predictor.md
+    - semantic_role_labeler: api/predictors/semantic_role_labeler.md
+    - simple_seq2seq: api/predictors/simple_seq2seq.md
+    - decomposable_attention: api/predictors/decomposable_attention.md
+    - coref: api/predictors/coref.md
+    - masked_language_model: api/predictors/masked_language_model.md
+    - biaffine_dependency_parser: api/predictors/biaffine_dependency_parser.md
+    - event2mind: api/predictors/event2mind.md
+    - sentence_tagger: api/predictors/sentence_tagger.md
+    - next_token_lm: api/predictors/next_token_lm.md
+    - text_classifier: api/predictors/text_classifier.md
+    - open_information_extraction: api/predictors/open_information_extraction.md
+    - constituency_parser: api/predictors/constituency_parser.md
+    - seq2seq: api/predictors/seq2seq.md
+  - tools:
+    - inspect_cache: api/tools/inspect_cache.md
+    - archive_surgery: api/tools/archive_surgery.md
+    - create_elmo_embeddings_from_vocab: api/tools/create_elmo_embeddings_from_vocab.md
+  - training:
+    - metrics:
+      - spearman_correlation: api/training/metrics/spearman_correlation.md
+      - srl_eval_scorer: api/training/metrics/srl_eval_scorer.md
+      - mean_absolute_error: api/training/metrics/mean_absolute_error.md
+      - f1_measure: api/training/metrics/f1_measure.md
+      - mention_recall: api/training/metrics/mention_recall.md
+      - pearson_correlation: api/training/metrics/pearson_correlation.md
+      - bleu: api/training/metrics/bleu.md
+      - boolean_accuracy: api/training/metrics/boolean_accuracy.md
+      - fbeta_measure: api/training/metrics/fbeta_measure.md
+      - perplexity: api/training/metrics/perplexity.md
+      - covariance: api/training/metrics/covariance.md
+      - unigram_recall: api/training/metrics/unigram_recall.md
+      - conll_coref_scores: api/training/metrics/conll_coref_scores.md
+      - attachment_scores: api/training/metrics/attachment_scores.md
+      - metric: api/training/metrics/metric.md
+      - average: api/training/metrics/average.md
+      - categorical_accuracy: api/training/metrics/categorical_accuracy.md
+      - evalb_bracketing_scorer: api/training/metrics/evalb_bracketing_scorer.md
+      - entropy: api/training/metrics/entropy.md
+      - sequence_accuracy: api/training/metrics/sequence_accuracy.md
+      - span_based_f1_measure: api/training/metrics/span_based_f1_measure.md
+      - auc: api/training/metrics/auc.md
+    - callback_trainer: api/training/callback_trainer.md
+    - metric_tracker: api/training/metric_tracker.md
+    - learning_rate_schedulers:
+      - cosine: api/training/learning_rate_schedulers/cosine.md
+      - slanted_triangular: api/training/learning_rate_schedulers/slanted_triangular.md
+      - noam: api/training/learning_rate_schedulers/noam.md
+      - learning_rate_scheduler: api/training/learning_rate_schedulers/learning_rate_scheduler.md
+    - callbacks:
+      - gradient_norm_and_clip: api/training/callbacks/gradient_norm_and_clip.md
+      - callback: api/training/callbacks/callback.md
+      - checkpoint: api/training/callbacks/checkpoint.md
+      - events: api/training/callbacks/events.md
+      - update_moving_average: api/training/callbacks/update_moving_average.md
+      - post_to_url: api/training/callbacks/post_to_url.md
+      - track_metrics: api/training/callbacks/track_metrics.md
+      - validate: api/training/callbacks/validate.md
+      - log_to_tensorboard: api/training/callbacks/log_to_tensorboard.md
+      - update_learning_rate: api/training/callbacks/update_learning_rate.md
+      - callback_handler: api/training/callbacks/callback_handler.md
+      - update_momentum: api/training/callbacks/update_momentum.md
+    - no_op_trainer: api/training/no_op_trainer.md
+    - util: api/training/util.md
+    - moving_average: api/training/moving_average.md
+    - checkpointer: api/training/checkpointer.md
+    - optimizers: api/training/optimizers.md
+    - momentum_schedulers:
+      - inverted_triangular: api/training/momentum_schedulers/inverted_triangular.md
+      - momentum_scheduler: api/training/momentum_schedulers/momentum_scheduler.md
+    - trainer_base: api/training/trainer_base.md
+    - trainer_pieces: api/training/trainer_pieces.md
+    - scheduler: api/training/scheduler.md
+    - trainer: api/training/trainer.md
+    - tensorboard_writer: api/training/tensorboard_writer.md
+- Roadmap: ROADMAP.md
+- Contributing: CONTRIBUTING.md
+- Licence: LICENSE.md
+
+markdown_extensions:
+- toc:
+    permalink: '#'
+- markdown.extensions.codehilite:
+    guess_lang: true
+- admonition
+- codehilite
+- extra

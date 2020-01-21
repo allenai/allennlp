@@ -1,7 +1,7 @@
 """
 AllenNLP just uses
 `PyTorch optimizers <https://pytorch.org/docs/master/optim.html>`_ ,
-with a thin wrapper to allow registering them and instantiating them ``from_params``.
+with a thin wrapper to allow registering them and instantiating them `from_params`.
 
 The available optimizers are
 
@@ -21,10 +21,9 @@ The available optimizers are
 import logging
 import re
 import math
-from typing import List, Any, Dict
+from typing import List, Any, Dict, Type
 
 import torch
-from pytorch_pretrained_bert.optimization import BertAdam
 import transformers
 
 from allennlp.common import Params, Registrable
@@ -34,7 +33,7 @@ logger = logging.getLogger(__name__)
 
 class Optimizer(Registrable):
     """
-    This class just allows us to implement ``Registrable`` for Pytorch Optimizers.
+    This class just allows us to implement `Registrable` for Pytorch Optimizers.
     """
 
     default_implementation = "adam"
@@ -114,7 +113,7 @@ class Optimizer(Registrable):
             for regex, count in regex_use_counts.items():
                 if count == 0:
                     logger.warning(
-                        "When constructing parameter groups, " " %s not match any parameter name",
+                        "When constructing parameter groups, %s does not match any parameter name",
                         regex,
                     )
 
@@ -136,7 +135,7 @@ class Optimizer(Registrable):
         # key to your "trainer.optimizer" config.
         infer_type_and_cast = params.pop_bool("infer_type_and_cast", True)
         params_as_dict = params.as_dict(infer_type_and_cast=infer_type_and_cast)
-        subclass = Optimizer.by_name(optimizer)
+        subclass: Type[Optimizer] = Optimizer.by_name(optimizer)  # type: ignore
 
         # If the optimizer subclass has a from_params, use it.
         if hasattr(subclass, "from_params"):
@@ -148,31 +147,17 @@ class Optimizer(Registrable):
 # We just use the Pytorch optimizers, so here we force them into
 # Registry._registry so we can build them from params.
 Registrable._registry[Optimizer] = {
-    "adam": torch.optim.Adam,
-    "adamw": torch.optim.AdamW,
-    "huggingface_adamw": transformers.AdamW,
-    "sparse_adam": torch.optim.SparseAdam,
-    "adagrad": torch.optim.Adagrad,
-    "adadelta": torch.optim.Adadelta,
-    "sgd": torch.optim.SGD,
-    "rmsprop": torch.optim.RMSprop,
-    "adamax": torch.optim.Adamax,
-    "averaged_sgd": torch.optim.ASGD,
-    "bert_adam": BertAdam,
+    "adam": (torch.optim.Adam, None),
+    "adamw": (torch.optim.AdamW, None),
+    "huggingface_adamw": (transformers.AdamW, None),
+    "sparse_adam": (torch.optim.SparseAdam, None),
+    "adagrad": (torch.optim.Adagrad, None),
+    "adadelta": (torch.optim.Adadelta, None),
+    "sgd": (torch.optim.SGD, None),
+    "rmsprop": (torch.optim.RMSprop, None),
+    "adamax": (torch.optim.Adamax, None),
+    "averaged_sgd": (torch.optim.ASGD, None),
 }
-
-
-def _safe_sparse_mask(tensor: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
-    """
-    In PyTorch 1.0, Tensor._sparse_mask was changed to Tensor.sparse_mask.
-    This wrapper allows AllenNLP to (temporarily) work with both 1.0 and 0.4.1.
-    """
-
-    try:
-        return tensor.sparse_mask(mask)
-    except AttributeError:
-        # TODO(joelgrus): remove this and/or warn at some point
-        return tensor._sparse_mask(mask)
 
 
 @Optimizer.register("dense_sparse_adam")
@@ -184,16 +169,16 @@ class DenseSparseAdam(torch.optim.Optimizer):
     Implements Adam algorithm with dense & sparse gradients.
     It has been proposed in Adam: A Method for Stochastic Optimization.
 
-    Parameters
-    ----------
-    params : ``iterable``
+    # Parameters
+
+    params : `iterable`
         iterable of parameters to optimize or dicts defining parameter groups
-    lr : ``float``, optional (default: 1e-3)
+    lr : `float`, optional (default: 1e-3)
         The learning rate.
-    betas : ``Tuple[float, float]``, optional (default: (0.9, 0.999))
+    betas : `Tuple[float, float]`, optional (default: (0.9, 0.999))
         coefficients used for computing running averages of gradient
         and its square.
-    eps : ``float``, optional, (default: 1e-8)
+    eps : `float`, optional, (default: 1e-8)
         A term added to the denominator to improve numerical stability.
     """
 
@@ -213,9 +198,9 @@ class DenseSparseAdam(torch.optim.Optimizer):
         """
         Performs a single optimization step.
 
-        Parameters
-        ----------
-        closure : ``callable``, optional.
+        # Parameters
+
+        closure : `callable`, optional.
             A closure that reevaluates the model and returns the loss.
         """
         loss = None
@@ -258,10 +243,10 @@ class DenseSparseAdam(torch.optim.Optimizer):
                     # Decay the first and second moment running average coefficient
                     #      old <- b * old + (1 - b) * new
                     # <==> old += (1 - b) * (new - old)
-                    old_exp_avg_values = _safe_sparse_mask(exp_avg, grad)._values()
+                    old_exp_avg_values = exp_avg.sparse_mask(grad)._values()
                     exp_avg_update_values = grad_values.sub(old_exp_avg_values).mul_(1 - beta1)
                     exp_avg.add_(make_sparse(exp_avg_update_values))
-                    old_exp_avg_sq_values = _safe_sparse_mask(exp_avg_sq, grad)._values()
+                    old_exp_avg_sq_values = exp_avg_sq.sparse_mask(grad)._values()
                     exp_avg_sq_update_values = (
                         grad_values.pow(2).sub_(old_exp_avg_sq_values).mul_(1 - beta2)
                     )

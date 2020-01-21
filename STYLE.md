@@ -17,13 +17,12 @@ inputs and their outputs.  Private methods should also most often have docstring
 who read your code know what the method is supposed to do.  The basic outline we use for docstrings
 is: (1) a brief description of what the method does, sometimes also including how or why the method
 does it, (2) the parameters / arguments to the method, (3) the return value of the method, if any.
-If the method is particularly simple or the arguments are obvious, (2) and (3) can be omitted.  We
-use [numpydoc](https://github.com/numpy/numpy/blob/master/doc/HOWTO_DOCUMENT.rst.txt) to produce
-our documentation, so function arguments and return values should be formatted as shown in the link
-(or as seen in just about any model or module in the codebase).  We treat the class docstring as
-the documentation for `__init__` methods, giving parameters there and omitting any docstring on the
-constructor itself.  For model / module constructors and methods like `forward`, _always_ include
-the parameters and return values (when there is one) in the docstring.
+If the method is particularly simple or the arguments are obvious, (2) and (3) can be omitted. Our
+docs use markdown formatting, so function arguments and return values should be formatted as markdown
+headers (e.g `# Parameters`), seen in just about any model or module in the codebase.  We treat the
+class docstring as the documentation for `__init__` methods, giving parameters there and omitting 
+any docstring on the constructor itself.  For model / module constructors and methods like 
+`forward`, _always_ include the parameters and return values (when there is one) in the docstring.
 
 ## Code format
 
@@ -50,9 +49,9 @@ that are inseparable from a companion class can also go in the same file (often 
 private classes).
 
 To avoid verbosity when importing classes structured this way, classes should be imported from
-their module's `__init__.py`.  For example, the `Dataset` class is in `allennlp/data/dataset.py`,
+their module's `__init__.py`.  For example, the `Batch` class is in `allennlp/data/batch.py`,
 but `allennlp/data/__init__.py` imports the class, so that you can just do `from allennlp.data
-import Dataset`.
+import Batch`.
 
 Abstract classes typically go in a module containing the abstract class and all built-in
 implementations.  This includes things like `Field` (in `allennlp.data.fields`), `Seq2SeqEncoder`

@@ -452,10 +452,15 @@ class TestNnUtil(AllenNlpTestCase):
 
     def test_get_text_field_mask_returns_a_correct_mask(self):
         text_field_tensors = {
-            "tokens": torch.LongTensor([[3, 4, 5, 0, 0], [1, 2, 0, 0, 0]]),
-            "token_characters": torch.LongTensor(
-                [[[1, 2], [3, 0], [2, 0], [0, 0], [0, 0]], [[5, 0], [4, 6], [0, 0], [0, 0], [0, 0]]]
-            ),
+            "indexer_name": {
+                "tokens": torch.LongTensor([[3, 4, 5, 0, 0], [1, 2, 0, 0, 0]]),
+                "token_characters": torch.LongTensor(
+                    [
+                        [[1, 2], [3, 0], [2, 0], [0, 0], [0, 0]],
+                        [[5, 0], [4, 6], [0, 0], [0, 0], [0, 0]],
+                    ]
+                ),
+            }
         }
         assert_almost_equal(
             util.get_text_field_mask(text_field_tensors).numpy(), [[1, 1, 1, 0, 0], [1, 1, 0, 0, 0]]
@@ -463,12 +468,14 @@ class TestNnUtil(AllenNlpTestCase):
 
     def test_get_text_field_mask_returns_a_correct_mask_character_only_input(self):
         text_field_tensors = {
-            "token_characters": torch.LongTensor(
-                [
-                    [[1, 2, 3], [3, 0, 1], [2, 1, 0], [0, 0, 0]],
-                    [[5, 5, 5], [4, 6, 0], [0, 0, 0], [0, 0, 0]],
-                ]
-            )
+            "indexer_name": {
+                "token_characters": torch.LongTensor(
+                    [
+                        [[1, 2, 3], [3, 0, 1], [2, 1, 0], [0, 0, 0]],
+                        [[5, 5, 5], [4, 6, 0], [0, 0, 0], [0, 0, 0]],
+                    ]
+                )
+            }
         }
         assert_almost_equal(
             util.get_text_field_mask(text_field_tensors).numpy(), [[1, 1, 1, 0], [1, 1, 0, 0]]
@@ -476,18 +483,27 @@ class TestNnUtil(AllenNlpTestCase):
 
     def test_get_text_field_mask_returns_a_correct_mask_list_field(self):
         text_field_tensors = {
-            "list_tokens": torch.LongTensor(
-                [[[1, 2], [3, 0], [2, 0], [0, 0], [0, 0]], [[5, 0], [4, 6], [0, 0], [0, 0], [0, 0]]]
-            )
+            "indexer_name": {
+                "list_tokens": torch.LongTensor(
+                    [
+                        [[1, 2], [3, 0], [2, 0], [0, 0], [0, 0]],
+                        [[5, 0], [4, 6], [0, 0], [0, 0], [0, 0]],
+                    ]
+                )
+            }
         }
         actual_mask = util.get_text_field_mask(text_field_tensors, num_wrapping_dims=1).numpy()
-        expected_mask = (text_field_tensors["list_tokens"].numpy() > 0).astype("int32")
+        expected_mask = (text_field_tensors["indexer_name"]["list_tokens"].numpy() > 0).astype(
+            "int32"
+        )
         assert_almost_equal(actual_mask, expected_mask)
 
     def test_get_text_field_mask_returns_mask_key(self):
         text_field_tensors = {
-            "tokens": torch.LongTensor([[3, 4, 5, 0, 0], [1, 2, 0, 0, 0]]),
-            "mask": torch.LongTensor([[0, 0, 1]]),
+            "indexer_name": {
+                "tokens": torch.LongTensor([[3, 4, 5, 0, 0], [1, 2, 0, 0, 0]]),
+                "mask": torch.LongTensor([[0, 0, 1]]),
+            }
         }
         assert_almost_equal(util.get_text_field_mask(text_field_tensors).numpy(), [[0, 0, 1]])
 
@@ -1008,9 +1024,9 @@ class TestNnUtil(AllenNlpTestCase):
 
     def test_batched_index_select(self):
         indices = numpy.array([[[1, 2], [3, 4]], [[5, 6], [7, 8]]])
-        # Each element is a vector of it's index.
+        # Each element is a vector of its index.
         targets = torch.ones([2, 10, 3]).cumsum(1) - 1
-        # Make the second batch double it's index so they're different.
+        # Make the second batch double its index so they're different.
         targets[1, :, :] *= 2
         indices = torch.tensor(indices, dtype=torch.long)
         selected = util.batched_index_select(targets, indices)
@@ -1037,10 +1053,45 @@ class TestNnUtil(AllenNlpTestCase):
         with pytest.raises(ConfigurationError):
             util.batched_index_select(targets, indices)
 
+    def test_batched_span_select(self):
+        # Each element is a vector of its index.
+        targets = torch.ones([3, 12, 2]).cumsum(1) - 1
+        spans = torch.LongTensor(
+            [
+                [[0, 0], [1, 2], [5, 8], [10, 10]],
+                [[i, i] for i in range(3, -1, -1)],
+                [[0, 3], [1, 4], [2, 5], [10, 11]],
+            ]
+        )
+        selected, mask = util.batched_span_select(targets, spans)
+
+        selected = torch.where(
+            mask.unsqueeze(-1).bool(), selected, torch.empty_like(selected).fill_(-1)
+        )
+
+        numpy.testing.assert_array_equal(
+            selected,
+            [
+                [
+                    [[0, 0], [-1, -1], [-1, -1], [-1, -1]],
+                    [[2, 2], [1, 1], [-1, -1], [-1, -1]],
+                    [[8, 8], [7, 7], [6, 6], [5, 5]],
+                    [[10, 10], [-1, -1], [-1, -1], [-1, -1]],
+                ],
+                [[[i, i], [-1, -1], [-1, -1], [-1, -1]] for i in range(3, -1, -1)],
+                [
+                    [[3, 3], [2, 2], [1, 1], [0, 0]],
+                    [[4, 4], [3, 3], [2, 2], [1, 1]],
+                    [[5, 5], [4, 4], [3, 3], [2, 2]],
+                    [[11, 11], [10, 10], [-1, -1], [-1, -1]],
+                ],
+            ],
+        )
+
     def test_flattened_index_select(self):
         indices = numpy.array([[1, 2], [3, 4]])
         targets = torch.ones([2, 6, 3]).cumsum(1) - 1
-        # Make the second batch double it's index so they're different.
+        # Make the second batch double its index so they're different.
         targets[1, :, :] *= 2
         indices = torch.tensor(indices, dtype=torch.long)
 

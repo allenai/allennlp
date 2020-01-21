@@ -1,8 +1,8 @@
 import numpy
 import pytest
 from _pytest.monkeypatch import MonkeyPatch
-from pytorch_pretrained_bert.modeling import BertConfig, BertModel
-from pytorch_pretrained_bert.tokenization import BertTokenizer
+from transformers.modeling_bert import BertConfig, BertModel
+from transformers.tokenization_bert import BertTokenizer
 
 from allennlp.common.testing import ModelTestCase
 from allennlp.nn.util import get_lengths_from_binary_sequence_mask
@@ -16,7 +16,7 @@ class BertSrlTest(ModelTestCase):
         # monkeypatch the PretrainedBertModel to return the tiny test fixture model
         config_path = self.FIXTURES_ROOT / "bert" / "config.json"
         vocab_path = self.FIXTURES_ROOT / "bert" / "vocab.txt"
-        config = BertConfig(str(config_path))
+        config = BertConfig.from_json_file(config_path)
         self.monkeypatch.setattr(BertModel, "from_pretrained", lambda _: BertModel(config))
         self.monkeypatch.setattr(
             BertTokenizer, "from_pretrained", lambda _: BertTokenizer(vocab_path)

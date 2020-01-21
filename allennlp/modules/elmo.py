@@ -29,7 +29,7 @@ from allennlp.data.token_indexers.elmo_indexer import (
     ELMoCharacterMapper,
     ELMoTokenCharactersIndexer,
 )
-from allennlp.data.dataset import Batch
+from allennlp.data.batch import Batch
 from allennlp.data import Token, Vocabulary, Instance
 from allennlp.data.fields import TextField
 
@@ -43,53 +43,53 @@ class Elmo(torch.nn.Module):
 
     See "Deep contextualized word representations", Peters et al. for details.
 
-    This module takes character id input and computes ``num_output_representations`` different layers
-    of ELMo representations.  Typically ``num_output_representations`` is 1 or 2.  For example, in
-    the case of the SRL model in the above paper, ``num_output_representations=1`` where ELMo was included at
-    the input token representation layer.  In the case of the SQuAD model, ``num_output_representations=2``
+    This module takes character id input and computes `num_output_representations` different layers
+    of ELMo representations.  Typically `num_output_representations` is 1 or 2.  For example, in
+    the case of the SRL model in the above paper, `num_output_representations=1` where ELMo was included at
+    the input token representation layer.  In the case of the SQuAD model, `num_output_representations=2`
     as ELMo was also included at the GRU output layer.
 
     In the implementation below, we learn separate scalar weights for each output layer,
     but only run the biLM once on each input sequence for efficiency.
 
-    Parameters
-    ----------
-    options_file : ``str``, required.
+    # Parameters
+
+    options_file : `str`, required.
         ELMo JSON options file
-    weight_file : ``str``, required.
+    weight_file : `str`, required.
         ELMo hdf5 weight file
-    num_output_representations: ``int``, required.
+    num_output_representations : `int`, required.
         The number of ELMo representation to output with
         different linear weighted combination of the 3 layers (i.e.,
         character-convnet output, 1st lstm output, 2nd lstm output).
-    requires_grad: ``bool``, optional
+    requires_grad : `bool`, optional
         If True, compute gradient of ELMo parameters for fine tuning.
-    do_layer_norm : ``bool``, optional, (default = False).
-        Should we apply layer normalization (passed to ``ScalarMix``)?
-    dropout : ``float``, optional, (default = 0.5).
+    do_layer_norm : `bool`, optional, (default = False).
+        Should we apply layer normalization (passed to `ScalarMix`)?
+    dropout : `float`, optional, (default = 0.5).
         The dropout to be applied to the ELMo representations.
-    vocab_to_cache : ``List[str]``, optional, (default = None).
+    vocab_to_cache : `List[str]`, optional, (default = None).
         A list of words to pre-compute and cache character convolutions
         for. If you use this option, Elmo expects that you pass word
         indices of shape (batch_size, timesteps) to forward, instead
         of character indices. If you use this option and pass a word which
         wasn't pre-cached, this will break.
-    keep_sentence_boundaries : ``bool``, optional, (default = False)
+    keep_sentence_boundaries : `bool`, optional, (default = False)
         If True, the representation of the sentence boundary tokens are
         not removed.
-    scalar_mix_parameters : ``List[float]``, optional, (default = None)
-        If not ``None``, use these scalar mix parameters to weight the representations
+    scalar_mix_parameters : `List[float]`, optional, (default = None)
+        If not `None`, use these scalar mix parameters to weight the representations
         produced by different layers. These mixing weights are not updated during
         training. The mixing weights here should be the unnormalized (i.e., pre-softmax)
         weights. So, if you wanted to use only the 1st layer of a 2-layer ELMo,
         you can set this to [-9e10, 1, -9e10 ].
-    module : ``torch.nn.Module``, optional, (default = None).
+    module : `torch.nn.Module`, optional, (default = None).
         If provided, then use this module instead of the pre-trained ELMo biLM.
-        If using this option, then pass ``None`` for both ``options_file``
-        and ``weight_file``.  The module must provide a public attribute
-        ``num_layers`` with the number of internal layers and its ``forward``
-        method must return a ``dict`` with ``activations`` and ``mask`` keys
-        (see `_ElmoBilm`` for an example).  Note that ``requires_grad`` is also
+        If using this option, then pass `None` for both `options_file`
+        and `weight_file`.  The module must provide a public attribute
+        `num_layers` with the number of internal layers and its `forward`
+        method must return a `dict` with `activations` and `mask` keys
+        (see `_ElmoBilm` for an example).  Note that `requires_grad` is also
         ignored with this option.
     """
 
@@ -141,22 +141,22 @@ class Elmo(torch.nn.Module):
         self, inputs: torch.Tensor, word_inputs: torch.Tensor = None
     ) -> Dict[str, Union[torch.Tensor, List[torch.Tensor]]]:
         """
-        Parameters
-        ----------
-        inputs: ``torch.Tensor``, required.
-        Shape ``(batch_size, timesteps, 50)`` of character ids representing the current batch.
-        word_inputs : ``torch.Tensor``, required.
-            If you passed a cached vocab, you can in addition pass a tensor of shape
-            ``(batch_size, timesteps)``, which represent word ids which have been pre-cached.
+        # Parameters
 
-        Returns
-        -------
+        inputs : `torch.Tensor`, required.
+        Shape `(batch_size, timesteps, 50)` of character ids representing the current batch.
+        word_inputs : `torch.Tensor`, required.
+            If you passed a cached vocab, you can in addition pass a tensor of shape
+            `(batch_size, timesteps)`, which represent word ids which have been pre-cached.
+
+        # Returns
+
         Dict with keys:
-        ``'elmo_representations'``: ``List[torch.Tensor]``
-            A ``num_output_representations`` list of ELMo representations for the input sequence.
-            Each representation is shape ``(batch_size, timesteps, embedding_dim)``
-        ``'mask'``:  ``torch.Tensor``
-            Shape ``(batch_size, timesteps)`` long tensor with sequence mask.
+        `'elmo_representations'` : `List[torch.Tensor]`
+            A `num_output_representations` list of ELMo representations for the input sequence.
+            Each representation is shape `(batch_size, timesteps, embedding_dim)`
+        `'mask'`:  `torch.Tensor`
+            Shape `(batch_size, timesteps)` long tensor with sequence mask.
         """
         # reshape the input if needed
         original_shape = inputs.size()
@@ -254,13 +254,13 @@ def batch_to_ids(batch: List[List[str]]) -> torch.Tensor:
     Converts a batch of tokenized sentences to a tensor representing the sentences with encoded characters
     (len(batch), max sentence length, max word length).
 
-    Parameters
-    ----------
-    batch : ``List[List[str]]``, required
+    # Parameters
+
+    batch : `List[List[str]]`, required
         A list of tokenized sentences.
 
-    Returns
-    -------
+    # Returns
+
         A tensor of padded character ids.
     """
     instances = []
@@ -274,7 +274,7 @@ def batch_to_ids(batch: List[List[str]]) -> torch.Tensor:
     dataset = Batch(instances)
     vocab = Vocabulary()
     dataset.index_instances(vocab)
-    return dataset.as_tensor_dict()["elmo"]["character_ids"]
+    return dataset.as_tensor_dict()["elmo"]["character_ids"]["tokens"]
 
 
 class _ElmoCharacterEncoder(torch.nn.Module):
@@ -289,15 +289,15 @@ class _ElmoCharacterEncoder(torch.nn.Module):
     to <S> and </S>, the beginning and end of sentence tokens.
 
     Note: this is a lower level class useful for advanced usage.  Most users should
-    use ``ElmoTokenEmbedder`` or ``allennlp.modules.Elmo`` instead.
+    use `ElmoTokenEmbedder` or `allennlp.modules.Elmo` instead.
 
-    Parameters
-    ----------
-    options_file : ``str``
+    # Parameters
+
+    options_file : `str`
         ELMo JSON options file
-    weight_file : ``str``
+    weight_file : `str`
         ELMo hdf5 weight file
-    requires_grad: ``bool``, optional, (default = False).
+    requires_grad : `bool`, optional, (default = False).
         If True, compute gradient of ELMo parameters for fine tuning.
 
     The relevant section of the options file is something like:
@@ -344,20 +344,20 @@ class _ElmoCharacterEncoder(torch.nn.Module):
         """
         Compute context insensitive token embeddings for ELMo representations.
 
-        Parameters
-        ----------
-        inputs: ``torch.Tensor``
-            Shape ``(batch_size, sequence_length, 50)`` of character ids representing the
+        # Parameters
+
+        inputs : `torch.Tensor`
+            Shape `(batch_size, sequence_length, 50)` of character ids representing the
             current batch.
 
-        Returns
-        -------
+        # Returns
+
         Dict with keys:
-        ``'token_embedding'``: ``torch.Tensor``
-            Shape ``(batch_size, sequence_length + 2, embedding_dim)`` tensor with context
+        `'token_embedding'` : `torch.Tensor`
+            Shape `(batch_size, sequence_length + 2, embedding_dim)` tensor with context
             insensitive token representations.
-        ``'mask'``:  ``torch.Tensor``
-            Shape ``(batch_size, sequence_length + 2)`` long tensor with sequence mask.
+        `'mask'`:  `torch.Tensor`
+            Shape `(batch_size, sequence_length + 2)` long tensor with sequence mask.
         """
         # Add BOS/EOS
         mask = ((inputs > 0).long().sum(dim=-1) > 0).long()
@@ -506,19 +506,19 @@ class _ElmoBiLm(torch.nn.Module):
     """
     Run a pre-trained bidirectional language model, outputting the activations at each
     layer for weighting together into an ELMo representation (with
-    ``allennlp.modules.seq2seq_encoders.Elmo``).  This is a lower level class, useful
-    for advanced uses, but most users should use ``allennlp.modules.seq2seq_encoders.Elmo``
+    `allennlp.modules.seq2seq_encoders.Elmo`).  This is a lower level class, useful
+    for advanced uses, but most users should use `allennlp.modules.seq2seq_encoders.Elmo`
     directly.
 
-    Parameters
-    ----------
-    options_file : ``str``
+    # Parameters
+
+    options_file : `str`
         ELMo JSON options file
-    weight_file : ``str``
+    weight_file : `str`
         ELMo hdf5 weight file
-    requires_grad: ``bool``, optional, (default = False).
+    requires_grad : `bool`, optional, (default = False).
         If True, compute gradient of ELMo parameters for fine tuning.
-    vocab_to_cache : ``List[str]``, optional, (default = None).
+    vocab_to_cache : `List[str]`, optional, (default = None).
         A list of words to pre-compute and cache character convolutions
         for. If you use this option, _ElmoBiLm expects that you pass word
         indices of shape (batch_size, timesteps) to forward, instead
@@ -582,23 +582,23 @@ class _ElmoBiLm(torch.nn.Module):
         self, inputs: torch.Tensor, word_inputs: torch.Tensor = None
     ) -> Dict[str, Union[torch.Tensor, List[torch.Tensor]]]:
         """
-        Parameters
-        ----------
-        inputs: ``torch.Tensor``, required.
-            Shape ``(batch_size, timesteps, 50)`` of character ids representing the current batch.
-        word_inputs : ``torch.Tensor``, required.
-            If you passed a cached vocab, you can in addition pass a tensor of shape ``(batch_size, timesteps)``,
+        # Parameters
+
+        inputs : `torch.Tensor`, required.
+            Shape `(batch_size, timesteps, 50)` of character ids representing the current batch.
+        word_inputs : `torch.Tensor`, required.
+            If you passed a cached vocab, you can in addition pass a tensor of shape `(batch_size, timesteps)`,
             which represent word ids which have been pre-cached.
 
-        Returns
-        -------
+        # Returns
+
         Dict with keys:
 
-        ``'activations'``: ``List[torch.Tensor]``
+        `'activations'` : `List[torch.Tensor]`
             A list of activations at each layer of the network, each of shape
-            ``(batch_size, timesteps + 2, embedding_dim)``
-        ``'mask'``:  ``torch.Tensor``
-            Shape ``(batch_size, timesteps + 2)`` long tensor with sequence mask.
+            `(batch_size, timesteps + 2, embedding_dim)`
+        `'mask'`:  `torch.Tensor`
+            Shape `(batch_size, timesteps + 2)` long tensor with sequence mask.
 
         Note that the output tensors all include additional special begin and end of sequence
         markers.
@@ -649,16 +649,16 @@ class _ElmoBiLm(torch.nn.Module):
 
         This function sets 3 attributes:
 
-        _word_embedding : ``torch.Tensor``
+        _word_embedding : `torch.Tensor`
             The word embedding for each word in the tokens passed to this method.
-        _bos_embedding : ``torch.Tensor``
+        _bos_embedding : `torch.Tensor`
             The embedding for the BOS token.
-        _eos_embedding : ``torch.Tensor``
+        _eos_embedding : `torch.Tensor`
             The embedding for the EOS token.
 
-        Parameters
-        ----------
-        tokens : ``List[str]``, required.
+        # Parameters
+
+        tokens : `List[str]`, required.
             A list of tokens to precompute character convolutions for.
         """
         tokens = [ELMoCharacterMapper.bos_token, ELMoCharacterMapper.eos_token] + tokens

@@ -16,11 +16,11 @@ class BooleanAccuracy(Metric):
     that are totally masked are ignored (in which case the denominator is the number of predictions that have
     at least one unmasked element).
 
-    This is similar to :class:`CategoricalAccuracy`, if you've already done a ``.max()`` on your
+    This is similar to :class:`CategoricalAccuracy`, if you've already done a `.max()` on your
     predictions.  If you have categorical output, though, you should typically just use
     :class:`CategoricalAccuracy`.  The reason you might want to use this instead is if you've done
     some kind of constrained inference and don't have a prediction tensor that matches the API of
-    :class:`CategoricalAccuracy`, which assumes a final dimension of size ``num_classes``.
+    :class:`CategoricalAccuracy`, which assumes a final dimension of size `num_classes`.
     """
 
     def __init__(self) -> None:
@@ -34,14 +34,14 @@ class BooleanAccuracy(Metric):
         mask: Optional[torch.Tensor] = None,
     ):
         """
-        Parameters
-        ----------
-        predictions : ``torch.Tensor``, required.
+        # Parameters
+
+        predictions : `torch.Tensor`, required.
             A tensor of predictions of shape (batch_size, ...).
-        gold_labels : ``torch.Tensor``, required.
-            A tensor of the same shape as ``predictions``.
-        mask: ``torch.Tensor``, optional (default = None).
-            A tensor of the same shape as ``predictions``.
+        gold_labels : `torch.Tensor`, required.
+            A tensor of the same shape as `predictions`.
+        mask : `torch.Tensor`, optional (default = None).
+            A tensor of the same shape as `predictions`.
         """
         predictions, gold_labels, mask = self.unwrap_to_tensors(predictions, gold_labels, mask)
 
@@ -87,8 +87,8 @@ class BooleanAccuracy(Metric):
 
     def get_metric(self, reset: bool = False):
         """
-        Returns
-        -------
+        # Returns
+
         The accumulated accuracy.
         """
         if self._total_count > 0:

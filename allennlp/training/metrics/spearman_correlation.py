@@ -10,7 +10,7 @@ from allennlp.training.metrics.metric import Metric
 @Metric.register("spearman_correlation")
 class SpearmanCorrelation(Metric):
     """
-    This ``Metric`` calculates the sample Spearman correlation coefficient (r)
+    This `Metric` calculates the sample Spearman correlation coefficient (r)
     between two tensors. Each element in the two tensors is assumed to be
     a different observation of the variable (i.e., the input tensors are
     implicitly flattened into vectors and the correlation is calculated
@@ -31,14 +31,14 @@ class SpearmanCorrelation(Metric):
         mask: Optional[torch.Tensor] = None,
     ):
         """
-        Parameters
-        ----------
-        predictions : ``torch.Tensor``, required.
+        # Parameters
+
+        predictions : `torch.Tensor`, required.
             A tensor of predictions of shape (batch_size, ...).
-        gold_labels : ``torch.Tensor``, required.
-            A tensor of the same shape as ``predictions``.
-        mask: ``torch.Tensor``, optional (default = None).
-            A tensor of the same shape as ``predictions``.
+        gold_labels : `torch.Tensor`, required.
+            A tensor of the same shape as `predictions`.
+        mask : `torch.Tensor`, optional (default = None).
+            A tensor of the same shape as `predictions`.
         """
         predictions, gold_labels, mask = self.unwrap_to_tensors(predictions, gold_labels, mask)
         # Flatten predictions, gold_labels, and mask. We calculate the spearman correlation between
@@ -58,8 +58,8 @@ class SpearmanCorrelation(Metric):
     @overrides
     def get_metric(self, reset: bool = False):
         """
-        Returns
-        -------
+        # Returns
+
         The accumulated sample Spearman correlation.
         """
         spearman_correlation = stats.spearmanr(

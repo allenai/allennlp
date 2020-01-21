@@ -20,33 +20,30 @@ logger = logging.getLogger(__name__)
 @DatasetReader.register("next_token_lm")
 class NextTokenLmReader(DatasetReader):
     """
-    Creates ``Instances`` suitable for use in predicting a single next token using a language
-    model.  The :class:`Field` s that we create are the following: an input ``TextField`` and a
-    target token ``TextField`` (we only ver have a single token, but we use a ``TextField`` so we
+    Creates `Instances` suitable for use in predicting a single next token using a language
+    model.  The :class:`Field` s that we create are the following: an input `TextField` and a
+    target token `TextField` (we only ver have a single token, but we use a `TextField` so we
     can index it the same way as our input, typically with a single
-    ``PretrainedTransformerIndexer``).
+    `PretrainedTransformerIndexer`).
 
     NOTE: This is not fully functional!  It was written to put together a demo for interpreting and
     attacking language models, not for actually training anything.  It would be a really bad idea
     to use this setup for training language models, as it would be incredibly inefficient.  The
     only purpose of this class is for a demo.
 
-    Parameters
-    ----------
-    tokenizer : ``Tokenizer``, optional (default=``WhitespaceTokenizer()``)
-        We use this ``Tokenizer`` for the text.  See :class:`Tokenizer`.
-    token_indexers : ``Dict[str, TokenIndexer]``, optional (default=``{"tokens": SingleIdTokenIndexer()}``)
+    # Parameters
+
+    tokenizer : `Tokenizer`, optional (default=`WhitespaceTokenizer()`)
+        We use this `Tokenizer` for the text.  See :class:`Tokenizer`.
+    token_indexers : `Dict[str, TokenIndexer]`, optional (default=`{"tokens": SingleIdTokenIndexer()}`)
         We use this to define the input representation for the text, and to get ids for the mask
         targets.  See :class:`TokenIndexer`.
     """
 
     def __init__(
-        self,
-        tokenizer: Tokenizer = None,
-        token_indexers: Dict[str, TokenIndexer] = None,
-        lazy: bool = False,
+        self, tokenizer: Tokenizer = None, token_indexers: Dict[str, TokenIndexer] = None, **kwargs,
     ) -> None:
-        super().__init__(lazy)
+        super().__init__(**kwargs)
         self._tokenizer = tokenizer or WhitespaceTokenizer()
         self._targets_tokenizer: Tokenizer
         if isinstance(self._tokenizer, PretrainedTransformerTokenizer):

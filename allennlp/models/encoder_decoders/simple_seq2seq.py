@@ -1,4 +1,4 @@
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Iterable
 
 import numpy
 from overrides import overrides
@@ -9,7 +9,7 @@ from torch.nn.modules.rnn import LSTMCell
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.util import START_SYMBOL, END_SYMBOL
-from allennlp.data.vocabulary import Vocabulary
+from allennlp.data import TextFieldTensors, Vocabulary
 from allennlp.modules.attention import LegacyAttention
 from allennlp.modules import Attention, TextFieldEmbedder, Seq2SeqEncoder
 from allennlp.modules.similarity_functions import SimilarityFunction
@@ -23,50 +23,52 @@ from allennlp.training.metrics import BLEU
 @Model.register("simple_seq2seq")
 class SimpleSeq2Seq(Model):
     """
-    This ``SimpleSeq2Seq`` class is a :class:`Model` which takes a sequence, encodes it, and then
+    This `SimpleSeq2Seq` class is a :class:`Model` which takes a sequence, encodes it, and then
     uses the encoded representations to decode another sequence.  You can use this as the basis for
     a neural machine translation system, an abstractive summarization system, or any other common
     seq2seq problem.  The model here is simple, but should be a decent starting place for
     implementing recent models for these tasks.
 
-    Parameters
-    ----------
-    vocab : ``Vocabulary``, required
+    # Parameters
+
+    vocab : `Vocabulary`, required
         Vocabulary containing source and target vocabularies. They may be under the same namespace
         (`tokens`) or the target tokens can have a different namespace, in which case it needs to
         be specified as `target_namespace`.
-    source_embedder : ``TextFieldEmbedder``, required
+    source_embedder : `TextFieldEmbedder`, required
         Embedder for source side sequences
-    encoder : ``Seq2SeqEncoder``, required
+    encoder : `Seq2SeqEncoder`, required
         The encoder of the "encoder/decoder" model
-    max_decoding_steps : ``int``
+    max_decoding_steps : `int`
         Maximum length of decoded sequences.
-    target_namespace : ``str``, optional (default = 'tokens')
+    target_namespace : `str`, optional (default = 'tokens')
         If the target side vocabulary is different from the source side's, you need to specify the
         target's namespace here. If not, we'll assume it is "tokens", which is also the default
         choice for the source side, and this might cause them to share vocabularies.
-    target_embedding_dim : ``int``, optional (default = source_embedding_dim)
+    target_embedding_dim : `int`, optional (default = source_embedding_dim)
         You can specify an embedding dimensionality for the target side. If not, we'll use the same
         value as the source embedder's.
-    attention : ``Attention``, optional (default = None)
+    attention : `Attention`, optional (default = None)
         If you want to use attention to get a dynamic summary of the encoder outputs at each step
         of decoding, this is the function used to compute similarity between the decoder hidden
         state and encoder outputs.
-    attention_function: ``SimilarityFunction``, optional (default = None)
+    attention_function : `SimilarityFunction`, optional (default = None)
         This is if you want to use the legacy implementation of attention. This will be deprecated
         since it consumes more memory than the specialized attention modules.
-    beam_size : ``int``, optional (default = None)
+    beam_size : `int`, optional (default = None)
         Width of the beam for beam search. If not specified, greedy decoding is used.
-    scheduled_sampling_ratio : ``float``, optional (default = 0.)
+    scheduled_sampling_ratio : `float`, optional (default = 0.)
         At each timestep during training, we sample a random number between 0 and 1, and if it is
         not less than this value, we use the ground truth labels for the whole batch. Else, we use
         the predictions from the previous time step for the whole batch. If this value is 0.0
         (default), this corresponds to teacher forcing, and if it is 1.0, it corresponds to not
         using target side ground truth labels.  See the following paper for more information:
-        `Scheduled Sampling for Sequence Prediction with Recurrent Neural Networks. Bengio et al.,
-        2015 <https://arxiv.org/abs/1506.03099>`_.
-    use_bleu : ``bool``, optional (default = True)
+        [Scheduled Sampling for Sequence Prediction with Recurrent Neural Networks. Bengio et al.,
+        2015](https://arxiv.org/abs/1506.03099).
+    use_bleu : `bool`, optional (default = True)
         If True, the BLEU metric will be calculated during validation.
+    ngram_weights : `Iterable[float]`, optional (default = (0.25, 0.25, 0.25, 0.25))
+        Weights to assign to scores for each ngram size.
     """
 
     def __init__(
@@ -82,6 +84,7 @@ class SimpleSeq2Seq(Model):
         target_embedding_dim: int = None,
         scheduled_sampling_ratio: float = 0.0,
         use_bleu: bool = True,
+        bleu_ngram_weights: Iterable[float] = (0.25, 0.25, 0.25, 0.25),
     ) -> None:
         super().__init__(vocab)
         self._target_namespace = target_namespace
@@ -96,7 +99,9 @@ class SimpleSeq2Seq(Model):
             pad_index = self.vocab.get_token_index(
                 self.vocab._padding_token, self._target_namespace
             )
-            self._bleu = BLEU(exclude_indices={pad_index, self._end_index, self._start_index})
+            self._bleu = BLEU(
+                bleu_ngram_weights, exclude_indices={pad_index, self._end_index, self._start_index}
+            )
         else:
             self._bleu = None
 
@@ -161,31 +166,31 @@ class SimpleSeq2Seq(Model):
         """
         Take a decoding step. This is called by the beam search class.
 
-        Parameters
-        ----------
-        last_predictions : ``torch.Tensor``
-            A tensor of shape ``(group_size,)``, which gives the indices of the predictions
+        # Parameters
+
+        last_predictions : `torch.Tensor`
+            A tensor of shape `(group_size,)`, which gives the indices of the predictions
             during the last time step.
-        state : ``Dict[str, torch.Tensor]``
+        state : `Dict[str, torch.Tensor]`
             A dictionary of tensors that contain the current state information
             needed to predict the next step, which includes the encoder outputs,
             the source mask, and the decoder hidden state and context. Each of these
-            tensors has shape ``(group_size, *)``, where ``*`` can be any other number
+            tensors has shape `(group_size, *)`, where `*` can be any other number
             of dimensions.
 
-        Returns
-        -------
+        # Returns
+
         Tuple[torch.Tensor, Dict[str, torch.Tensor]]
-            A tuple of ``(log_probabilities, updated_state)``, where ``log_probabilities``
-            is a tensor of shape ``(group_size, num_classes)`` containing the predicted
+            A tuple of `(log_probabilities, updated_state)`, where `log_probabilities`
+            is a tensor of shape `(group_size, num_classes)` containing the predicted
             log probability of each class for the next step, for each item in the group,
-            while ``updated_state`` is a dictionary of tensors containing the encoder outputs,
+            while `updated_state` is a dictionary of tensors containing the encoder outputs,
             source mask, and updated decoder hidden state and context.
 
         Notes
         -----
-            We treat the inputs as a batch, even though ``group_size`` is not necessarily
-            equal to ``batch_size``, since the group may contain multiple states
+            We treat the inputs as a batch, even though `group_size` is not necessarily
+            equal to `batch_size`, since the group may contain multiple states
             for each source sentence in the batch.
         """
         # shape: (group_size, num_classes)
@@ -199,24 +204,24 @@ class SimpleSeq2Seq(Model):
     @overrides
     def forward(
         self,  # type: ignore
-        source_tokens: Dict[str, torch.LongTensor],
-        target_tokens: Dict[str, torch.LongTensor] = None,
+        source_tokens: TextFieldTensors,
+        target_tokens: TextFieldTensors = None,
     ) -> Dict[str, torch.Tensor]:
 
         """
         Make foward pass with decoder logic for producing the entire target sequence.
 
-        Parameters
-        ----------
-        source_tokens : ``Dict[str, torch.LongTensor]``
+        # Parameters
+
+        source_tokens : `TextFieldTensors`
            The output of `TextField.as_array()` applied on the source `TextField`. This will be
            passed through a `TextFieldEmbedder` and then through an encoder.
-        target_tokens : ``Dict[str, torch.LongTensor]``, optional (default = None)
+        target_tokens : `TextFieldTensors`, optional (default = None)
            Output of `Textfield.as_array()` applied on target `TextField`. We assume that the
            target tokens are also represented as a `TextField`.
 
-        Returns
-        -------
+        # Returns
+
         Dict[str, torch.Tensor]
         """
         state = self._encode(source_tokens)
@@ -238,7 +243,7 @@ class SimpleSeq2Seq(Model):
                 top_k_predictions = output_dict["predictions"]
                 # shape: (batch_size, max_predicted_sequence_length)
                 best_predictions = top_k_predictions[:, 0, :]
-                self._bleu(best_predictions, target_tokens["tokens"])
+                self._bleu(best_predictions, target_tokens["tokens"]["tokens"])
 
         return output_dict
 
@@ -247,12 +252,12 @@ class SimpleSeq2Seq(Model):
         """
         Finalize predictions.
 
-        This method overrides ``Model.decode``, which gets called after ``Model.forward``, at test
+        This method overrides `Model.decode`, which gets called after `Model.forward`, at test
         time, to finalize predictions. The logic for the decoder part of the encoder-decoder lives
-        within the ``forward`` method.
+        within the `forward` method.
 
         This method trims the output predictions to the first end symbol, replaces indices with
-        corresponding tokens, and adds a field called ``predicted_tokens`` to the ``output_dict``.
+        corresponding tokens, and adds a field called `predicted_tokens` to the `output_dict`.
         """
         predicted_indices = output_dict["predictions"]
         if not isinstance(predicted_indices, numpy.ndarray):
@@ -300,7 +305,7 @@ class SimpleSeq2Seq(Model):
         return state
 
     def _forward_loop(
-        self, state: Dict[str, torch.Tensor], target_tokens: Dict[str, torch.LongTensor] = None
+        self, state: Dict[str, torch.Tensor], target_tokens: TextFieldTensors = None
     ) -> Dict[str, torch.Tensor]:
         """
         Make forward pass during training or do greedy search during prediction.
@@ -317,7 +322,7 @@ class SimpleSeq2Seq(Model):
 
         if target_tokens:
             # shape: (batch_size, max_target_sequence_length)
-            targets = target_tokens["tokens"]
+            targets = target_tokens["tokens"]["tokens"]
 
             _, target_sequence_length = targets.size()
 
@@ -481,9 +486,9 @@ class SimpleSeq2Seq(Model):
         and corresponding masks of size (batch_size, num_decoding_steps+1) steps and computes cross
         entropy loss while taking the mask into account.
 
-        The length of ``targets`` is expected to be greater than that of ``logits`` because the
+        The length of `targets` is expected to be greater than that of `logits` because the
         decoder does not need to compute the output corresponding to the last timestep of
-        ``targets``. This method aligns the inputs appropriately to compute the loss.
+        `targets`. This method aligns the inputs appropriately to compute the loss.
 
         During training, we want the logit corresponding to timestep i to be similar to the target
         token from timestep i + 1. That is, the targets should be shifted by one timestep for

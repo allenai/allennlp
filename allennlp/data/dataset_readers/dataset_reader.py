@@ -15,8 +15,8 @@ logger = logging.getLogger(__name__)
 
 class _LazyInstances(Iterable):
     """
-    An ``Iterable`` that just wraps a thunk for generating instances and calls it for
-    each call to ``__iter__``.
+    An `Iterable` that just wraps a thunk for generating instances and calls it for
+    each call to `__iter__`.
     """
 
     def __init__(
@@ -57,59 +57,56 @@ class _LazyInstances(Iterable):
 
 class DatasetReader(Registrable):
     """
-    A ``DatasetReader`` knows how to turn a file containing a dataset into a collection
-    of ``Instance`` s.  To implement your own, just override the `_read(file_path)` method
-    to return an ``Iterable`` of the instances. This could be a list containing the instances
+    A `DatasetReader` knows how to turn a file containing a dataset into a collection
+    of `Instances`.  To implement your own, just override the `_read(file_path)` method
+    to return an `Iterable` of the instances. This could be a list containing the instances
     or a lazy generator that returns them one at a time.
 
     All parameters necessary to _read the data apart from the filepath should be passed
-    to the constructor of the ``DatasetReader``.
+    to the constructor of the `DatasetReader`.
 
-    Parameters
-    ----------
-    lazy : ``bool``, optional (default=False)
-        If this is true, ``instances()`` will return an object whose ``__iter__`` method
-        reloads the dataset each time it's called. Otherwise, ``instances()`` returns a list.
+    # Parameters
+
+    lazy : `bool`, optional (default=False)
+        If this is true, `instances()` will return an object whose `__iter__` method
+        reloads the dataset each time it's called. Otherwise, `instances()` returns a list.
+    cache_directory : `str`, optional (default=None)
+        If given, we will use this directory to store a cache of already-processed `Instances` in
+        every file passed to :func:`read`, serialized (by default, though you can override this) as
+        one string-formatted `Instance` per line.  If the cache file for a given `file_path` exists,
+        we read the `Instances` from the cache instead of re-processing the data (using
+        :func:`_instances_from_cache_file`).  If the cache file does _not_ exist, we will _create_
+        it on our first pass through the data (using :func:`_instances_to_cache_file`).
+
+        IMPORTANT CAVEAT: It is the _caller's_ responsibility to make sure that this directory is
+        unique for any combination of code and parameters that you use.  That is, if you pass a
+        directory here, we will use any existing cache files in that directory _regardless of the
+        parameters you set for this DatasetReader!_
     """
 
-    def __init__(self, lazy: bool = False) -> None:
+    def __init__(self, lazy: bool = False, cache_directory: str = None) -> None:
         self.lazy = lazy
-        self._cache_directory: pathlib.Path = None
-
-    def cache_data(self, cache_directory: str) -> None:
-        """
-        When you call this method, we will use this directory to store a cache of already-processed
-        ``Instances`` in every file passed to :func:`read`, serialized as one string-formatted
-        ``Instance`` per line.  If the cache file for a given ``file_path`` exists, we read the
-        ``Instances`` from the cache instead of re-processing the data (using
-        :func:`deserialize_instance`).  If the cache file does `not` exist, we will `create` it on
-        our first pass through the data (using :func:`serialize_instance`).
-
-        IMPORTANT CAVEAT: It is the `caller's` responsibility to make sure that this directory is
-        unique for any combination of code and parameters that you use.  That is, if you call this
-        method, we will use any existing cache files in that directory `regardless of the
-        parameters you set for this DatasetReader!`  If you use our commands, the ``Train`` command
-        is responsible for calling this method and ensuring that unique parameters correspond to
-        unique cache directories.  If you don't use our commands, that is your responsibility.
-        """
-        self._cache_directory = pathlib.Path(cache_directory)
-        os.makedirs(self._cache_directory, exist_ok=True)
+        if cache_directory:
+            self._cache_directory = pathlib.Path(cache_directory)
+            os.makedirs(self._cache_directory, exist_ok=True)
+        else:
+            self._cache_directory = None
 
     def read(self, file_path: str) -> Iterable[Instance]:
         """
-        Returns an ``Iterable`` containing all the instances
+        Returns an `Iterable` containing all the instances
         in the specified dataset.
 
-        If ``self.lazy`` is False, this calls ``self._read()``,
+        If `self.lazy` is False, this calls `self._read()`,
         ensures that the result is a list, then returns the resulting list.
 
-        If ``self.lazy`` is True, this returns an object whose
-        ``__iter__`` method calls ``self._read()`` each iteration.
-        In this case your implementation of ``_read()`` must also be lazy
+        If `self.lazy` is True, this returns an object whose
+        `__iter__` method calls `self._read()` each iteration.
+        In this case your implementation of `_read()` must also be lazy
         (that is, not load all instances into memory at once), otherwise
-        you will get a ``ConfigurationError``.
+        you will get a `ConfigurationError`.
 
-        In either case, the returned ``Iterable`` can be iterated
+        In either case, the returned `Iterable` can be iterated
         over multiple times. It's unlikely you want to override this function,
         but if you do your result should likewise be repeatedly iterable.
         """
@@ -181,27 +178,27 @@ class DatasetReader(Registrable):
     def text_to_instance(self, *inputs) -> Instance:
         """
         Does whatever tokenization or processing is necessary to go from textual input to an
-        ``Instance``.  The primary intended use for this is with a
+        `Instance`.  The primary intended use for this is with a
         :class:`~allennlp.predictors.predictor.Predictor`, which gets text input as a JSON
         object and needs to process it to be input to a model.
 
         The intent here is to share code between :func:`_read` and what happens at
         model serving time, or any other time you want to make a prediction from new data.  We need
         to process the data in the same way it was done at training time.  Allowing the
-        ``DatasetReader`` to process new text lets us accomplish this, as we can just call
-        ``DatasetReader.text_to_instance`` when serving predictions.
+        `DatasetReader` to process new text lets us accomplish this, as we can just call
+        `DatasetReader.text_to_instance` when serving predictions.
 
-        The input type here is rather vaguely specified, unfortunately.  The ``Predictor`` will
-        have to make some assumptions about the kind of ``DatasetReader`` that it's using, in order
+        The input type here is rather vaguely specified, unfortunately.  The `Predictor` will
+        have to make some assumptions about the kind of `DatasetReader` that it's using, in order
         to pass it the right information.
         """
         raise NotImplementedError
 
     def serialize_instance(self, instance: Instance) -> str:
         """
-        Serializes an ``Instance`` to a string.  We use this for caching the processed data.
+        Serializes an `Instance` to a string.  We use this for caching the processed data.
 
-        The default implementation is to use ``jsonpickle``.  If you would like some other format
+        The default implementation is to use `jsonpickle`.  If you would like some other format
         for your pre-processed data, override this method.
         """
 
@@ -209,10 +206,10 @@ class DatasetReader(Registrable):
 
     def deserialize_instance(self, string: str) -> Instance:
         """
-        Deserializes an ``Instance`` from a string.  We use this when reading processed data from a
+        Deserializes an `Instance` from a string.  We use this when reading processed data from a
         cache.
 
-        The default implementation is to use ``jsonpickle``.  If you would like some other format
+        The default implementation is to use `jsonpickle`.  If you would like some other format
         for your pre-processed data, override this method.
         """
 

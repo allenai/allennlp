@@ -7,12 +7,14 @@
     "model": {
       "type": "biaffine_parser",
       "text_field_embedder": {
-        "tokens": {
-          "type": "embedding",
-          "embedding_dim": 100,
-          "pretrained_file": "https://allennlp.s3.amazonaws.com/datasets/glove/glove.6B.100d.txt.gz",
-          "trainable": true,
-          "sparse": true
+        "token_embedders": {
+          "tokens": {
+            "type": "embedding",
+            "embedding_dim": 100,
+            "pretrained_file": "https://allennlp.s3.amazonaws.com/datasets/glove/glove.6B.100d.txt.gz",
+            "trainable": true,
+            "sparse": true
+          }
         }
       },
       "pos_tag_embedding":{

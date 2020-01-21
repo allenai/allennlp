@@ -10,7 +10,7 @@ from allennlp.common.checks import ConfigurationError
 
 def _choice(num_words: int, num_samples: int) -> Tuple[np.ndarray, int]:
     """
-    Chooses ``num_samples`` samples without replacement from [0, ..., num_words).
+    Chooses `num_samples` samples without replacement from [0, ..., num_words).
     Returns a tuple (samples, num_tries).
     """
     num_tries = 0
@@ -53,21 +53,21 @@ class SampledSoftmaxLoss(torch.nn.Module):
     For the (tie_embeddings=True and use_character_inputs=False) case,
     then the embeddings DO include the extra 0 padding, to be consistent with the word embedding layer.
 
-    Parameters
-    ----------
-    num_words, ``int``
+    # Parameters
+
+    num_words, `int`, required
         The number of words in the vocabulary
-    embedding_dim, ``int``
+    embedding_dim, `int`, required
         The dimension to softmax over
-    num_samples, ``int``
+    num_samples, `int`, required
         During training take this many samples. Must be less than num_words.
-    sparse, ``bool``, optional (default = False)
+    sparse, `bool`, optional (default = False)
         If this is true, we use a sparse embedding matrix.
-    unk_id, ``int``, optional (default = None)
+    unk_id, `int`, optional (default = None)
         If provided, the id that represents unknown characters.
-    use_character_inputs, ``bool``, optional (default = True)
+    use_character_inputs, `bool`, optional (default = True)
         Whether to use character inputs
-    use_fast_sampler, ``bool``, optional (default = False)
+    use_fast_sampler, `bool`, optional (default = False)
         Whether to use the fast cython sampler.
     """
 
@@ -169,9 +169,11 @@ class SampledSoftmaxLoss(torch.nn.Module):
 
         # NOTE: targets input has padding removed (so 0 == the first id, NOT the padding id)
 
-        sampled_ids, target_expected_count, sampled_expected_count = self.log_uniform_candidate_sampler(
-            targets, choice_func=self.choice_func
-        )
+        (
+            sampled_ids,
+            target_expected_count,
+            sampled_expected_count,
+        ) = self.log_uniform_candidate_sampler(targets, choice_func=self.choice_func)
 
         long_targets = targets.long()
         long_targets.requires_grad_(False)

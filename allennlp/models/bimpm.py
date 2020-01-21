@@ -9,7 +9,7 @@ import torch
 import numpy
 
 from allennlp.common.checks import check_dimensions_match
-from allennlp.data import Vocabulary
+from allennlp.data import TextFieldTensors, Vocabulary
 from allennlp.modules import FeedForward, Seq2SeqEncoder, Seq2VecEncoder, TextFieldEmbedder
 from allennlp.models.model import Model
 from allennlp.nn import InitializerApplicator, RegularizerApplicator
@@ -22,40 +22,40 @@ from allennlp.modules.bimpm_matching import BiMpmMatching
 @Model.register("bimpm")
 class BiMpm(Model):
     """
-    This ``Model`` implements BiMPM model described in `Bilateral Multi-Perspective Matching
-    for Natural Language Sentences <https://arxiv.org/abs/1702.03814>`_ by Zhiguo Wang et al., 2017.
-    Also please refer to the `TensorFlow implementation <https://github.com/zhiguowang/BiMPM/>`_ and
-    `PyTorch implementation <https://github.com/galsang/BIMPM-pytorch>`_.
+    This `Model` implements BiMPM model described in [Bilateral Multi-Perspective Matching
+    for Natural Language Sentences](https://arxiv.org/abs/1702.03814) by Zhiguo Wang et al., 2017.
+    Also please refer to the [TensorFlow implementation](https://github.com/zhiguowang/BiMPM/) and
+    [PyTorch implementation](https://github.com/galsang/BIMPM-pytorch).
 
-    Parameters
-    ----------
-    vocab : ``Vocabulary``
-    text_field_embedder : ``TextFieldEmbedder``
-        Used to embed the ``premise`` and ``hypothesis`` ``TextFields`` we get as input to the
+    # Parameters
+
+    vocab : `Vocabulary`
+    text_field_embedder : `TextFieldEmbedder`
+        Used to embed the `premise` and `hypothesis` `TextFields` we get as input to the
         model.
-    matcher_word : ``BiMpmMatching``
+    matcher_word : `BiMpmMatching`
         BiMPM matching on the output of word embeddings of premise and hypothesis.
-    encoder1 : ``Seq2SeqEncoder``
+    encoder1 : `Seq2SeqEncoder`
         First encoder layer for the premise and hypothesis
-    matcher_forward1 : ``BiMPMMatching``
+    matcher_forward1 : `BiMPMMatching`
         BiMPM matching for the forward output of first encoder layer
-    matcher_backward1 : ``BiMPMMatching``
+    matcher_backward1 : `BiMPMMatching`
         BiMPM matching for the backward output of first encoder layer
-    encoder2 : ``Seq2SeqEncoder``
+    encoder2 : `Seq2SeqEncoder`
         Second encoder layer for the premise and hypothesis
-    matcher_forward2 : ``BiMPMMatching``
+    matcher_forward2 : `BiMPMMatching`
         BiMPM matching for the forward output of second encoder layer
-    matcher_backward2 : ``BiMPMMatching``
+    matcher_backward2 : `BiMPMMatching`
         BiMPM matching for the backward output of second encoder layer
-    aggregator : ``Seq2VecEncoder``
+    aggregator : `Seq2VecEncoder`
         Aggregator of all BiMPM matching vectors
-    classifier_feedforward : ``FeedForward``
+    classifier_feedforward : `FeedForward`
         Fully connected layers for classification.
-    dropout : ``float``, optional (default=0.1)
+    dropout : `float`, optional (default=0.1)
         Dropout percentage to use.
-    initializer : ``InitializerApplicator``, optional (default=``InitializerApplicator()``)
+    initializer : `InitializerApplicator`, optional (default=`InitializerApplicator()`)
         If provided, will be used to initialize the model parameters.
-    regularizer : ``RegularizerApplicator``, optional (default=``None``)
+    regularizer : `RegularizerApplicator`, optional (default=`None`)
         If provided, will be used to calculate the regularization penalty during training.
     """
 
@@ -120,29 +120,29 @@ class BiMpm(Model):
     @overrides
     def forward(
         self,  # type: ignore
-        premise: Dict[str, torch.LongTensor],
-        hypothesis: Dict[str, torch.LongTensor],
+        premise: TextFieldTensors,
+        hypothesis: TextFieldTensors,
         label: torch.LongTensor = None,
         metadata: List[Dict[str, Any]] = None,
     ) -> Dict[str, torch.Tensor]:
         """
 
-        Parameters
-        ----------
-        premise : Dict[str, torch.LongTensor]
-            The premise from a ``TextField``
-        hypothesis : Dict[str, torch.LongTensor]
-            The hypothesis from a ``TextField``
+        # Parameters
+
+        premise : TextFieldTensors
+            The premise from a `TextField`
+        hypothesis : TextFieldTensors
+            The hypothesis from a `TextField`
         label : torch.LongTensor, optional (default = None)
             The label for the pair of the premise and the hypothesis
-        metadata : ``List[Dict[str, Any]]``, optional, (default = None)
+        metadata : `List[Dict[str, Any]]`, optional, (default = None)
             Additional information about the pair
-        Returns
-        -------
+        # Returns
+
         An output dictionary consisting of:
 
         logits : torch.FloatTensor
-            A tensor of shape ``(batch_size, num_labels)`` representing unnormalised log
+            A tensor of shape `(batch_size, num_labels)` representing unnormalised log
             probabilities of the entailment label.
         loss : torch.FloatTensor, optional
             A scalar loss to be optimised.
@@ -228,7 +228,7 @@ class BiMpm(Model):
     @overrides
     def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         """
-        Converts indices to string labels, and adds a ``"label"`` key to the result.
+        Converts indices to string labels, and adds a `"label"` key to the result.
         """
         predictions = output_dict["probs"].cpu().data.numpy()
         argmax_indices = numpy.argmax(predictions, axis=-1)

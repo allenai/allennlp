@@ -5,25 +5,24 @@ import math
 import os
 import re
 import time
-from typing import Dict
 
-import torch
 import pytest
-from allennlp.common.checks import ConfigurationError
+import torch
 
+from allennlp.common.checks import ConfigurationError
+from allennlp.common.params import Params
 from allennlp.common.testing import AllenNlpTestCase, ModelTestCase
+from allennlp.data import Vocabulary
+from allennlp.data.dataset_readers import SequenceTaggingDatasetReader
+from allennlp.data.iterators import BasicIterator
+from allennlp.models.model import Model
+from allennlp.models.simple_tagger import SimpleTagger
 from allennlp.training import Trainer
-from allennlp.training.trainer_base import TrainerBase
 from allennlp.training.learning_rate_schedulers import LearningRateScheduler
 from allennlp.training.momentum_schedulers import MomentumScheduler
-from allennlp.training.util import sparse_clip_norm
-from allennlp.data import Vocabulary
-from allennlp.common.params import Params
-from allennlp.models.simple_tagger import SimpleTagger
-from allennlp.data.iterators import BasicIterator
-from allennlp.data.dataset_readers import SequenceTaggingDatasetReader
-from allennlp.models.model import Model
 from allennlp.training.moving_average import ExponentialMovingAverage
+from allennlp.training.trainer_base import TrainerBase
+from allennlp.training.util import sparse_clip_norm
 
 
 class TestTrainer(AllenNlpTestCase):
@@ -198,7 +197,7 @@ class TestTrainer(AllenNlpTestCase):
         new_trainer.train()
 
     def test_metric_only_considered_best_so_far_when_strictly_better_than_those_before_it_increasing_metric(
-        self
+        self,
     ):
         new_trainer = Trainer(
             self.model,
@@ -234,7 +233,7 @@ class TestTrainer(AllenNlpTestCase):
         assert not new_tracker.is_best_so_far()
 
     def test_metric_only_considered_best_so_far_when_strictly_better_than_those_before_it_decreasing_metric(
-        self
+        self,
     ):
         new_trainer = Trainer(
             self.model,
@@ -742,7 +741,7 @@ class TestTrainer(AllenNlpTestCase):
         assert best_validation_metrics_epoch_2 == best_validation_metrics_epoch_1
 
     def test_restored_training_returns_best_epoch_metrics_even_if_no_better_epoch_is_found_after_restoring(
-        self
+        self,
     ):
         # Instead of -loss, use +loss to assure 2nd epoch is considered worse.
         # Run 1 epoch of original training.

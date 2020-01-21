@@ -20,8 +20,8 @@ class Perplexity(Average):
     @overrides
     def get_metric(self, reset: bool = False) -> float:
         """
-        Returns
-        -------
+        # Returns
+
         The accumulated perplexity.
         """
         average_loss = super().get_metric(reset)

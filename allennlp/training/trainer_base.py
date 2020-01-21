@@ -4,15 +4,14 @@ A :class:`~allennlp.training.trainer.Trainer` is responsible for training a
 
 Typically you might create a configuration file specifying the model and
 training parameters and then use :mod:`~allennlp.commands.train`
-rather than instantiating a ``Trainer`` yourself.
+rather than instantiating a `Trainer` yourself.
 """
 
 
 import logging
-from typing import Dict, Any
+from typing import Dict, Any, Type
 
 from allennlp.common import Params, Registrable
-from allennlp.common.util import is_master
 from allennlp.common.checks import ConfigurationError, check_for_gpu
 from allennlp.models.model import Model
 
@@ -22,8 +21,8 @@ logger = logging.getLogger(__name__)
 class TrainerBase(Registrable):
     """
     The base class for an AllenNLP trainer. It can do pretty much
-    anything you want. Your subclass should implement ``train``
-    and also probably ``from_params``.
+    anything you want. Your subclass should implement `train`
+    and also probably `from_params`.
     """
 
     default_implementation = "default"
@@ -33,7 +32,7 @@ class TrainerBase(Registrable):
         serialization_dir: str,
         cuda_device: int = -1,
         distributed: bool = False,
-        rank: int = 0,
+        local_rank: int = 0,
         world_size: int = 1,
     ) -> None:
 
@@ -59,8 +58,8 @@ class TrainerBase(Registrable):
         self.cuda_device = cuda_device
 
         self._distributed = distributed
-        self._rank = rank
-        self._master = is_master()
+        self._rank = local_rank
+        self._master = self._rank == 0
         self._world_size = world_size
 
     def _move_to_gpu(self, model: Model) -> Model:
@@ -77,12 +76,7 @@ class TrainerBase(Registrable):
 
     @classmethod
     def from_params(  # type: ignore
-        cls,
-        params: Params,
-        serialization_dir: str,
-        recover: bool = False,
-        cache_directory: str = None,
-        cache_prefix: str = None,
+        cls, params: Params, serialization_dir: str, recover: bool = False,
     ):
 
         typ3 = params.get("trainer", {}).pop("type", "default")
@@ -92,9 +86,7 @@ class TrainerBase(Registrable):
             from allennlp.training.trainer import Trainer
             from allennlp.training.trainer_pieces import TrainerPieces
 
-            pieces = TrainerPieces.from_params(
-                params, serialization_dir, recover, cache_directory, cache_prefix
-            )
+            pieces = TrainerPieces.from_params(params, serialization_dir, recover)
             return Trainer.from_params(
                 model=pieces.model,
                 serialization_dir=serialization_dir,
@@ -105,12 +97,10 @@ class TrainerBase(Registrable):
                 validation_iterator=pieces.validation_iterator,
             )
         else:
-            klass = TrainerBase.by_name(typ3)
+            klass: Type[TrainerBase] = TrainerBase.by_name(typ3)  # type: ignore
             # Explicit check to prevent recursion.
             is_overriden = (
                 klass.from_params.__func__ != TrainerBase.from_params.__func__  # type: ignore
             )
             assert is_overriden, f"Class {klass.__name__} must override `from_params`."
-            return klass.from_params(
-                params, serialization_dir, recover, cache_directory, cache_prefix
-            )
+            return klass.from_params(params, serialization_dir, recover)

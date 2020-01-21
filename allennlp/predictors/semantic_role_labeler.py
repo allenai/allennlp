@@ -13,7 +13,7 @@ from allennlp.predictors.predictor import Predictor
 @Predictor.register("semantic-role-labeling")
 class SemanticRoleLabelerPredictor(Predictor):
     """
-    Predictor for the :class:`~allennlp.models.bidaf.SemanticRoleLabeler` model.
+    Predictor for the :class:`~allennlp.models.SemanticRoleLabeler` model.
     """
 
     def __init__(
@@ -36,13 +36,13 @@ class SemanticRoleLabelerPredictor(Predictor):
                 {"verb": "...", "description": "...", "tags": [...]},
             ]}
 
-        Parameters
-        ----------
-        sentence, ``str``
+        # Parameters
+
+        sentence, `str`
             The sentence to parse via semantic role labeling.
 
-        Returns
-        -------
+        # Returns
+
         A dictionary representation of the semantic roles in the sentence.
         """
         return self.predict_json({"sentence": sentence})
@@ -52,13 +52,13 @@ class SemanticRoleLabelerPredictor(Predictor):
         Predicts the semantic roles of the supplied sentence tokens and returns a dictionary
         with the results.
 
-        Parameters
-        ----------
-        tokenized_sentence, ``List[str]``
+        # Parameters
+
+        tokenized_sentence, `List[str]`
             The sentence tokens to parse via semantic role labeling.
 
-        Returns
-        -------
+        # Returns
+
         A dictionary representation of the semantic roles in the sentence.
         """
         spacy_doc = Doc(self._tokenizer.spacy.vocab, words=tokenized_sentence)
@@ -115,19 +115,19 @@ class SemanticRoleLabelerPredictor(Predictor):
         """
         The SRL model has a slightly different API from other models, as the model is run
         forward for every verb in the sentence. This means that for a single sentence, we need
-        to generate a ``List[Instance]``, where the length of this list corresponds to the number
+        to generate a `List[Instance]`, where the length of this list corresponds to the number
         of verbs in the sentence. Additionally, all of these verbs share the same return dictionary
         after being passed through the model (as really we care about all the frames of the sentence
         together, rather than separately).
 
-        Parameters
-        ----------
-        json_dict : ``JsonDict``, required.
-            JSON that looks like ``{"sentence": "..."}``.
+        # Parameters
 
-        Returns
-        -------
-        instances : ``List[Instance]``
+        json_dict : `JsonDict`, required.
+            JSON that looks like `{"sentence": "..."}`.
+
+        # Returns
+
+        instances : `List[Instance]`
             One instance per verb.
         """
         sentence = json_dict["sentence"]
@@ -137,7 +137,7 @@ class SemanticRoleLabelerPredictor(Predictor):
     @overrides
     def predict_batch_json(self, inputs: List[JsonDict]) -> List[JsonDict]:
         """
-        Expects JSON that looks like ``[{"sentence": "..."}, {"sentence": "..."}, ...]``
+        Expects JSON that looks like `[{"sentence": "..."}, {"sentence": "..."}, ...]`
         and returns JSON that looks like
 
         .. code-block:: js
@@ -229,7 +229,7 @@ class SemanticRoleLabelerPredictor(Predictor):
     @overrides
     def predict_json(self, inputs: JsonDict) -> JsonDict:
         """
-        Expects JSON that looks like ``{"sentence": "..."}``
+        Expects JSON that looks like `{"sentence": "..."}`
         and returns JSON that looks like
 
         .. code-block:: js

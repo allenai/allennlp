@@ -3,7 +3,7 @@ import random
 from collections import defaultdict
 
 from allennlp.common.util import lazy_groups_of
-from allennlp.data.dataset import Batch
+from allennlp.data.batch import Batch
 from allennlp.data.instance import Instance
 from allennlp.data.iterators.data_iterator import DataIterator
 
@@ -13,28 +13,28 @@ class HomogeneousBatchIterator(DataIterator):
     """
     This iterator takes a dataset of potentially heterogeneous instances
     and yields back homogeneous batches. It assumes that each instance has
-    some ``MetadataField`` indicating what "type" of instance it is
+    some `MetadataField` indicating what "type" of instance it is
     and bases its notion of homogeneity on that (and, in particular, not on
     inspecting the "field signature" of the instance.)
 
-    Parameters
-    ----------
-    batch_size : ``int``, optional, (default = 32)
+    # Parameters
+
+    batch_size : `int`, optional, (default = 32)
         The size of each batch of instances yielded when calling the iterator.
-    instances_per_epoch : ``int``, optional, (default = None)
+    instances_per_epoch : `int`, optional, (default = None)
         If specified, each epoch will consist of precisely this many instances.
         If not specified, each epoch will consist of a single pass through the dataset.
-    max_instances_in_memory : ``int``, optional, (default = None)
+    max_instances_in_memory : `int`, optional, (default = None)
         If specified, the iterator will load this many instances at a time into an
         in-memory list and then produce batches from one such list at a time. This
         could be useful if your instances are read lazily from disk.
-    cache_instances : ``bool``, optional, (default = False)
+    cache_instances : `bool`, optional, (default = False)
         If true, the iterator will cache the tensorized instances in memory.
         If false, it will do the tensorization anew each iteration.
-    track_epoch : ``bool``, optional, (default = False)
-        If true, each instance will get a ``MetadataField`` containing the epoch number.
-    partition_key : ``str``, optional, (default = "dataset")
-        The key of the ``MetadataField`` indicating what "type" of instance this is.
+    track_epoch : `bool`, optional, (default = False)
+        If true, each instance will get a `MetadataField` containing the epoch number.
+    partition_key : `str`, optional, (default = "dataset")
+        The key of the `MetadataField` indicating what "type" of instance this is.
     skip_smaller_batches : bool, optional, (default = False)
         When the number of data samples is not dividable by `batch_size`,
         some batches might be smaller than `batch_size`.

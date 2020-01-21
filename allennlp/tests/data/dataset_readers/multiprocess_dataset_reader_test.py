@@ -1,9 +1,11 @@
+import sys
 from collections import Counter
 from multiprocessing import Queue, Process
 from queue import Empty
 from typing import Tuple
 
 import numpy as np
+import pytest
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.dataset_readers import MultiprocessDatasetReader, SequenceTaggingDatasetReader
@@ -23,6 +25,10 @@ def fingerprint(instance: Instance) -> Tuple[str, ...]:
     return text_tuple + labels_tuple
 
 
+@pytest.mark.skipif(
+    sys.platform == "darwin" and sys.version_info > (3, 6),
+    reason="This test causes internal Python errors on the Mac since version 3.7",
+)
 class TestMultiprocessDatasetReader(AllenNlpTestCase):
     def setUp(self) -> None:
         super().setUp()

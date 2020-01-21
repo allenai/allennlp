@@ -2,30 +2,28 @@ import logging
 from typing import Dict, List, Set
 
 from overrides import overrides
-import torch
 
-from allennlp.common.util import pad_sequence_to_length
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.data.tokenizers.token import Token
-from allennlp.data.token_indexers.token_indexer import TokenIndexer
+from allennlp.data.token_indexers.token_indexer import TokenIndexer, IndexedTokenList
 
 logger = logging.getLogger(__name__)
 
 
 @TokenIndexer.register("pos_tag")
-class PosTagIndexer(TokenIndexer[int]):
+class PosTagIndexer(TokenIndexer):
     """
     This :class:`TokenIndexer` represents tokens by their part of speech tag, as determined by
-    the ``pos_`` or ``tag_`` fields on ``Token`` (corresponding to spacy's coarse-grained and
+    the `pos_` or `tag_` fields on `Token` (corresponding to spacy's coarse-grained and
     fine-grained POS tags, respectively).
 
-    Parameters
-    ----------
-    namespace : ``str``, optional (default=``pos_tokens``)
+    # Parameters
+
+    namespace : `str`, optional (default=`pos_tokens`)
         We will use this namespace in the :class:`Vocabulary` to map strings to indices.
-    coarse_tags : ``bool``, optional (default=``False``)
-        If ``True``, we will use coarse POS tags instead of the default fine-grained POS tags.
-    token_min_padding_length : ``int``, optional (default=``0``)
+    coarse_tags : `bool`, optional (default=`False`)
+        If `True`, we will use coarse POS tags instead of the default fine-grained POS tags.
+    token_min_padding_length : `int`, optional (default=`0`)
         See :class:`TokenIndexer`.
     """
 
@@ -55,7 +53,7 @@ class PosTagIndexer(TokenIndexer[int]):
 
     @overrides
     def tokens_to_indices(
-        self, tokens: List[Token], vocabulary: Vocabulary, index_name: str
+        self, tokens: List[Token], vocabulary: Vocabulary
     ) -> Dict[str, List[int]]:
         tags: List[str] = []
 
@@ -69,20 +67,8 @@ class PosTagIndexer(TokenIndexer[int]):
 
             tags.append(tag)
 
-        return {index_name: [vocabulary.get_token_index(tag, self._namespace) for tag in tags]}
+        return {"tokens": [vocabulary.get_token_index(tag, self._namespace) for tag in tags]}
 
     @overrides
-    def get_padding_lengths(self, token: int) -> Dict[str, int]:
-        return {}
-
-    @overrides
-    def as_padded_tensor(
-        self,
-        tokens: Dict[str, List[int]],
-        desired_num_tokens: Dict[str, int],
-        padding_lengths: Dict[str, int],
-    ) -> Dict[str, torch.Tensor]:
-        return {
-            key: torch.LongTensor(pad_sequence_to_length(val, desired_num_tokens[key]))
-            for key, val in tokens.items()
-        }
+    def get_empty_token_list(self) -> IndexedTokenList:
+        return {"tokens": []}

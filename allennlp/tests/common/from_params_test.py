@@ -6,7 +6,7 @@ import torch
 from allennlp.common import Params
 from allennlp.common.from_params import FromParams, takes_arg, remove_optional, create_kwargs
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.data.tokenizers import Tokenizer
+from allennlp.data import DatasetReader, Tokenizer
 from allennlp.models import Model
 from allennlp.models.archival import load_archive
 from allennlp.common.checks import ConfigurationError
@@ -68,7 +68,7 @@ class TestFromParams(AllenNlpTestCase):
         assert my_class.my_bool
 
     def test_create_kwargs(self):
-        kwargs = create_kwargs(MyClass, Params({"my_int": 5}), my_bool=True, my_float=4.4)
+        kwargs = create_kwargs(MyClass, MyClass, Params({"my_int": 5}), my_bool=True, my_float=4.4)
 
         # my_float should not be included because it's not a param of the MyClass constructor
         assert kwargs == {"my_int": 5, "my_bool": True}
@@ -93,7 +93,7 @@ class TestFromParams(AllenNlpTestCase):
 
             # custom from params
             @classmethod
-            def from_params(cls, params: Params, size: int) -> "C":  # type: ignore
+            def from_params(cls, params: Params, size: int, **extras) -> "C":  # type: ignore
                 name = params.pop("name")
                 return cls(size=size, name=name)
 
@@ -148,7 +148,7 @@ class TestFromParams(AllenNlpTestCase):
                 return self.b == other.b
 
             @classmethod
-            def from_params(cls, params: Params, a: int) -> "A":  # type: ignore
+            def from_params(cls, params: Params, a: int, **extras) -> "A":  # type: ignore
                 # A custom from params
                 b = params.pop_int("b")
                 val = params.pop("val", "C")
@@ -162,7 +162,7 @@ class TestFromParams(AllenNlpTestCase):
                 self.b = b
 
             @classmethod
-            def from_params(cls, params: Params, c: int) -> "B":  # type: ignore
+            def from_params(cls, params: Params, c: int, **extras) -> "B":  # type: ignore
                 b = params.pop_int("b")
                 params.assert_empty(cls.__name__)
                 return cls(c=c, b=b)
@@ -226,7 +226,7 @@ class TestFromParams(AllenNlpTestCase):
         tval2 = 6
         d = BaseClass.from_params(params=params, extra=extra, a=tval1, c=tval2, n=10)
 
-        # Tests for List Parameters
+        # Tests for List # Parameters
         assert len(d.arg1) == len(vals)
         assert isinstance(d.arg1, list)
         assert isinstance(d.arg1[0], A)
@@ -545,3 +545,11 @@ class TestFromParams(AllenNlpTestCase):
         }
         with pytest.raises(ConfigurationError):
             Model.from_params(vocab=trained_model.vocab, params=Params(model_params))
+
+    def test_kwargs_are_passed_to_superclass(self):
+        params = Params(
+            {"type": "text_classification_json", "lazy": True, "cache_directory": "tmp"}
+        )
+        reader = DatasetReader.from_params(params)
+        assert reader.lazy is True
+        assert str(reader._cache_directory) == "tmp"

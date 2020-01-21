@@ -34,8 +34,8 @@ class SentenceTaggerPredictor(Predictor):
     @overrides
     def _json_to_instance(self, json_dict: JsonDict) -> Instance:
         """
-        Expects JSON that looks like ``{"sentence": "..."}``.
-        Runs the underlying model, and adds the ``"words"`` to the output.
+        Expects JSON that looks like `{"sentence": "..."}`.
+        Runs the underlying model, and adds the `"words"` to the output.
         """
         sentence = json_dict["sentence"]
         tokens = self._tokenizer.tokenize(sentence)

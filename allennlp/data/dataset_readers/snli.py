@@ -23,21 +23,18 @@ class SnliReader(DatasetReader):
     "premise" and "hypothesis", along with a metadata field containing the tokenized strings of the
     premise and hypothesis.
 
-    Parameters
-    ----------
-    tokenizer : ``Tokenizer``, optional (default=``SpacyTokenizer()``)
-        We use this ``Tokenizer`` for both the premise and the hypothesis.  See :class:`Tokenizer`.
-    token_indexers : ``Dict[str, TokenIndexer]``, optional (default=``{"tokens": SingleIdTokenIndexer()}``)
+    # Parameters
+
+    tokenizer : `Tokenizer`, optional (default=`SpacyTokenizer()`)
+        We use this `Tokenizer` for both the premise and the hypothesis.  See :class:`Tokenizer`.
+    token_indexers : `Dict[str, TokenIndexer]`, optional (default=`{"tokens": SingleIdTokenIndexer()}`)
         We similarly use this for both the premise and the hypothesis.  See :class:`TokenIndexer`.
     """
 
     def __init__(
-        self,
-        tokenizer: Tokenizer = None,
-        token_indexers: Dict[str, TokenIndexer] = None,
-        lazy: bool = False,
+        self, tokenizer: Tokenizer = None, token_indexers: Dict[str, TokenIndexer] = None, **kwargs,
     ) -> None:
-        super().__init__(lazy)
+        super().__init__(**kwargs)
         self._tokenizer = tokenizer or SpacyTokenizer()
         self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
 

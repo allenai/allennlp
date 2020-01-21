@@ -30,7 +30,7 @@ class Event2MindTest(ModelTestCase):
                 sample_text_field = cur_text_field
                 break
         source = sample_text_field.as_tensor(sample_text_field.get_padding_lengths())
-        source["tokens"] = source["tokens"].unsqueeze(0)
+        source["tokens"]["tokens"] = source["tokens"]["tokens"].unsqueeze(0)
         embedded_input = self.trained_model._embedding_dropout(
             self.trained_model._source_embedder(source)
         )

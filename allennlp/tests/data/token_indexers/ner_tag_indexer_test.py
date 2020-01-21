@@ -28,21 +28,13 @@ class TestNerTagIndexer(AllenNlpTestCase):
         none_index = vocab.add_token_to_namespace("NONE", namespace="ner_tags")
         vocab.add_token_to_namespace("ORG", namespace="ner_tags")
         indexer = NerTagIndexer(namespace="ner_tags")
-        assert indexer.tokens_to_indices([tokens[1]], vocab, "tokens1") == {
-            "tokens1": [person_index]
-        }
-        assert indexer.tokens_to_indices([tokens[-1]], vocab, "tokens-1") == {
-            "tokens-1": [none_index]
-        }
-
-    def test_padding_functions(self):
-        indexer = NerTagIndexer()
-        assert indexer.get_padding_lengths(0) == {}
+        assert indexer.tokens_to_indices([tokens[1]], vocab) == {"tokens": [person_index]}
+        assert indexer.tokens_to_indices([tokens[-1]], vocab) == {"tokens": [none_index]}
 
     def test_as_array_produces_token_sequence(self):
         indexer = NerTagIndexer()
-        padded_tokens = indexer.as_padded_tensor({"key": [1, 2, 3, 4, 5]}, {"key": 10}, {})
-        assert padded_tokens["key"].tolist() == [1, 2, 3, 4, 5, 0, 0, 0, 0, 0]
+        padded_tokens = indexer.as_padded_tensor_dict({"tokens": [1, 2, 3, 4, 5]}, {"tokens": 10})
+        assert padded_tokens["tokens"].tolist() == [1, 2, 3, 4, 5, 0, 0, 0, 0, 0]
 
     def test_blank_ner_tag(self):
         tokens = [
@@ -58,5 +50,5 @@ class TestNerTagIndexer(AllenNlpTestCase):
         vocab = Vocabulary(counter)
         none_index = vocab.get_token_index("NONE", "ner_tokens")
         # should raise no exception
-        indices = indexer.tokens_to_indices(tokens, vocab, index_name="ner")
-        assert {"ner": [none_index, none_index, none_index, none_index]} == indices
+        indices = indexer.tokens_to_indices(tokens, vocab)
+        assert {"tokens": [none_index, none_index, none_index, none_index]} == indices

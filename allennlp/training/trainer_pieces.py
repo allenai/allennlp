@@ -1,11 +1,11 @@
 import logging
 import os
 import re
-from typing import Iterable, NamedTuple
+from typing import Dict, Iterable, NamedTuple
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
-from allennlp.common.util import get_frozen_and_tunable_parameter_names, is_distributed, is_master
+from allennlp.common.util import log_frozen_and_tunable_parameter_names, is_master
 from allennlp.data.instance import Instance
 from allennlp.data.iterators.data_iterator import DataIterator
 from allennlp.data.vocabulary import Vocabulary
@@ -39,52 +39,57 @@ class TrainerPieces(NamedTuple):
         params: Params,
         serialization_dir: str,
         recover: bool = False,
-        cache_directory: str = None,
-        cache_prefix: str = None,
+        model: Model = None,
+        embedding_sources_mapping: Dict[str, str] = None,
+        extend_vocab: bool = False,
     ) -> "TrainerPieces":
-        all_datasets = training_util.datasets_from_params(params, cache_directory, cache_prefix)
-        datasets_for_vocab_creation = set(params.pop("datasets_for_vocab_creation", all_datasets))
+        all_datasets = training_util.datasets_from_params(params)
 
-        for dataset in datasets_for_vocab_creation:
-            if dataset not in all_datasets:
-                raise ConfigurationError(f"invalid 'dataset_for_vocab_creation' {dataset}")
+        vocabulary_params = params.pop("vocabulary", {})
 
-        logger.info(
-            "From dataset instances, %s will be considered for vocabulary creation.",
-            ", ".join(datasets_for_vocab_creation),
-        )
+        if model:
+            if params.pop("model", None):
+                logger.warning(
+                    "You passed parameters for the model in your configuration file, but we "
+                    "are ignoring them, using instead the loaded model parameters."
+                )
 
-        if recover and os.path.exists(os.path.join(serialization_dir, "vocabulary")):
-            vocab_params = params.pop("vocabulary", {})
-            vocab = Vocabulary.from_files(
-                os.path.join(serialization_dir, "vocabulary"),
-                vocab_params.get("padding_token", None),
-                vocab_params.get("oov_token", None),
-            )
+            # TODO(mattg): This should be updated now that directory_path no longer exists.
+            if vocabulary_params.get("directory_path", None):
+                logger.warning(
+                    "You passed `directory_path` in parameters for the vocabulary in "
+                    "your configuration file, but it will be ignored because we already "
+                    "have a model with a vocabulary."
+                )
+
+            vocab = model.vocab
         else:
-            vocab = Vocabulary.from_params(
-                params.pop("vocabulary", {}),
-                # Using a generator comprehension here is important
-                # because, being lazy, it allows us to not iterate over the
-                # dataset when directory_path is specified.
-                (
-                    instance
-                    for key, dataset in all_datasets.items()
-                    if key in datasets_for_vocab_creation
-                    for instance in dataset
-                ),
+            vocab = None
+
+        vocabulary_path = os.path.join(serialization_dir, "vocabulary")
+
+        if not vocab or extend_vocab:
+            vocab = TrainerPieces.create_or_extend_vocab(
+                datasets=all_datasets,
+                params=params,
+                recover=recover,
+                vocab=vocab,
+                vocabulary_params=vocabulary_params,
+                vocabulary_path=vocabulary_path,
             )
 
-        model = Model.from_params(vocab=vocab, params=params.pop("model"))
+            if not model:
+                model = Model.from_params(vocab=vocab, params=params.pop("model"))
 
-        # If vocab extension is ON for training, embedding extension should also be
-        # done. If vocab and embeddings are already in sync, it would be a no-op.
-        model.extend_embedder_vocab()
+            # If vocab extension is ON for training, embedding extension should also be
+            # done. If vocab and embeddings are already in sync, it would be a no-op.
+            model.extend_embedder_vocab(embedding_sources_mapping)
 
         # Initializing the model can have side effect of expanding the vocabulary
-        # Save the vocab only in the master
-        if not is_distributed() or is_master():
-            vocab.save_to_files(os.path.join(serialization_dir, "vocabulary"))
+        # Save the vocab only in the master. In the degenerate non-distributed
+        # case, we're trivially the master.
+        if is_master():
+            vocab.save_to_files(vocabulary_path)
 
         iterator = DataIterator.from_params(params.pop("iterator"))
         iterator.index_with(model.vocab)
@@ -105,22 +110,60 @@ class TrainerPieces(NamedTuple):
             if any(re.search(regex, name) for regex in no_grad_regexes):
                 parameter.requires_grad_(False)
 
-        frozen_parameter_names, tunable_parameter_names = get_frozen_and_tunable_parameter_names(
-            model
-        )
-        logger.info("Following parameters are Frozen  (without gradient):")
-        for name in frozen_parameter_names:
-            logger.info(name)
-        logger.info("Following parameters are Tunable (with gradient):")
-        for name in tunable_parameter_names:
-            logger.info(name)
+        log_frozen_and_tunable_parameter_names(model)
 
         return cls(
-            model,
-            iterator,
-            train_data,
-            validation_data,
-            test_data,
-            validation_iterator,
-            trainer_params,
+            model=model,
+            iterator=iterator,
+            train_dataset=train_data,
+            validation_dataset=validation_data,
+            test_dataset=test_data,
+            validation_iterator=validation_iterator,
+            params=trainer_params,
         )
+
+    @staticmethod
+    def create_or_extend_vocab(
+        params: Params,
+        datasets: Dict[str, Iterable[Instance]],
+        vocabulary_params: Params,
+        vocabulary_path: str,
+        vocab: Vocabulary = None,
+        recover: bool = False,
+    ) -> Vocabulary:
+        datasets_for_vocab_creation = set(params.pop("datasets_for_vocab_creation", datasets))
+
+        for key in datasets_for_vocab_creation:
+            if key not in datasets:
+                raise ConfigurationError(f"invalid 'dataset_for_vocab_creation' {key}")
+
+        instance_generator = (
+            instance
+            for key, dataset in datasets.items()
+            if key in datasets_for_vocab_creation
+            for instance in dataset
+        )
+
+        dataset_keys_to_use_str = ", ".join(datasets_for_vocab_creation)
+
+        if vocab:
+            logger.info(f"Extending model vocabulary using {dataset_keys_to_use_str} data.")
+            vocab.extend_from_instances(instances=instance_generator)
+        else:
+            logger.info(
+                "From dataset instances, %s will be considered for vocabulary creation.",
+                dataset_keys_to_use_str,
+            )
+
+            if recover and os.path.exists(vocabulary_path):
+                vocab = Vocabulary.from_files(
+                    vocabulary_path,
+                    vocabulary_params.get("padding_token", None),
+                    vocabulary_params.get("oov_token", None),
+                )
+            else:
+                # Using a generator comprehension here is important because, by being lazy,
+                # it allows us to not iterate over the dataset when directory_path is specified.
+                vocab = Vocabulary.from_params(vocabulary_params, instances=instance_generator)
+
+        return vocab
