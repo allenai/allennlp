@@ -1,4 +1,4 @@
-from typing import Dict, List, Union
+from typing import Dict, List, Tuple, Union
 import logging
 import torch
 from allennlp.common.util import pad_sequence_to_length
