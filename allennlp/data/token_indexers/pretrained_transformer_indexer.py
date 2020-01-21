@@ -138,10 +138,10 @@ class PretrainedTransformerIndexer(TokenIndexer):
             # TODO(zhaofengw): we aren't respecting word boundaries when segmenting wordpieces.
 
             # Strips original special tokens
-            indices = indices[self._num_added_start_tokens:-self._num_added_end_tokens]
+            indices = indices[self._num_added_start_tokens : -self._num_added_end_tokens]
             # Folds indices
             wrapped_indices = [
-                indices[i:i + self._effective_max_len]
+                indices[i : i + self._effective_max_len]
                 for i in range(0, len(indices), self._effective_max_len)
             ]
             # Adds special tokens to each segment

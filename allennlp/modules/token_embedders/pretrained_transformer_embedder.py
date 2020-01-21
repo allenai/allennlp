@@ -127,15 +127,15 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
                 batch_size, num_segments * self._max_len, embedding_size
             )
             # Shape: (batch_size, self._num_added_start_tokens, embedding_size)
-            start_token_embeddings = embeddings[:, :self._num_added_start_tokens, :]
+            start_token_embeddings = embeddings[:, : self._num_added_start_tokens, :]
             # See comment above -- remedy when the longest sequences have full last segments.
             # This is not necessarily the end token embeddings when sequences aren't full.
             # Shape: (batch_size, self._num_added_end_tokens, embedding_size)
-            last_token_embeddings = embeddings[:, -self._num_added_end_tokens:, :]
+            last_token_embeddings = embeddings[:, -self._num_added_end_tokens :, :]
 
             embeddings = embeddings.reshape(batch_size, num_segments, self._max_len, embedding_size)
             embeddings = embeddings[
-                :, :, self._num_added_start_tokens:-self._num_added_end_tokens, :
+                :, :, self._num_added_start_tokens : -self._num_added_end_tokens, :
             ]  # truncate segment-level start/end tokens
             embeddings = embeddings.reshape(batch_size, -1, embedding_size)  # flatten
             embeddings = torch.cat([start_token_embeddings, embeddings, last_token_embeddings], 1)

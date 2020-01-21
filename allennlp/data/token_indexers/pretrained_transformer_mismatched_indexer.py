@@ -106,9 +106,7 @@ class PretrainedTransformerMismatchedIndexer(TokenIndexer):
             return True
         return NotImplemented
 
-    def _intra_word_tokenize(
-        self, tokens: List[Token]
-    ) -> Tuple[List[int], List[Tuple[int, int]]]:
+    def _intra_word_tokenize(self, tokens: List[Token]) -> Tuple[List[int], List[Tuple[int, int]]]:
         """
         Tokenizes each word into wordpieces separately and returns the wordpiece IDs.
         Also calculates offsets such that wordpices[offsets[i][0]:offsets[i][1] + 1]

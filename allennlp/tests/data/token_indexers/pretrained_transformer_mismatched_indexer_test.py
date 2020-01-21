@@ -44,8 +44,11 @@ class TestPretrainedTransformerMismatchedIndexer(AllenNlpTestCase):
         assert len(expected_ids) == 7  # just to make sure it's what we're expecting
         cls_id, sep_id = expected_ids[0], expected_ids[-1]
         expected_ids = (
-            expected_ids[:3] + [sep_id, cls_id]
-            + expected_ids[3:5] + [sep_id, cls_id] + expected_ids[5:]
+            expected_ids[:3]
+            + [sep_id, cls_id]
+            + expected_ids[3:5]
+            + [sep_id, cls_id]
+            + expected_ids[5:]
         )
 
         vocab = Vocabulary()
