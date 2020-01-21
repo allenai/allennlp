@@ -135,7 +135,7 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
 
             embeddings = embeddings.reshape(batch_size, num_segments, self._max_len, embedding_size)
             embeddings = embeddings[
-                :, :, self._num_added_start_tokens:self._num_added_end_tokens, :
+                :, :, self._num_added_start_tokens:-self._num_added_end_tokens, :
             ]  # truncate segment-level start/end tokens
             embeddings = embeddings.reshape(batch_size, -1, embedding_size)  # flatten
             embeddings = torch.cat([start_token_embeddings, embeddings, last_token_embeddings], 1)
