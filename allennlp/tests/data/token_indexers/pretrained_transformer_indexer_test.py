@@ -133,7 +133,7 @@ class TestPretrainedTransformerIndexer(AllenNlpTestCase):
         tokenizer = AutoTokenizer.from_pretrained("bert-base-cased")
         assert PretrainedTransformerIndexer.determine_num_special_tokens_added(tokenizer) == (1, 1)
 
-    def test_long_sequence_folding(self):
+    def test_long_sequence_splitting(self):
         tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
         allennlp_tokenizer = PretrainedTransformerTokenizer("bert-base-uncased")
         indexer = PretrainedTransformerIndexer(model_name="bert-base-uncased", max_len=4)

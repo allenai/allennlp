@@ -35,7 +35,7 @@ class TestPretrainedTransformerMismatchedIndexer(AllenNlpTestCase):
                 expected_value = [list(t) for t in expected_value]
             assert padded_tokens[key].tolist() == expected_value
 
-    def test_long_sequence_folding(self):
+    def test_long_sequence_splitting(self):
         tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
         indexer = PretrainedTransformerMismatchedIndexer("bert-base-uncased", max_len=4)
         text = ["AllenNLP", "is", "great"]

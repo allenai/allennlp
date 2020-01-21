@@ -94,7 +94,7 @@ class PretrainedTransformerIndexer(TokenIndexer):
     ) -> IndexedTokenList:
         """
         `tokens` may already be indices, in which case the token -> index step is a no-op, but other
-        logic still takes place, e.g. long sequence wrapping.
+        logic still takes place, e.g. long sequence splitting.
 
         `tokens` should have special tokens already inserted.
         """
@@ -140,17 +140,17 @@ class PretrainedTransformerIndexer(TokenIndexer):
             # Strips original special tokens
             indices = indices[self._num_added_start_tokens : -self._num_added_end_tokens]
             # Folds indices
-            wrapped_indices = [
+            folded_indices = [
                 indices[i : i + self._effective_max_len]
                 for i in range(0, len(indices), self._effective_max_len)
             ]
             # Adds special tokens to each segment
-            wrapped_indices = [
+            folded_indices = [
                 self._tokenizer.build_inputs_with_special_tokens(segment)
-                for segment in wrapped_indices
+                for segment in folded_indices
             ]
             # Flattens
-            indices = [i for segment in wrapped_indices for i in segment]
+            indices = [i for segment in folded_indices for i in segment]
 
             result["token_ids"] = indices
             result["segment_concat_mask"] = [1] * len(indices)

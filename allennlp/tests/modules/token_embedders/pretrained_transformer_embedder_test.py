@@ -85,9 +85,9 @@ class TestPretrainedTransformerEmbedder(AllenNlpTestCase):
         with pytest.raises(ValueError):
             token_embedder(token_ids, mask, type_ids)
 
-    def test_long_sequence_folding_end_to_end(self):
+    def test_long_sequence_splitting_end_to_end(self):
         # Mostly the same as the end_to_end test (except for adding max_len=4),
-        # because we don't want this folding behavior to change input/output format.
+        # because we don't want this splitting behavior to change input/output format.
 
         tokenizer = PretrainedTransformerTokenizer(model_name="bert-base-uncased")
         token_indexer = PretrainedTransformerIndexer(model_name="bert-base-uncased", max_len=4)

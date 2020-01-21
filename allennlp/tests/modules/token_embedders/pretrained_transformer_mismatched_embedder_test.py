@@ -53,7 +53,7 @@ class TestPretrainedTransformerMismatchedEmbedder(AllenNlpTestCase):
         assert bert_vectors.size() == (2, max(len(sentence1), len(sentence2)), 768)
         assert not torch.isnan(bert_vectors).any()
 
-    def test_long_sequence_folding_end_to_end(self):
+    def test_long_sequence_splitting_end_to_end(self):
         token_indexer = PretrainedTransformerMismatchedIndexer("bert-base-uncased", max_len=4)
 
         sentence1 = ["A", ",", "AllenNLP", "sentence", "."]
