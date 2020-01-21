@@ -23,6 +23,7 @@ local BASE_READER = {
         "end_tokens": ["</S>"]
 };
 
+# TODO(brendanr): We probably don't want NUM_GPUS in the config here anymore.
 local BASE_ITERATOR = {
   "type": "bucket",
   "max_instances_in_memory": 16384 * NUM_GPUS,
@@ -49,7 +50,8 @@ local BASE_ITERATOR = {
 
   "vocabulary": {
       // Use a prespecified vocabulary for efficiency.
-      "directory_path": std.extVar("BIDIRECTIONAL_LM_VOCAB_PATH")
+      "type": "from_files",
+      "directory": std.extVar("BIDIRECTIONAL_LM_VOCAB_PATH"),
       // Plausible config for generating the vocabulary.
       // "tokens_to_add": {
       //     "tokens": ["<S>", "</S>"],
@@ -119,9 +121,11 @@ local BASE_ITERATOR = {
     // but that number could use tuning.
     "output_queue_size": 1000
   },
+  "distributed": {
+    "cuda_devices": if NUM_GPUS > 1 then std.range(0, NUM_GPUS - 1) else 0,
+  },
   "trainer": {
     "num_epochs": 10,
-    "cuda_device" : if NUM_GPUS > 1 then std.range(0, NUM_GPUS - 1) else 0,
     "optimizer": {
       // The gradient accumulators in Adam for the running stdev and mean for
       // words not used in the sampled softmax would be decayed to zero with the
