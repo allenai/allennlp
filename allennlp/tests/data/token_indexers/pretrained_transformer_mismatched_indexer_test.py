@@ -37,7 +37,7 @@ class TestPretrainedTransformerMismatchedIndexer(AllenNlpTestCase):
 
     def test_long_sequence_splitting(self):
         tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
-        indexer = PretrainedTransformerMismatchedIndexer("bert-base-uncased", max_len=4)
+        indexer = PretrainedTransformerMismatchedIndexer("bert-base-uncased", max_length=4)
         text = ["AllenNLP", "is", "great"]
         tokens = tokenizer.tokenize(" ".join(["[CLS]"] + text + ["[SEP]"]))
         expected_ids = tokenizer.convert_tokens_to_ids(tokens)

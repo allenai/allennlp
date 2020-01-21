@@ -32,20 +32,20 @@ class PretrainedTransformerMismatchedIndexer(TokenIndexer):
         We use a somewhat confusing default value of `tags` so that we do not add padding or UNK
         tokens to this namespace, which would break on loading because we wouldn't find our default
         OOV token.
-    max_len : `int`, optional (default = -1)
+    max_length : `int`, optional (default = -1)
         If positive, split the document into segments of this many tokens (including special tokens)
         before feeding into the embedder. The embedder embeds these segments independently and
         concatenate the results to get the original document representation. Should be set to
-        the same value as the `max_len` option on the `PretrainedTransformerMismatchedEmbedder`.
+        the same value as the `max_length` option on the `PretrainedTransformerMismatchedEmbedder`.
     """
 
     def __init__(
-        self, model_name: str, namespace: str = "tags", max_len: int = -1, **kwargs
+        self, model_name: str, namespace: str = "tags", max_length: int = -1, **kwargs
     ) -> None:
         super().__init__(**kwargs)
         # The matched version v.s. mismatched
         self._matched_indexer = PretrainedTransformerIndexer(
-            model_name, namespace, max_len, **kwargs
+            model_name, namespace, max_length, **kwargs
         )
         self._tokenizer = self._matched_indexer._tokenizer
         self._num_added_start_tokens = self._matched_indexer._num_added_start_tokens

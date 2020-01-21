@@ -18,17 +18,17 @@ class PretrainedTransformerMismatchedEmbedder(TokenEmbedder):
     model_name : `str`
         The name of the `transformers` model to use. Should be the same as the corresponding
         `PretrainedTransformerMismatchedIndexer`.
-    max_len : `int`, optional (default = -1)
+    max_length : `int`, optional (default = -1)
         If positive, folds input token IDs into multiple segments of this length, pass them
         through the transformer model independently, and concatenate the final representations.
-        Should be set to the same value as the `max_len` option on the
+        Should be set to the same value as the `max_length` option on the
         `PretrainedTransformerMismatchedIndexer`.
     """
 
-    def __init__(self, model_name: str, max_len: int = -1) -> None:
+    def __init__(self, model_name: str, max_length: int = -1) -> None:
         super().__init__()
         # The matched version v.s. mismatched
-        self._matched_embedder = PretrainedTransformerEmbedder(model_name, max_len)
+        self._matched_embedder = PretrainedTransformerEmbedder(model_name, max_length)
 
     @overrides
     def get_output_dim(self):

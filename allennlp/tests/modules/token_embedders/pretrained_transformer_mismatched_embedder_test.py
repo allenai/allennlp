@@ -54,7 +54,7 @@ class TestPretrainedTransformerMismatchedEmbedder(AllenNlpTestCase):
         assert not torch.isnan(bert_vectors).any()
 
     def test_long_sequence_splitting_end_to_end(self):
-        token_indexer = PretrainedTransformerMismatchedIndexer("bert-base-uncased", max_len=4)
+        token_indexer = PretrainedTransformerMismatchedIndexer("bert-base-uncased", max_length=4)
 
         sentence1 = ["A", ",", "AllenNLP", "sentence", "."]
         sentence2 = ["AllenNLP", "is", "great"]
@@ -69,7 +69,7 @@ class TestPretrainedTransformerMismatchedEmbedder(AllenNlpTestCase):
                     "bert": {
                         "type": "pretrained_transformer_mismatched",
                         "model_name": "bert-base-uncased",
-                        "max_len": 4,
+                        "max_length": 4,
                     }
                 }
             }

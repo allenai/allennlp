@@ -31,15 +31,15 @@ class PretrainedTransformerIndexer(TokenIndexer):
         We use a somewhat confusing default value of `tags` so that we do not add padding or UNK
         tokens to this namespace, which would break on loading because we wouldn't find our default
         OOV token.
-    max_len : `int`, optional (default = -1)
+    max_length : `int`, optional (default = -1)
         If positive, split the document into segments of this many tokens (including special tokens)
         before feeding into the embedder. The embedder embeds these segments independently and
         concatenate the results to get the original document representation. Should be set to
-        the same value as the `max_len` option on the `PretrainedTransformerEmbedder`.
+        the same value as the `max_length` option on the `PretrainedTransformerEmbedder`.
     """
 
     def __init__(
-        self, model_name: str, namespace: str = "tags", max_len: int = -1, **kwargs
+        self, model_name: str, namespace: str = "tags", max_length: int = -1, **kwargs
     ) -> None:
         super().__init__(**kwargs)
         self._namespace = namespace
@@ -51,14 +51,14 @@ class PretrainedTransformerIndexer(TokenIndexer):
             self._num_added_end_tokens,
         ) = self.__class__.determine_num_special_tokens_added(self._tokenizer)
 
-        self._max_len = max_len
-        if self._max_len > 0:
-            self._effective_max_len = (  # we need to take into account special tokens
-                self._max_len - self._tokenizer.num_added_tokens()
+        self._max_length = max_length
+        if self._max_length > 0:
+            self._effective_max_length = (  # we need to take into account special tokens
+                self._max_length - self._tokenizer.num_added_tokens()
             )
-            if self._effective_max_len <= 0:
+            if self._effective_max_length <= 0:
                 raise ValueError(
-                    "max_len needs to be greater than the number of special tokens inserted."
+                    "max_length needs to be greater than the number of special tokens inserted."
                 )
 
     def _add_encoding_to_vocabulary(self, vocab: Vocabulary) -> None:
@@ -130,8 +130,8 @@ class PretrainedTransformerIndexer(TokenIndexer):
         if type_ids is not None:
             result["type_ids"] = type_ids
 
-        if self._max_len > 0:
-            # We prepare long indices by converting them to (assuming max_len == 5)
+        if self._max_length > 0:
+            # We prepare long indices by converting them to (assuming max_length == 5)
             # [CLS] A B C [SEP] [CLS] D E F [SEP] ...
             # Embedder is responsible for folding this 1-d sequence to 2-d and feed to the
             # transformer model.
@@ -141,8 +141,8 @@ class PretrainedTransformerIndexer(TokenIndexer):
             indices = indices[self._num_added_start_tokens : -self._num_added_end_tokens]
             # Folds indices
             folded_indices = [
-                indices[i : i + self._effective_max_len]
-                for i in range(0, len(indices), self._effective_max_len)
+                indices[i : i + self._effective_max_length]
+                for i in range(0, len(indices), self._effective_max_length)
             ]
             # Adds special tokens to each segment
             folded_indices = [
@@ -160,7 +160,7 @@ class PretrainedTransformerIndexer(TokenIndexer):
     @overrides
     def get_empty_token_list(self) -> IndexedTokenList:
         result: IndexedTokenList = {"token_ids": [], "mask": [], "type_ids": []}
-        if self._max_len > 0:
+        if self._max_length > 0:
             result["segment_concat_mask"] = []
         return result
 

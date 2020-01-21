@@ -86,11 +86,11 @@ class TestPretrainedTransformerEmbedder(AllenNlpTestCase):
             token_embedder(token_ids, mask, type_ids)
 
     def test_long_sequence_splitting_end_to_end(self):
-        # Mostly the same as the end_to_end test (except for adding max_len=4),
+        # Mostly the same as the end_to_end test (except for adding max_length=4),
         # because we don't want this splitting behavior to change input/output format.
 
         tokenizer = PretrainedTransformerTokenizer(model_name="bert-base-uncased")
-        token_indexer = PretrainedTransformerIndexer(model_name="bert-base-uncased", max_len=4)
+        token_indexer = PretrainedTransformerIndexer(model_name="bert-base-uncased", max_length=4)
 
         sentence1 = "A, AllenNLP sentence."
         tokens1 = tokenizer.tokenize(sentence1)
@@ -105,7 +105,7 @@ class TestPretrainedTransformerEmbedder(AllenNlpTestCase):
                     "bert": {
                         "type": "pretrained_transformer",
                         "model_name": "bert-base-uncased",
-                        "max_len": 4,
+                        "max_length": 4,
                     }
                 }
             }

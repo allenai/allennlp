@@ -136,7 +136,7 @@ class TestPretrainedTransformerIndexer(AllenNlpTestCase):
     def test_long_sequence_splitting(self):
         tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
         allennlp_tokenizer = PretrainedTransformerTokenizer("bert-base-uncased")
-        indexer = PretrainedTransformerIndexer(model_name="bert-base-uncased", max_len=4)
+        indexer = PretrainedTransformerIndexer(model_name="bert-base-uncased", max_length=4)
         string_specials = "[CLS] AllenNLP is great [SEP]"
         string_no_specials = "AllenNLP is great"
         tokens = tokenizer.tokenize(string_specials)
