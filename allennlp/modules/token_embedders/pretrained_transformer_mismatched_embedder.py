@@ -16,8 +16,9 @@ class PretrainedTransformerMismatchedEmbedder(TokenEmbedder):
     # Parameters
 
     model_name : `str`
-        The name of the `transformers` model to use.
-    max_len: `int`, optional (default = -1)
+        The name of the `transformers` model to use. Should be the same as the corresponding
+        `PretrainedTransformerMismatchedIndexer`.
+    max_len : `int`, optional (default = -1)
         If positive, folds input token IDs into multiple segments of this length, pass them
         through the transformer model independently, and concatenate the final representations.
         Should be set to the same value as the `max_len` option on the

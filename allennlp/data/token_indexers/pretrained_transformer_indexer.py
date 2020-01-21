@@ -31,7 +31,7 @@ class PretrainedTransformerIndexer(TokenIndexer):
         We use a somewhat confusing default value of `tags` so that we do not add padding or UNK
         tokens to this namespace, which would break on loading because we wouldn't find our default
         OOV token.
-    max_len: `int`, optional (default = -1)
+    max_len : `int`, optional (default = -1)
         If positive, split the document into segments of this many tokens (including special tokens)
         before feeding into the embedder. The embedder embeds these segments independently and
         concatenate the results to get the original document representation. Should be set to
@@ -49,7 +49,7 @@ class PretrainedTransformerIndexer(TokenIndexer):
         (
             self._num_added_start_tokens,
             self._num_added_end_tokens,
-        ) = self._determine_num_special_tokens_added()
+        ) = self.__class__.determine_num_special_tokens_added(self._tokenizer)
 
         self._max_len = max_len
         if self._max_len > 0:
@@ -195,18 +195,25 @@ class PretrainedTransformerIndexer(TokenIndexer):
             return True
         return NotImplemented
 
-    def _determine_num_special_tokens_added(self) -> Tuple[int, int]:
+    @classmethod
+    def determine_num_special_tokens_added(cls, tokenizer) -> Tuple[int, int]:
         """
-        Determines the number of tokens self._tokenizer adds to a sequence (currently doesn't
+        Determines the number of tokens `tokenizer` adds to a sequence (currently doesn't
         consider sequence pairs) in the start & end.
 
+        # Parameters
+
+        tokenizer : `transformers.tokenization_utils.PretrainedTokenizer`, required.
+            We want to determine the number of added tokens by this tokenizer.
+
         # Returns
+
         The number of tokens (`int`) that are inserted in the start & end of a sequence.
         """
         # Uses a slightly higher index to avoid tokenizer doing special things to lower-indexed
         # tokens which might be special.
         dummy = [1000]
-        inserted = self._tokenizer.build_inputs_with_special_tokens(dummy)
+        inserted = tokenizer.build_inputs_with_special_tokens(dummy)
 
         num_start = num_end = 0
         seen_dummy = False
@@ -222,5 +229,5 @@ class PretrainedTransformerIndexer(TokenIndexer):
             else:
                 num_end += 1
 
-        assert num_start + num_end == self._tokenizer.num_added_tokens()
+        assert num_start + num_end == tokenizer.num_added_tokens()
         return num_start, num_end

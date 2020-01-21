@@ -1,10 +1,13 @@
+import math
 from typing import Optional
 
 from overrides import overrides
 from transformers.modeling_auto import AutoModel
+from transformers.tokenization_auto import AutoTokenizer
 import torch
 import torch.nn.functional as F
 
+from allennlp.data.token_indexers import PretrainedTransformerIndexer
 from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
 
 
@@ -16,8 +19,9 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
     # Parameters
 
     model_name : `str`
-        The name of the `transformers` model to use.
-    max_len: `int`, optional (default = -1)
+        The name of the `transformers` model to use. Should be the same as the corresponding
+        `PretrainedTransformerIndexer`.
+    max_len : `int`, optional (default = -1)
         If positive, folds input token IDs into multiple segments of this length, pass them
         through the transformer model independently, and concatenate the final representations.
         Should be set to the same value as the `max_len` option on the
@@ -31,6 +35,13 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         # I'm not sure if this works for all models; open an issue on github if you find a case
         # where it doesn't work.
         self.output_dim = self.transformer_model.config.hidden_size
+
+        tokenizer = AutoTokenizer.from_pretrained(model_name)
+        (
+            self._num_added_start_tokens,
+            self._num_added_end_tokens,
+        ) = PretrainedTransformerIndexer.determine_num_special_tokens_added(tokenizer)
+        self._num_added_tokens = self._num_added_start_tokens + self._num_added_end_tokens
 
     @overrides
     def get_output_dim(self):
@@ -74,7 +85,7 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
             # [ [CLS] A B C [SEP] [CLS] D E F [SEP] ] ->
             # [ [ [CLS] A B C [SEP] ], [ [CLS] D E F [SEP] ] ]
             num_segment_concat_wordpieces = token_ids.size(1)
-            num_segments = (num_segment_concat_wordpieces / self._max_len).ceil()
+            num_segments = math.ceil(num_segment_concat_wordpieces / self._max_len)
             padded_length = num_segments * self._max_len
             length_to_pad = padded_length - num_segment_concat_wordpieces
 
