@@ -5,7 +5,6 @@ import numpy
 import torch
 import torch.nn.functional as F
 from torch.nn import Linear
-from copy import deepcopy
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.util import END_SYMBOL, START_SYMBOL
