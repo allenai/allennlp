@@ -132,3 +132,25 @@ class TestPretrainedTransformerIndexer(AllenNlpTestCase):
     def test_auto_determining_num_tokens_added(self):
         indexer = PretrainedTransformerIndexer("bert-base-cased")
         assert indexer._determine_num_special_tokens_added() == (1, 1)
+
+    def test_long_sequence_folding(self):
+        tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
+        allennlp_tokenizer = PretrainedTransformerTokenizer("bert-base-uncased")
+        indexer = PretrainedTransformerIndexer(model_name="bert-base-uncased", max_len=4)
+        string_specials = "[CLS] AllenNLP is great [SEP]"
+        string_no_specials = "AllenNLP is great"
+        tokens = tokenizer.tokenize(string_specials)
+        expected_ids = tokenizer.convert_tokens_to_ids(tokens)
+        assert len(expected_ids) == 7  # just to make sure it's what we're expecting
+        cls_id, sep_id = expected_ids[0], expected_ids[-1]
+        expected_ids = (
+            expected_ids[:3] + [sep_id, cls_id]
+            + expected_ids[3:5] + [sep_id, cls_id] + expected_ids[5:]
+        )
+
+        allennlp_tokens = allennlp_tokenizer.tokenize(string_no_specials)
+        vocab = Vocabulary()
+        indexed = indexer.tokens_to_indices(allennlp_tokens, vocab)
+        assert indexed["token_ids"] == expected_ids
+        assert indexed["segment_concat_mask"] == [1] * len(expected_ids)
+        assert indexed["mask"] == [1] * 7  # original length

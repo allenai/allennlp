@@ -1,4 +1,9 @@
+<<<<<<< HEAD
 import pytest
+=======
+import math
+
+>>>>>>> Add tests
 import torch
 
 from allennlp.common import Params
@@ -79,3 +84,58 @@ class TestPretrainedTransformerEmbedder(AllenNlpTestCase):
         type_ids[1, 1] = 1
         with pytest.raises(ValueError):
             token_embedder(token_ids, mask, type_ids)
+
+    def test_long_sequence_folding_end_to_end(self):
+        # Mostly the same as the end_to_end test (except for adding max_len=4),
+        # because we don't want this folding behavior to change input/output format.
+
+        tokenizer = PretrainedTransformerTokenizer(model_name="bert-base-uncased")
+        token_indexer = PretrainedTransformerIndexer(model_name="bert-base-uncased", max_len=4)
+
+        sentence1 = "A, AllenNLP sentence."
+        tokens1 = tokenizer.tokenize(sentence1)
+        sentence2 = "AllenNLP is great"
+        tokens2 = tokenizer.tokenize(sentence2)
+
+        vocab = Vocabulary()
+
+        params = Params(
+            {
+                "token_embedders": {
+                    "bert": {
+                        "type": "pretrained_transformer",
+                        "model_name": "bert-base-uncased",
+                        "max_len": 4,
+                    }
+                }
+            }
+        )
+        token_embedder = BasicTextFieldEmbedder.from_params(vocab=vocab, params=params)
+
+        instance1 = Instance({"tokens": TextField(tokens1, {"bert": token_indexer})})
+        instance2 = Instance({"tokens": TextField(tokens2, {"bert": token_indexer})})
+
+        batch = Batch([instance1, instance2])
+        batch.index_instances(vocab)
+
+        padding_lengths = batch.get_padding_lengths()
+        tensor_dict = batch.as_tensor_dict(padding_lengths)
+        tokens = tensor_dict["tokens"]
+        max_length = max(len(tokens1), len(tokens2))
+
+        # Adds n_segments * 2 special tokens
+        segment_concat_length = int(math.ceil(max_length / 4)) * 2 + max_length
+        assert tokens["bert"]["token_ids"].shape == (2, segment_concat_length)
+
+        assert tokens["bert"]["mask"].tolist() == [
+            [1, 1, 1, 1, 1, 1, 1, 1, 1],
+            [1, 1, 1, 1, 1, 1, 1, 0, 0],
+        ]
+        assert tokens["bert"]["segment_concat_mask"].tolist() == [
+            [1] * segment_concat_length,
+            [1] * (segment_concat_length - 4) + [0] * 4,  # 4 is hard-coded length difference
+        ]
+
+        # Attention mask
+        bert_vectors = token_embedder(tokens)
+        assert bert_vectors.size() == (2, 9, 768)
