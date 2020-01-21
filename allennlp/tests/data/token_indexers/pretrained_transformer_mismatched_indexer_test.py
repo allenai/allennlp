@@ -34,7 +34,3 @@ class TestPretrainedTransformerMismatchedIndexer(AllenNlpTestCase):
             if key == "offsets":
                 expected_value = [list(t) for t in expected_value]
             assert padded_tokens[key].tolist() == expected_value
-
-    def test_auto_determining_num_tokens_added(self):
-        indexer = PretrainedTransformerMismatchedIndexer("bert-base-cased")
-        assert indexer._determine_num_special_tokens_added() == (1, 1)

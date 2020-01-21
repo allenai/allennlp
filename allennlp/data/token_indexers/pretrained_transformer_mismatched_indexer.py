@@ -33,23 +33,24 @@ class PretrainedTransformerMismatchedIndexer(TokenIndexer):
         We use a somewhat confusing default value of `tags` so that we do not add padding or UNK
         tokens to this namespace, which would break on loading because we wouldn't find our default
         OOV token.
+    max_len: `int`, optional (default = -1)
+        If positive, split the document into segments of this many tokens (including special tokens)
+        before feeding into the embedder. The embedder embeds these segments independently and
+        concatenate the results to get the original document representation. Should be set to
+        the same value as the `max_len` option on the `PretrainedTransformerMismatchedEmbedder`.
     """
 
-    def __init__(self, model_name: str, namespace: str = "tags", **kwargs) -> None:
+    def __init__(
+        self, model_name: str, namespace: str = "tags", max_len: int = -1, **kwargs
+    ) -> None:
         super().__init__(**kwargs)
         # The matched version v.s. mismatched
-        self._matched_indexer = PretrainedTransformerIndexer(model_name, namespace, **kwargs)
-
-        # add_special_tokens=False since we don't want wordpieces to be surrounded by special tokens
-        self._allennlp_tokenizer = PretrainedTransformerTokenizer(
-            model_name, add_special_tokens=False
+        self._matched_indexer = PretrainedTransformerIndexer(
+            model_name, namespace, max_len, **kwargs
         )
-        self._tokenizer = self._allennlp_tokenizer.tokenizer
-
-        (
-            self._num_added_start_tokens,
-            self._num_added_end_tokens,
-        ) = self._determine_num_special_tokens_added()
+        self._num_added_start_tokens = self._matched_indexer._num_added_start_tokens
+        self._num_added_end_tokens = self._matched_indexer._num_added_end_tokens
+        self._tokenizer = self._matched_indexer._tokenizer
 
     @overrides
     def count_vocab_items(self, token: Token, counter: Dict[str, Dict[str, int]]):
@@ -59,22 +60,14 @@ class PretrainedTransformerMismatchedIndexer(TokenIndexer):
     def tokens_to_indices(self, tokens: List[Token], vocabulary: Vocabulary) -> IndexedTokenList:
         orig_token_mask = [1] * len(tokens)
         tokens, offsets = self._intra_word_tokenize(tokens)
+        wordpiece_mask = [1] * len(tokens)
 
         # {"token_ids": ..., "mask": ...}
         output = self._matched_indexer.tokens_to_indices(tokens, vocabulary)
 
-        # Insert type ids for the special tokens.
-        output["type_ids"] = self._tokenizer.create_token_type_ids_from_sequences(
-            output["token_ids"]
-        )
-        # Insert the special tokens themselves.
-        output["token_ids"] = self._tokenizer.build_inputs_with_special_tokens(output["token_ids"])
         output["mask"] = orig_token_mask
-        output["offsets"] = [
-            (start + self._num_added_start_tokens, end + self._num_added_start_tokens)
-            for start, end in offsets
-        ]
-        output["wordpiece_mask"] = [1] * len(output["token_ids"])
+        output["offsets"] = offsets
+        output["wordpiece_mask"] = wordpiece_mask
         return output
 
     @overrides
@@ -116,17 +109,19 @@ class PretrainedTransformerMismatchedIndexer(TokenIndexer):
 
     def _intra_word_tokenize(
         self, tokens: List[Token]
-    ) -> Tuple[List[Token], List[Tuple[int, int]]]:
+    ) -> Tuple[List[int], List[Tuple[int, int]]]:
         """
-        Tokenizes each word into wordpieces separately. Also calculates offsets such that
-        wordpices[offsets[i][0]:offsets[i][1] + 1] corresponds to the original i-th token.
-        Does not insert special tokens.
+        Tokenizes each word into wordpieces separately and returns the wordpiece IDs.
+        Also calculates offsets such that wordpices[offsets[i][0]:offsets[i][1] + 1]
+        corresponds to the original i-th token.
+
+        This function inserts special tokens.
         """
-        wordpieces: List[Token] = []
+        wordpieces: List[int] = []
         offsets = []
-        cumulative = 0
+        cumulative = self._num_added_start_tokens
         for token in tokens:
-            subword_wordpieces = self._allennlp_tokenizer.tokenize(token.text)
+            subword_wordpieces = self._tokenizer.encode(token.text, add_special_tokens=False)
             wordpieces.extend(subword_wordpieces)
 
             start_offset = cumulative
@@ -134,34 +129,7 @@ class PretrainedTransformerMismatchedIndexer(TokenIndexer):
             end_offset = cumulative - 1  # inclusive
             offsets.append((start_offset, end_offset))
 
+        wordpieces = self._tokenizer.build_inputs_with_special_tokens(wordpieces)
+        assert cumulative + self._num_added_end_tokens == len(wordpieces)
+
         return wordpieces, offsets
-
-    def _determine_num_special_tokens_added(self) -> Tuple[int, int]:
-        """
-        Determines the number of tokens self._tokenizer adds to a sequence (currently doesn't
-        consider sequence pairs) in the start & end.
-
-        # Returns
-        The number of tokens (`int`) that are inserted in the start & end of a sequence.
-        """
-        # Uses a slightly higher index to avoid tokenizer doing special things to lower-indexed
-        # tokens which might be special.
-        dummy = [1000]
-        inserted = self._tokenizer.build_inputs_with_special_tokens(dummy)
-
-        num_start = num_end = 0
-        seen_dummy = False
-        for idx in inserted:
-            if idx == dummy[0]:
-                if seen_dummy:  # seeing it twice
-                    raise ValueError("Cannot auto-determine the number of special tokens added.")
-                seen_dummy = True
-                continue
-
-            if not seen_dummy:
-                num_start += 1
-            else:
-                num_end += 1
-
-        assert num_start + num_end == self._tokenizer.num_added_tokens()
-        return num_start, num_end
