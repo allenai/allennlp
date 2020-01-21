@@ -10,6 +10,11 @@ class PretrainedTransformerMismatchedEmbedder(TokenEmbedder):
     """
     Use this embedder to embed wordpieces given by `PretrainedTransformerMismatchedIndexer`
     and to pool the resulting vectors to get word-level representations.
+
+    # Parameters
+
+    model_name : `str`
+        The name of the `transformers` model to use.
     """
 
     def __init__(self, model_name: str) -> None:

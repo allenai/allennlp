@@ -40,7 +40,7 @@ class PretrainedTransformerMismatchedIndexer(TokenIndexer):
         # The matched version v.s. mismatched
         self._matched_indexer = PretrainedTransformerIndexer(model_name, namespace, **kwargs)
 
-        # add_special_tokens=False sicne we don't want wordpieces to be surrounded by special tokens
+        # add_special_tokens=False since we don't want wordpieces to be surrounded by special tokens
         self._allennlp_tokenizer = PretrainedTransformerTokenizer(
             model_name, add_special_tokens=False
         )
@@ -132,10 +132,13 @@ class PretrainedTransformerMismatchedIndexer(TokenIndexer):
 
         return wordpieces, offsets
 
-    def _determine_num_special_tokens_added(self):
+    def _determine_num_special_tokens_added(self) -> Tuple[int, int]:
         """
         Determines the number of tokens self._tokenizer adds to a sequence (currently doesn't
         consider sequence pairs) in the start & end.
+
+        # Returns
+        The number of tokens (`int`) that are inserted in the start & end of a sequence.
         """
         # Uses a slightly higher index to avoid tokenizer doing special things to lower-indexed
         # tokens which might be special.
