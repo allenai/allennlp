@@ -58,7 +58,7 @@ class PretrainedTransformerMismatchedIndexer(TokenIndexer):
     @overrides
     def tokens_to_indices(self, tokens: List[Token], vocabulary: Vocabulary) -> IndexedTokenList:
         orig_token_mask = [1] * len(tokens)
-        tokens, offsets = self._intra_word_tokenize(tokens)
+        tokens, offsets = self._intra_word_tokenize(tokens)  # type: ignore
         wordpiece_mask = [1] * len(tokens)
 
         # {"token_ids": ..., "mask": ...}

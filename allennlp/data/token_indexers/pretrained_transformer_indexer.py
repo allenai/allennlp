@@ -159,7 +159,7 @@ class PretrainedTransformerIndexer(TokenIndexer):
 
     @overrides
     def get_empty_token_list(self) -> IndexedTokenList:
-        result = {"token_ids": [], "mask": [], "type_ids": []}
+        result: IndexedTokenList = {"token_ids": [], "mask": [], "type_ids": []}
         if self._max_len > 0:
             result["segment_concat_mask"] = []
         return result
