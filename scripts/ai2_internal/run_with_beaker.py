@@ -74,7 +74,15 @@ def main(param_file: str, args: argparse.Namespace):
     if args.preemptible:
         allennlp_prefix = ["/stage/allennlp/resumable_train.sh", "/output", "/config/config.json"]
     else:
-        allennlp_prefix = ["python", "-m", "allennlp.run", "train", "/config/config.json", "-s", "/output"]
+        allennlp_prefix = [
+            "python",
+            "-m",
+            "allennlp.run",
+            "train",
+            "/config/config.json",
+            "-s",
+            "/output",
+        ]
 
     # All other arguments
     allennlp_suffix = ["--file-friendly-logging"]
