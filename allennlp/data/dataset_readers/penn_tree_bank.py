@@ -47,7 +47,7 @@ class PennTreeBankConstituencySpanDatasetReader(DatasetReader):
     # Parameters
 
     token_indexers : `Dict[str, TokenIndexer]`, optional (default=`{"tokens": SingleIdTokenIndexer()}`)
-        We use this to define the input representation for the text.  See :class:`TokenIndexer`.
+        We use this to define the input representation for the text.  See `TokenIndexer`.
         Note that the `output` tags will always correspond to single token IDs based on how they
         are pre-tokenised in the data file.
     use_pos_tags : `bool`, optional, (default = `True`)

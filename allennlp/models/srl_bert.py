@@ -169,7 +169,7 @@ class SrlBert(Model):
     @overrides
     def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         """
-        Does constrained viterbi decoding on class probabilities output in :func:`forward`.  The
+        Does constrained viterbi decoding on class probabilities output in `forward`.  The
         constraint simply specifies that the output tags must be a valid BIO sequence.  We add a
         `"tags"` key to the dictionary with the result.
 

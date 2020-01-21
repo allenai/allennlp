@@ -1,5 +1,5 @@
 """
-The various :class:`~allennlp.data.iterators.data_iterator.DataIterator` subclasses
+The various `allennlp.data.iterators.data_iterator.DataIterator` subclasses
 can be used to iterate over datasets with different batching and padding schemes.
 """
 

@@ -9,9 +9,9 @@ from allennlp.predictors.predictor import Predictor
 class Seq2SeqPredictor(Predictor):
     """
     Predictor for sequence to sequence models, including
-    :class:`~allennlp.models.encoder_decoder.composed_seq2seq` and
-    :class:`~allennlp.models.encoder_decoder.simple_seq2seq` and
-    :class:`~allennlp.models.encoder_decoder.copynet_seq2seq`.
+    `allennlp.models.encoder_decoder.composed_seq2seq` and
+    `allennlp.models.encoder_decoder.simple_seq2seq` and
+    `allennlp.models.encoder_decoder.copynet_seq2seq`.
     """
 
     def predict(self, source: str) -> JsonDict:

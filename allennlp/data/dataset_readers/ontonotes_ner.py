@@ -42,7 +42,7 @@ class OntonotesNamedEntityRecognition(DatasetReader):
     # Parameters
 
     token_indexers : `Dict[str, TokenIndexer]`, optional
-        We similarly use this for both the premise and the hypothesis.  See :class:`TokenIndexer`.
+        We similarly use this for both the premise and the hypothesis.  See `TokenIndexer`.
         Default is `{"tokens": SingleIdTokenIndexer()}`.
     domain_identifier : `str`, (default = None)
         A string denoting a sub-domain of the Ontonotes 5.0 dataset to use. If present, only

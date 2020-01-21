@@ -21,7 +21,7 @@ from allennlp.common.file_utils import cached_path
 class ElmoLstm(_EncoderBase):
     """
     A stacked, bidirectional LSTM which uses
-    :class:`~allennlp.modules.lstm_cell_with_projection.LstmCellWithProjection`'s
+    `allennlp.modules.lstm_cell_with_projection.LstmCellWithProjection`'s
     with highway layers between the inputs to layers.
     The inputs to the forward and backward directions are independent - forward and backward
     states are not concatenated between layers.
@@ -41,7 +41,7 @@ class ElmoLstm(_EncoderBase):
         The dimension of the outputs of the LSTM.
     cell_size : `int`, required.
         The dimension of the memory cell of the
-        :class:`~allennlp.modules.lstm_cell_with_projection.LstmCellWithProjection`.
+        `allennlp.modules.lstm_cell_with_projection.LstmCellWithProjection`.
     num_layers : `int`, required
         The number of bidirectional LSTMs to use.
     requires_grad : `bool`, optional
@@ -69,7 +69,7 @@ class ElmoLstm(_EncoderBase):
     ) -> None:
         super().__init__(stateful=True)
 
-        # Required to be wrapped with a :class:`PytorchSeq2SeqWrapper`.
+        # Required to be wrapped with a `PytorchSeq2SeqWrapper`.
         self.input_size = input_size
         self.hidden_size = hidden_size
         self.num_layers = num_layers

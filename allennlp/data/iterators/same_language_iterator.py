@@ -28,7 +28,7 @@ class SameLanguageIterator(BucketIterator):
     The language of each instance is determined by looking at the 'lang' value
     in the metadata.
 
-    It takes the same parameters as :class:`allennlp.data.iterators.BucketIterator`
+    It takes the same parameters as `allennlp.data.iterators.BucketIterator`
     """
 
     def _create_batches(self, instances: Iterable[Instance], shuffle: bool) -> Iterable[Batch]:

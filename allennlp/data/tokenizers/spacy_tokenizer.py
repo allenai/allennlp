@@ -28,13 +28,13 @@ class SpacyTokenizer(Tokenizer):
         Spacy model name.
     pos_tags : `bool`, optional, (default=False)
         If `True`, performs POS tagging with spacy model on the tokens.
-        Generally used in conjunction with :class:`~allennlp.data.token_indexers.pos_tag_indexer.PosTagIndexer`.
+        Generally used in conjunction with `allennlp.data.token_indexers.pos_tag_indexer.PosTagIndexer`.
     parse : `bool`, optional, (default=False)
         If `True`, performs dependency parsing with spacy model on the tokens.
-        Generally used in conjunction with :class:`~allennlp.data.token_indexers.pos_tag_indexer.DepLabelIndexer`.
+        Generally used in conjunction with `allennlp.data.token_indexers.pos_tag_indexer.DepLabelIndexer`.
     ner : `bool`, optional, (default=False)
         If `True`, performs dependency parsing with spacy model on the tokens.
-        Generally used in conjunction with :class:`~allennlp.data.token_indexers.ner_tag_indexer.NerTagIndexer`.
+        Generally used in conjunction with `allennlp.data.token_indexers.ner_tag_indexer.NerTagIndexer`.
     keep_spacy_tokens : `bool`, optional, (default=False)
         If `True`, will preserve spacy token objects, We copy spacy tokens into our own class by default instead
         because spacy Cython Tokens can't be pickled.

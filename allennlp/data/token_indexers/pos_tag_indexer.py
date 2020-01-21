@@ -13,18 +13,18 @@ logger = logging.getLogger(__name__)
 @TokenIndexer.register("pos_tag")
 class PosTagIndexer(TokenIndexer):
     """
-    This :class:`TokenIndexer` represents tokens by their part of speech tag, as determined by
+    This `TokenIndexer` represents tokens by their part of speech tag, as determined by
     the `pos_` or `tag_` fields on `Token` (corresponding to spacy's coarse-grained and
     fine-grained POS tags, respectively).
 
     # Parameters
 
     namespace : `str`, optional (default=`pos_tokens`)
-        We will use this namespace in the :class:`Vocabulary` to map strings to indices.
+        We will use this namespace in the `Vocabulary` to map strings to indices.
     coarse_tags : `bool`, optional (default=`False`)
         If `True`, we will use coarse POS tags instead of the default fine-grained POS tags.
     token_min_padding_length : `int`, optional (default=`0`)
-        See :class:`TokenIndexer`.
+        See `TokenIndexer`.
     """
 
     def __init__(

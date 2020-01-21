@@ -16,7 +16,7 @@ from allennlp.predictors.predictor import Predictor
 @Predictor.register("coreference-resolution")
 class CorefPredictor(Predictor):
     """
-    Predictor for the :class:`~allennlp.models.coreference_resolution.CoreferenceResolver` model.
+    Predictor for the `allennlp.models.coreference_resolution.CoreferenceResolver` model.
     """
 
     def __init__(

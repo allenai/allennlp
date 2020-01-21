@@ -258,11 +258,11 @@ def search_learning_rate(
     stopping_factor: float = None,
 ) -> Tuple[List[float], List[float]]:
     """
-    Runs training loop on the model using :class:`~allennlp.training.trainer.Trainer`
+    Runs training loop on the model using `allennlp.training.trainer.Trainer`
     increasing learning rate from ``start_lr`` to ``end_lr`` recording the losses.
     # Parameters
 
-    trainer: :class:`~allennlp.training.trainer.Trainer`
+    trainer: `allennlp.training.trainer.Trainer`
     start_lr : ``float``
         The learning rate to start the search.
     end_lr : ``float``

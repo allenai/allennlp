@@ -16,7 +16,7 @@ class SentenceSplitter(Registrable):
 
     def split_sentences(self, text: str) -> List[str]:
         """
-        Splits a `text` :class:`str` paragraph into a list of :class:`str`, where each is a sentence.
+        Splits a `text` `str` paragraph into a list of `str`, where each is a sentence.
         """
         raise NotImplementedError
 

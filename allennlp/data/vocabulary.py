@@ -33,7 +33,7 @@ class _NamespaceDependentDefaultDict(defaultdict):
     (https://docs.python.org/2/library/collections.html#collections.defaultdict) where the
     default value is dependent on the key that is passed.
 
-    We use "namespaces" in the :class:`Vocabulary` object to keep track of several different
+    We use "namespaces" in the `Vocabulary` object to keep track of several different
     mappings from strings to integers, so that we have a consistent API for mapping words, tags,
     labels, characters, or whatever else you want, into integers.  The issue is that some of those
     namespaces (words and characters) should have integers reserved for padding and
@@ -51,7 +51,7 @@ class _NamespaceDependentDefaultDict(defaultdict):
 
     non_padded_namespaces : `Iterable[str]`
         A set / list / tuple of strings describing which namespaces are not padded.  If a namespace
-        (key) is missing from this dictionary, we will use :func:`namespace_match` to see whether
+        (key) is missing from this dictionary, we will use `namespace_match` to see whether
         the namespace should be padded.  If the given namespace matches any of the strings in this
         list, we will use `non_padded_function` to initialize the value for that namespace, and
         we will use `padded_function` otherwise.
@@ -129,7 +129,7 @@ class Vocabulary(Registrable):
 
     Vocabularies also allow for several different namespaces, so you can have separate indices for
     'a' as a word, and 'a' as a character, for instance, and so we can use this object to also map
-    tag and label strings to indices, for a unified :class:`~.fields.field.Field` API.  Most of the
+    tag and label strings to indices, for a unified `.fields.field.Field` API.  Most of the
     methods on this class allow you to pass in a namespace; by default we use the 'tokens'
     namespace, and you can omit the namespace argument everywhere and just use the default.
 
@@ -252,7 +252,7 @@ class Vocabulary(Registrable):
         """
         Constructs a vocabulary given a collection of `Instances` and some parameters.
         We count all of the vocabulary items in the instances, then pass those counts
-        and the other parameters, to :func:`__init__`.  See that method for a description
+        and the other parameters, to `__init__`.  See that method for a description
         of what the other parameters do.
         """
         logger.info("Fitting token dictionary from dataset.")

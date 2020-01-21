@@ -52,11 +52,11 @@ class BucketIterator(DataIterator):
     batch_size : int, optional, (default = 32)
         The size of each batch of instances yielded when calling the iterator.
     instances_per_epoch : int, optional, (default = None)
-        See :class:`BasicIterator`.
+        See `BasicIterator`.
     max_instances_in_memory : int, optional, (default = None)
-        See :class:`BasicIterator`.
+        See `BasicIterator`.
     maximum_samples_per_batch : `Tuple[str, int]`, (default = None)
-        See :class:`BasicIterator`.
+        See `BasicIterator`.
     skip_smaller_batches : bool, optional, (default = False)
         When the number of data samples is not dividable by `batch_size`,
         some batches might be smaller than `batch_size`.

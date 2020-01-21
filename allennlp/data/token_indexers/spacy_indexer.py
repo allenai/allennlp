@@ -14,7 +14,7 @@ from allennlp.data.token_indexers.token_indexer import TokenIndexer, IndexedToke
 @TokenIndexer.register("spacy")
 class SpacyTokenIndexer(TokenIndexer):
     """
-    This :class:`SpacyTokenIndexer` represents tokens as word vectors
+    This `SpacyTokenIndexer` represents tokens as word vectors
     from a spacy model. You might want to do this for two main reasons;
     easier integration with a spacy pipeline and no out of vocabulary
     tokens.
@@ -25,7 +25,7 @@ class SpacyTokenIndexer(TokenIndexer):
         The dimension of the vectors that spacy generates for
         representing words.
     token_min_padding_length : `int`, optional (default=`0`)
-        See :class:`TokenIndexer`.
+        See `TokenIndexer`.
     """
 
     def __init__(self, hidden_dim: int = 96, token_min_padding_length: int = 0) -> None:

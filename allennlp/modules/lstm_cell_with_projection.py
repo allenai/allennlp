@@ -65,7 +65,7 @@ class LstmCellWithProjection(torch.nn.Module):
         state_projection_clip_value: Optional[float] = None,
     ) -> None:
         super().__init__()
-        # Required to be wrapped with a :class:`PytorchSeq2SeqWrapper`.
+        # Required to be wrapped with a `PytorchSeq2SeqWrapper`.
         self.input_size = input_size
         self.hidden_size = hidden_size
         self.cell_size = cell_size

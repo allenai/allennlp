@@ -16,7 +16,7 @@ class SimilarityFunction(torch.nn.Module, Registrable):
 
     If you want to compute a similarity between tensors of different sizes, you need to first tile
     them in the appropriate dimensions to make them the same before you can use these functions.
-    The :class:`~allennlp.modules.Attention` and :class:`~allennlp.modules.MatrixAttention` modules
+    The `allennlp.modules.Attention` and `allennlp.modules.MatrixAttention` modules
     do this.
     """
 

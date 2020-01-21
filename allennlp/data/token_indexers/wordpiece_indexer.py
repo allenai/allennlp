@@ -59,7 +59,7 @@ class WordpieceIndexer(TokenIndexer):
         length. Otherwise, they will be split apart and batched using a
         sliding window.
     token_min_padding_length : `int`, optional (default=`0`)
-        See :class:`TokenIndexer`.
+        See `TokenIndexer`.
     """
 
     def __init__(

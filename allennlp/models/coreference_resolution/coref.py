@@ -329,7 +329,7 @@ class CoreferenceResolver(Model):
         # Parameters
 
         output_dict : `Dict[str, torch.Tensor]`, required.
-            The result of calling :func:`forward` on an instance or batch of instances.
+            The result of calling `forward` on an instance or batch of instances.
 
         # Returns
 

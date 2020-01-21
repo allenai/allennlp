@@ -23,7 +23,7 @@ class MaskedLanguageModelingReader(DatasetReader):
     Reads a text file and converts it into a `Dataset` suitable for training a masked language
     model.
 
-    The :class:`Field` s that we create are the following: an input `TextField`, a mask position
+    The `Field` s that we create are the following: an input `TextField`, a mask position
     `ListField[IndexField]`, and a target token `TextField` (the target tokens aren't a single
     string of text, but we use a `TextField` so we can index the target tokens the same way as
     our input, typically with a single `PretrainedTransformerIndexer`).  The mask position and
@@ -38,10 +38,10 @@ class MaskedLanguageModelingReader(DatasetReader):
     # Parameters
 
     tokenizer : `Tokenizer`, optional (default=`WhitespaceTokenizer()`)
-        We use this `Tokenizer` for the text.  See :class:`Tokenizer`.
+        We use this `Tokenizer` for the text.  See `Tokenizer`.
     token_indexers : `Dict[str, TokenIndexer]`, optional (default=`{"tokens": SingleIdTokenIndexer()}`)
         We use this to define the input representation for the text, and to get ids for the mask
-        targets.  See :class:`TokenIndexer`.
+        targets.  See `TokenIndexer`.
     """
 
     def __init__(

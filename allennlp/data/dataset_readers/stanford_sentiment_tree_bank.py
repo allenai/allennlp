@@ -40,7 +40,7 @@ class StanfordSentimentTreeBankDatasetReader(DatasetReader):
     # Parameters
 
     token_indexers : `Dict[str, TokenIndexer]`, optional (default=`{"tokens": SingleIdTokenIndexer()}`)
-        We use this to define the input representation for the text.  See :class:`TokenIndexer`.
+        We use this to define the input representation for the text.  See `TokenIndexer`.
     use_subtrees : `bool`, optional, (default = `False`)
         Whether or not to use sentiment-tagged subtrees.
     granularity : `str`, optional (default = `"5-class"`)

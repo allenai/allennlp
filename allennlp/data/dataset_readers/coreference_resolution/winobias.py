@@ -52,7 +52,7 @@ class WinobiasReader(DatasetReader):
     max_span_width : `int`, required.
         The maximum width of candidate spans to consider.
     token_indexers : `Dict[str, TokenIndexer]`, optional
-        This is used to index the words in the sentence.  See :class:`TokenIndexer`.
+        This is used to index the words in the sentence.  See `TokenIndexer`.
         Default is `{"tokens": SingleIdTokenIndexer()}`.
     """
 

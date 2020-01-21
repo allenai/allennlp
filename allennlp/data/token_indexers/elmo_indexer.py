@@ -107,7 +107,7 @@ class ELMoTokenCharactersIndexer(TokenIndexer):
         ids. When using pre-trained models, then the character id must be
         less then 261, and we recommend using un-used ids (e.g. 1-32).
     token_min_padding_length : `int`, optional (default=`0`)
-        See :class:`TokenIndexer`.
+        See `TokenIndexer`.
     """
 
     def __init__(

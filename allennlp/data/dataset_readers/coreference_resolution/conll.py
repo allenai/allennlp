@@ -60,7 +60,7 @@ def canonicalize_clusters(
 class ConllCorefReader(DatasetReader):
     """
     Reads a single CoNLL-formatted file. This is the same file format as used in the
-    :class:`~allennlp.data.dataset_readers.semantic_role_labelling.SrlReader`, but is preprocessed
+    `allennlp.data.dataset_readers.semantic_role_labelling.SrlReader`, but is preprocessed
     to dump all documents into a single file per train, dev and test split. See
     scripts/compile_coref_data.sh for more details of how to pre-process the Ontonotes 5.0 data
     into the correct format.
@@ -77,7 +77,7 @@ class ConllCorefReader(DatasetReader):
     max_span_width : `int`, required.
         The maximum width of candidate spans to consider.
     token_indexers : `Dict[str, TokenIndexer]`, optional
-        This is used to index the words in the document.  See :class:`TokenIndexer`.
+        This is used to index the words in the document.  See `TokenIndexer`.
         Default is `{"tokens": SingleIdTokenIndexer()}`.
     """
 

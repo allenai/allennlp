@@ -10,16 +10,16 @@ from allennlp.data.fields.sequence_field import SequenceField
 class SpanField(Field[torch.Tensor]):
     """
     A `SpanField` is a pair of inclusive, zero-indexed (start, end) indices into a
-    :class:`~allennlp.data.fields.sequence_field.SequenceField`, used to represent a span of text.
-    Because it's a pair of indices into a :class:`SequenceField`, we take one of those as input
+    `allennlp.data.fields.sequence_field.SequenceField`, used to represent a span of text.
+    Because it's a pair of indices into a `SequenceField`, we take one of those as input
     to make the span's dependence explicit and to validate that the span is well defined.
 
     # Parameters
 
     span_start : `int`, required.
-        The index of the start of the span in the :class:`SequenceField`.
+        The index of the start of the span in the `SequenceField`.
     span_end : `int`, required.
-        The inclusive index of the end of the span in the :class:`SequenceField`.
+        The inclusive index of the end of the span in the `SequenceField`.
     sequence_field : `SequenceField`, required.
         A field containing the sequence that this `SpanField` is a span inside.
     """

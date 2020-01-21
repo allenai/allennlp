@@ -716,7 +716,7 @@ def sequence_cross_entropy_with_logits(
     """
     Computes the cross entropy loss of a sequence, weighted with respect to
     some user provided weights. Note that the weighting here is not the same as
-    in the :func:`torch.nn.CrossEntropyLoss()` criterion, which is weighting
+    in the `torch.nn.CrossEntropyLoss()` criterion, which is weighting
     classes; here we are weighting the loss contribution from particular elements
     in the sequence. This allows loss computations for models which use padding.
 
@@ -1001,7 +1001,7 @@ def combine_tensors_and_multiply(
     combination: str, tensors: List[torch.Tensor], weights: torch.nn.Parameter
 ) -> torch.Tensor:
     """
-    Like :func:`combine_tensors`, but does a weighted (linear) multiplication while combining.
+    Like `combine_tensors`, but does a weighted (linear) multiplication while combining.
     This is a separate function from `combine_tensors` because we try to avoid instantiating
     large intermediate tensors during the combination, which is possible because we know that we're
     going to be multiplying by a weight vector in the end.
@@ -1009,7 +1009,7 @@ def combine_tensors_and_multiply(
     # Parameters
 
     combination : `str`
-        Same as in :func:`combine_tensors`
+        Same as in `combine_tensors`
     tensors : `List[torch.Tensor]`
         A list of tensors to combine, where the integers in the `combination` are (1-indexed)
         positions in this list of tensors.  These tensors are all expected to have either three or
@@ -1017,7 +1017,7 @@ def combine_tensors_and_multiply(
         dimensions, one of them must have length 1.
     weights : `torch.nn.Parameter`
         A vector of weights to use for the combinations.  This should have shape (combined_dim,),
-        as calculated by :func:`get_combined_dim`.
+        as calculated by `get_combined_dim`.
     """
     if len(tensors) > 9:
         raise ConfigurationError("Double-digit tensor lists not currently supported")
@@ -1089,7 +1089,7 @@ def _get_combination_and_multiply(
 
 def get_combined_dim(combination: str, tensor_dims: List[int]) -> int:
     """
-    For use with :func:`combine_tensors`.  This function computes the resultant dimension when
+    For use with `combine_tensors`.  This function computes the resultant dimension when
     calling `combine_tensors(combination, tensors)`, when the tensor dimension is known.  This is
     necessary for knowing the sizes of weight matrices when building models that use
     `combine_tensors`.
@@ -1098,10 +1098,10 @@ def get_combined_dim(combination: str, tensor_dims: List[int]) -> int:
 
     combination : `str`
         A comma-separated list of combination pieces, like `"1,2,1*2"`, specified identically to
-        `combination` in :func:`combine_tensors`.
+        `combination` in `combine_tensors`.
     tensor_dims : `List[int]`
         A list of tensor dimensions, where each dimension is from the `last axis` of the tensors
-        that will be input to :func:`combine_tensors`.
+        that will be input to `combine_tensors`.
     """
     if len(tensor_dims) > 9:
         raise ConfigurationError("Double-digit tensor lists not currently supported")
@@ -1159,7 +1159,7 @@ def get_device_of(tensor: torch.Tensor) -> int:
 
 def flatten_and_batch_shift_indices(indices: torch.Tensor, sequence_length: int) -> torch.Tensor:
     """
-    This is a subroutine for :func:`~batched_index_select`. The given `indices` of size
+    This is a subroutine for `batched_index_select`. The given `indices` of size
     `(batch_size, d_1, ..., d_n)` indexes into dimension 2 of a target tensor, which has size
     `(batch_size, sequence_length, embedding_size)`. This function returns a vector that
     correctly indexes into the flattened target. The sequence length of the target must be
@@ -1216,11 +1216,11 @@ def batched_index_select(
 
     This function returns selected values in the target with respect to the provided indices, which
     have size `(batch_size, d_1, ..., d_n, embedding_size)`. This can use the optionally
-    precomputed :func:`~flattened_indices` with size `(batch_size * d_1 * ... * d_n)` if given.
+    precomputed `flattened_indices` with size `(batch_size * d_1 * ... * d_n)` if given.
 
     An example use case of this function is looking up the start and end indices of spans in a
     sequence tensor. This is used in the
-    :class:`~allennlp.models.coreference_resolution.CoreferenceResolver`. Model to select
+    `allennlp.models.coreference_resolution.CoreferenceResolver`. Model to select
     contextual word representations corresponding to the start and end indices of mentions. The key
     reason this can't be done with basic torch functions is that we want to be able to use look-up
     tensors with an arbitrary number of dimensions (for example, in the coref model, we don't know

@@ -28,10 +28,10 @@ TextFieldTensors = Dict[str, Dict[str, torch.Tensor]]
 class TextField(SequenceField[TextFieldTensors]):
     """
     This `Field` represents a list of string tokens.  Before constructing this object, you need
-    to tokenize raw strings using a :class:`~allennlp.data.tokenizers.tokenizer.Tokenizer`.
+    to tokenize raw strings using a `allennlp.data.tokenizers.tokenizer.Tokenizer`.
 
     Because string tokens can be represented as indexed arrays in a number of ways, we also take a
-    dictionary of :class:`~allennlp.data.token_indexers.token_indexer.TokenIndexer`
+    dictionary of `allennlp.data.token_indexers.token_indexer.TokenIndexer`
     objects that will be used to convert the tokens into indices.
     Each `TokenIndexer` could represent each token as a single ID, or a list of character IDs, or
     something else.

@@ -13,15 +13,15 @@ logger = logging.getLogger(__name__)
 @TokenIndexer.register("ner_tag")
 class NerTagIndexer(TokenIndexer):
     """
-    This :class:`TokenIndexer` represents tokens by their entity type (i.e., their NER tag), as
+    This `TokenIndexer` represents tokens by their entity type (i.e., their NER tag), as
     determined by the `ent_type_` field on `Token`.
 
     # Parameters
 
     namespace : `str`, optional (default=`ner_tokens`)
-        We will use this namespace in the :class:`Vocabulary` to map strings to indices.
+        We will use this namespace in the `Vocabulary` to map strings to indices.
     token_min_padding_length : `int`, optional (default=`0`)
-        See :class:`TokenIndexer`.
+        See `TokenIndexer`.
     """
 
     def __init__(self, namespace: str = "ner_tokens", token_min_padding_length: int = 0) -> None:

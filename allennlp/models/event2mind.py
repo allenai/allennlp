@@ -24,7 +24,7 @@ from allennlp.training.metrics import UnigramRecall
 @Model.register("event2mind")
 class Event2Mind(Model):
     """
-    This `Event2Mind` class is a :class:`Model` which takes an event
+    This `Event2Mind` class is a `Model` which takes an event
     sequence, encodes it, and then uses the encoded representation to decode
     several mental state sequences.
 

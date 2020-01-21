@@ -40,8 +40,8 @@ class Embedding(TokenEmbedder, Registrable):
         5. build all of this easily `from_params`
 
     Note that if you are using our data API and are trying to embed a
-    :class:`~allennlp.data.fields.TextField`, you should use a
-    :class:`~allennlp.modules.TextFieldEmbedder` instead of using this directly.
+    `allennlp.data.fields.TextField`, you should use a
+    `allennlp.modules.TextFieldEmbedder` instead of using this directly.
 
     # Parameters
 

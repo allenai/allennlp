@@ -12,7 +12,7 @@ class Subcommand:
     ``allennlp special-evaluate ...``
 
     you would create a ``Subcommand`` subclass and then pass it as an override to
-    :func:`~allennlp.commands.main` .
+    `allennlp.commands.main` .
     """
 
     def add_subparser(

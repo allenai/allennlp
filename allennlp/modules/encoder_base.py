@@ -16,8 +16,8 @@ class _EncoderBase(torch.nn.Module):
 
     """
     This abstract class serves as a base for the 3 `Encoder` abstractions in AllenNLP.
-    - :class:`~allennlp.modules.seq2seq_encoders.Seq2SeqEncoders`
-    - :class:`~allennlp.modules.seq2vec_encoders.Seq2VecEncoders`
+    - `allennlp.modules.seq2seq_encoders.Seq2SeqEncoders`
+    - `allennlp.modules.seq2vec_encoders.Seq2VecEncoders`
 
     Additionally, this class provides functionality for sorting sequences by length
     so they can be consumed by Pytorch RNN classes, which require their inputs to be

@@ -26,9 +26,9 @@ class SnliReader(DatasetReader):
     # Parameters
 
     tokenizer : `Tokenizer`, optional (default=`SpacyTokenizer()`)
-        We use this `Tokenizer` for both the premise and the hypothesis.  See :class:`Tokenizer`.
+        We use this `Tokenizer` for both the premise and the hypothesis.  See `Tokenizer`.
     token_indexers : `Dict[str, TokenIndexer]`, optional (default=`{"tokens": SingleIdTokenIndexer()}`)
-        We similarly use this for both the premise and the hypothesis.  See :class:`TokenIndexer`.
+        We similarly use this for both the premise and the hypothesis.  See `TokenIndexer`.
     """
 
     def __init__(

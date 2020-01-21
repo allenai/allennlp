@@ -16,7 +16,7 @@ class BasicIterator(DataIterator):
     """
     A very basic iterator that takes a dataset, possibly shuffles it, and creates fixed sized batches.
 
-    It takes the same parameters as :class:`allennlp.data.iterators.DataIterator`
+    It takes the same parameters as `allennlp.data.iterators.DataIterator`
     """
 
     def _create_batches(self, instances: Iterable[Instance], shuffle: bool) -> Iterable[Batch]:

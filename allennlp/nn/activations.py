@@ -1,5 +1,5 @@
 """
-An :class:`Activation` is just a function
+An `Activation` is just a function
 that takes some parameters and returns an element-wise activation function.
 For the most part we just use
 `PyTorch activations <https://pytorch.org/docs/master/nn.html#non-linear-activations>`_.

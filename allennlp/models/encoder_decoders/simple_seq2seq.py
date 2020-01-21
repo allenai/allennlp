@@ -23,7 +23,7 @@ from allennlp.training.metrics import BLEU
 @Model.register("simple_seq2seq")
 class SimpleSeq2Seq(Model):
     """
-    This `SimpleSeq2Seq` class is a :class:`Model` which takes a sequence, encodes it, and then
+    This `SimpleSeq2Seq` class is a `Model` which takes a sequence, encodes it, and then
     uses the encoded representations to decode another sequence.  You can use this as the basis for
     a neural machine translation system, an abstractive summarization system, or any other common
     seq2seq problem.  The model here is simple, but should be a decent starting place for

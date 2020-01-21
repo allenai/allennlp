@@ -175,7 +175,7 @@ def fine_tune_model_from_file_paths(
     embedding_sources_mapping: Dict[str, str] = None,
 ) -> Model:
     """
-    A wrapper around :func:`fine_tune_model` which loads the model archive from a file.
+    A wrapper around `fine_tune_model` which loads the model archive from a file.
 
     # Parameters
 
@@ -187,14 +187,14 @@ def fine_tune_model_from_file_paths(
         ignored (as we are using the provided model archive instead).
     serialization_dir : ``str``
         The directory in which to save results and logs. We just pass this along to
-        :func:`fine_tune_model`.
+        `fine_tune_model`.
     overrides : ``str``
         A JSON string that we will use to override values in the input parameter file.
     extend_vocab : ``bool``, optional (default=False)
         If ``True``, we use the new instances to extend your vocabulary.
     file_friendly_logging : ``bool``, optional (default=False)
         If ``True``, we make our output more friendly to saved model files.  We just pass this
-        along to :func:`fine_tune_model`.
+        along to `fine_tune_model`.
     recover : ``bool``, optional (default=False)
         If ``True``, we will try to recover a training run from an existing serialization
         directory.  This is only intended for use when something actually crashed during the middle

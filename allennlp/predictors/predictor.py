@@ -65,13 +65,13 @@ class Predictor(Registrable):
 
     def json_to_labeled_instances(self, inputs: JsonDict) -> List[Instance]:
         """
-        Converts incoming json to a :class:`~allennlp.data.instance.Instance`,
+        Converts incoming json to a `allennlp.data.instance.Instance`,
         runs the model on the newly created instance, and adds labels to the
-        :class:`~allennlp.data.instance.Instance`s given by the model's output.
+        `allennlp.data.instance.Instance`s given by the model's output.
         # Returns
 
         List[instance]
-        A list of :class:`~allennlp.data.instance.Instance`
+        A list of `allennlp.data.instance.Instance`
         """
 
         instance = self._json_to_instance(inputs)
@@ -97,9 +97,9 @@ class Predictor(Registrable):
         Notes
         -----
         Takes a `JsonDict` representing the inputs of the model and converts
-        them to :class:`~allennlp.data.instance.Instance`s, sends these through
-        the model :func:`forward` function after registering hooks on the embedding
-        layer of the model. Calls :func:`backward` on the loss and then removes the
+        them to `allennlp.data.instance.Instance`s, sends these through
+        the model `forward` function after registering hooks on the embedding
+        layer of the model. Calls `backward` on the loss and then removes the
         hooks.
         """
         embedding_gradients: List[Tensor] = []
@@ -131,7 +131,7 @@ class Predictor(Registrable):
     def _register_embedding_gradient_hooks(self, embedding_gradients):
         """
         Registers a backward hook on the
-        :class:`~allennlp.modules.text_field_embedder.basic_text_field_embbedder.BasicTextFieldEmbedder`
+        `allennlp.modules.text_field_embedder.basic_text_field_embbedder.BasicTextFieldEmbedder`
         class. Used to save the gradients of the embeddings for use in get_gradients()
 
         When there are multiple inputs (e.g., a passage and question), the hook
@@ -203,7 +203,7 @@ class Predictor(Registrable):
 
     def _json_to_instance(self, json_dict: JsonDict) -> Instance:
         """
-        Converts a JSON object into an :class:`~allennlp.data.instance.Instance`
+        Converts a JSON object into an `allennlp.data.instance.Instance`
         and a `JsonDict` of information which the `Predictor` should pass through,
         such as tokenised inputs.
         """
@@ -219,10 +219,10 @@ class Predictor(Registrable):
 
     def _batch_json_to_instances(self, json_dicts: List[JsonDict]) -> List[Instance]:
         """
-        Converts a list of JSON objects into a list of :class:`~allennlp.data.instance.Instance`s.
+        Converts a list of JSON objects into a list of `allennlp.data.instance.Instance`s.
         By default, this expects that a "batch" consists of a list of JSON blobs which would
-        individually be predicted by :func:`predict_json`. In order to use this method for
-        batch prediction, :func:`_json_to_instance` should be implemented by the subclass, or
+        individually be predicted by `predict_json`. In order to use this method for
+        batch prediction, `_json_to_instance` should be implemented by the subclass, or
         if the instances have some dependency on each other, this method should be overridden
         directly.
         """
@@ -240,7 +240,7 @@ class Predictor(Registrable):
         dataset_reader_to_load: str = "validation",
     ) -> "Predictor":
         """
-        Instantiate a :class:`Predictor` from an archive path.
+        Instantiate a `Predictor` from an archive path.
 
         If you need more detailed configuration options, such as overrides,
         please use `from_archive`.
@@ -277,11 +277,11 @@ class Predictor(Registrable):
         dataset_reader_to_load: str = "validation",
     ) -> "Predictor":
         """
-        Instantiate a :class:`Predictor` from an :class:`~allennlp.models.archival.Archive`;
+        Instantiate a `Predictor` from an `allennlp.models.archival.Archive`;
         that is, from the result of training a model. Optionally specify which `Predictor`
         subclass; otherwise, we try to find a corresponding predictor in `DEFAULT_PREDICTORS`, or if
-        one is not found, the base class (i.e. :class:`Predictor`) will be used. Optionally specify
-        which :class:`DatasetReader` should be loaded; otherwise, the validation one will be used
+        one is not found, the base class (i.e. `Predictor`) will be used. Optionally specify
+        which `DatasetReader` should be loaded; otherwise, the validation one will be used
         if it exists followed by the training dataset reader.
         """
         # Duplicate the config so that the config inside the archive doesn't get consumed

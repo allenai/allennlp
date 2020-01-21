@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 class NextTokenLmReader(DatasetReader):
     """
     Creates `Instances` suitable for use in predicting a single next token using a language
-    model.  The :class:`Field` s that we create are the following: an input `TextField` and a
+    model.  The `Field` s that we create are the following: an input `TextField` and a
     target token `TextField` (we only ver have a single token, but we use a `TextField` so we
     can index it the same way as our input, typically with a single
     `PretrainedTransformerIndexer`).
@@ -34,10 +34,10 @@ class NextTokenLmReader(DatasetReader):
     # Parameters
 
     tokenizer : `Tokenizer`, optional (default=`WhitespaceTokenizer()`)
-        We use this `Tokenizer` for the text.  See :class:`Tokenizer`.
+        We use this `Tokenizer` for the text.  See `Tokenizer`.
     token_indexers : `Dict[str, TokenIndexer]`, optional (default=`{"tokens": SingleIdTokenIndexer()}`)
         We use this to define the input representation for the text, and to get ids for the mask
-        targets.  See :class:`TokenIndexer`.
+        targets.  See `TokenIndexer`.
     """
 
     def __init__(

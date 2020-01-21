@@ -11,12 +11,12 @@ from allennlp.data.token_indexers.token_indexer import TokenIndexer, IndexedToke
 @TokenIndexer.register("single_id")
 class SingleIdTokenIndexer(TokenIndexer):
     """
-    This :class:`TokenIndexer` represents tokens as single integers.
+    This `TokenIndexer` represents tokens as single integers.
 
     # Parameters
 
     namespace : `str`, optional (default=`tokens`)
-        We will use this namespace in the :class:`Vocabulary` to map strings to indices.
+        We will use this namespace in the `Vocabulary` to map strings to indices.
     lowercase_tokens : `bool`, optional (default=`False`)
         If `True`, we will call `token.lower()` before getting an index for the token from the
         vocabulary.
@@ -25,7 +25,7 @@ class SingleIdTokenIndexer(TokenIndexer):
     end_tokens : `List[str]`, optional (default=`None`)
         These are appended to the tokens provided to `tokens_to_indices`.
     token_min_padding_length : `int`, optional (default=`0`)
-        See :class:`TokenIndexer`.
+        See `TokenIndexer`.
     """
 
     def __init__(

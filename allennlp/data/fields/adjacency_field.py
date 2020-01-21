@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 class AdjacencyField(Field[torch.Tensor]):
     """
     A `AdjacencyField` defines directed adjacency relations between elements
-    in a :class:`~allennlp.data.fields.sequence_field.SequenceField`.
+    in a `allennlp.data.fields.sequence_field.SequenceField`.
     Because it's a labeling of some other field, we take that field as input here
     and use it to determine our padding and other things.
 

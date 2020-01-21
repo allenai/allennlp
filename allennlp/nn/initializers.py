@@ -19,9 +19,9 @@ The available initialization functions are
 * `"kaiming_normal" <https://pytorch.org/docs/master/nn.html?highlight=orthogonal#torch.nn.init.kaiming_normal_>`_
 * `"orthogonal" <https://pytorch.org/docs/master/nn.html?highlight=orthogonal#torch.nn.init.orthogonal_>`_
 * `"sparse" <https://pytorch.org/docs/master/nn.html?highlight=orthogonal#torch.nn.init.sparse_>`_
-* :func:`"block_orthogonal" <block_orthogonal>`
-* :func:`"uniform_unit_scaling" <uniform_unit_scaling>`
-* :class:`"pretrained" <PretrainedModelInitializer>`
+* `"block_orthogonal" <block_orthogonal>`
+* `"uniform_unit_scaling" <uniform_unit_scaling>`
+* `"pretrained" <PretrainedModelInitializer>`
 """
 import logging
 import re
@@ -215,7 +215,7 @@ class PretrainedModelInitializer(Initializer):
     weights file and use a regex to match all of the new parameters which need to be
     initialized.
 
-    The below entry in the :class:`InitializerApplicator` parameters will initialize
+    The below entry in the `InitializerApplicator` parameters will initialize
     `linear_1.weight` and `linear_2.weight` using a pretrained model.
     `linear_1.weight` will be initialized to the pretrained
     parameters called `linear_1.weight`, but `linear_2.weight` will be initialized
