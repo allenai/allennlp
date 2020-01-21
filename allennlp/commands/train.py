@@ -295,8 +295,8 @@ def train_model(
         # will load the vocabulary from the path specified.
         make_vocab_from_params(params.duplicate(), serialization_dir)
         params["vocabulary"] = {
-            "directory_path": os.path.join(serialization_dir, "vocabulary"),
-            "extend": False,  # vocab extension would have been done above
+            "type": "from_files",
+            "directory": os.path.join(serialization_dir, "vocabulary"),
         }
 
         mp.spawn(
