@@ -107,7 +107,7 @@ class PretrainedTransformerIndexer(TokenIndexer):
 
     def _extract_token_and_type_ids(self, tokens: List[Token]) -> List[int]:
         """
-        `tokens` should have special tokens already inserted.
+        Essentially returns `[token.text_id for token in tokens]`, with some checks.
         """
         indices: List[int] = []
         type_ids: List[int] = []
@@ -131,6 +131,13 @@ class PretrainedTransformerIndexer(TokenIndexer):
         return indices, type_ids
 
     def _postprocess_output(self, output: IndexedTokenList) -> IndexedTokenList:
+        """
+        Takes an IndexedTokenList about to be returned by `tokens_to_indices()` and adds any
+        necessary postprocessing, e.g. long sequence splitting.
+
+        The input should have a `"token_ids"` key corresponding to the token indices. They should
+        have special tokens already inserted.
+        """
         if self._max_length is not None:
             # We prepare long indices by converting them to (assuming max_length == 5)
             # [CLS] A B C [SEP] [CLS] D E F [SEP] ...
