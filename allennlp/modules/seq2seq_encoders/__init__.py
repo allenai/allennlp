@@ -6,16 +6,16 @@ others are AllenNLP modules.
 
 The available Seq2Seq encoders are
 
-* `"gru" <https://pytorch.org/docs/master/nn.html#torch.nn.GRU>`_
-* `"lstm" <https://pytorch.org/docs/master/nn.html#torch.nn.LSTM>`_
-* `"rnn" <https://pytorch.org/docs/master/nn.html#torch.nn.RNN>`_
-* :class:`"augmented_lstm" <allennlp.modules.augmented_lstm.AugmentedLstm>`
-* :class:`"alternating_lstm" <allennlp.modules.stacked_alternating_lstm.StackedAlternatingLstm>`
-* :class:`"alternating_highway_lstm" <allennlp.modules.stacked_alternating_lstm.StackedAlternatingLstm> (GPU only)`
-* :class:`"stacked_self_attention" <allennlp.modules.stacked_self_attention.StackedSelfAttentionEncoder>`
-* :class:`"multi_head_self_attention" <allennlp.modules.multi_head_self_attention.MultiHeadSelfAttention>`
-* :class:`"pass_through" <allennlp.modules.pass_through_encoder.PassThroughEncoder>`
-* :class:`"feedforward" <allennlp.modules.feedforward_encoder.FeedforwardEncoder>`
+- `"gru"` : https://pytorch.org/docs/master/nn.html#torch.nn.GRU
+- `"lstm"` : https://pytorch.org/docs/master/nn.html#torch.nn.LSTM
+- `"rnn"` : https://pytorch.org/docs/master/nn.html#torch.nn.RNN
+- `"augmented_lstm"` : allennlp.modules.augmented_lstm.AugmentedLstm
+- `"alternating_lstm"` : allennlp.modules.stacked_alternating_lstm.StackedAlternatingLstm
+- `"alternating_highway_lstm"` : allennlp.modules.stacked_alternating_lstm.StackedAlternatingLstm (GPU only)
+- `"stacked_self_attention"` : allennlp.modules.stacked_self_attention.StackedSelfAttentionEncoder
+- `"multi_head_self_attention"` : allennlp.modules.multi_head_self_attention.MultiHeadSelfAttention
+- `"pass_through"` : allennlp.modules.pass_through_encoder.PassThroughEncoder
+- `"feedforward"` : allennlp.modules.feedforward_encoder.FeedforwardEncoder
 """
 
 from typing import Type
@@ -48,7 +48,7 @@ logger = logging.getLogger(__name__)
 
 class _Seq2SeqWrapper:
     """
-    For :class:`Registrable` we need to have a `Type[Seq2SeqEncoder]` as the value registered for each
+    For `Registrable` we need to have a `Type[Seq2SeqEncoder]` as the value registered for each
     key.  What that means is that we need to be able to `__call__` these values (as is done with
     `__init__` on the class), and be able to call `from_params()` on the value.
 
@@ -57,8 +57,8 @@ class _Seq2SeqWrapper:
     the registry; or (2) we wrap pytorch's RNNs with something that `mimics` the required
     API.  We've gone with the second option here.
 
-    This is a two-step approach: first, we have the :class:`PytorchSeq2SeqWrapper` class that handles
-    the interface between a pytorch RNN and our `Seq2SeqEncoder` API.  Our `PytorchSeq2SeqWrapper`
+    This is a two-step approach: first, we have the [`PytorchSeq2SeqWrapper`](./pytorch_seq2seq_wrapper.md)
+    class that handles the interface between a pytorch RNN and our `Seq2SeqEncoder` API.  Our `PytorchSeq2SeqWrapper`
     takes an instantiated pytorch RNN and just does some interface changes.  Second, we need a way
     to create one of these `PytorchSeq2SeqWrappers`, with an instantiated pytorch RNN, from the
     registry.  That's what this `_Wrapper` does.  The only thing this class does is instantiate

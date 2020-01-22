@@ -13,12 +13,13 @@ from allennlp.nn import util
 @Seq2SeqEncoder.register("intra_sentence_attention")
 class IntraSentenceAttentionEncoder(Seq2SeqEncoder):
     """
-    An `IntraSentenceAttentionEncoder` is a :class:`Seq2SeqEncoder` that merges the original word
-    representations with an attention (for each word) over other words in the sentence.  As a
-    :class:`Seq2SeqEncoder`, the input to this module is of shape `(batch_size, num_tokens,
+    An `IntraSentenceAttentionEncoder` is a [`Seq2SeqEncoder`](./seq2seq_encoder.md) that merges
+    the original word representations with an attention (for each word) over other words in the sentence.
+    As a `Seq2SeqEncoder`, the input to this module is of shape `(batch_size, num_tokens,
     input_dim)`, and the output is of shape `(batch_size, num_tokens, output_dim)`.
 
-    We compute the attention using a configurable :class:`SimilarityFunction`, which could have
+    We compute the attention using a configurable
+    [`SimilarityFunction`](../similarity_functions/similarity_function.md), which could have
     multiple attention heads.  The operation for merging the original representations with the
     attended representations is also configurable (e.g., you can concatenate them, add them,
     multiply them, etc.).
@@ -40,9 +41,10 @@ class IntraSentenceAttentionEncoder(Seq2SeqEncoder):
     combination : `str`, optional
         This string defines how we merge the original word representations with the result of the
         intra-sentence attention.  This will be passed to
-        :func:`~allennlp.nn.util.combine_tensors`; see that function for more detail on exactly how
-        this works, but some simple examples are `"1,2"` for concatenation (the default),
-        `"1+2"` for adding the two, or `"2"` for only keeping the attention representation.
+        [`allennlp.nn.util.combine_tensors`](../../nn/util.md#combine_tensors); see that function
+        for more detail on exactly how this works, but some simple examples are `"1,2"` for
+        concatenation (the default), `"1+2"` for adding the two, or `"2"` for only keeping the
+        attention representation.
     output_dim : `int`, optional (default = None)
         The dimension of an optional output projection.
     """
