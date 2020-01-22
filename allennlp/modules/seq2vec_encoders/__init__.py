@@ -6,13 +6,13 @@ others are AllenNLP modules.
 
 The available Seq2Vec encoders are
 
-* `"gru" <https://pytorch.org/docs/master/nn.html#torch.nn.GRU>`_
-* `"lstm" <https://pytorch.org/docs/master/nn.html#torch.nn.LSTM>`_
-* `"rnn" <https://pytorch.org/docs/master/nn.html#torch.nn.RNN>`_
-* :class:`"cnn" <allennlp.modules.seq2vec_encoders.cnn_encoder.CnnEncoder>`
-* :class:`"augmented_lstm" <allennlp.modules.augmented_lstm.AugmentedLstm>`
-* :class:`"alternating_lstm" <allennlp.modules.stacked_alternating_lstm.StackedAlternatingLstm>`
-* :class:`"stacked_bidirectional_lstm" <allennlp.modules.stacked_bidirectional_lstm.StackedBidirectionalLstm>`
+* `"gru"` https://pytorch.org/docs/master/nn.html#torch.nn.GRU
+* `"lstm"` https://pytorch.org/docs/master/nn.html#torch.nn.LSTM
+* `"rnn"` https://pytorch.org/docs/master/nn.html#torch.nn.RNN
+* `"cnn"` allennlp.modules.seq2vec_encoders.cnn_encoder.CnnEncoder
+* `"augmented_lstm"` allennlp.modules.augmented_lstm.AugmentedLstm
+* `"alternating_lstm"` allennlp.modules.stacked_alternating_lstm.StackedAlternatingLstm
+* `"stacked_bidirectional_lstm"` allennlp.modules.stacked_bidirectional_lstm.StackedBidirectionalLstm
 """
 
 from typing import Type
@@ -34,7 +34,7 @@ from allennlp.modules.stacked_bidirectional_lstm import StackedBidirectionalLstm
 
 class _Seq2VecWrapper:
     """
-    For :class:`Registrable` we need to have a `Type[Seq2VecEncoder]` as the value registered for each
+    For `Registrable` we need to have a `Type[Seq2VecEncoder]` as the value registered for each
     key.  What that means is that we need to be able to `__call__` these values (as is done with
     `__init__` on the class), and be able to call `from_params()` on the value.
 
@@ -43,7 +43,7 @@ class _Seq2VecWrapper:
     the registry; or (2) we wrap pytorch's RNNs with something that `mimics` the required
     API.  We've gone with the second option here.
 
-    This is a two-step approach: first, we have the :class:`PytorchSeq2VecWrapper` class that handles
+    This is a two-step approach: first, we have the `PytorchSeq2VecWrapper` class that handles
     the interface between a pytorch RNN and our `Seq2VecEncoder` API.  Our `PytorchSeq2VecWrapper`
     takes an instantiated pytorch RNN and just does some interface changes.  Second, we need a way
     to create one of these `PytorchSeq2VecWrappers`, with an instantiated pytorch RNN, from the

@@ -1,5 +1,5 @@
 """
-:py:class:`Model` is an abstract class representing
+`Model` is an abstract class representing
 an AllenNLP model.
 """
 
@@ -37,14 +37,14 @@ class Model(torch.nn.Module, Registrable):
     interleave the models with a wrapper module which unpacks the dictionary into
     a list of tensors.
 
-    In order for your model to be trained using the :class:`~allennlp.training.Trainer`
+    In order for your model to be trained using the [`Trainer`](../training/trainer.md)
     api, the output dictionary of your Model must include a "loss" key, which will be
     optimised during the training process.
 
     Finally, you can optionally implement :func:`Model.get_metrics` in order to make use
     of early stopping and best-model serialization based on a validation metric in
-    :class:`~allennlp.training.Trainer`. Metrics that begin with "_" will not be logged
-    to the progress bar by :class:`~allennlp.training.Trainer`.
+    `Trainer`. Metrics that begin with "_" will not be logged
+    to the progress bar by `Trainer`.
     """
 
     _warn_for_unseparable_batches: Set[str] = set()
@@ -106,16 +106,16 @@ class Model(torch.nn.Module, Registrable):
 
         output_dict : `Dict[str, torch.Tensor]`
             The outputs from the model. In order to train a model using the
-            :class:`~allennlp.training.Trainer` api, you must provide a "loss" key pointing to a
+            `Trainer` api, you must provide a "loss" key pointing to a
             scalar `torch.Tensor` representing the loss to be optimized.
         """
         raise NotImplementedError
 
     def forward_on_instance(self, instance: Instance) -> Dict[str, numpy.ndarray]:
         """
-        Takes an :class:`~allennlp.data.instance.Instance`, which typically has raw text in it,
-        converts that text into arrays using this model's :class:`Vocabulary`, passes those arrays
-        through :func:`self.forward()` and :func:`self.decode()` (which by default does nothing)
+        Takes an [`Instance`](../data/instance.md), which typically has raw text in it,
+        converts that text into arrays using this model's [`Vocabulary`](../data/vocabulary.md),
+        passes those arrays through `self.forward()` and `self.decode()` (which by default does nothing)
         and returns the result.  Before returning the result, we convert any
         `torch.Tensors` into numpy arrays and remove the batch dimension.
         """
@@ -123,14 +123,14 @@ class Model(torch.nn.Module, Registrable):
 
     def forward_on_instances(self, instances: List[Instance]) -> List[Dict[str, numpy.ndarray]]:
         """
-        Takes a list of  :class:`~allennlp.data.instance.Instance`s, converts that text into
-        arrays using this model's :class:`Vocabulary`, passes those arrays through
-        :func:`self.forward()` and :func:`self.decode()` (which by default does nothing)
+        Takes a list of `Instances`, converts that text into
+        arrays using this model's `Vocabulary`, passes those arrays through
+        `self.forward()` and `self.decode()` (which by default does nothing)
         and returns the result.  Before returning the result, we convert any
         `torch.Tensors` into numpy arrays and separate the
         batched output into a list of individual dicts per instance. Note that typically
         this will be faster on a GPU (and conditionally, on a CPU) than repeated calls to
-        :func:`forward_on_instance`.
+        `forward_on_instance`.
 
         # Parameters
 
@@ -172,7 +172,7 @@ class Model(torch.nn.Module, Registrable):
 
     def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         """
-        Takes the result of :func:`forward` and runs inference / decoding / whatever
+        Takes the result of `forward` and runs inference / decoding / whatever
         post-processing you need to do your model.  The intent is that `model.forward()` should
         produce potentials or probabilities, and then `model.decode()` can take those results and
         run some kind of beam search or constrained inference or whatever is necessary.  This does
@@ -190,14 +190,13 @@ class Model(torch.nn.Module, Registrable):
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
         """
         Returns a dictionary of metrics. This method will be called by
-        :class:`allennlp.training.Trainer` in order to compute and use model metrics for early
+        `allennlp.training.Trainer` in order to compute and use model metrics for early
         stopping and model serialization.  We return an empty dictionary here rather than raising
         as it is not required to implement metrics for a new model.  A boolean `reset` parameter is
         passed, as frequently a metric accumulator will have some state which should be reset
-        between epochs. This is also compatible with :class:`~allennlp.training.Metric`s. Metrics
-        should be populated during the call to `forward`, with the
-        :class:`~allennlp.training.Metric` handling the accumulation of the metric until this
-        method is called.
+        between epochs. This is also compatible with [`Metric`s](../training/metrics/metric.md). Metrics
+        should be populated during the call to `forward`, with the `Metric` handling the accumulation of
+        the metric until this method is called.
         """
 
         return {}

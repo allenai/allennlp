@@ -68,7 +68,7 @@ class AugmentedLstm(torch.nn.Module):
         use_input_projection_bias: bool = True,
     ) -> None:
         super().__init__()
-        # Required to be wrapped with a :class:`PytorchSeq2SeqWrapper`.
+        # Required to be wrapped with a `PytorchSeq2SeqWrapper`.
         self.input_size = input_size
         self.hidden_size = hidden_size
 

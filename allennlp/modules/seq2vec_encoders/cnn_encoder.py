@@ -12,7 +12,7 @@ from allennlp.nn import Activation
 class CnnEncoder(Seq2VecEncoder):
     """
     A `CnnEncoder` is a combination of multiple convolution layers and max pooling layers.  As a
-    :class:`Seq2VecEncoder`, the input to this module is of shape `(batch_size, num_tokens,
+    [`Seq2VecEncoder`](./seq2vec_encoder.md), the input to this module is of shape `(batch_size, num_tokens,
     input_dim)`, and the output is of shape `(batch_size, output_dim)`.
 
     The CNN has one convolution layer for each ngram filter size. Each convolution operation gives

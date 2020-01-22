@@ -22,7 +22,7 @@ class DecomposableAttention(Model):
     by Parikh et al., 2016, with some optional enhancements before the decomposable attention
     actually happens.  Parikh's original model allowed for computing an "intra-sentence" attention
     before doing the decomposable entailment step.  We generalize this to any
-    :class:`Seq2SeqEncoder` that can be applied to the premise and/or the hypothesis before
+    [`Seq2SeqEncoder`](../modules/seq2seq_encoders/seq2seq_encoder.md) that can be applied to the premise and/or the hypothesis before
     computing entailment.
 
     The basic outline of this model is to get an embedded representation of each word in the

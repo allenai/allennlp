@@ -1,8 +1,7 @@
 """
 Custom PyTorch
 `Module <https://pytorch.org/docs/master/nn.html#torch.nn.Module>`_ s
-that are used as components in AllenNLP
-:class:`~allennlp.models.model.Model` s.
+that are used as components in AllenNLP `Model` s.
 """
 
 from allennlp.modules.conditional_random_field import ConditionalRandomField
