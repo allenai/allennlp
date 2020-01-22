@@ -116,7 +116,7 @@ class TestPretrainedTransformerIndexer(AllenNlpTestCase):
         expected_masks = [1] * len(indexed["token_ids"])
         assert indexed["mask"] == expected_masks
         max_length = 10
-        padding_lengths = {"token_ids": max_length, "mask": max_length}
+        padding_lengths = {key: max_length for key in indexed.keys()}
         padded_tokens = indexer.as_padded_tensor_dict(indexed, padding_lengths)
         padding_length = max_length - len(indexed["mask"])
         expected_masks = expected_masks + ([0] * padding_length)
