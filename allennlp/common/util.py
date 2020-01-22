@@ -605,7 +605,7 @@ def threaded_generator(g: Iterable, maxsize: int = 8) -> Generator:
     maxsize : int
         The maximum number of results to cache
     """
-    q = Queue(maxsize=maxsize)
+    q: Queue = Queue(maxsize=maxsize)
 
     sentinel = object()
 
