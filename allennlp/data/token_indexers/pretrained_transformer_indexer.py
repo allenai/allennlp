@@ -37,6 +37,7 @@ class PretrainedTransformerIndexer(TokenIndexer):
         super().__init__(**kwargs)
         self._namespace = namespace
         self._tokenizer = AutoTokenizer.from_pretrained(model_name)
+        self._padding_value = self._tokenizer.convert_tokens_to_ids([self._tokenizer.pad_token])[0]
         self._added_to_vocabulary = False
 
     def _add_encoding_to_vocabulary(self, vocab: Vocabulary) -> None:

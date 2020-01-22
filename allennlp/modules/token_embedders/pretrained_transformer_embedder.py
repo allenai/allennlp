@@ -29,7 +29,7 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         self,
         token_ids: torch.LongTensor,
         mask: torch.LongTensor,
-        type_ids: Optional[torch.LongTensor],
+        type_ids: Optional[torch.LongTensor] = None,
     ) -> torch.Tensor:  # type: ignore
         """
         # Parameters
