@@ -64,7 +64,9 @@ class PretrainedTransformerMismatchedIndexer(TokenIndexer):
         output = self._matched_indexer.tokens_to_indices(tokens, vocabulary)
 
         # self._intra_word_tokenize() does not insert special tokens, so we need to do it here
-        output["type_ids"] = self._tokenizer.create_token_type_ids_from_sequences(output["token_ids"])
+        output["type_ids"] = self._tokenizer.create_token_type_ids_from_sequences(
+            output["token_ids"]
+        )
         output["token_ids"] = self._tokenizer.build_inputs_with_special_tokens(output["token_ids"])
         output["mask"] = orig_token_mask
         output["offsets"] = [
