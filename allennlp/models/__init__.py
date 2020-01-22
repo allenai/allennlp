@@ -1,6 +1,6 @@
 """
 These submodules contain the classes for AllenNLP models,
-all of which are subclasses of :class:`~allennlp.models.model.Model`.
+all of which are subclasses of `Model`.
 """
 
 from allennlp.models.model import Model

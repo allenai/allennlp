@@ -10,9 +10,9 @@ from allennlp.nn.util import get_lengths_from_binary_sequence_mask
 @Seq2VecEncoder.register("bag_of_embeddings")
 class BagOfEmbeddingsEncoder(Seq2VecEncoder):
     """
-    A `BagOfEmbeddingsEncoder` is a simple :class:`Seq2VecEncoder` which simply sums the embeddings
-    of a sequence across the time dimension. The input to this module is of shape `(batch_size, num_tokens,
-    embedding_dim)`, and the output is of shape `(batch_size, embedding_dim)`.
+    A `BagOfEmbeddingsEncoder` is a simple [`Seq2VecEncoder`](./seq2vec_encoder.md) which simply sums
+    the embeddings of a sequence across the time dimension. The input to this module is of shape
+    `(batch_size, num_tokens, embedding_dim)`, and the output is of shape `(batch_size, embedding_dim)`.
 
     # Parameters
 
