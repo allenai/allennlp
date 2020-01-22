@@ -185,13 +185,9 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         embedding_size = embeddings.size(2)
 
         # We want to remove all segment-level special tokens but maintain sequence-level ones
-        num_wordpieces = (
-            num_segment_concat_wordpieces - (num_segments - 1) * self._num_added_tokens
-        )
+        num_wordpieces = num_segment_concat_wordpieces - (num_segments - 1) * self._num_added_tokens
 
-        embeddings = embeddings.reshape(
-            batch_size, num_segments * self._max_length, embedding_size
-        )
+        embeddings = embeddings.reshape(batch_size, num_segments * self._max_length, embedding_size)
         # Shape: (batch_size, self._num_added_start_tokens, embedding_size)
         start_token_embeddings = embeddings[:, : self._num_added_start_tokens, :]
         # See comment above -- remedy when the longest sequences have full last segments.
@@ -199,9 +195,7 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         # Shape: (batch_size, self._num_added_end_tokens, embedding_size)
         last_token_embeddings = embeddings[:, -self._num_added_end_tokens :, :]
 
-        embeddings = embeddings.reshape(
-            batch_size, num_segments, self._max_length, embedding_size
-        )
+        embeddings = embeddings.reshape(batch_size, num_segments, self._max_length, embedding_size)
         embeddings = embeddings[
             :, :, self._num_added_start_tokens : -self._num_added_end_tokens, :
         ]  # truncate segment-level start/end tokens
