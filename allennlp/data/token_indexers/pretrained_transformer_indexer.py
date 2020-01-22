@@ -1,4 +1,4 @@
-from typing import Dict, List, Tuple, Union
+from typing import Dict, List, Tuple
 import logging
 import torch
 from allennlp.common.util import pad_sequence_to_length
@@ -61,11 +61,14 @@ class PretrainedTransformerIndexer(TokenIndexer):
                     "max_length needs to be greater than the number of special tokens inserted."
                 )
 
-    def _add_encoding_to_vocabulary(self, vocab: Vocabulary) -> None:
+    def _add_encoding_to_vocabulary_if_needed(self, vocab: Vocabulary) -> None:
         """
         Copies tokens from ```transformers``` model to the specified namespace.
         Transformers vocab is taken from the <vocab>/<encoder> keys of the tokenizer object.
         """
+        if self._added_to_vocabulary:
+            return
+
         vocab_field_name = None
         if hasattr(self._tokenizer, "vocab"):
             vocab_field_name = "vocab"
@@ -83,31 +86,33 @@ class PretrainedTransformerIndexer(TokenIndexer):
                 vocab._token_to_index[self._namespace][word] = idx
                 vocab._index_to_token[self._namespace][idx] = word
 
+        self._added_to_vocabulary = True
+
     @overrides
     def count_vocab_items(self, token: Token, counter: Dict[str, Dict[str, int]]):
         # If we only use pretrained models, we don't need to do anything here.
         pass
 
     @overrides
-    def tokens_to_indices(
-        self, tokens: List[Union[Token, int]], vocabulary: Vocabulary
-    ) -> IndexedTokenList:
-        """
-        `tokens` may already be indices, in which case the token -> index step is a no-op, but other
-        logic still takes place, e.g. long sequence splitting.
+    def tokens_to_indices(self, tokens: List[Token], vocabulary: Vocabulary) -> IndexedTokenList:
+        self._add_encoding_to_vocabulary_if_needed(vocabulary)
 
+        indices, type_ids = self._extract_token_and_type_ids(tokens)
+        # The mask has 1 for real tokens and 0 for padding tokens. Only real tokens are attended to.
+        output = {"token_ids": indices, "mask": [1] * len(indices)}
+        if type_ids is not None:
+            result["type_ids"] = type_ids
+
+        return self._postprocess_output(output)
+
+    def _extract_token_and_type_ids(self, tokens: List[Token]) -> List[int]:
+        """
         `tokens` should have special tokens already inserted.
         """
-        if not self._added_to_vocabulary:
-            self._add_encoding_to_vocabulary(vocabulary)
-            self._added_to_vocabulary = True
-
         indices: List[int] = []
         type_ids: List[int] = []
         for token in tokens:
-            if isinstance(token, int):
-                indices.append(token)
-            elif getattr(token, "text_id", None) is not None:
+            if getattr(token, "text_id", None) is not None:
                 # `text_id` being set on the token means that we aren't using the vocab, we just use
                 # this id instead. Id comes from the pretrained vocab.
                 # It is computed in PretrainedTransformerTokenizer.
@@ -123,13 +128,9 @@ class PretrainedTransformerIndexer(TokenIndexer):
             else:
                 type_ids = None
 
-        # The mask has 1 for real tokens and 0 for padding tokens. Only real tokens are attended to.
-        mask = [1] * len(indices)
+        return indices, type_ids
 
-        result = {"token_ids": indices, "mask": mask}
-        if type_ids is not None:
-            result["type_ids"] = type_ids
-
+    def _postprocess_output(self, output: IndexedTokenList) -> IndexedTokenList:
         if self._max_length is not None:
             # We prepare long indices by converting them to (assuming max_length == 5)
             # [CLS] A B C [SEP] [CLS] D E F [SEP] ...
@@ -137,6 +138,7 @@ class PretrainedTransformerIndexer(TokenIndexer):
             # transformer model.
             # TODO(zhaofengw): we aren't respecting word boundaries when segmenting wordpieces.
 
+            indices = output["token_ids"]
             # Strips original special tokens
             indices = indices[self._num_added_start_tokens : -self._num_added_end_tokens]
             # Folds indices
