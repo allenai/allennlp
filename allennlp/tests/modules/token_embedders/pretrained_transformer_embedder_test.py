@@ -139,3 +139,61 @@ class TestPretrainedTransformerEmbedder(AllenNlpTestCase):
         # Attention mask
         bert_vectors = token_embedder(tokens)
         assert bert_vectors.size() == (2, 9, 768)
+
+    def test_fold_long_sequences(self):
+        # Let's just say [PAD] is 0, [CLS] is 1, and [SEP] is 2
+        token_ids = torch.LongTensor([
+            [1, 101, 102, 103, 104, 2, 1, 105, 106, 107, 108, 2, 1, 109, 2],
+            [1, 201, 202, 203, 204, 2, 1, 205, 206, 207, 208, 2, 0, 0, 0],
+            [1, 301, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        ])  # Shape: [3, 15]
+        segment_concat_mask = (token_ids > 0).long()
+
+        folded_token_ids = torch.LongTensor([
+            [1, 101, 102, 103, 104, 2],
+            [1, 105, 106, 107, 108, 2],
+            [1, 109, 2, 0, 0, 0],
+            [1, 201, 202, 203, 204, 2],
+            [1, 205, 206, 207, 208, 2],
+            [0, 0, 0, 0, 0, 0],
+            [1, 301, 2, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0],
+        ])
+        folded_segment_concat_mask = (folded_token_ids > 0).long()
+
+        token_embedder = PretrainedTransformerEmbedder("bert-base-uncased", max_length=6)
+
+        folded_token_ids_out, folded_segment_concat_mask_out = token_embedder._fold_long_sequences(
+            token_ids, segment_concat_mask
+        )
+        assert (folded_token_ids_out == folded_token_ids).all()
+        assert (folded_segment_concat_mask_out == folded_segment_concat_mask).all()
+
+    def test_unfold_long_sequences(self):
+        # Let's just say [PAD] is 0, [CLS] is 1, and [SEP] is 2
+        # We assume embeddings are 1-dim and are the same as indices
+        embeddings = torch.LongTensor([
+            [1, 101, 102, 103, 104, 2],
+            [1, 105, 106, 107, 108, 2],
+            [1, 109, 2, 0, 0, 0],
+            [1, 201, 202, 203, 204, 2],
+            [1, 205, 206, 207, 208, 2],
+            [0, 0, 0, 0, 0, 0],
+            [1, 301, 2, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0],
+        ]).unsqueeze(-1)
+
+        unfolded_embeddings = torch.LongTensor([
+            [1, 101, 102, 103, 104, 105, 106, 107, 108, 109, 2],
+            [1, 201, 202, 203, 204, 205, 206, 207, 208, 0, 0],
+            [1, 301, 2, 0, 0, 0, 0, 0, 0, 0, 0],
+        ]).unsqueeze(-1)
+
+        token_embedder = PretrainedTransformerEmbedder("bert-base-uncased", max_length=6)
+
+        unfolded_embeddings_out = token_embedder._unfold_long_sequences(
+            embeddings, unfolded_embeddings.size(0), 15
+        )
+        assert (unfolded_embeddings_out == unfolded_embeddings).all()

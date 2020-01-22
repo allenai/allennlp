@@ -114,7 +114,7 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         that are in reality multiple segments concatenated together, to 2D tensors, i.e.
 
         [ [CLS] A B C [SEP] [CLS] D E [SEP] ]
-        -> [ [ [CLS] A B C [SEP] ], [ [CLS] D E [PAD] [SEP] ] ]
+        -> [ [ [CLS] A B C [SEP] ], [ [CLS] D E [SEP] [PAD] ] ]
         The [PAD] positions can be found in the returned `segment_concat_mask`.
 
         # Parameters
@@ -153,7 +153,7 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         We take 2D segments of a long sequence and flatten them out to get the whole sequence
         representation while remove unnecessary special tokens.
 
-        [ [ [CLS]_emb A_emb B_emb C_emb [SEP]_emb ], [ [CLS]_emb D_emb E_emb [PAD]_emb [SEP]_emb ] ]
+        [ [ [CLS]_emb A_emb B_emb C_emb [SEP]_emb ], [ [CLS]_emb D_emb E_emb [SEP]_emb [PAD]_emb ] ]
         -> [ [CLS]_emb A_emb B_emb C_emb D_emb E_emb [SEP]_emb ]
 
         We truncate the start and end tokens for all segments, recombine the segments,
