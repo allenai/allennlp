@@ -60,7 +60,7 @@ class IntegratedGradient(SaliencyInterpreter):
 
     def _integrate_gradients(self, instance: Instance) -> Dict[str, numpy.ndarray]:
         """
-        Returns integrated gradients for the given :class:`~allennlp.data.instance.Instance`
+        Returns integrated gradients for the given [`Instance`](../../data/instance.md)
         """
         ig_grads: Dict[str, Any] = {}
 
