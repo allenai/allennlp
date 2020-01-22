@@ -1,5 +1,5 @@
 import logging
-from typing import List, Optional
+from typing import List
 
 from allennlp.common.util import sanitize_wordpiece
 from overrides import overrides
