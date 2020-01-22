@@ -1,5 +1,9 @@
 import math
+<<<<<<< HEAD
 from typing import Optional
+=======
+from typing import Tuple
+>>>>>>> Factor out long sequence handling logic in embedder in separate functions
 
 from overrides import overrides
 from transformers.modeling_auto import AutoModel
@@ -81,69 +85,128 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         ):
             raise ValueError("Found type ids too large for the chosen transformer model.")
 
-        batch_size = token_ids.size(0)
-
         if self._max_length is not None:
-            # [ [CLS] A B C [SEP] [CLS] D E F [SEP] ] ->
-            # [ [ [CLS] A B C [SEP] ], [ [CLS] D E F [SEP] ] ]
-            num_segment_concat_wordpieces = token_ids.size(1)
-            num_segments = math.ceil(num_segment_concat_wordpieces / self._max_length)
-            padded_length = num_segments * self._max_length
-            length_to_pad = padded_length - num_segment_concat_wordpieces
-
-            def fold(tensor):  # Shape: [batch_size, num_segment_concat_wordpieces]
-                # Shape: [batch_size, num_segments * self._max_length]
-                tensor = F.pad(tensor, [0, length_to_pad], value=0)
-                # Shape: [batch_size * num_segments, self._max_length]
-                return tensor.reshape(-1, self._max_length)
-
-            token_ids = fold(token_ids)
-            segment_concat_mask = fold(segment_concat_mask)
+            batch_size, num_segment_concat_wordpieces = token_ids.size()
+            token_ids, segment_concat_mask = self._fold_long_sequences(
+                token_ids, segment_concat_mask
+            )
 
         transformer_mask = segment_concat_mask if self._max_length is not None else mask
         # Shape: [batch_size, num_wordpieces, embedding_size],
         # or if self._max_length is not None:
-        # [batch_size * num_segments, self._max_len, embedding_size]
+        # [batch_size * num_segments, self._max_length, embedding_size]
         embeddings = self.transformer_model(
             input_ids=token_ids, token_type_ids=type_ids, attention_mask=transformer_mask
         )[0]
-        embedding_size = embeddings.size(2)
 
         if self._max_length is not None:
-            # We truncate the start and end tokens for all segments, recombine the segments,
-            # and manually add back the start tokens. We generally don't need to add back
-            # the end tokens -- because the last segment is usually shorter than self._max_length,
-            # the final end tokens usually won't be touched in our truncation process.
-            #
-            # There are special cases where sequences have a full last segment. The only issue
-            # in this case is that the [SEP] embedding will be wrong. Nevertheless, [SEP] embeddings
-            # are rarely, if ever, used, so it shouldn't be a huge problem. However, we do remedy
-            # this case when such sequences with a full last segment are the longest ones in a batch
-            # by adding back the last token representations.
-
-            # We want to remove all segment-level special tokens but maintain sequence-level ones
-            num_wordpieces = (
-                num_segment_concat_wordpieces - (num_segments - 1) * self._num_added_tokens
+            embeddings = self._unfold_long_sequences(
+                embeddings, batch_size, num_segment_concat_wordpieces
             )
 
-            embeddings = embeddings.reshape(
-                batch_size, num_segments * self._max_length, embedding_size
-            )
-            # Shape: (batch_size, self._num_added_start_tokens, embedding_size)
-            start_token_embeddings = embeddings[:, : self._num_added_start_tokens, :]
-            # See comment above -- remedy when the longest sequences have full last segments.
-            # This is not necessarily the end token embeddings when sequences aren't full.
-            # Shape: (batch_size, self._num_added_end_tokens, embedding_size)
-            last_token_embeddings = embeddings[:, -self._num_added_end_tokens :, :]
+        return embeddings
 
-            embeddings = embeddings.reshape(
-                batch_size, num_segments, self._max_length, embedding_size
-            )
-            embeddings = embeddings[
-                :, :, self._num_added_start_tokens : -self._num_added_end_tokens, :
-            ]  # truncate segment-level start/end tokens
-            embeddings = embeddings.reshape(batch_size, -1, embedding_size)  # flatten
-            embeddings = torch.cat([start_token_embeddings, embeddings, last_token_embeddings], 1)
-            embeddings = embeddings[:, :num_wordpieces, :]
+    def _fold_long_sequences(
+        self, token_ids: torch.LongTensor, segment_concat_mask: torch.LongTensor
+    ) -> Tuple[torch.LongTensor, torch.LongTensor]:
+        """
+        We fold 1D sequences (for each element in batch), returned by `PretrainedTransformerIndexer`
+        that are in reality multiple segments concatenated together, to 2D tensors, i.e.
+
+        [ [CLS] A B C [SEP] [CLS] D E [SEP] ]
+        -> [ [ [CLS] A B C [SEP] ], [ [CLS] D E [PAD] [SEP] ] ]
+        The [PAD] positions can be found in the returned `segment_concat_mask`.
+
+        # Parameters
+
+        token_ids: `torch.LongTensor`
+            Shape: [batch_size, num_segment_concat_wordpieces].
+            num_segment_concat_wordpieces is num_wordpieces plus special tokens inserted in the
+            middle, i.e. the length of: "[CLS] A B C [SEP] [CLS] D E F [SEP]" (see indexer logic).
+        segment_concat_mask: `torch.LongTensor`
+            Shape: [batch_size, num_segment_concat_wordpieces].
+
+        # Returns:
+
+        token_ids: `torch.LongTensor`
+            Shape: [batch_size * num_segments, self._max_length].
+        segment_concat_mask: `torch.LongTensor`
+            Shape: [batch_size * num_segments, self._max_length].
+        """
+        num_segment_concat_wordpieces = token_ids.size(1)
+        num_segments = math.ceil(num_segment_concat_wordpieces / self._max_length)
+        padded_length = num_segments * self._max_length
+        length_to_pad = padded_length - num_segment_concat_wordpieces
+
+        def fold(tensor):  # Shape: [batch_size, num_segment_concat_wordpieces]
+            # Shape: [batch_size, num_segments * self._max_length]
+            tensor = F.pad(tensor, [0, length_to_pad], value=0)
+            # Shape: [batch_size * num_segments, self._max_length]
+            return tensor.reshape(-1, self._max_length)
+
+        return fold(token_ids), fold(segment_concat_mask)
+
+    def _unfold_long_sequences(
+        self, embeddings: torch.FloatTensor, batch_size: int, num_segment_concat_wordpieces: int
+    ) -> torch.FloatTensor:
+        """
+        We take 2D segments of a long sequence and flatten them out to get the whole sequence
+        representation while remove unnecessary special tokens.
+
+        [ [ [CLS]_emb A_emb B_emb C_emb [SEP]_emb ], [ [CLS]_emb D_emb E_emb [PAD]_emb [SEP]_emb ] ]
+        -> [ [CLS]_emb A_emb B_emb C_emb D_emb E_emb [SEP]_emb ]
+
+        We truncate the start and end tokens for all segments, recombine the segments,
+        and manually add back the start tokens. We generally don't need to add back
+        the end tokens -- because the last segment is usually shorter than self._max_length,
+        the final end tokens usually won't be touched in our truncation process.
+
+        There are special cases where sequences have a full last segment. The only issue
+        in this case is that the [SEP] embedding will be wrong. Nevertheless, [SEP] embeddings
+        are rarely, if ever, used, so it shouldn't be a huge problem. However, we do remedy
+        this case when such sequences with a full last segment are the longest ones in a batch
+        by adding back the last token representations.
+
+        # Parameters
+
+        embeddings: `torch.FloatTensor`
+            Shape: [batch_size * num_segments, self._max_length, embedding_size].
+        batch_size: `int`
+        num_segment_concat_wordpieces: `int`
+            The length of the original "[ [CLS] A B C [SEP] [CLS] D E F [SEP] ]", i.e.
+            the original `token_ids.size(1)`.
+
+        # Returns:
+
+        embeddings: `torch.FloatTensor`
+            Shape: [batch_size, self._num_wordpieces, embedding_size].
+        """
+        num_segments = int(embeddings.size(0) / batch_size)
+        embedding_size = embeddings.size(2)
+
+        # We want to remove all segment-level special tokens but maintain sequence-level ones
+        num_wordpieces = (
+            num_segment_concat_wordpieces - (num_segments - 1) * self._num_added_tokens
+        )
+
+        embeddings = embeddings.reshape(
+            batch_size, num_segments * self._max_length, embedding_size
+        )
+        # Shape: (batch_size, self._num_added_start_tokens, embedding_size)
+        start_token_embeddings = embeddings[:, : self._num_added_start_tokens, :]
+        # See comment above -- remedy when the longest sequences have full last segments.
+        # This is not necessarily the end token embeddings when sequences aren't full.
+        # Shape: (batch_size, self._num_added_end_tokens, embedding_size)
+        last_token_embeddings = embeddings[:, -self._num_added_end_tokens :, :]
+
+        embeddings = embeddings.reshape(
+            batch_size, num_segments, self._max_length, embedding_size
+        )
+        embeddings = embeddings[
+            :, :, self._num_added_start_tokens : -self._num_added_end_tokens, :
+        ]  # truncate segment-level start/end tokens
+        embeddings = embeddings.reshape(batch_size, -1, embedding_size)  # flatten
+        embeddings = torch.cat([start_token_embeddings, embeddings, last_token_embeddings], 1)
+        embeddings = embeddings[:, :num_wordpieces, :]
 
         return embeddings
