@@ -827,8 +827,8 @@ class Trainer(TrainerBase):
             optimizer_ = Optimizer.default(parameters)
 
         moving_average_ = moving_average.construct(parameters=parameters)
-        learning_rate_scheduler_ = learning_rate_scheduler.construct(optimizer=optimizer)
-        momentum_scheduler_ = momentum_scheduler.construct(optimizer=optimizer)
+        learning_rate_scheduler_ = learning_rate_scheduler.construct(optimizer=optimizer_)
+        momentum_scheduler_ = momentum_scheduler.construct(optimizer=optimizer_)
 
         checkpointer_ = checkpointer.construct()
         if not checkpointer_:
