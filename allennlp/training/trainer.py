@@ -2,9 +2,10 @@ import datetime
 import logging
 import math
 import os
+import re
 import time
 import traceback
-from typing import Dict, Optional, Tuple, Union, Iterable, Any
+from typing import Dict, List, Optional, Tuple, Union, Iterable, Any
 
 import torch
 import torch.distributed as dist
@@ -13,7 +14,7 @@ from torch.nn.parallel import DistributedDataParallel
 
 from allennlp.common import Params, Lazy, Tqdm
 from allennlp.common.checks import ConfigurationError, parse_cuda_device, check_for_gpu
-from allennlp.common.util import dump_metrics, gpu_memory_mb, peak_memory_mb, lazy_groups_of
+from allennlp.common import util as common_util
 from allennlp.data.instance import Instance
 from allennlp.data.iterators.data_iterator import DataIterator, TensorDict
 from allennlp.models.model import Model
@@ -319,10 +320,10 @@ class Trainer(TrainerBase):
         Trains one epoch and returns metrics.
         """
         logger.info("Epoch %d/%d", epoch, self._num_epochs - 1)
-        peak_cpu_usage = peak_memory_mb()
+        peak_cpu_usage = common_util.peak_memory_mb()
         logger.info(f"Peak CPU memory usage MB: {peak_cpu_usage}")
         gpu_usage = []
-        for gpu, memory in gpu_memory_mb().items():
+        for gpu, memory in common_util.gpu_memory_mb().items():
             gpu_usage.append((gpu, memory))
             logger.info(f"GPU {gpu} memory usage MB: {memory}")
 
@@ -332,7 +333,7 @@ class Trainer(TrainerBase):
 
         # Get tqdm for the training batches
         batch_generator = self.iterator(self.train_data, num_epochs=1, shuffle=self.shuffle)
-        batch_group_generator = lazy_groups_of(
+        batch_group_generator = common_util.lazy_groups_of(
             batch_generator, self._num_gradient_accumulation_steps
         )
         num_training_batches = math.ceil(
@@ -618,7 +619,7 @@ class Trainer(TrainerBase):
                 self._metric_tracker.best_epoch_metrics = val_metrics
 
             if self._serialization_dir and self._master:
-                dump_metrics(
+                common_util.dump_metrics(
                     os.path.join(self._serialization_dir, f"metrics_epoch_{epoch}.json"), metrics
                 )
 
@@ -784,6 +785,7 @@ class Trainer(TrainerBase):
         distributed: bool = None,
         world_size: int = 1,
         num_gradient_accumulation_steps: int = 1,
+        no_grad: List[str] = None,
         optimizer: Lazy[Optimizer] = None,
         learning_rate_scheduler: Lazy[LearningRateScheduler] = None,
         momentum_scheduler: Lazy[MomentumScheduler] = None,
@@ -812,26 +814,25 @@ class Trainer(TrainerBase):
             # the right device.
             model = model.cuda(cuda_device)
 
+        if no_grad:
+            for name, parameter in model.named_parameters():
+                if any(re.search(regex, name) for regex in no_grad):
+                    parameter.requires_grad_(False)
+
+        common_util.log_frozen_and_tunable_parameter_names(model)
+
+
         parameters = [[n, p] for n, p in model.named_parameters() if p.requires_grad]
         optimizer = optimizer.construct(model_parameters=parameters)
-        if moving_average:
-            moving_average_ = moving_average.construct(parameters=parameters)
-        else:
-            moving_average_ = None
+        if not optimizer:
+            optimizer = Optimizer.default(model_parameters)
 
-        if learning_rate_scheduler:
-            learning_rate_scheduler_ = learning_rate_scheduler.construct(optimizer=optimizer)
-        else:
-            learning_rate_scheduler_ = None
+        moving_average_ = moving_average.construct(parameters=parameters)
+        learning_rate_scheduler_ = learning_rate_scheduler.construct(optimizer=optimizer)
+        momentum_scheduler_ = momentum_scheduler.construct(optimizer=optimizer)
 
-        if momentum_scheduler:
-            momentum_scheduler_ = momentum_scheduler.construct(optimizer=optimizer)
-        else:
-            momentum_scheduler_ = None
-
-        if checkpointer:
-            checkpointer = checkpointer.construct()
-        else:
+        checkpointer = checkpointer.construct()
+        if not checkpointer:
             checkpointer = Checkpointer(serialization_dir)
         return cls(
             model,

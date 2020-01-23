@@ -468,6 +468,7 @@ class TrainModel(Registrable):
         self.serialization_dir = serialization_dir
         self.trainer = trainer
         self.evaluation_dataset = evaluation_dataset
+        self.evaluation_iterator = evaluation_iterator
         self.evaluate_on_test = evaluate_on_test
         self.batch_weight_key = batch_weight_key
 
@@ -503,17 +504,16 @@ class TrainModel(Registrable):
         local_rank: int,
         dataset_reader: DatasetReader,
         train_data_path: str,
-        vocab: Lazy[Vocabulary],
         model: Lazy[Model],
         iterator: DataIterator,
         trainer: Lazy[TrainerBase],
+        vocabulary: Lazy[Vocabulary] = None,
         datasets_for_vocab_creation: List[str] = None,
         validation_dataset_reader: DatasetReader = None,
         validation_data_path: str = None,
         validation_iterator: DataIterator = None,
         test_data_path: str = None,
         evaluate_on_test: bool = False,
-        no_grad_regexes: List[str] = None,
         batch_weight_key: str = "",
     ) -> "TrainModel":
 
@@ -537,26 +537,21 @@ class TrainModel(Registrable):
             for instance in dataset
         )
 
-        vocab = vocab.construct(instances=instance_generator)
-        model = model.construct(vocab=vocab)
+        vocabulary = vocabulary.construct(instances=instance_generator)
+        if not vocabulary:
+            vocabulary = Vocabulary.from_instances(instance_generator)
+        model = model.construct(vocab=vocabulary)
 
         # Initializing the model can have side effect of expanding the vocabulary.
         # Save the vocab only in the master. In the degenerate non-distributed
         # case, we're trivially the master.
         if common_util.is_master():
             vocabulary_path = os.path.join(serialization_dir, "vocabulary")
-            vocab.save_to_files(vocabulary_path)
+            vocabulary.save_to_files(vocabulary_path)
 
         iterator.index_with(model.vocab)
         validation_iterator = validation_iterator or iterator
         validation_iterator.index_with(model.vocab)  # it is ok to call this twice
-
-        if no_grad_regexes:
-            for name, parameter in model.named_parameters():
-                if any(re.search(regex, name) for regex in no_grad_regexes):
-                    parameter.requires_grad_(False)
-
-        common_util.log_frozen_and_tunable_parameter_names(model)
 
         # We don't need to pass serialization_dir and local_rank here, because they will have been
         # passed through the trainer by from_params already, because they were keyword arguments to

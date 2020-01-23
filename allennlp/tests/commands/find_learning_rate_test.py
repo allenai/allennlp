@@ -9,13 +9,13 @@ from allennlp.data import Vocabulary, DataIterator
 from allennlp.models import Model
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.commands.train import Trainer
 from allennlp.commands.find_learning_rate import (
     search_learning_rate,
     find_learning_rate_from_args,
     find_learning_rate_model,
     FindLearningRate,
 )
+from allennlp.training import Trainer
 from allennlp.training.util import datasets_from_params
 
 

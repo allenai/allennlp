@@ -38,6 +38,10 @@ class Optimizer(Registrable):
 
     default_implementation = "adam"
 
+    @staticmethod
+    def default(model_parameters: List) -> 'Optimizer':
+        return Optimizer.from_params(model_parameters, Params({}))
+
     # Requires custom from_params.
     @classmethod
     def from_params(cls, model_parameters: List, params: Params):  # type: ignore
