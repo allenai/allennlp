@@ -263,10 +263,10 @@ class MultiTaskTrainer(TrainerBase):
         iterator.index_with(vocab)
 
         parameters = [[n, p] for n, p in model.named_parameters() if p.requires_grad]
-        optimizer = optimizer.construct(model_parameters=parameters)
+        optimizer_ = optimizer.construct(model_parameters=parameters)
 
         return MultiTaskTrainer(
-            model, serialization_dir, iterator, mingler, optimizer, datasets, num_epochs
+            model, serialization_dir, iterator, mingler, optimizer_, datasets, num_epochs
         )
 
 

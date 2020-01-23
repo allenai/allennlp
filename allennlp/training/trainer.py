@@ -12,8 +12,8 @@ import torch.distributed as dist
 import torch.optim.lr_scheduler
 from torch.nn.parallel import DistributedDataParallel
 
-from allennlp.common import Params, Lazy, Tqdm
-from allennlp.common.checks import ConfigurationError, parse_cuda_device, check_for_gpu
+from allennlp.common import Lazy, Tqdm
+from allennlp.common.checks import ConfigurationError, check_for_gpu
 from allennlp.common import util as common_util
 from allennlp.data.instance import Instance
 from allennlp.data.iterators.data_iterator import DataIterator, TensorDict
@@ -822,20 +822,20 @@ class Trainer(TrainerBase):
         common_util.log_frozen_and_tunable_parameter_names(model)
 
         parameters = [[n, p] for n, p in model.named_parameters() if p.requires_grad]
-        optimizer = optimizer.construct(model_parameters=parameters)
-        if not optimizer:
-            optimizer = Optimizer.default(model_parameters)
+        optimizer_ = optimizer.construct(model_parameters=parameters)
+        if not optimizer_:
+            optimizer_ = Optimizer.default(parameters)
 
         moving_average_ = moving_average.construct(parameters=parameters)
         learning_rate_scheduler_ = learning_rate_scheduler.construct(optimizer=optimizer)
         momentum_scheduler_ = momentum_scheduler.construct(optimizer=optimizer)
 
-        checkpointer = checkpointer.construct()
-        if not checkpointer:
-            checkpointer = Checkpointer(serialization_dir)
+        checkpointer_ = checkpointer.construct()
+        if not checkpointer_:
+            checkpointer_ = Checkpointer(serialization_dir)
         return cls(
             model,
-            optimizer,
+            optimizer_,
             iterator,
             train_data,
             validation_data,
@@ -850,7 +850,7 @@ class Trainer(TrainerBase):
             grad_clipping=grad_clipping,
             learning_rate_scheduler=learning_rate_scheduler_,
             momentum_scheduler=momentum_scheduler_,
-            checkpointer=checkpointer,
+            checkpointer=checkpointer_,
             model_save_interval=model_save_interval,
             summary_interval=summary_interval,
             histogram_interval=histogram_interval,

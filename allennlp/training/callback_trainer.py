@@ -9,7 +9,7 @@ import functools
 from typing import Dict, Optional, List, Any, Iterable
 import torch
 
-from allennlp.common.checks import parse_cuda_device, check_for_gpu
+from allennlp.common.checks import check_for_gpu
 from allennlp.common import Lazy, Tqdm
 from allennlp.data import Instance
 from allennlp.data.iterators.data_iterator import DataIterator, TensorDict
@@ -319,7 +319,7 @@ class CallbackTrainer(TrainerBase):
             model = model.cuda(cuda_device)
 
         parameters = [[n, p] for n, p in model.named_parameters() if p.requires_grad]
-        optimizer = optimizer.construct(model_parameters=parameters)
+        optimizer_ = optimizer.construct(model_parameters=parameters)
 
         if not callbacks:
             callbacks = []
@@ -330,8 +330,8 @@ class CallbackTrainer(TrainerBase):
                 # We only need to pass here the things that weren't already passed to
                 # CallbackTrainer.from_partial_objects; FromParams will automatically pass those
                 # things through to the callback constructor.
-                callback = callback.construct(optimizer=optimizer, instances=train_data)
-                constructed_callbacks.append(callback)
+                callback_ = callback.construct(optimizer=optimizer, instances=train_data)
+                constructed_callbacks.append(callback_)
 
         if distributed:
             rank = cuda_device
@@ -342,7 +342,7 @@ class CallbackTrainer(TrainerBase):
             model,
             train_data,
             iterator,
-            optimizer,
+            optimizer_,
             num_epochs=num_epochs,
             shuffle=shuffle,
             serialization_dir=serialization_dir,

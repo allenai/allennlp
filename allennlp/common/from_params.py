@@ -374,13 +374,13 @@ def construct_from_params(value_cls: Type[T], value_params: Params, extras: Dict
     """
     origin = getattr(value_cls, "__origin__", None)
     if origin == Lazy:
-        value_cls = value_cls.__args__[0]
+        value_cls = value_cls.__args__[0]  # type: ignore
         subextras = create_extras(value_cls, extras)
 
         def constructor(**kwargs):
             return value_cls.from_params(params=value_params, **kwargs, **subextras)
 
-        return Lazy(constructor)
+        return Lazy(constructor)  # type: ignore
     else:
         subextras = create_extras(value_cls, extras)
         return value_cls.from_params(params=value_params, **subextras)

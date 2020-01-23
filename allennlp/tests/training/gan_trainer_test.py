@@ -307,12 +307,12 @@ class GanTestTrainer(TrainerBase):
         noise = noise_reader.read("")
 
         generator_params = [[n, p] for n, p in generator.named_parameters() if p.requires_grad]
-        generator_optimizer = generator_optimizer.construct(model_parameters=generator_params)
+        generator_optimizer_ = generator_optimizer.construct(model_parameters=generator_params)
 
         discriminator_params = [
             [n, p] for n, p in discriminator.named_parameters() if p.requires_grad
         ]
-        discriminator_optimizer = discriminator_optimizer.construct(
+        discriminator_optimizer_ = discriminator_optimizer.construct(
             model_parameters=discriminator_params
         )
 
@@ -324,8 +324,8 @@ class GanTestTrainer(TrainerBase):
             discriminator,
             iterator,
             noise_iterator,
-            generator_optimizer,
-            discriminator_optimizer,
+            generator_optimizer_,
+            discriminator_optimizer_,
             batches_per_epoch,
             num_epochs,
         )
@@ -405,6 +405,6 @@ if __name__ == "__main__":
     import tempfile
 
     serialization_dir_ = tempfile.mkdtemp()
-    trainer_ = TrainerBase.from_params(params_, serialization_dir_)
+    trainer_ = TrainerBase.from_params(params=params_, serialization_dir=serialization_dir_)
     metrics_ = trainer_.train()
     print(metrics_)

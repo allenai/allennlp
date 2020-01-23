@@ -9,9 +9,9 @@ rather than instantiating a `Trainer` yourself.
 
 
 import logging
-from typing import Dict, Any, Type
+from typing import Dict, Any
 
-from allennlp.common import Params, Registrable
+from allennlp.common import Registrable
 from allennlp.common.checks import ConfigurationError, check_for_gpu
 from allennlp.models.model import Model
 

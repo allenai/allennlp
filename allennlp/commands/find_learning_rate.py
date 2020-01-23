@@ -225,7 +225,7 @@ def find_learning_rate_model(
     trainer_choice = trainer_params.pop("type", "default")
     if trainer_choice != "default":
         raise ConfigurationError("currently find-learning-rate only works with the default Trainer")
-    trainer = TrainerBase.from_params(
+    trainer: Trainer = TrainerBase.from_params(  # type: ignore
         model=model,
         serialization_dir=serialization_dir,
         iterator=iterator,

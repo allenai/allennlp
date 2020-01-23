@@ -1,7 +1,6 @@
 import os
 from typing import Dict, Any
 
-from allennlp.common import Params
 from allennlp.models import Model
 from allennlp.training.checkpointer import Checkpointer
 from allennlp.training.trainer_base import TrainerBase

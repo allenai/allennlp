@@ -448,7 +448,7 @@ def _train_worker(
         train_loop.finish(metrics)
 
     if not distributed:
-        return train_loop.trainer.model
+        return train_loop.model
 
     return None  # to make mypy happy
 
@@ -459,6 +459,7 @@ class TrainModel(Registrable):
     def __init__(
         self,
         serialization_dir: str,
+        model: Model,
         trainer: TrainerBase,
         evaluation_dataset: Iterable[Instance] = None,
         evaluation_iterator: DataIterator = None,
@@ -466,6 +467,7 @@ class TrainModel(Registrable):
         batch_weight_key: str = "",
     ) -> None:
         self.serialization_dir = serialization_dir
+        self.model = model
         self.trainer = trainer
         self.evaluation_dataset = evaluation_dataset
         self.evaluation_iterator = evaluation_iterator
@@ -479,7 +481,7 @@ class TrainModel(Registrable):
         if self.evaluation_dataset and self.evaluate_on_test:
             logger.info("The model will be evaluated using the best epoch weights.")
             test_metrics = training_util.evaluate(
-                self.trainer.model,
+                self.model,
                 self.evaluation_dataset,
                 self.evaluation_iterator,
                 cuda_device=self.trainer.cuda_device,
@@ -537,27 +539,27 @@ class TrainModel(Registrable):
             for instance in dataset
         )
 
-        vocabulary = vocabulary.construct(instances=instance_generator)
-        if not vocabulary:
-            vocabulary = Vocabulary.from_instances(instance_generator)
-        model = model.construct(vocab=vocabulary)
+        vocabulary_ = vocabulary.construct(instances=instance_generator)
+        if not vocabulary_:
+            vocabulary_ = Vocabulary.from_instances(instance_generator)
+        model_ = model.construct(vocab=vocabulary)
 
         # Initializing the model can have side effect of expanding the vocabulary.
         # Save the vocab only in the master. In the degenerate non-distributed
         # case, we're trivially the master.
         if common_util.is_master():
             vocabulary_path = os.path.join(serialization_dir, "vocabulary")
-            vocabulary.save_to_files(vocabulary_path)
+            vocabulary_.save_to_files(vocabulary_path)
 
-        iterator.index_with(model.vocab)
+        iterator.index_with(model_.vocab)
         validation_iterator = validation_iterator or iterator
-        validation_iterator.index_with(model.vocab)  # it is ok to call this twice
+        validation_iterator.index_with(model_.vocab)  # it is ok to call this twice
 
         # We don't need to pass serialization_dir and local_rank here, because they will have been
         # passed through the trainer by from_params already, because they were keyword arguments to
         # construct this class in the first place.
-        trainer = trainer.construct(
-            model=model,
+        trainer_ = trainer.construct(
+            model=model_,
             iterator=iterator,
             train_data=datasets["train"],
             validation_iterator=validation_iterator,
@@ -566,7 +568,8 @@ class TrainModel(Registrable):
 
         return cls(
             serialization_dir=serialization_dir,
-            trainer=trainer,
+            model=model_,
+            trainer=trainer_,
             evaluation_dataset=datasets.get("test"),
             evaluation_iterator=validation_iterator,
             evaluate_on_test=evaluate_on_test,
