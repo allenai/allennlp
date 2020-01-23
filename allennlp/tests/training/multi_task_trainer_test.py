@@ -258,7 +258,7 @@ class MultiTaskTrainer(TrainerBase):
         }
 
         instances = (instance for dataset in datasets.values() for instance in dataset)
-        vocab = Vocabulary.from_params(Params({}), instances=instances)
+        vocab = Vocabulary.from_instances(instances=instances)
         model = model.construct(vocab=vocab)
         iterator.index_with(vocab)
 
