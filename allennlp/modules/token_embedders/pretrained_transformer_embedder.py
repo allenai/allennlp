@@ -67,7 +67,7 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
                 batch_size, num_wordpieces if max_length is None else num_segment_concat_wordpieces
             ].
             num_segment_concat_wordpieces is num_wordpieces plus special tokens inserted in the
-            middle, i.e. the length of: "[CLS] A B C [SEP] [CLS] D E F [SEP]" (see indexer logic).
+            middle, e.g. the length of: "[CLS] A B C [SEP] [CLS] D E F [SEP]" (see indexer logic).
         mask: torch.LongTensor
              Shape: [batch_size, num_wordpieces].
         segment_concat_mask: torch.LongTensor, optional.
