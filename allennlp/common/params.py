@@ -450,10 +450,7 @@ class Params(MutableMapping):
     def _check_is_dict(self, new_history, value):
         if isinstance(value, dict):
             new_history = self.history + new_history + "."
-            return Params(
-                value,
-                history=new_history,
-            )
+            return Params(value, history=new_history,)
         if isinstance(value, list):
             value = [self._check_is_dict(f"{new_history}.{i}", v) for i, v in enumerate(value)]
         return value

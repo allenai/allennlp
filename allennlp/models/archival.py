@@ -89,9 +89,7 @@ _WEIGHTS_NAME = "weights.th"
 
 
 def archive_model(
-    serialization_dir: str,
-    weights: str = _DEFAULT_WEIGHTS,
-    archive_path: str = None,
+    serialization_dir: str, weights: str = _DEFAULT_WEIGHTS, archive_path: str = None,
 ) -> None:
     """
     Archive the model weights, its training configuration, and its vocabulary to `model.tar.gz`.
