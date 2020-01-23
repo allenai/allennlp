@@ -56,7 +56,7 @@ from allennlp.common.checks import check_for_gpu, ConfigurationError
 from allennlp.common.util import prepare_environment
 from allennlp.data import DataIterator, Vocabulary
 from allennlp.models import Model
-from allennlp.training import Trainer
+from allennlp.training import Trainer, TrainerBase
 from allennlp.training.util import create_serialization_dir, datasets_from_params
 
 logger = logging.getLogger(__name__)
@@ -225,7 +225,7 @@ def find_learning_rate_model(
     trainer_choice = trainer_params.pop("type", "default")
     if trainer_choice != "default":
         raise ConfigurationError("currently find-learning-rate only works with the default Trainer")
-    trainer = Trainer.from_params(
+    trainer = TrainerBase.from_params(
         model=model,
         serialization_dir=serialization_dir,
         iterator=iterator,
