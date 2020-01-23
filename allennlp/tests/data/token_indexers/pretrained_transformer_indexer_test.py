@@ -107,18 +107,24 @@ class TestPretrainedTransformerIndexer(AllenNlpTestCase):
         assert vocab.get_token_to_index_vocabulary(namespace=namespace) == tokenizer.encoder
 
     def test_mask(self):
-        allennlp_tokenizer = PretrainedTransformerTokenizer("bert-base-uncased")
-        indexer = PretrainedTransformerIndexer(model_name="bert-base-uncased")
-        string_no_specials = "AllenNLP is great"
-        allennlp_tokens = allennlp_tokenizer.tokenize(string_no_specials)
-        vocab = Vocabulary()
-        indexed = indexer.tokens_to_indices(allennlp_tokens, vocab)
-        expected_masks = [1] * len(indexed["token_ids"])
-        assert indexed["mask"] == expected_masks
-        max_length = 10
-        padding_lengths = {key: max_length for key in indexed.keys()}
-        padded_tokens = indexer.as_padded_tensor_dict(indexed, padding_lengths)
-        padding_length = max_length - len(indexed["mask"])
-        expected_masks = expected_masks + ([0] * padding_length)
-        assert len(padded_tokens["mask"]) == max_length
-        assert padded_tokens["mask"].tolist() == expected_masks
+        # We try these two models, because BERT pads tokens with 0, but RoBERTa pads tokens with 1.
+        for model in ["bert-base-uncased", "roberta-base"]:
+            allennlp_tokenizer = PretrainedTransformerTokenizer(model)
+            indexer = PretrainedTransformerIndexer(model_name=model)
+            string_no_specials = "AllenNLP is great"
+            allennlp_tokens = allennlp_tokenizer.tokenize(string_no_specials)
+            vocab = Vocabulary()
+            indexed = indexer.tokens_to_indices(allennlp_tokens, vocab)
+            expected_masks = [1] * len(indexed["token_ids"])
+            assert indexed["mask"] == expected_masks
+            max_length = 10
+            padding_lengths = {key: max_length for key in indexed.keys()}
+            padded_tokens = indexer.as_padded_tensor_dict(indexed, padding_lengths)
+            padding_length = max_length - len(indexed["mask"])
+            expected_masks = expected_masks + ([0] * padding_length)
+            assert len(padded_tokens["mask"]) == max_length
+            assert padded_tokens["mask"].tolist() == expected_masks
+
+            assert len(padded_tokens["token_ids"]) == max_length
+            padding_suffix = [allennlp_tokenizer.tokenizer.pad_token_id] * padding_length
+            assert padded_tokens["token_ids"][-padding_length:].tolist() == padding_suffix
