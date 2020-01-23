@@ -15,7 +15,6 @@ from overrides import overrides
 
 from allennlp.common.file_utils import cached_path
 from allennlp.common.checks import ConfigurationError
-from allennlp.common import Params
 from allennlp.common.util import lazy_groups_of
 from allennlp.modules.elmo_lstm import ElmoLstm
 from allennlp.modules.highway import Highway
@@ -219,34 +218,6 @@ class Elmo(torch.nn.Module):
             elmo_representations = representations
 
         return {"elmo_representations": elmo_representations, "mask": mask}
-
-    # The add_to_archive logic here requires a custom from_params.
-    @classmethod
-    def from_params(cls, params: Params) -> "Elmo":
-        # Add files to archive
-        params.add_file_to_archive("options_file")
-        params.add_file_to_archive("weight_file")
-
-        options_file = params.pop("options_file")
-        weight_file = params.pop("weight_file")
-        requires_grad = params.pop("requires_grad", False)
-        num_output_representations = params.pop("num_output_representations")
-        do_layer_norm = params.pop_bool("do_layer_norm", False)
-        keep_sentence_boundaries = params.pop_bool("keep_sentence_boundaries", False)
-        dropout = params.pop_float("dropout", 0.5)
-        scalar_mix_parameters = params.pop("scalar_mix_parameters", None)
-        params.assert_empty(cls.__name__)
-
-        return cls(
-            options_file=options_file,
-            weight_file=weight_file,
-            num_output_representations=num_output_representations,
-            requires_grad=requires_grad,
-            do_layer_norm=do_layer_norm,
-            keep_sentence_boundaries=keep_sentence_boundaries,
-            dropout=dropout,
-            scalar_mix_parameters=scalar_mix_parameters,
-        )
 
 
 def batch_to_ids(batch: List[List[str]]) -> torch.Tensor:
