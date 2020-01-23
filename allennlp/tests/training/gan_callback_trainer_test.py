@@ -101,6 +101,8 @@ class GanOptimizer(torch.optim.Optimizer, Registrable):
         return cls(
             generator_optimizer=generator_optimizer, discriminator_optimizer=discriminator_optimizer
         )
+
+
 GanOptimizer.register("gan", constructor="from_partial_objects")(GanOptimizer)
 
 
@@ -305,7 +307,7 @@ class GanCallbackTrainer(CallbackTrainer):
         distributed: bool = False,
         rank: int = 0,
         world_size: int = 1,
-    ) -> 'GanCallbackTrainer':
+    ) -> "GanCallbackTrainer":
         optimizer = optimizer.construct()
         return cls(
             model=model,

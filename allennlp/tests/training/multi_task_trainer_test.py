@@ -252,7 +252,10 @@ class MultiTaskTrainer(TrainerBase):
         num_epochs: int = 10,
     ) -> "MultiTaskTrainer":
 
-        datasets = {name: reader.read(train_file_paths[name]) for name, reader in train_dataset_readers.items()}
+        datasets = {
+            name: reader.read(train_file_paths[name])
+            for name, reader in train_dataset_readers.items()
+        }
 
         instances = (instance for dataset in datasets.values() for instance in dataset)
         vocab = Vocabulary.from_params(Params({}), instances=instances)

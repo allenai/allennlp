@@ -821,7 +821,6 @@ class Trainer(TrainerBase):
 
         common_util.log_frozen_and_tunable_parameter_names(model)
 
-
         parameters = [[n, p] for n, p in model.named_parameters() if p.requires_grad]
         optimizer = optimizer.construct(model_parameters=parameters)
         if not optimizer:
