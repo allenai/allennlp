@@ -16,6 +16,7 @@ from overrides import overrides
 from allennlp.common.file_utils import cached_path
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.util import lazy_groups_of
+from allennlp.common import FromParams
 from allennlp.modules.elmo_lstm import ElmoLstm
 from allennlp.modules.highway import Highway
 from allennlp.modules.scalar_mix import ScalarMix
@@ -36,7 +37,7 @@ from allennlp.data.fields import TextField
 logger = logging.getLogger(__name__)
 
 
-class Elmo(torch.nn.Module):
+class Elmo(torch.nn.Module, FromParams):
     """
     Compute ELMo representations using a pre-trained bidirectional language model.
 

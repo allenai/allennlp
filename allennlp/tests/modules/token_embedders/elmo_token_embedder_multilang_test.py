@@ -24,59 +24,6 @@ class TestElmoTokenEmbedderMultilang(ModelTestCase):
     def test_tagger_with_elmo_token_embedder_can_train_save_and_load(self):
         self.ensure_model_can_train_save_and_load(self.param_file)
 
-    def test_file_archiving(self):
-        # This happens to be a good place to test auxiliary file archiving.
-        # Train the model
-        params = Params.from_file(
-            self.FIXTURES_ROOT / "elmo_multilingual" / "config" / "multilang_token_embedder.json"
-        )
-        serialization_dir = os.path.join(self.TEST_DIR, "serialization")
-        train_model(params, serialization_dir)
-
-        # Inspect the archive
-        archive_file = os.path.join(serialization_dir, "model.tar.gz")
-        unarchive_dir = os.path.join(self.TEST_DIR, "unarchive")
-        with tarfile.open(archive_file, "r:gz") as archive:
-            archive.extractall(unarchive_dir)
-
-        # It should contain `files_to_archive.json`
-        fta_file = os.path.join(unarchive_dir, "files_to_archive.json")
-        assert os.path.exists(fta_file)
-
-        # Which should properly contain { flattened_key -> original_filename }
-        with open(fta_file) as fta:
-            files_to_archive = json.loads(fta.read())
-
-        assert files_to_archive == {
-            "model.text_field_embedder.token_embedders.elmo.options_files.en": str(
-                pathlib.Path("allennlp") / "tests" / "fixtures" / "elmo" / "options.json"
-            ),
-            "model.text_field_embedder.token_embedders.elmo.weight_files.en": str(
-                pathlib.Path("allennlp") / "tests" / "fixtures" / "elmo" / "lm_weights.hdf5"
-            ),
-            "model.text_field_embedder.token_embedders.elmo.options_files.fr": str(
-                pathlib.Path("allennlp")
-                / "tests"
-                / "fixtures"
-                / "elmo_multilingual"
-                / "fr"
-                / "options.json"
-            ),
-            "model.text_field_embedder.token_embedders.elmo.weight_files.fr": str(
-                pathlib.Path("allennlp")
-                / "tests"
-                / "fixtures"
-                / "elmo_multilingual"
-                / "fr"
-                / "weights.hdf5"
-            ),
-        }
-
-        # Check that the unarchived contents of those files match the original contents.
-        for key, original_filename in files_to_archive.items():
-            new_filename = os.path.join(unarchive_dir, "fta", key)
-            assert filecmp.cmp(original_filename, new_filename)
-
     def test_alignment_per_language(self):
         """
         Tests that the correct alignment is applied for each input language.

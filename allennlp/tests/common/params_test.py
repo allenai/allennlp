@@ -290,15 +290,6 @@ class TestParams(AllenNlpTestCase):
         assert params.as_dict() == lots_of_strings
         assert params.as_dict(infer_type_and_cast=True) == casted
 
-    def test_duplicate_copies_all_params_state(self):
-
-        params = Params({}, loading_from_archive=True, files_to_archive={"hey": "this is a path"})
-
-        new_params = params.duplicate()
-
-        assert new_params.loading_from_archive
-        assert new_params.files_to_archive == {"hey": "this is a path"}
-
     def test_pop_choice(self):
         choices = ["my_model", "other_model"]
         params = Params({"model": "my_model"})
