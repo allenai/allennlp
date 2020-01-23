@@ -114,7 +114,9 @@ class PretrainedTransformerIndexer(TokenIndexer):
                 pad_sequence_to_length(
                     val,
                     padding_lengths[key],
-                    default_value=lambda: 0 if key in {"mask", "type_ids"} else self._tokenizer.pad_token_id,
+                    default_value=lambda: 0
+                    if key in {"mask", "type_ids"}
+                    else self._tokenizer.pad_token_id,
                 )
             )
             for key, val in tokens.items()
