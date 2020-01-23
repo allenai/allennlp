@@ -38,6 +38,8 @@ def main(checks):
                 # We are extremely lax about specifying Optional[] types, so we need this flag.
                 # TODO: tighten up our type annotations and remove this
                 " --no-strict-optional"
+                # Some versions of mypy crash randomly when caching, probably because of our use of
+                # NamedTuple (https://github.com/python/mypy/issues/7281).
                 " --cache-dir=/dev/null",
                 shell=True,
                 check=True,
