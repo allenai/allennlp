@@ -50,8 +50,9 @@ run chmod 600 ./pypirc so only you can read/write.
 7. Copy the release notes from RELEASE.md to the tag in github once everything is looking hunky-dory.
 
 """
-from setuptools import setup, find_packages
 import sys
+
+from setuptools import find_namespace_packages, find_packages, setup
 
 # PEP0440 compatible formatted version, see:
 # https://www.python.org/dev/peps/pep-0440/
@@ -99,7 +100,8 @@ setup(
     author="Allen Institute for Artificial Intelligence",
     author_email="allennlp@allenai.org",
     license="Apache",
-    packages=find_packages(exclude=["*.tests", "*.tests.*", "tests.*", "tests"]),
+    packages=find_packages(exclude=["*.tests", "*.tests.*", "tests.*", "tests"])
+    + find_namespace_packages(include=["allennlp_plugins.*"]),
     install_requires=[
         "torch>=1.2.0,!=1.3.0",
         "jsonnet>=0.10.0 ; sys.platform != 'win32'",

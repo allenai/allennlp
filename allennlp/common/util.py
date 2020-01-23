@@ -9,29 +9,27 @@ import pkgutil
 import random
 import subprocess
 import sys
-from itertools import zip_longest, islice
+from itertools import islice, zip_longest
 from logging import Filter
-from typing import Any, Callable, Dict, Iterable, Iterator, List, Optional, Tuple, TypeVar
+from typing import Any, Callable, Dict, Iterable, Iterator, List, Optional, Tuple, Type, TypeVar
 
+import numpy
+import spacy
+import torch
 import torch.distributed as dist
+from spacy.cli.download import download as spacy_download
+from spacy.language import Language as SpacyModelType
+
+import allennlp_plugins
+from allennlp.common.checks import log_pytorch_version_info
+from allennlp.common.params import Params
+from allennlp.common.tqdm import Tqdm
 
 try:
     import resource
 except ImportError:
     # resource doesn't exist on Windows systems
     resource = None
-
-import torch
-import numpy
-import spacy
-from spacy.cli.download import download as spacy_download
-from spacy.language import Language as SpacyModelType
-
-# This base import is so we can refer to allennlp.data.Token in `sanitize()` without creating
-# circular dependencies.
-from allennlp.common.checks import log_pytorch_version_info
-from allennlp.common.params import Params
-from allennlp.common.tqdm import Tqdm
 
 logger = logging.getLogger(__name__)
 
@@ -577,3 +575,12 @@ def sanitize_wordpiece(wordpiece: str) -> str:
         return wordpiece[1:]
     else:
         return wordpiece
+
+
+def discover_plugins(namespace: Type = allennlp_plugins) -> Iterable[pkgutil.ModuleInfo]:
+    return pkgutil.iter_modules(namespace.__path__, namespace.__name__ + ".")
+
+
+def import_plugins() -> None:
+    for module_info in discover_plugins():
+        importlib.import_module(module_info.name)

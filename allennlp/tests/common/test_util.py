@@ -1,9 +1,16 @@
+import contextlib
+import distutils.dir_util
+import os
 import sys
+import tempfile
 from collections import OrderedDict
+from os import PathLike
+from typing import Generator, Union
 
 import pytest
 import torch
 
+from allennlp.commands import Subcommand
 from allennlp.common import util
 from allennlp.common.testing import AllenNlpTestCase
 
@@ -15,6 +22,14 @@ class Unsanitizable:
 class Sanitizable:
     def to_json(self):
         return {"sanitizable": True}
+
+
+@contextlib.contextmanager
+def pushd(new_dir: Union[bytes, PathLike, str]) -> Generator[None, None, None]:
+    previous_dir = os.getcwd()
+    os.chdir(new_dir)
+    yield
+    os.chdir(previous_dir)
 
 
 class TestCommonUtils(AllenNlpTestCase):
@@ -88,3 +103,30 @@ class TestCommonUtils(AllenNlpTestCase):
         ) = util.get_frozen_and_tunable_parameter_names(model)
         assert set(frozen_parameter_names) == {"linear.weight", "linear.bias"}
         assert set(tunable_parameter_names) == {"conv.weight", "conv.bias"}
+
+    def test_plugins_are_discovered_and_imported(self):
+        plugins_root = self.FIXTURES_ROOT / "plugins"
+        project_a_fixtures_root = plugins_root / "project_a"
+        project_b_fixtures_root = plugins_root / "project_b"
+
+        with tempfile.TemporaryDirectory() as temp_dir_a, tempfile.TemporaryDirectory() as temp_dir_b:
+            distutils.dir_util.copy_tree(project_a_fixtures_root, temp_dir_a)
+            distutils.dir_util.copy_tree(project_b_fixtures_root, temp_dir_b)
+
+            # We make one plugin available in the path, in another directory as if it were another project.
+            sys.path.append(temp_dir_a)
+
+            # We move to another directory with a different plugin, as if it were other project.
+            with pushd(temp_dir_b):
+                # In general when we run scripts or commands in a project, the current directory is the root of it
+                # and is part of the path. So we emulate this here.
+                sys.path.append(".")
+
+                available_plugins = list(util.discover_plugins())
+                self.assertEqual(len(available_plugins), 2)
+
+                util.import_plugins()
+                # As a secondary effect of importing, the new subcommands should be available.
+                subcommands_available = {t.__name__ for t in Subcommand.__subclasses__()}
+                self.assertIn("A", subcommands_available)
+                self.assertIn("B", subcommands_available)
