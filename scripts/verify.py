@@ -37,7 +37,8 @@ def main(checks):
                 " --no-site-packages "
                 # We are extremely lax about specifying Optional[] types, so we need this flag.
                 # TODO: tighten up our type annotations and remove this
-                " --no-strict-optional",
+                " --no-strict-optional"
+                " --cache-dir=/dev/null",
                 shell=True,
                 check=True,
             )

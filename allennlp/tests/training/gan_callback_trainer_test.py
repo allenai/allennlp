@@ -60,7 +60,7 @@ class GanOptimizer(torch.optim.Optimizer, Registrable):
         self.generator_optimizer = generator_optimizer
         self.discriminator_optimizer = discriminator_optimizer
         self.stage = ""
-        self.param_groups = {}
+        self.param_groups = {}  # type: ignore
 
     def step(self, _closure=None) -> None:
         if "discriminator" in self.stage:
@@ -93,13 +93,14 @@ class GanOptimizer(torch.optim.Optimizer, Registrable):
             [n, p] for n, p in model.discriminator.named_parameters() if p.requires_grad
         ]
 
-        generator_optimizer = generator_optimizer.construct(model_parameters=generator_parameters)
-        discriminator_optimizer = discriminator_optimizer.construct(
+        generator_optimizer_ = generator_optimizer.construct(model_parameters=generator_parameters)
+        discriminator_optimizer_ = discriminator_optimizer.construct(
             model_parameters=discriminator_parameters
         )
 
         return cls(
-            generator_optimizer=generator_optimizer, discriminator_optimizer=discriminator_optimizer
+            generator_optimizer=generator_optimizer_,
+            discriminator_optimizer=discriminator_optimizer_,
         )
 
 
@@ -293,7 +294,7 @@ class GanCallbackTrainer(CallbackTrainer):
         super().train_one_epoch()
 
     @classmethod
-    def from_partial_objects(
+    def from_partial_objects(  # type: ignore
         cls,
         model: Gan,
         train_data: Iterable[Instance],
@@ -340,7 +341,7 @@ if __name__ == "__main__":
     serialization_dir = tempfile.mkdtemp()
 
     params = config()
-    trainer = TrainerBase.from_params(params, serialization_dir)
+    trainer = TrainerBase.from_params(params=params, serialization_dir=serialization_dir)
 
     metrics = trainer.train()
     print(metrics)
