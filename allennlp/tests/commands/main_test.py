@@ -7,6 +7,7 @@ from allennlp.commands import main
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
+from allennlp.common.util import push_python_path
 
 
 class TestMain(AllenNlpTestCase):
@@ -54,79 +55,76 @@ class TestMain(AllenNlpTestCase):
         (packagedir / "__init__.py").touch()
 
         # And add that directory to the path
-        sys.path.insert(0, str(self.TEST_DIR))
+        with push_python_path(self.TEST_DIR):
+            # Write out a duplicate model there, but registered under a different name.
+            from allennlp.models import simple_tagger
 
-        # Write out a duplicate model there, but registered under a different name.
-        from allennlp.models import simple_tagger
+            with open(simple_tagger.__file__) as model_file:
+                code = model_file.read().replace(
+                    """@Model.register("simple_tagger")""",
+                    """@Model.register("duplicate-test-tagger")""",
+                )
 
-        with open(simple_tagger.__file__) as model_file:
-            code = model_file.read().replace(
-                """@Model.register("simple_tagger")""",
-                """@Model.register("duplicate-test-tagger")""",
+            with open(packagedir / "model.py", "w") as new_model_file:
+                new_model_file.write(code)
+
+            # Copy fixture there too.
+            shutil.copy(self.FIXTURES_ROOT / "data" / "sequence_tagging.tsv", self.TEST_DIR)
+            data_path = str(self.TEST_DIR / "sequence_tagging.tsv")
+
+            # Write out config file
+            config_path = self.TEST_DIR / "config.json"
+            config_json = """{
+                    "model": {
+                            "type": "duplicate-test-tagger",
+                            "text_field_embedder": {
+                                    "token_embedders": {
+                                            "tokens": {
+                                                    "type": "embedding",
+                                                    "embedding_dim": 5
+                                            }
+                                    }
+                            },
+                            "encoder": {
+                                    "type": "lstm",
+                                    "input_size": 5,
+                                    "hidden_size": 7,
+                                    "num_layers": 2
+                            }
+                    },
+                    "dataset_reader": {"type": "sequence_tagging"},
+                    "train_data_path": "$$$",
+                    "validation_data_path": "$$$",
+                    "iterator": {"type": "basic", "batch_size": 2},
+                    "trainer": {
+                            "num_epochs": 2,
+                            "optimizer": "adam"
+                    }
+                }""".replace(
+                "$$$", data_path
             )
+            with open(config_path, "w") as config_file:
+                config_file.write(config_json)
 
-        with open(packagedir / "model.py", "w") as new_model_file:
-            new_model_file.write(code)
+            serialization_dir = self.TEST_DIR / "serialization"
 
-        # Copy fixture there too.
-        shutil.copy(self.FIXTURES_ROOT / "data" / "sequence_tagging.tsv", self.TEST_DIR)
-        data_path = str(self.TEST_DIR / "sequence_tagging.tsv")
+            # Run train with using the non-allennlp module.
+            sys.argv = ["allennlp", "train", str(config_path), "-s", str(serialization_dir)]
 
-        # Write out config file
-        config_path = self.TEST_DIR / "config.json"
-        config_json = """{
-                "model": {
-                        "type": "duplicate-test-tagger",
-                        "text_field_embedder": {
-                                "token_embedders": {
-                                        "tokens": {
-                                                "type": "embedding",
-                                                "embedding_dim": 5
-                                        }
-                                }
-                        },
-                        "encoder": {
-                                "type": "lstm",
-                                "input_size": 5,
-                                "hidden_size": 7,
-                                "num_layers": 2
-                        }
-                },
-                "dataset_reader": {"type": "sequence_tagging"},
-                "train_data_path": "$$$",
-                "validation_data_path": "$$$",
-                "iterator": {"type": "basic", "batch_size": 2},
-                "trainer": {
-                        "num_epochs": 2,
-                        "optimizer": "adam"
-                }
-            }""".replace(
-            "$$$", data_path
-        )
-        with open(config_path, "w") as config_file:
-            config_file.write(config_json)
+            # Shouldn't be able to find the model.
+            with pytest.raises(ConfigurationError):
+                main()
 
-        serialization_dir = self.TEST_DIR / "serialization"
+            # Now add the --include-package flag and it should work.
+            # We also need to add --recover since the output directory already exists.
+            sys.argv.extend(["--recover", "--include-package", "testpackage"])
 
-        # Run train with using the non-allennlp module.
-        sys.argv = ["allennlp", "train", str(config_path), "-s", str(serialization_dir)]
-
-        # Shouldn't be able to find the model.
-        with pytest.raises(ConfigurationError):
             main()
 
-        # Now add the --include-package flag and it should work.
-        # We also need to add --recover since the output directory already exists.
-        sys.argv.extend(["--recover", "--include-package", "testpackage"])
+            # Rewrite out config file, but change a value.
+            with open(config_path, "w") as new_config_file:
+                new_config_file.write(config_json.replace('"num_epochs": 2,', '"num_epochs": 4,'))
 
-        main()
-
-        # Rewrite out config file, but change a value.
-        with open(config_path, "w") as new_config_file:
-            new_config_file.write(config_json.replace('"num_epochs": 2,', '"num_epochs": 4,'))
-
-        # This should fail because the config.json does not match that in the serialization directory.
-        with pytest.raises(ConfigurationError):
-            main()
-
-        sys.path.remove(str(self.TEST_DIR))
+            # This should fail because the config.json does not match that in the serialization directory.
+            with pytest.raises(ConfigurationError):
+                main()
