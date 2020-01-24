@@ -1,6 +1,5 @@
 import contextlib
 import distutils.dir_util
-import os
 import tempfile
 
 from pip._internal.cli.main import main as pip_main
@@ -9,17 +8,7 @@ import allennlp
 from allennlp.commands import Subcommand
 from allennlp.common.plugins import discover_plugins
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.common.util import ContextManagerFunctionReturnType, PathType, push_python_path
-
-
-@contextlib.contextmanager
-def pushd(new_dir: PathType) -> ContextManagerFunctionReturnType[None]:
-    previous_dir = os.getcwd()
-    os.chdir(new_dir)
-    try:
-        yield
-    finally:
-        os.chdir(previous_dir)
+from allennlp.common.util import ContextManagerFunctionReturnType, PathType, push_python_path, pushd
 
 
 @contextlib.contextmanager

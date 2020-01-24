@@ -395,6 +395,20 @@ def get_spacy_model(
 
 
 @contextlib.contextmanager
+def pushd(new_dir: PathType, verbose: bool = False) -> ContextManagerFunctionReturnType[None]:
+    previous_dir = os.getcwd()
+    if verbose:
+        logger.info(f"Changing directory to {new_dir}")
+    os.chdir(new_dir)
+    try:
+        yield
+    finally:
+        if verbose:
+            logger.info(f"Changing directory back to {previous_dir}")
+        os.chdir(previous_dir)
+
+
+@contextlib.contextmanager
 def push_python_path(path: PathType) -> ContextManagerFunctionReturnType[None]:
     path = str(path)
     sys.path.insert(0, path)
