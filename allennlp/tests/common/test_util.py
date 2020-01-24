@@ -34,23 +34,30 @@ ContextManagerFunctionReturnType = Generator[T, None, None]
 def pushd(new_dir: PathType) -> ContextManagerFunctionReturnType[None]:
     previous_dir = os.getcwd()
     os.chdir(new_dir)
-    yield
-    os.chdir(previous_dir)
+    try:
+        yield
+    finally:
+        os.chdir(previous_dir)
 
 
 @contextlib.contextmanager
 def pip_install(path: PathType, package_name: str) -> ContextManagerFunctionReturnType[None]:
     pip_main(["install", str(path)])
-    yield
-    pip_main(["uninstall", "-y", package_name])
+    try:
+        yield
+    finally:
+        pip_main(["uninstall", "-y", package_name])
 
 
 @contextlib.contextmanager
 def push_python_path(path: PathType) -> ContextManagerFunctionReturnType[None]:
-    sys.path.append(path)
-    yield
-    # Better to remove by value, in case `sys.path` was manipulated in between.
-    sys.path.remove(path)
+    path = str(path)
+    sys.path.insert(0, path)
+    try:
+        yield
+    finally:
+        # Better to remove by value, in case `sys.path` was manipulated in between.
+        sys.path.remove(path)
 
 
 class TestCommonUtils(AllenNlpTestCase):
