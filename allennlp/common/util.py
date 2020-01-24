@@ -1,6 +1,7 @@
 """
 Various utilities that don't fit anywhere else.
 """
+import contextlib
 import importlib
 import json
 import logging
@@ -11,7 +12,19 @@ import subprocess
 import sys
 from itertools import islice, zip_longest
 from logging import Filter
-from typing import Any, Callable, Dict, Iterable, Iterator, List, Optional, Tuple, TypeVar
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Generator,
+    Iterable,
+    Iterator,
+    List,
+    Optional,
+    Tuple,
+    TypeVar,
+    Union,
+)
 
 import numpy
 import spacy
@@ -41,6 +54,11 @@ JsonDict = Dict[str, Any]
 # those cases).
 START_SYMBOL = "@start@"
 END_SYMBOL = "@end@"
+
+
+PathType = Union[bytes, os.PathLike, str]
+T = TypeVar("T")
+ContextManagerFunctionReturnType = Generator[T, None, None]
 
 
 def sanitize(x: Any) -> Any:
@@ -376,6 +394,17 @@ def get_spacy_model(
     return LOADED_SPACY_MODELS[options]
 
 
+@contextlib.contextmanager
+def push_python_path(path: PathType) -> ContextManagerFunctionReturnType[None]:
+    path = str(path)
+    sys.path.insert(0, path)
+    try:
+        yield
+    finally:
+        # Better to remove by value, in case `sys.path` was manipulated in between.
+        sys.path.remove(path)
+
+
 def import_submodules(package_name: str) -> None:
     """
     Import all submodules under the given package.
@@ -388,21 +417,20 @@ def import_submodules(package_name: str) -> None:
     # For some reason, python doesn't always add this by default to your path, but you pretty much
     # always want it when using `--include-package`.  And if it's already there, adding it again at
     # the end won't hurt anything.
-    sys.path.append(".")
+    with push_python_path("."):
+        # Import at top level
+        module = importlib.import_module(package_name)
+        path = getattr(module, "__path__", [])
+        path_string = "" if not path else path[0]
 
-    # Import at top level
-    module = importlib.import_module(package_name)
-    path = getattr(module, "__path__", [])
-    path_string = "" if not path else path[0]
-
-    # walk_packages only finds immediate children, so need to recurse.
-    for module_finder, name, _ in pkgutil.walk_packages(path):
-        # Sometimes when you import third-party libraries that are on your path,
-        # `pkgutil.walk_packages` returns those too, so we need to skip them.
-        if path_string and module_finder.path != path_string:
-            continue
-        subpackage = f"{package_name}.{name}"
-        import_submodules(subpackage)
+        # walk_packages only finds immediate children, so need to recurse.
+        for module_finder, name, _ in pkgutil.walk_packages(path):
+            # Sometimes when you import third-party libraries that are on your path,
+            # `pkgutil.walk_packages` returns those too, so we need to skip them.
+            if path_string and module_finder.path != path_string:
+                continue
+            subpackage = f"{package_name}.{name}"
+            import_submodules(subpackage)
 
 
 def peak_memory_mb() -> float:
@@ -574,35 +602,3 @@ def sanitize_wordpiece(wordpiece: str) -> str:
         return wordpiece[1:]
     else:
         return wordpiece
-
-
-def discover_namespace_plugins() -> Iterable[pkgutil.ModuleInfo]:
-    try:
-        import allennlp_plugins as namespace
-
-        return pkgutil.iter_modules(namespace.__path__, namespace.__name__ + ".")
-    except ImportError:
-        return []
-
-
-def discover_file_plugins() -> Iterable[str]:
-    plugins_filename = ".allennlp_plugins"
-    if os.path.isfile(plugins_filename):
-        with open(plugins_filename) as file_:
-            for module_name in file_.readlines():
-                module_name = module_name.strip()
-                if module_name:
-                    yield module_name
-    else:
-        return []
-
-
-def discover_plugins() -> Iterable[str]:
-    for module_info in discover_namespace_plugins():
-        yield module_info.name
-    yield from discover_file_plugins()
-
-
-def import_plugins() -> None:
-    for module_name in discover_plugins():
-        importlib.import_module(module_name)
