@@ -175,17 +175,17 @@ class TestPretrainedTransformerEmbedder(AllenNlpTestCase):
         assert (folded_segment_concat_mask_out == folded_segment_concat_mask).all()
 
     def test_unfold_long_sequences(self):
-        # Let's just say [PAD] is 0, [CLS] is 1, and [SEP] is 2
+        # Let's just say [PAD] is 0, [CLS] is xxx1, and [SEP] is xxx2
         # We assume embeddings are 1-dim and are the same as indices
         embeddings = torch.LongTensor(
             [
-                [1, 101, 102, 103, 104, 2],
-                [1, 105, 106, 107, 108, 2],
-                [1, 109, 2, 0, 0, 0],
-                [1, 201, 202, 203, 204, 2],
-                [1, 205, 206, 207, 208, 2],
+                [1001, 101, 102, 103, 104, 1002],
+                [1011, 105, 106, 107, 108, 1012],
+                [1021, 109, 1022, 0, 0, 0],
+                [2001, 201, 202, 203, 204, 2002],
+                [2011, 205, 206, 207, 208, 2012],
                 [0, 0, 0, 0, 0, 0],
-                [1, 301, 2, 0, 0, 0],
+                [3001, 301, 3002, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0],
             ]
@@ -194,9 +194,9 @@ class TestPretrainedTransformerEmbedder(AllenNlpTestCase):
 
         unfolded_embeddings = torch.LongTensor(
             [
-                [1, 101, 102, 103, 104, 105, 106, 107, 108, 109, 2],
-                [1, 201, 202, 203, 204, 205, 206, 207, 208, 2, 0],
-                [1, 301, 2, 0, 0, 0, 0, 0, 0, 0, 0],
+                [1001, 101, 102, 103, 104, 105, 106, 107, 108, 109, 1022],
+                [2001, 201, 202, 203, 204, 205, 206, 207, 208, 2012, 0],
+                [3001, 301, 3002, 0, 0, 0, 0, 0, 0, 0, 0],
             ]
         ).unsqueeze(-1)
 
