@@ -17,8 +17,8 @@ def discover_namespace_plugins(
             importlib.reload(namespace_module)
 
         return pkgutil.iter_modules(
-            namespace_module.__path__, namespace_module.__name__ + "."
-        )  # type: ignore
+            namespace_module.__path__, namespace_module.__name__ + "."  # type: ignore
+        )
     except ModuleNotFoundError:
         return []
 
