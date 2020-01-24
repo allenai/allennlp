@@ -4,6 +4,7 @@ import time
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.tokenizers import PretrainedTransformerTokenizer
+from flaky import flaky
 
 
 class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
@@ -196,6 +197,7 @@ class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
             assert tokenized[-2].text == "."
             assert tokenized[-2].idx == len(sentence) - 1
 
+    @flaky(max_runs=3)  # This test relies on elapsed wall time, so it's inherently flaky.
     def test_token_idx_performance(self):
         text = """
             Tokyo (東京 Tōkyō, English: /ˈtoʊkioʊ/,[7] Japanese: [toːkʲoː]), officially Tokyo Metropolis (東京都
