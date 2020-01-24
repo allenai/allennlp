@@ -43,8 +43,13 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
 
         Shape: [batch_size, num_wordpieces, embedding_size].
         """
-        if self.transformer_model.embeddings.token_type_embeddings.num_embeddings == 1:
-            type_ids = None  # RoBERTa doesn't have token type ids
+        if (
+            type_ids is not None
+            and type_ids.max()
+            >= self.transformer_model.embeddings.token_type_embeddings.num_embeddings
+            == 1
+        ):
+            raise ValueError("Found type ids too large for the chosen transformer model.")
         return self.transformer_model(
             input_ids=token_ids, token_type_ids=type_ids, attention_mask=mask
         )[0]
