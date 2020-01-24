@@ -398,7 +398,7 @@ def get_spacy_model(
 def pushd(new_dir: PathType, verbose: bool = False) -> ContextManagerFunctionReturnType[None]:
     previous_dir = os.getcwd()
     if verbose:
-        logger.info(f"Changing directory to {new_dir}")
+        logger.info(f"Changing directory to {new_dir}")  # type: ignore
     os.chdir(new_dir)
     try:
         yield
