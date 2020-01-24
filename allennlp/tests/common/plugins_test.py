@@ -6,7 +6,12 @@ from overrides import overrides
 from pip._internal.cli.main import main as pip_main
 
 from allennlp.commands import Subcommand
-from allennlp.common.plugins import discover_namespace_plugins, discover_plugins, import_plugins
+from allennlp.common.plugins import (
+    discover_file_plugins,
+    discover_namespace_plugins,
+    discover_plugins,
+    import_plugins,
+)
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.common.util import ContextManagerFunctionReturnType, PathType, push_python_path, pushd
 
@@ -41,6 +46,10 @@ class TestPlugins(AllenNlpTestCase):
 
     def test_namespace_package_does_not_exist(self):
         available_plugins = list(discover_namespace_plugins("dummy_namespace"))
+        self.assertEqual(0, len(available_plugins))
+
+    def test_file_plugins_does_not_exist(self):
+        available_plugins = list(discover_file_plugins("dummy_file"))
         self.assertEqual(0, len(available_plugins))
 
     def test_namespace_plugins_are_discovered_and_imported(self):

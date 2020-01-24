@@ -22,8 +22,7 @@ def discover_namespace_plugins(
         return []
 
 
-def discover_file_plugins() -> Iterable[str]:
-    plugins_filename = ".allennlp_plugins"
+def discover_file_plugins(plugins_filename: str = ".allennlp_plugins") -> Iterable[str]:
     if os.path.isfile(plugins_filename):
         with open(plugins_filename) as file_:
             for module_name in file_.readlines():
