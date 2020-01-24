@@ -576,7 +576,7 @@ def sanitize_wordpiece(wordpiece: str) -> str:
         return wordpiece
 
 
-def discover_plugins() -> Iterable[pkgutil.ModuleInfo]:
+def discover_namespace_plugins() -> Iterable[pkgutil.ModuleInfo]:
     try:
         import allennlp_plugins as namespace
 
@@ -585,6 +585,11 @@ def discover_plugins() -> Iterable[pkgutil.ModuleInfo]:
         return []
 
 
+def discover_plugins() -> Iterable[str]:
+    for module_info in discover_namespace_plugins():
+        yield module_info.name
+
+
 def import_plugins() -> None:
-    for module_info in discover_plugins():
-        importlib.import_module(module_info.name)
+    for module_name in discover_plugins():
+        importlib.import_module(module_name)
