@@ -129,6 +129,10 @@ class TestCommonUtils(AllenNlpTestCase):
         assert set(frozen_parameter_names) == {"linear.weight", "linear.bias"}
         assert set(tunable_parameter_names) == {"conv.weight", "conv.bias"}
 
+    def test_no_plugins(self):
+        available_plugins = list(util.discover_plugins())
+        self.assertEqual(0, len(available_plugins))
+
     def test_namespace_plugins_are_discovered_and_imported(self):
         plugins_root = self.FIXTURES_ROOT / "plugins"
         project_a_fixtures_root = plugins_root / "project_a"
