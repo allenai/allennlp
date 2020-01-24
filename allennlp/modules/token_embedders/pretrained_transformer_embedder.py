@@ -204,7 +204,9 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
             lengths_to_mask(seq_lengths, segment_concat_mask.size(1), device) == segment_concat_mask
         ).all()
         # Shape: (batch_size, self._num_added_end_tokens); this is a broadcast op
-        end_token_indices = seq_lengths.unsqueeze(-1) - torch.arange(self._num_added_end_tokens) - 1
+        end_token_indices = (
+            seq_lengths.unsqueeze(-1) - torch.arange(self._num_added_end_tokens, device=device) - 1
+        )
 
         # Shape: (batch_size, self._num_added_start_tokens, embedding_size)
         start_token_embeddings = embeddings[:, : self._num_added_start_tokens, :]
