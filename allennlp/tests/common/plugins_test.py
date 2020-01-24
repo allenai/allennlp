@@ -36,26 +36,24 @@ class TestCommonUtils(AllenNlpTestCase):
         self.assertEqual(0, len(available_plugins))
 
     def test_namespace_plugins_are_discovered_and_imported(self):
-        with tempfile.TemporaryDirectory() as temp_dir_a, tempfile.TemporaryDirectory() as temp_dir_b, tempfile.TemporaryDirectory() as temp_dir_c:
-            distutils.dir_util.copy_tree(self.project_a_fixtures_root, temp_dir_a)
+        # We make plugins "a" and "c" available as packages, each from other directories, as if they were
+        # separate installed projects ("global" usage of the plugins).
+        with pip_install(
+            self.project_a_fixtures_root, "a"
+        ), tempfile.TemporaryDirectory() as temp_dir_b, pip_install(
+            self.project_c_fixtures_root, "c"
+        ):
             distutils.dir_util.copy_tree(self.project_b_fixtures_root, temp_dir_b)
-            distutils.dir_util.copy_tree(self.project_c_fixtures_root, temp_dir_c)
 
-            # We make plugins "a" and "c" available as packages, each from other directories, as if they were
-            # separate installed projects ("global" usage of the plugins).
             # We move to another directory with a different plugin "b", as if it were another separate project
             # which is not installed ("local" usage of the plugin declared in the namespace).
-            with pip_install(temp_dir_a, "a"), pushd(temp_dir_b), push_python_path(
-                "."
-            ), pip_install(temp_dir_c, "c"):
-                # In general when we run scripts or commands in a project, the current directory is the root of it
-                # and is part of the path. So we emulate this here with `push_python_path`.
-
+            # In general when we run scripts or commands in a project, the current directory is the root of it
+            # and is part of the path. So we emulate this here with `push_python_path`.
+            with pushd(temp_dir_b), push_python_path("."):
                 available_plugins = list(allennlp.common.plugins.discover_plugins())
                 self.assertEqual(3, len(available_plugins))
 
                 allennlp.common.plugins.import_plugins()
-                # As a secondary effect of importing, the new subcommands should be available.
                 subcommands_available = {t.__name__ for t in Subcommand.__subclasses__()}
                 self.assertIn("A", subcommands_available)
                 self.assertIn("B", subcommands_available)
@@ -64,24 +62,20 @@ class TestCommonUtils(AllenNlpTestCase):
     def test_namespace_and_file_plugins_are_discovered_and_imported(self):
         # We make plugins "a" and "c" available as packages, each from other directories, as if they were
         # separate installed projects ("global" usage of the plugins).
-        # We move to another directory with a different plugin "b", as if it were another separate project
-        # which is not installed ("local" usage of the plugin declared in a file).
-        with tempfile.TemporaryDirectory() as temp_dir_a, tempfile.TemporaryDirectory() as temp_dir_c, tempfile.TemporaryDirectory() as temp_dir_d:
-            distutils.dir_util.copy_tree(self.project_a_fixtures_root, temp_dir_a)
-            distutils.dir_util.copy_tree(self.project_c_fixtures_root, temp_dir_c)
+        with pip_install(self.project_a_fixtures_root, "a"), pip_install(
+            self.project_c_fixtures_root, "c"
+        ), tempfile.TemporaryDirectory() as temp_dir_d:
             distutils.dir_util.copy_tree(self.project_d_fixtures_root, temp_dir_d)
 
-            with pip_install(temp_dir_a, "a"), pushd(temp_dir_d), push_python_path(
-                "."
-            ), pip_install(temp_dir_c, "c"):
-                # In general when we run scripts or commands in a project, the current directory is the root of it
-                # and is part of the path. So we emulate this here with `push_python_path`.
-
+            # We move to another directory with a different plugin "b", as if it were another separate project
+            # which is not installed ("local" usage of the plugin declared in a file).
+            # In general when we run scripts or commands in a project, the current directory is the root of it
+            # and is part of the path. So we emulate this here with `push_python_path`.
+            with pushd(temp_dir_d), push_python_path("."):
                 available_plugins = list(allennlp.common.plugins.discover_plugins())
                 self.assertEqual(3, len(available_plugins))
 
                 allennlp.common.plugins.import_plugins()
-                # As a secondary effect of importing, the new subcommands should be available.
                 subcommands_available = {t.__name__ for t in Subcommand.__subclasses__()}
                 self.assertIn("A", subcommands_available)
                 self.assertIn("C", subcommands_available)
