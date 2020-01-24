@@ -37,3 +37,6 @@ twine>=1.11.0
 
 # Optional dependencies, which we install for testing purposes.
 matplotlib>=2.2.3
+
+# For the plugin testing.
+pip>=20.0.1
