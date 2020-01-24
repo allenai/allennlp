@@ -2,6 +2,7 @@ import contextlib
 import distutils.dir_util
 import tempfile
 
+import pytest
 from overrides import overrides
 from pip._internal.cli.main import main as pip_main
 
@@ -124,7 +125,8 @@ class TestPlugins(AllenNlpTestCase):
                 self.assertIn("A", subcommands_available)
                 self.assertIn("C", subcommands_available)
 
-    def test_reload_plugins_removes_one(self):
+    @pytest.mark.skip("Plugin unloading is not supported.")
+    def test_unload_plugin(self):
         with pip_install(self.project_a_fixtures_root, "a"):
             available_plugins = list(discover_plugins())
             self.assertEqual(1, len(available_plugins))
@@ -140,6 +142,7 @@ class TestPlugins(AllenNlpTestCase):
         subcommands_available = {t.__name__ for t in Subcommand.__subclasses__()}
         self.assertNotIn("A", subcommands_available)
 
+    @pytest.mark.skip("Plugin unloading is not supported.")
     def test_reload_plugins_removes_one_adds_one(self):
         with pip_install(self.project_a_fixtures_root, "a"):
             available_plugins = list(discover_plugins())

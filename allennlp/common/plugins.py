@@ -11,11 +11,10 @@ def discover_namespace_plugins(
     try:
         reload = namespace_name in sys.modules
 
-        # Don't use import so we don't make `namespace_module` a global variable
         namespace_module = importlib.import_module(namespace_name)
 
         if reload:
-            namespace_module = importlib.reload(namespace_module)
+            importlib.reload(namespace_module)
 
         return pkgutil.iter_modules(namespace_module.__path__, namespace_module.__name__ + ".")
     except ModuleNotFoundError:
