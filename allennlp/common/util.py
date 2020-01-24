@@ -11,7 +11,7 @@ import subprocess
 import sys
 from itertools import islice, zip_longest
 from logging import Filter
-from typing import Any, Callable, Dict, Iterable, Iterator, List, Optional, Tuple, Type, TypeVar
+from typing import Any, Callable, Dict, Iterable, Iterator, List, Optional, Tuple, TypeVar
 
 import numpy
 import spacy
@@ -20,7 +20,6 @@ import torch.distributed as dist
 from spacy.cli.download import download as spacy_download
 from spacy.language import Language as SpacyModelType
 
-import allennlp_plugins
 from allennlp.common.checks import log_pytorch_version_info
 from allennlp.common.params import Params
 from allennlp.common.tqdm import Tqdm
@@ -577,8 +576,13 @@ def sanitize_wordpiece(wordpiece: str) -> str:
         return wordpiece
 
 
-def discover_plugins(namespace: Type = allennlp_plugins) -> Iterable[pkgutil.ModuleInfo]:
-    return pkgutil.iter_modules(namespace.__path__, namespace.__name__ + ".")
+def discover_plugins() -> Iterable[pkgutil.ModuleInfo]:
+    try:
+        import allennlp_plugins as namespace
+
+        return pkgutil.iter_modules(namespace.__path__, namespace.__name__ + ".")
+    except ImportError:
+        return []
 
 
 def import_plugins() -> None:
