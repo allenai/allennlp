@@ -99,24 +99,21 @@ class TestCommonUtils(AllenNlpTestCase):
         assert util.sanitize(Sanitizable()) == {"sanitizable": True}
 
     def test_import_submodules(self):
-
         (self.TEST_DIR / "mymodule").mkdir()
         (self.TEST_DIR / "mymodule" / "__init__.py").touch()
         (self.TEST_DIR / "mymodule" / "submodule").mkdir()
         (self.TEST_DIR / "mymodule" / "submodule" / "__init__.py").touch()
         (self.TEST_DIR / "mymodule" / "submodule" / "subsubmodule.py").touch()
 
-        sys.path.insert(0, str(self.TEST_DIR))
-        assert "mymodule" not in sys.modules
-        assert "mymodule.submodule" not in sys.modules
+        with push_python_path(self.TEST_DIR):
+            assert "mymodule" not in sys.modules
+            assert "mymodule.submodule" not in sys.modules
 
-        util.import_submodules("mymodule")
+            util.import_submodules("mymodule")
 
-        assert "mymodule" in sys.modules
-        assert "mymodule.submodule" in sys.modules
-        assert "mymodule.submodule.subsubmodule" in sys.modules
-
-        sys.path.remove(str(self.TEST_DIR))
+            assert "mymodule" in sys.modules
+            assert "mymodule.submodule" in sys.modules
+            assert "mymodule.submodule.subsubmodule" in sys.modules
 
     def test_get_frozen_and_tunable_parameter_names(self):
         model = torch.nn.Sequential(
