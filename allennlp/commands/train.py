@@ -260,7 +260,7 @@ def train_model(
             extend_vocab=extend_vocab,
             embedding_sources_mapping=embedding_sources_mapping,
         )
-        archive_model(serialization_dir, files_to_archive=params.files_to_archive)
+        archive_model(serialization_dir)
         return model
 
     # Otherwise, we are running multiple processes for training.
@@ -319,7 +319,7 @@ def train_model(
             ),
             nprocs=num_procs,
         )
-        archive_model(serialization_dir, files_to_archive=params.files_to_archive)
+        archive_model(serialization_dir)
         model = Model.load(params, serialization_dir)
         return model
 
@@ -481,7 +481,7 @@ def _train_worker(
                 "Training interrupted by the user. Attempting to create "
                 "a model archive using the current best epoch weights."
             )
-            archive_model(serialization_dir, files_to_archive=params.files_to_archive)
+            archive_model(serialization_dir)
         raise
 
     if master:
