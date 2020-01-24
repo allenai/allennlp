@@ -13,6 +13,7 @@ import torch.nn.functional as F
 
 from allennlp.data.token_indexers import PretrainedTransformerIndexer
 from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
+from allennlp.nn.util import batched_index_select
 
 
 @TokenEmbedder.register("pretrained_transformer")
@@ -101,7 +102,7 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
 
         if self._max_length is not None:
             embeddings = self._unfold_long_sequences(
-                embeddings, batch_size, num_segment_concat_wordpieces
+                embeddings, segment_concat_mask, batch_size, num_segment_concat_wordpieces
             )
 
         return embeddings
@@ -147,7 +148,11 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         return fold(token_ids), fold(segment_concat_mask)
 
     def _unfold_long_sequences(
-        self, embeddings: torch.FloatTensor, batch_size: int, num_segment_concat_wordpieces: int
+        self,
+        embeddings: torch.FloatTensor,
+        segment_concat_mask: torch.LongTensor,
+        batch_size: int,
+        num_segment_concat_wordpieces: int,
     ) -> torch.FloatTensor:
         """
         We take 2D segments of a long sequence and flatten them out to get the whole sequence
@@ -157,20 +162,14 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         -> [ [CLS]_emb A_emb B_emb C_emb D_emb E_emb [SEP]_emb ]
 
         We truncate the start and end tokens for all segments, recombine the segments,
-        and manually add back the start tokens. We generally don't need to add back
-        the end tokens -- because the last segment is usually shorter than self._max_length,
-        the final end tokens usually won't be touched in our truncation process.
-
-        There are special cases where sequences have a full last segment. The only issue
-        in this case is that the [SEP] embedding will be wrong. Nevertheless, [SEP] embeddings
-        are rarely, if ever, used, so it shouldn't be a huge problem. However, we do remedy
-        this case when such sequences with a full last segment are the longest ones in a batch
-        by adding back the last token representations.
+        and manually add back the start and end tokens.
 
         # Parameters
 
         embeddings: `torch.FloatTensor`
             Shape: [batch_size * num_segments, self._max_length, embedding_size].
+        segment_concat_mask: `torch.LongTensor`
+            Shape: [batch_size * num_segments, self._max_length].
         batch_size: `int`
         num_segment_concat_wordpieces: `int`
             The length of the original "[ [CLS] A B C [SEP] [CLS] D E F [SEP] ]", i.e.
@@ -181,6 +180,13 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         embeddings: `torch.FloatTensor`
             Shape: [batch_size, self._num_wordpieces, embedding_size].
         """
+        def lengths_to_mask(lengths, max_len, device):
+            return (
+                torch.arange(max_len, device=device).expand(lengths.size(0), max_len)
+                < lengths.unsqueeze(1)
+            )
+
+        device = embeddings.device
         num_segments = int(embeddings.size(0) / batch_size)
         embedding_size = embeddings.size(2)
 
@@ -188,19 +194,52 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         num_wordpieces = num_segment_concat_wordpieces - (num_segments - 1) * self._num_added_tokens
 
         embeddings = embeddings.reshape(batch_size, num_segments * self._max_length, embedding_size)
+        segment_concat_mask = segment_concat_mask.reshape(
+            batch_size, num_segments * self._max_length
+        )
+        # We assume that all 1s in the mask preceed all 0s, and add an assert for that
+        # Shape: (batch_size,)
+        seq_lengths = segment_concat_mask.sum(-1)
+        assert (
+            lengths_to_mask(seq_lengths, segment_concat_mask.size(1), device) == segment_concat_mask
+        ).all()
+        # Shape: (batch_size, self._num_added_end_tokens); this is a broadcast op
+        end_token_indices = seq_lengths.unsqueeze(-1) - torch.arange(self._num_added_end_tokens) - 1
+
         # Shape: (batch_size, self._num_added_start_tokens, embedding_size)
         start_token_embeddings = embeddings[:, : self._num_added_start_tokens, :]
-        # See comment above -- remedy when the longest sequences have full last segments.
-        # This is not necessarily the end token embeddings when sequences aren't full.
         # Shape: (batch_size, self._num_added_end_tokens, embedding_size)
-        last_token_embeddings = embeddings[:, -self._num_added_end_tokens :, :]
+        end_token_embeddings = batched_index_select(embeddings, end_token_indices)
 
         embeddings = embeddings.reshape(batch_size, num_segments, self._max_length, embedding_size)
         embeddings = embeddings[
             :, :, self._num_added_start_tokens : -self._num_added_end_tokens, :
         ]  # truncate segment-level start/end tokens
         embeddings = embeddings.reshape(batch_size, -1, embedding_size)  # flatten
-        embeddings = torch.cat([start_token_embeddings, embeddings, last_token_embeddings], 1)
-        embeddings = embeddings[:, :num_wordpieces, :]
 
+        # Now try to put end token embeddings back which is a little tricky.
+
+        # The number of segment each sequence spans, excluding padding. Mimicking ceiling operation.
+        # Shape: (batch_size,)
+        num_effective_segments = (seq_lengths + self._max_length - 1) / self._max_length
+        # The number of indices that end tokens should shift back.
+        num_removed_non_end_tokens = (
+            num_effective_segments * self._num_added_tokens - self._num_added_end_tokens
+        )
+        # Shape: (batch_size, self._num_added_end_tokens)
+        end_token_indices -= num_removed_non_end_tokens.unsqueeze(-1)
+        assert (end_token_indices >= self._num_added_start_tokens).all()
+        # Add space for end embeddings
+        embeddings = torch.cat([embeddings, torch.zeros_like(end_token_embeddings)], 1)
+        # Add end token embeddings back
+        embeddings.scatter_(
+            1, end_token_indices.unsqueeze(-1).expand_as(end_token_embeddings), end_token_embeddings
+        )
+
+        # Now put back start tokens. We can do this before putting back end tokens, but then
+        # we need to change `num_removed_non_end_tokens` a little.
+        embeddings = torch.cat([start_token_embeddings, embeddings], 1)
+
+        # Truncate to original length
+        embeddings = embeddings[:, :num_wordpieces, :]
         return embeddings

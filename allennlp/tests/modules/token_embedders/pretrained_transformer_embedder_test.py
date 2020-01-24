@@ -190,11 +190,12 @@ class TestPretrainedTransformerEmbedder(AllenNlpTestCase):
                 [0, 0, 0, 0, 0, 0],
             ]
         ).unsqueeze(-1)
+        mask = (embeddings > 0).long()
 
         unfolded_embeddings = torch.LongTensor(
             [
                 [1, 101, 102, 103, 104, 105, 106, 107, 108, 109, 2],
-                [1, 201, 202, 203, 204, 205, 206, 207, 208, 0, 0],
+                [1, 201, 202, 203, 204, 205, 206, 207, 208, 2, 0],
                 [1, 301, 2, 0, 0, 0, 0, 0, 0, 0, 0],
             ]
         ).unsqueeze(-1)
@@ -202,6 +203,6 @@ class TestPretrainedTransformerEmbedder(AllenNlpTestCase):
         token_embedder = PretrainedTransformerEmbedder("bert-base-uncased", max_length=6)
 
         unfolded_embeddings_out = token_embedder._unfold_long_sequences(
-            embeddings, unfolded_embeddings.size(0), 15
+            embeddings, mask, unfolded_embeddings.size(0), 15
         )
         assert (unfolded_embeddings_out == unfolded_embeddings).all()
