@@ -1,15 +1,24 @@
 import importlib
 import os
 import pkgutil
+import sys
 from typing import Iterable
 
 
-def discover_namespace_plugins() -> Iterable[pkgutil.ModuleInfo]:
+def discover_namespace_plugins(
+    namespace_name: str = "allennlp_plugins",
+) -> Iterable[pkgutil.ModuleInfo]:
     try:
-        import allennlp_plugins as namespace
+        reload = namespace_name in sys.modules
 
-        return pkgutil.iter_modules(namespace.__path__, namespace.__name__ + ".")
-    except ImportError:
+        # Don't use import so we don't make `namespace_module` a global variable
+        namespace_module = importlib.import_module(namespace_name)
+
+        if reload:
+            namespace_module = importlib.reload(namespace_module)
+
+        return pkgutil.iter_modules(namespace_module.__path__, namespace_module.__name__ + ".")
+    except ModuleNotFoundError:
         return []
 
 
