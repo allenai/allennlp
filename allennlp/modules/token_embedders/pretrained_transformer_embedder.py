@@ -180,11 +180,11 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         embeddings: `torch.FloatTensor`
             Shape: [batch_size, self._num_wordpieces, embedding_size].
         """
+
         def lengths_to_mask(lengths, max_len, device):
-            return (
-                torch.arange(max_len, device=device).expand(lengths.size(0), max_len)
-                < lengths.unsqueeze(1)
-            )
+            return torch.arange(max_len, device=device).expand(
+                lengths.size(0), max_len
+            ) < lengths.unsqueeze(1)
 
         device = embeddings.device
         num_segments = int(embeddings.size(0) / batch_size)
