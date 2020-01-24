@@ -21,10 +21,7 @@ from typing import (
     Optional,
     Tuple,
     TypeVar,
-    Generator,
 )
-from queue import Queue
-from threading import Thread
 
 import torch.distributed as dist
 
@@ -590,4 +587,3 @@ def sanitize_wordpiece(wordpiece: str) -> str:
         return wordpiece[1:]
     else:
         return wordpiece
-
