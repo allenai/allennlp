@@ -155,7 +155,7 @@ class TestCommonUtils(AllenNlpTestCase):
                 # and is part of the path. So we emulate this here with `push_python_path`.
 
                 available_plugins = list(util.discover_plugins())
-                self.assertEqual(len(available_plugins), 3)
+                self.assertEqual(3, len(available_plugins))
 
                 util.import_plugins()
                 # As a secondary effect of importing, the new subcommands should be available.
@@ -186,7 +186,7 @@ class TestCommonUtils(AllenNlpTestCase):
                 # and is part of the path. So we emulate this here with `push_python_path`.
 
                 available_plugins = list(util.discover_plugins())
-                self.assertEqual(len(available_plugins), 3)
+                self.assertEqual(3, len(available_plugins))
 
                 util.import_plugins()
                 # As a secondary effect of importing, the new subcommands should be available.
