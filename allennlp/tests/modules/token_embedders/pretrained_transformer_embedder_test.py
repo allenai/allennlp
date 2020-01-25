@@ -1,9 +1,6 @@
-<<<<<<< HEAD
-import pytest
-=======
 import math
 
->>>>>>> Add tests
+import pytest
 import torch
 
 from allennlp.common import Params
@@ -168,9 +165,11 @@ class TestPretrainedTransformerEmbedder(AllenNlpTestCase):
 
         token_embedder = PretrainedTransformerEmbedder("bert-base-uncased", max_length=6)
 
-        folded_token_ids_out, folded_segment_concat_mask_out = token_embedder._fold_long_sequences(
-            token_ids, segment_concat_mask
-        )
+        (
+            folded_token_ids_out,
+            folded_segment_concat_mask_out,
+            _,
+        ) = token_embedder._fold_long_sequences(token_ids, segment_concat_mask)
         assert (folded_token_ids_out == folded_token_ids).all()
         assert (folded_segment_concat_mask_out == folded_segment_concat_mask).all()
 

@@ -1,9 +1,5 @@
 import math
-<<<<<<< HEAD
-from typing import Optional
-=======
-from typing import Tuple
->>>>>>> Factor out long sequence handling logic in embedder in separate functions
+from typing import Optional, Tuple
 
 from overrides import overrides
 from transformers.modeling_auto import AutoModel
@@ -70,9 +66,11 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
             num_segment_concat_wordpieces is num_wordpieces plus special tokens inserted in the
             middle, e.g. the length of: "[CLS] A B C [SEP] [CLS] D E F [SEP]" (see indexer logic).
         mask: torch.LongTensor
-             Shape: [batch_size, num_wordpieces].
+            Shape: [batch_size, num_wordpieces].
         type_ids: Optional[torch.LongTensor]
-             Shape: [batch_size, num_wordpieces].
+            Shape: [
+                batch_size, num_wordpieces if max_length is None else num_segment_concat_wordpieces
+            ].
         segment_concat_mask: Optional[torch.LongTensor]
             Shape: [batch_size, num_segment_concat_wordpieces].
 
@@ -87,6 +85,9 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
             == 1
         ):
             raise ValueError("Found type ids too large for the chosen transformer model.")
+
+        if type_ids is not None:
+            assert token_ids.shape == type_ids.shape
 
         if self._max_length is not None:
             batch_size, num_segment_concat_wordpieces = token_ids.size()
