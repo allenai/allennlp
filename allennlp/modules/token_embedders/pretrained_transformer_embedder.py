@@ -115,7 +115,7 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         token_ids: torch.LongTensor,
         segment_concat_mask: torch.LongTensor,
         type_ids: Optional[torch.LongTensor] = None,
-    ) -> Tuple[torch.LongTensor, torch.LongTensor]:
+    ) -> Tuple[torch.LongTensor, torch.LongTensor, Optional[torch.LongTensor]]:
         """
         We fold 1D sequences (for each element in batch), returned by `PretrainedTransformerIndexer`
         that are in reality multiple segments concatenated together, to 2D tensors, i.e.

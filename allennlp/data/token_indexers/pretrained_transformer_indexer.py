@@ -1,4 +1,4 @@
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 import logging
 import torch
 from allennlp.common.util import pad_sequence_to_length
@@ -105,7 +105,9 @@ class PretrainedTransformerIndexer(TokenIndexer):
 
         return self._postprocess_output(output)
 
-    def _extract_token_and_type_ids(self, tokens: List[Token]) -> List[int]:
+    def _extract_token_and_type_ids(
+        self, tokens: List[Token]
+    ) -> Tuple[List[int], Optional[List[int]]]:
         """
         Roughly equivalent to `zip(*[(token.text_id, token.type_id) for token in tokens])`,
         with some checks.
