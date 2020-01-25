@@ -107,7 +107,8 @@ class PretrainedTransformerIndexer(TokenIndexer):
 
     def _extract_token_and_type_ids(self, tokens: List[Token]) -> List[int]:
         """
-        Essentially returns `[token.text_id for token in tokens]`, with some checks.
+        Roughly equivalent to `zip(*[(token.text_id, token.type_id) for token in tokens])`,
+        with some checks.
         """
         indices: List[int] = []
         type_ids: List[int] = []
