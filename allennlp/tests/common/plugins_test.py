@@ -42,16 +42,16 @@ class TestPlugins(AllenNlpTestCase):
         self.project_d_fixtures_root = self.plugins_root / "project_d"
 
     def test_no_plugins(self):
-        available_plugins = list(discover_plugins())
-        self.assertEqual(0, len(available_plugins))
+        available_plugins = set(discover_plugins())
+        self.assertSetEqual(set(), available_plugins)
 
     def test_namespace_package_does_not_exist(self):
-        available_plugins = list(discover_namespace_plugins("dummy_namespace"))
-        self.assertEqual(0, len(available_plugins))
+        available_plugins = set(discover_namespace_plugins("dummy_namespace"))
+        self.assertSetEqual(set(), available_plugins)
 
     def test_file_plugins_does_not_exist(self):
-        available_plugins = list(discover_file_plugins("dummy_file"))
-        self.assertEqual(0, len(available_plugins))
+        available_plugins = set(discover_file_plugins("dummy_file"))
+        self.assertSetEqual(set(), available_plugins)
 
     def test_namespace_plugins_are_discovered_and_imported(self):
         # We make plugins "a" and "c" available as packages, each from other directories, as if they were
@@ -63,8 +63,11 @@ class TestPlugins(AllenNlpTestCase):
         with pip_install(self.project_a_fixtures_root, "a"), pip_install(
             self.project_c_fixtures_root, "c"
         ), pushd(self.project_b_fixtures_root), push_python_path("."):
-            available_plugins = list(discover_plugins())
-            self.assertEqual(3, len(available_plugins))
+            available_plugins = set(discover_plugins())
+            self.assertSetEqual(
+                {"allennlp_plugins.a", "allennlp_plugins.b", "allennlp_plugins.c"},
+                available_plugins,
+            )
 
             import_plugins()
             subcommands_available = {t.__name__ for t in Subcommand.__subclasses__()}
@@ -81,8 +84,8 @@ class TestPlugins(AllenNlpTestCase):
             # In general when we run scripts or commands in a project, the current directory is the root of it
             # and is part of the path. So we emulate this here with `push_python_path`.
             with pushd(temp_dir_b), push_python_path("."):
-                available_plugins = list(discover_plugins())
-                self.assertEqual(1, len(available_plugins))
+                available_plugins = set(discover_plugins())
+                self.assertSetEqual({"allennlp_plugins.b"}, available_plugins)
 
                 import_plugins()
                 subcommands_available = {t.__name__ for t in Subcommand.__subclasses__()}
@@ -98,8 +101,10 @@ class TestPlugins(AllenNlpTestCase):
         with pip_install(self.project_a_fixtures_root, "a"), pip_install(
             self.project_c_fixtures_root, "c"
         ), pushd(self.project_d_fixtures_root), push_python_path("."):
-            available_plugins = list(discover_plugins())
-            self.assertEqual(3, len(available_plugins))
+            available_plugins = set(discover_plugins())
+            self.assertSetEqual(
+                {"allennlp_plugins.a", "allennlp_plugins.c", "d"}, available_plugins
+            )
 
             import_plugins()
             subcommands_available = {t.__name__ for t in Subcommand.__subclasses__()}
@@ -109,16 +114,16 @@ class TestPlugins(AllenNlpTestCase):
 
     def test_reload_plugins_add_new_plugin(self):
         with pip_install(self.project_a_fixtures_root, "a"):
-            available_plugins = list(discover_plugins())
-            self.assertEqual(1, len(available_plugins))
+            available_plugins = set(discover_plugins())
+            self.assertSetEqual({"allennlp_plugins.a"}, available_plugins)
 
             import_plugins()
             subcommands_available = {t.__name__ for t in Subcommand.__subclasses__()}
             self.assertIn("A", subcommands_available)
 
             with pip_install(self.project_c_fixtures_root, "c"):
-                available_plugins = list(discover_plugins())
-                self.assertEqual(2, len(available_plugins))
+                available_plugins = set(discover_plugins())
+                self.assertSetEqual({"allennlp_plugins.a", "allennlp_plugins.c"}, available_plugins)
 
                 import_plugins()
                 subcommands_available = {t.__name__ for t in Subcommand.__subclasses__()}
@@ -128,15 +133,15 @@ class TestPlugins(AllenNlpTestCase):
     @pytest.mark.skip("Plugin unloading is not supported.")
     def test_unload_plugin(self):
         with pip_install(self.project_a_fixtures_root, "a"):
-            available_plugins = list(discover_plugins())
-            self.assertEqual(1, len(available_plugins))
+            available_plugins = set(discover_plugins())
+            self.assertSetEqual({"allennlp_plugins.a"}, available_plugins)
 
             import_plugins()
             subcommands_available = {t.__name__ for t in Subcommand.__subclasses__()}
             self.assertIn("A", subcommands_available)
 
-        available_plugins = list(discover_plugins())
-        self.assertEqual(0, len(available_plugins))
+        available_plugins = set(discover_plugins())
+        self.assertSetEqual(set(), available_plugins)
 
         import_plugins()
         subcommands_available = {t.__name__ for t in Subcommand.__subclasses__()}
@@ -145,8 +150,8 @@ class TestPlugins(AllenNlpTestCase):
     @pytest.mark.skip("Plugin unloading is not supported.")
     def test_reload_plugins_removes_one_adds_one(self):
         with pip_install(self.project_a_fixtures_root, "a"):
-            available_plugins = list(discover_plugins())
-            self.assertEqual(1, len(available_plugins))
+            available_plugins = set(discover_plugins())
+            self.assertSetEqual({"allennlp_plugins.a"}, available_plugins)
 
             import_plugins()
             subcommands_available = {t.__name__ for t in Subcommand.__subclasses__()}
@@ -154,8 +159,8 @@ class TestPlugins(AllenNlpTestCase):
             self.assertNotIn("C", subcommands_available)
 
         with pip_install(self.project_c_fixtures_root, "c"):
-            available_plugins = list(discover_plugins())
-            self.assertEqual(1, len(available_plugins))
+            available_plugins = set(discover_plugins())
+            self.assertSetEqual({"allennlp_plugins.c"}, available_plugins)
 
             import_plugins()
             subcommands_available = {t.__name__ for t in Subcommand.__subclasses__()}
