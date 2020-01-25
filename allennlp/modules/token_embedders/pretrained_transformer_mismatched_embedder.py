@@ -59,9 +59,9 @@ class PretrainedTransformerMismatchedEmbedder(TokenEmbedder):
         wordpiece_mask: torch.LongTensor
             Shape: [batch_size, num_wordpieces].
         type_ids: Optional[torch.LongTensor]
-            Shape: [batch_size, num_wordpieces]
+            Shape: [batch_size, num_wordpieces].
         segment_concat_mask: Optional[torch.LongTensor]
-            Not directly used here. See `PretrainedTransformerEmbedder`.
+            See `PretrainedTransformerEmbedder`.
 
         # Returns:
 
