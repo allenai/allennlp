@@ -101,7 +101,7 @@ class PretrainedTransformerIndexer(TokenIndexer):
         # The mask has 1 for real tokens and 0 for padding tokens. Only real tokens are attended to.
         output = {"token_ids": indices, "mask": [1] * len(indices)}
         if type_ids is not None:
-            result["type_ids"] = type_ids
+            output["type_ids"] = type_ids
 
         return self._postprocess_output(output)
 
@@ -162,17 +162,17 @@ class PretrainedTransformerIndexer(TokenIndexer):
             # Flattens
             indices = [i for segment in folded_indices for i in segment]
 
-            result["token_ids"] = indices
-            result["segment_concat_mask"] = [1] * len(indices)
+            output["token_ids"] = indices
+            output["segment_concat_mask"] = [1] * len(indices)
 
-        return result
+        return output
 
     @overrides
     def get_empty_token_list(self) -> IndexedTokenList:
-        result: IndexedTokenList = {"token_ids": [], "mask": [], "type_ids": []}
+        output: IndexedTokenList = {"token_ids": [], "mask": [], "type_ids": []}
         if self._max_length is not None:
-            result["segment_concat_mask"] = []
-        return result
+            output["segment_concat_mask"] = []
+        return output
 
     @overrides
     def as_padded_tensor_dict(
