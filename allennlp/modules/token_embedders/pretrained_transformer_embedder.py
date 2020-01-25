@@ -71,7 +71,9 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
             middle, e.g. the length of: "[CLS] A B C [SEP] [CLS] D E F [SEP]" (see indexer logic).
         mask: torch.LongTensor
              Shape: [batch_size, num_wordpieces].
-        segment_concat_mask: torch.LongTensor, optional.
+        type_ids: Optional[torch.LongTensor]
+             Shape: [batch_size, num_wordpieces].
+        segment_concat_mask: Optional[torch.LongTensor]
             Shape: [batch_size, num_segment_concat_wordpieces].
 
         # Returns:
@@ -88,8 +90,8 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
 
         if self._max_length is not None:
             batch_size, num_segment_concat_wordpieces = token_ids.size()
-            token_ids, segment_concat_mask = self._fold_long_sequences(
-                token_ids, segment_concat_mask
+            token_ids, segment_concat_mask, type_ids = self._fold_long_sequences(
+                token_ids, segment_concat_mask, type_ids
             )
 
         transformer_mask = segment_concat_mask if self._max_length is not None else mask
@@ -108,7 +110,10 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         return embeddings
 
     def _fold_long_sequences(
-        self, token_ids: torch.LongTensor, segment_concat_mask: torch.LongTensor
+        self,
+        token_ids: torch.LongTensor,
+        segment_concat_mask: torch.LongTensor,
+        type_ids: Optional[torch.LongTensor] = None,
     ) -> Tuple[torch.LongTensor, torch.LongTensor]:
         """
         We fold 1D sequences (for each element in batch), returned by `PretrainedTransformerIndexer`
@@ -126,6 +131,8 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
             middle, i.e. the length of: "[CLS] A B C [SEP] [CLS] D E F [SEP]" (see indexer logic).
         segment_concat_mask: `torch.LongTensor`
             Shape: [batch_size, num_segment_concat_wordpieces].
+        type_ids: Optional[torch.LongTensor]
+            Shape: [batch_size, num_wordpieces].
 
         # Returns:
 
@@ -145,7 +152,11 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
             # Shape: [batch_size * num_segments, self._max_length]
             return tensor.reshape(-1, self._max_length)
 
-        return fold(token_ids), fold(segment_concat_mask)
+        return (
+            fold(token_ids),
+            fold(segment_concat_mask),
+            fold(type_ids) if type_ids is not None else None,
+        )
 
     def _unfold_long_sequences(
         self,
