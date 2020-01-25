@@ -62,7 +62,7 @@ class PretrainedTransformerMismatchedIndexer(TokenIndexer):
         indices, offsets = self._intra_word_tokenize(tokens)
         # `create_token_type_ids_from_sequences()` inserts special tokens
         type_ids = self._tokenizer.create_token_type_ids_from_sequences(
-            indices[self._num_added_start_tokens:-self._num_added_end_tokens]
+            indices[self._num_added_start_tokens : -self._num_added_end_tokens]
         )
         output: IndexedTokenList = {
             "token_ids": indices,

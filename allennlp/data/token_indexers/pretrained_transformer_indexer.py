@@ -165,7 +165,7 @@ class PretrainedTransformerIndexer(TokenIndexer):
             output["token_ids"] = indices
             # `create_token_type_ids_from_sequences()` inserts special tokens
             output["type_ids"] = self._tokenizer.create_token_type_ids_from_sequences(
-                indices[self._num_added_start_tokens:-self._num_added_end_tokens]
+                indices[self._num_added_start_tokens : -self._num_added_end_tokens]
             )
             output["segment_concat_mask"] = [1] * len(indices)
 
