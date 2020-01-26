@@ -1,3 +1,5 @@
+from typing import Optional
+
 from overrides import overrides
 import torch
 
@@ -33,6 +35,7 @@ class PretrainedTransformerMismatchedEmbedder(TokenEmbedder):
         mask: torch.LongTensor,
         offsets: torch.LongTensor,
         wordpiece_mask: torch.LongTensor,
+        type_ids: Optional[torch.LongTensor] = None,
     ) -> torch.Tensor:  # type: ignore
         """
         # Parameters
@@ -48,13 +51,15 @@ class PretrainedTransformerMismatchedEmbedder(TokenEmbedder):
             corresponds to the original j-th token from the i-th batch.
         wordpiece_mask: torch.LongTensor
             Shape: [batch_size, num_wordpieces].
+        type_ids: Optional[torch.LongTensor]
+            Shape: [batch_size, num_wordpieces]
 
         # Returns:
 
         Shape: [batch_size, num_orig_tokens, embedding_size].
         """
         # Shape: [batch_size, num_wordpieces, embedding_size].
-        embeddings = self._matched_embedder(token_ids, wordpiece_mask)
+        embeddings = self._matched_embedder(token_ids, wordpiece_mask, type_ids=type_ids)
 
         # span_embeddings: (batch_size, num_orig_tokens, max_span_length, embedding_size)
         # span_mask: (batch_size, num_orig_tokens, max_span_length)

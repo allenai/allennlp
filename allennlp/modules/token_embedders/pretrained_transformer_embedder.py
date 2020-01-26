@@ -1,3 +1,5 @@
+from typing import Optional
+
 from overrides import overrides
 from transformers.modeling_auto import AutoModel
 import torch
@@ -24,7 +26,10 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
 
     @overrides
     def forward(
-        self, token_ids: torch.LongTensor, mask: torch.LongTensor
+        self,
+        token_ids: torch.LongTensor,
+        mask: torch.LongTensor,
+        type_ids: Optional[torch.LongTensor] = None,
     ) -> torch.Tensor:  # type: ignore
         """
         # Parameters
@@ -38,4 +43,13 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
 
         Shape: [batch_size, num_wordpieces, embedding_size].
         """
-        return self.transformer_model(input_ids=token_ids, attention_mask=mask)[0]
+        if (
+            type_ids is not None
+            and type_ids.max()
+            >= self.transformer_model.embeddings.token_type_embeddings.num_embeddings
+            == 1
+        ):
+            raise ValueError("Found type ids too large for the chosen transformer model.")
+        return self.transformer_model(
+            input_ids=token_ids, token_type_ids=type_ids, attention_mask=mask
+        )[0]

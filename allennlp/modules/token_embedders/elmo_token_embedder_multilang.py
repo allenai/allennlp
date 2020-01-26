@@ -149,10 +149,6 @@ class ElmoTokenEmbedderMultiLang(TokenEmbedder):
 
         options_files = params.pop("options_files")
         weight_files = params.pop("weight_files")
-        for lang in options_files.keys():
-            options_files.add_file_to_archive(lang)
-        for lang in weight_files.keys():
-            weight_files.add_file_to_archive(lang)
         requires_grad = params.pop("requires_grad", False)
         do_layer_norm = params.pop_bool("do_layer_norm", False)
         dropout = params.pop_float("dropout", 0.5)

@@ -2,14 +2,14 @@
 Assorted utilities for working with neural networks in AllenNLP.
 """
 
+import copy
+import json
+import logging
 from collections import defaultdict
 from typing import Any, Dict, List, Optional, Sequence, Tuple, TypeVar, Union
-import logging
-import copy
-import math
-import json
-import numpy
 
+import math
+import numpy
 import torch
 
 from allennlp.common.checks import ConfigurationError
@@ -607,7 +607,7 @@ def get_text_field_mask(
 
     TODO(joelgrus): can we change this?
     NOTE: Our functions for generating masks create torch.LongTensors, because using
-    torch.ByteTensors  makes it easy to run into overflow errors
+    torch.ByteTensors makes it easy to run into overflow errors
     when doing mask manipulation, such as summing to get the lengths of sequences - see below.
     >>> mask = torch.ones([260]).byte()
     >>> mask.sum() # equals 260.

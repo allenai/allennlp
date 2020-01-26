@@ -1,3 +1,4 @@
+import pytest
 import torch
 
 from allennlp.common import Params
@@ -69,3 +70,12 @@ class TestPretrainedTransformerEmbedder(AllenNlpTestCase):
         # Attention mask
         bert_vectors = token_embedder(tokens)
         assert bert_vectors.size() == (2, 9, 768)
+
+    def test_big_token_type_ids(self):
+        token_embedder = PretrainedTransformerEmbedder("roberta-base")
+        token_ids = torch.LongTensor([[1, 2, 3], [2, 3, 4]])
+        mask = torch.ones_like(token_ids)
+        type_ids = torch.zeros_like(token_ids)
+        type_ids[1, 1] = 1
+        with pytest.raises(ValueError):
+            token_embedder(token_ids, mask, type_ids)

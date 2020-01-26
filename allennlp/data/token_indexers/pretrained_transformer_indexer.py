@@ -1,5 +1,7 @@
 from typing import Dict, List
 import logging
+import torch
+from allennlp.common.util import pad_sequence_to_length
 
 from overrides import overrides
 from transformers.tokenization_auto import AutoTokenizer
@@ -71,6 +73,7 @@ class PretrainedTransformerIndexer(TokenIndexer):
             self._added_to_vocabulary = True
 
         indices: List[int] = []
+        type_ids: List[int] = []
         for token in tokens:
             if getattr(token, "text_id", None) is not None:
                 # `text_id` being set on the token means that we aren't using the vocab, we just use
@@ -83,14 +86,41 @@ class PretrainedTransformerIndexer(TokenIndexer):
                     f" for the following token: {token.text}"
                 )
 
+            if type_ids is not None and getattr(token, "type_id", None) is not None:
+                type_ids.append(token.type_id)
+            else:
+                type_ids = None
+
         # The mask has 1 for real tokens and 0 for padding tokens. Only real tokens are attended to.
         mask = [1] * len(indices)
 
-        return {"token_ids": indices, "mask": mask}
+        result = {"token_ids": indices, "mask": mask}
+        if type_ids is not None:
+            result["type_ids"] = type_ids
+        return result
 
     @overrides
     def get_empty_token_list(self) -> IndexedTokenList:
-        return {"token_ids": [], "mask": []}
+        return {"token_ids": [], "mask": [], "type_ids": []}
+
+    @overrides
+    def as_padded_tensor_dict(
+        self, tokens: IndexedTokenList, padding_lengths: Dict[str, int],
+    ) -> Dict[str, torch.Tensor]:
+        # Different transformers use different padding values for tokens, but for mask and type id, the padding
+        # value is always 0.
+        return {
+            key: torch.LongTensor(
+                pad_sequence_to_length(
+                    val,
+                    padding_lengths[key],
+                    default_value=lambda: 0
+                    if key in {"mask", "type_ids"}
+                    else self._tokenizer.pad_token_id,
+                )
+            )
+            for key, val in tokens.items()
+        }
 
     def __eq__(self, other):
         if isinstance(other, PretrainedTransformerIndexer):
