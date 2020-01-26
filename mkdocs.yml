@@ -61,8 +61,10 @@ nav:
     - tqdm: api/common/tqdm.md
     - testing:
       - model_test_case: api/common/testing/model_test_case.md
+      - plugins_test_util: api/common/testing/plugins_test_util.md
       - test_case: api/common/testing/test_case.md
     - file_utils: api/common/file_utils.md
+    - plugins: api/common/plugins.md
   - data:
     - instance: api/data/instance.md
     - tokenizers:
