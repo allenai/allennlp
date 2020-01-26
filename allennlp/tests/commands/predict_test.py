@@ -39,7 +39,7 @@ class TestPredict(AllenNlpTestCase):
     def test_add_predict_subparser(self):
         parser = argparse.ArgumentParser(description="Testing")
         subparsers = parser.add_subparsers(title="Commands", metavar="")
-        Predict().add_subparser("predict", subparsers)
+        Predict().add_subparser(subparsers)
 
         kebab_args = [
             "predict",  # command

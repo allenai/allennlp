@@ -50,6 +50,8 @@ import os
 import re
 from typing import List, Tuple
 
+from overrides import overrides
+
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common import Params, Tqdm
 from allennlp.common.checks import check_for_gpu, ConfigurationError
@@ -63,14 +65,15 @@ logger = logging.getLogger(__name__)
 
 
 class FindLearningRate(Subcommand):
-    def add_subparser(
-        self, name: str, parser: argparse._SubParsersAction
-    ) -> argparse.ArgumentParser:
+    name = "find-lr"
+
+    @overrides
+    def add_subparser(self, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
 
         description = """Find a learning rate range where loss decreases quickly
                          for the specified model and dataset."""
         subparser = parser.add_parser(
-            name, description=description, help="Find a learning rate range."
+            self.name, description=description, help="Find a learning rate range."
         )
 
         subparser.add_argument(

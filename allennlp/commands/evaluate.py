@@ -57,6 +57,8 @@ import json
 import logging
 from typing import Any, Dict
 
+from overrides import overrides
+
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common.util import dump_metrics, prepare_environment
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
@@ -68,13 +70,13 @@ logger = logging.getLogger(__name__)
 
 
 class Evaluate(Subcommand):
-    def add_subparser(
-        self, name: str, parser: argparse._SubParsersAction
-    ) -> argparse.ArgumentParser:
+    name = "evaluate"
 
+    @overrides
+    def add_subparser(self, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
         description = """Evaluate the specified model + dataset"""
         subparser = parser.add_parser(
-            name, description=description, help="Evaluate the specified model + dataset."
+            self.name, description=description, help="Evaluate the specified model + dataset."
         )
 
         subparser.add_argument("archive_file", type=str, help="path to an archived trained model")

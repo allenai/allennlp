@@ -222,7 +222,7 @@ class TestTrain(AllenNlpTestCase):
     def test_train_args(self):
         parser = argparse.ArgumentParser(description="Testing")
         subparsers = parser.add_subparsers(title="Commands", metavar="")
-        Train().add_subparser("train", subparsers)
+        Train().add_subparser(subparsers)
 
         for serialization_arg in ["-s", "--serialization-dir"]:
             raw_args = ["train", "path/to/params", serialization_arg, "serialization_dir"]

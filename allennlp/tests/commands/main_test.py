@@ -4,6 +4,7 @@ import sys
 from contextlib import redirect_stdout
 
 import pytest
+from overrides import overrides
 
 from allennlp.commands import main
 from allennlp.commands.subcommand import Subcommand
@@ -34,10 +35,12 @@ class TestMain(AllenNlpTestCase):
             pass
 
         class FakeEvaluate(Subcommand):
+            name = "evaluate"
             add_subparser_called = False
 
-            def add_subparser(self, name, parser):
-                subparser = parser.add_parser(name, description="fake", help="fake help")
+            @overrides
+            def add_subparser(self, parser):
+                subparser = parser.add_parser(self.name, description="fake", help="fake help")
 
                 subparser.set_defaults(func=do_nothing)
                 self.add_subparser_called = True
@@ -47,7 +50,7 @@ class TestMain(AllenNlpTestCase):
         fake_evaluate = FakeEvaluate()
 
         sys.argv = ["allennlp", "evaluate"]
-        main(subcommand_overrides={"evaluate": fake_evaluate})
+        main(subcommand_overrides=[fake_evaluate])
 
         assert fake_evaluate.add_subparser_called
 
@@ -137,17 +140,19 @@ class TestMain(AllenNlpTestCase):
         # "a" sets a "global" namespace plugin, because it's gonna be installed with pip.
         project_a_fixtures_root = plugins_root / "project_a"
 
+        sys.argv = ["allennlp"]
+
         with pip_install(project_a_fixtures_root, "a"):
             main()
 
-            subcommands_available = {t.__name__ for t in Subcommand.__subclasses__()}
-            self.assertIn("A", subcommands_available)
+        subcommands_available = {t.__name__ for t in Subcommand.__subclasses__()}
+        self.assertIn("A", subcommands_available)
 
     def test_subcommand_plugin_is_available(self):
         plugins_root = self.FIXTURES_ROOT / "plugins"
         allennlp_server_fixtures_root = plugins_root / "allennlp_server"
 
-        sys.argv = ["--help"]
+        sys.argv = ["allennlp"]
 
         with pip_install(
             allennlp_server_fixtures_root, "allennlp_server"

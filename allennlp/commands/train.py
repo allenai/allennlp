@@ -44,6 +44,7 @@ from typing import Dict, List, Optional
 import torch
 import torch.distributed as dist
 import torch.multiprocessing as mp
+from overrides import overrides
 
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common import Params
@@ -65,11 +66,12 @@ logger = logging.getLogger(__name__)
 
 
 class Train(Subcommand):
-    def add_subparser(
-        self, name: str, parser: argparse._SubParsersAction
-    ) -> argparse.ArgumentParser:
+    name = "train"
+
+    @overrides
+    def add_subparser(self, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
         description = """Train the specified model on the specified dataset."""
-        subparser = parser.add_parser(name, description=description, help="Train a model.")
+        subparser = parser.add_parser(self.name, description=description, help="Train a model.")
 
         subparser.add_argument(
             "param_path", type=str, help="path to parameter file describing the model to be trained"

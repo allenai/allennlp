@@ -26,6 +26,7 @@ import pathlib
 import sys
 
 import pytest
+from overrides import overrides
 
 import allennlp
 from allennlp.commands.subcommand import Subcommand
@@ -35,12 +36,15 @@ logger = logging.getLogger(__name__)
 
 
 class TestInstall(Subcommand):
-    def add_subparser(
-        self, name: str, parser: argparse._SubParsersAction
-    ) -> argparse.ArgumentParser:
+    name = "test-install"
+
+    @overrides
+    def add_subparser(self, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
 
         description = """Test that installation works by running the unit tests."""
-        subparser = parser.add_parser(name, description=description, help="Run the unit tests.")
+        subparser = parser.add_parser(
+            self.name, description=description, help="Run the unit tests."
+        )
 
         subparser.add_argument(
             "--run-all",

@@ -100,7 +100,7 @@ class TestFindLearningRate(AllenNlpTestCase):
     def test_find_learning_rate_args(self):
         parser = argparse.ArgumentParser(description="Testing")
         subparsers = parser.add_subparsers(title="Commands", metavar="")
-        FindLearningRate().add_subparser("find_lr", subparsers)
+        FindLearningRate().add_subparser(subparsers)
 
         for serialization_arg in ["-s", "--serialization-dir"]:
             raw_args = ["find_lr", "path/to/params", serialization_arg, "serialization_dir"]

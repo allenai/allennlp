@@ -31,19 +31,22 @@ import json
 import logging
 import os
 
+from overrides import overrides
+
 from allennlp.commands.subcommand import Subcommand
 
 logger = logging.getLogger(__name__)
 
 
 class PrintResults(Subcommand):
-    def add_subparser(
-        self, name: str, parser: argparse._SubParsersAction
-    ) -> argparse.ArgumentParser:
+    name = "print-results"
+
+    @overrides
+    def add_subparser(self, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
 
         description = """Print results from allennlp training runs in a helpful CSV format."""
         subparser = parser.add_parser(
-            name,
+            self.name,
             description=description,
             help="Print results from allennlp serialization directories to the console.",
         )

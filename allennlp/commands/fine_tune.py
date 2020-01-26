@@ -57,6 +57,8 @@ import json
 import logging
 from typing import Dict
 
+from overrides import overrides
+
 from allennlp.commands.subcommand import Subcommand
 from allennlp.commands.train import train_model
 from allennlp.common import Params
@@ -67,13 +69,13 @@ logger = logging.getLogger(__name__)
 
 
 class FineTune(Subcommand):
-    def add_subparser(
-        self, name: str, parser: argparse._SubParsersAction
-    ) -> argparse.ArgumentParser:
+    name = "fine-tune"
 
+    @overrides
+    def add_subparser(self, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
         description = """Continues training a saved model on a new dataset."""
         subparser = parser.add_parser(
-            name, description=description, help="Continue training a model on a new dataset."
+            self.name, description=description, help="Continue training a model on a new dataset."
         )
 
         subparser.add_argument(

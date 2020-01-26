@@ -15,8 +15,9 @@ class Subcommand:
     :func:`~allennlp.commands.main` .
     """
 
-    def add_subparser(
-        self, name: str, parser: argparse._SubParsersAction
-    ) -> argparse.ArgumentParser:
+    def add_subparser(self, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
+        raise NotImplementedError
 
+    @property
+    def name(self) -> str:
         raise NotImplementedError
