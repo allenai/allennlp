@@ -82,16 +82,13 @@ def create_parser(
 
     for name, subcommand in subcommands.items():
         subparser = subcommand.add_subparser(name, subparsers)
-        # configure doesn't need include-package because it imports
-        # whatever classes it needs.
-        if name != "configure":
-            subparser.add_argument(
-                "--include-package",
-                type=str,
-                action="append",
-                default=[],
-                help="additional packages to include",
-            )
+        subparser.add_argument(
+            "--include-package",
+            type=str,
+            action="append",
+            default=[],
+            help="additional packages to include",
+        )
 
     return parser
 
