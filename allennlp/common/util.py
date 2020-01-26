@@ -1,7 +1,6 @@
 """
 Various utilities that don't fit anywhere else.
 """
-import contextlib
 import importlib
 import json
 import logging
@@ -10,6 +9,7 @@ import pkgutil
 import random
 import subprocess
 import sys
+from contextlib import contextmanager
 from itertools import islice, zip_longest
 from logging import Filter
 from typing import (
@@ -394,7 +394,7 @@ def get_spacy_model(
     return LOADED_SPACY_MODELS[options]
 
 
-@contextlib.contextmanager
+@contextmanager
 def pushd(new_dir: PathType, verbose: bool = False) -> ContextManagerFunctionReturnType[None]:
     previous_dir = os.getcwd()
     if verbose:
@@ -408,7 +408,7 @@ def pushd(new_dir: PathType, verbose: bool = False) -> ContextManagerFunctionRet
         os.chdir(previous_dir)
 
 
-@contextlib.contextmanager
+@contextmanager
 def push_python_path(path: PathType) -> ContextManagerFunctionReturnType[None]:
     path = str(path)
     sys.path.insert(0, path)
