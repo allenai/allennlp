@@ -74,8 +74,7 @@ def create_parser(
         if subcommand.name not in subcommand_overrides_names:
             subcommands.add(subcommand)
 
-    subcommands = sorted(list(subcommands), key=lambda s: s.name)
-    for subcommand in subcommands:
+    for subcommand in sorted(list(subcommands), key=lambda s: s.name):
         subparser = subcommand.add_subparser(subparsers)
         subparser.add_argument(
             "--include-package",
