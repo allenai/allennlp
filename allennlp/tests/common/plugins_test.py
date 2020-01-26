@@ -1,11 +1,8 @@
 import distutils.dir_util
-import os
 import tempfile
-from contextlib import contextmanager
 
 import pytest
 from overrides import overrides
-from pip._internal.cli.main import main as pip_main
 
 from allennlp.commands import Subcommand
 from allennlp.common.plugins import (
@@ -15,24 +12,7 @@ from allennlp.common.plugins import (
     import_plugins,
 )
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.common.util import ContextManagerFunctionReturnType, PathType, push_python_path, pushd
-
-
-@contextmanager
-def pip_install(path: PathType, package_name: str) -> ContextManagerFunctionReturnType[None]:
-    pip_main(["install", str(path)])
-    try:
-        yield
-    finally:
-        pip_main(["uninstall", "-y", package_name])
-
-
-@contextmanager
-def _push_python_project(path: PathType) -> ContextManagerFunctionReturnType[None]:
-    # In general when we run scripts or commands in a project, the current directory is the root of it
-    # and is part of the path. So we emulate this here with `push_python_path`.
-    with pushd(path), push_python_path("."):
-        yield
+from allennlp.common.testing.plugins_test_util import pip_install, push_python_project
 
 
 class TestPlugins(AllenNlpTestCase):
@@ -84,7 +64,7 @@ class TestPlugins(AllenNlpTestCase):
             self.assertIn("C", subcommands_available)
 
     def test_local_namespace_plugin(self):
-        with _push_python_project(self.project_b_fixtures_root):
+        with push_python_project(self.project_b_fixtures_root):
             available_plugins = set(discover_plugins())
             self.assertSetEqual({"allennlp_plugins.b"}, available_plugins)
 
@@ -93,7 +73,7 @@ class TestPlugins(AllenNlpTestCase):
             self.assertIn("B", subcommands_available)
 
     def test_file_plugin(self):
-        with _push_python_project(self.project_d_fixtures_root):
+        with push_python_project(self.project_d_fixtures_root):
             available_plugins = set(discover_plugins())
             self.assertSetEqual({"d"}, available_plugins)
 
@@ -107,7 +87,7 @@ class TestPlugins(AllenNlpTestCase):
 
             # We move to another directory with a different plugin "b", as if it were another separate project
             # which is not installed ("local" usage of the plugin declared in the namespace).
-            with _push_python_project(temp_dir_b):
+            with push_python_project(temp_dir_b):
                 available_plugins = set(discover_plugins())
                 self.assertSetEqual({"allennlp_plugins.b"}, available_plugins)
 
@@ -122,7 +102,7 @@ class TestPlugins(AllenNlpTestCase):
         # which is not installed ("local" usage of the plugin declared in the namespace).
         with pip_install(self.project_a_fixtures_root, "a"), pip_install(
             self.project_c_fixtures_root, "c"
-        ), _push_python_project(self.project_b_fixtures_root):
+        ), push_python_project(self.project_b_fixtures_root):
             available_plugins = set(discover_plugins())
             self.assertSetEqual(
                 {"allennlp_plugins.a", "allennlp_plugins.b", "allennlp_plugins.c"},
@@ -142,7 +122,7 @@ class TestPlugins(AllenNlpTestCase):
         # which is not installed ("local" usage of the plugin declared in a file).
         with pip_install(self.project_a_fixtures_root, "a"), pip_install(
             self.project_c_fixtures_root, "c"
-        ), _push_python_project(self.project_d_fixtures_root):
+        ), push_python_project(self.project_d_fixtures_root):
             available_plugins = set(discover_plugins())
             self.assertSetEqual(
                 {"allennlp_plugins.a", "allennlp_plugins.c", "d"}, available_plugins

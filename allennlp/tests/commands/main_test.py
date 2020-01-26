@@ -7,6 +7,7 @@ from allennlp.commands import main
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
+from allennlp.common.testing.plugins_test_util import pip_install
 from allennlp.common.util import push_python_path
 
 
@@ -128,3 +129,14 @@ class TestMain(AllenNlpTestCase):
             # This should fail because the config.json does not match that in the serialization directory.
             with pytest.raises(ConfigurationError):
                 main()
+
+    def test_plugins_loaded(self):
+        plugins_root = self.FIXTURES_ROOT / "plugins"
+        # "a" sets a "global" namespace plugin, because it's gonna be installed with pip.
+        project_a_fixtures_root = plugins_root / "project_a"
+
+        with pip_install(project_a_fixtures_root, "a"):
+            main()
+
+            subcommands_available = {t.__name__ for t in Subcommand.__subclasses__()}
+            self.assertIn("A", subcommands_available)
