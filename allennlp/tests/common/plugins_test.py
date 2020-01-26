@@ -31,9 +31,8 @@ def pip_install(path: PathType, package_name: str) -> ContextManagerFunctionRetu
 def _push_python_project(path: PathType) -> ContextManagerFunctionReturnType[None]:
     # In general when we run scripts or commands in a project, the current directory is the root of it
     # and is part of the path. So we emulate this here with `push_python_path`.
-    with pushd(path):
-        with push_python_path(os.getcwd()):
-            yield
+    with pushd(path), push_python_path("."):
+        yield
 
 
 class TestPlugins(AllenNlpTestCase):

@@ -12,6 +12,7 @@ import sys
 from contextlib import contextmanager
 from itertools import islice, zip_longest
 from logging import Filter
+from pathlib import Path
 from typing import (
     Any,
     Callable,
@@ -56,7 +57,7 @@ START_SYMBOL = "@start@"
 END_SYMBOL = "@end@"
 
 
-PathType = Union[bytes, os.PathLike, str]
+PathType = Union[os.PathLike, str]
 T = TypeVar("T")
 ContextManagerFunctionReturnType = Generator[T, None, None]
 
@@ -410,6 +411,8 @@ def pushd(new_dir: PathType, verbose: bool = False) -> ContextManagerFunctionRet
 
 @contextmanager
 def push_python_path(path: PathType) -> ContextManagerFunctionReturnType[None]:
+    # In some environments, such as TC, it fails when sys.path contains a relative path, such as ".".
+    path = Path(path).resolve()
     path = str(path)
     sys.path.insert(0, path)
     try:
