@@ -397,6 +397,12 @@ def get_spacy_model(
 
 @contextmanager
 def pushd(new_dir: PathType, verbose: bool = False) -> ContextManagerFunctionReturnType[None]:
+    """
+    Changes the current directory to the given path and prepends it to `sys.path`.
+
+    This method is intended to use with `with`, so after its usage, the current directory will be
+    set to the previous value.
+    """
     previous_dir = os.getcwd()
     if verbose:
         logger.info(f"Changing directory to {new_dir}")  # type: ignore
@@ -411,6 +417,12 @@ def pushd(new_dir: PathType, verbose: bool = False) -> ContextManagerFunctionRet
 
 @contextmanager
 def push_python_path(path: PathType) -> ContextManagerFunctionReturnType[None]:
+    """
+    Prepends the given path to `sys.path`.
+
+    This method is intended to use with `with`, so after its usage, its value willbe removed from
+    `sys.path`.
+    """
     # In some environments, such as TC, it fails when sys.path contains a relative path, such as ".".
     path = Path(path).resolve()
     path = str(path)
