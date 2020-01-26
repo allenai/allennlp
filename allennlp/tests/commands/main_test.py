@@ -1,5 +1,7 @@
+import io
 import shutil
 import sys
+from contextlib import redirect_stdout
 
 import pytest
 
@@ -140,3 +142,17 @@ class TestMain(AllenNlpTestCase):
 
             subcommands_available = {t.__name__ for t in Subcommand.__subclasses__()}
             self.assertIn("A", subcommands_available)
+
+    def test_subcommand_plugin_is_available(self):
+        plugins_root = self.FIXTURES_ROOT / "plugins"
+        allennlp_server_fixtures_root = plugins_root / "allennlp_server"
+
+        sys.argv = ["--help"]
+
+        with pip_install(
+            allennlp_server_fixtures_root, "allennlp_server"
+        ), io.StringIO() as buf, redirect_stdout(buf):
+            main()
+            output = buf.getvalue()
+
+        self.assertIn("    serve", output)
