@@ -209,7 +209,7 @@ class PretrainedTransformerTokenizer(Tokenizer):
 
         wp_tokens = [
             Token(text, text_id=text_id, type_id=type_id)
-            for text, text_id, type_id in zip(wordpieces, texts, type_ids)
+            for text, text_id, type_id in zip(texts, wordpieces, type_ids)
         ]
 
         return wp_tokens, offsets

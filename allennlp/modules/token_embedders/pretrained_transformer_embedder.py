@@ -7,7 +7,6 @@ from transformers.modeling_auto import AutoModel
 import torch
 import torch.nn.functional as F
 
-from allennlp.data.token_indexers import PretrainedTransformerIndexer
 from allennlp.data.tokenizers import PretrainedTransformerTokenizer
 from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
 from allennlp.nn.util import batched_index_select
