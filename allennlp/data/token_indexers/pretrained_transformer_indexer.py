@@ -201,7 +201,7 @@ class PretrainedTransformerIndexer(TokenIndexer):
     def __eq__(self, other):
         if isinstance(other, PretrainedTransformerIndexer):
             for key in self.__dict__:
-                if key == "tokenizer":
+                if key == "_tokenizer":
                     # This is a reference to a function in the huggingface code, which we can't
                     # really modify to make this clean.  So we special-case it.
                     continue
