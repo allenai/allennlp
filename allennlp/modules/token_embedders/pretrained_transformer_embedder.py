@@ -213,7 +213,7 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         seq_lengths = mask.sum(-1)
         if not (lengths_to_mask(seq_lengths, mask.size(1), device) == mask).all():
             raise ValueError(
-                'Long sequence splitting only supports masks with all 1s preceding all 0s.'
+                "Long sequence splitting only supports masks with all 1s preceding all 0s."
             )
         # Shape: (batch_size, self._num_added_end_tokens); this is a broadcast op
         end_token_indices = (
