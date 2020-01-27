@@ -453,6 +453,12 @@ class Trainer(TrainerBase):
                 self._save_checkpoint(
                     "{0}.{1}".format(epoch, training_util.time_to_str(int(last_save_time)))
                 )
+
+        # Let all workers finish their epoch before computing
+        # the final statistics for the epoch.
+        if self._distributed:
+            dist.barrier()
+
         metrics = training_util.get_metrics(
             self.model,
             train_loss,
@@ -558,10 +564,6 @@ class Trainer(TrainerBase):
             for key, value in train_metrics.items():
                 if key.startswith("gpu_"):
                     metrics["peak_" + key] = max(metrics.get("peak_" + key, 0), value)
-
-            # Let all workers finish training before going into the validation mode
-            if self._distributed:
-                dist.barrier()
 
             if self._validation_data is not None:
                 with torch.no_grad():
