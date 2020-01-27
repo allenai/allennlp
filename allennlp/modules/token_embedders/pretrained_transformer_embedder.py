@@ -113,16 +113,16 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
     def _fold_long_sequences(
         self,
         token_ids: torch.LongTensor,
-        segment_concat_mask: torch.LongTensor,
+        mask: torch.LongTensor,
         type_ids: Optional[torch.LongTensor] = None,
     ) -> Tuple[torch.LongTensor, torch.LongTensor, Optional[torch.LongTensor]]:
         """
         We fold 1D sequences (for each element in batch), returned by `PretrainedTransformerIndexer`
-        that are in reality multiple segments concatenated together, to 2D tensors, i.e.
+        that are in reality multiple segments concatenated together, to 2D tensors, e.g.
 
         [ [CLS] A B C [SEP] [CLS] D E [SEP] ]
         -> [ [ [CLS] A B C [SEP] ], [ [CLS] D E [SEP] [PAD] ] ]
-        The [PAD] positions can be found in the returned `segment_concat_mask`.
+        The [PAD] positions can be found in the returned `mask`.
 
         # Parameters
 
@@ -130,16 +130,18 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
             Shape: [batch_size, num_segment_concat_wordpieces].
             num_segment_concat_wordpieces is num_wordpieces plus special tokens inserted in the
             middle, i.e. the length of: "[CLS] A B C [SEP] [CLS] D E F [SEP]" (see indexer logic).
-        segment_concat_mask: `torch.LongTensor`
+        mask: `torch.LongTensor`
             Shape: [batch_size, num_segment_concat_wordpieces].
+            The mask for the concatenated segments of wordpieces. The same as `segment_concat_mask`
+            in `forward()`.
         type_ids: Optional[torch.LongTensor]
-            Shape: [batch_size, num_wordpieces].
+            Shape: [batch_size, num_segment_concat_wordpieces].
 
         # Returns:
 
         token_ids: `torch.LongTensor`
             Shape: [batch_size * num_segments, self._max_length].
-        segment_concat_mask: `torch.LongTensor`
+        mask: `torch.LongTensor`
             Shape: [batch_size * num_segments, self._max_length].
         """
         num_segment_concat_wordpieces = token_ids.size(1)
@@ -153,16 +155,12 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
             # Shape: [batch_size * num_segments, self._max_length]
             return tensor.reshape(-1, self._max_length)
 
-        return (
-            fold(token_ids),
-            fold(segment_concat_mask),
-            fold(type_ids) if type_ids is not None else None,
-        )
+        return fold(token_ids), fold(mask), fold(type_ids) if type_ids is not None else None
 
     def _unfold_long_sequences(
         self,
         embeddings: torch.FloatTensor,
-        segment_concat_mask: torch.LongTensor,
+        mask: torch.LongTensor,
         batch_size: int,
         num_segment_concat_wordpieces: int,
     ) -> torch.FloatTensor:
@@ -180,8 +178,10 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
 
         embeddings: `torch.FloatTensor`
             Shape: [batch_size * num_segments, self._max_length, embedding_size].
-        segment_concat_mask: `torch.LongTensor`
+        mask: `torch.LongTensor`
             Shape: [batch_size * num_segments, self._max_length].
+            The mask for the concatenated segments of wordpieces. The same as `segment_concat_mask`
+            in `forward()`.
         batch_size: `int`
         num_segment_concat_wordpieces: `int`
             The length of the original "[ [CLS] A B C [SEP] [CLS] D E F [SEP] ]", i.e.
@@ -206,15 +206,11 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         num_wordpieces = num_segment_concat_wordpieces - (num_segments - 1) * self._num_added_tokens
 
         embeddings = embeddings.reshape(batch_size, num_segments * self._max_length, embedding_size)
-        segment_concat_mask = segment_concat_mask.reshape(
-            batch_size, num_segments * self._max_length
-        )
+        mask = mask.reshape(batch_size, num_segments * self._max_length)
         # We assume that all 1s in the mask preceed all 0s, and add an assert for that
         # Shape: (batch_size,)
-        seq_lengths = segment_concat_mask.sum(-1)
-        assert (
-            lengths_to_mask(seq_lengths, segment_concat_mask.size(1), device) == segment_concat_mask
-        ).all()
+        seq_lengths = mask.sum(-1)
+        assert (lengths_to_mask(seq_lengths, mask.size(1), device) == mask).all()
         # Shape: (batch_size, self._num_added_end_tokens); this is a broadcast op
         end_token_indices = (
             seq_lengths.unsqueeze(-1) - torch.arange(self._num_added_end_tokens, device=device) - 1
@@ -223,7 +219,7 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         # Shape: (batch_size, self._num_added_start_tokens, embedding_size)
         start_token_embeddings = embeddings[:, : self._num_added_start_tokens, :]
         # Shape: (batch_size, self._num_added_end_tokens, embedding_size)
-        end_token_embeddings = batched_index_select(embeddings, end_token_indices)
+        end_token_embeddings = batched_index_select(embeddings.contiguous(), end_token_indices)
 
         embeddings = embeddings.reshape(batch_size, num_segments, self._max_length, embedding_size)
         embeddings = embeddings[
