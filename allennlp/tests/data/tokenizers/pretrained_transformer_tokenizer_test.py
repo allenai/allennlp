@@ -305,3 +305,7 @@ class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
             idxs[first_sentence_end_index] + len(tokens[first_sentence_end_index])
             == idxs[second_sentence_start_index]
         )
+
+    def test_determine_num_special_tokens_added(self):
+        tokenizer = PretrainedTransformerTokenizer("bert-base-cased")
+        assert tokenizer._determine_num_special_tokens_added() == (1, 1)

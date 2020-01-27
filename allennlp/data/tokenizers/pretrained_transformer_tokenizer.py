@@ -188,7 +188,7 @@ class PretrainedTransformerTokenizer(Tokenizer):
         """
         wordpieces: List[int] = []
         offsets = []
-        cumulative = self._num_added_start_tokens
+        cumulative = self.num_added_start_tokens
         for token in tokens:
             subword_wordpieces = self.tokenizer.encode(token, add_special_tokens=False)
             wordpieces.extend(subword_wordpieces)
@@ -198,8 +198,8 @@ class PretrainedTransformerTokenizer(Tokenizer):
             end_offset = cumulative - 1  # inclusive
             offsets.append((start_offset, end_offset))
 
-        wordpieces = self._tokenizer.build_inputs_with_special_tokens(wordpieces)
-        assert cumulative + self._num_added_end_tokens == len(wordpieces)
+        wordpieces = self.tokenizer.build_inputs_with_special_tokens(wordpieces)
+        assert cumulative + self.num_added_end_tokens == len(wordpieces)
 
         return wordpieces, offsets
 
