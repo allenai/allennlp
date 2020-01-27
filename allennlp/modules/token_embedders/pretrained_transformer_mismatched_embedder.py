@@ -74,7 +74,7 @@ class PretrainedTransformerMismatchedEmbedder(TokenEmbedder):
 
         # span_embeddings: (batch_size, num_orig_tokens, max_span_length, embedding_size)
         # span_mask: (batch_size, num_orig_tokens, max_span_length)
-        span_embeddings, span_mask = util.batched_span_select(embeddings, offsets)
+        span_embeddings, span_mask = util.batched_span_select(embeddings.contiguous(), offsets)
         span_mask = span_mask.unsqueeze(-1)
         span_embeddings *= span_mask  # zero out paddings
 

@@ -207,10 +207,14 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
 
         embeddings = embeddings.reshape(batch_size, num_segments * self._max_length, embedding_size)
         mask = mask.reshape(batch_size, num_segments * self._max_length)
-        # We assume that all 1s in the mask preceed all 0s, and add an assert for that
+        # We assume that all 1s in the mask preceed all 0s, and add an assert for that.
+        # Open an issue on GitHub if this breaks for you.
         # Shape: (batch_size,)
         seq_lengths = mask.sum(-1)
-        assert (lengths_to_mask(seq_lengths, mask.size(1), device) == mask).all()
+        if not (lengths_to_mask(seq_lengths, mask.size(1), device) == mask).all():
+            raise ValueError(
+                'Long sequence splitting only supports masks with all 1s preceding all 0s.'
+            )
         # Shape: (batch_size, self._num_added_end_tokens); this is a broadcast op
         end_token_indices = (
             seq_lengths.unsqueeze(-1) - torch.arange(self._num_added_end_tokens, device=device) - 1
@@ -219,7 +223,7 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         # Shape: (batch_size, self._num_added_start_tokens, embedding_size)
         start_token_embeddings = embeddings[:, : self._num_added_start_tokens, :]
         # Shape: (batch_size, self._num_added_end_tokens, embedding_size)
-        end_token_embeddings = batched_index_select(embeddings.contiguous(), end_token_indices)
+        end_token_embeddings = batched_index_select(embeddings, end_token_indices)
 
         embeddings = embeddings.reshape(batch_size, num_segments, self._max_length, embedding_size)
         embeddings = embeddings[
