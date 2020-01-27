@@ -82,7 +82,6 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
             type_ids is not None
             and type_ids.max()
             >= self.transformer_model.embeddings.token_type_embeddings.num_embeddings
-            == 1
         ):
             raise ValueError("Found type ids too large for the chosen transformer model.")
 
