@@ -178,7 +178,7 @@ class PretrainedTransformerTokenizer(Tokenizer):
         """
         return self._tokenize(text)
 
-    def intra_word_tokenize(self, tokens: List[str]) -> Tuple[List[int], List[Tuple[int, int]]]:
+    def intra_word_tokenize(self, tokens: List[str]) -> Tuple[List[Token], List[Tuple[int, int]]]:
         """
         Tokenizes each word into wordpieces separately and returns the wordpiece IDs.
         Also calculates offsets such that wordpices[offsets[i][0]:offsets[i][1] + 1]
@@ -201,7 +201,18 @@ class PretrainedTransformerTokenizer(Tokenizer):
         wordpieces = self.tokenizer.build_inputs_with_special_tokens(wordpieces)
         assert cumulative + self.num_added_end_tokens == len(wordpieces)
 
-        return wordpieces, offsets
+        texts = self.tokenizer.convert_ids_to_tokens(wordpieces)
+        # `create_token_type_ids_from_sequences()` inserts special tokens
+        type_ids = self.tokenizer.create_token_type_ids_from_sequences(
+            wordpieces[self.num_added_start_tokens : -self.num_added_end_tokens]
+        )
+
+        wp_tokens = [
+            Token(text, text_id=text_id, type_id=type_id)
+            for text, text_id, type_id in zip(wordpieces, texts, type_ids)
+        ]
+
+        return wp_tokens, offsets
 
     def _determine_num_special_tokens_added(self) -> Tuple[int, int]:
         """
