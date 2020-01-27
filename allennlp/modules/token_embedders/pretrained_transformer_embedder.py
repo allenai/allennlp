@@ -3,11 +3,12 @@ from typing import Optional, Tuple
 
 from overrides import overrides
 from transformers.modeling_auto import AutoModel
-from transformers.tokenization_auto import AutoTokenizer
+
 import torch
 import torch.nn.functional as F
 
 from allennlp.data.token_indexers import PretrainedTransformerIndexer
+from allennlp.data.tokenizer import PretrainedTransformerTokenizer
 from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
 from allennlp.nn.util import batched_index_select
 
@@ -37,11 +38,9 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         # where it doesn't work.
         self.output_dim = self.transformer_model.config.hidden_size
 
-        tokenizer = AutoTokenizer.from_pretrained(model_name)
-        (
-            self._num_added_start_tokens,
-            self._num_added_end_tokens,
-        ) = PretrainedTransformerIndexer.determine_num_special_tokens_added(tokenizer)
+        tokenizer = PretrainedTransformerTokenizer(model_name)
+        self._num_added_start_tokens = tokenizer.num_added_start_tokens
+        self._num_added_end_tokens = tokenizer.num_added_end_tokens
         self._num_added_tokens = self._num_added_start_tokens + self._num_added_end_tokens
 
     @overrides

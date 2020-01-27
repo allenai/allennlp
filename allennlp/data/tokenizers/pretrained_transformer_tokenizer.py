@@ -1,5 +1,5 @@
 import logging
-from typing import List
+from typing import List, Tuple
 
 from allennlp.common.util import sanitize_wordpiece
 from overrides import overrides
@@ -79,6 +79,11 @@ class PretrainedTransformerTokenizer(Tokenizer):
         self._stride = stride
         self._truncation_strategy = truncation_strategy
         self._calculate_character_offsets = calculate_character_offsets
+
+        (
+            self.num_added_start_tokens,
+            self.num_added_end_tokens,
+        ) = self._determine_num_special_tokens_added()
 
     def _tokenize(self, sentence_1: str, sentence_2: str = None):
         """
@@ -172,3 +177,59 @@ class PretrainedTransformerTokenizer(Tokenizer):
         Refer to the `tokenize_sentence_pair` method if you have a sentence pair.
         """
         return self._tokenize(text)
+
+    def intra_word_tokenize(self, tokens: List[str]) -> Tuple[List[int], List[Tuple[int, int]]]:
+        """
+        Tokenizes each word into wordpieces separately and returns the wordpiece IDs.
+        Also calculates offsets such that wordpices[offsets[i][0]:offsets[i][1] + 1]
+        corresponds to the original i-th token.
+
+        This function inserts special tokens.
+        """
+        wordpieces: List[int] = []
+        offsets = []
+        cumulative = self._num_added_start_tokens
+        for token in tokens:
+            subword_wordpieces = self.tokenizer.encode(token, add_special_tokens=False)
+            wordpieces.extend(subword_wordpieces)
+
+            start_offset = cumulative
+            cumulative += len(subword_wordpieces)
+            end_offset = cumulative - 1  # inclusive
+            offsets.append((start_offset, end_offset))
+
+        wordpieces = self._tokenizer.build_inputs_with_special_tokens(wordpieces)
+        assert cumulative + self._num_added_end_tokens == len(wordpieces)
+
+        return wordpieces, offsets
+
+    def _determine_num_special_tokens_added(self) -> Tuple[int, int]:
+        """
+        Determines the number of tokens `tokenizer` adds to a sequence (currently doesn't
+        consider sequence pairs) in the start & end.
+
+        # Returns
+
+        The number of tokens (`int`) that are inserted in the start & end of a sequence.
+        """
+        # Uses a slightly higher index to avoid tokenizer doing special things to lower-indexed
+        # tokens which might be special.
+        dummy = [1000]
+        inserted = self.tokenizer.build_inputs_with_special_tokens(dummy)
+
+        num_start = num_end = 0
+        seen_dummy = False
+        for idx in inserted:
+            if idx == dummy[0]:
+                if seen_dummy:  # seeing it twice
+                    raise ValueError("Cannot auto-determine the number of special tokens added.")
+                seen_dummy = True
+                continue
+
+            if not seen_dummy:
+                num_start += 1
+            else:
+                num_end += 1
+
+        assert num_start + num_end == self.tokenizer.num_added_tokens()
+        return num_start, num_end

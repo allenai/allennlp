@@ -4,9 +4,9 @@ import torch
 from allennlp.common.util import pad_sequence_to_length
 
 from overrides import overrides
-from transformers.tokenization_auto import AutoTokenizer
 
 from allennlp.data.vocabulary import Vocabulary
+from allennlp.data.tokenizers import PretrainedTransformerTokenizer
 from allennlp.data.tokenizers.token import Token
 from allennlp.data.token_indexers.token_indexer import TokenIndexer, IndexedTokenList
 
@@ -43,13 +43,12 @@ class PretrainedTransformerIndexer(TokenIndexer):
     ) -> None:
         super().__init__(**kwargs)
         self._namespace = namespace
-        self._tokenizer = AutoTokenizer.from_pretrained(model_name)
+        self._allennlp_tokenizer = PretrainedTransformerTokenizer(model_name)
+        self._tokenizer = self._allennlp_tokenizer.tokenizer
         self._added_to_vocabulary = False
 
-        (
-            self._num_added_start_tokens,
-            self._num_added_end_tokens,
-        ) = self.__class__.determine_num_special_tokens_added(self._tokenizer)
+        self._num_added_start_tokens = self._allennlp_tokenizer.num_added_start_tokens
+        self._num_added_end_tokens = self._allennlp_tokenizer.num_added_end_tokens
 
         self._max_length = max_length
         if self._max_length is not None:
@@ -210,40 +209,3 @@ class PretrainedTransformerIndexer(TokenIndexer):
                     return False
             return True
         return NotImplemented
-
-    @classmethod
-    def determine_num_special_tokens_added(cls, tokenizer) -> Tuple[int, int]:
-        """
-        Determines the number of tokens `tokenizer` adds to a sequence (currently doesn't
-        consider sequence pairs) in the start & end.
-
-        # Parameters
-
-        tokenizer : `transformers.tokenization_utils.PretrainedTokenizer`, required.
-            We want to determine the number of added tokens by this tokenizer.
-
-        # Returns
-
-        The number of tokens (`int`) that are inserted in the start & end of a sequence.
-        """
-        # Uses a slightly higher index to avoid tokenizer doing special things to lower-indexed
-        # tokens which might be special.
-        dummy = [1000]
-        inserted = tokenizer.build_inputs_with_special_tokens(dummy)
-
-        num_start = num_end = 0
-        seen_dummy = False
-        for idx in inserted:
-            if idx == dummy[0]:
-                if seen_dummy:  # seeing it twice
-                    raise ValueError("Cannot auto-determine the number of special tokens added.")
-                seen_dummy = True
-                continue
-
-            if not seen_dummy:
-                num_start += 1
-            else:
-                num_end += 1
-
-        assert num_start + num_end == tokenizer.num_added_tokens()
-        return num_start, num_end
