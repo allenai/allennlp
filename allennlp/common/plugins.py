@@ -11,9 +11,13 @@ There are two ways of declaring plugins for discovery:
 
     * Creating a folder called "allennlp_plugins" that's in the Python path when you run the
     "allennlp" command (typically under your project's root directory), then creating a subfolder
-    with the name you want and creating an "__init.py" file that imports the code you want (e.g.,
+    with the name you want and creating an "__init__.py" file that imports the code you want (e.g.,
     your Python package). This option is preferred when you want to create a pip-installable
     package and you want to make your AllenNLP plugin available when users install your package.
+    For example, if you want to provide a package to serve AllenNLP models (i.e.,
+    `allennlp serve`), you may want to provide a pip-installable package so any user can install
+    your library. This method of declaring plugins will allow you anybody who runs `allennlp`
+    to see and use the option `serve` by just installing your package with pip.
 """
 import importlib
 import os

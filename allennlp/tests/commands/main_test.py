@@ -10,8 +10,8 @@ from allennlp.commands import main
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.common.testing.plugins_test_util import pip_install
 from allennlp.common.util import push_python_path
+from allennlp.tests.plugins_test_util import pip_install, push_python_project
 
 
 class TestMain(AllenNlpTestCase):
@@ -130,7 +130,20 @@ class TestMain(AllenNlpTestCase):
             with pytest.raises(ConfigurationError):
                 main()
 
-    def test_plugins_loaded(self):
+    def test_file_plugin_loaded(self):
+        plugins_root = self.FIXTURES_ROOT / "plugins"
+        # "b" sets a "local" namespace plugin, because it's supposed to be run from that directory.
+        project_b_fixtures_root = plugins_root / "project_b"
+
+        sys.argv = ["allennlp"]
+
+        with push_python_project(project_b_fixtures_root):
+            main()
+
+        subcommands_available = {t.__name__ for t in Subcommand.__subclasses__()}
+        self.assertIn("B", subcommands_available)
+
+    def test_namespace_plugin_loaded(self):
         plugins_root = self.FIXTURES_ROOT / "plugins"
         # "a" sets a "global" namespace plugin, because it's gonna be installed with pip.
         project_a_fixtures_root = plugins_root / "project_a"
