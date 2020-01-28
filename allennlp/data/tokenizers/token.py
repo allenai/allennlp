@@ -1,4 +1,4 @@
-from typing import NamedTuple
+from typing import NamedTuple, Optional
 
 
 class Token(NamedTuple):
@@ -36,15 +36,15 @@ class Token(NamedTuple):
         added, similar to spacy's `lex_id`.
     """
 
-    text: str = None
-    idx: int = None
-    lemma_: str = None
-    pos_: str = None
-    tag_: str = None
-    dep_: str = None
-    ent_type_: str = None
-    text_id: int = None
-    type_id: int = None
+    text: Optional[str] = None
+    idx: Optional[int] = None
+    lemma_: Optional[str] = None
+    pos_: Optional[str] = None
+    tag_: Optional[str] = None
+    dep_: Optional[str] = None
+    ent_type_: Optional[str] = None
+    text_id: Optional[int] = None
+    type_id: Optional[int] = None
 
     def __str__(self):
         return self.text
