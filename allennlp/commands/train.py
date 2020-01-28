@@ -454,6 +454,24 @@ def _train_worker(
 
 
 class TrainModel(Registrable):
+    """
+    This class exists so that we can easily read a configuration file with the `allennlp train`
+    command.  The basic logic is that we call `train_loop =
+    TrainModel.from_params(params_from_config_file)`, then `train_loop.run()`.  This class performs
+    very little logic, pushing most of it to the `TrainerBase` that has a `train()` method.  The
+    point here is to construct all of the dependencies for the `TrainerBase` in a way that we can do
+    it using `from_params()`, while having all of those dependencies transparently documented and
+    not hidden in calls to `params.pop()`.  If you are writing your own training loop, you almost
+    certainly should not use this class, but you might look at the code for this class to see what
+    we do, to make writing your training loop easier.
+
+    In particular, if you are tempted to call the `__init__` method of this class, you are probably
+    doing something unnecessary.  Literally all we do after `__init__` is call `trainer.train()`.  You
+    can do that yourself, if you've constructed a `Trainer` already.  What this class gives you is a
+    way to construct the `Trainer` by means of a config file.  The actual constructor that we use
+    with `from_params` in this class is `from_partial_objects`.  See that method for a description
+    of all of the allowed top-level keys in a configuration file used with `allennlp train`.
+    """
     default_implementation = "default"
 
     def __init__(
@@ -504,6 +522,7 @@ class TrainModel(Registrable):
         cls,
         serialization_dir: str,
         local_rank: int,
+        batch_weight_key: str,
         dataset_reader: DatasetReader,
         train_data_path: str,
         model: Lazy[Model],
@@ -516,8 +535,69 @@ class TrainModel(Registrable):
         validation_iterator: DataIterator = None,
         test_data_path: str = None,
         evaluate_on_test: bool = False,
-        batch_weight_key: str = "",
     ) -> "TrainModel":
+        """
+        This method is intended for use with our `FromParams` logic, to construct a `TrainModel`
+        object from a config file passed to the `allennlp train` command.  The arguments to this
+        method are the allowed top-level keys in a configuration file (except for the first three,
+        which are obtained separately).
+
+        You *could* use this outside of our `FromParams` logic if you really want to, but there
+        might be easier ways to accomplish your goal than instantiating `Lazy` objects.  If you are
+        writing your own training loop, we recommend that you look at the implementation of this
+        method for inspiration and possibly some utility functions you can call, but you very likely
+        should not use this method directly.
+
+        The `Lazy` type annotations here are a mechanism for building dependencies to an object
+        sequentially - the `TrainModel` object needs data, a model, and a trainer, but the model
+        needs to see the data before it's constructed (to create a vocabulary) and the trainer needs
+        the data and the model before it's constructed.  Objects that have sequential dependencies
+        like this are labeled as `Lazy` in their type annotations, and we pass the missing
+        dependencies when we call their `construct()` method, which you can see in the code below.
+
+        # Parameters
+        serialization_dir: `str`
+            The directory where logs and model archives will be saved.
+        local_rank: `int`
+        batch_weight_key: `str`
+        dataset_reader: `DatasetReader`
+            The `DatasetReader` that will be used for training and (by default) for validation.
+        train_data_path: `str`
+            The file (or directory) that will be passed to `dataset_reader.read()` to construct the
+            training data.
+        model: `Lazy[Model]`
+            The model that we will train.  This is lazy because it depends on the `Vocabulary`;
+            after constructing the vocabulary we call `model.construct(vocab=vocabulary)`.
+        iterator: `DataIterator`
+            The iterator we use to batch instances from the dataset reader at training and (by
+            default) validation time.
+        trainer: `Lazy[TrainerBase]`
+            The `Trainer` that actually implements the training loop.  This is a lazy object because
+            it depends on the model that's going to be trained.
+        vocabulary: `Lazy[Vocabulary]`, optional (default=None)
+            The `Vocabulary` that we will use to convert strings in the data to integer ids (and
+            possibly set sizes of embedding matrices in the `Model`).  By default we construct the
+            vocabulary from the instances that we read.
+        datasets_for_vocab_creation: `List[str]`, optional (default=None)
+            If you pass in more than one dataset but don't want to use all of them to construct a
+            vocabulary, you can pass in this key to limit it.  Valid entries in the list are
+            "train", "validation" and "test".
+        validation_dataset_reader: `DatasetReader`, optional (default=None)
+            If given, we will use this dataset reader for the validation data instead of
+            `dataset_reader`.
+        validation_data_path: `str`, optional (default=None)
+            If given, we will use this data for computing validation metrics and early stopping.
+        validation_iterator: `DataIterator`, optional (default=None)
+            If given, we will use this iterator for batching and scheduling instances for the
+            validation data, instead of `iterator`.
+        test_data_path: `str`, optional (default=None)
+            If given, we will use this as test data.  This makes it available for vocab creation by
+            default, but nothing else.
+        evaluate_on_test: `bool`, optional (default=False)
+            If given, we will evaluate the final model on this data at the end of training.  Note
+            that we do not recommend using this for actual test data in every-day experimentation;
+            you should only very rarely evaluate your model on actual test data.
+        """
 
         datasets = training_util.read_all_datasets(
             train_data_path=train_data_path,

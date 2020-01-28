@@ -325,7 +325,6 @@ class CallbackTrainer(TrainerBase):
             callbacks = []
         else:
             constructed_callbacks = []
-            print(f"\n\nCALLBACKS: {callbacks}\n\n")
             for callback in callbacks:
                 # We only need to pass here the things that weren't already passed to
                 # CallbackTrainer.from_partial_objects; FromParams will automatically pass those
