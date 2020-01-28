@@ -198,8 +198,8 @@ class ConllCorefReader(DatasetReader):
                     if start < self._wordpiece_modeling_tokenizer.num_added_start_tokens:
                         continue
                     if (
-                        end >=
-                        len(flat_sentences_tokens)
+                        end
+                        >= len(flat_sentences_tokens)
                         - self._wordpiece_modeling_tokenizer.num_added_end_tokens
                     ):
                         continue
