@@ -3,6 +3,7 @@ from typing import List, Tuple
 import pytest
 
 from allennlp.data.dataset_readers import ConllCorefReader
+from allennlp.data.tokenizers import PretrainedTransformerTokenizer
 from allennlp.common.util import ensure_list
 from allennlp.common.testing import AllenNlpTestCase
 
@@ -183,6 +184,104 @@ class TestCorefReader:
         assert (["Hong", "Kong"], 0) in gold_mentions_with_ids
         assert (["they"], 1) in gold_mentions_with_ids
         assert (["the", "clever", "Hong", "Kong", "people"], 1) in gold_mentions_with_ids
+
+    def test_wordpiece_modeling(self):
+        tokenizer = PretrainedTransformerTokenizer("bert-base-cased")
+        conll_reader = ConllCorefReader(
+            max_span_width=self.span_width, wordpiece_modeling_tokenizer=tokenizer
+        )
+        instances = ensure_list(
+            conll_reader.read(str(AllenNlpTestCase.FIXTURES_ROOT / "coref" / "coref.gold_conll"))
+        )
+
+        assert len(instances) == 2
+
+        fields = instances[0].fields
+        text = [x.text for x in fields["text"].tokens]
+
+        assert text == [
+            "[CLS]",
+            "In",
+            "the",
+            "summer",
+            "of",
+            "2005",
+            ",",
+            "a",
+            "picture",
+            "that",
+            "people",
+            "have",
+            "long",
+            "been",
+            "looking",
+            "forward",
+            "to",
+            "started",
+            "emerging",
+            "with",
+            "frequency",
+            "in",
+            "various",
+            "major",
+            "Hong",
+            "Kong",
+            "media",
+            ".",
+            "With",
+            "their",
+            "unique",
+            "charm",
+            ",",
+            "these",
+            "well",
+            "-",
+            "known",
+            "cartoon",
+            "images",
+            "once",
+            "again",
+            "caused",
+            "Hong",
+            "Kong",
+            "to",
+            "be",
+            "a",
+            "focus",
+            "of",
+            "worldwide",
+            "attention",
+            ".",
+            "The",
+            "world",
+            "'",
+            "s",
+            "fifth",
+            "Disney",
+            "park",
+            "will",
+            "soon",
+            "open",
+            "to",
+            "the",
+            "public",
+            "here",
+            ".",
+            "[SEP]",
+        ]
+
+        spans = fields["spans"].field_list
+        span_starts, span_ends = zip(*[(field.span_start, field.span_end) for field in spans])
+
+        candidate_mentions = self.check_candidate_mentions_are_well_defined(
+            span_starts, span_ends, text
+        )
+
+        # Asserts special tokens aren't included in the spans
+        assert all(span_start > 0 for span_start in span_starts)
+        assert all(span_end < len(text) - 1 for span_end in span_ends)
+        # This is a span which exceeds our max_span_width, so it should not be considered.
+        assert ["world", "'", "s", "fifth", "Disney", "park"] not in candidate_mentions
 
     def check_candidate_mentions_are_well_defined(self, span_starts, span_ends, text):
         candidate_mentions = []
