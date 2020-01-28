@@ -68,9 +68,8 @@ from allennlp.models.model import Model
 logger = logging.getLogger(__name__)
 
 
+@Subcommand.register("fine-tune")
 class FineTune(Subcommand):
-    name = "fine-tune"
-
     @overrides
     def add_subparser(self, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
         description = """Continues training a saved model on a new dataset."""

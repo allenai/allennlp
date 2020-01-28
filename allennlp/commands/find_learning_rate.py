@@ -64,9 +64,8 @@ from allennlp.training.util import create_serialization_dir, datasets_from_param
 logger = logging.getLogger(__name__)
 
 
+@Subcommand.register("find-lr")
 class FindLearningRate(Subcommand):
-    name = "find-lr"
-
     @overrides
     def add_subparser(self, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
 

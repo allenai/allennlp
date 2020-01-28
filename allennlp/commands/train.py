@@ -65,9 +65,8 @@ from allennlp.training.util import create_serialization_dir, evaluate, make_voca
 logger = logging.getLogger(__name__)
 
 
+@Subcommand.register("train")
 class Train(Subcommand):
-    name = "train"
-
     @overrides
     def add_subparser(self, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
         description = """Train the specified model on the specified dataset."""

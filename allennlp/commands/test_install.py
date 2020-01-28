@@ -35,9 +35,8 @@ from allennlp.common.util import pushd
 logger = logging.getLogger(__name__)
 
 
+@Subcommand.register("test-install")
 class TestInstall(Subcommand):
-    name = "test-install"
-
     @overrides
     def add_subparser(self, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
 

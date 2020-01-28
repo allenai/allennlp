@@ -1,6 +1,6 @@
 import argparse
 import logging
-from typing import Any, Iterable
+from typing import Any, Optional
 
 from overrides import overrides
 
@@ -44,37 +44,23 @@ class ArgumentParserWithDefaults(argparse.ArgumentParser):
         if kwargs.get(
             "action"
         ) not in self._action_defaults_to_ignore and not self._is_empty_default(default):
-            description = kwargs.get("help") or ""
+            description = kwargs.get("help", "")
             kwargs["help"] = f"{description} (default = {default})"
         super().add_argument(*args, **kwargs)
 
 
-def create_parser(
-    prog: str = None, subcommand_overrides: Iterable[Subcommand] = None
-) -> argparse.ArgumentParser:
+def create_parser(prog: Optional[str] = None) -> argparse.ArgumentParser:
     """
     Creates the argument parser for the main program.
     """
-    subcommand_overrides = subcommand_overrides or []
-
     parser = ArgumentParserWithDefaults(description="Run AllenNLP", prog=prog)
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
 
     subparsers = parser.add_subparsers(title="Commands", metavar="")
 
-    subcommand_overrides_names = {subcommand.name for subcommand in subcommand_overrides}
-
-    subcommands = set(subcommand_overrides)
-
-    # The class of each instance in the overrides iterable is gonna be in the subclasses
-    # iterable, by definition. So we only add those `Subcommand` subclasses that don't have an
-    # instance in the overrides iterable.
-    for subcommand_class in Subcommand.__subclasses__():
+    for subcommand_name in Subcommand.list_available():
+        subcommand_class = Subcommand.by_name(subcommand_name)
         subcommand = subcommand_class()
-        if subcommand.name not in subcommand_overrides_names:
-            subcommands.add(subcommand)
-
-    for subcommand in sorted(list(subcommands), key=lambda s: s.name):
         subparser = subcommand.add_subparser(subparsers)
         subparser.add_argument(
             "--include-package",
@@ -87,18 +73,16 @@ def create_parser(
     return parser
 
 
-def main(prog: str = None, subcommand_overrides: Iterable[Subcommand] = None) -> None:
+def main(prog: Optional[str] = None) -> None:
     """
     The :mod:`~allennlp.run` command only knows about the registered classes in the ``allennlp``
     codebase. In particular, once you start creating your own ``Model`` s and so forth, it won't
     work for them, unless you use the ``--include-package`` flag or you make your code available
     as a plugin.
     """
-    subcommand_overrides = subcommand_overrides or []
-
     import_plugins()
 
-    parser = create_parser(prog, subcommand_overrides)
+    parser = create_parser(prog)
     args = parser.parse_args()
 
     # If a subparser is triggered, it adds its work as `args.func`.
@@ -106,7 +90,7 @@ def main(prog: str = None, subcommand_overrides: Iterable[Subcommand] = None) ->
     # so give the user some help.
     if "func" in dir(args):
         # Import any additional modules needed (to register custom classes).
-        for package_name in getattr(args, "include_package", ()):
+        for package_name in args.include_package:
             import_submodules(package_name)
         args.func(args)
     else:

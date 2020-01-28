@@ -38,9 +38,8 @@ from allennlp.commands.subcommand import Subcommand
 logger = logging.getLogger(__name__)
 
 
+@Subcommand.register("print-results")
 class PrintResults(Subcommand):
-    name = "print-results"
-
     @overrides
     def add_subparser(self, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
 

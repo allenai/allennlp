@@ -45,9 +45,8 @@ from allennlp.training.util import datasets_from_params
 logger = logging.getLogger(__name__)
 
 
+@Subcommand.register("dry-run")
 class DryRun(Subcommand):
-    name = "dry-run"
-
     @overrides
     def add_subparser(self, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
         description = (
@@ -70,7 +69,6 @@ class DryRun(Subcommand):
             type=str,
             help="directory in which to save the output of the dry run.",
         )
-
         subparser.add_argument(
             "-o",
             "--overrides",

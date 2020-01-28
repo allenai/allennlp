@@ -69,9 +69,8 @@ from allennlp.training.util import evaluate
 logger = logging.getLogger(__name__)
 
 
+@Subcommand.register("evaluate")
 class Evaluate(Subcommand):
-    name = "evaluate"
-
     @overrides
     def add_subparser(self, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
         description = """Evaluate the specified model + dataset"""

@@ -95,6 +95,7 @@ DEFAULT_WEIGHT_FILE = "https://allennlp.s3.amazonaws.com/models/elmo/2x4096_512_
 DEFAULT_BATCH_SIZE = 64
 
 
+@Subcommand.register("elmo")
 class Elmo(Subcommand):
     """
     Note that ELMo maintains an internal state dependent on previous batches.
@@ -103,8 +104,6 @@ class Elmo(Subcommand):
 
     See https://github.com/allenai/allennlp/blob/master/tutorials/how_to/elmo.md for more details.
     """
-
-    name = "elmo"
 
     @overrides
     def add_subparser(self, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:

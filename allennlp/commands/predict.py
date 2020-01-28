@@ -65,9 +65,8 @@ from allennlp.predictors.predictor import Predictor, JsonDict
 from allennlp.data import Instance
 
 
+@Subcommand.register("predict")
 class Predict(Subcommand):
-    name = "predict"
-
     @overrides
     def add_subparser(self, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
 

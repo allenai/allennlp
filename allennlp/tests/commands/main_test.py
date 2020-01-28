@@ -31,28 +31,23 @@ class TestMain(AllenNlpTestCase):
         assert cm.exception.code == 2  # argparse code for incorrect usage
 
     def test_subcommand_overrides(self):
+        called = False
+
         def do_nothing(_):
-            pass
+            nonlocal called
+            called = True
 
-        class FakeEvaluate(Subcommand):
-            name = "evaluate"
-            add_subparser_called = False
-
+        @Subcommand.register("evaluate", exist_ok=True)
+        class FakeEvaluate(Subcommand):  # noqa
             @overrides
             def add_subparser(self, parser):
                 subparser = parser.add_parser(self.name, description="fake", help="fake help")
-
                 subparser.set_defaults(func=do_nothing)
-                self.add_subparser_called = True
-
                 return subparser
 
-        fake_evaluate = FakeEvaluate()
-
         sys.argv = ["allennlp", "evaluate"]
-        main(subcommand_overrides=[fake_evaluate])
-
-        assert fake_evaluate.add_subparser_called
+        main()
+        assert called
 
     def test_other_modules(self):
         # Create a new package in a temporary dir
