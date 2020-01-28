@@ -153,7 +153,7 @@ class AutoRegressiveSeqDecoder(SeqDecoder):
         source_mask = state["source_mask"]
 
         # shape: (batch_size, max_target_sequence_length)
-        targets = target_tokens["tokens"]["tokens"]
+        targets = util.get_token_ids_from_text_field_tensors(target_tokens)
 
         # Prepare embeddings for targets. They will be used as gold embeddings during decoder training
         # shape: (batch_size, max_target_sequence_length, embedding_dim)
@@ -412,6 +412,7 @@ class AutoRegressiveSeqDecoder(SeqDecoder):
             output_dict.update(predictions)
 
             if target_tokens:
+                targets = util.get_token_ids_from_text_field_tensors(target_tokens)
                 if self._tensor_based_metric is not None:
                     # shape: (batch_size, beam_size, max_sequence_length)
                     top_k_predictions = output_dict["predictions"]
@@ -419,7 +420,7 @@ class AutoRegressiveSeqDecoder(SeqDecoder):
                     best_predictions = top_k_predictions[:, 0, :]
 
                     self._tensor_based_metric(  # type: ignore
-                        best_predictions, target_tokens["tokens"]["tokens"]
+                        best_predictions, targets
                     )
 
                 if self._token_based_metric is not None:
@@ -427,8 +428,7 @@ class AutoRegressiveSeqDecoder(SeqDecoder):
                     predicted_tokens = output_dict["predicted_tokens"]
 
                     self._token_based_metric(  # type: ignore
-                        predicted_tokens,
-                        self.indices_to_tokens(target_tokens["tokens"]["tokens"][:, 1:]),
+                        predicted_tokens, self.indices_to_tokens(targets[:, 1:]),
                     )
 
         return output_dict
