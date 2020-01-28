@@ -58,7 +58,7 @@ def create_parser(prog: Optional[str] = None) -> argparse.ArgumentParser:
 
     subparsers = parser.add_subparsers(title="Commands", metavar="")
 
-    for subcommand_name in sorted(list(Subcommand.list_available())):
+    for subcommand_name in sorted(Subcommand.list_available()):
         subcommand_class = Subcommand.by_name(subcommand_name)
         subcommand = subcommand_class()
         subparser = subcommand.add_subparser(subparsers)
