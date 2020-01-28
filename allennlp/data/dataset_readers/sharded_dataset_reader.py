@@ -42,11 +42,11 @@ class ShardedDatasetReader(DatasetReader):
         return self.reader.text_to_instance(*args, **kwargs)  # type: ignore
 
     def _read(self, file_path: str) -> Iterable[Instance]:
-        shards = glob.glob(self.file_path)
+        shards = glob.glob(file_path)
         # Ensure a consistent order.
         shards.sort()
 
-        for file_path in shards:
-            logger.info(f"reading instances from {file_path}")
-            for instance in reader.read(file_path):
+        for shard in shards:
+            logger.info(f"reading instances from {shard}")
+            for instance in self.reader.read(shard):
                 yield instance

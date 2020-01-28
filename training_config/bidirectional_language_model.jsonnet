@@ -36,6 +36,7 @@ local BASE_ITERATOR = {
   "dataset_reader": {
     "type": "sharded",
     "base_reader": BASE_READER,
+    "lazy": true
   },
   // Note: We don't set a validation_data_path because the softmax is only
   // sampled during training. Not sampling on GPUs results in a certain OOM
