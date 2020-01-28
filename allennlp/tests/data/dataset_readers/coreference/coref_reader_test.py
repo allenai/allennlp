@@ -108,7 +108,9 @@ class TestCorefReader:
         assert (["Hong", "Kong"], 0) in gold_mentions_with_ids
         assert (["their"], 1) in gold_mentions_with_ids
         # This is a span which exceeds our max_span_width, so it should not be considered.
-        assert not (["these", "well", "known", "cartoon", "images"], 1) in gold_mentions_with_ids
+        assert (
+            ["these", "well", "-", "known", "cartoon", "images"], 1
+        ) not in gold_mentions_with_ids
 
         fields = instances[1].fields
         text = [x.text for x in fields["text"].tokens]
