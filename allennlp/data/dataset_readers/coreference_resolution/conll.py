@@ -190,7 +190,18 @@ class ConllCorefReader(DatasetReader):
                 if self._wordpiece_modeling_tokenizer is not None:
                     start = offsets[start][0]
                     end = offsets[end][1]
+
+                    # `enumerate_spans` uses word-level width limit; we need to be stricter here
                     if end - start + 1 > self._max_span_width:
+                        continue
+                    # We also don't generate spans that contain special tokens
+                    if start < self._wordpiece_modeling_tokenizer.num_added_start_tokens:
+                        continue
+                    if (
+                        end >=
+                        len(flat_sentences_tokens)
+                        - self._wordpiece_modeling_tokenizer.num_added_end_tokens
+                    ):
                         continue
 
                 if span_labels is not None:
