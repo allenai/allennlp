@@ -31,7 +31,6 @@ local BASE_ITERATOR = {
   // maximum_samples_per_batch below we will pack approximately that many
   // samples in every batch.
   "batch_size": 512 * NUM_GPUS,
-  "sorting_keys": [["source", "num_tokens"]],
   "maximum_samples_per_batch": ["num_tokens", 2000]
 };
 
