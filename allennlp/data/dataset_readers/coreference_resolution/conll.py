@@ -168,6 +168,13 @@ class ConllCorefReader(DatasetReader):
 
         cluster_dict = {}
         if gold_clusters is not None:
+            if self._wordpiece_modeling_tokenizer is not None:
+                for cluster in gold_clusters:
+                    for mention_id, mention in enumerate(cluster):
+                        start = offsets[mention[0]][0]
+                        end = offsets[mention[1]][1]
+                        cluster[mention_id] = (start, end)
+
             for cluster_id, cluster in enumerate(gold_clusters):
                 for mention in cluster:
                     cluster_dict[tuple(mention)] = cluster_id
@@ -180,15 +187,17 @@ class ConllCorefReader(DatasetReader):
             for start, end in enumerate_spans(
                 sentence, offset=sentence_offset, max_span_width=self._max_span_width
             ):
+                if self._wordpiece_modeling_tokenizer is not None:
+                    start = offsets[start][0]
+                    end = offsets[end][1]
+                    if end - start + 1 > self._max_span_width:
+                        continue
+
                 if span_labels is not None:
                     if (start, end) in cluster_dict:
                         span_labels.append(cluster_dict[(start, end)])
                     else:
                         span_labels.append(-1)
-
-                if self._wordpiece_modeling_tokenizer is not None:
-                    start = offsets[start][0]
-                    end = offsets[end][1]
 
                 spans.append(SpanField(start, end, text_field))
             sentence_offset += len(sentence)
@@ -197,12 +206,6 @@ class ConllCorefReader(DatasetReader):
 
         metadata: Dict[str, Any] = {"original_text": flattened_sentences}
         if gold_clusters is not None:
-            if self._wordpiece_modeling_tokenizer is not None:
-                for cluster in gold_clusters:
-                    for mention_id, mention in enumerate(cluster):
-                        start = offsets[mention[0]][0]
-                        end = offsets[mention[1]][1]
-                        cluster[mention_id] = (start, end)
             metadata["clusters"] = gold_clusters
         metadata_field = MetadataField(metadata)
 
