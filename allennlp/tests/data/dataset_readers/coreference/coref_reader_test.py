@@ -109,7 +109,8 @@ class TestCorefReader:
         assert (["their"], 1) in gold_mentions_with_ids
         # This is a span which exceeds our max_span_width, so it should not be considered.
         assert (
-            ["these", "well", "-", "known", "cartoon", "images"], 1
+            ["these", "well", "-", "known", "cartoon", "images"],
+            1,
         ) not in gold_mentions_with_ids
 
         fields = instances[1].fields
