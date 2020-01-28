@@ -9,7 +9,7 @@ from torch.nn import Linear
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.util import END_SYMBOL, START_SYMBOL
 from allennlp.modules.seq2seq_decoders.seq_decoder import SeqDecoder
-from allennlp.data import Vocabulary
+from allennlp.data import TextFieldTensors, Vocabulary
 from allennlp.modules import Embedding
 from allennlp.modules.seq2seq_decoders.decoder_net import DecoderNet
 from allennlp.nn import util
@@ -136,7 +136,7 @@ class AutoRegressiveSeqDecoder(SeqDecoder):
         return output_dict
 
     def _forward_loss(
-        self, state: Dict[str, torch.Tensor], target_tokens: Dict[str, torch.LongTensor]
+        self, state: Dict[str, torch.Tensor], target_tokens: TextFieldTensors
     ) -> Dict[str, torch.Tensor]:
         """
         Make forward pass during training or do greedy search during prediction.
@@ -396,9 +396,7 @@ class AutoRegressiveSeqDecoder(SeqDecoder):
 
     @overrides
     def forward(
-        self,
-        encoder_out: Dict[str, torch.LongTensor],
-        target_tokens: Dict[str, torch.LongTensor] = None,
+        self, encoder_out: Dict[str, torch.LongTensor], target_tokens: TextFieldTensors = None,
     ) -> Dict[str, torch.Tensor]:
         state = encoder_out
         decoder_init_state = self._decoder_net.init_decoder_state(state)
