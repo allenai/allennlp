@@ -26,11 +26,7 @@ class ShardedDatasetReader(DatasetReader):
         Reader with a read method that accepts a single file.
     """
 
-    def __init__(
-        self,
-        base_reader: DatasetReader,
-        **kwargs,
-    ) -> None:
+    def __init__(self, base_reader: DatasetReader, **kwargs,) -> None:
         super().__init__(**kwargs)
 
         self.reader = base_reader
@@ -45,7 +41,6 @@ class ShardedDatasetReader(DatasetReader):
         shards = glob.glob(file_path)
         # Ensure a consistent order.
         shards.sort()
-
 
         # TODO(brendanr): Modify such that different shards are used by
         # different workers in the distributed case.
