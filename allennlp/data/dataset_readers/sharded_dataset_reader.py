@@ -15,7 +15,7 @@ class ShardedDatasetReader(DatasetReader):
     Wraps another dataset reader and uses it to read from multiple input files.
     Note that in this case the `file_path` passed to `read()` should be a glob,
     and that the dataset reader will return instances from all files matching
-    the glob.  The instances will always be read lazily.
+    the glob.
 
     The order the files are processed in is deterministic to enable the
     instances to be filtered according to worker rank in the distributed case.
