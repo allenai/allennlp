@@ -192,6 +192,10 @@ class ConllCorefReader(DatasetReader):
                     end = offsets[end][1]
 
                     # `enumerate_spans` uses word-level width limit; here we apply it to wordpieces
+                    # We have to do this check here because we use a span width embedding that has
+                    # only `self._max_span_width` entries, and since we are doing wordpiece
+                    # modeling, the span width embedding operates on wordpiece lengths. So a check
+                    # here is necessary or else we wouldn't know how many entries there would be.
                     if end - start + 1 > self._max_span_width:
                         continue
                     # We also don't generate spans that contain special tokens
