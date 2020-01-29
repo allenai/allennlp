@@ -12,6 +12,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(os.path.join(__file__, os.par
 from allennlp.commands.test_install import _get_module_root
 from allennlp.commands.train import train_model_from_file, train_model
 from allennlp.common import Params
+from allennlp.common.util import pushd
 from allennlp.training.metrics import EvalbBracketingScorer
 
 
@@ -59,27 +60,23 @@ def train_fixture_gpu(config_prefix: str) -> None:
 
 
 if __name__ == "__main__":
-    initial_working_dir = os.getcwd()
     module_root = _get_module_root().parent
-    logger.info("Changing directory to %s", module_root)
-    os.chdir(module_root)
-    if len(sys.argv) >= 2 and sys.argv[1].lower() == "gpu":
-        train_fixture_gpu("allennlp/tests/fixtures/srl/")
-    else:
-        models = [
-            "biaffine_dependency_parser",
-            "constituency_parser",
-            "coref",
-            "decomposable_attention",
-            "encoder_decoder/composed_seq2seq",
-            "encoder_decoder/simple_seq2seq",
-            "encoder_decoder/copynet_seq2seq",
-            "simple_tagger_with_span_f1",
-            "srl",
-        ]
-        for model in models:
-            if model == "constituency_parser":
-                EvalbBracketingScorer.compile_evalb()
-            train_fixture(f"allennlp/tests/fixtures/{model}/")
-    logger.info("Changing directory back to %s", initial_working_dir)
-    os.chdir(initial_working_dir)
+    with pushd(module_root, verbose=True):
+        if len(sys.argv) >= 2 and sys.argv[1].lower() == "gpu":
+            train_fixture_gpu("allennlp/tests/fixtures/srl/")
+        else:
+            models = [
+                "biaffine_dependency_parser",
+                "constituency_parser",
+                "coref",
+                "decomposable_attention",
+                "encoder_decoder/composed_seq2seq",
+                "encoder_decoder/simple_seq2seq",
+                "encoder_decoder/copynet_seq2seq",
+                "simple_tagger_with_span_f1",
+                "srl",
+            ]
+            for model in models:
+                if model == "constituency_parser":
+                    EvalbBracketingScorer.compile_evalb()
+                train_fixture(f"allennlp/tests/fixtures/{model}/")
