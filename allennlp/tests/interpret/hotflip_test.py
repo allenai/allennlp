@@ -1,6 +1,7 @@
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.token_indexers import TokenCharactersIndexer
 from allennlp.models.archival import load_archive
+from allennlp.modules.token_embedders import EmptyEmbedder
 from allennlp.predictors import Predictor
 from allennlp.interpret.attackers import Hotflip
 from allennlp.interpret.attackers.hotflip import DEFAULT_IGNORE_TOKENS
@@ -42,7 +43,10 @@ class TestHotflip(AllenNlpTestCase):
             self.FIXTURES_ROOT / "decomposable_attention" / "serialization" / "model.tar.gz"
         )
         predictor = Predictor.from_archive(archive, "textual-entailment")
-        predictor._dataset_reader._token_indexers["token_characters"] = TokenCharactersIndexer()
+        predictor._dataset_reader._token_indexers["chars"] = TokenCharactersIndexer(
+            min_padding_length=1
+        )
+        predictor._model._text_field_embedder._token_embedders["chars"] = EmptyEmbedder()
 
         hotflipper = Hotflip(predictor)
         hotflipper.initialize()
