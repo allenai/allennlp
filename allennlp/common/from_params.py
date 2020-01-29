@@ -46,6 +46,7 @@ import inspect
 import logging
 
 from allennlp.common.checks import ConfigurationError
+from allennlp.common.lazy import Lazy
 from allennlp.common.params import Params
 
 logger = logging.getLogger(__name__)
@@ -94,6 +95,13 @@ def takes_kwargs(obj) -> bool:
             ]
         )
     )
+
+
+def can_construct_from_params(type_: Type) -> bool:
+    origin = getattr(type_, "__origin__", None)
+    if origin == Lazy:
+        return True
+    return hasattr(type_, "from_params")
 
 
 def remove_optional(annotation: type):
@@ -283,45 +291,41 @@ def construct_arg(
     # This is special logic for handling types like Dict[str, TokenIndexer],
     # List[TokenIndexer], Tuple[TokenIndexer, Tokenizer], and Set[TokenIndexer],
     # which it creates by instantiating each value from_params and returning the resulting structure.
-    elif origin in (Dict, dict) and len(args) == 2 and hasattr(args[-1], "from_params"):
+    elif origin in (Dict, dict) and len(args) == 2 and can_construct_from_params(args[-1]):
         value_cls = annotation.__args__[-1]
 
         value_dict = {}
 
         for key, value_params in params.pop(name, Params({})).items():
-            subextras = create_extras(value_cls, extras)
-            value_dict[key] = value_cls.from_params(params=value_params, **subextras)
+            value_dict[key] = construct_from_params(value_cls, value_params, extras)
 
         return value_dict
 
-    elif origin in (List, list) and len(args) == 1 and hasattr(args[0], "from_params"):
+    elif origin in (List, list) and len(args) == 1 and can_construct_from_params(args[0]):
         value_cls = annotation.__args__[0]
 
         value_list = []
 
         for value_params in params.pop(name, Params({})):
-            subextras = create_extras(value_cls, extras)
-            value_list.append(value_cls.from_params(params=value_params, **subextras))
+            value_list.append(construct_from_params(value_cls, value_params, extras))
 
         return value_list
 
-    elif origin in (Tuple, tuple) and all(hasattr(arg, "from_params") for arg in args):
+    elif origin in (Tuple, tuple) and all(can_construct_from_params(arg) for arg in args):
         value_list = []
 
         for value_cls, value_params in zip(annotation.__args__, params.pop(name, Params({}))):
-            subextras = create_extras(value_cls, extras)
-            value_list.append(value_cls.from_params(params=value_params, **subextras))
+            value_list.append(construct_from_params(value_cls, value_params, extras))
 
         return tuple(value_list)
 
-    elif origin in (Set, set) and len(args) == 1 and hasattr(args[0], "from_params"):
+    elif origin in (Set, set) and len(args) == 1 and can_construct_from_params(args[0]):
         value_cls = annotation.__args__[0]
 
         value_set = set()
 
         for value_params in params.pop(name, Params({})):
-            subextras = create_extras(value_cls, extras)
-            value_set.add(value_cls.from_params(params=value_params, **subextras))
+            value_set.add(construct_from_params(value_cls, value_params, extras))
 
         return value_set
 
@@ -344,6 +348,11 @@ def construct_arg(
 
         # If none of them succeeded, we crash.
         raise ConfigurationError(f"Failed to construct argument {name} with type {annotation}")
+    elif origin == Lazy:
+        if name not in params and optional:
+            return Lazy(lambda **kwargs: default)
+        value_params = params.pop(name, Params({}))
+        return construct_from_params(annotation, value_params, extras)
     else:
         # Pass it on as is and hope for the best.   ¯\_(ツ)_/¯
         if optional:
@@ -351,6 +360,30 @@ def construct_arg(
         else:
             value = params.pop(name, keep_as_dict=True)
         return value
+
+
+def construct_from_params(value_cls: Type[T], value_params: Params, extras: Dict[str, Any]) -> T:
+    """
+    At this point we know that we need to use `from_params` to construct an object that will be
+    (part of) an argument to a constructor.  This does the logic of actually calling that
+    `from_params` method.
+
+    This is normally as simple as just `value_cls.from_params`, but we first call `create_extras` to
+    pass along any **kwargs that we got as input, and we also have some special handling for `Lazy`
+    annotations here - we don't want to recurse on `Lazy.from_params`, we want to bypass that.
+    """
+    origin = getattr(value_cls, "__origin__", None)
+    if origin == Lazy:
+        value_cls = value_cls.__args__[0]  # type: ignore
+        subextras = create_extras(value_cls, extras)
+
+        def constructor(**kwargs):
+            return value_cls.from_params(params=value_params, **kwargs, **subextras)
+
+        return Lazy(constructor)  # type: ignore
+    else:
+        subextras = create_extras(value_cls, extras)
+        return value_cls.from_params(params=value_params, **subextras)
 
 
 class FromParams:

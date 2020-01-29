@@ -9,9 +9,8 @@ import functools
 from typing import Dict, Optional, List, Any, Iterable
 import torch
 
-from allennlp.common import Params
-from allennlp.common.checks import parse_cuda_device, check_for_gpu
-from allennlp.common.tqdm import Tqdm
+from allennlp.common.checks import check_for_gpu
+from allennlp.common import Lazy, Tqdm
 from allennlp.data import Instance
 from allennlp.data.iterators.data_iterator import DataIterator, TensorDict
 from allennlp.models.model import Model
@@ -21,7 +20,6 @@ from allennlp.training.callbacks.callback import Callback
 from allennlp.training.callbacks.callback_handler import CallbackHandler
 from allennlp.training.callbacks.events import Events
 from allennlp.training.optimizers import Optimizer
-from allennlp.training.trainer_pieces import TrainerPieces
 from allennlp.training.trainer_base import TrainerBase
 
 from torch.nn.parallel import DistributedDataParallel
@@ -42,7 +40,7 @@ def handle_errors(method):
     return train_and_handle_errors
 
 
-@TrainerBase.register("callback")
+@TrainerBase.register("callback", constructor="from_partial_objects")
 class CallbackTrainer(TrainerBase):
     def __init__(
         self,
@@ -293,19 +291,26 @@ class CallbackTrainer(TrainerBase):
 
         return self.metrics
 
-    # Requires custom from_params.
     @classmethod
-    def from_params(  # type: ignore
-        cls, params: Params, serialization_dir: str, recover: bool = False,
+    def from_partial_objects(
+        cls,
+        model: Model,
+        serialization_dir: str,
+        iterator: DataIterator,
+        train_data: Iterable[Instance],
+        validation_iterator: DataIterator = None,
+        validation_data: Iterable[Instance] = None,
+        callbacks: List[Lazy[Callback]] = None,
+        local_rank: int = 0,
+        patience: int = None,
+        validation_metric: str = "-loss",
+        shuffle: bool = True,
+        num_epochs: int = 20,
+        cuda_device: int = -1,
+        distributed: bool = False,
+        world_size: int = 1,
+        optimizer: Lazy[Optimizer] = None,
     ) -> "CallbackTrainer":
-        pieces = TrainerPieces.from_params(params, serialization_dir, recover)
-        model = pieces.model
-        params = pieces.params
-        validation_iterator = pieces.validation_iterator or pieces.iterator
-
-        shuffle = params.pop_bool("shuffle", True)
-        num_epochs = params.pop_int("num_epochs", 20)
-        cuda_device = parse_cuda_device(params.pop("cuda_device", -1))
 
         check_for_gpu(cuda_device)
         if cuda_device >= 0:
@@ -314,43 +319,34 @@ class CallbackTrainer(TrainerBase):
             model = model.cuda(cuda_device)
 
         parameters = [[n, p] for n, p in model.named_parameters() if p.requires_grad]
-        optimizer = Optimizer.from_params(parameters, params.pop("optimizer"))
+        optimizer_ = optimizer.construct(model_parameters=parameters)
 
-        callbacks_params = params.pop("callbacks", [])
-        callbacks: List[Callback] = [
-            Callback.from_params(
-                params=callback_params,
-                model=model,
-                optimizer=optimizer,
-                instances=pieces.train_dataset,
-                iterator=pieces.iterator,
-                shuffle=shuffle,
-                validation_data=pieces.validation_dataset,
-                validation_iterator=validation_iterator,
-                serialization_dir=serialization_dir,
-            )
-            for callback_params in callbacks_params
-        ]
-
-        distributed = params.pop_bool("distributed", False)
-        world_size = params.pop_int("world_size", 1)
+        if not callbacks:
+            callbacks = []
+        else:
+            constructed_callbacks = []
+            for callback in callbacks:
+                # We only need to pass here the things that weren't already passed to
+                # CallbackTrainer.from_partial_objects; FromParams will automatically pass those
+                # things through to the callback constructor.
+                callback_ = callback.construct(optimizer=optimizer, instances=train_data)
+                constructed_callbacks.append(callback_)
 
         if distributed:
             rank = cuda_device
         else:
             rank = 0
 
-        params.assert_empty(cls.__name__)
         return cls(
             model,
-            pieces.train_dataset,
-            pieces.iterator,
-            optimizer,
+            train_data,
+            iterator,
+            optimizer_,
             num_epochs=num_epochs,
             shuffle=shuffle,
             serialization_dir=serialization_dir,
             cuda_device=cuda_device,
-            callbacks=callbacks,
+            callbacks=constructed_callbacks,
             distributed=distributed,
             rank=rank,
             world_size=world_size,
