@@ -29,7 +29,9 @@ local BASE_ITERATOR = {
   // maximum_samples_per_batch below we will pack approximately that many
   // samples in every batch.
   "batch_size": 512,
-  "maximum_samples_per_batch": ["tokens___tokens", 2000]
+  "sorting_keys": [["source", "tokens___tokens"]],
+  # Smaller as we have to use dense embeddings now.
+  "maximum_samples_per_batch": ["tokens___tokens", 1000]
 };
 
 {
@@ -59,7 +61,8 @@ local BASE_ITERATOR = {
     "type": "language_model",
     "bidirectional": true,
     "num_samples": 8192,
-    "sparse_embeddings": true,
+    # Sparse embeddings don't work with DistributedDataParallel.
+    "sparse_embeddings": false,
     "text_field_embedder": {
       "token_embedders": {
         "tokens": {
