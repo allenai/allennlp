@@ -16,13 +16,19 @@ class PretrainedTransformerMismatchedEmbedder(TokenEmbedder):
     # Parameters
 
     model_name : `str`
-        The name of the `transformers` model to use.
+        The name of the `transformers` model to use. Should be the same as the corresponding
+        `PretrainedTransformerMismatchedIndexer`.
+    max_length : `int`, optional (default = None)
+        If positive, folds input token IDs into multiple segments of this length, pass them
+        through the transformer model independently, and concatenate the final representations.
+        Should be set to the same value as the `max_length` option on the
+        `PretrainedTransformerMismatchedIndexer`.
     """
 
-    def __init__(self, model_name: str) -> None:
+    def __init__(self, model_name: str, max_length: int = None) -> None:
         super().__init__()
         # The matched version v.s. mismatched
-        self._matched_embedder = PretrainedTransformerEmbedder(model_name)
+        self._matched_embedder = PretrainedTransformerEmbedder(model_name, max_length)
 
     @overrides
     def get_output_dim(self):
@@ -36,12 +42,13 @@ class PretrainedTransformerMismatchedEmbedder(TokenEmbedder):
         offsets: torch.LongTensor,
         wordpiece_mask: torch.LongTensor,
         type_ids: Optional[torch.LongTensor] = None,
+        segment_concat_mask: Optional[torch.LongTensor] = None,
     ) -> torch.Tensor:  # type: ignore
         """
         # Parameters
 
         token_ids: torch.LongTensor
-            Shape: [batch_size, num_wordpieces].
+            Shape: [batch_size, num_wordpieces] (for exception see `PretrainedTransformerEmbedder`).
         mask: torch.LongTensor
             Shape: [batch_size, num_orig_tokens].
         offsets: torch.LongTensor
@@ -52,18 +59,22 @@ class PretrainedTransformerMismatchedEmbedder(TokenEmbedder):
         wordpiece_mask: torch.LongTensor
             Shape: [batch_size, num_wordpieces].
         type_ids: Optional[torch.LongTensor]
-            Shape: [batch_size, num_wordpieces]
+            Shape: [batch_size, num_wordpieces].
+        segment_concat_mask: Optional[torch.LongTensor]
+            See `PretrainedTransformerEmbedder`.
 
         # Returns:
 
         Shape: [batch_size, num_orig_tokens, embedding_size].
         """
         # Shape: [batch_size, num_wordpieces, embedding_size].
-        embeddings = self._matched_embedder(token_ids, wordpiece_mask, type_ids=type_ids)
+        embeddings = self._matched_embedder(
+            token_ids, wordpiece_mask, type_ids=type_ids, segment_concat_mask=segment_concat_mask
+        )
 
         # span_embeddings: (batch_size, num_orig_tokens, max_span_length, embedding_size)
         # span_mask: (batch_size, num_orig_tokens, max_span_length)
-        span_embeddings, span_mask = util.batched_span_select(embeddings, offsets)
+        span_embeddings, span_mask = util.batched_span_select(embeddings.contiguous(), offsets)
         span_mask = span_mask.unsqueeze(-1)
         span_embeddings *= span_mask  # zero out paddings
 

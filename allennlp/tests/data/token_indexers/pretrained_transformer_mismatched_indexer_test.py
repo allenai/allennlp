@@ -35,6 +35,29 @@ class TestPretrainedTransformerMismatchedIndexer(AllenNlpTestCase):
                 expected_value = [list(t) for t in expected_value]
             assert padded_tokens[key].tolist() == expected_value
 
-    def test_auto_determining_num_tokens_added(self):
-        indexer = PretrainedTransformerMismatchedIndexer("bert-base-cased")
-        assert indexer._determine_num_special_tokens_added() == (1, 1)
+    def test_long_sequence_splitting(self):
+        tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
+        indexer = PretrainedTransformerMismatchedIndexer("bert-base-uncased", max_length=4)
+        text = ["AllenNLP", "is", "great"]
+        tokens = tokenizer.tokenize(" ".join(["[CLS]"] + text + ["[SEP]"]))
+        expected_ids = tokenizer.convert_tokens_to_ids(tokens)
+        assert len(expected_ids) == 7  # just to make sure it's what we're expecting
+        cls_id, sep_id = expected_ids[0], expected_ids[-1]
+        expected_ids = (
+            expected_ids[:3]
+            + [sep_id, cls_id]
+            + expected_ids[3:5]
+            + [sep_id, cls_id]
+            + expected_ids[5:]
+        )
+
+        vocab = Vocabulary()
+        indexed = indexer.tokens_to_indices([Token(word) for word in text], vocab)
+
+        assert indexed["token_ids"] == expected_ids
+        # [CLS] allen ##nl [SEP] [CLS] #p is [SEP] [CLS] great [SEP]
+        assert indexed["segment_concat_mask"] == [1] * len(expected_ids)
+        # allennlp is great
+        assert indexed["mask"] == [1] * len(text)
+        # [CLS] allen #nl #p is great [SEP]
+        assert indexed["wordpiece_mask"] == [1] * 7

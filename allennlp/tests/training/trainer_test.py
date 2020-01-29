@@ -651,12 +651,6 @@ class TestTrainer(AllenNlpTestCase):
         # One batch per epoch.
         assert restore_trainer._batch_num_total == 2
 
-    def test_trainer_from_base_class_params(self):
-        params = Params.from_file(self.FIXTURES_ROOT / "simple_tagger" / "experiment.json")
-
-        # Can instantiate from base class params
-        TrainerBase.from_params(params, self.TEST_DIR)
-
     def test_trainer_saves_and_loads_best_validation_metrics_correctly_1(self):
         # Use -loss and run 1 epoch of original-training, and one of restored-training
         # Run 1 epoch of original training.
