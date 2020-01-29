@@ -9,9 +9,10 @@ from overrides import overrides
 from allennlp.commands import main
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common.checks import ConfigurationError
+from allennlp.common.plugins import discover_plugins
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.common.util import push_python_path
-from allennlp.tests.plugins_test_util import pip_install, push_python_project
+from allennlp.tests.common.plugins_util import pip_install, push_python_project
 
 
 class TestMain(AllenNlpTestCase):
@@ -137,11 +138,14 @@ class TestMain(AllenNlpTestCase):
 
         sys.argv = ["allennlp"]
 
+        available_plugins = set(discover_plugins())
+        self.assertSetEqual(set(), available_plugins)
+
         with push_python_project(project_b_fixtures_root):
             main()
 
-        subcommands_available = {t.__name__ for t in Subcommand.__subclasses__()}
-        self.assertIn("B", subcommands_available)
+        subcommands_available = Subcommand.list_available()
+        self.assertIn("b", subcommands_available)
 
     def test_namespace_plugin_loaded(self):
         plugins_root = self.FIXTURES_ROOT / "plugins"
@@ -150,11 +154,14 @@ class TestMain(AllenNlpTestCase):
 
         sys.argv = ["allennlp"]
 
+        available_plugins = set(discover_plugins())
+        self.assertSetEqual(set(), available_plugins)
+
         with pip_install(project_a_fixtures_root, "a"):
             main()
 
-        subcommands_available = {t.__name__ for t in Subcommand.__subclasses__()}
-        self.assertIn("A", subcommands_available)
+        subcommands_available = Subcommand.list_available()
+        self.assertIn("a", subcommands_available)
 
     def test_subcommand_plugin_is_available(self):
         plugins_root = self.FIXTURES_ROOT / "plugins"

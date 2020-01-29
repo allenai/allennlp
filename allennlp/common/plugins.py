@@ -14,10 +14,7 @@ There are two ways of declaring plugins for discovery:
     with the name you want and creating an "__init__.py" file that imports the code you want (e.g.,
     your Python package). This option is preferred when you want to create a pip-installable
     package and you want to make your AllenNLP plugin available when users install your package.
-    For example, if you want to provide a package to serve AllenNLP models (i.e.,
-    `allennlp serve`), you may want to provide a pip-installable package so any user can install
-    your library. This method of declaring plugins will allow you anybody who runs `allennlp`
-    to see and use the option `serve` by just installing your package with pip.
+    See [allennlp-server](https://github.com/allenai/allennlp-server) for an example.
 """
 import importlib
 import os

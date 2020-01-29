@@ -12,7 +12,7 @@ from allennlp.common.plugins import (
     import_plugins,
 )
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.tests.plugins_test_util import pip_install, push_python_project
+from allennlp.tests.common.plugins_util import pip_install, push_python_project
 
 
 class TestPlugins(AllenNlpTestCase):
@@ -43,8 +43,8 @@ class TestPlugins(AllenNlpTestCase):
         self.assertSetEqual(set(), available_plugins)
 
     def test_global_namespace_plugin(self):
-        subcommands_available = Subcommand.list_available()
-        self.assertNotIn("a", subcommands_available)
+        available_plugins = set(discover_plugins())
+        self.assertSetEqual(set(), available_plugins)
 
         with pip_install(self.project_a_fixtures_root, "a"):
             available_plugins = set(discover_plugins())
@@ -55,9 +55,8 @@ class TestPlugins(AllenNlpTestCase):
             self.assertIn("a", subcommands_available)
 
     def test_two_global_namespace_plugins(self):
-        subcommands_available = Subcommand.list_available()
-        self.assertNotIn("a", subcommands_available)
-        self.assertNotIn("c", subcommands_available)
+        available_plugins = set(discover_plugins())
+        self.assertSetEqual(set(), available_plugins)
 
         with pip_install(self.project_a_fixtures_root, "a"), pip_install(
             self.project_c_fixtures_root, "c"
@@ -71,8 +70,8 @@ class TestPlugins(AllenNlpTestCase):
             self.assertIn("c", subcommands_available)
 
     def test_local_namespace_plugin(self):
-        subcommands_available = Subcommand.list_available()
-        self.assertNotIn("b", subcommands_available)
+        available_plugins = set(discover_plugins())
+        self.assertSetEqual(set(), available_plugins)
 
         with push_python_project(self.project_b_fixtures_root):
             available_plugins = set(discover_plugins())
@@ -83,8 +82,8 @@ class TestPlugins(AllenNlpTestCase):
             self.assertIn("b", subcommands_available)
 
     def test_file_plugin(self):
-        subcommands_available = Subcommand.list_available()
-        self.assertNotIn("d", subcommands_available)
+        available_plugins = set(discover_plugins())
+        self.assertSetEqual(set(), available_plugins)
 
         with push_python_project(self.project_d_fixtures_root):
             available_plugins = set(discover_plugins())
@@ -95,8 +94,8 @@ class TestPlugins(AllenNlpTestCase):
             self.assertIn("d", subcommands_available)
 
     def test_local_namespace_plugin_different_path(self):
-        subcommands_available = Subcommand.list_available()
-        self.assertNotIn("b", subcommands_available)
+        available_plugins = set(discover_plugins())
+        self.assertSetEqual(set(), available_plugins)
 
         with tempfile.TemporaryDirectory() as temp_dir_b:
             distutils.dir_util.copy_tree(self.project_b_fixtures_root, temp_dir_b)
@@ -112,10 +111,8 @@ class TestPlugins(AllenNlpTestCase):
                 self.assertIn("b", subcommands_available)
 
     def test_local_and_two_global_namespace_plugins(self):
-        subcommands_available = Subcommand.list_available()
-        self.assertNotIn("a", subcommands_available)
-        self.assertNotIn("b", subcommands_available)
-        self.assertNotIn("c", subcommands_available)
+        available_plugins = set(discover_plugins())
+        self.assertSetEqual(set(), available_plugins)
 
         # We make plugins "a" and "c" available as packages, each from other directories, as if they were
         # separate installed projects ("global" usage of the plugins).
@@ -137,10 +134,8 @@ class TestPlugins(AllenNlpTestCase):
             self.assertIn("c", subcommands_available)
 
     def test_file_and_two_global_namespace_plugins(self):
-        subcommands_available = Subcommand.list_available()
-        self.assertNotIn("a", subcommands_available)
-        self.assertNotIn("c", subcommands_available)
-        self.assertNotIn("d", subcommands_available)
+        available_plugins = set(discover_plugins())
+        self.assertSetEqual(set(), available_plugins)
 
         # We make plugins "a" and "c" available as packages, each from other directories, as if they were
         # separate installed projects ("global" usage of the plugins).
@@ -161,9 +156,8 @@ class TestPlugins(AllenNlpTestCase):
             self.assertIn("d", subcommands_available)
 
     def test_reload_plugins_adds_new(self):
-        subcommands_available = Subcommand.list_available()
-        self.assertNotIn("a", subcommands_available)
-        self.assertNotIn("c", subcommands_available)
+        available_plugins = set(discover_plugins())
+        self.assertSetEqual(set(), available_plugins)
 
         with pip_install(self.project_a_fixtures_root, "a"):
             available_plugins = set(discover_plugins())
@@ -184,8 +178,8 @@ class TestPlugins(AllenNlpTestCase):
 
     @pytest.mark.skip("Plugin unloading is not supported.")
     def test_unload_plugin(self):
-        subcommands_available = Subcommand.list_available()
-        self.assertNotIn("a", subcommands_available)
+        available_plugins = set(discover_plugins())
+        self.assertSetEqual(set(), available_plugins)
 
         with pip_install(self.project_a_fixtures_root, "a"):
             available_plugins = set(discover_plugins())
@@ -204,9 +198,8 @@ class TestPlugins(AllenNlpTestCase):
 
     @pytest.mark.skip("Plugin unloading is not supported.")
     def test_reload_plugins_removes_one_adds_one(self):
-        subcommands_available = Subcommand.list_available()
-        self.assertNotIn("a", subcommands_available)
-        self.assertNotIn("c", subcommands_available)
+        available_plugins = set(discover_plugins())
+        self.assertSetEqual(set(), available_plugins)
 
         with pip_install(self.project_a_fixtures_root, "a"):
             available_plugins = set(discover_plugins())
