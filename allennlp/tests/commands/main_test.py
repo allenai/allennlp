@@ -133,19 +133,19 @@ class TestMain(AllenNlpTestCase):
 
     def test_file_plugin_loaded(self):
         plugins_root = self.FIXTURES_ROOT / "plugins"
-        # "b" sets a "local" namespace plugin, because it's supposed to be run from that directory.
-        project_b_fixtures_root = plugins_root / "project_b"
+        # "d" sets a "local" file plugin, because it's supposed to be run from that directory
+        # and has a ".allennlp_plugins" file in it.
+        project_d_fixtures_root = plugins_root / "project_d"
 
         sys.argv = ["allennlp"]
 
         available_plugins = set(discover_plugins())
         self.assertSetEqual(set(), available_plugins)
 
-        with push_python_project(project_b_fixtures_root):
+        with push_python_project(project_d_fixtures_root):
             main()
-
-        subcommands_available = Subcommand.list_available()
-        self.assertIn("b", subcommands_available)
+            subcommands_available = Subcommand.list_available()
+            self.assertIn("d", subcommands_available)
 
     def test_namespace_plugin_loaded(self):
         plugins_root = self.FIXTURES_ROOT / "plugins"
