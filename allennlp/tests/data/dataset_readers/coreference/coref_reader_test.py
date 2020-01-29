@@ -18,7 +18,7 @@ class TestCorefReader:
             conll_reader.read(str(AllenNlpTestCase.FIXTURES_ROOT / "coref" / "coref.gold_conll"))
         )
 
-        assert len(instances) == 2
+        assert len(instances) == 3
 
         fields = instances[0].fields
         text = [x.text for x in fields["text"].tokens]
@@ -194,78 +194,47 @@ class TestCorefReader:
             conll_reader.read(str(AllenNlpTestCase.FIXTURES_ROOT / "coref" / "coref.gold_conll"))
         )
 
-        assert len(instances) == 2
+        assert len(instances) == 3
 
-        fields = instances[0].fields
+        fields = instances[2].fields
         text = [x.text for x in fields["text"].tokens]
 
         assert text == [
             "[CLS]",
-            "In",
-            "the",
-            "summer",
-            "of",
-            "2005",
-            ",",
-            "a",
-            "picture",
-            "that",
-            "people",
-            "have",
-            "long",
-            "been",
-            "looking",
-            "forward",
-            "to",
-            "started",
-            "emerging",
-            "with",
-            "frequency",
-            "in",
-            "various",
-            "major",
             "Hong",
             "Kong",
-            "media",
-            ".",
-            "With",
-            "their",
-            "unique",
-            "charm",
+            "Wet",
+            "##land",
+            "Park",
             ",",
-            "these",
-            "well",
-            "-",
-            "known",
-            "cartoon",
-            "images",
-            "once",
-            "again",
-            "caused",
+            "which",
+            "is",
+            "currently",
+            "under",
+            "construction",
+            ",",
+            "is",
+            "also",
+            "one",
+            "of",
+            "the",
+            "designated",
+            "new",
+            "projects",
+            "of",
+            "the",
             "Hong",
             "Kong",
-            "to",
-            "be",
-            "a",
-            "focus",
-            "of",
-            "worldwide",
-            "attention",
-            ".",
-            "The",
-            "world",
-            "'",
-            "s",
-            "fifth",
-            "Disney",
-            "park",
-            "will",
-            "soon",
-            "open",
-            "to",
+            "SA",
+            "##R",
+            "government",
+            "for",
+            "advancing",
             "the",
-            "public",
-            "here",
+            "Hong",
+            "Kong",
+            "tourism",
+            "industry",
             ".",
             "[SEP]",
         ]
@@ -280,8 +249,16 @@ class TestCorefReader:
         # Asserts special tokens aren't included in the spans
         assert all(span_start > 0 for span_start in span_starts)
         assert all(span_end < len(text) - 1 for span_end in span_ends)
-        # This is a span which exceeds our max_span_width, so it should not be considered.
-        assert ["world", "'", "s", "fifth", "Disney", "park"] not in candidate_mentions
+
+        gold_span_labels = fields["span_labels"]
+        gold_indices_with_ids = [(i, x) for i, x in enumerate(gold_span_labels.labels) if x != -1]
+        gold_mentions_with_ids: List[Tuple[List[str], int]] = [
+            (candidate_mentions[i], x) for i, x in gold_indices_with_ids
+        ]
+
+        assert (["Hong", "Kong"], 0) in gold_mentions_with_ids
+        # Within span_width before wordpiece splitting but exceeds afterwards
+        assert (["the", "Hong", "Kong", "SA", "##R", "government"], 0) not in gold_mentions_with_ids
 
     def check_candidate_mentions_are_well_defined(self, span_starts, span_ends, text):
         candidate_mentions = []

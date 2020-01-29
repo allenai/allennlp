@@ -191,7 +191,7 @@ class ConllCorefReader(DatasetReader):
                     start = offsets[start][0]
                     end = offsets[end][1]
 
-                    # `enumerate_spans` uses word-level width limit; we need to be stricter here
+                    # `enumerate_spans` uses word-level width limit; here we apply it to wordpieces
                     if end - start + 1 > self._max_span_width:
                         continue
                     # We also don't generate spans that contain special tokens
