@@ -18,7 +18,7 @@ class TestCorefReader:
             conll_reader.read(str(AllenNlpTestCase.FIXTURES_ROOT / "coref" / "coref.gold_conll"))
         )
 
-        assert len(instances) == 3
+        assert len(instances) == 4
 
         fields = instances[0].fields
         text = [x.text for x in fields["text"].tokens]
@@ -114,7 +114,7 @@ class TestCorefReader:
             1,
         ) not in gold_mentions_with_ids
 
-        fields = instances[1].fields
+        fields = instances[2].fields
         text = [x.text for x in fields["text"].tokens]
         assert text == [
             "The",
@@ -194,9 +194,9 @@ class TestCorefReader:
             conll_reader.read(str(AllenNlpTestCase.FIXTURES_ROOT / "coref" / "coref.gold_conll"))
         )
 
-        assert len(instances) == 3
+        assert len(instances) == 4
 
-        fields = instances[2].fields
+        fields = instances[3].fields
         text = [x.text for x in fields["text"].tokens]
 
         assert text == [
@@ -259,6 +259,23 @@ class TestCorefReader:
         assert (["Hong", "Kong"], 0) in gold_mentions_with_ids
         # Within span_width before wordpiece splitting but exceeds afterwards
         assert (["the", "Hong", "Kong", "SA", "##R", "government"], 0) not in gold_mentions_with_ids
+
+        fields = instances[1].fields
+        text = [x.text for x in fields["text"].tokens]
+        spans = fields["spans"].field_list
+        span_starts, span_ends = zip(*[(field.span_start, field.span_end) for field in spans])
+        candidate_mentions = self.check_candidate_mentions_are_well_defined(
+            span_starts, span_ends, text
+        )
+
+        gold_span_labels = fields["span_labels"]
+        gold_indices_with_ids = [(i, x) for i, x in enumerate(gold_span_labels.labels) if x != -1]
+        gold_mentions_with_ids: List[Tuple[List[str], int]] = [
+            (candidate_mentions[i], x) for i, x in gold_indices_with_ids
+        ]
+
+        # Prior to wordpiece tokenization, 's was one token; wordpiece tokenization splits it into 2
+        assert (["the", "city", "'", "s"], 0) in gold_mentions_with_ids
 
     def check_candidate_mentions_are_well_defined(self, span_starts, span_ends, text):
         candidate_mentions = []
