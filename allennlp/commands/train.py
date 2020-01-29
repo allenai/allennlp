@@ -472,6 +472,7 @@ class TrainModel(Registrable):
     with `from_params` in this class is `from_partial_objects`.  See that method for a description
     of all of the allowed top-level keys in a configuration file used with `allennlp train`.
     """
+
     default_implementation = "default"
 
     def __init__(
