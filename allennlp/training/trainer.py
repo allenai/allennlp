@@ -2,19 +2,19 @@ import datetime
 import logging
 import math
 import os
+import re
 import time
 import traceback
-from typing import Dict, Optional, Tuple, Union, Iterable, Any
+from typing import Dict, List, Optional, Tuple, Union, Iterable, Any
 
 import torch
 import torch.distributed as dist
 import torch.optim.lr_scheduler
 from torch.nn.parallel import DistributedDataParallel
 
-from allennlp.common import Params
-from allennlp.common.checks import ConfigurationError, parse_cuda_device, check_for_gpu
-from allennlp.common.tqdm import Tqdm
-from allennlp.common.util import dump_metrics, gpu_memory_mb, peak_memory_mb, lazy_groups_of
+from allennlp.common import Lazy, Tqdm
+from allennlp.common.checks import ConfigurationError, check_for_gpu
+from allennlp.common import util as common_util
 from allennlp.data.instance import Instance
 from allennlp.data.iterators.data_iterator import DataIterator, TensorDict
 from allennlp.models.model import Model
@@ -32,7 +32,7 @@ from allennlp.training.trainer_base import TrainerBase
 logger = logging.getLogger(__name__)
 
 
-@TrainerBase.register("default")
+@TrainerBase.register("default", constructor="from_partial_objects")
 class Trainer(TrainerBase):
     def __init__(
         self,
@@ -320,10 +320,10 @@ class Trainer(TrainerBase):
         Trains one epoch and returns metrics.
         """
         logger.info("Epoch %d/%d", epoch, self._num_epochs - 1)
-        peak_cpu_usage = peak_memory_mb()
+        peak_cpu_usage = common_util.peak_memory_mb()
         logger.info(f"Peak CPU memory usage MB: {peak_cpu_usage}")
         gpu_usage = []
-        for gpu, memory in gpu_memory_mb().items():
+        for gpu, memory in common_util.gpu_memory_mb().items():
             gpu_usage.append((gpu, memory))
             logger.info(f"GPU {gpu} memory usage MB: {memory}")
 
@@ -333,7 +333,7 @@ class Trainer(TrainerBase):
 
         # Get tqdm for the training batches
         batch_generator = self.iterator(self.train_data, num_epochs=1, shuffle=self.shuffle)
-        batch_group_generator = lazy_groups_of(
+        batch_group_generator = common_util.lazy_groups_of(
             batch_generator, self._num_gradient_accumulation_steps
         )
         num_training_batches = math.ceil(
@@ -619,7 +619,7 @@ class Trainer(TrainerBase):
                 self._metric_tracker.best_epoch_metrics = val_metrics
 
             if self._serialization_dir and self._master:
-                dump_metrics(
+                common_util.dump_metrics(
                     os.path.join(self._serialization_dir, f"metrics_epoch_{epoch}.json"), metrics
                 )
 
@@ -759,29 +759,54 @@ class Trainer(TrainerBase):
 
         return epoch_to_return
 
-    # Requires custom from_params.
     @classmethod
-    def from_params(  # type: ignore
+    def from_partial_objects(
         cls,
         model: Model,
         serialization_dir: str,
         iterator: DataIterator,
         train_data: Iterable[Instance],
-        validation_data: Optional[Iterable[Instance]],
-        params: Params,
         validation_iterator: DataIterator = None,
+        validation_data: Iterable[Instance] = None,
         local_rank: int = 0,
+        patience: int = None,
+        validation_metric: str = "-loss",
+        shuffle: bool = True,
+        num_epochs: int = 20,
+        cuda_device: int = -1,
+        grad_norm: float = None,
+        grad_clipping: float = None,
+        model_save_interval: float = None,
+        summary_interval: int = 100,
+        histogram_interval: int = None,
+        should_log_parameter_statistics: bool = True,
+        should_log_learning_rate: bool = False,
+        log_batch_size_period: int = None,
+        distributed: bool = None,
+        world_size: int = 1,
+        num_gradient_accumulation_steps: int = 1,
+        no_grad: List[str] = None,
+        optimizer: Lazy[Optimizer] = None,
+        learning_rate_scheduler: Lazy[LearningRateScheduler] = None,
+        momentum_scheduler: Lazy[MomentumScheduler] = None,
+        moving_average: Lazy[MovingAverage] = None,
+        checkpointer: Lazy[Checkpointer] = None,
     ) -> "Trainer":
+        """
+        This method exists so that we can have a documented method to construct this class using
+        `FromParams`. If you are not using `FromParams` or config files, you can safely ignore this
+        method.
 
-        patience = params.pop_int("patience", None)
-        validation_metric = params.pop("validation_metric", "-loss")
-        shuffle = params.pop_bool("shuffle", True)
-        num_epochs = params.pop_int("num_epochs", 20)
-        cuda_device = parse_cuda_device(params.pop("cuda_device", -1))
-        grad_norm = params.pop_float("grad_norm", None)
-        grad_clipping = params.pop_float("grad_clipping", None)
-        lr_scheduler_params = params.pop("learning_rate_scheduler", None)
-        momentum_scheduler_params = params.pop("momentum_scheduler", None)
+        The reason we can't just use `__init__` with `FromParams` here is because there are
+        sequential dependencies to this class's arguments.  Anything that has a `Lazy[]` type
+        annotation needs something from one of the non-`Lazy` arguments.  The `Optimizer` needs to
+        have the parameters from the `Model` before it's constructed, and the `Schedulers` need to
+        have the `Optimizer`. Because of this, the typical way we construct things `FromParams`
+        doesn't work, so we use `Lazy` to allow for constructing the objects sequentially.
+
+        If you're not using `FromParams`, you can just construct these arguments in the right order
+        yourself in your code and call the constructor directly.
+        """
 
         check_for_gpu(cuda_device)
         if cuda_device >= 0:
@@ -789,61 +814,28 @@ class Trainer(TrainerBase):
             # the right device.
             model = model.cuda(cuda_device)
 
+        if no_grad:
+            for name, parameter in model.named_parameters():
+                if any(re.search(regex, name) for regex in no_grad):
+                    parameter.requires_grad_(False)
+
+        common_util.log_frozen_and_tunable_parameter_names(model)
+
         parameters = [[n, p] for n, p in model.named_parameters() if p.requires_grad]
-        optimizer = Optimizer.from_params(parameters, params.pop("optimizer"))
-        if "moving_average" in params:
-            moving_average = MovingAverage.from_params(
-                params.pop("moving_average"), parameters=parameters
-            )
-        else:
-            moving_average = None
+        optimizer_ = optimizer.construct(model_parameters=parameters)
+        if not optimizer_:
+            optimizer_ = Optimizer.default(parameters)
 
-        if lr_scheduler_params:
-            lr_scheduler = LearningRateScheduler.from_params(optimizer, lr_scheduler_params)
-        else:
-            lr_scheduler = None
-        if momentum_scheduler_params:
-            momentum_scheduler = MomentumScheduler.from_params(optimizer, momentum_scheduler_params)
-        else:
-            momentum_scheduler = None
+        moving_average_ = moving_average.construct(parameters=parameters)
+        learning_rate_scheduler_ = learning_rate_scheduler.construct(optimizer=optimizer_)
+        momentum_scheduler_ = momentum_scheduler.construct(optimizer=optimizer_)
 
-        if "checkpointer" in params:
-            if (
-                "keep_serialized_model_every_num_seconds" in params
-                or "num_serialized_models_to_keep" in params
-            ):
-                raise ConfigurationError(
-                    "Checkpointer may be initialized either from the 'checkpointer' key or from the "
-                    "keys 'num_serialized_models_to_keep' and 'keep_serialized_model_every_num_seconds'"
-                    " but the passed config uses both methods."
-                )
-            checkpointer = Checkpointer.from_params(params.pop("checkpointer"))
-        else:
-            num_serialized_models_to_keep = params.pop_int("num_serialized_models_to_keep", 20)
-            keep_serialized_model_every_num_seconds = params.pop_int(
-                "keep_serialized_model_every_num_seconds", None
-            )
-            checkpointer = Checkpointer(
-                serialization_dir=serialization_dir,
-                num_serialized_models_to_keep=num_serialized_models_to_keep,
-                keep_serialized_model_every_num_seconds=keep_serialized_model_every_num_seconds,
-            )
-        model_save_interval = params.pop_float("model_save_interval", None)
-        summary_interval = params.pop_int("summary_interval", 100)
-        histogram_interval = params.pop_int("histogram_interval", None)
-        should_log_parameter_statistics = params.pop_bool("should_log_parameter_statistics", True)
-        should_log_learning_rate = params.pop_bool("should_log_learning_rate", False)
-        log_batch_size_period = params.pop_int("log_batch_size_period", None)
-
-        distributed = params.pop_bool("distributed", False)
-        world_size = params.pop_int("world_size", 1)
-
-        num_gradient_accumulation_steps = params.pop("num_gradient_accumulation_steps", 1)
-
-        params.assert_empty(cls.__name__)
+        checkpointer_ = checkpointer.construct()
+        if not checkpointer_:
+            checkpointer_ = Checkpointer(serialization_dir)
         return cls(
             model,
-            optimizer,
+            optimizer_,
             iterator,
             train_data,
             validation_data,
@@ -856,16 +848,16 @@ class Trainer(TrainerBase):
             cuda_device=cuda_device,
             grad_norm=grad_norm,
             grad_clipping=grad_clipping,
-            learning_rate_scheduler=lr_scheduler,
-            momentum_scheduler=momentum_scheduler,
-            checkpointer=checkpointer,
+            learning_rate_scheduler=learning_rate_scheduler_,
+            momentum_scheduler=momentum_scheduler_,
+            checkpointer=checkpointer_,
             model_save_interval=model_save_interval,
             summary_interval=summary_interval,
             histogram_interval=histogram_interval,
             should_log_parameter_statistics=should_log_parameter_statistics,
             should_log_learning_rate=should_log_learning_rate,
             log_batch_size_period=log_batch_size_period,
-            moving_average=moving_average,
+            moving_average=moving_average_,
             distributed=distributed,
             local_rank=local_rank,
             world_size=world_size,

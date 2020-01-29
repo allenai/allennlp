@@ -9,7 +9,7 @@ from allennlp.common.params import Params
 from allennlp.data.dataset_readers import DatasetReader
 from allennlp.data.iterators import DataIterator, BasicIterator
 from allennlp.models import Model
-from allennlp.training import Trainer
+from allennlp.training import Trainer, TrainerBase
 
 
 class SimpleTaggerTest(ModelTestCase):
@@ -94,8 +94,12 @@ class SimpleTaggerRegularizationTest(ModelTestCase):
         params = Params.from_file(param_file)
         self.reader = DatasetReader.from_params(params["dataset_reader"])
         self.iterator = DataIterator.from_params(params["iterator"])
-        self.trainer = Trainer.from_params(
-            self.model, self.TEST_DIR, self.iterator, self.dataset, None, params.get("trainer")
+        self.trainer = TrainerBase.from_params(
+            model=self.model,
+            serialization_dir=self.TEST_DIR,
+            iterator=self.iterator,
+            train_data=self.dataset,
+            params=params.get("trainer"),
         )
 
     def test_regularization(self):
