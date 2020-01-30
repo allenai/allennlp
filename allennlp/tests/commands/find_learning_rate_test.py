@@ -100,10 +100,10 @@ class TestFindLearningRate(AllenNlpTestCase):
     def test_find_learning_rate_args(self):
         parser = argparse.ArgumentParser(description="Testing")
         subparsers = parser.add_subparsers(title="Commands", metavar="")
-        FindLearningRate().add_subparser("find_lr", subparsers)
+        FindLearningRate().add_subparser(subparsers)
 
         for serialization_arg in ["-s", "--serialization-dir"]:
-            raw_args = ["find_lr", "path/to/params", serialization_arg, "serialization_dir"]
+            raw_args = ["find-lr", "path/to/params", serialization_arg, "serialization_dir"]
 
             args = parser.parse_args(raw_args)
 
@@ -113,12 +113,12 @@ class TestFindLearningRate(AllenNlpTestCase):
 
         # config is required
         with self.assertRaises(SystemExit) as cm:
-            args = parser.parse_args(["find_lr", "-s", "serialization_dir"])
+            parser.parse_args(["find-lr", "-s", "serialization_dir"])
             assert cm.exception.code == 2  # argparse code for incorrect usage
 
         # serialization dir is required
         with self.assertRaises(SystemExit) as cm:
-            args = parser.parse_args(["find_lr", "path/to/params"])
+            parser.parse_args(["find-lr", "path/to/params"])
             assert cm.exception.code == 2  # argparse code for incorrect usage
 
     @pytest.mark.skipif(torch.cuda.device_count() < 2, reason="Need multiple GPUs.")

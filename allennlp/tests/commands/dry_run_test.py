@@ -143,7 +143,7 @@ class TestDryRun(AllenNlpTestCase):
     def test_make_vocab_args(self):
         parser = argparse.ArgumentParser(description="Testing")
         subparsers = parser.add_subparsers(title="Commands", metavar="")
-        DryRun().add_subparser("dry-run", subparsers)
+        DryRun().add_subparser(subparsers)
         for serialization_arg in ["-s", "--serialization-dir"]:
             raw_args = ["dry-run", "path/to/params", serialization_arg, "serialization_dir"]
             args = parser.parse_args(raw_args)

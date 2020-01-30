@@ -1,6 +1,5 @@
 import inspect
 import os
-import sys
 
 import pytest
 import torch
@@ -9,6 +8,8 @@ import torch.optim.lr_scheduler
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.registrable import Registrable
+from allennlp.common.testing import AllenNlpTestCase
+from allennlp.common.util import push_python_path
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.iterators.data_iterator import DataIterator
 from allennlp.data.token_indexers.token_indexer import TokenIndexer
@@ -18,7 +19,6 @@ from allennlp.modules.seq2vec_encoders.seq2vec_encoder import Seq2VecEncoder
 from allennlp.modules.similarity_functions import SimilarityFunction
 from allennlp.modules.text_field_embedders.text_field_embedder import TextFieldEmbedder
 from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
-from allennlp.common.testing import AllenNlpTestCase
 from allennlp.nn import Initializer
 from allennlp.nn.regularizers.regularizer import Regularizer
 from allennlp.training.learning_rate_schedulers import LearningRateScheduler
@@ -157,34 +157,34 @@ class TestRegistrable(AllenNlpTestCase):
         (packagedir / "__init__.py").touch()
 
         # And add that directory to the path
-        sys.path.insert(0, str(self.TEST_DIR))
+        with push_python_path(self.TEST_DIR):
+            # Write out a duplicate dataset reader there, but registered under a different name.
+            snli_reader = DatasetReader.by_name("snli")
 
-        # Write out a duplicate dataset reader there, but registered under a different name.
-        snli_reader = DatasetReader.by_name("snli")
+            with open(inspect.getabsfile(snli_reader)) as f:
+                code = f.read().replace(
+                    """@DatasetReader.register("snli")""",
+                    """@DatasetReader.register("snli-fake")""",
+                )
 
-        with open(inspect.getabsfile(snli_reader)) as f:
-            code = f.read().replace(
-                """@DatasetReader.register("snli")""", """@DatasetReader.register("snli-fake")"""
-            )
+            with open(os.path.join(packagedir, "reader.py"), "w") as f:
+                f.write(code)
 
-        with open(os.path.join(packagedir, "reader.py"), "w") as f:
-            f.write(code)
+            # Fails to import by registered name
+            with pytest.raises(ConfigurationError) as exc:
+                DatasetReader.by_name("snli-fake")
+                assert "is not a registered name" in str(exc.value)
 
-        # Fails to import by registered name
-        with pytest.raises(ConfigurationError) as exc:
-            DatasetReader.by_name("snli-fake")
-            assert "is not a registered name" in str(exc.value)
+            # Fails to import with wrong module name
+            with pytest.raises(ConfigurationError) as exc:
+                DatasetReader.by_name("testpackage.snli_reader.SnliFakeReader")
+                assert "unable to import module" in str(exc.value)
 
-        # Fails to import with wrong module name
-        with pytest.raises(ConfigurationError) as exc:
-            DatasetReader.by_name("testpackage.snli_reader.SnliFakeReader")
-            assert "unable to import module" in str(exc.value)
+            # Fails to import with wrong class name
+            with pytest.raises(ConfigurationError):
+                DatasetReader.by_name("testpackage.reader.SnliFakeReader")
+                assert "unable to find class" in str(exc.value)
 
-        # Fails to import with wrong class name
-        with pytest.raises(ConfigurationError):
-            DatasetReader.by_name("testpackage.reader.SnliFakeReader")
-            assert "unable to find class" in str(exc.value)
-
-        # Imports successfully with right fully qualified name
-        duplicate_reader = DatasetReader.by_name("testpackage.reader.SnliReader")
-        assert duplicate_reader.__name__ == "SnliReader"
+            # Imports successfully with right fully qualified name
+            duplicate_reader = DatasetReader.by_name("testpackage.reader.SnliReader")
+            assert duplicate_reader.__name__ == "SnliReader"
