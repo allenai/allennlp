@@ -1,4 +1,4 @@
-from typing import Dict, List, Tuple
+from typing import Dict, List
 import logging
 
 from overrides import overrides
@@ -47,6 +47,7 @@ class PretrainedTransformerMismatchedIndexer(TokenIndexer):
         self._matched_indexer = PretrainedTransformerIndexer(
             model_name, namespace, max_length, **kwargs
         )
+        self._allennlp_tokenizer = self._matched_indexer._allennlp_tokenizer
         self._tokenizer = self._matched_indexer._tokenizer
         self._num_added_start_tokens = self._matched_indexer._num_added_start_tokens
         self._num_added_end_tokens = self._matched_indexer._num_added_end_tokens
@@ -59,17 +60,13 @@ class PretrainedTransformerMismatchedIndexer(TokenIndexer):
     def tokens_to_indices(self, tokens: List[Token], vocabulary: Vocabulary) -> IndexedTokenList:
         self._matched_indexer._add_encoding_to_vocabulary_if_needed(vocabulary)
 
-        indices, offsets = self._intra_word_tokenize(tokens)
-        # `create_token_type_ids_from_sequences()` inserts special tokens
-        type_ids = self._tokenizer.create_token_type_ids_from_sequences(
-            indices[self._num_added_start_tokens : -self._num_added_end_tokens]
-        )
+        wordpieces, offsets = self._allennlp_tokenizer.intra_word_tokenize([t.text for t in tokens])
         output: IndexedTokenList = {
-            "token_ids": indices,
+            "token_ids": [t.text_id for t in wordpieces],
             "mask": [1] * len(tokens),  # for original tokens (i.e. word-level)
-            "type_ids": type_ids,
+            "type_ids": [t.type_id for t in wordpieces],
             "offsets": offsets,
-            "wordpiece_mask": [1] * len(indices),  # for wordpieces (i.e. subword-level)
+            "wordpiece_mask": [1] * len(wordpieces),  # for wordpieces (i.e. subword-level)
         }
 
         return self._matched_indexer._postprocess_output(output)
@@ -102,7 +99,7 @@ class PretrainedTransformerMismatchedIndexer(TokenIndexer):
     def __eq__(self, other):
         if isinstance(other, PretrainedTransformerMismatchedIndexer):
             for key in self.__dict__:
-                if key == "tokenizer":
+                if key == "_tokenizer":
                     # This is a reference to a function in the huggingface code, which we can't
                     # really modify to make this clean.  So we special-case it.
                     continue
@@ -110,28 +107,3 @@ class PretrainedTransformerMismatchedIndexer(TokenIndexer):
                     return False
             return True
         return NotImplemented
-
-    def _intra_word_tokenize(self, tokens: List[Token]) -> Tuple[List[int], List[Tuple[int, int]]]:
-        """
-        Tokenizes each word into wordpieces separately and returns the wordpiece IDs.
-        Also calculates offsets such that wordpices[offsets[i][0]:offsets[i][1] + 1]
-        corresponds to the original i-th token.
-
-        This function inserts special tokens.
-        """
-        wordpieces: List[int] = []
-        offsets = []
-        cumulative = self._num_added_start_tokens
-        for token in tokens:
-            subword_wordpieces = self._tokenizer.encode(token.text, add_special_tokens=False)
-            wordpieces.extend(subword_wordpieces)
-
-            start_offset = cumulative
-            cumulative += len(subword_wordpieces)
-            end_offset = cumulative - 1  # inclusive
-            offsets.append((start_offset, end_offset))
-
-        wordpieces = self._tokenizer.build_inputs_with_special_tokens(wordpieces)
-        assert cumulative + self._num_added_end_tokens == len(wordpieces)
-
-        return wordpieces, offsets

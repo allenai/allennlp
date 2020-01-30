@@ -475,4 +475,4 @@ class TestOntonotes(AllenNlpTestCase):
         reader = Ontonotes()
         file_path = self.FIXTURES_ROOT / "coref" / "coref.gold_conll"
         documents = list(reader.dataset_document_iterator(file_path))
-        assert len(documents) == 2
+        assert len(documents) == 4
