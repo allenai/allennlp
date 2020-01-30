@@ -284,19 +284,17 @@ def train_model(
             f"World size: {world_size}"
         )
 
-        # Creating `Vocabulary` objects from workers could be problematic since
-        # the data iterators in each worker will yield only `rank` specific
-        # instances. Hence it is safe to construct the vocabulary and write it
-        # to disk before initializing the distributed context. The workers will
-        # load the vocabulary from the path specified.
-        if params["vocabulary"]["type"] != "from_files":
-            vocab = training_util.make_vocab_from_params(params.duplicate(), serialization_dir)
-            params["vocabulary"] = {
-                "type": "from_files",
-                "directory": os.path.join(serialization_dir, "vocabulary"),
-                "padding_token": vocab._padding_token,
-                "oov_token": vocab._oov_token,
-            }
+        # Creating `Vocabulary` objects from workers could be problematic since the data iterators
+        # in each worker will yield only `rank` specific instances. Hence it is safe to construct
+        # the vocabulary and write it to disk before initializing the distributed context. The workers
+        # will load the vocabulary from the path specified.
+        vocab = training_util.make_vocab_from_params(params.duplicate(), serialization_dir)
+        params["vocabulary"] = {
+            "type": "from_files",
+            "directory": os.path.join(serialization_dir, "vocabulary"),
+            "padding_token": vocab._padding_token,
+            "oov_token": vocab._oov_token,
+        }
 
         mp.spawn(
             _train_worker,
