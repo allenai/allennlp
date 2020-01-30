@@ -17,10 +17,14 @@ There are two ways of declaring plugins for discovery:
     See [allennlp-server](https://github.com/allenai/allennlp-server) for an example.
 """
 import importlib
+import logging
 import os
 import pkgutil
 import sys
 from typing import Iterable
+
+
+logger = logging.getLogger(__name__)
 
 
 def discover_namespace_plugins(
@@ -72,4 +76,7 @@ def import_plugins() -> None:
     Imports the plugins found with `discover_plugins()`.
     """
     for module_name in discover_plugins():
-        importlib.import_module(module_name)
+        try:
+            importlib.import_module(module_name)
+        except ModuleNotFoundError as e:
+            logger.error(f"Plugin {module_name} could not be loaded: {e}")
