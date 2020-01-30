@@ -2,14 +2,14 @@
 Assorted utilities for working with neural networks in AllenNLP.
 """
 
+import copy
+import json
+import logging
 from collections import defaultdict
 from typing import Any, Dict, List, Optional, Sequence, Tuple, TypeVar, Union
-import logging
-import copy
-import math
-import json
-import numpy
 
+import math
+import numpy
 import torch
 
 from allennlp.common.checks import ConfigurationError

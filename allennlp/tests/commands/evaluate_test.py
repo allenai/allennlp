@@ -41,7 +41,7 @@ class TestEvaluate(AllenNlpTestCase):
 
         self.parser = argparse.ArgumentParser(description="Testing")
         subparsers = self.parser.add_subparsers(title="Commands", metavar="")
-        Evaluate().add_subparser("evaluate", subparsers)
+        Evaluate().add_subparser(subparsers)
 
     def test_evaluate_calculates_average_loss(self):
         losses = [7.0, 9.0, 8.0]
