@@ -2,6 +2,7 @@ import gc
 
 import time
 
+from allennlp.common import Params
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.tokenizers import PretrainedTransformerTokenizer
 from flaky import flaky
@@ -313,7 +314,7 @@ class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
     def test_tokenizer_kwargs_forced_lowercase(self):
         text = "Hello there! General Kenobi."
         forced_lowercase_tokenizer = PretrainedTransformerTokenizer(
-            "bert-base-cased", do_lower_case=True
+            "bert-base-cased", tokenizer_kwargs={"do_lower_case": True}
         )
         assert forced_lowercase_tokenizer._tokenizer_lowercases
         tokenized = [token.text for token in forced_lowercase_tokenizer.tokenize(text)]
@@ -349,3 +350,11 @@ class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
         assert not tokenizer._tokenizer_lowercases
         tokenized = [token.text for token in tokenizer.tokenize(text)]
         assert tokenized == original_tokens
+
+    def test_from_params_kwargs(self):
+        PretrainedTransformerTokenizer.from_params(Params({
+            "model_name": "bert-base-uncased",
+            "tokenizer_kwargs": {
+                "do_lower_case": True,
+            }
+        }))
