@@ -329,14 +329,13 @@ def construct_arg(
         value_dict = {}
 
         for key, value_params in popped_params.items():
-            subextras = create_extras(value_cls, extras)
             value_dict[key] = construct_arg(
-                value_cls.__name__,
+                str(value_cls),
                 argument_name + "." + key,
                 value_params,
                 value_cls,
                 _NO_DEFAULT,
-                **subextras,
+                **extras,
             )
 
         return value_dict
@@ -364,7 +363,7 @@ def construct_arg(
 
         for i, (value_cls, value_params) in enumerate(zip(annotation.__args__, popped_params)):
             value = construct_arg(
-                value_cls.__name__,
+                str(value_cls),
                 argument_name + f".{i}",
                 value_params,
                 value_cls,
@@ -382,7 +381,7 @@ def construct_arg(
 
         for i, value_params in enumerate(popped_params):
             value = construct_arg(
-                value_cls.__name__,
+                str(value_cls),
                 argument_name + f".{i}",
                 value_params,
                 value_cls,
