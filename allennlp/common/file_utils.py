@@ -294,7 +294,14 @@ def get_file_extension(path: str, dot=True, lower: bool = True):
     return ext.lower() if lower else ext
 
 
-def open_compressed(filename: str, mode: str = "rt", encoding: Optional[str] = "UTF-8", **kwargs):
+def open_compressed(
+    filename: Union[str, Path],
+    mode: str = "rt",
+    encoding: Optional[str] = "UTF-8",
+    **kwargs
+):
+    if isinstance(filename, Path):
+        filename = str(filename)
     open_fn: Callable = open
 
     if filename.endswith(".gz"):
