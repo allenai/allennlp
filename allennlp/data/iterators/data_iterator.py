@@ -270,11 +270,16 @@ class DataIterator(Registrable):
                 # we need access to shaping information before batches are constructed)
                 instance.index_fields(self.vocab)
             field_lengths = instance.get_padding_lengths()
-            for _, lengths in field_lengths.items():
+            for lengths in field_lengths.values():
                 try:
                     padding_length = max(padding_length, lengths[key])
                 except KeyError:
                     pass
+            assert padding_length > -1, (
+                f"Padding key {key} from "
+                f"maximum_samples_per_batch not found! Possible padding "
+                f"keys: {[k for l in field_lengths.values() for k in l]}"
+            )
 
             proposed_batch_size = len(batch) + 1
 

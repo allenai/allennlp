@@ -126,6 +126,39 @@ def str_to_time(time_str: str) -> datetime.datetime:
     return datetime.datetime(*pieces)
 
 
+def read_all_datasets(
+    train_data_path: str,
+    dataset_reader: DatasetReader,
+    validation_dataset_reader: DatasetReader = None,
+    validation_data_path: str = None,
+    test_data_path: str = None,
+) -> Dict[str, Iterable[Instance]]:
+    """
+    Reads all datasets (perhaps lazily, if the corresponding dataset readers are lazy) and returns a
+    dictionary mapping dataset name ("train", "validation" or "test") to the iterable resulting from
+    `reader.read(filename)`.
+    """
+
+    logger.info("Reading training data from %s", train_data_path)
+    train_data = dataset_reader.read(train_data_path)
+
+    datasets: Dict[str, Iterable[Instance]] = {"train": train_data}
+
+    validation_dataset_reader = validation_dataset_reader or dataset_reader
+
+    if validation_data_path is not None:
+        logger.info("Reading validation data from %s", validation_data_path)
+        validation_data = validation_dataset_reader.read(validation_data_path)
+        datasets["validation"] = validation_data
+
+    if test_data_path is not None:
+        logger.info("Reading test data from %s", test_data_path)
+        test_data = validation_dataset_reader.read(test_data_path)
+        datasets["test"] = test_data
+
+    return datasets
+
+
 def datasets_from_params(params: Params) -> Dict[str, Iterable[Instance]]:
     """
     Load all the datasets specified by the config.

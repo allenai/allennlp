@@ -14,7 +14,7 @@ import tqdm
 import torch
 import numpy as np
 
-from allennlp.common import Registrable
+from allennlp.common import Lazy, Registrable
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import Params
 from allennlp.common.testing import AllenNlpTestCase
@@ -187,7 +187,7 @@ class Discriminator(Model):
         return output_dict
 
 
-@TrainerBase.register("gan-test")
+@TrainerBase.register("gan-test", constructor="from_partial_objects")
 class GanTestTrainer(TrainerBase):
     def __init__(
         self,
@@ -289,40 +289,32 @@ class GanTestTrainer(TrainerBase):
         return metrics
 
     @classmethod
-    def from_params(  # type: ignore
+    def from_partial_objects(
         cls,
-        params: Params,
         serialization_dir: str,
-        recover: bool = False,
-        cache_directory: str = None,
-        cache_prefix: str = None,
+        data_reader: DatasetReader,
+        noise_reader: DatasetReader,
+        generator: Model,
+        discriminator: Model,
+        iterator: DataIterator,
+        noise_iterator: DataIterator,
+        generator_optimizer: Lazy[Optimizer],
+        discriminator_optimizer: Lazy[Optimizer],
+        num_epochs: int,
+        batches_per_epoch: int,
     ) -> "GanTestTrainer":
-        dataset_reader = DatasetReader.from_params(params.pop("data_reader"))
-        data = dataset_reader.read("")
-
-        noise_reader = DatasetReader.from_params(params.pop("noise_reader"))
+        data = data_reader.read("")
         noise = noise_reader.read("")
 
-        generator = Model.from_params(params.pop("generator"))
-        discriminator = Model.from_params(params.pop("discriminator"))
-        iterator = DataIterator.from_params(params.pop("iterator"))
-        noise_iterator = DataIterator.from_params(params.pop("noise_iterator"))
+        generator_params = [[n, p] for n, p in generator.named_parameters() if p.requires_grad]
+        generator_optimizer_ = generator_optimizer.construct(model_parameters=generator_params)
 
-        generator_optimizer = Optimizer.from_params(
-            [[n, p] for n, p in generator.named_parameters() if p.requires_grad],
-            params.pop("generator_optimizer"),
+        discriminator_params = [
+            [n, p] for n, p in discriminator.named_parameters() if p.requires_grad
+        ]
+        discriminator_optimizer_ = discriminator_optimizer.construct(
+            model_parameters=discriminator_params
         )
-
-        discriminator_optimizer = Optimizer.from_params(
-            [[n, p] for n, p in discriminator.named_parameters() if p.requires_grad],
-            params.pop("discriminator_optimizer"),
-        )
-
-        num_epochs = params.pop_int("num_epochs")
-        batches_per_epoch = params.pop_int("batches_per_epoch")
-        params.pop("trainer")
-
-        params.assert_empty(__name__)
 
         return cls(
             serialization_dir,
@@ -332,8 +324,8 @@ class GanTestTrainer(TrainerBase):
             discriminator,
             iterator,
             noise_iterator,
-            generator_optimizer,
-            discriminator_optimizer,
+            generator_optimizer_,
+            discriminator_optimizer_,
             batches_per_epoch,
             num_epochs,
         )
@@ -345,7 +337,7 @@ class GanTrainerTest(AllenNlpTestCase):
 
         params = Params(
             {
-                "trainer": {"type": "gan-test"},
+                "type": "gan-test",
                 "data_reader": {
                     "type": "sampling",
                     "sampler": {"type": "normal", "mean": 4.0, "stdev": 1.25},
@@ -367,7 +359,7 @@ class GanTrainerTest(AllenNlpTestCase):
             }
         )
 
-        self.trainer = TrainerBase.from_params(params, self.TEST_DIR)
+        self.trainer = TrainerBase.from_params(params=params, serialization_dir=self.TEST_DIR)
 
     def test_gan_can_train(self):
         self.trainer.train()
@@ -383,7 +375,7 @@ if __name__ == "__main__":
 
     params_ = Params(
         {
-            "trainer": {"type": "gan-test"},
+            "type": "gan-test",
             "data_reader": {
                 "type": "sampling",
                 "sampler": {"type": "normal", "mean": 4.0, "stdev": 1.25},
@@ -413,6 +405,6 @@ if __name__ == "__main__":
     import tempfile
 
     serialization_dir_ = tempfile.mkdtemp()
-    trainer_ = TrainerBase.from_params(params_, serialization_dir_)
+    trainer_ = TrainerBase.from_params(params=params_, serialization_dir=serialization_dir_)
     metrics_ = trainer_.train()
     print(metrics_)

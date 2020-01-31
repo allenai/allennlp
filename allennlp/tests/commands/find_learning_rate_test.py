@@ -9,13 +9,13 @@ from allennlp.data import Vocabulary, DataIterator
 from allennlp.models import Model
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.commands.train import Trainer
 from allennlp.commands.find_learning_rate import (
     search_learning_rate,
     find_learning_rate_from_args,
     find_learning_rate_model,
     FindLearningRate,
 )
+from allennlp.training import TrainerBase
 from allennlp.training.util import datasets_from_params
 
 
@@ -100,10 +100,10 @@ class TestFindLearningRate(AllenNlpTestCase):
     def test_find_learning_rate_args(self):
         parser = argparse.ArgumentParser(description="Testing")
         subparsers = parser.add_subparsers(title="Commands", metavar="")
-        FindLearningRate().add_subparser("find_lr", subparsers)
+        FindLearningRate().add_subparser(subparsers)
 
         for serialization_arg in ["-s", "--serialization-dir"]:
-            raw_args = ["find_lr", "path/to/params", serialization_arg, "serialization_dir"]
+            raw_args = ["find-lr", "path/to/params", serialization_arg, "serialization_dir"]
 
             args = parser.parse_args(raw_args)
 
@@ -113,12 +113,12 @@ class TestFindLearningRate(AllenNlpTestCase):
 
         # config is required
         with self.assertRaises(SystemExit) as cm:
-            args = parser.parse_args(["find_lr", "-s", "serialization_dir"])
+            parser.parse_args(["find-lr", "-s", "serialization_dir"])
             assert cm.exception.code == 2  # argparse code for incorrect usage
 
         # serialization dir is required
         with self.assertRaises(SystemExit) as cm:
-            args = parser.parse_args(["find_lr", "path/to/params"])
+            parser.parse_args(["find-lr", "path/to/params"])
             assert cm.exception.code == 2  # argparse code for incorrect usage
 
     @pytest.mark.skipif(torch.cuda.device_count() < 2, reason="Need multiple GPUs.")
@@ -173,11 +173,11 @@ class TestSearchLearningRate(AllenNlpTestCase):
         trainer_params = params.pop("trainer")
         serialization_dir = os.path.join(self.TEST_DIR, "test_search_learning_rate")
 
-        self.trainer = Trainer.from_params(
-            model,
-            serialization_dir,
-            iterator,
-            train_data,
+        self.trainer = TrainerBase.from_params(
+            model=model,
+            serialization_dir=serialization_dir,
+            iterator=iterator,
+            train_data=train_data,
             params=trainer_params,
             validation_data=None,
             validation_iterator=None,

@@ -128,12 +128,9 @@ class Hotflip(Attacker):
                 max_token_length = max(len(x) for x in all_tokens)
                 # sometime max_token_length is too short for cnn encoder
                 max_token_length = max(max_token_length, token_indexer._min_padding_length)
-                indexed_tokens = token_indexer.tokens_to_indices(
-                    tokens, self.vocab, "token_characters"
-                )
-                padded_tokens = token_indexer.as_padded_tensor_dict(
-                    indexed_tokens, {"token_characters": len(tokens)}
-                )
+                indexed_tokens = token_indexer.tokens_to_indices(tokens, self.vocab)
+                padding_lengths = token_indexer.get_padding_lengths(indexed_tokens)
+                padded_tokens = token_indexer.as_padded_tensor_dict(indexed_tokens, padding_lengths)
                 inputs[indexer_name] = {
                     "token_characters": torch.LongTensor(
                         padded_tokens["token_characters"]

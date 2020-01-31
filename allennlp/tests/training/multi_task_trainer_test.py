@@ -17,7 +17,7 @@ import os
 import tqdm
 import torch
 
-from allennlp.common import Registrable
+from allennlp.common import Lazy, Registrable
 from allennlp.common.params import Params
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Instance
@@ -176,7 +176,7 @@ class MyModel(Model):
         return {"loss": loss}
 
 
-@TrainerBase.register("multi-task-test")
+@TrainerBase.register("multi-task-test", constructor="from_partial_objects")
 class MultiTaskTrainer(TrainerBase):
     """
     A simple trainer that works in our multi-task setup.
@@ -240,40 +240,33 @@ class MultiTaskTrainer(TrainerBase):
         return {}
 
     @classmethod
-    def from_params(  # type: ignore
+    def from_partial_objects(
         cls,
-        params: Params,
         serialization_dir: str,
-        recover: bool = False,
-        cache_directory: str = None,
-        cache_prefix: str = None,
+        train_dataset_readers: Dict[str, DatasetReader],
+        train_file_paths: Dict[str, str],
+        model: Lazy[Model],
+        iterator: DataIterator,
+        mingler: DatasetMingler,
+        optimizer: Lazy[Optimizer],
+        num_epochs: int = 10,
     ) -> "MultiTaskTrainer":
-        readers = {
-            name: DatasetReader.from_params(reader_params)
-            for name, reader_params in params.pop("train_dataset_readers").items()
-        }
-        train_file_paths = params.pop("train_file_paths").as_dict()
 
-        datasets = {name: reader.read(train_file_paths[name]) for name, reader in readers.items()}
+        datasets = {
+            name: reader.read(train_file_paths[name])
+            for name, reader in train_dataset_readers.items()
+        }
 
         instances = (instance for dataset in datasets.values() for instance in dataset)
-        vocab = Vocabulary.from_params(Params({}), instances=instances)
-        model = Model.from_params(params.pop("model"), vocab=vocab)
-        iterator = DataIterator.from_params(params.pop("iterator"))
+        vocab = Vocabulary.from_instances(instances=instances)
+        model = model.construct(vocab=vocab)
         iterator.index_with(vocab)
-        mingler = DatasetMingler.from_params(params.pop("mingler"))
 
         parameters = [[n, p] for n, p in model.named_parameters() if p.requires_grad]
-        optimizer = Optimizer.from_params(parameters, params.pop("optimizer"))
-
-        num_epochs = params.pop_int("num_epochs", 10)
-
-        _ = params.pop("trainer", Params({}))
-
-        params.assert_empty(__name__)
+        optimizer_ = optimizer.construct(model_parameters=parameters)
 
         return MultiTaskTrainer(
-            model, serialization_dir, iterator, mingler, optimizer, datasets, num_epochs
+            model, serialization_dir, iterator, mingler, optimizer_, datasets, num_epochs
         )
 
 
@@ -297,11 +290,11 @@ class MultiTaskTest(AllenNlpTestCase):
                     "b": self.FIXTURES_ROOT / "data" / "conll2000.txt",
                     "c": self.FIXTURES_ROOT / "data" / "conll2003.txt",
                 },
-                "trainer": {"type": "multi-task-test"},
+                "type": "multi-task-test",
             }
         )
 
-        self.trainer = TrainerBase.from_params(params, self.TEST_DIR)
+        self.trainer = TrainerBase.from_params(params=params, serialization_dir=self.TEST_DIR)
 
     def test_training(self):
         self.trainer.train()

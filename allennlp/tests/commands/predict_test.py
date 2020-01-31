@@ -10,11 +10,11 @@ import tempfile
 
 import pytest
 
-from allennlp.common.checks import ConfigurationError
-from allennlp.common.util import JsonDict
-from allennlp.common.testing import AllenNlpTestCase
 from allennlp.commands import main
 from allennlp.commands.predict import Predict
+from allennlp.common.checks import ConfigurationError
+from allennlp.common.testing import AllenNlpTestCase
+from allennlp.common.util import JsonDict, push_python_path
 from allennlp.data.dataset_readers import DatasetReader, TextClassificationJsonReader
 from allennlp.models.archival import load_archive
 from allennlp.predictors import Predictor, TextClassifierPredictor
@@ -39,7 +39,7 @@ class TestPredict(AllenNlpTestCase):
     def test_add_predict_subparser(self):
         parser = argparse.ArgumentParser(description="Testing")
         subparsers = parser.add_subparsers(title="Commands", metavar="")
-        Predict().add_subparser("predict", subparsers)
+        Predict().add_subparser(subparsers)
 
         kebab_args = [
             "predict",  # command
@@ -337,58 +337,55 @@ class TestPredict(AllenNlpTestCase):
         (packagedir / "__init__.py").touch()
 
         # And add that directory to the path
-        sys.path.insert(0, str(self.TEST_DIR))
+        with push_python_path(self.TEST_DIR):
+            # Write out a duplicate predictor there, but registered under a different name.
+            from allennlp.predictors import text_classifier
 
-        # Write out a duplicate predictor there, but registered under a different name.
-        from allennlp.predictors import text_classifier
+            with open(text_classifier.__file__) as f:
+                code = f.read().replace(
+                    """@Predictor.register("text_classifier")""",
+                    """@Predictor.register("duplicate-test-predictor")""",
+                )
 
-        with open(text_classifier.__file__) as f:
-            code = f.read().replace(
-                """@Predictor.register("text_classifier")""",
-                """@Predictor.register("duplicate-test-predictor")""",
-            )
+            with open(os.path.join(packagedir, "predictor.py"), "w") as f:
+                f.write(code)
 
-        with open(os.path.join(packagedir, "predictor.py"), "w") as f:
-            f.write(code)
+            self.infile = os.path.join(self.TEST_DIR, "inputs.txt")
+            self.outfile = os.path.join(self.TEST_DIR, "outputs.txt")
 
-        self.infile = os.path.join(self.TEST_DIR, "inputs.txt")
-        self.outfile = os.path.join(self.TEST_DIR, "outputs.txt")
+            with open(self.infile, "w") as f:
+                f.write("""{"sentence": "the seahawks won the super bowl in 2016"}\n""")
+                f.write("""{"sentence": "the mariners won the super bowl in 2037"}\n""")
 
-        with open(self.infile, "w") as f:
-            f.write("""{"sentence": "the seahawks won the super bowl in 2016"}\n""")
-            f.write("""{"sentence": "the mariners won the super bowl in 2037"}\n""")
+            sys.argv = [
+                "run.py",  # executable
+                "predict",  # command
+                str(self.classifier_model_path),
+                str(self.infile),  # input_file
+                "--output-file",
+                str(self.outfile),
+                "--predictor",
+                "duplicate-test-predictor",
+                "--silent",
+            ]
 
-        sys.argv = [
-            "run.py",  # executable
-            "predict",  # command
-            str(self.classifier_model_path),
-            str(self.infile),  # input_file
-            "--output-file",
-            str(self.outfile),
-            "--predictor",
-            "duplicate-test-predictor",
-            "--silent",
-        ]
+            # Should raise ConfigurationError, because predictor is unknown
+            with pytest.raises(ConfigurationError):
+                main()
 
-        # Should raise ConfigurationError, because predictor is unknown
-        with pytest.raises(ConfigurationError):
+            # But once we include testpackage, it should be known
+            sys.argv.extend(["--include-package", "testpackage"])
             main()
 
-        # But once we include testpackage, it should be known
-        sys.argv.extend(["--include-package", "testpackage"])
-        main()
+            assert os.path.exists(self.outfile)
 
-        assert os.path.exists(self.outfile)
+            with open(self.outfile, "r") as f:
+                results = [json.loads(line) for line in f]
 
-        with open(self.outfile, "r") as f:
-            results = [json.loads(line) for line in f]
-
-        assert len(results) == 2
-        # Overridden predictor should output extra field
-        for result in results:
-            assert set(result.keys()) == {"label", "logits", "probs"}
-
-        sys.path.remove(str(self.TEST_DIR))
+            assert len(results) == 2
+            # Overridden predictor should output extra field
+            for result in results:
+                assert set(result.keys()) == {"label", "logits", "probs"}
 
     def test_alternative_file_formats(self):
         @Predictor.register("classification-csv")
@@ -428,7 +425,7 @@ class TestPredict(AllenNlpTestCase):
         main()
         assert os.path.exists(self.outfile)
 
-        with open(self.outfile, "r") as f:
+        with open(self.outfile) as f:
             reader = csv.reader(f)
             results = [row for row in reader]
 
