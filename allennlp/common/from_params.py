@@ -182,9 +182,15 @@ def create_kwargs(
         # and an __args__ field indicating `(str, int)`. We capture both.
         annotation = remove_optional(param.annotation)
 
-        kwargs[param_name] = pop_and_construct_arg(
+        constructed_arg = pop_and_construct_arg(
             cls.__name__, param_name, annotation, param.default, params, **extras
         )
+
+        # If we just ended up constructing the default value for the parameter, we can just omit it.
+        # Leaving it in can cause issues with **kwargs in some corner cases, where you might end up
+        # with multiple values for a single parameter.
+        if constructed_arg is not param.default:
+            kwargs[param_name] = constructed_arg
 
     params.assert_empty(cls.__name__)
     return kwargs
