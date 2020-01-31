@@ -398,7 +398,7 @@ def construct_arg(
         # succeeds.
         for arg_annotation in args:
             try:
-                a = construct_arg(
+                return construct_arg(
                     str(arg_annotation),
                     argument_name,
                     popped_params,
@@ -406,7 +406,6 @@ def construct_arg(
                     default,
                     **extras,
                 )
-                return a
             except (ValueError, TypeError, ConfigurationError, AttributeError) as e:
                 # Our attempt to construct the argument may have modified popped_params, so we
                 # restore it here.

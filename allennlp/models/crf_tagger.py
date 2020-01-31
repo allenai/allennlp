@@ -163,7 +163,7 @@ class CrfTagger(Model):
         tokens: TextFieldTensors,
         tags: torch.LongTensor = None,
         metadata: List[Dict[str, Any]] = None,
-        **kwargs
+        **kwargs,
     ) -> Dict[str, torch.Tensor]:
 
         """
