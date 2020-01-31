@@ -433,23 +433,6 @@ def construct_arg(
         return popped_params.as_dict(quiet=True)
 
 
-def construct_from_params(value_cls: Type[T], value_params: Params, extras: Dict[str, Any]) -> T:
-    """
-    At this point we know that we need to use `from_params` to construct an object that will be
-    (part of) an argument to a constructor.  This does the logic of actually calling that
-    `from_params` method.
-
-    This is normally as simple as just `value_cls.from_params`, but we first call `create_extras` to
-    pass along any **kwargs that we got as input, and we also have some special handling for `Lazy`
-    annotations here - we don't want to recurse on `Lazy.from_params`, we want to bypass that.
-    """
-    origin = getattr(value_cls, "__origin__", None)
-    if origin == Lazy:
-        value_cls = value_cls.__args__[0]  # type: ignore
-    else:
-        return value_cls.from_params(params=value_params, **subextras)
-
-
 class FromParams:
     """
     Mixin to give a from_params method to classes. We create a distinct base class for this
