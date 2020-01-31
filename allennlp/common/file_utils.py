@@ -295,10 +295,7 @@ def get_file_extension(path: str, dot=True, lower: bool = True):
 
 
 def open_compressed(
-    filename: Union[str, Path],
-    mode: str = "rt",
-    encoding: Optional[str] = "UTF-8",
-    **kwargs
+    filename: Union[str, Path], mode: str = "rt", encoding: Optional[str] = "UTF-8", **kwargs
 ):
     if isinstance(filename, Path):
         filename = str(filename)

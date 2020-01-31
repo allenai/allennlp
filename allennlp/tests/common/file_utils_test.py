@@ -12,7 +12,8 @@ from allennlp.common.file_utils import (
     get_from_cache,
     cached_path,
     split_s3_path,
-    open_compressed)
+    open_compressed,
+)
 from allennlp.common.testing import AllenNlpTestCase
 
 
