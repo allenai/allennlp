@@ -98,9 +98,18 @@ def takes_kwargs(obj) -> bool:
 
 
 def can_construct_from_params(type_: Type) -> bool:
+    if type_ in [str, int, float, bool]:
+        return True
     origin = getattr(type_, "__origin__", None)
+    print(f"can construct?: {type_} {origin}")
     if origin == Lazy:
         return True
+    elif origin:
+        if hasattr(type_, "from_params"):
+            return True
+        args = getattr(type_, "__args__")
+        print(f"Recursing: {args}")
+        return all([can_construct_from_params(arg) for arg in args])
     return hasattr(type_, "from_params")
 
 
@@ -235,6 +244,8 @@ def construct_arg(
     # The parameter is optional if its default value is not the "no default" sentinel.
     optional = default != _NO_DEFAULT
 
+    print(origin)
+    print(args)
     # Some constructors expect extra non-parameter items, e.g. vocab: Vocabulary.
     # We check the provided `extras` for these and just use them if they exist.
     if name in extras:
@@ -356,6 +367,7 @@ def construct_arg(
     else:
         # Pass it on as is and hope for the best.   ¯\_(ツ)_/¯
         if optional:
+            print(params)
             value = params.pop(name, default, keep_as_dict=True)
         else:
             value = params.pop(name, keep_as_dict=True)

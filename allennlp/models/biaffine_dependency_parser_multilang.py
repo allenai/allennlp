@@ -71,8 +71,6 @@ class BiaffineDependencyParserMultiLang(BiaffineDependencyParser):
         The dropout applied to the embedded text input.
     initializer : `InitializerApplicator`, optional (default=`InitializerApplicator()`)
         Used to initialize the model parameters.
-    regularizer : `RegularizerApplicator`, optional (default=`None`)
-        If provided, will be used to calculate the regularization penalty during training.
     """
 
     def __init__(
@@ -90,7 +88,7 @@ class BiaffineDependencyParserMultiLang(BiaffineDependencyParser):
         dropout: float = 0.0,
         input_dropout: float = 0.0,
         initializer: InitializerApplicator = InitializerApplicator(),
-        regularizer: Optional[RegularizerApplicator] = None,
+        **kwargs,
     ) -> None:
         super().__init__(
             vocab,
@@ -105,7 +103,7 @@ class BiaffineDependencyParserMultiLang(BiaffineDependencyParser):
             dropout,
             input_dropout,
             initializer,
-            regularizer,
+            **kwargs,
         )
 
         self._langs_for_early_stop = langs_for_early_stop or []

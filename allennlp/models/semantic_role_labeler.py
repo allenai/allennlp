@@ -50,8 +50,6 @@ class SemanticRoleLabeler(Model):
         The dimensionality of the embedding of the binary verb predicate features.
     initializer : `InitializerApplicator`, optional (default=`InitializerApplicator()`)
         Used to initialize the model parameters.
-    regularizer : `RegularizerApplicator`, optional (default=`None`)
-        If provided, will be used to calculate the regularization penalty during training.
     label_smoothing : `float`, optional (default = 0.0)
         Whether or not to use label smoothing on the labels when computing cross entropy loss.
     ignore_span_metric : `bool`, optional (default = False)
@@ -69,12 +67,12 @@ class SemanticRoleLabeler(Model):
         binary_feature_dim: int,
         embedding_dropout: float = 0.0,
         initializer: InitializerApplicator = InitializerApplicator(),
-        regularizer: Optional[RegularizerApplicator] = None,
         label_smoothing: float = None,
         ignore_span_metric: bool = False,
         srl_eval_path: str = DEFAULT_SRL_EVAL_PATH,
+        **kwargs,
     ) -> None:
-        super().__init__(vocab, regularizer)
+        super().__init__(vocab, **kwargs)
 
         self.text_field_embedder = text_field_embedder
         self.num_classes = self.vocab.get_vocab_size("labels")

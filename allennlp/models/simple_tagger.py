@@ -48,8 +48,6 @@ class SimpleTagger(Model):
         to the overall statistics.
     initializer : `InitializerApplicator`, optional (default=`InitializerApplicator()`)
         Used to initialize the model parameters.
-    regularizer : `RegularizerApplicator`, optional (default=`None`)
-        If provided, will be used to calculate the regularization penalty during training.
     """
 
     def __init__(
@@ -62,9 +60,9 @@ class SimpleTagger(Model):
         label_namespace: str = "labels",
         verbose_metrics: bool = False,
         initializer: InitializerApplicator = InitializerApplicator(),
-        regularizer: Optional[RegularizerApplicator] = None,
+        **kwargs,
     ) -> None:
-        super().__init__(vocab, regularizer)
+        super().__init__(vocab, **kwargs)
 
         self.label_namespace = label_namespace
         self.text_field_embedder = text_field_embedder

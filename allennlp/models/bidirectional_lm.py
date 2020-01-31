@@ -39,8 +39,6 @@ class BidirectionalLanguageModel(LanguageModel):
         the full `_SoftmaxLoss` defined above.
     sparse_embeddings : `bool`, optional (default: False)
         Passed on to `SampledSoftmaxLoss` if True.
-    regularizer : `RegularizerApplicator`, optional (default=`None`)
-        If provided, will be used to calculate the regularization penalty during training.
     """
 
     def __init__(
@@ -52,7 +50,7 @@ class BidirectionalLanguageModel(LanguageModel):
         num_samples: int = None,
         sparse_embeddings: bool = False,
         initializer: InitializerApplicator = None,
-        regularizer: Optional[RegularizerApplicator] = None,
+        **kwargs,
     ) -> None:
         super().__init__(
             vocab=vocab,
@@ -63,5 +61,5 @@ class BidirectionalLanguageModel(LanguageModel):
             sparse_embeddings=sparse_embeddings,
             bidirectional=True,
             initializer=initializer,
-            regularizer=regularizer,
+            **kwargs,
         )

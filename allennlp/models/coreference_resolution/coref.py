@@ -57,8 +57,6 @@ class CoreferenceResolver(Model):
         The probability of dropping out dimensions of the embedded text.
     initializer : `InitializerApplicator`, optional (default=`InitializerApplicator()`)
         Used to initialize the model parameters.
-    regularizer : `RegularizerApplicator`, optional (default=`None`)
-        If provided, will be used to calculate the regularization penalty during training.
     """
 
     def __init__(
@@ -74,9 +72,9 @@ class CoreferenceResolver(Model):
         max_antecedents: int,
         lexical_dropout: float = 0.2,
         initializer: InitializerApplicator = InitializerApplicator(),
-        regularizer: Optional[RegularizerApplicator] = None,
+        **kwargs
     ) -> None:
-        super().__init__(vocab, regularizer)
+        super().__init__(vocab, **kwargs)
 
         self._text_field_embedder = text_field_embedder
         self._context_layer = context_layer

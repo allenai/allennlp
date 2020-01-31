@@ -86,8 +86,6 @@ class LanguageModel(Model):
         Train a bidirectional language model, where the contextualizer
         is used to predict the next and previous token for each input token.
         This must match the bidirectionality of the contextualizer.
-    regularizer : `RegularizerApplicator`, optional (default=`None`)
-        If provided, will be used to calculate the regularization penalty during training.
     """
 
     def __init__(
@@ -100,9 +98,9 @@ class LanguageModel(Model):
         sparse_embeddings: bool = False,
         bidirectional: bool = False,
         initializer: InitializerApplicator = None,
-        regularizer: Optional[RegularizerApplicator] = None,
+        **kwargs,
     ) -> None:
-        super().__init__(vocab, regularizer)
+        super().__init__(vocab, **kwargs)
         self._text_field_embedder = text_field_embedder
 
         if contextualizer.is_bidirectional() is not bidirectional:

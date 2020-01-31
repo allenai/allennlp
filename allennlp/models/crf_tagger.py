@@ -59,8 +59,6 @@ class CrfTagger(Model):
         to the overall statistics.
     initializer : `InitializerApplicator`, optional (default=`InitializerApplicator()`)
         Used to initialize the model parameters.
-    regularizer : `RegularizerApplicator`, optional (default=`None`)
-        If provided, will be used to calculate the regularization penalty during training.
     top_k : `int`, optional (default=`1`)
         If provided, the number of parses to return from the crf in output_dict['top_k_tags'].
         Top k parses are returned as a list of dicts, where each dictionary is of the form:
@@ -83,10 +81,10 @@ class CrfTagger(Model):
         dropout: Optional[float] = None,
         verbose_metrics: bool = False,
         initializer: InitializerApplicator = InitializerApplicator(),
-        regularizer: Optional[RegularizerApplicator] = None,
         top_k: int = 1,
+        **kwargs,
     ) -> None:
-        super().__init__(vocab, regularizer)
+        super().__init__(vocab, **kwargs)
 
         self.label_namespace = label_namespace
         self.text_field_embedder = text_field_embedder

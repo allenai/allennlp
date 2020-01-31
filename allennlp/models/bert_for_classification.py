@@ -43,8 +43,6 @@ class BertForClassification(Model):
         Otherwise, they will be frozen and only the final linear layer will be trained.
     initializer : `InitializerApplicator`, optional
         If provided, will be used to initialize the final linear layer *only*.
-    regularizer : `RegularizerApplicator`, optional (default=`None`)
-        If provided, will be used to calculate the regularization penalty during training.
     """
 
     def __init__(
@@ -57,9 +55,9 @@ class BertForClassification(Model):
         label_namespace: str = "labels",
         trainable: bool = True,
         initializer: InitializerApplicator = InitializerApplicator(),
-        regularizer: Optional[RegularizerApplicator] = None,
+        **kwargs,
     ) -> None:
-        super().__init__(vocab, regularizer)
+        super().__init__(vocab, **kwargs)
 
         if isinstance(bert_model, str):
             self.bert_model = PretrainedBertModel.load(bert_model)
