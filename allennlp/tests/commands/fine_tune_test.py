@@ -19,7 +19,7 @@ class TestFineTune(AllenNlpTestCase):
 
         self.parser = argparse.ArgumentParser(description="Testing")
         subparsers = self.parser.add_subparsers(title="Commands", metavar="")
-        FineTune().add_subparser("fine-tune", subparsers)
+        FineTune().add_subparser(subparsers)
 
     def test_fine_tune_model_runs_from_file_paths(self):
         fine_tune_model_from_file_paths(

@@ -24,6 +24,7 @@ The available activation functions are
 * `"softshrink" <https://pytorch.org/docs/master/nn.html#torch.nn.Softshrink>`_
 * `"softsign" <https://pytorch.org/docs/master/nn.html#torch.nn.Softsign>`_
 * `"tanhshrink" <https://pytorch.org/docs/master/nn.html#torch.nn.Tanhshrink>`_
+* `"selu" <https://pytorch.org/docs/master/nn.html#torch.nn.SELU>`_
 """
 
 import torch
@@ -73,4 +74,5 @@ Registrable._registry[Activation] = {
     "softshrink": (torch.nn.Softshrink, None),
     "softsign": (torch.nn.Softsign, None),
     "tanhshrink": (torch.nn.Tanhshrink, None),
+    "selu": (torch.nn.SELU, None),
 }

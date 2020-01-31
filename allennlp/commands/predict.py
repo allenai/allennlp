@@ -54,6 +54,8 @@ import argparse
 import sys
 import json
 
+from overrides import overrides
+
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common.checks import check_for_gpu, ConfigurationError
 from allennlp.common.file_utils import cached_path
@@ -63,14 +65,14 @@ from allennlp.predictors.predictor import Predictor, JsonDict
 from allennlp.data import Instance
 
 
+@Subcommand.register("predict")
 class Predict(Subcommand):
-    def add_subparser(
-        self, name: str, parser: argparse._SubParsersAction
-    ) -> argparse.ArgumentParser:
+    @overrides
+    def add_subparser(self, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
 
         description = """Run the specified model against a JSON-lines input file."""
         subparser = parser.add_parser(
-            name, description=description, help="Use a trained model to make predictions."
+            self.name, description=description, help="Use a trained model to make predictions."
         )
 
         subparser.add_argument(

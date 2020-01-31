@@ -15,7 +15,7 @@ import tempfile
 import torch
 
 from allennlp.commands.train import train_model
-from allennlp.common.params import Params
+from allennlp.common import Registrable, Lazy, Params
 from allennlp.common.testing import ModelTestCase
 from allennlp.data import Instance
 from allennlp.data.iterators import DataIterator
@@ -40,20 +40,12 @@ class Gan(Model):
 
     def __init__(self, generator: Model, discriminator: Model) -> None:
         super().__init__(None)
-
-        # We need our optimizer to know which parameters came from
-        # which model, so we cheat by adding tags to them.
-        for param in generator.parameters():
-            setattr(param, "_generator", True)
-        for param in discriminator.parameters():
-            setattr(param, "_discriminator", True)
-
         self.generator = generator
         self.discriminator = discriminator
 
 
-@Optimizer.register("gan")
-class GanOptimizer(torch.optim.Optimizer):
+@Optimizer.register("gan", constructor="from_partial_objects")
+class GanOptimizer(torch.optim.Optimizer, Registrable):
     """
     Similarly, we want different optimizers for the generator and discriminator,
     so we cheat by encapsulating both in a single optimizer that has a state
@@ -68,6 +60,7 @@ class GanOptimizer(torch.optim.Optimizer):
         self.generator_optimizer = generator_optimizer
         self.discriminator_optimizer = discriminator_optimizer
         self.stage = ""
+        self.param_groups = {}  # type: ignore
 
     def step(self, _closure=None) -> None:
         if "discriminator" in self.stage:
@@ -85,24 +78,33 @@ class GanOptimizer(torch.optim.Optimizer):
         self.discriminator_optimizer.zero_grad()
 
     @classmethod
-    def from_params(cls, parameters: List, params: Params) -> "GanOptimizer":
+    def from_partial_objects(
+        cls,
+        model: Gan,
+        generator_optimizer: Lazy[Optimizer],
+        discriminator_optimizer: Lazy[Optimizer],
+    ) -> "GanOptimizer":
         # Because we "tagged" the parameters, we can use getattr to figure out
         # which ones go with which model.
-        generator_parameters = [("", param) for param in parameters if hasattr(param, "_generator")]
+        generator_parameters = [
+            [n, p] for n, p in model.generator.named_parameters() if p.requires_grad
+        ]
         discriminator_parameters = [
-            ("", param) for param in parameters if hasattr(param, "_discriminator")
+            [n, p] for n, p in model.discriminator.named_parameters() if p.requires_grad
         ]
 
-        generator_optimizer = Optimizer.from_params(
-            generator_parameters, params.pop("generator_optimizer")
-        )
-        discriminator_optimizer = Optimizer.from_params(
-            discriminator_parameters, params.pop("discriminator_optimizer")
+        generator_optimizer_ = generator_optimizer.construct(model_parameters=generator_parameters)
+        discriminator_optimizer_ = discriminator_optimizer.construct(
+            model_parameters=discriminator_parameters
         )
 
         return cls(
-            generator_optimizer=generator_optimizer, discriminator_optimizer=discriminator_optimizer
+            generator_optimizer=generator_optimizer_,
+            discriminator_optimizer=discriminator_optimizer_,
         )
+
+
+GanOptimizer.register("gan", constructor="from_partial_objects")(GanOptimizer)
 
 
 @DatasetReader.register("gan-callback")
@@ -186,22 +188,22 @@ def config(sample_size: int = 500, batches_per_epoch: int = 40, num_epochs: int 
                     "generator_optimizer": {"type": "sgd", "lr": 0.05},
                     "discriminator_optimizer": {"type": "sgd", "lr": 0.05},
                 },
-                "num_epochs": num_epochs,
                 "callbacks": [
                     "track-gan-metrics",
                     {"type": "gradient_norm_and_clip", "grad_norm": 1.0},
                 ],
+                "num_epochs": num_epochs,
             },
         }
     )
 
 
-@TrainerBase.register("gan-callback")
+@TrainerBase.register("gan-callback", constructor="from_partial_objects")
 class GanCallbackTrainer(CallbackTrainer):
     def __init__(
         self,
         model: Gan,
-        train_dataset: Iterable[Instance],
+        train_data: Iterable[Instance],
         iterator: DataIterator,
         optimizer: GanOptimizer,
         num_epochs: int = 20,
@@ -215,7 +217,7 @@ class GanCallbackTrainer(CallbackTrainer):
     ) -> None:
         super().__init__(
             model,
-            train_dataset,
+            train_data,
             iterator,
             optimizer,
             num_epochs,
@@ -291,6 +293,38 @@ class GanCallbackTrainer(CallbackTrainer):
         # Will call `self.train_one_batch`
         super().train_one_epoch()
 
+    @classmethod
+    def from_partial_objects(  # type: ignore
+        cls,
+        model: Gan,
+        train_data: Iterable[Instance],
+        iterator: DataIterator,
+        optimizer: Lazy[GanOptimizer],
+        num_epochs: int = 20,
+        shuffle: bool = False,
+        serialization_dir: Optional[str] = None,
+        cuda_device: int = -1,
+        callbacks: List[Callback] = None,
+        distributed: bool = False,
+        rank: int = 0,
+        world_size: int = 1,
+    ) -> "GanCallbackTrainer":
+        optimizer = optimizer.construct()
+        return cls(
+            model=model,
+            train_data=train_data,
+            iterator=iterator,
+            optimizer=optimizer,
+            num_epochs=num_epochs,
+            shuffle=shuffle,
+            serialization_dir=serialization_dir,
+            cuda_device=cuda_device,
+            callbacks=callbacks,
+            distributed=distributed,
+            rank=rank,
+            world_size=world_size,
+        )
+
 
 class GanCallbackTrainerTest(ModelTestCase):
     def test_gan_can_train(self):
@@ -307,7 +341,7 @@ if __name__ == "__main__":
     serialization_dir = tempfile.mkdtemp()
 
     params = config()
-    trainer = TrainerBase.from_params(params, serialization_dir)
+    trainer = TrainerBase.from_params(params=params, serialization_dir=serialization_dir)
 
     metrics = trainer.train()
     print(metrics)

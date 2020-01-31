@@ -50,8 +50,9 @@ run chmod 600 ./pypirc so only you can read/write.
 7. Copy the release notes from RELEASE.md to the tag in github once everything is looking hunky-dory.
 
 """
-from setuptools import setup, find_packages
 import sys
+
+from setuptools import find_packages, setup
 
 # PEP0440 compatible formatted version, see:
 # https://www.python.org/dev/peps/pep-0440/

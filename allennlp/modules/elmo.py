@@ -479,8 +479,7 @@ class _ElmoBiLm(torch.nn.Module):
     Run a pre-trained bidirectional language model, outputting the activations at each
     layer for weighting together into an ELMo representation (with
     `allennlp.modules.seq2seq_encoders.Elmo`).  This is a lower level class, useful
-    for advanced uses, but most users should use `allennlp.modules.seq2seq_encoders.Elmo`
-    directly.
+    for advanced uses, but most users should use `allennlp.modules.Elmo` directly.
 
     # Parameters
 

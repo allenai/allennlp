@@ -31,6 +31,8 @@ import logging
 import os
 import re
 
+from overrides import overrides
+
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import Params
@@ -43,16 +45,15 @@ from allennlp.training.util import datasets_from_params
 logger = logging.getLogger(__name__)
 
 
+@Subcommand.register("dry-run")
 class DryRun(Subcommand):
-    def add_subparser(
-        self, name: str, parser: argparse._SubParsersAction
-    ) -> argparse.ArgumentParser:
-
+    @overrides
+    def add_subparser(self, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
         description = (
             """Create a vocabulary, compute dataset statistics and other training utilities."""
         )
         subparser = parser.add_parser(
-            name,
+            self.name,
             description=description,
             help="Create a vocabulary, compute dataset statistics and other training utilities.",
         )
@@ -68,7 +69,6 @@ class DryRun(Subcommand):
             type=str,
             help="directory in which to save the output of the dry run.",
         )
-
         subparser.add_argument(
             "-o",
             "--overrides",
@@ -88,9 +88,9 @@ def dry_run_from_args(args: argparse.Namespace):
     """
     parameter_path = args.param_path
     serialization_dir = args.serialization_dir
-    overrides = args.overrides
+    overrides_ = args.overrides
 
-    params = Params.from_file(parameter_path, overrides)
+    params = Params.from_file(parameter_path, overrides_)
 
     dry_run_from_params(params, serialization_dir)
 
