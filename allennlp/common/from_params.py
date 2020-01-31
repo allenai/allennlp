@@ -429,7 +429,9 @@ def construct_arg(
         return Lazy(constructor)  # type: ignore
     else:
         # Pass it on as is and hope for the best.   ¯\_(ツ)_/¯
-        return popped_params.as_dict(quiet=True)
+        if isinstance(popped_params, Params):
+            return popped_params.as_dict(quiet=True)
+        return popped_params
 
 
 class FromParams:
