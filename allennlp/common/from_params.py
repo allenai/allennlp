@@ -101,14 +101,12 @@ def can_construct_from_params(type_: Type) -> bool:
     if type_ in [str, int, float, bool]:
         return True
     origin = getattr(type_, "__origin__", None)
-    print(f"can construct?: {type_} {origin}")
     if origin == Lazy:
         return True
     elif origin:
         if hasattr(type_, "from_params"):
             return True
         args = getattr(type_, "__args__")
-        print(f"Recursing: {args}")
         return all([can_construct_from_params(arg) for arg in args])
     return hasattr(type_, "from_params")
 
@@ -180,7 +178,7 @@ def create_kwargs(
         # it will have an __origin__ field indicating `typing.Dict`
         # and an __args__ field indicating `(str, int)`. We capture both.
         annotation = remove_optional(param.annotation)
-        kwargs[param_name] = construct_arg(
+        kwargs[param_name] = pop_and_construct_arg(
             cls.__name__, param_name, annotation, param.default, params, **extras
         )
 
@@ -216,8 +214,8 @@ def create_extras(cls: Type[T], extras: Dict[str, Any]) -> Dict[str, Any]:
     return subextras
 
 
-def construct_arg(
-    class_name: str, param_name: str, annotation: Type, default: Any, params: Params, **extras
+def pop_and_construct_arg(
+    class_name: str, argument_name: str, annotation: Type, default: Any, params: Params, **extras
 ) -> Any:
     """
     Does the work of actually constructing an individual argument for :func:`create_kwargs`.
@@ -234,18 +232,11 @@ def construct_arg(
     """
     from allennlp.models.archival import load_archive  # import here to avoid circular imports
 
-    # We used `param_name` as the method argument to avoid conflicts with 'name' being a key in
+    # We used `argument_name` as the method argument to avoid conflicts with 'name' being a key in
     # `extras`, which isn't _that_ unlikely.  Now that we are inside the method, we can switch back
     # to using `name`.
-    name = param_name
-    origin = getattr(annotation, "__origin__", None)
-    args = getattr(annotation, "__args__", [])
+    name = argument_name
 
-    # The parameter is optional if its default value is not the "no default" sentinel.
-    optional = default != _NO_DEFAULT
-
-    print(origin)
-    print(args)
     # Some constructors expect extra non-parameter items, e.g. vocab: Vocabulary.
     # We check the provided `extras` for these and just use them if they exist.
     if name in extras:
@@ -268,36 +259,63 @@ def construct_arg(
                 f"was expected of type {annotation} but is of type {type(result)}"
             )
         return result
-    # The next case is when the parameter type is itself constructible from_params.
-    elif hasattr(annotation, "from_params"):
-        if name in params:
+
+    popped_params = params.pop(name, default) if default != _NO_DEFAULT else params.pop(name)
+    if popped_params is None:
+        return None
+
+    return construct_arg(class_name, name, popped_params, annotation, default, **extras)
+
+
+def construct_arg(
+    class_name: str,
+    argument_name: str,
+    popped_params: Params,
+    annotation: Type,
+    default: Any,
+    **extras,
+) -> Any:
+    """
+    The first two parameters here are only used for logging if we encounter an error.
+    """
+    origin = getattr(annotation, "__origin__", None)
+    args = getattr(annotation, "__args__", [])
+
+    # The parameter is optional if its default value is not the "no default" sentinel.
+    optional = default != _NO_DEFAULT
+
+    if hasattr(annotation, "from_params"):
+        if popped_params is default:
+            return default
+        elif popped_params is not None:
             # Our params have an entry for this, so we use that.
-            subparams = params.pop(name)
 
             subextras = create_extras(annotation, extras)
 
             # In some cases we allow a string instead of a param dict, so
             # we need to handle that case separately.
-            if isinstance(subparams, str):
-                return annotation.by_name(subparams)()
+            if isinstance(popped_params, str):
+                return annotation.by_name(popped_params)()
             else:
-                return annotation.from_params(params=subparams, **subextras)
+                if isinstance(popped_params, dict):
+                    popped_params = Params(popped_params)
+                return annotation.from_params(params=popped_params, **subextras)
         elif not optional:
             # Not optional and not supplied, that's an error!
-            raise ConfigurationError(f"expected key {name} for {class_name}")
+            raise ConfigurationError(f"expected key {argument_name} for {class_name}")
         else:
             return default
 
     # If the parameter type is a Python primitive, just pop it off
     # using the correct casting pop_xyz operation.
     elif annotation == str:
-        return params.pop(name, default) if optional else params.pop(name)
+        return popped_params
     elif annotation == int:
-        return params.pop_int(name, default) if optional else params.pop_int(name)
+        return int(popped_params)
     elif annotation == bool:
-        return params.pop_bool(name, default) if optional else params.pop_bool(name)
+        return bool(popped_params)
     elif annotation == float:
-        return params.pop_float(name, default) if optional else params.pop_float(name)
+        return float(popped_params)
 
     # This is special logic for handling types like Dict[str, TokenIndexer],
     # List[TokenIndexer], Tuple[TokenIndexer, Tokenizer], and Set[TokenIndexer],
@@ -307,8 +325,16 @@ def construct_arg(
 
         value_dict = {}
 
-        for key, value_params in params.pop(name, Params({})).items():
-            value_dict[key] = construct_from_params(value_cls, value_params, extras)
+        for key, value_params in popped_params.items():
+            subextras = create_extras(value_cls, extras)
+            value_dict[key] = construct_arg(
+                value_cls.__name__,
+                argument_name + "." + key,
+                value_params,
+                value_cls,
+                _NO_DEFAULT,
+                **subextras,
+            )
 
         return value_dict
 
@@ -317,16 +343,32 @@ def construct_arg(
 
         value_list = []
 
-        for value_params in params.pop(name, Params({})):
-            value_list.append(construct_from_params(value_cls, value_params, extras))
+        for i, value_params in enumerate(popped_params):
+            value = construct_arg(
+                str(value_cls),
+                argument_name + f".{i}",
+                value_params,
+                value_cls,
+                _NO_DEFAULT,
+                **extras,
+            )
+            value_list.append(value)
 
         return value_list
 
     elif origin in (Tuple, tuple) and all(can_construct_from_params(arg) for arg in args):
         value_list = []
 
-        for value_cls, value_params in zip(annotation.__args__, params.pop(name, Params({}))):
-            value_list.append(construct_from_params(value_cls, value_params, extras))
+        for i, (value_cls, value_params) in enumerate(zip(annotation.__args__, popped_params)):
+            value = construct_arg(
+                value_cls.__name__,
+                argument_name + f".{i}",
+                value_params,
+                value_cls,
+                _NO_DEFAULT,
+                **extras,
+            )
+            value_list.append(value)
 
         return tuple(value_list)
 
@@ -335,43 +377,60 @@ def construct_arg(
 
         value_set = set()
 
-        for value_params in params.pop(name, Params({})):
-            value_set.add(construct_from_params(value_cls, value_params, extras))
+        for i, value_params in enumerate(popped_params):
+            value = construct_arg(
+                value_cls.__name__,
+                argument_name + f".{i}",
+                value_params,
+                value_cls,
+                _NO_DEFAULT,
+                **extras,
+            )
+            value_set.add(value)
 
         return value_set
 
     elif origin == Union:
         # Storing this so we can recover it later if we need to.
-        param_value = params.pop(name, default=default, keep_as_dict=True)
-        params[name] = deepcopy(param_value)
+        backup_params = deepcopy(popped_params)
 
         # We'll try each of the given types in the union sequentially, returning the first one that
         # succeeds.
-        for arg in args:
+        for arg_annotation in args:
             try:
-                return construct_arg(class_name, name, arg, default, params, **extras)
-            except (ValueError, TypeError, ConfigurationError, AttributeError):
-                # Our attempt to construct the argument may have popped `params[name]`, so we
+                a = construct_arg(
+                    str(arg_annotation),
+                    argument_name,
+                    popped_params,
+                    arg_annotation,
+                    default,
+                    **extras,
+                )
+                return a
+            except (ValueError, TypeError, ConfigurationError, AttributeError) as e:
+                # Our attempt to construct the argument may have modified popped_params, so we
                 # restore it here.
-                params[name] = param_value
-                param_value = deepcopy(param_value)
-                continue
+                popped_params = deepcopy(backup_params)
 
         # If none of them succeeded, we crash.
-        raise ConfigurationError(f"Failed to construct argument {name} with type {annotation}")
+        raise ConfigurationError(
+            f"Failed to construct argument {argument_name} with type {annotation}"
+        )
     elif origin == Lazy:
-        if name not in params and optional:
+        if popped_params is default:
             return Lazy(lambda **kwargs: default)
-        value_params = params.pop(name, Params({}))
-        return construct_from_params(annotation, value_params, extras)
+        value_cls = args[0]
+        subextras = create_extras(value_cls, extras)
+
+        def constructor(**kwargs):
+            return construct_arg(
+                value_cls.__name__, argument_name, value_params, value_cls, default, **subextras,
+            )
+
+        return Lazy(constructor)  # type: ignore
     else:
         # Pass it on as is and hope for the best.   ¯\_(ツ)_/¯
-        if optional:
-            print(params)
-            value = params.pop(name, default, keep_as_dict=True)
-        else:
-            value = params.pop(name, keep_as_dict=True)
-        return value
+        return popped_params.as_dict(quiet=True)
 
 
 def construct_from_params(value_cls: Type[T], value_params: Params, extras: Dict[str, Any]) -> T:
@@ -387,14 +446,7 @@ def construct_from_params(value_cls: Type[T], value_params: Params, extras: Dict
     origin = getattr(value_cls, "__origin__", None)
     if origin == Lazy:
         value_cls = value_cls.__args__[0]  # type: ignore
-        subextras = create_extras(value_cls, extras)
-
-        def constructor(**kwargs):
-            return value_cls.from_params(params=value_params, **kwargs, **subextras)
-
-        return Lazy(constructor)  # type: ignore
     else:
-        subextras = create_extras(value_cls, extras)
         return value_cls.from_params(params=value_params, **subextras)
 
 

@@ -276,12 +276,6 @@ class TestFromParams(AllenNlpTestCase):
                 # this test we'll ignore that.
                 self.b = b
 
-        class C(FromParams):
-            def __init__(self, c: Union[A, B, Dict[str, A]]) -> None:
-                # Really you would want to be sure that `self.c` has a consistent type, but for
-                # this test we'll ignore that.
-                self.c = c
-
         params = Params({"a": 3})
         a = A.from_params(params)
         assert a.a == 3
@@ -300,6 +294,23 @@ class TestFromParams(AllenNlpTestCase):
         assert isinstance(b.b, list)
         assert b.b[0].a == 3
         assert b.b[1].a == [4, 5]
+
+    def test_crazy_nested_union(self):
+        class A(FromParams):
+            def __init__(self, a: Union[int, List[int]]) -> None:
+                self.a = a
+
+        class B(FromParams):
+            def __init__(self, b: Union[A, List[A]]) -> None:
+                # Really you would want to be sure that `self.b` has a consistent type, but for
+                # this test we'll ignore that.
+                self.b = b
+
+        class C(FromParams):
+            def __init__(self, c: Union[A, B, Dict[str, A]]) -> None:
+                # Really you would want to be sure that `self.c` has a consistent type, but for
+                # this test we'll ignore that.
+                self.c = c
 
         # This is a contrived, ugly example (why would you want to duplicate names in a nested
         # structure like this??), but it demonstrates a potential bug when dealing with mutatable
