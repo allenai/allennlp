@@ -63,16 +63,17 @@ class PretrainedTransformerTokenizer(Tokenizer):
         stride: int = 0,
         truncation_strategy: str = "longest_first",
         calculate_character_offsets: bool = False,
+        **tokenizer_kwargs,
     ) -> None:
-        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name, **tokenizer_kwargs)
 
         # Huggingface tokenizers have different ways of remembering whether they lowercase or not. Detecting it
         # this way seems like the least brittle way to do it.
         tokenized = self.tokenizer.tokenize(
-            "FOO"
-        )  # Use a short word that's unlikely to be cut into word pieces.
+            "A"
+        )  # Use a single character that won't be cut into word pieces.
         detokenized = " ".join(tokenized)
-        self._tokenizer_lowercases = "foo" in detokenized
+        self._tokenizer_lowercases = "a" in detokenized
 
         self._add_special_tokens = add_special_tokens
         self._max_length = max_length
