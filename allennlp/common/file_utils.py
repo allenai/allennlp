@@ -294,18 +294,15 @@ def get_file_extension(path: str, dot=True, lower: bool = True):
     return ext.lower() if lower else ext
 
 
-def open_compressed(
-    filename: str,
-    mode: str = "rt",
-    encoding: Optional[str] = "UTF-8",
-    **kwargs
-):
+def open_compressed(filename: str, mode: str = "rt", encoding: Optional[str] = "UTF-8", **kwargs):
+    open_fn: Callable = open
+
     if filename.endswith(".gz"):
         import gzip
+
         open_fn = gzip.open
     elif filename.endswith(".bz2"):
         import bz2
+
         open_fn = bz2.open
-    else:
-        open_fn = open
     return open_fn(filename, mode=mode, encoding=encoding, **kwargs)
