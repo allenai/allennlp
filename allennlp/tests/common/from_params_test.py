@@ -553,3 +553,83 @@ class TestFromParams(AllenNlpTestCase):
         reader = DatasetReader.from_params(params)
         assert reader.lazy is True
         assert str(reader._cache_directory) == "tmp"
+
+    def test_only_infer_superclass_params_if_unknown(self):
+
+        from allennlp.common.registrable import Registrable
+
+        class BaseClass(Registrable):
+            def __init__(self):
+                self.x = None
+                self.a = None
+                self.rest = None
+
+        @BaseClass.register("a")
+        class A(BaseClass):
+            def __init__(self, a: int, x: int, **kwargs):
+                super().__init__()
+                self.x = x
+                self.a = a
+                self.rest = kwargs
+
+        @BaseClass.register("b")
+        class B(A):
+            def __init__(self, a: str, x: int = 42, **kwargs):
+                super().__init__(x=x, a=-1, raw_a=a, **kwargs)
+
+        params = Params(
+            {
+                "type": "b",
+                "a": "123"
+            }
+        )
+        # The param `x` should not be required as it has default value in `B`
+        # The correct type of the param `a` should be inferred from `B` as well.
+        instance = BaseClass.from_params(params)
+        assert instance.x == 42
+        assert instance.a == -1
+        assert len(instance.rest) == 1
+        assert type(instance.rest['raw_a']) == str
+        assert instance.rest['raw_a'] == "123"
+
+    def test_kwargs_are_passed_to_deeper_superclasses(self):
+
+        from allennlp.common.registrable import Registrable
+
+        class BaseClass(Registrable):
+            def __init__(self):
+                self.a = None
+                self.b = None
+                self.c = None
+
+        @BaseClass.register("a")
+        class A(BaseClass):
+            def __init__(self, a: str):
+                super().__init__()
+                self.a = a
+
+        @BaseClass.register("b")
+        class B(A):
+            def __init__(self, b: str, **kwargs):
+                super().__init__(**kwargs)
+                self.b = b
+
+        @BaseClass.register("c")
+        class C(B):
+            def __init__(self, c, **kwargs):
+                super().__init__(**kwargs)
+                self.c = c
+
+        params = Params(
+            {
+                "type": "c",
+                "a": "a_value",
+                "b": "b_value",
+                "c": "c_value",
+            }
+        )
+
+        instance = BaseClass.from_params(params)
+        assert instance.a == "a_value"
+        assert instance.b == "b_value"
+        assert instance.c == "c_value"
