@@ -352,9 +352,6 @@ class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
         assert tokenized == original_tokens
 
     def test_from_params_kwargs(self):
-        PretrainedTransformerTokenizer.from_params(Params({
-            "model_name": "bert-base-uncased",
-            "tokenizer_kwargs": {
-                "do_lower_case": True,
-            }
-        }))
+        PretrainedTransformerTokenizer.from_params(
+            Params({"model_name": "bert-base-uncased", "tokenizer_kwargs": {"do_lower_case": True}})
+        )

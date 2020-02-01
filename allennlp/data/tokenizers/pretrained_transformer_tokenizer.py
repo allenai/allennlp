@@ -127,7 +127,9 @@ class PretrainedTransformerTokenizer(Tokenizer):
 
             whole_text = sentence_1
             if sentence_2 is not None:
-                whole_text += sentence_2  # Calculating character offsets with sentence pairs is sketchy at best.
+                whole_text += (
+                    sentence_2
+                )  # Calculating character offsets with sentence pairs is sketchy at best.
             if self._tokenizer_lowercases:
                 whole_text = whole_text.lower()
 
