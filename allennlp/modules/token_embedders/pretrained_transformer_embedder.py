@@ -85,7 +85,7 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         """
 
         # Some of the huggingface transformers don't support type ids at all and crash when you supply them. For
-        # others, you can supply a tensor of zeros, and if you don't, it acts as if you did. There is no practical
+        # others, you can supply a tensor of zeros, and if you don't, they act as if you did. There is no practical
         # difference to the caller, so here we pretend that one case is the same as another case.
         max_type_id = type_ids.max()
         if max_type_id == 0:
