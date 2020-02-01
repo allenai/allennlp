@@ -17,7 +17,6 @@ from allennlp.modules.token_embedders import Embedding
 from allennlp.models.model import Model
 from allennlp.nn.beam_search import BeamSearch
 from allennlp.nn.util import get_text_field_mask, sequence_cross_entropy_with_logits
-from allennlp.nn import RegularizerApplicator
 from allennlp.training.metrics import UnigramRecall
 
 

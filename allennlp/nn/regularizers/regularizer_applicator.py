@@ -1,5 +1,5 @@
 import re
-from typing import List, Tuple, Optional, Iterable
+from typing import List, Tuple
 
 import torch
 

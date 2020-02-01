@@ -10,7 +10,7 @@ from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder
 from allennlp.modules import ConditionalRandomField, FeedForward
 from allennlp.modules.conditional_random_field import allowed_transitions
 from allennlp.models.model import Model
-from allennlp.nn import InitializerApplicator, RegularizerApplicator
+from allennlp.nn import InitializerApplicator
 import allennlp.nn.util as util
 from allennlp.training.metrics import CategoricalAccuracy, SpanBasedF1Measure
 

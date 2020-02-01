@@ -1,4 +1,4 @@
-from typing import Dict, Tuple, List, Optional, NamedTuple, Any
+from typing import Dict, Tuple, List, NamedTuple, Any
 from overrides import overrides
 
 import torch
@@ -11,7 +11,7 @@ from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder,
 from allennlp.modules.token_embedders import Embedding
 from allennlp.modules.span_extractors.span_extractor import SpanExtractor
 from allennlp.models.model import Model
-from allennlp.nn import InitializerApplicator, RegularizerApplicator
+from allennlp.nn import InitializerApplicator
 from allennlp.nn.util import get_text_field_mask, sequence_cross_entropy_with_logits
 from allennlp.nn.util import masked_softmax, get_lengths_from_binary_sequence_mask
 from allennlp.training.metrics import CategoricalAccuracy

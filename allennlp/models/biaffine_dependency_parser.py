@@ -1,4 +1,4 @@
-from typing import Dict, Optional, Tuple, Any, List
+from typing import Dict, Tuple, Any, List
 import logging
 import copy
 
@@ -14,7 +14,7 @@ from allennlp.modules import Seq2SeqEncoder, TextFieldEmbedder, Embedding, Input
 from allennlp.modules.matrix_attention.bilinear_matrix_attention import BilinearMatrixAttention
 from allennlp.modules import FeedForward
 from allennlp.models.model import Model
-from allennlp.nn import InitializerApplicator, RegularizerApplicator, Activation
+from allennlp.nn import InitializerApplicator, Activation
 from allennlp.nn.util import get_text_field_mask, get_range_vector
 from allennlp.nn.util import (
     get_device_of,

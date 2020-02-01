@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, Any, Union
+from typing import Dict, List, Any, Union
 
 from overrides import overrides
 import torch
@@ -9,7 +9,7 @@ from transformers.modeling_bert import BertModel
 from allennlp.data import TextFieldTensors, Vocabulary
 from allennlp.models.model import Model
 from allennlp.models.srl_util import convert_bio_tags_to_conll_format
-from allennlp.nn import InitializerApplicator, RegularizerApplicator, util
+from allennlp.nn import InitializerApplicator, util
 from allennlp.nn.util import get_text_field_mask, sequence_cross_entropy_with_logits
 from allennlp.nn.util import get_lengths_from_binary_sequence_mask, viterbi_decode
 from allennlp.training.metrics.srl_eval_scorer import SrlEvalScorer, DEFAULT_SRL_EVAL_PATH

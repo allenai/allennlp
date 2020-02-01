@@ -1,4 +1,4 @@
-from typing import Dict, Optional, List, Any
+from typing import Dict, List, Any
 
 import torch
 
@@ -8,7 +8,7 @@ from allennlp.models.model import Model
 from allennlp.modules import FeedForward, InputVariationalDropout
 from allennlp.modules.matrix_attention.legacy_matrix_attention import LegacyMatrixAttention
 from allennlp.modules import Seq2SeqEncoder, SimilarityFunction, TextFieldEmbedder
-from allennlp.nn import InitializerApplicator, RegularizerApplicator
+from allennlp.nn import InitializerApplicator
 from allennlp.nn.util import (
     get_text_field_mask,
     masked_softmax,

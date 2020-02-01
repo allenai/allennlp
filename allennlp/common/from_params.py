@@ -324,11 +324,11 @@ def construct_arg(
     elif annotation == str:
         return popped_params
     elif annotation == int:
-        return int(popped_params)
+        return int(popped_params)  # type: ignore
     elif annotation == bool:
         return bool(popped_params)
     elif annotation == float:
-        return float(popped_params)
+        return float(popped_params)  # type: ignore
 
     # This is special logic for handling types like Dict[str, TokenIndexer],
     # List[TokenIndexer], Tuple[TokenIndexer, Tokenizer], and Set[TokenIndexer],
@@ -418,7 +418,7 @@ def construct_arg(
                     default,
                     **extras,
                 )
-            except (ValueError, TypeError, ConfigurationError, AttributeError) as e:
+            except (ValueError, TypeError, ConfigurationError, AttributeError):
                 # Our attempt to construct the argument may have modified popped_params, so we
                 # restore it here.
                 popped_params = deepcopy(backup_params)

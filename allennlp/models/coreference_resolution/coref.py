@@ -1,6 +1,6 @@
 import logging
 import math
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Tuple
 
 import torch
 import torch.nn.functional as F
@@ -12,7 +12,7 @@ from allennlp.modules.token_embedders import Embedding
 from allennlp.modules import FeedForward
 from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder, Pruner
 from allennlp.modules.span_extractors import SelfAttentiveSpanExtractor, EndpointSpanExtractor
-from allennlp.nn import util, InitializerApplicator, RegularizerApplicator
+from allennlp.nn import util, InitializerApplicator
 from allennlp.training.metrics import MentionRecall, ConllCorefScores
 
 logger = logging.getLogger(__name__)
