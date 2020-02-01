@@ -2,6 +2,7 @@ import gc
 
 import time
 
+from allennlp.common import Params
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.tokenizers import PretrainedTransformerTokenizer
 from flaky import flaky
@@ -309,3 +310,48 @@ class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
     def test_determine_num_special_tokens_added(self):
         tokenizer = PretrainedTransformerTokenizer("bert-base-cased")
         assert tokenizer._determine_num_special_tokens_added() == (1, 1)
+
+    def test_tokenizer_kwargs_forced_lowercase(self):
+        text = "Hello there! General Kenobi."
+        forced_lowercase_tokenizer = PretrainedTransformerTokenizer(
+            "bert-base-cased", tokenizer_kwargs={"do_lower_case": True}
+        )
+        assert forced_lowercase_tokenizer._tokenizer_lowercases
+        tokenized = [token.text for token in forced_lowercase_tokenizer.tokenize(text)]
+        lowercase_tokens = [
+            "[CLS]",
+            "hello",
+            "there",
+            "!",
+            "general",
+            "k",
+            "##eno",
+            "##bi",
+            ".",
+            "[SEP]",
+        ]
+        assert tokenized == lowercase_tokens
+
+    def test_tokenizer_kwargs_default(self):
+        text = "Hello there! General Kenobi."
+        tokenizer = PretrainedTransformerTokenizer("bert-base-cased")
+        original_tokens = [
+            "[CLS]",
+            "Hello",
+            "there",
+            "!",
+            "General",
+            "Ken",
+            "##ob",
+            "##i",
+            ".",
+            "[SEP]",
+        ]
+        assert not tokenizer._tokenizer_lowercases
+        tokenized = [token.text for token in tokenizer.tokenize(text)]
+        assert tokenized == original_tokens
+
+    def test_from_params_kwargs(self):
+        PretrainedTransformerTokenizer.from_params(
+            Params({"model_name": "bert-base-uncased", "tokenizer_kwargs": {"do_lower_case": True}})
+        )
