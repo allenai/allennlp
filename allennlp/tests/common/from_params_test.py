@@ -626,7 +626,7 @@ class TestFromParams(AllenNlpTestCase):
                 super().__init__(**kwargs)
                 self.c = c
 
-        params = Params({"type": "c", "a": "a_value", "b": "b_value", "c": "c_value",})
+        params = Params({"type": "c", "a": "a_value", "b": "b_value", "c": "c_value"})
 
         instance = BaseClass.from_params(params)
         assert instance.a == "a_value"
