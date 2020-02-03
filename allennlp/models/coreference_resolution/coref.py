@@ -1,6 +1,6 @@
 import logging
 import math
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Tuple
 
 import torch
 import torch.nn.functional as F
@@ -12,7 +12,7 @@ from allennlp.modules.token_embedders import Embedding
 from allennlp.modules import FeedForward
 from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder, Pruner
 from allennlp.modules.span_extractors import SelfAttentiveSpanExtractor, EndpointSpanExtractor
-from allennlp.nn import util, InitializerApplicator, RegularizerApplicator
+from allennlp.nn import util, InitializerApplicator
 from allennlp.training.metrics import MentionRecall, ConllCorefScores
 
 logger = logging.getLogger(__name__)
@@ -57,8 +57,6 @@ class CoreferenceResolver(Model):
         The probability of dropping out dimensions of the embedded text.
     initializer : `InitializerApplicator`, optional (default=`InitializerApplicator()`)
         Used to initialize the model parameters.
-    regularizer : `RegularizerApplicator`, optional (default=`None`)
-        If provided, will be used to calculate the regularization penalty during training.
     """
 
     def __init__(
@@ -74,9 +72,9 @@ class CoreferenceResolver(Model):
         max_antecedents: int,
         lexical_dropout: float = 0.2,
         initializer: InitializerApplicator = InitializerApplicator(),
-        regularizer: Optional[RegularizerApplicator] = None,
+        **kwargs
     ) -> None:
-        super().__init__(vocab, regularizer)
+        super().__init__(vocab, **kwargs)
 
         self._text_field_embedder = text_field_embedder
         self._context_layer = context_layer

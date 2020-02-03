@@ -17,7 +17,6 @@ from allennlp.modules.token_embedders import Embedding
 from allennlp.models.model import Model
 from allennlp.nn.beam_search import BeamSearch
 from allennlp.nn.util import get_text_field_mask, sequence_cross_entropy_with_logits
-from allennlp.nn import RegularizerApplicator
 from allennlp.training.metrics import UnigramRecall
 
 
@@ -56,8 +55,6 @@ class Event2Mind(Model):
     target_embedding_dim : int, optional (default = source_embedding_dim)
         You can specify an embedding dimensionality for the target side. If not, we'll use the same
         value as the source embedder's.
-    regularizer : `RegularizerApplicator`, optional (default=`None`)
-        If provided, will be used to calculate the regularization penalty during training.
     """
 
     def __init__(
@@ -71,9 +68,9 @@ class Event2Mind(Model):
         target_names: List[str] = None,
         target_namespace: str = "tokens",
         target_embedding_dim: int = None,
-        regularizer: Optional[RegularizerApplicator] = None,
+        **kwargs,
     ) -> None:
-        super().__init__(vocab, regularizer)
+        super().__init__(vocab, **kwargs)
         target_names = target_names or ["xintent", "xreact", "oreact"]
 
         # Note: The original tweaks the embeddings for "personx" to be the mean
