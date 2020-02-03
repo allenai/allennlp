@@ -588,20 +588,15 @@ class TestFromParams(AllenNlpTestCase):
             def __init__(self, a: str, x: int = 42, **kwargs):
                 super().__init__(x=x, a=-1, raw_a=a, **kwargs)
 
-        params = Params(
-            {
-                "type": "b",
-                "a": "123"
-            }
-        )
+        params = Params({"type": "b", "a": "123"})
         # The param `x` should not be required as it has default value in `B`
         # The correct type of the param `a` should be inferred from `B` as well.
         instance = BaseClass.from_params(params)
         assert instance.x == 42
         assert instance.a == -1
         assert len(instance.rest) == 1
-        assert type(instance.rest['raw_a']) == str
-        assert instance.rest['raw_a'] == "123"
+        assert type(instance.rest["raw_a"]) == str
+        assert instance.rest["raw_a"] == "123"
 
     def test_kwargs_are_passed_to_deeper_superclasses(self):
 
@@ -631,14 +626,7 @@ class TestFromParams(AllenNlpTestCase):
                 super().__init__(**kwargs)
                 self.c = c
 
-        params = Params(
-            {
-                "type": "c",
-                "a": "a_value",
-                "b": "b_value",
-                "c": "c_value",
-            }
-        )
+        params = Params({"type": "c", "a": "a_value", "b": "b_value", "c": "c_value",})
 
         instance = BaseClass.from_params(params)
         assert instance.a == "a_value"
