@@ -9,7 +9,7 @@ from allennlp.models.model import Model
 from allennlp.modules import TextFieldEmbedder, Seq2SeqEncoder, Embedding
 from allennlp.modules.text_field_embedders import BasicTextFieldEmbedder
 from allennlp.modules.seq2seq_decoders.seq_decoder import SeqDecoder
-from allennlp.nn import util, InitializerApplicator, RegularizerApplicator
+from allennlp.nn import util, InitializerApplicator
 
 
 @Model.register("composed_seq2seq")
@@ -41,8 +41,6 @@ class ComposedSeq2Seq(Model):
         the weights are shared/tied with the decoder's target embedding weights.
     initializer : `InitializerApplicator`, optional (default=`InitializerApplicator()`)
         Used to initialize the model parameters.
-    regularizer : `RegularizerApplicator`, optional (default=`None`)
-        If provided, will be used to calculate the regularization penalty during training.
     """
 
     def __init__(
@@ -53,10 +51,10 @@ class ComposedSeq2Seq(Model):
         decoder: SeqDecoder,
         tied_source_embedder_key: Optional[str] = None,
         initializer: InitializerApplicator = InitializerApplicator(),
-        regularizer: Optional[RegularizerApplicator] = None,
+        **kwargs,
     ) -> None:
 
-        super().__init__(vocab, regularizer)
+        super().__init__(vocab, **kwargs)
 
         self._source_text_embedder = source_text_embedder
         self._encoder = encoder

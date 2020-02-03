@@ -45,6 +45,16 @@ class Model(torch.nn.Module, Registrable):
     of early stopping and best-model serialization based on a validation metric in
     `Trainer`. Metrics that begin with "_" will not be logged
     to the progress bar by `Trainer`.
+
+    # Parameters
+
+    vocab: `Vocabulary`
+        There are two typical use-cases for the `Vocabulary` in a `Model`: getting vocabulary sizes
+        when constructing embedding matrices or output classifiers (as the vocabulary holds the
+        number of classes in your output, also), and translating model output into human-readable
+        form.
+    regularizer: `RegularizerApplicator`, optional
+        If given, the `Trainer` will use this to regularize model parameters.
     """
 
     _warn_for_unseparable_batches: Set[str] = set()
