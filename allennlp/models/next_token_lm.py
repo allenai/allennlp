@@ -52,8 +52,9 @@ class NextTokenLM(Model):
         target_namespace: str = "bert",
         dropout: float = 0.0,
         initializer: InitializerApplicator = None,
+        **kwargs,
     ) -> None:
-        super().__init__(vocab)
+        super().__init__(vocab, **kwargs)
         self._text_field_embedder = text_field_embedder
         self._contextualizer = contextualizer
         if contextualizer:

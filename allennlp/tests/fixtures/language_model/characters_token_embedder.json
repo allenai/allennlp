@@ -40,9 +40,11 @@
               "dropout": 0.5,
               "bidirectional": true
       },
-      "regularizer": [
-        ["transitions$", {"type": "l2", "alpha": 0.01}]
-      ]
+      "regularizer": {
+        "regexes": [
+          ["transitions$", {"type": "l2", "alpha": 0.01}]
+        ]
+      }
     },
     "iterator": {"type": "basic", "batch_size": 32},
     "trainer": {
