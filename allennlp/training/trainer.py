@@ -826,9 +826,16 @@ class Trainer(TrainerBase):
         if not optimizer_:
             optimizer_ = Optimizer.default(parameters)
 
+        batches_per_epoch = iterator.get_num_batches(train_data)
+        if batches_per_epoch == 1:  # get_num_batches returns 1 when it can't determine the answer
+            batches_per_epoch = None
         moving_average_ = moving_average.construct(parameters=parameters)
-        learning_rate_scheduler_ = learning_rate_scheduler.construct(optimizer=optimizer_)
-        momentum_scheduler_ = momentum_scheduler.construct(optimizer=optimizer_)
+        learning_rate_scheduler_ = learning_rate_scheduler.construct(
+            optimizer=optimizer_, num_epochs=num_epochs, batches_per_epoch=batches_per_epoch
+        )
+        momentum_scheduler_ = momentum_scheduler.construct(
+            optimizer=optimizer_, num_epochs=num_epochs, batches_per_epoch=batches_per_epoch
+        )
 
         checkpointer_ = checkpointer.construct()
         if not checkpointer_:

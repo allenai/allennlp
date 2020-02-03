@@ -1,4 +1,4 @@
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 from overrides import overrides
 import torch
@@ -18,12 +18,17 @@ class LearningRateScheduler(Scheduler, Registrable):
 
     # Requires custom from_params so we can wrap the PyTorch LR schedulers.
     @classmethod
-    def from_params(cls, optimizer: torch.optim.Optimizer, params: Params):  # type: ignore
-
+    def from_params(
+        cls,
+        optimizer: torch.optim.Optimizer,
+        num_epochs: int,
+        batches_per_epoch: Optional[int],
+        params: Params,
+    ):  # type: ignore
         scheduler_type = params.pop_choice("type", LearningRateScheduler.list_available())
-        scheduler = LearningRateScheduler.by_name(scheduler_type)(
-            optimizer, **params.as_dict()
-        )  # type: ignore
+        construct_params = {"num_epochs": num_epochs, "batches_per_epoch": batches_per_epoch}
+        construct_params.update(params.as_dict())
+        scheduler = LearningRateScheduler.by_name(scheduler_type)(optimizer, **construct_params)  # type: ignore
         if isinstance(scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
             return _PyTorchLearningRateSchedulerWithMetricsWrapper(scheduler)
         elif isinstance(scheduler, torch.optim.lr_scheduler._LRScheduler):
