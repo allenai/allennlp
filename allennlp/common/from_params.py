@@ -140,6 +140,11 @@ def infer_params(cls: Type[T], constructor: Callable[..., T] = None):
     if not has_kwargs:
         return parameters
 
+    # "mro" is "method resolution order".  The first one is the current class, the next is the
+    # first superclass, and so on.  Taking the first superclass should work in almost all cases that
+    # we're looking for here.  This could fail, though, if you are using multiple inheritance and we
+    # pick the wrong superclass.  We'll worry about how to fix that when we run into an actual
+    # problem because of it.
     super_class = cls.mro()[1]
     super_parameters = infer_params(super_class)
 
@@ -188,7 +193,9 @@ def create_kwargs(
 
         # If we just ended up constructing the default value for the parameter, we can just omit it.
         # Leaving it in can cause issues with **kwargs in some corner cases, where you might end up
-        # with multiple values for a single parameter.
+        # with multiple values for a single parameter (e.g., the default value gives you lazy=False
+        # for a dataset reader inside **kwargs, but a particular dataset reader actually hard-codes
+        # lazy=True - the superclass sees both lazy=True and lazy=False in its constructor).
         if constructed_arg is not param.default:
             kwargs[param_name] = constructed_arg
 
