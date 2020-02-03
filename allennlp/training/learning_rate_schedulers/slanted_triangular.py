@@ -29,7 +29,7 @@ class SlantedTriangular(LearningRateScheduler):
 
     num_epochs : `int`, required.
         The total number of epochs for which the model should be trained.
-    num_steps_per_epoch : `int`, required.
+    batches_per_epoch : `int`, required.
         The number of steps (updates, batches) per training epoch.
     cut_frac : `float`, optional (default = 0.1).
         The fraction of the steps to increase the learning rate.
@@ -49,7 +49,7 @@ class SlantedTriangular(LearningRateScheduler):
         self,
         optimizer: torch.optim.Optimizer,
         num_epochs: int,
-        num_steps_per_epoch: int,
+        batches_per_epoch: int,
         cut_frac: float = 0.1,
         ratio: int = 32,
         last_epoch: int = -1,
@@ -58,7 +58,11 @@ class SlantedTriangular(LearningRateScheduler):
         decay_factor: float = 0.38,
     ) -> None:
         self.num_epochs = num_epochs
-        self.num_steps_per_epoch = num_steps_per_epoch
+        self.batches_per_epoch = batches_per_epoch
+        if self.batches_per_epoch is None:
+            raise ValueError(
+                f"{self.__class__.__name__} needs to know the number of batches per epoch up front."
+            )
         self.cut_frac = cut_frac
         self.ratio = ratio
         self.gradual_unfreezing = gradual_unfreezing
@@ -132,7 +136,7 @@ class SlantedTriangular(LearningRateScheduler):
                 self.batch_num_total_epoch_end[-1] / (len(self.batch_num_total_epoch_end) - 1)
             )
         else:
-            actual_num_steps_per_epoch = max(self.num_steps_per_epoch, self.last_batch_num_total)
+            actual_num_steps_per_epoch = max(self.batches_per_epoch, self.last_batch_num_total)
 
         if self.freezing_current:
             # if we still freeze, we restrict the schedule to the current epoch
