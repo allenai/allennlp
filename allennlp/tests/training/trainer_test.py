@@ -434,7 +434,12 @@ class TestTrainer(AllenNlpTestCase):
 
     def test_trainer_can_run_with_lr_scheduler(self):
         lr_params = Params({"type": "reduce_on_plateau"})
-        lr_scheduler = LearningRateScheduler.from_params(self.optimizer, lr_params)
+        num_epochs = 2
+        lr_scheduler = LearningRateScheduler.from_params(
+            self.optimizer,
+            num_epochs,
+            self.iterator.get_num_batches(self.instances),
+            lr_params)
         trainer = Trainer(
             model=self.model,
             optimizer=self.optimizer,
@@ -443,13 +448,20 @@ class TestTrainer(AllenNlpTestCase):
             validation_metric="-loss",
             train_dataset=self.instances,
             validation_dataset=self.instances,
-            num_epochs=2,
+            num_epochs=num_epochs,
         )
         trainer.train()
 
     def test_trainer_can_resume_with_lr_scheduler(self):
+        num_epochs = 2
         lr_scheduler = LearningRateScheduler.from_params(
-            self.optimizer, Params({"type": "exponential", "gamma": 0.5})
+            self.optimizer,
+            num_epochs,
+            self.iterator.get_num_batches(self.instances),
+            Params({
+                "type": "exponential",
+                "gamma": 0.5,
+            })
         )
         trainer = Trainer(
             model=self.model,
@@ -458,13 +470,16 @@ class TestTrainer(AllenNlpTestCase):
             learning_rate_scheduler=lr_scheduler,
             train_dataset=self.instances,
             validation_dataset=self.instances,
-            num_epochs=2,
+            num_epochs=num_epochs,
             serialization_dir=self.TEST_DIR,
         )
         trainer.train()
 
         new_lr_scheduler = LearningRateScheduler.from_params(
-            self.optimizer, Params({"type": "exponential", "gamma": 0.5})
+            self.optimizer,
+            num_epochs,
+            self.iterator.get_num_batches(self.instances),
+            Params({"type": "exponential", "gamma": 0.5})
         )
         new_trainer = Trainer(
             model=self.model,
