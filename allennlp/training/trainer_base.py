@@ -1,6 +1,6 @@
 """
-A :class:`~allennlp.training.trainer.Trainer` is responsible for training a
-:class:`~allennlp.models.model.Model`.
+A `allennlp.training.trainer.Trainer` is responsible for training a
+[`Model`](../models/model.md).
 
 Typically you might create a configuration file specifying the model and
 training parameters and then use :mod:`~allennlp.commands.train`
