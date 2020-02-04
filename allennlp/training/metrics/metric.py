@@ -30,7 +30,7 @@ class Metric(Registrable):
         self, reset: bool
     ) -> Union[float, Tuple[float, ...], Dict[str, float], Dict[str, List[float]]]:
         """
-        Compute and return the metric. Optionally also call :func:`self.reset`.
+        Compute and return the metric. Optionally also call `self.reset`.
         """
         raise NotImplementedError
 
