@@ -436,10 +436,8 @@ class TestTrainer(AllenNlpTestCase):
         lr_params = Params({"type": "reduce_on_plateau"})
         num_epochs = 2
         lr_scheduler = LearningRateScheduler.from_params(
-            self.optimizer,
-            num_epochs,
-            self.iterator.get_num_batches(self.instances),
-            lr_params)
+            self.optimizer, num_epochs, self.iterator.get_num_batches(self.instances), lr_params
+        )
         trainer = Trainer(
             model=self.model,
             optimizer=self.optimizer,
@@ -458,10 +456,7 @@ class TestTrainer(AllenNlpTestCase):
             self.optimizer,
             num_epochs,
             self.iterator.get_num_batches(self.instances),
-            Params({
-                "type": "exponential",
-                "gamma": 0.5,
-            })
+            Params({"type": "exponential", "gamma": 0.5,}),
         )
         trainer = Trainer(
             model=self.model,
@@ -479,7 +474,7 @@ class TestTrainer(AllenNlpTestCase):
             self.optimizer,
             num_epochs,
             self.iterator.get_num_batches(self.instances),
-            Params({"type": "exponential", "gamma": 0.5})
+            Params({"type": "exponential", "gamma": 0.5}),
         )
         new_trainer = Trainer(
             model=self.model,

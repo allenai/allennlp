@@ -28,6 +28,7 @@ class LearningRateScheduler(Scheduler, Registrable):
         scheduler_type = params.pop_choice("type", LearningRateScheduler.list_available())
         constructor = LearningRateScheduler.by_name(scheduler_type)
         from inspect import signature
+
         constructor_parameters = signature(constructor).parameters.keys()
         params = params.as_dict()
         if "num_epochs" in constructor_parameters and "num_epochs" not in params:
