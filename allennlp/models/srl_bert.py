@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, Any, Union
+from typing import Dict, List, Any, Union
 
 from overrides import overrides
 import torch
@@ -9,7 +9,7 @@ from transformers.modeling_bert import BertModel
 from allennlp.data import TextFieldTensors, Vocabulary
 from allennlp.models.model import Model
 from allennlp.models.srl_util import convert_bio_tags_to_conll_format
-from allennlp.nn import InitializerApplicator, RegularizerApplicator, util
+from allennlp.nn import InitializerApplicator, util
 from allennlp.nn.util import get_text_field_mask, sequence_cross_entropy_with_logits
 from allennlp.nn.util import get_lengths_from_binary_sequence_mask, viterbi_decode
 from allennlp.training.metrics.srl_eval_scorer import SrlEvalScorer, DEFAULT_SRL_EVAL_PATH
@@ -27,8 +27,6 @@ class SrlBert(Model):
         A string describing the BERT model to load or an already constructed BertModel.
     initializer : `InitializerApplicator`, optional (default=`InitializerApplicator()`)
         Used to initialize the model parameters.
-    regularizer : `RegularizerApplicator`, optional (default=`None`)
-        If provided, will be used to calculate the regularization penalty during training.
     label_smoothing : `float`, optional (default = 0.0)
         Whether or not to use label smoothing on the labels when computing cross entropy loss.
     ignore_span_metric : `bool`, optional (default = False)
@@ -44,12 +42,12 @@ class SrlBert(Model):
         bert_model: Union[str, BertModel],
         embedding_dropout: float = 0.0,
         initializer: InitializerApplicator = InitializerApplicator(),
-        regularizer: Optional[RegularizerApplicator] = None,
         label_smoothing: float = None,
         ignore_span_metric: bool = False,
         srl_eval_path: str = DEFAULT_SRL_EVAL_PATH,
+        **kwargs,
     ) -> None:
-        super().__init__(vocab, regularizer)
+        super().__init__(vocab, **kwargs)
 
         if isinstance(bert_model, str):
             self.bert_model = BertModel.from_pretrained(bert_model)

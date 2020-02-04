@@ -1,5 +1,5 @@
 import logging
-from typing import List, Tuple
+from typing import Any, Dict, List, Tuple
 
 from allennlp.common.util import sanitize_wordpiece
 from overrides import overrides
@@ -50,6 +50,8 @@ class PretrainedTransformerTokenizer(Tokenizer):
         - 'do_not_truncate': Do not truncate (raise an error if the input sequence is longer than max_length)
     calculate_character_offsets : `bool`, optional (default=False)
         Attempts to reconstruct character offsets for the instances of Token that this tokenizer produces.
+    tokenizer_kwargs: 'Dict[str, Any]'
+        Dictionary with additional arguments for `AutoTokenizer.from_pretrained`.
 
     Argument descriptions are from
     https://github.com/huggingface/transformers/blob/155c782a2ccd103cf63ad48a2becd7c76a7d2115/transformers/tokenization_utils.py#L691
@@ -63,16 +65,18 @@ class PretrainedTransformerTokenizer(Tokenizer):
         stride: int = 0,
         truncation_strategy: str = "longest_first",
         calculate_character_offsets: bool = False,
+        tokenizer_kwargs: Dict[str, Any] = None,
     ) -> None:
-        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+        tokenizer_kwargs = tokenizer_kwargs or {}
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name, **tokenizer_kwargs)
 
         # Huggingface tokenizers have different ways of remembering whether they lowercase or not. Detecting it
         # this way seems like the least brittle way to do it.
         tokenized = self.tokenizer.tokenize(
-            "FOO"
-        )  # Use a short word that's unlikely to be cut into word pieces.
+            "A"
+        )  # Use a single character that won't be cut into word pieces.
         detokenized = " ".join(tokenized)
-        self._tokenizer_lowercases = "foo" in detokenized
+        self._tokenizer_lowercases = "a" in detokenized
 
         self._add_special_tokens = add_special_tokens
         self._max_length = max_length

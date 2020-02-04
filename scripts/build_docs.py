@@ -69,6 +69,7 @@ def build_docs(root_path: str, docs_dir: str):
             nav_subsection = build_docs(relative_path, docs_dir)
             if not nav_subsection:
                 continue
+            nav_subsection.sort(key=lambda x: list(x)[0], reverse=False)
             nav_root.append({child: nav_subsection})
 
         else:
