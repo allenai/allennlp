@@ -142,7 +142,7 @@ class Trainer(TrainerBase):
         learning_rate_scheduler : `LearningRateScheduler`, optional (default = None)
             If specified, the learning rate will be decayed with respect to
             this schedule at the end of each epoch (or batch, if the scheduler implements
-            the `step_batch` method). If you use :class:`torch.optim.lr_scheduler.ReduceLROnPlateau`,
+            the `step_batch` method). If you use `torch.optim.lr_scheduler.ReduceLROnPlateau`,
             this will use the `validation_metric` provided to determine if learning has plateaued.
             To support updating the learning rate on every batch, this can optionally implement
             `step_batch(batch_num_total)` which updates the learning rate given the batch number.
