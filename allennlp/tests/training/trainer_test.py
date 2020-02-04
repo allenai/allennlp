@@ -456,7 +456,7 @@ class TestTrainer(AllenNlpTestCase):
             self.optimizer,
             num_epochs,
             self.iterator.get_num_batches(self.instances),
-            Params({"type": "exponential", "gamma": 0.5,}),
+            Params({"type": "exponential", "gamma": 0.5}),
         )
         trainer = Trainer(
             model=self.model,
