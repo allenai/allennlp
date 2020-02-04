@@ -7,21 +7,20 @@ as named arguments to the constructor.
 
 The available initialization functions are
 
-* `"normal" <https://pytorch.org/docs/master/nn.html?highlight=orthogonal#torch.nn.init.normal_>`_
-* `"uniform" <https://pytorch.org/docs/master/nn.html?highlight=orthogonal#torch.nn.init.uniform_>`_
-* `"constant" <https://pytorch.org/docs/master/nn.html?highlight=orthogonal#torch.nn.init.constant_>`_
-* `"eye" <https://pytorch.org/docs/master/nn.html?highlight=orthogonal#torch.nn.init.eye_>`_
-* `"dirac" <https://pytorch.org/docs/master/nn.html?highlight=orthogonal#torch.nn.init.dirac_>`_
-* `"xavier_uniform" <https://pytorch.org/docs/master/nn.html?highlight=orthogonal#torch.nn.init.xavier_uniform_>`_
-* `"xavier_normal" <https://pytorch.org/docs/master/nn.html?highlight=orthogonal#torch.nn.init.xavier_normal_>`_
-* `"kaiming_uniform"
-  <https://pytorch.org/docs/master/nn.html?highlight=orthogonal#torch.nn.init.kaiming_uniform_>`_
-* `"kaiming_normal" <https://pytorch.org/docs/master/nn.html?highlight=orthogonal#torch.nn.init.kaiming_normal_>`_
-* `"orthogonal" <https://pytorch.org/docs/master/nn.html?highlight=orthogonal#torch.nn.init.orthogonal_>`_
-* `"sparse" <https://pytorch.org/docs/master/nn.html?highlight=orthogonal#torch.nn.init.sparse_>`_
-* :func:`"block_orthogonal" <block_orthogonal>`
-* :func:`"uniform_unit_scaling" <uniform_unit_scaling>`
-* :class:`"pretrained" <PretrainedModelInitializer>`
+* ["normal"](https://pytorch.org/docs/master/nn.html?highlight=orthogonal#torch.nn.init.normal_)
+* ["uniform"](https://pytorch.org/docs/master/nn.html?highlight=orthogonal#torch.nn.init.uniform_)
+* ["constant"](https://pytorch.org/docs/master/nn.html?highlight=orthogonal#torch.nn.init.constant_)
+* ["eye"](https://pytorch.org/docs/master/nn.html?highlight=orthogonal#torch.nn.init.eye_)
+* ["dirac"](https://pytorch.org/docs/master/nn.html?highlight=orthogonal#torch.nn.init.dirac_)
+* ["xavier_uniform"](https://pytorch.org/docs/master/nn.html?highlight=orthogonal#torch.nn.init.xavier_uniform_)
+* ["xavier_normal"](https://pytorch.org/docs/master/nn.html?highlight=orthogonal#torch.nn.init.xavier_normal_)
+* ["kaiming_uniform"](https://pytorch.org/docs/master/nn.html?highlight=orthogonal#torch.nn.init.kaiming_uniform_)
+* ["kaiming_normal"](https://pytorch.org/docs/master/nn.html?highlight=orthogonal#torch.nn.init.kaiming_normal_)
+* ["orthogonal"](https://pytorch.org/docs/master/nn.html?highlight=orthogonal#torch.nn.init.orthogonal_)
+* ["sparse"](https://pytorch.org/docs/master/nn.html?highlight=orthogonal#torch.nn.init.sparse_)
+* ["block_orthogonal"](./initializers.md#block_orthogonal)
+* ["uniform_unit_scaling"](./initializers.md#uniform_unit_scaling)
+* ["pretrained"](./initializers.md#PretrainedModelInitializer)
 """
 import logging
 import re
@@ -215,12 +214,13 @@ class PretrainedModelInitializer(Initializer):
     weights file and use a regex to match all of the new parameters which need to be
     initialized.
 
-    The below entry in the :class:`InitializerApplicator` parameters will initialize
+    The below entry in the `InitializerApplicator` parameters will initialize
     `linear_1.weight` and `linear_2.weight` using a pretrained model.
     `linear_1.weight` will be initialized to the pretrained
     parameters called `linear_1.weight`, but `linear_2.weight` will be initialized
     to the pretrained parameters called `linear_3.weight`::
 
+    ```
        ["linear_1.weight|linear_2.weight",
            {
                "type": "pretrained",
@@ -230,12 +230,12 @@ class PretrainedModelInitializer(Initializer):
                }
            }
        ]
+    ```
 
     To initialize weights for all the parameters from a pretrained model (assuming their names
     remain unchanged), use the following instead:
 
-        .. code-block:: js
-
+    ```
             [".*",
                 {
                     "type": "pretrained",
@@ -243,6 +243,7 @@ class PretrainedModelInitializer(Initializer):
                     "parameter_name_overrides": {}
                 }
             ]
+    ```
 
     # Parameters
 
@@ -344,8 +345,9 @@ class InitializerApplicator:
     def from_params(cls, params: List[Tuple[str, Params]] = None) -> "InitializerApplicator":
         """
         Converts a Params object into an InitializerApplicator. The json should
-        be formatted as follows::
+        be formatted as follows:
 
+        ```
             [
                 ["parameter_regex_match1",
                     {
@@ -357,6 +359,7 @@ class InitializerApplicator:
                 ["parameter_regex_match2", "uniform"]
                 ["prevent_init_regex", "prevent"]
             ]
+        ```
 
         where the first item in each tuple is the regex that matches to parameters, and the second
         item is a set of parameters that will be passed to `Initialzer.from_params()`.  These
