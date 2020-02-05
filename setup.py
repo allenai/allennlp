@@ -118,7 +118,7 @@ setup(
         "pytest",
         "flaky",
         "responses>=0.7",
-        "conllu==2.2.1",
+        "conllu==2.2.2",
         "transformers>=2.4.0",
         "jsonpickle",
     ],
