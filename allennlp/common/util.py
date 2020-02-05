@@ -513,7 +513,8 @@ def gpu_memory_mb() -> Dict[int, int]:
     except:  # noqa
         # Catch *all* exceptions, because this memory check is a nice-to-have
         # and we'd never want a training run to fail because of it.
-        logger.exception("unable to check gpu_memory_mb(), continuing")
+        logger.warning("unable to check gpu_memory_mb() due to "
+                       "occasional failure, continuing", exc_info=True)
         return {}
 
 
