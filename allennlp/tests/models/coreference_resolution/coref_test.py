@@ -26,7 +26,7 @@ class CorefTest(ModelTestCase):
                 ".transformer_model.pooler.weight",
                 "_text_field_embedder.token_embedder_tokens._matched_embedder"
                 ".transformer_model.pooler.bias",
-            }
+            },
         )
 
     def test_decode(self):
