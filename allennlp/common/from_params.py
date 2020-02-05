@@ -442,7 +442,12 @@ def construct_arg(
         subextras = create_extras(value_cls, extras)
 
         def constructor(**kwargs):
-            return value_cls.from_params(params=popped_params, **kwargs, **subextras)
+            # If there are duplicate keys between subextras and kwargs, this will overwrite the ones
+            # in subextras with what's in kwargs.  If an argument shows up twice, we should take it
+            # from what's passed to Lazy.construct() instead of what we got from create_extras().
+            # Almost certainly these will be identical objects, anyway.
+            subextras.update(kwargs)
+            return value_cls.from_params(params=popped_params, **subextras)
 
         return Lazy(constructor)  # type: ignore
     else:
