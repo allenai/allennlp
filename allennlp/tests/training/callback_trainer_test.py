@@ -612,7 +612,7 @@ class TestCallbackTrainer(ModelTestCase):
 
     def test_trainer_can_run_with_lr_scheduler(self):
         lr_params = Params({"type": "reduce_on_plateau"})
-        lr_scheduler = LearningRateScheduler.from_params(self.optimizer, lr_params)
+        lr_scheduler = LearningRateScheduler.from_params(optimizer=self.optimizer, params=lr_params)
         callbacks = self.default_callbacks() + [UpdateLearningRate(lr_scheduler)]
 
         trainer = CallbackTrainer(
@@ -627,7 +627,7 @@ class TestCallbackTrainer(ModelTestCase):
 
     def test_trainer_can_resume_with_lr_scheduler(self):
         lr_scheduler = LearningRateScheduler.from_params(
-            self.optimizer, Params({"type": "exponential", "gamma": 0.5})
+            optimizer=self.optimizer, params=Params({"type": "exponential", "gamma": 0.5})
         )
         callbacks = self.default_callbacks() + [UpdateLearningRate(lr_scheduler)]
 
@@ -643,7 +643,7 @@ class TestCallbackTrainer(ModelTestCase):
         trainer.train()
 
         new_lr_scheduler = LearningRateScheduler.from_params(
-            self.optimizer, Params({"type": "exponential", "gamma": 0.5})
+            optimizer=self.optimizer, params=Params({"type": "exponential", "gamma": 0.5})
         )
         callbacks = self.default_callbacks() + [UpdateLearningRate(new_lr_scheduler)]
 
