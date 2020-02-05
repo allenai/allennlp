@@ -235,7 +235,8 @@ def pop_and_construct_arg(
     class_name: str, argument_name: str, annotation: Type, default: Any, params: Params, **extras
 ) -> Any:
     """
-    Does the work of actually constructing an individual argument for :func:`create_kwargs`.
+    Does the work of actually constructing an individual argument for
+    [`create_kwargs`](./from_params#create_kwargs).
 
     Here we're in the inner loop of iterating over the parameters to a particular constructor,
     trying to construct just one of them.  The information we get for that parameter is its name,
