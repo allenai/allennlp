@@ -138,7 +138,9 @@ class CosineWithRestartsTest(AllenNlpTestCase):
             a checkpoint.
             """
             params["type"] = "cosine"
-            scheduler = LearningRateScheduler.from_params(optimizer, Params(params))
+            scheduler = LearningRateScheduler.from_params(
+                optimizer=optimizer, params=Params(params)
+            )
             if state_dict is not None:
                 scheduler.load_state_dict(state_dict)
             return scheduler

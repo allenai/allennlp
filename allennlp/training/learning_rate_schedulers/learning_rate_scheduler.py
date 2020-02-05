@@ -4,7 +4,6 @@ from overrides import overrides
 import torch
 
 from allennlp.common.checks import ConfigurationError
-from allennlp.common.params import Params
 from allennlp.common.registrable import Registrable
 from allennlp.training.scheduler import Scheduler
 from allennlp.training.optimizers import Optimizer
@@ -91,7 +90,7 @@ class ReduceOnPlateauLearningRateScheduler(_PyTorchLearningRateSchedulerWithMetr
         factor: float = 0.1,
         patience: int = 10,
         verbose: bool = False,
-        threshold_mode: str = 'rel',
+        threshold_mode: str = "rel",
         threshold: float = 1e-4,
         cooldown: int = 0,
         min_lr: Union[float, List[float]] = 0,

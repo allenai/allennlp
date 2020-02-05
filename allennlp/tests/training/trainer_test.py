@@ -433,7 +433,6 @@ class TestTrainer(AllenNlpTestCase):
         new_trainer.train()
 
     def test_trainer_can_run_with_lr_scheduler(self):
-        lr_params = Params({"type": "reduce_on_plateau"})
         lr_scheduler = ExponentialLearningRateScheduler(self.optimizer, gamma=0.5)
         trainer = Trainer(
             model=self.model,
