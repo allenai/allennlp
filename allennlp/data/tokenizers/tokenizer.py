@@ -46,39 +46,3 @@ class Tokenizer(Registrable):
         tokens : `List[Token]`
         """
         raise NotImplementedError
-
-    @classmethod
-    def from_params(cls, params: Params, **extras) -> "Tokenizer":  # type: ignore
-
-        # Backwards compatibility for legacy "word" Tokenizer
-        # which provided arguments to intitalize current tokenizers
-        # inside "word_splitter" key.
-        tokenizer_type = params.get("type")
-        splitter_params = params.get("word_splitter")
-        if tokenizer_type == "word" or (tokenizer_type is None and splitter_params):
-            if not splitter_params:
-                splitter_params = Params({"type": "spacy"})
-            elif isinstance(splitter_params, str):
-                splitter_params = Params({"type": splitter_params})
-
-            if params.get("word_filter") or params.get("word_stemmer"):
-                raise ConfigurationError(
-                    "Support for word_filter, word_stemmer is dropped in the current default tokenizer."
-                )
-
-            start_tokens = params.get("start_tokens")
-            end_tokens = params.get("end_tokens")
-            if start_tokens:
-                splitter_params["start_tokens"] = start_tokens
-            if end_tokens:
-                splitter_params["end_tokens"] = end_tokens
-
-            logger.warning(
-                "Converting old WordTokenizer params - %s \n" "to new params %s.",
-                str(params),
-                str(splitter_params),
-            )
-
-            params = splitter_params
-
-        return super().from_params(params, **extras)
