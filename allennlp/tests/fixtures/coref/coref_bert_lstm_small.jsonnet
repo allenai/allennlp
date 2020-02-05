@@ -47,14 +47,14 @@ local span_pair_embedding_dim = 3 * span_embedding_dim + feature_size;
     "mention_feedforward": {
         "input_dim": span_embedding_dim,
         "num_layers": 2,
-        "hidden_dims": 150,
+        "hidden_dims": 8,
         "activations": "relu",
         "dropout": 0.2
     },
     "antecedent_feedforward": {
         "input_dim": span_pair_embedding_dim,
         "num_layers": 2,
-        "hidden_dims": 150,
+        "hidden_dims": 8,
         "activations": "relu",
         "dropout": 0.2
     },
@@ -81,7 +81,7 @@ local span_pair_embedding_dim = 3 * span_embedding_dim + feature_size;
   "trainer": {
     "num_epochs": 1,
     "grad_norm": 5.0,
-    "patience" : 3,
+    "patience" : 2,
     "cuda_device" : -1,
     "validation_metric": "+coref_f1",
     "learning_rate_scheduler": {
