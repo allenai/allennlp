@@ -22,7 +22,7 @@ class TestSeq2SeqEncoder(AllenNlpTestCase):
         )
         encoder = Seq2SeqEncoder.from_params(params)
 
-        assert encoder.__class__.__name__ == "PytorchSeq2SeqWrapper"
+        assert encoder.__class__.__name__ == "LstmSeq2SeqEncoder"
         assert encoder._module.__class__.__name__ == "LSTM"
         assert encoder._module.num_layers == 3
         assert encoder._module.input_size == 5
