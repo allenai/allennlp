@@ -128,6 +128,31 @@ class SlantedTriangularTest(AllenNlpTestCase):
         assert trainer._learning_rate_scheduler.num_epochs == 5
         assert trainer._learning_rate_scheduler.num_steps_per_epoch == 4
 
+        # And we'll do one more to make sure that we can override num_epochs in the scheduler if we
+        # really want to.  Not sure why you would ever want to in this case; this is just testing
+        # the functionality.
+        params = Params(
+            {
+                "num_epochs": 5,
+                "learning_rate_scheduler": {
+                    "type": "slanted_triangular",
+                    "num_epochs": 3,
+                    "gradual_unfreezing": True,
+                    "discriminative_fine_tuning": True,
+                    "decay_factor": 0.5,
+                },
+            }
+        )
+        trainer = TrainerBase.from_params(
+            model=self.model,
+            optimizer=Lazy(lambda **kwargs: optim),
+            serialization_dir=self.TEST_DIR,
+            params=params,
+            iterator=BasicIterator(batch_size=10),
+            train_data=instances,
+        )
+        assert trainer._learning_rate_scheduler.num_epochs == 3
+
     def test_from_params(self):
         optim = self._get_optimizer()
         sched = LearningRateScheduler.from_params(
