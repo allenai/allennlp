@@ -1,8 +1,7 @@
 from typing import List
 import logging
 
-from allennlp.common import Registrable, Params
-from allennlp.common.checks import ConfigurationError
+from allennlp.common import Registrable
 from allennlp.data.tokenizers.token import Token
 
 

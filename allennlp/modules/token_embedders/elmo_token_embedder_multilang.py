@@ -2,12 +2,10 @@ from typing import List, Dict
 import torch
 
 from allennlp.common.file_utils import cached_path
-from allennlp.common import Params
 from allennlp.common.checks import check_dimensions_match, ConfigurationError
 from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
 from allennlp.modules.elmo import Elmo
 from allennlp.modules.time_distributed import TimeDistributed
-from allennlp.data import Vocabulary
 
 
 @TokenEmbedder.register("elmo_token_embedder_multilang")

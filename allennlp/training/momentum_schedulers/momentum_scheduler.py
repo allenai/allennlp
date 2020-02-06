@@ -1,6 +1,5 @@
 import torch
 
-from allennlp.common.params import Params
 from allennlp.common.registrable import Registrable
 from allennlp.training.scheduler import Scheduler
 

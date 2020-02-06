@@ -66,7 +66,7 @@ if __name__ == "__main__":
             train_fixture_gpu("allennlp/tests/fixtures/srl/")
         else:
             models = [
-                ("basic_classifier", "experiment_seq2seq.jsonnet")
+                ("basic_classifier", "experiment_seq2seq.jsonnet"),
                 "biaffine_dependency_parser",
                 "constituency_parser",
                 "coref",
