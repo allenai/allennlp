@@ -25,7 +25,7 @@ The available initialization functions are
 import logging
 import re
 import math
-from typing import Callable, List, Tuple, Type, Dict
+from typing import Callable, List, Tuple, Dict
 import itertools
 from overrides import overrides
 
@@ -255,7 +255,7 @@ class ZeroInitializer(_InitializerWrapper):
 
 
 @Initializer.register("lstm_hidden_bias")
-class ZeroInitializer(_InitializerWrapper):
+class LstmHiddenBiasInitializer(_InitializerWrapper):
     def __init__(self):
         super().__init__(init_function=lstm_hidden_bias)
 
