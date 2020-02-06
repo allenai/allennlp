@@ -15,7 +15,13 @@ a Noam schedule, and a slanted triangular schedule, which are registered as
 "cosine", "noam", and "slanted_triangular", respectively.
 """
 
-from allennlp.training.learning_rate_schedulers.learning_rate_scheduler import LearningRateScheduler
+from allennlp.training.learning_rate_schedulers.learning_rate_scheduler import (
+    LearningRateScheduler,
+    StepLearningRateScheduler,
+    MultiStepLearningRateScheduler,
+    ExponentialLearningRateScheduler,
+    ReduceOnPlateauLearningRateScheduler,
+)
 from allennlp.training.learning_rate_schedulers.cosine import CosineWithRestarts
 from allennlp.training.learning_rate_schedulers.noam import NoamLR
 from allennlp.training.learning_rate_schedulers.slanted_triangular import SlantedTriangular
