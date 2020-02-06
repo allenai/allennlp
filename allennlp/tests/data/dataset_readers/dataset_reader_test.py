@@ -10,7 +10,7 @@ from allennlp.data.dataset_readers.dataset_reader import _LazyInstances
 class TestDatasetReader:
     cache_directory = str(AllenNlpTestCase.FIXTURES_ROOT / "data_cache" / "with_prefix")
 
-    @pytest.yield_fixture(autouse=True)
+    @pytest.fixture(autouse=True)
     def cache_directory_fixture(self):
         yield self.cache_directory
         if os.path.exists(self.cache_directory):
