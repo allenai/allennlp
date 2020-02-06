@@ -114,16 +114,6 @@ class TestRegistrable(AllenNlpTestCase):
 
             assert Initializer.by_name(key)()._init_function == value
 
-    def test_registry_has_builtin_learning_rate_schedulers(self):
-        all_schedulers = {
-            "step": torch.optim.lr_scheduler.StepLR,
-            "multi_step": torch.optim.lr_scheduler.MultiStepLR,
-            "exponential": torch.optim.lr_scheduler.ExponentialLR,
-            "reduce_on_plateau": torch.optim.lr_scheduler.ReduceLROnPlateau,
-        }
-        for key, value in all_schedulers.items():
-            assert LearningRateScheduler.by_name(key) == value
-
     def test_registry_has_builtin_token_embedders(self):
         assert TokenEmbedder.by_name("embedding").__name__ == "from_vocab_or_file"
         assert TokenEmbedder.by_name("character_encoding").__name__ == "TokenCharactersEncoder"
