@@ -183,9 +183,10 @@ class PretrainedTransformerTokenizer(Tokenizer):
         """
         return self._tokenize(text)
 
-    def intra_word_tokenize(
-        self, tokens_a: List[str], tokens_b: Optional[List[str]] = None
-    ) -> Tuple[List[Token], List[Tuple[int, int]]]:
+    def intra_word_tokenize(self, tokens_a: List[str], tokens_b: Optional[List[str]] = None) -> Any:
+        # mypy doesn't like variable number of returned objects.
+        # But the return signature should be:
+        # Tuple[List[Token], List[Tuple[int, int]] (, List[Tuple[int, int]]) ],
         """
         Tokenizes each word into wordpieces separately and returns the wordpiece IDs.
         Also calculates offsets such that wordpices[offsets[i][0]:offsets[i][1] + 1]
@@ -236,14 +237,14 @@ class PretrainedTransformerTokenizer(Tokenizer):
         else:
             return wp_tokens, offsets_a, offsets_b
 
-    def _determine_num_special_tokens_added(self) -> Tuple[int, int]:
+    def _determine_num_special_tokens_added(self) -> Tuple[int, int, int]:
         """
         Determines the number of tokens `tokenizer` adds to a sequence or sequence pair
         in the start & middele & end.
 
         # Returns
 
-        The number of tokens (`int`) that are inserted in the start & end of a sequence.
+        The number of tokens (`int`) that are inserted in the start & middle & end of a sequence.
         """
         # Uses a slightly higher index to avoid tokenizer doing special things to lower-indexed
         # tokens which might be special.
