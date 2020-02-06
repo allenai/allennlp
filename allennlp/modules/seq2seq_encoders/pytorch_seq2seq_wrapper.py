@@ -127,7 +127,7 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
         return unpacked_sequence_tensor.index_select(0, restoration_indices)
 
 
-@Seq2SeqEncoder.regster("gru")
+@Seq2SeqEncoder.register("gru")
 class GruSeq2SeqEncoder(PytorchSeq2SeqWrapper):
     def __init__(
         self,
@@ -151,7 +151,7 @@ class GruSeq2SeqEncoder(PytorchSeq2SeqWrapper):
         super().__init__(module=module, stateful=stateful)
 
 
-@Seq2SeqEncoder.regster("lstm")
+@Seq2SeqEncoder.register("lstm")
 class LstmSeq2SeqEncoder(PytorchSeq2SeqWrapper):
     def __init__(
         self,
@@ -175,7 +175,7 @@ class LstmSeq2SeqEncoder(PytorchSeq2SeqWrapper):
         super().__init__(module=module, stateful=stateful)
 
 
-@Seq2SeqEncoder.regster("rnn")
+@Seq2SeqEncoder.register("rnn")
 class RnnSeq2SeqEncoder(PytorchSeq2SeqWrapper):
     def __init__(
         self,
@@ -201,7 +201,7 @@ class RnnSeq2SeqEncoder(PytorchSeq2SeqWrapper):
         super().__init__(module=module, stateful=stateful)
 
 
-@Seq2SeqEncoder.regster("augmented_lstm")
+@Seq2SeqEncoder.register("augmented_lstm")
 class AugmentedLstmSeq2SeqEncoder(PytorchSeq2SeqWrapper):
     def __init__(
         self,
@@ -224,7 +224,7 @@ class AugmentedLstmSeq2SeqEncoder(PytorchSeq2SeqWrapper):
         super().__init__(module=module, stateful=stateful)
 
 
-@Seq2SeqEncoder.regster("alternating_lstm")
+@Seq2SeqEncoder.register("alternating_lstm")
 class StackedAlternatingLstmSeq2SeqEncoder(PytorchSeq2SeqWrapper):
     def __init__(
         self,
@@ -247,7 +247,7 @@ class StackedAlternatingLstmSeq2SeqEncoder(PytorchSeq2SeqWrapper):
         super().__init__(module=module, stateful=stateful)
 
 
-@Seq2SeqEncoder.regster("stacked_bidirectional_lstm")
+@Seq2SeqEncoder.register("stacked_bidirectional_lstm")
 class StackedBidirectionalLstmSeq2SeqEncoder(PytorchSeq2SeqWrapper):
     def __init__(
         self,

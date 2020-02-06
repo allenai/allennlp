@@ -113,7 +113,7 @@ class PytorchSeq2VecWrapper(Seq2VecEncoder):
         return last_layer_state.contiguous().view([-1, self.get_output_dim()])
 
 
-@Seq2VecEncoder.regster("gru")
+@Seq2VecEncoder.register("gru")
 class GruSeq2VecEncoder(PytorchSeq2VecWrapper):
     def __init__(
         self,
@@ -136,7 +136,7 @@ class GruSeq2VecEncoder(PytorchSeq2VecWrapper):
         super().__init__(module=module)
 
 
-@Seq2VecEncoder.regster("lstm")
+@Seq2VecEncoder.register("lstm")
 class LstmSeq2VecEncoder(PytorchSeq2VecWrapper):
     def __init__(
         self,
@@ -159,7 +159,7 @@ class LstmSeq2VecEncoder(PytorchSeq2VecWrapper):
         super().__init__(module=module)
 
 
-@Seq2VecEncoder.regster("rnn")
+@Seq2VecEncoder.register("rnn")
 class RnnSeq2VecEncoder(PytorchSeq2VecWrapper):
     def __init__(
         self,
@@ -184,7 +184,7 @@ class RnnSeq2VecEncoder(PytorchSeq2VecWrapper):
         super().__init__(module=module)
 
 
-@Seq2VecEncoder.regster("augmented_lstm")
+@Seq2VecEncoder.register("augmented_lstm")
 class AugmentedLstmSeq2VecEncoder(PytorchSeq2VecWrapper):
     def __init__(
         self,
@@ -206,7 +206,7 @@ class AugmentedLstmSeq2VecEncoder(PytorchSeq2VecWrapper):
         super().__init__(module=module)
 
 
-@Seq2VecEncoder.regster("alternating_lstm")
+@Seq2VecEncoder.register("alternating_lstm")
 class StackedAlternatingLstmSeq2VecEncoder(PytorchSeq2VecWrapper):
     def __init__(
         self,
@@ -228,7 +228,7 @@ class StackedAlternatingLstmSeq2VecEncoder(PytorchSeq2VecWrapper):
         super().__init__(module=module)
 
 
-@Seq2VecEncoder.regster("stacked_bidirectional_lstm")
+@Seq2VecEncoder.register("stacked_bidirectional_lstm")
 class StackedBidirectionalLstmSeq2VecEncoder(PytorchSeq2VecWrapper):
     def __init__(
         self,
