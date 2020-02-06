@@ -78,6 +78,8 @@ class DatasetReader(Registrable):
         we read the `Instances` from the cache instead of re-processing the data (using
         :func:`_instances_from_cache_file`).  If the cache file does _not_ exist, we will _create_
         it on our first pass through the data (using :func:`_instances_to_cache_file`).
+    max_instances : `int`, optional (default=None)
+        If given, will stop reading after this many instances. This is a useful setting for debugging.
 
         IMPORTANT CAVEAT: It is the _caller's_ responsibility to make sure that this directory is
         unique for any combination of code and parameters that you use.  That is, if you pass a
