@@ -1,7 +1,10 @@
 import torch
 
 from allennlp.common.checks import ConfigurationError
+from allennlp.modules.augmented_lstm import AugmentedLstm
 from allennlp.modules.seq2vec_encoders.seq2vec_encoder import Seq2VecEncoder
+from allennlp.modules.stacked_alternating_lstm import StackedAlternatingLstm
+from allennlp.modules.stacked_bidirectional_lstm import StackedBidirectionalLstm
 
 
 class PytorchSeq2VecWrapper(Seq2VecEncoder):
@@ -120,7 +123,6 @@ class GruSeq2VecEncoder(PytorchSeq2VecWrapper):
         bias: bool = False,
         dropout: float = 0.0,
         bidirectional: bool = False,
-        stateful: bool = False,
     ):
         module = torch.nn.GRU(
             input_size=input_size,
@@ -131,7 +133,7 @@ class GruSeq2VecEncoder(PytorchSeq2VecWrapper):
             dropout=dropout,
             bidirectional=bidirectional,
         )
-        super().__init__(module=module, stateful=stateful)
+        super().__init__(module=module)
 
 
 @Seq2VecEncoder.regster("lstm")
@@ -144,7 +146,6 @@ class LstmSeq2VecEncoder(PytorchSeq2VecWrapper):
         bias: bool = False,
         dropout: float = 0.0,
         bidirectional: bool = False,
-        stateful: bool = False,
     ):
         module = torch.nn.LSTM(
             input_size=input_size,
@@ -155,7 +156,7 @@ class LstmSeq2VecEncoder(PytorchSeq2VecWrapper):
             dropout=dropout,
             bidirectional=bidirectional,
         )
-        super().__init__(module=module, stateful=stateful)
+        super().__init__(module=module)
 
 
 @Seq2VecEncoder.regster("rnn")
@@ -169,7 +170,6 @@ class RnnSeq2VecEncoder(PytorchSeq2VecWrapper):
         bias: bool = False,
         dropout: float = 0.0,
         bidirectional: bool = False,
-        stateful: bool = False,
     ):
         module = torch.nn.RNN(
             input_size=input_size,
@@ -181,7 +181,7 @@ class RnnSeq2VecEncoder(PytorchSeq2VecWrapper):
             dropout=dropout,
             bidirectional=bidirectional,
         )
-        super().__init__(module=module, stateful=stateful)
+        super().__init__(module=module)
 
 
 @Seq2VecEncoder.regster("augmented_lstm")
@@ -194,7 +194,6 @@ class AugmentedLstmSeq2VecEncoder(PytorchSeq2VecWrapper):
         recurrent_dropout_probability: float = 0.0,
         use_highway: bool = True,
         use_input_projection_bias: bool = True,
-        stateful: bool = False,
     ) -> None:
         module = AugmentedLstm(
             input_size=input_size,
@@ -204,7 +203,7 @@ class AugmentedLstmSeq2VecEncoder(PytorchSeq2VecWrapper):
             use_highway=use_highway,
             use_input_projection_bias=use_input_projection_bias,
         )
-        super().__init__(module=module, stateful=stateful)
+        super().__init__(module=module)
 
 
 @Seq2VecEncoder.regster("alternating_lstm")
@@ -217,7 +216,6 @@ class StackedAlternatingLstmSeq2VecEncoder(PytorchSeq2VecWrapper):
         recurrent_dropout_probability: float = 0.0,
         use_highway: bool = True,
         use_input_projection_bias: bool = True,
-        stateful: bool = False,
     ) -> None:
         module = StackedAlternatingLstm(
             input_size=input_size,
@@ -227,7 +225,7 @@ class StackedAlternatingLstmSeq2VecEncoder(PytorchSeq2VecWrapper):
             use_highway=use_highway,
             use_input_projection_bias=use_input_projection_bias,
         )
-        super().__init__(module=module, stateful=stateful)
+        super().__init__(module=module)
 
 
 @Seq2VecEncoder.regster("stacked_bidirectional_lstm")
@@ -240,7 +238,6 @@ class StackedBidirectionalLstmSeq2VecEncoder(PytorchSeq2VecWrapper):
         recurrent_dropout_probability: float = 0.0,
         layer_dropout_probability: float = 0.0,
         use_highway: bool = True,
-        stateful: bool = False,
     ) -> None:
         module = StackedBidirectionalLstm(
             input_size=input_size,
@@ -250,4 +247,4 @@ class StackedBidirectionalLstmSeq2VecEncoder(PytorchSeq2VecWrapper):
             layer_dropout_probability=layer_dropout_probability,
             use_highway=use_highway,
         )
-        super().__init__(module=module, stateful=stateful)
+        super().__init__(module=module)
