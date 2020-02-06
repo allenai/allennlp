@@ -2,12 +2,10 @@ from typing import List, Dict
 import torch
 
 from allennlp.common.file_utils import cached_path
-from allennlp.common import Params
 from allennlp.common.checks import check_dimensions_match, ConfigurationError
 from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
 from allennlp.modules.elmo import Elmo
 from allennlp.modules.time_distributed import TimeDistributed
-from allennlp.data import Vocabulary
 
 
 @TokenEmbedder.register("elmo_token_embedder_multilang")
@@ -140,35 +138,3 @@ class ElmoTokenEmbedderMultiLang(TokenEmbedder):
                 projection = TimeDistributed(projection)
             elmo_representations = projection(elmo_representations)
         return elmo_representations
-
-    # Custom vocab_to_cache logic requires a from_params implementation.
-    @classmethod
-    def from_params(  # type: ignore
-        cls, vocab: Vocabulary, params: Params, **extras
-    ) -> "ElmoTokenEmbedderMultiLang":
-
-        options_files = params.pop("options_files")
-        weight_files = params.pop("weight_files")
-        requires_grad = params.pop("requires_grad", False)
-        do_layer_norm = params.pop_bool("do_layer_norm", False)
-        dropout = params.pop_float("dropout", 0.5)
-        namespace_to_cache = params.pop("namespace_to_cache", None)
-        if namespace_to_cache is not None:
-            vocab_to_cache = list(vocab.get_token_to_index_vocabulary(namespace_to_cache).keys())
-        else:
-            vocab_to_cache = None
-        projection_dim = params.pop_int("projection_dim", None)
-        scalar_mix_parameters = params.pop("scalar_mix_parameters", None)
-        aligning_files = params.pop("aligning_files", {})
-        params.assert_empty(cls.__name__)
-        return cls(
-            options_files=options_files,
-            weight_files=weight_files,
-            do_layer_norm=do_layer_norm,
-            dropout=dropout,
-            requires_grad=requires_grad,
-            projection_dim=projection_dim,
-            vocab_to_cache=vocab_to_cache,
-            scalar_mix_parameters=scalar_mix_parameters,
-            aligning_files=aligning_files,
-        )
