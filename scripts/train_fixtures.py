@@ -74,6 +74,7 @@ if __name__ == "__main__":
                 "encoder_decoder/composed_seq2seq",
                 "encoder_decoder/simple_seq2seq",
                 "encoder_decoder/copynet_seq2seq",
+                "event2mind",
                 "simple_tagger_with_span_f1",
                 "srl",
             ]
