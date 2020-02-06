@@ -58,14 +58,16 @@ local span_pair_embedding_dim = 3 * span_embedding_dim + feature_size;
         "activations": "relu",
         "dropout": 0.2
     },
-    "initializer": [
-        [".*linear_layers.*weight", {"type": "xavier_normal"}],
-        [".*scorer._module.weight", {"type": "xavier_normal"}],
-        ["_distance_embedding.weight", {"type": "xavier_normal"}],
-        ["_span_width_embedding.weight", {"type": "xavier_normal"}],
-        ["_context_layer._module.weight_ih.*", {"type": "xavier_normal"}],
-        ["_context_layer._module.weight_hh.*", {"type": "orthogonal"}]
-    ],
+    "initializer": {
+        "regexes": [
+            [".*linear_layers.*weight", {"type": "xavier_normal"}],
+            [".*scorer._module.weight", {"type": "xavier_normal"}],
+            ["_distance_embedding.weight", {"type": "xavier_normal"}],
+            ["_span_width_embedding.weight", {"type": "xavier_normal"}],
+            ["_context_layer._module.weight_ih.*", {"type": "xavier_normal"}],
+            ["_context_layer._module.weight_hh.*", {"type": "orthogonal"}]
+        ]
+    },
     "lexical_dropout": 0.5,
     "feature_size": feature_size,
     "max_span_width": max_span_width,
