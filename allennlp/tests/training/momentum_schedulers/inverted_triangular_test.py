@@ -22,7 +22,8 @@ class InvertedTriangularTest(AllenNlpTestCase):
     def test_from_params(self):
         optimizer = self._get_optimizer()
         scheduler = MomentumScheduler.from_params(
-            optimizer, Params({"type": "inverted_triangular", "cool_down": 10, "warm_up": 10})
+            optimizer=optimizer,
+            params=Params({"type": "inverted_triangular", "cool_down": 10, "warm_up": 10}),
         )
         assert scheduler.cool_down == 10
         assert scheduler.warm_up == 10
@@ -32,8 +33,10 @@ class InvertedTriangularTest(AllenNlpTestCase):
     def test_basic_schedule(self):
         optimizer = self._get_optimizer()
         scheduler = MomentumScheduler.from_params(
-            optimizer,
-            Params({"type": "inverted_triangular", "cool_down": 6, "warm_up": 10, "ratio": 5}),
+            optimizer=optimizer,
+            params=Params(
+                {"type": "inverted_triangular", "cool_down": 6, "warm_up": 10, "ratio": 5}
+            ),
         )
         # Before first epoch, momentum should be unchanged.
         assert optimizer.param_groups[0]["momentum"] == self.base_momentum

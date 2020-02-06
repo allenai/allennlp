@@ -398,7 +398,8 @@ class TestTrainer(AllenNlpTestCase):
 
     def test_trainer_can_run_and_resume_with_momentum_scheduler(self):
         scheduler = MomentumScheduler.from_params(
-            self.optimizer, Params({"type": "inverted_triangular", "cool_down": 2, "warm_up": 2})
+            optimizer=self.optimizer,
+            params=Params({"type": "inverted_triangular", "cool_down": 2, "warm_up": 2}),
         )
         trainer = Trainer(
             model=self.model,
@@ -414,7 +415,8 @@ class TestTrainer(AllenNlpTestCase):
         trainer.train()
 
         new_scheduler = MomentumScheduler.from_params(
-            self.optimizer, Params({"type": "inverted_triangular", "cool_down": 2, "warm_up": 2})
+            optimizer=self.optimizer,
+            params=Params({"type": "inverted_triangular", "cool_down": 2, "warm_up": 2}),
         )
         new_trainer = Trainer(
             model=self.model,
