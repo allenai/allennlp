@@ -39,7 +39,7 @@ from allennlp.modules.seq2seq_encoders.pytorch_seq2seq_wrapper import (
     PytorchSeq2SeqWrapper,
     RnnSeq2SeqEncoder,
     StackedAlternatingLstmSeq2SeqEncoder,
-    StackedBidirectionalLstmSeq2SeqEncoder
+    StackedBidirectionalLstmSeq2SeqEncoder,
 )
 from allennlp.modules.seq2seq_encoders.seq2seq_encoder import Seq2SeqEncoder
 from allennlp.modules.stacked_alternating_lstm import StackedAlternatingLstm

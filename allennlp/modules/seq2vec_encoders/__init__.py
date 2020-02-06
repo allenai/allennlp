@@ -32,7 +32,7 @@ from allennlp.modules.seq2vec_encoders.pytorch_seq2vec_wrapper import (
     PytorchSeq2VecWrapper,
     RnnSeq2VecEncoder,
     StackedAlternatingLstmSeq2VecEncoder,
-    StackedBidirectionalLstmSeq2VecEncoder
+    StackedBidirectionalLstmSeq2VecEncoder,
 )
 from allennlp.modules.seq2vec_encoders.seq2vec_encoder import Seq2VecEncoder
 from allennlp.modules.augmented_lstm import AugmentedLstm
