@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from allennlp.common.util import sanitize_wordpiece
 from overrides import overrides
@@ -86,6 +86,7 @@ class PretrainedTransformerTokenizer(Tokenizer):
 
         (
             self.num_added_start_tokens,
+            self.num_added_middle_tokens,
             self.num_added_end_tokens,
         ) = self._determine_num_special_tokens_added()
 
@@ -182,7 +183,9 @@ class PretrainedTransformerTokenizer(Tokenizer):
         """
         return self._tokenize(text)
 
-    def intra_word_tokenize(self, tokens: List[str]) -> Tuple[List[Token], List[Tuple[int, int]]]:
+    def intra_word_tokenize(
+        self, tokens_a: List[str], tokens_b: Optional[List[str]] = None
+    ) -> Tuple[List[Token], List[Tuple[int, int]]]:
         """
         Tokenizes each word into wordpieces separately and returns the wordpiece IDs.
         Also calculates offsets such that wordpices[offsets[i][0]:offsets[i][1] + 1]
@@ -190,38 +193,53 @@ class PretrainedTransformerTokenizer(Tokenizer):
 
         This function inserts special tokens.
         """
-        wordpieces: List[int] = []
-        offsets = []
-        cumulative = self.num_added_start_tokens
-        for token in tokens:
-            subword_wordpieces = self.tokenizer.encode(token, add_special_tokens=False)
-            wordpieces.extend(subword_wordpieces)
 
-            start_offset = cumulative
-            cumulative += len(subword_wordpieces)
-            end_offset = cumulative - 1  # inclusive
-            offsets.append((start_offset, end_offset))
+        def _intra_word_tokenize_single(tokens, starting_offset):
+            wordpieces: List[int] = []
+            offsets = []
+            cumulative = starting_offset
+            for token in tokens:
+                subword_wordpieces = self.tokenizer.encode(token, add_special_tokens=False)
+                wordpieces.extend(subword_wordpieces)
 
-        wordpieces = self.tokenizer.build_inputs_with_special_tokens(wordpieces)
-        assert cumulative + self.num_added_end_tokens == len(wordpieces)
+                start_offset = cumulative
+                cumulative += len(subword_wordpieces)
+                end_offset = cumulative - 1  # inclusive
+                offsets.append((start_offset, end_offset))
+            return wordpieces, offsets, cumulative
 
-        texts = self.tokenizer.convert_ids_to_tokens(wordpieces)
-        # `create_token_type_ids_from_sequences()` inserts special tokens
-        type_ids = self.tokenizer.create_token_type_ids_from_sequences(
-            wordpieces[self.num_added_start_tokens : -self.num_added_end_tokens]
+        wordpieces_a, offsets_a, cumulative = _intra_word_tokenize_single(
+            tokens_a, self.num_added_start_tokens
         )
 
+        if tokens_b is None:
+            text_ids = self.tokenizer.build_inputs_with_special_tokens(wordpieces_a)
+            type_ids = self.tokenizer.create_token_type_ids_from_sequences(wordpieces_a)
+        else:
+            wordpieces_b, offsets_b, cumulative = _intra_word_tokenize_single(
+                tokens_b, cumulative + self.num_added_middle_tokens
+            )
+            text_ids = self.tokenizer.build_inputs_with_special_tokens(wordpieces_a, wordpieces_b)
+            type_ids = self.tokenizer.create_token_type_ids_from_sequences(
+                wordpieces_a, wordpieces_b
+            )
+
+        assert cumulative + self.num_added_end_tokens == len(text_ids) == len(type_ids)
+
         wp_tokens = [
-            Token(text, text_id=text_id, type_id=type_id)
-            for text, text_id, type_id in zip(texts, wordpieces, type_ids)
+            Token(self.tokenizer.convert_ids_to_tokens(text_id), text_id=text_id, type_id=type_id)
+            for text_id, type_id in zip(text_ids, type_ids)
         ]
 
-        return wp_tokens, offsets
+        if tokens_b is None:
+            return wp_tokens, offsets_a
+        else:
+            return wp_tokens, offsets_a, offsets_b
 
     def _determine_num_special_tokens_added(self) -> Tuple[int, int]:
         """
-        Determines the number of tokens `tokenizer` adds to a sequence (currently doesn't
-        consider sequence pairs) in the start & end.
+        Determines the number of tokens `tokenizer` adds to a sequence or sequence pair
+        in the start & middele & end.
 
         # Returns
 
@@ -229,22 +247,33 @@ class PretrainedTransformerTokenizer(Tokenizer):
         """
         # Uses a slightly higher index to avoid tokenizer doing special things to lower-indexed
         # tokens which might be special.
-        dummy = [1000]
-        inserted = self.tokenizer.build_inputs_with_special_tokens(dummy)
+        dummy_a = [1000]
+        dummy_b = [2000]
+        inserted = self.tokenizer.build_inputs_with_special_tokens(dummy_a, dummy_b)
 
-        num_start = num_end = 0
-        seen_dummy = False
+        num_start = num_middle = num_end = 0
+        seen_dummy_a = False
+        seen_dummy_b = False
         for idx in inserted:
-            if idx == dummy[0]:
-                if seen_dummy:  # seeing it twice
+            if idx == dummy_a[0]:
+                if seen_dummy_a or seen_dummy_b:  # seeing a twice or b before a
                     raise ValueError("Cannot auto-determine the number of special tokens added.")
-                seen_dummy = True
+                seen_dummy_a = True
                 continue
 
-            if not seen_dummy:
+            if idx == dummy_b[0]:
+                if seen_dummy_b:  # seeing b twice
+                    raise ValueError("Cannot auto-determine the number of special tokens added.")
+                seen_dummy_b = True
+                continue
+
+            if not seen_dummy_a:
                 num_start += 1
+            elif not seen_dummy_b:
+                num_middle += 1
             else:
                 num_end += 1
 
-        assert num_start + num_end == self.tokenizer.num_added_tokens()
-        return num_start, num_end
+        assert num_start + num_middle + num_end == self.tokenizer.num_added_tokens(pair=True)
+        assert num_start + num_end == self.tokenizer.num_added_tokens(pair=False)
+        return num_start, num_middle, num_end
