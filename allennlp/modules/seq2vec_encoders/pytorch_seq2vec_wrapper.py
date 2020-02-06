@@ -120,7 +120,7 @@ class GruSeq2VecEncoder(PytorchSeq2VecWrapper):
         input_size: int,
         hidden_size: int,
         num_layers: int = 1,
-        bias: bool = False,
+        bias: bool = True,
         dropout: float = 0.0,
         bidirectional: bool = False,
     ):
@@ -143,7 +143,7 @@ class LstmSeq2VecEncoder(PytorchSeq2VecWrapper):
         input_size: int,
         hidden_size: int,
         num_layers: int = 1,
-        bias: bool = False,
+        bias: bool = True,
         dropout: float = 0.0,
         bidirectional: bool = False,
     ):
@@ -167,7 +167,7 @@ class RnnSeq2VecEncoder(PytorchSeq2VecWrapper):
         hidden_size: int,
         num_layers: int = 1,
         nonlinearity: str = "tanh",
-        bias: bool = False,
+        bias: bool = True,
         dropout: float = 0.0,
         bidirectional: bool = False,
     ):
