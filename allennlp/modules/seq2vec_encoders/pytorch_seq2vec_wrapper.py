@@ -108,3 +108,146 @@ class PytorchSeq2VecWrapper(Seq2VecEncoder):
             last_state_index = 1
         last_layer_state = unsorted_state[:, -last_state_index:, :]
         return last_layer_state.contiguous().view([-1, self.get_output_dim()])
+
+
+@Seq2VecEncoder.regster("gru")
+class GruSeq2VecEncoder(PytorchSeq2VecWrapper):
+    def __init__(
+        self,
+        input_size: int,
+        hidden_size: int,
+        num_layers: int = 1,
+        bias: bool = False,
+        dropout: float = 0.0,
+        bidirectional: bool = False,
+        stateful: bool = False,
+    ):
+        module = torch.nn.GRU(
+            input_size=input_size,
+            hidden_size=hidden_size,
+            num_layers=num_layers,
+            bias=bias,
+            batch_first=True,
+            dropout=dropout,
+            bidirectional=bidirectional,
+        )
+        super().__init__(module=module, stateful=stateful)
+
+
+@Seq2VecEncoder.regster("lstm")
+class LstmSeq2VecEncoder(PytorchSeq2VecWrapper):
+    def __init__(
+        self,
+        input_size: int,
+        hidden_size: int,
+        num_layers: int = 1,
+        bias: bool = False,
+        dropout: float = 0.0,
+        bidirectional: bool = False,
+        stateful: bool = False,
+    ):
+        module = torch.nn.LSTM(
+            input_size=input_size,
+            hidden_size=hidden_size,
+            num_layers=num_layers,
+            bias=bias,
+            batch_first=True,
+            dropout=dropout,
+            bidirectional=bidirectional,
+        )
+        super().__init__(module=module, stateful=stateful)
+
+
+@Seq2VecEncoder.regster("rnn")
+class RnnSeq2VecEncoder(PytorchSeq2VecWrapper):
+    def __init__(
+        self,
+        input_size: int,
+        hidden_size: int,
+        num_layers: int = 1,
+        nonlinearity: str = "tanh",
+        bias: bool = False,
+        dropout: float = 0.0,
+        bidirectional: bool = False,
+        stateful: bool = False,
+    ):
+        module = torch.nn.RNN(
+            input_size=input_size,
+            hidden_size=hidden_size,
+            num_layers=num_layers,
+            nonlinearity=nonlinearity,
+            bias=bias,
+            batch_first=True,
+            dropout=dropout,
+            bidirectional=bidirectional,
+        )
+        super().__init__(module=module, stateful=stateful)
+
+
+@Seq2VecEncoder.regster("augmented_lstm")
+class AugmentedLstmSeq2VecEncoder(PytorchSeq2VecWrapper):
+    def __init__(
+        self,
+        input_size: int,
+        hidden_size: int,
+        go_forward: bool = True,
+        recurrent_dropout_probability: float = 0.0,
+        use_highway: bool = True,
+        use_input_projection_bias: bool = True,
+        stateful: bool = False,
+    ) -> None:
+        module = AugmentedLstm(
+            input_size=input_size,
+            hidden_size=hidden_size,
+            go_forward=go_forward,
+            recurrent_dropout_probability=recurrent_dropout_probability,
+            use_highway=use_highway,
+            use_input_projection_bias=use_input_projection_bias,
+        )
+        super().__init__(module=module, stateful=stateful)
+
+
+@Seq2VecEncoder.regster("alternating_lstm")
+class StackedAlternatingLstmSeq2VecEncoder(PytorchSeq2VecWrapper):
+    def __init__(
+        self,
+        input_size: int,
+        hidden_size: int,
+        num_layers: int,
+        recurrent_dropout_probability: float = 0.0,
+        use_highway: bool = True,
+        use_input_projection_bias: bool = True,
+        stateful: bool = False,
+    ) -> None:
+        module = StackedAlternatingLstm(
+            input_size=input_size,
+            hidden_size=hidden_size,
+            num_layers=num_layers,
+            recurrent_dropout_probability=recurrent_dropout_probability,
+            use_highway=use_highway,
+            use_input_projection_bias=use_input_projection_bias,
+        )
+        super().__init__(module=module, stateful=stateful)
+
+
+@Seq2VecEncoder.regster("stacked_bidirectional_lstm")
+class StackedBidirectionalLstmSeq2VecEncoder(PytorchSeq2VecWrapper):
+    def __init__(
+        self,
+        input_size: int,
+        hidden_size: int,
+        num_layers: int,
+        recurrent_dropout_probability: float = 0.0,
+        layer_dropout_probability: float = 0.0,
+        use_highway: bool = True,
+        stateful: bool = False,
+    ) -> None:
+        module = StackedBidirectionalLstm(
+            input_size=input_size,
+            hidden_size=hidden_size,
+            num_layers=num_layers,
+            recurrent_dropout_probability=recurrent_dropout_probability,
+            layer_dropout_probability=layer_dropout_probability,
+            use_highway=use_highway,
+        )
+        super().__init__(module=module, stateful=stateful)
