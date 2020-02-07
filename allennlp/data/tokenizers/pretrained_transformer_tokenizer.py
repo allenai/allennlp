@@ -194,48 +194,56 @@ class PretrainedTransformerTokenizer(Tokenizer):
 
         This function inserts special tokens.
         """
-
-        def _intra_word_tokenize_single(tokens, starting_offset):
-            wordpieces: List[int] = []
-            offsets = []
-            cumulative = starting_offset
-            for token in tokens:
-                subword_wordpieces = self.tokenizer.encode(token, add_special_tokens=False)
-                wordpieces.extend(subword_wordpieces)
-
-                start_offset = cumulative
-                cumulative += len(subword_wordpieces)
-                end_offset = cumulative - 1  # inclusive
-                offsets.append((start_offset, end_offset))
-            return wordpieces, offsets, cumulative
-
-        wordpieces_a, offsets_a, cumulative = _intra_word_tokenize_single(
+        wordpieces_a, offsets_a, cumulative = self.intra_word_tokenize_in_id(
             tokens_a, self.num_added_start_tokens
         )
 
         if tokens_b is None:
-            text_ids = self.tokenizer.build_inputs_with_special_tokens(wordpieces_a)
-            type_ids = self.tokenizer.create_token_type_ids_from_sequences(wordpieces_a)
+            tokens = self.ids_to_tokens(wordpieces_a)
+            return tokens, offsets_a
         else:
-            wordpieces_b, offsets_b, cumulative = _intra_word_tokenize_single(
+            wordpieces_b, offsets_b, cumulative = self.intra_word_tokenize_in_id(
                 tokens_b, cumulative + self.num_added_middle_tokens
             )
-            text_ids = self.tokenizer.build_inputs_with_special_tokens(wordpieces_a, wordpieces_b)
-            type_ids = self.tokenizer.create_token_type_ids_from_sequences(
-                wordpieces_a, wordpieces_b
-            )
+            tokens = self.ids_to_tokens(wordpieces_a, wordpieces_b)
+            return tokens, offsets_a, offsets_b
 
-        assert cumulative + self.num_added_end_tokens == len(text_ids) == len(type_ids)
+    def intra_word_tokenize_in_id(
+        self, tokens: List[str], starting_offset: int = 0
+    ) -> Tuple[List[int], List[Tuple[int, int]], int]:
+        """
+        Similar to `intra_word_tokenize()`, except:
+        (a) returns wordpiece IDs in the vocab instead of `Token`s;
+        (b) only takes a single sequence; and
+        (c) does not insert special tokens.
+        """
+        wordpieces: List[int] = []
+        offsets = []
+        cumulative = starting_offset
+        for token in tokens:
+            subword_wordpieces = self.tokenizer.encode(token, add_special_tokens=False)
+            wordpieces.extend(subword_wordpieces)
 
-        wp_tokens = [
+            start_offset = cumulative
+            cumulative += len(subword_wordpieces)
+            end_offset = cumulative - 1  # inclusive
+            offsets.append((start_offset, end_offset))
+        return wordpieces, offsets, cumulative
+
+    def ids_to_tokens(
+        self, token_ids_a: List[int], token_ids_b: Optional[List[int]] = None
+    ) -> List[Token]:
+        """
+        Convert one or two sequences of token IDs to `Token`s while adding special tokens.
+        """
+        text_ids = self.tokenizer.build_inputs_with_special_tokens(token_ids_a, token_ids_b)
+        type_ids = self.tokenizer.create_token_type_ids_from_sequences(token_ids_a, token_ids_b)
+
+        tokens = [
             Token(self.tokenizer.convert_ids_to_tokens(text_id), text_id=text_id, type_id=type_id)
             for text_id, type_id in zip(text_ids, type_ids)
         ]
-
-        if tokens_b is None:
-            return wp_tokens, offsets_a
-        else:
-            return wp_tokens, offsets_a, offsets_b
+        return tokens
 
     def _determine_num_special_tokens_added(self) -> Tuple[int, int, int]:
         """
