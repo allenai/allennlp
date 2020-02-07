@@ -1,4 +1,4 @@
-from typing import Dict, Optional, Any, List
+from typing import Dict, Any, List
 import logging
 
 from collections import defaultdict
@@ -12,7 +12,7 @@ from allennlp.modules import Seq2SeqEncoder, TextFieldEmbedder, Embedding
 from allennlp.modules import FeedForward
 from allennlp.models.model import Model
 from allennlp.models.biaffine_dependency_parser import BiaffineDependencyParser
-from allennlp.nn import InitializerApplicator, RegularizerApplicator
+from allennlp.nn import InitializerApplicator
 from allennlp.nn.util import get_text_field_mask
 from allennlp.training.metrics import AttachmentScores
 
@@ -71,8 +71,6 @@ class BiaffineDependencyParserMultiLang(BiaffineDependencyParser):
         The dropout applied to the embedded text input.
     initializer : `InitializerApplicator`, optional (default=`InitializerApplicator()`)
         Used to initialize the model parameters.
-    regularizer : `RegularizerApplicator`, optional (default=`None`)
-        If provided, will be used to calculate the regularization penalty during training.
     """
 
     def __init__(
@@ -90,7 +88,7 @@ class BiaffineDependencyParserMultiLang(BiaffineDependencyParser):
         dropout: float = 0.0,
         input_dropout: float = 0.0,
         initializer: InitializerApplicator = InitializerApplicator(),
-        regularizer: Optional[RegularizerApplicator] = None,
+        **kwargs,
     ) -> None:
         super().__init__(
             vocab,
@@ -105,7 +103,7 @@ class BiaffineDependencyParserMultiLang(BiaffineDependencyParser):
             dropout,
             input_dropout,
             initializer,
-            regularizer,
+            **kwargs,
         )
 
         self._langs_for_early_stop = langs_for_early_stop or []

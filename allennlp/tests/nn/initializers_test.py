@@ -41,13 +41,13 @@ class TestInitializers(AllenNlpTestCase):
                 pass
 
         # Make sure we handle regexes properly
-        json_params = """{"initializer": [
+        json_params = """{"initializer": {"regexes": [
         ["conv", {"type": "constant", "val": 5}],
         ["funky_na.*bi", {"type": "constant", "val": 7}]
-        ]}
+        ]}}
         """
         params = Params(json.loads(_jsonnet.evaluate_snippet("", json_params)))
-        initializers = InitializerApplicator.from_params(params["initializer"])
+        initializers = InitializerApplicator.from_params(params=params["initializer"])
         model = Net()
         initializers(model)
 
@@ -104,15 +104,16 @@ class TestInitializers(AllenNlpTestCase):
             def forward(self, inputs):
                 pass
 
-        json_params = """{"initializer": [
-        [".*linear.*", {"type": "constant", "val": 10}],
-        [".*conv.*", {"type": "constant", "val": 10}],
-        [".*_transfer.*", "prevent"],
-        [".*pretrained.*",{"type": "prevent"}]
-        ]}
+        json_params = """{"initializer": {
+        "regexes": [
+            [".*linear.*", {"type": "constant", "val": 10}],
+            [".*conv.*", {"type": "constant", "val": 10}]
+            ],
+        "prevent_regexes": [".*_transfer.*", ".*pretrained.*"]
+        }}
         """
         params = Params(json.loads(_jsonnet.evaluate_snippet("", json_params)))
-        initializers = InitializerApplicator.from_params(params["initializer"])
+        initializers = InitializerApplicator.from_params(params=params["initializer"])
         model = Net()
         initializers(model)
 

@@ -1,4 +1,5 @@
-from typing import Iterable, Iterator, Callable
+import itertools
+from typing import Iterable, Iterator, Callable, Optional
 import logging
 import os
 import pathlib
@@ -77,6 +78,8 @@ class DatasetReader(Registrable):
         we read the `Instances` from the cache instead of re-processing the data (using
         :func:`_instances_from_cache_file`).  If the cache file does _not_ exist, we will _create_
         it on our first pass through the data (using :func:`_instances_to_cache_file`).
+    max_instances : `int`, optional (default=None)
+        If given, will stop reading after this many instances. This is a useful setting for debugging.
 
         IMPORTANT CAVEAT: It is the _caller's_ responsibility to make sure that this directory is
         unique for any combination of code and parameters that you use.  That is, if you pass a
@@ -84,8 +87,14 @@ class DatasetReader(Registrable):
         parameters you set for this DatasetReader!_
     """
 
-    def __init__(self, lazy: bool = False, cache_directory: str = None) -> None:
+    def __init__(
+        self,
+        lazy: bool = False,
+        cache_directory: Optional[str] = None,
+        max_instances: Optional[int] = None,
+    ) -> None:
         self.lazy = lazy
+        self.max_instances = max_instances
         if cache_directory:
             self._cache_directory = pathlib.Path(cache_directory)
             os.makedirs(self._cache_directory, exist_ok=True)
@@ -124,18 +133,26 @@ class DatasetReader(Registrable):
             cache_file = None
 
         if lazy:
-            return _LazyInstances(
+            instances: Iterable[Instance] = _LazyInstances(
                 lambda: self._read(file_path),
                 cache_file,
                 self.deserialize_instance,
                 self.serialize_instance,
             )
+            if self.max_instances is not None:
+                instances = itertools.islice(instances, 0, self.max_instances)
         else:
             # First we read the instances, either from a cache or from the original file.
             if cache_file and os.path.exists(cache_file):
                 instances = self._instances_from_cache_file(cache_file)
             else:
                 instances = self._read(file_path)
+
+            if self.max_instances is not None:
+                if isinstance(instances, list):
+                    instances = instances[: self.max_instances]
+                else:
+                    instances = itertools.islice(instances, 0, self.max_instances)
 
             # Then some validation.
             if not isinstance(instances, list):
@@ -151,7 +168,7 @@ class DatasetReader(Registrable):
                 logger.info(f"Caching instances to {cache_file}")
                 self._instances_to_cache_file(cache_file, instances)
 
-            return instances
+        return instances
 
     def _get_cache_location_for_file_path(self, file_path: str) -> str:
         return str(self._cache_directory / util.flatten_filename(str(file_path)))

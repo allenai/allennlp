@@ -59,6 +59,12 @@ class TestMultiLabelField(AllenNlpTestCase):
         tensor = g.as_tensor(g.get_padding_lengths()).detach().cpu().numpy()
         numpy.testing.assert_array_almost_equal(tensor, numpy.array([0, 0]))
 
+        h = MultiLabelField(
+            [0, 0, 1], label_namespace="test_empty_labels", num_labels=3, skip_indexing=True
+        )
+        tensor = h.empty_field().as_tensor(None).detach().cpu().numpy()
+        numpy.testing.assert_array_almost_equal(tensor, numpy.array([0, 0, 0]))
+
     def test_class_variables_for_namespace_warnings_work_correctly(self):
 
         assert "text" not in MultiLabelField._already_warned_namespaces
