@@ -194,9 +194,9 @@ class PretrainedTransformerTokenizer(Tokenizer):
         wordpieces, offsets, cumulative = self.intra_word_tokenize_in_id(
             tokens, self.num_added_start_tokens
         )
-        tokens = self.ids_to_tokens(wordpieces)
-        assert cumulative + self.num_added_end_tokens == len(tokens)
-        return tokens, offsets
+        wp_tokens = self.ids_to_tokens(wordpieces)
+        assert cumulative + self.num_added_end_tokens == len(wp_tokens)
+        return wp_tokens, offsets
 
     def intra_word_tokenize_sentence_pair(
         self, tokens_a: List[str], tokens_b: List[str]
@@ -214,9 +214,9 @@ class PretrainedTransformerTokenizer(Tokenizer):
         wordpieces_b, offsets_b, cumulative = self.intra_word_tokenize_in_id(
             tokens_b, cumulative + self.num_added_middle_tokens
         )
-        tokens = self.ids_to_tokens(wordpieces_a, wordpieces_b)
-        assert cumulative + self.num_added_end_tokens == len(tokens)
-        return tokens, offsets_a, offsets_b
+        wp_tokens = self.ids_to_tokens(wordpieces_a, wordpieces_b)
+        assert cumulative + self.num_added_end_tokens == len(wp_tokens)
+        return wp_tokens, offsets_a, offsets_b
 
     def intra_word_tokenize_in_id(
         self, tokens: List[str], starting_offset: int = 0
