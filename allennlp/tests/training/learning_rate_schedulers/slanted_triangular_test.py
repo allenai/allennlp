@@ -53,7 +53,9 @@ class SlantedTriangularTest(AllenNlpTestCase):
     def _get_optimizer(self, lr: float = 1.0):
         optimizer_params = Params({"type": "sgd", "lr": lr})
         optimizer_params["parameter_groups"] = [[[f"^{m}"], {}] for m in self.model._modules]
-        return Optimizer.from_params(self.model.named_parameters(), optimizer_params)
+        return Optimizer.from_params(
+            model_parameters=self.model.named_parameters(), params=optimizer_params
+        )
 
     def _run_scheduler_get_lrs(self, params, num_steps_per_epoch):
         optimizer = self._get_optimizer()

@@ -95,7 +95,7 @@ class CosineWithRestartsTest(AllenNlpTestCase):
 
     def _get_optimizer(self, lr: float = 1.0):
         return Optimizer.from_params(
-            self.model.named_parameters(), Params({"type": "sgd", "lr": lr})
+            model_parameters=self.model.named_parameters(), params=Params({"type": "sgd", "lr": lr})
         )
 
     def test_from_params(self):
