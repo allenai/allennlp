@@ -50,7 +50,9 @@ class Optimizer(Registrable):
             optimizer = params
             params = Params({})
         else:
-            optimizer = params.pop_choice("type", Optimizer.list_available())
+            optimizer = params.pop_choice(
+                "type", Optimizer.list_available(), default_to_first_choice=True
+            )
 
         # make the parameter groups if need
         groups = params.pop("parameter_groups", None)

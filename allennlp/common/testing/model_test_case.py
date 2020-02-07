@@ -14,8 +14,8 @@ from allennlp.models import load_archive, Model
 
 class ModelTestCase(AllenNlpTestCase):
     """
-    A subclass of :class:`~allennlp.common.testing.test_case.AllenNlpTestCase`
-    with added methods for testing :class:`~allennlp.models.model.Model` subclasses.
+    A subclass of [`AllenNlpTestCase`](./allennlp_test_case.md)
+    with added methods for testing [`Model`](../../models/model.md) subclasses.
     """
 
     def set_up_model(self, param_file, dataset_file):

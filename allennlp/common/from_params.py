@@ -235,7 +235,8 @@ def pop_and_construct_arg(
     class_name: str, argument_name: str, annotation: Type, default: Any, params: Params, **extras
 ) -> Any:
     """
-    Does the work of actually constructing an individual argument for :func:`create_kwargs`.
+    Does the work of actually constructing an individual argument for
+    [`create_kwargs`](./from_params#create_kwargs).
 
     Here we're in the inner loop of iterating over the parameters to a particular constructor,
     trying to construct just one of them.  The information we get for that parameter is its name,
@@ -257,7 +258,16 @@ def pop_and_construct_arg(
     # Some constructors expect extra non-parameter items, e.g. vocab: Vocabulary.
     # We check the provided `extras` for these and just use them if they exist.
     if name in extras:
-        return extras[name]
+        if name not in params:
+            return extras[name]
+        else:
+            logger.warning(
+                f"Parameter {name} for class {class_name} was found in both "
+                "**extras and in params. Using the specification found in params, "
+                "but you probably put a key in a config file that you didn't need, "
+                "and if it is different from what we get from **extras, you might "
+                "get unexpected behavior."
+            )
     # Next case is when argument should be loaded from pretrained archive.
     elif (
         name in params
@@ -441,7 +451,12 @@ def construct_arg(
         subextras = create_extras(value_cls, extras)
 
         def constructor(**kwargs):
-            return value_cls.from_params(params=popped_params, **kwargs, **subextras)
+            # If there are duplicate keys between subextras and kwargs, this will overwrite the ones
+            # in subextras with what's in kwargs.  If an argument shows up twice, we should take it
+            # from what's passed to Lazy.construct() instead of what we got from create_extras().
+            # Almost certainly these will be identical objects, anyway.
+            subextras.update(kwargs)
+            return value_cls.from_params(params=popped_params, **subextras)
 
         return Lazy(constructor)  # type: ignore
     else:

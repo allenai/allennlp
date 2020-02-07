@@ -96,53 +96,12 @@ class TestRegistrable(AllenNlpTestCase):
         assert Regularizer.by_name("l1").__name__ == "L1Regularizer"
         assert Regularizer.by_name("l2").__name__ == "L2Regularizer"
 
-    def test_registry_has_builtin_initializers(self):
-        all_initializers = {
-            "normal": torch.nn.init.normal_,
-            "uniform": torch.nn.init.uniform_,
-            "orthogonal": torch.nn.init.orthogonal_,
-            "constant": torch.nn.init.constant_,
-            "dirac": torch.nn.init.dirac_,
-            "xavier_normal": torch.nn.init.xavier_normal_,
-            "xavier_uniform": torch.nn.init.xavier_uniform_,
-            "kaiming_normal": torch.nn.init.kaiming_normal_,
-            "kaiming_uniform": torch.nn.init.kaiming_uniform_,
-            "sparse": torch.nn.init.sparse_,
-            "eye": torch.nn.init.eye_,
-        }
-        for key, value in all_initializers.items():
-
-            assert Initializer.by_name(key)()._init_function == value
-
-    def test_registry_has_builtin_learning_rate_schedulers(self):
-        all_schedulers = {
-            "step": torch.optim.lr_scheduler.StepLR,
-            "multi_step": torch.optim.lr_scheduler.MultiStepLR,
-            "exponential": torch.optim.lr_scheduler.ExponentialLR,
-            "reduce_on_plateau": torch.optim.lr_scheduler.ReduceLROnPlateau,
-        }
-        for key, value in all_schedulers.items():
-            assert LearningRateScheduler.by_name(key) == value
-
     def test_registry_has_builtin_token_embedders(self):
         assert TokenEmbedder.by_name("embedding").__name__ == "from_vocab_or_file"
         assert TokenEmbedder.by_name("character_encoding").__name__ == "TokenCharactersEncoder"
 
     def test_registry_has_builtin_text_field_embedders(self):
         assert TextFieldEmbedder.by_name("basic").__name__ == "BasicTextFieldEmbedder"
-
-    def test_registry_has_builtin_seq2seq_encoders(self):
-
-        assert Seq2SeqEncoder.by_name("gru")._module_class.__name__ == "GRU"
-        assert Seq2SeqEncoder.by_name("lstm")._module_class.__name__ == "LSTM"
-        assert Seq2SeqEncoder.by_name("rnn")._module_class.__name__ == "RNN"
-
-    def test_registry_has_builtin_seq2vec_encoders(self):
-        assert Seq2VecEncoder.by_name("cnn").__name__ == "CnnEncoder"
-
-        assert Seq2VecEncoder.by_name("gru")._module_class.__name__ == "GRU"
-        assert Seq2VecEncoder.by_name("lstm")._module_class.__name__ == "LSTM"
-        assert Seq2VecEncoder.by_name("rnn")._module_class.__name__ == "RNN"
 
     def test_registry_has_builtin_similarity_functions(self):
         assert SimilarityFunction.by_name("dot_product").__name__ == "DotProductSimilarity"
