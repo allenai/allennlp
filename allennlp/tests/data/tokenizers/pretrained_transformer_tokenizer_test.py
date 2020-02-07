@@ -363,7 +363,9 @@ class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
             (10, 10),
             (11, 12),
         ]
-        tokens, offsets_a, offsets_b = tokenizer.intra_word_tokenize(sentence_1, sentence_2)
+        tokens, offsets_a, offsets_b = tokenizer.intra_word_tokenize_sentence_pair(
+            sentence_1, sentence_2
+        )
         tokens = [t.text for t in tokens]
         assert tokens == expected_tokens
         assert offsets_a == expected_offsets_a

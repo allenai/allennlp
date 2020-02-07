@@ -183,10 +183,24 @@ class PretrainedTransformerTokenizer(Tokenizer):
         """
         return self._tokenize(text)
 
-    def intra_word_tokenize(self, tokens_a: List[str], tokens_b: Optional[List[str]] = None) -> Any:
-        # mypy doesn't like variable number of returned objects.
-        # But the return signature should be:
-        # Tuple[List[Token], List[Tuple[int, int]] (, List[Tuple[int, int]]) ],
+    def intra_word_tokenize(self, tokens: List[str]) -> Tuple[List[Token], List[Tuple[int, int]]]:
+        """
+        Tokenizes each word into wordpieces separately and returns the wordpiece IDs.
+        Also calculates offsets such that wordpices[offsets[i][0]:offsets[i][1] + 1]
+        corresponds to the original i-th token.
+
+        This function inserts special tokens.
+        """
+        wordpieces, offsets, cumulative = self.intra_word_tokenize_in_id(
+            tokens, self.num_added_start_tokens
+        )
+        tokens = self.ids_to_tokens(wordpieces)
+        assert cumulative + self.num_added_end_tokens == len(tokens)
+        return tokens, offsets
+
+    def intra_word_tokenize_sentence_pair(
+        self, tokens_a: List[str], tokens_b: List[str]
+    ) -> Tuple[List[Token], List[Tuple[int, int]], List[Tuple[int, int]]]:
         """
         Tokenizes each word into wordpieces separately and returns the wordpiece IDs.
         Also calculates offsets such that wordpices[offsets[i][0]:offsets[i][1] + 1]
@@ -197,16 +211,12 @@ class PretrainedTransformerTokenizer(Tokenizer):
         wordpieces_a, offsets_a, cumulative = self.intra_word_tokenize_in_id(
             tokens_a, self.num_added_start_tokens
         )
-
-        if tokens_b is None:
-            tokens = self.ids_to_tokens(wordpieces_a)
-            return tokens, offsets_a
-        else:
-            wordpieces_b, offsets_b, cumulative = self.intra_word_tokenize_in_id(
-                tokens_b, cumulative + self.num_added_middle_tokens
-            )
-            tokens = self.ids_to_tokens(wordpieces_a, wordpieces_b)
-            return tokens, offsets_a, offsets_b
+        wordpieces_b, offsets_b, cumulative = self.intra_word_tokenize_in_id(
+            tokens_b, cumulative + self.num_added_middle_tokens
+        )
+        tokens = self.ids_to_tokens(wordpieces_a, wordpieces_b)
+        assert cumulative + self.num_added_end_tokens == len(tokens)
+        return tokens, offsets_a, offsets_b
 
     def intra_word_tokenize_in_id(
         self, tokens: List[str], starting_offset: int = 0
@@ -248,11 +258,11 @@ class PretrainedTransformerTokenizer(Tokenizer):
     def _determine_num_special_tokens_added(self) -> Tuple[int, int, int]:
         """
         Determines the number of tokens `tokenizer` adds to a sequence or sequence pair
-        in the start & middele & end.
+        in the start, middle, and end.
 
         # Returns
 
-        The number of tokens (`int`) that are inserted in the start & middle & end of a sequence.
+        The number of tokens (`int`) that are inserted in the start, middle, and end of a sequence.
         """
         # Uses a slightly higher index to avoid tokenizer doing special things to lower-indexed
         # tokens which might be special.
