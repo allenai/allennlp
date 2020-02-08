@@ -21,7 +21,7 @@ The available optimizers are
 import logging
 import re
 import math
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Tuple, Union
 
 import torch
 import transformers
@@ -32,32 +32,43 @@ logger = logging.getLogger(__name__)
 
 
 def make_parameter_groups(
-    model_parameters: List[torch.nn.Parameter],
+    model_parameters: List[Tuple[str, torch.nn.Parameter]],
     groups: List[Tuple[List[str], Dict[str, Any]]] = None,
-):
-    if groups:
-        # The input to the optimizer is list of dict.
-        # Each dict contains a "parameter group" and groups specific options,
-        # e.g., {'params': [list of parameters], 'lr': 1e-3, ...}
-        # Any config option not specified in the additional options (e.g.
-        # for the default group) is inherited from the top level config.
-        # see: https://pytorch.org/docs/0.3.0/optim.html?#per-parameter-options
-        #
-        # groups contains something like:
-        #  "parameter_groups": [
-        #       [["regex1", "regex2"], {"lr": 1e-3}],
-        #       [["regex3"], {"lr": 1e-4}]
-        #  ]
-        # (note that the allennlp config files require double quotes ", and will
-        # fail (sometimes silently) with single quotes ').
+) -> Union[List[Dict[str, Any]], List[torch.nn.Parameter]]:
+    """
+    Takes a list of model parameters with associated names (typically coming from something like
+    `model.parameters`), along with a grouping (as specified below), and prepares them to be passed
+    to the `__init__` function of a `torch.Optimizer`.  This means separating the parameters into
+    groups with the given regexes, and prepping whatever keyword arguments are given for those
+    regexes in `groups`.
 
-        # This is typed as as Any since the dict values other then
-        # the params key are passed to the Optimizer constructor and
-        # can be any type it accepts.
+    `groups` contains something like:
+
+    ```
+     [
+          (["regex1", "regex2"], {"lr": 1e-3}),
+          (["regex3"], {"lr": 1e-4})
+     ]
+     ```
+
+    The return value in the right format to be passed directly as the `params` argument to a pytorch
+    `Optimizer`.  If there are multiple groups specified, this is list of dictionaries, where each
+    dict contains a "parameter group" and groups specific options, e.g., {'params': [list of
+    parameters], 'lr': 1e-3, ...}.  Any config option not specified in the additional options (e.g.
+    for the default group) is inherited from the top level arguments given in the constructor.  See:
+    https://pytorch.org/docs/0.3.0/optim.html?#per-parameter-options.  See also our
+    `test_optimizer_parameter_groups` test for an example of how this works in this code.
+
+    The dictionary's return type is labeled as `Any`, because it can be a `List[torch.nn.Parameter]`
+    (for the "params" key), or anything else (typically a float) for the other keys.
+    """
+    if groups:
         # In addition to any parameters that match group specific regex,
         # we also need a group for the remaining "default" group.
         # Those will be included in the last entry of parameter_groups.
-        parameter_groups: Any = [{"params": []} for _ in range(len(groups) + 1)]
+        parameter_groups: Union[List[Dict[str, Any]], List[torch.nn.Parameter]] = [
+            {"params": []} for _ in range(len(groups) + 1)
+        ]
         # add the group specific kwargs
         for k in range(len(groups)):
             parameter_groups[k].update(groups[k][1])
@@ -111,7 +122,7 @@ def make_parameter_groups(
         if isinstance(parameter_group, dict):
             num_parameters += sum(parameter.numel() for parameter in parameter_group["params"])
         else:
-            num_parameters += parameter_group.numel()
+            num_parameters += parameter_group.numel()  # type: ignore
     logger.info("Number of trainable parameters: %s", num_parameters)
     return parameter_groups
 
@@ -145,7 +156,7 @@ class Optimizer(Registrable):
 class AdamOptimizer(Optimizer, torch.optim.Adam):
     def __init__(
         self,
-        model_parameters: List[torch.nn.Parameter],
+        model_parameters: List[Tuple[str, torch.nn.Parameter]],
         parameter_groups: List[Tuple[List[str], Dict[str, Any]]] = None,
         lr: float = 0.001,
         betas: Tuple[float, float] = (0.9, 0.999),
@@ -167,7 +178,7 @@ class AdamOptimizer(Optimizer, torch.optim.Adam):
 class SparseAdamOptimizer(Optimizer, torch.optim.SparseAdam):
     def __init__(
         self,
-        model_parameters: List[torch.nn.Parameter],
+        model_parameters: List[Tuple[str, torch.nn.Parameter]],
         parameter_groups: List[Tuple[List[str], Dict[str, Any]]] = None,
         lr: float = 0.001,
         betas: Tuple[float, float] = (0.9, 0.999),
@@ -185,7 +196,7 @@ class SparseAdamOptimizer(Optimizer, torch.optim.SparseAdam):
 class AdamaxOptimizer(Optimizer, torch.optim.Adamax):
     def __init__(
         self,
-        model_parameters: List[torch.nn.Parameter],
+        model_parameters: List[Tuple[str, torch.nn.Parameter]],
         parameter_groups: List[Tuple[List[str], Dict[str, Any]]] = None,
         lr: float = 0.002,
         betas: Tuple[float, float] = (0.9, 0.999),
@@ -205,7 +216,7 @@ class AdamaxOptimizer(Optimizer, torch.optim.Adamax):
 class AdamWOptimizer(Optimizer, torch.optim.AdamW):
     def __init__(
         self,
-        model_parameters: List[torch.nn.Parameter],
+        model_parameters: List[Tuple[str, torch.nn.Parameter]],
         parameter_groups: List[Tuple[List[str], Dict[str, Any]]] = None,
         lr: float = 0.001,
         betas: Tuple[float, float] = (0.9, 0.999),
@@ -227,7 +238,7 @@ class AdamWOptimizer(Optimizer, torch.optim.AdamW):
 class HuggingfaceAdamWOptimizer(Optimizer, transformers.AdamW):
     def __init__(
         self,
-        model_parameters: List[torch.nn.Parameter],
+        model_parameters: List[Tuple[str, torch.nn.Parameter]],
         parameter_groups: List[Tuple[List[str], Dict[str, Any]]] = None,
         lr: float = 0.001,
         betas: Tuple[float, float] = (0.9, 0.999),
@@ -249,7 +260,7 @@ class HuggingfaceAdamWOptimizer(Optimizer, transformers.AdamW):
 class AdagradOptimizer(Optimizer, torch.optim.Adagrad):
     def __init__(
         self,
-        model_parameters: List[torch.nn.Parameter],
+        model_parameters: List[Tuple[str, torch.nn.Parameter]],
         parameter_groups: List[Tuple[List[str], Dict[str, Any]]] = None,
         lr: float = 0.01,
         lr_decay: float = 0.0,
@@ -271,7 +282,7 @@ class AdagradOptimizer(Optimizer, torch.optim.Adagrad):
 class AdadeltaOptimizer(Optimizer, torch.optim.Adadelta):
     def __init__(
         self,
-        model_parameters: List[torch.nn.Parameter],
+        model_parameters: List[Tuple[str, torch.nn.Parameter]],
         parameter_groups: List[Tuple[List[str], Dict[str, Any]]] = None,
         lr: float = 1.0,
         rho: float = 0.9,
@@ -291,7 +302,7 @@ class AdadeltaOptimizer(Optimizer, torch.optim.Adadelta):
 class SgdOptimizer(Optimizer, torch.optim.SGD):
     def __init__(
         self,
-        model_parameters: List[torch.nn.Parameter],
+        model_parameters: List[Tuple[str, torch.nn.Parameter]],
         lr: float,
         parameter_groups: List[Tuple[List[str], Dict[str, Any]]] = None,
         momentum: float = 0.0,
@@ -313,7 +324,7 @@ class SgdOptimizer(Optimizer, torch.optim.SGD):
 class RmsPropOptimizer(Optimizer, torch.optim.RMSprop):
     def __init__(
         self,
-        model_parameters: List[torch.nn.Parameter],
+        model_parameters: List[Tuple[str, torch.nn.Parameter]],
         parameter_groups: List[Tuple[List[str], Dict[str, Any]]] = None,
         lr: float = 0.01,
         alpha: float = 0.99,
@@ -337,7 +348,7 @@ class RmsPropOptimizer(Optimizer, torch.optim.RMSprop):
 class AveragedSgdOptimizer(Optimizer, torch.optim.ASGD):
     def __init__(
         self,
-        model_parameters: List[torch.nn.Parameter],
+        model_parameters: List[Tuple[str, torch.nn.Parameter]],
         parameter_groups: List[Tuple[List[str], Dict[str, Any]]] = None,
         lr: float = 0.01,
         lambd: float = 0.0001,
@@ -379,7 +390,7 @@ class DenseSparseAdam(Optimizer, torch.optim.Optimizer):
 
     def __init__(
         self,
-        model_parameters: List[torch.nn.Parameter],
+        model_parameters: List[Tuple[str, torch.nn.Parameter]],
         parameter_groups: List[Tuple[List[str], Dict[str, Any]]] = None,
         lr=1e-3,
         betas=(0.9, 0.999),
