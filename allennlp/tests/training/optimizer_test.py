@@ -30,7 +30,7 @@ class TestOptimizer(AllenNlpTestCase):
     def test_optimizer_basic(self):
         optimizer_params = Params({"type": "sgd", "lr": 1})
         parameters = [[n, p] for n, p in self.model.named_parameters() if p.requires_grad]
-        optimizer = Optimizer.from_params(parameters, optimizer_params)
+        optimizer = Optimizer.from_params(model_parameters=parameters, params=optimizer_params)
         param_groups = optimizer.param_groups
         assert len(param_groups) == 1
         assert param_groups[0]["lr"] == 1
@@ -50,7 +50,7 @@ class TestOptimizer(AllenNlpTestCase):
             }
         )
         parameters = [[n, p] for n, p in self.model.named_parameters() if p.requires_grad]
-        optimizer = Optimizer.from_params(parameters, optimizer_params)
+        optimizer = Optimizer.from_params(model_parameters=parameters, params=optimizer_params)
         param_groups = optimizer.param_groups
 
         assert len(param_groups) == 3
@@ -73,17 +73,9 @@ class TestOptimizer(AllenNlpTestCase):
         optimizer_params = Params({"type": "sgd", "lr": "0.1"})
 
         parameters = [[n, p] for n, p in self.model.named_parameters() if p.requires_grad]
-        optimizer = Optimizer.from_params(parameters, optimizer_params)
+        optimizer = Optimizer.from_params(model_parameters=parameters, params=optimizer_params)
 
         assert optimizer.defaults["lr"] == 0.1
-
-        # But should crash (in the Pytorch code) if we don't do the type inference
-        optimizer_params = Params({"type": "sgd", "lr": "0.1", "infer_type_and_cast": False})
-
-        parameters = [[n, p] for n, p in self.model.named_parameters() if p.requires_grad]
-
-        with pytest.raises(TypeError):
-            optimizer = Optimizer.from_params(parameters, optimizer_params)
 
 
 class TestDenseSparseAdam(AllenNlpTestCase):
@@ -108,7 +100,7 @@ class TestDenseSparseAdam(AllenNlpTestCase):
     def test_can_optimise_model_with_dense_and_sparse_params(self):
         optimizer_params = Params({"type": "dense_sparse_adam"})
         parameters = [[n, p] for n, p in self.model.named_parameters() if p.requires_grad]
-        optimizer = Optimizer.from_params(parameters, optimizer_params)
+        optimizer = Optimizer.from_params(model_parameters=parameters, params=optimizer_params)
         iterator = BasicIterator(2)
         iterator.index_with(self.vocab)
         Trainer(self.model, optimizer, iterator, self.instances).train()

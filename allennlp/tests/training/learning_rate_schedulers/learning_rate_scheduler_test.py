@@ -16,7 +16,7 @@ class LearningRateSchedulersTest(AllenNlpTestCase):
         with self.assertRaises(ConfigurationError) as context:
             LearningRateScheduler.from_params(
                 optimizer=Optimizer.from_params(
-                    self.model.named_parameters(), Params({"type": "adam"})
+                    model_parameters=self.model.named_parameters(), params=Params({"type": "adam"})
                 ),
                 params=Params({"type": "reduce_on_plateau"}),
             ).step(None, None)
@@ -25,7 +25,7 @@ class LearningRateSchedulersTest(AllenNlpTestCase):
     def test_reduce_on_plateau_works_when_metrics_exist(self):
         LearningRateScheduler.from_params(
             optimizer=Optimizer.from_params(
-                self.model.named_parameters(), Params({"type": "adam"})
+                model_parameters=self.model.named_parameters(), params=Params({"type": "adam"})
             ),
             params=Params({"type": "reduce_on_plateau"}),
         ).step(10, None)
@@ -33,7 +33,7 @@ class LearningRateSchedulersTest(AllenNlpTestCase):
     def test_no_metric_wrapper_can_support_none_for_metrics(self):
         lrs = LearningRateScheduler.from_params(
             optimizer=Optimizer.from_params(
-                self.model.named_parameters(), Params({"type": "adam"})
+                model_parameters=self.model.named_parameters(), params=Params({"type": "adam"})
             ),
             params=Params({"type": "step", "step_size": 1}),
         )
@@ -43,7 +43,7 @@ class LearningRateSchedulersTest(AllenNlpTestCase):
     def test_noam_learning_rate_schedule_does_not_crash(self):
         lrs = LearningRateScheduler.from_params(
             optimizer=Optimizer.from_params(
-                self.model.named_parameters(), Params({"type": "adam"})
+                model_parameters=self.model.named_parameters(), params=Params({"type": "adam"})
             ),
             params=Params({"type": "noam", "model_size": 10, "warmup_steps": 2000}),
         )
@@ -53,7 +53,8 @@ class LearningRateSchedulersTest(AllenNlpTestCase):
     def test_exponential_works_properly(self):
         scheduler = LearningRateScheduler.from_params(
             optimizer=Optimizer.from_params(
-                self.model.named_parameters(), Params({"type": "sgd", "lr": 1.0})
+                model_parameters=self.model.named_parameters(),
+                params=Params({"type": "sgd", "lr": 1.0}),
             ),
             params=Params({"type": "exponential", "gamma": 0.5}),
         )
