@@ -18,6 +18,7 @@ import torch.nn.functional as F
 from allennlp.common.checks import ExperimentalFeatureWarning
 from allennlp.modules.layer_norm import LayerNorm
 from allennlp.modules.seq2seq_encoders.seq2seq_encoder import Seq2SeqEncoder
+from allennlp.common import Registrable
 from allennlp.nn import util
 
 
@@ -45,7 +46,7 @@ def subsequent_mask(size: int, device: str = "cpu") -> torch.Tensor:
     return mask
 
 
-class PositionalEncoding(torch.nn.Module):
+class PositionalEncoding(torch.nn.Module, Registrable):
     """Implement the Positional Encoding function."""
 
     def __init__(self, input_dim: int, max_len: int = 5000) -> None:
