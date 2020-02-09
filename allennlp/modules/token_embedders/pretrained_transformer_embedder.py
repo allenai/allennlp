@@ -5,8 +5,8 @@ from overrides import overrides
 
 import torch
 import torch.nn.functional as F
+from transformers.modeling_auto import AutoModel
 
-from allennlp.common.util import PretrainedTransformer
 from allennlp.data.tokenizers import PretrainedTransformerTokenizer
 from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
 from allennlp.nn.util import batched_index_select
@@ -31,7 +31,7 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
 
     def __init__(self, model_name: str, max_length: int = None) -> None:
         super().__init__()
-        self.transformer_model = PretrainedTransformer.load(model_name)
+        self.transformer_model = AutoModel.from_pretrained(model_name)
         self._max_length = max_length
         # I'm not sure if this works for all models; open an issue on github if you find a case
         # where it doesn't work.

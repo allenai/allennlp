@@ -64,27 +64,6 @@ T = TypeVar("T")
 ContextManagerFunctionReturnType = Generator[T, None, None]
 
 
-class PretrainedTransformer:
-    """
-    In some instances you may want to load the same BERT model twice
-    (e.g. to use as a token embedder and also as a pooling layer).
-    This factory provides a cache so that you don't actually have to load the model twice.
-    """
-
-    _cache: Dict[str, Any] = {}
-
-    @classmethod
-    def load(cls, model_name: str, cache_model: bool = True) -> PreTrainedModel:
-        if model_name in cls._cache:
-            return PretrainedTransformer._cache[model_name]
-
-        model = AutoModel.from_pretrained(model_name)
-        if cache_model:
-            cls._cache[model_name] = model
-
-        return model
-
-
 def sanitize(x: Any) -> Any:
     """
     Sanitize turns PyTorch and Numpy types into basic Python types so they
