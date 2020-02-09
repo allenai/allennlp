@@ -33,6 +33,8 @@ import torch
 import torch.distributed as dist
 from spacy.cli.download import download as spacy_download
 from spacy.language import Language as SpacyModelType
+from transformers.modeling_auto import AutoModel
+from transformers.modeling_utils import PreTrainedModel
 
 from allennlp.common.checks import log_pytorch_version_info
 from allennlp.common.params import Params
@@ -60,6 +62,27 @@ END_SYMBOL = "@end@"
 PathType = Union[os.PathLike, str]
 T = TypeVar("T")
 ContextManagerFunctionReturnType = Generator[T, None, None]
+
+
+class PretrainedTransformer:
+    """
+    In some instances you may want to load the same BERT model twice
+    (e.g. to use as a token embedder and also as a pooling layer).
+    This factory provides a cache so that you don't actually have to load the model twice.
+    """
+
+    _cache: Dict[str, Any] = {}
+
+    @classmethod
+    def load(cls, model_name: str, cache_model: bool = True) -> PreTrainedModel:
+        if model_name in cls._cache:
+            return PretrainedTransformer._cache[model_name]
+
+        model = AutoModel.from_pretrained(model_name)
+        if cache_model:
+            cls._cache[model_name] = model
+
+        return model
 
 
 def sanitize(x: Any) -> Any:

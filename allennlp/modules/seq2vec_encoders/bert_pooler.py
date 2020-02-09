@@ -6,8 +6,8 @@ import torch
 import torch.nn
 from transformers.modeling_bert import BertModel
 
+from allennlp.common.util import PretrainedTransformer
 from allennlp.modules.seq2vec_encoders.seq2vec_encoder import Seq2VecEncoder
-from allennlp.modules.token_embedders.bert_token_embedder import PretrainedBertModel
 
 
 @Seq2VecEncoder.register("bert_pooler")
@@ -45,7 +45,7 @@ class BertPooler(Seq2VecEncoder):
         super().__init__()
 
         if isinstance(pretrained_model, str):
-            model = PretrainedBertModel.load(pretrained_model)
+            model = PretrainedTransformer.load(pretrained_model)
         else:
             model = pretrained_model
 
