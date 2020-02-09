@@ -4,9 +4,8 @@ from overrides import overrides
 
 import torch
 import torch.nn
-from transformers.modeling_bert import BertModel
+from transformers.modeling_auto import AutoModel
 
-from allennlp.common.util import PretrainedTransformer
 from allennlp.modules.seq2vec_encoders.seq2vec_encoder import Seq2VecEncoder
 
 
@@ -38,16 +37,13 @@ class BertPooler(Seq2VecEncoder):
 
     def __init__(
         self,
-        pretrained_model: Union[str, BertModel],
+        pretrained_model: str,
         requires_grad: bool = True,
         dropout: float = 0.0,
     ) -> None:
         super().__init__()
 
-        if isinstance(pretrained_model, str):
-            model = PretrainedTransformer.load(pretrained_model)
-        else:
-            model = pretrained_model
+        model = AutoModel.from_pretrained(pretrained_model)
 
         self._dropout = torch.nn.Dropout(p=dropout)
 
