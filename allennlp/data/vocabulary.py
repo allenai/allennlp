@@ -356,7 +356,7 @@ class Vocabulary(Registrable):
         return vocab
 
     @classmethod
-    def empty(cls) -> 'Vocabulary':
+    def empty(cls) -> "Vocabulary":
         """
         This method returns a bare vocabulary instantiated with `cls()` (so, `Vocabulary()` if you
         haven't made a subclass of this object).  The only reason to call `Vocabulary.empty()`
@@ -430,7 +430,7 @@ class Vocabulary(Registrable):
             instance.count_vocab_items(namespace_token_counts)
         self._extend(counter=namespace_token_counts)
 
-    def extend_from_vocab(self, vocab: 'Vocabulary') -> None:
+    def extend_from_vocab(self, vocab: "Vocabulary") -> None:
         """
         Adds all vocabulary items from all namespaces in the given vocabulary to this vocabulary.
         Useful if you want to load a model and extends its vocabulary from new instances.

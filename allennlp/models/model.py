@@ -366,7 +366,7 @@ class Model(torch.nn.Module, Registrable):
                 )
 
     @classmethod
-    def from_archive(cls, archive_file: str, vocab: Vocabulary = None) -> 'Model':
+    def from_archive(cls, archive_file: str, vocab: Vocabulary = None) -> "Model":
         """
         Loads a model from an archive file.  This basically just calls
         `return archival.load_archive(archive_file).model`.  It exists as a method here for
@@ -377,6 +377,7 @@ class Model(torch.nn.Module, Registrable):
         object (including calling `extend_embedder_vocab`, which extends embedding layers).
         """
         from allennlp.models.archival import load_archive  # here to avoid circular imports
+
         model = load_archive(archive_file).model
         if vocab:
             model.vocab.extend_from_vocab(vocab)

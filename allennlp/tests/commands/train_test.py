@@ -252,8 +252,9 @@ class TestTrain(AllenNlpTestCase):
         )
 
     def test_train_can_fine_tune_model_from_archive(self):
-        params = Params.from_file(self.FIXTURES_ROOT / "basic_classifier" /
-                                  "experiment_from_archive.jsonnet")
+        params = Params.from_file(
+            self.FIXTURES_ROOT / "basic_classifier" / "experiment_from_archive.jsonnet"
+        )
         train_loop = TrainModel.from_params(
             params=params, serialization_dir=self.TEST_DIR, local_rank=0, batch_weight_key=""
         )
