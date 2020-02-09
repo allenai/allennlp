@@ -251,6 +251,20 @@ class TestTrain(AllenNlpTestCase):
             params=params, serialization_dir=self.TEST_DIR, local_rank=0, batch_weight_key=""
         )
 
+    def test_train_can_fine_tune_model_from_archive(self):
+        params = Params.from_file(self.FIXTURES_ROOT / "basic_classifier" /
+                                  "experiment_from_archive.jsonnet")
+        train_loop = TrainModel.from_params(
+            params=params, serialization_dir=self.TEST_DIR, local_rank=0, batch_weight_key=""
+        )
+        train_loop.run()
+
+        # This is checking that the vocabulary actually got extended.  This token was not in the
+        # original training data for the model that we are fine-tuning, but is in the new training
+        # data, and the vocabulary settings in the experiment config are such that this token should
+        # have been added.
+        assert "journalism" in train_loop.model.vocab.get_token_to_index_vocabulary()
+
 
 @DatasetReader.register("lazy-test")
 class LazyFakeReader(DatasetReader):

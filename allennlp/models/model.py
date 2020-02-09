@@ -365,9 +365,32 @@ class Model(torch.nn.Module, Registrable):
                     self.vocab, extension_pretrained_file=pretrained_file, model_path=model_path
                 )
 
+    @classmethod
+    def from_archive(cls, archive_file: str, vocab: Vocabulary = None) -> 'Model':
+        """
+        Loads a model from an archive file.  This basically just calls
+        `return archival.load_archive(archive_file).model`.  It exists as a method here for
+        convenience, and so that we can register it for easy use for fine tuning an existing model
+        from a config file.
+
+        If `vocab` is given, we will extend the loaded model's vocabulary using the passed vocab
+        object (including calling `extend_embedder_vocab`, which extends embedding layers).
+        """
+        from allennlp.models.archival import load_archive  # here to avoid circular imports
+        model = load_archive(archive_file).model
+        if vocab:
+            model.vocab.extend_from_vocab(vocab)
+            model.extend_embedder_vocab()
+        return model
+
+
+# We can't decorate `Model` with `Model.register()`, because `Model` hasn't been defined yet.  So we
+# put this down here.
+Model.register("from_archive", constructor="from_archive")(Model)
+
 
 def remove_pretrained_embedding_params(params: Params):
-    if isinstance(params, Params):  # The model could possible be a string, for example.
+    if isinstance(params, Params):  # The model could possibly be a string, for example.
         keys = params.keys()
         if "pretrained_file" in keys:
             del params["pretrained_file"]
