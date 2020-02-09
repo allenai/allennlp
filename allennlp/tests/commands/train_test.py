@@ -14,7 +14,7 @@ from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import DatasetReader, Instance, Vocabulary
-from allennlp.models import load_archive
+from allennlp.models import load_archive, Model
 from allennlp.models.archival import CONFIG_NAME
 from allennlp.modules.token_embedders.embedding import _read_pretrained_embeddings_file
 
@@ -260,11 +260,14 @@ class TestTrain(AllenNlpTestCase):
         )
         train_loop.run()
 
-        # This is checking that the vocabulary actually got extended.  This token was not in the
-        # original training data for the model that we are fine-tuning, but is in the new training
-        # data, and the vocabulary settings in the experiment config are such that this token should
-        # have been added.
-        assert "journalism" in train_loop.model.vocab.get_token_to_index_vocabulary()
+        model = Model.from_archive(
+            self.FIXTURES_ROOT / "basic_classifier" / "serialization" / "model.tar.gz"
+        )
+
+        # This is checking that the vocabulary actually got extended.  The data that we're using for
+        # training is different from the data we used to produce the model archive, and we set
+        # parameters such that the vocab should have been extended.
+        assert train_loop.model.vocab.get_vocab_size() > model.vocab.get_vocab_size()
 
 
 @DatasetReader.register("lazy-test")
