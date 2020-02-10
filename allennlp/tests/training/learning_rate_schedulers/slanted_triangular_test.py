@@ -112,7 +112,7 @@ class SlantedTriangularTest(AllenNlpTestCase):
         )
         # The method called in the logic below only checks the length of this list, not its
         # contents, so this should be safe.
-        instances = [1] * 40  # noqa: E231, flake doesn't like what black does with this list
+        instances = [1] * 40
         optim = self._get_optimizer()
         trainer = TrainerBase.from_params(
             model=self.model,
