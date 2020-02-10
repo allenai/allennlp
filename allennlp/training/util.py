@@ -13,6 +13,7 @@ import torch
 from allennlp.common.checks import ConfigurationError, check_for_gpu
 from allennlp.common.params import Params
 from allennlp.common.tqdm import Tqdm
+from allennlp.data.batch import Batch
 from allennlp.data.dataset_readers import DatasetReader
 from allennlp.data import Instance, Vocabulary
 from allennlp.data.iterators import DataIterator
@@ -449,8 +450,9 @@ def description_from_metrics(metrics: Dict[str, float]) -> str:
     )
 
 
-def make_vocab_from_params(params: Params, serialization_dir: str) -> Vocabulary:
-
+def make_vocab_from_params(
+    params: Params, serialization_dir: str, print_statistics: bool = False
+) -> Vocabulary:
     vocab_params = params.pop("vocabulary", {})
     os.makedirs(serialization_dir, exist_ok=True)
     vocab_dir = os.path.join(serialization_dir, "vocabulary")
@@ -475,14 +477,23 @@ def make_vocab_from_params(params: Params, serialization_dir: str) -> Vocabulary
     instances = (
         instance
         for key, dataset in all_datasets.items()
-        for instance in dataset
         if key in datasets_for_vocab_creation
+        for instance in dataset
     )
+
+    if print_statistics:
+        instances = list(instances)
 
     vocab = Vocabulary.from_params(vocab_params, instances=instances)
 
     logger.info(f"writing the vocabulary to {vocab_dir}.")
     vocab.save_to_files(vocab_dir)
     logger.info("done creating vocab")
+
+    if print_statistics:
+        dataset = Batch(instances)
+        dataset.index_instances(vocab)
+        dataset.print_statistics()
+        vocab.print_statistics()
 
     return vocab

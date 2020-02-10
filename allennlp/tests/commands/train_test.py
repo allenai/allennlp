@@ -85,7 +85,6 @@ class TestTrain(AllenNlpTestCase):
 
     @pytest.mark.skipif(torch.cuda.device_count() < 2, reason="Need multiple GPUs.")
     def test_train_model_distributed(self):
-
         params = lambda: Params(
             {
                 "model": {
@@ -116,7 +115,7 @@ class TestTrain(AllenNlpTestCase):
         assert "stdout_worker1.log" in serialized_files
         assert "model.tar.gz" in serialized_files
 
-        # Check we can load the seralized model
+        # Check we can load the serialized model
         assert load_archive(out_dir).model
 
     def test_distributed_raises_error_with_no_gpus(self):
