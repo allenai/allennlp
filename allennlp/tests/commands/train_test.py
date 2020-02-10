@@ -14,7 +14,7 @@ from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import DatasetReader, Instance, Vocabulary
-from allennlp.models import load_archive
+from allennlp.models import load_archive, Model
 from allennlp.models.archival import CONFIG_NAME
 from allennlp.modules.token_embedders.embedding import _read_pretrained_embeddings_file
 
@@ -250,6 +250,24 @@ class TestTrain(AllenNlpTestCase):
         TrainModel.from_params(
             params=params, serialization_dir=self.TEST_DIR, local_rank=0, batch_weight_key=""
         )
+
+    def test_train_can_fine_tune_model_from_archive(self):
+        params = Params.from_file(
+            self.FIXTURES_ROOT / "basic_classifier" / "experiment_from_archive.jsonnet"
+        )
+        train_loop = TrainModel.from_params(
+            params=params, serialization_dir=self.TEST_DIR, local_rank=0, batch_weight_key=""
+        )
+        train_loop.run()
+
+        model = Model.from_archive(
+            self.FIXTURES_ROOT / "basic_classifier" / "serialization" / "model.tar.gz"
+        )
+
+        # This is checking that the vocabulary actually got extended.  The data that we're using for
+        # training is different from the data we used to produce the model archive, and we set
+        # parameters such that the vocab should have been extended.
+        assert train_loop.model.vocab.get_vocab_size() > model.vocab.get_vocab_size()
 
 
 @DatasetReader.register("lazy-test")
