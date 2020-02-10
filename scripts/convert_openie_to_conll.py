@@ -37,11 +37,11 @@ Element = namedtuple(
 
 def main(inp_fn: str, domain: str, out_fn: str) -> None:
     """
-    inp_fn: ``str``
+    inp_fn: `str`
        Path to file from which to read Open IE extractions in Open IE4's format.
-    domain: ``str``
+    domain: `str`
        Domain to be used when writing CoNLL format.
-    out_fn: ``str``
+    out_fn: `str`
        Path to file to which to write the CoNLL format Open IE extractions.
     """
     with open(out_fn, "w") as fout:
