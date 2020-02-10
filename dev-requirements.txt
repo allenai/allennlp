@@ -33,7 +33,7 @@ pip>=20.0.1
 # YAML manipulation
 ruamel.yaml
 
-pydoc-markdown==2.0.5
+mathy_pydoc>=0.6.7,<0.7.0
 markdown-include==0.5.1
 # Package for the material theme for mkdocs
 mkdocs-material==4.6.0
