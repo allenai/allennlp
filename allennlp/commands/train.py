@@ -266,7 +266,8 @@ def train_model(
             batch_weight_key=batch_weight_key,
             dry_run=dry_run,
         )
-        archive_model(serialization_dir)
+        if not dry_run:
+            archive_model(serialization_dir)
         return model
 
     # Otherwise, we are running multiple processes for training.
@@ -329,7 +330,8 @@ def train_model(
             ),
             nprocs=num_procs,
         )
-        archive_model(serialization_dir)
+        if not dry_run:
+            archive_model(serialization_dir)
         model = Model.load(params, serialization_dir)
         return model
 
