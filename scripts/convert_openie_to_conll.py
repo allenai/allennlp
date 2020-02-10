@@ -46,10 +46,8 @@ def main(inp_fn: str, domain: str, out_fn: str) -> None:
             fout.write(
                 "{}\n\n".format(
                     "\n".join(
-                        [
-                            "\t".join(map(str, pad_line_to_ontonotes(line, domain)))
-                            for line in convert_sent_to_conll(sent_ls)
-                        ]
+                        "\t".join(pad_line_to_ontonotes(line, domain))
+                        for line in convert_sent_to_conll(sent_ls)
                     )
                 )
             )
@@ -245,7 +243,7 @@ def pad_line_to_ontonotes(line, domain) -> List[str]:
     word_ind, word = line[:2]
     pos = "XX"
     oie_tags = line[2:]
-    line_num = 0
+    line_num = "0"
     parse = "-"
     lemma = "-"
     return (
@@ -261,15 +259,11 @@ def convert_sent_dict_to_conll(sent_dic, domain) -> str:
     return a corresponding CoNLL representation.
     """
     return "\n\n".join(
-        [
-            "\n".join(
-                [
-                    "\t".join(map(str, pad_line_to_ontonotes(line, domain)))
-                    for line in convert_sent_to_conll(sent_ls)
-                ]
-            )
-            for sent_ls in sent_dic.iteritems()
-        ]
+        "\n".join(
+            "\t".join(map(str, pad_line_to_ontonotes(line, domain)))
+            for line in convert_sent_to_conll(sent_ls)
+        )
+        for sent_ls in sent_dic.iteritems()
     )
 
 

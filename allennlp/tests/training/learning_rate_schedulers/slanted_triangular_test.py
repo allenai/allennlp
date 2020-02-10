@@ -72,10 +72,8 @@ class SlantedTriangularTest(AllenNlpTestCase):
                 # allennlp trainer calls step_batch after updating parameters
                 # so collect lr at time of parameter update
                 lrs.append(
-                    [
-                        param_group["lr"] * float(param_group["params"][0].requires_grad)
-                        for param_group in optimizer.param_groups[:2]
-                    ]
+                    param_group["lr"] * float(param_group["params"][0].requires_grad)
+                    for param_group in optimizer.param_groups[:2]
                 )
                 scheduler.step_batch(batch_num_total)
                 if params.get("gradual_unfreezing") and epoch == 0:

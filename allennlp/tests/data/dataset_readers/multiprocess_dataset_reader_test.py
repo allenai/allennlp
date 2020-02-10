@@ -197,5 +197,5 @@ class TestMultiprocessDatasetReader(AllenNlpTestCase):
         batches = [batch for batch in iterator(instances, num_epochs=1)]
 
         # 400 instances / batch_size 32 = 12 full batches + 1 batch of 16
-        sizes = sorted([len(batch["tags"]) for batch in batches])
+        sizes = sorted(len(batch["tags"]) for batch in batches)
         assert sizes == [16] + 12 * [32]

@@ -768,12 +768,9 @@ class TestNnUtil(AllenNlpTestCase):
             # Score
             scored_sequences = []  # type: ignore
             for sequence in sequences:
-                emission_score = sum([tag_sequence[i, j] for i, j in enumerate(sequence)])
+                emission_score = sum(tag_sequence[i, j] for i, j in enumerate(sequence))
                 transition_score = sum(
-                    [
-                        transition_matrix[sequence[i - 1], sequence[i]]
-                        for i in range(1, len(sequence))
-                    ]
+                    transition_matrix[sequence[i - 1], sequence[i]] for i in range(1, len(sequence))
                 )
                 score = emission_score + transition_score
                 scored_sequences.append((score, sequence))

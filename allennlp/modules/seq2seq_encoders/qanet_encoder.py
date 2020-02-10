@@ -186,7 +186,7 @@ class QaNetEncoderBlock(Seq2SeqEncoder):
         self._use_positional_encoding = use_positional_encoding
 
         self._conv_norm_layers = torch.nn.ModuleList(
-            [LayerNorm(hidden_dim) for _ in range(num_convs)]
+            LayerNorm(hidden_dim) for _ in range(num_convs)
         )
         self._conv_layers = torch.nn.ModuleList()
         for _ in range(num_convs):
