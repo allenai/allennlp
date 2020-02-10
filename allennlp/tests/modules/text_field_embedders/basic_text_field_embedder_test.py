@@ -169,7 +169,7 @@ class TestBasicTextFieldEmbedder(AllenNlpTestCase):
         params = Params(
             {
                 "token_embedders": {
-                    "bert": {"type": "bert-pretrained", "pretrained_model": "bert-base-uncased"},
+                    "bert": {"type": "pretrained_transformer", "model_name": "bert-base-uncased"},
                     "token_characters": {
                         "type": "character_encoding",
                         "embedding": {"embedding_dim": 5},
@@ -186,8 +186,8 @@ class TestBasicTextFieldEmbedder(AllenNlpTestCase):
         token_embedder = BasicTextFieldEmbedder.from_params(vocab=self.vocab, params=params)
         inputs = {
             "bert": {
-                "input_ids": (torch.rand(3, 5) * 10).long(),
-                "offsets": (torch.rand(3, 5) * 1).long(),
+                "token_ids": (torch.rand(3, 5) * 10).long(),
+                "mask": (torch.rand(3, 5) * 1).long(),
             },
             "token_characters": {"token_characters": (torch.rand(3, 5, 5) * 1).long()},
         }
