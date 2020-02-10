@@ -780,3 +780,36 @@ class TestVocabulary(AllenNlpTestCase):
             vocab = Vocabulary.from_params(Params({"type": "from_files", "directory": vocab_dir}))
 
         assert "OOV token not found!" in str(excinfo.value)
+
+    def test_extend_from_vocab(self):
+        vocab1 = Vocabulary(non_padded_namespaces={"1", "2"})
+        vocab2 = Vocabulary(non_padded_namespaces={"3"})
+
+        vocab1.add_tokens_to_namespace(["a", "b", "c"], namespace="1")
+        vocab1.add_tokens_to_namespace(["d", "e", "f"], namespace="2")
+
+        vocab2.add_tokens_to_namespace(["c", "d", "e"], namespace="1")
+        vocab2.add_tokens_to_namespace(["g", "h", "i"], namespace="3")
+
+        vocab1.extend_from_vocab(vocab2)
+        assert vocab1.get_namespaces() == {"1", "2", "3"}
+        assert vocab1._non_padded_namespaces == {"1", "2", "3"}
+        assert vocab1.get_token_to_index_vocabulary("1") == {
+            "a": 0,
+            "b": 1,
+            "c": 2,
+            "@@PADDING@@": 3,
+            "@@UNKNOWN@@": 4,
+            "d": 5,
+            "e": 6,
+        }
+        assert vocab1.get_token_to_index_vocabulary("2") == {
+            "d": 0,
+            "e": 1,
+            "f": 2,
+        }
+        assert vocab1.get_token_to_index_vocabulary("3") == {
+            "g": 0,
+            "h": 1,
+            "i": 2,
+        }
