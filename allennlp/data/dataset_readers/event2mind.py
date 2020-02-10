@@ -89,9 +89,9 @@ class Event2MindDatasetReader(DatasetReader):
             # Skip header
             next(reader)
 
-            for (line_num, line_parts) in enumerate(reader):
+            for line_num, line_parts in enumerate(reader):
                 if len(line_parts) != 7:
-                    line = ",".join([str(s) for s in line_parts])
+                    line = ",".join(str(s) for s in line_parts)
                     raise ConfigurationError(
                         "Invalid line format: %s (line number %d)" % (line, line_num + 1)
                     )
