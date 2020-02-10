@@ -186,7 +186,7 @@ def find_learning_rate_model(
 
     cuda_device = params.params.get("trainer").get("cuda_device", -1)
     check_for_gpu(cuda_device)
-    distributed_params = params.params.get("distributed", None)
+    distributed_params = params.params.get("distributed")
     # See https://github.com/allenai/allennlp/issues/3658
     assert not distributed_params, "find-lr is not compatible with DistributedDataParallel."
 

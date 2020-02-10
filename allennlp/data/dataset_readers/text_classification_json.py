@@ -68,7 +68,7 @@ class TextClassificationJsonReader(DatasetReader):
                     continue
                 items = json.loads(line)
                 text = items["text"]
-                label = items.get("label", None)
+                label = items.get("label")
                 if label is not None:
                     if self._skip_label_indexing:
                         try:
