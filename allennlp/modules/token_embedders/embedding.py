@@ -194,7 +194,7 @@ class Embedding(TokenEmbedder, Registrable):
         model_path : `str`, (optional, default=None)
             Path traversing the model attributes upto this embedding module.
             Eg. "_text_field_embedder.token_embedder_tokens". This is only useful
-            to give helpful error message when extend_vocab is implicitly called
+            to give a helpful error message when extend_vocab is implicitly called
             by fine-tune or any other command.
         """
         # Caveat: For allennlp v0.8.1 and below, we weren't storing vocab_namespace as an attribute,
