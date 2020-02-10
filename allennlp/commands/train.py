@@ -8,7 +8,7 @@ which to write the results.
    $ allennlp train --help
     usage: allennlp train [-h] -s SERIALIZATION_DIR [-r] [-f] [-o OVERRIDES]
                           [--file-friendly-logging] [--node-rank NODE_RANK]
-                          [--include-package INCLUDE_PACKAGE]
+                          [--dry-run] [--include-package INCLUDE_PACKAGE]
                           param_path
 
     Train the specified model on the specified dataset.
@@ -30,8 +30,11 @@ which to write the results.
                             outputs tqdm status on separate lines and slows tqdm
                             refresh rate
       --node-rank NODE_RANK
-                            Rank of this node in the distributed setup (default =
+                            rank of this node in the distributed setup (default =
                             0)
+      --dry-run
+                            do not train a model, but create a vocabulary, show
+                            dataset statistics and other training information
       --include-package INCLUDE_PACKAGE
                             additional packages to include
 """
@@ -110,7 +113,14 @@ class Train(Subcommand):
         )
 
         subparser.add_argument(
-            "--node-rank", type=int, default=0, help="Rank of this node in the distributed setup"
+            "--node-rank", type=int, default=0, help="rank of this node in the distributed setup"
+        )
+
+        subparser.add_argument(
+            "--dry-run",
+            action="store_true",
+            help="do not train a model, but create a vocabulary, show dataset statistics and "
+            "other training information",
         )
 
         subparser.set_defaults(func=train_model_from_args)
@@ -131,6 +141,7 @@ def train_model_from_args(args: argparse.Namespace):
         force=args.force,
         node_rank=args.node_rank,
         include_package=args.include_package,
+        dry_run=args.dry_run,
     )
 
 
@@ -143,6 +154,7 @@ def train_model_from_file(
     force: bool = False,
     node_rank: int = 0,
     include_package: List[str] = None,
+    dry_run: bool = False,
 ) -> Model:
     """
     A wrapper around :func:`train_model` which loads the params from a file.
@@ -169,6 +181,14 @@ def train_model_from_file(
         Rank of the current node in distributed training
     include_package : ``str``, optional
         In distributed mode, extra packages mentioned will be imported in trainer workers.
+    dry_run : ``bool``, optional (default=False)
+        Do not train a model, but create a vocabulary, show dataset statistics and other training
+        information.
+
+    # Returns
+
+    best_model : ``Model``
+        The model with the best epoch weights.
     """
     # Load the experiment config from a file and pass it to ``train_model``.
     params = Params.from_file(parameter_filename, overrides)
@@ -180,6 +200,7 @@ def train_model_from_file(
         force=force,
         node_rank=node_rank,
         include_package=include_package,
+        dry_run=dry_run,
     )
 
 
@@ -192,6 +213,7 @@ def train_model(
     node_rank: int = 0,
     include_package: List[str] = None,
     batch_weight_key: str = "",
+    dry_run: bool = False,
 ) -> Model:
     """
     Trains the model specified in the given :class:`Params` object, using the data and training
@@ -218,6 +240,9 @@ def train_model(
         In distributed mode, extra packages mentioned will be imported in trainer workers.
     batch_weight_key : ``str``, optional (default="")
         If non-empty, name of metric used to weight the loss on a per-batch basis.
+    dry_run : ``bool``, optional (default=False)
+        Do not train a model, but create a vocabulary, show dataset statistics and other training
+        information.
 
     # Returns
 
@@ -239,6 +264,7 @@ def train_model(
             recover=recover,
             include_package=include_package,
             batch_weight_key=batch_weight_key,
+            dry_run=dry_run,
         )
         archive_model(serialization_dir)
         return model
@@ -292,6 +318,7 @@ def train_model(
                 recover,
                 include_package,
                 batch_weight_key,
+                dry_run,
                 node_rank,
                 master_addr,
                 master_port,
@@ -313,6 +340,7 @@ def _train_worker(
     recover: bool = False,
     include_package: List[str] = None,
     batch_weight_key: str = "",
+    dry_run: bool = False,
     node_rank: int = 0,
     master_addr: str = "127.0.0.1",
     master_port: int = 29500,
@@ -345,6 +373,9 @@ def _train_worker(
         GPU training.
     batch_weight_key : ``str``, optional (default="")
         If non-empty, name of metric used to weight the loss on a per-batch basis.
+    dry_run : ``bool``, optional (default=False)
+        Do not train a model, but create a vocabulary, show dataset statistics and other training
+        information.
     node_rank : ``int``, optional
         Rank of the node.
     master_addr : ``str``, optional (default="127.0.0.1")
@@ -418,23 +449,24 @@ def _train_worker(
         batch_weight_key=batch_weight_key,
     )
 
-    try:
-        if distributed:  # let the setup get ready for all the workers
-            dist.barrier()
+    if not dry_run:
+        try:
+            if distributed:  # let the setup get ready for all the workers
+                dist.barrier()
 
-        metrics = train_loop.run()
-    except KeyboardInterrupt:
-        # if we have completed an epoch, try to create a model archive.
-        if master and os.path.exists(os.path.join(serialization_dir, _DEFAULT_WEIGHTS)):
-            logging.info(
-                "Training interrupted by the user. Attempting to create "
-                "a model archive using the current best epoch weights."
-            )
-            archive_model(serialization_dir)
-        raise
+            metrics = train_loop.run()
+        except KeyboardInterrupt:
+            # if we have completed an epoch, try to create a model archive.
+            if master and os.path.exists(os.path.join(serialization_dir, _DEFAULT_WEIGHTS)):
+                logging.info(
+                    "Training interrupted by the user. Attempting to create "
+                    "a model archive using the current best epoch weights."
+                )
+                archive_model(serialization_dir)
+            raise
 
-    if master:
-        train_loop.finish(metrics)
+        if master:
+            train_loop.finish(metrics)
 
     if not distributed:
         return train_loop.model
