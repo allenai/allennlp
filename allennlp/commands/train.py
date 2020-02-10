@@ -301,7 +301,9 @@ def train_model(
         # to disk before initializing the distributed context. The workers will
         # load the vocabulary from the path specified.
         if params.get("vocabulary", Params({})).get("type", "") != "from_files":
-            vocab = training_util.make_vocab_from_params(params.duplicate(), serialization_dir)
+            vocab = training_util.make_vocab_from_params(
+                params.duplicate(), serialization_dir, print_statistics=dry_run
+            )
             params["vocabulary"] = {
                 "type": "from_files",
                 "directory": os.path.join(serialization_dir, "vocabulary"),
