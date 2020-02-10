@@ -33,8 +33,6 @@ import torch
 import torch.distributed as dist
 from spacy.cli.download import download as spacy_download
 from spacy.language import Language as SpacyModelType
-from transformers.modeling_auto import AutoModel
-from transformers.modeling_utils import PreTrainedModel
 
 from allennlp.common.checks import log_pytorch_version_info
 from allennlp.common.params import Params
