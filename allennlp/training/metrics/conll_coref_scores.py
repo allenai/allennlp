@@ -227,8 +227,8 @@ class Scorer:
         """
         return (
             2
-            * sum(1 for mention in gold_clustering if mention in predicted_clustering)
-            / float(len(gold_clustering) + len(predicted_clustering))
+            * len([mention for mention in gold_clustering if mention in predicted_clustering])
+            / (len(gold_clustering) + len(predicted_clustering))
         )
 
     @staticmethod

@@ -1,14 +1,16 @@
-import sys
+import argparse
 import os
+import sys
+from collections import namedtuple
+from typing import List
+
+import regex
+from tqdm import tqdm
+
+from allennlp.data.tokenizers.spacy_tokenizer import SpacyTokenizer
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(os.path.join(__file__, os.pardir))))
 
-from typing import List
-from collections import namedtuple
-import regex
-from tqdm import tqdm
-from allennlp.data.tokenizers.spacy_tokenizer import SpacyTokenizer
-import argparse
 
 Extraction = namedtuple(
     "Extraction",  # Open IE extraction
@@ -46,7 +48,7 @@ def main(inp_fn: str, domain: str, out_fn: str) -> None:
             fout.write(
                 "{}\n\n".format(
                     "\n".join(
-                        "\t".join(pad_line_to_ontonotes(line, domain))
+                        "\t".join(map(str, pad_line_to_ontonotes(line, domain)))
                         for line in convert_sent_to_conll(sent_ls)
                     )
                 )
@@ -243,7 +245,7 @@ def pad_line_to_ontonotes(line, domain) -> List[str]:
     word_ind, word = line[:2]
     pos = "XX"
     oie_tags = line[2:]
-    line_num = "0"
+    line_num = 0
     parse = "-"
     lemma = "-"
     return (
