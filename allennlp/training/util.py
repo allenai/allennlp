@@ -1,24 +1,24 @@
 """
 Helper functions for Trainers
 """
-import torch.distributed as dist
-from typing import Any, Union, Dict, Iterable, List, Optional
 import datetime
 import logging
 import os
 import shutil
+from typing import Any, Dict, Iterable, List, Optional, Union
 
 import torch
+import torch.distributed as dist
 
-from allennlp.common.checks import ConfigurationError, check_for_gpu
+from allennlp.common.checks import check_for_gpu, ConfigurationError
 from allennlp.common.params import Params
 from allennlp.common.tqdm import Tqdm
+from allennlp.data import Instance, Vocabulary
 from allennlp.data.batch import Batch
 from allennlp.data.dataset_readers import DatasetReader
-from allennlp.data import Instance, Vocabulary
 from allennlp.data.iterators import DataIterator
-from allennlp.models.model import Model
 from allennlp.models.archival import CONFIG_NAME
+from allennlp.models.model import Model
 from allennlp.nn import util as nn_util
 
 logger = logging.getLogger(__name__)
@@ -474,7 +474,7 @@ def make_vocab_from_params(
         ", ".join(datasets_for_vocab_creation),
     )
 
-    instances = (
+    instances: Iterable[Instance] = (
         instance
         for key, dataset in all_datasets.items()
         if key in datasets_for_vocab_creation

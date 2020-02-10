@@ -32,8 +32,7 @@ which to write the results.
       --node-rank NODE_RANK
                             rank of this node in the distributed setup (default =
                             0)
-      --dry-run
-                            do not train a model, but create a vocabulary, show
+      --dry-run             do not train a model, but create a vocabulary, show
                             dataset statistics and other training information
       --include-package INCLUDE_PACKAGE
                             additional packages to include

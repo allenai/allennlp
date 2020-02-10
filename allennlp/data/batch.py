@@ -7,7 +7,7 @@ import logging
 from collections import defaultdict
 from typing import Dict, Iterable, Iterator, List, Union
 
-import numpy as np
+import numpy
 import torch
 
 from allennlp.common.checks import ConfigurationError
@@ -173,11 +173,11 @@ class Batch(Iterable):
         for name, lengths in sequence_field_lengths.items():
             print(f"Statistics for {name}:")
             print(
-                f"\tLengths: Mean: {np.mean(lengths)}, Standard Dev: {np.std(lengths)}, "
-                f"Max: {np.max(lengths)}, Min: {np.min(lengths)}"
+                f"\tLengths: Mean: {numpy.mean(lengths)}, Standard Dev: {numpy.std(lengths)}, "
+                f"Max: {numpy.max(lengths)}, Min: {numpy.min(lengths)}"
             )
 
         print("\n10 Random instances:")
-        for i in np.random.randint(len(self.instances), size=10):
+        for i in numpy.random.randint(len(self.instances), size=10):
             print(f"Instance {i}:")
             print(f"\t{self.instances[i]}")
