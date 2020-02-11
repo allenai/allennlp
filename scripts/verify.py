@@ -14,7 +14,7 @@ def main(checks):
         print("Verifying with " + str(checks))
         if "pytest" in checks:
             print("Tests (pytest):", flush=True)
-            run("pytest -v --color=yes", shell=True, check=True)
+            run("pytest --color=yes -rf", shell=True, check=True)
 
         if "flake8" in checks:
             print("Linter (flake8)", flush=True)
@@ -34,7 +34,7 @@ def main(checks):
                 " --ignore-missing-imports"
                 # This is necessary because PyTorch has some type stubs but they're incomplete,
                 # and mypy will follow them and generate a lot of spurious errors.
-                " --no-site-packages "
+                " --no-site-packages"
                 # We are extremely lax about specifying Optional[] types, so we need this flag.
                 # TODO: tighten up our type annotations and remove this
                 " --no-strict-optional"

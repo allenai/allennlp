@@ -13,7 +13,7 @@ from allennlp.commands.train import Train, train_model, train_model_from_args, T
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.data import DatasetReader, Instance, Vocabulary
+from allennlp.data import DatasetReader, Instance
 from allennlp.models import load_archive, Model
 from allennlp.models.archival import CONFIG_NAME
 

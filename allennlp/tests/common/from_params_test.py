@@ -230,8 +230,8 @@ class TestFromParams(AllenNlpTestCase):
         assert len(d.arg1) == len(vals)
         assert isinstance(d.arg1, list)
         assert isinstance(d.arg1[0], A)
-        assert all([x.b == y for x, y in zip(d.arg1, vals)])
-        assert all([x.a == tval1 for x in d.arg1])
+        assert all(x.b == y for x, y in zip(d.arg1, vals))
+        assert all(x.a == tval1 for x in d.arg1)
 
         # Tests for Tuple
         assert isinstance(d.arg2, tuple)

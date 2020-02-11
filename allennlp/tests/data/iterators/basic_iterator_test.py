@@ -60,10 +60,8 @@ class IteratorTest(AllenNlpTestCase):
         sample_sizes = []
         for batch in batches:
             batch_sequence_length = max(
-                [
-                    instance.get_padding_lengths()["text"]["tokens___tokens"]
-                    for instance in batch.instances
-                ]
+                instance.get_padding_lengths()["text"]["tokens___tokens"]
+                for instance in batch.instances
             )
             sample_sizes.append(batch_sequence_length * len(batch.instances))
 

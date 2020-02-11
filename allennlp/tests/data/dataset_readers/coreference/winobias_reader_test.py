@@ -99,5 +99,5 @@ class TestWinobiasReader:
 
         # Check we aren't considering zero length spans and all
         # candidate spans are less than what we specified
-        assert all([self.span_width >= len(x) > 0 for x in candidate_mentions])
+        assert all(self.span_width >= len(x) > 0 for x in candidate_mentions)
         return candidate_mentions

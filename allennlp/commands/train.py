@@ -52,6 +52,7 @@ from allennlp.commands.subcommand import Subcommand
 from allennlp.common import Params, Registrable, Lazy
 from allennlp.common.checks import check_for_gpu, ConfigurationError
 from allennlp.common import util as common_util
+from allennlp.common.plugins import import_plugins
 from allennlp.data import DataIterator, DatasetReader, Instance, Vocabulary
 from allennlp.models.archival import archive_model, CONFIG_NAME
 from allennlp.models.model import _DEFAULT_WEIGHTS, Model
@@ -260,7 +261,6 @@ def train_model(
             params=params,
             serialization_dir=serialization_dir,
             file_friendly_logging=file_friendly_logging,
-            recover=recover,
             include_package=include_package,
             batch_weight_key=batch_weight_key,
             dry_run=dry_run,
@@ -317,7 +317,6 @@ def train_model(
                 params.duplicate(),
                 serialization_dir,
                 file_friendly_logging,
-                recover,
                 include_package,
                 batch_weight_key,
                 dry_run,
@@ -340,7 +339,6 @@ def _train_worker(
     params: Params,
     serialization_dir: str,
     file_friendly_logging: bool = False,
-    recover: bool = False,
     include_package: List[str] = None,
     batch_weight_key: str = "",
     dry_run: bool = False,
@@ -366,10 +364,6 @@ def _train_worker(
     file_friendly_logging : `bool`, optional (default=False)
         If `True`, we add newlines to tqdm output, even on an interactive terminal, and we slow
         down tqdm's output to only once every 10 seconds.
-    recover : `bool`, optional (default=False)
-        If `True`, we will try to recover a training run from an existing serialization
-        directory.  This is only intended for use when something actually crashed during the middle
-        of a run.  For continuing training a model on new data, see `Model.from_archive`.
     include_package : `List[str]`, optional
         In distributed mode, since this function would have been spawned as a separate process,
         the extra imports need to be done again. NOTE: This does not have any effect in single
@@ -405,12 +399,13 @@ def _train_worker(
     # not using `allennlp.common.util.is_master` as the process group is yet to be initialized
     master = process_rank == 0
 
+    include_package = include_package or []
+
     if distributed:
-        # Since the worker is spawned and not forked, the extra imports
-        # need to be done again.
-        if include_package is not None:
-            for package_name in include_package:
-                common_util.import_submodules(package_name)
+        # Since the worker is spawned and not forked, the extra imports need to be done again.
+        import_plugins()
+        for package_name in include_package:
+            common_util.import_submodules(package_name)
 
         num_procs_per_node = len(distributed_device_ids)
         # The Unique identifier of the worker process among all the processes in the
@@ -584,6 +579,7 @@ class TrainModel(Registrable):
         serialization_dir: `str`
             The directory where logs and model archives will be saved.
         local_rank: `int`
+            The process index that is initialized using the GPU device id.
         batch_weight_key: `str`
             The name of metric used to weight the loss on a per-batch basis.
         dataset_reader: `DatasetReader`

@@ -281,7 +281,7 @@ def create_serialization_dir(
             )
             fail = True
         for key in flat_params.keys():
-            if flat_params.get(key, None) != flat_loaded.get(key, None):
+            if flat_params.get(key) != flat_loaded.get(key):
                 logger.error(
                     f"Value for '{key}' in training configuration does not match that the value in "
                     f"the serialization directory we're recovering from: "
