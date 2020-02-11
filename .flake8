@@ -12,10 +12,9 @@ exclude =
     tutorials/tagger/**
 
 per-file-ignores =
-    # __init__.py files are allowed to have unused imports and lines-too-long
-    **/__init__.py:F401
-    # for some reason ("fixtures" dir not being a Python package?) we need to add this line
-    allennlp/tests/fixtures/**/__init__.py:F401
+    # __init__.py files are allowed to have unused imports
+    */__init__.py:F401
+    */**/**/__init__.py:F401
 
     # tests don't have to respect
     #  E731: do not assign a lambda expression, use a def
