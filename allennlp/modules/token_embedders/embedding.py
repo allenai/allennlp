@@ -74,9 +74,12 @@ class Embedding(TokenEmbedder, Registrable):
         construct it in the original training. We store vocab_namespace used during the original
         training as an attribute, so that it can be retrieved during fine-tuning.
     pretrained_file : `str`, (optional, default=None)
-        Used to keep track of what is the source of the weights and loading more embeddings at test time.
-        **It does not load the weights from this pretrained_file.** For that purpose, use
-        `Embedding.from_params`.
+        Path to a file of word vectors to intialize the embedding matrix. It can be the
+        path to a local file or an URL of a (cached) remote file. Two formats are supported:
+            * hdf5 file - containing an embedding matrix in the form of a torch.Tensor;
+            * text file - an utf-8 encoded text file with space separated fields.
+    vocabulary : `Vocabulary` (optional, default = None)
+        Used to construct an embedding from a pretrained file.
 
     # Returns
 
@@ -314,37 +317,15 @@ class Embedding(TokenEmbedder, Registrable):
         sparse: bool = False,
     ) -> "Embedding":
         """
-        Similar to `__init__`, but does two functions on top of what's there: (1) if
+        Similar to `__init__`, but has one additional function on top of what's there: if
         `num_embeddings` is not given, it checks the vocabulary for how many embeddings to
-        construct; and (2) if a pretrained file is given, it loads weights from that file (while
-        looking at the given vocabulary) and passes those weights to `__init__`.
+        construct.
 
         We need the vocabulary here to know how many items we need to embed, and we look for a
         `vocab_namespace` key in the parameter dictionary to know which vocabulary to use.  If
         you know beforehand exactly how many embeddings you need, or aren't using a vocabulary
         mapping for the things getting embedded here, then you can pass in the `num_embeddings`
         key directly, and the vocabulary will be ignored.
-
-        A file containing pretrained embeddings can be specified using the parameter
-        `"pretrained_file"`.
-        It can be the path to a local file or an URL of a (cached) remote file.
-        Two formats are supported:
-
-            * hdf5 file - containing an embedding matrix in the form of a torch.Tensor;
-
-            * text file - an utf-8 encoded text file with space separated fields::
-
-                    [word] [dim 1] [dim 2] ...
-
-              The text file can eventually be compressed with gzip, bz2, lzma or zip.
-              You can even select a single file inside an archive containing multiple files
-              using the URI::
-
-                    "(archive_uri)#file_path_inside_the_archive"
-
-              where `archive_uri` can be a file system path or a URL. For example::
-
-                    "(https://nlp.stanford.edu/data/glove.twitter.27B.zip)#glove.twitter.27B.200d.txt"
         """
 
         if num_embeddings is None:
