@@ -116,7 +116,7 @@ class Embedding(TokenEmbedder, Registrable):
 
         self.output_dim = projection_dim or embedding_dim
 
-        if weight and pretrained_file:
+        if weight is not None and pretrained_file:
             raise ConfigurationError(
                 "Embedding was constructed with both a weight and a pretrained file."
             )
@@ -140,7 +140,7 @@ class Embedding(TokenEmbedder, Registrable):
             )
             self.weight = torch.nn.Parameter(weight, requires_grad=trainable)
 
-        elif weight:
+        elif weight is not None:
             self.weight = torch.nn.Parameter(weight, requires_grad=trainable)
 
         else:
