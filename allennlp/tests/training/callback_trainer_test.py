@@ -4,38 +4,37 @@ import json
 import os
 import re
 import time
-from typing import Dict, Iterable, Optional
+from typing import Iterable, Optional
 
-import torch
-import responses
-import pytest
 import numpy as np
+import pytest
+import responses
+import torch
 
 from allennlp.common.checks import ConfigurationError
-
-from allennlp.common.testing import ModelTestCase
-from allennlp.data.instance import Instance
-from allennlp.data.iterators import DataIterator
-from allennlp.data import Vocabulary
 from allennlp.common.params import Params
-from allennlp.models.simple_tagger import SimpleTagger
-from allennlp.data.iterators import BasicIterator
+from allennlp.common.testing import ModelTestCase
+from allennlp.data import Vocabulary
 from allennlp.data.dataset_readers import SequenceTaggingDatasetReader
+from allennlp.data.instance import Instance
+from allennlp.data.iterators import BasicIterator
+from allennlp.data.iterators import DataIterator
 from allennlp.models.model import Model
+from allennlp.models.simple_tagger import SimpleTagger
 from allennlp.training.callback_trainer import CallbackTrainer
 from allennlp.training.callbacks import (
     Events,
     Callback,
+    Checkpoint,
+    GradientNormAndClip,
     handle_event,
     LogToTensorboard,
-    Checkpoint,
-    Validate,
     PostToUrl,
-    GradientNormAndClip,
+    TrackMetrics,
     UpdateLearningRate,
     UpdateMomentum,
-    TrackMetrics,
     UpdateMovingAverage,
+    Validate,
 )
 from allennlp.training.checkpointer import Checkpointer
 from allennlp.training.learning_rate_schedulers import LearningRateScheduler
