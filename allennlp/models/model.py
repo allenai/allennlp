@@ -263,7 +263,7 @@ class Model(torch.nn.Module, Registrable):
         vocab_choice = vocab_params.pop_choice("type", Vocabulary.list_available(), True)
         vocab_class, _ = Vocabulary.resolve_class_name(vocab_choice)
         vocab = vocab_class.from_files(
-            vocab_dir, vocab_params.get("padding_token", None), vocab_params.get("oov_token", None)
+            vocab_dir, vocab_params.get("padding_token"), vocab_params.get("oov_token")
         )
 
         model_params = config.get("model")
@@ -360,7 +360,7 @@ class Model(torch.nn.Module, Registrable):
         embedding_sources_mapping = embedding_sources_mapping or {}
         for model_path, module in self.named_modules():
             if hasattr(module, "extend_vocab"):
-                pretrained_file = embedding_sources_mapping.get(model_path, None)
+                pretrained_file = embedding_sources_mapping.get(model_path)
                 module.extend_vocab(
                     self.vocab, extension_pretrained_file=pretrained_file, model_path=model_path
                 )

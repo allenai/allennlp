@@ -13,10 +13,9 @@ from allennlp.commands.train import Train, TrainModel, train_model, train_model_
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.data import DatasetReader, Instance, Vocabulary
+from allennlp.data import DatasetReader, Instance
 from allennlp.models import load_archive, Model
 from allennlp.models.archival import CONFIG_NAME
-from allennlp.modules.token_embedders.embedding import _read_pretrained_embeddings_file
 
 SEQUENCE_TAGGING_DATA_PATH = str(AllenNlpTestCase.FIXTURES_ROOT / "data" / "sequence_tagging.tsv")
 
