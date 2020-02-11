@@ -27,7 +27,7 @@ from allennlp.nn import util
 logger = logging.getLogger(__name__)
 
 
-@TokenEmbedder.register("embedding", constructor="from_vocab_or_file")
+@TokenEmbedder.register("embedding")
 class Embedding(TokenEmbedder, Registrable):
     """
     A more featureful embedding module than the default in Pytorch.  Adds the ability to:
@@ -90,8 +90,8 @@ class Embedding(TokenEmbedder, Registrable):
 
     def __init__(
         self,
-        num_embeddings: int,
         embedding_dim: int,
+        num_embeddings: int = None,
         projection_dim: int = None,
         weight: torch.FloatTensor = None,
         padding_index: int = None,
@@ -100,11 +100,24 @@ class Embedding(TokenEmbedder, Registrable):
         norm_type: float = 2.0,
         scale_grad_by_freq: bool = False,
         sparse: bool = False,
-        vocab_namespace: str = None,
+        vocab_namespace: str = "tokens",
         pretrained_file: str = None,
         vocabulary: Vocabulary = None,
     ) -> None:
         super().__init__()
+
+        if num_embeddings is None and vocabulary is None:
+            raise ConfigurationError(
+                "Embedding must be constructed with either num_embeddings or a vocabulary."
+            )
+
+        if num_embeddings is None:
+            num_embeddings = vocabulary.get_vocab_size(vocab_namespace)
+        else:
+            # If num_embeddings is present, set default namespace to None so that extend_vocab
+            # call doesn't misinterpret that some namespace was originally used.
+            vocab_namespace = None
+
         self.num_embeddings = num_embeddings
         self.padding_index = padding_index
         self.max_norm = max_norm
@@ -300,58 +313,8 @@ class Embedding(TokenEmbedder, Registrable):
         extended_weight = torch.cat([self.weight.data, extra_weight.to(device)], dim=0)
         self.weight = torch.nn.Parameter(extended_weight, requires_grad=self.weight.requires_grad)
 
-    @classmethod
-    def from_vocab_or_file(
-        cls,
-        vocab: Vocabulary,
-        embedding_dim: int,
-        num_embeddings: int = None,
-        vocab_namespace: str = "tokens",
-        pretrained_file: str = None,
-        projection_dim: int = None,
-        trainable: bool = True,
-        padding_index: int = None,
-        max_norm: float = None,
-        norm_type: float = 2.0,
-        scale_grad_by_freq: bool = False,
-        sparse: bool = False,
-    ) -> "Embedding":
-        """
-        Similar to `__init__`, but has one additional function on top of what's there: if
-        `num_embeddings` is not given, it checks the vocabulary for how many embeddings to
-        construct.
 
-        We need the vocabulary here to know how many items we need to embed, and we look for a
-        `vocab_namespace` key in the parameter dictionary to know which vocabulary to use.  If
-        you know beforehand exactly how many embeddings you need, or aren't using a vocabulary
-        mapping for the things getting embedded here, then you can pass in the `num_embeddings`
-        key directly, and the vocabulary will be ignored.
-        """
-
-        if num_embeddings is None:
-            num_embeddings = vocab.get_vocab_size(vocab_namespace)
-        else:
-            # If num_embeddings is present, set default namespace to None so that extend_vocab
-            # call doesn't misinterpret that some namespace was originally used.
-            vocab_namespace = None
-
-        return cls(
-            num_embeddings=num_embeddings,
-            embedding_dim=embedding_dim,
-            projection_dim=projection_dim,
-            padding_index=padding_index,
-            trainable=trainable,
-            max_norm=max_norm,
-            norm_type=norm_type,
-            scale_grad_by_freq=scale_grad_by_freq,
-            sparse=sparse,
-            vocab_namespace=vocab_namespace,
-            pretrained_file=pretrained_file,
-            vocabulary=vocab,
-        )
-
-
-Embedding.register("embedding", constructor="from_vocab_or_file")(Embedding)
+Embedding.register("embedding")(Embedding)
 
 
 def _read_pretrained_embeddings_file(
