@@ -307,10 +307,10 @@ class TestElmoRequiresGrad(ElmoTestCase):
         ]
         if requires_grad:
             # None of the elmo grads should be None.
-            assert all([grad is not None for grad in elmo_grads])
+            assert all(grad is not None for grad in elmo_grads)
         else:
             # All of the elmo grads should be None.
-            assert all([grad is None for grad in elmo_grads])
+            assert all(grad is None for grad in elmo_grads)
 
     def test_elmo_requires_grad(self):
         self._run_test(True)

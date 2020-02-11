@@ -242,9 +242,7 @@ class Params(MutableMapping):
             try:
                 value = self.params.pop(key)
             except KeyError:
-                raise ConfigurationError(
-                    'key "{}" is required at location "{}"'.format(key, self.history)
-                )
+                raise ConfigurationError(f'key "{key}" is required at location "{self.history}"')
         else:
             value = self.params.pop(key, default)
 
@@ -296,15 +294,8 @@ class Params(MutableMapping):
         Performs the functionality associated with dict.get(key) but also checks for returned
         dicts and returns a Params object in their place with an updated history.
         """
-        if default is self.DEFAULT:
-            try:
-                value = self.params.get(key)
-            except KeyError:
-                raise ConfigurationError(
-                    'key "{}" is required at location "{}"'.format(key, self.history)
-                )
-        else:
-            value = self.params.get(key, default)
+        default = None if default is self.DEFAULT else default
+        value = self.params.get(key, default)
         return self._check_is_dict(key, value)
 
     def pop_choice(
@@ -451,7 +442,7 @@ class Params(MutableMapping):
     def _check_is_dict(self, new_history, value):
         if isinstance(value, dict):
             new_history = self.history + new_history + "."
-            return Params(value, history=new_history,)
+            return Params(value, history=new_history)
         if isinstance(value, list):
             value = [self._check_is_dict(f"{new_history}.{i}", v) for i, v in enumerate(value)]
         return value
