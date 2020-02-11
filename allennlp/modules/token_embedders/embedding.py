@@ -75,7 +75,7 @@ class Embedding(TokenEmbedder, Registrable):
         training as an attribute, so that it can be retrieved during fine-tuning.
     pretrained_file : `str`, (optional, default=None)
         Path to a file of word vectors to intialize the embedding matrix. It can be the
-        path to a local file or an URL of a (cached) remote file. Two formats are supported:
+        path to a local file or a URL of a (cached) remote file. Two formats are supported:
             * hdf5 file - containing an embedding matrix in the form of a torch.Tensor;
             * text file - an utf-8 encoded text file with space separated fields.
     vocabulary : `Vocabulary` (optional, default = None)
