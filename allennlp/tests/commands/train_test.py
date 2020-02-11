@@ -13,10 +13,9 @@ from allennlp.commands.train import Train, TrainModel, train_model, train_model_
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.data import DatasetReader, Instance, Vocabulary
-from allennlp.models import load_archive
+from allennlp.data import DatasetReader, Instance
+from allennlp.models import load_archive, Model
 from allennlp.models.archival import CONFIG_NAME
-from allennlp.modules.token_embedders.embedding import _read_pretrained_embeddings_file
 
 SEQUENCE_TAGGING_DATA_PATH = str(AllenNlpTestCase.FIXTURES_ROOT / "data" / "sequence_tagging.tsv")
 
@@ -251,6 +250,24 @@ class TestTrain(AllenNlpTestCase):
             params=params, serialization_dir=self.TEST_DIR, local_rank=0, batch_weight_key=""
         )
 
+    def test_train_can_fine_tune_model_from_archive(self):
+        params = Params.from_file(
+            self.FIXTURES_ROOT / "basic_classifier" / "experiment_from_archive.jsonnet"
+        )
+        train_loop = TrainModel.from_params(
+            params=params, serialization_dir=self.TEST_DIR, local_rank=0, batch_weight_key=""
+        )
+        train_loop.run()
+
+        model = Model.from_archive(
+            self.FIXTURES_ROOT / "basic_classifier" / "serialization" / "model.tar.gz"
+        )
+
+        # This is checking that the vocabulary actually got extended.  The data that we're using for
+        # training is different from the data we used to produce the model archive, and we set
+        # parameters such that the vocab should have been extended.
+        assert train_loop.model.vocab.get_vocab_size() > model.vocab.get_vocab_size()
+
 
 @DatasetReader.register("lazy-test")
 class LazyFakeReader(DatasetReader):
@@ -345,45 +362,3 @@ class TestTrainOnLazyDataset(AllenNlpTestCase):
         shutil.rmtree(serialization_dir, ignore_errors=True)
         with pytest.raises(Exception):
             train_model(params, serialization_dir=serialization_dir)
-
-
-class TestFineTune(AllenNlpTestCase):
-    def setUp(self):
-        super().setUp()
-        self.model_archive = str(
-            self.FIXTURES_ROOT / "decomposable_attention" / "serialization" / "model.tar.gz"
-        )
-        self.config_file = str(self.FIXTURES_ROOT / "decomposable_attention" / "experiment.json")
-        self.serialization_dir = str(self.TEST_DIR / "fine_tune")
-
-    def test_fine_tune_nograd_regex(self):
-        original_model = load_archive(self.model_archive).model
-        name_parameters_original = dict(original_model.named_parameters())
-        regex_lists = [
-            [],
-            [".*attend_feedforward.*", ".*token_embedder.*"],
-            [".*compare_feedforward.*"],
-        ]
-        for regex_list in regex_lists:
-            params = Params.from_file(self.config_file)
-            params["trainer"]["no_grad"] = regex_list
-            shutil.rmtree(self.serialization_dir, ignore_errors=True)
-            tuned_model = train_model(
-                model=original_model, params=params, serialization_dir=self.serialization_dir
-            )
-            # If regex is matched, parameter name should have requires_grad False
-            # If regex is matched, parameter name should have same requires_grad
-            # as the originally loaded model
-            for name, parameter in tuned_model.named_parameters():
-                if any(re.search(regex, name) for regex in regex_list):
-                    assert not parameter.requires_grad
-                else:
-                    assert parameter.requires_grad == name_parameters_original[name].requires_grad
-        # If all parameters have requires_grad=False, then error.
-        with pytest.raises(Exception) as _:
-            params = Params.from_file(self.config_file)
-            params["trainer"]["no_grad"] = ["*"]
-            shutil.rmtree(self.serialization_dir, ignore_errors=True)
-            train_model(
-                model=original_model, params=params, serialization_dir=self.serialization_dir
-            )

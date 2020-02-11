@@ -2,10 +2,10 @@ import math
 from typing import Optional, Tuple
 
 from overrides import overrides
-from transformers.modeling_auto import AutoModel
 
 import torch
 import torch.nn.functional as F
+from transformers.modeling_auto import AutoModel
 
 from allennlp.data.tokenizers import PretrainedTransformerTokenizer
 from allennlp.modules.token_embedders.token_embedder import TokenEmbedder

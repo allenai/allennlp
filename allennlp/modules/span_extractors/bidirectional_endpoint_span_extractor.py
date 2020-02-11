@@ -1,11 +1,11 @@
 import torch
-from torch.nn.parameter import Parameter
 from overrides import overrides
+from torch.nn.parameter import Parameter
 
+from allennlp.common.checks import ConfigurationError
 from allennlp.modules.span_extractors.span_extractor import SpanExtractor
 from allennlp.modules.token_embedders.embedding import Embedding
 from allennlp.nn import util
-from allennlp.common.checks import ConfigurationError
 
 
 @SpanExtractor.register("bidirectional_endpoint")
@@ -90,7 +90,7 @@ class BidirectionalEndpointSpanExtractor(SpanExtractor):
             )
         if num_width_embeddings is not None and span_width_embedding_dim is not None:
             self._span_width_embedding = Embedding(num_width_embeddings, span_width_embedding_dim)
-        elif not all([num_width_embeddings is None, span_width_embedding_dim is None]):
+        elif num_width_embeddings is not None or span_width_embedding_dim is not None:
             raise ConfigurationError(
                 "To use a span width embedding representation, you must"
                 "specify both num_width_buckets and span_width_embedding_dim."

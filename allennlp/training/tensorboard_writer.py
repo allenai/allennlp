@@ -167,7 +167,7 @@ class TensorboardWriter(FromParams):
             no_val_message_template = "%s |  %8.3f  |  %8s"
             no_train_message_template = "%s |  %8s  |  %8.3f"
             header_template = "%s |  %-10s"
-            name_length = max([len(x) for x in metric_names])
+            name_length = max(len(x) for x in metric_names)
             logger.info(header_template, "Training".rjust(name_length + 13), "Validation")
 
         for name in metric_names:

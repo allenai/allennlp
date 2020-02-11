@@ -15,8 +15,8 @@ class InvertedTriangularTest(AllenNlpTestCase):
 
     def _get_optimizer(self):
         return Optimizer.from_params(
-            self.model.named_parameters(),
-            Params({"type": "sgd", "lr": 1.0, "momentum": self.base_momentum}),
+            model_parameters=self.model.named_parameters(),
+            params=Params({"type": "sgd", "lr": 1.0, "momentum": self.base_momentum}),
         )
 
     def test_from_params(self):
