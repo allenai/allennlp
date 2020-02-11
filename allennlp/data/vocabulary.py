@@ -355,6 +355,20 @@ class Vocabulary(Registrable):
         )
         return vocab
 
+    @classmethod
+    def empty(cls) -> "Vocabulary":
+        """
+        This method returns a bare vocabulary instantiated with `cls()` (so, `Vocabulary()` if you
+        haven't made a subclass of this object).  The only reason to call `Vocabulary.empty()`
+        instead of `Vocabulary()` is if you are instantiating this object from a config file.  We
+        register this constructor with the key "empty", so if you know that you don't need to
+        compute a vocabulary (either because you're loading a pre-trained model from an archive
+        file, you're using a pre-trained transformer that has its own vocabulary, or something
+        else), you can use this to avoid having the default vocabulary construction code iterate
+        through the data.
+        """
+        return cls()
+
     def set_from_file(
         self,
         filename: str,
@@ -415,6 +429,20 @@ class Vocabulary(Registrable):
         for instance in Tqdm.tqdm(instances):
             instance.count_vocab_items(namespace_token_counts)
         self._extend(counter=namespace_token_counts)
+
+    def extend_from_vocab(self, vocab: "Vocabulary") -> None:
+        """
+        Adds all vocabulary items from all namespaces in the given vocabulary to this vocabulary.
+        Useful if you want to load a model and extends its vocabulary from new instances.
+
+        We also add all non-padded namespaces from the given vocabulary to this vocabulary.
+        """
+        self._non_padded_namespaces.update(vocab._non_padded_namespaces)
+        self._token_to_index._non_padded_namespaces.update(vocab._non_padded_namespaces)
+        self._index_to_token._non_padded_namespaces.update(vocab._non_padded_namespaces)
+        for namespace in vocab.get_namespaces():
+            for token in vocab.get_token_to_index_vocabulary(namespace):
+                self.add_token_to_namespace(token, namespace)
 
     def _extend(
         self,
@@ -618,6 +646,9 @@ class Vocabulary(Registrable):
     def get_vocab_size(self, namespace: str = "tokens") -> int:
         return len(self._token_to_index[namespace])
 
+    def get_namespaces(self) -> Set[str]:
+        return set(self._index_to_token.keys())
+
     def __eq__(self, other):
         if isinstance(self, other.__class__):
             return self.__dict__ == other.__dict__
@@ -674,7 +705,9 @@ class Vocabulary(Registrable):
             )
 
 
-# the tricky part is that `Vocabulary` is both the base class and the default implementation
+# We can't decorate `Vocabulary` with `Vocabulary.register()`, because `Vocabulary` hasn't been
+# defined yet.  So we put these down here.
 Vocabulary.register("from_instances", constructor="from_instances")(Vocabulary)
 Vocabulary.register("from_files", constructor="from_files")(Vocabulary)
 Vocabulary.register("extend", constructor="from_files_and_instances")(Vocabulary)
+Vocabulary.register("empty", constructor="empty")(Vocabulary)

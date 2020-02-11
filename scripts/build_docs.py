@@ -24,7 +24,7 @@ def render_file(relative_src_path: str, src_file: str, to_file: str, modifier="+
     else:
         namespace = f"allennlp.{relative_src_namespace}.{src_base}{modifier}"
 
-    args = ["pydocmd", "simple", namespace]
+    args = ["mathy_pydoc", namespace]
     call_result = check_output(args, env=os.environ).decode("utf-8")
     with open(to_file, "w") as f:
         f.write(call_result)

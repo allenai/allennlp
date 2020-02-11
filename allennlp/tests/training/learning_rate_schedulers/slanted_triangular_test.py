@@ -1,6 +1,6 @@
-from typing import Dict, List, Tuple, Any
-from copy import deepcopy
 from collections import OrderedDict
+from copy import deepcopy
+from typing import Any, Dict, List, Tuple
 
 import torch
 
@@ -53,7 +53,9 @@ class SlantedTriangularTest(AllenNlpTestCase):
     def _get_optimizer(self, lr: float = 1.0):
         optimizer_params = Params({"type": "sgd", "lr": lr})
         optimizer_params["parameter_groups"] = [[[f"^{m}"], {}] for m in self.model._modules]
-        return Optimizer.from_params(self.model.named_parameters(), optimizer_params)
+        return Optimizer.from_params(
+            model_parameters=self.model.named_parameters(), params=optimizer_params
+        )
 
     def _run_scheduler_get_lrs(self, params, num_steps_per_epoch):
         optimizer = self._get_optimizer()
@@ -110,7 +112,7 @@ class SlantedTriangularTest(AllenNlpTestCase):
         )
         # The method called in the logic below only checks the length of this list, not its
         # contents, so this should be safe.
-        instances = [1,] * 40  # noqa: E231, flake doesn't like what black does with this list
+        instances = [1] * 40
         optim = self._get_optimizer()
         trainer = TrainerBase.from_params(
             model=self.model,
