@@ -50,6 +50,7 @@ from allennlp.commands.subcommand import Subcommand
 from allennlp.common import Params, Registrable, Lazy
 from allennlp.common.checks import check_for_gpu, ConfigurationError
 from allennlp.common import util as common_util
+from allennlp.common.plugins import import_plugins
 from allennlp.data import DataIterator, DatasetReader, Instance, Vocabulary
 from allennlp.models.archival import archive_model, CONFIG_NAME
 from allennlp.models.model import _DEFAULT_WEIGHTS, Model
@@ -364,12 +365,13 @@ def _train_worker(
     # not using `allennlp.common.util.is_master` as the process group is yet to be initialized
     master = process_rank == 0
 
+    include_package = include_package or []
+
     if distributed:
-        # Since the worker is spawned and not forked, the extra imports
-        # need to be done again.
-        if include_package is not None:
-            for package_name in include_package:
-                common_util.import_submodules(package_name)
+        # Since the worker is spawned and not forked, the extra imports need to be done again.
+        import_plugins()
+        for package_name in include_package:
+            common_util.import_submodules(package_name)
 
         num_procs_per_node = len(distributed_device_ids)
         # The Unique identifier of the worker process among all the processes in the
