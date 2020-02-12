@@ -1,11 +1,11 @@
 import copy
 import glob
 import json
-import math
 import os
 import re
 import time
 
+import math
 import pytest
 import torch
 
@@ -21,7 +21,6 @@ from allennlp.training import Trainer
 from allennlp.training.learning_rate_schedulers import ExponentialLearningRateScheduler
 from allennlp.training.momentum_schedulers import MomentumScheduler
 from allennlp.training.moving_average import ExponentialMovingAverage
-from allennlp.training.trainer_base import TrainerBase
 from allennlp.training.util import sparse_clip_norm
 
 

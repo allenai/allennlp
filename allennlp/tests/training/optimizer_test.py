@@ -1,13 +1,11 @@
-import pytest
-
+from allennlp.common.params import Params
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Vocabulary
-from allennlp.common.params import Params
-from allennlp.models.simple_tagger import SimpleTagger
 from allennlp.data.dataset_readers import SequenceTaggingDatasetReader
-from allennlp.training.optimizers import Optimizer
-from allennlp.training import Trainer
 from allennlp.data.iterators import BasicIterator
+from allennlp.models.simple_tagger import SimpleTagger
+from allennlp.training import Trainer
+from allennlp.training.optimizers import Optimizer
 
 
 class TestOptimizer(AllenNlpTestCase):
