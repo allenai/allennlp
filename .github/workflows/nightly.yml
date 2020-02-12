@@ -17,15 +17,18 @@ jobs:
       run: |
         pip install -r dev-requirements.txt
     - name: Build Package
-      env: 
-        ALLENNLP_VERSION: $(git rev-parse --short "$GITHUB_SHA")
+      env:
+        ALLENNLP_REVISION: $(git rev-parse --short "$GITHUB_SHA")
       run: |
         python setup.py bdist_wheel sdist
     - name: Test Packages
       run: |
         pip install $(ls dist/*.whl)
         allennlp test-install
+    - name: Check diff from 24hr ago
+      run: scripts/24hr_diff.sh
     - name: Deploy
+      if: success()
       run: |
         twine upload -u ${{ secrets.PYPI_NIGHTLY_USERNAME }} -p ${{ secrets.PYPI_NIGHTLY_PASSWORD }} dist/*
         rm -rf dist/
