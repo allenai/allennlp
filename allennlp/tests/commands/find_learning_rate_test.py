@@ -1,5 +1,4 @@
 import argparse
-import importlib.util
 import os
 import pytest
 
@@ -21,7 +20,11 @@ from allennlp.training.util import datasets_from_params
 
 
 def is_matplotlib_installed():
-    return importlib.util.find_spec("matplotlib") is not None
+    try:
+        import matplotlib
+    except:  # noqa: E722. Any exception means we don't have a working matplotlib.
+        return False
+    return True
 
 
 class TestFindLearningRate(AllenNlpTestCase):
