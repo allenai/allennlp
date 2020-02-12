@@ -121,9 +121,11 @@ setup(
         "conllu==2.2.2",
         "transformers>=2.4.0",
         "jsonpickle",
+        "semantic_version",
     ],
     entry_points={"console_scripts": ["allennlp=allennlp.run:run"]},
     setup_requires=setup_requirements,
+    # TODO: Is this needed given that it's redundant with install_requires?
     tests_require=["pytest", "flaky", "responses>=0.7", "semantic_version"],
     include_package_data=True,
     python_requires=">=3.6.1",
