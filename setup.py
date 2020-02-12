@@ -125,7 +125,7 @@ setup(
     ],
     entry_points={"console_scripts": ["allennlp=allennlp.run:run"]},
     setup_requires=setup_requirements,
-    # TODO: Is this needed given that it's redundant with install_requires?
+    # For running via `python setup.py test`.
     tests_require=["pytest", "flaky", "responses>=0.7", "semantic_version"],
     include_package_data=True,
     python_requires=">=3.6.1",
