@@ -21,7 +21,7 @@ from allennlp.training.util import datasets_from_params
 
 def is_matplotlib_installed():
     try:
-        import matplotlib
+        import matplotlib  # noqa: F401 - Matplotlib is optional.
     except:  # noqa: E722. Any exception means we don't have a working matplotlib.
         return False
     return True
