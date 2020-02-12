@@ -369,9 +369,10 @@ def _train_worker(
 
     if distributed:
         # Since the worker is spawned and not forked, the extra imports need to be done again.
+        # Both the ones from the plugins and the ones from `include_package`.
         import_plugins()
         for package_name in include_package:
-            common_util.import_submodules(package_name)
+            common_util.import_module_and_submodules(package_name)
 
         num_procs_per_node = len(distributed_device_ids)
         # The Unique identifier of the worker process among all the processes in the

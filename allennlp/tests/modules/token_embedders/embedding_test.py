@@ -5,21 +5,21 @@ import numpy
 import pytest
 import torch
 
-with warnings.catch_warnings():
-    warnings.filterwarnings("ignore", category=FutureWarning)
-    import h5py
-
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Vocabulary
 from allennlp.modules.token_embedders.embedding import (
-    Embedding,
     _read_pretrained_embeddings_file,
+    Embedding,
     EmbeddingsTextFile,
     format_embeddings_file_uri,
     parse_embeddings_file_uri,
 )
+
+with warnings.catch_warnings():
+    warnings.filterwarnings("ignore", category=FutureWarning)
+    import h5py
 
 
 class TestEmbedding(AllenNlpTestCase):

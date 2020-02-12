@@ -1,18 +1,18 @@
-import torch
+from typing import Any, Iterable, Dict
+
 import pytest
-
+import torch
 from overrides import overrides
-from typing import Tuple, Any, Iterable, Dict
 
+from allennlp.common import Params
+from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
+from allennlp.common.util import END_SYMBOL, prepare_environment, START_SYMBOL
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.modules import Embedding
 from allennlp.modules.seq2seq_decoders import AutoRegressiveSeqDecoder
 from allennlp.modules.seq2seq_decoders import StackedSelfAttentionDecoderNet
-from allennlp.common.checks import ConfigurationError
-from allennlp.common.util import START_SYMBOL, END_SYMBOL, prepare_environment
 from allennlp.training.metrics import BLEU, Metric
-from allennlp.common import Params
 
 
 def create_vocab_and_decoder_net(decoder_inout_dim):

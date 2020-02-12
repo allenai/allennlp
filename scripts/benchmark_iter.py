@@ -5,24 +5,35 @@
 # Example 1: Log stats every 100 batches. Periodically output internals of
 # MultiprocessDatasetReader and MultiprocessIterator.
 #
-# $ scripts/benchmark_iter.py --config training_config/bidirectional_language_model.jsonnet --serialization-dir serialization-dir --action=log --assume-multiprocess-types
+# $ scripts/benchmark_iter.py \
+#     --config training_config/bidirectional_language_model.jsonnet \
+#     --serialization-dir serialization-dir \
+#     --action=log \
+#     --assume-multiprocess-types
 #
 # Example 2: Output seconds/batch over 10k batches.
 #
-# $ scripts/benchmark_iter.py --config training_config/bidirectional_language_model.jsonnet --serialization-dir serialization-dir --action=time --batch-count=10000
+# $ scripts/benchmark_iter.py \
+#     --config training_config/bidirectional_language_model.jsonnet \
+#     --serialization-dir serialization-dir \
+#     --action=time \
+#     --batch-count=10000
 #
 # Example 3: Output seconds to produce the first batch in order to measure overhead.
 #
-# $ scripts/benchmark_iter.py --config training_config/bidirectional_language_model.jsonnet --serialization-dir serialization-dir --action=first
+# $ scripts/benchmark_iter.py \
+#     --config training_config/bidirectional_language_model.jsonnet \
+#     --serialization-dir serialization-dir \
+#     --action=first
 
 
 import argparse
+import time
 from enum import Enum
 from multiprocessing import Process
-import time
 
+from allennlp.commands.train import TrainModel
 from allennlp.common import Params
-from allennlp.training.trainer_pieces import TrainerPieces
 from allennlp.training.util import get_batch_size
 
 BATCH_INTERVAL = 100
@@ -128,9 +139,11 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     params = Params.from_file(args.config)
-    pieces = TrainerPieces.from_params(params, args.serialization_dir)
-
-    raw_generator = pieces.iterator(pieces.train_dataset, num_epochs=1, shuffle=True)
+    train_model = TrainModel.from_params(
+        params, args.serialization_dir, local_rank=0, batch_weight_key=""
+    )
+    trainer = train_model.trainer
+    raw_generator = trainer.iterator(trainer.train_data, num_epochs=1, shuffle=True)
 
     if args.action is Action.log:
         log_iterable(raw_generator, args.assume_multiprocess_types)
