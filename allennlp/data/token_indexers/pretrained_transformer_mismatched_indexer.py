@@ -5,8 +5,8 @@ import torch
 from overrides import overrides
 
 from allennlp.common.util import pad_sequence_to_length
-from allennlp.data.token_indexers import PretrainedTransformerIndexer, TokenIndexer
-from allennlp.data.token_indexers.token_indexer import IndexedTokenList
+from allennlp.data.token_indexers.pretrained_transformer_indexer import PretrainedTransformerIndexer
+from allennlp.data.token_indexers.token_indexer import IndexedTokenList, TokenIndexer
 from allennlp.data.tokenizers.token import Token
 from allennlp.data.vocabulary import Vocabulary
 

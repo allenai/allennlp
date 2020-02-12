@@ -3,7 +3,10 @@ from typing import Optional
 import torch
 from overrides import overrides
 
-from allennlp.modules.token_embedders import PretrainedTransformerEmbedder, TokenEmbedder
+from allennlp.modules.token_embedders.pretrained_transformer_embedder import (
+    PretrainedTransformerEmbedder,
+)
+from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
 from allennlp.nn import util
 
 
