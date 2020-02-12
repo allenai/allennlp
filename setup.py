@@ -124,7 +124,7 @@ setup(
     ],
     entry_points={"console_scripts": ["allennlp=allennlp.run:run"]},
     setup_requires=setup_requirements,
-    tests_require=["pytest", "flaky", "responses>=0.7"],
+    tests_require=["pytest", "flaky", "responses>=0.7", "semantic_version"],
     include_package_data=True,
     python_requires=">=3.6.1",
     zip_safe=False,
