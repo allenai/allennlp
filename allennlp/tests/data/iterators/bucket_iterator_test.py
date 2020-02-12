@@ -1,7 +1,4 @@
-import pytest
-
 from allennlp.common import Params
-from allennlp.common.checks import ConfigurationError
 from allennlp.data import Instance, Token
 from allennlp.data.fields import TextField
 from allennlp.data.iterators import BucketIterator

@@ -1,13 +1,12 @@
 import json
 import os
 import re
-import tempfile
 from collections import OrderedDict
 
 import pytest
 
 from allennlp.common.checks import ConfigurationError
-from allennlp.common.params import Params, unflatten, with_fallback, parse_overrides, infer_and_cast
+from allennlp.common.params import infer_and_cast, Params, parse_overrides, unflatten, with_fallback
 from allennlp.common.testing import AllenNlpTestCase
 
 
@@ -38,7 +37,8 @@ class TestParams(AllenNlpTestCase):
         filename = self.FIXTURES_ROOT / "simple_tagger" / "experiment.json"
         overrides = (
             '{ "train_data_path": "FOO", "model": { "type": "BAR" },'
-            '"model.text_field_embedder.tokens.type": "BAZ", "iterator.sorting_keys.0.0": "question"}'
+            '"model.text_field_embedder.tokens.type": "BAZ",'
+            '"iterator.sorting_keys.0.0": "question"}'
         )
         params = Params.from_file(filename, overrides)
 

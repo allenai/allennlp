@@ -67,7 +67,7 @@ class TestCommonUtils(AllenNlpTestCase):
             assert "mymodule" not in sys.modules
             assert "mymodule.submodule" not in sys.modules
 
-            util.import_submodules("mymodule")
+            util.import_module_and_submodules("mymodule")
 
             assert "mymodule" in sys.modules
             assert "mymodule.submodule" in sys.modules

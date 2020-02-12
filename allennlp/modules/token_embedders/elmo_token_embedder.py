@@ -47,8 +47,10 @@ class ElmoTokenEmbedder(TokenEmbedder):
 
     def __init__(
         self,
-        options_file: str,
-        weight_file: str,
+        options_file: str = "https://allennlp.s3.amazonaws.com/models/elmo/2x4096_512_2048cnn_2xhighway/"
+        + "elmo_2x4096_512_2048cnn_2xhighway_options.json",
+        weight_file: str = "https://allennlp.s3.amazonaws.com/models/elmo/2x4096_512_2048cnn_2xhighway/"
+        + "elmo_2x4096_512_2048cnn_2xhighway_weights.hdf5",
         do_layer_norm: bool = False,
         dropout: float = 0.5,
         requires_grad: bool = False,

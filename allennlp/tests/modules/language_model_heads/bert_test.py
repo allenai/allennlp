@@ -2,7 +2,7 @@ import torch
 
 from allennlp.common import Params
 from allennlp.common.testing.test_case import AllenNlpTestCase
-from allennlp.modules.language_model_heads import LanguageModelHead, BertLanguageModelHead
+from allennlp.modules.language_model_heads import BertLanguageModelHead, LanguageModelHead
 
 
 class TestBertLanguageModelHead(AllenNlpTestCase):

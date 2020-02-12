@@ -14,7 +14,7 @@ from allennlp.commands.subcommand import Subcommand
 from allennlp.commands.test_install import TestInstall
 from allennlp.commands.train import Train
 from allennlp.common.plugins import import_plugins
-from allennlp.common.util import import_submodules
+from allennlp.common.util import import_module_and_submodules
 
 logger = logging.getLogger(__name__)
 
@@ -89,7 +89,7 @@ def main(prog: Optional[str] = None) -> None:
     if "func" in dir(args):
         # Import any additional modules needed (to register custom classes).
         for package_name in args.include_package:
-            import_submodules(package_name)
+            import_module_and_submodules(package_name)
         args.func(args)
     else:
         parser.print_help()

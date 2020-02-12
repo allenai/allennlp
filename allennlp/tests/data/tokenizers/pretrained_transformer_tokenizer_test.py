@@ -1,11 +1,11 @@
 import gc
-
 import time
+
+from flaky import flaky
 
 from allennlp.common import Params
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.tokenizers import PretrainedTransformerTokenizer
-from flaky import flaky
 
 
 class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
@@ -187,9 +187,12 @@ class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
         assert idxs == expected_idxs
 
     def test_token_idx_wikipedia(self):
-        # This will produce lots of problems with the index calculation. We check whether it catches back up at the
-        # end.
-        sentence = "Tokyo (東京 Tōkyō, English: /ˈtoʊkioʊ/,[7] Japanese: [toːkʲoː]), officially Tokyo Metropolis (東京都 Tōkyō-to), is one of the 47 prefectures of Japan."
+        # This will produce lots of problems with the index calculation.
+        # We check whether it catches back up at the end.
+        sentence = (
+            "Tokyo (東京 Tōkyō, English: /ˈtoʊkioʊ/,[7] Japanese: [toːkʲoː]), officially "
+            "Tokyo Metropolis (東京都 Tōkyō-to), is one of the 47 prefectures of Japan."
+        )
         for tokenizer_name in ["roberta-base", "bert-base-uncased", "bert-base-cased"]:
             tokenizer = PretrainedTransformerTokenizer(
                 tokenizer_name, calculate_character_offsets=True
@@ -323,12 +326,7 @@ class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
             ".",
             "[SEP]",
         ]
-        expected_offsets = [
-            (1, 2),
-            (3, 3),
-            (4, 6),
-            (7, 8),
-        ]
+        expected_offsets = [(1, 2), (3, 3), (4, 6), (7, 8)]
         tokens, offsets = tokenizer.intra_word_tokenize(sentence)
         tokens = [t.text for t in tokens]
         assert tokens == expected_tokens
@@ -353,16 +351,8 @@ class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
             ".",
             "[SEP]",
         ]
-        expected_offsets_a = [
-            (1, 2),
-            (3, 3),
-            (4, 6),
-            (7, 8),
-        ]
-        expected_offsets_b = [
-            (10, 10),
-            (11, 12),
-        ]
+        expected_offsets_a = [(1, 2), (3, 3), (4, 6), (7, 8)]
+        expected_offsets_b = [(10, 10), (11, 12)]
         tokens, offsets_a, offsets_b = tokenizer.intra_word_tokenize_sentence_pair(
             sentence_1, sentence_2
         )

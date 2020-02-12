@@ -1,5 +1,4 @@
 import codecs
-import copy
 import gzip
 import pickle
 import shutil
@@ -803,13 +802,5 @@ class TestVocabulary(AllenNlpTestCase):
             "d": 5,
             "e": 6,
         }
-        assert vocab1.get_token_to_index_vocabulary("2") == {
-            "d": 0,
-            "e": 1,
-            "f": 2,
-        }
-        assert vocab1.get_token_to_index_vocabulary("3") == {
-            "g": 0,
-            "h": 1,
-            "i": 2,
-        }
+        assert vocab1.get_token_to_index_vocabulary("2") == {"d": 0, "e": 1, "f": 2}
+        assert vocab1.get_token_to_index_vocabulary("3") == {"g": 0, "h": 1, "i": 2}

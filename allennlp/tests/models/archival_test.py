@@ -1,12 +1,11 @@
 import copy
-import os
 
 import torch
 
+from allennlp.commands.train import train_model
 from allennlp.common import Params
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.commands.train import train_model
-from allennlp.models.archival import load_archive, archive_model
+from allennlp.models.archival import archive_model, load_archive
 
 
 def assert_models_equal(model, model2):
