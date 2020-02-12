@@ -1,4 +1,4 @@
-from typing import NamedTuple, Optional
+from typing import NamedTuple, Optional, Dict
 
 
 class Token(NamedTuple):
@@ -31,6 +31,9 @@ class Token(NamedTuple):
         still use a character-level representation in addition to a hash-based word embedding.
     type_id : `int`, optional
         Token type id used by some pretrained language models like original BERT
+    other_features : `dict`, optional
+        Store other features that could be used for processing
+
 
         The other fields on `Token` follow the fields on spacy's `Token` object; this is one we
         added, similar to spacy's `lex_id`.
@@ -45,6 +48,7 @@ class Token(NamedTuple):
     ent_type_: Optional[str] = None
     text_id: Optional[int] = None
     type_id: Optional[int] = None
+    other_features: Optional[Dict[str, str]] = None
 
     def __str__(self):
         return self.text

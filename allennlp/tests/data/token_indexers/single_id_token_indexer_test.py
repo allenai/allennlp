@@ -23,3 +23,9 @@ class TestSingleIdTokenIndexer(AllenNlpTestCase):
         indexer = SingleIdTokenIndexer("words")
         padded_tokens = indexer.as_padded_tensor_dict({"tokens": [1, 2, 3, 4, 5]}, {"tokens": 10})
         assert padded_tokens["tokens"].tolist() == [1, 2, 3, 4, 5, 0, 0, 0, 0, 0]
+
+    def test_count_other_features(self):
+        indexer = SingleIdTokenIndexer("other_features", feature_name="is_bold")
+        counter = defaultdict(lambda: defaultdict(int))
+        indexer.count_vocab_items(Token("Header", other_features={"is_bold": "True"}), counter)
+        assert counter["other_features"] == {"True": 1}
