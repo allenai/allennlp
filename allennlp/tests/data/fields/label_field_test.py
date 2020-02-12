@@ -2,8 +2,8 @@ import pytest
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.data.fields import LabelField
 from allennlp.data import Vocabulary
+from allennlp.data.fields import LabelField
 
 
 class TestLabelField(AllenNlpTestCase):

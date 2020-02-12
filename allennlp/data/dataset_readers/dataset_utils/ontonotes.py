@@ -1,8 +1,8 @@
-from typing import DefaultDict, List, Optional, Iterator, Set, Tuple
-from collections import defaultdict
 import codecs
-import os
 import logging
+import os
+from collections import defaultdict
+from typing import DefaultDict, Iterator, List, Optional, Set, Tuple
 
 from nltk import Tree
 

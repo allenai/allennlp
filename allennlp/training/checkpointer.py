@@ -1,10 +1,9 @@
-from typing import Union, Dict, Any, List, Tuple
-
 import logging
 import os
 import re
 import shutil
 import time
+from typing import Any, Dict, List, Tuple, Union
 
 import torch
 

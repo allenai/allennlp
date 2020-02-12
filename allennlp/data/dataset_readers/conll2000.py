@@ -1,6 +1,6 @@
-from typing import Dict, List, Sequence, Iterable
 import itertools
 import logging
+from typing import Dict, Iterable, List, Sequence
 
 from overrides import overrides
 
@@ -8,9 +8,9 @@ from allennlp.common.checks import ConfigurationError
 from allennlp.common.file_utils import cached_path
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.dataset_readers.dataset_utils import to_bioul
-from allennlp.data.fields import TextField, SequenceLabelField, Field, MetadataField
+from allennlp.data.fields import Field, MetadataField, SequenceLabelField, TextField
 from allennlp.data.instance import Instance
-from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
+from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenIndexer
 from allennlp.data.tokenizers import Token
 
 logger = logging.getLogger(__name__)

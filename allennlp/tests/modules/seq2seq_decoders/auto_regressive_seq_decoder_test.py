@@ -1,4 +1,4 @@
-from typing import Any, Iterable, Dict
+from typing import Any, Dict, Iterable
 
 import pytest
 import torch
@@ -7,11 +7,13 @@ from overrides import overrides
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.common.util import END_SYMBOL, prepare_environment, START_SYMBOL
+from allennlp.common.util import END_SYMBOL, START_SYMBOL, prepare_environment
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.modules import Embedding
-from allennlp.modules.seq2seq_decoders import AutoRegressiveSeqDecoder
-from allennlp.modules.seq2seq_decoders import StackedSelfAttentionDecoderNet
+from allennlp.modules.seq2seq_decoders import (
+    AutoRegressiveSeqDecoder,
+    StackedSelfAttentionDecoderNet,
+)
 from allennlp.training.metrics import BLEU, Metric
 
 

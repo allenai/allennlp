@@ -2,18 +2,17 @@
 A Vocabulary maps strings to integers, allowing for strings to be mapped to an
 out-of-vocabulary token.
 """
-
 import codecs
 import copy
 import logging
 import os
 from collections import defaultdict
-from typing import Any, Callable, Dict, Iterable, List, Optional, Set, Union, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Callable, Dict, Iterable, List, Optional, Set, Union
 
-from allennlp.common.util import namespace_match
 from allennlp.common import Registrable
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.tqdm import Tqdm
+from allennlp.common.util import namespace_match
 
 if TYPE_CHECKING:
     from allennlp.data import instance as adi  # noqa

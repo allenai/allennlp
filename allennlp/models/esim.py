@@ -1,19 +1,24 @@
-from typing import Dict, List, Any
+from typing import Any, Dict, List
 
 import torch
 
 from allennlp.common.checks import check_dimensions_match
 from allennlp.data import TextFieldTensors, Vocabulary
 from allennlp.models.model import Model
-from allennlp.modules import FeedForward, InputVariationalDropout
+from allennlp.modules import (
+    FeedForward,
+    InputVariationalDropout,
+    Seq2SeqEncoder,
+    SimilarityFunction,
+    TextFieldEmbedder,
+)
 from allennlp.modules.matrix_attention.legacy_matrix_attention import LegacyMatrixAttention
-from allennlp.modules import Seq2SeqEncoder, SimilarityFunction, TextFieldEmbedder
 from allennlp.nn import InitializerApplicator
 from allennlp.nn.util import (
     get_text_field_mask,
     masked_softmax,
-    weighted_sum,
     replace_masked_values,
+    weighted_sum,
 )
 from allennlp.training.metrics import CategoricalAccuracy
 

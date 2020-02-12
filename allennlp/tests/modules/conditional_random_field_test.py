@@ -1,14 +1,14 @@
 import itertools
 import math
 
-from pytest import approx, raises
 import torch
 from numpy.testing import assert_allclose
+from pytest import approx, raises
 
-from allennlp.modules import ConditionalRandomField
-from allennlp.modules.conditional_random_field import allowed_transitions
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
+from allennlp.modules import ConditionalRandomField
+from allennlp.modules.conditional_random_field import allowed_transitions
 
 
 class TestConditionalRandomField(AllenNlpTestCase):

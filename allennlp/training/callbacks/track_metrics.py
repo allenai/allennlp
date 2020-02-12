@@ -1,9 +1,9 @@
-from typing import List, Tuple, TYPE_CHECKING
 import copy
 import datetime
 import logging
 import os
 import time
+from typing import TYPE_CHECKING, List, Tuple
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.util import dump_metrics, gpu_memory_mb, peak_memory_mb

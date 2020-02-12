@@ -1,5 +1,5 @@
-from typing import Optional, TYPE_CHECKING
 import logging
+from typing import TYPE_CHECKING, Optional
 
 from allennlp.training import util as training_util
 from allennlp.training.callbacks.callback import Callback, handle_event

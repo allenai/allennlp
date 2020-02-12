@@ -1,17 +1,16 @@
 from typing import Dict, Union
 
 import numpy
-from overrides import overrides
 import torch
+from overrides import overrides
 from torch import nn
-import torch.nn.functional as F
+from torch.nn import functional as F
 
-from allennlp.common.checks import check_dimensions_match, ConfigurationError
+from allennlp.common.checks import ConfigurationError, check_dimensions_match
 from allennlp.data import TextFieldTensors, Vocabulary
-from allennlp.modules import Elmo, FeedForward, Maxout, Seq2SeqEncoder, TextFieldEmbedder
 from allennlp.models.model import Model
-from allennlp.nn import InitializerApplicator
-from allennlp.nn import util
+from allennlp.modules import Elmo, FeedForward, Maxout, Seq2SeqEncoder, TextFieldEmbedder
+from allennlp.nn import InitializerApplicator, util
 from allennlp.training.metrics import CategoricalAccuracy
 
 

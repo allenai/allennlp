@@ -4,8 +4,7 @@ import torch
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import Params
-from allennlp.models.model import Model
-from allennlp.models.model import remove_pretrained_embedding_params
+from allennlp.models.model import Model, remove_pretrained_embedding_params
 
 
 class Ensemble(Model):

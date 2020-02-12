@@ -1,22 +1,19 @@
 """
 BiMPM (Bilateral Multi-Perspective Matching) model implementation.
 """
+from typing import Any, Dict, List
 
-from typing import Dict, List, Any
-
-from overrides import overrides
-import torch
 import numpy
+import torch
+from overrides import overrides
 
 from allennlp.common.checks import check_dimensions_match
 from allennlp.data import TextFieldTensors, Vocabulary
-from allennlp.modules import FeedForward, Seq2SeqEncoder, Seq2VecEncoder, TextFieldEmbedder
 from allennlp.models.model import Model
-from allennlp.nn import InitializerApplicator
-from allennlp.nn import util
-from allennlp.training.metrics import CategoricalAccuracy
-
+from allennlp.modules import FeedForward, Seq2SeqEncoder, Seq2VecEncoder, TextFieldEmbedder
 from allennlp.modules.bimpm_matching import BiMpmMatching
+from allennlp.nn import InitializerApplicator, util
+from allennlp.training.metrics import CategoricalAccuracy
 
 
 @Model.register("bimpm")

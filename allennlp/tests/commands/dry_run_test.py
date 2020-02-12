@@ -3,11 +3,11 @@ import os
 
 import pytest
 
-from allennlp.common import Params
-from allennlp.common.testing import AllenNlpTestCase
 from allennlp.commands.dry_run import DryRun, dry_run_from_args, dry_run_from_params
-from allennlp.data import Vocabulary
+from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
+from allennlp.common.testing import AllenNlpTestCase
+from allennlp.data import Vocabulary
 
 
 class TestDryRun(AllenNlpTestCase):

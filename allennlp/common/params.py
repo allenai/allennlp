@@ -3,17 +3,19 @@ The `allennlp.common.params.Params` class represents a dictionary of
 parameters (e.g. for configuring a model), with added functionality around
 logging and validation.
 """
-
-from typing import Any, Dict, List
-from collections.abc import MutableMapping
-from collections import OrderedDict
 import copy
 import json
 import logging
 import os
 import zlib
+from collections import OrderedDict
+from collections.abc import MutableMapping
+from typing import Any, Dict, List
 
 from overrides import overrides
+
+from allennlp.common.checks import ConfigurationError
+from allennlp.common.file_utils import cached_path
 
 # _jsonnet doesn't work on Windows, so we have to use fakes.
 try:
@@ -33,9 +35,6 @@ except ImportError:
         )
         return expr
 
-
-from allennlp.common.checks import ConfigurationError
-from allennlp.common.file_utils import cached_path
 
 logger = logging.getLogger(__name__)
 

@@ -2,8 +2,8 @@ import numpy
 import pytest
 import torch
 
-from allennlp.modules import Pruner
 from allennlp.common.testing import AllenNlpTestCase
+from allennlp.modules import Pruner
 from allennlp.nn.util import batched_index_select
 
 

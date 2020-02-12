@@ -1,9 +1,9 @@
 import numpy
 import torch
 
+from allennlp.common.params import Params
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.modules.seq2seq_encoders import MultiHeadSelfAttention
-from allennlp.common.params import Params
 
 
 class MultiHeadSelfAttentionTest(AllenNlpTestCase):

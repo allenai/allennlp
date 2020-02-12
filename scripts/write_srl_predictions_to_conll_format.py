@@ -1,18 +1,17 @@
+import argparse
 import os
 import sys
-
-import argparse
 
 import torch
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(os.path.join(__file__, os.pardir))))
 
-from allennlp.common.tqdm import Tqdm
 from allennlp.common import Params
-from allennlp.models.archival import load_archive
-from allennlp.data.iterators import BasicIterator
+from allennlp.common.tqdm import Tqdm
 from allennlp.data import DatasetReader
-from allennlp.models.semantic_role_labeler import write_to_conll_eval_file
+from allennlp.data.iterators import BasicIterator
+from allennlp.models.archival import load_archive
+from allennlp.models.semantic_role_labeler import write_bio_formatted_tags_to_file
 from allennlp.nn.util import move_to_device
 
 
@@ -78,7 +77,7 @@ def main(serialization_directory: int, device: int, data: str, prefix: str, doma
             verb_index = fields["metadata"]["verb_index"]
             gold_tags = fields["metadata"]["gold_tags"]
             sentence = fields["metadata"]["words"]
-            write_to_conll_eval_file(
+            write_bio_formatted_tags_to_file(
                 prediction_file, gold_file, verb_index, sentence, prediction, gold_tags
             )
         prediction_file.close()

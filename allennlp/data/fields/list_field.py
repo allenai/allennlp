@@ -1,11 +1,11 @@
-from typing import Dict, List, Iterator
+from typing import Dict, Iterator, List
 
 from overrides import overrides
 
-from allennlp.data.fields.field import DataArray, Field
-from allennlp.data.vocabulary import Vocabulary
-from allennlp.data.fields.sequence_field import SequenceField
 from allennlp.common.util import pad_sequence_to_length
+from allennlp.data.fields.field import DataArray, Field
+from allennlp.data.fields.sequence_field import SequenceField
+from allennlp.data.vocabulary import Vocabulary
 
 
 class ListField(SequenceField[DataArray]):

@@ -1,13 +1,13 @@
 import torch
 
 from allennlp.common import Params
+from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Token, Vocabulary
 from allennlp.data.batch import Batch
 from allennlp.data.fields import TextField
 from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import PretrainedTransformerMismatchedIndexer
 from allennlp.modules.text_field_embedders import BasicTextFieldEmbedder
-from allennlp.common.testing import AllenNlpTestCase
 
 
 class TestPretrainedTransformerMismatchedEmbedder(AllenNlpTestCase):

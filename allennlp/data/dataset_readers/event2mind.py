@@ -1,18 +1,18 @@
-from typing import Dict
 import csv
 import json
 import logging
+from typing import Dict
 
 from overrides import overrides
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.file_utils import cached_path
-from allennlp.common.util import START_SYMBOL, END_SYMBOL
+from allennlp.common.util import END_SYMBOL, START_SYMBOL
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.fields import TextField
 from allennlp.data.instance import Instance
-from allennlp.data.tokenizers import Token, Tokenizer, SpacyTokenizer
-from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
+from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenIndexer
+from allennlp.data.tokenizers import SpacyTokenizer, Token, Tokenizer
 
 logger = logging.getLogger(__name__)
 

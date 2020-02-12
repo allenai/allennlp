@@ -1,6 +1,6 @@
 # These should probably all live in separate files
-from typing import Set, Dict, TYPE_CHECKING
 import logging
+from typing import TYPE_CHECKING, Dict, Set
 
 import torch
 

@@ -1,7 +1,7 @@
 from typing import Any, Dict, List, Set, Tuple
-from overrides import overrides
 
 import torch
+from overrides import overrides
 
 from allennlp.training.metrics.metric import Metric
 

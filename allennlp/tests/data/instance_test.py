@@ -1,6 +1,6 @@
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Instance
-from allennlp.data.fields import TextField, LabelField
+from allennlp.data.fields import LabelField, TextField
 from allennlp.data.tokenizers import Token
 
 

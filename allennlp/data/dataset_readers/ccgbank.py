@@ -1,15 +1,15 @@
-from typing import Dict, List, Sequence
 import logging
 import re
+from typing import Dict, List, Sequence
 
 from overrides import overrides
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.file_utils import cached_path
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
-from allennlp.data.fields import Field, TextField, SequenceLabelField
+from allennlp.data.fields import Field, SequenceLabelField, TextField
 from allennlp.data.instance import Instance
-from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
+from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenIndexer
 from allennlp.data.tokenizers import Token
 
 logger = logging.getLogger(__name__)

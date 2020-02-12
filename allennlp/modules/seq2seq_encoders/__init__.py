@@ -17,9 +17,8 @@ The available Seq2Seq encoders are
 - `"pass_through"` : allennlp.modules.pass_through_encoder.PassThroughEncoder
 - `"feedforward"` : allennlp.modules.feedforward_encoder.FeedforwardEncoder
 """
-
-from typing import Type
 import logging
+from typing import Type
 
 import torch
 
@@ -30,8 +29,11 @@ from allennlp.modules.seq2seq_encoders.bidirectional_language_model_transformer 
     BidirectionalLanguageModelTransformer,
 )
 from allennlp.modules.seq2seq_encoders.compose_encoder import ComposeEncoder
+from allennlp.modules.seq2seq_encoders.feedforward_encoder import FeedForwardEncoder
 from allennlp.modules.seq2seq_encoders.gated_cnn_encoder import GatedCnnEncoder
 from allennlp.modules.seq2seq_encoders.intra_sentence_attention import IntraSentenceAttentionEncoder
+from allennlp.modules.seq2seq_encoders.multi_head_self_attention import MultiHeadSelfAttention
+from allennlp.modules.seq2seq_encoders.pass_through_encoder import PassThroughEncoder
 from allennlp.modules.seq2seq_encoders.pytorch_seq2seq_wrapper import (
     AugmentedLstmSeq2SeqEncoder,
     GruSeq2SeqEncoder,
@@ -41,11 +43,8 @@ from allennlp.modules.seq2seq_encoders.pytorch_seq2seq_wrapper import (
     StackedAlternatingLstmSeq2SeqEncoder,
     StackedBidirectionalLstmSeq2SeqEncoder,
 )
+from allennlp.modules.seq2seq_encoders.qanet_encoder import QaNetEncoder
 from allennlp.modules.seq2seq_encoders.seq2seq_encoder import Seq2SeqEncoder
+from allennlp.modules.seq2seq_encoders.stacked_self_attention import StackedSelfAttentionEncoder
 from allennlp.modules.stacked_alternating_lstm import StackedAlternatingLstm
 from allennlp.modules.stacked_bidirectional_lstm import StackedBidirectionalLstm
-from allennlp.modules.seq2seq_encoders.stacked_self_attention import StackedSelfAttentionEncoder
-from allennlp.modules.seq2seq_encoders.multi_head_self_attention import MultiHeadSelfAttention
-from allennlp.modules.seq2seq_encoders.pass_through_encoder import PassThroughEncoder
-from allennlp.modules.seq2seq_encoders.feedforward_encoder import FeedForwardEncoder
-from allennlp.modules.seq2seq_encoders.qanet_encoder import QaNetEncoder

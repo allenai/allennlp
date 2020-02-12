@@ -26,7 +26,6 @@ The available activation functions are
 * ["tanhshrink"](https://pytorch.org/docs/master/nn.html#torch.nn.Tanhshrink)
 * ["selu"](https://pytorch.org/docs/master/nn.html#torch.nn.SELU)
 """
-
 import torch
 
 from allennlp.common import Registrable

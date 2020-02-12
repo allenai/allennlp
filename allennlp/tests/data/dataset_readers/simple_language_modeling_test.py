@@ -2,9 +2,8 @@ import os
 from typing import cast
 
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.data.fields import TextField
-
 from allennlp.data.dataset_readers import SimpleLanguageModelingDatasetReader
+from allennlp.data.fields import TextField
 
 
 class TestSimpleLanguageModelingDatasetReader(AllenNlpTestCase):

@@ -1,7 +1,7 @@
 from typing import Tuple, Union
 
-from overrides import overrides
 import torch
+from overrides import overrides
 
 from allennlp.nn import util
 

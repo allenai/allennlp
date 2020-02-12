@@ -1,9 +1,9 @@
 from typing import Tuple
 
-from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
 from allennlp.modules.token_embedders.language_model_token_embedder import (
     LanguageModelTokenEmbedder,
 )
+from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
 
 
 @TokenEmbedder.register("bidirectional_lm_token_embedder")

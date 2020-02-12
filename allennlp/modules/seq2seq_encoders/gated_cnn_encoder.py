@@ -1,5 +1,5 @@
-from typing import Sequence, List
 import math
+from typing import List, Sequence
 
 import torch
 

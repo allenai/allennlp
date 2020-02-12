@@ -1,12 +1,12 @@
-from typing import List
 import logging
 import os
-import tempfile
-import subprocess
 import shutil
+import subprocess
+import tempfile
+from typing import List
 
-from overrides import overrides
 from nltk import Tree
+from overrides import overrides
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.training.metrics.metric import Metric

@@ -5,16 +5,16 @@ import os
 import re
 import time
 import traceback
-from typing import Dict, List, Optional, Tuple, Union, Iterable, Any
+from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
 
 import torch
-import torch.distributed as dist
 import torch.optim.lr_scheduler
+from torch import distributed as dist
 from torch.nn.parallel import DistributedDataParallel
 
 from allennlp.common import Lazy, Tqdm
-from allennlp.common.checks import ConfigurationError, check_for_gpu
 from allennlp.common import util as common_util
+from allennlp.common.checks import ConfigurationError, check_for_gpu
 from allennlp.data.instance import Instance
 from allennlp.data.iterators.data_iterator import DataIterator, TensorDict
 from allennlp.models.model import Model

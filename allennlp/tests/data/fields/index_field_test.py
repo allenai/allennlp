@@ -4,7 +4,7 @@ import pytest
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Token
-from allennlp.data.fields import TextField, IndexField
+from allennlp.data.fields import IndexField, TextField
 from allennlp.data.token_indexers import SingleIdTokenIndexer
 
 

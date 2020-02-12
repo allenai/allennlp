@@ -17,17 +17,15 @@ from allennlp.common.testing import ModelTestCase
 from allennlp.data import Vocabulary
 from allennlp.data.dataset_readers import SequenceTaggingDatasetReader
 from allennlp.data.instance import Instance
-from allennlp.data.iterators import BasicIterator
-from allennlp.data.iterators import DataIterator
+from allennlp.data.iterators import BasicIterator, DataIterator
 from allennlp.models.model import Model
 from allennlp.models.simple_tagger import SimpleTagger
 from allennlp.training.callback_trainer import CallbackTrainer
 from allennlp.training.callbacks import (
-    Events,
     Callback,
     Checkpoint,
+    Events,
     GradientNormAndClip,
-    handle_event,
     LogToTensorboard,
     PostToUrl,
     TrackMetrics,
@@ -35,6 +33,7 @@ from allennlp.training.callbacks import (
     UpdateMomentum,
     UpdateMovingAverage,
     Validate,
+    handle_event,
 )
 from allennlp.training.checkpointer import Checkpointer
 from allennlp.training.learning_rate_schedulers import LearningRateScheduler

@@ -1,12 +1,12 @@
 from typing import Any, Dict, List, Union
 
-from overrides import overrides
 import torch
+from overrides import overrides
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.registrable import Registrable
-from allennlp.training.scheduler import Scheduler
 from allennlp.training.optimizers import Optimizer
+from allennlp.training.scheduler import Scheduler
 
 
 class LearningRateScheduler(Scheduler, Registrable):

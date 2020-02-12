@@ -1,7 +1,7 @@
 from nltk import Tree
 
-from allennlp.data.dataset_readers.dataset_utils import Ontonotes
 from allennlp.common.testing import AllenNlpTestCase
+from allennlp.data.dataset_readers.dataset_utils import Ontonotes
 
 
 class TestOntonotes(AllenNlpTestCase):

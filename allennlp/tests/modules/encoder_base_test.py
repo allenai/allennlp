@@ -3,9 +3,9 @@ import pytest
 import torch
 from torch.nn import LSTM, RNN
 
-from allennlp.modules.encoder_base import _EncoderBase
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.nn.util import sort_batch_by_length, get_lengths_from_binary_sequence_mask
+from allennlp.modules.encoder_base import _EncoderBase
+from allennlp.nn.util import get_lengths_from_binary_sequence_mask, sort_batch_by_length
 
 
 class TestEncoderBase(AllenNlpTestCase):

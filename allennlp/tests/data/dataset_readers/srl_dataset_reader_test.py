@@ -1,11 +1,11 @@
 import pytest
 
+from allennlp.common.testing import AllenNlpTestCase
+from allennlp.common.util import ensure_list
 from allennlp.data.dataset_readers.semantic_role_labeling import (
     SrlReader,
     _convert_tags_to_wordpiece_tags,
 )
-from allennlp.common.util import ensure_list
-from allennlp.common.testing import AllenNlpTestCase
 
 
 class TestSrlReader:

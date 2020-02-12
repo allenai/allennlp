@@ -1,12 +1,12 @@
 from typing import Iterable, List
 
-from allennlp.data.fields import TextField
-from allennlp.data.instance import Instance
-from allennlp.data.dataset_readers import DatasetReader
-from allennlp.data.token_indexers import SingleIdTokenIndexer
-from allennlp.data.tokenizers import Token
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.common.util import ensure_list
+from allennlp.data.dataset_readers import DatasetReader
+from allennlp.data.fields import TextField
+from allennlp.data.instance import Instance
+from allennlp.data.token_indexers import SingleIdTokenIndexer
+from allennlp.data.tokenizers import Token
 
 
 class LazyDatasetReader(DatasetReader):

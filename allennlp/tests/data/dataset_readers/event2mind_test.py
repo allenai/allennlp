@@ -2,9 +2,9 @@ from typing import cast
 
 import pytest
 
-from allennlp.data.dataset_readers import Event2MindDatasetReader
-from allennlp.common.util import ensure_list
 from allennlp.common.testing import AllenNlpTestCase
+from allennlp.common.util import ensure_list
+from allennlp.data.dataset_readers import Event2MindDatasetReader
 from allennlp.data.fields import TextField
 from allennlp.data.instance import Instance
 

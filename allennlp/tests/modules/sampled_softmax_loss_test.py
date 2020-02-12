@@ -1,11 +1,11 @@
 from typing import Tuple
 
-import torch
 import numpy as np
+import torch
 
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.modules.sampled_softmax_loss import _choice, SampledSoftmaxLoss
 from allennlp.models.language_model import _SoftmaxLoss
+from allennlp.modules.sampled_softmax_loss import SampledSoftmaxLoss, _choice
 
 
 class TestSampledSoftmaxLoss(AllenNlpTestCase):

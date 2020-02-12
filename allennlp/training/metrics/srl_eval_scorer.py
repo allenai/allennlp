@@ -1,16 +1,16 @@
-from typing import Dict, List, Optional, Set
-from collections import defaultdict
 import logging
 import os
-import tempfile
-import subprocess
 import shutil
+import subprocess
+import tempfile
+from collections import defaultdict
+from typing import Dict, List, Optional, Set
 
 from overrides import overrides
 
 from allennlp.common.checks import ConfigurationError
-from allennlp.training.metrics.metric import Metric
 from allennlp.models.srl_util import write_conll_formatted_tags_to_file
+from allennlp.training.metrics.metric import Metric
 
 logger = logging.getLogger(__name__)
 

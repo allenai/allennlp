@@ -1,11 +1,11 @@
-from typing import Dict, List
 import itertools
+from typing import Dict, List
 
 from overrides import overrides
 
-from allennlp.data.vocabulary import Vocabulary
+from allennlp.data.token_indexers.token_indexer import IndexedTokenList, TokenIndexer
 from allennlp.data.tokenizers.token import Token
-from allennlp.data.token_indexers.token_indexer import TokenIndexer, IndexedTokenList
+from allennlp.data.vocabulary import Vocabulary
 
 
 @TokenIndexer.register("single_id")

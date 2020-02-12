@@ -1,9 +1,9 @@
-from typing import Dict, List, Union, Set, Iterator
 import logging
 import textwrap
+from typing import Dict, Iterator, List, Set, Union
 
-from overrides import overrides
 import torch
+from overrides import overrides
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.util import pad_sequence_to_length

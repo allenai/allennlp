@@ -9,6 +9,13 @@ mypy==0.761
 # Automatic code formatting
 black
 
+# Automatic import formatting
+# We need to use the "develop" branch, not the latest stable release, so we have:
+#   * https://github.com/timothycrosley/isort/pull/1000
+#   * It can read from pyproject.toml.
+#   * Some bug fixes.
+git+https://github.com/timothycrosley/isort@a06e3d3#egg=isort[pyproject]
+
 # For creating git precommit hooks
 pre-commit==2.0.1
 

@@ -35,7 +35,6 @@ class TestRegistrable(AllenNlpTestCase):
 
         @base_class.register("fake")
         class Fake(base_class):
-
             pass
 
         assert base_class.by_name("fake") == Fake
@@ -57,14 +56,12 @@ class TestRegistrable(AllenNlpTestCase):
 
             @base_class.register("fake")
             class FakeAlternate(base_class):
-
                 pass
 
         # Registering under a name that already exists should overwrite
         # if exist_ok=True.
         @base_class.register("fake", exist_ok=True)  # noqa
         class FakeAlternate(base_class):
-
             pass
 
         assert base_class.by_name("fake") == FakeAlternate

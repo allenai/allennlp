@@ -2,10 +2,9 @@
 An *attention* module that computes the similarity between
 an input vector and the rows of a matrix.
 """
-
 import torch
-
 from overrides import overrides
+
 from allennlp.common.registrable import Registrable
 from allennlp.nn.util import masked_softmax
 

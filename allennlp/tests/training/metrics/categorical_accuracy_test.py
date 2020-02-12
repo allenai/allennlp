@@ -1,9 +1,9 @@
-import torch
-import pytest
 import numpy
+import pytest
+import torch
 
-from allennlp.common.testing import AllenNlpTestCase
 from allennlp.common.checks import ConfigurationError
+from allennlp.common.testing import AllenNlpTestCase
 from allennlp.training.metrics import CategoricalAccuracy
 
 

@@ -1,5 +1,5 @@
-from typing import List, Iterable, Dict, Union
 from collections import Counter
+from typing import Dict, Iterable, List, Union
 
 from allennlp.common import Params
 from allennlp.common.testing import AllenNlpTestCase

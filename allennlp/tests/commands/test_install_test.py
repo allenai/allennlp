@@ -1,7 +1,7 @@
 import os
 
-from allennlp.common.testing import AllenNlpTestCase
 from allennlp.commands.test_install import _get_module_root
+from allennlp.common.testing import AllenNlpTestCase
 
 
 class TestTestInstall(AllenNlpTestCase):

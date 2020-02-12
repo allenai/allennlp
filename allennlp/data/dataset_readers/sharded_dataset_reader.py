@@ -5,7 +5,6 @@ from typing import Iterable
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.instance import Instance
 
-
 logger = logging.getLogger(__name__)
 
 

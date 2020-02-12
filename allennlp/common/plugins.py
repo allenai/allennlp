@@ -23,7 +23,6 @@ import pkgutil
 import sys
 from typing import Iterable
 
-
 logger = logging.getLogger(__name__)
 
 

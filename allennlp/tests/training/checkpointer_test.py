@@ -2,11 +2,11 @@ import os
 import re
 import time
 
+from allennlp.common.checks import ConfigurationError
+from allennlp.common.params import Params
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.training.checkpointer import Checkpointer
-from allennlp.common.params import Params
 from allennlp.training.trainer import Trainer
-from allennlp.common.checks import ConfigurationError
 
 
 class TestCheckpointer(AllenNlpTestCase):

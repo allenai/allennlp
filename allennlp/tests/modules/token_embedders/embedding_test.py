@@ -10,9 +10,9 @@ from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Vocabulary
 from allennlp.modules.token_embedders.embedding import (
-    _read_pretrained_embeddings_file,
     Embedding,
     EmbeddingsTextFile,
+    _read_pretrained_embeddings_file,
     format_embeddings_file_uri,
     parse_embeddings_file_uri,
 )

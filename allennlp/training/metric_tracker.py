@@ -1,4 +1,4 @@
-from typing import Optional, Iterable, Dict, Any
+from typing import Any, Dict, Iterable, Optional
 
 from allennlp.common.checks import ConfigurationError
 

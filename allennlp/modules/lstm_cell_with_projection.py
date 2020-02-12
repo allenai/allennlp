@@ -2,13 +2,12 @@
 An LSTM with Recurrent Dropout, a hidden_state which is projected and
 clipping on both the hidden state and the memory state of the LSTM.
 """
-
-from typing import Optional, Tuple, List
+from typing import List, Optional, Tuple
 
 import torch
 
-from allennlp.nn.util import get_dropout_mask
 from allennlp.nn.initializers import block_orthogonal
+from allennlp.nn.util import get_dropout_mask
 
 
 class LstmCellWithProjection(torch.nn.Module):

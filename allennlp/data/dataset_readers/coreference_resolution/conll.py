@@ -1,23 +1,23 @@
-import logging
 import collections
-from typing import Any, Dict, List, Optional, Tuple, DefaultDict, Set
+import logging
+from typing import Any, DefaultDict, Dict, List, Optional, Set, Tuple
 
 from overrides import overrides
 
 from allennlp.common.file_utils import cached_path
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
+from allennlp.data.dataset_readers.dataset_utils import Ontonotes, enumerate_spans
 from allennlp.data.fields import (
     Field,
     ListField,
-    TextField,
-    SpanField,
     MetadataField,
     SequenceLabelField,
+    SpanField,
+    TextField,
 )
 from allennlp.data.instance import Instance
-from allennlp.data.tokenizers import Token, PretrainedTransformerTokenizer
 from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenIndexer
-from allennlp.data.dataset_readers.dataset_utils import Ontonotes, enumerate_spans
+from allennlp.data.tokenizers import PretrainedTransformerTokenizer, Token
 
 logger = logging.getLogger(__name__)
 

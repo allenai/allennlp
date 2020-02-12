@@ -1,4 +1,4 @@
-from typing import List, TextIO, Optional
+from typing import List, Optional, TextIO
 
 
 def write_bio_formatted_tags_to_file(

@@ -1,10 +1,10 @@
-from typing import Any, Dict, List, Tuple
 from collections import Counter
+from typing import Any, Dict, List, Tuple
 
-from overrides import overrides
-from scipy.optimize import linear_sum_assignment
 import numpy as np
 import torch
+from overrides import overrides
+from scipy.optimize import linear_sum_assignment
 
 from allennlp.training.metrics.metric import Metric
 

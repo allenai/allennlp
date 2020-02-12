@@ -1,6 +1,6 @@
 import sys
 from collections import Counter
-from multiprocessing import Queue, Process
+from multiprocessing import Process, Queue
 from queue import Empty
 from typing import Tuple
 

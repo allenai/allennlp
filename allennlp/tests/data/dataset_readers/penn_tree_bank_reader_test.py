@@ -1,7 +1,7 @@
 from nltk.tree import Tree
 
-from allennlp.data.dataset_readers import PennTreeBankConstituencySpanDatasetReader
 from allennlp.common.testing import AllenNlpTestCase
+from allennlp.data.dataset_readers import PennTreeBankConstituencySpanDatasetReader
 from allennlp.data.dataset_readers.dataset_utils.span_utils import enumerate_spans
 
 

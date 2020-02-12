@@ -6,10 +6,10 @@ from overrides import overrides
 from allennlp.common.checks import ConfigurationError
 from allennlp.data import TextFieldTensors, Vocabulary
 from allennlp.models.model import Model
-from allennlp.modules import TextFieldEmbedder, Seq2SeqEncoder, Embedding
-from allennlp.modules.text_field_embedders import BasicTextFieldEmbedder
+from allennlp.modules import Embedding, Seq2SeqEncoder, TextFieldEmbedder
 from allennlp.modules.seq2seq_decoders.seq_decoder import SeqDecoder
-from allennlp.nn import util, InitializerApplicator
+from allennlp.modules.text_field_embedders import BasicTextFieldEmbedder
+from allennlp.nn import InitializerApplicator, util
 
 
 @Model.register("composed_seq2seq")

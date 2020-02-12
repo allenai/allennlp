@@ -2,11 +2,9 @@
 
 """Script that runs all verification steps.
 """
-
 import argparse
-from subprocess import run
-from subprocess import CalledProcessError
 import sys
+from subprocess import CalledProcessError, run
 
 
 def main(checks):
@@ -25,6 +23,11 @@ def main(checks):
             print("Formatter (black)", flush=True)
             run("black -v --check .", shell=True, check=True)
             print("black checks passed")
+
+        if "isort" in checks:
+            print("Formatter (isort)", flush=True)
+            run("isort . --check --diff", shell=True, check=True)
+            print("isort checks passed")
 
         if "mypy" in checks:
             print("Typechecker (mypy):", flush=True)
@@ -67,6 +70,7 @@ if __name__ == "__main__":
         "flake8",
         "mypy",
         "black",
+        "isort",
         "check-links",
         "check-requirements",
         "check-large-files",

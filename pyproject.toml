@@ -18,6 +18,22 @@ exclude = '''
 )
 '''
 
+[tool.isort]
+line_length = 100
+profile = "black"
+skip_glob = [
+    "**/__pycache__/",
+    "tutorials/",
+    "build/",
+    ".git/",
+    ".mypy_cache/",
+    ".pytest_cache/",
+    ".vscode/",
+    ".venv/",
+    "bdist/",
+    "bdoc/",
+]
+
 [build-system]
 requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"

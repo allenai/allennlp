@@ -35,27 +35,26 @@ which to write the results.
       --include-package INCLUDE_PACKAGE
                             additional packages to include
 """
-
 import argparse
 import logging
 import os
 from typing import Any, Dict, Iterable, List, Optional
 
 import torch
-import torch.distributed as dist
-import torch.multiprocessing as mp
 from overrides import overrides
+from torch import distributed as dist
+from torch import multiprocessing as mp
 
 from allennlp.commands.subcommand import Subcommand
-from allennlp.common import Params, Registrable, Lazy
-from allennlp.common.checks import check_for_gpu, ConfigurationError
+from allennlp.common import Lazy, Params, Registrable
 from allennlp.common import util as common_util
+from allennlp.common.checks import ConfigurationError, check_for_gpu
 from allennlp.common.plugins import import_plugins
 from allennlp.data import DataIterator, DatasetReader, Instance, Vocabulary
-from allennlp.models.archival import archive_model, CONFIG_NAME
+from allennlp.models.archival import CONFIG_NAME, archive_model
 from allennlp.models.model import _DEFAULT_WEIGHTS, Model
-from allennlp.training.trainer_base import TrainerBase
 from allennlp.training import util as training_util
+from allennlp.training.trainer_base import TrainerBase
 
 logger = logging.getLogger(__name__)
 

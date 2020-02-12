@@ -1,17 +1,22 @@
-from typing import Dict, Optional, List, Any, cast
+from typing import Any, Dict, List, Optional, cast
 
-from overrides import overrides
 import torch
+from overrides import overrides
 from torch.nn.modules.linear import Linear
 
-from allennlp.common.checks import check_dimensions_match, ConfigurationError
+from allennlp.common.checks import ConfigurationError, check_dimensions_match
 from allennlp.data import TextFieldTensors, Vocabulary
-from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder
-from allennlp.modules import ConditionalRandomField, FeedForward
-from allennlp.modules.conditional_random_field import allowed_transitions
 from allennlp.models.model import Model
+from allennlp.modules import (
+    ConditionalRandomField,
+    FeedForward,
+    Seq2SeqEncoder,
+    TextFieldEmbedder,
+    TimeDistributed,
+)
+from allennlp.modules.conditional_random_field import allowed_transitions
 from allennlp.nn import InitializerApplicator
-import allennlp.nn.util as util
+from allennlp.nn import util as util
 from allennlp.training.metrics import CategoricalAccuracy, SpanBasedF1Measure
 
 

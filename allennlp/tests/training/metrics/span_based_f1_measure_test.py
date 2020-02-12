@@ -1,15 +1,15 @@
 import os
 import subprocess
 
-import torch
 import numpy
+import torch
 
+from allennlp.common.checks import ConfigurationError
+from allennlp.common.params import Params
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Vocabulary
-from allennlp.training.metrics import SpanBasedF1Measure, Metric
 from allennlp.models.semantic_role_labeler import write_bio_formatted_tags_to_file
-from allennlp.common.params import Params
-from allennlp.common.checks import ConfigurationError
+from allennlp.training.metrics import Metric, SpanBasedF1Measure
 
 
 class SpanBasedF1Test(AllenNlpTestCase):

@@ -1,13 +1,13 @@
-from typing import List, Dict
 from copy import deepcopy
+from typing import Dict, List
 
 import numpy
 from overrides import overrides
 
 from allennlp.common.util import JsonDict
 from allennlp.data import Instance
-from allennlp.predictors.predictor import Predictor
 from allennlp.data.fields import LabelField
+from allennlp.predictors.predictor import Predictor
 
 
 @Predictor.register("textual-entailment")

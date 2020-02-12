@@ -1,10 +1,10 @@
 import logging
 from typing import Any, Dict, List, Optional, Tuple
 
-from allennlp.common.util import sanitize_wordpiece
 from overrides import overrides
 from transformers.tokenization_auto import AutoTokenizer
 
+from allennlp.common.util import sanitize_wordpiece
 from allennlp.data.tokenizers.token import Token
 from allennlp.data.tokenizers.tokenizer import Tokenizer
 

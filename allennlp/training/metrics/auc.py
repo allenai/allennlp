@@ -1,7 +1,7 @@
 from typing import Optional
 
-from overrides import overrides
 import torch
+from overrides import overrides
 from sklearn import metrics
 
 from allennlp.common.checks import ConfigurationError

@@ -1,9 +1,9 @@
-from typing import Dict, List, Set, Tuple
 import logging
 import textwrap
+from typing import Dict, List, Set, Tuple
 
-from overrides import overrides
 import torch
+from overrides import overrides
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.data.fields.field import Field

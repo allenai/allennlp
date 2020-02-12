@@ -10,22 +10,22 @@ The main problem is that the `SingleTaskTrainer` expects
 a single `train_path`. (Even that you could fudge by passing
 in a Dict[str, str] serialized as JSON, but that's really hacky.)
 """
-from typing import List, Dict, Iterable, Any, Set
-from collections import defaultdict
 import os
+from collections import defaultdict
+from typing import Any, Dict, Iterable, List, Set
 
-import tqdm
 import torch
+import tqdm
 
 from allennlp.common import Lazy, Registrable
 from allennlp.common.params import Params
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Instance
 from allennlp.data.batch import Batch
-from allennlp.data.iterators import DataIterator
 from allennlp.data.dataset_readers import DatasetReader
-from allennlp.data.fields import TextField, MetadataField
-from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
+from allennlp.data.fields import MetadataField, TextField
+from allennlp.data.iterators import DataIterator
+from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenIndexer
 from allennlp.data.tokenizers import SpacyTokenizer
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.models import Model

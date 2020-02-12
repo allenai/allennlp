@@ -1,9 +1,9 @@
 import torch
 from overrides import overrides
 
+from allennlp.modules.matrix_attention.matrix_attention import MatrixAttention
 from allennlp.modules.similarity_functions.dot_product import DotProductSimilarity
 from allennlp.modules.similarity_functions.similarity_function import SimilarityFunction
-from allennlp.modules.matrix_attention.matrix_attention import MatrixAttention
 
 
 @MatrixAttention.register("legacy")

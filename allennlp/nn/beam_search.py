@@ -1,10 +1,9 @@
-from typing import List, Callable, Tuple, Dict
 import warnings
+from typing import Callable, Dict, List, Tuple
 
 import torch
 
 from allennlp.common.checks import ConfigurationError
-
 
 StateType = Dict[str, torch.Tensor]
 StepFunctionType = Callable[[torch.Tensor, StateType], Tuple[torch.Tensor, StateType]]

@@ -1,8 +1,8 @@
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.models.language_model import LanguageModel
 from allennlp.models.model import Model
-from allennlp.modules.text_field_embedders import TextFieldEmbedder
 from allennlp.modules.seq2seq_encoders import Seq2SeqEncoder
+from allennlp.modules.text_field_embedders import TextFieldEmbedder
 from allennlp.nn import InitializerApplicator
 
 

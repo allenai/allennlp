@@ -1,13 +1,13 @@
+import heapq
 from copy import deepcopy
 from typing import List, Tuple
-import heapq
 
 import numpy as np
 import torch
 
 from allennlp.common.util import JsonDict, sanitize
 from allennlp.data import Instance
-from allennlp.data.fields import TextField, SequenceLabelField
+from allennlp.data.fields import SequenceLabelField, TextField
 from allennlp.interpret.attackers import utils
 from allennlp.interpret.attackers.attacker import Attacker
 from allennlp.predictors import Predictor

@@ -1,14 +1,14 @@
-import logging
-from typing import Dict, Union, Iterable, Iterator, List, Optional, Tuple, Deque
-from collections import defaultdict
 import itertools
+import logging
 import math
 import random
+from collections import defaultdict
+from typing import Deque, Dict, Iterable, Iterator, List, Optional, Tuple, Union
 
 import torch
 
 from allennlp.common.registrable import Registrable
-from allennlp.common.util import is_lazy, lazy_groups_of, ensure_list
+from allennlp.common.util import ensure_list, is_lazy, lazy_groups_of
 from allennlp.data.batch import Batch
 from allennlp.data.fields import MetadataField
 from allennlp.data.instance import Instance

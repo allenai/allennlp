@@ -1,16 +1,16 @@
-from typing import Dict, List
 import logging
+from typing import Dict, List
 
-from overrides import overrides
 from nltk.tree import Tree
+from overrides import overrides
 
+from allennlp.common.checks import ConfigurationError
 from allennlp.common.file_utils import cached_path
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
-from allennlp.data.fields import LabelField, TextField, Field
+from allennlp.data.fields import Field, LabelField, TextField
 from allennlp.data.instance import Instance
-from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
+from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenIndexer
 from allennlp.data.tokenizers import Token
-from allennlp.common.checks import ConfigurationError
 
 logger = logging.getLogger(__name__)
 

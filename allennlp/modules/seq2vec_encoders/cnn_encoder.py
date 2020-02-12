@@ -1,7 +1,7 @@
 from typing import Optional, Tuple
 
-from overrides import overrides
 import torch
+from overrides import overrides
 from torch.nn import Conv1d, Linear
 
 from allennlp.modules.seq2vec_encoders.seq2vec_encoder import Seq2VecEncoder

@@ -1,7 +1,8 @@
 import numpy
 import torch
-from allennlp.modules.token_embedders import PassThroughTokenEmbedder
+
 from allennlp.common.testing import AllenNlpTestCase
+from allennlp.modules.token_embedders import PassThroughTokenEmbedder
 
 
 class TestBagOfWordCountsTokenEmbedder(AllenNlpTestCase):

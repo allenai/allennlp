@@ -1,12 +1,12 @@
 import math
 
 import torch
-from torch.nn import Parameter
 from overrides import overrides
+from torch.nn import Parameter
 
+from allennlp.modules.matrix_attention.matrix_attention import MatrixAttention
 from allennlp.nn import util
 from allennlp.nn.activations import Activation
-from allennlp.modules.matrix_attention.matrix_attention import MatrixAttention
 
 
 @MatrixAttention.register("linear")

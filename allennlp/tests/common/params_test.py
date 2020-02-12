@@ -6,7 +6,7 @@ from collections import OrderedDict
 import pytest
 
 from allennlp.common.checks import ConfigurationError
-from allennlp.common.params import infer_and_cast, Params, parse_overrides, unflatten, with_fallback
+from allennlp.common.params import Params, infer_and_cast, parse_overrides, unflatten, with_fallback
 from allennlp.common.testing import AllenNlpTestCase
 
 

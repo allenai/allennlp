@@ -1,5 +1,5 @@
-from typing import Dict
 import inspect
+from typing import Dict
 
 import torch
 from overrides import overrides

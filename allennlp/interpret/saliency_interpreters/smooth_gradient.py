@@ -1,5 +1,5 @@
 import math
-from typing import Dict, Any
+from typing import Any, Dict
 
 import numpy
 import torch
@@ -7,8 +7,8 @@ import torch
 from allennlp.common.util import JsonDict, sanitize
 from allennlp.data import Instance
 from allennlp.interpret.saliency_interpreters.saliency_interpreter import SaliencyInterpreter
-from allennlp.predictors import Predictor
 from allennlp.nn import util
+from allennlp.predictors import Predictor
 
 
 @SaliencyInterpreter.register("smooth-gradient")

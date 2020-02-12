@@ -1,11 +1,11 @@
-import torch
-from sklearn import metrics
-from numpy.testing import assert_almost_equal
 import pytest
+import torch
+from numpy.testing import assert_almost_equal
+from sklearn import metrics
 
+from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.training.metrics import Auc
-from allennlp.common.checks import ConfigurationError
 
 
 class AucTest(AllenNlpTestCase):

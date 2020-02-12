@@ -1,10 +1,9 @@
+import numpy
+import pytest
 import torch
 
-import pytest
-import numpy
-
-from allennlp.common.testing import AllenNlpTestCase
 from allennlp.common.checks import ConfigurationError
+from allennlp.common.testing import AllenNlpTestCase
 from allennlp.modules import ScalarMix
 
 

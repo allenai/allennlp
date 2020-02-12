@@ -1,21 +1,20 @@
 import logging
-from typing import Dict, Tuple, List, Any, Union
+from typing import Any, Dict, List, Tuple, Union
 
 import numpy
-from overrides import overrides
 import torch
+from overrides import overrides
 from torch.nn.modules.linear import Linear
 from torch.nn.modules.rnn import LSTMCell
 
-from allennlp.common.util import START_SYMBOL, END_SYMBOL
+from allennlp.common.util import END_SYMBOL, START_SYMBOL
 from allennlp.data import TextFieldTensors, Vocabulary
 from allennlp.models.model import Model
-from allennlp.modules import Attention, TextFieldEmbedder, Seq2SeqEncoder
+from allennlp.modules import Attention, Seq2SeqEncoder, TextFieldEmbedder
 from allennlp.modules.token_embedders import Embedding
 from allennlp.nn import InitializerApplicator, util
-from allennlp.training.metrics import Metric, BLEU
 from allennlp.nn.beam_search import BeamSearch
-
+from allennlp.training.metrics import BLEU, Metric
 
 logger = logging.getLogger(__name__)
 

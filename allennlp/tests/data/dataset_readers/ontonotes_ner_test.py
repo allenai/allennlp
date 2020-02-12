@@ -1,8 +1,8 @@
 import pytest
 
-from allennlp.data.dataset_readers.ontonotes_ner import OntonotesNamedEntityRecognition
-from allennlp.common.util import ensure_list
 from allennlp.common.testing import AllenNlpTestCase
+from allennlp.common.util import ensure_list
+from allennlp.data.dataset_readers.ontonotes_ner import OntonotesNamedEntityRecognition
 
 
 class TestOntonotesNamedEntityRecognitionReader:

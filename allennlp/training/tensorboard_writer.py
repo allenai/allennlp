@@ -1,9 +1,9 @@
-from typing import Any, Set, Optional, Callable
 import logging
 import os
+from typing import Any, Callable, Optional, Set
 
-from tensorboardX import SummaryWriter
 import torch
+from tensorboardX import SummaryWriter
 
 from allennlp.common.from_params import FromParams
 from allennlp.models.model import Model

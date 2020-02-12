@@ -1,6 +1,6 @@
-from numpy.testing import assert_almost_equal
 import pytest
 import torch
+from numpy.testing import assert_almost_equal
 from torch.nn.parameter import Parameter
 
 from allennlp.common import Params

@@ -1,17 +1,16 @@
 import argparse
 import os
+import re
 import sys
 from collections import namedtuple
 from typing import Iterable, List, Tuple
 
-import regex
 from tqdm import tqdm
-
-from allennlp.data import Token
-from allennlp.data.tokenizers import SpacyTokenizer
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(os.path.join(__file__, os.pardir))))
 
+from allennlp.data import Token
+from allennlp.data.tokenizers import SpacyTokenizer
 
 Extraction = namedtuple(
     "Extraction",  # Open IE extraction
@@ -127,7 +126,7 @@ def interpret_span(text_spans: str) -> List[int]:
     """
     Return an integer tuple from textual representation of closed/open spans.
     """
-    m = regex.match(r"^(?:(?:([\(\[]\d+, \d+[\)\]])|({\d+}))[,]?\s*)+$", text_spans)  # noqa
+    m = re.match(r"^(?:(?:([(\[]\d+, \d+[)\]])|({\d+}))[,]?\s*)+$", text_spans)  # noqa
 
     spans = m.captures(1) + m.captures(2)
 
@@ -174,7 +173,7 @@ def parse_element(raw_element: str) -> List[Element]:
     Parse a raw element into text and indices (integers).
     """
     elements = (
-        regex.match(r"^(([a-zA-Z]+)\(([^;]+),List\(([^;]*)\)\))$", elem.lstrip().rstrip())  # noqa
+        re.match(r"^(([a-zA-Z]+)\(([^;]+),List\(([^;]*)\)\))$", elem.lstrip().rstrip())  # noqa
         for elem in raw_element.split(";")
     )
     return [interpret_element(*elem.groups()[1:]) for elem in elements if elem]

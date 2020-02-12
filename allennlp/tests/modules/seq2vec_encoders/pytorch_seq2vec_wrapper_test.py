@@ -1,14 +1,14 @@
 import pytest
-from numpy.testing import assert_almost_equal
 import torch
+from numpy.testing import assert_almost_equal
 from torch.nn import LSTM
 from torch.nn.utils.rnn import pack_padded_sequence
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.modules.seq2vec_encoders import PytorchSeq2VecWrapper
-from allennlp.nn.util import sort_batch_by_length, get_lengths_from_binary_sequence_mask
 from allennlp.modules.stacked_alternating_lstm import StackedAlternatingLstm
+from allennlp.nn.util import get_lengths_from_binary_sequence_mask, sort_batch_by_length
 
 
 class TestPytorchSeq2VecWrapper(AllenNlpTestCase):

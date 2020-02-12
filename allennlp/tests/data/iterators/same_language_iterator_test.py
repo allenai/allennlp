@@ -1,6 +1,6 @@
+from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.dataset_readers import UniversalDependenciesMultiLangDatasetReader
 from allennlp.data.iterators.same_language_iterator import SameLanguageIterator
-from allennlp.common.testing import AllenNlpTestCase
 
 
 class SameLanguageIteratorTest(AllenNlpTestCase):

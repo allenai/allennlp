@@ -1,8 +1,8 @@
 import torch
 
 from allennlp.common import Params
-from allennlp.modules import BiMpmMatching
 from allennlp.common.testing import AllenNlpTestCase
+from allennlp.modules import BiMpmMatching
 
 
 class TestBiMPMMatching(AllenNlpTestCase):

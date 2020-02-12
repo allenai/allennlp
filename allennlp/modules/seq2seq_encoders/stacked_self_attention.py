@@ -1,7 +1,7 @@
 from typing import List
 
-from overrides import overrides
 import torch
+from overrides import overrides
 from torch.nn import Dropout
 
 from allennlp.modules.feedforward import FeedForward

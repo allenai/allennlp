@@ -1,16 +1,16 @@
-from typing import Dict, Tuple, List, Iterator, Any
-import logging
-import itertools
 import glob
+import itertools
+import logging
 import os
-import numpy as np
+from typing import Any, Dict, Iterator, List, Tuple
 
-from overrides import overrides
+import numpy as np
 from conllu import parse_incr
+from overrides import overrides
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
-from allennlp.data.fields import Field, TextField, SequenceLabelField, MetadataField
+from allennlp.data.fields import Field, MetadataField, SequenceLabelField, TextField
 from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenIndexer
 from allennlp.data.tokenizers import Token

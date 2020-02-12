@@ -4,8 +4,8 @@ import numpy
 import torch
 
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.data import Token, Vocabulary, Instance
-from allennlp.data.fields import TextField, LabelField, ListField, IndexField, SequenceLabelField
+from allennlp.data import Instance, Token, Vocabulary
+from allennlp.data.fields import IndexField, LabelField, ListField, SequenceLabelField, TextField
 from allennlp.data.iterators import BasicIterator
 from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenCharactersIndexer
 from allennlp.data.tokenizers import SpacyTokenizer

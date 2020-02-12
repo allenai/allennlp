@@ -1,11 +1,11 @@
-from typing import Sequence, Dict, List, Callable
+from typing import Callable, Dict, List, Sequence
 
-import torch
 import numpy as np
+import torch
 
 from allennlp.common.checks import ConfigurationError
-from allennlp.modules.layer_norm import LayerNorm
 from allennlp.modules.highway import Highway
+from allennlp.modules.layer_norm import LayerNorm
 from allennlp.modules.seq2vec_encoders.seq2vec_encoder import Seq2VecEncoder
 
 _VALID_PROJECTION_LOCATIONS = {"after_cnn", "after_highway", None}

@@ -1,6 +1,6 @@
-from typing import Iterable, Dict, List
 import random
 from collections import defaultdict
+from typing import Dict, Iterable, List
 
 from allennlp.common.util import lazy_groups_of
 from allennlp.data.batch import Batch

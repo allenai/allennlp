@@ -1,15 +1,15 @@
-from typing import Dict, Optional, List, Any
+from typing import Any, Dict, List, Optional
 
 import numpy
-from overrides import overrides
 import torch
+from overrides import overrides
+from torch.nn import functional as F
 from torch.nn.modules.linear import Linear
-import torch.nn.functional as F
 
-from allennlp.common.checks import check_dimensions_match, ConfigurationError
+from allennlp.common.checks import ConfigurationError, check_dimensions_match
 from allennlp.data import TextFieldTensors, Vocabulary
-from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder
 from allennlp.models.model import Model
+from allennlp.modules import Seq2SeqEncoder, TextFieldEmbedder, TimeDistributed
 from allennlp.nn import InitializerApplicator
 from allennlp.nn.util import get_text_field_mask, sequence_cross_entropy_with_logits
 from allennlp.training.metrics import CategoricalAccuracy, SpanBasedF1Measure

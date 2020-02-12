@@ -2,10 +2,9 @@
 `Model` is an abstract class representing
 an AllenNLP model.
 """
-
 import logging
 import os
-from typing import Dict, Union, List, Set, Type
+from typing import Dict, List, Set, Type, Union
 
 import numpy
 import torch

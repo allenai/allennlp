@@ -1,7 +1,7 @@
 import math
 
-from overrides import overrides
 import torch
+from overrides import overrides
 from torch.nn.parameter import Parameter
 
 from allennlp.modules.similarity_functions.similarity_function import SimilarityFunction

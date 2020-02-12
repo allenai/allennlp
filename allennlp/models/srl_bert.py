@@ -1,18 +1,22 @@
-from typing import Dict, List, Any, Union
+from typing import Any, Dict, List, Union
 
-from overrides import overrides
 import torch
-from torch.nn.modules import Linear, Dropout
-import torch.nn.functional as F
+from overrides import overrides
+from torch.nn import functional as F
+from torch.nn.modules import Dropout, Linear
 from transformers.modeling_bert import BertModel
 
 from allennlp.data import TextFieldTensors, Vocabulary
 from allennlp.models.model import Model
 from allennlp.models.srl_util import convert_bio_tags_to_conll_format
 from allennlp.nn import InitializerApplicator, util
-from allennlp.nn.util import get_text_field_mask, sequence_cross_entropy_with_logits
-from allennlp.nn.util import get_lengths_from_binary_sequence_mask, viterbi_decode
-from allennlp.training.metrics.srl_eval_scorer import SrlEvalScorer, DEFAULT_SRL_EVAL_PATH
+from allennlp.nn.util import (
+    get_lengths_from_binary_sequence_mask,
+    get_text_field_mask,
+    sequence_cross_entropy_with_logits,
+    viterbi_decode,
+)
+from allennlp.training.metrics.srl_eval_scorer import DEFAULT_SRL_EVAL_PATH, SrlEvalScorer
 
 
 @Model.register("srl_bert")

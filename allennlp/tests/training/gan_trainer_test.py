@@ -8,20 +8,20 @@ and a second to sample uniform noise. We'll then adversarially train a generator
 to transform the noise into something that (hopefully) looks like the true distribution
 and a discriminator `Model` to (hopefully) distinguish between the "true" and generated data.
 """
-from typing import Dict, Iterable, Any
+from typing import Any, Dict, Iterable
 
-import tqdm
-import torch
 import numpy as np
+import torch
+import tqdm
 
 from allennlp.common import Lazy, Registrable
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import Params
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Instance
-from allennlp.data.iterators import DataIterator
 from allennlp.data.dataset_readers import DatasetReader
 from allennlp.data.fields import ArrayField
+from allennlp.data.iterators import DataIterator
 from allennlp.models import Model
 from allennlp.nn.activations import Activation
 from allennlp.training.optimizers import Optimizer

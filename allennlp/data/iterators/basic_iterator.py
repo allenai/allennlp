@@ -1,12 +1,12 @@
-from collections import deque
-from typing import Iterable, Deque
 import logging
 import random
+from collections import deque
+from typing import Deque, Iterable
 
 from allennlp.common.util import lazy_groups_of
+from allennlp.data.batch import Batch
 from allennlp.data.instance import Instance
 from allennlp.data.iterators.data_iterator import DataIterator
-from allennlp.data.batch import Batch
 
 logger = logging.getLogger(__name__)
 

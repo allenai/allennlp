@@ -9,7 +9,7 @@ from allennlp.common import Params
 from allennlp.common.testing.test_case import AllenNlpTestCase
 from allennlp.data import DataIterator, DatasetReader, Vocabulary
 from allennlp.data.batch import Batch
-from allennlp.models import load_archive, Model
+from allennlp.models import Model, load_archive
 
 
 class ModelTestCase(AllenNlpTestCase):

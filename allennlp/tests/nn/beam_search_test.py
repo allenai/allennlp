@@ -8,7 +8,6 @@ from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.nn.beam_search import BeamSearch
 
-
 transition_probabilities = torch.tensor(
     [
         [0.0, 0.4, 0.3, 0.2, 0.1, 0.0],  # start token -> jth token

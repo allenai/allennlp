@@ -18,7 +18,7 @@ from allennlp.commands.train import train_model
 from allennlp.common import Lazy, Params, Registrable
 from allennlp.common.testing import ModelTestCase
 from allennlp.data import Instance
-from allennlp.data.dataset_readers.dataset_reader import _LazyInstances, DatasetReader
+from allennlp.data.dataset_readers.dataset_reader import DatasetReader, _LazyInstances
 from allennlp.data.fields import ArrayField, MetadataField
 from allennlp.data.iterators import DataIterator
 from allennlp.models import Model

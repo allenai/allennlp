@@ -1,17 +1,17 @@
-from typing import Dict, List, Tuple, Optional
-from overrides import overrides
+from typing import Dict, List, Optional, Tuple
 
 import numpy
 import torch
-import torch.nn.functional as F
+from overrides import overrides
 from torch.nn import Linear
+from torch.nn import functional as F
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.util import END_SYMBOL, START_SYMBOL
-from allennlp.modules.seq2seq_decoders.seq_decoder import SeqDecoder
 from allennlp.data import TextFieldTensors, Vocabulary
 from allennlp.modules import Embedding
 from allennlp.modules.seq2seq_decoders.decoder_net import DecoderNet
+from allennlp.modules.seq2seq_decoders.seq_decoder import SeqDecoder
 from allennlp.nn import util
 from allennlp.nn.beam_search import BeamSearch
 from allennlp.training.metrics import Metric

@@ -1,4 +1,5 @@
-from typing import Dict, Optional, Tuple, Union, List
+from typing import Dict, List, Optional, Tuple, Union
+
 import torch
 
 from allennlp.common.registrable import Registrable

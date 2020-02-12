@@ -1,16 +1,16 @@
 import json
-from typing import Dict, Tuple, TYPE_CHECKING
+from typing import TYPE_CHECKING, Dict, Tuple
 
 import torch
 
 from allennlp.common.checks import ConfigurationError
-from allennlp.data import TokenIndexer, Token
+from allennlp.data import Token, TokenIndexer
 from allennlp.modules.scalar_mix import ScalarMix
 from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
 from allennlp.nn.util import (
-    remove_sentence_boundaries,
-    get_text_field_mask,
     add_sentence_boundary_token_ids,
+    get_text_field_mask,
+    remove_sentence_boundaries,
 )
 
 # Importing at runtime results in a circular dependency.

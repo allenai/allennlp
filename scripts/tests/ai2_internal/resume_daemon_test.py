@@ -1,9 +1,9 @@
-import pytest
 import sqlite3
-from unittest.mock import call, Mock
+from unittest.mock import Mock, call
+
+import pytest
 
 from allennlp.common.testing import AllenNlpTestCase
-
 from scripts.ai2_internal.resume_daemon import (
     BeakerStatus,
     create_table,

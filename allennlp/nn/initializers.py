@@ -22,15 +22,15 @@ The available initialization functions are
 * ["uniform_unit_scaling"](./initializers.md#uniform_unit_scaling)
 * ["pretrained"](./initializers.md#PretrainedModelInitializer)
 """
-import logging
-import re
-import math
-from typing import Callable, List, Tuple, Dict
 import itertools
-from overrides import overrides
+import logging
+import math
+import re
+from typing import Callable, Dict, List, Tuple
 
 import torch
 import torch.nn.init
+from overrides import overrides
 
 from allennlp.common import FromParams, Registrable
 from allennlp.common.checks import ConfigurationError

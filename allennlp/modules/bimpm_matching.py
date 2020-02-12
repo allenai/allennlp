@@ -1,12 +1,11 @@
 """
 Multi-perspective matching layer
 """
-
-from typing import Tuple, List
+from typing import List, Tuple
 
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
+from torch import nn as nn
+from torch.nn import functional as F
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.registrable import FromParams

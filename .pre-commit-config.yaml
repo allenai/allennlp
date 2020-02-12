@@ -1,10 +1,18 @@
 repos:
--   repo: https://github.com/ambv/black
-    rev: stable
-    hooks:
-    - id: black
-      language_version: python3.6
--   repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v1.2.3
-    hooks:
-    - id: flake8
+- repo: local
+  hooks:
+  - id: isort
+    name: isort
+    entry: isort
+    language: python
+    types: [python]
+  - id: black
+    name: black
+    entry: black
+    language: python
+    types: [python]
+  - id: flake8
+    name: flake8
+    entry: flake8
+    language: python
+    types: [python]

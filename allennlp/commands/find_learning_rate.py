@@ -42,7 +42,6 @@ which to write the results.
       --include-package INCLUDE_PACKAGE
                             additional packages to include
 """
-
 import argparse
 import logging
 import math
@@ -54,7 +53,7 @@ from overrides import overrides
 
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common import Params, Tqdm
-from allennlp.common.checks import check_for_gpu, ConfigurationError
+from allennlp.common.checks import ConfigurationError, check_for_gpu
 from allennlp.common.util import prepare_environment
 from allennlp.data import DataIterator, Vocabulary
 from allennlp.models import Model
@@ -353,7 +352,7 @@ def _save_plot(learning_rates: List[float], losses: List[float], save_path: str)
         import matplotlib
 
         matplotlib.use("Agg")  # noqa
-        import matplotlib.pyplot as plt
+        from matplotlib import pyplot as plt
 
     except ModuleNotFoundError as error:
 

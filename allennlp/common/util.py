@@ -30,9 +30,9 @@ from typing import (
 import numpy
 import spacy
 import torch
-import torch.distributed as dist
 from spacy.cli.download import download as spacy_download
 from spacy.language import Language as SpacyModelType
+from torch import distributed as dist
 
 from allennlp.common.checks import log_pytorch_version_info
 from allennlp.common.params import Params

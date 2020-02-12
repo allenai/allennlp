@@ -1,10 +1,11 @@
-from typing import Optional, Tuple, List
+from typing import List, Optional, Tuple
+
 import torch
 from torch.nn.utils.rnn import PackedSequence, pack_padded_sequence, pad_packed_sequence
+
+from allennlp.common.checks import ConfigurationError
 from allennlp.modules.augmented_lstm import AugmentedLstm
 from allennlp.modules.input_variational_dropout import InputVariationalDropout
-from allennlp.common.checks import ConfigurationError
-
 
 TensorPair = Tuple[torch.Tensor, torch.Tensor]
 

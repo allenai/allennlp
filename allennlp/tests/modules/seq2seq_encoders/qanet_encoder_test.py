@@ -1,8 +1,8 @@
 import torch
 
+from allennlp.common.params import Params
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.modules.seq2seq_encoders import QaNetEncoder
-from allennlp.common.params import Params
 
 
 class QaNetEncoderTest(AllenNlpTestCase):

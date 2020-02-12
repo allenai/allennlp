@@ -1,7 +1,7 @@
 from allennlp.common.testing import AllenNlpTestCase
+from allennlp.interpret.saliency_interpreters import SmoothGradient
 from allennlp.models.archival import load_archive
 from allennlp.predictors import Predictor
-from allennlp.interpret.saliency_interpreters import SmoothGradient
 
 
 class TestSmoothGradient(AllenNlpTestCase):

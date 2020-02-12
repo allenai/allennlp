@@ -6,10 +6,8 @@ Typically you might create a configuration file specifying the model and
 training parameters and then use :mod:`~allennlp.commands.train`
 rather than instantiating a `Trainer` yourself.
 """
-
-
 import logging
-from typing import Dict, Any
+from typing import Any, Dict
 
 from allennlp.common import Registrable
 from allennlp.common.checks import ConfigurationError, check_for_gpu

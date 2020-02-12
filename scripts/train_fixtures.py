@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-
 import glob
 import logging
 import os
@@ -9,12 +8,12 @@ import sys
 import tempfile
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(os.path.join(__file__, os.pardir))))
+
 from allennlp.commands.test_install import _get_module_root
-from allennlp.commands.train import train_model_from_file, train_model
+from allennlp.commands.train import train_model, train_model_from_file
 from allennlp.common import Params
 from allennlp.common.util import pushd
 from allennlp.training.metrics import EvalbBracketingScorer
-
 
 logger = logging.getLogger(__name__)
 

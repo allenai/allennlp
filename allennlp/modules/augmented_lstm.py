@@ -2,16 +2,14 @@
 An LSTM with Recurrent Dropout and the option to use highway
 connections between layers.
 """
-
 from typing import Optional, Tuple
 
 import torch
-
-from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence, PackedSequence
+from torch.nn.utils.rnn import PackedSequence, pack_padded_sequence, pad_packed_sequence
 
 from allennlp.common.checks import ConfigurationError
-from allennlp.nn.util import get_dropout_mask
 from allennlp.nn.initializers import block_orthogonal
+from allennlp.nn.util import get_dropout_mask
 
 
 class AugmentedLstm(torch.nn.Module):

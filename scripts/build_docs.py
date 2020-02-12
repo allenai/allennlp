@@ -1,10 +1,9 @@
-from typing import Dict
 import os
 from pathlib import Path
 from subprocess import check_output
+from typing import Dict
 
 from ruamel.yaml import YAML
-
 
 exclude_files = [".DS_Store", "__init__.py", "__init__.pyc", "README.md", "version.py", "run.py"]
 

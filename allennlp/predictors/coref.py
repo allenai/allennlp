@@ -1,12 +1,11 @@
 from copy import deepcopy
-from typing import List, Dict
+from typing import Dict, List
 
+import numpy
 from overrides import overrides
 from spacy.tokens import Doc
-import numpy
 
-from allennlp.common.util import JsonDict
-from allennlp.common.util import get_spacy_model
+from allennlp.common.util import JsonDict, get_spacy_model
 from allennlp.data import DatasetReader, Instance
 from allennlp.data.fields import ListField, SequenceLabelField
 from allennlp.models import Model

@@ -1,5 +1,5 @@
-from overrides import overrides
 import torch
+from overrides import overrides
 from torch.nn.parameter import Parameter
 
 from allennlp.modules.matrix_attention.matrix_attention import MatrixAttention

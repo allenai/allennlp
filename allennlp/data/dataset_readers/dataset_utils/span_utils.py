@@ -1,8 +1,8 @@
-from typing import Callable, List, Set, Tuple, TypeVar, Optional
 import warnings
+from typing import Callable, List, Optional, Set, Tuple, TypeVar
 
-from allennlp.data.dataset_readers.dataset_utils.ontonotes import TypedStringSpan
 from allennlp.common.checks import ConfigurationError
+from allennlp.data.dataset_readers.dataset_utils.ontonotes import TypedStringSpan
 from allennlp.data.tokenizers.token import Token
 
 

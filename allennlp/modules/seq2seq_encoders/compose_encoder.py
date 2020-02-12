@@ -1,6 +1,7 @@
-from overrides import overrides
-import torch
 from typing import List
+
+import torch
+from overrides import overrides
 
 from allennlp.modules.seq2seq_encoders.seq2seq_encoder import Seq2SeqEncoder
 
@@ -42,11 +43,7 @@ class ComposeEncoder(Seq2SeqEncoder):
             last_enc = enc
 
     @overrides
-    def forward(
-        self,  # pylint: disable=arguments-differ
-        inputs: torch.Tensor,
-        mask: torch.LongTensor = None,
-    ) -> torch.Tensor:
+    def forward(self, inputs: torch.Tensor, mask: torch.LongTensor = None,) -> torch.Tensor:
         """
         # Parameters
 

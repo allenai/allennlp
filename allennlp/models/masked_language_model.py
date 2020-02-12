@@ -1,13 +1,13 @@
 from typing import Dict
 
-from overrides import overrides
 import torch
+from overrides import overrides
 
 from allennlp.common.checks import check_dimensions_match
 from allennlp.data import TextFieldTensors, Vocabulary
 from allennlp.models.model import Model
 from allennlp.modules import LanguageModelHead, Seq2SeqEncoder, TextFieldEmbedder
-from allennlp.nn import util, InitializerApplicator
+from allennlp.nn import InitializerApplicator, util
 from allennlp.training.metrics import Perplexity
 
 

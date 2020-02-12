@@ -3,7 +3,7 @@ from typing import List
 from overrides import overrides
 from spacy.tokens import Doc
 
-from allennlp.common.util import JsonDict, sanitize, group_by_count
+from allennlp.common.util import JsonDict, group_by_count, sanitize
 from allennlp.data import DatasetReader, Instance
 from allennlp.data.tokenizers.spacy_tokenizer import SpacyTokenizer
 from allennlp.models import Model

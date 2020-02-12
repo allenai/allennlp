@@ -1,9 +1,9 @@
-from flaky import flaky
 import pytest
+from flaky import flaky
 
-from allennlp.common.testing import ModelTestCase
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import Params
+from allennlp.common.testing import ModelTestCase
 from allennlp.models import Model
 
 

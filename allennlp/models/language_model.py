@@ -1,16 +1,16 @@
 from typing import Dict, List, Tuple, Union
 
-import torch
 import numpy as np
+import torch
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.data import TextFieldTensors, Vocabulary
 from allennlp.models.model import Model
-from allennlp.modules.text_field_embedders import TextFieldEmbedder
 from allennlp.modules.sampled_softmax_loss import SampledSoftmaxLoss
 from allennlp.modules.seq2seq_encoders import Seq2SeqEncoder
-from allennlp.nn.util import get_text_field_mask
+from allennlp.modules.text_field_embedders import TextFieldEmbedder
 from allennlp.nn import InitializerApplicator
+from allennlp.nn.util import get_text_field_mask
 from allennlp.training.metrics import Perplexity
 
 

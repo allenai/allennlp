@@ -1,15 +1,15 @@
 import itertools
-from typing import Iterable, Iterator, Callable, Optional
 import logging
 import os
 import pathlib
+from typing import Callable, Iterable, Iterator, Optional
 
 import jsonpickle
 
-from allennlp.data.instance import Instance
 from allennlp.common import Tqdm, util
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.registrable import Registrable
+from allennlp.data.instance import Instance
 
 logger = logging.getLogger(__name__)
 

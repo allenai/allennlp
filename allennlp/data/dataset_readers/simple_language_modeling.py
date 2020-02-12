@@ -1,16 +1,15 @@
-from typing import Dict, Iterable, Union, Optional, List
 import logging
 import math
+from typing import Dict, Iterable, List, Optional, Union
 
 from overrides import overrides
 
-from allennlp.data.tokenizers import Token
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.fields import TextField
 from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import SingleIdTokenIndexer
 from allennlp.data.token_indexers.token_indexer import TokenIndexer
-from allennlp.data.tokenizers import SpacyTokenizer
+from allennlp.data.tokenizers import SpacyTokenizer, Token
 from allennlp.data.tokenizers.tokenizer import Tokenizer
 
 logger = logging.getLogger(__name__)

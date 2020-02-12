@@ -1,6 +1,6 @@
+import torch
 from overrides import overrides
 from transformers import BertConfig, BertForMaskedLM
-import torch
 
 from allennlp.modules.language_model_heads.language_model_head import LanguageModelHead
 

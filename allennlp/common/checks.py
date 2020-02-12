@@ -2,11 +2,10 @@
 Functions and exceptions for checking that
 AllenNLP and its models are configured correctly.
 """
-from typing import Union, List
-
 import logging
 import re
 import subprocess
+from typing import List, Union
 
 from torch import cuda
 

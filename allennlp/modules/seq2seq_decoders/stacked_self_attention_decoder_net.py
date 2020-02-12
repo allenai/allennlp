@@ -3,10 +3,10 @@ from copy import deepcopy
 from typing import Dict, Optional, Tuple
 
 import torch
-import torch.nn.functional as F
 from overrides import overrides
 from torch import nn
 from torch.autograd import Variable
+from torch.nn import functional as F
 
 from allennlp.modules.layer_norm import LayerNorm
 from allennlp.modules.seq2seq_decoders.decoder_net import DecoderNet

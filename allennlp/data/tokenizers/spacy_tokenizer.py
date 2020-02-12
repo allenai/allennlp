@@ -1,7 +1,7 @@
 from typing import List, Optional
 
-from overrides import overrides
 import spacy
+from overrides import overrides
 from spacy.tokens import Doc
 
 from allennlp.common.util import get_spacy_model

@@ -1,12 +1,12 @@
 from typing import Dict
 
-import torch
 import numpy as np
+import torch
 
 from allennlp.common.params import Params
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.models.model import Model
-from allennlp.training.moving_average import MovingAverage, ExponentialMovingAverage
+from allennlp.training.moving_average import ExponentialMovingAverage, MovingAverage
 
 
 class MovingAverageTest(AllenNlpTestCase):

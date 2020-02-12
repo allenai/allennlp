@@ -1,9 +1,10 @@
 import tempfile
+
 import pytest
 
 from allennlp.common.checks import ConfigurationError
-from allennlp.common.util import ensure_list
 from allennlp.common.testing import AllenNlpTestCase
+from allennlp.common.util import ensure_list
 from allennlp.data.dataset_readers import Seq2SeqDatasetReader
 
 

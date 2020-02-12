@@ -14,17 +14,17 @@ The available Seq2Vec encoders are
 * `"alternating_lstm"` allennlp.modules.stacked_alternating_lstm.StackedAlternatingLstm
 * `"stacked_bidirectional_lstm"` allennlp.modules.stacked_bidirectional_lstm.StackedBidirectionalLstm
 """
-
 from typing import Type
 
 import torch
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
-from allennlp.modules.seq2vec_encoders.cnn_encoder import CnnEncoder
-from allennlp.modules.seq2vec_encoders.cnn_highway_encoder import CnnHighwayEncoder
+from allennlp.modules.augmented_lstm import AugmentedLstm
 from allennlp.modules.seq2vec_encoders.bert_pooler import BertPooler
 from allennlp.modules.seq2vec_encoders.boe_encoder import BagOfEmbeddingsEncoder
+from allennlp.modules.seq2vec_encoders.cnn_encoder import CnnEncoder
+from allennlp.modules.seq2vec_encoders.cnn_highway_encoder import CnnHighwayEncoder
 from allennlp.modules.seq2vec_encoders.pytorch_seq2vec_wrapper import (
     AugmentedLstmSeq2VecEncoder,
     GruSeq2VecEncoder,
@@ -35,6 +35,5 @@ from allennlp.modules.seq2vec_encoders.pytorch_seq2vec_wrapper import (
     StackedBidirectionalLstmSeq2VecEncoder,
 )
 from allennlp.modules.seq2vec_encoders.seq2vec_encoder import Seq2VecEncoder
-from allennlp.modules.augmented_lstm import AugmentedLstm
 from allennlp.modules.stacked_alternating_lstm import StackedAlternatingLstm
 from allennlp.modules.stacked_bidirectional_lstm import StackedBidirectionalLstm

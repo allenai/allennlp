@@ -7,18 +7,17 @@ This code should be considered "private" in that we have several
 transformer implementations and may end up deleting this one.
 If you use it, consider yourself warned.
 """
-
-from typing import Tuple, Callable
 import math
 import warnings
+from typing import Callable, Tuple
 
 import torch
-import torch.nn.functional as F
+from torch.nn import functional as F
 
+from allennlp.common import Registrable
 from allennlp.common.checks import ExperimentalFeatureWarning
 from allennlp.modules.layer_norm import LayerNorm
 from allennlp.modules.seq2seq_encoders.seq2seq_encoder import Seq2SeqEncoder
-from allennlp.common import Registrable
 from allennlp.nn import util
 
 

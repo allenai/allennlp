@@ -2,6 +2,7 @@ import os
 import shutil
 
 import pytest
+
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.dataset_readers import SnliReader
 from allennlp.data.dataset_readers.dataset_reader import _LazyInstances

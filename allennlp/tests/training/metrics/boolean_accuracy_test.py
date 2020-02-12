@@ -1,5 +1,5 @@
-import torch
 import pytest
+import torch
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.training.metrics import BooleanAccuracy

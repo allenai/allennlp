@@ -1,14 +1,14 @@
 from copy import deepcopy
-from typing import List, Dict
+from typing import Dict, List
 
-from overrides import overrides
 import numpy
+from overrides import overrides
 
 from allennlp.common.util import JsonDict
 from allennlp.data import Instance
-from allennlp.predictors.predictor import Predictor
 from allennlp.data.fields import LabelField
 from allennlp.data.tokenizers.spacy_tokenizer import SpacyTokenizer
+from allennlp.predictors.predictor import Predictor
 
 
 @Predictor.register("text_classifier")

@@ -14,7 +14,7 @@ from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import DatasetReader, Instance
-from allennlp.models import load_archive, Model
+from allennlp.models import Model, load_archive
 from allennlp.models.archival import CONFIG_NAME
 
 SEQUENCE_TAGGING_DATA_PATH = str(AllenNlpTestCase.FIXTURES_ROOT / "data" / "sequence_tagging.tsv")

@@ -39,11 +39,10 @@ to include more elaborate logic than "pop off params and hand them to the constr
 In this case your class just needs to explicitly implement its own `from_params`
 method.
 """
-
-from copy import deepcopy
-from typing import TypeVar, Type, Callable, Dict, Union, Any, cast, List, Tuple, Set
 import inspect
 import logging
+from copy import deepcopy
+from typing import Any, Callable, Dict, List, Set, Tuple, Type, TypeVar, Union, cast
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.lazy import Lazy

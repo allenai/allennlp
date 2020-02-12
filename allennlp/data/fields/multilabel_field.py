@@ -1,12 +1,12 @@
-from typing import Dict, Union, Sequence, Set, Optional, cast
 import logging
+from typing import Dict, Optional, Sequence, Set, Union, cast
 
-from overrides import overrides
 import torch
+from overrides import overrides
 
+from allennlp.common.checks import ConfigurationError
 from allennlp.data.fields.field import Field
 from allennlp.data.vocabulary import Vocabulary
-from allennlp.common.checks import ConfigurationError
 
 logger = logging.getLogger(__name__)
 

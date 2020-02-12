@@ -1,8 +1,8 @@
 import pytest
 
-from allennlp.data.dataset_readers.conll2000 import Conll2000DatasetReader
-from allennlp.common.util import ensure_list
 from allennlp.common.testing import AllenNlpTestCase
+from allennlp.common.util import ensure_list
+from allennlp.data.dataset_readers.conll2000 import Conll2000DatasetReader
 
 
 class TestConll2000Reader:

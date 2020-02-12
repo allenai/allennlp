@@ -4,7 +4,7 @@ from allennlp.common import Params
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.common.util import ensure_list
 from allennlp.data import DatasetReader
-from allennlp.data.vocabulary import Vocabulary, DEFAULT_OOV_TOKEN
+from allennlp.data.vocabulary import DEFAULT_OOV_TOKEN, Vocabulary
 
 
 class TestCopyNetReader(AllenNlpTestCase):

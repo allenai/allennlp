@@ -1,5 +1,5 @@
-from typing import Iterable, List, TYPE_CHECKING
 import logging
+from typing import TYPE_CHECKING, Iterable, List
 
 import torch
 

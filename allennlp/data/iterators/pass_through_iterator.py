@@ -1,6 +1,6 @@
-from typing import Iterable, Iterator
 import itertools
 import logging
+from typing import Iterable, Iterator
 
 from overrides import overrides
 

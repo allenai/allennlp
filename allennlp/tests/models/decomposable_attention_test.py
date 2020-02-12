@@ -1,6 +1,6 @@
-from flaky import flaky
-import pytest
 import numpy
+import pytest
+from flaky import flaky
 from numpy.testing import assert_almost_equal
 
 from allennlp.common import Params

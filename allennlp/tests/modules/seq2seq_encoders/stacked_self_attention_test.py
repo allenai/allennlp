@@ -1,7 +1,6 @@
+import pytest
 import torch
 from torch.nn.parallel.data_parallel import DataParallel
-
-import pytest
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.modules.seq2seq_encoders import StackedSelfAttentionEncoder

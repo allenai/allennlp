@@ -1,22 +1,21 @@
 """
 Utilities for working with the local dataset cache.
 """
-
-import os
+import json
 import logging
+import os
 import shutil
 import tempfile
-import json
-from urllib.parse import urlparse
-from pathlib import Path
-from typing import Optional, Tuple, Union, IO, Callable, Set
-from hashlib import sha256
 from functools import wraps
+from hashlib import sha256
+from pathlib import Path
+from typing import IO, Callable, Optional, Set, Tuple, Union
+from urllib.parse import urlparse
 
 import boto3
 import botocore
-from botocore.exceptions import ClientError
 import requests
+from botocore.exceptions import ClientError
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
 

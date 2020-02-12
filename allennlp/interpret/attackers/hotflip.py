@@ -8,8 +8,8 @@ from allennlp.common.util import JsonDict, sanitize
 from allennlp.data.fields import TextField
 from allennlp.data.token_indexers import (
     ELMoTokenCharactersIndexer,
-    TokenCharactersIndexer,
     SingleIdTokenIndexer,
+    TokenCharactersIndexer,
 )
 from allennlp.data.tokenizers import Token
 from allennlp.interpret.attackers import utils

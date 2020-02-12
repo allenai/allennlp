@@ -2,7 +2,7 @@ import glob
 import logging
 import os
 from queue import Empty
-from typing import List, Iterable, Iterator, Optional
+from typing import Iterable, Iterator, List, Optional
 
 import numpy as np
 from torch.multiprocessing import Process, Queue, Value, log_to_stderr

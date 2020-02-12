@@ -1,13 +1,13 @@
-from typing import List, Optional, TYPE_CHECKING
-import traceback
 import time
+import traceback
+from typing import TYPE_CHECKING, List, Optional
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import Params
 from allennlp.training import util as training_util
-from allennlp.training.checkpointer import Checkpointer
 from allennlp.training.callbacks.callback import Callback, handle_event
 from allennlp.training.callbacks.events import Events
+from allennlp.training.checkpointer import Checkpointer
 from allennlp.training.moving_average import MovingAverage
 
 if TYPE_CHECKING:

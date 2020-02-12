@@ -1,5 +1,5 @@
-from allennlp.modules.encoder_base import _EncoderBase
 from allennlp.common import Registrable
+from allennlp.modules.encoder_base import _EncoderBase
 
 
 class Seq2SeqEncoder(_EncoderBase, Registrable):

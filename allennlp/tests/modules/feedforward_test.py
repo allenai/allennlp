@@ -1,12 +1,12 @@
-from numpy.testing import assert_almost_equal
 import pytest
 import torch
+from numpy.testing import assert_almost_equal
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
-from allennlp.modules import FeedForward
-from allennlp.nn import InitializerApplicator, Initializer, Activation
 from allennlp.common.testing import AllenNlpTestCase
+from allennlp.modules import FeedForward
+from allennlp.nn import Activation, Initializer, InitializerApplicator
 
 
 class TestFeedForward(AllenNlpTestCase):

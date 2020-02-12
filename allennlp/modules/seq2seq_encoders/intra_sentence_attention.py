@@ -1,12 +1,15 @@
-from overrides import overrides
 import torch
+from overrides import overrides
 from torch.nn import Linear
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.modules.matrix_attention.legacy_matrix_attention import LegacyMatrixAttention
 from allennlp.modules.seq2seq_encoders.seq2seq_encoder import Seq2SeqEncoder
-from allennlp.modules.similarity_functions import DotProductSimilarity, SimilarityFunction
-from allennlp.modules.similarity_functions import MultiHeadedSimilarity
+from allennlp.modules.similarity_functions import (
+    DotProductSimilarity,
+    MultiHeadedSimilarity,
+    SimilarityFunction,
+)
 from allennlp.nn import util
 
 

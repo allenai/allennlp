@@ -1,9 +1,9 @@
 import pytest
 
-from allennlp.data.dataset_readers import StanfordSentimentTreeBankDatasetReader
 from allennlp.common import Params
-from allennlp.common.util import ensure_list
 from allennlp.common.testing import AllenNlpTestCase
+from allennlp.common.util import ensure_list
+from allennlp.data.dataset_readers import StanfordSentimentTreeBankDatasetReader
 
 
 class TestStanfordSentimentTreebankReader:

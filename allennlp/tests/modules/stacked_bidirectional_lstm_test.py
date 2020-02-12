@@ -3,11 +3,11 @@ import pytest
 import torch
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
-from allennlp.modules.stacked_bidirectional_lstm import StackedBidirectionalLstm
+from allennlp.common.params import Params
 from allennlp.modules.seq2seq_encoders import Seq2SeqEncoder
 from allennlp.modules.seq2vec_encoders import Seq2VecEncoder
-from allennlp.common.params import Params
-from allennlp.nn import InitializerApplicator, Initializer
+from allennlp.modules.stacked_bidirectional_lstm import StackedBidirectionalLstm
+from allennlp.nn import Initializer, InitializerApplicator
 from allennlp.nn.util import sort_batch_by_length
 
 

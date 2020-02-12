@@ -9,16 +9,16 @@ with the following changes:
  4. early stopping based on validation loss
  5. track accuracy during training / validation
 """
-
-from typing import Iterable, Mapping, Dict, Tuple, List
+from typing import Dict, Iterable, List, Mapping, Tuple
 
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
-import torch.optim as optim
 import tqdm
+from torch import nn as nn
+from torch import optim as optim
+from torch.nn import functional as F
 
 torch.manual_seed(1)
+
 
 def load_data(file_path: str) -> Tuple[List[str], List[str]]:
     """
@@ -38,12 +38,15 @@ def load_data(file_path: str) -> Tuple[List[str], List[str]]:
 
     return data
 
-training_data = load_data('tutorials/tagger/training.txt')
-validation_data = load_data('tutorials/tagger/validation.txt')
+
+training_data = load_data("tutorials/tagger/training.txt")
+validation_data = load_data("tutorials/tagger/validation.txt")
+
 
 def prepare_sequence(seq: Iterable[str], to_ix: Mapping[str, int]) -> torch.Tensor:
     idxs = [to_ix[w] for w in seq]
     return torch.tensor(idxs, dtype=torch.long)
+
 
 word_to_ix: Dict[str, int] = {}
 tag_to_ix: Dict[str, int] = {}
@@ -59,13 +62,11 @@ for sent, tags in training_data + validation_data:
 EMBEDDING_DIM = 6
 HIDDEN_DIM = 6
 
-class LSTMTagger(nn.Module):
 
-    def __init__(self,
-                 embedding_dim: int,
-                 hidden_dim: int,
-                 vocab_size: int,
-                 tagset_size: int) -> None:
+class LSTMTagger(nn.Module):
+    def __init__(
+        self, embedding_dim: int, hidden_dim: int, vocab_size: int, tagset_size: int
+    ) -> None:
         super().__init__()
         self.hidden_dim = hidden_dim
 
@@ -84,8 +85,7 @@ class LSTMTagger(nn.Module):
         # Refer to the Pytorch documentation to see exactly
         # why they have this dimensionality.
         # The axes semantics are (num_layers, minibatch_size, hidden_dim)
-        return (torch.zeros(1, 1, self.hidden_dim),
-                torch.zeros(1, 1, self.hidden_dim))
+        return (torch.zeros(1, 1, self.hidden_dim), torch.zeros(1, 1, self.hidden_dim))
 
     def forward(self, sentence: torch.Tensor) -> torch.Tensor:
         embeds = self.word_embeddings(sentence)
@@ -93,6 +93,7 @@ class LSTMTagger(nn.Module):
         tag_space = self.hidden2tag(lstm_out.view(len(sentence), -1))
         tag_scores = F.log_softmax(tag_space, dim=1)
         return tag_scores
+
 
 model = LSTMTagger(EMBEDDING_DIM, HIDDEN_DIM, len(word_to_ix), len(tag_to_ix))
 loss_function = nn.NLLLoss()
@@ -153,9 +154,11 @@ for epoch in range(1000):
                 t.set_postfix(validation_loss=validation_loss / (i + 1), accuracy=accuracy)
 
     validation_losses.append(validation_loss)
-    if (patience and
-                len(validation_losses) >= patience and
-                validation_losses[-patience] == min(validation_losses[-patience:])):
+    if (
+        patience
+        and len(validation_losses) >= patience
+        and validation_losses[-patience] == min(validation_losses[-patience:])
+    ):
         print("patience reached, stopping early")
         break
 

@@ -1,6 +1,6 @@
-from allennlp.data.dataset_readers import CcgBankDatasetReader
-from allennlp.common.util import ensure_list
 from allennlp.common.testing import AllenNlpTestCase
+from allennlp.common.util import ensure_list
+from allennlp.data.dataset_readers import CcgBankDatasetReader
 from allennlp.data.vocabulary import Vocabulary
 
 

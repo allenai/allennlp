@@ -1,5 +1,5 @@
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.data.dataset_readers import SequenceTaggingDatasetReader, MultiprocessDatasetReader
+from allennlp.data.dataset_readers import MultiprocessDatasetReader, SequenceTaggingDatasetReader
 from allennlp.data.iterators import BasicIterator, MultiprocessIterator
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.tests.data.iterators.basic_iterator_test import IteratorTest

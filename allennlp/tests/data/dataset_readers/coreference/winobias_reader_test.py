@@ -2,9 +2,9 @@ from typing import List, Tuple
 
 import pytest
 
-from allennlp.data.dataset_readers import WinobiasReader
-from allennlp.common.util import ensure_list
 from allennlp.common.testing import AllenNlpTestCase
+from allennlp.common.util import ensure_list
+from allennlp.data.dataset_readers import WinobiasReader
 
 
 class TestWinobiasReader:

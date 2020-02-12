@@ -25,8 +25,6 @@
 #     --config training_config/bidirectional_language_model.jsonnet \
 #     --serialization-dir serialization-dir \
 #     --action=first
-
-
 import argparse
 import time
 from enum import Enum
@@ -42,8 +40,7 @@ LOGGING_INTERVAL_SECONDS = 5
 
 def run_periodically(reader_output, iterator_output):
     while True:
-        message = f"read out q: {reader_output.qsize()} " + f"it out q: {iterator_output.qsize()}"
-        print(message)
+        print(f"read out q: {reader_output.qsize()} it out q: {iterator_output.qsize()}")
         time.sleep(LOGGING_INTERVAL_SECONDS)
 
 

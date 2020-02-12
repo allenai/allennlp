@@ -1,20 +1,19 @@
 from typing import Dict, List, Optional, Tuple
 
 import numpy
-from overrides import overrides
-
 import torch
-from torch.nn import Module, ModuleDict
-from torch.nn.modules.rnn import GRUCell
-from torch.nn.modules.linear import Linear
+from overrides import overrides
 from torch import nn
-import torch.nn.functional as F
+from torch.nn import Module, ModuleDict
+from torch.nn import functional as F
+from torch.nn.modules.linear import Linear
+from torch.nn.modules.rnn import GRUCell
 
-from allennlp.common.util import START_SYMBOL, END_SYMBOL
+from allennlp.common.util import END_SYMBOL, START_SYMBOL
 from allennlp.data import TextFieldTensors, Vocabulary
+from allennlp.models.model import Model
 from allennlp.modules import Seq2VecEncoder, TextFieldEmbedder
 from allennlp.modules.token_embedders import Embedding
-from allennlp.models.model import Model
 from allennlp.nn.beam_search import BeamSearch
 from allennlp.nn.util import get_text_field_mask, sequence_cross_entropy_with_logits
 from allennlp.training.metrics import UnigramRecall

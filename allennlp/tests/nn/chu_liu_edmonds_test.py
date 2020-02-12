@@ -2,8 +2,8 @@ import numpy
 import pytest
 import torch
 
-from allennlp.common.testing import AllenNlpTestCase
 from allennlp.common.checks import ConfigurationError
+from allennlp.common.testing import AllenNlpTestCase
 from allennlp.nn.chu_liu_edmonds import _find_cycle, decode_mst
 
 

@@ -26,15 +26,12 @@ any docstring on the constructor itself.  For model / module constructors and me
 
 ## Code format
 
-We use flake8 to enforce some basic consistency in formatting.  Those formatting guidelines roughly
-follow [Google's python style
+We use flake8, black and isort to enforce some basic consistency in formatting.  Those formatting
+guidelines roughly follow [Google's python style
 guide](https://google.github.io/styleguide/pyguide.html#Python_Style_Rules), with a few notable
 exceptions.  In particular, because we use type annotations and descriptive variable names, we use
 100-character lines instead of 80-character lines, and it's ok to go over sometimes in code.
-Pylint enforces a hard boundary of 115 characters, but you should try to stay under 100 characters
-most of the time (in particular, comments and docstrings should wrap to the next line at no more
-than 100 characters).  Additionally, we use `numpydoc` and `sphinx` for building our docs, so
-Google's docstring formats don't apply.
+Additionally, we use `mkdocs` for building our docs, so Google's docstring formats don't apply.
 
 ## Naming
 

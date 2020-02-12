@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-
 import os
 
 value = os.environ.get("CACHE_MODELS", "false")

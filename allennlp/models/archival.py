@@ -1,21 +1,20 @@
 """
 Helper functions for archiving models and restoring archived models.
 """
-
-from typing import NamedTuple
 import atexit
 import logging
 import os
-import tempfile
-import tarfile
 import shutil
+import tarfile
+import tempfile
+from typing import NamedTuple
 
 from torch.nn import Module
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.file_utils import cached_path
 from allennlp.common.params import Params
-from allennlp.models.model import Model, _DEFAULT_WEIGHTS
+from allennlp.models.model import _DEFAULT_WEIGHTS, Model
 
 logger = logging.getLogger(__name__)
 

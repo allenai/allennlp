@@ -1,18 +1,17 @@
-from typing import Dict, List
-import logging
 import copy
+import logging
+from typing import Dict, List
 
 from overrides import overrides
 
-from allennlp.data.instance import Instance
-from allennlp.data.tokenizers.tokenizer import Tokenizer
-from allennlp.data.tokenizers import Token
-from allennlp.data.tokenizers.whitespace_tokenizer import WhitespaceTokenizer
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
-from allennlp.data.token_indexers.token_indexer import TokenIndexer
 from allennlp.data.fields import Field, TextField
+from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import SingleIdTokenIndexer
-from allennlp.data.tokenizers import PretrainedTransformerTokenizer
+from allennlp.data.token_indexers.token_indexer import TokenIndexer
+from allennlp.data.tokenizers import PretrainedTransformerTokenizer, Token
+from allennlp.data.tokenizers.tokenizer import Tokenizer
+from allennlp.data.tokenizers.whitespace_tokenizer import WhitespaceTokenizer
 
 logger = logging.getLogger(__name__)
 

@@ -1,14 +1,13 @@
 #! /usr/bin/env python
 
 # Script to launch AllenNLP Beaker jobs.
-
 import argparse
-import os
 import json
+import os
 import random
-import tempfile
 import subprocess
 import sys
+import tempfile
 
 # This has to happen before we import spacy (even indirectly), because for some crazy reason spacy
 # thought it was a good idea to set the random seed on import...

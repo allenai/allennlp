@@ -3,7 +3,6 @@ Custom PyTorch
 `Module <https://pytorch.org/docs/master/nn.html#torch.nn.Module>`_ s
 that are used as components in AllenNLP `Model` s.
 """
-
 from allennlp.modules.attention import Attention
 from allennlp.modules.bimpm_matching import BiMpmMatching
 from allennlp.modules.conditional_random_field import ConditionalRandomField
@@ -23,4 +22,4 @@ from allennlp.modules.seq2vec_encoders import Seq2VecEncoder
 from allennlp.modules.similarity_functions import SimilarityFunction
 from allennlp.modules.text_field_embedders import TextFieldEmbedder
 from allennlp.modules.time_distributed import TimeDistributed
-from allennlp.modules.token_embedders import TokenEmbedder, Embedding
+from allennlp.modules.token_embedders import Embedding, TokenEmbedder

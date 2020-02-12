@@ -5,14 +5,14 @@ import re
 import tarfile
 import warnings
 import zipfile
-from typing import Any, cast, IO, Iterator, NamedTuple, Optional, Sequence, Tuple
+from typing import IO, Any, Iterator, NamedTuple, Optional, Sequence, Tuple, cast
 
 import numpy
 import torch
 from overrides import overrides
 from torch.nn.functional import embedding
 
-from allennlp.common import Tqdm, Registrable
+from allennlp.common import Registrable, Tqdm
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.file_utils import cached_path, get_file_extension, is_url_or_existing_file
 from allennlp.data import Vocabulary
@@ -23,6 +23,7 @@ from allennlp.nn import util
 with warnings.catch_warnings():
     warnings.filterwarnings("ignore", category=FutureWarning)
     import h5py
+
 
 logger = logging.getLogger(__name__)
 

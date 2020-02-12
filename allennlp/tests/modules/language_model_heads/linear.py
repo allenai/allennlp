@@ -1,5 +1,5 @@
-from overrides import overrides
 import torch
+from overrides import overrides
 
 from allennlp.data import Vocabulary
 from allennlp.modules.language_model_heads.language_model_head import LanguageModelHead

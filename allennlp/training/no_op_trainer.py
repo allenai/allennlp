@@ -1,5 +1,5 @@
 import os
-from typing import Dict, Any
+from typing import Any, Dict
 
 from allennlp.models import Model
 from allennlp.training.checkpointer import Checkpointer

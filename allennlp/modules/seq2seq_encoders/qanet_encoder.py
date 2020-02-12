@@ -1,15 +1,14 @@
-from overrides import overrides
 import torch
-from torch.nn import Dropout
-from torch.nn import LayerNorm
-from torch.nn import ModuleList
+from overrides import overrides
+from torch.nn import Dropout, LayerNorm, ModuleList
+
+from allennlp.common.checks import check_dimensions_match
 from allennlp.modules.feedforward import FeedForward
 from allennlp.modules.residual_with_layer_dropout import ResidualWithLayerDropout
 from allennlp.modules.seq2seq_encoders.multi_head_self_attention import MultiHeadSelfAttention
 from allennlp.modules.seq2seq_encoders.seq2seq_encoder import Seq2SeqEncoder
 from allennlp.nn.activations import Activation
 from allennlp.nn.util import add_positional_features
-from allennlp.common.checks import check_dimensions_match
 
 
 @Seq2SeqEncoder.register("qanet_encoder")

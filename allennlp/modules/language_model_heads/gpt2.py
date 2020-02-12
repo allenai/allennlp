@@ -1,6 +1,6 @@
+import torch
 from overrides import overrides
 from transformers import GPT2Config, GPT2LMHeadModel
-import torch
 
 from allennlp.modules.language_model_heads.language_model_head import LanguageModelHead
 

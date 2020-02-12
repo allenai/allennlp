@@ -1,8 +1,8 @@
 from typing import Optional
 
-from overrides import overrides
 import torch
-import scipy.stats as stats
+from overrides import overrides
+from scipy import stats as stats
 
 from allennlp.training.metrics.metric import Metric
 

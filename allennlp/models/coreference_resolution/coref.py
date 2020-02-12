@@ -3,17 +3,16 @@ import math
 from typing import Any, Dict, List, Tuple
 
 import torch
-import torch.nn.functional as F
 from overrides import overrides
+from torch.nn import functional as F
 
 from allennlp.data import TextFieldTensors, Vocabulary
 from allennlp.models.model import Model
+from allennlp.modules import FeedForward, Pruner, Seq2SeqEncoder, TextFieldEmbedder, TimeDistributed
+from allennlp.modules.span_extractors import EndpointSpanExtractor, SelfAttentiveSpanExtractor
 from allennlp.modules.token_embedders import Embedding
-from allennlp.modules import FeedForward
-from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder, Pruner
-from allennlp.modules.span_extractors import SelfAttentiveSpanExtractor, EndpointSpanExtractor
-from allennlp.nn import util, InitializerApplicator
-from allennlp.training.metrics import MentionRecall, ConllCorefScores
+from allennlp.nn import InitializerApplicator, util
+from allennlp.training.metrics import ConllCorefScores, MentionRecall
 
 logger = logging.getLogger(__name__)
 

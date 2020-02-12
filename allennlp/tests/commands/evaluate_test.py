@@ -1,11 +1,11 @@
 import argparse
 import json
-from typing import Iterator, List, Dict, Iterable
+from typing import Dict, Iterable, Iterator, List
 
 import torch
 from flaky import flaky
 
-from allennlp.commands.evaluate import evaluate_from_args, Evaluate, evaluate
+from allennlp.commands.evaluate import Evaluate, evaluate, evaluate_from_args
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import DataIterator, Instance
 from allennlp.data.batch import Batch

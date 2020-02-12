@@ -1,5 +1,5 @@
-from allennlp.data.dataset_readers import UniversalDependenciesMultiLangDatasetReader
 from allennlp.common.testing import AllenNlpTestCase
+from allennlp.data.dataset_readers import UniversalDependenciesMultiLangDatasetReader
 
 
 class TestUniversalDependenciesMultilangDatasetReader(AllenNlpTestCase):

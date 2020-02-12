@@ -1,15 +1,14 @@
 from typing import List
 
-from overrides import overrides
 from nltk import Tree
+from overrides import overrides
 from spacy.lang.en.tag_map import TAG_MAP
 
 from allennlp.common.util import JsonDict, sanitize
 from allennlp.data import DatasetReader, Instance
+from allennlp.data.tokenizers.spacy_tokenizer import SpacyTokenizer
 from allennlp.models import Model
 from allennlp.predictors.predictor import Predictor
-from allennlp.data.tokenizers.spacy_tokenizer import SpacyTokenizer
-
 
 # Make the links to POS tag nodes render as "pos",
 # to distinguish them from constituency tags. The

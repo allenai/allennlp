@@ -1,5 +1,5 @@
-from numpy.testing import assert_allclose
 import torch
+from numpy.testing import assert_allclose
 
 from allennlp.common import Params
 from allennlp.common.testing import AllenNlpTestCase

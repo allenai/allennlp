@@ -1,7 +1,7 @@
-from typing import Tuple, Dict, Optional
-from overrides import overrides
+from typing import Dict, Optional, Tuple
 
 import torch
+from overrides import overrides
 from torch.nn import LSTMCell
 
 from allennlp.modules import Attention

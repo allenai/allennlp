@@ -1,7 +1,7 @@
 from typing import Optional
 
-from overrides import overrides
 import torch
+from overrides import overrides
 
 from allennlp.modules.token_embedders import PretrainedTransformerEmbedder, TokenEmbedder
 from allennlp.nn import util

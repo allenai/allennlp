@@ -2,10 +2,9 @@
 A :class:`~Batch` represents a collection of `Instance` s to be fed
 through a model.
 """
-
 import logging
 from collections import defaultdict
-from typing import Dict, List, Union, Iterator, Iterable
+from typing import Dict, Iterable, Iterator, List, Union
 
 import numpy
 import torch

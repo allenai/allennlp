@@ -17,10 +17,9 @@ The available optimizers are
 * `"adamax <https://pytorch.org/docs/master/optim.html#torch.optim.Adamax>`_
 * `"averaged_sgd <https://pytorch.org/docs/master/optim.html#torch.optim.ASGD>`_
 """
-
 import logging
-import re
 import math
+import re
 from typing import Any, Dict, List, Tuple, Union
 
 import torch

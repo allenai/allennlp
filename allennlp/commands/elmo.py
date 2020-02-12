@@ -63,7 +63,6 @@ https://arxiv.org/abs/1802.05365
       --include-package INCLUDE_PACKAGE
                             additional packages to include
 """
-
 import argparse
 import json
 import logging
@@ -86,6 +85,7 @@ from allennlp.nn.util import remove_sentence_boundaries
 with warnings.catch_warnings():
     warnings.filterwarnings("ignore", category=FutureWarning)
     import h5py
+
 
 logger = logging.getLogger(__name__)
 

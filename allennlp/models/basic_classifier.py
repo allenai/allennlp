@@ -1,7 +1,7 @@
 from typing import Dict, Optional
 
-from overrides import overrides
 import torch
+from overrides import overrides
 
 from allennlp.data import TextFieldTensors, Vocabulary
 from allennlp.models.model import Model

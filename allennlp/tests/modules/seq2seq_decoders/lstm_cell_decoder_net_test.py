@@ -1,8 +1,8 @@
 import torch
 
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.modules.seq2seq_decoders import LstmCellDecoderNet
 from allennlp.modules.attention import DotProductAttention
+from allennlp.modules.seq2seq_decoders import LstmCellDecoderNet
 
 
 class TestLstmCellDecoderNet(AllenNlpTestCase):

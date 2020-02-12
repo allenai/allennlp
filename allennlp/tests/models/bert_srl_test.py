@@ -5,8 +5,8 @@ from transformers.modeling_bert import BertConfig, BertModel
 from transformers.tokenization_bert import BertTokenizer
 
 from allennlp.common.testing import ModelTestCase
-from allennlp.nn.util import get_lengths_from_binary_sequence_mask
 from allennlp.data.dataset_readers.dataset_utils.span_utils import to_bioul
+from allennlp.nn.util import get_lengths_from_binary_sequence_mask
 
 
 class BertSrlTest(ModelTestCase):

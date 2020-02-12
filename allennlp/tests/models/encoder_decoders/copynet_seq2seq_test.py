@@ -1,6 +1,6 @@
 import numpy as np
-from scipy.special import logsumexp
 import torch
+from scipy.special import logsumexp
 
 from allennlp.common.testing import ModelTestCase
 

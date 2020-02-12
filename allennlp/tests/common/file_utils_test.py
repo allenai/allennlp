@@ -1,18 +1,18 @@
-from collections import Counter
+import json
 import os
 import pathlib
-import json
+from collections import Counter
 
 import pytest
 import responses
 
 from allennlp.common.file_utils import (
-    url_to_filename,
+    cached_path,
     filename_to_url,
     get_from_cache,
-    cached_path,
-    split_s3_path,
     open_compressed,
+    split_s3_path,
+    url_to_filename,
 )
 from allennlp.common.testing import AllenNlpTestCase
 

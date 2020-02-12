@@ -2,8 +2,8 @@ from typing import List
 
 import numpy
 import torch
-from allennlp.common.checks import ConfigurationError
 
+from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.training.metrics import FBetaMeasure
 

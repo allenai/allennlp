@@ -13,7 +13,7 @@ from allennlp.data.fields import TextField
 from allennlp.data.iterators import BasicIterator
 from allennlp.data.token_indexers.elmo_indexer import ELMoTokenCharactersIndexer
 from allennlp.data.token_indexers.single_id_token_indexer import SingleIdTokenIndexer
-from allennlp.modules.elmo import _ElmoBiLm, _ElmoCharacterEncoder, Elmo
+from allennlp.modules.elmo import Elmo, _ElmoBiLm, _ElmoCharacterEncoder
 from allennlp.modules.token_embedders import ElmoTokenEmbedder
 from allennlp.nn.util import remove_sentence_boundaries
 

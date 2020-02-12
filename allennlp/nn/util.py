@@ -1,14 +1,13 @@
 """
 Assorted utilities for working with neural networks in AllenNLP.
 """
-
 import copy
 import json
 import logging
+import math
 from collections import defaultdict
 from typing import Any, Dict, List, Optional, Sequence, Tuple, TypeVar, Union
 
-import math
 import numpy
 import torch
 
@@ -258,10 +257,10 @@ def masked_softmax(
     masked positions so that the probabilities of those positions would be approximately 0.
     This is not accurate in math, but works for most cases and consumes less memory.
 
-    In the case that the input vector is completely masked and `memory_efficient` is false, this function
-    returns an array of `0.0`. This behavior may cause `NaN` if this is used as the last layer of
-    a model that uses categorical cross-entropy loss. Instead, if `memory_efficient` is true, this function
-    will treat every element as equal, and do softmax over equal numbers.
+    In the case that the input vector is completely masked and `memory_efficient` is false, this
+    function returns an array of `0.0`. This behavior may cause `NaN` if this is used as the last
+    layer of a model that uses categorical cross-entropy loss. Instead, if `memory_efficient` is
+    true, this function will treat every element as equal, and do softmax over equal numbers.
     """
     if mask is None:
         result = torch.nn.functional.softmax(vector, dim=dim)
@@ -270,7 +269,8 @@ def masked_softmax(
         while mask.dim() < vector.dim():
             mask = mask.unsqueeze(1)
         if not memory_efficient:
-            # To limit numerical errors from large vector elements outside the mask, we zero these out.
+            # To limit numerical errors from large vector elements outside the mask,
+            # we zero these out.
             result = torch.nn.functional.softmax(vector * mask, dim=dim)
             result = result * mask
             result = result / (result.sum(dim=dim, keepdim=True) + 1e-13)
@@ -1648,12 +1648,13 @@ def find_embedding_layer(model: torch.nn.Module) -> torch.nn.Module:
     """
     # We'll look for a few special cases in a first pass, then fall back to just finding a
     # TextFieldEmbedder in a second pass if we didn't find a special case.
-    from transformers.modeling_gpt2 import GPT2Model
     from transformers.modeling_bert import BertEmbeddings
-    from allennlp.modules.text_field_embedders.text_field_embedder import TextFieldEmbedder
+    from transformers.modeling_gpt2 import GPT2Model
+
     from allennlp.modules.text_field_embedders.basic_text_field_embedder import (
         BasicTextFieldEmbedder,
     )
+    from allennlp.modules.text_field_embedders.text_field_embedder import TextFieldEmbedder
     from allennlp.modules.token_embedders.embedding import Embedding
 
     for module in model.modules():
@@ -1663,7 +1664,6 @@ def find_embedding_layer(model: torch.nn.Module) -> torch.nn.Module:
             return module.wte
     for module in model.modules():
         if isinstance(module, TextFieldEmbedder):
-
             if isinstance(module, BasicTextFieldEmbedder):
                 # We'll have a check for single Embedding cases, because we can be more efficient
                 # in cases like this.  If this check fails, then for something like hotflip we need

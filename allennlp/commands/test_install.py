@@ -18,7 +18,6 @@ an installation by running the unit tests.
       --include-package INCLUDE_PACKAGE
                             additional packages to include
 """
-
 import argparse
 import logging
 import os
