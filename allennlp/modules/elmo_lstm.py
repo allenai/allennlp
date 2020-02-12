@@ -1,21 +1,21 @@
 """
 A stacked bidirectional LSTM with skip connections between layers.
 """
-from typing import Optional, Tuple, List
 import warnings
+from typing import List, Optional, Tuple
 
+import numpy
 import torch
 from torch.nn.utils.rnn import PackedSequence, pad_packed_sequence
+
+from allennlp.common.checks import ConfigurationError
+from allennlp.common.file_utils import cached_path
+from allennlp.modules.encoder_base import _EncoderBase
+from allennlp.modules.lstm_cell_with_projection import LstmCellWithProjection
 
 with warnings.catch_warnings():
     warnings.filterwarnings("ignore", category=FutureWarning)
     import h5py
-import numpy
-
-from allennlp.modules.lstm_cell_with_projection import LstmCellWithProjection
-from allennlp.common.checks import ConfigurationError
-from allennlp.modules.encoder_base import _EncoderBase
-from allennlp.common.file_utils import cached_path
 
 
 class ElmoLstm(_EncoderBase):

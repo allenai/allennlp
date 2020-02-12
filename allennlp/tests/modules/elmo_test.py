@@ -1,24 +1,25 @@
-import os
 import json
+import os
 import warnings
 from typing import List
 
-with warnings.catch_warnings():
-    warnings.filterwarnings("ignore", category=FutureWarning)
-    import h5py
 import numpy
 import torch
 
 from allennlp.common.testing import AllenNlpTestCase
+from allennlp.data import Instance, Token, Vocabulary
+from allennlp.data.batch import Batch
+from allennlp.data.fields import TextField
+from allennlp.data.iterators import BasicIterator
 from allennlp.data.token_indexers.elmo_indexer import ELMoTokenCharactersIndexer
 from allennlp.data.token_indexers.single_id_token_indexer import SingleIdTokenIndexer
-from allennlp.data import Token, Vocabulary, Instance
-from allennlp.data.batch import Batch
-from allennlp.data.iterators import BasicIterator
-from allennlp.modules.elmo import _ElmoBiLm, Elmo, _ElmoCharacterEncoder
+from allennlp.modules.elmo import _ElmoBiLm, _ElmoCharacterEncoder, Elmo
 from allennlp.modules.token_embedders import ElmoTokenEmbedder
-from allennlp.data.fields import TextField
 from allennlp.nn.util import remove_sentence_boundaries
+
+with warnings.catch_warnings():
+    warnings.filterwarnings("ignore", category=FutureWarning)
+    import h5py
 
 
 class ElmoTestCase(AllenNlpTestCase):

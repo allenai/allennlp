@@ -217,7 +217,7 @@ def read(fn: str) -> Iterable[List[Extraction]]:
         yield prev_sent
 
 
-def convert_sent_to_conll(sent_ls: List[Extraction]) -> Iterable[Tuple[str, str, ...]]:
+def convert_sent_to_conll(sent_ls: List[Extraction]) -> Iterable[Tuple[str, ...]]:
     """
     Given a list of extractions for a single sentence, converts it to CoNLL representation.
     """
@@ -230,7 +230,7 @@ def convert_sent_to_conll(sent_ls: List[Extraction]) -> Iterable[Tuple[str, str,
     )
 
 
-def pad_line_to_ontonotes(line: Tuple[str, str, ...], domain: str) -> List[str]:
+def pad_line_to_ontonotes(line: Tuple[str, ...], domain: str) -> List[str]:
     """
     Pad line to conform to OntoNotes representation.
     """

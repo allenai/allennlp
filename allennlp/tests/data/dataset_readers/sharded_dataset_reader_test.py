@@ -1,13 +1,9 @@
 from collections import Counter
 from typing import Tuple
 
-import numpy as np
-import pytest
-
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.data.dataset_readers import ShardedDatasetReader, SequenceTaggingDatasetReader
+from allennlp.data.dataset_readers import SequenceTaggingDatasetReader, ShardedDatasetReader
 from allennlp.data.instance import Instance
-from allennlp.data.vocabulary import Vocabulary
 
 
 def fingerprint(instance: Instance) -> Tuple[str, ...]:

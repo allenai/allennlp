@@ -1,37 +1,36 @@
 import json
 import logging
-from typing import Union, List, Dict, Any
 import warnings
-
-import torch
-from torch.nn.modules import Dropout
+from typing import Any, Dict, List, Union
 
 import numpy
-
-with warnings.catch_warnings():
-    warnings.filterwarnings("ignore", category=FutureWarning)
-    import h5py
+import torch
 from overrides import overrides
+from torch.nn.modules import Dropout
 
-from allennlp.common.file_utils import cached_path
-from allennlp.common.checks import ConfigurationError
-from allennlp.common.util import lazy_groups_of
 from allennlp.common import FromParams
-from allennlp.modules.elmo_lstm import ElmoLstm
-from allennlp.modules.highway import Highway
-from allennlp.modules.scalar_mix import ScalarMix
-from allennlp.nn.util import (
-    remove_sentence_boundaries,
-    add_sentence_boundary_token_ids,
-    get_device_of,
-)
+from allennlp.common.checks import ConfigurationError
+from allennlp.common.file_utils import cached_path
+from allennlp.common.util import lazy_groups_of
+from allennlp.data import Instance, Token, Vocabulary
+from allennlp.data.batch import Batch
+from allennlp.data.fields import TextField
 from allennlp.data.token_indexers.elmo_indexer import (
     ELMoCharacterMapper,
     ELMoTokenCharactersIndexer,
 )
-from allennlp.data.batch import Batch
-from allennlp.data import Token, Vocabulary, Instance
-from allennlp.data.fields import TextField
+from allennlp.modules.elmo_lstm import ElmoLstm
+from allennlp.modules.highway import Highway
+from allennlp.modules.scalar_mix import ScalarMix
+from allennlp.nn.util import (
+    add_sentence_boundary_token_ids,
+    get_device_of,
+    remove_sentence_boundaries,
+)
+
+with warnings.catch_warnings():
+    warnings.filterwarnings("ignore", category=FutureWarning)
+    import h5py
 
 
 logger = logging.getLogger(__name__)

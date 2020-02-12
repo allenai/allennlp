@@ -1,13 +1,6 @@
-import filecmp
-import json
-import os
-import pathlib
-import tarfile
 import numpy as np
-
 import torch
 
-from allennlp.commands.train import train_model
 from allennlp.common import Params
 from allennlp.common.testing import ModelTestCase
 from allennlp.modules.token_embedders import ElmoTokenEmbedderMultiLang

@@ -41,7 +41,7 @@ logger = logging.getLogger(__name__)
 class Initializer(Registrable):
     """
     An initializer is really just a bare pytorch function. This class
-    is a proxy that allows us to implement `Registerable` for those functions.
+    is a proxy that allows us to implement `Registrable` for those functions.
     """
 
     default_implementation = "normal"
