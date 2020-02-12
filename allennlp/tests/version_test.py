@@ -2,11 +2,13 @@ import os
 from unittest import TestCase
 from semantic_version import Version
 
+
 def load_version():
     with open("allennlp/version.py", "r") as version_file:
         globals = {}
         exec(version_file.read(), globals)
         return Version(globals["VERSION"])
+
 
 class TestVersion(TestCase):
     def test_default_suffix(self):
