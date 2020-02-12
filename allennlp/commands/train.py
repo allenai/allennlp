@@ -155,7 +155,7 @@ def train_model_from_file(
     node_rank: int = 0,
     include_package: List[str] = None,
     dry_run: bool = False,
-) -> Model:
+) -> Optional[Model]:
     """
     A wrapper around :func:`train_model` which loads the params from a file.
 
@@ -187,8 +187,8 @@ def train_model_from_file(
 
     # Returns
 
-    best_model : `Model`
-        The model with the best epoch weights.
+    best_model : `Optional[Model]`
+        The model with the best epoch weights or `None` if in dry run.
     """
     # Load the experiment config from a file and pass it to `train_model`.
     params = Params.from_file(parameter_filename, overrides)
@@ -214,7 +214,7 @@ def train_model(
     include_package: List[str] = None,
     batch_weight_key: str = "",
     dry_run: bool = False,
-) -> Model:
+) -> Optional[Model]:
     """
     Trains the model specified in the given :class:`Params` object, using the data and training
     parameters also specified in that object, and saves the results in `serialization_dir`.
@@ -246,8 +246,8 @@ def train_model(
 
     # Returns
 
-    best_model : `Model`
-        The model with the best epoch weights.
+    best_model : `Optional[Model]`
+        The model with the best epoch weights or `None` if in dry run.
     """
     training_util.create_serialization_dir(params, serialization_dir, recover, force)
     params.to_file(os.path.join(serialization_dir, CONFIG_NAME))
@@ -328,10 +328,12 @@ def train_model(
             ),
             nprocs=num_procs,
         )
-        if not dry_run:
+        if dry_run:
+            return None
+        else:
             archive_model(serialization_dir)
-        model = Model.load(params, serialization_dir)
-        return model
+            model = Model.load(params, serialization_dir)
+            return model
 
 
 def _train_worker(
@@ -386,8 +388,8 @@ def _train_worker(
 
     # Returns
 
-    best_model : `Model`
-        The model with the best epoch weights.
+    best_model : `Optional[Model]`
+        The model with the best epoch weights or `None` if in distributed training or in dry run.
     """
     common_util.prepare_global_logging(
         serialization_dir, file_friendly_logging, rank=process_rank, world_size=world_size
@@ -448,29 +450,31 @@ def _train_worker(
         batch_weight_key=batch_weight_key,
     )
 
-    if not dry_run:
-        try:
-            if distributed:  # let the setup get ready for all the workers
-                dist.barrier()
+    if dry_run:
+        return None
 
-            metrics = train_loop.run()
-        except KeyboardInterrupt:
-            # if we have completed an epoch, try to create a model archive.
-            if master and os.path.exists(os.path.join(serialization_dir, _DEFAULT_WEIGHTS)):
-                logging.info(
-                    "Training interrupted by the user. Attempting to create "
-                    "a model archive using the current best epoch weights."
-                )
-                archive_model(serialization_dir)
-            raise
+    try:
+        if distributed:  # let the setup get ready for all the workers
+            dist.barrier()
 
-        if master:
-            train_loop.finish(metrics)
+        metrics = train_loop.run()
+    except KeyboardInterrupt:
+        # if we have completed an epoch, try to create a model archive.
+        if master and os.path.exists(os.path.join(serialization_dir, _DEFAULT_WEIGHTS)):
+            logging.info(
+                "Training interrupted by the user. Attempting to create "
+                "a model archive using the current best epoch weights."
+            )
+            archive_model(serialization_dir)
+        raise
+
+    if master:
+        train_loop.finish(metrics)
 
     if not distributed:
         return train_loop.model
 
-    return None  # to make mypy happy
+    return None
 
 
 class TrainModel(Registrable):
