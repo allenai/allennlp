@@ -342,7 +342,7 @@ def construct_arg(
     elif annotation == float:
         # Floats are special because we allow casting from int to float.
         if type(popped_params) in {int, float}:
-            return float(popped_params)
+            return float(popped_params)  # type: ignore
         else:
             raise TypeError(f"Expected {argument_name} to be numeric.")
 
