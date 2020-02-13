@@ -146,8 +146,8 @@ class AugmentedLstm(torch.nn.Module):
     dropout controlls the level of variational dropout done.
 
     Args:
-        embed_dim (int): The number of expected features in the input.
-        lstm_dim (int): Number of features in the hidden state of the LSTM.
+        input_size (int): The number of expected features in the input.
+        hidden_size (int): Number of features in the hidden state of the LSTM.
             Defaults to 32.
         go_forward (bool): Whether to compute features left to right (forward)
             or right to left (backward).
@@ -164,8 +164,8 @@ class AugmentedLstm(torch.nn.Module):
 
     def __init__(
         self,
-        embed_dim: int,
-        lstm_dim: int,
+        input_size: int,
+        hidden_size: int,
         go_forward: bool = True,
         recurrent_dropout_probability: float = 0.0,
         use_highway: bool = True,
@@ -173,8 +173,8 @@ class AugmentedLstm(torch.nn.Module):
     ):
         super().__init__()
 
-        self.embed_dim = embed_dim
-        self.lstm_dim = lstm_dim
+        self.embed_dim = input_size
+        self.lstm_dim = hidden_size
 
         self.go_forward = go_forward
         self.use_highway = use_highway
@@ -420,7 +420,7 @@ class BiAugmentedLstm(torch.nn.Module):
                 "initial states does not match the number of layers."
             )
         else:
-            hidden_states = list(  # noqa
+            hidden_states = list(  # type: ignore
                 zip(states[0].chunk(self.num_layers, 0), states[1].chunk(self.num_layers, 0))
             )
         for i, state in enumerate(hidden_states):
@@ -468,7 +468,7 @@ class BiAugmentedLstm(torch.nn.Module):
                 "initial states does not match the number of layers."
             )
         else:
-            hidden_states = list(  # noqa
+            hidden_states = list(  # type: ignore
                 zip(states[0].chunk(self.num_layers, 0), states[1].chunk(self.num_layers, 0))
             )
 

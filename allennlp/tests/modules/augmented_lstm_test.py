@@ -8,7 +8,7 @@ from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import Params
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.modules.augmented_lstm import AugmentedLstm, AugmentedLSTMCell, AugmentedLstm
+from allennlp.modules.augmented_lstm import AugmentedLstm, AugmentedLSTMCell
 from allennlp.nn import InitializerApplicator, Initializer
 from allennlp.nn.util import sort_batch_by_length
 
