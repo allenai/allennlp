@@ -334,14 +334,17 @@ def construct_arg(
 
     # If the parameter type is a Python primitive, just pop it off
     # using the correct casting pop_xyz operation.
-    elif annotation == str:
-        return popped_params
-    elif annotation == int:
-        return int(popped_params)  # type: ignore
-    elif annotation == bool:
-        return bool(popped_params)
+    elif annotation in {str, int, bool}:
+        if type(popped_params) in {str, int, bool}:
+            return annotation(popped_params)
+        else:
+            raise TypeError(f"Expected {argument_name} to be a {annotation.__name__}.")
     elif annotation == float:
-        return float(popped_params)  # type: ignore
+        # Floats are special because we allow casting from int to float.
+        if type(popped_params) in {int, float}:
+            return float(popped_params)  # type: ignore
+        else:
+            raise TypeError(f"Expected {argument_name} to be numeric.")
 
     # This is special logic for handling types like Dict[str, TokenIndexer],
     # List[TokenIndexer], Tuple[TokenIndexer, Tokenizer], and Set[TokenIndexer],
