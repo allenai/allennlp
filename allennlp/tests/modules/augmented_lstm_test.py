@@ -8,11 +8,7 @@ from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import Params
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.modules.augmented_lstm import (
-    AugmentedLstm,
-    AugmentedLSTMCell,
-    AugmentedLSTMUnidirectional,
-)
+from allennlp.modules.augmented_lstm import AugmentedLstm, AugmentedLSTMCell, AugmentedLstm
 from allennlp.nn import InitializerApplicator, Initializer
 from allennlp.nn.util import sort_batch_by_length
 
@@ -52,7 +48,7 @@ class TestAugmentedLSTM(AllenNlpTestCase):
         tensor = pack_padded_sequence(
             sorted_tensor, sorted_sequence.data.tolist(), batch_first=True
         )
-        lstm = AugmentedLSTMUnidirectional(10, 11, go_forward=False)
+        lstm = AugmentedLstm(10, 11, go_forward=False)
         output, _ = lstm(tensor)
         output_sequence, _ = pad_packed_sequence(output, batch_first=True)
 
@@ -131,7 +127,7 @@ class TestAugmentedLSTM(AllenNlpTestCase):
         tensor = pack_padded_sequence(
             sorted_tensor, sorted_sequence.data.tolist(), batch_first=True
         )
-        lstm = AugmentedLSTMUnidirectional(10, 11, recurrent_dropout_probability=0.5)
+        lstm = AugmentedLstm(10, 11, recurrent_dropout_probability=0.5)
 
         output, (hidden_state, _) = lstm(tensor)
         output_sequence, _ = pad_packed_sequence(output, batch_first=True)
@@ -148,10 +144,8 @@ class TestAugmentedLSTM(AllenNlpTestCase):
         assert not num_hidden_dims_zero_across_timesteps
 
     def test_dropout_version_is_different_to_no_dropout(self):
-        augmented_lstm = AugmentedLSTMUnidirectional(10, 11)
-        dropped_augmented_lstm = AugmentedLSTMUnidirectional(
-            10, 11, recurrent_dropout_probability=0.9
-        )
+        augmented_lstm = AugmentedLstm(10, 11)
+        dropped_augmented_lstm = AugmentedLstm(10, 11, recurrent_dropout_probability=0.9)
         # Initialize all weights to be == 1.
         constant_init = Initializer.from_params(Params({"type": "constant", "val": 0.5}))
         initializer = InitializerApplicator([(".*", constant_init)])

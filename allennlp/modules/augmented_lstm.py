@@ -138,9 +138,9 @@ class AugmentedLSTMCell(torch.nn.Module):
         return timestep_output, memory
 
 
-class AugmentedLSTMUnidirectional(torch.nn.Module):
+class AugmentedLstm(torch.nn.Module):
     """
-    `AugmentedLSTMUnidirectional` implements a one-layer single directional
+    `AugmentedLstm` implements a one-layer single directional
     AugmentedLSTM layer. AugmentedLSTM is an LSTM which optionally
     appends an optional highway network to the output layer. Furthermore the
     dropout controlls the level of variational dropout done.
@@ -188,7 +188,7 @@ class AugmentedLSTMUnidirectional(torch.nn.Module):
         self, inputs: PackedSequence, states: Optional[Tuple[torch.Tensor, torch.Tensor]] = None
     ) -> Tuple[PackedSequence, Tuple[torch.Tensor, torch.Tensor]]:
         """
-        Warning: DO NOT USE THIS LAYER DIRECTLY, INSTEAD USE the AugmentedLSTM class
+        Warning: Would be better to use the BiAugmentedLstm class in a regular model
 
         Given an input batch of sequential data such as word embeddings, produces
         a single layer unidirectional AugmentedLSTM representation of the sequential
@@ -210,6 +210,9 @@ class AugmentedLSTMUnidirectional(torch.nn.Module):
                 Shape of each state is (1 x bsize x nhid).
 
         """
+        if not isinstance(inputs, PackedSequence):
+            raise ConfigurationError("inputs must be PackedSequence but got %s" % (type(inputs)))
+
         sequence_tensor, batch_lengths = pad_packed_sequence(inputs, batch_first=True)
         batch_size = sequence_tensor.size()[0]
         total_timesteps = sequence_tensor.size()[1]
@@ -275,12 +278,12 @@ class AugmentedLSTMUnidirectional(torch.nn.Module):
         return output_accumulator, final_state
 
 
-class AugmentedLstm(torch.nn.Module):
+class BiAugmentedLstm(torch.nn.Module):
     """
-    `AugmentedLSTM` implements a generic AugmentedLSTM representation layer.
-    AugmentedLSTM is an LSTM which optionally appends
+    `BiAugmentedLstm` implements a generic AugmentedLSTM representation layer.
+    BiAugmentedLstm is an LSTM which optionally appends
     an optional highway network to the output layer.
-    Furthermore the dropout controlls the level of variational dropout done.
+    Furthermore the dropout controls the level of variational dropout done.
 
     # Parameters
         input_size : `int`, required.
@@ -343,7 +346,7 @@ class AugmentedLstm(torch.nn.Module):
         lstm_embed_dim = self.input_size
         for _ in range(self.num_layers):
             self.forward_layers.append(
-                AugmentedLSTMUnidirectional(
+                AugmentedLstm(
                     lstm_embed_dim,
                     self.hidden_size,
                     go_forward=True,
@@ -354,7 +357,7 @@ class AugmentedLstm(torch.nn.Module):
             )
             if self.bidirectional:
                 self.backward_layers.append(
-                    AugmentedLSTMUnidirectional(
+                    AugmentedLstm(
                         lstm_embed_dim,
                         self.hidden_size,
                         go_forward=False,
