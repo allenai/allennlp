@@ -42,3 +42,5 @@ mkdocs-material==4.6.2
 
 # Pypi uploads
 twine>=1.11.0
+setuptools
+wheel
