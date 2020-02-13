@@ -42,11 +42,7 @@ class ComposeEncoder(Seq2SeqEncoder):
             last_enc = enc
 
     @overrides
-    def forward(
-        self,  # pylint: disable=arguments-differ
-        inputs: torch.Tensor,
-        mask: torch.LongTensor = None,
-    ) -> torch.Tensor:
+    def forward(self, inputs: torch.Tensor, mask: torch.LongTensor = None) -> torch.Tensor:
         """
         # Parameters
 

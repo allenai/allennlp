@@ -37,7 +37,7 @@ from logging.handlers import RotatingFileHandler
 from sqlite3 import Connection
 from subprocess import PIPE
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 formatter = logging.Formatter(
     fmt="%(asctime)s %(levelname)-8s %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
