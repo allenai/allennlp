@@ -35,7 +35,7 @@ class AugmentedLSTMCell(torch.nn.Module):
     """
 
     def __init__(
-            self, embed_dim: int, lstm_dim: int, use_highway: bool = True, use_bias: bool = True
+        self, embed_dim: int, lstm_dim: int, use_highway: bool = True, use_bias: bool = True
     ):
         super().__init__()
         self.embed_dim = embed_dim
@@ -65,9 +65,7 @@ class AugmentedLSTMCell(torch.nn.Module):
             self.input_linearity = torch.nn.Linear(
                 self.embed_dim, 4 * self.lstm_dim, bias=self.use_bias
             )
-            self.state_linearity = torch.nn.Linear(
-                self.lstm_dim, 4 * self.lstm_dim, bias=True
-            )
+            self.state_linearity = torch.nn.Linear(self.lstm_dim, 4 * self.lstm_dim, bias=True)
         self.reset_parameters()
 
     def reset_parameters(self):
@@ -78,13 +76,13 @@ class AugmentedLSTMCell(torch.nn.Module):
         self.state_linearity.bias.data.fill_(0.0)
         # Initialize forget gate biases to 1.0 as per An Empirical
         # Exploration of Recurrent Network Architectures, (Jozefowicz, 2015).
-        self.state_linearity.bias.data[self.lstm_dim: 2 * self.lstm_dim].fill_(1.0)
+        self.state_linearity.bias.data[self.lstm_dim : 2 * self.lstm_dim].fill_(1.0)
 
     def forward(
-            self,
-            x: torch.Tensor,
-            states=Tuple[torch.Tensor, torch.Tensor],
-            variational_dropout_mask: Optional[torch.Tensor] = None,
+        self,
+        x: torch.Tensor,
+        states=Tuple[torch.Tensor, torch.Tensor],
+        variational_dropout_mask: Optional[torch.Tensor] = None,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Warning: DO NOT USE THIS LAYER DIRECTLY, INSTEAD USE the AugmentedLSTM class
@@ -116,19 +114,11 @@ class AugmentedLSTMCell(torch.nn.Module):
         if self.use_highway:
             fused_op = projected_input[:, : 5 * self.lstm_dim] + projected_state
             fused_chunked = torch.chunk(fused_op, 5, 1)
-            (
-                input_gate,
-                forget_gate,
-                memory_init,
-                output_gate,
-                highway_gate,
-            ) = fused_chunked
+            (input_gate, forget_gate, memory_init, output_gate, highway_gate) = fused_chunked
             highway_gate = torch.sigmoid(highway_gate)
         else:
             fused_op = projected_input + projected_state
-            input_gate, forget_gate, memory_init, output_gate = torch.chunk(
-                fused_op, 4, 1
-            )
+            input_gate, forget_gate, memory_init, output_gate = torch.chunk(fused_op, 4, 1)
         input_gate = torch.sigmoid(input_gate)
         forget_gate = torch.sigmoid(forget_gate)
         memory_init = torch.tanh(memory_init)
@@ -138,11 +128,11 @@ class AugmentedLSTMCell(torch.nn.Module):
 
         if self.use_highway:
             highway_input_projection = projected_input[
-                                       :, self._highway_inp_proj_start: self._highway_inp_proj_end
-                                       ]
+                :, self._highway_inp_proj_start : self._highway_inp_proj_end
+            ]
             timestep_output = (
-                    highway_gate * timestep_output
-                    + (1 - highway_gate) * highway_input_projection  # noqa
+                highway_gate * timestep_output
+                + (1 - highway_gate) * highway_input_projection  # noqa
             )
 
         return timestep_output, memory
@@ -173,13 +163,13 @@ class AugmentedLSTMUnidirectional(torch.nn.Module):
     """
 
     def __init__(
-            self,
-            embed_dim: int,
-            lstm_dim: int,
-            go_forward: bool = True,
-            recurrent_dropout_probability: float = 0.0,
-            use_highway: bool = True,
-            use_input_projection_bias: bool = True,
+        self,
+        embed_dim: int,
+        lstm_dim: int,
+        go_forward: bool = True,
+        recurrent_dropout_probability: float = 0.0,
+        use_highway: bool = True,
+        use_input_projection_bias: bool = True,
     ):
         super().__init__()
 
@@ -195,9 +185,7 @@ class AugmentedLSTMUnidirectional(torch.nn.Module):
         )
 
     def forward(
-            self,
-            inputs: PackedSequence,
-            states: Optional[Tuple[torch.Tensor, torch.Tensor]] = None,
+        self, inputs: PackedSequence, states: Optional[Tuple[torch.Tensor, torch.Tensor]] = None
     ) -> Tuple[PackedSequence, Tuple[torch.Tensor, torch.Tensor]]:
         """
         Warning: DO NOT USE THIS LAYER DIRECTLY, INSTEAD USE the AugmentedLSTM class
@@ -225,16 +213,10 @@ class AugmentedLSTMUnidirectional(torch.nn.Module):
         sequence_tensor, batch_lengths = pad_packed_sequence(inputs, batch_first=True)
         batch_size = sequence_tensor.size()[0]
         total_timesteps = sequence_tensor.size()[1]
-        output_accumulator = sequence_tensor.new_zeros(
-            batch_size, total_timesteps, self.lstm_dim
-        )
+        output_accumulator = sequence_tensor.new_zeros(batch_size, total_timesteps, self.lstm_dim)
         if states is None:
-            full_batch_previous_memory = sequence_tensor.new_zeros(
-                batch_size, self.lstm_dim
-            )
-            full_batch_previous_state = sequence_tensor.data.new_zeros(
-                batch_size, self.lstm_dim
-            )
+            full_batch_previous_memory = sequence_tensor.new_zeros(batch_size, self.lstm_dim)
+            full_batch_previous_state = sequence_tensor.data.new_zeros(batch_size, self.lstm_dim)
         else:
             full_batch_previous_state = states[0].squeeze(0)
             full_batch_previous_memory = states[1].squeeze(0)
@@ -260,30 +242,24 @@ class AugmentedLSTMUnidirectional(torch.nn.Module):
                 # sequence beyond the current batch
                 # index require computation use this timestep?
                 while (
-                        current_length_index < (len(batch_lengths) - 1)
-                        and batch_lengths[current_length_index + 1] > index
+                    current_length_index < (len(batch_lengths) - 1)
+                    and batch_lengths[current_length_index + 1] > index
                 ):
                     current_length_index += 1
 
-            previous_memory = full_batch_previous_memory[
-                              0: current_length_index + 1
-                              ].clone()
-            previous_state = full_batch_previous_state[
-                             0: current_length_index + 1
-                             ].clone()
-            timestep_input = sequence_tensor[0: current_length_index + 1, index]
+            previous_memory = full_batch_previous_memory[0 : current_length_index + 1].clone()
+            previous_state = full_batch_previous_state[0 : current_length_index + 1].clone()
+            timestep_input = sequence_tensor[0 : current_length_index + 1, index]
             timestep_output, memory = self.cell(
                 timestep_input,
                 (previous_state, previous_memory),
-                dropout_mask[0: current_length_index + 1]
-                if dropout_mask is not None
-                else None,
+                dropout_mask[0 : current_length_index + 1] if dropout_mask is not None else None,
             )
             full_batch_previous_memory = full_batch_previous_memory.data.clone()
             full_batch_previous_state = full_batch_previous_state.data.clone()
-            full_batch_previous_memory[0: current_length_index + 1] = memory
-            full_batch_previous_state[0: current_length_index + 1] = timestep_output
-            output_accumulator[0: current_length_index + 1, index, :] = timestep_output
+            full_batch_previous_memory[0 : current_length_index + 1] = memory
+            full_batch_previous_state[0 : current_length_index + 1] = timestep_output
+            output_accumulator[0 : current_length_index + 1, index, :] = timestep_output
 
         output_accumulator = pack_padded_sequence(
             output_accumulator, batch_lengths, batch_first=True
@@ -317,7 +293,7 @@ class AugmentedLstm(torch.nn.Module):
             computing the final result. Defaults to 1.
         bias (bool): If `True` we use a bias in our LSTM calculations, otherwise
             we don't.
-        dropout (float): Variational dropout probability to use.
+        recurrent_dropout_probability (float): Variational dropout probability to use.
             Defaults to 0.0.
         bidirectional (bool): If `True`, becomes a bidirectional LSTM. Defaults
             to `True`.
@@ -339,15 +315,15 @@ class AugmentedLstm(torch.nn.Module):
     """
 
     def __init__(
-            self,
-            input_size: int,
-            hidden_size: int,
-            num_layers: int = 1,
-            bias: bool = True,
-            dropout: float = 0.0,
-            bidirectional: bool = False,
-            padding_value: float = 0.0,
-            use_highway: bool = True
+        self,
+        input_size: int,
+        hidden_size: int,
+        num_layers: int = 1,
+        bias: bool = True,
+        recurrent_dropout_probability: float = 0.0,
+        bidirectional: bool = False,
+        padding_value: float = 0.0,
+        use_highway: bool = True,
     ) -> None:
         super().__init__()
         self.input_size = input_size
@@ -355,7 +331,7 @@ class AugmentedLstm(torch.nn.Module):
         self.hidden_size = hidden_size
         self.num_layers = num_layers
         self.bidirectional = bidirectional
-        self.dropout = dropout
+        self.recurrent_dropout_probability = recurrent_dropout_probability
         self.use_highway = use_highway
         self.use_bias = bias
 
@@ -371,7 +347,7 @@ class AugmentedLstm(torch.nn.Module):
                     lstm_embed_dim,
                     self.hidden_size,
                     go_forward=True,
-                    recurrent_dropout_probability=self.dropout,
+                    recurrent_dropout_probability=self.recurrent_dropout_probability,
                     use_highway=self.use_highway,
                     use_input_projection_bias=self.use_bias,
                 )
@@ -382,7 +358,7 @@ class AugmentedLstm(torch.nn.Module):
                         lstm_embed_dim,
                         self.hidden_size,
                         go_forward=False,
-                        recurrent_dropout_probability=self.dropout,
+                        recurrent_dropout_probability=self.recurrent_dropout_probability,
                         use_highway=self.use_highway,
                         use_input_projection_bias=self.use_bias,
                     )
@@ -392,9 +368,7 @@ class AugmentedLstm(torch.nn.Module):
         self.representation_dim = lstm_embed_dim
 
     def forward(
-            self,
-            inputs: torch.Tensor,
-            states: Optional[Tuple[torch.Tensor, torch.Tensor]] = None,
+        self, inputs: torch.Tensor, states: Optional[Tuple[torch.Tensor, torch.Tensor]] = None
     ) -> Tuple[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
         """
         Given an input batch of sequential data such as word embeddings, produces
@@ -429,9 +403,7 @@ class AugmentedLstm(torch.nn.Module):
         return self._forward_unidirectional(inputs, states)
 
     def _forward_bidirectional(
-            self,
-            inputs: PackedSequence,
-            states: Optional[Tuple[torch.Tensor, torch.Tensor]],
+        self, inputs: PackedSequence, states: Optional[Tuple[torch.Tensor, torch.Tensor]]
     ):
         output_sequence = inputs
         final_h = []
@@ -446,10 +418,7 @@ class AugmentedLstm(torch.nn.Module):
             )
         else:
             hidden_states = list(  # noqa
-                zip(
-                    states[0].chunk(self.num_layers, 0),
-                    states[1].chunk(self.num_layers, 0),
-                )
+                zip(states[0].chunk(self.num_layers, 0), states[1].chunk(self.num_layers, 0))
             )
         for i, state in enumerate(hidden_states):
             if state:
@@ -461,20 +430,12 @@ class AugmentedLstm(torch.nn.Module):
             forward_layer = self.forward_layers[i]
             backward_layer = self.backward_layers[i]
             # The state is duplicated to mirror the Pytorch API for LSTMs.
-            forward_output, final_forward_state = forward_layer(
-                output_sequence, forward_state
-            )
-            backward_output, final_backward_state = backward_layer(
-                output_sequence, backward_state
-            )
-            forward_output, lengths = pad_packed_sequence(
-                forward_output, batch_first=True
-            )
+            forward_output, final_forward_state = forward_layer(output_sequence, forward_state)
+            backward_output, final_backward_state = backward_layer(output_sequence, backward_state)
+            forward_output, lengths = pad_packed_sequence(forward_output, batch_first=True)
             backward_output, _ = pad_packed_sequence(backward_output, batch_first=True)
             output_sequence = torch.cat([forward_output, backward_output], -1)
-            output_sequence = pack_padded_sequence(
-                output_sequence, lengths, batch_first=True
-            )
+            output_sequence = pack_padded_sequence(output_sequence, lengths, batch_first=True)
 
             final_h.extend([final_forward_state[0], final_backward_state[0]])
             final_c.extend([final_forward_state[1], final_backward_state[1]])
@@ -486,15 +447,11 @@ class AugmentedLstm(torch.nn.Module):
             output_sequence, padding_value=self.padding_value, batch_first=True
         )
 
-        output_sequence = pack_padded_sequence(
-            output_sequence, batch_lengths, batch_first=True
-        )
+        output_sequence = pack_padded_sequence(output_sequence, batch_lengths, batch_first=True)
         return output_sequence, final_state_tuple
 
     def _forward_unidirectional(
-            self,
-            inputs: PackedSequence,
-            states: Optional[Tuple[torch.Tensor, torch.Tensor]],
+        self, inputs: PackedSequence, states: Optional[Tuple[torch.Tensor, torch.Tensor]]
     ):
         output_sequence = inputs
         final_h = []
@@ -509,10 +466,7 @@ class AugmentedLstm(torch.nn.Module):
             )
         else:
             hidden_states = list(  # noqa
-                zip(
-                    states[0].chunk(self.num_layers, 0),
-                    states[1].chunk(self.num_layers, 0),
-                )
+                zip(states[0].chunk(self.num_layers, 0), states[1].chunk(self.num_layers, 0))
             )
 
         for i, state in enumerate(hidden_states):
@@ -530,8 +484,6 @@ class AugmentedLstm(torch.nn.Module):
             output_sequence, padding_value=self.padding_value, batch_first=True
         )
 
-        output_sequence = pack_padded_sequence(
-            output_sequence, batch_lengths, batch_first=True
-        )
+        output_sequence = pack_padded_sequence(output_sequence, batch_lengths, batch_first=True)
 
         return output_sequence, final_state_tuple

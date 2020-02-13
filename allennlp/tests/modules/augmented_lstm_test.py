@@ -8,7 +8,11 @@ from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import Params
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.modules.augmented_lstm import AugmentedLstm, AugmentedLSTMCell, AugmentedLSTMUnidirectional
+from allennlp.modules.augmented_lstm import (
+    AugmentedLstm,
+    AugmentedLSTMCell,
+    AugmentedLSTMUnidirectional,
+)
 from allennlp.nn import InitializerApplicator, Initializer
 from allennlp.nn.util import sort_batch_by_length
 
@@ -145,7 +149,9 @@ class TestAugmentedLSTM(AllenNlpTestCase):
 
     def test_dropout_version_is_different_to_no_dropout(self):
         augmented_lstm = AugmentedLSTMUnidirectional(10, 11)
-        dropped_augmented_lstm = AugmentedLSTMUnidirectional(10, 11, recurrent_dropout_probability=0.9)
+        dropped_augmented_lstm = AugmentedLSTMUnidirectional(
+            10, 11, recurrent_dropout_probability=0.9
+        )
         # Initialize all weights to be == 1.
         constant_init = Initializer.from_params(Params({"type": "constant", "val": 0.5}))
         initializer = InitializerApplicator([(".*", constant_init)])
