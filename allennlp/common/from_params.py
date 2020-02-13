@@ -41,6 +41,7 @@ method.
 """
 
 from copy import deepcopy
+from pathlib import Path
 from typing import TypeVar, Type, Callable, Dict, Union, Any, cast, List, Tuple, Set
 import inspect
 import logging
@@ -334,11 +335,17 @@ def construct_arg(
 
     # If the parameter type is a Python primitive, just pop it off
     # using the correct casting pop_xyz operation.
-    elif annotation in {str, int, bool}:
-        if type(popped_params) in {str, int, bool}:
+    elif annotation in {int, bool}:
+        if type(popped_params) in {int, bool}:
             return annotation(popped_params)
         else:
             raise TypeError(f"Expected {argument_name} to be a {annotation.__name__}.")
+    elif annotation == str:
+        # Strings are special because we allow casting from Path to str.
+        if type(popped_params) == str or isinstance(popped_params, Path):
+            return str(popped_params)  # type: ignore
+        else:
+            raise TypeError(f"Expected {argument_name} to be a string.")
     elif annotation == float:
         # Floats are special because we allow casting from int to float.
         if type(popped_params) in {int, float}:
