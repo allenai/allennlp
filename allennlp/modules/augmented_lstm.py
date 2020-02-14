@@ -420,8 +420,10 @@ class BiAugmentedLstm(torch.nn.Module):
                 "initial states does not match the number of layers."
             )
         else:
-            hidden_states = list(  # type: ignore
-                zip(states[0].chunk(self.num_layers, 0), states[1].chunk(self.num_layers, 0))
+            hidden_states = list(
+                zip(
+                    states[0].chunk(self.num_layers, 0), states[1].chunk(self.num_layers, 0)
+                )  # type: ignore
             )
         for i, state in enumerate(hidden_states):
             if state:
@@ -468,8 +470,10 @@ class BiAugmentedLstm(torch.nn.Module):
                 "initial states does not match the number of layers."
             )
         else:
-            hidden_states = list(  # type: ignore
-                zip(states[0].chunk(self.num_layers, 0), states[1].chunk(self.num_layers, 0))
+            hidden_states = list(
+                zip(
+                    states[0].chunk(self.num_layers, 0), states[1].chunk(self.num_layers, 0)
+                )  # type: ignore
             )
 
         for i, state in enumerate(hidden_states):
