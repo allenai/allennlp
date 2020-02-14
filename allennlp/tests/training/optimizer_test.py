@@ -67,7 +67,6 @@ class TestOptimizer(AllenNlpTestCase):
         assert len(param_groups[2]["params"]) == 3
 
     def test_parameter_type_inference(self):
-        # Should work ok even with lr as a string
         optimizer_params = Params({"type": "sgd", "lr": 0.1})
 
         parameters = [[n, p] for n, p in self.model.named_parameters() if p.requires_grad]
