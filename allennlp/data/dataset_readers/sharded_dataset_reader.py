@@ -35,6 +35,11 @@ class ShardedDatasetReader(DatasetReader):
         if (util.is_distributed()):
             logger.info(f"BRR rank: {torch.distributed.get_rank()}")
             logger.info(f"BRR world: {torch.distributed.get_world_size()}")
+            self._rank = torch.distributed.get_rank()
+            self._world_size = torch.distributed.get_world_size()
+        else:
+            self._rank = 0
+            self._world_size = 1
 
         self.reader = base_reader
 
@@ -49,9 +54,8 @@ class ShardedDatasetReader(DatasetReader):
         # Ensure a consistent order.
         shards.sort()
 
-        # TODO(brendanr): Modify such that different shards are used by
-        # different workers in the distributed case.
-        for shard in shards:
-            logger.info(f"reading instances from {shard}")
-            for instance in self.reader.read(shard):
-                yield instance
+        for i, shard in enumerate(shards):
+            if i % self._world_size == self._rank:
+                logger.info(f"reading instances from {shard}")
+                for instance in self.reader.read(shard):
+                    yield instance
