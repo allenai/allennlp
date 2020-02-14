@@ -156,10 +156,40 @@ class TestTrain(AllenNlpTestCase):
         assert "stdout_worker1.log" in serialized_files
         assert "model.tar.gz" in serialized_files
 
-        import pdb; pdb.set_trace()
-
         # Check we can load the seralized model
-        assert load_archive(out_dir).model
+        archive = load_archive(out_dir)
+        assert archive.model
+
+        # Check that we created a vocab from all the shards.
+        tokens = archive.model.vocab._token_to_index["tokens"].keys()
+        assert tokens == {
+                '@@PADDING@@', '@@UNKNOWN@@', 'are', '.', 'animals', 'plants',
+                'vehicles', 'cats', 'dogs', 'snakes', 'birds', 'ferns',
+                'trees', 'flowers', 'vegetables', 'cars', 'buses', 'planes',
+                'rockets'
+        }
+
+        # TODO: This is somewhat brittle. Make these constants in trainer.py.
+        train_early = "finishing training early!"
+        validation_early = "finishing validation early!"
+        train_complete = "completed its entire epoch (training)."
+        validation_complete = "completed its entire epoch (validation)."
+
+        # There are three shards, but only two workers, so the first worker will have to discard some data.
+        with open(os.path.join(out_dir, "stdout_worker0.log")) as f:
+            worker0_log = f.read()
+            assert train_early in worker0_log
+            assert validation_early in worker0_log
+            assert train_complete not in worker0_log
+            assert validation_complete not in worker0_log
+
+        with open(os.path.join(out_dir, "stdout_worker0.log")) as f:
+            worker0_log = f.read()
+            assert train_early not in worker0_log
+            assert validation_early not in worker0_log
+            assert train_complete in worker0_log
+            assert validation_complete in worker0_log
+
 
     def test_distributed_raises_error_with_no_gpus(self):
         params = Params(
