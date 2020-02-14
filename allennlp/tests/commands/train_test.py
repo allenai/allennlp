@@ -184,11 +184,11 @@ class TestTrain(AllenNlpTestCase):
             assert validation_complete not in worker0_log
 
         with open(os.path.join(out_dir, "stdout_worker1.log")) as f:
-            worker0_log = f.read()
-            assert train_early not in worker0_log
-            assert validation_early not in worker0_log
-            assert train_complete in worker0_log
-            assert validation_complete in worker0_log
+            worker1_log = f.read()
+            assert train_early not in worker1_log
+            assert validation_early not in worker1_log
+            assert train_complete in worker1_log
+            assert validation_complete in worker1_log
 
 
     def test_distributed_raises_error_with_no_gpus(self):
