@@ -38,7 +38,7 @@ class TestNerTagIndexer(AllenNlpTestCase):
 
     def test_blank_ner_tag(self):
         tokens = [
-            Token(token)._replace(ent_type_="") for token in "allennlp is awesome .".split(" ")
+            Token(token) for token in "allennlp is awesome .".split(" ")
         ]
         indexer = NerTagIndexer()
         counter = defaultdict(lambda: defaultdict(int))

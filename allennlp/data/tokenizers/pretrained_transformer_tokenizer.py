@@ -128,7 +128,9 @@ class PretrainedTransformerTokenizer(Tokenizer):
 
             whole_text = sentence_1
             if sentence_2 is not None:
-                whole_text += sentence_2  # Calculating character offsets with sentence pairs is sketchy at best.
+                whole_text += (
+                    sentence_2
+                )  # Calculating character offsets with sentence pairs is sketchy at best.
             if self._tokenizer_lowercases:
                 whole_text = whole_text.lower()
 
@@ -163,7 +165,7 @@ class PretrainedTransformerTokenizer(Tokenizer):
                     continue
                 allowed_skipped_whitespace = min_allowed_skipped_whitespace
 
-                tokens[token_index] = tokens[token_index]._replace(idx=token_start_index)
+                tokens[token_index].idx = token_start_index
                 text_index = token_start_index + len(token_text)
                 token_index += 1
 
