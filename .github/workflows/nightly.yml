@@ -18,8 +18,9 @@ jobs:
         pip install -r dev-requirements.txt
     - name: Build Package
       env:
-        ALLENNLP_REVISION: dev.$(git rev-parse --short "$GITHUB_SHA")
+        ALLENNLP_VERSION_SUFFIX: -dev$(date -u +%Y%m%d)+$(git rev-parse --short "$GITHUB_SHA")
       run: |
+        echo "Building packages for dev release $ALLENNLP_VERSION_SUFFIX"
         python setup.py bdist_wheel sdist
     - name: Test Packages
       run: |
