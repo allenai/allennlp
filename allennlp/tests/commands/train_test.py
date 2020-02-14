@@ -183,7 +183,7 @@ class TestTrain(AllenNlpTestCase):
             assert train_complete not in worker0_log
             assert validation_complete not in worker0_log
 
-        with open(os.path.join(out_dir, "stdout_worker0.log")) as f:
+        with open(os.path.join(out_dir, "stdout_worker1.log")) as f:
             worker0_log = f.read()
             assert train_early not in worker0_log
             assert validation_early not in worker0_log
