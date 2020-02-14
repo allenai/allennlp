@@ -360,7 +360,24 @@ class Trainer(TrainerBase):
         logger.info("Training")
 
         cumulative_batch_group_size = 0
+        stopped_early = False
         for batch_group in batch_group_generator_tqdm:
+            if self._distributed:
+                # Check whether the other workers have stopped already (due to differing amounts of
+                # data in each). If so, we can't proceed because we would hang when we hit the
+                # barrier implicit in Model.forward.
+                done = torch.tensor(False, device=self.cuda_device)
+                torch.distributed.all_reduce(done, reduce_op.BOR)
+                if done.item():
+                    stopped_early = True
+                    logger.warning(f"Worker {torch.distributed.get_rank()} finishing epoch early! "
+                                   "This implies that there is an imbalance in your training "
+                                   "data across the workers and that some amount of it will be "
+                                   "ignored. A small amount of this is fine, but a major imbalance "
+                                   "should be avoided. Note: This warning will appear unless your "
+                                   "data is perfectly balanced.")
+                    break
+
             batches_this_epoch += 1
             self._batch_num_total += 1
             batch_num_total = self._batch_num_total
@@ -453,6 +470,12 @@ class Trainer(TrainerBase):
                 self._save_checkpoint(
                     "{0}.{1}".format(epoch, training_util.time_to_str(int(last_save_time)))
                 )
+        if self._distributed and not stopped_early:
+            logger.warning(f"Worker {torch.distributed.get_rank()} completed its entire epoch.")
+            # Indicate that we're done so that any workers that have remaining data stop the epoch early.
+            done = torch.tensor(True, device=self.cuda_device)
+            torch.distributed.all_reduce(done, reduce_op.BOR)
+            assert done.item()
 
         # Let all workers finish their epoch before computing
         # the final statistics for the epoch.
