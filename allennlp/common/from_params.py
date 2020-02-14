@@ -347,9 +347,10 @@ def construct_arg(
         else:
             raise TypeError(f"Expected {argument_name} to be a string.")
     elif annotation == float:
-        # Floats are special because we allow casting from int to float.
+        # Floats are special because in Python, you can put an int wherever you can put a float.
+        # https://mypy.readthedocs.io/en/stable/duck_type_compatibility.html
         if type(popped_params) in {int, float}:
-            return float(popped_params)  # type: ignore
+            return popped_params
         else:
             raise TypeError(f"Expected {argument_name} to be numeric.")
 
