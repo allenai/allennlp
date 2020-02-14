@@ -4,6 +4,7 @@ import torch
 import torch.nn
 
 from allennlp.modules.seq2vec_encoders.seq2vec_encoder import Seq2VecEncoder
+from allennlp.nn.util import get_final_encoder_states
 
 
 @Seq2VecEncoder.register("cls_pooler")
@@ -48,5 +49,4 @@ class ClsPooler(Seq2VecEncoder):
         else:  # [CLS] at the end
             if mask is None:
                 raise ValueError("Must provide mask for transformer models with [CLS] at the end.")
-            lengths = mask.sum(1)
-            return tokens[torch.arange(tokens.size(0)), lengths - 1, :]
+            return get_final_encoder_states(tokens, mask)
