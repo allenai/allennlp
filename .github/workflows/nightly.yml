@@ -34,6 +34,7 @@ jobs:
       run: scripts/24hr_diff.sh
     - name: Deploy
       if: success()
+      env:
         PYPI_NIGHTLY_USERNAME: ${{ secrets.PYPI_NIGHTLY_USERNAME }}
         PYPI_NIGHTLY_PASSWORD: ${{ secrets.PYPI_NIGHTLY_PASSWORD }}
       run: twine upload -u $PYPI_NIGHTLY_USERNAME -p $PYPI_NIGHTLY_PASSWORD dist/*
