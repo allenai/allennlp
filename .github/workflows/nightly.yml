@@ -18,7 +18,7 @@ jobs:
       run: |
         pip install -r dev-requirements.txt
     - name: Set Version
-      # This is somewhat bizzare, but you can't set env variables to bash commands in the action workflow -
+      # This is somewhat bizarre, but you can't set env variables to bash commands in the action workflow -
       # So we have to use this odd way of exporting a variable instead.
       run: echo ::set-env name=ALLENNLP_VERSION_SUFFIX::-dev$(date -u +%Y%m%d)+$(git rev-parse --short "$GITHUB_SHA")
     - name: Build Package
