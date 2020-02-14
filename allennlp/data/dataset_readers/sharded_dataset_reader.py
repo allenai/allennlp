@@ -1,7 +1,9 @@
 import glob
 import logging
+import torch
 from typing import Iterable
 
+from allennlp.common import util
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.instance import Instance
 
@@ -28,6 +30,12 @@ class ShardedDatasetReader(DatasetReader):
 
     def __init__(self, base_reader: DatasetReader, **kwargs,) -> None:
         super().__init__(**kwargs)
+
+        logger.info(f"BRR is_dist: {util.is_distributed()}")
+        if (util.is_distributed()) {
+            logger.info(f"BRR rank: {torch.distributed.get_rank()}")
+            logger.info(f"BRR world: {torch.distributed.get_world_size()}")
+        }
 
         self.reader = base_reader
 
