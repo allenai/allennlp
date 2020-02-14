@@ -27,5 +27,7 @@ class TestSingleIdTokenIndexer(AllenNlpTestCase):
     def test_count_other_features(self):
         indexer = SingleIdTokenIndexer("other_features", feature_name="is_bold")
         counter = defaultdict(lambda: defaultdict(int))
-        indexer.count_vocab_items(Token("Header", other_features={"is_bold": "True"}), counter)
+        token = Token("Header")
+        token.is_bold = "True"
+        indexer.count_vocab_items(token, counter)
         assert counter["other_features"] == {"True": 1}

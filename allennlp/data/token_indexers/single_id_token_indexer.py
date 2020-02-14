@@ -49,17 +49,11 @@ class SingleIdTokenIndexer(TokenIndexer):
     def count_vocab_items(self, token: Token, counter: Dict[str, Dict[str, int]]):
         # If `text_id` is set on the token (e.g., if we're using some kind of hash-based word
         # encoding), we will not be using the vocab for this token.
-        if getattr(token, "text_id", None) is not None:
-            return
-
-        if self.feature_name == "text":
-            text = token.text
-        else:
-            text = token.other_features[self.feature_name]
-
-        if self.lowercase_tokens:
-            text = text.lower()
-        counter[self.namespace][text] += 1
+        if getattr(token, "text_id", None) is None:
+            text = getattr(token, self.feature_name)
+            if self.lowercase_tokens:
+                text = text.lower()
+            counter[self.namespace][text] += 1
 
     @overrides
     def tokens_to_indices(
@@ -73,10 +67,7 @@ class SingleIdTokenIndexer(TokenIndexer):
                 # this id instead.
                 indices.append(token.text_id)
             else:
-                if self.feature_name == "text":
-                    text = token.text
-                else:
-                    text = token.other_features[self.feature_name]
+                text = getattr(token, self.feature_name)
                 if self.lowercase_tokens:
                     text = text.lower()
                 indices.append(vocabulary.get_token_index(text, self.namespace))
