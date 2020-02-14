@@ -334,6 +334,7 @@ class TestFromParams(AllenNlpTestCase):
         float_param_str = '{"a": 1.0}'
         int_param_str = '{"a": 1}'
         import json
+
         for expected_type, param_str in [(int, int_param_str), (float, float_param_str)]:
             for cls in [IntFloat, FloatInt]:
                 c = cls.from_params(Params(json.loads(param_str)))
