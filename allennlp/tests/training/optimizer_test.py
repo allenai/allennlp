@@ -68,7 +68,7 @@ class TestOptimizer(AllenNlpTestCase):
 
     def test_parameter_type_inference(self):
         # Should work ok even with lr as a string
-        optimizer_params = Params({"type": "sgd", "lr": "0.1"})
+        optimizer_params = Params({"type": "sgd", "lr": 0.1})
 
         parameters = [[n, p] for n, p in self.model.named_parameters() if p.requires_grad]
         optimizer = Optimizer.from_params(model_parameters=parameters, params=optimizer_params)
