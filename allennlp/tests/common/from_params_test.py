@@ -339,6 +339,16 @@ class TestFromParams(AllenNlpTestCase):
                 c = cls.from_params(Params(json.loads(param_str)))
                 assert type(c.a) == expected_type
 
+    def test_invalid_type_conversions(self):
+        class A(FromParams):
+            def __init__(self, a: int) -> None:
+                self.a = a
+
+        with pytest.raises(TypeError):
+            A.from_params(Params({"a": "1"}))
+        with pytest.raises(TypeError):
+            A.from_params(Params({"a": 1.0}))
+
     def test_dict(self):
 
         from allennlp.common.registrable import Registrable
