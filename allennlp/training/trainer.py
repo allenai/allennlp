@@ -518,7 +518,24 @@ class Trainer(TrainerBase):
         val_generator_tqdm = Tqdm.tqdm(val_generator, total=num_validation_batches)
         batches_this_epoch = 0
         val_loss = 0
+        stopped_early = False
         for batch in val_generator_tqdm:
+            if self._distributed:
+                # Check whether the other workers have stopped already (due to differing amounts of
+                # data in each). If so, we can't proceed because we would hang when we hit the
+                # barrier implicit in Model.forward. We use a IntTensor instead a BoolTensor
+                # here because NCCL process groups apparently don't support BoolTensor.
+                done = torch.tensor(0, device=self.cuda_device)
+                torch.distributed.all_reduce(done, torch.distributed.ReduceOp.SUM)
+                if done.item() > 0:
+                    stopped_early = True
+                    logger.warning(f"Worker {torch.distributed.get_rank()} finishing validation early! "
+                                   "This implies that there is an imbalance in your validation "
+                                   "data across the workers and that some amount of it will be "
+                                   "ignored. A small amount of this is fine, but a major imbalance "
+                                   "should be avoided. Note: This warning will appear unless your "
+                                   "data is perfectly balanced.")
+                    break
 
             loss = self.batch_loss(batch, for_training=False)
             if loss is not None:
@@ -540,6 +557,13 @@ class Trainer(TrainerBase):
             )
             description = training_util.description_from_metrics(val_metrics)
             val_generator_tqdm.set_description(description, refresh=False)
+
+        if self._distributed and not stopped_early:
+            logger.warning(f"Worker {torch.distributed.get_rank()} completed validating.")
+            # Indicate that we're done so that any workers that have remaining data stop validation early.
+            done = torch.tensor(1, device=self.cuda_device)
+            torch.distributed.all_reduce(done, torch.distributed.ReduceOp.SUM)
+            assert done.item()
 
         # Now restore the original parameter values.
         if self._moving_average is not None:
