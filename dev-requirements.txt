@@ -36,7 +36,7 @@ ruamel.yaml
 mathy_pydoc>=0.6.7,<0.7.0
 markdown-include==0.5.1
 # Package for the material theme for mkdocs
-mkdocs-material==4.6.2
+mkdocs-material==4.6.3
 
 #### PACKAGE-UPLOAD PACKAGES ####
 
