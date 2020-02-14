@@ -371,12 +371,14 @@ class Trainer(TrainerBase):
                 torch.distributed.all_reduce(done, torch.distributed.ReduceOp.SUM)
                 if done.item() > 0:
                     stopped_early = True
-                    logger.warning(f"Worker {torch.distributed.get_rank()} finishing training early! "
-                                   "This implies that there is an imbalance in your training "
-                                   "data across the workers and that some amount of it will be "
-                                   "ignored. A small amount of this is fine, but a major imbalance "
-                                   "should be avoided. Note: This warning will appear unless your "
-                                   "data is perfectly balanced.")
+                    logger.warning(
+                        f"Worker {torch.distributed.get_rank()} finishing training early! "
+                        "This implies that there is an imbalance in your training "
+                        "data across the workers and that some amount of it will be "
+                        "ignored. A small amount of this is fine, but a major imbalance "
+                        "should be avoided. Note: This warning will appear unless your "
+                        "data is perfectly balanced."
+                    )
                     break
 
             batches_this_epoch += 1
@@ -472,7 +474,9 @@ class Trainer(TrainerBase):
                     "{0}.{1}".format(epoch, training_util.time_to_str(int(last_save_time)))
                 )
         if self._distributed and not stopped_early:
-            logger.warning(f"Worker {torch.distributed.get_rank()} completed its entire epoch (training).")
+            logger.warning(
+                f"Worker {torch.distributed.get_rank()} completed its entire epoch (training)."
+            )
             # Indicate that we're done so that any workers that have remaining data stop the epoch early.
             done = torch.tensor(1, device=self.cuda_device)
             torch.distributed.all_reduce(done, torch.distributed.ReduceOp.SUM)
@@ -529,12 +533,14 @@ class Trainer(TrainerBase):
                 torch.distributed.all_reduce(done, torch.distributed.ReduceOp.SUM)
                 if done.item() > 0:
                     stopped_early = True
-                    logger.warning(f"Worker {torch.distributed.get_rank()} finishing validation early! "
-                                   "This implies that there is an imbalance in your validation "
-                                   "data across the workers and that some amount of it will be "
-                                   "ignored. A small amount of this is fine, but a major imbalance "
-                                   "should be avoided. Note: This warning will appear unless your "
-                                   "data is perfectly balanced.")
+                    logger.warning(
+                        f"Worker {torch.distributed.get_rank()} finishing validation early! "
+                        "This implies that there is an imbalance in your validation "
+                        "data across the workers and that some amount of it will be "
+                        "ignored. A small amount of this is fine, but a major imbalance "
+                        "should be avoided. Note: This warning will appear unless your "
+                        "data is perfectly balanced."
+                    )
                     break
 
             loss = self.batch_loss(batch, for_training=False)
@@ -559,7 +565,9 @@ class Trainer(TrainerBase):
             val_generator_tqdm.set_description(description, refresh=False)
 
         if self._distributed and not stopped_early:
-            logger.warning(f"Worker {torch.distributed.get_rank()} completed its entire epoch (validation).")
+            logger.warning(
+                f"Worker {torch.distributed.get_rank()} completed its entire epoch (validation)."
+            )
             # Indicate that we're done so that any workers that have remaining data stop validation early.
             done = torch.tensor(1, device=self.cuda_device)
             torch.distributed.all_reduce(done, torch.distributed.ReduceOp.SUM)

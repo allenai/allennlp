@@ -123,25 +123,25 @@ class TestTrain(AllenNlpTestCase):
     def test_train_model_distributed_with_sharded_reader(self):
 
         params = lambda: Params(
-                {
-                        "model": {
-                                "type": "simple_tagger",
-                                "text_field_embedder": {
-                                        "token_embedders": {"tokens": {"type": "embedding", "embedding_dim": 5}}
-                                },
-                                "encoder": {"type": "lstm", "input_size": 5, "hidden_size": 7, "num_layers": 2},
-                        },
-                        "dataset_reader": {
-                                "type": "sharded",
-                                "base_reader": {"type": "sequence_tagging"},
-                                "lazy": True
-                        },
-                        "train_data_path": SEQUENCE_TAGGING_SHARDS_PATH,
-                        "validation_data_path": SEQUENCE_TAGGING_SHARDS_PATH,
-                        "iterator": {"type": "basic", "batch_size": 2},
-                        "trainer": {"num_epochs": 2, "optimizer": "adam"},
-                        "distributed": {"cuda_devices": [0, 1]},
-                }
+            {
+                "model": {
+                    "type": "simple_tagger",
+                    "text_field_embedder": {
+                        "token_embedders": {"tokens": {"type": "embedding", "embedding_dim": 5}}
+                    },
+                    "encoder": {"type": "lstm", "input_size": 5, "hidden_size": 7, "num_layers": 2},
+                },
+                "dataset_reader": {
+                    "type": "sharded",
+                    "base_reader": {"type": "sequence_tagging"},
+                    "lazy": True,
+                },
+                "train_data_path": SEQUENCE_TAGGING_SHARDS_PATH,
+                "validation_data_path": SEQUENCE_TAGGING_SHARDS_PATH,
+                "iterator": {"type": "basic", "batch_size": 2},
+                "trainer": {"num_epochs": 2, "optimizer": "adam"},
+                "distributed": {"cuda_devices": [0, 1]},
+            }
         )
 
         out_dir = os.path.join(self.TEST_DIR, "test_distributed_train")
@@ -163,10 +163,25 @@ class TestTrain(AllenNlpTestCase):
         # Check that we created a vocab from all the shards.
         tokens = archive.model.vocab._token_to_index["tokens"].keys()
         assert tokens == {
-                '@@PADDING@@', '@@UNKNOWN@@', 'are', '.', 'animals', 'plants',
-                'vehicles', 'cats', 'dogs', 'snakes', 'birds', 'ferns',
-                'trees', 'flowers', 'vegetables', 'cars', 'buses', 'planes',
-                'rockets'
+            "@@PADDING@@",
+            "@@UNKNOWN@@",
+            "are",
+            ".",
+            "animals",
+            "plants",
+            "vehicles",
+            "cats",
+            "dogs",
+            "snakes",
+            "birds",
+            "ferns",
+            "trees",
+            "flowers",
+            "vegetables",
+            "cars",
+            "buses",
+            "planes",
+            "rockets",
         }
 
         # TODO: This is somewhat brittle. Make these constants in trainer.py.
@@ -189,7 +204,6 @@ class TestTrain(AllenNlpTestCase):
             assert validation_early not in worker1_log
             assert train_complete in worker1_log
             assert validation_complete in worker1_log
-
 
     def test_distributed_raises_error_with_no_gpus(self):
         params = Params(

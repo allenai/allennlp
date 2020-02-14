@@ -31,7 +31,7 @@ class ShardedDatasetReader(DatasetReader):
     def __init__(self, base_reader: DatasetReader, **kwargs,) -> None:
         super().__init__(**kwargs)
 
-        if (util.is_distributed()):
+        if util.is_distributed():
             self._rank = torch.distributed.get_rank()
             self._world_size = torch.distributed.get_world_size()
         else:
