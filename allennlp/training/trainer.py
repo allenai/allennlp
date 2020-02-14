@@ -365,10 +365,11 @@ class Trainer(TrainerBase):
             if self._distributed:
                 # Check whether the other workers have stopped already (due to differing amounts of
                 # data in each). If so, we can't proceed because we would hang when we hit the
-                # barrier implicit in Model.forward.
-                done = torch.tensor(False, device=self.cuda_device)
-                torch.distributed.all_reduce(done, torch.distributed.ReduceOp.BOR)
-                if done.item():
+                # barrier implicit in Model.forward. We use a IntTensor instead a BoolTensor
+                # here because NCCL process groups apparently don't support BoolTensor.
+                done = torch.tensor(0, device=self.cuda_device)
+                torch.distributed.all_reduce(done, torch.distributed.ReduceOp.SUM)
+                if done.item() > 0:
                     stopped_early = True
                     logger.warning(f"Worker {torch.distributed.get_rank()} finishing epoch early! "
                                    "This implies that there is an imbalance in your training "
@@ -473,8 +474,8 @@ class Trainer(TrainerBase):
         if self._distributed and not stopped_early:
             logger.warning(f"Worker {torch.distributed.get_rank()} completed its entire epoch.")
             # Indicate that we're done so that any workers that have remaining data stop the epoch early.
-            done = torch.tensor(True, device=self.cuda_device)
-            torch.distributed.all_reduce(done, torch.distributed.ReduceOp.BOR)
+            done = torch.tensor(1, device=self.cuda_device)
+            torch.distributed.all_reduce(done, torch.distributed.ReduceOp.SUM)
             assert done.item()
 
         # Let all workers finish their epoch before computing
