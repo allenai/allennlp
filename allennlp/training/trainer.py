@@ -360,7 +360,7 @@ class Trainer(TrainerBase):
         logger.info("Training")
 
         cumulative_batch_group_size = 0
-        stopped_early = False
+        done_early = False
         for batch_group in batch_group_generator_tqdm:
             if self._distributed:
                 # Check whether the other workers have stopped already (due to differing amounts of
@@ -370,7 +370,7 @@ class Trainer(TrainerBase):
                 done = torch.tensor(0, device=self.cuda_device)
                 torch.distributed.all_reduce(done, torch.distributed.ReduceOp.SUM)
                 if done.item() > 0:
-                    stopped_early = True
+                    done_early = True
                     logger.warning(
                         f"Worker {torch.distributed.get_rank()} finishing training early! "
                         "This implies that there is an imbalance in your training "
@@ -473,7 +473,7 @@ class Trainer(TrainerBase):
                 self._save_checkpoint(
                     "{0}.{1}".format(epoch, training_util.time_to_str(int(last_save_time)))
                 )
-        if self._distributed and not stopped_early:
+        if self._distributed and not done_early:
             logger.warning(
                 f"Worker {torch.distributed.get_rank()} completed its entire epoch (training)."
             )
@@ -522,7 +522,7 @@ class Trainer(TrainerBase):
         val_generator_tqdm = Tqdm.tqdm(val_generator, total=num_validation_batches)
         batches_this_epoch = 0
         val_loss = 0
-        stopped_early = False
+        done_early = False
         for batch in val_generator_tqdm:
             if self._distributed:
                 # Check whether the other workers have stopped already (due to differing amounts of
@@ -532,7 +532,7 @@ class Trainer(TrainerBase):
                 done = torch.tensor(0, device=self.cuda_device)
                 torch.distributed.all_reduce(done, torch.distributed.ReduceOp.SUM)
                 if done.item() > 0:
-                    stopped_early = True
+                    done_early = True
                     logger.warning(
                         f"Worker {torch.distributed.get_rank()} finishing validation early! "
                         "This implies that there is an imbalance in your validation "
@@ -564,7 +564,7 @@ class Trainer(TrainerBase):
             description = training_util.description_from_metrics(val_metrics)
             val_generator_tqdm.set_description(description, refresh=False)
 
-        if self._distributed and not stopped_early:
+        if self._distributed and not done_early:
             logger.warning(
                 f"Worker {torch.distributed.get_rank()} completed its entire epoch (validation)."
             )
