@@ -367,7 +367,7 @@ class Trainer(TrainerBase):
                 # data in each). If so, we can't proceed because we would hang when we hit the
                 # barrier implicit in Model.forward.
                 done = torch.tensor(False, device=self.cuda_device)
-                torch.distributed.all_reduce(done, reduce_op.BOR)
+                torch.distributed.all_reduce(done, torch.distributed.ReduceOp.BOR)
                 if done.item():
                     stopped_early = True
                     logger.warning(f"Worker {torch.distributed.get_rank()} finishing epoch early! "
@@ -474,7 +474,7 @@ class Trainer(TrainerBase):
             logger.warning(f"Worker {torch.distributed.get_rank()} completed its entire epoch.")
             # Indicate that we're done so that any workers that have remaining data stop the epoch early.
             done = torch.tensor(True, device=self.cuda_device)
-            torch.distributed.all_reduce(done, reduce_op.BOR)
+            torch.distributed.all_reduce(done, torch.distributed.ReduceOp.BOR)
             assert done.item()
 
         # Let all workers finish their epoch before computing
