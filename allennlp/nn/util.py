@@ -50,9 +50,9 @@ def move_to_device(obj, cuda_device: int):
         return [move_to_device(item, cuda_device) for item in obj]
     elif isinstance(obj, tuple) and hasattr(obj, "_fields"):
         # This is the best way to detect a NamedTuple, it turns out.
-        return obj.__class__(*[move_to_device(item, cuda_device) for item in obj])
+        return obj.__class__(*(move_to_device(item, cuda_device) for item in obj))
     elif isinstance(obj, tuple):
-        return tuple([move_to_device(item, cuda_device) for item in obj])
+        return tuple(move_to_device(item, cuda_device) for item in obj)
     else:
         return obj
 
@@ -716,7 +716,7 @@ def sequence_cross_entropy_with_logits(
     """
     Computes the cross entropy loss of a sequence, weighted with respect to
     some user provided weights. Note that the weighting here is not the same as
-    in the :func:`torch.nn.CrossEntropyLoss()` criterion, which is weighting
+    in the `torch.nn.CrossEntropyLoss()` criterion, which is weighting
     classes; here we are weighting the loss contribution from particular elements
     in the sequence. This allows loss computations for models which use padding.
 
@@ -886,13 +886,13 @@ def tensors_equal(tensor1: torch.Tensor, tensor2: torch.Tensor, tolerance: float
     if isinstance(tensor1, (list, tuple)):
         if not isinstance(tensor2, (list, tuple)) or len(tensor1) != len(tensor2):
             return False
-        return all([tensors_equal(t1, t2, tolerance) for t1, t2 in zip(tensor1, tensor2)])
+        return all(tensors_equal(t1, t2, tolerance) for t1, t2 in zip(tensor1, tensor2))
     elif isinstance(tensor1, dict):
         if not isinstance(tensor2, dict):
             return False
         if tensor1.keys() != tensor2.keys():
             return False
-        return all([tensors_equal(tensor1[key], tensor2[key], tolerance) for key in tensor1])
+        return all(tensors_equal(tensor1[key], tensor2[key], tolerance) for key in tensor1)
     elif isinstance(tensor1, torch.Tensor):
         if not isinstance(tensor2, torch.Tensor):
             return False
@@ -1001,15 +1001,15 @@ def combine_tensors_and_multiply(
     combination: str, tensors: List[torch.Tensor], weights: torch.nn.Parameter
 ) -> torch.Tensor:
     """
-    Like :func:`combine_tensors`, but does a weighted (linear) multiplication while combining.
-    This is a separate function from `combine_tensors` because we try to avoid instantiating
-    large intermediate tensors during the combination, which is possible because we know that we're
-    going to be multiplying by a weight vector in the end.
+    Like [`combine_tensors`](./util.md#combine_tensors), but does a weighted (linear)
+    multiplication while combining. This is a separate function from `combine_tensors`
+    because we try to avoid instantiating large intermediate tensors during the combination,
+    which is possible because we know that we're going to be multiplying by a weight vector in the end.
 
     # Parameters
 
     combination : `str`
-        Same as in :func:`combine_tensors`
+        Same as in `combine_tensors`
     tensors : `List[torch.Tensor]`
         A list of tensors to combine, where the integers in the `combination` are (1-indexed)
         positions in this list of tensors.  These tensors are all expected to have either three or
@@ -1017,7 +1017,7 @@ def combine_tensors_and_multiply(
         dimensions, one of them must have length 1.
     weights : `torch.nn.Parameter`
         A vector of weights to use for the combinations.  This should have shape (combined_dim,),
-        as calculated by :func:`get_combined_dim`.
+        as calculated by `get_combined_dim`.
     """
     if len(tensors) > 9:
         raise ConfigurationError("Double-digit tensor lists not currently supported")
@@ -1089,24 +1089,24 @@ def _get_combination_and_multiply(
 
 def get_combined_dim(combination: str, tensor_dims: List[int]) -> int:
     """
-    For use with :func:`combine_tensors`.  This function computes the resultant dimension when
-    calling `combine_tensors(combination, tensors)`, when the tensor dimension is known.  This is
-    necessary for knowing the sizes of weight matrices when building models that use
-    `combine_tensors`.
+    For use with [`combine_tensors`](./util.md#combine_tensors).
+    This function computes the resultant dimension when calling `combine_tensors(combination, tensors)`,
+    when the tensor dimension is known.  This is necessary for knowing the sizes of weight matrices
+    when building models that use `combine_tensors`.
 
     # Parameters
 
     combination : `str`
         A comma-separated list of combination pieces, like `"1,2,1*2"`, specified identically to
-        `combination` in :func:`combine_tensors`.
+        `combination` in `combine_tensors`.
     tensor_dims : `List[int]`
         A list of tensor dimensions, where each dimension is from the `last axis` of the tensors
-        that will be input to :func:`combine_tensors`.
+        that will be input to `combine_tensors`.
     """
     if len(tensor_dims) > 9:
         raise ConfigurationError("Double-digit tensor lists not currently supported")
     combination = combination.replace("x", "1").replace("y", "2")
-    return sum([_get_combination_dim(piece, tensor_dims) for piece in combination.split(",")])
+    return sum(_get_combination_dim(piece, tensor_dims) for piece in combination.split(","))
 
 
 def _get_combination_dim(combination: str, tensor_dims: List[int]) -> int:
@@ -1159,14 +1159,13 @@ def get_device_of(tensor: torch.Tensor) -> int:
 
 def flatten_and_batch_shift_indices(indices: torch.Tensor, sequence_length: int) -> torch.Tensor:
     """
-    This is a subroutine for :func:`~batched_index_select`. The given `indices` of size
-    `(batch_size, d_1, ..., d_n)` indexes into dimension 2 of a target tensor, which has size
-    `(batch_size, sequence_length, embedding_size)`. This function returns a vector that
-    correctly indexes into the flattened target. The sequence length of the target must be
-    provided to compute the appropriate offsets.
+    This is a subroutine for [`batched_index_select`](./util.md#batched_index_select).
+    The given `indices` of size `(batch_size, d_1, ..., d_n)` indexes into dimension 2 of a
+    target tensor, which has size `(batch_size, sequence_length, embedding_size)`. This
+    function returns a vector that correctly indexes into the flattened target. The sequence
+    length of the target must be provided to compute the appropriate offsets.
 
-    .. code-block:: python
-
+    ```python
         indices = torch.ones([2,3], dtype=torch.long)
         # Sequence length of the target tensor.
         sequence_length = 10
@@ -1175,6 +1174,7 @@ def flatten_and_batch_shift_indices(indices: torch.Tensor, sequence_length: int)
         # to take into account that the target tensor will be flattened before
         # the indices are applied.
         assert shifted_indices == [1, 1, 1, 11, 11, 11]
+    ```
 
     # Parameters
 
@@ -1216,11 +1216,11 @@ def batched_index_select(
 
     This function returns selected values in the target with respect to the provided indices, which
     have size `(batch_size, d_1, ..., d_n, embedding_size)`. This can use the optionally
-    precomputed :func:`~flattened_indices` with size `(batch_size * d_1 * ... * d_n)` if given.
+    precomputed `flattened_indices` with size `(batch_size * d_1 * ... * d_n)` if given.
 
     An example use case of this function is looking up the start and end indices of spans in a
     sequence tensor. This is used in the
-    :class:`~allennlp.models.coreference_resolution.CoreferenceResolver`. Model to select
+    [CoreferenceResolver](../models/coreference_resolution/coref.md). Model to select
     contextual word representations corresponding to the start and end indices of mentions. The key
     reason this can't be done with basic torch functions is that we want to be able to use look-up
     tensors with an arbitrary number of dimensions (for example, in the coref model, we don't know
@@ -1235,7 +1235,7 @@ def batched_index_select(
         A tensor of shape (batch_size, ...), where each element is an index into the
         `sequence_length` dimension of the `target` tensor.
     flattened_indices : Optional[torch.Tensor], optional (default = None)
-        An optional tensor representing the result of calling :func:~`flatten_and_batch_shift_indices`
+        An optional tensor representing the result of calling `flatten_and_batch_shift_indices`
         on `indices`. This is helpful in the case that the indices can be flattened once and
         cached for many batch lookups.
 
@@ -1571,7 +1571,7 @@ def add_positional_features(
 
 def clone(module: torch.nn.Module, num_copies: int) -> torch.nn.ModuleList:
     """Produce N identical layers."""
-    return torch.nn.ModuleList([copy.deepcopy(module) for _ in range(num_copies)])
+    return torch.nn.ModuleList(copy.deepcopy(module) for _ in range(num_copies))
 
 
 def combine_initial_dims(tensor: torch.Tensor) -> torch.Tensor:

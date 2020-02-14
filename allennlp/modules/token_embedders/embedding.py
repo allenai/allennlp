@@ -1,28 +1,28 @@
 import io
-import tarfile
-import zipfile
-import re
-import logging
-import warnings
 import itertools
-from typing import Optional, Tuple, Sequence, cast, IO, Iterator, Any, NamedTuple
+import logging
+import re
+import tarfile
+import warnings
+import zipfile
+from typing import Any, cast, IO, Iterator, NamedTuple, Optional, Sequence, Tuple
 
-from overrides import overrides
 import numpy
 import torch
+from overrides import overrides
 from torch.nn.functional import embedding
+
+from allennlp.common import Tqdm, Registrable
+from allennlp.common.checks import ConfigurationError
+from allennlp.common.file_utils import cached_path, get_file_extension, is_url_or_existing_file
+from allennlp.data import Vocabulary
+from allennlp.modules.time_distributed import TimeDistributed
+from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
+from allennlp.nn import util
 
 with warnings.catch_warnings():
     warnings.filterwarnings("ignore", category=FutureWarning)
     import h5py
-
-from allennlp.common import Tqdm, Registrable
-from allennlp.common.checks import ConfigurationError
-from allennlp.common.file_utils import get_file_extension, cached_path, is_url_or_existing_file
-from allennlp.data import Vocabulary
-from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
-from allennlp.modules.time_distributed import TimeDistributed
-from allennlp.nn import util
 
 logger = logging.getLogger(__name__)
 
@@ -194,8 +194,8 @@ class Embedding(TokenEmbedder, Registrable):
         model_path : `str`, (optional, default=None)
             Path traversing the model attributes upto this embedding module.
             Eg. "_text_field_embedder.token_embedder_tokens". This is only useful
-            to give helpful error message when extend_vocab is implicitly called
-            by fine-tune or any other command.
+            to give a helpful error message when extend_vocab is implicitly called
+            by train or any other command.
         """
         # Caveat: For allennlp v0.8.1 and below, we weren't storing vocab_namespace as an attribute,
         # knowing which is necessary at time of embedding vocab extension. So old archive models are

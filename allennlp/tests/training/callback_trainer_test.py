@@ -4,38 +4,37 @@ import json
 import os
 import re
 import time
-from typing import Dict, Iterable, Optional
+from typing import Iterable, Optional
 
-import torch
-import responses
-import pytest
 import numpy as np
+import pytest
+import responses
+import torch
 
 from allennlp.common.checks import ConfigurationError
-
-from allennlp.common.testing import ModelTestCase
-from allennlp.data.instance import Instance
-from allennlp.data.iterators import DataIterator
-from allennlp.data import Vocabulary
 from allennlp.common.params import Params
-from allennlp.models.simple_tagger import SimpleTagger
-from allennlp.data.iterators import BasicIterator
+from allennlp.common.testing import ModelTestCase
+from allennlp.data import Vocabulary
 from allennlp.data.dataset_readers import SequenceTaggingDatasetReader
+from allennlp.data.instance import Instance
+from allennlp.data.iterators import BasicIterator
+from allennlp.data.iterators import DataIterator
 from allennlp.models.model import Model
+from allennlp.models.simple_tagger import SimpleTagger
 from allennlp.training.callback_trainer import CallbackTrainer
 from allennlp.training.callbacks import (
     Events,
     Callback,
+    Checkpoint,
+    GradientNormAndClip,
     handle_event,
     LogToTensorboard,
-    Checkpoint,
-    Validate,
     PostToUrl,
-    GradientNormAndClip,
+    TrackMetrics,
     UpdateLearningRate,
     UpdateMomentum,
-    TrackMetrics,
     UpdateMovingAverage,
+    Validate,
 )
 from allennlp.training.checkpointer import Checkpointer
 from allennlp.training.learning_rate_schedulers import LearningRateScheduler
@@ -578,7 +577,8 @@ class TestCallbackTrainer(ModelTestCase):
 
     def test_trainer_can_run_and_resume_with_momentum_scheduler(self):
         scheduler = MomentumScheduler.from_params(
-            self.optimizer, Params({"type": "inverted_triangular", "cool_down": 2, "warm_up": 2})
+            optimizer=self.optimizer,
+            params=Params({"type": "inverted_triangular", "cool_down": 2, "warm_up": 2}),
         )
         callbacks = self.default_callbacks() + [UpdateMomentum(scheduler)]
         trainer = CallbackTrainer(
@@ -593,7 +593,8 @@ class TestCallbackTrainer(ModelTestCase):
         trainer.train()
 
         new_scheduler = MomentumScheduler.from_params(
-            self.optimizer, Params({"type": "inverted_triangular", "cool_down": 2, "warm_up": 2})
+            optimizer=self.optimizer,
+            params=Params({"type": "inverted_triangular", "cool_down": 2, "warm_up": 2}),
         )
         new_callbacks = self.default_callbacks() + [UpdateMomentum(new_scheduler)]
         new_trainer = CallbackTrainer(
@@ -612,7 +613,7 @@ class TestCallbackTrainer(ModelTestCase):
 
     def test_trainer_can_run_with_lr_scheduler(self):
         lr_params = Params({"type": "reduce_on_plateau"})
-        lr_scheduler = LearningRateScheduler.from_params(self.optimizer, lr_params)
+        lr_scheduler = LearningRateScheduler.from_params(optimizer=self.optimizer, params=lr_params)
         callbacks = self.default_callbacks() + [UpdateLearningRate(lr_scheduler)]
 
         trainer = CallbackTrainer(
@@ -627,7 +628,7 @@ class TestCallbackTrainer(ModelTestCase):
 
     def test_trainer_can_resume_with_lr_scheduler(self):
         lr_scheduler = LearningRateScheduler.from_params(
-            self.optimizer, Params({"type": "exponential", "gamma": 0.5})
+            optimizer=self.optimizer, params=Params({"type": "exponential", "gamma": 0.5})
         )
         callbacks = self.default_callbacks() + [UpdateLearningRate(lr_scheduler)]
 
@@ -643,7 +644,7 @@ class TestCallbackTrainer(ModelTestCase):
         trainer.train()
 
         new_lr_scheduler = LearningRateScheduler.from_params(
-            self.optimizer, Params({"type": "exponential", "gamma": 0.5})
+            optimizer=self.optimizer, params=Params({"type": "exponential", "gamma": 0.5})
         )
         callbacks = self.default_callbacks() + [UpdateLearningRate(new_lr_scheduler)]
 

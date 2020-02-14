@@ -46,7 +46,7 @@ class TextField(SequenceField[TextFieldTensors]):
         self._token_indexers = token_indexers
         self._indexed_tokens: Optional[Dict[str, IndexedTokenList]] = None
 
-        if not all([isinstance(x, (Token, SpacyToken)) for x in tokens]):
+        if not all(isinstance(x, (Token, SpacyToken)) for x in tokens):
             raise ConfigurationError(
                 "TextFields must be passed Tokens. "
                 "Found: {} with types {}.".format(tokens, [type(x) for x in tokens])
@@ -137,7 +137,7 @@ class TextField(SequenceField[TextFieldTensors]):
 
         # Double tab to indent under the header.
         formatted_text = "".join(
-            ["\t\t" + text + "\n" for text in textwrap.wrap(repr(self.tokens), 100)]
+            "\t\t" + text + "\n" for text in textwrap.wrap(repr(self.tokens), 100)
         )
         return (
             f"TextField of length {self.sequence_length()} with "

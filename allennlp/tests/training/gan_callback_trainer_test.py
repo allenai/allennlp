@@ -9,26 +9,25 @@ and from uniform noise. We'll then adversarially train a generator `Model`
 to transform the noise into something that (hopefully) looks like the true distribution
 and a discriminator `Model` to (hopefully) distinguish between the "true" and generated data.
 """
-from typing import Iterable, List, Iterator, Union, Optional
 import tempfile
+from typing import Iterable, Iterator, List, Optional
 
 import torch
 
 from allennlp.commands.train import train_model
-from allennlp.common import Registrable, Lazy, Params
+from allennlp.common import Lazy, Params, Registrable
 from allennlp.common.testing import ModelTestCase
 from allennlp.data import Instance
-from allennlp.data.iterators import DataIterator
-from allennlp.data.dataset_readers.dataset_reader import DatasetReader, _LazyInstances
+from allennlp.data.dataset_readers.dataset_reader import _LazyInstances, DatasetReader
 from allennlp.data.fields import ArrayField, MetadataField
+from allennlp.data.iterators import DataIterator
 from allennlp.models import Model
+from allennlp.tests.training.gan_trainer_test import InputSampler
 from allennlp.training import util as training_util
 from allennlp.training.callback_trainer import CallbackTrainer
 from allennlp.training.callbacks import Callback, Events, handle_event
 from allennlp.training.optimizers import Optimizer
 from allennlp.training.trainer_base import TrainerBase
-
-from allennlp.tests.training.gan_trainer_test import InputSampler
 
 
 @Model.register("gan")

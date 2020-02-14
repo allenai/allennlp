@@ -12,9 +12,8 @@ TEST_DIR = tempfile.mkdtemp(prefix="allennlp_tests")
 
 class AllenNlpTestCase(TestCase):
     """
-    A custom subclass of :class:`~unittest.TestCase` that disables some of the
-    more verbose AllenNLP logging and that creates and destroys a temp directory
-    as a test fixture.
+    A custom subclass of `unittest.TestCase` that disables some of the more verbose AllenNLP
+    logging and that creates and destroys a temp directory as a test fixture.
     """
 
     PROJECT_ROOT = (pathlib.Path(__file__).parent / ".." / ".." / "..").resolve()

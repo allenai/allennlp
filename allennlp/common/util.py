@@ -434,7 +434,7 @@ def push_python_path(path: PathType) -> ContextManagerFunctionReturnType[None]:
         sys.path.remove(path)
 
 
-def import_submodules(package_name: str) -> None:
+def import_module_and_submodules(package_name: str) -> None:
     """
     Import all submodules under the given package.
     Primarily useful so that people using AllenNLP as a library
@@ -459,7 +459,7 @@ def import_submodules(package_name: str) -> None:
             if path_string and module_finder.path != path_string:
                 continue
             subpackage = f"{package_name}.{name}"
-            import_submodules(subpackage)
+            import_module_and_submodules(subpackage)
 
 
 def peak_memory_mb() -> float:
@@ -513,7 +513,9 @@ def gpu_memory_mb() -> Dict[int, int]:
     except:  # noqa
         # Catch *all* exceptions, because this memory check is a nice-to-have
         # and we'd never want a training run to fail because of it.
-        logger.exception("unable to check gpu_memory_mb(), continuing")
+        logger.warning(
+            "unable to check gpu_memory_mb() due to occasional failure, continuing", exc_info=True
+        )
         return {}
 
 

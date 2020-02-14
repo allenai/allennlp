@@ -68,7 +68,7 @@ class AdjacencyField(Field[torch.Tensor]):
             raise ConfigurationError(f"Indices must be unique, but found {indices}")
 
         if not all(
-            [0 <= index[1] < field_length and 0 <= index[0] < field_length for index in indices]
+            0 <= index[1] < field_length and 0 <= index[0] < field_length for index in indices
         ):
             raise ConfigurationError(
                 f"Label indices and sequence length "
@@ -133,10 +133,10 @@ class AdjacencyField(Field[torch.Tensor]):
     def __str__(self) -> str:
         length = self.sequence_field.sequence_length()
         formatted_labels = "".join(
-            ["\t\t" + labels + "\n" for labels in textwrap.wrap(repr(self.labels), 100)]
+            "\t\t" + labels + "\n" for labels in textwrap.wrap(repr(self.labels), 100)
         )
         formatted_indices = "".join(
-            ["\t\t" + index + "\n" for index in textwrap.wrap(repr(self.indices), 100)]
+            "\t\t" + index + "\n" for index in textwrap.wrap(repr(self.indices), 100)
         )
         return (
             f"AdjacencyField of length {length}\n"

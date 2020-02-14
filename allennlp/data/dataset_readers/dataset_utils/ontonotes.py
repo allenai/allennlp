@@ -322,7 +322,7 @@ class Ontonotes:
             # we need to record its index. This also has the side effect
             # of ordering the verbal predicates by their location in the
             # sentence, automatically aligning them with the annotations.
-            word_is_verbal_predicate = any(["(V" in x for x in conll_components[11:-1]])
+            word_is_verbal_predicate = any("(V" in x for x in conll_components[11:-1])
             if word_is_verbal_predicate:
                 verbal_predicates.append(word)
 

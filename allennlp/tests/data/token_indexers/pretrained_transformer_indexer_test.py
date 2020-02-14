@@ -1,7 +1,7 @@
 from transformers.tokenization_auto import AutoTokenizer
 
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.data import Token, Vocabulary
+from allennlp.data import Vocabulary
 from allennlp.data.token_indexers import PretrainedTransformerIndexer
 from allennlp.data.tokenizers import PretrainedTransformerTokenizer
 
@@ -128,10 +128,6 @@ class TestPretrainedTransformerIndexer(AllenNlpTestCase):
             assert len(padded_tokens["token_ids"]) == max_length
             padding_suffix = [allennlp_tokenizer.tokenizer.pad_token_id] * padding_length
             assert padded_tokens["token_ids"][-padding_length:].tolist() == padding_suffix
-
-    def test_determine_num_special_tokens_added(self):
-        tokenizer = AutoTokenizer.from_pretrained("bert-base-cased")
-        assert PretrainedTransformerIndexer.determine_num_special_tokens_added(tokenizer) == (1, 1)
 
     def test_long_sequence_splitting(self):
         tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")

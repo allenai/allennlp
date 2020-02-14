@@ -21,10 +21,12 @@
         "hidden_size": 4,
         "num_layers": 1
       },
-      "regularizer": [
-        ["weight$", {"type": "l2", "alpha": 10}],
-        ["bias$", {"type": "l1", "alpha": 5}]
-      ]
+      "regularizer": {
+        "regexes": [
+          ["weight$", {"type": "l2", "alpha": 10}],
+          ["bias$", {"type": "l1", "alpha": 5}]
+        ]
+      }
     },
     "iterator": {
       "type": "bucket",

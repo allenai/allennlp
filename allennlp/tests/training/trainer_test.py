@@ -1,11 +1,11 @@
 import copy
 import glob
 import json
-import math
 import os
 import re
 import time
 
+import math
 import pytest
 import torch
 
@@ -18,10 +18,9 @@ from allennlp.data.iterators import BasicIterator
 from allennlp.models.model import Model
 from allennlp.models.simple_tagger import SimpleTagger
 from allennlp.training import Trainer
-from allennlp.training.learning_rate_schedulers import LearningRateScheduler
+from allennlp.training.learning_rate_schedulers import ExponentialLearningRateScheduler
 from allennlp.training.momentum_schedulers import MomentumScheduler
 from allennlp.training.moving_average import ExponentialMovingAverage
-from allennlp.training.trainer_base import TrainerBase
 from allennlp.training.util import sparse_clip_norm
 
 
@@ -398,7 +397,8 @@ class TestTrainer(AllenNlpTestCase):
 
     def test_trainer_can_run_and_resume_with_momentum_scheduler(self):
         scheduler = MomentumScheduler.from_params(
-            self.optimizer, Params({"type": "inverted_triangular", "cool_down": 2, "warm_up": 2})
+            optimizer=self.optimizer,
+            params=Params({"type": "inverted_triangular", "cool_down": 2, "warm_up": 2}),
         )
         trainer = Trainer(
             model=self.model,
@@ -414,7 +414,8 @@ class TestTrainer(AllenNlpTestCase):
         trainer.train()
 
         new_scheduler = MomentumScheduler.from_params(
-            self.optimizer, Params({"type": "inverted_triangular", "cool_down": 2, "warm_up": 2})
+            optimizer=self.optimizer,
+            params=Params({"type": "inverted_triangular", "cool_down": 2, "warm_up": 2}),
         )
         new_trainer = Trainer(
             model=self.model,
@@ -433,8 +434,7 @@ class TestTrainer(AllenNlpTestCase):
         new_trainer.train()
 
     def test_trainer_can_run_with_lr_scheduler(self):
-        lr_params = Params({"type": "reduce_on_plateau"})
-        lr_scheduler = LearningRateScheduler.from_params(self.optimizer, lr_params)
+        lr_scheduler = ExponentialLearningRateScheduler(self.optimizer, gamma=0.5)
         trainer = Trainer(
             model=self.model,
             optimizer=self.optimizer,
@@ -448,9 +448,7 @@ class TestTrainer(AllenNlpTestCase):
         trainer.train()
 
     def test_trainer_can_resume_with_lr_scheduler(self):
-        lr_scheduler = LearningRateScheduler.from_params(
-            self.optimizer, Params({"type": "exponential", "gamma": 0.5})
-        )
+        lr_scheduler = ExponentialLearningRateScheduler(self.optimizer, gamma=0.5)
         trainer = Trainer(
             model=self.model,
             optimizer=self.optimizer,
@@ -463,9 +461,7 @@ class TestTrainer(AllenNlpTestCase):
         )
         trainer.train()
 
-        new_lr_scheduler = LearningRateScheduler.from_params(
-            self.optimizer, Params({"type": "exponential", "gamma": 0.5})
-        )
+        new_lr_scheduler = ExponentialLearningRateScheduler(self.optimizer, gamma=0.5)
         new_trainer = Trainer(
             model=self.model,
             optimizer=self.optimizer,

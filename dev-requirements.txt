@@ -10,7 +10,7 @@ mypy==0.761
 black
 
 # For creating git precommit hooks
-pre-commit==2.0.0
+pre-commit==2.0.1
 
 # Allows generation of coverage reports with pytest.
 pytest-cov
@@ -33,12 +33,14 @@ pip>=20.0.1
 # YAML manipulation
 ruamel.yaml
 
-pydoc-markdown==2.0.5
+mathy_pydoc>=0.6.7,<0.7.0
 markdown-include==0.5.1
 # Package for the material theme for mkdocs
-mkdocs-material==4.6.0
+mkdocs-material==4.6.2
 
 #### PACKAGE-UPLOAD PACKAGES ####
 
 # Pypi uploads
 twine>=1.11.0
+setuptools
+wheel

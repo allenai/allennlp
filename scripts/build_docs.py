@@ -24,7 +24,7 @@ def render_file(relative_src_path: str, src_file: str, to_file: str, modifier="+
     else:
         namespace = f"allennlp.{relative_src_namespace}.{src_base}{modifier}"
 
-    args = ["pydocmd", "simple", namespace]
+    args = ["mathy_pydoc", namespace]
     call_result = check_output(args, env=os.environ).decode("utf-8")
     with open(to_file, "w") as f:
         f.write(call_result)
@@ -69,6 +69,7 @@ def build_docs(root_path: str, docs_dir: str):
             nav_subsection = build_docs(relative_path, docs_dir)
             if not nav_subsection:
                 continue
+            nav_subsection.sort(key=lambda x: list(x)[0], reverse=False)
             nav_root.append({child: nav_subsection})
 
         else:

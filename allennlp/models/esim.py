@@ -1,4 +1,4 @@
-from typing import Dict, Optional, List, Any
+from typing import Dict, List, Any
 
 import torch
 
@@ -8,7 +8,7 @@ from allennlp.models.model import Model
 from allennlp.modules import FeedForward, InputVariationalDropout
 from allennlp.modules.matrix_attention.legacy_matrix_attention import LegacyMatrixAttention
 from allennlp.modules import Seq2SeqEncoder, SimilarityFunction, TextFieldEmbedder
-from allennlp.nn import InitializerApplicator, RegularizerApplicator
+from allennlp.nn import InitializerApplicator
 from allennlp.nn.util import (
     get_text_field_mask,
     masked_softmax,
@@ -48,8 +48,6 @@ class ESIM(Model):
         Dropout percentage to use.
     initializer : `InitializerApplicator`, optional (default=`InitializerApplicator()`)
         Used to initialize the model parameters.
-    regularizer : `RegularizerApplicator`, optional (default=`None`)
-        If provided, will be used to calculate the regularization penalty during training.
     """
 
     def __init__(
@@ -64,9 +62,9 @@ class ESIM(Model):
         output_logit: FeedForward,
         dropout: float = 0.5,
         initializer: InitializerApplicator = InitializerApplicator(),
-        regularizer: Optional[RegularizerApplicator] = None,
+        **kwargs,
     ) -> None:
-        super().__init__(vocab, regularizer)
+        super().__init__(vocab, **kwargs)
 
         self._text_field_embedder = text_field_embedder
         self._encoder = encoder

@@ -267,7 +267,7 @@ class SrlReader(DatasetReader):
         fields["tokens"] = text_field
         fields["verb_indicator"] = verb_indicator
 
-        if all([x == 0 for x in verb_label]):
+        if all(x == 0 for x in verb_label):
             verb = None
             verb_index = None
         else:

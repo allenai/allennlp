@@ -50,6 +50,7 @@ from allennlp.commands.subcommand import Subcommand
 from allennlp.common import Params, Registrable, Lazy
 from allennlp.common.checks import check_for_gpu, ConfigurationError
 from allennlp.common import util as common_util
+from allennlp.common.plugins import import_plugins
 from allennlp.data import DataIterator, DatasetReader, Instance, Vocabulary
 from allennlp.models.archival import archive_model, CONFIG_NAME
 from allennlp.models.model import _DEFAULT_WEIGHTS, Model
@@ -162,7 +163,7 @@ def train_model_from_file(
     recover : ``bool`, optional (default=False)
         If ``True``, we will try to recover a training run from an existing serialization
         directory.  This is only intended for use when something actually crashed during the middle
-        of a run.  For continuing training a model on new data, see the ``fine-tune`` command.
+        of a run.  For continuing training a model on new data, see ``Model.from_archive``.
     force : ``bool``, optional (default=False)
         If ``True``, we will overwrite the serialization directory if it already exists.
     node_rank : ``int``, optional
@@ -192,10 +193,6 @@ def train_model(
     node_rank: int = 0,
     include_package: List[str] = None,
     batch_weight_key: str = "",
-    # For fine-tuning:
-    model: Model = None,
-    extend_vocab: bool = False,
-    embedding_sources_mapping: Dict[str, str] = None,
 ) -> Model:
     """
     Trains the model specified in the given :class:`Params` object, using the data and training
@@ -213,7 +210,7 @@ def train_model(
     recover : ``bool``, optional (default=False)
         If ``True``, we will try to recover a training run from an existing serialization
         directory.  This is only intended for use when something actually crashed during the middle
-        of a run.  For continuing training a model on new data, see the ``fine-tune`` command.
+        of a run.  For continuing training a model on new data, see ``Model.from_archive``.
     force : ``bool``, optional (default=False)
         If ``True``, we will overwrite the serialization directory if it already exists.
     node_rank : ``int``, optional
@@ -222,14 +219,6 @@ def train_model(
         In distributed mode, extra packages mentioned will be imported in trainer workers.
     batch_weight_key : ``str``, optional (default="")
         If non-empty, name of metric used to weight the loss on a per-batch basis.
-    model : ``Model``, optional
-        A model to fine tune.
-    extend_vocab : ``bool``, optional (default=False)
-        If ``True``, we use the new instances to extend your vocabulary.
-        Used only when fine-tuning.
-    embedding_sources_mapping : ``Dict[str, str]``, optional (default=None)
-        Mapping from model paths to the pretrained embedding filepaths.
-        Used only when fine-tuning.
 
     # Returns
 
@@ -248,12 +237,8 @@ def train_model(
             params=params,
             serialization_dir=serialization_dir,
             file_friendly_logging=file_friendly_logging,
-            recover=recover,
             include_package=include_package,
             batch_weight_key=batch_weight_key,
-            model=model,
-            extend_vocab=extend_vocab,
-            embedding_sources_mapping=embedding_sources_mapping,
         )
         archive_model(serialization_dir)
         return model
@@ -284,17 +269,19 @@ def train_model(
             f"World size: {world_size}"
         )
 
-        # Creating `Vocabulary` objects from workers could be problematic since the data iterators
-        # in each worker will yield only `rank` specific instances. Hence it is safe to construct
-        # the vocabulary and write it to disk before initializing the distributed context. The workers
-        # will load the vocabulary from the path specified.
-        vocab = training_util.make_vocab_from_params(params.duplicate(), serialization_dir)
-        params["vocabulary"] = {
-            "type": "from_files",
-            "directory": os.path.join(serialization_dir, "vocabulary"),
-            "padding_token": vocab._padding_token,
-            "oov_token": vocab._oov_token,
-        }
+        # Creating `Vocabulary` objects from workers could be problematic since
+        # the data iterators in each worker will yield only `rank` specific
+        # instances. Hence it is safe to construct the vocabulary and write it
+        # to disk before initializing the distributed context. The workers will
+        # load the vocabulary from the path specified.
+        if params.get("vocabulary", Params({})).get("type", "") != "from_files":
+            vocab = training_util.make_vocab_from_params(params.duplicate(), serialization_dir)
+            params["vocabulary"] = {
+                "type": "from_files",
+                "directory": os.path.join(serialization_dir, "vocabulary"),
+                "padding_token": vocab._padding_token,
+                "oov_token": vocab._oov_token,
+            }
 
         mp.spawn(
             _train_worker,
@@ -302,7 +289,6 @@ def train_model(
                 params.duplicate(),
                 serialization_dir,
                 file_friendly_logging,
-                recover,
                 include_package,
                 batch_weight_key,
                 node_rank,
@@ -310,9 +296,6 @@ def train_model(
                 master_port,
                 world_size,
                 device_ids,
-                model,
-                extend_vocab,
-                embedding_sources_mapping,
             ),
             nprocs=num_procs,
         )
@@ -326,7 +309,6 @@ def _train_worker(
     params: Params,
     serialization_dir: str,
     file_friendly_logging: bool = False,
-    recover: bool = False,
     include_package: List[str] = None,
     batch_weight_key: str = "",
     node_rank: int = 0,
@@ -334,10 +316,6 @@ def _train_worker(
     master_port: int = 29500,
     world_size: int = 1,
     distributed_device_ids: List[str] = None,
-    # For fine-tuning:
-    model: Model = None,
-    extend_vocab: bool = False,
-    embedding_sources_mapping: Dict[str, str] = None,
 ) -> Optional[Model]:
     """
     Helper to train the configured model/experiment. In distributed mode, this is spawned as a
@@ -355,18 +333,22 @@ def _train_worker(
     file_friendly_logging : ``bool``, optional (default=False)
         If ``True``, we add newlines to tqdm output, even on an interactive terminal, and we slow
         down tqdm's output to only once every 10 seconds.
-    recover : ``bool``, optional (default=False)
-        If ``True``, we will try to recover a training run from an existing serialization
-        directory.  This is only intended for use when something actually crashed during the middle
-        of a run.  For continuing training a model on new data, see the ``fine-tune`` command.
     include_package : ``List[str]``, optional
         In distributed mode, since this function would have been spawned as a separate process,
         the extra imports need to be done again. NOTE: This does not have any effect in single
         GPU training.
+    batch_weight_key : ``str``, optional (default="")
+        If non-empty, name of metric used to weight the loss on a per-batch basis.
     node_rank : ``int``, optional
-        Rank of the node
+        Rank of the node.
+    master_addr : ``str``, optional (default="127.0.0.1")
+        Address of the master node for distributed training.
+    master_port : ``str``, optional (default="29500")
+        Port of the master node for distributed training.
     world_size : ``int``, optional
         The number of processes involved in distributed training.
+    distributed_device_ids: ``List[str]``, optional
+        IDs of the devices used involved in distributed training.
 
     # Returns
 
@@ -383,12 +365,14 @@ def _train_worker(
     # not using `allennlp.common.util.is_master` as the process group is yet to be initialized
     master = process_rank == 0
 
+    include_package = include_package or []
+
     if distributed:
-        # Since the worker is spawned and not forked, the extra imports
-        # need to be done again.
-        if include_package is not None:
-            for package_name in include_package:
-                common_util.import_submodules(package_name)
+        # Since the worker is spawned and not forked, the extra imports need to be done again.
+        # Both the ones from the plugins and the ones from `include_package`.
+        import_plugins()
+        for package_name in include_package:
+            common_util.import_module_and_submodules(package_name)
 
         num_procs_per_node = len(distributed_device_ids)
         # The Unique identifier of the worker process among all the processes in the
@@ -561,7 +545,9 @@ class TrainModel(Registrable):
         serialization_dir: `str`
             The directory where logs and model archives will be saved.
         local_rank: `int`
+            The process index that is initialized using the GPU device id.
         batch_weight_key: `str`
+            The name of metric used to weight the loss on a per-batch basis.
         dataset_reader: `DatasetReader`
             The `DatasetReader` that will be used for training and (by default) for validation.
         train_data_path: `str`

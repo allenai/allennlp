@@ -19,6 +19,14 @@ from allennlp.training import TrainerBase
 from allennlp.training.util import datasets_from_params
 
 
+def is_matplotlib_installed():
+    try:
+        import matplotlib  # noqa: F401 - Matplotlib is optional.
+    except:  # noqa: E722. Any exception means we don't have a working matplotlib.
+        return False
+    return True
+
+
 class TestFindLearningRate(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
@@ -39,6 +47,7 @@ class TestFindLearningRate(AllenNlpTestCase):
             }
         )
 
+    @pytest.mark.skipif(not is_matplotlib_installed(), reason="matplotlib dependency is optional")
     def test_find_learning_rate(self):
         find_learning_rate_model(
             self.params(),

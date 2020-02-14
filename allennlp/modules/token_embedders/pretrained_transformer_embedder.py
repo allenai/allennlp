@@ -2,12 +2,12 @@ import math
 from typing import Optional, Tuple
 
 from overrides import overrides
-from transformers.modeling_auto import AutoModel
-from transformers.tokenization_auto import AutoTokenizer
+
 import torch
 import torch.nn.functional as F
+from transformers.modeling_auto import AutoModel
 
-from allennlp.data.token_indexers import PretrainedTransformerIndexer
+from allennlp.data.tokenizers import PretrainedTransformerTokenizer
 from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
 from allennlp.nn.util import batched_index_select
 
@@ -37,16 +37,21 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         # where it doesn't work.
         self.output_dim = self.transformer_model.config.hidden_size
 
-        tokenizer = AutoTokenizer.from_pretrained(model_name)
-        (
-            self._num_added_start_tokens,
-            self._num_added_end_tokens,
-        ) = PretrainedTransformerIndexer.determine_num_special_tokens_added(tokenizer)
+        tokenizer = PretrainedTransformerTokenizer(model_name)
+        self._num_added_start_tokens = tokenizer.num_added_start_tokens
+        self._num_added_end_tokens = tokenizer.num_added_end_tokens
         self._num_added_tokens = self._num_added_start_tokens + self._num_added_end_tokens
 
     @overrides
     def get_output_dim(self):
         return self.output_dim
+
+    def _number_of_token_type_embeddings(self):
+        config = self.transformer_model.config
+        if hasattr(config, "type_vocab_size"):
+            return config.type_vocab_size
+        else:
+            return 0
 
     @overrides
     def forward(
@@ -78,15 +83,18 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
 
         Shape: [batch_size, num_wordpieces, embedding_size].
         """
-        if (
-            type_ids is not None
-            and type_ids.max()
-            >= self.transformer_model.embeddings.token_type_embeddings.num_embeddings
-        ):
-            raise ValueError("Found type ids too large for the chosen transformer model.")
 
+        # Some of the huggingface transformers don't support type ids at all and crash when you supply them. For
+        # others, you can supply a tensor of zeros, and if you don't, they act as if you did. There is no practical
+        # difference to the caller, so here we pretend that one case is the same as another case.
         if type_ids is not None:
-            assert token_ids.shape == type_ids.shape
+            max_type_id = type_ids.max()
+            if max_type_id == 0:
+                type_ids = None
+            else:
+                if max_type_id >= self._number_of_token_type_embeddings():
+                    raise ValueError("Found type ids too large for the chosen transformer model.")
+                assert token_ids.shape == type_ids.shape
 
         if self._max_length is not None:
             batch_size, num_segment_concat_wordpieces = token_ids.size()
@@ -98,9 +106,13 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         # Shape: [batch_size, num_wordpieces, embedding_size],
         # or if self._max_length is not None:
         # [batch_size * num_segments, self._max_length, embedding_size]
-        embeddings = self.transformer_model(
-            input_ids=token_ids, token_type_ids=type_ids, attention_mask=transformer_mask
-        )[0]
+
+        # We call this with kwargs because some of the huggingface models don't have the token_type_ids parameter
+        # and fail even when it's given as None.
+        parameters = {"input_ids": token_ids, "attention_mask": transformer_mask}
+        if type_ids is not None:
+            parameters["token_type_ids"] = type_ids
+        embeddings = self.transformer_model(**parameters)[0]
 
         if self._max_length is not None:
             embeddings = self._unfold_long_sequences(

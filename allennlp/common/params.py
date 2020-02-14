@@ -1,5 +1,5 @@
 """
-The :class:`~allennlp.common.params.Params` class represents a dictionary of
+The `allennlp.common.params.Params` class represents a dictionary of
 parameters (e.g. for configuring a model), with added functionality around
 logging and validation.
 """
@@ -210,11 +210,12 @@ class Params(MutableMapping):
        specification of the actual parameters used than is given in a JSON file, because
        those may not specify what default values were used, whereas this will log them.
 
-    The convention for using a `Params` object in AllenNLP is that you will consume the parameters
-    as you read them, so that there are none left when you've read everything you expect.  This
-    lets us easily validate that you didn't pass in any `extra` parameters, just by making sure
-    that the parameter dictionary is empty.  You should do this when you're done handling
-    parameters, by calling :func:`Params.assert_empty`.
+    !!! Params consumption
+        The convention for using a `Params` object in AllenNLP is that you will consume the parameters
+        as you read them, so that there are none left when you've read everything you expect.  This
+        lets us easily validate that you didn't pass in any `extra` parameters, just by making sure
+        that the parameter dictionary is empty.  You should do this when you're done handling
+        parameters, by calling `Params.assert_empty`.
     """
 
     # This allows us to check for the presence of "None" as a default argument,
@@ -241,9 +242,7 @@ class Params(MutableMapping):
             try:
                 value = self.params.pop(key)
             except KeyError:
-                raise ConfigurationError(
-                    'key "{}" is required at location "{}"'.format(key, self.history)
-                )
+                raise ConfigurationError(f'key "{key}" is required at location "{self.history}"')
         else:
             value = self.params.pop(key, default)
 
@@ -295,15 +294,8 @@ class Params(MutableMapping):
         Performs the functionality associated with dict.get(key) but also checks for returned
         dicts and returns a Params object in their place with an updated history.
         """
-        if default is self.DEFAULT:
-            try:
-                value = self.params.get(key)
-            except KeyError:
-                raise ConfigurationError(
-                    'key "{}" is required at location "{}"'.format(key, self.history)
-                )
-        else:
-            value = self.params.get(key, default)
+        default = None if default is self.DEFAULT else default
+        value = self.params.get(key, default)
         return self._check_is_dict(key, value)
 
     def pop_choice(
@@ -450,7 +442,7 @@ class Params(MutableMapping):
     def _check_is_dict(self, new_history, value):
         if isinstance(value, dict):
             new_history = self.history + new_history + "."
-            return Params(value, history=new_history,)
+            return Params(value, history=new_history)
         if isinstance(value, list):
             value = [self._check_is_dict(f"{new_history}.{i}", v) for i, v in enumerate(value)]
         return value
@@ -568,12 +560,12 @@ def pop_choice(
     allow_class_names: bool = True,
 ) -> Any:
     """
-    Performs the same function as :func:`Params.pop_choice`, but is required in order to deal with
+    Performs the same function as `Params.pop_choice`, but is required in order to deal with
     places that the Params object is not welcome, such as inside Keras layers.  See the docstring
     of that method for more detail on how this function works.
 
     This method adds a `history` parameter, in the off-chance that you know it, so that we can
-    reproduce :func:`Params.pop_choice` exactly.  We default to using "?." if you don't know the
+    reproduce `Params.pop_choice` exactly.  We default to using "?." if you don't know the
     history, so you'll have to fix that in the log if you want to actually recover the logged
     parameters.
     """
