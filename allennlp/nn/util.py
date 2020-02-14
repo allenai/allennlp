@@ -1680,19 +1680,18 @@ def find_embedding_layer(model: torch.nn.Module) -> torch.nn.Module:
     raise RuntimeError("No embedding module found!")
 
 
-def extend_layer(layer: torch.nn.Module, new_dim: int, layer_type: str="linear") -> torch.nn.Module:
-    valid_layer_types = ["linear", "bilinear"]
-    if layer_type not in valid_layer_types:
-        raise ConfigurationError("Inappropriate layer type; layer_type must be one of {}."
-                                 .format(", ".join(valid_layer_types)))
+def extend_layer(layer: torch.nn.Module, new_dim: int) -> None:
+    valid_layers = [torch.nn.Linear, torch.nn.Bilinear]
+    if not any([isinstance(layer, i) for i in valid_layers]):
+        raise ConfigurationError("Inappropriate layer type")
 
     extend_dim = new_dim - layer.out_features
     if not extend_dim:
         return layer
 
-    if layer_type == "linear":
+    if isinstance(layer, torch.nn.Linear):
         new_weight = torch.FloatTensor(extend_dim, layer.in_features)
-    elif layer_type == "bilinear":
+    elif isinstance(layer, torch.nn.Bilinear):
         new_weight = torch.FloatTensor(extend_dim, layer.in1_features, layer.in2_features)
 
     new_bias = torch.FloatTensor(extend_dim)
@@ -1700,10 +1699,12 @@ def extend_layer(layer: torch.nn.Module, new_dim: int, layer_type: str="linear")
     torch.nn.init.zeros_(new_bias)
 
     device = layer.weight.device
-    layer.weight = torch.nn.Parameter(torch.cat([layer.weight.data, new_weight.to(device)], dim=0),
-                                      requires_grad=layer.weight.requires_grad)
-    layer.bias = torch.nn.Parameter(torch.cat([layer.bias.data, new_bias.to(device)], dim=0),
-                                    requires_grad=layer.bias.requires_grad)
-
-    return layer
-
+    layer.weight = torch.nn.Parameter(
+        torch.cat([layer.weight.data, new_weight.to(device)], dim=0),
+        requires_grad=layer.weight.requires_grad,
+    )
+    layer.bias = torch.nn.Parameter(
+        torch.cat([layer.bias.data, new_bias.to(device)], dim=0),
+        requires_grad=layer.bias.requires_grad,
+    )
+    layer.out_features = new_dim

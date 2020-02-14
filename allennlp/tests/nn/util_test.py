@@ -1415,3 +1415,20 @@ class TestNnUtil(AllenNlpTestCase):
         assert moved_obj["b"]._device == new_device
         assert moved_obj["c"][0] == 1
         assert moved_obj["c"][1]._device == new_device
+
+    def test_extend_layer(self):
+        lin_layer = torch.nn.Linear(10, 5)
+        new_dim = 8
+
+        old_weights = lin_layer.weight.data.clone()
+        old_bias = lin_layer.bias.data.clone()
+
+        util.extend_layer(lin_layer, new_dim)
+
+        assert lin_layer.weight.data.shape == (8, 10)
+        assert lin_layer.bias.data.shape == (8,)
+
+        assert (lin_layer.weight.data[:5] == old_weights).all()
+        assert (lin_layer.bias.data[:5] == old_bias).all()
+
+        assert lin_layer.out_features == new_dim
