@@ -322,6 +322,23 @@ class TestFromParams(AllenNlpTestCase):
         assert c.c["a"].a == 3
         assert c.c["b"].a == [4, 5]
 
+    def test_union_of_castable_types(self):
+        class IntFloat(FromParams):
+            def __init__(self, a: Union[int, float]) -> None:
+                self.a = a
+
+        class FloatInt(FromParams):
+            def __init__(self, a: Union[float, int]) -> None:
+                self.a = a
+
+        float_param_str = '{"a": 1.0}'
+        int_param_str = '{"a": 1}'
+        import json
+        for expected_type, param_str in [(int, int_param_str), (float, float_param_str)]:
+            for cls in [IntFloat, FloatInt]:
+                c = cls.from_params(Params(json.loads(param_str)))
+                assert type(c.a) == expected_type
+
     def test_dict(self):
 
         from allennlp.common.registrable import Registrable
