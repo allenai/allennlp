@@ -421,9 +421,9 @@ class BiAugmentedLstm(torch.nn.Module):
             )
         else:
             hidden_states = list(
-                zip(
+                zip(  # type: ignore
                     states[0].chunk(self.num_layers, 0), states[1].chunk(self.num_layers, 0)
-                )  # type: ignore
+                )
             )
         for i, state in enumerate(hidden_states):
             if state:
@@ -471,7 +471,7 @@ class BiAugmentedLstm(torch.nn.Module):
             )
         else:
             hidden_states = list(
-                zip(
+                zip(  # type: ignore
                     states[0].chunk(self.num_layers, 0), states[1].chunk(self.num_layers, 0)
                 )  # type: ignore
             )
