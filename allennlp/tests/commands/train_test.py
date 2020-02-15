@@ -18,6 +18,7 @@ from allennlp.models import load_archive, Model
 from allennlp.models.archival import CONFIG_NAME
 
 SEQUENCE_TAGGING_DATA_PATH = str(AllenNlpTestCase.FIXTURES_ROOT / "data" / "sequence_tagging.tsv")
+SEQUENCE_TAGGING_SHARDS_PATH = str(AllenNlpTestCase.FIXTURES_ROOT / "data" / "shards" / "*")
 
 
 class TestTrain(AllenNlpTestCase):
@@ -116,6 +117,92 @@ class TestTrain(AllenNlpTestCase):
 
         # Check we can load the serialized model
         assert load_archive(out_dir).model
+
+    @pytest.mark.skipif(torch.cuda.device_count() < 2, reason="Need multiple GPUs.")
+    def test_train_model_distributed_with_sharded_reader(self):
+
+        params = lambda: Params(
+            {
+                "model": {
+                    "type": "simple_tagger",
+                    "text_field_embedder": {
+                        "token_embedders": {"tokens": {"type": "embedding", "embedding_dim": 5}}
+                    },
+                    "encoder": {"type": "lstm", "input_size": 5, "hidden_size": 7, "num_layers": 2},
+                },
+                "dataset_reader": {
+                    "type": "sharded",
+                    "base_reader": {"type": "sequence_tagging"},
+                    "lazy": True,
+                },
+                "train_data_path": SEQUENCE_TAGGING_SHARDS_PATH,
+                "validation_data_path": SEQUENCE_TAGGING_SHARDS_PATH,
+                "iterator": {"type": "basic", "batch_size": 2},
+                "trainer": {"num_epochs": 2, "optimizer": "adam"},
+                "distributed": {"cuda_devices": [0, 1]},
+            }
+        )
+
+        out_dir = os.path.join(self.TEST_DIR, "test_distributed_train")
+        train_model(params(), serialization_dir=out_dir)
+
+        # Check that some logs specific to distributed
+        # training are where we expect.
+        serialized_files = os.listdir(out_dir)
+        assert "stderr_worker0.log" in serialized_files
+        assert "stdout_worker0.log" in serialized_files
+        assert "stderr_worker1.log" in serialized_files
+        assert "stdout_worker1.log" in serialized_files
+        assert "model.tar.gz" in serialized_files
+
+        # Check we can load the seralized model
+        archive = load_archive(out_dir)
+        assert archive.model
+
+        # Check that we created a vocab from all the shards.
+        tokens = archive.model.vocab._token_to_index["tokens"].keys()
+        assert tokens == {
+            "@@PADDING@@",
+            "@@UNKNOWN@@",
+            "are",
+            ".",
+            "animals",
+            "plants",
+            "vehicles",
+            "cats",
+            "dogs",
+            "snakes",
+            "birds",
+            "ferns",
+            "trees",
+            "flowers",
+            "vegetables",
+            "cars",
+            "buses",
+            "planes",
+            "rockets",
+        }
+
+        # TODO: This is somewhat brittle. Make these constants in trainer.py.
+        train_early = "finishing training early!"
+        validation_early = "finishing validation early!"
+        train_complete = "completed its entire epoch (training)."
+        validation_complete = "completed its entire epoch (validation)."
+
+        # There are three shards, but only two workers, so the first worker will have to discard some data.
+        with open(os.path.join(out_dir, "stdout_worker0.log")) as f:
+            worker0_log = f.read()
+            assert train_early in worker0_log
+            assert validation_early in worker0_log
+            assert train_complete not in worker0_log
+            assert validation_complete not in worker0_log
+
+        with open(os.path.join(out_dir, "stdout_worker1.log")) as f:
+            worker1_log = f.read()
+            assert train_early not in worker1_log
+            assert validation_early not in worker1_log
+            assert train_complete in worker1_log
+            assert validation_complete in worker1_log
 
     def test_distributed_raises_error_with_no_gpus(self):
         params = Params(
