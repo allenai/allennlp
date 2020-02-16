@@ -31,6 +31,7 @@ local BASE_ITERATOR = {
   "batch_size": 512,
   "sorting_keys": [["source", "tokens___tokens"]],
   # Smaller as we have to use dense embeddings now.
+  # TODO: Use either an adaptive softmax or switch to wordpieces to reduce the vocab size.
   "maximum_samples_per_batch": ["tokens___tokens", 1000]
 };
 

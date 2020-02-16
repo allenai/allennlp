@@ -1,8 +1,9 @@
 name: Nightly Release
 
 on:
+  # This is 11am in Seattle time.
   schedule:
-    - cron:  '0 11 * * *'
+    - cron:  '0 19 * * *'
 
 jobs:
   build:
@@ -16,10 +17,13 @@ jobs:
     - name: Install requirements
       run: |
         pip install -r dev-requirements.txt
+    - name: Set Version
+      # This is somewhat bizarre, but you can't set env variables to bash commands in the action workflow -
+      # So we have to use this odd way of exporting a variable instead.
+      run: echo ::set-env name=ALLENNLP_VERSION_SUFFIX::-dev$(date -u +%Y%m%d)+$(git rev-parse --short "$GITHUB_SHA")
     - name: Build Package
-      env:
-        ALLENNLP_REVISION: dev.$(git rev-parse --short "$GITHUB_SHA")
       run: |
+        echo "Building packages for dev release $ALLENNLP_VERSION_SUFFIX"
         python setup.py bdist_wheel sdist
     - name: Test Packages
       run: |
@@ -30,6 +34,7 @@ jobs:
       run: scripts/24hr_diff.sh
     - name: Deploy
       if: success()
-      run: |
-        twine upload -u ${{ secrets.PYPI_NIGHTLY_USERNAME }} -p ${{ secrets.PYPI_NIGHTLY_PASSWORD }} dist/*
-        rm -rf dist/
+      env:
+        PYPI_NIGHTLY_USERNAME: ${{ secrets.PYPI_NIGHTLY_USERNAME }}
+        PYPI_NIGHTLY_PASSWORD: ${{ secrets.PYPI_NIGHTLY_PASSWORD }}
+      run: twine upload -u $PYPI_NIGHTLY_USERNAME -p $PYPI_NIGHTLY_PASSWORD dist/*

@@ -199,6 +199,12 @@ class CorefPredictor(Predictor):
         """
         document = json_dict["document"]
         spacy_document = self._spacy(document)
-        sentences = [[token.text for token in sentence] for sentence in spacy_document.sents]
+        # Spacy preserves whitespaces if there are multiple contiguous ones, see
+        # https://github.com/explosion/spaCy/issues/1707
+        # But we don't want those because they are not in the training data, so we remove them.
+        sentences = [
+            [token.text for token in sentence if not token.is_space]
+            for sentence in spacy_document.sents
+        ]
         instance = self._dataset_reader.text_to_instance(sentences)
         return instance
