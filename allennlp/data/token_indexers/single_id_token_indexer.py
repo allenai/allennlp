@@ -24,6 +24,8 @@ class SingleIdTokenIndexer(TokenIndexer):
         These are prepended to the tokens provided to `tokens_to_indices`.
     end_tokens : `List[str]`, optional (default=`None`)
         These are appended to the tokens provided to `tokens_to_indices`.
+    feature_name : `str`, optional (default=`text`)
+        We will use the :class:`Token` attribute with this name as input
     token_min_padding_length : `int`, optional (default=`0`)
         See :class:`TokenIndexer`.
     """
