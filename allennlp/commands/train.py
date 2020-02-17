@@ -1,5 +1,5 @@
 """
-The ``train`` subcommand can be used to train a model.
+The `train` subcommand can be used to train a model.
 It requires a configuration file and a directory in
 which to write the results.
 
@@ -8,7 +8,7 @@ which to write the results.
    $ allennlp train --help
     usage: allennlp train [-h] -s SERIALIZATION_DIR [-r] [-f] [-o OVERRIDES]
                           [--file-friendly-logging] [--node-rank NODE_RANK]
-                          [--include-package INCLUDE_PACKAGE]
+                          [--dry-run] [--include-package INCLUDE_PACKAGE]
                           param_path
 
     Train the specified model on the specified dataset.
@@ -30,8 +30,10 @@ which to write the results.
                             outputs tqdm status on separate lines and slows tqdm
                             refresh rate
       --node-rank NODE_RANK
-                            Rank of this node in the distributed setup (default =
+                            rank of this node in the distributed setup (default =
                             0)
+      --dry-run             do not train a model, but create a vocabulary, show
+                            dataset statistics and other training information
       --include-package INCLUDE_PACKAGE
                             additional packages to include
 """
@@ -111,7 +113,14 @@ class Train(Subcommand):
         )
 
         subparser.add_argument(
-            "--node-rank", type=int, default=0, help="Rank of this node in the distributed setup"
+            "--node-rank", type=int, default=0, help="rank of this node in the distributed setup"
+        )
+
+        subparser.add_argument(
+            "--dry-run",
+            action="store_true",
+            help="do not train a model, but create a vocabulary, show dataset statistics and "
+            "other training information",
         )
 
         subparser.set_defaults(func=train_model_from_args)
@@ -121,7 +130,7 @@ class Train(Subcommand):
 
 def train_model_from_args(args: argparse.Namespace):
     """
-    Just converts from an ``argparse.Namespace`` object to string paths.
+    Just converts from an `argparse.Namespace` object to string paths.
     """
     train_model_from_file(
         parameter_filename=args.param_path,
@@ -132,6 +141,7 @@ def train_model_from_args(args: argparse.Namespace):
         force=args.force,
         node_rank=args.node_rank,
         include_package=args.include_package,
+        dry_run=args.dry_run,
     )
 
 
@@ -144,34 +154,43 @@ def train_model_from_file(
     force: bool = False,
     node_rank: int = 0,
     include_package: List[str] = None,
-) -> Model:
+    dry_run: bool = False,
+) -> Optional[Model]:
     """
     A wrapper around :func:`train_model` which loads the params from a file.
 
     # Parameters
 
-    parameter_filename : ``str``
+    parameter_filename : `str`
         A json parameter file specifying an AllenNLP experiment.
-    serialization_dir : ``str``
+    serialization_dir : `str`
         The directory in which to save results and logs. We just pass this along to
         :func:`train_model`.
-    overrides : ``str``
+    overrides : `str`
         A JSON string that we will use to override values in the input parameter file.
-    file_friendly_logging : ``bool``, optional (default=False)
-        If ``True``, we make our output more friendly to saved model files.  We just pass this
+    file_friendly_logging : `bool`, optional (default=False)
+        If `True`, we make our output more friendly to saved model files.  We just pass this
         along to :func:`train_model`.
-    recover : ``bool`, optional (default=False)
-        If ``True``, we will try to recover a training run from an existing serialization
+    recover : `bool`, optional (default=False)
+        If `True`, we will try to recover a training run from an existing serialization
         directory.  This is only intended for use when something actually crashed during the middle
-        of a run.  For continuing training a model on new data, see ``Model.from_archive``.
-    force : ``bool``, optional (default=False)
-        If ``True``, we will overwrite the serialization directory if it already exists.
-    node_rank : ``int``, optional
+        of a run.  For continuing training a model on new data, see `Model.from_archive`.
+    force : `bool`, optional (default=False)
+        If `True`, we will overwrite the serialization directory if it already exists.
+    node_rank : `int`, optional
         Rank of the current node in distributed training
-    include_package : ``str``, optional
+    include_package : `str`, optional
         In distributed mode, extra packages mentioned will be imported in trainer workers.
+    dry_run : `bool`, optional (default=False)
+        Do not train a model, but create a vocabulary, show dataset statistics and other training
+        information.
+
+    # Returns
+
+    best_model : `Optional[Model]`
+        The model with the best epoch weights or `None` if in dry run.
     """
-    # Load the experiment config from a file and pass it to ``train_model``.
+    # Load the experiment config from a file and pass it to `train_model`.
     params = Params.from_file(parameter_filename, overrides)
     return train_model(
         params=params,
@@ -181,6 +200,7 @@ def train_model_from_file(
         force=force,
         node_rank=node_rank,
         include_package=include_package,
+        dry_run=dry_run,
     )
 
 
@@ -193,37 +213,41 @@ def train_model(
     node_rank: int = 0,
     include_package: List[str] = None,
     batch_weight_key: str = "",
-) -> Model:
+    dry_run: bool = False,
+) -> Optional[Model]:
     """
     Trains the model specified in the given :class:`Params` object, using the data and training
-    parameters also specified in that object, and saves the results in ``serialization_dir``.
+    parameters also specified in that object, and saves the results in `serialization_dir`.
 
     # Parameters
 
-    params : ``Params``
+    params : `Params`
         A parameter object specifying an AllenNLP Experiment.
-    serialization_dir : ``str``
+    serialization_dir : `str`
         The directory in which to save results and logs.
-    file_friendly_logging : ``bool``, optional (default=False)
-        If ``True``, we add newlines to tqdm output, even on an interactive terminal, and we slow
+    file_friendly_logging : `bool`, optional (default=False)
+        If `True`, we add newlines to tqdm output, even on an interactive terminal, and we slow
         down tqdm's output to only once every 10 seconds.
-    recover : ``bool``, optional (default=False)
-        If ``True``, we will try to recover a training run from an existing serialization
+    recover : `bool`, optional (default=False)
+        If `True`, we will try to recover a training run from an existing serialization
         directory.  This is only intended for use when something actually crashed during the middle
-        of a run.  For continuing training a model on new data, see ``Model.from_archive``.
-    force : ``bool``, optional (default=False)
-        If ``True``, we will overwrite the serialization directory if it already exists.
-    node_rank : ``int``, optional
+        of a run.  For continuing training a model on new data, see `Model.from_archive`.
+    force : `bool`, optional (default=False)
+        If `True`, we will overwrite the serialization directory if it already exists.
+    node_rank : `int`, optional
         Rank of the current node in distributed training
-    include_package : ``List[str]``, optional
+    include_package : `List[str]`, optional
         In distributed mode, extra packages mentioned will be imported in trainer workers.
-    batch_weight_key : ``str``, optional (default="")
+    batch_weight_key : `str`, optional (default="")
         If non-empty, name of metric used to weight the loss on a per-batch basis.
+    dry_run : `bool`, optional (default=False)
+        Do not train a model, but create a vocabulary, show dataset statistics and other training
+        information.
 
     # Returns
 
-    best_model : ``Model``
-        The model with the best epoch weights.
+    best_model : `Optional[Model]`
+        The model with the best epoch weights or `None` if in dry run.
     """
     training_util.create_serialization_dir(params, serialization_dir, recover, force)
     params.to_file(os.path.join(serialization_dir, CONFIG_NAME))
@@ -239,8 +263,10 @@ def train_model(
             file_friendly_logging=file_friendly_logging,
             include_package=include_package,
             batch_weight_key=batch_weight_key,
+            dry_run=dry_run,
         )
-        archive_model(serialization_dir)
+        if not dry_run:
+            archive_model(serialization_dir)
         return model
 
     # Otherwise, we are running multiple processes for training.
@@ -275,7 +301,9 @@ def train_model(
         # to disk before initializing the distributed context. The workers will
         # load the vocabulary from the path specified.
         if params.get("vocabulary", Params({})).get("type", "") != "from_files":
-            vocab = training_util.make_vocab_from_params(params.duplicate(), serialization_dir)
+            vocab = training_util.make_vocab_from_params(
+                params.duplicate(), serialization_dir, print_statistics=dry_run
+            )
             params["vocabulary"] = {
                 "type": "from_files",
                 "directory": os.path.join(serialization_dir, "vocabulary"),
@@ -291,6 +319,7 @@ def train_model(
                 file_friendly_logging,
                 include_package,
                 batch_weight_key,
+                dry_run,
                 node_rank,
                 master_addr,
                 master_port,
@@ -299,9 +328,12 @@ def train_model(
             ),
             nprocs=num_procs,
         )
-        archive_model(serialization_dir)
-        model = Model.load(params, serialization_dir)
-        return model
+        if dry_run:
+            return None
+        else:
+            archive_model(serialization_dir)
+            model = Model.load(params, serialization_dir)
+            return model
 
 
 def _train_worker(
@@ -311,6 +343,7 @@ def _train_worker(
     file_friendly_logging: bool = False,
     include_package: List[str] = None,
     batch_weight_key: str = "",
+    dry_run: bool = False,
     node_rank: int = 0,
     master_addr: str = "127.0.0.1",
     master_port: int = 29500,
@@ -319,41 +352,44 @@ def _train_worker(
 ) -> Optional[Model]:
     """
     Helper to train the configured model/experiment. In distributed mode, this is spawned as a
-    worker process. In a single GPU experiment, this returns the ``Model`` object and in distributed
+    worker process. In a single GPU experiment, this returns the `Model` object and in distributed
     training, nothing is returned.
 
     # Parameters
 
-    process_rank : ``int``
+    process_rank : `int`
         The process index that is initialized using the GPU device id.
-    params : ``Params``
+    params : `Params`
         A parameter object specifying an AllenNLP Experiment.
-    serialization_dir : ``str``
+    serialization_dir : `str`
         The directory in which to save results and logs.
-    file_friendly_logging : ``bool``, optional (default=False)
-        If ``True``, we add newlines to tqdm output, even on an interactive terminal, and we slow
+    file_friendly_logging : `bool`, optional (default=False)
+        If `True`, we add newlines to tqdm output, even on an interactive terminal, and we slow
         down tqdm's output to only once every 10 seconds.
-    include_package : ``List[str]``, optional
+    include_package : `List[str]`, optional
         In distributed mode, since this function would have been spawned as a separate process,
         the extra imports need to be done again. NOTE: This does not have any effect in single
         GPU training.
-    batch_weight_key : ``str``, optional (default="")
+    batch_weight_key : `str`, optional (default="")
         If non-empty, name of metric used to weight the loss on a per-batch basis.
-    node_rank : ``int``, optional
+    dry_run : `bool`, optional (default=False)
+        Do not train a model, but create a vocabulary, show dataset statistics and other training
+        information.
+    node_rank : `int`, optional
         Rank of the node.
-    master_addr : ``str``, optional (default="127.0.0.1")
+    master_addr : `str`, optional (default="127.0.0.1")
         Address of the master node for distributed training.
-    master_port : ``str``, optional (default="29500")
+    master_port : `str`, optional (default="29500")
         Port of the master node for distributed training.
-    world_size : ``int``, optional
+    world_size : `int`, optional
         The number of processes involved in distributed training.
-    distributed_device_ids: ``List[str]``, optional
+    distributed_device_ids: `List[str]`, optional
         IDs of the devices used involved in distributed training.
 
     # Returns
 
-    best_model : ``Model``
-        The model with the best epoch weights.
+    best_model : `Optional[Model]`
+        The model with the best epoch weights or `None` if in distributed training or in dry run.
     """
     common_util.prepare_global_logging(
         serialization_dir, file_friendly_logging, rank=process_rank, world_size=world_size
@@ -414,6 +450,9 @@ def _train_worker(
         batch_weight_key=batch_weight_key,
     )
 
+    if dry_run:
+        return None
+
     try:
         if distributed:  # let the setup get ready for all the workers
             dist.barrier()
@@ -435,7 +474,7 @@ def _train_worker(
     if not distributed:
         return train_loop.model
 
-    return None  # to make mypy happy
+    return None
 
 
 class TrainModel(Registrable):

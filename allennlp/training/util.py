@@ -1,23 +1,24 @@
 """
 Helper functions for Trainers
 """
-import torch.distributed as dist
-from typing import Any, Union, Dict, Iterable, List, Optional
 import datetime
 import logging
 import os
 import shutil
+from typing import Any, Dict, Iterable, List, Optional, Union
 
 import torch
+import torch.distributed as dist
 
-from allennlp.common.checks import ConfigurationError, check_for_gpu
+from allennlp.common.checks import check_for_gpu, ConfigurationError
 from allennlp.common.params import Params
 from allennlp.common.tqdm import Tqdm
-from allennlp.data.dataset_readers import DatasetReader
 from allennlp.data import Instance, Vocabulary
+from allennlp.data.batch import Batch
+from allennlp.data.dataset_readers import DatasetReader
 from allennlp.data.iterators import DataIterator
-from allennlp.models.model import Model
 from allennlp.models.archival import CONFIG_NAME
+from allennlp.models.model import Model
 from allennlp.nn import util as nn_util
 
 logger = logging.getLogger(__name__)
@@ -449,8 +450,9 @@ def description_from_metrics(metrics: Dict[str, float]) -> str:
     )
 
 
-def make_vocab_from_params(params: Params, serialization_dir: str) -> Vocabulary:
-
+def make_vocab_from_params(
+    params: Params, serialization_dir: str, print_statistics: bool = False
+) -> Vocabulary:
     vocab_params = params.pop("vocabulary", {})
     os.makedirs(serialization_dir, exist_ok=True)
     vocab_dir = os.path.join(serialization_dir, "vocabulary")
@@ -472,17 +474,26 @@ def make_vocab_from_params(params: Params, serialization_dir: str) -> Vocabulary
         ", ".join(datasets_for_vocab_creation),
     )
 
-    instances = (
+    instances: Iterable[Instance] = (
         instance
         for key, dataset in all_datasets.items()
-        for instance in dataset
         if key in datasets_for_vocab_creation
+        for instance in dataset
     )
+
+    if print_statistics:
+        instances = list(instances)
 
     vocab = Vocabulary.from_params(vocab_params, instances=instances)
 
     logger.info(f"writing the vocabulary to {vocab_dir}.")
     vocab.save_to_files(vocab_dir)
     logger.info("done creating vocab")
+
+    if print_statistics:
+        dataset = Batch(instances)
+        dataset.index_instances(vocab)
+        dataset.print_statistics()
+        vocab.print_statistics()
 
     return vocab

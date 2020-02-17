@@ -597,7 +597,6 @@ class Trainer(TrainerBase):
 
         logger.info("Beginning training.")
 
-        train_metrics: Dict[str, float] = {}
         val_metrics: Dict[str, float] = {}
         this_epoch_val_metric: float = None
         metrics: Dict[str, Any] = {}
@@ -891,9 +890,7 @@ class Trainer(TrainerBase):
         )
         momentum_scheduler_ = momentum_scheduler.construct(optimizer=optimizer_)
 
-        checkpointer_ = checkpointer.construct()
-        if not checkpointer_:
-            checkpointer_ = Checkpointer(serialization_dir)
+        checkpointer_ = checkpointer.construct() or Checkpointer(serialization_dir)
         return cls(
             model,
             optimizer_,
