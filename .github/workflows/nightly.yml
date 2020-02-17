@@ -3,7 +3,7 @@ name: Nightly Release
 on:
   # This is 11am in Seattle time.
   schedule:
-    - cron:  '0 19 * * *'
+    - cron: '0 19 * * *'
 
 jobs:
   build:
@@ -20,7 +20,7 @@ jobs:
     - name: Set Version
       # This is somewhat bizarre, but you can't set env variables to bash commands in the action workflow -
       # So we have to use this odd way of exporting a variable instead.
-      run: echo ::set-env name=ALLENNLP_VERSION_SUFFIX::-dev$(date -u +%Y%m%d)+$(git rev-parse --short "$GITHUB_SHA")
+      run: echo ::set-env name=ALLENNLP_VERSION_SUFFIX::.dev$(date -u +%Y%m%d)
     - name: Build Package
       run: |
         echo "Building packages for dev release $ALLENNLP_VERSION_SUFFIX"
