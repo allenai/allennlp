@@ -1,7 +1,9 @@
-from typing import NamedTuple, Optional
+from dataclasses import dataclass
+from typing import Optional
 
 
-class Token(NamedTuple):
+@dataclass
+class Token:
     """
     A simple token representation, keeping track of the token's text, offset in the passage it was
     taken from, POS tag, dependency relation, and similar information.  These fields match spacy's
@@ -31,6 +33,7 @@ class Token(NamedTuple):
         still use a character-level representation in addition to a hash-based word embedding.
     type_id : `int`, optional
         Token type id used by some pretrained language models like original BERT
+
 
         The other fields on `Token` follow the fields on spacy's `Token` object; this is one we
         added, similar to spacy's `lex_id`.

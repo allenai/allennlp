@@ -122,6 +122,7 @@ setup(
         "transformers>=2.4.0",
         "jsonpickle",
         "semantic_version",
+        "dataclasses;python_version<'3.7'",
     ],
     entry_points={"console_scripts": ["allennlp=allennlp.run:run"]},
     setup_requires=setup_requirements,
