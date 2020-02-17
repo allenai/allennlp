@@ -12,7 +12,7 @@ from allennlp.common.checks import ConfigurationError
 from allennlp.common.plugins import discover_plugins
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.common.util import push_python_path
-from allennlp.tests.common.plugins_util import pip_install, push_python_project
+from allennlp.tests.common.plugins_util import push_python_project
 
 
 class TestMain(AllenNlpTestCase):
@@ -146,33 +146,3 @@ class TestMain(AllenNlpTestCase):
             main()
             subcommands_available = Subcommand.list_available()
             self.assertIn("d", subcommands_available)
-
-    def test_namespace_plugin_loaded(self):
-        plugins_root = self.FIXTURES_ROOT / "plugins"
-        # "a" sets a "global" namespace plugin, because it's gonna be installed with pip.
-        project_a_fixtures_root = plugins_root / "project_a"
-
-        sys.argv = ["allennlp"]
-
-        available_plugins = set(discover_plugins())
-        self.assertSetEqual(set(), available_plugins)
-
-        with pip_install(project_a_fixtures_root, "a"):
-            main()
-
-        subcommands_available = Subcommand.list_available()
-        self.assertIn("a", subcommands_available)
-
-    def test_subcommand_plugin_is_available(self):
-        plugins_root = self.FIXTURES_ROOT / "plugins"
-        allennlp_server_fixtures_root = plugins_root / "allennlp_server"
-
-        sys.argv = ["allennlp"]
-
-        with pip_install(
-            allennlp_server_fixtures_root, "allennlp_server"
-        ), io.StringIO() as buf, redirect_stdout(buf):
-            main()
-            output = buf.getvalue()
-
-        self.assertIn("    serve", output)
