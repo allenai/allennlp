@@ -14,7 +14,7 @@ def main(checks):
         print("Verifying with " + str(checks))
         if "pytest" in checks:
             print("Tests (pytest):", flush=True)
-            run("pytest -v --color=yes", shell=True, check=True)
+            run("pytest --color=yes -rf", shell=True, check=True)
 
         if "flake8" in checks:
             print("Linter (flake8)", flush=True)

@@ -1,7 +1,7 @@
 from transformers.tokenization_auto import AutoTokenizer
 
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.data import Token, Vocabulary
+from allennlp.data import Vocabulary
 from allennlp.data.token_indexers import PretrainedTransformerIndexer
 from allennlp.data.tokenizers import PretrainedTransformerTokenizer
 

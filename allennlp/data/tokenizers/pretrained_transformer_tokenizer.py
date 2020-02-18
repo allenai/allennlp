@@ -163,7 +163,7 @@ class PretrainedTransformerTokenizer(Tokenizer):
                     continue
                 allowed_skipped_whitespace = min_allowed_skipped_whitespace
 
-                tokens[token_index] = tokens[token_index]._replace(idx=token_start_index)
+                tokens[token_index].idx = token_start_index
                 text_index = token_start_index + len(token_text)
                 token_index += 1
 

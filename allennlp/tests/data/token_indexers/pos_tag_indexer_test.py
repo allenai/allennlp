@@ -59,7 +59,7 @@ class TestPosTagIndexer(AllenNlpTestCase):
         assert padded_tokens["tokens"].tolist() == [1, 2, 3, 4, 5, 0, 0, 0, 0, 0]
 
     def test_blank_pos_tag(self):
-        tokens = [Token(token)._replace(pos_="") for token in "allennlp is awesome .".split(" ")]
+        tokens = [Token(token) for token in "allennlp is awesome .".split(" ")]
         indexer = PosTagIndexer()
         counter = defaultdict(lambda: defaultdict(int))
         for token in tokens:

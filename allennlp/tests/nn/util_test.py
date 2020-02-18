@@ -692,9 +692,9 @@ class TestNnUtil(AllenNlpTestCase):
         # Test Viterbi decoding is equal to greedy decoding with no pairwise potentials.
         sequence_logits = torch.autograd.Variable(torch.rand([5, 9]))
         transition_matrix = torch.zeros([9, 9])
-        # pylint: disable=no-member
+
         indices, _ = util.viterbi_decode(sequence_logits.data, transition_matrix, top_k=5)
-        # pylint: enable=no-member
+
         _, argmax_indices = torch.max(sequence_logits, 1)
         assert indices[0] == argmax_indices.data.squeeze().tolist()
 
@@ -756,14 +756,13 @@ class TestNnUtil(AllenNlpTestCase):
             """
             # Create all possible sequences
             sequences = [[]]  # type: ignore
-            # pylint: disable=consider-using-enumerate
+
             for i in range(len(tag_sequence)):
                 new_sequences = []  # type: ignore
                 for j in range(len(tag_sequence[i])):
                     for sequence in sequences:
                         new_sequences.append(sequence[:] + [j])
                 sequences = new_sequences
-            # pylint: enable=consider-using-enumerate
 
             # Score
             scored_sequences = []  # type: ignore
@@ -1415,3 +1414,20 @@ class TestNnUtil(AllenNlpTestCase):
         assert moved_obj["b"]._device == new_device
         assert moved_obj["c"][0] == 1
         assert moved_obj["c"][1]._device == new_device
+
+    def test_extend_layer(self):
+        lin_layer = torch.nn.Linear(10, 5)
+        new_dim = 8
+
+        old_weights = lin_layer.weight.data.clone()
+        old_bias = lin_layer.bias.data.clone()
+
+        util.extend_layer(lin_layer, new_dim)
+
+        assert lin_layer.weight.data.shape == (8, 10)
+        assert lin_layer.bias.data.shape == (8,)
+
+        assert (lin_layer.weight.data[:5] == old_weights).all()
+        assert (lin_layer.bias.data[:5] == old_bias).all()
+
+        assert lin_layer.out_features == new_dim

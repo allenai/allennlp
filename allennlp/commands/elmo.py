@@ -68,25 +68,24 @@ import argparse
 import json
 import logging
 import os
-from typing import IO, List, Iterable, Tuple
 import warnings
+from typing import IO, Iterable, List, Tuple
 
+import numpy
+import torch
 from overrides import overrides
+
+from allennlp.commands.subcommand import Subcommand
+from allennlp.common.checks import ConfigurationError
+from allennlp.common.tqdm import Tqdm
+from allennlp.common.util import lazy_groups_of, prepare_global_logging
+from allennlp.data.token_indexers.elmo_indexer import ELMoTokenCharactersIndexer
+from allennlp.modules.elmo import _ElmoBiLm, batch_to_ids
+from allennlp.nn.util import remove_sentence_boundaries
 
 with warnings.catch_warnings():
     warnings.filterwarnings("ignore", category=FutureWarning)
     import h5py
-
-import numpy
-import torch
-
-from allennlp.common.tqdm import Tqdm
-from allennlp.common.util import lazy_groups_of, prepare_global_logging
-from allennlp.common.checks import ConfigurationError
-from allennlp.data.token_indexers.elmo_indexer import ELMoTokenCharactersIndexer
-from allennlp.nn.util import remove_sentence_boundaries
-from allennlp.modules.elmo import _ElmoBiLm, batch_to_ids
-from allennlp.commands.subcommand import Subcommand
 
 logger = logging.getLogger(__name__)
 

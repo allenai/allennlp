@@ -24,6 +24,8 @@ class SingleIdTokenIndexer(TokenIndexer):
         These are prepended to the tokens provided to `tokens_to_indices`.
     end_tokens : `List[str]`, optional (default=`None`)
         These are appended to the tokens provided to `tokens_to_indices`.
+    feature_name : `str`, optional (default=`text`)
+        We will use the :class:`Token` attribute with this name as input
     token_min_padding_length : `int`, optional (default=`0`)
         See :class:`TokenIndexer`.
     """
@@ -34,6 +36,7 @@ class SingleIdTokenIndexer(TokenIndexer):
         lowercase_tokens: bool = False,
         start_tokens: List[str] = None,
         end_tokens: List[str] = None,
+        feature_name: str = "text",
         token_min_padding_length: int = 0,
     ) -> None:
         super().__init__(token_min_padding_length)
@@ -42,13 +45,14 @@ class SingleIdTokenIndexer(TokenIndexer):
 
         self._start_tokens = [Token(st) for st in (start_tokens or [])]
         self._end_tokens = [Token(et) for et in (end_tokens or [])]
+        self.feature_name = feature_name
 
     @overrides
     def count_vocab_items(self, token: Token, counter: Dict[str, Dict[str, int]]):
         # If `text_id` is set on the token (e.g., if we're using some kind of hash-based word
         # encoding), we will not be using the vocab for this token.
         if getattr(token, "text_id", None) is None:
-            text = token.text
+            text = getattr(token, self.feature_name)
             if self.lowercase_tokens:
                 text = text.lower()
             counter[self.namespace][text] += 1
@@ -65,7 +69,7 @@ class SingleIdTokenIndexer(TokenIndexer):
                 # this id instead.
                 indices.append(token.text_id)
             else:
-                text = token.text
+                text = getattr(token, self.feature_name)
                 if self.lowercase_tokens:
                     text = text.lower()
                 indices.append(vocabulary.get_token_index(text, self.namespace))
