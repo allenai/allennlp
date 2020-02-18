@@ -1,8 +1,11 @@
 from contextlib import contextmanager
 
-from pip._internal.cli.main import main as pip_main
-
 from allennlp.common.util import ContextManagerFunctionReturnType, PathType, push_python_path, pushd
+
+try:
+    from pip._internal.cli.main import main as pip_main
+except ImportError:
+    from pip._internal.main import main as pip_main
 
 
 @contextmanager
