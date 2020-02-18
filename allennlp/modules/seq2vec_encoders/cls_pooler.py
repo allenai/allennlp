@@ -1,6 +1,5 @@
 from overrides import overrides
 
-import torch
 import torch.nn
 
 from allennlp.modules.seq2vec_encoders.seq2vec_encoder import Seq2VecEncoder
@@ -11,7 +10,7 @@ from allennlp.nn.util import get_final_encoder_states
 class ClsPooler(Seq2VecEncoder):
     """
     Just takes the first vector from a list of vectors (which in a transformer is typically the
-    [CLS] token) and returns it.
+    [CLS] token) and returns it.  For BERT, it's recommended to use `BertPooler` instead.
 
     # Parameters
 

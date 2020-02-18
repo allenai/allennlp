@@ -17,9 +17,6 @@ class BertPooler(Seq2VecEncoder):
     token-embedder -> seq2vec encoder setup, this is the Seq2VecEncoder to use.
     (For example, if you want to experiment with other embedding / encoding combinations.)
 
-    If you just want to train a BERT classifier, it's simpler to just use the
-    `BertForClassification` model.
-
     # Parameters
 
     pretrained_model : `Union[str, BertModel]`, required
@@ -34,7 +31,7 @@ class BertPooler(Seq2VecEncoder):
     """
 
     def __init__(
-        self, pretrained_model: str, requires_grad: bool = True, dropout: float = 0.0,
+        self, pretrained_model: str, requires_grad: bool = True, dropout: float = 0.0
     ) -> None:
         super().__init__()
 
