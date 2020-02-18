@@ -21,6 +21,7 @@ import torch
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
+from allennlp.modules.seq2vec_encoders.cls_pooler import ClsPooler
 from allennlp.modules.seq2vec_encoders.cnn_encoder import CnnEncoder
 from allennlp.modules.seq2vec_encoders.cnn_highway_encoder import CnnHighwayEncoder
 from allennlp.modules.seq2vec_encoders.bert_pooler import BertPooler
