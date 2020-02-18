@@ -25,9 +25,6 @@ matplotlib>=2.2.3
 # Required to run sanic tests
 aiohttp
 
-# Required to run plugin tests.
-pip>=20.0.1
-
 #### DOC-RELATED PACKAGES ####
 
 # YAML manipulation

@@ -1,6 +1,6 @@
+import subprocess
+import sys
 from contextlib import contextmanager
-
-from pip._internal.cli.main import main as pip_main
 
 from allennlp.common.util import ContextManagerFunctionReturnType, PathType, push_python_path, pushd
 
@@ -13,11 +13,17 @@ def pip_install(path: PathType, package_name: str) -> ContextManagerFunctionRetu
     This method is intended to use with `with`, so after its usage, the package will be
     uninstalled.
     """
-    pip_main(["install", str(path)])
+    # Not using the function `main` from pip._internal because it assumes that once it finished,
+    # the process will terminate, and thus it can failed if called multiple times. See
+    # https://pip.pypa.io/en/latest/user_guide/#using-pip-from-your-program
+    # It actually fails in pip==19.3.1 if called multiple times in the same process (but it works
+    # in 20.0).
+    # Starting a new process is slower, but it's not a problem if it's not called often.
+    subprocess.check_call([sys.executable, "-m", "pip", "install", str(path)])
     try:
         yield
     finally:
-        pip_main(["uninstall", "-y", package_name])
+        subprocess.check_call([sys.executable, "-m", "pip", "uninstall", "-y", package_name])
 
 
 @contextmanager
