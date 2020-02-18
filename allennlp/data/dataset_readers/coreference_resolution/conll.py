@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 
 def canonicalize_clusters(
-    clusters: DefaultDict[int, List[Tuple[int, int]]]
+    clusters: List[List[Tuple[int, int]]]
 ) -> List[List[Tuple[int, int]]]:
     """
     The CONLL 2012 data includes 2 annotated spans which are identical,
@@ -32,7 +32,7 @@ def canonicalize_clusters(
     identical spans.
     """
     merged_clusters: List[Set[Tuple[int, int]]] = []
-    for cluster in clusters.values():
+    for cluster in clusters:
         cluster_with_overlapping_mention = None
         for mention in cluster:
             # Look at clusters we have already processed to
@@ -118,8 +118,7 @@ class ConllCorefReader(DatasetReader):
                     clusters[span_id].append((start + total_tokens, end + total_tokens))
                 total_tokens += len(sentence.words)
 
-            canonical_clusters = canonicalize_clusters(clusters)
-            yield self.text_to_instance([s.words for s in sentences], canonical_clusters)
+            yield self.text_to_instance([s.words for s in sentences], list(clusters.values()))
 
     @overrides
     def text_to_instance(
@@ -135,8 +134,8 @@ class ConllCorefReader(DatasetReader):
             A list of lists representing the tokenised words and sentences in the document.
         gold_clusters : `Optional[List[List[Tuple[int, int]]]]`, optional (default = None)
             A list of all clusters in the document, represented as word spans. Each cluster
-            contains some number of spans, which can be nested and overlap, but will never
-            exactly match between clusters.
+            contains some number of spans, which can be nested and overlap. If there are
+            exactly matches between clusters, they will be resolved using `canonicalize_clusters`.
 
         # Returns
 
@@ -168,6 +167,8 @@ class ConllCorefReader(DatasetReader):
 
         cluster_dict = {}
         if gold_clusters is not None:
+            gold_clusters = canonicalize_clusters(gold_clusters)
+
             if self._wordpiece_modeling_tokenizer is not None:
                 for cluster in gold_clusters:
                     for mention_id, mention in enumerate(cluster):
