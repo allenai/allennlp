@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Union
 
 from overrides import overrides
 
@@ -37,8 +37,8 @@ class CharacterTokenizer(Tokenizer):
         self,
         byte_encoding: str = None,
         lowercase_characters: bool = False,
-        start_tokens: List[str] = None,
-        end_tokens: List[str] = None,
+        start_tokens: List[Union[str, int]] = None,
+        end_tokens: List[Union[str, int]] = None,
     ) -> None:
         # TODO(brendanr): Add length truncation.
         self._byte_encoding = byte_encoding
