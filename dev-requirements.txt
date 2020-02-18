@@ -26,7 +26,7 @@ matplotlib>=2.2.3
 aiohttp
 
 # Required to run plugin tests.
-pip>=10.0.1
+pip
 
 #### DOC-RELATED PACKAGES ####
 
