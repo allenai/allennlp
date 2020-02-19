@@ -62,25 +62,17 @@ def make_coref_instance(
                 with respect to the `spans `ListField`.
     """
     if max_sentences is not None and len(sentences) > max_sentences:
-        first_sentence = random.randint(0, len(sentences) - max_sentences)
-        last_sentence = first_sentence + max_sentences - 1  # inclusive
-        first_token_offset = sum(len(sentence) for sentence in sentences[:first_sentence])
-        last_token_offset = (
-            first_token_offset
-            + sum(len(sentence) for sentence in sentences[first_sentence : last_sentence + 1])
-            - 1
-        )  # inclusive
+        sentences = sentences[:max_sentences]
+        total_length = sum(len(sentence) for sentence in sentences)
 
-        sentences = sentences[first_sentence : last_sentence + 1]
         if gold_clusters is not None:
             new_gold_clusters = []
 
             for cluster in gold_clusters:
                 new_cluster = []
                 for mention in cluster:
-                    start, end = mention
-                    if first_token_offset <= start <= end <= last_token_offset:
-                        new_cluster.append((start - first_token_offset, end - first_token_offset))
+                    if mention[1] < total_length:
+                        new_cluster.append(mention)
                 if new_cluster:
                     new_gold_clusters.append(new_cluster)
 

@@ -304,9 +304,21 @@ class TestCorefReader:
 
         assert len(limited_instances) == len(instances) == 4
 
-        # Some are truncated, some short ones are not
-        length_of = lambda instance: len(instance.fields["text"].tokens)
-        assert length_of(limited_instances[0]) < length_of(instances[0])
-        assert length_of(limited_instances[1]) == length_of(instances[1])
-        assert length_of(limited_instances[2]) < length_of(instances[2])
-        assert length_of(limited_instances[3]) == length_of(instances[3])
+        tokens_of = lambda instance: instance.fields["text"].tokens
+        text_of = lambda tokens: [token.text for token in tokens]
+        docs = [tokens_of(instance) for instance in instances]
+        limited_docs = [tokens_of(instance) for instance in limited_instances]
+
+        # Short ones; not truncated
+        assert limited_docs[1] == docs[1]
+        assert limited_docs[3] == docs[3]
+
+        # Truncation happened
+        assert len(limited_docs[0]) < len(docs[0])
+        assert len(limited_docs[2]) < len(docs[2])
+        assert 'Disney' in text_of(docs[0]) and 'Disney' not in text_of(limited_docs[0])
+        assert 'tourism' in text_of(docs[2]) and 'tourism' not in text_of(limited_docs[2])
+
+        # Truncated tokens are the prefixes
+        assert limited_docs[0] == docs[0][:len(limited_docs[0])]
+        assert limited_docs[2] == docs[2][:len(limited_docs[2])]
