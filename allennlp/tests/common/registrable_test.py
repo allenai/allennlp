@@ -90,7 +90,7 @@ class TestRegistrable(AllenNlpTestCase):
         assert Regularizer.by_name("l2").__name__ == "L2Regularizer"
 
     def test_registry_has_builtin_token_embedders(self):
-        assert TokenEmbedder.by_name("embedding").__name__ == "from_vocab_or_file"
+        assert TokenEmbedder.by_name("embedding").__name__ == "Embedding"
         assert TokenEmbedder.by_name("character_encoding").__name__ == "TokenCharactersEncoder"
 
     def test_registry_has_builtin_text_field_embedders(self):
