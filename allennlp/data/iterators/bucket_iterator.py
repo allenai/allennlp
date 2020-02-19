@@ -149,7 +149,7 @@ class BucketIterator(DataIterator):
                     instances_for_sorting.append(instance)
                     if len(instances_for_sorting) >= num_instances_for_sorting:
                         break
-                instances = itertools.chain(instances_for_sorting, instances)
+                instances = itertools.chain(instances_for_sorting, instances)  # type: ignore
             self._guess_sorting_keys(instances_for_sorting)
             logger.info(f"Using {self._sorting_keys} as the sorting keys")
         instances_with_lengths = []
