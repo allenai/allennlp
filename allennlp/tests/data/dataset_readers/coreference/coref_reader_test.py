@@ -288,3 +288,23 @@ class TestCorefReader:
         # candidate spans are less than what we specified
         assert all(self.span_width >= len(x) > 0 for x in candidate_mentions)
         return candidate_mentions
+
+    def test_max_sentences(self):
+        conll_reader = ConllCorefReader(max_span_width=self.span_width)
+        instances = ensure_list(
+            conll_reader.read(str(AllenNlpTestCase.FIXTURES_ROOT / "coref" / "coref.gold_conll"))
+        )
+
+        limited_conll_reader = ConllCorefReader(max_span_width=self.span_width, max_sentences=2)
+        limited_instances = ensure_list(
+            limited_conll_reader.read(str(AllenNlpTestCase.FIXTURES_ROOT / "coref" / "coref.gold_conll"))
+        )
+
+        assert len(limited_instances) == len(instances) == 4
+
+        # Some are truncated, some short ones are not
+        length_of = lambda instance: len(instance.fields["text"].tokens)
+        assert length_of(limited_instances[0]) < length_of(instances[0])
+        assert length_of(limited_instances[1]) == length_of(instances[1])
+        assert length_of(limited_instances[2]) < length_of(instances[2])
+        assert length_of(limited_instances[3]) == length_of(instances[3])
