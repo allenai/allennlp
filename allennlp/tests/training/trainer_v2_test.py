@@ -4,6 +4,7 @@ from allennlp.common.params import Params
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Vocabulary
 from allennlp.data.dataset_readers import SequenceTaggingDatasetReader
+from allennlp.data.samplers import allennlp_collocate
 from allennlp.models.simple_tagger import SimpleTagger
 from allennlp.training.trainer_v2 import TrainerV2
 
@@ -26,8 +27,8 @@ class TestTrainer(AllenNlpTestCase):
         )
         self.model = SimpleTagger.from_params(vocab=self.vocab, params=self.model_params)
         self.optimizer = torch.optim.SGD(self.model.parameters(), 0.01, momentum=0.9)
-        self.data_loader = DataLoader(self.instances, batch_size=2)
-        self.validation_data_loader = DataLoader(self.instances, batch_size=2)
+        self.data_loader = DataLoader(self.instances, batch_size=2, collate_fn=allennlp_collocate)
+        self.validation_data_loader = DataLoader(self.instances, batch_size=2, collate_fn=allennlp_collocate)
         self.instances.index_with(vocab)
 
     def test_trainer_can_run(self):

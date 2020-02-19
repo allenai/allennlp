@@ -339,7 +339,7 @@ class TrainerV2(TrainerBase):
         self._pytorch_model.train()
 
         # Get tqdm for the training batches
-        batch_generator = self.data_loader
+        batch_generator = iter(self.data_loader)
         batch_group_generator = common_util.lazy_groups_of(
             batch_generator, self._num_gradient_accumulation_steps
         )
@@ -525,7 +525,7 @@ class TrainerV2(TrainerBase):
         else:
             raise ConfigurationError("Validation results cannot be calculated without a validation_data_loader")
 
-        val_generator_tqdm = Tqdm.tqdm(validation_data_loader, total=len(validation_data_loader))
+        val_generator_tqdm = Tqdm.tqdm(iter(validation_data_loader), total=len(validation_data_loader))
         batches_this_epoch = 0
         val_loss = 0
         done_early = False

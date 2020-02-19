@@ -22,7 +22,8 @@ class AllennlpDataset(Dataset):
         self.vocab = vocab
 
     def __getitem__(self, idx):
-
+        if self.vocab is not None:
+            self.instances[idx].index_fields(self.vocab)
         return self.instances[idx]
 
     def __len__(self):
@@ -30,6 +31,7 @@ class AllennlpDataset(Dataset):
 
     def index_with(self, vocab: Vocabulary):
         self.vocab = vocab
+
 
 class _LazyInstances(IterableDataset):
     """

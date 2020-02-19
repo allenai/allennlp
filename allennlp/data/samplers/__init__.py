@@ -184,6 +184,14 @@ class BatchInstanceSampler(BatchSampler):
         self._sorting_keys = [longest_padding_key]
 
 
+def allennlp_collocate(batch):
+    print(batch)
+    batch = AllennlpBatch(batch)
+    return batch.as_tensor_dict(batch.get_padding_lengths())
+
+
+
+
 class DataLoader(Registrable, data.DataLoader):
 
     def __init__(self, dataset: data.Dataset, batch_size: int = 1, shuffle: bool = False, sampler: Sampler = None,
@@ -191,6 +199,7 @@ class DataLoader(Registrable, data.DataLoader):
                  pin_memory: bool = False, drop_last: bool = False, timeout: bool = 0,
                  worker_init_fn=None, multiprocessing_context: str = None):
 
+        collate_fn = allennlp_collocate
         super().__init__(self, dataset=dataset, batch_size=batch_size, shuffle=shuffle, sampler=sampler,
                          batch_sampler=batch_sampler, num_workers=num_workers, collate_fn=collate_fn,
                          pin_memory=pin_memory, drop_last=drop_last, timeout=timeout,
