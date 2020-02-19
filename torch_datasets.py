@@ -5,7 +5,7 @@ from overrides import overrides
 
 from torch.utils.data import Dataset as TorchDataset
 from torch.utils.data import DataLoader
-from torch.utils.data import Sampler, BatchSampler, SequentialSampler, SubsetRandomSampler
+from torch.utils.data import BatchSampler, SequentialSampler
 
 from allennlp.common.registrable import Registrable
 from allennlp.common.util import add_noise_to_dict_values, lazy_groups_of
@@ -18,6 +18,7 @@ from allennlp.data.fields import Field, TextField, LabelField, MetadataField
 from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenIndexer
 
 logger = logging.getLogger(__name__)
+
 
 class Dataset(TorchDataset, Registrable):
     def __init__(self):
@@ -98,8 +99,13 @@ class SnliDataset(Dataset):
 
 
 class BatchInstanceSampler(BatchSampler):
-    
-    def __init__(self, data, batch_size: int, sorting_keys: List[Tuple[str, str]] = None, padding_noise: float = 0.1):
+    def __init__(
+        self,
+        data,
+        batch_size: int,
+        sorting_keys: List[Tuple[str, str]] = None,
+        padding_noise: float = 0.1,
+    ):
 
         self.vocab = data.vocab
         self._sorting_keys = sorting_keys
@@ -183,6 +189,7 @@ def allennlp_collocate(batch):
 
     batch = AllennlpBatch(batch)
     return batch.as_tensor_dict(batch.get_padding_lengths())
+
 
 batch_generator = DataLoader(data, batch_sampler=batch_sampler, collate_fn=allennlp_collocate)
 
