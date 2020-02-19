@@ -96,8 +96,6 @@ class LanguageModelTokenEmbedder(TokenEmbedder):
         # https://github.com/allenai/allennlp/blob/eff25a3085aa9976a7650d30d8961c3626ddc411/allennlp/modules/elmo.py#L590
         if bos_eos_tokens:
             dataset_reader_config = config.get("dataset_reader")
-            if dataset_reader_config.get("type") == "multiprocess":
-                dataset_reader_config = dataset_reader_config.get("base_reader")
             token_indexer_config = dataset_reader_config.get("token_indexers").get(self._token_name)
             token_indexer: TokenIndexer = TokenIndexer.from_params(token_indexer_config)
             token_list = [Token(token) for token in bos_eos_tokens]

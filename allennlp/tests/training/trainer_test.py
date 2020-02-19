@@ -11,7 +11,7 @@ import torch
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import Params
-from allennlp.common.testing import AllenNlpTestCase, ModelTestCase
+from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Vocabulary
 from allennlp.data.dataset_readers import SequenceTaggingDatasetReader
 from allennlp.data.iterators import BasicIterator
@@ -842,16 +842,3 @@ class TestSparseClipGrad(AllenNlpTestCase):
         # Final norm should be 1.5
         grad = embedding.weight.grad.coalesce()
         self.assertAlmostEqual(grad._values().norm(2.0).item(), 1.5, places=5)
-
-
-class TestLanguageModelWithMultiprocessDatasetReader(ModelTestCase):
-    def setUp(self):
-        super().setUp()
-        self.set_up_model(
-            self.FIXTURES_ROOT / "language_model" / "experiment_multiprocessing_reader.jsonnet",
-            # Note the glob on the end of this path.
-            self.FIXTURES_ROOT / "language_model" / "sentences*",
-        )
-
-    def test_unidirectional_language_model_can_train_save_and_load(self):
-        self.ensure_model_can_train_save_and_load(self.param_file)
