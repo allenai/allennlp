@@ -28,9 +28,10 @@ def make_coref_instance(
     sentences : `List[List[str]]`, required.
         A list of lists representing the tokenised words and sentences in the document.
     gold_clusters : `Optional[List[List[Tuple[int, int]]]]`, optional (default = None)
-        A list of all clusters in the document, represented as word spans with absolute indices in the entire document.
-        Each cluster contains some number of spans, which can be nested and overlap. If there are
-        exact matches between clusters, they will be resolved using `_canonicalize_clusters`.
+        A list of all clusters in the document, represented as word spans with absolute indices
+        in the entire document. Each cluster contains some number of spans, which can be nested
+        and overlap. If there are exact matches between clusters, they will be resolved
+        using `_canonicalize_clusters`.
 
     # Returns
 

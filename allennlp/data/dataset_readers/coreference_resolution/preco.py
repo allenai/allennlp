@@ -85,6 +85,12 @@ class PrecoReader(DatasetReader):
             for mention_id, (sent_idx, start, end) in enumerate(cluster):
                 start = start + sentence_offsets[sent_idx]
                 end = end + sentence_offsets[sent_idx] - 1  # exclusive -> inclusive
-                cluster[mention_id] = (start, end)
+                cluster[mention_id] = (start, end)  # type: ignore
 
-        return make_coref_instance(sentences, self._token_indexers, self._max_span_width, gold_clusters, self._wordpiece_modeling_tokenizer)  # type: ignore
+        return make_coref_instance(
+            sentences,
+            self._token_indexers,
+            self._max_span_width,
+            gold_clusters,  # type: ignore
+            self._wordpiece_modeling_tokenizer,
+        )
