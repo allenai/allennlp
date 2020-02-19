@@ -1,3 +1,4 @@
+import random
 from typing import Any, Dict, List, Optional, Tuple, Set
 
 from allennlp.data.fields import (
@@ -20,6 +21,7 @@ def make_coref_instance(
     max_span_width: int,
     gold_clusters: Optional[List[List[Tuple[int, int]]]] = None,
     wordpiece_modeling_tokenizer: PretrainedTransformerTokenizer = None,
+    max_sentences: int = None,
 ) -> Instance:
 
     """
@@ -47,6 +49,33 @@ def make_coref_instance(
                 how many spans we are considering), we represent this a as a `SequenceLabelField`
                 with respect to the `spans `ListField`.
     """
+    if max_sentences is not None and len(sentences) > max_sentences:
+        first_sentence = random.randint(0, len(sentences) - max_sentences)
+        last_sentence = first_sentence + max_sentences - 1  # inclusive
+        first_token_offset = sum(len(sentence) for sentence in sentences[:first_sentence])
+        last_token_offset = (
+            first_token_offset
+            + sum(len(sentence) for sentence in sentences[first_sentence : last_sentence + 1])
+            - 1
+        )  # inclusive
+
+        sentences = sentences[first_sentence : last_sentence + 1]
+        if gold_clusters is not None:
+            new_gold_clusters = []
+
+            for cluster in gold_clusters:
+                new_cluster = []
+                for mention in cluster:
+                    start, end = mention
+                    if first_token_offset <= start <= end <= last_token_offset:
+                        new_cluster.append(
+                            (start - first_token_offset, end - first_token_offset)
+                        )
+                if new_cluster:
+                    new_gold_clusters.append(new_cluster)
+
+            gold_clusters = new_gold_clusters
+
     flattened_sentences = [_normalize_word(word) for sentence in sentences for word in sentence]
 
     if wordpiece_modeling_tokenizer is not None:

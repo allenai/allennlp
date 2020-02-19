@@ -44,6 +44,8 @@ class ConllCorefReader(DatasetReader):
         wordpieces. If this is set to `False` (default), the user is expected to use
         `PretrainedTransformerMismatchedIndexer` and `PretrainedTransformerMismatchedEmbedder`,
         and the modeling will be on the word-level.
+    max_sentences: int, optional (default = None)
+        The maximum number of sentences in each document to keep. By default keeps all sentences.
     """
 
     def __init__(
@@ -51,12 +53,14 @@ class ConllCorefReader(DatasetReader):
         max_span_width: int,
         token_indexers: Dict[str, TokenIndexer] = None,
         wordpiece_modeling_tokenizer: Optional[PretrainedTransformerTokenizer] = None,
+        max_sentences: int = None,
         **kwargs,
     ) -> None:
         super().__init__(**kwargs)
         self._max_span_width = max_span_width
         self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
         self._wordpiece_modeling_tokenizer = wordpiece_modeling_tokenizer
+        self._max_sentences = max_sentences
 
     @overrides
     def _read(self, file_path: str):
@@ -91,4 +95,5 @@ class ConllCorefReader(DatasetReader):
             self._max_span_width,
             gold_clusters,
             self._wordpiece_modeling_tokenizer,
+            self._max_sentences
         )
