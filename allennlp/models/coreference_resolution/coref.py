@@ -101,7 +101,9 @@ class CoreferenceResolver(Model):
 
         # 10 possible distance buckets.
         self._num_distance_buckets = 10
-        self._distance_embedding = Embedding(self._num_distance_buckets, feature_size)
+        self._distance_embedding = Embedding(
+            embedding_dim=feature_size, num_embeddings=self._num_distance_buckets
+        )
 
         self._max_span_width = max_span_width
         self._spans_per_word = spans_per_word
