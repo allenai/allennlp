@@ -89,7 +89,6 @@ class PretrainedTransformerTokenizer(Tokenizer):
             self.num_added_middle_tokens,
             self.num_added_end_tokens,
         ) = self._determine_num_special_tokens_added()
-        self._whitespace_id = self.tokenizer.convert_tokens_to_ids(" ")
 
     def _tokenize(self, sentence_1: str, sentence_2: str = None):
         """
@@ -234,7 +233,7 @@ class PretrainedTransformerTokenizer(Tokenizer):
         for token in tokens:
             subword_wordpieces = self.tokenizer.encode(token, add_special_tokens=False)
             if len(subword_wordpieces) == 0:
-                subword_wordpieces = [self._whitespace_id]
+                subword_wordpieces = [self.tokenizer.unk_token_id]
 
             wordpieces.extend(subword_wordpieces)
 
