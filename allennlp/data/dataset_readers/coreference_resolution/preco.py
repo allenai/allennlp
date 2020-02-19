@@ -5,11 +5,11 @@ from typing import Dict, List, Optional, Tuple
 from overrides import overrides
 
 from allennlp.common.file_utils import cached_path
-from allennlp.data.dataset_readers.coreference_resolution.conll import ConllCorefReader
+from allennlp.data.dataset_readers.coreference_resolution.util import make_coref_instance
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.instance import Instance
 from allennlp.data.tokenizers import PretrainedTransformerTokenizer
-from allennlp.data.token_indexers import TokenIndexer
+from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenIndexer
 
 logger = logging.getLogger(__name__)
 
@@ -17,8 +17,9 @@ logger = logging.getLogger(__name__)
 @DatasetReader.register("preco")
 class PrecoReader(DatasetReader):
     """
-    Reads a single JSON-lines file. Each line contains a "sentences" key for a list of sentences
-    and a "mention_clusters" key for the clusters.
+    Reads a single JSON-lines file for [the PreCo dataset](https://www.aclweb.org/anthology/D18-1016.pdf).
+    Each line contains a "sentences" key for a list of sentences and a "mention_clusters" key
+    for the clusters.
 
     Returns a `Dataset` where the `Instances` have four fields : `text`, a `TextField`
     containing the full document text, `spans`, a `ListField[SpanField]` of inclusive start and
@@ -50,9 +51,9 @@ class PrecoReader(DatasetReader):
         **kwargs,
     ) -> None:
         super().__init__(**kwargs)
-        self._conll_reader = ConllCorefReader(
-            max_span_width, token_indexers, wordpiece_modeling_tokenizer, **kwargs
-        )
+        self._max_span_width = max_span_width
+        self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
+        self._wordpiece_modeling_tokenizer = wordpiece_modeling_tokenizer
 
     @overrides
     def _read(self, file_path: str):
@@ -86,4 +87,4 @@ class PrecoReader(DatasetReader):
                 end = end + sentence_offsets[sent_idx] - 1  # exclusive -> inclusive
                 cluster[mention_id] = (start, end)
 
-        return self._conll_reader.text_to_instance(sentences, gold_clusters)
+        return make_coref_instance(sentences, self._token_indexers, self._max_span_width, gold_clusters, self._wordpiece_modeling_tokenizer)  # type: ignore
