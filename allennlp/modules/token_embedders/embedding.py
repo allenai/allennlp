@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 
 
 @TokenEmbedder.register("embedding")
-class Embedding(TokenEmbedder, Registrable):
+class Embedding(TokenEmbedder):
     """
     A more featureful embedding module than the default in Pytorch.  Adds the ability to:
 
@@ -78,15 +78,13 @@ class Embedding(TokenEmbedder, Registrable):
         path to a local file or a URL of a (cached) remote file. Two formats are supported:
             * hdf5 file - containing an embedding matrix in the form of a torch.Tensor;
             * text file - an utf-8 encoded text file with space separated fields.
-    vocabulary : `Vocabulary` (optional, default = None)
+    vocab : `Vocabulary` (optional, default = None)
         Used to construct an embedding from a pretrained file.
 
     # Returns
 
     An Embedding module.
     """
-
-    default_implementation = "embedding"
 
     def __init__(
         self,
@@ -102,17 +100,17 @@ class Embedding(TokenEmbedder, Registrable):
         sparse: bool = False,
         vocab_namespace: str = "tokens",
         pretrained_file: str = None,
-        vocabulary: Vocabulary = None,
+        vocab: Vocabulary = None,
     ) -> None:
         super().__init__()
 
-        if num_embeddings is None and vocabulary is None:
+        if num_embeddings is None and vocab is None:
             raise ConfigurationError(
                 "Embedding must be constructed with either num_embeddings or a vocabulary."
             )
 
         if num_embeddings is None:
-            num_embeddings = vocabulary.get_vocab_size(vocab_namespace)
+            num_embeddings = vocab.get_vocab_size(vocab_namespace)
         else:
             # If num_embeddings is present, set default namespace to None so that extend_vocab
             # call doesn't misinterpret that some namespace was originally used.
@@ -136,7 +134,7 @@ class Embedding(TokenEmbedder, Registrable):
 
         elif pretrained_file is not None:
 
-            if vocabulary is None:
+            if vocab is None:
                 raise ConfigurationError(
                     "To construct an Embedding from a pretrained file, you must also pass a vocabulary."
                 )
@@ -149,7 +147,7 @@ class Embedding(TokenEmbedder, Registrable):
             # extend_vocab method, which relies on the value of vocab_namespace being None
             # to infer at what stage the embedding has been constructed. Phew.
             weight = _read_pretrained_embeddings_file(
-                pretrained_file, embedding_dim, vocabulary, vocab_namespace or "tokens"
+                pretrained_file, embedding_dim, vocab, vocab_namespace or "tokens"
             )
             self.weight = torch.nn.Parameter(weight, requires_grad=trainable)
 
@@ -312,9 +310,6 @@ class Embedding(TokenEmbedder, Registrable):
         device = self.weight.data.device
         extended_weight = torch.cat([self.weight.data, extra_weight.to(device)], dim=0)
         self.weight = torch.nn.Parameter(extended_weight, requires_grad=self.weight.requires_grad)
-
-
-Embedding.register("embedding")(Embedding)
 
 
 def _read_pretrained_embeddings_file(
