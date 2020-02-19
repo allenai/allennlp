@@ -206,9 +206,9 @@ class FBetaMeasure(Metric):
         elif self._average == "weighted":
             weights = true_sum
             weights_sum = true_sum.sum()
-            precision = (weights * precision).sum() / weights_sum
-            recall = (weights * recall).sum() / weights_sum
-            fscore = (weights * fscore).sum() / weights_sum
+            precision = _prf_divide((weights * precision).sum(), weights_sum)
+            recall = _prf_divide((weights * recall).sum(), weights_sum)
+            fscore = _prf_divide((weights * fscore).sum(), weights_sum)
 
         if reset:
             self.reset()
