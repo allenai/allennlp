@@ -50,7 +50,9 @@ class PrecoReader(DatasetReader):
         **kwargs,
     ) -> None:
         super().__init__(**kwargs)
-        self._conll_reader = ConllCorefReader(max_span_width, token_indexers, wordpiece_modeling_tokenizer, **kwargs)
+        self._conll_reader = ConllCorefReader(
+            max_span_width, token_indexers, wordpiece_modeling_tokenizer, **kwargs
+        )
 
     @overrides
     def _read(self, file_path: str):

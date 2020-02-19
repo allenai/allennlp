@@ -22,9 +22,7 @@ from allennlp.data.dataset_readers.dataset_utils import Ontonotes, enumerate_spa
 logger = logging.getLogger(__name__)
 
 
-def canonicalize_clusters(
-    clusters: List[List[Tuple[int, int]]]
-) -> List[List[Tuple[int, int]]]:
+def canonicalize_clusters(clusters: List[List[Tuple[int, int]]]) -> List[List[Tuple[int, int]]]:
     """
     The CONLL 2012 data includes 2 annotated spans which are identical,
     but have different ids. This checks all clusters for spans which are
