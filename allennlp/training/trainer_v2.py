@@ -43,8 +43,6 @@ class TrainerV2(TrainerBase):
         model: Model,
         optimizer: torch.optim.Optimizer,
         data_loader: torch.utils.data.DataLoader,
-        train_dataset: Iterable[Instance],
-        validation_dataset: Optional[Iterable[Instance]] = None,
         patience: Optional[int] = None,
         validation_metric: str = "-loss",
         validation_data_loader: torch.utils.data.DataLoader = None,
@@ -92,10 +90,6 @@ class TrainerV2(TrainerBase):
             model to be optimized.
         iterator : `DataIterator`, required.
             A method for iterating over a `Dataset`, yielding padded indexed batches.
-        train_dataset : `Dataset`, required.
-            A `Dataset` to train on. The dataset should have already been indexed.
-        validation_dataset : `Dataset`, optional, (default = None).
-            A `Dataset` to evaluate on. The dataset should have already been indexed.
         patience : Optional[int] > 0, optional (default=None)
             Number of epochs to be patient before early stopping: the training is stopped
             after `patience` epochs with no improvement. If given, it must be `> 0`.
@@ -206,14 +200,9 @@ class TrainerV2(TrainerBase):
         self._validation_data_loader = validation_data_loader
         self.shuffle = shuffle
         self.optimizer = optimizer
-        self.train_data = train_dataset
-        self._validation_data = validation_dataset
-
-        if validation_dataset is not None and validation_data_loader is None:
-            raise ConfigurationError("To pass a validation dataset, you must also pass a validation_data_loader.")
 
         if patience is None:  # no early stopping
-            if validation_dataset:
+            if validation_data_loader:
                 logger.warning(
                     "You provided a validation dataset but patience was set to None, "
                     "meaning that early stopping is disabled"
@@ -626,7 +615,7 @@ class TrainerV2(TrainerBase):
                 if key.startswith("gpu_"):
                     metrics["peak_" + key] = max(metrics.get("peak_" + key, 0), value)
 
-            if self._validation_data is not None:
+            if self._validation_data_loader is not None:
                 with torch.no_grad():
                     # We have a validation set, so compute all the metrics on it.
                     val_loss, num_batches = self._validation_loss()
@@ -826,9 +815,7 @@ class TrainerV2(TrainerBase):
         model: Model,
         serialization_dir: str,
         data_loader: Lazy[DataLoader],
-        train_data: Iterable[Instance],
         validation_data_loader: Lazy[DataLoader] = None,
-        validation_data: Iterable[Instance] = None,
         local_rank: int = 0,
         patience: int = None,
         validation_metric: str = "-loss",
@@ -888,7 +875,7 @@ class TrainerV2(TrainerBase):
             optimizer_ = Optimizer.default(parameters)
 
         try:
-            batches_per_epoch = len(train_data)
+            batches_per_epoch = len(data_loader)
         except TypeError:
             # If the dataset is lazy, it won't have a length.
             batches_per_epoch = None
@@ -901,23 +888,10 @@ class TrainerV2(TrainerBase):
 
         checkpointer_ = checkpointer.construct() or Checkpointer(serialization_dir)
 
-        if validation_data_loader is None and validation_data is not None:
-            validation_data_loader = data_loader.construct(dataset=validation_data)
-
-        elif validation_data_loader and validation_data is not None:
-            validation_data_loader = validation_data_loader.construct(dataset=validation_data)
-
-        else:
-            validation_data_loader = None
-
-        data_loader = data_loader.construct(dataset=train_data)
-
         return cls(
             model,
             optimizer_,
             data_loader,
-            train_data,
-            validation_data,
             patience=patience,
             validation_metric=validation_metric,
             validation_data_loader=validation_data_loader,

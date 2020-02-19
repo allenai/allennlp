@@ -37,8 +37,6 @@ class TestTrainer(AllenNlpTestCase):
             optimizer=self.optimizer,
             data_loader=self.data_loader,
             validation_data_loader=self.validation_data_loader,
-            train_dataset=self.instances,
-            validation_dataset=self.instances,
             num_epochs=2,
         )
         metrics = trainer.train()
@@ -57,8 +55,6 @@ class TestTrainer(AllenNlpTestCase):
             optimizer=self.optimizer,
             data_loader=self.data_loader,
             validation_data_loader=self.validation_data_loader,
-            train_dataset=self.instances,
-            validation_dataset=self.instances,
             validation_metric="+loss",
             num_epochs=2,
         )
