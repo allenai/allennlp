@@ -1,10 +1,11 @@
 import itertools
-from typing import Iterable, Iterator, Callable, Optional
+from typing import Iterable, Iterator, Callable, Optional, List
 import logging
 import os
 import pathlib
 
 import jsonpickle
+from torch.utils.data import Dataset, IterableDataset
 
 from allennlp.data.instance import Instance
 from allennlp.common import Tqdm, util
@@ -14,7 +15,19 @@ from allennlp.common.registrable import Registrable
 logger = logging.getLogger(__name__)
 
 
-class _LazyInstances(Iterable):
+class AllennlpDataset(Dataset):
+    def __init__(self, instances: List[Instance]):
+        self.instances = instances
+
+    def __getitem__(self, idx):
+
+        return self.instances[idx]
+
+    def __len__(self):
+        return len(self.instances)
+
+
+class _LazyInstances(IterableDataset):
     """
     An `Iterable` that just wraps a thunk for generating instances and calls it for
     each call to `__iter__`.
@@ -167,6 +180,8 @@ class DatasetReader(Registrable):
             if cache_file and not os.path.exists(cache_file):
                 logger.info(f"Caching instances to {cache_file}")
                 self._instances_to_cache_file(cache_file, instances)
+
+            instances = AllennlpDataset(instances)
 
         return instances
 
