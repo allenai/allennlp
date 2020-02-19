@@ -95,5 +95,5 @@ class ConllCorefReader(DatasetReader):
             self._max_span_width,
             gold_clusters,
             self._wordpiece_modeling_tokenizer,
-            self._max_sentences
+            self._max_sentences,
         )

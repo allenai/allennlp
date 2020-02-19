@@ -68,9 +68,7 @@ def make_coref_instance(
                 for mention in cluster:
                     start, end = mention
                     if first_token_offset <= start <= end <= last_token_offset:
-                        new_cluster.append(
-                            (start - first_token_offset, end - first_token_offset)
-                        )
+                        new_cluster.append((start - first_token_offset, end - first_token_offset))
                 if new_cluster:
                     new_gold_clusters.append(new_cluster)
 
