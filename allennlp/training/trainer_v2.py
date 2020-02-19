@@ -202,12 +202,15 @@ class TrainerV2(TrainerBase):
         # not already on the GPU then the optimizer is going to be wrong.
         self.model = model
 
-        self.iterator = iterator
-        self._validation_iterator = validation_iterator
+        self.data_loader = data_loader
+        self._validation_data_loader = validation_data_loader
         self.shuffle = shuffle
         self.optimizer = optimizer
         self.train_data = train_dataset
         self._validation_data = validation_dataset
+
+        if validation_dataset is not None and validation_data_loader is None:
+            raise ConfigurationError("To pass a validation dataset, you must also pass a validation_data_loader.")
 
         if patience is None:  # no early stopping
             if validation_dataset:
@@ -336,12 +339,13 @@ class TrainerV2(TrainerBase):
         self._pytorch_model.train()
 
         # Get tqdm for the training batches
-        batch_generator = self.iterator(self.train_data, num_epochs=1, shuffle=self.shuffle)
+        batch_generator = self.data_loader
         batch_group_generator = common_util.lazy_groups_of(
             batch_generator, self._num_gradient_accumulation_steps
         )
+
         num_training_batches = math.ceil(
-            self.iterator.get_num_batches(self.train_data) / self._num_gradient_accumulation_steps
+            len(self.data_loader) / self._num_gradient_accumulation_steps
         )
         # Having multiple tqdm bars in case of distributed training will be a mess. Hence only the master's
         # progress is shown
@@ -516,14 +520,12 @@ class TrainerV2(TrainerBase):
         if self._moving_average is not None:
             self._moving_average.assign_average_value()
 
-        if self._validation_iterator is not None:
-            val_iterator = self._validation_iterator
+        if self._validation_data_loader is not None:
+            validation_data_loader = self._validation_data_loader
         else:
-            val_iterator = self.iterator
+            raise ConfigurationError("Validation results cannot be calculated without a validation_data_loader")
 
-        val_generator = val_iterator(self._validation_data, num_epochs=1, shuffle=False)
-        num_validation_batches = val_iterator.get_num_batches(self._validation_data)
-        val_generator_tqdm = Tqdm.tqdm(val_generator, total=num_validation_batches)
+        val_generator_tqdm = Tqdm.tqdm(validation_data_loader, total=len(validation_data_loader))
         batches_this_epoch = 0
         val_loss = 0
         done_early = False

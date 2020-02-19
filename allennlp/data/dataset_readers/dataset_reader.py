@@ -8,6 +8,7 @@ import jsonpickle
 from torch.utils.data import Dataset, IterableDataset
 
 from allennlp.data.instance import Instance
+from allennlp.data.vocabulary import Vocabulary
 from allennlp.common import Tqdm, util
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.registrable import Registrable
@@ -16,8 +17,9 @@ logger = logging.getLogger(__name__)
 
 
 class AllennlpDataset(Dataset):
-    def __init__(self, instances: List[Instance]):
+    def __init__(self, instances: List[Instance], vocab: Vocabulary = None):
         self.instances = instances
+        self.vocab = vocab
 
     def __getitem__(self, idx):
 
@@ -26,6 +28,8 @@ class AllennlpDataset(Dataset):
     def __len__(self):
         return len(self.instances)
 
+    def index_with(self, vocab: Vocabulary):
+        self.vocab = vocab
 
 class _LazyInstances(IterableDataset):
     """
@@ -39,12 +43,14 @@ class _LazyInstances(IterableDataset):
         cache_file: str = None,
         deserialize: Callable[[str], Instance] = None,
         serialize: Callable[[Instance], str] = None,
+        vocab: Vocabulary = None
     ) -> None:
         super().__init__()
         self.instance_generator = instance_generator
         self.cache_file = cache_file
         self.deserialize = deserialize
         self.serialize = serialize
+        self.vocab = vocab
 
     def __iter__(self) -> Iterator[Instance]:
         # Case 1: Use cached instances
@@ -67,6 +73,9 @@ class _LazyInstances(IterableDataset):
                     "For a lazy dataset reader, _read() must return a generator"
                 )
             yield from instances
+
+    def index_with(self, vocab: Vocabulary):
+        self.vocab = vocab
 
 
 class DatasetReader(Registrable):
