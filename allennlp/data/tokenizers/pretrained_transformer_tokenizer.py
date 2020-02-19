@@ -232,6 +232,9 @@ class PretrainedTransformerTokenizer(Tokenizer):
         cumulative = starting_offset
         for token in tokens:
             subword_wordpieces = self.tokenizer.encode(token, add_special_tokens=False)
+            if len(subword_wordpieces) == 0:
+                subword_wordpieces = [self.tokenizer.unk_token_id]
+
             wordpieces.extend(subword_wordpieces)
 
             start_offset = cumulative
