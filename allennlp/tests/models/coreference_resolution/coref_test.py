@@ -42,7 +42,7 @@ class CorefTest(ModelTestCase):
                 [3, 2, 1, 0, 0, 0],
                 [4, 3, 2, 1, 0, 0],
             ]
-        )
+        ).unsqueeze(0)
 
         spans = spans.unsqueeze(0)
         antecedent_indices = antecedent_indices
