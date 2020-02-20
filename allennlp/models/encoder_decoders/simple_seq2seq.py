@@ -135,7 +135,9 @@ class SimpleSeq2Seq(Model):
 
         # Dense embedding of vocab words in the target space.
         target_embedding_dim = target_embedding_dim or source_embedder.get_output_dim()
-        self._target_embedder = Embedding(num_classes, target_embedding_dim)
+        self._target_embedder = Embedding(
+            num_embeddings=num_classes, embedding_dim=target_embedding_dim
+        )
 
         # Decoder output dim needs to be the same as the encoder output dim since we initialize the
         # hidden state of the decoder with the final hidden state of the encoder.
