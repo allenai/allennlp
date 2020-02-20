@@ -1711,7 +1711,10 @@ def extend_layer(layer: torch.nn.Module, new_dim: int) -> None:
 
 
 def masked_topk(
-    input_: torch.FloatTensor, mask: torch.BoolTensor, k: Union[int, torch.LongTensor], dim: int = -1
+    input_: torch.FloatTensor,
+    mask: torch.BoolTensor,
+    k: Union[int, torch.LongTensor],
+    dim: int = -1,
 ) -> Tuple[torch.LongTensor, torch.LongTensor, torch.FloatTensor]:
     """
     Extracts the top-k scoring items with respect to the scorer. We additionally return
