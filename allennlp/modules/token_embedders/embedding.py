@@ -12,7 +12,7 @@ import torch
 from overrides import overrides
 from torch.nn.functional import embedding
 
-from allennlp.common import Tqdm, Registrable
+from allennlp.common import Tqdm
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.file_utils import cached_path, get_file_extension, is_url_or_existing_file
 from allennlp.data import Vocabulary
