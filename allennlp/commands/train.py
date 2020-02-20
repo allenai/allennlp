@@ -677,9 +677,7 @@ class TrainModel(Registrable):
         # passed through the trainer by from_params already, because they were keyword arguments to
         # construct this class in the first place.
         trainer_ = trainer.construct(
-            model=model_,
-            data_loader=data_loader_,
-            validation_data_loader=validation_data_loader_,
+            model=model_, data_loader=data_loader_, validation_data_loader=validation_data_loader_,
         )
 
         return cls(

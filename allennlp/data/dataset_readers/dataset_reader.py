@@ -137,7 +137,7 @@ class DatasetReader(Registrable):
         else:
             self._cache_directory = None
 
-    def read(self, file_path: str) -> Iterable[Instance]:
+    def read(self, file_path: str) -> Dataset:
         """
         Returns an `Iterable` containing all the instances
         in the specified dataset.

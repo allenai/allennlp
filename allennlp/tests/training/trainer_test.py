@@ -44,7 +44,9 @@ class TestTrainer(AllenNlpTestCase):
         self.model = SimpleTagger.from_params(vocab=self.vocab, params=self.model_params)
         self.optimizer = torch.optim.SGD(self.model.parameters(), 0.01, momentum=0.9)
         self.data_loader = DataLoader(self.instances, batch_size=2, collate_fn=allennlp_collocate)
-        self.validation_data_loader = DataLoader(self.instances, batch_size=2, collate_fn=allennlp_collocate)
+        self.validation_data_loader = DataLoader(
+            self.instances, batch_size=2, collate_fn=allennlp_collocate
+        )
         self.instances.index_with(vocab)
 
     def test_trainer_can_run(self):
@@ -102,9 +104,7 @@ class TestTrainer(AllenNlpTestCase):
     @pytest.mark.skipif(not torch.cuda.is_available(), reason="No CUDA device registered.")
     def test_trainer_can_run_cuda(self):
         self.model.cuda()
-        trainer = Trainer(
-            self.model, self.optimizer, self.data_loader, num_epochs=2, cuda_device=0
-        )
+        trainer = Trainer(self.model, self.optimizer, self.data_loader, num_epochs=2, cuda_device=0)
         metrics = trainer.train()
         assert "peak_cpu_memory_MB" in metrics
         assert isinstance(metrics["peak_cpu_memory_MB"], float)
@@ -118,11 +118,7 @@ class TestTrainer(AllenNlpTestCase):
 
         with pytest.raises(ConfigurationError):
             Trainer(
-                self.model,
-                self.optimizer,
-                self.data_loader,
-                num_epochs=2,
-                cuda_device=[0, 1],
+                self.model, self.optimizer, self.data_loader, num_epochs=2, cuda_device=[0, 1],
             )
 
     def test_trainer_can_resume_training(self):

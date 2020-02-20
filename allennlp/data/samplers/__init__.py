@@ -48,7 +48,11 @@ class RandomSampler(Sampler, data.RandomSampler):
     """
 
     def __init__(
-        self, data_source: data.Dataset, replacement: bool = False, num_samples: int = None, **kwargs
+        self,
+        data_source: data.Dataset,
+        replacement: bool = False,
+        num_samples: int = None,
+        **kwargs,
     ):
         super().__init__(data_source, replacement, num_samples)
 
@@ -205,7 +209,7 @@ class DataLoader(Registrable, data.DataLoader):
         collate_fn=None,
         pin_memory: bool = False,
         drop_last: bool = False,
-        timeout: bool = 0,
+        timeout: int = 0,
         worker_init_fn=None,
         multiprocessing_context: str = None,
     ):
