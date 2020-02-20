@@ -79,12 +79,20 @@ class TestAutoRegressiveSeqDecoder(AllenNlpTestCase):
         vocab, decoder_net = create_vocab_and_decoder_net(decoder_inout_dim)
 
         AutoRegressiveSeqDecoder(
-            vocab, decoder_net, 10, Embedding(vocab.get_vocab_size(), decoder_inout_dim)
+            vocab,
+            decoder_net,
+            10,
+            Embedding(num_embeddings=vocab.get_vocab_size(), embedding_dim=decoder_inout_dim),
         )
 
         with pytest.raises(ConfigurationError):
             AutoRegressiveSeqDecoder(
-                vocab, decoder_net, 10, Embedding(vocab.get_vocab_size(), decoder_inout_dim + 1)
+                vocab,
+                decoder_net,
+                10,
+                Embedding(
+                    num_embeddings=vocab.get_vocab_size(), embedding_dim=decoder_inout_dim + 1
+                ),
             )
 
     def test_auto_regressive_seq_decoder_forward(self):
@@ -92,7 +100,10 @@ class TestAutoRegressiveSeqDecoder(AllenNlpTestCase):
         vocab, decoder_net = create_vocab_and_decoder_net(decoder_inout_dim)
 
         auto_regressive_seq_decoder = AutoRegressiveSeqDecoder(
-            vocab, decoder_net, 10, Embedding(vocab.get_vocab_size(), decoder_inout_dim)
+            vocab,
+            decoder_net,
+            10,
+            Embedding(num_embeddings=vocab.get_vocab_size(), embedding_dim=decoder_inout_dim),
         )
 
         encoded_state = torch.rand(batch_size, time_steps, decoder_inout_dim)
@@ -112,7 +123,10 @@ class TestAutoRegressiveSeqDecoder(AllenNlpTestCase):
         vocab, decoder_net = create_vocab_and_decoder_net(decoder_inout_dim)
 
         auto_regressive_seq_decoder = AutoRegressiveSeqDecoder(
-            vocab, decoder_net, 10, Embedding(vocab.get_vocab_size(), decoder_inout_dim)
+            vocab,
+            decoder_net,
+            10,
+            Embedding(num_embeddings=vocab.get_vocab_size(), embedding_dim=decoder_inout_dim),
         )
 
         predictions = torch.tensor([[3, 2, 5, 0, 0], [2, 2, 3, 5, 0]])
@@ -126,7 +140,10 @@ class TestAutoRegressiveSeqDecoder(AllenNlpTestCase):
         vocab, decoder_net = create_vocab_and_decoder_net(decoder_inout_dim)
 
         auto_regressive_seq_decoder = AutoRegressiveSeqDecoder(
-            vocab, decoder_net, 10, Embedding(vocab.get_vocab_size(), decoder_inout_dim)
+            vocab,
+            decoder_net,
+            10,
+            Embedding(num_embeddings=vocab.get_vocab_size(), embedding_dim=decoder_inout_dim),
         )
 
         predictions = torch.tensor([[3, 2, 5, 0, 0], [2, 2, 3, 5, 0]])
@@ -150,7 +167,7 @@ class TestAutoRegressiveSeqDecoder(AllenNlpTestCase):
             vocab,
             decoder_net,
             10,
-            Embedding(vocab.get_vocab_size(), decoder_inout_dim),
+            Embedding(num_embeddings=vocab.get_vocab_size(), embedding_dim=decoder_inout_dim),
             tensor_based_metric=BLEU(),
             token_based_metric=DummyMetric(),
         ).eval()

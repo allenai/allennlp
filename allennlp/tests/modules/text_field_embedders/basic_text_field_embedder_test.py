@@ -81,23 +81,18 @@ class TestBasicTextFieldEmbedder(AllenNlpTestCase):
         assert token_embedder(inputs, num_wrapping_dims=2).size() == (3, 4, 5, 6, 12)
 
     def test_forward_runs_with_forward_params(self):
-        elmo_fixtures_path = self.FIXTURES_ROOT / "elmo_multilingual" / "es"
-        options_file = str(elmo_fixtures_path / "options.json")
-        weight_file = str(elmo_fixtures_path / "weights.hdf5")
-        params = Params(
-            {
-                "token_embedders": {
-                    "elmo": {
-                        "type": "elmo_token_embedder_multilang",
-                        "options_files": {"es": options_file},
-                        "weight_files": {"es": weight_file},
-                    }
-                }
-            }
-        )
-        token_embedder = BasicTextFieldEmbedder.from_params(vocab=self.vocab, params=params)
-        inputs = {"elmo": {"tokens": (torch.rand(3, 6, 50) * 15).long()}}
-        kwargs = {"lang": "es"}
+        class FakeEmbedder(torch.nn.Module):
+            def __init__(self):
+                super().__init__()
+
+            def forward(self, tokens: torch.Tensor, extra_arg: int = None):
+                assert tokens is not None
+                assert extra_arg is not None
+                return tokens
+
+        token_embedder = BasicTextFieldEmbedder({"elmo": FakeEmbedder()})
+        inputs = {"elmo": {"tokens": (torch.rand(3, 6, 5) * 2).long()}}
+        kwargs = {"extra_arg": 1}
         token_embedder(inputs, **kwargs)
 
     def test_forward_runs_with_non_bijective_mapping(self):

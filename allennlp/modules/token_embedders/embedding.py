@@ -12,7 +12,7 @@ import torch
 from overrides import overrides
 from torch.nn.functional import embedding
 
-from allennlp.common import Tqdm, Registrable
+from allennlp.common import Tqdm
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.file_utils import cached_path, get_file_extension, is_url_or_existing_file
 from allennlp.data import Vocabulary
@@ -27,8 +27,8 @@ with warnings.catch_warnings():
 logger = logging.getLogger(__name__)
 
 
-@TokenEmbedder.register("embedding", constructor="from_vocab_or_file")
-class Embedding(TokenEmbedder, Registrable):
+@TokenEmbedder.register("embedding")
+class Embedding(TokenEmbedder):
     """
     A more featureful embedding module than the default in Pytorch.  Adds the ability to:
 
@@ -78,7 +78,7 @@ class Embedding(TokenEmbedder, Registrable):
         path to a local file or a URL of a (cached) remote file. Two formats are supported:
             * hdf5 file - containing an embedding matrix in the form of a torch.Tensor;
             * text file - an utf-8 encoded text file with space separated fields.
-    vocabulary : `Vocabulary` (optional, default = None)
+    vocab : `Vocabulary` (optional, default = None)
         Used to construct an embedding from a pretrained file.
 
     # Returns
@@ -86,12 +86,10 @@ class Embedding(TokenEmbedder, Registrable):
     An Embedding module.
     """
 
-    default_implementation = "embedding"
-
     def __init__(
         self,
-        num_embeddings: int,
         embedding_dim: int,
+        num_embeddings: int = None,
         projection_dim: int = None,
         weight: torch.FloatTensor = None,
         padding_index: int = None,
@@ -100,11 +98,24 @@ class Embedding(TokenEmbedder, Registrable):
         norm_type: float = 2.0,
         scale_grad_by_freq: bool = False,
         sparse: bool = False,
-        vocab_namespace: str = None,
+        vocab_namespace: str = "tokens",
         pretrained_file: str = None,
-        vocabulary: Vocabulary = None,
+        vocab: Vocabulary = None,
     ) -> None:
         super().__init__()
+
+        if num_embeddings is None and vocab is None:
+            raise ConfigurationError(
+                "Embedding must be constructed with either num_embeddings or a vocabulary."
+            )
+
+        if num_embeddings is None:
+            num_embeddings = vocab.get_vocab_size(vocab_namespace)
+        else:
+            # If num_embeddings is present, set default namespace to None so that extend_vocab
+            # call doesn't misinterpret that some namespace was originally used.
+            vocab_namespace = None
+
         self.num_embeddings = num_embeddings
         self.padding_index = padding_index
         self.max_norm = max_norm
@@ -123,7 +134,7 @@ class Embedding(TokenEmbedder, Registrable):
 
         elif pretrained_file is not None:
 
-            if vocabulary is None:
+            if vocab is None:
                 raise ConfigurationError(
                     "To construct an Embedding from a pretrained file, you must also pass a vocabulary."
                 )
@@ -136,7 +147,7 @@ class Embedding(TokenEmbedder, Registrable):
             # extend_vocab method, which relies on the value of vocab_namespace being None
             # to infer at what stage the embedding has been constructed. Phew.
             weight = _read_pretrained_embeddings_file(
-                pretrained_file, embedding_dim, vocabulary, vocab_namespace or "tokens"
+                pretrained_file, embedding_dim, vocab, vocab_namespace or "tokens"
             )
             self.weight = torch.nn.Parameter(weight, requires_grad=trainable)
 
@@ -299,59 +310,6 @@ class Embedding(TokenEmbedder, Registrable):
         device = self.weight.data.device
         extended_weight = torch.cat([self.weight.data, extra_weight.to(device)], dim=0)
         self.weight = torch.nn.Parameter(extended_weight, requires_grad=self.weight.requires_grad)
-
-    @classmethod
-    def from_vocab_or_file(
-        cls,
-        vocab: Vocabulary,
-        embedding_dim: int,
-        num_embeddings: int = None,
-        vocab_namespace: str = "tokens",
-        pretrained_file: str = None,
-        projection_dim: int = None,
-        trainable: bool = True,
-        padding_index: int = None,
-        max_norm: float = None,
-        norm_type: float = 2.0,
-        scale_grad_by_freq: bool = False,
-        sparse: bool = False,
-    ) -> "Embedding":
-        """
-        Similar to `__init__`, but has one additional function on top of what's there: if
-        `num_embeddings` is not given, it checks the vocabulary for how many embeddings to
-        construct.
-
-        We need the vocabulary here to know how many items we need to embed, and we look for a
-        `vocab_namespace` key in the parameter dictionary to know which vocabulary to use.  If
-        you know beforehand exactly how many embeddings you need, or aren't using a vocabulary
-        mapping for the things getting embedded here, then you can pass in the `num_embeddings`
-        key directly, and the vocabulary will be ignored.
-        """
-
-        if num_embeddings is None:
-            num_embeddings = vocab.get_vocab_size(vocab_namespace)
-        else:
-            # If num_embeddings is present, set default namespace to None so that extend_vocab
-            # call doesn't misinterpret that some namespace was originally used.
-            vocab_namespace = None
-
-        return cls(
-            num_embeddings=num_embeddings,
-            embedding_dim=embedding_dim,
-            projection_dim=projection_dim,
-            padding_index=padding_index,
-            trainable=trainable,
-            max_norm=max_norm,
-            norm_type=norm_type,
-            scale_grad_by_freq=scale_grad_by_freq,
-            sparse=sparse,
-            vocab_namespace=vocab_namespace,
-            pretrained_file=pretrained_file,
-            vocabulary=vocab,
-        )
-
-
-Embedding.register("embedding", constructor="from_vocab_or_file")(Embedding)
 
 
 def _read_pretrained_embeddings_file(
