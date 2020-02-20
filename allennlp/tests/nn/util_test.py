@@ -1572,6 +1572,9 @@ class TestNnUtil(AllenNlpTestCase):
             [[1, 0, 1, 1, 1], [0, 1, 0, 1, 1]],
         ])
 
+        # This is the same as just specifying a scalar int, but we want to test this behavior
+        k = torch.ones(3, 5, dtype=torch.long)
+
         target_items = torch.FloatTensor([
             [[-4, -2, -9, -9, -7]],
             [[5, 4, 7, 8, 1]],
@@ -1587,7 +1590,7 @@ class TestNnUtil(AllenNlpTestCase):
         ])
         # fmt: on
 
-        pruned_items, pruned_mask, pruned_indices = util.masked_topk(items, mask, 1, dim=1)
+        pruned_items, pruned_mask, pruned_indices = util.masked_topk(items, mask, k, dim=1)
 
         numpy.testing.assert_array_equal(pruned_items.data.numpy(), target_items.data.numpy())
         numpy.testing.assert_array_equal(pruned_mask.data.numpy(), target_mask.data.numpy())

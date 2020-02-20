@@ -1717,11 +1717,10 @@ def masked_topk(
     dim: int = -1,
 ) -> Tuple[torch.LongTensor, torch.LongTensor, torch.FloatTensor]:
     """
-    Extracts the top-k scoring items with respect to the scorer. We additionally return
-    the indices of the top-k in their original order, not ordered by score, so that downstream
-    components can rely on the original ordering (e.g., for knowing what spans are valid
-    antecedents in a coreference resolution model). May use the same k for all sentences in
-    minibatch, or different k for each.
+    Extracts the top-k items along a certain dimension. This is similar to `torch.topk` except:
+    (1) we allow of a `mask` that makes the function not consider certain elements;
+    (2) the returned top input, mask, and indices are sorted in their original order in the input.
+    (3) May use the same k for all dimensions, or different k for each.
 
     # Parameters
 
@@ -1751,28 +1750,43 @@ def masked_topk(
         scorers, for instance. Has shape (batch_size, max_k).
     """
     if input_.size() != mask.size():
-        raise ValueError("input_ and mask must have the same shape.")
-    if dim >= input_.dim():
-        raise ValueError("dim cannot be greater than input_.dim()")
+        raise ValueError("`input_` and `mask` must have the same shape.")
+    if not -input_.dim() <= dim < input_.dim():
+        raise ValueError("`dim` must be in `[-input_.dim(), input_.dim())`")
+    dim = (dim + input_.dim()) % input_.dim()
 
     max_k = k if isinstance(k, int) else k.max()
 
-    # The idea is that we put the dim in question to the last dimension, and squash all leading dims
-    # We record the pre-squashing (but after transpose) size for restoration later
-    transposed_target_size = list(input_.size())
-    transposed_target_size.pop(dim)
-    transposed_target_size += [max_k]
+    # We put the dim in question to the last dimension by permutation, and squash all leading dims.
 
-    num_items = input_.size(dim)
-    # (batch_size, num_items)  -- "batch_size" refers to all other dimensions stacked together
-    input_ = input_.transpose(dim, -1).reshape(-1, num_items)
-    mask = mask.transpose(dim, -1).reshape(-1, num_items)
+    # [0, 1, ..., dim - 1, dim + 1, ..., input.dim() - 1, dim]
+    permutation = list(range(input_.dim()))
+    permutation.pop(dim)
+    permutation += [dim]
+
+    # [0, 1, ..., dim - 1, -1, dim, ..., input.dim() - 2]; for restoration
+    reverse_permutation = list(range(input_.dim() - 1))
+    reverse_permutation.insert(dim, -1)
+
+    other_dims_size = list(input_.size())
+    other_dims_size.pop(dim)
+    permuted_size = other_dims_size + [max_k]  # for restoration
 
     # If an int was given for number of items to keep, construct tensor by repeating the value.
     if isinstance(k, int):
-        batch_size = mask.size(0)
         # Put the tensor on same device as the mask.
-        k = k * torch.ones([batch_size], dtype=torch.long, device=mask.device)
+        k = k * torch.ones(*other_dims_size, dtype=torch.long, device=mask.device)
+    else:
+        if list(k.size()) != other_dims_size:
+            raise ValueError(
+                "`k` must have the same shape as `input_` with dimension `dim` removed."
+            )
+
+    num_items = input_.size(dim)
+    # (batch_size, num_items)  -- "batch_size" refers to all other dimensions stacked together
+    input_ = input_.permute(*permutation).reshape(-1, num_items)
+    mask = mask.permute(*permutation).reshape(-1, num_items)
+    k = k.reshape(-1)
 
     # Make sure that we don't select any masked items by setting their scores to be very
     # negative.  These are logits, typically, so -1e20 should be plenty negative.
@@ -1806,11 +1820,8 @@ def masked_topk(
     # Shape: (batch_size, max_k)
     top_input = input_.gather(1, top_indices)
 
-    # if dim != -1:
-    #     breakpoint()
-
     return (
-        top_input.reshape(*transposed_target_size).transpose(dim, -1),
-        top_mask.reshape(*transposed_target_size).transpose(dim, -1),
-        top_indices.reshape(*transposed_target_size).transpose(dim, -1),
+        top_input.reshape(*permuted_size).permute(*reverse_permutation),
+        top_mask.reshape(*permuted_size).permute(*reverse_permutation),
+        top_indices.reshape(*permuted_size).permute(*reverse_permutation),
     )
