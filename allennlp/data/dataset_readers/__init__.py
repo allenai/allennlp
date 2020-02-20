@@ -17,7 +17,6 @@ from allennlp.data.dataset_readers.coreference_resolution import (
     WinobiasReader,
 )
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
-from allennlp.data.dataset_readers.event2mind import Event2MindDatasetReader
 from allennlp.data.dataset_readers.interleaving_dataset_reader import InterleavingDatasetReader
 from allennlp.data.dataset_readers.masked_language_modeling import MaskedLanguageModelingReader
 from allennlp.data.dataset_readers.next_token_lm import NextTokenLmReader
