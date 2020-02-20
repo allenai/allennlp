@@ -1455,9 +1455,7 @@ class TestNnUtil(AllenNlpTestCase):
 
         # scores should be the result of index_selecting the pruned_indices.
         correct_scores = util.batched_index_select(scores.unsqueeze(-1), pruned_indices).squeeze(-1)
-        numpy.testing.assert_array_equal(
-            (correct_scores * pruned_mask).data.numpy(), (pruned_scores * pruned_mask).data.numpy()
-        )
+        self.assert_array_equal_with_mask(correct_scores, pruned_scores, pruned_mask)
 
     def test_masked_topk_works_for_completely_masked_rows(self):
         items = torch.randn([3, 4, 5]).clamp(min=0.0, max=1.0)
@@ -1485,9 +1483,7 @@ class TestNnUtil(AllenNlpTestCase):
 
         # scores should be the result of index_selecting the pruned_indices.
         correct_scores = util.batched_index_select(scores.unsqueeze(-1), pruned_indices).squeeze(-1)
-        numpy.testing.assert_array_equal(
-            (correct_scores * pruned_mask).data.numpy(), (pruned_scores * pruned_mask).data.numpy()
-        )
+        self.assert_array_equal_with_mask(correct_scores, pruned_scores, pruned_mask)
 
     def test_masked_topk_selects_top_scored_items_and_respects_masking_different_num_items(self):
         items = torch.randn([3, 4, 5]).clamp(min=0.0, max=1.0)
@@ -1519,9 +1515,7 @@ class TestNnUtil(AllenNlpTestCase):
 
         # scores should be the result of index_selecting the pruned_indices.
         correct_scores = util.batched_index_select(scores.unsqueeze(-1), pruned_indices).squeeze(-1)
-        numpy.testing.assert_array_equal(
-            (correct_scores * pruned_mask).data.numpy(), (pruned_scores * pruned_mask).data.numpy()
-        )
+        self.assert_array_equal_with_mask(correct_scores, pruned_scores, pruned_mask)
 
     def test_masked_topk_works_for_row_with_no_items_requested(self):
         # Case where `num_items_to_keep` is a tensor rather than an int. Make sure it does the right
@@ -1554,9 +1548,7 @@ class TestNnUtil(AllenNlpTestCase):
 
         # scores should be the result of index_selecting the pruned_indices.
         correct_scores = util.batched_index_select(scores.unsqueeze(-1), pruned_indices).squeeze(-1)
-        numpy.testing.assert_array_equal(
-            (correct_scores * pruned_mask).data.numpy(), (pruned_scores * pruned_mask).data.numpy()
-        )
+        self.assert_array_equal_with_mask(correct_scores, pruned_scores, pruned_mask)
 
     def test_masked_topk_works_for_multiple_dimensions(self):
         # fmt: off
@@ -1564,34 +1556,40 @@ class TestNnUtil(AllenNlpTestCase):
             [[4, 2, 9, 9, 7], [-4, -2, -9, -9, -7]],
             [[5, 4, 1, 8, 8], [9, 1, 7, 4, 1]],
             [[9, 8, 9, 6, 0], [2, 2, 2, 2, 2]],
-        ])
+        ]).unsqueeze(-1).expand(3, 2, 5, 4)
 
         mask = torch.BoolTensor([
             [[0, 0, 0, 0, 0], [1, 1, 1, 1, 1]],
             [[1, 1, 1, 1, 0], [0, 1, 1, 1, 1]],
             [[1, 0, 1, 1, 1], [0, 1, 0, 1, 1]],
-        ])
+        ]).unsqueeze(-1).expand(3, 2, 5, 4)
 
         # This is the same as just specifying a scalar int, but we want to test this behavior
-        k = torch.ones(3, 5, dtype=torch.long)
+        k = torch.ones(3, 5, 4, dtype=torch.long)
+        k[1, 3, :] = 2
 
         target_items = torch.FloatTensor([
-            [[-4, -2, -9, -9, -7]],
-            [[5, 4, 7, 8, 1]],
-            [[9, 2, 9, 6, 2]],
-        ])
+            [[-4, -2, -9, -9, -7], [0, 0, 0, 0, 0]],
+            [[5, 4, 7, 8, 1], [0, 0, 0, 4, 0]],
+            [[9, 2, 9, 6, 2], [0, 0, 0, 0, 0]],
+        ]).unsqueeze(-1).expand(3, 2, 5, 4)
 
-        target_mask = torch.ones(3, 1, 5, dtype=torch.bool)
+        target_mask = torch.ones(3, 2, 5, 4, dtype=torch.bool)
+        target_mask[:, 1, :, :] = 0
+        target_mask[1, 1, 3, :] = 1
 
         target_indices = torch.LongTensor([
-            [[1, 1, 1, 1, 1]],
-            [[0, 0, 1, 0, 1]],
-            [[0, 1, 0, 0, 1]],
-        ])
+            [[1, 1, 1, 1, 1], [0, 0, 0, 0, 0]],
+            [[0, 0, 1, 0, 1], [0, 0, 0, 1, 0]],
+            [[0, 1, 0, 0, 1], [0, 0, 0, 0, 0]],
+        ]).unsqueeze(-1).expand(3, 2, 5, 4)
         # fmt: on
 
         pruned_items, pruned_mask, pruned_indices = util.masked_topk(items, mask, k, dim=1)
 
-        numpy.testing.assert_array_equal(pruned_items.data.numpy(), target_items.data.numpy())
         numpy.testing.assert_array_equal(pruned_mask.data.numpy(), target_mask.data.numpy())
-        numpy.testing.assert_array_equal(pruned_indices.data.numpy(), target_indices.data.numpy())
+        self.assert_array_equal_with_mask(pruned_items, target_items, pruned_mask)
+        self.assert_array_equal_with_mask(pruned_indices, target_indices, pruned_mask)
+
+    def assert_array_equal_with_mask(self, a, b, mask):
+        numpy.testing.assert_array_equal((a * mask).data.numpy(), (b * mask).data.numpy())
