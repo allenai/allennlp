@@ -185,7 +185,6 @@ class BatchInstanceSampler(BatchSampler):
 
 
 def allennlp_collocate(batch):
-    print(batch)
     batch = AllennlpBatch(batch)
     return batch.as_tensor_dict(batch.get_padding_lengths())
 
