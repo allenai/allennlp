@@ -9,6 +9,6 @@ local COMMON = import 'common.jsonnet';
         "type": "from_archive",
         "archive_file": "allennlp/tests/fixtures/basic_classifier/serialization/model.tar.gz",
     },
-    "iterator": COMMON['iterator'],
+    "data_loader": COMMON['data_loader'],
     "trainer": COMMON['trainer'],
 }
