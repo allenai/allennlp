@@ -1,4 +1,3 @@
-
 from typing import List, Iterable, Tuple, Dict, cast
 import logging
 from torch.utils import data
@@ -18,14 +17,12 @@ logger = logging.getLogger(__name__)
 
 
 class Sampler(Registrable):
-
     def __iter__(self) -> Iterable[int]:
 
         raise NotImplementedError
 
 
 class BatchSampler(Registrable):
-
     def __iter__(self) -> Iterable[List[int]]:
 
         raise NotImplementedError
@@ -33,10 +30,8 @@ class BatchSampler(Registrable):
 
 @Sampler.register("sequential")
 class SequentialSampler(Sampler, data.SequentialSampler):
-
     def __init__(self, data_source: data.Dataset):
         super().__init__(data_source)
-
 
 
 @Sampler.register("random")
@@ -50,7 +45,10 @@ class RandomSampler(Sampler, data.RandomSampler):
         num_samples (int): number of samples to draw, default=`len(dataset)`. This argument
             is supposed to be specified only when `replacement` is ``True``.
     """
-    def __init__(self, data_source: data.Dataset, replacement: bool = False, num_samples: int = None):
+
+    def __init__(
+        self, data_source: data.Dataset, replacement: bool = False, num_samples: int = None
+    ):
         super().__init__(data_source, replacement, num_samples)
 
 
@@ -61,6 +59,7 @@ class SubsetRandomSampler(Sampler, data.SubsetRandomSampler):
     Arguments:
         indices (sequence): a sequence of indices
     """
+
     def __init__(self, indices: List[int]):
         super().__init__(indices)
 
@@ -82,6 +81,7 @@ class WeightedRandomSampler(Sampler, data.WeightedRandomSampler):
         >>> list(WeightedRandomSampler([0.9, 0.4, 0.05, 0.2, 0.3, 0.1], 5, replacement=False))
         [0, 1, 4, 3, 2]
     """
+
     def __init__(self, weights: List[float], num_samples: int, replacement: bool = True):
         super().__init__(weights, num_samples, replacement)
 
@@ -189,17 +189,35 @@ def allennlp_collocate(batch):
     return batch.as_tensor_dict(batch.get_padding_lengths())
 
 
-
-
 class DataLoader(Registrable, data.DataLoader):
-
-    def __init__(self, dataset: data.Dataset, batch_size: int = 1, shuffle: bool = False, sampler: Sampler = None,
-                 batch_sampler: BatchSampler = None, num_workers: int = 0, collate_fn=None,
-                 pin_memory: bool = False, drop_last: bool = False, timeout: bool = 0,
-                 worker_init_fn=None, multiprocessing_context: str = None):
+    def __init__(
+        self,
+        dataset: data.Dataset,
+        batch_size: int = 1,
+        shuffle: bool = False,
+        sampler: Sampler = None,
+        batch_sampler: BatchSampler = None,
+        num_workers: int = 0,
+        collate_fn=None,
+        pin_memory: bool = False,
+        drop_last: bool = False,
+        timeout: bool = 0,
+        worker_init_fn=None,
+        multiprocessing_context: str = None,
+    ):
 
         collate_fn = allennlp_collocate
-        super().__init__(self, dataset=dataset, batch_size=batch_size, shuffle=shuffle, sampler=sampler,
-                         batch_sampler=batch_sampler, num_workers=num_workers, collate_fn=collate_fn,
-                         pin_memory=pin_memory, drop_last=drop_last, timeout=timeout,
-                         worker_init_fn=worker_init_fn, multiprocessing_context=multiprocessing_context)
+        super().__init__(
+            dataset=dataset,
+            batch_size=batch_size,
+            shuffle=shuffle,
+            sampler=sampler,
+            batch_sampler=batch_sampler,
+            num_workers=num_workers,
+            collate_fn=collate_fn,
+            pin_memory=pin_memory,
+            drop_last=drop_last,
+            timeout=timeout,
+            worker_init_fn=worker_init_fn,
+            multiprocessing_context=multiprocessing_context,
+        )

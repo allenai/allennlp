@@ -5,7 +5,7 @@ import os
 import re
 import time
 import traceback
-from typing import Dict, List, Optional, Tuple, Union, Iterable, Any
+from typing import Dict, List, Optional, Tuple, Union, Any
 
 import torch
 import torch.distributed as dist
@@ -16,7 +16,6 @@ from torch.nn.parallel import DistributedDataParallel
 from allennlp.common import Lazy, Tqdm
 from allennlp.common.checks import ConfigurationError, check_for_gpu
 from allennlp.common import util as common_util
-from allennlp.data.instance import Instance
 
 from allennlp.data.samplers import DataLoader
 
@@ -36,7 +35,7 @@ from allennlp.training.trainer_base import TrainerBase
 logger = logging.getLogger(__name__)
 
 
-@TrainerBase.register("trainer", constructor="from_partial_objects")
+@TrainerBase.register("default", constructor="from_partial_objects")
 class Trainer(TrainerBase):
     def __init__(
         self,
@@ -512,9 +511,13 @@ class Trainer(TrainerBase):
         if self._validation_data_loader is not None:
             validation_data_loader = self._validation_data_loader
         else:
-            raise ConfigurationError("Validation results cannot be calculated without a validation_data_loader")
+            raise ConfigurationError(
+                "Validation results cannot be calculated without a validation_data_loader"
+            )
 
-        val_generator_tqdm = Tqdm.tqdm(iter(validation_data_loader), total=len(validation_data_loader))
+        val_generator_tqdm = Tqdm.tqdm(
+            iter(validation_data_loader), total=len(validation_data_loader)
+        )
         batches_this_epoch = 0
         val_loss = 0
         done_early = False
@@ -814,8 +817,8 @@ class Trainer(TrainerBase):
         cls,
         model: Model,
         serialization_dir: str,
-        data_loader: Lazy[DataLoader],
-        validation_data_loader: Lazy[DataLoader] = None,
+        data_loader: DataLoader,
+        validation_data_loader: DataLoader = None,
         local_rank: int = 0,
         patience: int = None,
         validation_metric: str = "-loss",
