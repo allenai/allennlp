@@ -665,8 +665,8 @@ class _ElmoBiLm(torch.nn.Module):
         self._bos_embedding = full_embedding[0, :]
         self._eos_embedding = full_embedding[1, :]
         self._word_embedding = Embedding(  # type: ignore
-            vocab_size,
-            embedding_dim,
+            num_embeddings=vocab_size,
+            embedding_dim=embedding_dim,
             weight=embedding.data,
             trainable=self._requires_grad,
             padding_index=0,

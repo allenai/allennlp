@@ -86,7 +86,9 @@ class SemanticRoleLabeler(Model):
 
         self.encoder = encoder
         # There are exactly 2 binary features for the verb predicate embedding.
-        self.binary_feature_embedding = Embedding(2, binary_feature_dim)
+        self.binary_feature_embedding = Embedding(
+            num_embeddings=2, embedding_dim=binary_feature_dim
+        )
         self.tag_projection_layer = TimeDistributed(
             Linear(self.encoder.get_output_dim(), self.num_classes)
         )

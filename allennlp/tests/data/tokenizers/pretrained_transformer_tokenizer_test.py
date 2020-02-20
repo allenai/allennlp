@@ -361,6 +361,30 @@ class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
         assert offsets_a == expected_offsets_a
         assert offsets_b == expected_offsets_b
 
+    def test_intra_word_tokenize_whitespaces(self):
+        tokenizer = PretrainedTransformerTokenizer("bert-base-cased")
+
+        sentence = ["A,", " ", "[MASK]", "AllenNLP", "\u007f", "sentence."]
+        expected_tokens = [
+            "[CLS]",
+            "A",
+            ",",
+            "[UNK]",
+            "[MASK]",
+            "Allen",
+            "##NL",
+            "##P",
+            "[UNK]",
+            "sentence",
+            ".",
+            "[SEP]",
+        ]
+        expected_offsets = [(1, 2), (3, 3), (4, 4), (5, 7), (8, 8), (9, 10)]
+        tokens, offsets = tokenizer.intra_word_tokenize(sentence)
+        tokens = [t.text for t in tokens]
+        assert tokens == expected_tokens
+        assert offsets == expected_offsets
+
     def test_determine_num_special_tokens_added(self):
         tokenizer = PretrainedTransformerTokenizer("bert-base-cased")
         assert tokenizer._determine_num_special_tokens_added() == (1, 1, 1)

@@ -96,9 +96,13 @@ class SampledSoftmaxLoss(torch.nn.Module):
         # Glorit init (std=(1.0 / sqrt(fan_in))
         if sparse:
             # create our own sparse embedding
-            self.softmax_w = torch.nn.Embedding(num_words, embedding_dim, sparse=True)
+            self.softmax_w = torch.nn.Embedding(
+                num_embeddings=num_words, embedding_dim=embedding_dim, sparse=True
+            )
             self.softmax_w.weight.data.normal_(mean=0.0, std=1.0 / np.sqrt(embedding_dim))
-            self.softmax_b = torch.nn.Embedding(num_words, 1, sparse=True)
+            self.softmax_b = torch.nn.Embedding(
+                num_embeddings=num_words, embedding_dim=1, sparse=True
+            )
             self.softmax_b.weight.data.fill_(0.0)
         else:
             # just create tensors to use as the embeddings
