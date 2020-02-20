@@ -97,7 +97,7 @@ class TestMain(AllenNlpTestCase):
                     "dataset_reader": {"type": "sequence_tagging"},
                     "train_data_path": "$$$",
                     "validation_data_path": "$$$",
-                    "iterator": {"type": "basic", "batch_size": 2},
+                    "data_loader": {"batch_size": 2},
                     "trainer": {
                             "num_epochs": 2,
                             "optimizer": "adam"
