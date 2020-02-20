@@ -78,12 +78,11 @@ class CoreferenceResolver(Model):
 
         self._text_field_embedder = text_field_embedder
         self._context_layer = context_layer
-        self._antecedent_feedforward = TimeDistributed(antecedent_feedforward)
-        feedforward_scorer = torch.nn.Sequential(
-            TimeDistributed(mention_feedforward),
-            TimeDistributed(torch.nn.Linear(mention_feedforward.get_output_dim(), 1)),
+        self._mention_feedforward = TimeDistributed(mention_feedforward)
+        self._mention_scorer = TimeDistributed(
+            torch.nn.Linear(mention_feedforward.get_output_dim(), 1)
         )
-        self._mention_pruner = Pruner(feedforward_scorer)
+        self._antecedent_feedforward = TimeDistributed(antecedent_feedforward)
         self._antecedent_scorer = TimeDistributed(
             torch.nn.Linear(antecedent_feedforward.get_output_dim(), 1)
         )
@@ -170,7 +169,7 @@ class CoreferenceResolver(Model):
         text_mask = util.get_text_field_mask(text).float()
 
         # Shape: (batch_size, num_spans)
-        span_mask = (spans[:, :, 0] >= 0).squeeze(-1).float()
+        span_mask = (spans[:, :, 0] >= 0).squeeze(-1)
         # SpanFields return -1 when they are used as padding. As we do
         # some comparisons based on span widths when we attend over the
         # span representations that we generate from these indices, we
@@ -194,13 +193,18 @@ class CoreferenceResolver(Model):
         # Prune based on mention scores.
         num_spans_to_keep = int(math.floor(self._spans_per_word * document_length))
 
-        (
-            top_span_embeddings,
-            top_span_mask,
-            top_span_indices,
-            top_span_mention_scores,
-        ) = self._mention_pruner(span_embeddings, span_mask, num_spans_to_keep)
+        # Shape: (batch_size, num_spans)
+        span_mention_scores = self._mention_scorer(
+            self._mention_feedforward(span_embeddings)
+        ).squeeze(-1)
+        # Shape:
+        #   (batch_size, num_spans) * 3
+        top_span_mention_scores, top_span_mask, top_span_indices = util.masked_topk(
+            span_mention_scores, span_mask, num_spans_to_keep
+        )
+        top_span_mention_scores = top_span_mention_scores.unsqueeze(-1)
         top_span_mask = top_span_mask.unsqueeze(-1)
+
         # Shape: (batch_size * num_spans_to_keep)
         # torch.index_select only accepts 1D indices, but here
         # we need to select spans for each element in the batch.
@@ -212,6 +216,10 @@ class CoreferenceResolver(Model):
         # Compute final predictions for which spans to consider as mentions.
         # Shape: (batch_size, num_spans_to_keep, 2)
         top_spans = util.batched_index_select(spans, top_span_indices, flat_top_span_indices)
+        # Shape: (batch_size, num_spans_to_keep, embedding_size)
+        top_span_embeddings = util.batched_index_select(
+            span_embeddings, top_span_indices, flat_top_span_indices
+        )
 
         # Compute indices for antecedent spans to consider.
         max_antecedents = min(self._max_antecedents, num_spans_to_keep)
