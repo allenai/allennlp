@@ -59,13 +59,19 @@ class _LazyInstances(IterableDataset):
         if self.cache_file is not None and os.path.exists(self.cache_file):
             with open(self.cache_file) as data_file:
                 for line in data_file:
-                    yield self.deserialize(line)
+                    instance = self.deserialize(line)
+                    if self.vocab is not None:
+                        instance.index_fields(self.vocab)
+                    yield instance
+
         # Case 2: Need to cache instances
         elif self.cache_file is not None:
             with open(self.cache_file, "w") as data_file:
                 for instance in self.instance_generator():
                     data_file.write(self.serialize(instance))
                     data_file.write("\n")
+                    if self.vocab is not None:
+                        instance.index_fields(self.vocab)
                     yield instance
         # Case 3: No cache
         else:
@@ -74,10 +80,16 @@ class _LazyInstances(IterableDataset):
                 raise ConfigurationError(
                     "For a lazy dataset reader, _read() must return a generator"
                 )
-            yield from instances
+            for instance in instances:
+                if self.vocab is not None:
+                    instance.index_fields(self.vocab)
+                yield instance
 
     def index_with(self, vocab: Vocabulary):
         self.vocab = vocab
+
+    def __len__(self):
+        return 1
 
 
 class DatasetReader(Registrable):

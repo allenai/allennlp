@@ -5,6 +5,7 @@ from torch.utils import data
 from allennlp.common.registrable import Registrable
 
 from allennlp.common.util import add_noise_to_dict_values, lazy_groups_of
+from allennlp.common.lazy import Lazy
 from allennlp.data.batch import Batch as AllennlpBatch
 from allennlp.data.instance import Instance
 from allennlp.data.vocabulary import Vocabulary
@@ -30,7 +31,7 @@ class BatchSampler(Registrable):
 
 @Sampler.register("sequential")
 class SequentialSampler(Sampler, data.SequentialSampler):
-    def __init__(self, data_source: data.Dataset):
+    def __init__(self, data_source: data.Dataset, **kwargs):
         super().__init__(data_source)
 
 
@@ -47,7 +48,7 @@ class RandomSampler(Sampler, data.RandomSampler):
     """
 
     def __init__(
-        self, data_source: data.Dataset, replacement: bool = False, num_samples: int = None
+        self, data_source: data.Dataset, replacement: bool = False, num_samples: int = None, **kwargs
     ):
         super().__init__(data_source, replacement, num_samples)
 
@@ -60,7 +61,7 @@ class SubsetRandomSampler(Sampler, data.SubsetRandomSampler):
         indices (sequence): a sequence of indices
     """
 
-    def __init__(self, indices: List[int]):
+    def __init__(self, indices: List[int], **kwargs):
         super().__init__(indices)
 
 
@@ -82,7 +83,7 @@ class WeightedRandomSampler(Sampler, data.WeightedRandomSampler):
         [0, 1, 4, 3, 2]
     """
 
-    def __init__(self, weights: List[float], num_samples: int, replacement: bool = True):
+    def __init__(self, weights: List[float], num_samples: int, replacement: bool = True, **kwargs):
         super().__init__(weights, num_samples, replacement)
 
 
@@ -103,7 +104,7 @@ class BasicBatchSampler(BatchSampler, data.BatchSampler):
         [[0, 1, 2], [3, 4, 5], [6, 7, 8]]
     """
 
-    def __init__(self, sampler: Sampler, batch_size: int, drop_last: bool):
+    def __init__(self, sampler: Sampler, batch_size: int, drop_last: bool, **kwargs):
         super().__init__(sampler, batch_size, drop_last)
 
 
@@ -111,7 +112,7 @@ class BasicBatchSampler(BatchSampler, data.BatchSampler):
 class BatchInstanceSampler(BatchSampler):
     def __init__(
         self,
-        data: data.Dataset,
+        data_source: data.Dataset,
         batch_size: int,
         sorting_keys: List[Tuple[str, str]] = None,
         padding_noise: float = 0.1,
@@ -121,7 +122,7 @@ class BatchInstanceSampler(BatchSampler):
         self._sorting_keys = sorting_keys
         self._padding_noise = padding_noise
         self._batch_size = batch_size
-        self.data = data
+        self.data_source = data_source
 
     def _argsort_by_padding(self, instances: List[Instance]) -> List[int]:
         """
@@ -159,7 +160,7 @@ class BatchInstanceSampler(BatchSampler):
 
     def __iter__(self) -> Iterable[List[int]]:
 
-        indices = self._argsort_by_padding(self.data)
+        indices = self._argsort_by_padding(self.data_source)
         for group in lazy_groups_of(indices, self._batch_size):
             yield list(group)
 
@@ -195,8 +196,8 @@ class DataLoader(Registrable, data.DataLoader):
         dataset: data.Dataset,
         batch_size: int = 1,
         shuffle: bool = False,
-        sampler: Sampler = None,
-        batch_sampler: BatchSampler = None,
+        sampler: Lazy[Sampler] = None,
+        batch_sampler: Lazy[BatchSampler] = None,
         num_workers: int = 0,
         collate_fn=None,
         pin_memory: bool = False,
@@ -207,12 +208,21 @@ class DataLoader(Registrable, data.DataLoader):
     ):
 
         collate_fn = allennlp_collocate
+        if batch_sampler is not None:
+            batch_sampler_ = batch_sampler.construct(dataset=dataset)
+        else:
+            batch_sampler_ = None
+        if sampler is not None:
+            sampler_ = sampler.construct(dataset=dataset)
+        else:
+            sampler_ = None
+
         super().__init__(
             dataset=dataset,
             batch_size=batch_size,
             shuffle=shuffle,
-            sampler=sampler,
-            batch_sampler=batch_sampler,
+            sampler=sampler_,
+            batch_sampler=batch_sampler_,
             num_workers=num_workers,
             collate_fn=collate_fn,
             pin_memory=pin_memory,
