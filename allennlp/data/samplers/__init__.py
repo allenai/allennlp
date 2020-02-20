@@ -118,7 +118,7 @@ class BatchInstanceSampler(BatchSampler):
         padding_noise: float = 0.1,
     ):
 
-        self.vocab = data.vocab
+        self.vocab = data_source.vocab
         self._sorting_keys = sorting_keys
         self._padding_noise = padding_noise
         self._batch_size = batch_size
@@ -184,6 +184,9 @@ class BatchInstanceSampler(BatchSampler):
             )
         self._sorting_keys = [longest_padding_key]
 
+    def __len__(self):
+        return len(self.data_source) // self._batch_size
+
 
 def allennlp_collocate(batch):
     batch = AllennlpBatch(batch)
@@ -209,11 +212,11 @@ class DataLoader(Registrable, data.DataLoader):
 
         collate_fn = allennlp_collocate
         if batch_sampler is not None:
-            batch_sampler_ = batch_sampler.construct(dataset=dataset)
+            batch_sampler_ = batch_sampler.construct(data_source=dataset)
         else:
             batch_sampler_ = None
         if sampler is not None:
-            sampler_ = sampler.construct(dataset=dataset)
+            sampler_ = sampler.construct(data_source=dataset)
         else:
             sampler_ = None
 
