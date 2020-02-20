@@ -1725,29 +1725,30 @@ def masked_topk(
     # Parameters
 
     input_ : `torch.FloatTensor`, required.
-        A tensor of shape (batch_size, num_items), containing an embedding for
-        each item in the list that we want to prune.
+        A tensor containing the items that we want to prune.
     mask : `torch.BoolTensor`, required.
-        A tensor of shape (batch_size, num_items), denoting unpadded elements of
-        `embeddings`.
+        A tensor with the same shape as `input_` that makes the function not consider masked out
+        (i.e. False) elements.
     k : `Union[int, torch.LongTensor]`, required.
-        If a tensor of shape (batch_size), specifies the number of items to keep for each
-        individual sentence in minibatch.
-        If an int, keep the same number of items for all sentences.
+        If a tensor of shape as `input_` except without dimension `dim`, specifies the number of
+        items to keep for each dimension.
+        If an int, keep the same number of items for all dimensions.
 
     # Returns
 
     top_input : `torch.FloatTensor`
         The values of the top-k scoring items.
-        Has shape (batch_size, max_k).
+        Has the same shape as `input_` except dimension `dim` has value `k` when it's an `int`
+        or `k.max()` when it's a tensor.
     top_mask : `torch.BoolTensor`
         The corresponding mask for `top_input`.
-        Has shape (batch_size, max_k).
+        Has the shape as `top_input`.
     top_indices : `torch.IntTensor`
-        The indices of the top-k scoring items into the original `embeddings`
+        The indices of the top-k scoring items into the original `input_`
         tensor. This is returned because it can be useful to retain pointers to
         the original items, if each item is being scored by multiple distinct
-        scorers, for instance. Has shape (batch_size, max_k).
+        scorers, for instance.
+        Has the shape as `top_input`.
     """
     if input_.size() != mask.size():
         raise ValueError("`input_` and `mask` must have the same shape.")
