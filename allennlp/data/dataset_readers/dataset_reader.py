@@ -45,7 +45,7 @@ class _LazyInstances(IterableDataset):
         cache_file: str = None,
         deserialize: Callable[[str], Instance] = None,
         serialize: Callable[[Instance], str] = None,
-        vocab: Vocabulary = None
+        vocab: Vocabulary = None,
     ) -> None:
         super().__init__()
         self.instance_generator = instance_generator

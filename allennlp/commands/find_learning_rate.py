@@ -49,6 +49,7 @@ import math
 import os
 import re
 from typing import List, Tuple
+import itertools
 
 from overrides import overrides
 
@@ -56,7 +57,8 @@ from allennlp.commands.subcommand import Subcommand
 from allennlp.common import Params, Tqdm
 from allennlp.common.checks import check_for_gpu, ConfigurationError
 from allennlp.common.util import prepare_environment
-from allennlp.data import DataIterator, Vocabulary
+from allennlp.data import Vocabulary
+from allennlp.data.samplers import DataLoader
 from allennlp.models import Model
 from allennlp.training import Trainer, TrainerBase
 from allennlp.training.util import create_serialization_dir, datasets_from_params
@@ -211,11 +213,10 @@ def find_learning_rate_model(
         ),
     )
 
-    model = Model.from_params(vocab=vocab, params=params.pop("model"))
-    iterator = DataIterator.from_params(params.pop("iterator"))
-    iterator.index_with(vocab)
-
     train_data = all_datasets["train"]
+    train_data.index_with(vocab)
+    model = Model.from_params(vocab=vocab, params=params.pop("model"))
+    data_loader = DataLoader.from_params(dataset=train_data, params=params.pop("data_loader"))
 
     trainer_params = params.pop("trainer")
 
@@ -230,11 +231,8 @@ def find_learning_rate_model(
     trainer: Trainer = TrainerBase.from_params(  # type: ignore
         model=model,
         serialization_dir=serialization_dir,
-        iterator=iterator,
-        train_data=train_data,
-        validation_data=None,
+        data_loader=data_loader,
         params=trainer_params,
-        validation_iterator=None,
     )
 
     logger.info(
@@ -292,8 +290,8 @@ def search_learning_rate(
 
     trainer.model.train()
 
-    train_generator = trainer.iterator(trainer.train_data, shuffle=trainer.shuffle)
-    train_generator_tqdm = Tqdm.tqdm(train_generator, total=num_batches)
+    infinite_generator = itertools.cycle(trainer.data_loader)
+    train_generator_tqdm = Tqdm.tqdm(infinite_generator, total=num_batches)
 
     learning_rates = []
     losses = []
