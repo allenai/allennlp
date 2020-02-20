@@ -16,7 +16,6 @@ from allennlp.modules.language_model_heads import LanguageModelHead
 from allennlp.modules.layer_norm import LayerNorm
 from allennlp.modules.matrix_attention import MatrixAttention
 from allennlp.modules.maxout import Maxout
-from allennlp.modules.pruner import Pruner
 from allennlp.modules.residual_with_layer_dropout import ResidualWithLayerDropout
 from allennlp.modules.scalar_mix import ScalarMix
 from allennlp.modules.seq2seq_encoders import Seq2SeqEncoder
