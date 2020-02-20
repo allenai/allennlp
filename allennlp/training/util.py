@@ -9,6 +9,7 @@ from typing import Any, Dict, Iterable, List, Optional, Union
 
 import torch
 import torch.distributed as dist
+from torch.utils.data import DataLoader
 
 from allennlp.common.checks import check_for_gpu, ConfigurationError
 from allennlp.common.params import Params
@@ -16,7 +17,6 @@ from allennlp.common.tqdm import Tqdm
 from allennlp.data import Instance, Vocabulary
 from allennlp.data.batch import Batch
 from allennlp.data.dataset_readers import DatasetReader
-from allennlp.data.iterators import DataIterator
 from allennlp.models.archival import CONFIG_NAME
 from allennlp.models.model import Model
 from allennlp.nn import util as nn_util
@@ -356,8 +356,7 @@ def get_metrics(
 
 def evaluate(
     model: Model,
-    instances: Iterable[Instance],
-    data_iterator: DataIterator,
+    data_loader: DataLoader,
     cuda_device: int,
     batch_weight_key: str,
 ) -> Dict[str, Any]:
@@ -365,9 +364,9 @@ def evaluate(
     with torch.no_grad():
         model.eval()
 
-        iterator = data_iterator(instances, num_epochs=1, shuffle=False)
+        iterator = iter(data_loader)
         logger.info("Iterating over dataset")
-        generator_tqdm = Tqdm.tqdm(iterator, total=data_iterator.get_num_batches(instances))
+        generator_tqdm = Tqdm.tqdm(iterator, total=len(data_loader))
 
         # Number of batches in instances.
         batch_count = 0

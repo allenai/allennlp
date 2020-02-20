@@ -41,7 +41,7 @@ which to write the results.
 import argparse
 import logging
 import os
-from typing import Any, Dict, Iterable, List, Optional
+from typing import Any, Dict, List, Optional
 
 import torch
 import torch.distributed as dist
@@ -53,7 +53,8 @@ from allennlp.common import Params, Registrable, Lazy
 from allennlp.common.checks import check_for_gpu, ConfigurationError
 from allennlp.common import util as common_util
 from allennlp.common.plugins import import_plugins
-from allennlp.data import DataIterator, DatasetReader, Instance, Vocabulary
+from allennlp.data import DatasetReader, Vocabulary
+from allennlp.data.samplers import DataLoader
 from allennlp.models.archival import archive_model, CONFIG_NAME
 from allennlp.models.model import _DEFAULT_WEIGHTS, Model
 from allennlp.training.trainer_base import TrainerBase
@@ -504,16 +505,14 @@ class TrainModel(Registrable):
         serialization_dir: str,
         model: Model,
         trainer: TrainerBase,
-        evaluation_dataset: Iterable[Instance] = None,
-        evaluation_iterator: DataIterator = None,
+        evaluation_data_loader: DataLoader = None,
         evaluate_on_test: bool = False,
         batch_weight_key: str = "",
     ) -> None:
         self.serialization_dir = serialization_dir
         self.model = model
         self.trainer = trainer
-        self.evaluation_dataset = evaluation_dataset
-        self.evaluation_iterator = evaluation_iterator
+        self.evaluation_data_loader = evaluation_data_loader
         self.evaluate_on_test = evaluate_on_test
         self.batch_weight_key = batch_weight_key
 
@@ -521,19 +520,18 @@ class TrainModel(Registrable):
         return self.trainer.train()
 
     def finish(self, metrics: Dict[str, Any]):
-        if self.evaluation_dataset and self.evaluate_on_test:
+        if self.evaluation_data_loader and self.evaluate_on_test:
             logger.info("The model will be evaluated using the best epoch weights.")
             test_metrics = training_util.evaluate(
                 self.model,
-                self.evaluation_dataset,
-                self.evaluation_iterator,
+                self.evaluation_data_loader,
                 cuda_device=self.trainer.cuda_device,
                 batch_weight_key=self.batch_weight_key,
             )
 
             for key, value in test_metrics.items():
                 metrics["test_" + key] = value
-        elif self.evaluation_dataset:
+        elif self.evaluation_data_loader:
             logger.info(
                 "To evaluate on the test set after training, pass the "
                 "'evaluate_on_test' flag, or use the 'allennlp evaluate' command."
@@ -551,13 +549,13 @@ class TrainModel(Registrable):
         dataset_reader: DatasetReader,
         train_data_path: str,
         model: Lazy[Model],
-        iterator: DataIterator,
+        data_loader: Lazy[DataLoader],
         trainer: Lazy[TrainerBase],
         vocabulary: Lazy[Vocabulary] = None,
         datasets_for_vocab_creation: List[str] = None,
         validation_dataset_reader: DatasetReader = None,
         validation_data_path: str = None,
-        validation_iterator: DataIterator = None,
+        validation_data_loader: Lazy[DataLoader] = None,
         test_data_path: str = None,
         evaluate_on_test: bool = False,
     ) -> "TrainModel":
@@ -658,27 +656,37 @@ class TrainModel(Registrable):
             vocabulary_path = os.path.join(serialization_dir, "vocabulary")
             vocabulary_.save_to_files(vocabulary_path)
 
-        iterator.index_with(model_.vocab)
-        validation_iterator = validation_iterator or iterator
-        validation_iterator.index_with(model_.vocab)  # it is ok to call this twice
+        for dataset in datasets.values():
+            dataset.index_with(model_.vocab)
+
+        data_loader_ = data_loader.construct(dataset=datasets["train"])
+        validation_data_loader = validation_data_loader or data_loader
+        validation_data = datasets.get("validation")
+        if validation_data is not None:
+            validation_data_loader_ = validation_data_loader.construct(dataset=validation_data)
+        else:
+            validation_data_loader_ = None
+
+        test_data = datasets.get("test")
+        if test_data is not None:
+            test_data_loader = validation_data_loader.construct(dataset=test_data)
+        else:
+            test_data_loader = None
 
         # We don't need to pass serialization_dir and local_rank here, because they will have been
         # passed through the trainer by from_params already, because they were keyword arguments to
         # construct this class in the first place.
         trainer_ = trainer.construct(
             model=model_,
-            iterator=iterator,
-            train_data=datasets["train"],
-            validation_iterator=validation_iterator,
-            validation_data=datasets.get("validation"),
+            data_loader=data_loader_,
+            validation_data_loader=validation_data_loader_,
         )
 
         return cls(
             serialization_dir=serialization_dir,
             model=model_,
             trainer=trainer_,
-            evaluation_dataset=datasets.get("test"),
-            evaluation_iterator=validation_iterator,
+            evaluation_data_loader=test_data_loader,
             evaluate_on_test=evaluate_on_test,
             batch_weight_key=batch_weight_key,
         )
