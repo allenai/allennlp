@@ -20,6 +20,7 @@ def make_coref_instance(
     max_span_width: int,
     gold_clusters: Optional[List[List[Tuple[int, int]]]] = None,
     wordpiece_modeling_tokenizer: PretrainedTransformerTokenizer = None,
+    max_sentences: int = None,
 ) -> Instance:
 
     """
@@ -27,11 +28,23 @@ def make_coref_instance(
 
     sentences : `List[List[str]]`, required.
         A list of lists representing the tokenised words and sentences in the document.
+    token_indexers : `Dict[str, TokenIndexer]`
+        This is used to index the words in the document.  See :class:`TokenIndexer`.
+    max_span_width : `int`, required.
+        The maximum width of candidate spans to consider.
     gold_clusters : `Optional[List[List[Tuple[int, int]]]]`, optional (default = None)
         A list of all clusters in the document, represented as word spans with absolute indices
         in the entire document. Each cluster contains some number of spans, which can be nested
         and overlap. If there are exact matches between clusters, they will be resolved
         using `_canonicalize_clusters`.
+    wordpiece_modeling_tokenizer: `PretrainedTransformerTokenizer`, optional (default = None)
+        If not None, this dataset reader does subword tokenization using the supplied tokenizer
+        and distribute the labels to the resulting wordpieces. All the modeling will be based on
+        wordpieces. If this is set to `False` (default), the user is expected to use
+        `PretrainedTransformerMismatchedIndexer` and `PretrainedTransformerMismatchedEmbedder`,
+        and the modeling will be on the word-level.
+    max_sentences: int, optional (default = None)
+        The maximum number of sentences in each document to keep. By default keeps all sentences.
 
     # Returns
 
@@ -47,6 +60,23 @@ def make_coref_instance(
                 how many spans we are considering), we represent this a as a `SequenceLabelField`
                 with respect to the `spans `ListField`.
     """
+    if max_sentences is not None and len(sentences) > max_sentences:
+        sentences = sentences[:max_sentences]
+        total_length = sum(len(sentence) for sentence in sentences)
+
+        if gold_clusters is not None:
+            new_gold_clusters = []
+
+            for cluster in gold_clusters:
+                new_cluster = []
+                for mention in cluster:
+                    if mention[1] < total_length:
+                        new_cluster.append(mention)
+                if new_cluster:
+                    new_gold_clusters.append(new_cluster)
+
+            gold_clusters = new_gold_clusters
+
     flattened_sentences = [_normalize_word(word) for sentence in sentences for word in sentence]
 
     if wordpiece_modeling_tokenizer is not None:
