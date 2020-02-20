@@ -316,9 +316,9 @@ class TestCorefReader:
         # Truncation happened
         assert len(limited_docs[0]) < len(docs[0])
         assert len(limited_docs[2]) < len(docs[2])
-        assert 'Disney' in text_of(docs[0]) and 'Disney' not in text_of(limited_docs[0])
-        assert 'tourism' in text_of(docs[2]) and 'tourism' not in text_of(limited_docs[2])
+        assert "Disney" in text_of(docs[0]) and "Disney" not in text_of(limited_docs[0])
+        assert "tourism" in text_of(docs[2]) and "tourism" not in text_of(limited_docs[2])
 
         # Truncated tokens are the prefixes
-        assert limited_docs[0] == docs[0][:len(limited_docs[0])]
-        assert limited_docs[2] == docs[2][:len(limited_docs[2])]
+        assert limited_docs[0] == docs[0][: len(limited_docs[0])]
+        assert limited_docs[2] == docs[2][: len(limited_docs[2])]
