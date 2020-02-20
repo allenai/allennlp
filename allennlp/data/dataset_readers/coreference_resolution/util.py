@@ -1,4 +1,3 @@
-import random
 from typing import Any, Dict, List, Optional, Tuple, Set
 
 from allennlp.data.fields import (
