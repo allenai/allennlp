@@ -7,7 +7,8 @@ from allennlp.common.testing import ModelTestCase
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import Params
 from allennlp.data.dataset_readers import DatasetReader
-from allennlp.data.iterators import DataIterator, BasicIterator
+from allennlp.data.iterators import BasicIterator
+from allennlp.data.samplers import DataLoader
 from allennlp.models import Model
 from allennlp.training import Trainer, TrainerBase
 
@@ -55,13 +56,13 @@ class SimpleTaggerTest(ModelTestCase):
         penalty = self.model.get_regularization_penalty()
         assert penalty == 0
 
-        iterator = BasicIterator(batch_size=32)
-        trainer = Trainer(self.model, None, iterator, self.instances)  # optimizer,
+        data_loader = DataLoader(self.instances, batch_size=32)
+        trainer = Trainer(self.model, None, data_loader)  # optimizer,
 
         # You get a RuntimeError if you call `model.forward` twice on the same inputs.
         # The data and config are such that the whole dataset is one batch.
-        training_batch = next(iterator(self.instances, num_epochs=1))
-        validation_batch = next(iterator(self.instances, num_epochs=1))
+        training_batch = next(iter(data_loader))
+        validation_batch = next(iter(data_loader))
 
         training_loss = trainer.batch_loss(training_batch, for_training=True).item()
         validation_loss = trainer.batch_loss(validation_batch, for_training=False).item()
@@ -93,12 +94,11 @@ class SimpleTaggerRegularizationTest(ModelTestCase):
         self.set_up_model(param_file, self.FIXTURES_ROOT / "data" / "sequence_tagging.tsv")
         params = Params.from_file(param_file)
         self.reader = DatasetReader.from_params(params["dataset_reader"])
-        self.iterator = DataIterator.from_params(params["iterator"])
+        self.data_loader = DataLoader.from_params(dataset=self.instances, params=params["data_loader"])
         self.trainer = TrainerBase.from_params(
             model=self.model,
+            data_loader=self.data_loader,
             serialization_dir=self.TEST_DIR,
-            iterator=self.iterator,
-            train_data=self.dataset,
             params=params.get("trainer"),
         )
 
@@ -125,8 +125,8 @@ class SimpleTaggerRegularizationTest(ModelTestCase):
 
         # You get a RuntimeError if you call `model.forward` twice on the same inputs.
         # The data and config are such that the whole dataset is one batch.
-        training_batch = next(self.iterator(self.instances, num_epochs=1))
-        validation_batch = next(self.iterator(self.instances, num_epochs=1))
+        training_batch = next(iter(self.data_loader))
+        validation_batch = next(iter(self.data_loader))
 
         training_loss = self.trainer.batch_loss(training_batch, for_training=True).data
         validation_loss = self.trainer.batch_loss(validation_batch, for_training=False).data
