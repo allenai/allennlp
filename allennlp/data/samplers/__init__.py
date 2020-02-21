@@ -18,12 +18,22 @@ logger = logging.getLogger(__name__)
 
 
 class Sampler(Registrable):
+    """
+    A wrapper around the pytorch [Sampler](https://pytorch.org/docs/stable/_modules/torch/utils/data/sampler.html)
+    which allows us to register it with `Registrable.`
+    """
+
     def __iter__(self) -> Iterable[int]:
 
         raise NotImplementedError
 
 
 class BatchSampler(Registrable):
+    """
+    A wrapper around the pytorch [BatchSampler](https://pytorch.org/docs/stable/data.html#torch.utils.data.BatchSampler)
+    which allows us to register it with `Registrable.`
+    """
+
     def __iter__(self) -> Iterable[List[int]]:
 
         raise NotImplementedError
@@ -37,14 +47,18 @@ class SequentialSampler(Sampler, data.SequentialSampler):
 
 @Sampler.register("random")
 class RandomSampler(Sampler, data.RandomSampler):
-    r"""Samples elements randomly. If without replacement, then sample from a shuffled dataset.
-    If with replacement, then user can specify :attr:`num_samples` to draw.
+    """
+    Samples elements randomly. If without replacement, then sample from a shuffled dataset.
+    If with replacement, then user can specify `num_samples` to draw.
 
-    Arguments:
-        data_source (Dataset): dataset to sample from
-        replacement (bool): samples are drawn with replacement if ``True``, default=``False``
-        num_samples (int): number of samples to draw, default=`len(dataset)`. This argument
-            is supposed to be specified only when `replacement` is ``True``.
+    # Parameters
+    data_source: `Dataset`, reqired
+        The dataset to sample from.
+    replacement : `bool`, optional(default = False)
+        Samples are drawn with replacement if `True`.
+    num_samples: `int` (default = `len(dataset)`)
+        The number of samples to draw. This argument
+        is supposed to be specified only when `replacement` is ``True``.
     """
 
     def __init__(
@@ -59,10 +73,12 @@ class RandomSampler(Sampler, data.RandomSampler):
 
 @Sampler.register("subset_random")
 class SubsetRandomSampler(Sampler, data.SubsetRandomSampler):
-    r"""Samples elements randomly from a given list of indices, without replacement.
+    """
+    Samples elements randomly from a given list of indices, without replacement.
 
-    Arguments:
-        indices (sequence): a sequence of indices
+    # Parameters
+    indices: `List[int]`
+        a sequence of indices to sample from.
     """
 
     def __init__(self, indices: List[int], **kwargs):
@@ -71,20 +87,26 @@ class SubsetRandomSampler(Sampler, data.SubsetRandomSampler):
 
 @Sampler.register("weighted_random")
 class WeightedRandomSampler(Sampler, data.WeightedRandomSampler):
-    r"""Samples elements from ``[0,..,len(weights)-1]`` with given probabilities (weights).
+    """
+    Samples elements from ``[0,..,len(weights)-1]`` with given probabilities (weights).
 
-    Args:
-        weights (sequence)   : a sequence of weights, not necessary summing up to one
-        num_samples (int): number of samples to draw
-        replacement (bool): if ``True``, samples are drawn with replacement.
-            If not, they are drawn without replacement, which means that when a
-            sample index is drawn for a row, it cannot be drawn again for that row.
+    # Parameters:
+    weights : `List[float]`
+        A sequence of weights, not necessary summing up to one.
+    num_samples : `int`
+        The number of samples to draw.
+    replacement : `bool`
+        If ``True``, samples are drawn with replacement.
+        If not, they are drawn without replacement, which means that when a
+        sample index is drawn for a row, it cannot be drawn again for that row.
 
     Example:
+    ```
         >>> list(WeightedRandomSampler([0.1, 0.9, 0.4, 0.7, 3.0, 0.6], 5, replacement=True))
         [0, 0, 0, 1, 0]
         >>> list(WeightedRandomSampler([0.9, 0.4, 0.05, 0.2, 0.3, 0.1], 5, replacement=False))
         [0, 1, 4, 3, 2]
+    ```
     """
 
     def __init__(self, weights: List[float], num_samples: int, replacement: bool = True, **kwargs):
@@ -93,19 +115,25 @@ class WeightedRandomSampler(Sampler, data.WeightedRandomSampler):
 
 @BatchSampler.register("basic")
 class BasicBatchSampler(BatchSampler, data.BatchSampler):
-    r"""Wraps another sampler to yield a mini-batch of indices.
+    """
+    Wraps another sampler to yield a mini-batch of indices.
 
-    Args:
-        sampler (Sampler): Base sampler.
-        batch_size (int): Size of mini-batch.
-        drop_last (bool): If ``True``, the sampler will drop the last batch if
-            its size would be less than ``batch_size``
+    # Parameters
+    sampler: `Sampler`
+        The base sampler.
+    batch_size : `int`
+        The size of the batch.
+    drop_last : `bool`
+        If `True`, the sampler will drop the last batch if
+        its size would be less than batch_size`.
 
     Example:
+    ```
         >>> list(BatchSampler(SequentialSampler(range(10)), batch_size=3, drop_last=False))
         [[0, 1, 2], [3, 4, 5], [6, 7, 8], [9]]
         >>> list(BatchSampler(SequentialSampler(range(10)), batch_size=3, drop_last=True))
         [[0, 1, 2], [3, 4, 5], [6, 7, 8]]
+    ```
     """
 
     def __init__(self, sampler: Sampler, batch_size: int, drop_last: bool, **kwargs):
@@ -114,6 +142,40 @@ class BasicBatchSampler(BatchSampler, data.BatchSampler):
 
 @BatchSampler.register("bucket")
 class BatchInstanceSampler(BatchSampler):
+    """
+    An sampler which by default, argsorts batches with respect to the maximum input lengths `per
+    batch`. Additionally, you can provide a list of field names and padding keys which the dataset
+    will be sorted by before doing this batching, causing inputs with similar length to be batched
+    together, making computation more efficient (as less time is wasted on padded elements of the
+    batch).
+
+    # Parameters
+
+    sorting_keys : List[Tuple[str, str]], optional
+        To bucket inputs into batches, we want to group the instances by padding length, so that we
+        minimize the amount of padding necessary per batch. In order to do this, we need to know
+        which fields need what type of padding, and in what order.
+
+        Specifying the right keys for this is a bit cryptic, so if this is not given we try to
+        auto-detect the right keys by iterating once through the data up front, reading all of the
+        padding keys and seeing which one has the longest length.  We use that one for padding.
+        This should give reasonable results in most cases.
+
+        When you need to specify this yourself, you can create an instance from your dataset and
+        call `Instance.get_padding_lengths()` to see a list of all keys used in your data.  You
+        should give one or more of those as the sorting keys here.
+    padding_noise : float, optional (default=.1)
+        When sorting by padding length, we add a bit of noise to the lengths, so that the sorting
+        isn't deterministic.  This parameter determines how much noise we add, as a percentage of
+        the actual padding value for each instance.
+
+        Note that if you specify `max_instances_in_memory`, the first batch will only be the
+        biggest from among the first "max instances in memory" instances.
+    batch_size : int, optional, (default = 32)
+        The size of each batch of instances yielded when calling the iterator.
+
+    """
+
     def __init__(
         self,
         data_source: data.Dataset,
@@ -130,9 +192,9 @@ class BatchInstanceSampler(BatchSampler):
 
     def _argsort_by_padding(self, instances: List[Instance]) -> List[int]:
         """
-        Sorts the instances by their padding lengths, using the keys in
-        `sorting_keys` (in the order in which they are provided).  `sorting_keys` is a list of
-        `(field_name, padding_key)` tuples.
+        Argsorts the instances by their padding lengths, using the keys in
+        `sorting_keys` (in the order in which they are provided). `sorting_keys`
+        is a list of `(field_name, padding_key)` tuples.
         """
         if not self._sorting_keys:
             logger.info("No sorting keys given; trying to guess a good one")
