@@ -2,8 +2,9 @@ from typing import List
 
 import numpy
 import torch
-from allennlp.common.checks import ConfigurationError
+from sklearn.metrics import precision_recall_fscore_support
 
+from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.training.metrics import FBetaMeasure
 
@@ -211,6 +212,24 @@ class FBetaMeasureTest(AllenNlpTestCase):
         numpy.testing.assert_almost_equal(precisions, micro_precision, decimal=2)
         numpy.testing.assert_almost_equal(recalls, micro_recall, decimal=2)
         numpy.testing.assert_almost_equal(fscores, micro_fscore, decimal=2)
+
+    def test_fbeta_multiclass_with_weighted_average(self):
+        labels = [0, 1]
+        fbeta = FBetaMeasure(average="weighted", labels=labels)
+        fbeta(self.predictions, self.targets)
+        metric = fbeta.get_metric()
+        precisions = metric["precision"]
+        recalls = metric["recall"]
+        fscores = metric["fscore"]
+
+        weighted_precision, weighted_recall, weighted_fscore, _ = precision_recall_fscore_support(
+            self.targets, self.predictions.argmax(dim=1), labels=labels, average="weighted"
+        )
+
+        # check value
+        numpy.testing.assert_almost_equal(precisions, weighted_precision, decimal=2)
+        numpy.testing.assert_almost_equal(recalls, weighted_recall, decimal=2)
+        numpy.testing.assert_almost_equal(fscores, weighted_fscore, decimal=2)
 
     def test_fbeta_handles_batch_size_of_one(self):
         predictions = torch.Tensor([[0.2862, 0.3479, 0.1627, 0.2033]])

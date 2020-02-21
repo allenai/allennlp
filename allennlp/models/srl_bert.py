@@ -125,7 +125,7 @@ class SrlBert(Model):
         output_dict = {"logits": logits, "class_probabilities": class_probabilities}
         # We need to retain the mask in the output dictionary
         # so that we can crop the sequences to remove padding
-        # when we do viterbi inference in self.decode.
+        # when we do viterbi inference in self.make_output_human_readable.
         output_dict["mask"] = mask
         # We add in the offsets here so we can compute the un-wordpieced tags.
         words, verbs, offsets = zip(*[(x["words"], x["verb"], x["offsets"]) for x in metadata])
@@ -142,10 +142,10 @@ class SrlBert(Model):
                     example_metadata["verb_index"] for example_metadata in metadata
                 ]
                 batch_sentences = [example_metadata["words"] for example_metadata in metadata]
-                # Get the BIO tags from decode()
+                # Get the BIO tags from make_output_human_readable()
                 # TODO (nfliu): This is kind of a hack, consider splitting out part
-                # of decode() to a separate function.
-                batch_bio_predicted_tags = self.decode(output_dict).pop("tags")
+                # of make_output_human_readable() to a separate function.
+                batch_bio_predicted_tags = self.make_output_human_readable(output_dict).pop("tags")
                 batch_conll_predicted_tags = [
                     convert_bio_tags_to_conll_format(tags) for tags in batch_bio_predicted_tags
                 ]
@@ -165,7 +165,9 @@ class SrlBert(Model):
         return output_dict
 
     @overrides
-    def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+    def make_output_human_readable(
+        self, output_dict: Dict[str, torch.Tensor]
+    ) -> Dict[str, torch.Tensor]:
         """
         Does constrained viterbi decoding on class probabilities output in :func:`forward`.  The
         constraint simply specifies that the output tags must be a valid BIO sequence.  We add a

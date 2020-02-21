@@ -111,7 +111,7 @@ class Predictor(Registrable):
         dataset_tensor_dict = util.move_to_device(dataset.as_tensor_dict(), self.cuda_device)
         # To bypass "RuntimeError: cudnn RNN backward can only be called in training mode"
         with backends.cudnn.flags(enabled=False):
-            outputs = self._model.decode(
+            outputs = self._model.make_output_human_readable(
                 self._model.forward(**dataset_tensor_dict)  # type: ignore
             )
 

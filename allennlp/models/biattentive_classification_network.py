@@ -312,7 +312,9 @@ class BiattentiveClassificationNetwork(Model):
         return output_dict
 
     @overrides
-    def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+    def make_output_human_readable(
+        self, output_dict: Dict[str, torch.Tensor]
+    ) -> Dict[str, torch.Tensor]:
         """
         Does a simple argmax over the class probabilities, converts indices to string labels, and
         adds a `"label"` key to the dictionary with the result.

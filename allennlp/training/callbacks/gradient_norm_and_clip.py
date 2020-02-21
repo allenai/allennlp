@@ -1,12 +1,10 @@
-from typing import Optional, TYPE_CHECKING
+from typing import Optional
 import logging
 
 from allennlp.training import util as training_util
 from allennlp.training.callbacks.callback import Callback, handle_event
 from allennlp.training.callbacks.events import Events
 
-if TYPE_CHECKING:
-    from allennlp.training.callback_trainer import CallbackTrainer
 
 logger = logging.getLogger(__name__)
 
@@ -31,9 +29,9 @@ class GradientNormAndClip(Callback):
         self.grad_clipping = grad_clipping
 
     @handle_event(Events.TRAINING_START)
-    def enable_gradient_clipping(self, trainer: "CallbackTrainer"):
+    def enable_gradient_clipping(self, trainer):
         training_util.enable_gradient_clipping(trainer.model, self.grad_clipping)
 
     @handle_event(Events.BACKWARD, priority=1000)
-    def rescale_gradients(self, trainer: "CallbackTrainer"):
+    def rescale_gradients(self, trainer):
         trainer.batch_grad_norm = training_util.rescale_gradients(trainer.model, self.grad_norm)

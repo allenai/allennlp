@@ -265,7 +265,9 @@ class BiaffineDependencyParser(Model):
         return output_dict
 
     @overrides
-    def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+    def make_output_human_readable(
+        self, output_dict: Dict[str, torch.Tensor]
+    ) -> Dict[str, torch.Tensor]:
 
         head_tags = output_dict.pop("head_tags").cpu().detach().numpy()
         heads = output_dict.pop("heads").cpu().detach().numpy()
