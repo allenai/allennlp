@@ -135,7 +135,9 @@ class SimpleSeq2Seq(Model):
 
         # Dense embedding of vocab words in the target space.
         target_embedding_dim = target_embedding_dim or source_embedder.get_output_dim()
-        self._target_embedder = Embedding(num_classes, target_embedding_dim)
+        self._target_embedder = Embedding(
+            num_embeddings=num_classes, embedding_dim=target_embedding_dim
+        )
 
         # Decoder output dim needs to be the same as the encoder output dim since we initialize the
         # hidden state of the decoder with the final hidden state of the encoder.
@@ -248,11 +250,13 @@ class SimpleSeq2Seq(Model):
         return output_dict
 
     @overrides
-    def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+    def make_output_human_readable(
+        self, output_dict: Dict[str, torch.Tensor]
+    ) -> Dict[str, torch.Tensor]:
         """
         Finalize predictions.
 
-        This method overrides `Model.decode`, which gets called after `Model.forward`, at test
+        This method overrides `Model.make_output_human_readable`, which gets called after `Model.forward`, at test
         time, to finalize predictions. The logic for the decoder part of the encoder-decoder lives
         within the `forward` method.
 

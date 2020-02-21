@@ -10,7 +10,7 @@ mypy==0.761
 black
 
 # For creating git precommit hooks
-pre-commit==2.0.1
+pre-commit==2.1.0
 
 # Allows generation of coverage reports with pytest.
 pytest-cov
@@ -25,9 +25,6 @@ matplotlib>=2.2.3
 # Required to run sanic tests
 aiohttp
 
-# Required to run plugin tests.
-pip>=20.0.1
-
 #### DOC-RELATED PACKAGES ####
 
 # YAML manipulation
@@ -36,9 +33,11 @@ ruamel.yaml
 mathy_pydoc>=0.6.7,<0.7.0
 markdown-include==0.5.1
 # Package for the material theme for mkdocs
-mkdocs-material==4.6.2
+mkdocs-material==4.6.3
 
 #### PACKAGE-UPLOAD PACKAGES ####
 
 # Pypi uploads
 twine>=1.11.0
+setuptools
+wheel

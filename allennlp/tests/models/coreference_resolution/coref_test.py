@@ -55,7 +55,7 @@ class CorefTest(ModelTestCase):
             "antecedent_indices": antecedent_indices,
             "predicted_antecedents": predicted_antecedents,
         }
-        output = self.model.decode(output_dict)
+        output = self.model.make_output_human_readable(output_dict)
 
         clusters = output["clusters"][0]
         gold1 = [(1, 2), (3, 4), (17, 80)]

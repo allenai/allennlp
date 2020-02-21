@@ -129,7 +129,9 @@ class CopyNetSeq2Seq(Model):
         # the weights for the selective read are simply the predicted probabilities
         # corresponding to each token in the source sentence that matches the target
         # token from the previous timestep.
-        self._target_embedder = Embedding(target_vocab_size, target_embedding_dim)
+        self._target_embedder = Embedding(
+            num_embeddings=target_vocab_size, embedding_dim=target_embedding_dim
+        )
         self._attention = attention
         self._input_projection_layer = Linear(
             target_embedding_dim + self.encoder_output_dim * 2, self.decoder_input_dim
@@ -869,7 +871,7 @@ class CopyNetSeq2Seq(Model):
         return predicted_tokens
 
     @overrides
-    def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, Any]:
+    def make_output_human_readable(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, Any]:
         """
         Finalize predictions.
 

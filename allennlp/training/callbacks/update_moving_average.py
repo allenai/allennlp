@@ -1,13 +1,8 @@
-from typing import TYPE_CHECKING
-
 from allennlp.common.params import Params
 from allennlp.models.model import Model
 from allennlp.training.callbacks.callback import Callback, handle_event
 from allennlp.training.callbacks.events import Events
 from allennlp.training.moving_average import MovingAverage
-
-if TYPE_CHECKING:
-    from allennlp.training.callback_trainer import CallbackTrainer
 
 
 @Callback.register("update_moving_average")
@@ -25,7 +20,7 @@ class UpdateMovingAverage(Callback):
         self.moving_average = moving_average
 
     @handle_event(Events.BATCH_END, priority=-1000)
-    def apply_moving_average(self, trainer: "CallbackTrainer") -> None:
+    def apply_moving_average(self, trainer) -> None:
         self.moving_average.apply(trainer.batch_num_total)
 
     @classmethod

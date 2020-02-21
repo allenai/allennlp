@@ -1,4 +1,4 @@
-from typing import Iterable, List, TYPE_CHECKING
+from typing import Iterable, List
 import logging
 
 import torch
@@ -10,9 +10,6 @@ from allennlp.training import util as training_util
 from allennlp.training.callbacks.callback import Callback, handle_event
 from allennlp.training.callbacks.events import Events
 from allennlp.training.moving_average import MovingAverage
-
-if TYPE_CHECKING:
-    from allennlp.training.callback_trainer import CallbackTrainer
 
 logger = logging.getLogger(__name__)
 
@@ -41,12 +38,12 @@ class Validate(Callback):
         self.moving_averages: List[MovingAverage] = []
 
     @handle_event(Events.TRAINING_START)
-    def set_validate(self, trainer: "CallbackTrainer"):
+    def set_validate(self, trainer):
 
         trainer.validate = True
 
     @handle_event(Events.TRAINING_START)
-    def collect_moving_averages(self, trainer: "CallbackTrainer"):
+    def collect_moving_averages(self, trainer):
         self.moving_averages = [
             getattr(callback, "moving_average")
             for callback in trainer.handler.callbacks()
@@ -54,7 +51,7 @@ class Validate(Callback):
         ]
 
     @handle_event(Events.VALIDATE)
-    def validate(self, trainer: "CallbackTrainer"):
+    def validate(self, trainer):
         # If the trainer has MovingAverage objects, use their weights for validation.
         for moving_average in self.moving_averages:
             moving_average.assign_average_value()

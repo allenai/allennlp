@@ -1,16 +1,16 @@
 from overrides import overrides
 
-import torch
 import torch.nn
 
 from allennlp.modules.seq2vec_encoders.seq2vec_encoder import Seq2VecEncoder
+from allennlp.nn.util import get_final_encoder_states
 
 
 @Seq2VecEncoder.register("cls_pooler")
 class ClsPooler(Seq2VecEncoder):
     """
     Just takes the first vector from a list of vectors (which in a transformer is typically the
-    [CLS] token) and returns it.
+    [CLS] token) and returns it.  For BERT, it's recommended to use `BertPooler` instead.
 
     # Parameters
 
@@ -20,11 +20,16 @@ class ClsPooler(Seq2VecEncoder):
         order to give the right values there, we need to know the embedding dimension.  If you're
         using this with a transformer from the `transformers` library, this can often be found with
         `model.config.hidden_size`, if you're not sure.
+    cls_is_last_token: bool, optional
+        The [CLS] token is the first token for most of the pretrained transformer models.
+        For some models such as XLNet, however, it is the last token, and we therefore need to
+        select at the end.
     """
 
-    def __init__(self, embedding_dim: int = None):
+    def __init__(self, embedding_dim: int = None, cls_is_last_token: bool = False):
         super().__init__()
         self._embedding_dim = embedding_dim
+        self._cls_is_last_token = cls_is_last_token
 
     @overrides
     def get_input_dim(self) -> int:
@@ -36,6 +41,11 @@ class ClsPooler(Seq2VecEncoder):
 
     @overrides
     def forward(self, tokens: torch.Tensor, mask: torch.Tensor = None):
-        # tokens is assumed to have shape (batch_size, sequence_length, embedding_dim).  We just
-        # want the first token for each instance in the batch.
-        return tokens[:, 0]
+        # tokens is assumed to have shape (batch_size, sequence_length, embedding_dim).
+        # mask is assumed to have shape (batch_size, sequence_length) with all 1s preceding all 0s.
+        if not self._cls_is_last_token:
+            return tokens[:, 0, :]
+        else:  # [CLS] at the end
+            if mask is None:
+                raise ValueError("Must provide mask for transformer models with [CLS] at the end.")
+            return get_final_encoder_states(tokens, mask)

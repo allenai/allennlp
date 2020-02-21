@@ -288,3 +288,37 @@ class TestCorefReader:
         # candidate spans are less than what we specified
         assert all(self.span_width >= len(x) > 0 for x in candidate_mentions)
         return candidate_mentions
+
+    def test_max_sentences(self):
+        conll_reader = ConllCorefReader(max_span_width=self.span_width)
+        instances = ensure_list(
+            conll_reader.read(str(AllenNlpTestCase.FIXTURES_ROOT / "coref" / "coref.gold_conll"))
+        )
+
+        limited_conll_reader = ConllCorefReader(max_span_width=self.span_width, max_sentences=2)
+        limited_instances = ensure_list(
+            limited_conll_reader.read(
+                str(AllenNlpTestCase.FIXTURES_ROOT / "coref" / "coref.gold_conll")
+            )
+        )
+
+        assert len(limited_instances) == len(instances) == 4
+
+        tokens_of = lambda instance: instance.fields["text"].tokens
+        text_of = lambda tokens: [token.text for token in tokens]
+        docs = [tokens_of(instance) for instance in instances]
+        limited_docs = [tokens_of(instance) for instance in limited_instances]
+
+        # Short ones; not truncated
+        assert limited_docs[1] == docs[1]
+        assert limited_docs[3] == docs[3]
+
+        # Truncation happened
+        assert len(limited_docs[0]) < len(docs[0])
+        assert len(limited_docs[2]) < len(docs[2])
+        assert "Disney" in text_of(docs[0]) and "Disney" not in text_of(limited_docs[0])
+        assert "tourism" in text_of(docs[2]) and "tourism" not in text_of(limited_docs[2])
+
+        # Truncated tokens are the prefixes
+        assert limited_docs[0] == docs[0][: len(limited_docs[0])]
+        assert limited_docs[2] == docs[2][: len(limited_docs[2])]

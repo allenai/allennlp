@@ -1,28 +1,25 @@
+import json
 import logging
-import collections
-from typing import Dict, List, Optional, Tuple, DefaultDict
+from typing import Dict, List, Optional, Tuple
 
 from overrides import overrides
 
 from allennlp.common.file_utils import cached_path
+from allennlp.data.dataset_readers.coreference_resolution.util import make_coref_instance
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.instance import Instance
 from allennlp.data.tokenizers import PretrainedTransformerTokenizer
 from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenIndexer
-from allennlp.data.dataset_readers.coreference_resolution.util import make_coref_instance
-from allennlp.data.dataset_readers.dataset_utils import Ontonotes
 
 logger = logging.getLogger(__name__)
 
 
-@DatasetReader.register("coref")
-class ConllCorefReader(DatasetReader):
+@DatasetReader.register("preco")
+class PrecoReader(DatasetReader):
     """
-    Reads a single CoNLL-formatted file. This is the same file format as used in the
-    :class:`~allennlp.data.dataset_readers.semantic_role_labelling.SrlReader`, but is preprocessed
-    to dump all documents into a single file per train, dev and test split. See
-    scripts/compile_coref_data.sh for more details of how to pre-process the Ontonotes 5.0 data
-    into the correct format.
+    Reads a single JSON-lines file for [the PreCo dataset](https://www.aclweb.org/anthology/D18-1016.pdf).
+    Each line contains a "sentences" key for a list of sentences and a "mention_clusters" key
+    for the clusters.
 
     Returns a `Dataset` where the `Instances` have four fields : `text`, a `TextField`
     containing the full document text, `spans`, a `ListField[SpanField]` of inclusive start and
@@ -67,33 +64,38 @@ class ConllCorefReader(DatasetReader):
         # if `file_path` is a URL, redirect to the cache
         file_path = cached_path(file_path)
 
-        ontonotes_reader = Ontonotes()
-        for sentences in ontonotes_reader.dataset_document_iterator(file_path):
-            clusters: DefaultDict[int, List[Tuple[int, int]]] = collections.defaultdict(list)
-
-            total_tokens = 0
-            for sentence in sentences:
-                for typed_span in sentence.coref_spans:
-                    # Coref annotations are on a _per sentence_
-                    # basis, so we need to adjust them to be relative
-                    # to the length of the document.
-                    span_id, (start, end) = typed_span
-                    clusters[span_id].append((start + total_tokens, end + total_tokens))
-                total_tokens += len(sentence.words)
-
-            yield self.text_to_instance([s.words for s in sentences], list(clusters.values()))
+        with open(file_path, "r") as preco_file:
+            for line in preco_file:
+                example = json.loads(line)
+                yield self.text_to_instance(example["sentences"], example["mention_clusters"])
 
     @overrides
     def text_to_instance(
         self,  # type: ignore
         sentences: List[List[str]],
-        gold_clusters: Optional[List[List[Tuple[int, int]]]] = None,
+        gold_clusters: Optional[List[List[Tuple[int, int, int]]]] = None,
     ) -> Instance:
+        sentence_offsets = [0]
+        for sentence in sentences[:-1]:
+            sent_length = len(sentence)
+            if sentence == [" "]:  # paragraph separator
+                sent_length = 0  # we ignore them
+            sentence_offsets.append(sentence_offsets[-1] + sent_length)
+
+        sentences = [sentence for sentence in sentences if sentence != [" "]]
+
+        # Convert (sent_idx, rel_start, rel_exclusive_end) to (abs_start, abs_inclusive_end)
+        for cluster in gold_clusters:
+            for mention_id, (sent_idx, start, end) in enumerate(cluster):
+                start = start + sentence_offsets[sent_idx]
+                end = end + sentence_offsets[sent_idx] - 1  # exclusive -> inclusive
+                cluster[mention_id] = (start, end)  # type: ignore
+
         return make_coref_instance(
             sentences,
             self._token_indexers,
             self._max_span_width,
-            gold_clusters,
+            gold_clusters,  # type: ignore
             self._wordpiece_modeling_tokenizer,
             self._max_sentences,
         )

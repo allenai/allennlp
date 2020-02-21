@@ -12,7 +12,7 @@ import torch
 from overrides import overrides
 from torch.nn.functional import embedding
 
-from allennlp.common import Tqdm, Registrable
+from allennlp.common import Tqdm
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.file_utils import cached_path, get_file_extension, is_url_or_existing_file
 from allennlp.data import Vocabulary
@@ -27,8 +27,8 @@ with warnings.catch_warnings():
 logger = logging.getLogger(__name__)
 
 
-@TokenEmbedder.register("embedding", constructor="from_vocab_or_file")
-class Embedding(TokenEmbedder, Registrable):
+@TokenEmbedder.register("embedding")
+class Embedding(TokenEmbedder):
     """
     A more featureful embedding module than the default in Pytorch.  Adds the ability to:
 
@@ -74,21 +74,22 @@ class Embedding(TokenEmbedder, Registrable):
         construct it in the original training. We store vocab_namespace used during the original
         training as an attribute, so that it can be retrieved during fine-tuning.
     pretrained_file : `str`, (optional, default=None)
-        Used to keep track of what is the source of the weights and loading more embeddings at test time.
-        **It does not load the weights from this pretrained_file.** For that purpose, use
-        `Embedding.from_params`.
+        Path to a file of word vectors to intialize the embedding matrix. It can be the
+        path to a local file or a URL of a (cached) remote file. Two formats are supported:
+            * hdf5 file - containing an embedding matrix in the form of a torch.Tensor;
+            * text file - an utf-8 encoded text file with space separated fields.
+    vocab : `Vocabulary` (optional, default = None)
+        Used to construct an embedding from a pretrained file.
 
     # Returns
 
     An Embedding module.
     """
 
-    default_implementation = "embedding"
-
     def __init__(
         self,
-        num_embeddings: int,
         embedding_dim: int,
+        num_embeddings: int = None,
         projection_dim: int = None,
         weight: torch.FloatTensor = None,
         padding_index: int = None,
@@ -97,10 +98,24 @@ class Embedding(TokenEmbedder, Registrable):
         norm_type: float = 2.0,
         scale_grad_by_freq: bool = False,
         sparse: bool = False,
-        vocab_namespace: str = None,
+        vocab_namespace: str = "tokens",
         pretrained_file: str = None,
+        vocab: Vocabulary = None,
     ) -> None:
         super().__init__()
+
+        if num_embeddings is None and vocab is None:
+            raise ConfigurationError(
+                "Embedding must be constructed with either num_embeddings or a vocabulary."
+            )
+
+        if num_embeddings is None:
+            num_embeddings = vocab.get_vocab_size(vocab_namespace)
+        else:
+            # If num_embeddings is present, set default namespace to None so that extend_vocab
+            # call doesn't misinterpret that some namespace was originally used.
+            vocab_namespace = None
+
         self.num_embeddings = num_embeddings
         self.padding_index = padding_index
         self.max_norm = max_norm
@@ -112,16 +127,44 @@ class Embedding(TokenEmbedder, Registrable):
 
         self.output_dim = projection_dim or embedding_dim
 
-        if weight is None:
+        if weight is not None and pretrained_file:
+            raise ConfigurationError(
+                "Embedding was constructed with both a weight and a pretrained file."
+            )
+
+        elif pretrained_file is not None:
+
+            if vocab is None:
+                raise ConfigurationError(
+                    "To construct an Embedding from a pretrained file, you must also pass a vocabulary."
+                )
+
+            # If we're loading a saved model, we don't want to actually read a pre-trained
+            # embedding file - the embeddings will just be in our saved weights, and we might not
+            # have the original embedding file anymore, anyway.
+
+            # TODO: having to pass tokens here is SUPER gross, but otherwise this breaks the
+            # extend_vocab method, which relies on the value of vocab_namespace being None
+            # to infer at what stage the embedding has been constructed. Phew.
+            weight = _read_pretrained_embeddings_file(
+                pretrained_file, embedding_dim, vocab, vocab_namespace or "tokens"
+            )
+            self.weight = torch.nn.Parameter(weight, requires_grad=trainable)
+
+        elif weight is not None:
+            self.weight = torch.nn.Parameter(weight, requires_grad=trainable)
+
+        else:
             weight = torch.FloatTensor(num_embeddings, embedding_dim)
             self.weight = torch.nn.Parameter(weight, requires_grad=trainable)
             torch.nn.init.xavier_uniform_(self.weight)
-        else:
-            if weight.size() != (num_embeddings, embedding_dim):
-                raise ConfigurationError(
-                    "A weight matrix was passed with contradictory embedding shapes."
-                )
-            self.weight = torch.nn.Parameter(weight, requires_grad=trainable)
+
+        # Whatever way we have constructed the embedding, it should be consistent with
+        # num_embeddings and embedding_dim.
+        if self.weight.size() != (num_embeddings, embedding_dim):
+            raise ConfigurationError(
+                "A weight matrix was passed with contradictory embedding shapes."
+            )
 
         if self.padding_index is not None:
             self.weight.data[self.padding_index].fill_(0)
@@ -267,90 +310,6 @@ class Embedding(TokenEmbedder, Registrable):
         device = self.weight.data.device
         extended_weight = torch.cat([self.weight.data, extra_weight.to(device)], dim=0)
         self.weight = torch.nn.Parameter(extended_weight, requires_grad=self.weight.requires_grad)
-
-    @classmethod
-    def from_vocab_or_file(
-        cls,
-        vocab: Vocabulary,
-        embedding_dim: int,
-        num_embeddings: int = None,
-        vocab_namespace: str = "tokens",
-        pretrained_file: str = None,
-        projection_dim: int = None,
-        trainable: bool = True,
-        padding_index: int = None,
-        max_norm: float = None,
-        norm_type: float = 2.0,
-        scale_grad_by_freq: bool = False,
-        sparse: bool = False,
-    ) -> "Embedding":
-        """
-        Similar to `__init__`, but does two functions on top of what's there: (1) if
-        `num_embeddings` is not given, it checks the vocabulary for how many embeddings to
-        construct; and (2) if a pretrained file is given, it loads weights from that file (while
-        looking at the given vocabulary) and passes those weights to `__init__`.
-
-        We need the vocabulary here to know how many items we need to embed, and we look for a
-        `vocab_namespace` key in the parameter dictionary to know which vocabulary to use.  If
-        you know beforehand exactly how many embeddings you need, or aren't using a vocabulary
-        mapping for the things getting embedded here, then you can pass in the `num_embeddings`
-        key directly, and the vocabulary will be ignored.
-
-        A file containing pretrained embeddings can be specified using the parameter
-        `"pretrained_file"`.
-        It can be the path to a local file or an URL of a (cached) remote file.
-        Two formats are supported:
-
-            * hdf5 file - containing an embedding matrix in the form of a torch.Tensor;
-
-            * text file - an utf-8 encoded text file with space separated fields::
-
-                    [word] [dim 1] [dim 2] ...
-
-              The text file can eventually be compressed with gzip, bz2, lzma or zip.
-              You can even select a single file inside an archive containing multiple files
-              using the URI::
-
-                    "(archive_uri)#file_path_inside_the_archive"
-
-              where `archive_uri` can be a file system path or a URL. For example::
-
-                    "(https://nlp.stanford.edu/data/glove.twitter.27B.zip)#glove.twitter.27B.200d.txt"
-        """
-
-        if num_embeddings is None:
-            num_embeddings = vocab.get_vocab_size(vocab_namespace)
-        else:
-            # If num_embeddings is present, set default namespace to None so that extend_vocab
-            # call doesn't misinterpret that some namespace was originally used.
-            vocab_namespace = None
-
-        if pretrained_file:
-            # If we're loading a saved model, we don't want to actually read a pre-trained
-            # embedding file - the embeddings will just be in our saved weights, and we might not
-            # have the original embedding file anymore, anyway.
-            weight = _read_pretrained_embeddings_file(
-                pretrained_file, embedding_dim, vocab, vocab_namespace
-            )
-        else:
-            weight = None
-
-        return cls(
-            num_embeddings=num_embeddings,
-            embedding_dim=embedding_dim,
-            projection_dim=projection_dim,
-            weight=weight,
-            padding_index=padding_index,
-            trainable=trainable,
-            max_norm=max_norm,
-            norm_type=norm_type,
-            scale_grad_by_freq=scale_grad_by_freq,
-            sparse=sparse,
-            vocab_namespace=vocab_namespace,
-        )
-
-
-Embedding.register("embedding", constructor="from_vocab_or_file")(Embedding)
 
 
 def _read_pretrained_embeddings_file(

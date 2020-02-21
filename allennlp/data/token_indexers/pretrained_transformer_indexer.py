@@ -181,7 +181,7 @@ class PretrainedTransformerIndexer(TokenIndexer):
 
     @overrides
     def as_padded_tensor_dict(
-        self, tokens: IndexedTokenList, padding_lengths: Dict[str, int],
+        self, tokens: IndexedTokenList, padding_lengths: Dict[str, int]
     ) -> Dict[str, torch.Tensor]:
         # Different transformers use different padding values for tokens, but for mask and type id, the padding
         # value is always 0.
