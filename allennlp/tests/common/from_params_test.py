@@ -3,7 +3,7 @@ from typing import Dict, Optional, List, Set, Tuple, Union
 import pytest
 import torch
 
-from allennlp.common import Params
+from allennlp.common import Lazy, Params
 from allennlp.common.from_params import FromParams, takes_arg, remove_optional, create_kwargs
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import DatasetReader, Tokenizer
@@ -660,3 +660,23 @@ class TestFromParams(AllenNlpTestCase):
         assert instance.a == "a_value"
         assert instance.b == "b_value"
         assert instance.c == "c_value"
+
+    def test_lazy_construction_can_happen_multiple_times(self):
+        test_string = "this is a test"
+        extra_string = "extra string"
+
+        class ConstructedObject(FromParams):
+            def __init__(self, string: str, extra: str):
+                self.string = string
+                self.extra = extra
+
+        class Testing(FromParams):
+            def __init__(self, lazy_object: Lazy[ConstructedObject]):
+                first_time = lazy_object.construct(extra=extra_string)
+                second_time = lazy_object.construct(extra=extra_string)
+                assert first_time.string == test_string
+                assert first_time.extra == extra_string
+                assert second_time.string == test_string
+                assert second_time.extra == extra_string
+
+        Testing.from_params(Params({"lazy_object": {"string": test_string}}))
