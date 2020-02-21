@@ -465,7 +465,7 @@ def construct_arg(
             # We do this by constructing a new dictionary, instead of mutating subextras, just in
             # case this constructor is called multiple times.
             constructor_extras = {**subextras, **kwargs}
-            return value_cls.from_params(params=popped_params.duplicate(), **constructor_extras)
+            return value_cls.from_params(params=deepcopy(popped_params), **constructor_extras)
 
         return Lazy(constructor)  # type: ignore
     else:
