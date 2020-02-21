@@ -871,7 +871,7 @@ class CopyNetSeq2Seq(Model):
         return predicted_tokens
 
     @overrides
-    def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, Any]:
+    def make_output_human_readable(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, Any]:
         """
         Finalize predictions.
 

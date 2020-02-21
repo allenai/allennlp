@@ -37,7 +37,8 @@ class NextTokenLM(Model):
         Used to "contextualize" the embeddings.  This is optional because the contextualization
         might actually be done in the text field embedder.
     target_namespace : `str`, optional (default='bert')
-        Namespace to use to convert predicted token ids to strings in `Model.decode`.
+        Namespace to use to convert predicted token ids to strings in
+        `Model.make_output_human_readable`.
     dropout : `float`, optional (default=0.0)
         If specified, dropout is applied to the contextualized embeddings before computation of
         the softmax. The contextualized embeddings themselves are returned without dropout.
@@ -112,7 +113,9 @@ class NextTokenLM(Model):
         return {"perplexity": self._perplexity.get_metric(reset=reset)}
 
     @overrides
-    def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+    def make_output_human_readable(
+        self, output_dict: Dict[str, torch.Tensor]
+    ) -> Dict[str, torch.Tensor]:
         top_words = []
         for instance_indices in output_dict["top_indices"]:
             top_words.append(
