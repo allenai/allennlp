@@ -18,4 +18,4 @@ class TestTestInstall(AllenNlpTestCase):
         """
         project_root = _get_module_root()
         assert os.path.exists(os.path.join(project_root, "tests"))
-        assert os.path.exists(os.path.join(project_root, "run.py"))
+        assert os.path.exists(os.path.join(project_root, "__main__.py"))
