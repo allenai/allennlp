@@ -7,7 +7,6 @@ from allennlp.common.testing import ModelTestCase
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import Params
 from allennlp.data.dataset_readers import DatasetReader
-from allennlp.data.iterators import BasicIterator
 from allennlp.data.samplers import DataLoader
 from allennlp.models import Model
 from allennlp.training import Trainer, TrainerBase
@@ -94,7 +93,9 @@ class SimpleTaggerRegularizationTest(ModelTestCase):
         self.set_up_model(param_file, self.FIXTURES_ROOT / "data" / "sequence_tagging.tsv")
         params = Params.from_file(param_file)
         self.reader = DatasetReader.from_params(params["dataset_reader"])
-        self.data_loader = DataLoader.from_params(dataset=self.instances, params=params["data_loader"])
+        self.data_loader = DataLoader.from_params(
+            dataset=self.instances, params=params["data_loader"]
+        )
         self.trainer = TrainerBase.from_params(
             model=self.model,
             data_loader=self.data_loader,
