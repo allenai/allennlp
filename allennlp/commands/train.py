@@ -549,13 +549,13 @@ class TrainModel(Registrable):
         dataset_reader: DatasetReader,
         train_data_path: str,
         model: Lazy[Model],
-        data_loader: DataLoader,
+        data_loader: Lazy[DataLoader],
         trainer: Lazy[TrainerBase],
         vocabulary: Lazy[Vocabulary] = None,
         datasets_for_vocab_creation: List[str] = None,
         validation_dataset_reader: DatasetReader = None,
         validation_data_path: str = None,
-        validation_data_loader: DataLoader = None,
+        validation_data_loader: Lazy[DataLoader] = None,
         test_data_path: str = None,
         evaluate_on_test: bool = False,
     ) -> "TrainModel":
@@ -631,6 +631,7 @@ class TrainModel(Registrable):
             validation_data_path=validation_data_path,
             test_data_path=test_data_path,
         )
+
         if datasets_for_vocab_creation:
             for key in datasets_for_vocab_creation:
                 if key not in datasets:
@@ -658,18 +659,17 @@ class TrainModel(Registrable):
         for dataset in datasets.values():
             dataset.index_with(model_.vocab)
 
+        data_loader_ = data_loader.construct(dataset=datasets["train"])
         validation_data_loader = validation_data_loader or data_loader
-        data_loader_ = data_loader.construct(datasets["train"])
         validation_data = datasets.get("validation")
-
         if validation_data is not None:
-            validation_data_loader_ = validation_data_loader.construct(validation_data)
+            validation_data_loader_ = validation_data_loader.construct(dataset=validation_data)
         else:
             validation_data_loader_ = None
 
         test_data = datasets.get("test")
         if test_data is not None:
-            test_data_loader = validation_data_loader.construct(test_data)
+            test_data_loader = validation_data_loader.construct(dataset=test_data)
         else:
             test_data_loader = None
 

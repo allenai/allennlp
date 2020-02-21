@@ -108,8 +108,8 @@ class ModelTestCase(AllenNlpTestCase):
         data_loader_params["shuffle"] = False
         data_loader_params2 = Params(copy.deepcopy(data_loader_params.as_dict()))
 
-        data_loader = DataLoader.from_params(data_loader_params).construct(model_dataset)
-        data_loader2 = DataLoader.from_params(data_loader_params2).construct(loaded_dataset)
+        data_loader = DataLoader.from_params(dataset=model_dataset, params=data_loader_params)
+        data_loader2 = DataLoader.from_params(dataset=loaded_dataset, params=data_loader_params2)
 
         # We'll check that even if we index the dataset with each model separately, we still get
         # the same result out.

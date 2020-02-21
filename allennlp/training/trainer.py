@@ -636,6 +636,7 @@ class Trainer(TrainerBase):
                         world_size=self._world_size,
                         cuda_device=[self.cuda_device],
                     )
+
                     # Check validation metric for early stopping
                     this_epoch_val_metric = val_metrics[self._validation_metric]
                     self._metric_tracker.add_metric(this_epoch_val_metric)
