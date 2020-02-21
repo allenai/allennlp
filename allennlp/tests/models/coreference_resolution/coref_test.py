@@ -12,7 +12,14 @@ class CorefTest(ModelTestCase):
         )
 
     def test_coref_model_can_train_save_and_load(self):
-        self.ensure_model_can_train_save_and_load(self.param_file)
+        for coarse_to_fine in (True, False):
+            self._test_coref_model_can_train_save_and_load(coarse_to_fine)
+
+    def _test_coref_model_can_train_save_and_load(self, coarse_to_fine: bool):
+        overrides = '{"model.coarse_to_fine": ' + f"{str(coarse_to_fine).lower()}" + "}"
+        self.ensure_model_can_train_save_and_load(self.param_file, overrides=overrides)
+        self.tearDown()
+        self.setUp()
 
     def test_coref_bert_model_can_train_save_and_load(self):
         self.set_up_model(
