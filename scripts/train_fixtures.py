@@ -66,17 +66,17 @@ if __name__ == "__main__":
             train_fixture_gpu("allennlp/tests/fixtures/srl/")
         else:
             models = [
-                ("basic_classifier", "experiment_seq2seq.jsonnet"),
-                "biaffine_dependency_parser",
-                "constituency_parser",
-                "coref",
-                "decomposable_attention",
+                #("basic_classifier", "experiment_seq2seq.jsonnet"),
+                #"biaffine_dependency_parser",
+                #"constituency_parser",
+                #"coref",
+                #"decomposable_attention",
                 "encoder_decoder/composed_seq2seq",
                 "encoder_decoder/simple_seq2seq",
                 "encoder_decoder/copynet_seq2seq",
-                "esim",
-                "simple_tagger_with_span_f1",
-                "srl",
+                #"esim",
+                #"simple_tagger_with_span_f1",
+                #"srl",
             ]
             for model in models:
                 if model == "constituency_parser":
