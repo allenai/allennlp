@@ -660,16 +660,23 @@ class TrainModel(Registrable):
             dataset.index_with(model_.vocab)
 
         data_loader_ = data_loader.construct(dataset=datasets["train"])
-        validation_data_loader = validation_data_loader or data_loader
         validation_data = datasets.get("validation")
         if validation_data is not None:
+            # Because of the way Lazy[T] works, we can't check it's existence
+            # _before_ we've tried to construct it. It returns None if it is not
+            # present, so we try to construct it first, and then afterward back off
+            # to the data_loader configuration used for training if it returns None.
             validation_data_loader_ = validation_data_loader.construct(dataset=validation_data)
+            if validation_data_loader_ is None:
+                validation_data_loader_ = data_loader.construct(dataset=validation_data)
         else:
             validation_data_loader_ = None
 
         test_data = datasets.get("test")
         if test_data is not None:
             test_data_loader = validation_data_loader.construct(dataset=test_data)
+            if test_data_loader is None:
+                test_data_loader = data_loader.construct(dataset=test_data)
         else:
             test_data_loader = None
 
