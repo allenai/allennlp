@@ -1,4 +1,4 @@
-from typing import List, Optional, TYPE_CHECKING
+from typing import List, Optional
 import traceback
 import time
 
@@ -9,9 +9,6 @@ from allennlp.training.checkpointer import Checkpointer
 from allennlp.training.callbacks.callback import Callback, handle_event
 from allennlp.training.callbacks.events import Events
 from allennlp.training.moving_average import MovingAverage
-
-if TYPE_CHECKING:
-    from allennlp.training.callback_trainer import CallbackTrainer
 
 
 @Callback.register("checkpoint")
@@ -58,7 +55,7 @@ class Checkpoint(Callback):
         )
 
     @handle_event(Events.TRAINING_START)
-    def collect_moving_averages(self, trainer: "CallbackTrainer"):
+    def collect_moving_averages(self, trainer):
         self.moving_averages = [
             getattr(callback, "moving_average")
             for callback in trainer.handler.callbacks()
@@ -66,17 +63,17 @@ class Checkpoint(Callback):
         ]
 
     @handle_event(Events.BATCH_END)
-    def save_model_at_batch_end(self, trainer: "CallbackTrainer"):
+    def save_model_at_batch_end(self, trainer):
         if self._should_save_at_batch_end():
             self.last_save_time = time.time()
             epoch = f"{trainer.epoch_number}.{training_util.time_to_str(int(self.last_save_time))}"
             self._save_checkpoint(epoch, trainer)
 
     @handle_event(Events.EPOCH_END, priority=1000)
-    def save_model_at_epoch_end(self, trainer: "CallbackTrainer"):
+    def save_model_at_epoch_end(self, trainer):
         self._save_checkpoint(f"{trainer.epoch_number}", trainer)
 
-    def _save_checkpoint(self, epoch: str, trainer: "CallbackTrainer"):
+    def _save_checkpoint(self, epoch: str, trainer):
         # If the trainer has MovingAverage objects, use their weights for checkpointing.
         for moving_average in self.moving_averages:
             moving_average.assign_average_value()
@@ -110,7 +107,7 @@ class Checkpoint(Callback):
             moving_average.restore()
 
     @handle_event(Events.TRAINING_START)
-    def restore_checkpoint(self, trainer: "CallbackTrainer"):
+    def restore_checkpoint(self, trainer):
         # Restores the model and training state from the last saved checkpoint.
         # This includes an epoch count and optimizer state, which is serialized separately
         # from model parameters. This function should only be used to continue training -
@@ -157,7 +154,7 @@ class Checkpoint(Callback):
             trainer.epoch_number = int(training_state["epoch"].split(".")[0]) + 1
 
     @handle_event(Events.TRAINING_END)
-    def load_best_model_state(self, trainer: "CallbackTrainer"):
+    def load_best_model_state(self, trainer):
         # Load the best model state before returning
         best_model_state = self.checkpointer.best_model_state()
         if best_model_state:

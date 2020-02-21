@@ -1,12 +1,8 @@
-from typing import TYPE_CHECKING
-
 import requests
 
 from allennlp.training.callbacks.callback import Callback, handle_event
 from allennlp.training.callbacks.events import Events
 
-if TYPE_CHECKING:
-    from allennlp.training.callback_trainer import CallbackTrainer
 
 DEFAULT_MESSAGE = "Your experiment has finished running!"
 
@@ -32,6 +28,6 @@ class PostToUrl(Callback):
         self.json = {key: message}
 
     @handle_event(Events.TRAINING_END)
-    def post_to_url(self, trainer: "CallbackTrainer"):
+    def post_to_url(self, trainer):
 
         requests.post(self.url, json=self.json)
