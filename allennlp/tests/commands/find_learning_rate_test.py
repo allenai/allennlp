@@ -180,7 +180,7 @@ class TestSearchLearningRate(AllenNlpTestCase):
         train_data = all_datasets["train"]
         train_data.index_with(vocab)
 
-        data_loader = DataLoader.from_params(dataset=train_data, params=params.pop("data_loader"))
+        data_loader = DataLoader.from_params(params.pop("data_loader")).construct(train_data)
         trainer_params = params.pop("trainer")
         serialization_dir = os.path.join(self.TEST_DIR, "test_search_learning_rate")
 

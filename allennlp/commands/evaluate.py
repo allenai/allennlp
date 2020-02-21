@@ -179,7 +179,7 @@ def evaluate_from_args(args: argparse.Namespace) -> Dict[str, Any]:
         data_loader_params = config.pop("data_loader")
     if args.batch_size:
         data_loader_params["batch_size"] = args.batch_size
-    data_loader = DataLoader.from_params(dataset=instances, params=data_loader_params)
+    data_loader = DataLoader.from_params(data_loader_params).construct(instances)
 
     metrics = evaluate(model, data_loader, args.cuda_device, args.batch_weight_key)
 

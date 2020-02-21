@@ -196,15 +196,16 @@ def allennlp_collocate(batch):
     batch = AllennlpBatch(batch)
     return batch.as_tensor_dict(batch.get_padding_lengths())
 
+from allennlp.common.from_params import FromParams
 
-class DataLoader(Registrable, data.DataLoader):
+class DataLoader(FromParams):
+
     def __init__(
         self,
-        dataset: data.Dataset,
         batch_size: int = 1,
         shuffle: bool = False,
-        sampler: Lazy[Sampler] = None,
-        batch_sampler: Lazy[BatchSampler] = None,
+        sampler: Sampler = None,
+        batch_sampler: BatchSampler = None,
         num_workers: int = 0,
         collate_fn=None,
         pin_memory: bool = False,
@@ -214,27 +215,40 @@ class DataLoader(Registrable, data.DataLoader):
         multiprocessing_context: str = None,
     ):
 
-        collate_fn = allennlp_collocate
-        if batch_sampler is not None:
-            batch_sampler_ = batch_sampler.construct(data_source=dataset)
-        else:
-            batch_sampler_ = None
-        if sampler is not None:
-            sampler_ = sampler.construct(data_source=dataset)
-        else:
-            sampler_ = None
+        self.batch_size = batch_size
+        self.shuffle = shuffle
+        self.partially_constructed_sampler = sampler
+        self.partially_constructed_batch_sampler = batch_sampler
+        self.num_workers = num_workers
+        self.pin_memory = pin_memory
+        self.drop_last = drop_last
+        self.timeout = timeout
+        self.worker_init_fn = worker_init_fn
+        self.multiprocessing_context = multiprocessing_context
 
-        super().__init__(
+    def construct(self, dataset: data.Dataset) -> data.DataLoader:
+
+        collate_fn = allennlp_collocate
+        if self.partially_constructed_batch_sampler is not None:
+            batch_sampler = self.partially_constructed_batch_sampler.construct(data_source=dataset)
+        else:
+            batch_sampler = None
+        if self.partially_constructed_sampler is not None:
+            sampler = self.partially_constructed_sampler.construct(data_source=dataset)
+        else:
+            sampler = None
+
+        data.DataLoader(
             dataset=dataset,
-            batch_size=batch_size,
-            shuffle=shuffle,
-            sampler=sampler_,
-            batch_sampler=batch_sampler_,
-            num_workers=num_workers,
+            batch_size=self.batch_size,
+            shuffle=self.shuffle,
+            sampler=sampler,
+            batch_sampler=batch_sampler,
+            num_workers=self.num_workers,
             collate_fn=collate_fn,
-            pin_memory=pin_memory,
-            drop_last=drop_last,
-            timeout=timeout,
-            worker_init_fn=worker_init_fn,
-            multiprocessing_context=multiprocessing_context,
+            pin_memory=self.pin_memory,
+            drop_last=self.drop_last,
+            timeout=self.timeout,
+            worker_init_fn=self.worker_init_fn,
+            multiprocessing_context=self.multiprocessing_context,
         )

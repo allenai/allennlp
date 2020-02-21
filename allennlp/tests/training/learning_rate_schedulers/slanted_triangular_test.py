@@ -120,7 +120,7 @@ class SlantedTriangularTest(AllenNlpTestCase):
             optimizer=Lazy(lambda **kwargs: optim),
             serialization_dir=self.TEST_DIR,
             params=params,
-            data_loader=DataLoader(instances, batch_size=10),
+            data_loader=torch.utils.data.DataLoader(instances, batch_size=10),
         )
         assert isinstance(trainer._learning_rate_scheduler, SlantedTriangular)
 
@@ -150,7 +150,7 @@ class SlantedTriangularTest(AllenNlpTestCase):
             optimizer=Lazy(lambda **kwargs: optim),
             serialization_dir=self.TEST_DIR,
             params=params,
-            data_loader=DataLoader(instances, batch_size=10),
+            data_loader=torch.utils.data.DataLoader(instances, batch_size=10),
         )
         assert trainer._learning_rate_scheduler.num_epochs == 3
 
