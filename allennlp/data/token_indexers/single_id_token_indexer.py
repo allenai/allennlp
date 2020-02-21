@@ -83,7 +83,7 @@ class SingleIdTokenIndexer(TokenIndexer):
             text = self._get_feature_value(token)
             if self.namespace is None:
                 # We could have a check here that `text` is an int; not sure it's worth it.
-                indices.append(text)
+                indices.append(text)  # type: ignore
             else:
                 if self.lowercase_tokens:
                     text = text.lower()

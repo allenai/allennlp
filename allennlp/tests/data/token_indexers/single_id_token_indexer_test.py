@@ -73,8 +73,8 @@ class TestSingleIdTokenIndexer(AllenNlpTestCase):
         tokens = tokenizer.tokenize("This is a sentence.")
         tokens = [t for t in tokens] + [Token("</S>")]
         vocab = Vocabulary()
-        root_index = vocab.add_token_to_namespace("ROOT", namespace="dep_labels")
-        none_index = vocab.add_token_to_namespace("NONE", namespace="dep_labels")
+        vocab.add_token_to_namespace("ROOT", namespace="dep_labels")
+        vocab.add_token_to_namespace("NONE", namespace="dep_labels")
         indexer = SingleIdTokenIndexer(namespace="dep_labels", feature_name="dep_")
         with pytest.raises(ValueError):
             indexer.tokens_to_indices([tokens[-1]], vocab)
