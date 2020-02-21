@@ -37,7 +37,7 @@ class FBetaMeasure(Metric):
     beta : `float`, optional (default = 1.0)
         The strength of recall versus precision in the F-score.
 
-    average : string, [None (default), 'micro', 'macro']
+    average : string, [None (default), 'micro', 'macro', 'weighted']
         If `None`, the scores for each class are returned. Otherwise, this
         determines the type of averaging performed on the data:
 
@@ -47,23 +47,28 @@ class FBetaMeasure(Metric):
         `'macro'`:
             Calculate metrics for each label, and find their unweighted mean.
             This does not take label imbalance into account.
+        `'weighted'`:
+            Calculate metrics for each label, and find their average weighted
+            by support (the number of true instances for each label). This
+            alters 'macro' to account for label imbalance; it can result in an
+            F-score that is not between precision and recall.
 
     labels: list, optional
         The set of labels to include and their order if `average is None`.
         Labels present in the data can be excluded, for example to calculate a
         multi-class average ignoring a majority negative class. Labels not present
-        in the data will result in 0 components in a macro average.
+        in the data will result in 0 components in a macro or weighted average.
 
     """
 
     def __init__(self, beta: float = 1.0, average: str = None, labels: List[int] = None) -> None:
-        average_options = (None, "micro", "macro")
+        average_options = {None, "micro", "macro", "weighted"}
         if average not in average_options:
             raise ConfigurationError(f"`average` has to be one of {average_options}.")
         if beta <= 0:
             raise ConfigurationError("`beta` should be >0 in the F-beta score.")
         if labels is not None and len(labels) == 0:
-            raise ConfigurationError("`labels` cannot be an empty list ")
+            raise ConfigurationError("`labels` cannot be an empty list.")
         self._beta = beta
         self._average = average
         self._labels = labels
@@ -198,6 +203,12 @@ class FBetaMeasure(Metric):
             precision = precision.mean()
             recall = recall.mean()
             fscore = fscore.mean()
+        elif self._average == "weighted":
+            weights = true_sum
+            weights_sum = true_sum.sum()
+            precision = _prf_divide((weights * precision).sum(), weights_sum)
+            recall = _prf_divide((weights * recall).sum(), weights_sum)
+            fscore = _prf_divide((weights * fscore).sum(), weights_sum)
 
         if reset:
             self.reset()
