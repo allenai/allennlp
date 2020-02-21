@@ -18,7 +18,7 @@ class SingleIdTokenIndexer(TokenIndexer):
 
     # Parameters
 
-    namespace : `str`, optional (default=`tokens`)
+    namespace : `Optional[str]`, optional (default=`tokens`)
         We will use this namespace in the :class:`Vocabulary` to map strings to indices.  If you
         explicitly pass in `None` here, we will skip indexing and vocabulary lookups.  This means
         that the `feature_name` you use must correspond to an integer value (like `text_id`, for
@@ -48,7 +48,7 @@ class SingleIdTokenIndexer(TokenIndexer):
 
     def __init__(
         self,
-        namespace: str = "tokens",
+        namespace: Optional[str] = "tokens",
         lowercase_tokens: bool = False,
         start_tokens: List[str] = None,
         end_tokens: List[str] = None,
