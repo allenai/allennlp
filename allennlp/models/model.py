@@ -123,24 +123,22 @@ class Model(torch.nn.Module, Registrable):
 
     def forward_on_instance(self, instance: Instance) -> Dict[str, numpy.ndarray]:
         """
-        Takes an [`Instance`](../data/instance.md), which typically has raw text in it,
-        converts that text into arrays using this model's [`Vocabulary`](../data/vocabulary.md),
-        passes those arrays through `self.forward()` and `self.decode()` (which by default does nothing)
-        and returns the result.  Before returning the result, we convert any
+        Takes an [`Instance`](../data/instance.md), which typically has raw text in it, converts
+        that text into arrays using this model's [`Vocabulary`](../data/vocabulary.md), passes those
+        arrays through `self.forward()` and `self.make_output_human_readable()` (which by default
+        does nothing) and returns the result.  Before returning the result, we convert any
         `torch.Tensors` into numpy arrays and remove the batch dimension.
         """
         return self.forward_on_instances([instance])[0]
 
     def forward_on_instances(self, instances: List[Instance]) -> List[Dict[str, numpy.ndarray]]:
         """
-        Takes a list of `Instances`, converts that text into
-        arrays using this model's `Vocabulary`, passes those arrays through
-        `self.forward()` and `self.decode()` (which by default does nothing)
-        and returns the result.  Before returning the result, we convert any
-        `torch.Tensors` into numpy arrays and separate the
-        batched output into a list of individual dicts per instance. Note that typically
-        this will be faster on a GPU (and conditionally, on a CPU) than repeated calls to
-        `forward_on_instance`.
+        Takes a list of `Instances`, converts that text into arrays using this model's `Vocabulary`,
+        passes those arrays through `self.forward()` and `self.make_output_human_readable()` (which
+        by default does nothing) and returns the result.  Before returning the result, we convert
+        any `torch.Tensors` into numpy arrays and separate the batched output into a list of
+        individual dicts per instance. Note that typically this will be faster on a GPU (and
+        conditionally, on a CPU) than repeated calls to `forward_on_instance`.
 
         # Parameters
 
@@ -157,7 +155,7 @@ class Model(torch.nn.Module, Registrable):
             dataset = Batch(instances)
             dataset.index_instances(self.vocab)
             model_input = util.move_to_device(dataset.as_tensor_dict(), cuda_device)
-            outputs = self.decode(self(**model_input))
+            outputs = self.make_output_human_readable(self(**model_input))
 
             instance_separated_output: List[Dict[str, numpy.ndarray]] = [
                 {} for _ in dataset.instances
@@ -180,19 +178,18 @@ class Model(torch.nn.Module, Registrable):
                     instance_output[name] = batch_element
             return instance_separated_output
 
-    def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+    def make_output_human_readable(
+        self, output_dict: Dict[str, torch.Tensor]
+    ) -> Dict[str, torch.Tensor]:
         """
-        Takes the result of `forward` and runs inference / decoding / whatever
-        post-processing you need to do your model.  The intent is that `model.forward()` should
-        produce potentials or probabilities, and then `model.decode()` can take those results and
-        run some kind of beam search or constrained inference or whatever is necessary.  This does
-        not handle all possible decoding use cases, but it at least handles simple kinds of
-        decoding.
+        Takes the result of `forward` and makes it human readable.  Most of the time, the only thing
+        this method does is convert tokens / predicted labels from tensors to strings that humans
+        might actually understand.  Somtimes you'll also do an argmax or something in here, too, but
+        that most often happens in `Model.forward`, before you compute your metrics.
 
         This method `modifies` the input dictionary, and also `returns` the same dictionary.
 
-        By default in the base class we do nothing.  If your model has some special decoding step,
-        override this method.
+        By default in the base class we do nothing.
         """
 
         return output_dict

@@ -227,7 +227,9 @@ class GraphParser(Model):
         return output_dict
 
     @overrides
-    def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+    def make_output_human_readable(
+        self, output_dict: Dict[str, torch.Tensor]
+    ) -> Dict[str, torch.Tensor]:
         arc_tag_probs = output_dict["arc_tag_probs"].cpu().detach().numpy()
         arc_probs = output_dict["arc_probs"].cpu().detach().numpy()
         mask = output_dict["mask"]
