@@ -114,7 +114,7 @@ class ModelTestCase(AllenNlpTestCase):
         # the same result out.
         model_batch = next(iter(data_loader))
 
-        loaded_batch = next((iter(data_loader2)))
+        loaded_batch = next(iter(data_loader2))
 
         # Check gradients are None for non-trainable parameters and check that
         # trainable parameters receive some gradient if they are trainable.
