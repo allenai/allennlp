@@ -1719,7 +1719,7 @@ def masked_topk(
     """
     Extracts the top-k items along a certain dimension. This is similar to `torch.topk` except:
     (1) we allow of a `mask` that makes the function not consider certain elements;
-    (2) the returned top input, mask, and indices are sorted in their original order in the input.
+    (2) the returned top input, mask, and indices are sorted in their original order in the input;
     (3) May use the same k for all dimensions, or different k for each.
 
     # Parameters
