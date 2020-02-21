@@ -31,7 +31,7 @@ class SimpleTaggerTest(ModelTestCase):
     def test_forward_pass_runs_correctly(self):
         training_tensors = self.dataset.as_tensor_dict()
         output_dict = self.model(**training_tensors)
-        output_dict = self.model.decode(output_dict)
+        output_dict = self.model.make_output_human_readable(output_dict)
         class_probs = output_dict["class_probabilities"][0].data.numpy()
         numpy.testing.assert_almost_equal(numpy.sum(class_probs, -1), numpy.array([1, 1, 1, 1]))
 
