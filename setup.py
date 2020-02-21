@@ -124,7 +124,7 @@ setup(
         "semantic_version",
         "dataclasses;python_version<'3.7'",
     ],
-    entry_points={"console_scripts": ["allennlp=allennlp.run:run"]},
+    entry_points={"console_scripts": ["allennlp=allennlp.__main__:run"]},
     setup_requires=setup_requirements,
     # For running via `python setup.py test`.
     tests_require=["pytest", "flaky", "responses>=0.7", "semantic_version"],
