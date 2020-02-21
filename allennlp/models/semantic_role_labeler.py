@@ -86,7 +86,9 @@ class SemanticRoleLabeler(Model):
 
         self.encoder = encoder
         # There are exactly 2 binary features for the verb predicate embedding.
-        self.binary_feature_embedding = Embedding(2, binary_feature_dim)
+        self.binary_feature_embedding = Embedding(
+            num_embeddings=2, embedding_dim=binary_feature_dim
+        )
         self.tag_projection_layer = TimeDistributed(
             Linear(self.encoder.get_output_dim(), self.num_classes)
         )
@@ -166,7 +168,7 @@ class SemanticRoleLabeler(Model):
         output_dict = {"logits": logits, "class_probabilities": class_probabilities}
         # We need to retain the mask in the output dictionary
         # so that we can crop the sequences to remove padding
-        # when we do viterbi inference in self.decode.
+        # when we do viterbi inference in self.make_output_human_readable.
         output_dict["mask"] = mask
 
         if tags is not None:
@@ -178,10 +180,10 @@ class SemanticRoleLabeler(Model):
                     example_metadata["verb_index"] for example_metadata in metadata
                 ]
                 batch_sentences = [example_metadata["words"] for example_metadata in metadata]
-                # Get the BIO tags from decode()
+                # Get the BIO tags from make_output_human_readable()
                 # TODO (nfliu): This is kind of a hack, consider splitting out part
-                # of decode() to a separate function.
-                batch_bio_predicted_tags = self.decode(output_dict).pop("tags")
+                # of make_output_human_readable() to a separate function.
+                batch_bio_predicted_tags = self.make_output_human_readable(output_dict).pop("tags")
                 batch_conll_predicted_tags = [
                     convert_bio_tags_to_conll_format(tags) for tags in batch_bio_predicted_tags
                 ]
@@ -206,7 +208,9 @@ class SemanticRoleLabeler(Model):
         return output_dict
 
     @overrides
-    def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+    def make_output_human_readable(
+        self, output_dict: Dict[str, torch.Tensor]
+    ) -> Dict[str, torch.Tensor]:
         """
         Does constrained viterbi decoding on class probabilities output in :func:`forward`.  The
         constraint simply specifies that the output tags must be a valid BIO sequence.  We add a

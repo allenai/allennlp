@@ -254,7 +254,9 @@ class SpanConstituencyParser(Model):
         return output_dict
 
     @overrides
-    def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+    def make_output_human_readable(
+        self, output_dict: Dict[str, torch.Tensor]
+    ) -> Dict[str, torch.Tensor]:
         """
         Constructs an NLTK `Tree` given the scored spans. We also switch to exclusive
         span ends when constructing the tree representation, because it makes indexing
