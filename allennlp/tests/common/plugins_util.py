@@ -2,7 +2,7 @@ import subprocess
 import sys
 from contextlib import contextmanager
 
-from allennlp.common.util import ContextManagerFunctionReturnType, PathType, push_python_path, pushd
+from allennlp.common.util import ContextManagerFunctionReturnType, PathType, pushd
 
 
 @contextmanager
@@ -37,5 +37,5 @@ def push_python_project(path: PathType) -> ContextManagerFunctionReturnType[None
     This method is intended to use with `with`, so after its usage, the current directory will be
     set to the previous value and its value removed from `sys.path`.
     """
-    with pushd(path), push_python_path("."):
+    with pushd(path):
         yield
