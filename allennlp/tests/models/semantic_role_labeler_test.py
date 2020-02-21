@@ -43,7 +43,7 @@ class SemanticRoleLabelerTest(ModelTestCase):
     def test_decode_runs_correctly(self):
         training_tensors = self.dataset.as_tensor_dict()
         output_dict = self.model(**training_tensors)
-        decode_output_dict = self.model.decode(output_dict)
+        decode_output_dict = self.model.make_output_human_readable(output_dict)
         lengths = get_lengths_from_binary_sequence_mask(decode_output_dict["mask"]).data.tolist()
         # Hard to check anything concrete which we haven't checked in the above
         # test, so we'll just check that the tags are equal to the lengths

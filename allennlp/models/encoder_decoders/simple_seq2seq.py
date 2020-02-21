@@ -250,11 +250,13 @@ class SimpleSeq2Seq(Model):
         return output_dict
 
     @overrides
-    def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+    def make_output_human_readable(
+        self, output_dict: Dict[str, torch.Tensor]
+    ) -> Dict[str, torch.Tensor]:
         """
         Finalize predictions.
 
-        This method overrides `Model.decode`, which gets called after `Model.forward`, at test
+        This method overrides `Model.make_output_human_readable`, which gets called after `Model.forward`, at test
         time, to finalize predictions. The logic for the decoder part of the encoder-decoder lives
         within the `forward` method.
 
