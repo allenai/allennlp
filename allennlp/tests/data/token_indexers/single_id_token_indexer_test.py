@@ -84,8 +84,10 @@ class TestSingleIdTokenIndexer(AllenNlpTestCase):
         tokens = tokenizer.tokenize("This is a sentence.")
         tokens = [Token("<S>")] + [t for t in tokens] + [Token("</S>")]
         indexer = SingleIdTokenIndexer(namespace=None, feature_name="text_id")
+
         def fail():
             assert False
+
         counter = defaultdict(fail)
         for token in tokens:
             indexer.count_vocab_items(token, counter)

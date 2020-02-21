@@ -8,7 +8,7 @@ from allennlp.data.tokenizers.token import Token
 from allennlp.data.token_indexers.token_indexer import TokenIndexer, IndexedTokenList
 
 
-_DEFAULT_VALUE = object()
+_DEFAULT_VALUE = "THIS IS A REALLY UNLIKELY VALUE THAT HAS TO BE A STRING"
 
 
 @TokenIndexer.register("single_id")
