@@ -26,4 +26,12 @@ class TestGatedSum(AllenNlpTestCase):
 
         with pytest.raises(ValueError):
             GatedSum(a.size(-1))(a, b.unsqueeze(0))
+
+        with pytest.raises(ValueError):
             GatedSum(100)(a, b)
+
+    def test_input_output_dim(self):
+        dim = 77
+        gated_sum = GatedSum(dim)
+        assert numpy.testing.assert_almost_equal(gated_sum.get_input_dim(), dim)
+        assert numpy.testing.assert_almost_equal(gated_sum.get_output_dim(), dim)
