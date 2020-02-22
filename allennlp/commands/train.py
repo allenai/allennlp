@@ -297,7 +297,7 @@ def train_model(
         )
 
         # Creating `Vocabulary` objects from workers could be problematic since
-        # the data iterators in each worker will yield only `rank` specific
+        # the data loaders in each worker will yield only `rank` specific
         # instances. Hence it is safe to construct the vocabulary and write it
         # to disk before initializing the distributed context. The workers will
         # load the vocabulary from the path specified.
@@ -593,9 +593,9 @@ class TrainModel(Registrable):
         model: `Lazy[Model]`
             The model that we will train.  This is lazy because it depends on the `Vocabulary`;
             after constructing the vocabulary we call `model.construct(vocab=vocabulary)`.
-        iterator: `DataIterator`
-            The iterator we use to batch instances from the dataset reader at training and (by
-            default) validation time.
+        data_loader: `Lazy[DataLoader]`
+            The data_loader we use to batch instances from the dataset reader at training and (by
+            default) validation time. This is lazy because it takes a dataset in it's constructor.
         trainer: `Lazy[TrainerBase]`
             The `Trainer` that actually implements the training loop.  This is a lazy object because
             it depends on the model that's going to be trained.
@@ -612,9 +612,9 @@ class TrainModel(Registrable):
             `dataset_reader`.
         validation_data_path: `str`, optional (default=None)
             If given, we will use this data for computing validation metrics and early stopping.
-        validation_iterator: `DataIterator`, optional (default=None)
-            If given, we will use this iterator for batching and scheduling instances for the
-            validation data, instead of `iterator`.
+        validation_data_loader: `Lazy[DataLoader]`, optional (default=None)
+            If given, the data_loader we use to batch instances from the dataset reader at
+            validation and test time. This is lazy because it takes a dataset in it's constructor.
         test_data_path: `str`, optional (default=None)
             If given, we will use this as test data.  This makes it available for vocab creation by
             default, but nothing else.

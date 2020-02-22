@@ -87,8 +87,8 @@ class Trainer(TrainerBase):
         optimizer : `torch.nn.Optimizer`, required.
             An instance of a Pytorch Optimizer, instantiated with the parameters of the
             model to be optimized.
-        iterator : `DataIterator`, required.
-            A method for iterating over a `Dataset`, yielding padded indexed batches.
+        data_loader : `DataLoader`, required.
+            A pytorch `DataLoader` containing your `Dataset`, yielding padded indexed batches.
         patience : Optional[int] > 0, optional (default=None)
             Number of epochs to be patient before early stopping: the training is stopped
             after `patience` epochs with no improvement. If given, it must be `> 0`.
@@ -98,9 +98,9 @@ class Trainer(TrainerBase):
             and whether to serialize an `is_best` model each epoch. The metric name
             must be prepended with either "+" or "-", which specifies whether the metric
             is an increasing or decreasing function.
-        validation_iterator : `DataIterator`, optional (default=None)
-            An iterator to use for the validation set.  If `None`, then
-            use the training `iterator`.
+        validation_iterator : `DataLoader`, optional (default=None)
+            A `DataLoader` to use for the validation set.  If `None`, then
+            use the training `DataLoader` with the validation data.
         shuffle : `bool`, optional (default=True)
             Whether to shuffle the instances in the iterator or not.
         num_epochs : int, optional (default = 20)

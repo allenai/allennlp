@@ -23,7 +23,8 @@ class Sampler(Registrable):
 
 class BatchSampler(Registrable):
     """
-    A wrapper around the pytorch [BatchSampler](https://pytorch.org/docs/stable/data.html#torch.utils.data.BatchSampler)
+    A wrapper around the pytorch
+    [BatchSampler](https://pytorch.org/docs/stable/data.html#torch.utils.data.BatchSampler)
     which allows us to register it with `Registrable.`
     """
 
