@@ -22,7 +22,7 @@ from allennlp.training.learning_rate_schedulers import ExponentialLearningRateSc
 from allennlp.training.momentum_schedulers import MomentumScheduler
 from allennlp.training.moving_average import ExponentialMovingAverage
 from allennlp.training.util import sparse_clip_norm
-from allennlp.data.samplers import allennlp_collocate
+from allennlp.data.samplers import allennlp_collate
 
 
 class TestTrainer(AllenNlpTestCase):
@@ -43,9 +43,9 @@ class TestTrainer(AllenNlpTestCase):
         )
         self.model = SimpleTagger.from_params(vocab=self.vocab, params=self.model_params)
         self.optimizer = torch.optim.SGD(self.model.parameters(), 0.01, momentum=0.9)
-        self.data_loader = DataLoader(self.instances, batch_size=2, collate_fn=allennlp_collocate)
+        self.data_loader = DataLoader(self.instances, batch_size=2, collate_fn=allennlp_collate)
         self.validation_data_loader = DataLoader(
-            self.instances, batch_size=2, collate_fn=allennlp_collocate
+            self.instances, batch_size=2, collate_fn=allennlp_collate
         )
         self.instances.index_with(vocab)
 
@@ -527,7 +527,7 @@ class TestTrainer(AllenNlpTestCase):
         #       2, 4, plus the last two at 5 and 6.
 
         class SlowDataLoader:
-            data_loader = DataLoader(self.instances, batch_size=2, collate_fn=allennlp_collocate)
+            data_loader = DataLoader(self.instances, batch_size=2, collate_fn=allennlp_collate)
 
             def __iter__(self):
                 time.sleep(2.5)
@@ -555,7 +555,7 @@ class TestTrainer(AllenNlpTestCase):
             assert sorted(epochs) == [1, 3, 4, 5]
 
     def test_trainer_can_log_learning_rates_tensorboard(self):
-        data_loader = DataLoader(self.instances, batch_size=4, collate_fn=allennlp_collocate)
+        data_loader = DataLoader(self.instances, batch_size=4, collate_fn=allennlp_collate)
         trainer = Trainer(
             self.model,
             self.optimizer,
@@ -569,7 +569,7 @@ class TestTrainer(AllenNlpTestCase):
         trainer.train()
 
     def test_trainer_saves_models_at_specified_interval(self):
-        data_loader = DataLoader(self.instances, batch_size=4, collate_fn=allennlp_collocate)
+        data_loader = DataLoader(self.instances, batch_size=4, collate_fn=allennlp_collate)
 
         trainer = Trainer(
             self.model,

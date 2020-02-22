@@ -19,7 +19,7 @@ from allennlp.data.samplers.samplers import (
 logger = logging.getLogger(__name__)
 
 
-def allennlp_collocate(batch):
+def allennlp_collate(batch):
     batch = Batch(batch)
     return batch.as_tensor_dict(batch.get_padding_lengths())
 
@@ -41,7 +41,7 @@ class DataLoader(Registrable, data.DataLoader):
         multiprocessing_context: str = None,
     ):
 
-        collate_fn = allennlp_collocate
+        collate_fn = allennlp_collate
         if batch_sampler is not None:
             batch_sampler_ = batch_sampler.construct(data_source=dataset)
         else:
