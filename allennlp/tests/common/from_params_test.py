@@ -1,4 +1,4 @@
-from typing import Dict, Optional, List, Set, Tuple, Union
+from typing import Dict, Iterable, Optional, List, Set, Tuple, Union
 
 import pytest
 import torch
@@ -680,3 +680,33 @@ class TestFromParams(AllenNlpTestCase):
                 assert second_time.extra == extra_string
 
         Testing.from_params(Params({"lazy_object": {"string": test_string}}))
+
+    def test_iterable(self):
+        from allennlp.common.registrable import Registrable
+
+        class A(Registrable):
+            pass
+
+        @A.register("b")
+        class B(A):
+            def __init__(self, size: int) -> None:
+                self.size = size
+
+        class C(Registrable):
+            pass
+
+        @C.register("d")
+        class D(C):  # noqa
+            def __init__(self, items: Iterable[A]) -> None:
+                self.items = items
+
+        params = Params(
+            {"type": "d", "items": [{"type": "b", "size": 1}, {"type": "b", "size": 2}]}
+        )
+        d = C.from_params(params)
+
+        assert isinstance(d.items, list)
+        assert len(d.items) == 2
+        assert all(isinstance(item, B) for item in d.items)
+        assert d.items[0].size == 1
+        assert d.items[1].size == 2
