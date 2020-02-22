@@ -1,3 +1,4 @@
+import itertools
 from typing import List, Iterable, Tuple, Dict, cast
 import logging
 from torch.utils import data
@@ -192,7 +193,21 @@ class BatchInstanceSampler(BatchSampler):
         """
         if not self._sorting_keys:
             logger.info("No sorting keys given; trying to guess a good one")
-            self._guess_sorting_keys(instances)
+            num_instances_for_sorting = 10
+            # We want to grab just a few instances to guess a sorting key, instead of using all of
+            # them.  If `instances` is just a list, this is really easy, but if it's a generator, we
+            # have to be careful to not consume those instances.
+            if isinstance(instances, list):
+                instances_for_sorting = instances[:num_instances_for_sorting]
+            else:
+                instances_for_sorting = []
+                for instance in instances:
+                    instances_for_sorting.append(instance)
+                    if len(instances_for_sorting) >= num_instances_for_sorting:
+                        break
+                instances = itertools.chain(instances_for_sorting, instances)  # type: ignore
+            self._guess_sorting_keys(instances_for_sorting)
+
             logger.info(f"Using {self._sorting_keys} as the sorting keys")
         instances_with_lengths = []
         for instance in instances:
