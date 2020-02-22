@@ -1,3 +1,4 @@
+import pytest
 import torch
 
 import numpy
@@ -22,3 +23,7 @@ class TestGatedSum(AllenNlpTestCase):
 
             out = gated_sum(a, b)
             numpy.testing.assert_almost_equal(expected.data.numpy(), out.data.numpy(), decimal=5)
+
+        with pytest.raises(ValueError):
+            GatedSum(a.size(-1))(a, b.unsqueeze(0))
+            GatedSum(100)(a, b)
