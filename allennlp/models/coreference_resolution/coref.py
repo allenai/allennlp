@@ -9,7 +9,7 @@ from overrides import overrides
 from allennlp.data import TextFieldTensors, Vocabulary
 from allennlp.models.model import Model
 from allennlp.modules.token_embedders import Embedding
-from allennlp.modules import FeedForward
+from allennlp.modules import FeedForward, GatedSum
 from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder
 from allennlp.modules.span_extractors import SelfAttentiveSpanExtractor, EndpointSpanExtractor
 from allennlp.nn import util, InitializerApplicator
@@ -21,10 +21,10 @@ logger = logging.getLogger(__name__)
 @Model.register("coref")
 class CoreferenceResolver(Model):
     """
-    This `Model` implements the coreference resolution model described "End-to-end Neural
-    Coreference Resolution"
-    <https://www.semanticscholar.org/paper/End-to-end-Neural-Coreference-Resolution-Lee-He/3f2114893dc44eacac951f148fbff142ca200e83>
-    by Lee et al., 2017.
+    This `Model` implements the coreference resolution model described
+    "Higher-order Coreference Resolution with Coarse-to-fine Inference"
+    <https://arxiv.org/pdf/1804.05392.pdf>
+    by Lee et al., 2018.
     The basic outline of this model is to get an embedded representation of each span in the
     document. These span representations are scored and used to prune away spans that are unlikely
     to occur in a coreference cluster. For the remaining spans, the model decides which antecedent
@@ -53,6 +53,10 @@ class CoreferenceResolver(Model):
         spans we retain with respect to the number of words in the document.
     max_antecedents: int, required.
         For each mention which survives the pruning stage, we consider this many antecedents.
+    coarse_to_fine: bool, optional (default = False)
+        Whether or not to apply the coarse-to-fine filtering.
+    num_coref_layers: int, optional (default = 1)
+        The number of span representation refinement layers.
     lexical_dropout : `int`
         The probability of dropping out dimensions of the embedded text.
     initializer : `InitializerApplicator`, optional (default=`InitializerApplicator()`)
@@ -71,6 +75,7 @@ class CoreferenceResolver(Model):
         spans_per_word: float,
         max_antecedents: int,
         coarse_to_fine: bool = False,
+        num_coref_layers: int = 1,
         lexical_dropout: float = 0.2,
         initializer: InitializerApplicator = InitializerApplicator(),
         **kwargs
@@ -110,8 +115,11 @@ class CoreferenceResolver(Model):
         self._max_antecedents = max_antecedents
 
         self._coarse_to_fine = coarse_to_fine
-        if self._coarse_to_fine:  # TODO: make this a blinear module
+        if self._coarse_to_fine:
             self._coarse2fine_scorer = torch.nn.Linear(mention_feedforward.get_input_dim(), mention_feedforward.get_input_dim())
+        self._num_coref_layers = num_coref_layers
+        if self._num_coref_layers > 1:
+            self._span_updating_gated_sum = GatedSum(mention_feedforward.get_input_dim())
 
         self._mention_recall = MentionRecall()
         self._conll_coref_scores = ConllCorefScores()
@@ -260,11 +268,6 @@ class CoreferenceResolver(Model):
                 valid_antecedent_offsets.unsqueeze(0).expand(batch_size, num_spans_to_keep, num_spans_to_keep).reshape(batch_size * num_spans_to_keep, num_spans_to_keep, 1),
                 top_antecedent_indices.view(-1, max_antecedents),
             ).reshape(batch_size, num_spans_to_keep, max_antecedents)
-
-            # Compute antecedent scores.
-            top_antecedent_embeddings = util.batched_index_select(
-                top_span_embeddings, top_antecedent_indices
-            )
         else:
             # Now that we have our variables in terms of num_spans_to_keep, we need to
             # compare span pairs to decide each span's antecedent. Each span can only
@@ -308,26 +311,50 @@ class CoreferenceResolver(Model):
             top_antecedent_offsets = top_antecedent_offsets.unsqueeze(0).expand_as(top_partial_antecedents_scores)
             top_antecedent_mask = top_antecedent_mask.expand_as(top_partial_antecedents_scores)
 
-
-
         # Both branches above produce:
-        # top_antecedent_embeddings: (batch_size, num_spans_to_keep, max_antecedents, embedding_size)
         # top_partial_antecedents_scores: (batch_size, num_spans_to_keep, max_antecedents)
         # top_antecedent_mask: (batch_size, num_spans_to_keep, max_antecedents)
         # top_antecedent_offsets: (batch_size, num_spans_to_keep, max_antecedents)
         # top_antecedent_indices: (batch_size, num_spans_to_keep, max_antecedents)
 
-        # Compute antecedent scores.
         # Shape: (batch_size, num_spans_to_keep, max_antecedents, embedding_size)
-        span_pair_embeddings = self._compute_span_pair_embeddings(
-            top_span_embeddings, top_antecedent_embeddings, top_antecedent_offsets
+        top_antecedent_embeddings = util.batched_index_select(
+            top_span_embeddings, top_antecedent_indices
         )
         # Shape: (batch_size, num_spans_to_keep, 1 + max_antecedents)
         coreference_scores = self._compute_coreference_scores(
-            span_pair_embeddings,
+            top_span_embeddings,
+            top_antecedent_embeddings,
             top_partial_antecedents_scores,
             top_antecedent_mask,
+            top_antecedent_offsets,
         )
+
+        for _ in range(self._num_coref_layers - 1):
+            dummy_mask = top_antecedent_mask.new_ones(batch_size, num_spans_to_keep, 1)
+            # Shape: (batch_size, num_spans_to_keep, 1 + max_antecedents,)
+            top_antecedent_with_dummy_mask = torch.cat([dummy_mask, top_antecedent_mask], -1)
+            # Shape: (batch_size, num_spans_to_keep, 1 + max_antecedents)
+            attention_weight = util.masked_softmax(coreference_scores, top_antecedent_with_dummy_mask, memory_efficient=True)
+            # Shape: (batch_size, num_spans_to_keep, 1 + max_antecedents, embedding_size)
+            top_antecedent_with_dummy_embeddings = torch.cat([top_span_embeddings.unsqueeze(2), top_antecedent_embeddings], 2)
+            # Shape: (batch_size, num_spans_to_keep, embedding_size)
+            attended_embeddings = util.weighted_sum(top_antecedent_with_dummy_embeddings, attention_weight)
+            # Shape: (batch_size, num_spans_to_keep, embedding_size)
+            top_span_embeddings = self._span_updating_gated_sum(top_span_embeddings, attended_embeddings)
+
+            # Shape: (batch_size, num_spans_to_keep, max_antecedents, embedding_size)
+            top_antecedent_embeddings = util.batched_index_select(
+                top_span_embeddings, top_antecedent_indices
+            )
+            # Shape: (batch_size, num_spans_to_keep, 1 + max_antecedents)
+            coreference_scores = self._compute_coreference_scores(
+                top_span_embeddings,
+                top_antecedent_embeddings,
+                top_partial_antecedents_scores,
+                top_antecedent_mask,
+                top_antecedent_offsets,
+            )
 
         # We now have, for each span which survived the pruning stage,
         # a predicted antecedent. This implies a clustering if we group
@@ -632,9 +659,11 @@ class CoreferenceResolver(Model):
 
     def _compute_coreference_scores(
         self,
-        pairwise_embeddings: torch.FloatTensor,
+        top_span_embeddings: torch.FloatTensor,
+        top_antecedent_embeddings: torch.FloatTensor,
         top_partial_antecedents_scores: torch.FloatTensor,
-        antecedent_mask: torch.BoolTensor,
+        top_antecedent_mask: torch.BoolTensor,
+        top_antecedent_offsets: torch.FloatTensor,
     ) -> torch.FloatTensor:
         """
         Computes scores for every pair of spans. Additionally, a dummy label is included,
@@ -646,15 +675,23 @@ class CoreferenceResolver(Model):
 
         # Parameters
 
-        pairwise_embeddings : `torch.FloatTensor`, required.
-            Embedding representations of pairs of spans. Has shape
-            (batch_size, num_spans_to_keep, max_antecedents, encoding_dim)
+        top_span_embeddings : `torch.FloatTensor`, required.
+            Embedding representations of the kept spans. Has shape
+            (batch_size, num_spans_to_keep, embedding_size)
+        top_antecedent_embeddings: `torch.FloatTensor`, required.
+            The embeddings of antecedents for each span candidate. Has shape
+            (batch_size, num_spans_to_keep, max_antecedents, embedding_size)
         top_partial_antecedents_scores : `torch.FloatTensor`, required.
             Sum of span mention score and antecedent mention score. If using coarse to fine,
             it has an additional term which is the coarse score.
             (batch_size, num_spans_to_keep, max_antecedents).
-        antecedent_mask : `torch.BoolTensor`, required.
-            The log of the mask for valid antecedents.
+        top_antecedent_mask : `torch.BoolTensor`, required.
+            The mask for valid antecedents.
+            (batch_size, num_spans_to_keep, max_antecedents).
+        top_antecedent_offsets : `torch.FloatTensor`, required.
+            The distance between the span and each of its antecedents in terms of the number
+            of considered spans (i.e not the word distance between the spans).
+            (batch_size, num_spans_to_keep, max_antecedents).
 
         # Returns
 
@@ -664,12 +701,17 @@ class CoreferenceResolver(Model):
             we considered.
 
         """
+        # Shape: (batch_size, num_spans_to_keep, max_antecedents, embedding_size)
+        span_pair_embeddings = self._compute_span_pair_embeddings(
+            top_span_embeddings, top_antecedent_embeddings, top_antecedent_offsets
+        )
+
         # Shape: (batch_size, num_spans_to_keep, max_antecedents)
         antecedent_scores = self._antecedent_scorer(
-            self._antecedent_feedforward(pairwise_embeddings)
+            self._antecedent_feedforward(span_pair_embeddings)
         ).squeeze(-1)
         antecedent_scores += top_partial_antecedents_scores
-        antecedent_scores = util.replace_masked_values(antecedent_scores, antecedent_mask, -1e20)
+        antecedent_scores = util.replace_masked_values(antecedent_scores, top_antecedent_mask, -1e20)
 
         # Shape: (batch_size, num_spans_to_keep, 1)
         shape = [antecedent_scores.size(0), antecedent_scores.size(1), 1]
