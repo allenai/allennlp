@@ -9,6 +9,7 @@ from allennlp.modules.bimpm_matching import BiMpmMatching
 from allennlp.modules.conditional_random_field import ConditionalRandomField
 from allennlp.modules.elmo import Elmo
 from allennlp.modules.feedforward import FeedForward
+from allennlp.modules.gated_sum import GatedSum
 from allennlp.modules.highway import Highway
 from allennlp.modules.input_variational_dropout import InputVariationalDropout
 from allennlp.modules.language_model_heads import LanguageModelHead
