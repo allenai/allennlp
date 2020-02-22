@@ -33,5 +33,5 @@ class TestGatedSum(AllenNlpTestCase):
     def test_input_output_dim(self):
         dim = 77
         gated_sum = GatedSum(dim)
-        assert numpy.testing.assert_almost_equal(gated_sum.get_input_dim(), dim)
-        assert numpy.testing.assert_almost_equal(gated_sum.get_output_dim(), dim)
+        numpy.testing.assert_equal(gated_sum.get_input_dim(), dim)
+        numpy.testing.assert_equal(gated_sum.get_output_dim(), dim)
