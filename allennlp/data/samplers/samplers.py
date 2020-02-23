@@ -35,6 +35,9 @@ class BatchSampler(Registrable):
 
 @Sampler.register("sequential")
 class SequentialSampler(Sampler, data.SequentialSampler):
+    """
+    A registerable version of pytorch's [SequentialSampler](https://pytorch.org/docs/stable/data.html#torch.utils.data.SequentialSampler).
+    """
     def __init__(self, data_source: data.Dataset):
         super().__init__(data_source)
 
@@ -42,6 +45,7 @@ class SequentialSampler(Sampler, data.SequentialSampler):
 @Sampler.register("random")
 class RandomSampler(Sampler, data.RandomSampler):
     """
+    A registerable version of pytorch's [RandomSampler](https://pytorch.org/docs/stable/data.html#torch.utils.data.RandomSampler).
     Samples elements randomly. If without replacement, then sample from a shuffled dataset.
     If with replacement, then user can specify `num_samples` to draw.
 
@@ -64,6 +68,7 @@ class RandomSampler(Sampler, data.RandomSampler):
 @Sampler.register("subset_random")
 class SubsetRandomSampler(Sampler, data.SubsetRandomSampler):
     """
+    A registerable version of pytorch's [SubsetRandomSampler](https://pytorch.org/docs/stable/data.html#torch.utils.data.SubsetRandomSampler).
     Samples elements randomly from a given list of indices, without replacement.
 
     # Parameters
@@ -78,7 +83,8 @@ class SubsetRandomSampler(Sampler, data.SubsetRandomSampler):
 @Sampler.register("weighted_random")
 class WeightedRandomSampler(Sampler, data.WeightedRandomSampler):
     """
-    Samples elements from ``[0,..,len(weights)-1]`` with given probabilities (weights).
+    A registerable version of pytorch's [WeightedRandomSampler](https://pytorch.org/docs/stable/data.html#torch.utils.data.WeightedRandomSampler).
+    Samples elements from `[0,...,len(weights)-1]` with given probabilities (weights).
 
     # Parameters:
     weights : `List[float]`
@@ -106,6 +112,7 @@ class WeightedRandomSampler(Sampler, data.WeightedRandomSampler):
 @BatchSampler.register("basic")
 class BasicBatchSampler(BatchSampler, data.BatchSampler):
     """
+    A registerable version of pytorch's [BatchSampler](https://pytorch.org/docs/stable/data.html#torch.utils.data.BatchSampler).
     Wraps another sampler to yield a mini-batch of indices.
 
     # Parameters
@@ -134,10 +141,10 @@ class BasicBatchSampler(BatchSampler, data.BatchSampler):
 class BatchInstanceSampler(BatchSampler):
     """
     An sampler which by default, argsorts batches with respect to the maximum input lengths `per
-    batch`. Additionally, you can provide a list of field names and padding keys which the dataset
-    will be sorted by before doing this batching, causing inputs with similar length to be batched
-    together, making computation more efficient (as less time is wasted on padded elements of the
-    batch).
+    batch`. You can provide a list of field names and padding keys (or pass none, in which case they
+    will be inferred) which the dataset will be sorted by before doing this batching, causing inputs
+    with similar length to be batched together, making computation more efficient (as less time is
+    wasted on padded elements of the batch).
 
     # Parameters
 
@@ -154,6 +161,8 @@ class BatchInstanceSampler(BatchSampler):
         When you need to specify this yourself, you can create an instance from your dataset and
         call `Instance.get_padding_lengths()` to see a list of all keys used in your data.  You
         should give one or more of those as the sorting keys here.
+    batch_size : int, required.
+        The size of each batch of instances yielded when calling the dataloader.
     padding_noise : float, optional (default=.1)
         When sorting by padding length, we add a bit of noise to the lengths, so that the sorting
         isn't deterministic.  This parameter determines how much noise we add, as a percentage of
@@ -161,8 +170,6 @@ class BatchInstanceSampler(BatchSampler):
 
         Note that if you specify `max_instances_in_memory`, the first batch will only be the
         biggest from among the first "max instances in memory" instances.
-    batch_size : int, optional, (default = 32)
-        The size of each batch of instances yielded when calling the iterator.
 
     """
 
