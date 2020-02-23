@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 class Sampler(Registrable):
     """
-    A wrapper around the pytorch [Sampler](https://pytorch.org/docs/stable/_modules/torch/utils/data/sampler.html)
+    A copy of the pytorch [Sampler](https://pytorch.org/docs/stable/_modules/torch/utils/data/sampler.html)
     which allows us to register it with `Registrable.`
     """
 
@@ -24,7 +24,7 @@ class Sampler(Registrable):
 
 class BatchSampler(Registrable):
     """
-    A wrapper around the pytorch
+    A copy of the pytorch
     [BatchSampler](https://pytorch.org/docs/stable/data.html#torch.utils.data.BatchSampler)
     which allows us to register it with `Registrable.`
     """
@@ -36,7 +36,7 @@ class BatchSampler(Registrable):
 
 @Sampler.register("sequential")
 class SequentialSampler(Sampler, data.SequentialSampler):
-    def __init__(self, data_source: data.Dataset, **kwargs):
+    def __init__(self, data_source: data.Dataset):
         super().__init__(data_source)
 
 
@@ -57,11 +57,7 @@ class RandomSampler(Sampler, data.RandomSampler):
     """
 
     def __init__(
-        self,
-        data_source: data.Dataset,
-        replacement: bool = False,
-        num_samples: int = None,
-        **kwargs,
+        self, data_source: data.Dataset, replacement: bool = False, num_samples: int = None,
     ):
         super().__init__(data_source, replacement, num_samples)
 
@@ -76,7 +72,7 @@ class SubsetRandomSampler(Sampler, data.SubsetRandomSampler):
         a sequence of indices to sample from.
     """
 
-    def __init__(self, indices: List[int], **kwargs):
+    def __init__(self, indices: List[int]):
         super().__init__(indices)
 
 
@@ -104,7 +100,7 @@ class WeightedRandomSampler(Sampler, data.WeightedRandomSampler):
     ```
     """
 
-    def __init__(self, weights: List[float], num_samples: int, replacement: bool = True, **kwargs):
+    def __init__(self, weights: List[float], num_samples: int, replacement: bool = True):
         super().__init__(weights, num_samples, replacement)
 
 
@@ -131,7 +127,7 @@ class BasicBatchSampler(BatchSampler, data.BatchSampler):
     ```
     """
 
-    def __init__(self, sampler: Sampler, batch_size: int, drop_last: bool, **kwargs):
+    def __init__(self, sampler: Sampler, batch_size: int, drop_last: bool):
         super().__init__(sampler, batch_size, drop_last)
 
 
