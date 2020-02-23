@@ -180,7 +180,7 @@ class BatchInstanceSampler(BatchSampler):
         self._batch_size = batch_size
         self.data_source = data_source
 
-    def _argsort_by_padding(self, instances: List[Instance]) -> List[int]:
+    def _argsort_by_padding(self, instances: Iterable[Instance]) -> List[int]:
         """
         Argsorts the instances by their padding lengths, using the keys in
         `sorting_keys` (in the order in which they are provided). `sorting_keys`
@@ -220,10 +220,23 @@ class BatchInstanceSampler(BatchSampler):
         for group in lazy_groups_of(indices, self._batch_size):
             yield list(group)
 
-    def _guess_sorting_keys(self, instances: List[Instance]) -> None:
+    def _guess_sorting_keys(self, instances: Iterable[Instance], num_instances: int = 10) -> None:
+        """
+        Use `num_instances` instances from the dataset to infer the keys used
+        for sorting the dataset for bucketing.
+
+        # Parameters
+
+        instances : `Iterable[Instance]`, required.
+            The dataset to guess sorting keys for.
+        num_instances : `int`, optional (default = 10)
+            The number of instances to use to guess sorting keys. Typically
+            the default value is completely sufficient, but if your instances
+            are not homogeneous, you might need more.
+        """
         max_length = 0.0
         longest_padding_key: Tuple[str, str] = None
-        for instance in instances:
+        for i, instance in enumerate(instances):
             instance.index_fields(self.vocab)
             padding_lengths = cast(Dict[str, Dict[str, float]], instance.get_padding_lengths())
             for field_name, field_padding in padding_lengths.items():
@@ -231,6 +244,10 @@ class BatchInstanceSampler(BatchSampler):
                     if length > max_length:
                         max_length = length
                         longest_padding_key = (field_name, padding_key)
+            if i > num_instances:
+                # Only use num_instances instances to guess the sorting keys.
+                break
+
         if not longest_padding_key:
             # This shouldn't ever happen (you basically have to have an empty instance list), but
             # just in case...
