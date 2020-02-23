@@ -89,6 +89,12 @@ class _LazyInstances(IterableDataset):
         self.vocab = vocab
 
     def __len__(self):
+        """
+        We rely in a couple of places that calling len on the dataloader
+        (which in turn calls len on the dataset) doesn't raise an error.
+        In the case that you have an IterableDataset and you call len, the pytorch dataloader
+        actually spits out a warning - but we need actually calling it to not crash.
+        """
         return 1
 
 
