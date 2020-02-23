@@ -469,7 +469,7 @@ def construct_arg(
         return Lazy(constructor)  # type: ignore
 
     # For any other kind of iterable, we will just assume that a list is good enough, and treat
-    # it that same as List. This condition needs to be at the end, so we don't catch other kinds
+    # it the same as List. This condition needs to be at the end, so we don't catch other kinds
     # of Iterables with this branch.
     elif (
         origin in {collections.abc.Iterable, Iterable, List, list}
