@@ -42,7 +42,20 @@ method.
 import collections.abc
 from copy import deepcopy
 from pathlib import Path
-from typing import TypeVar, Type, Callable, Dict, Union, Any, cast, List, Tuple, Set, Iterable
+from typing import (
+    Any,
+    Callable,
+    cast,
+    Dict,
+    Iterable,
+    List,
+    Mapping,
+    Set,
+    Tuple,
+    Type,
+    TypeVar,
+    Union,
+)
 import inspect
 import logging
 
@@ -357,7 +370,11 @@ def construct_arg(
     # This is special logic for handling types like Dict[str, TokenIndexer],
     # List[TokenIndexer], Tuple[TokenIndexer, Tokenizer], and Set[TokenIndexer],
     # which it creates by instantiating each value from_params and returning the resulting structure.
-    elif origin in (Dict, dict) and len(args) == 2 and can_construct_from_params(args[-1]):
+    elif (
+        origin in {collections.abc.Mapping, Mapping, Dict, dict}
+        and len(args) == 2
+        and can_construct_from_params(args[-1])
+    ):
         value_cls = annotation.__args__[-1]
 
         value_dict = {}
