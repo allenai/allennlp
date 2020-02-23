@@ -6,7 +6,14 @@ from subprocess import check_output
 from ruamel.yaml import YAML
 
 
-exclude_files = [".DS_Store", "__init__.py", "__init__.pyc", "README.md", "version.py", "run.py"]
+exclude_files = [
+    ".DS_Store",
+    "__init__.py",
+    "__init__.pyc",
+    "README.md",
+    "version.py",
+    "__main__.py",
+]
 
 
 def render_file(relative_src_path: str, src_file: str, to_file: str, modifier="++") -> None:

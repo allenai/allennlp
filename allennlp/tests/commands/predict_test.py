@@ -69,7 +69,7 @@ class TestPredict(AllenNlpTestCase):
             f.write("""{"sentence": "the mariners won the super bowl in 2037"}\n""")
 
         sys.argv = [
-            "run.py",  # executable
+            "__main__.py",  # executable
             "predict",  # command
             str(self.classifier_model_path),
             str(self.infile),  # input_file
@@ -94,7 +94,7 @@ class TestPredict(AllenNlpTestCase):
     def test_using_dataset_reader_works_with_known_model(self):
 
         sys.argv = [
-            "run.py",  # executable
+            "__main__.py",  # executable
             "predict",  # command
             str(self.classifier_model_path),
             str(self.classifier_data_path),  # input_file
@@ -138,7 +138,7 @@ class TestPredict(AllenNlpTestCase):
 
         # --use-dataset-reader argument only should use validation
         sys.argv = [
-            "run.py",  # executable
+            "__main__.py",  # executable
             "predict",  # command
             str(self.classifier_model_path),
             str(self.classifier_data_path),  # input_file
@@ -159,7 +159,7 @@ class TestPredict(AllenNlpTestCase):
 
         # --use-dataset-reader, override with train
         sys.argv = [
-            "run.py",  # executable
+            "__main__.py",  # executable
             "predict",  # command
             str(self.classifier_model_path),
             str(self.classifier_data_path),  # input_file
@@ -182,7 +182,7 @@ class TestPredict(AllenNlpTestCase):
 
         # --use-dataset-reader, override with validation
         sys.argv = [
-            "run.py",  # executable
+            "__main__.py",  # executable
             "predict",  # command
             str(self.classifier_model_path),
             str(self.classifier_data_path),  # input_file
@@ -206,7 +206,7 @@ class TestPredict(AllenNlpTestCase):
         # No --use-dataset-reader flag, fails because the loading logic
         # is not implemented in the testing predictor
         sys.argv = [
-            "run.py",  # executable
+            "__main__.py",  # executable
             "predict",  # command
             str(self.classifier_model_path),
             str(self.classifier_data_path),  # input_file
@@ -232,7 +232,7 @@ class TestPredict(AllenNlpTestCase):
 
         # Doesn't use a --predictor
         sys.argv = [
-            "run.py",  # executable
+            "__main__.py",  # executable
             "predict",  # command
             model_path,
             str(self.esim_data_path),  # input_file
@@ -256,7 +256,7 @@ class TestPredict(AllenNlpTestCase):
             f.write("""{"sentence": "the mariners won the super bowl in 2037"}\n""")
 
         sys.argv = [
-            "run.py",  # executable
+            "__main__.py",  # executable
             "predict",  # command
             str(self.classifier_model_path),
             str(self.infile),  # input_file
@@ -281,7 +281,7 @@ class TestPredict(AllenNlpTestCase):
 
     def test_fails_without_required_args(self):
         sys.argv = [
-            "run.py",
+            "__main__.py",
             "predict",
             "/path/to/archive",
         ]  # executable  # command  # archive, but no input file
@@ -306,7 +306,7 @@ class TestPredict(AllenNlpTestCase):
             f.write("""{"sentence": "the mariners won the super bowl in 2037"}\n""")
 
         sys.argv = [
-            "run.py",  # executable
+            "__main__.py",  # executable
             "predict",  # command
             str(self.classifier_model_path),
             str(self.infile),  # input_file
@@ -358,7 +358,7 @@ class TestPredict(AllenNlpTestCase):
                 f.write("""{"sentence": "the mariners won the super bowl in 2037"}\n""")
 
             sys.argv = [
-                "run.py",  # executable
+                "__main__.py",  # executable
                 "predict",  # command
                 str(self.classifier_model_path),
                 str(self.infile),  # input_file
@@ -411,7 +411,7 @@ class TestPredict(AllenNlpTestCase):
             writer.writerow(["the mariners won the super bowl in 2037", "neg"])
 
         sys.argv = [
-            "run.py",  # executable
+            "__main__.py",  # executable
             "predict",  # command
             str(self.classifier_model_path),
             str(self.infile),  # input_file
