@@ -118,3 +118,4 @@ class DataLoader(Registrable, data.DataLoader):
 
 
 DataLoader.register("default", "from_partial_objects")(DataLoader)
+DataLoader.default_implementation = "default"
