@@ -1,4 +1,4 @@
-from typing import Dict, Optional, List, Set, Tuple, Union
+from typing import Dict, Iterable, List, Mapping, Optional, Set, Tuple, Union
 
 import pytest
 import torch
@@ -680,3 +680,68 @@ class TestFromParams(AllenNlpTestCase):
                 assert second_time.extra == extra_string
 
         Testing.from_params(Params({"lazy_object": {"string": test_string}}))
+
+    def test_iterable(self):
+        from allennlp.common.registrable import Registrable
+
+        class A(Registrable):
+            pass
+
+        @A.register("b")
+        class B(A):
+            def __init__(self, size: int) -> None:
+                self.size = size
+
+        class C(Registrable):
+            pass
+
+        @C.register("d")
+        class D(C):
+            def __init__(self, items: Iterable[A]) -> None:
+                self.items = items
+
+        params = Params(
+            {"type": "d", "items": [{"type": "b", "size": 1}, {"type": "b", "size": 2}]}
+        )
+        d = C.from_params(params)
+
+        assert isinstance(d.items, Iterable)
+        items = list(d.items)
+        assert len(items) == 2
+        assert all(isinstance(item, B) for item in items)
+        assert items[0].size == 1
+        assert items[1].size == 2
+
+    def test_mapping(self):
+        from allennlp.common.registrable import Registrable
+
+        class A(Registrable):
+            pass
+
+        @A.register("b")
+        class B(A):
+            def __init__(self, size: int) -> None:
+                self.size = size
+
+        class C(Registrable):
+            pass
+
+        @C.register("d")
+        class D(C):
+            def __init__(self, items: Mapping[str, A]) -> None:
+                self.items = items
+
+        params = Params(
+            {
+                "type": "d",
+                "items": {"first": {"type": "b", "size": 1}, "second": {"type": "b", "size": 2}},
+            }
+        )
+        d = C.from_params(params)
+
+        assert isinstance(d.items, Mapping)
+        assert len(d.items) == 2
+        assert all(isinstance(key, str) for key in d.items.keys())
+        assert all(isinstance(value, B) for value in d.items.values())
+        assert d.items["first"].size == 1
+        assert d.items["second"].size == 2
