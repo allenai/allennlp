@@ -58,7 +58,7 @@ from allennlp.common import Params, Tqdm
 from allennlp.common.checks import check_for_gpu, ConfigurationError
 from allennlp.common.util import prepare_environment
 from allennlp.data import Vocabulary
-from allennlp.data.samplers import DataLoader
+from allennlp.data import DataLoader
 from allennlp.models import Model
 from allennlp.training import Trainer, TrainerBase
 from allennlp.training.util import create_serialization_dir, datasets_from_params

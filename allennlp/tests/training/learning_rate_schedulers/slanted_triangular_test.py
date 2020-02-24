@@ -8,7 +8,7 @@ from allennlp.data.dataset_readers.dataset_reader import AllennlpDataset
 from allennlp.common import Lazy, Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.data.samplers import DataLoader
+from allennlp.data import DataLoader
 from allennlp.training import TrainerBase
 from allennlp.training.learning_rate_schedulers import LearningRateScheduler, SlantedTriangular
 from allennlp.training.optimizers import Optimizer

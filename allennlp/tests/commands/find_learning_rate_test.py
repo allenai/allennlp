@@ -6,7 +6,7 @@ import torch
 
 from allennlp.common import Params
 from allennlp.data import Vocabulary
-from allennlp.data.samplers import DataLoader
+from allennlp.data import DataLoader
 from allennlp.models import Model
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase

@@ -22,7 +22,7 @@ from allennlp.training.learning_rate_schedulers import ExponentialLearningRateSc
 from allennlp.training.momentum_schedulers import MomentumScheduler
 from allennlp.training.moving_average import ExponentialMovingAverage
 from allennlp.training.util import sparse_clip_norm
-from allennlp.data.samplers import allennlp_collate
+from allennlp.data import allennlp_collate
 
 
 class TestTrainer(AllenNlpTestCase):

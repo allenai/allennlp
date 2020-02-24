@@ -54,7 +54,7 @@ from allennlp.common.checks import check_for_gpu, ConfigurationError
 from allennlp.common import util as common_util
 from allennlp.common.plugins import import_plugins
 from allennlp.data import DatasetReader, Vocabulary
-from allennlp.data.samplers import DataLoader
+from allennlp.data import DataLoader
 from allennlp.models.archival import archive_model, CONFIG_NAME
 from allennlp.models.model import _DEFAULT_WEIGHTS, Model
 from allennlp.training.trainer_base import TrainerBase

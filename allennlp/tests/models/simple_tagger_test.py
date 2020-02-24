@@ -7,7 +7,7 @@ from allennlp.common.testing import ModelTestCase
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import Params
 from allennlp.data.dataset_readers import DatasetReader
-from allennlp.data.samplers import DataLoader
+from allennlp.data import DataLoader
 from allennlp.models import Model
 from allennlp.training import Trainer, TrainerBase
 

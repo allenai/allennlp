@@ -17,7 +17,7 @@ from allennlp.common import Lazy, Tqdm
 from allennlp.common.checks import ConfigurationError, check_for_gpu
 from allennlp.common import util as common_util
 
-from allennlp.data.samplers import DataLoader
+from allennlp.data import DataLoader
 
 from allennlp.data.iterators.data_iterator import TensorDict
 from allennlp.models.model import Model
