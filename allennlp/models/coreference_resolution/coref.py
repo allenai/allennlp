@@ -317,9 +317,11 @@ class CoreferenceResolver(Model):
         # top_antecedent_offsets: (batch_size, num_spans_to_keep, max_antecedents)
         # top_antecedent_indices: (batch_size, num_spans_to_keep, max_antecedents)
 
+        flat_top_antecedent_indices = util.flatten_and_batch_shift_indices(top_antecedent_indices, num_spans_to_keep)
+
         # Shape: (batch_size, num_spans_to_keep, max_antecedents, embedding_size)
         top_antecedent_embeddings = util.batched_index_select(
-            top_span_embeddings, top_antecedent_indices
+            top_span_embeddings, top_antecedent_indices, flat_top_antecedent_indices
         )
         # Shape: (batch_size, num_spans_to_keep, 1 + max_antecedents)
         coreference_scores = self._compute_coreference_scores(
@@ -345,7 +347,7 @@ class CoreferenceResolver(Model):
 
             # Shape: (batch_size, num_spans_to_keep, max_antecedents, embedding_size)
             top_antecedent_embeddings = util.batched_index_select(
-                top_span_embeddings, top_antecedent_indices
+                top_span_embeddings, top_antecedent_indices, flat_top_antecedent_indices
             )
             # Shape: (batch_size, num_spans_to_keep, 1 + max_antecedents)
             coreference_scores = self._compute_coreference_scores(
@@ -380,7 +382,7 @@ class CoreferenceResolver(Model):
 
             # Shape: (batch_size, num_spans_to_keep, max_antecedents)
             antecedent_labels = util.batched_index_select(
-                pruned_gold_labels, top_antecedent_indices
+                pruned_gold_labels, top_antecedent_indices, flat_top_antecedent_indices
             ).squeeze(-1)
             antecedent_labels = util.replace_masked_values(antecedent_labels, top_antecedent_mask, -100)
 
