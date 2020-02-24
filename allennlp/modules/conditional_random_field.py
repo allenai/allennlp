@@ -166,12 +166,15 @@ class ConditionalRandomField(torch.nn.Module):
     # Parameters
 
     num_tags : `int`, required
-        The number of tags.
+        The number of tags. This does not count the START and END tags.
     constraints : `List[Tuple[int, int]]`, optional (default: None)
         An optional list of allowed transitions (from_tag_id, to_tag_id).
         These are applied to `viterbi_tags()` but do not affect `forward()`.
-        These should be derived from `allowed_transitions` so that the
-        start and end transitions are handled correctly for your tag type.
+        It is important that the START and END tags are included in this.
+        The START tag gets the special index equal to num_tags and END gets
+        the index num_tags+1. If you are using a supported tagging scheme, 
+        it is recomended that you use a call to `allowed_transitions` in 
+        order to get this List as it handles this for you.
     include_start_end_transitions : `bool`, optional (default: True)
         Whether to include the start and end transition parameters.
     """
@@ -319,7 +322,25 @@ class ConditionalRandomField(torch.nn.Module):
         self, inputs: torch.Tensor, tags: torch.Tensor, mask: torch.ByteTensor = None
     ) -> torch.Tensor:
         """
-        Computes the log likelihood.
+        Computes the log likelihood of the tags under the current learned
+        transition parameters. It does not consider the hard constraints supplied
+        in `__init__()`.
+        
+        # Parameters
+        
+        inputs : `torch.Tensor`
+            A tensor of logit values representing the prediction for each tag. It
+            should have shape `(batch_size, seq_len, num_tags)`.
+        tags : `torch.Tensor`
+            A tensor which is the expected tag labels. It should have shape of
+            `(batch_size, seq_len)`
+        mask : `torch.Tensor`
+            An optional mask which is True where we care about the labeling. So
+            for example if one has pad's in the sequence it should be False there.
+            It can optionally be false in the middle of the sequence, which
+            corresponds to pretending that token is not in the sequence. When
+            finding the likelihood we skip over the False tokens.
+            If provided, it should have shape `(batch_size, seq_len)`.
         """
 
         if mask is None:
@@ -343,6 +364,11 @@ class ConditionalRandomField(torch.nn.Module):
 
         For backwards compatibility, if top_k is None, then instead returns a flat list of
         tag sequences (the top tag sequence for each batch item).
+        
+        If the mask is provided, we will skip over tokens where False. This means that our
+        output sequence might be shorter than the input number of logits and that the
+        output of each sequence in the batch might have a different length. If provided,
+        the mask should have shape `(batch_size, seq_len)`
         """
         if mask is None:
             mask = torch.ones(*logits.shape[:2], dtype=torch.long, device=logits.device)
@@ -368,7 +394,7 @@ class ConditionalRandomField(torch.nn.Module):
             :num_tags, :num_tags
         ] + -10000.0 * (1 - self._constraint_mask[:num_tags, :num_tags])
         transitions[:num_tags, :num_tags] = constrained_transitions.data
-
+        
         if self.include_start_end_transitions:
             transitions[
                 start_tag, :num_tags
