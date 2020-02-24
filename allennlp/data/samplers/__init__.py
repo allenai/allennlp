@@ -30,8 +30,9 @@ class DataLoader(Registrable, data.DataLoader):
     """
     A registrable version of the pytorch [DataLoader](https://pytorch.org/docs/stable/data.html#torch.utils.data.DataLoader).
     The only reason this class exists is so that we can construct a DataLoader
-    from a configuration file. Instead of using this class directly in python code,
-    you should just use the pytorch dataloader with allennlp's custom collate function:
+    from a configuration file and have a different default `collate_fn`.
+    You can use this class directly in python code, but it is identical to using
+    pytorch dataloader with allennlp's custom collate function:
 
     ```
     from torch.utils.data import DataLoader
@@ -51,7 +52,10 @@ class DataLoader(Registrable, data.DataLoader):
         sampler: Sampler = None,
         batch_sampler: BatchSampler = None,
         num_workers: int = 0,
-        collate_fn=None,
+        # NOTE: This default is different from the normal `None`.
+        # We assume that if you are using this class you are using an
+        # allennlp dataset of instances, which would require this.
+        collate_fn=allennlp_collate,
         pin_memory: bool = False,
         drop_last: bool = False,
         timeout: int = 0,
