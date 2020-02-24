@@ -6,5 +6,5 @@ from allennlp.data.samplers.samplers import (
     WeightedRandomSampler,
     RandomSampler,
     BasicBatchSampler,
-    BatchInstanceSampler,
+    BucketBatchSampler,
 )

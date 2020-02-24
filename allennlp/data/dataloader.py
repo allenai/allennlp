@@ -16,7 +16,8 @@ def allennlp_collate(instances: List[Instance]):
 
 class DataLoader(Registrable, data.DataLoader):
     """
-    A registrable version of the pytorch [DataLoader](https://pytorch.org/docs/stable/data.html#torch.utils.data.DataLoader).
+    A registrable version of the pytorch
+    [DataLoader](https://pytorch.org/docs/stable/data.html#torch.utils.data.DataLoader).
     The only reason this class exists is so that we can construct a DataLoader
     from a configuration file and have a different default `collate_fn`.
     You can use this class directly in python code, but it is identical to using

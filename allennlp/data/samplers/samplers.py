@@ -144,7 +144,7 @@ class BasicBatchSampler(BatchSampler, data.BatchSampler):
 
 
 @BatchSampler.register("bucket")
-class BatchInstanceSampler(BatchSampler):
+class BucketBatchSampler(BatchSampler):
     """
     An sampler which by default, argsorts batches with respect to the maximum input lengths `per
     batch`. You can provide a list of field names and padding keys (or pass none, in which case they
@@ -173,10 +173,9 @@ class BatchInstanceSampler(BatchSampler):
         When sorting by padding length, we add a bit of noise to the lengths, so that the sorting
         isn't deterministic.  This parameter determines how much noise we add, as a percentage of
         the actual padding value for each instance.
-
-        Note that if you specify `max_instances_in_memory`, the first batch will only be the
-        biggest from among the first "max instances in memory" instances.
-
+    drop_last : `bool`
+        If `True`, the sampler will drop the last batch if
+        its size would be less than batch_size`.
     """
 
     def __init__(
@@ -185,13 +184,15 @@ class BatchInstanceSampler(BatchSampler):
         batch_size: int,
         sorting_keys: List[Tuple[str, str]] = None,
         padding_noise: float = 0.1,
+        drop_last: bool = False,
     ):
 
         self.vocab = data_source.vocab
-        self._sorting_keys = sorting_keys
-        self._padding_noise = padding_noise
-        self._batch_size = batch_size
+        self.sorting_keys = sorting_keys
+        self.padding_noise = padding_noise
+        self.batch_size = batch_size
         self.data_source = data_source
+        self.drop_last = drop_last
 
     def _argsort_by_padding(self, instances: Iterable[Instance]) -> List[int]:
         """
@@ -199,26 +200,26 @@ class BatchInstanceSampler(BatchSampler):
         `sorting_keys` (in the order in which they are provided). `sorting_keys`
         is a list of `(field_name, padding_key)` tuples.
         """
-        if not self._sorting_keys:
+        if not self.sorting_keys:
             logger.info("No sorting keys given; trying to guess a good one")
             self._guess_sorting_keys(instances)
-            logger.info(f"Using {self._sorting_keys} as the sorting keys")
+            logger.info(f"Using {self.sorting_keys} as the sorting keys")
         instances_with_lengths = []
         for instance in instances:
             # Make sure instance is indexed before calling .get_padding
             instance.index_fields(self.vocab)
             padding_lengths = cast(Dict[str, Dict[str, float]], instance.get_padding_lengths())
-            if self._padding_noise > 0.0:
+            if self.padding_noise > 0.0:
                 noisy_lengths = {}
                 for field_name, field_lengths in padding_lengths.items():
                     noisy_lengths[field_name] = add_noise_to_dict_values(
-                        field_lengths, self._padding_noise
+                        field_lengths, self.padding_noise
                     )
                 padding_lengths = noisy_lengths
             instance_with_lengths = (
                 [
                     padding_lengths[field_name][padding_key]
-                    for (field_name, padding_key) in self._sorting_keys
+                    for (field_name, padding_key) in self.sorting_keys
                 ],
                 instance,
             )
@@ -230,8 +231,11 @@ class BatchInstanceSampler(BatchSampler):
     def __iter__(self) -> Iterable[List[int]]:
 
         indices = self._argsort_by_padding(self.data_source)
-        for group in lazy_groups_of(indices, self._batch_size):
-            yield list(group)
+        for group in lazy_groups_of(indices, self.batch_size):
+            batch_indices = list(group)
+            if self.drop_last and len(batch_indices) < self.batch_size:
+                continue
+            yield batch_indices
 
     def _guess_sorting_keys(self, instances: Iterable[Instance], num_instances: int = 10) -> None:
         """
@@ -268,7 +272,7 @@ class BatchInstanceSampler(BatchSampler):
                 "Found no field that needed padding; we are surprised you got this error, please "
                 "open an issue on github"
             )
-        self._sorting_keys = [longest_padding_key]
+        self.sorting_keys = [longest_padding_key]
 
     def __len__(self):
-        return len(self.data_source) // self._batch_size
+        return len(self.data_source) // self.batch_size
