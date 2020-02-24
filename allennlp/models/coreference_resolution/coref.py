@@ -245,7 +245,7 @@ class CoreferenceResolver(Model):
                 num_spans_to_keep, num_spans_to_keep, util.get_device_of(spans)
             )
 
-            # Shape: (batch_size, num_spans_to_keep, num_spans_to_keep)
+            # Shape: (batch_size, num_spans_to_keep, num_spans_to_keep); broadcast op
             partial_antecedent_scores = top_span_mention_scores.unsqueeze(
                 1
             ) + top_span_mention_scores.unsqueeze(2)
@@ -254,11 +254,8 @@ class CoreferenceResolver(Model):
             )
 
             # Shape: (batch_size, num_spans_to_keep, num_spans_to_keep); broadcast op
-            span_pair_mask = top_span_mask.bool().unsqueeze(-1) & valid_antecedent_mask
+            span_pair_mask = top_span_mask.unsqueeze(-1) & valid_antecedent_mask
 
-            ## The corresponding mask for top embeddings: (batch_size, max_num_items_to_keep, max_antecedents)
-            ## The indices of the top-k scoring items into the original embedding:  (batch_size, max_num_items_to_keep, max_antecedents)
-            ## (batch_size, max_num_items_to_keep, max_num_items_to_keep, 1) fast_top_ancedents_scores already included the mention scores.
             # Shape:
             # (batch_size, num_spans_to_keep, max_antecedents) * 3
             (
