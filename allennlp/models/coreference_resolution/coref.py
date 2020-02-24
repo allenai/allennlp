@@ -116,7 +116,9 @@ class CoreferenceResolver(Model):
 
         self._coarse_to_fine = coarse_to_fine
         if self._coarse_to_fine:
-            self._coarse2fine_scorer = torch.nn.Linear(mention_feedforward.get_input_dim(), mention_feedforward.get_input_dim())
+            self._coarse2fine_scorer = torch.nn.Linear(
+                mention_feedforward.get_input_dim(), mention_feedforward.get_input_dim()
+            )
         self._num_coref_layers = num_coref_layers
         if self._num_coref_layers > 1:
             self._span_updating_gated_sum = GatedSum(mention_feedforward.get_input_dim())
@@ -239,11 +241,17 @@ class CoreferenceResolver(Model):
 
         if self._coarse_to_fine:
             # Shape: (1, num_spans_to_keep, num_spans_to_keep)
-            _, _, valid_antecedent_mask = self._generate_valid_antecedents(num_spans_to_keep, num_spans_to_keep, util.get_device_of(spans))
+            _, _, valid_antecedent_mask = self._generate_valid_antecedents(
+                num_spans_to_keep, num_spans_to_keep, util.get_device_of(spans)
+            )
 
             # Shape: (batch_size, num_spans_to_keep, num_spans_to_keep)
-            partial_antecedent_scores = top_span_mention_scores.unsqueeze(1) + top_span_mention_scores.unsqueeze(2)
-            partial_antecedent_scores += torch.matmul(top_span_embeddings, self._coarse2fine_scorer(top_span_embeddings).transpose(1, 2))
+            partial_antecedent_scores = top_span_mention_scores.unsqueeze(
+                1
+            ) + top_span_mention_scores.unsqueeze(2)
+            partial_antecedent_scores += torch.matmul(
+                top_span_embeddings, self._coarse2fine_scorer(top_span_embeddings).transpose(1, 2)
+            )
 
             # Shape: (batch_size, num_spans_to_keep, num_spans_to_keep); broadcast op
             span_pair_mask = top_span_mask.bool().unsqueeze(-1) & valid_antecedent_mask
@@ -265,7 +273,9 @@ class CoreferenceResolver(Model):
 
             # TODO: we need to make `batched_index_select` more general to make this less awkward.
             top_antecedent_offsets = util.batched_index_select(
-                valid_antecedent_offsets.unsqueeze(0).expand(batch_size, num_spans_to_keep, num_spans_to_keep).reshape(batch_size * num_spans_to_keep, num_spans_to_keep, 1),
+                valid_antecedent_offsets.unsqueeze(0)
+                .expand(batch_size, num_spans_to_keep, num_spans_to_keep)
+                .reshape(batch_size * num_spans_to_keep, num_spans_to_keep, 1),
                 top_antecedent_indices.view(-1, max_antecedents),
             ).reshape(batch_size, num_spans_to_keep, max_antecedents)
         else:
@@ -306,9 +316,15 @@ class CoreferenceResolver(Model):
             ).squeeze(-1)
 
             # Shape: (batch_size, num_spans_to_keep, max_antecedents) * 4
-            top_partial_antecedents_scores = top_span_mention_scores.unsqueeze(-1) + top_antecedent_mention_scores
-            top_antecedent_indices = top_antecedent_indices.unsqueeze(0).expand_as(top_partial_antecedents_scores)
-            top_antecedent_offsets = top_antecedent_offsets.unsqueeze(0).expand_as(top_partial_antecedents_scores)
+            top_partial_antecedents_scores = (
+                top_span_mention_scores.unsqueeze(-1) + top_antecedent_mention_scores
+            )
+            top_antecedent_indices = top_antecedent_indices.unsqueeze(0).expand_as(
+                top_partial_antecedents_scores
+            )
+            top_antecedent_offsets = top_antecedent_offsets.unsqueeze(0).expand_as(
+                top_partial_antecedents_scores
+            )
             top_antecedent_mask = top_antecedent_mask.expand_as(top_partial_antecedents_scores)
 
         # Both branches above produce:
@@ -317,7 +333,9 @@ class CoreferenceResolver(Model):
         # top_antecedent_offsets: (batch_size, num_spans_to_keep, max_antecedents)
         # top_antecedent_indices: (batch_size, num_spans_to_keep, max_antecedents)
 
-        flat_top_antecedent_indices = util.flatten_and_batch_shift_indices(top_antecedent_indices, num_spans_to_keep)
+        flat_top_antecedent_indices = util.flatten_and_batch_shift_indices(
+            top_antecedent_indices, num_spans_to_keep
+        )
 
         # Shape: (batch_size, num_spans_to_keep, max_antecedents, embedding_size)
         top_antecedent_embeddings = util.batched_index_select(
@@ -337,13 +355,21 @@ class CoreferenceResolver(Model):
             # Shape: (batch_size, num_spans_to_keep, 1 + max_antecedents,)
             top_antecedent_with_dummy_mask = torch.cat([dummy_mask, top_antecedent_mask], -1)
             # Shape: (batch_size, num_spans_to_keep, 1 + max_antecedents)
-            attention_weight = util.masked_softmax(coreference_scores, top_antecedent_with_dummy_mask, memory_efficient=True)
+            attention_weight = util.masked_softmax(
+                coreference_scores, top_antecedent_with_dummy_mask, memory_efficient=True
+            )
             # Shape: (batch_size, num_spans_to_keep, 1 + max_antecedents, embedding_size)
-            top_antecedent_with_dummy_embeddings = torch.cat([top_span_embeddings.unsqueeze(2), top_antecedent_embeddings], 2)
+            top_antecedent_with_dummy_embeddings = torch.cat(
+                [top_span_embeddings.unsqueeze(2), top_antecedent_embeddings], 2
+            )
             # Shape: (batch_size, num_spans_to_keep, embedding_size)
-            attended_embeddings = util.weighted_sum(top_antecedent_with_dummy_embeddings, attention_weight)
+            attended_embeddings = util.weighted_sum(
+                top_antecedent_with_dummy_embeddings, attention_weight
+            )
             # Shape: (batch_size, num_spans_to_keep, embedding_size)
-            top_span_embeddings = self._span_updating_gated_sum(top_span_embeddings, attended_embeddings)
+            top_span_embeddings = self._span_updating_gated_sum(
+                top_span_embeddings, attended_embeddings
+            )
 
             # Shape: (batch_size, num_spans_to_keep, max_antecedents, embedding_size)
             top_antecedent_embeddings = util.batched_index_select(
@@ -384,7 +410,9 @@ class CoreferenceResolver(Model):
             antecedent_labels = util.batched_index_select(
                 pruned_gold_labels, top_antecedent_indices, flat_top_antecedent_indices
             ).squeeze(-1)
-            antecedent_labels = util.replace_masked_values(antecedent_labels, top_antecedent_mask, -100)
+            antecedent_labels = util.replace_masked_values(
+                antecedent_labels, top_antecedent_mask, -100
+            )
 
             # Compute labels.
             # Shape: (batch_size, num_spans_to_keep, max_antecedents + 1)
@@ -401,7 +429,9 @@ class CoreferenceResolver(Model):
             # probability assigned to all valid antecedents. This is a valid objective for
             # clustering as we don't mind which antecedent is predicted, so long as they are in
             #  the same coreference cluster.
-            coreference_log_probs = util.masked_log_softmax(coreference_scores, top_span_mask.unsqueeze(-1))
+            coreference_log_probs = util.masked_log_softmax(
+                coreference_scores, top_span_mask.unsqueeze(-1)
+            )
             correct_antecedent_log_probs = coreference_log_probs + gold_antecedent_labels.log()
             negative_marginal_log_likelihood = -util.logsumexp(correct_antecedent_log_probs).sum()
 
@@ -454,7 +484,9 @@ class CoreferenceResolver(Model):
 
         # Calling zip() on two tensors results in an iterator over their
         # first dimension. This is iterating over instances in the batch.
-        for top_spans, predicted_antecedents, antecedent_indices in zip(batch_top_spans, batch_predicted_antecedents, batch_antecedent_indices):
+        for top_spans, predicted_antecedents, antecedent_indices in zip(
+            batch_top_spans, batch_predicted_antecedents, batch_antecedent_indices
+        ):
             spans_to_cluster_ids: Dict[Tuple[int, int], int] = {}
             clusters: List[List[Tuple[int, int]]] = []
 
@@ -713,7 +745,9 @@ class CoreferenceResolver(Model):
             self._antecedent_feedforward(span_pair_embeddings)
         ).squeeze(-1)
         antecedent_scores += top_partial_antecedents_scores
-        antecedent_scores = util.replace_masked_values(antecedent_scores, top_antecedent_mask, -1e20)
+        antecedent_scores = util.replace_masked_values(
+            antecedent_scores, top_antecedent_mask, -1e20
+        )
 
         # Shape: (batch_size, num_spans_to_keep, 1)
         shape = [antecedent_scores.size(0), antecedent_scores.size(1), 1]
