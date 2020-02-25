@@ -195,10 +195,9 @@ class AugmentedLstm(torch.nn.Module):
 
         Args:
             inputs (PackedSequence): `bsize` sequences of shape `(len, input_dim)` each, in PackedSequence format
-            states (Tuple[torch.Tensor, torch.Tensor]): Tuple of tensors containing
-                the initial hidden state and the cell state of each element in
-                the batch. Each of these tensors have a dimension of
-                (1 x bsize x num_directions * nhid). Defaults to `None`.
+            states (Tuple[torch.Tensor, torch.Tensor]): Tuple of tensors containing the initial hidden state and
+                the cell state of each element in the batch. Each of these tensors have a dimension of
+                (1 x bsize x nhid). Defaults to `None`.
 
         Returns:
             Tuple[PackedSequence, Tuple[torch.Tensor, torch.Tensor]]:
