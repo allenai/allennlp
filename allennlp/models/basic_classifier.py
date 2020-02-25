@@ -173,6 +173,6 @@ class BasicClassifier(Model):
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
         return {
             name: value
-            for default_name, metric in self.metrics.items()
+            for default_name, metric in self._metrics.items()
             for name, value in metric.get_metric_name_value_pairs(default_name, reset)
         }
