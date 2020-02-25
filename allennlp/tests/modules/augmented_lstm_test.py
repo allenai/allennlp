@@ -8,7 +8,7 @@ from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import Params
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.modules.augmented_lstm import AugmentedLstm, AugmentedLSTMCell
+from allennlp.modules.augmented_lstm import AugmentedLstm, AugmentedLSTMCell, BiAugmentedLstm
 from allennlp.nn import InitializerApplicator, Initializer
 from allennlp.nn.util import sort_batch_by_length
 
@@ -185,3 +185,16 @@ class TestAugmentedLSTM(AllenNlpTestCase):
             numpy.testing.assert_array_almost_equal(
                 dropped_state[1].data.numpy(), augmented_state[1].data.numpy(), decimal=4
             )
+
+    def test_biaugmented_lstm(self):
+        for bidirectional in [True, False]:
+            bi_augmented_lstm = BiAugmentedLstm(
+                10, 11, 3, recurrent_dropout_probability=0.1, bidirectional=bidirectional
+            )
+            sorted_tensor, sorted_sequence, _, _ = sort_batch_by_length(
+                self.random_tensor, self.sequence_lengths
+            )
+            lstm_input = pack_padded_sequence(
+                sorted_tensor, sorted_sequence.data.tolist(), batch_first=True
+            )
+            bi_augmented_lstm(lstm_input)
