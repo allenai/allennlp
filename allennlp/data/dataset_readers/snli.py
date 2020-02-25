@@ -9,7 +9,7 @@ from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.fields import Field, TextField, LabelField, MetadataField
 from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenIndexer
-from allennlp.data.tokenizers import Tokenizer, SpacyTokenizer
+from allennlp.data.tokenizers import Tokenizer, SpacyTokenizer, PretrainedTransformerTokenizer
 
 logger = logging.getLogger(__name__)
 
@@ -68,16 +68,23 @@ class SnliReader(DatasetReader):
     ) -> Instance:
 
         fields: Dict[str, Field] = {}
-        premise_tokens = self._tokenizer.tokenize(premise)
-        hypothesis_tokens = self._tokenizer.tokenize(hypothesis)
-        fields["premise"] = TextField(premise_tokens, self._token_indexers)
-        fields["hypothesis"] = TextField(hypothesis_tokens, self._token_indexers)
+
+        if isinstance(self._tokenizer, PretrainedTransformerTokenizer):
+            tokens = self._tokenizer.tokenize_sentence_pair(premise, hypothesis)
+            fields["tokens"] = TextField(tokens, self._token_indexers)
+        else:
+            premise_tokens = self._tokenizer.tokenize(premise)
+            hypothesis_tokens = self._tokenizer.tokenize(hypothesis)
+            fields["premise"] = TextField(premise_tokens, self._token_indexers)
+            fields["hypothesis"] = TextField(hypothesis_tokens, self._token_indexers)
+
+            metadata = {
+                "premise_tokens": [x.text for x in premise_tokens],
+                "hypothesis_tokens": [x.text for x in hypothesis_tokens],
+            }
+            fields["metadata"] = MetadataField(metadata)
+
         if label:
             fields["label"] = LabelField(label)
 
-        metadata = {
-            "premise_tokens": [x.text for x in premise_tokens],
-            "hypothesis_tokens": [x.text for x in hypothesis_tokens],
-        }
-        fields["metadata"] = MetadataField(metadata)
         return Instance(fields)
