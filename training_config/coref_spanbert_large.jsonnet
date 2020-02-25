@@ -69,6 +69,7 @@ local span_pair_embedding_dim = 3 * span_embedding_dim + feature_size;
     },
     "initializer": {
       "regexes": [
+        [".*_span_updating_gated_sum.*weight", {"type": "xavier_normal"}],
         [".*linear_layers.*weight", {"type": "xavier_normal"}],
         [".*scorer._module.weight", {"type": "xavier_normal"}],
         ["_distance_embedding.weight", {"type": "xavier_normal"}],
@@ -82,7 +83,7 @@ local span_pair_embedding_dim = 3 * span_embedding_dim + feature_size;
     "spans_per_word": 0.4,
     "max_antecedents": 50,
     "coarse_to_fine": true,
-    "num_coref_layers": 2
+    "inference_order": 2
   },
   "iterator": {
     "type": "bucket",

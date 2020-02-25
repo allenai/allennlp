@@ -13,17 +13,17 @@ class CorefTest(ModelTestCase):
 
     def test_coref_model_can_train_save_and_load(self):
         for coarse_to_fine in (True, False):
-            for num_coref_layes in (1, 3):
-                self._test_coref_model_can_train_save_and_load(coarse_to_fine, num_coref_layes)
+            for inference_order in (1, 3):
+                self._test_coref_model_can_train_save_and_load(coarse_to_fine, inference_order)
 
     def _test_coref_model_can_train_save_and_load(
-        self, coarse_to_fine: bool = False, num_coref_layes: int = 1
+        self, coarse_to_fine: bool = False, inference_order: int = 1
     ):
         # fmt: off
         overrides = (
             "{"
             + '"model.coarse_to_fine": ' + f"{str(coarse_to_fine).lower()}" + ","
-            + '"model.num_coref_layers": ' + f"{num_coref_layes}"
+            + '"model.inference_order": ' + f"{inference_order}"
             + "}"
         )
         # fmt: on
