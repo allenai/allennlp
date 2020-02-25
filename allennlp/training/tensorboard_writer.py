@@ -43,10 +43,14 @@ class TensorboardWriter(FromParams):
         should_log_learning_rate: bool = False,
     ) -> None:
         if serialization_dir is not None:
-            self._train_log = SummaryWriter(os.path.join(serialization_dir, "log", "train"))
-            self._validation_log = SummaryWriter(
-                os.path.join(serialization_dir, "log", "validation")
-            )
+            # Create log directories prior to creating SummaryWriter objects
+            # in order to avoid race conditions during distributed training.
+            train_ser_dir = os.path.join(serialization_dir, "log", "train")
+            os.makedirs(train_ser_dir, exist_ok=True)
+            self._train_log = SummaryWriter(train_ser_dir)
+            val_ser_dir = os.path.join(serialization_dir, "log", "validation")
+            os.makedirs(val_ser_dir, exist_ok=True)
+            self._validation_log = SummaryWriter(val_ser_dir)
         else:
             self._train_log = self._validation_log = None
 

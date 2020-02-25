@@ -862,13 +862,13 @@ def replace_masked_values(
 
     This just does `tensor.masked_fill()`, except the pytorch method fills in things with a mask
     value of 1, where we want the opposite.  You can do this in your own code with
-    `tensor.masked_fill((1 - mask).to(dtype=torch.bool), replace_with)`.
+    `tensor.masked_fill(~mask.bool(), replace_with)`.
     """
     if tensor.dim() != mask.dim():
         raise ConfigurationError(
             "tensor.dim() (%d) != mask.dim() (%d)" % (tensor.dim(), mask.dim())
         )
-    return tensor.masked_fill((1 - mask).to(dtype=torch.bool), replace_with)
+    return tensor.masked_fill(~mask.bool(), replace_with)
 
 
 def tensors_equal(tensor1: torch.Tensor, tensor2: torch.Tensor, tolerance: float = 1e-12) -> bool:
@@ -1708,3 +1708,121 @@ def extend_layer(layer: torch.nn.Module, new_dim: int) -> None:
         requires_grad=layer.bias.requires_grad,
     )
     layer.out_features = new_dim
+
+
+def masked_topk(
+    input_: torch.FloatTensor,
+    mask: torch.BoolTensor,
+    k: Union[int, torch.LongTensor],
+    dim: int = -1,
+) -> Tuple[torch.LongTensor, torch.LongTensor, torch.FloatTensor]:
+    """
+    Extracts the top-k items along a certain dimension. This is similar to `torch.topk` except:
+    (1) we allow of a `mask` that makes the function not consider certain elements;
+    (2) the returned top input, mask, and indices are sorted in their original order in the input;
+    (3) May use the same k for all dimensions, or different k for each.
+
+    # Parameters
+
+    input_ : `torch.FloatTensor`, required.
+        A tensor containing the items that we want to prune.
+    mask : `torch.BoolTensor`, required.
+        A tensor with the same shape as `input_` that makes the function not consider masked out
+        (i.e. False) elements.
+    k : `Union[int, torch.LongTensor]`, required.
+        If a tensor of shape as `input_` except without dimension `dim`, specifies the number of
+        items to keep for each dimension.
+        If an int, keep the same number of items for all dimensions.
+
+    # Returns
+
+    top_input : `torch.FloatTensor`
+        The values of the top-k scoring items.
+        Has the same shape as `input_` except dimension `dim` has value `k` when it's an `int`
+        or `k.max()` when it's a tensor.
+    top_mask : `torch.BoolTensor`
+        The corresponding mask for `top_input`.
+        Has the shape as `top_input`.
+    top_indices : `torch.IntTensor`
+        The indices of the top-k scoring items into the original `input_`
+        tensor. This is returned because it can be useful to retain pointers to
+        the original items, if each item is being scored by multiple distinct
+        scorers, for instance.
+        Has the shape as `top_input`.
+    """
+    if input_.size() != mask.size():
+        raise ValueError("`input_` and `mask` must have the same shape.")
+    if not -input_.dim() <= dim < input_.dim():
+        raise ValueError("`dim` must be in `[-input_.dim(), input_.dim())`")
+    dim = (dim + input_.dim()) % input_.dim()
+
+    max_k = k if isinstance(k, int) else k.max()
+
+    # We put the dim in question to the last dimension by permutation, and squash all leading dims.
+
+    # [0, 1, ..., dim - 1, dim + 1, ..., input.dim() - 1, dim]
+    permutation = list(range(input_.dim()))
+    permutation.pop(dim)
+    permutation += [dim]
+
+    # [0, 1, ..., dim - 1, -1, dim, ..., input.dim() - 2]; for restoration
+    reverse_permutation = list(range(input_.dim() - 1))
+    reverse_permutation.insert(dim, -1)
+
+    other_dims_size = list(input_.size())
+    other_dims_size.pop(dim)
+    permuted_size = other_dims_size + [max_k]  # for restoration
+
+    # If an int was given for number of items to keep, construct tensor by repeating the value.
+    if isinstance(k, int):
+        # Put the tensor on same device as the mask.
+        k = k * torch.ones(*other_dims_size, dtype=torch.long, device=mask.device)
+    else:
+        if list(k.size()) != other_dims_size:
+            raise ValueError(
+                "`k` must have the same shape as `input_` with dimension `dim` removed."
+            )
+
+    num_items = input_.size(dim)
+    # (batch_size, num_items)  -- "batch_size" refers to all other dimensions stacked together
+    input_ = input_.permute(*permutation).reshape(-1, num_items)
+    mask = mask.permute(*permutation).reshape(-1, num_items)
+    k = k.reshape(-1)
+
+    # Make sure that we don't select any masked items by setting their scores to be very
+    # negative.  These are logits, typically, so -1e20 should be plenty negative.
+    input_ = replace_masked_values(input_, mask, -1e20)
+
+    # Shape: (batch_size, max_k)
+    _, top_indices = input_.topk(max_k, 1)
+
+    # Mask based on number of items to keep for each sentence.
+    # Shape: (batch_size, max_k)
+    top_indices_mask = get_mask_from_sequence_lengths(k, max_k).bool()
+
+    # Fill all masked indices with largest "top" index for that sentence, so that all masked
+    # indices will be sorted to the end.
+    # Shape: (batch_size, 1)
+    fill_value, _ = top_indices.max(dim=1, keepdim=True)
+    # Shape: (batch_size, max_num_items_to_keep)
+    top_indices = torch.where(top_indices_mask, top_indices, fill_value)
+
+    # Now we order the selected indices in increasing order with
+    # respect to their indices (and hence, with respect to the
+    # order they originally appeared in the `embeddings` tensor).
+    top_indices, _ = top_indices.sort(1)
+
+    # Combine the masks on spans that are out-of-bounds, and the mask on spans that are outside
+    # the top k for each sentence.
+    # Shape: (batch_size, max_k)
+    sequence_mask = mask.gather(1, top_indices)
+    top_mask = top_indices_mask & sequence_mask
+
+    # Shape: (batch_size, max_k)
+    top_input = input_.gather(1, top_indices)
+
+    return (
+        top_input.reshape(*permuted_size).permute(*reverse_permutation),
+        top_mask.reshape(*permuted_size).permute(*reverse_permutation),
+        top_indices.reshape(*permuted_size).permute(*reverse_permutation),
+    )
