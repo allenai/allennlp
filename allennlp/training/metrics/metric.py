@@ -12,7 +12,10 @@ class Metric(Registrable):
     """
 
     def __call__(
-        self, predictions: torch.Tensor, gold_labels: torch.Tensor, mask: Optional[torch.Tensor]
+        self,
+        predictions: torch.Tensor,
+        gold_labels: torch.Tensor,
+        mask: Optional[torch.Tensor] = None,
     ):
         """
         # Parameters
@@ -50,8 +53,8 @@ class Metric(Registrable):
                 else:
                     yield sub_name, sub_value
         elif isinstance(value, collections.abc.Iterable):
-            for i, sub_value in enumerate(value):
-                yield f"{default_name}_{i}", sub_value
+            for i, sub_value in enumerate(value):  # type: ignore
+                yield f"{default_name}_{i}", sub_value  # type: ignore
         else:
             yield default_name, value
 
