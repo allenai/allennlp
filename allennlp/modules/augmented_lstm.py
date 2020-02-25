@@ -190,13 +190,11 @@ class AugmentedLstm(torch.nn.Module):
         """
         Warning: Would be better to use the BiAugmentedLstm class in a regular model
 
-        Given an input batch of sequential data such as word embeddings, produces
-        a single layer unidirectional AugmentedLSTM representation of the sequential
-        input and new state tensors.
+        Given an input batch of sequential data such as word embeddings, produces a single layer unidirectional
+        AugmentedLSTM representation of the sequential input and new state tensors.
 
         Args:
-            inputs (PackedSequence): Input tensor of shape
-                (bsize x seq_len x input_dim).
+            inputs (PackedSequence): `bsize` sequences of shape `(len, input_dim)` each, in PackedSequence format
             states (Tuple[torch.Tensor, torch.Tensor]): Tuple of tensors containing
                 the initial hidden state and the cell state of each element in
                 the batch. Each of these tensors have a dimension of
