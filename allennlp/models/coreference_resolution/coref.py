@@ -177,7 +177,6 @@ class CoreferenceResolver(Model):
         # Shape: (batch_size, document_length, embedding_size)
         text_embeddings = self._lexical_dropout(self._text_field_embedder(text))
 
-        device = util.get_device_of(spans)
         batch_size = spans.size(0)
         document_length = text_embeddings.size(1)
         num_spans = spans.size(1)
