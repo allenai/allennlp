@@ -1,4 +1,5 @@
-from typing import Dict, Optional, Tuple, Union, List
+from typing import Dict, Iterable, List, Optional, Tuple, Union
+import collections.abc
 import torch
 
 from allennlp.common.registrable import Registrable
@@ -33,6 +34,26 @@ class Metric(Registrable):
         Compute and return the metric. Optionally also call `self.reset`.
         """
         raise NotImplementedError
+
+    def get_metric_name_value_pairs(
+        self, default_name: str, reset: bool = False
+    ) -> Iterable[Tuple[str, float]]:
+        """
+        Return the metric as in `self.get_metric` but as an iterable of string-float pairs.
+        """
+        value = self.get_metric(reset)
+        if isinstance(value, collections.abc.Mapping):
+            for sub_name, sub_value in value.items():
+                if isinstance(sub_value, collections.abc.Iterable):
+                    for i, sub_value_i in enumerate(sub_value):
+                        yield f"{sub_name}_{i}", sub_value_i
+                else:
+                    yield sub_name, sub_value
+        elif isinstance(value, collections.abc.Iterable):
+            for i, sub_value in enumerate(value):
+                yield f"{default_name}_{i}", sub_value
+        else:
+            yield default_name, value
 
     def reset(self) -> None:
         """

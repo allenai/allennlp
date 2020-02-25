@@ -8,7 +8,7 @@ from allennlp.models.model import Model
 from allennlp.modules import FeedForward, Seq2SeqEncoder, Seq2VecEncoder, TextFieldEmbedder
 from allennlp.nn import InitializerApplicator
 from allennlp.nn.util import get_text_field_mask
-from allennlp.training.metrics import CategoricalAccuracy
+from allennlp.training.metrics import CategoricalAccuracy, Metric
 
 
 @Model.register("basic_classifier")
@@ -37,10 +37,12 @@ class BasicClassifier(Model):
     dropout : `float`, optional (default = `None`)
         Dropout percentage to use.
     num_labels : `int`, optional (default = `None`)
-        Number of labels to project to in classification layer. By default, the classification layer will
-        project to the size of the vocabulary namespace corresponding to labels.
+        Number of labels to project to in classification layer. By default, the classification layer
+        will project to the size of the vocabulary namespace corresponding to labels.
     label_namespace : `str`, optional (default = "labels")
         Vocabulary namespace corresponding to labels. By default, we use the "labels" namespace.
+    metrics : `Dict[str, Metric]`, optional (default = `{"accuracy": CategoricalAccuracy()}`)
+        Metrics to use, along with a name associated to each of them.
     initializer : `InitializerApplicator`, optional (default=`InitializerApplicator()`)
         If provided, will be used to initialize the model parameters.
     """
@@ -55,6 +57,7 @@ class BasicClassifier(Model):
         dropout: float = None,
         num_labels: int = None,
         label_namespace: str = "labels",
+        metrics: Optional[Dict[str, Metric]] = None,
         initializer: InitializerApplicator = InitializerApplicator(),
         **kwargs,
     ) -> None:
@@ -85,10 +88,11 @@ class BasicClassifier(Model):
         else:
             self._num_labels = vocab.get_vocab_size(namespace=self._label_namespace)
         self._classification_layer = torch.nn.Linear(self._classifier_input_dim, self._num_labels)
-        self._accuracy = CategoricalAccuracy()
+        self._metrics = metrics or {"accuracy": CategoricalAccuracy()}
         self._loss = torch.nn.CrossEntropyLoss()
         initializer(self)
 
+    @overrides
     def forward(  # type: ignore
         self, tokens: TextFieldTensors, label: torch.IntTensor = None
     ) -> Dict[str, torch.Tensor]:
@@ -136,7 +140,9 @@ class BasicClassifier(Model):
         if label is not None:
             loss = self._loss(logits, label.long().view(-1))
             output_dict["loss"] = loss
-            self._accuracy(logits, label)
+
+            for metric in self._metrics.values():
+                metric(logits, label)
 
         return output_dict
 
@@ -163,6 +169,10 @@ class BasicClassifier(Model):
         output_dict["label"] = classes
         return output_dict
 
+    @overrides
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
-        metrics = {"accuracy": self._accuracy.get_metric(reset)}
-        return metrics
+        return {
+            name: value
+            for default_name, metric in self.metrics.items()
+            for name, value in metric.get_metric_name_value_pairs(default_name, reset)
+        }
