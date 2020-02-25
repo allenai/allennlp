@@ -143,7 +143,7 @@ class AugmentedLstm(torch.nn.Module):
     `AugmentedLstm` implements a one-layer single directional
     AugmentedLSTM layer. AugmentedLSTM is an LSTM which optionally
     appends an optional highway network to the output layer. Furthermore the
-    dropout controlls the level of variational dropout done.
+    dropout controls the level of variational dropout done.
 
     Args:
         input_size (int): The number of expected features in the input.
@@ -202,8 +202,7 @@ class AugmentedLstm(torch.nn.Module):
 
         Returns:
             Tuple[PackedSequence, Tuple[torch.Tensor, torch.Tensor]]:
-                AgumentedLSTM representation of input and the
-                state of the LSTM `t = seq_len`.
+                AugmentedLSTM representation of input and the state of the LSTM `t = seq_len`.
                 Shape of representation is (bsize x seq_len x representation_dim).
                 Shape of each state is (1 x bsize x nhid).
 
