@@ -71,7 +71,7 @@ local span_pair_embedding_dim = 3 * span_embedding_dim + feature_size;
       "regexes": [
         [".*_span_updating_gated_sum.*weight", {"type": "xavier_normal"}],
         [".*linear_layers.*weight", {"type": "xavier_normal"}],
-        [".*scorer._module.weight", {"type": "xavier_normal"}],
+        [".*scorer.*weight", {"type": "xavier_normal"}],
         ["_distance_embedding.weight", {"type": "xavier_normal"}],
         ["_span_width_embedding.weight", {"type": "xavier_normal"}],
         ["_context_layer._module.weight_ih.*", {"type": "xavier_normal"}],
