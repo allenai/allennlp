@@ -281,8 +281,7 @@ class AugmentedLstm(torch.nn.Module):
 class BiAugmentedLstm(torch.nn.Module):
     """
     `BiAugmentedLstm` implements a generic AugmentedLSTM representation layer.
-    BiAugmentedLstm is an LSTM which optionally appends
-    an optional highway network to the output layer.
+    BiAugmentedLstm is an LSTM which optionally appends an optional highway network to the output layer.
     Furthermore the dropout controls the level of variational dropout done.
 
     # Parameters
@@ -311,10 +310,8 @@ class BiAugmentedLstm(torch.nn.Module):
     # Returns
 
     output_accumulator : PackedSequence
-        The outputs of the LSTM for each timestep. A tensor of shape
-        (batch_size, max_timesteps, hidden_size) where for a given batch
-        element, all outputs past the sequence length for that batch are
-        zero tensors.
+        The outputs of the LSTM for each timestep. A tensor of shape (batch_size, max_timesteps, hidden_size) where
+        for a given batch element, all outputs past the sequence length for that batch are zero tensors.
     """
 
     def __init__(
