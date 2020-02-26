@@ -54,7 +54,7 @@
       ]
     }
   },
-  "iterator": {"type": "basic", "batch_size": 32},
+  "data_loader": {"batch_size": 32},
   "trainer": {
     "optimizer": "adam",
     "num_epochs": 5,

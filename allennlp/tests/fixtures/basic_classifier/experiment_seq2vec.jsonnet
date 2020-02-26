@@ -23,6 +23,6 @@ local COMMON = import 'common.jsonnet';
            "output_dim": 16
         }
     },
-    "iterator": COMMON['iterator'],
+    "data_loader": COMMON['data_loader'],
     "trainer": COMMON['trainer'],
 }

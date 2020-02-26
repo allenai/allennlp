@@ -16,9 +16,12 @@
     },
     "train_data_path": "allennlp/tests/fixtures/data/text_classification_json/imdb_corpus.jsonl",
     "validation_data_path": "allennlp/tests/fixtures/data/text_classification_json/imdb_corpus.jsonl",
-    "iterator": {
-        "type": "bucket",
-        "batch_size": 5
+    "data_loader": {
+
+        "batch_sampler": {
+            "type": "bucket",
+            "batch_size": 5
+        },
     },
     "trainer": {
         "optimizer": {

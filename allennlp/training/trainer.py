@@ -5,18 +5,21 @@ import os
 import re
 import time
 import traceback
-from typing import Dict, List, Optional, Tuple, Union, Iterable, Any
+from typing import Dict, List, Optional, Tuple, Union, Any
 
 import torch
 import torch.distributed as dist
 import torch.optim.lr_scheduler
 from torch.nn.parallel import DistributedDataParallel
 
+
 from allennlp.common import Lazy, Tqdm
 from allennlp.common.checks import ConfigurationError, check_for_gpu
 from allennlp.common import util as common_util
-from allennlp.data.instance import Instance
-from allennlp.data.iterators.data_iterator import DataIterator, TensorDict
+
+from allennlp.data import DataLoader
+
+from allennlp.data.iterators.data_iterator import TensorDict
 from allennlp.models.model import Model
 from allennlp.nn import util as nn_util
 from allennlp.training import util as training_util
@@ -38,12 +41,10 @@ class Trainer(TrainerBase):
         self,
         model: Model,
         optimizer: torch.optim.Optimizer,
-        iterator: DataIterator,
-        train_dataset: Iterable[Instance],
-        validation_dataset: Optional[Iterable[Instance]] = None,
+        data_loader: torch.utils.data.DataLoader,
         patience: Optional[int] = None,
         validation_metric: str = "-loss",
-        validation_iterator: DataIterator = None,
+        validation_data_loader: torch.utils.data.DataLoader = None,
         shuffle: bool = True,
         num_epochs: int = 20,
         serialization_dir: Optional[str] = None,
@@ -86,12 +87,8 @@ class Trainer(TrainerBase):
         optimizer : `torch.nn.Optimizer`, required.
             An instance of a Pytorch Optimizer, instantiated with the parameters of the
             model to be optimized.
-        iterator : `DataIterator`, required.
-            A method for iterating over a `Dataset`, yielding padded indexed batches.
-        train_dataset : `Dataset`, required.
-            A `Dataset` to train on. The dataset should have already been indexed.
-        validation_dataset : `Dataset`, optional, (default = None).
-            A `Dataset` to evaluate on. The dataset should have already been indexed.
+        data_loader : `DataLoader`, required.
+            A pytorch `DataLoader` containing your `Dataset`, yielding padded indexed batches.
         patience : Optional[int] > 0, optional (default=None)
             Number of epochs to be patient before early stopping: the training is stopped
             after `patience` epochs with no improvement. If given, it must be `> 0`.
@@ -101,9 +98,9 @@ class Trainer(TrainerBase):
             and whether to serialize an `is_best` model each epoch. The metric name
             must be prepended with either "+" or "-", which specifies whether the metric
             is an increasing or decreasing function.
-        validation_iterator : `DataIterator`, optional (default=None)
-            An iterator to use for the validation set.  If `None`, then
-            use the training `iterator`.
+        validation_iterator : `DataLoader`, optional (default=None)
+            A `DataLoader` to use for the validation set.  If `None`, then
+            use the training `DataLoader` with the validation data.
         shuffle : `bool`, optional (default=True)
             Whether to shuffle the instances in the iterator or not.
         num_epochs : int, optional (default = 20)
@@ -198,15 +195,13 @@ class Trainer(TrainerBase):
         # not already on the GPU then the optimizer is going to be wrong.
         self.model = model
 
-        self.iterator = iterator
-        self._validation_iterator = validation_iterator
+        self.data_loader = data_loader
+        self._validation_data_loader = validation_data_loader
         self.shuffle = shuffle
         self.optimizer = optimizer
-        self.train_data = train_dataset
-        self._validation_data = validation_dataset
 
         if patience is None:  # no early stopping
-            if validation_dataset:
+            if validation_data_loader:
                 logger.warning(
                     "You provided a validation dataset but patience was set to None, "
                     "meaning that early stopping is disabled"
@@ -332,12 +327,13 @@ class Trainer(TrainerBase):
         self._pytorch_model.train()
 
         # Get tqdm for the training batches
-        batch_generator = self.iterator(self.train_data, num_epochs=1, shuffle=self.shuffle)
+        batch_generator = iter(self.data_loader)
         batch_group_generator = common_util.lazy_groups_of(
             batch_generator, self._num_gradient_accumulation_steps
         )
+
         num_training_batches = math.ceil(
-            self.iterator.get_num_batches(self.train_data) / self._num_gradient_accumulation_steps
+            len(self.data_loader) / self._num_gradient_accumulation_steps
         )
         # Having multiple tqdm bars in case of distributed training will be a mess. Hence only the master's
         # progress is shown
@@ -512,14 +508,14 @@ class Trainer(TrainerBase):
         if self._moving_average is not None:
             self._moving_average.assign_average_value()
 
-        if self._validation_iterator is not None:
-            val_iterator = self._validation_iterator
+        if self._validation_data_loader is not None:
+            validation_data_loader = self._validation_data_loader
         else:
-            val_iterator = self.iterator
+            raise ConfigurationError(
+                "Validation results cannot be calculated without a validation_data_loader"
+            )
 
-        val_generator = val_iterator(self._validation_data, num_epochs=1, shuffle=False)
-        num_validation_batches = val_iterator.get_num_batches(self._validation_data)
-        val_generator_tqdm = Tqdm.tqdm(val_generator, total=num_validation_batches)
+        val_generator_tqdm = Tqdm.tqdm(validation_data_loader)
         batches_this_epoch = 0
         val_loss = 0
         done_early = False
@@ -620,7 +616,7 @@ class Trainer(TrainerBase):
                 if key.startswith("gpu_"):
                     metrics["peak_" + key] = max(metrics.get("peak_" + key, 0), value)
 
-            if self._validation_data is not None:
+            if self._validation_data_loader is not None:
                 with torch.no_grad():
                     # We have a validation set, so compute all the metrics on it.
                     val_loss, num_batches = self._validation_loss()
@@ -819,10 +815,8 @@ class Trainer(TrainerBase):
         cls,
         model: Model,
         serialization_dir: str,
-        iterator: DataIterator,
-        train_data: Iterable[Instance],
-        validation_iterator: DataIterator = None,
-        validation_data: Iterable[Instance] = None,
+        data_loader: DataLoader,
+        validation_data_loader: DataLoader = None,
         local_rank: int = 0,
         patience: int = None,
         validation_metric: str = "-loss",
@@ -881,9 +875,12 @@ class Trainer(TrainerBase):
         if not optimizer_:
             optimizer_ = Optimizer.default(parameters)
 
-        batches_per_epoch = iterator.get_num_batches(train_data)
-        if batches_per_epoch == 1:  # get_num_batches returns 1 when it can't determine the answer
+        try:
+            batches_per_epoch = len(data_loader)
+        except TypeError:
+            # If the dataset is lazy, it won't have a length.
             batches_per_epoch = None
+
         moving_average_ = moving_average.construct(parameters=parameters)
         learning_rate_scheduler_ = learning_rate_scheduler.construct(
             optimizer=optimizer_, num_epochs=num_epochs, num_steps_per_epoch=batches_per_epoch
@@ -891,15 +888,14 @@ class Trainer(TrainerBase):
         momentum_scheduler_ = momentum_scheduler.construct(optimizer=optimizer_)
 
         checkpointer_ = checkpointer.construct() or Checkpointer(serialization_dir)
+
         return cls(
             model,
             optimizer_,
-            iterator,
-            train_data,
-            validation_data,
+            data_loader,
             patience=patience,
             validation_metric=validation_metric,
-            validation_iterator=validation_iterator,
+            validation_data_loader=validation_data_loader,
             shuffle=shuffle,
             num_epochs=num_epochs,
             serialization_dir=serialization_dir,

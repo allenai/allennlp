@@ -62,7 +62,7 @@ from overrides import overrides
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common.util import dump_metrics, prepare_environment
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
-from allennlp.data.iterators import DataIterator
+from allennlp.data import DataLoader
 from allennlp.models.archival import load_archive
 from allennlp.training.util import evaluate
 
@@ -173,15 +173,15 @@ def evaluate_from_args(args: argparse.Namespace) -> Dict[str, Any]:
         model.vocab.extend_from_instances(instances=instances)
         model.extend_embedder_vocab(embedding_sources)
 
-    iterator_params = config.pop("validation_iterator", None)
-    if iterator_params is None:
-        iterator_params = config.pop("iterator")
+    instances.index_with(model.vocab)
+    data_loader_params = config.pop("validation_data_loader", None)
+    if data_loader_params is None:
+        data_loader_params = config.pop("data_loader")
     if args.batch_size:
-        iterator_params["batch_size"] = args.batch_size
-    iterator = DataIterator.from_params(iterator_params)
-    iterator.index_with(model.vocab)
+        data_loader_params["batch_size"] = args.batch_size
+    data_loader = DataLoader.from_params(dataset=instances, params=data_loader_params)
 
-    metrics = evaluate(model, instances, iterator, args.cuda_device, args.batch_weight_key)
+    metrics = evaluate(model, data_loader, args.cuda_device, args.batch_weight_key)
 
     logger.info("Finished evaluating.")
 
