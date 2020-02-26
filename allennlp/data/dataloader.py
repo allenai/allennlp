@@ -1,4 +1,6 @@
-from typing import List
+from typing import List, Dict, Union
+
+import torch
 from torch.utils import data
 
 from allennlp.common.registrable import Registrable
@@ -9,7 +11,10 @@ from allennlp.data.batch import Batch
 from allennlp.data.samplers import Sampler, BatchSampler
 
 
-def allennlp_collate(instances: List[Instance]):
+TensorDict = Dict[str, Union[torch.Tensor, Dict[str, torch.Tensor]]]
+
+
+def allennlp_collate(instances: List[Instance]) -> TensorDict:
     batch = Batch(instances)
     return batch.as_tensor_dict(batch.get_padding_lengths())
 

@@ -19,7 +19,7 @@ from allennlp.common import util as common_util
 
 from allennlp.data import DataLoader
 
-from allennlp.data.iterators.data_iterator import TensorDict
+from allennlp.data.dataloader import TensorDict
 from allennlp.models.model import Model
 from allennlp.nn import util as nn_util
 from allennlp.training import util as training_util
@@ -70,9 +70,9 @@ class Trainer(TrainerBase):
     ) -> None:
         """
         A trainer for doing supervised learning. It just takes a labeled dataset
-        and a `DataIterator`, and uses the supplied `Optimizer` to learn the weights
+        and a `DataLoader`, and uses the supplied `Optimizer` to learn the weights
         for your model over some fixed number of epochs. You can also pass in a validation
-        dataset and enable early stopping. There are many other bells and whistles as well.
+        dataloader and enable early stopping. There are many other bells and whistles as well.
 
         # Parameters
 
@@ -98,7 +98,7 @@ class Trainer(TrainerBase):
             and whether to serialize an `is_best` model each epoch. The metric name
             must be prepended with either "+" or "-", which specifies whether the metric
             is an increasing or decreasing function.
-        validation_iterator : `DataLoader`, optional (default=None)
+        validation_dataloader : `DataLoader`, optional (default=None)
             A `DataLoader` to use for the validation set.  If `None`, then
             use the training `DataLoader` with the validation data.
         shuffle : `bool`, optional (default=True)
