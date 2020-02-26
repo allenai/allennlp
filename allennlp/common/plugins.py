@@ -23,6 +23,7 @@ import pkgutil
 import sys
 from typing import Iterable
 
+from allennlp.common.util import push_python_path
 
 logger = logging.getLogger(__name__)
 
@@ -66,9 +67,10 @@ def discover_plugins() -> Iterable[str]:
     """
     Returns an iterable of the plugins found.
     """
-    for module_info in discover_namespace_plugins():
-        yield module_info.name
-    yield from discover_file_plugins()
+    with push_python_path("."):
+        for module_info in discover_namespace_plugins():
+            yield module_info.name
+        yield from discover_file_plugins()
 
 
 def import_plugins() -> None:
