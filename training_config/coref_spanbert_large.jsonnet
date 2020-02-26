@@ -92,7 +92,7 @@ local span_pair_embedding_dim = 3 * span_embedding_dim + feature_size;
   },
   "trainer": {
     "num_epochs": 40,
-    "patience" : 7,
+    "patience" : 10,
     "cuda_device" : 0,
     "validation_metric": "+coref_f1",
     "learning_rate_scheduler": {
