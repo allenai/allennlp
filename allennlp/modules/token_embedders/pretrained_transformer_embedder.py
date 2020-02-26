@@ -5,6 +5,7 @@ from overrides import overrides
 
 import torch
 import torch.nn.functional as F
+from transformers import XLNetConfig
 from transformers.modeling_auto import AutoModel
 
 from allennlp.data.tokenizers import PretrainedTransformerTokenizer
@@ -48,7 +49,9 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
 
     def _number_of_token_type_embeddings(self):
         config = self.transformer_model.config
-        if hasattr(config, "type_vocab_size"):
+        if isinstance(config, XLNetConfig):
+            return 2  # XLNet has hardcoded 2
+        elif hasattr(config, "type_vocab_size"):
             return config.type_vocab_size
         else:
             return 0
