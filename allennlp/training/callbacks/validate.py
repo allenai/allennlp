@@ -24,7 +24,7 @@ class Validate(Callback):
 
     validation_data : `Iterable[Instance]`
         The instances in the validation dataset.
-    validation_dataloader : `DataIterator`
+    validation_dataloader : `DataLoader`
         The dataloader to use in the evaluation.
     """
 
