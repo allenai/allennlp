@@ -7,7 +7,7 @@ from flaky import flaky
 
 from allennlp.commands.evaluate import evaluate_from_args, Evaluate, evaluate
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.data.iterators.data_iterator import TensorDict
+from allennlp.data.dataloader import TensorDict
 from allennlp.models import Model
 
 
