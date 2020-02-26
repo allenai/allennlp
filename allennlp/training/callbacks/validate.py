@@ -2,10 +2,10 @@ from typing import Iterable, List
 import logging
 
 import torch
+from torch.utils.data import Dataloader
 
 from allennlp.common.tqdm import Tqdm
 from allennlp.data.instance import Instance
-from allennlp.data.iterators import DataIterator
 from allennlp.training import util as training_util
 from allennlp.training.callbacks.callback import Callback, handle_event
 from allennlp.training.callbacks.events import Events
@@ -24,12 +24,12 @@ class Validate(Callback):
 
     validation_data : `Iterable[Instance]`
         The instances in the validation dataset.
-    validation_iterator : `DataIterator`
-        The iterator to use in the evaluation.
+    validation_dataloader : `DataIterator`
+        The dataloader to use in the evaluation.
     """
 
     def __init__(
-        self, validation_data: Iterable[Instance], validation_iterator: DataIterator
+        self, validation_data: Iterable[Instance], validation_dataloader: Dataloader
     ) -> None:
         self.instances = validation_data
         self.iterator = validation_iterator
