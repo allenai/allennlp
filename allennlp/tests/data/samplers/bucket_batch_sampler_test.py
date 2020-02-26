@@ -84,7 +84,6 @@ class SamplerTest(AllenNlpTestCase):
         assert set(candidate_instances) == set(expected_instances)
 
 
-
 class TestBucketSampler(SamplerTest):
     def test_create_batches_groups_correctly(self):
 
