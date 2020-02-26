@@ -50,16 +50,13 @@
             ]
         ]
     },
-    "iterator": {
-        "type": "bucket",
-        "sorting_keys": [
-            [
-                "tokens",
-                "num_tokens"
-            ]
-        ],
-        "batch_size": 80
-    },
+  "data_loader": {
+    "batch_sampler": {
+      "type": "bucket",
+      "sorting_keys": [["tokens", "num_tokens"]],
+      "batch_size": 80
+    }
+  },
     "trainer": {
         "num_epochs": 500,
         "grad_clipping": 1.0,
