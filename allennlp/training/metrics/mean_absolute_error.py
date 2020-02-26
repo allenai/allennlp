@@ -32,7 +32,7 @@ class MeanAbsoluteError(Metric):
         mask : `torch.Tensor`, optional (default = None).
             A tensor of the same shape as `predictions`.
         """
-        predictions, gold_labels, mask = self.unwrap_to_tensors(predictions, gold_labels, mask)
+        predictions, gold_labels, mask = self.detach_tensors(predictions, gold_labels, mask)
 
         absolute_errors = torch.abs(predictions - gold_labels)
         if mask is not None:
@@ -48,7 +48,7 @@ class MeanAbsoluteError(Metric):
 
         The accumulated mean absolute error.
         """
-        mean_absolute_error = float(self._absolute_error) / float(self._total_count)
+        mean_absolute_error = self._absolute_error / self._total_count
         if reset:
             self.reset()
         return mean_absolute_error

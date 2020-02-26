@@ -48,7 +48,7 @@ class Covariance(Metric):
         mask : `torch.Tensor`, optional (default = None).
             A tensor of the same shape as `predictions`.
         """
-        predictions, gold_labels, mask = self.unwrap_to_tensors(predictions, gold_labels, mask)
+        predictions, gold_labels, mask = self.detach_tensors(predictions, gold_labels, mask)
         # Flatten predictions, gold_labels, and mask. We calculate the covariance between
         # the vectors, since each element in the predictions and gold_labels tensor is assumed
         # to be a separate observation.

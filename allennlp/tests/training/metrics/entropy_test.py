@@ -16,11 +16,11 @@ class EntropyTest(AllenNlpTestCase):
         metric = Entropy()
         logits = torch.Tensor([[1, 1, 1, 1], [1, 1, 1, 1]])
         metric(logits)
-        numpy.testing.assert_almost_equal(metric.get_metric(), 1.38629436)
+        numpy.testing.assert_almost_equal(metric.get_metric().cpu(), 1.38629436)
         # actual values shouldn't effect uniform distribution:
         logits = torch.Tensor([[2, 2, 2, 2], [2, 2, 2, 2]])
         metric(logits)
-        numpy.testing.assert_almost_equal(metric.get_metric(), 1.38629436)
+        numpy.testing.assert_almost_equal(metric.get_metric().cpu(), 1.38629436)
 
         metric.reset()
         assert metric._entropy == 0.0

@@ -18,7 +18,7 @@ class MentionRecall(Metric):
         batched_top_spans: torch.Tensor,
         batched_metadata: List[Dict[str, Any]],
     ):
-        for top_spans, metadata in zip(batched_top_spans.data.tolist(), batched_metadata):
+        for top_spans, metadata in zip(batched_top_spans.tolist(), batched_metadata):
 
             gold_mentions: Set[Tuple[int, int]] = {
                 mention for cluster in metadata["clusters"] for mention in cluster
@@ -32,7 +32,7 @@ class MentionRecall(Metric):
         if self._num_gold_mentions == 0:
             recall = 0.0
         else:
-            recall = self._num_recalled_mentions / float(self._num_gold_mentions)
+            recall = self._num_recalled_mentions / self._num_gold_mentions
         if reset:
             self.reset()
         return recall
