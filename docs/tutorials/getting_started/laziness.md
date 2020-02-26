@@ -175,4 +175,4 @@ AllenNLP uses the pytorch `DataLoader` abstraction to iterate over datasets
 using configurable batching, shuffling, and so on. Currently the `DataLoader`
 does not allow the use of custom samplers when using a lazy dataset. However,
 you can get a good approximation to e.g bucketing by simply sorting by sentence
-length in your iterator, for example.
+length in your dataset reader, for example.
