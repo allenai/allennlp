@@ -76,7 +76,7 @@ class TestRegistrable(AllenNlpTestCase):
     def test_registry_has_builtin_samplers(self):
         assert Sampler.by_name("random").__name__ == "RandomSampler"
         assert Sampler.by_name("sequential").__name__ == "SequentialSampler"
-        assert BatchSampler.by_name("bucket").__name__ == "BucketBatchIterator"
+        assert BatchSampler.by_name("bucket").__name__ == "BucketBatchSampler"
 
     def test_registry_has_builtin_tokenizers(self):
         assert Tokenizer.by_name("spacy").__name__ == "SpacyTokenizer"
