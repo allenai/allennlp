@@ -113,7 +113,6 @@
     "batch_sampler": {
       "type": "bucket",
       "padding_noise": 0.1,
-      "sorting_keys": [["premise", "num_tokens"], ["hypothesis", "num_tokens"]],
       "batch_size" : 32
     }
   },
