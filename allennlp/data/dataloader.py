@@ -41,7 +41,7 @@ class DataLoader(Registrable, data.DataLoader):
         sampler: Sampler = None,
         batch_sampler: BatchSampler = None,
         num_workers: int = 0,
-        # NOTE: This default is different from the normal `None`.
+        # NOTE: The default for collate_fn is different from the normal `None`.
         # We assume that if you are using this class you are using an
         # allennlp dataset of instances, which would require this.
         collate_fn=allennlp_collate,
@@ -98,7 +98,7 @@ class DataLoader(Registrable, data.DataLoader):
             sampler=sampler_,
             batch_sampler=batch_sampler_,
             num_workers=num_workers,
-            # NOTE: This default is different from the normal `None`.
+            # NOTE: The default for collate_fn is different from the normal `None`.
             # We assume that if you are using this class you are using an
             # allennlp dataset of instances, which would require this.
             collate_fn=allennlp_collate,

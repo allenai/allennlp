@@ -515,9 +515,7 @@ class Trainer(TrainerBase):
                 "Validation results cannot be calculated without a validation_data_loader"
             )
 
-        val_generator_tqdm = Tqdm.tqdm(
-            iter(validation_data_loader), total=len(validation_data_loader)
-        )
+        val_generator_tqdm = Tqdm.tqdm(validation_data_loader)
         batches_this_epoch = 0
         val_loss = 0
         done_early = False

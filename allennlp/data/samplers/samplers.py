@@ -3,6 +3,13 @@ from torch.utils import data
 
 from allennlp.common.registrable import Registrable
 
+"""
+Duplicates of the pytorch Sampler classes. Broadly, these only exist
+so that we can add type hints, meaning we can construct them from configuration
+files. You can use these directly from Python code, but they are identical to the
+pytorch ones.
+"""
+
 
 class Sampler(Registrable):
     """
@@ -30,7 +37,7 @@ class BatchSampler(Registrable):
 @Sampler.register("sequential")
 class SequentialSampler(Sampler, data.SequentialSampler):
     """
-    A registerable version of pytorch's
+    A registrable version of pytorch's
     [SequentialSampler](https://pytorch.org/docs/stable/data.html#torch.utils.data.SequentialSampler).
     """
 
@@ -41,7 +48,7 @@ class SequentialSampler(Sampler, data.SequentialSampler):
 @Sampler.register("random")
 class RandomSampler(Sampler, data.RandomSampler):
     """
-    A registerable version of pytorch's
+    A registrable version of pytorch's
     [RandomSampler](https://pytorch.org/docs/stable/data.html#torch.utils.data.RandomSampler).
     Samples elements randomly. If without replacement, then sample from a shuffled dataset.
     If with replacement, then user can specify `num_samples` to draw.
@@ -65,7 +72,7 @@ class RandomSampler(Sampler, data.RandomSampler):
 @Sampler.register("subset_random")
 class SubsetRandomSampler(Sampler, data.SubsetRandomSampler):
     """
-    A registerable version of pytorch's
+    A registrable version of pytorch's
     [SubsetRandomSampler](https://pytorch.org/docs/stable/data.html#torch.utils.data.SubsetRandomSampler).
     Samples elements randomly from a given list of indices, without replacement.
 
@@ -81,7 +88,7 @@ class SubsetRandomSampler(Sampler, data.SubsetRandomSampler):
 @Sampler.register("weighted_random")
 class WeightedRandomSampler(Sampler, data.WeightedRandomSampler):
     """
-    A registerable version of pytorch's
+    A registrable version of pytorch's
     [WeightedRandomSampler](https://pytorch.org/docs/stable/data.html#torch.utils.data.WeightedRandomSampler).
     Samples elements from `[0,...,len(weights)-1]` with given probabilities (weights).
 
@@ -111,7 +118,7 @@ class WeightedRandomSampler(Sampler, data.WeightedRandomSampler):
 @BatchSampler.register("basic")
 class BasicBatchSampler(BatchSampler, data.BatchSampler):
     """
-    A registerable version of pytorch's
+    A registrable version of pytorch's
     [BatchSampler](https://pytorch.org/docs/stable/data.html#torch.utils.data.BatchSampler).
     Wraps another sampler to yield a mini-batch of indices.
 
