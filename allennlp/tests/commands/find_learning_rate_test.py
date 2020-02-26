@@ -5,7 +5,8 @@ import pytest
 import torch
 
 from allennlp.common import Params
-from allennlp.data import Vocabulary, DataIterator
+from allennlp.data import Vocabulary
+from allennlp.data import DataLoader
 from allennlp.models import Model
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
@@ -42,7 +43,7 @@ class TestFindLearningRate(AllenNlpTestCase):
                 "dataset_reader": {"type": "sequence_tagging"},
                 "train_data_path": str(self.FIXTURES_ROOT / "data" / "sequence_tagging.tsv"),
                 "validation_data_path": str(self.FIXTURES_ROOT / "data" / "sequence_tagging.tsv"),
-                "iterator": {"type": "basic", "batch_size": 2},
+                "data_loader": {"batch_size": 2},
                 "trainer": {"cuda_device": -1, "num_epochs": 2, "optimizer": "adam"},
             }
         )
@@ -166,7 +167,7 @@ class TestSearchLearningRate(AllenNlpTestCase):
                 "dataset_reader": {"type": "sequence_tagging"},
                 "train_data_path": str(self.FIXTURES_ROOT / "data" / "sequence_tagging.tsv"),
                 "validation_data_path": str(self.FIXTURES_ROOT / "data" / "sequence_tagging.tsv"),
-                "iterator": {"type": "basic", "batch_size": 2},
+                "data_loader": {"batch_size": 2},
                 "trainer": {"cuda_device": -1, "num_epochs": 2, "optimizer": "adam"},
             }
         )
@@ -176,16 +177,17 @@ class TestSearchLearningRate(AllenNlpTestCase):
             instances=(instance for dataset in all_datasets.values() for instance in dataset),
         )
         model = Model.from_params(vocab=vocab, params=params.pop("model"))
-        iterator = DataIterator.from_params(params.pop("iterator"))
-        iterator.index_with(vocab)
         train_data = all_datasets["train"]
+        train_data.index_with(vocab)
+
+        data_loader = DataLoader.from_params(dataset=train_data, params=params.pop("data_loader"))
         trainer_params = params.pop("trainer")
         serialization_dir = os.path.join(self.TEST_DIR, "test_search_learning_rate")
 
         self.trainer = TrainerBase.from_params(
             model=model,
             serialization_dir=serialization_dir,
-            iterator=iterator,
+            data_loader=data_loader,
             train_data=train_data,
             params=trainer_params,
             validation_data=None,

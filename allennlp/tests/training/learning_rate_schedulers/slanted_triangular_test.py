@@ -4,10 +4,11 @@ from typing import Any, Dict, List, Tuple
 
 import torch
 
+from allennlp.data.dataset_readers.dataset_reader import AllennlpDataset
 from allennlp.common import Lazy, Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.data.iterators import BasicIterator
+from allennlp.data import DataLoader
 from allennlp.training import TrainerBase
 from allennlp.training.learning_rate_schedulers import LearningRateScheduler, SlantedTriangular
 from allennlp.training.optimizers import Optimizer
@@ -112,15 +113,14 @@ class SlantedTriangularTest(AllenNlpTestCase):
         )
         # The method called in the logic below only checks the length of this list, not its
         # contents, so this should be safe.
-        instances = [1] * 40
+        instances = AllennlpDataset([1] * 40)
         optim = self._get_optimizer()
         trainer = TrainerBase.from_params(
             model=self.model,
             optimizer=Lazy(lambda **kwargs: optim),
             serialization_dir=self.TEST_DIR,
             params=params,
-            iterator=BasicIterator(batch_size=10),
-            train_data=instances,
+            data_loader=DataLoader(instances, batch_size=10),
         )
         assert isinstance(trainer._learning_rate_scheduler, SlantedTriangular)
 
@@ -150,8 +150,7 @@ class SlantedTriangularTest(AllenNlpTestCase):
             optimizer=Lazy(lambda **kwargs: optim),
             serialization_dir=self.TEST_DIR,
             params=params,
-            iterator=BasicIterator(batch_size=10),
-            train_data=instances,
+            data_loader=DataLoader(instances, batch_size=10),
         )
         assert trainer._learning_rate_scheduler.num_epochs == 3
 
