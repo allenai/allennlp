@@ -1,12 +1,14 @@
 import itertools
-from typing import Iterable, Iterator, Callable, Optional
+from typing import Iterable, Iterator, Callable, Optional, List
 import logging
 import os
 import pathlib
 
 import jsonpickle
+from torch.utils.data import Dataset, IterableDataset
 
 from allennlp.data.instance import Instance
+from allennlp.data.vocabulary import Vocabulary
 from allennlp.common import Tqdm, util
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.registrable import Registrable
@@ -14,7 +16,24 @@ from allennlp.common.registrable import Registrable
 logger = logging.getLogger(__name__)
 
 
-class _LazyInstances(Iterable):
+class AllennlpDataset(Dataset):
+    def __init__(self, instances: List[Instance], vocab: Vocabulary = None):
+        self.instances = instances
+        self.vocab = vocab
+
+    def __getitem__(self, idx):
+        if self.vocab is not None:
+            self.instances[idx].index_fields(self.vocab)
+        return self.instances[idx]
+
+    def __len__(self):
+        return len(self.instances)
+
+    def index_with(self, vocab: Vocabulary):
+        self.vocab = vocab
+
+
+class _LazyInstances(IterableDataset):
     """
     An `Iterable` that just wraps a thunk for generating instances and calls it for
     each call to `__iter__`.
@@ -26,25 +45,33 @@ class _LazyInstances(Iterable):
         cache_file: str = None,
         deserialize: Callable[[str], Instance] = None,
         serialize: Callable[[Instance], str] = None,
+        vocab: Vocabulary = None,
     ) -> None:
         super().__init__()
         self.instance_generator = instance_generator
         self.cache_file = cache_file
         self.deserialize = deserialize
         self.serialize = serialize
+        self.vocab = vocab
 
     def __iter__(self) -> Iterator[Instance]:
         # Case 1: Use cached instances
         if self.cache_file is not None and os.path.exists(self.cache_file):
             with open(self.cache_file) as data_file:
                 for line in data_file:
-                    yield self.deserialize(line)
+                    instance = self.deserialize(line)
+                    if self.vocab is not None:
+                        instance.index_fields(self.vocab)
+                    yield instance
+
         # Case 2: Need to cache instances
         elif self.cache_file is not None:
             with open(self.cache_file, "w") as data_file:
                 for instance in self.instance_generator():
                     data_file.write(self.serialize(instance))
                     data_file.write("\n")
+                    if self.vocab is not None:
+                        instance.index_fields(self.vocab)
                     yield instance
         # Case 3: No cache
         else:
@@ -53,7 +80,22 @@ class _LazyInstances(Iterable):
                 raise ConfigurationError(
                     "For a lazy dataset reader, _read() must return a generator"
                 )
-            yield from instances
+            for instance in instances:
+                if self.vocab is not None:
+                    instance.index_fields(self.vocab)
+                yield instance
+
+    def index_with(self, vocab: Vocabulary):
+        self.vocab = vocab
+
+    def __len__(self):
+        """
+        We rely in a couple of places that calling len on the dataloader
+        (which in turn calls len on the dataset) doesn't raise an error.
+        In the case that you have an IterableDataset and you call len, the pytorch dataloader
+        actually spits out a warning - but we need actually calling it to not crash.
+        """
+        return 1
 
 
 class DatasetReader(Registrable):
@@ -101,7 +143,7 @@ class DatasetReader(Registrable):
         else:
             self._cache_directory = None
 
-    def read(self, file_path: str) -> Iterable[Instance]:
+    def read(self, file_path: str) -> Dataset:
         """
         Returns an `Iterable` containing all the instances
         in the specified dataset.
@@ -167,6 +209,8 @@ class DatasetReader(Registrable):
             if cache_file and not os.path.exists(cache_file):
                 logger.info(f"Caching instances to {cache_file}")
                 self._instances_to_cache_file(cache_file, instances)
+
+            instances = AllennlpDataset(instances)
 
         return instances
 

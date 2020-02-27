@@ -9,6 +9,7 @@ from typing import Any, Dict, Iterable, List, Optional, Union
 
 import torch
 import torch.distributed as dist
+from torch.utils.data import DataLoader, Dataset
 
 from allennlp.common.checks import check_for_gpu, ConfigurationError
 from allennlp.common.params import Params
@@ -16,7 +17,6 @@ from allennlp.common.tqdm import Tqdm
 from allennlp.data import Instance, Vocabulary
 from allennlp.data.batch import Batch
 from allennlp.data.dataset_readers import DatasetReader
-from allennlp.data.iterators import DataIterator
 from allennlp.models.archival import CONFIG_NAME
 from allennlp.models.model import Model
 from allennlp.nn import util as nn_util
@@ -133,7 +133,7 @@ def read_all_datasets(
     validation_dataset_reader: DatasetReader = None,
     validation_data_path: str = None,
     test_data_path: str = None,
-) -> Dict[str, Iterable[Instance]]:
+) -> Dict[str, Dataset]:
     """
     Reads all datasets (perhaps lazily, if the corresponding dataset readers are lazy) and returns a
     dictionary mapping dataset name ("train", "validation" or "test") to the iterable resulting from
@@ -143,7 +143,7 @@ def read_all_datasets(
     logger.info("Reading training data from %s", train_data_path)
     train_data = dataset_reader.read(train_data_path)
 
-    datasets: Dict[str, Iterable[Instance]] = {"train": train_data}
+    datasets: Dict[str, Dataset] = {"train": train_data}
 
     validation_dataset_reader = validation_dataset_reader or dataset_reader
 
@@ -160,7 +160,7 @@ def read_all_datasets(
     return datasets
 
 
-def datasets_from_params(params: Params) -> Dict[str, Iterable[Instance]]:
+def datasets_from_params(params: Params) -> Dict[str, Dataset]:
     """
     Load all the datasets specified by the config.
 
@@ -355,19 +355,15 @@ def get_metrics(
 
 
 def evaluate(
-    model: Model,
-    instances: Iterable[Instance],
-    data_iterator: DataIterator,
-    cuda_device: int,
-    batch_weight_key: str,
+    model: Model, data_loader: DataLoader, cuda_device: int, batch_weight_key: str,
 ) -> Dict[str, Any]:
     check_for_gpu(cuda_device)
     with torch.no_grad():
         model.eval()
 
-        iterator = data_iterator(instances, num_epochs=1, shuffle=False)
+        iterator = iter(data_loader)
         logger.info("Iterating over dataset")
-        generator_tqdm = Tqdm.tqdm(iterator, total=data_iterator.get_num_batches(instances))
+        generator_tqdm = Tqdm.tqdm(iterator, total=len(data_loader))
 
         # Number of batches in instances.
         batch_count = 0

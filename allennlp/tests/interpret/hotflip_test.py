@@ -5,6 +5,8 @@ from allennlp.models.archival import load_archive
 from allennlp.modules.token_embedders import EmptyEmbedder
 from allennlp.predictors import Predictor
 
+from ..modules.language_model_heads.linear import LinearLanguageModelHead  # noqa: F401
+
 
 class TestHotflip(AllenNlpTestCase):
     def test_hotflip(self):

@@ -81,6 +81,14 @@ class TestPretrainedTransformerEmbedder(AllenNlpTestCase):
         with pytest.raises(ValueError):
             token_embedder(token_ids, mask, type_ids)
 
+    def test_xlnet_token_type_ids(self):
+        token_embedder = PretrainedTransformerEmbedder("xlnet-base-cased")
+        token_ids = torch.LongTensor([[1, 2, 3], [2, 3, 4]])
+        mask = torch.ones_like(token_ids)
+        type_ids = torch.zeros_like(token_ids)
+        type_ids[1, 1] = 1
+        token_embedder(token_ids, mask, type_ids)
+
     def test_long_sequence_splitting_end_to_end(self):
         # Mostly the same as the end_to_end test (except for adding max_length=4),
         # because we don't want this splitting behavior to change input/output format.

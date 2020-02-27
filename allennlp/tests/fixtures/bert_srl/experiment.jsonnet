@@ -11,10 +11,12 @@ local bert_model = "allennlp/tests/fixtures/bert/vocab.txt";
         "bert_model": bert_model,
         "embedding_dropout": 0.0
     },
-    "iterator": {
-        "type": "bucket",
-        "batch_size": 5,
-        "padding_noise": 0.0
+    "data_loader": {
+        "batch_sampler": {
+            "type": "bucket",
+            "batch_size": 5,
+            "padding_noise": 0.0
+        }
     },
     "trainer": {
         "optimizer": {

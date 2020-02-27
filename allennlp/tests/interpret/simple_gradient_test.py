@@ -5,6 +5,8 @@ from allennlp.interpret.saliency_interpreters import SimpleGradient
 from allennlp.models.archival import load_archive
 from allennlp.predictors import Predictor
 
+from ..modules.language_model_heads.linear import LinearLanguageModelHead  # noqa: F401
+
 
 class TestSimpleGradient(AllenNlpTestCase):
     def test_simple_gradient_basic_text(self):
