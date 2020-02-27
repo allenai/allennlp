@@ -73,11 +73,13 @@ local span_pair_embedding_dim = 3 * span_embedding_dim + feature_size;
     "spans_per_word": 0.4,
     "max_antecedents": 100
   },
-  "iterator": {
-    "type": "bucket",
-    "sorting_keys": [["text", "tokens___token_ids"]],
-    "padding_noise": 0.0,
-    "batch_size": 1
+  "data_loader": {
+    "batch_sampler": {
+      "type": "bucket",
+      "sorting_keys": [["text", "tokens___token_ids"]],
+      "padding_noise": 0.0,
+      "batch_size": 1
+    }
   },
   "trainer": {
     "num_epochs": 150,

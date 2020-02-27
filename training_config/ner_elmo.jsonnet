@@ -82,8 +82,7 @@
       ]
     ]
   },
-  "iterator": {
-    "type": "basic",
+  "data_loader": {
     "batch_size": 64
   },
   "trainer": {
