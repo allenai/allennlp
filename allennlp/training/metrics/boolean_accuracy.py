@@ -43,7 +43,7 @@ class BooleanAccuracy(Metric):
         mask : `torch.Tensor`, optional (default = None).
             A tensor of the same shape as `predictions`.
         """
-        predictions, gold_labels, mask = self.unwrap_to_tensors(predictions, gold_labels, mask)
+        predictions, gold_labels, mask = self.detach_tensors(predictions, gold_labels, mask)
 
         # Some sanity checks.
         if gold_labels.size() != predictions.size():
@@ -69,7 +69,7 @@ class BooleanAccuracy(Metric):
             # so we'll keep predictions that aren't.
             keep = mask.view(batch_size, -1).max(dim=1)[0].float()
         else:
-            keep = torch.ones(batch_size).float()
+            keep = torch.ones(batch_size, device=predictions.device).float()
 
         predictions = predictions.view(batch_size, -1)
         gold_labels = gold_labels.view(batch_size, -1)

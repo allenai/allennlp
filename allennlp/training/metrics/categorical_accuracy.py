@@ -45,7 +45,7 @@ class CategoricalAccuracy(Metric):
         mask : `torch.Tensor`, optional (default = None).
             A masking tensor the same size as `gold_labels`.
         """
-        predictions, gold_labels, mask = self.unwrap_to_tensors(predictions, gold_labels, mask)
+        predictions, gold_labels, mask = self.detach_tensors(predictions, gold_labels, mask)
 
         # Some sanity checks.
         num_classes = predictions.size(-1)
@@ -80,7 +80,7 @@ class CategoricalAccuracy(Metric):
             # ith entry in gold_labels points to index (0-num_classes) for ith row in max_predictions
             # For each row check if index pointed by gold_label is was 1 or not (among max scored classes)
             correct = max_predictions_mask[
-                torch.arange(gold_labels.numel()).long(), gold_labels
+                torch.arange(gold_labels.numel(), device=gold_labels.device).long(), gold_labels
             ].float()
             tie_counts = max_predictions_mask.sum(-1)
             correct /= tie_counts.float()

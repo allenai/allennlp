@@ -125,7 +125,7 @@ class SpanBasedF1Measure(Metric):
         if mask is None:
             mask = torch.ones_like(gold_labels)
 
-        predictions, gold_labels, mask, prediction_map = self.unwrap_to_tensors(
+        predictions, gold_labels, mask, prediction_map = self.detach_tensors(
             predictions, gold_labels, mask, prediction_map
         )
 
@@ -277,9 +277,9 @@ class SpanBasedF1Measure(Metric):
 
     @staticmethod
     def _compute_metrics(true_positives: int, false_positives: int, false_negatives: int):
-        precision = float(true_positives) / float(true_positives + false_positives + 1e-13)
-        recall = float(true_positives) / float(true_positives + false_negatives + 1e-13)
-        f1_measure = 2.0 * ((precision * recall) / (precision + recall + 1e-13))
+        precision = true_positives / (true_positives + false_positives + 1e-13)
+        recall = true_positives / (true_positives + false_negatives + 1e-13)
+        f1_measure = 2.0 * (precision * recall) / (precision + recall + 1e-13)
         return precision, recall, f1_measure
 
     def reset(self):
