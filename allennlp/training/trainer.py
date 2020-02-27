@@ -32,6 +32,8 @@ from allennlp.training.optimizers import Optimizer
 from allennlp.training.tensorboard_writer import TensorboardWriter
 from allennlp.training.trainer_base import TrainerBase
 
+from apex import amp
+
 logger = logging.getLogger(__name__)
 
 
@@ -66,6 +68,7 @@ class Trainer(TrainerBase):
         local_rank: int = 0,
         world_size: int = 1,
         num_gradient_accumulation_steps: int = 1,
+        opt_level: Optional[str] = None,
     ) -> None:
         """
         A trainer for doing supervised learning. It just takes a labeled dataset
@@ -267,6 +270,11 @@ class Trainer(TrainerBase):
         if histogram_interval is not None:
             self._tensorboard.enable_activation_logging(self.model)
 
+        # Enable automatic mixed precision training with NVIDIA Apex.
+        self._opt_level = opt_level
+        if self._opt_level is not None:
+            self.model, self.optimizer = amp.initialize(self.model, self.optimizer, opt_level=self._opt_level)
+
         # Using `DistributedDataParallel`(ddp) brings in a quirk wrt AllenNLP's `Model` interface and its
         # usage. A `Model` object is wrapped by `ddp`, but assigning the wrapped model to `self.model`
         # will break the usages such as `Model.get_regularization_penalty`, `Model.get_metrics`, etc.
@@ -282,7 +290,14 @@ class Trainer(TrainerBase):
             self._pytorch_model = self.model
 
     def rescale_gradients(self) -> Optional[float]:
-        return training_util.rescale_gradients(self.model, self._grad_norm)
+        if self._opt_level is not None:
+            if self._grad_norm:
+                # See: https://nvidia.github.io/apex/advanced.html#gradient-clipping
+                parameters_to_clip = [p for p in amp.master_params(self.optimizer) if p.grad is not None]
+                return training_util.sparse_clip_norm(parameters_to_clip, self._grad_norm)
+            return None
+        else:
+            return training_util.rescale_gradients(self.model, self._grad_norm)
 
     def batch_loss(self, batch: TensorDict, for_training: bool) -> torch.Tensor:
         """
@@ -384,7 +399,11 @@ class Trainer(TrainerBase):
                 if torch.isnan(loss):
                     raise ValueError("nan loss encountered")
                 loss = loss / len(batch_group)
-                loss.backward()
+                if self._opt_level is not None:
+                    with amp.scale_loss(loss, self.optimizer) as scaled_loss:
+                        scaled_loss.backward()
+                else:
+                    loss.backward()
                 train_loss += loss.item()
 
             batch_grad_norm = self.rescale_gradients()
@@ -829,6 +848,7 @@ class Trainer(TrainerBase):
         distributed: bool = None,
         world_size: int = 1,
         num_gradient_accumulation_steps: int = 1,
+        opt_level: Optional[str] = None,
         no_grad: List[str] = None,
         optimizer: Lazy[Optimizer] = None,
         learning_rate_scheduler: Lazy[LearningRateScheduler] = None,
@@ -910,4 +930,5 @@ class Trainer(TrainerBase):
             local_rank=local_rank,
             world_size=world_size,
             num_gradient_accumulation_steps=num_gradient_accumulation_steps,
+            opt_level=opt_level,
         )
