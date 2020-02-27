@@ -29,10 +29,10 @@ class SnliReader(DatasetReader):
         We use this `Tokenizer` for both the premise and the hypothesis.  See :class:`Tokenizer`.
     token_indexers : `Dict[str, TokenIndexer]`, optional (default=`{"tokens": SingleIdTokenIndexer()}`)
         We similarly use this for both the premise and the hypothesis.  See :class:`TokenIndexer`.
-    tokenize_separately : `bool`, optional
+    combine_input_fields : `bool`, optional
             (default=`not isinstance(tokenizer, PretrainedTransformerTokenizer)`)
-        If True, tokenize the premise and the hypothesis separately and provide separate entries
-        in the instance. If False, tokenize them together using `tokenizer.tokenize_sentence_pair()`
+        If False, represent the premise and the hypothesis as separate fields in the instance.
+        If True, tokenize them together using `tokenizer.tokenize_sentence_pair()`
         and provide a single `tokens` field in the instance.
     """
 
@@ -40,18 +40,16 @@ class SnliReader(DatasetReader):
         self,
         tokenizer: Tokenizer = None,
         token_indexers: Dict[str, TokenIndexer] = None,
-        tokenize_separately: bool = None,
+        combine_input_fields: bool = None,
         **kwargs,
     ) -> None:
         super().__init__(**kwargs)
         self._tokenizer = tokenizer or SpacyTokenizer()
         self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
-        if tokenize_separately is not None:
-            self._tokenize_separately = tokenize_separately
+        if combine_input_fields is not None:
+            self._combine_input_fields = combine_input_fields
         else:
-            self._tokenize_separately = not isinstance(
-                self._tokenizer, PretrainedTransformerTokenizer
-            )
+            self._combine_input_fields = isinstance(self._tokenizer, PretrainedTransformerTokenizer)
 
     @overrides
     def _read(self, file_path: str):
@@ -84,7 +82,10 @@ class SnliReader(DatasetReader):
 
         fields: Dict[str, Field] = {}
 
-        if self._tokenize_separately:
+        if self._combine_input_fields:
+            tokens = self._tokenizer.tokenize_sentence_pair(premise, hypothesis)  # type: ignore
+            fields["tokens"] = TextField(tokens, self._token_indexers)
+        else:
             premise_tokens = self._tokenizer.tokenize(premise)
             hypothesis_tokens = self._tokenizer.tokenize(hypothesis)
             fields["premise"] = TextField(premise_tokens, self._token_indexers)
@@ -95,9 +96,6 @@ class SnliReader(DatasetReader):
                 "hypothesis_tokens": [x.text for x in hypothesis_tokens],
             }
             fields["metadata"] = MetadataField(metadata)
-        else:
-            tokens = self._tokenizer.tokenize_sentence_pair(premise, hypothesis)  # type: ignore
-            fields["tokens"] = TextField(tokens, self._token_indexers)
 
         if label:
             fields["label"] = LabelField(label)
