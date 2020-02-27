@@ -29,14 +29,29 @@ class SnliReader(DatasetReader):
         We use this `Tokenizer` for both the premise and the hypothesis.  See :class:`Tokenizer`.
     token_indexers : `Dict[str, TokenIndexer]`, optional (default=`{"tokens": SingleIdTokenIndexer()}`)
         We similarly use this for both the premise and the hypothesis.  See :class:`TokenIndexer`.
+    tokenize_separately : `bool`, optional
+            (default=`not isinstance(tokenizer, PretrainedTransformerTokenizer)`)
+        If True, tokenize the premise and the hypothesis separately and provide separate entries
+        in the instance. If False, tokenize them together using `tokenizer.tokenize_sentence_pair()`
+        and provide a single `tokens` field in the instance.
     """
 
     def __init__(
-        self, tokenizer: Tokenizer = None, token_indexers: Dict[str, TokenIndexer] = None, **kwargs,
+        self,
+        tokenizer: Tokenizer = None,
+        token_indexers: Dict[str, TokenIndexer] = None,
+        tokenize_separately: bool = None,
+        **kwargs,
     ) -> None:
         super().__init__(**kwargs)
         self._tokenizer = tokenizer or SpacyTokenizer()
         self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
+        if tokenize_separately is not None:
+            self._tokenize_separately = tokenize_separately
+        else:
+            self._tokenize_separately = not isinstance(
+                self._tokenizer, PretrainedTransformerTokenizer
+            )
 
     @overrides
     def _read(self, file_path: str):
@@ -69,10 +84,7 @@ class SnliReader(DatasetReader):
 
         fields: Dict[str, Field] = {}
 
-        if isinstance(self._tokenizer, PretrainedTransformerTokenizer):
-            tokens = self._tokenizer.tokenize_sentence_pair(premise, hypothesis)
-            fields["tokens"] = TextField(tokens, self._token_indexers)
-        else:
+        if self._tokenize_separately:
             premise_tokens = self._tokenizer.tokenize(premise)
             hypothesis_tokens = self._tokenizer.tokenize(hypothesis)
             fields["premise"] = TextField(premise_tokens, self._token_indexers)
@@ -83,6 +95,9 @@ class SnliReader(DatasetReader):
                 "hypothesis_tokens": [x.text for x in hypothesis_tokens],
             }
             fields["metadata"] = MetadataField(metadata)
+        else:
+            tokens = self._tokenizer.tokenize_sentence_pair(premise, hypothesis)
+            fields["tokens"] = TextField(tokens, self._token_indexers)
 
         if label:
             fields["label"] = LabelField(label)
