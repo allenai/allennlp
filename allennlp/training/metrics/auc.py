@@ -40,7 +40,7 @@ class Auc(Metric):
             A one-dimensional label tensor of shape (batch_size).
         """
 
-        predictions, gold_labels, mask = self.unwrap_to_tensors(predictions, gold_labels, mask)
+        predictions, gold_labels, mask = self.detach_tensors(predictions, gold_labels, mask)
 
         # Sanity checks.
         if gold_labels.dim() != 1:
@@ -70,8 +70,11 @@ class Auc(Metric):
 
         if mask is None:
             batch_size = gold_labels.shape[0]
-            mask = torch.ones(batch_size)
+            mask = torch.ones(batch_size, device=gold_labels.device)
         mask = mask.to(dtype=torch.bool)
+
+        self._all_predictions = self._all_predictions.to(predictions.device)
+        self._all_gold_labels = self._all_gold_labels.to(gold_labels.device)
 
         self._all_predictions = torch.cat(
             [self._all_predictions, torch.masked_select(predictions, mask).float()], dim=0
@@ -84,8 +87,8 @@ class Auc(Metric):
         if self._all_gold_labels.shape[0] == 0:
             return 0.5
         false_positive_rates, true_positive_rates, _ = metrics.roc_curve(
-            self._all_gold_labels.numpy(),
-            self._all_predictions.numpy(),
+            self._all_gold_labels.cpu().numpy(),
+            self._all_predictions.cpu().numpy(),
             pos_label=self._positive_label,
         )
         auc = metrics.auc(false_positive_rates, true_positive_rates)

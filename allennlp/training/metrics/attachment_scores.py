@@ -53,10 +53,13 @@ class AttachmentScores(Metric):
         mask : `torch.Tensor`, optional (default = None).
             A tensor of the same shape as `predicted_indices`.
         """
-        unwrapped = self.unwrap_to_tensors(
+        detached = self.detach_tensors(
             predicted_indices, predicted_labels, gold_indices, gold_labels, mask
         )
-        predicted_indices, predicted_labels, gold_indices, gold_labels, mask = unwrapped
+        predicted_indices, predicted_labels, gold_indices, gold_labels, mask = detached
+
+        if mask is None:
+            mask = torch.ones_like(predicted_indices)
 
         mask = mask.long()
         predicted_indices = predicted_indices.long()
