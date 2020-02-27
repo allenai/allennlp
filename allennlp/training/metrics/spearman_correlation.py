@@ -44,14 +44,14 @@ class SpearmanCorrelation(Metric):
         # Flatten predictions, gold_labels, and mask. We calculate the Spearman correlation between
         # the vectors, since each element in the predictions and gold_labels tensor is assumed
         # to be a separate observation.
-        predictions = predictions.view(-1)
-        gold_labels = gold_labels.view(-1)
+        predictions = predictions.reshape(-1)
+        gold_labels = gold_labels.reshape(-1)
 
         self.total_predictions = self.total_predictions.to(predictions.device)
         self.total_gold_labels = self.total_gold_labels.to(gold_labels.device)
 
         if mask is not None:
-            mask = mask.view(-1)
+            mask = mask.reshape(-1)
             self.total_predictions = torch.cat((self.total_predictions, predictions * mask), 0)
             self.total_gold_labels = torch.cat((self.total_gold_labels, gold_labels * mask), 0)
         else:
