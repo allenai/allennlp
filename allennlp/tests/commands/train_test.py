@@ -9,6 +9,7 @@ from typing import Iterable
 import pytest
 import torch
 
+from allennlp.commands import train
 from allennlp.commands.train import Train, train_model, train_model_from_args, TrainModel
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
@@ -82,6 +83,26 @@ class TestTrain(AllenNlpTestCase):
                 force=True,
                 recover=True,
             )
+
+    def test_train_model_with_lightning(self):
+        params = lambda: Params(
+            {
+                "model": {
+                    "type": "simple_tagger",
+                    "text_field_embedder": {
+                        "token_embedders": {"tokens": {"type": "embedding", "embedding_dim": 5}}
+                    },
+                    "encoder": {"type": "lstm", "input_size": 5, "hidden_size": 7, "num_layers": 2},
+                },
+                "dataset_reader": {"type": "sequence_tagging"},
+                "train_data_path": SEQUENCE_TAGGING_DATA_PATH,
+                "validation_data_path": SEQUENCE_TAGGING_DATA_PATH,
+                "data_loader": {"batch_size": 2},
+                "trainer": {"num_epochs": 2, "optimizer": "adam"},
+            }
+        )
+
+        train.train_with_lightning(params())
 
     @pytest.mark.skipif(torch.cuda.device_count() < 2, reason="Need multiple GPUs.")
     def test_train_model_distributed(self):

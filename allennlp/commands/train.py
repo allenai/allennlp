@@ -698,3 +698,95 @@ class TrainModel(Registrable):
 
 
 TrainModel.register("default", constructor="from_partial_objects")(TrainModel)
+
+
+def train_with_lightning(
+    params: Params
+):
+    from copy import deepcopy
+    dataset_reader = DatasetReader.from_params(params['dataset_reader'])
+    datasets = training_util.read_all_datasets(
+        train_data_path=params['train_data_path'],
+        dataset_reader=dataset_reader,
+        validation_dataset_reader=dataset_reader,
+        validation_data_path=params['validation_data_path'],
+        test_data_path=params.get('test_data_path'),
+    )
+
+    datasets_for_vocab_creation = params.get('datasets_for_vocab_creation')
+    if datasets_for_vocab_creation:
+        for key in datasets_for_vocab_creation:
+            if key not in datasets:
+                raise ConfigurationError(f"invalid 'dataset_for_vocab_creation' {key}")
+
+    instance_generator = (
+        instance
+        for key, dataset in datasets.items()
+        if not datasets_for_vocab_creation or key in datasets_for_vocab_creation
+        for instance in dataset
+    )
+
+    vocabulary = Vocabulary.from_params(
+        params=params.get('vocabulary', Params({})),
+        instances=instance_generator
+    )
+    model = Model.from_params(params=params['model'], vocab=vocabulary)
+
+    for dataset in datasets.values():
+        dataset.index_with(model.vocab)
+
+    data_loader = DataLoader.from_params(
+        params=deepcopy(params['data_loader']),
+        dataset=datasets["train"]
+    )
+    validation_data = datasets.get("validation")
+    if validation_data is not None:
+        validation_data_loader = DataLoader.from_params(
+            params=deepcopy(params.get('validation_data_loader', params['data_loader'])),
+            dataset=validation_data
+        )
+    else:
+        validation_data_loader = None
+
+    test_data = datasets.get("test")
+    if test_data is not None:
+        test_data_loader = DataLoader.from_params(
+            params=deepcopy(params.get('validation_data_loader', params['data_loader'])),
+            dataset=test_data
+        )
+    else:
+        test_data_loader = None
+
+
+    import pytorch_lightning
+    class LightningModule(pytorch_lightning.LightningModule):
+        def forward(self, **kwargs):
+            return model(**kwargs)
+
+        def training_step(self, batch, batch_idx):
+            print(f"\n\nBATCH: {batch}\n\n")
+            # log needs to be separated out here, but presumably your model code can do that.
+            return {'loss': model(**batch)['loss']}
+
+        def validation_step(self, batch, batch_idx):
+            return {'val_loss': modoel(**batch)['loss']}
+
+        def configure_optimizers(self):
+            from allennlp.training.optimizers import Optimizer
+            parameters = [[n, p] for n, p in model.named_parameters() if p.requires_grad]
+            return Optimizer.from_params(
+                params=params['trainer']['optimizer'],
+                model_parameters=parameters
+            )
+
+        @pytorch_lightning.data_loader
+        def train_dataloader(self):
+            return data_loader
+
+        @pytorch_lightning.data_loader
+        def validation_dataloader(self):
+            return validation_data_loader
+
+    module = LightningModule()
+    trainer = pytorch_lightning.Trainer()
+    trainer.fit(module)
