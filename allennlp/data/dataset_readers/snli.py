@@ -30,7 +30,7 @@ class SnliReader(DatasetReader):
     token_indexers : `Dict[str, TokenIndexer]`, optional (default=`{"tokens": SingleIdTokenIndexer()}`)
         We similarly use this for both the premise and the hypothesis.  See :class:`TokenIndexer`.
     combine_input_fields : `bool`, optional
-            (default=`not isinstance(tokenizer, PretrainedTransformerTokenizer)`)
+            (default=`isinstance(tokenizer, PretrainedTransformerTokenizer)`)
         If False, represent the premise and the hypothesis as separate fields in the instance.
         If True, tokenize them together using `tokenizer.tokenize_sentence_pair()`
         and provide a single `tokens` field in the instance.
