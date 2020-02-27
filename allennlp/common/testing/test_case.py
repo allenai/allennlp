@@ -55,7 +55,7 @@ def parametrize(arg_names: Iterable[str], arg_values: Iterable[Iterable[Any]]):
         Argument names to pass to the test function.
     arg_values : `Iterable[Iterable[Any]]`, required.
         Iterable of values to pass to each of the args.
-        A function call is gonna be made for each inner iterable.
+		The decorated test will be run for each inner iterable.
     """
 
     def decorator(func):
