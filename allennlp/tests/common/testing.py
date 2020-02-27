@@ -3,7 +3,7 @@ import torch
 from allennlp.common.testing import AllenNlpTestCase, multi_device
 
 
-class TestFromParams(AllenNlpTestCase):
+class TestTesting(AllenNlpTestCase):
     def test_multi_device(self):
         actual_devices = set()
 
