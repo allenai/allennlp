@@ -188,6 +188,11 @@ class Trainer(TrainerBase):
             Gradients are accumulated for the given number of steps before doing an optimizer step. This can
             be useful to accommodate batches that are larger than the RAM size. Refer Thomas Wolf's
             [post](https://tinyurl.com/y5mv44fw) for details on Gradient Accumulation.
+        opt_level : `str`, optional, (default = `None`)
+            Each opt_level establishes a set of properties that govern Amp’s implementation of pure or mixed
+            precision training. Must be a choice of `"O0"`, `"O1"`, `"O2"`, or `"O3"`.
+            See the Apex [documentation](https://nvidia.github.io/apex/amp.html#opt-levels-and-properties) for
+            more details. If `None`, Amp is not used. Defaults to `None`.
         """
         super().__init__(serialization_dir, cuda_device, distributed, local_rank, world_size)
 
