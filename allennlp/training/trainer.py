@@ -7,6 +7,7 @@ import time
 import traceback
 from typing import Dict, List, Optional, Tuple, Union, Any
 
+from apex import amp
 import torch
 import torch.distributed as dist
 import torch.optim.lr_scheduler
@@ -31,8 +32,6 @@ from allennlp.training.moving_average import MovingAverage
 from allennlp.training.optimizers import Optimizer
 from allennlp.training.tensorboard_writer import TensorboardWriter
 from allennlp.training.trainer_base import TrainerBase
-
-from apex import amp
 
 logger = logging.getLogger(__name__)
 
