@@ -55,7 +55,7 @@ class PearsonCorrelation(Metric):
         mask : `torch.Tensor`, optional (default = None).
             A tensor of the same shape as `predictions`.
         """
-        predictions, gold_labels, mask = self.unwrap_to_tensors(predictions, gold_labels, mask)
+        predictions, gold_labels, mask = self.detach_tensors(predictions, gold_labels, mask)
         self._predictions_labels_covariance(predictions, gold_labels, mask)
         self._predictions_variance(predictions, predictions, mask)
         self._labels_variance(gold_labels, gold_labels, mask)

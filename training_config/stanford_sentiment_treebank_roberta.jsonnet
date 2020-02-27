@@ -47,10 +47,12 @@ local cls_is_last_token = false;
     },
     "dropout": 0.1
   },
-  "iterator": {
-    "type": "bucket",
-    "sorting_keys": [["tokens", "tokens___token_ids"]],
-    "batch_size" : 32
+  "data_loader": {
+    "batch_sampler": {
+      "type": "bucket",
+      "sorting_keys": [["tokens", "tokens___token_ids"]],
+      "batch_size" : 32
+    }
   },
   "trainer": {
     "num_epochs": 10,

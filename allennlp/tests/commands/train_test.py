@@ -35,7 +35,7 @@ class TestTrain(AllenNlpTestCase):
                 "dataset_reader": {"type": "sequence_tagging"},
                 "train_data_path": SEQUENCE_TAGGING_DATA_PATH,
                 "validation_data_path": SEQUENCE_TAGGING_DATA_PATH,
-                "iterator": {"type": "basic", "batch_size": 2},
+                "data_loader": {"batch_size": 2},
                 "trainer": {"num_epochs": 2, "optimizer": "adam"},
             }
         )
@@ -97,7 +97,7 @@ class TestTrain(AllenNlpTestCase):
                 "dataset_reader": {"type": "sequence_tagging"},
                 "train_data_path": SEQUENCE_TAGGING_DATA_PATH,
                 "validation_data_path": SEQUENCE_TAGGING_DATA_PATH,
-                "iterator": {"type": "basic", "batch_size": 2},
+                "data_loader": {"batch_size": 2},
                 "trainer": {"num_epochs": 2, "optimizer": "adam"},
                 "distributed": {"cuda_devices": [0, 1]},
             }
@@ -137,7 +137,7 @@ class TestTrain(AllenNlpTestCase):
                 },
                 "train_data_path": SEQUENCE_TAGGING_SHARDS_PATH,
                 "validation_data_path": SEQUENCE_TAGGING_SHARDS_PATH,
-                "iterator": {"type": "basic", "batch_size": 2},
+                "data_loader": {"batch_size": 2},
                 "trainer": {"num_epochs": 2, "optimizer": "adam"},
                 "distributed": {"cuda_devices": [0, 1]},
             }
@@ -217,7 +217,7 @@ class TestTrain(AllenNlpTestCase):
                 "dataset_reader": {"type": "sequence_tagging"},
                 "train_data_path": SEQUENCE_TAGGING_DATA_PATH,
                 "validation_data_path": SEQUENCE_TAGGING_DATA_PATH,
-                "iterator": {"type": "basic", "batch_size": 2},
+                "data_loader": {"batch_size": 2},
                 "trainer": {"num_epochs": 2, "optimizer": "adam"},
                 "distributed": {},
             }
@@ -241,7 +241,7 @@ class TestTrain(AllenNlpTestCase):
                 "dataset_reader": {"type": "sequence_tagging"},
                 "train_data_path": SEQUENCE_TAGGING_DATA_PATH,
                 "validation_data_path": SEQUENCE_TAGGING_DATA_PATH,
-                "iterator": {"type": "basic", "batch_size": 2},
+                "data_loader": {"batch_size": 2},
                 "trainer": {"num_epochs": 2, "optimizer": "adam"},
             }
         )
@@ -270,7 +270,7 @@ class TestTrain(AllenNlpTestCase):
                 "dataset_reader": {"type": "sequence_tagging"},
                 "train_data_path": "allennlp/tests/fixtures/data/sequence_tagging.tsv",
                 "validation_data_path": "allennlp/tests/fixtures/data/sequence_tagging.tsv",
-                "iterator": {"type": "basic", "batch_size": 2},
+                "data_loader": {"batch_size": 2},
                 "trainer": {
                     "num_epochs": 2,
                     "cuda_device": torch.cuda.device_count(),
@@ -297,7 +297,7 @@ class TestTrain(AllenNlpTestCase):
                 "test_data_path": SEQUENCE_TAGGING_DATA_PATH,
                 "validation_data_path": SEQUENCE_TAGGING_DATA_PATH,
                 "evaluate_on_test": True,
-                "iterator": {"type": "basic", "batch_size": 2},
+                "data_loader": {"batch_size": 2},
                 "trainer": {"num_epochs": 2, "optimizer": "adam"},
             }
         )
@@ -382,7 +382,7 @@ class TestTrainOnLazyDataset(AllenNlpTestCase):
                 "dataset_reader": {"type": "lazy-test"},
                 "train_data_path": SEQUENCE_TAGGING_DATA_PATH,
                 "validation_data_path": SEQUENCE_TAGGING_DATA_PATH,
-                "iterator": {"type": "basic", "batch_size": 2},
+                "data_loader": {"batch_size": 2},
                 "trainer": {"num_epochs": 2, "optimizer": "adam"},
             }
         )
@@ -404,7 +404,7 @@ class TestTrainOnLazyDataset(AllenNlpTestCase):
                 "test_data_path": SEQUENCE_TAGGING_DATA_PATH,
                 "validation_data_path": SEQUENCE_TAGGING_DATA_PATH,
                 "evaluate_on_test": True,
-                "iterator": {"type": "basic", "batch_size": 2},
+                "data_loader": {"batch_size": 2},
                 "trainer": {"num_epochs": 2, "optimizer": "adam"},
             }
         )
@@ -424,7 +424,7 @@ class TestTrainOnLazyDataset(AllenNlpTestCase):
                 "dataset_reader": {"type": "sequence_tagging"},
                 "train_data_path": SEQUENCE_TAGGING_DATA_PATH,
                 "validation_data_path": SEQUENCE_TAGGING_DATA_PATH,
-                "iterator": {"type": "basic", "batch_size": 2},
+                "data_loader": {"batch_size": 2},
                 "trainer": {"num_epochs": 2, "optimizer": "adam"},
             }
         )
@@ -466,7 +466,7 @@ class TestDryRun(AllenNlpTestCase):
                 "dataset_reader": {"type": "sequence_tagging"},
                 "train_data_path": str(self.FIXTURES_ROOT / "data" / "sequence_tagging.tsv"),
                 "validation_data_path": str(self.FIXTURES_ROOT / "data" / "sequence_tagging.tsv"),
-                "iterator": {"type": "basic", "batch_size": 2},
+                "data_loader": {"batch_size": 2},
                 "trainer": {"num_epochs": 2, "optimizer": "adam"},
             }
         )

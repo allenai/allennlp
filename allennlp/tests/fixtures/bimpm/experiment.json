@@ -112,11 +112,13 @@
       ]
     }
   },
-  "iterator": {
-    "type": "bucket",
-    "batch_size": 64,
-    "padding_noise": 0.0
-  },
+  "data_loader": {
+    "batch_sampler": {
+        "type": "bucket",
+        "batch_size": 64,
+        "padding_noise": 0.0
+    }
+},
   "trainer": {
     "checkpointer": {
       "num_serialized_models_to_keep": 2

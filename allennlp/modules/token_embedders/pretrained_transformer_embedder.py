@@ -5,6 +5,7 @@ from overrides import overrides
 
 import torch
 import torch.nn.functional as F
+from transformers import XLNetConfig
 from transformers.modeling_auto import AutoModel
 
 from allennlp.data.tokenizers import PretrainedTransformerTokenizer
@@ -48,7 +49,9 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
 
     def _number_of_token_type_embeddings(self):
         config = self.transformer_model.config
-        if hasattr(config, "type_vocab_size"):
+        if isinstance(config, XLNetConfig):
+            return 2  # XLNet has hardcoded 2
+        elif hasattr(config, "type_vocab_size"):
             return config.type_vocab_size
         else:
             return 0
@@ -96,7 +99,8 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
                     raise ValueError("Found type ids too large for the chosen transformer model.")
                 assert token_ids.shape == type_ids.shape
 
-        if self._max_length is not None:
+        fold_long_sequences = self._max_length is not None and token_ids.size(1) > self._max_length
+        if fold_long_sequences:
             batch_size, num_segment_concat_wordpieces = token_ids.size()
             token_ids, segment_concat_mask, type_ids = self._fold_long_sequences(
                 token_ids, segment_concat_mask, type_ids
@@ -114,7 +118,7 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
             parameters["token_type_ids"] = type_ids
         embeddings = self.transformer_model(**parameters)[0]
 
-        if self._max_length is not None:
+        if fold_long_sequences:
             embeddings = self._unfold_long_sequences(
                 embeddings, segment_concat_mask, batch_size, num_segment_concat_wordpieces
             )

@@ -23,11 +23,13 @@
     "binary_feature_dim": 50,
     "ignore_span_metric": true // Span metric is irrelevant for Open IE loss
   },
-  "iterator": {
-    "type": "bucket",
-    "padding_noise": 0.0,
-    "batch_size" : 80
-  },
+  "data_loader": {
+    "batch_sampler": {
+        "type": "bucket",
+        "batch_size": 80,
+        "padding_noise": 0.0
+    }
+},
 
   "trainer": {
     "num_epochs": 1,

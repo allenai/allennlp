@@ -7,7 +7,7 @@ _MINOR = "9"
 _PATCH = "1"
 # For pre-release and build metadata. In an official release this must be the
 # empty string. On master we will default to "-unreleased" while in our nightly
-# builds this will have the syntax "-dev$DATE+$SHA". See
+# builds this will have the syntax ".dev$DATE". See
 # https://semver.org/#is-v123-a-semantic-version for the semantics.
 _SUFFIX = os.environ.get("ALLENNLP_VERSION_SUFFIX", "-unreleased")
 

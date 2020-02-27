@@ -1,30 +1,26 @@
 import argparse
 import json
-from typing import Iterator, List, Dict, Iterable
+from typing import Iterator, List, Dict
 
 import torch
 from flaky import flaky
 
 from allennlp.commands.evaluate import evaluate_from_args, Evaluate, evaluate
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.data import DataIterator, Instance
-from allennlp.data.batch import Batch
-from allennlp.data.iterators.data_iterator import TensorDict
+from allennlp.data.dataloader import TensorDict
 from allennlp.models import Model
 
 
-class DummyIterator(DataIterator):
+class DummyDataLoader:
     def __init__(self, outputs: List[TensorDict]) -> None:
         super().__init__()
         self._outputs = outputs
 
-    def __call__(
-        self, instances: Iterable[Instance], num_epochs: int = None, shuffle: bool = True
-    ) -> Iterator[TensorDict]:
+    def __iter__(self) -> Iterator[TensorDict]:
         yield from self._outputs
 
-    def _create_batches(self, instances: Iterable[Instance], shuffle: bool) -> Iterable[Batch]:
-        raise NotImplementedError
+    def __len__(self):
+        return len(self._outputs)
 
 
 class DummyModel(Model):
@@ -46,8 +42,8 @@ class TestEvaluate(AllenNlpTestCase):
     def test_evaluate_calculates_average_loss(self):
         losses = [7.0, 9.0, 8.0]
         outputs = [{"loss": torch.Tensor([loss])} for loss in losses]
-        iterator = DummyIterator(outputs)
-        metrics = evaluate(DummyModel(), None, iterator, -1, "")
+        data_loader = DummyDataLoader(outputs)
+        metrics = evaluate(DummyModel(), data_loader, -1, "")
         self.assertAlmostEqual(metrics["loss"], 8.0)
 
     def test_evaluate_calculates_average_loss_with_weights(self):
@@ -58,8 +54,8 @@ class TestEvaluate(AllenNlpTestCase):
             {"loss": torch.Tensor([loss]), "batch_weight": torch.Tensor([weight])}
             for loss, weight in inputs
         ]
-        iterator = DummyIterator(outputs)
-        metrics = evaluate(DummyModel(), None, iterator, -1, "batch_weight")
+        data_loader = DummyDataLoader(outputs)
+        metrics = evaluate(DummyModel(), data_loader, -1, "batch_weight")
         self.assertAlmostEqual(metrics["loss"], (70 + 18 + 12) / 13.5)
 
     @flaky

@@ -11,8 +11,8 @@ from allennlp.commands.subcommand import Subcommand
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.plugins import discover_plugins
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.common.util import push_python_path
-from allennlp.tests.common.plugins_util import pip_install, push_python_project
+from allennlp.common.util import push_python_path, pushd
+from allennlp.tests.common.plugins_util import pip_install
 
 
 class TestMain(AllenNlpTestCase):
@@ -97,7 +97,7 @@ class TestMain(AllenNlpTestCase):
                     "dataset_reader": {"type": "sequence_tagging"},
                     "train_data_path": "$$$",
                     "validation_data_path": "$$$",
-                    "iterator": {"type": "basic", "batch_size": 2},
+                    "data_loader": {"batch_size": 2},
                     "trainer": {
                             "num_epochs": 2,
                             "optimizer": "adam"
@@ -142,7 +142,7 @@ class TestMain(AllenNlpTestCase):
         available_plugins = set(discover_plugins())
         self.assertSetEqual(set(), available_plugins)
 
-        with push_python_project(project_d_fixtures_root):
+        with pushd(project_d_fixtures_root):
             main()
             subcommands_available = Subcommand.list_available()
             self.assertIn("d", subcommands_available)

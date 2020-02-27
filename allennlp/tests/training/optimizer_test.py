@@ -2,7 +2,7 @@ from allennlp.common.params import Params
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Vocabulary
 from allennlp.data.dataset_readers import SequenceTaggingDatasetReader
-from allennlp.data.iterators import BasicIterator
+from allennlp.data import DataLoader
 from allennlp.models.simple_tagger import SimpleTagger
 from allennlp.training import Trainer
 from allennlp.training.optimizers import Optimizer
@@ -90,6 +90,5 @@ class TestDenseSparseAdam(AllenNlpTestCase):
         optimizer_params = Params({"type": "dense_sparse_adam"})
         parameters = [[n, p] for n, p in self.model.named_parameters() if p.requires_grad]
         optimizer = Optimizer.from_params(model_parameters=parameters, params=optimizer_params)
-        iterator = BasicIterator(2)
-        iterator.index_with(self.vocab)
-        Trainer(self.model, optimizer, iterator, self.instances).train()
+        self.instances.index_with(self.vocab)
+        Trainer(self.model, optimizer, DataLoader(self.instances, 2)).train()
