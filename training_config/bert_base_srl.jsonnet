@@ -9,7 +9,7 @@
       "batch_sampler": {
         "type": "bucket",
         "batch_size" : 32
-        }
+      }
     },
 
     "train_data_path": std.extVar("SRL_TRAIN_DATA_PATH"),
