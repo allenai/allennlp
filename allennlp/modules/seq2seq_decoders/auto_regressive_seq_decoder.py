@@ -301,7 +301,7 @@ class AutoRegressiveSeqDecoder(SeqDecoder):
         return output_projections, state
 
     def _get_loss(
-        self, logits: torch.LongTensor, targets: torch.LongTensor, target_mask: torch.LongTensor
+        self, logits: torch.LongTensor, targets: torch.LongTensor, target_mask: torch.BoolTensor
     ) -> torch.Tensor:
         """
         Compute loss.

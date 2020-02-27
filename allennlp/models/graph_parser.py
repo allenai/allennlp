@@ -177,7 +177,6 @@ class GraphParser(Model):
         embedded_text_input = self._input_dropout(embedded_text_input)
         encoded_text = self.encoder(embedded_text_input, mask)
 
-        float_mask = mask.float()
         encoded_text = self._dropout(encoded_text)
 
         # shape (batch_size, sequence_length, arc_representation_dim)
@@ -195,7 +194,7 @@ class GraphParser(Model):
         arc_tag_logits = arc_tag_logits.permute(0, 2, 3, 1).contiguous()
 
         minus_inf = -1e8
-        minus_mask = (1 - float_mask) * minus_inf
+        minus_mask = ~mask.float() * minus_inf
         arc_scores = arc_scores + minus_mask.unsqueeze(2) + minus_mask.unsqueeze(1)
 
         arc_probs, arc_tag_probs = self._greedy_decode(arc_scores, arc_tag_logits, mask)
@@ -216,7 +215,7 @@ class GraphParser(Model):
             # Make the arc tags not have negative values anywhere
             # (by default, no edge is indicated with -1).
             arc_indices = (arc_tags != -1).float()
-            tag_mask = float_mask.unsqueeze(1) * float_mask.unsqueeze(2)
+            tag_mask = mask.unsqueeze(1) & mask.unsqueeze(2)
             one_minus_arc_probs = 1 - arc_probs
             # We stack scores here because the f1 measure expects a
             # distribution, rather than a single value.

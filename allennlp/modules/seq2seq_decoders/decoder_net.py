@@ -66,9 +66,9 @@ class DecoderNet(torch.nn.Module, Registrable):
         self,
         previous_state: Dict[str, torch.Tensor],
         encoder_outputs: torch.Tensor,
-        source_mask: torch.Tensor,
+        source_mask: torch.BoolTensor,
         previous_steps_predictions: torch.Tensor,
-        previous_steps_mask: Optional[torch.Tensor] = None,
+        previous_steps_mask: Optional[torch.BoolTensor] = None,
     ) -> Tuple[Dict[str, torch.Tensor], torch.Tensor]:
 
         """

@@ -462,14 +462,9 @@ class SimpleSeq2Seq(Model):
         self,
         decoder_hidden_state: torch.LongTensor = None,
         encoder_outputs: torch.LongTensor = None,
-        encoder_outputs_mask: torch.LongTensor = None,
+        encoder_outputs_mask: torch.BoolTensor = None,
     ) -> torch.Tensor:
         """Apply attention over encoder outputs and decoder state."""
-        # Ensure mask is also a FloatTensor. Or else the multiplication within
-        # attention will complain.
-        # shape: (batch_size, max_input_sequence_length)
-        encoder_outputs_mask = encoder_outputs_mask.float()
-
         # shape: (batch_size, max_input_sequence_length)
         input_weights = self._attention(decoder_hidden_state, encoder_outputs, encoder_outputs_mask)
 

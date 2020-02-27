@@ -583,7 +583,7 @@ def viterbi_decode(
 
 def get_text_field_mask(
     text_field_tensors: Dict[str, Dict[str, torch.Tensor]], num_wrapping_dims: int = 0
-) -> torch.LongTensor:
+) -> torch.BoolTensor:
     """
     Takes the dictionary of tensors produced by a `TextField` and returns a mask
     with 0 where the tokens are padding, and 1 otherwise.  We also handle `TextFields`
@@ -604,15 +604,6 @@ def get_text_field_mask(
     featurized representation of each token, etc.
 
     If the input `text_field_tensors` contains the "mask" key, this is returned instead of inferring the mask.
-
-    TODO(joelgrus): can we change this?
-    NOTE: Our functions for generating masks create torch.LongTensors, because using
-    torch.ByteTensors makes it easy to run into overflow errors
-    when doing mask manipulation, such as summing to get the lengths of sequences - see below.
-    >>> mask = torch.ones([260]).byte()
-    >>> mask.sum() # equals 260.
-    >>> var_mask = torch.autograd.V(mask)
-    >>> var_mask.sum() # equals 4, due to 8 bit precision - the sum overflows.
     """
     masks = []
     for indexer_name, indexer_tensors in text_field_tensors.items():
@@ -636,10 +627,10 @@ def get_text_field_mask(
     smallest_dim = tensor_dims[0][0] - num_wrapping_dims
     if smallest_dim == 2:
         token_tensor = tensor_dims[0][1]
-        return (token_tensor != 0).long()
+        return token_tensor != 0
     elif smallest_dim == 3:
         character_tensor = tensor_dims[0][1]
-        return ((character_tensor > 0).long().sum(dim=-1) > 0).long()
+        return (character_tensor > 0).any(dim=-1)
     else:
         raise ValueError("Expected a tensor with dimension 2 or 3, found {}".format(smallest_dim))
 

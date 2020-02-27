@@ -275,7 +275,7 @@ class LanguageModel(Model):
         `'noncontextual_token_embeddings'` : `torch.Tensor`
             (batch_size, timesteps, token_embed_dim) tensor of bottom layer noncontextual
             representations
-        `'mask'` : `torch.Tensor`
+        `'mask'` : `torch.BoolTensor`
             (batch_size, timesteps) mask for the embeddings
         """
 

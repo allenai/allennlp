@@ -203,7 +203,7 @@ class SpanConstituencyParser(Model):
         mask = get_text_field_mask(tokens)
         # Looking at the span start index is enough to know if
         # this is padding or not. Shape: (batch_size, num_spans)
-        span_mask = (spans[:, :, 0] >= 0).squeeze(-1).long()
+        span_mask = (spans[:, :, 0] >= 0).squeeze(-1)
         if span_mask.dim() == 1:
             # This happens if you use batch_size 1 and encounter
             # a length 1 sentence in PTB, which do exist. -.-
@@ -231,7 +231,7 @@ class SpanConstituencyParser(Model):
             "num_spans": num_spans,
         }
         if span_labels is not None:
-            loss = sequence_cross_entropy_with_logits(logits, span_labels, span_mask)
+            loss = sequence_cross_entropy_with_logits(logits, span_labels, span_mask.float())
             self.tag_accuracy(class_probabilities, span_labels, span_mask)
             output_dict["loss"] = loss
 

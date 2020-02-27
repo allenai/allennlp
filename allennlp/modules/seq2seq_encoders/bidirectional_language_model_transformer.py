@@ -26,14 +26,14 @@ def attention(
     query: torch.Tensor,
     key: torch.Tensor,
     value: torch.Tensor,
-    mask: torch.Tensor = None,
+    mask: torch.BoolTensor = None,
     dropout: Callable = None,
 ) -> Tuple[torch.Tensor, torch.Tensor]:
     """Compute 'Scaled Dot Product Attention'"""
     d_k = query.size(-1)
     scores = torch.matmul(query, key.transpose(-2, -1)) / math.sqrt(d_k)
     if mask is not None:
-        scores = scores.masked_fill(mask == 0, -1e9)
+        scores = scores.masked_fill(~mask, -1e9)
     p_attn = F.softmax(scores, dim=-1)
     if dropout is not None:
         p_attn = dropout(p_attn)
@@ -156,7 +156,7 @@ class MultiHeadedAttention(torch.nn.Module):
         self.dropout = torch.nn.Dropout(p=dropout)
 
     def forward(
-        self, query: torch.Tensor, key: torch.Tensor, value: torch.Tensor, mask: torch.Tensor = None
+        self, query: torch.Tensor, key: torch.Tensor, value: torch.Tensor, mask: torch.BoolTensor = None
     ) -> torch.Tensor:
         if mask is not None:
             # Same mask applied to all h heads.
@@ -252,7 +252,7 @@ class BidirectionalLanguageModelTransformer(Seq2SeqEncoder):
 
         self.should_log_activations = False
 
-    def get_attention_masks(self, mask: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    def get_attention_masks(self, mask: torch.BoolTensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Returns 2 masks of shape (batch_size, timesteps, timesteps) representing
         1) non-padded elements, and
@@ -273,8 +273,8 @@ class BidirectionalLanguageModelTransformer(Seq2SeqEncoder):
 
         return forward_mask, backward_mask
 
-    def forward(self, token_embeddings: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
-        forward_mask, backward_mask = self.get_attention_masks(mask.int())
+    def forward(self, token_embeddings: torch.Tensor, mask: torch.BoolTensor) -> torch.Tensor:
+        forward_mask, backward_mask = self.get_attention_masks(mask)
         token_embeddings = self._position(token_embeddings)
         token_embeddings = self._dropout(token_embeddings)
         forward_output = self._forward_transformer(token_embeddings, forward_mask)

@@ -291,7 +291,7 @@ class BiaffineDependencyParser(Model):
     def _parse(
         self,
         embedded_text_input: torch.Tensor,
-        mask: torch.LongTensor,
+        mask: torch.BoolTensor,
         head_tags: torch.LongTensor = None,
         head_indices: torch.LongTensor = None,
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
@@ -442,7 +442,7 @@ class BiaffineDependencyParser(Model):
         head_tag_representation: torch.Tensor,
         child_tag_representation: torch.Tensor,
         attended_arcs: torch.Tensor,
-        mask: torch.Tensor,
+        mask: torch.BoolTensor,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Decodes the head and head tag predictions by decoding the unlabeled arcs
@@ -480,7 +480,7 @@ class BiaffineDependencyParser(Model):
         )
         # Mask padded tokens, because we only want to consider actual words as heads.
         if mask is not None:
-            minus_mask = (1 - mask).to(dtype=torch.bool).unsqueeze(2)
+            minus_mask = ~mask.unsqueeze(2)
             attended_arcs.masked_fill_(minus_mask, -numpy.inf)
 
         # Compute the heads greedily.
@@ -500,7 +500,7 @@ class BiaffineDependencyParser(Model):
         head_tag_representation: torch.Tensor,
         child_tag_representation: torch.Tensor,
         attended_arcs: torch.Tensor,
-        mask: torch.Tensor,
+        mask: torch.BoolTensor,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Decodes the head and head tag predictions using the Edmonds' Algorithm
@@ -654,7 +654,7 @@ class BiaffineDependencyParser(Model):
         return head_tag_logits
 
     def _get_mask_for_eval(
-        self, mask: torch.LongTensor, pos_tags: torch.LongTensor
+        self, mask: torch.BoolTensor, pos_tags: torch.LongTensor
     ) -> torch.LongTensor:
         """
         Dependency evaluation excludes words are punctuation.
@@ -663,7 +663,7 @@ class BiaffineDependencyParser(Model):
 
         # Parameters
 
-        mask : `torch.LongTensor`, required.
+        mask : `torch.BoolTensor`, required.
             The original mask.
         pos_tags : `torch.LongTensor`, required.
             The pos tags for the sequence.
@@ -675,8 +675,8 @@ class BiaffineDependencyParser(Model):
         """
         new_mask = mask.detach()
         for label in self._pos_to_ignore:
-            label_mask = pos_tags.eq(label).long()
-            new_mask = new_mask * (1 - label_mask)
+            label_mask = pos_tags.eq(label)
+            new_mask = new_mask & ~label_mask
         return new_mask
 
     @overrides

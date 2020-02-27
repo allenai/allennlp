@@ -182,7 +182,7 @@ class CoreferenceResolver(Model):
         num_spans = spans.size(1)
 
         # Shape: (batch_size, document_length)
-        text_mask = util.get_text_field_mask(text).float()
+        text_mask = util.get_text_field_mask(text)
 
         # Shape: (batch_size, num_spans)
         span_mask = (spans[:, :, 0] >= 0).squeeze(-1)

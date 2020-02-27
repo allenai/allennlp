@@ -37,7 +37,7 @@ class _EncoderBase(torch.nn.Module):
             Tuple[Union[PackedSequence, torch.Tensor], RnnState],
         ],
         inputs: torch.Tensor,
-        mask: torch.Tensor,
+        mask: torch.BoolTensor,
         hidden_state: Optional[RnnState] = None,
     ):
         """
@@ -63,7 +63,7 @@ class _EncoderBase(torch.nn.Module):
         inputs : `torch.Tensor`, required.
             A tensor of shape `(batch_size, sequence_length, embedding_size)` representing
             the inputs to the Encoder.
-        mask : `torch.Tensor`, required.
+        mask : `torch.BoolTensor`, required.
             A tensor of shape `(batch_size, sequence_length)`, representing masked and
             non-masked elements of the sequence for each element in the batch.
         hidden_state : `Optional[RnnState]`, (default = None).

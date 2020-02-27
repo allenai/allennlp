@@ -100,7 +100,7 @@ class SpanBasedF1Measure(Metric):
         self,
         predictions: torch.Tensor,
         gold_labels: torch.Tensor,
-        mask: Optional[torch.Tensor] = None,
+        mask: Optional[torch.BoolTensor] = None,
         prediction_map: Optional[torch.Tensor] = None,
     ):
         """
@@ -111,7 +111,7 @@ class SpanBasedF1Measure(Metric):
         gold_labels : `torch.Tensor`, required.
             A tensor of integer class label of shape (batch_size, sequence_length). It must be the same
             shape as the `predictions` tensor without the `num_classes` dimension.
-        mask : `torch.Tensor`, optional (default = None).
+        mask : `torch.BoolTensor`, optional (default = None).
             A masking tensor the same size as `gold_labels`.
         prediction_map : `torch.Tensor`, optional (default = None).
             A tensor of size (batch_size, num_classes) which provides a mapping from the index of predictions
