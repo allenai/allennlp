@@ -92,7 +92,7 @@
   "data_loader": {
     "batch_sampler": {
       "type": "bucket",
-    "batch_size" : 100
+      "batch_size" : 100
     }
   },
   "trainer": {
