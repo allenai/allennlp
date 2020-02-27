@@ -96,7 +96,7 @@ class SnliReader(DatasetReader):
             }
             fields["metadata"] = MetadataField(metadata)
         else:
-            tokens = self._tokenizer.tokenize_sentence_pair(premise, hypothesis)
+            tokens = self._tokenizer.tokenize_sentence_pair(premise, hypothesis)  # type: ignore
             fields["tokens"] = TextField(tokens, self._token_indexers)
 
         if label:
