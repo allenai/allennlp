@@ -212,9 +212,9 @@ class SpanBasedF1Test(AllenNlpTestCase):
         params = Params({"type": "span_f1", "tag_namespace": "tags", "ignore_classes": ["V"]})
         metric = Metric.from_params(params=params, vocabulary=self.vocab)
         assert metric._ignore_classes == ["V"]  # type: ignore
-        assert metric._label_vocabulary == self.vocab.get_index_to_token_vocabulary(
+        assert metric._label_vocabulary == self.vocab.get_index_to_token_vocabulary(  # type: ignore
             "tags"
-        )  # type: ignore
+        )
 
     @multi_device
     def test_span_f1_matches_perl_script_for_continued_arguments(self, device: str):
