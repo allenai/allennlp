@@ -239,7 +239,7 @@ def get_dropout_mask(dropout_probability: float, tensor_for_masking: torch.Tenso
 
 def masked_softmax(
     vector: torch.Tensor,
-    mask: torch.Tensor,
+    mask: torch.BoolTensor,
     dim: int = -1,
     memory_efficient: bool = False,
     mask_fill_value: float = -1e32,
@@ -266,7 +266,6 @@ def masked_softmax(
     if mask is None:
         result = torch.nn.functional.softmax(vector, dim=dim)
     else:
-        mask = mask.float()
         while mask.dim() < vector.dim():
             mask = mask.unsqueeze(1)
         if not memory_efficient:
@@ -275,7 +274,7 @@ def masked_softmax(
             result = result * mask
             result = result / (result.sum(dim=dim, keepdim=True) + 1e-13)
         else:
-            masked_vector = vector.masked_fill((1 - mask).to(dtype=torch.bool), mask_fill_value)
+            masked_vector = vector.masked_fill(~mask, mask_fill_value)
             result = torch.nn.functional.softmax(masked_vector, dim=dim)
     return result
 
