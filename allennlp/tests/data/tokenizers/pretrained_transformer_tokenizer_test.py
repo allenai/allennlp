@@ -1,8 +1,3 @@
-import gc
-import time
-
-from flaky import flaky
-
 from allennlp.common import Params
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.tokenizers import PretrainedTransformerTokenizer
@@ -13,7 +8,7 @@ class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
         tokenizer = PretrainedTransformerTokenizer("roberta-base")
 
         sentence = "A, <mask> AllenNLP sentence."
-        expected_tokens = ["<s>", "A", ",", "<mask>", "Allen", "N", "LP", "Ġsentence", ".", "</s>"]
+        expected_tokens = ["<s>", "A", ",", "<mask>", "Allen", "N", "LP", "sentence", ".", "</s>"]
         tokens = [t.text for t in tokenizer.tokenize(sentence)]
         assert tokens == expected_tokens
 
@@ -28,12 +23,12 @@ class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
             "Allen",
             "N",
             "LP",
-            "Ġsentence",
+            "sentence",
             ".",
             "</s>",
             "</s>",
             "A",
-            "Ġsentence",
+            "sentence",
             ".",
             "</s>",
         ]
@@ -50,8 +45,8 @@ class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
             ",",
             "[MASK]",
             "Allen",
-            "##NL",
-            "##P",
+            "NL",
+            "P",
             "sentence",
             ".",
             "[SEP]",
@@ -68,8 +63,8 @@ class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
             ",",
             "[MASK]",
             "Allen",
-            "##NL",
-            "##P",
+            "NL",
+            "P",
             "sentence",
             ".",
             "[SEP]",
@@ -85,12 +80,12 @@ class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
         sentence = "A, [MASK] AllenNLP sentence."
         expected_tokens = [
             "[CLS]",
-            "a",
+            "A",
             ",",
             "[MASK]",
-            "allen",
-            "##nl",
-            "##p",
+            "Allen",
+            "NL",
+            "P",
             "sentence",
             ".",
             "[SEP]",
@@ -103,13 +98,13 @@ class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
         sentence = "A, naïve [MASK] AllenNLP sentence."
         expected_tokens = [
             "[CLS]",
-            "a",
+            "A",
             ",",
-            "naive",  # It normalizes the accent.
+            "naïve",
             "[MASK]",
-            "allen",
-            "##nl",
-            "##p",
+            "Allen",
+            "NL",
+            "P",
             "sentence",
             ".",
             "[SEP]",
@@ -118,7 +113,7 @@ class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
             None,
             0,
             1,
-            None,  # It can't find this one because of the normalized accent.
+            None,  # TODO
             9,
             16,
             21,
@@ -127,9 +122,7 @@ class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
             33,
             None,
         ]
-        tokenizer = PretrainedTransformerTokenizer(
-            "bert-base-uncased", calculate_character_offsets=True
-        )
+        tokenizer = PretrainedTransformerTokenizer("bert-base-uncased")
         tokenized = tokenizer.tokenize(sentence)
         tokens = [t.text for t in tokenized]
         assert tokens == expected_tokens
@@ -143,20 +136,18 @@ class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
             "A",
             ",",
             "na",
-            "##ï",  # Does not normalize the accent
-            "##ve",
+            "ï",
+            "ve",
             "[MASK]",
             "Allen",
-            "##NL",
-            "##P",
+            "NL",
+            "P",
             "sentence",
             ".",
             "[SEP]",
         ]
         expected_idxs = [None, 0, 1, 3, 5, 6, 9, 16, 21, 23, 25, 33, None]
-        tokenizer = PretrainedTransformerTokenizer(
-            "bert-base-cased", calculate_character_offsets=True
-        )
+        tokenizer = PretrainedTransformerTokenizer("bert-base-cased")
         tokenized = tokenizer.tokenize(sentence)
         tokens = [t.text for t in tokenized]
         assert tokens == expected_tokens
@@ -169,17 +160,17 @@ class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
             "<s>",
             "A",
             ",",
-            "ĠnaÃ¯ve",  # RoBERTa has a funny way of encoding combining characters.
+            "naïve",
             "<mask>",
             "Allen",
             "N",
             "LP",
-            "Ġsentence",
+            "sentence",
             ".",
             "</s>",
         ]
         expected_idxs = [None, 0, 1, None, 9, 16, 21, 22, 25, 33, None]
-        tokenizer = PretrainedTransformerTokenizer("roberta-base", calculate_character_offsets=True)
+        tokenizer = PretrainedTransformerTokenizer("roberta-base")
         tokenized = tokenizer.tokenize(sentence)
         tokens = [t.text for t in tokenized]
         assert tokens == expected_tokens
@@ -187,55 +178,15 @@ class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
         assert idxs == expected_idxs
 
     def test_token_idx_wikipedia(self):
-        # This will produce lots of problems with the index calculation.
-        # We check whether it catches back up at the end.
         sentence = (
             "Tokyo (東京 Tōkyō, English: /ˈtoʊkioʊ/,[7] Japanese: [toːkʲoː]), officially "
             "Tokyo Metropolis (東京都 Tōkyō-to), is one of the 47 prefectures of Japan."
         )
         for tokenizer_name in ["roberta-base", "bert-base-uncased", "bert-base-cased"]:
-            tokenizer = PretrainedTransformerTokenizer(
-                tokenizer_name, calculate_character_offsets=True
-            )
+            tokenizer = PretrainedTransformerTokenizer(tokenizer_name)
             tokenized = tokenizer.tokenize(sentence)
             assert tokenized[-2].text == "."
             assert tokenized[-2].idx == len(sentence) - 1
-
-    @flaky(max_runs=3)  # This test relies on elapsed wall time, so it's inherently flaky.
-    def test_token_idx_performance(self):
-        text = """
-            Tokyo (東京 Tōkyō, English: /ˈtoʊkioʊ/,[7] Japanese: [toːkʲoː]), officially Tokyo Metropolis (東京都
-            Tōkyō-to), is one of the 47 prefectures of Japan. It has served as the Japanese capital since
-            1869,[8][9] its urban area housing the Emperor of Japan and the Japanese government. Tokyo forms part
-            of the Kantō region on the southeastern side of Japan's main island, Honshu, and includes the Izu
-            Islands and Ogasawara Islands.[10] Tokyo was formerly named Edo when Shōgun Tokugawa Ieyasu made the
-            city his headquarters in 1603. It became the capital after Emperor Meiji moved his seat to the city
-            from Kyoto in 1868; at that time Edo was renamed Tokyo.[11] The Tokyo Metropolis formed in 1943 from
-            the merger of the former Tokyo Prefecture (東京府 Tōkyō-fu) and the city of Tokyo (東京市 Tōkyō-shi).
-            Tokyo is often referred to as a city but is officially known and governed as a "metropolitan
-            prefecture", which differs from and combines elements of a city and a prefecture, a characteristic
-            unique to Tokyo."""
-
-        tokenizer_with_idx = PretrainedTransformerTokenizer(
-            "roberta-base", calculate_character_offsets=True
-        )
-        tokenizer_without_idx = PretrainedTransformerTokenizer(
-            "roberta-base", calculate_character_offsets=False
-        )
-
-        gc.collect()
-        start = time.monotonic()
-        for i in range(200):
-            tokenizer_without_idx.tokenize(text)
-        without_idx_time = time.monotonic() - start
-
-        gc.collect()
-        start = time.monotonic()
-        for i in range(200):
-            tokenizer_with_idx.tokenize(text)
-        with_idx_time = time.monotonic() - start
-
-        assert with_idx_time <= 2 * without_idx_time
 
     def test_token_idx_sentence_pairs(self):
         first_sentence = "I went to the zoo yesterday, but they had only one animal."
@@ -243,25 +194,25 @@ class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
         expected_tokens = [
             "<s>",
             "I",
-            "Ġwent",
-            "Ġto",
-            "Ġthe",
-            "Ġzoo",
-            "Ġyesterday",
+            "went",
+            "to",
+            "the",
+            "zoo",
+            "yesterday",
             ",",
-            "Ġbut",
-            "Ġthey",
-            "Ġhad",
-            "Ġonly",
-            "Ġone",
-            "Ġanimal",
+            "but",
+            "they",
+            "had",
+            "only",
+            "one",
+            "animal",
             ".",
             "</s>",
             "</s>",
             "It",
-            "Ġwas",
-            "Ġa",
-            "Ġsh",
+            "was",
+            "a",
+            "sh",
             "itz",
             "u",
             ".",
@@ -295,7 +246,7 @@ class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
             None,
         ]
 
-        tokenizer = PretrainedTransformerTokenizer("roberta-base", calculate_character_offsets=True)
+        tokenizer = PretrainedTransformerTokenizer("roberta-base")
         tokenized = tokenizer.tokenize_sentence_pair(first_sentence, second_sentence)
         tokens = [t.text for t in tokenized]
         assert tokens == expected_tokens
@@ -391,27 +342,6 @@ class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
         tokenizer = PretrainedTransformerTokenizer("xlnet-base-cased")
         assert tokenizer._determine_num_special_tokens_added() == (0, 1, 2)
 
-    def test_tokenizer_kwargs_forced_lowercase(self):
-        text = "Hello there! General Kenobi."
-        forced_lowercase_tokenizer = PretrainedTransformerTokenizer(
-            "bert-base-cased", tokenizer_kwargs={"do_lower_case": True}
-        )
-        assert forced_lowercase_tokenizer._tokenizer_lowercases
-        tokenized = [token.text for token in forced_lowercase_tokenizer.tokenize(text)]
-        lowercase_tokens = [
-            "[CLS]",
-            "hello",
-            "there",
-            "!",
-            "general",
-            "k",
-            "##eno",
-            "##bi",
-            ".",
-            "[SEP]",
-        ]
-        assert tokenized == lowercase_tokens
-
     def test_tokenizer_kwargs_default(self):
         text = "Hello there! General Kenobi."
         tokenizer = PretrainedTransformerTokenizer("bert-base-cased")
@@ -422,16 +352,15 @@ class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
             "!",
             "General",
             "Ken",
-            "##ob",
-            "##i",
+            "ob",
+            "i",
             ".",
             "[SEP]",
         ]
-        assert not tokenizer._tokenizer_lowercases
         tokenized = [token.text for token in tokenizer.tokenize(text)]
         assert tokenized == original_tokens
 
     def test_from_params_kwargs(self):
         PretrainedTransformerTokenizer.from_params(
-            Params({"model_name": "bert-base-uncased", "tokenizer_kwargs": {"do_lower_case": True}})
+            Params({"model_name": "bert-base-uncased", "tokenizer_kwargs": {"max_len": 10}})
         )

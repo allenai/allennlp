@@ -95,17 +95,30 @@ class PretrainedTransformerTokenizer(Tokenizer):
             truncation_strategy=self._truncation_strategy,
             return_tensors=None,
             return_offsets_mapping=True,
+            return_attention_mask=False,
+            return_token_type_ids=True,
         )
         # token_ids contains a final list with ids for both regular and special tokens
         token_ids, token_type_ids, token_offsets = (
             encoded_tokens["input_ids"],
             encoded_tokens["token_type_ids"],
-            encoded_tokens["offset_mappings"],
+            encoded_tokens["offset_mapping"],
         )
 
         tokens = []
-        for token_id, token_type_id, (start, end) in zip(token_ids, token_type_ids, token_offsets):
-            token_str = self.tokenizer.convert_ids_to_tokens(token_id, skip_special_tokens=False)
+        for token_id, token_type_id, offsets in zip(token_ids, token_type_ids, token_offsets):
+            if offsets is None:
+                token_str = self.tokenizer.convert_ids_to_tokens(
+                    token_id, skip_special_tokens=False
+                )
+                start = None
+            else:
+                start, end = offsets
+                if start < len(sentence_1):
+                    token_str = sentence_1[start:end]
+                else:
+                    token_str = sentence_2[start - len(sentence_1) : end - len(sentence_1)]
+
             tokens.append(Token(text=token_str, text_id=token_id, type_id=token_type_id, idx=start))
         return tokens
 
