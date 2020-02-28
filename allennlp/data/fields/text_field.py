@@ -153,7 +153,7 @@ class TextField(SequenceField[TextFieldTensors]):
         if sort_key in self._token_indexers:
             suffix = self._token_indexers[sort_key].get_default_sort_key()
             return f"{sort_key}___{suffix}"
-        raise ValueError(f"Invalid TextField sort key: {sort_key}.")
+        raise ConfigurationError(f"Invalid TextField sort key: {sort_key}.")
 
     # Sequence[Token] methods
     def __iter__(self) -> Iterator[Token]:

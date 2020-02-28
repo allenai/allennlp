@@ -3,6 +3,7 @@ import logging
 from torch.utils import data
 
 from allennlp.common.util import add_noise_to_dict_values, lazy_groups_of
+from allennlp.common.checks import ConfigurationError
 from allennlp.data.instance import Instance
 from allennlp.data.samplers import BatchSampler
 
@@ -158,7 +159,7 @@ class BucketBatchSampler(BatchSampler):
         """
         for field_name, padding_key in self.sorting_keys:
             if field_name not in schema:
-                raise ValueError(f"Invalid field name: {field_name}.")
+                raise ConfigurationError(f"Invalid field name: {field_name}.")
         self.sorting_keys = [
             (field_name, schema[field_name].expand_sort_key(padding_key))
             for field_name, padding_key in self.sorting_keys
