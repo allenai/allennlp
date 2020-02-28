@@ -328,6 +328,8 @@ class Trainer(TrainerBase):
             batch_generator, self._num_gradient_accumulation_steps
         )
 
+        logger.info("Training")
+
         num_training_batches = math.ceil(
             len(self.data_loader) / self._num_gradient_accumulation_steps
         )
@@ -348,8 +350,6 @@ class Trainer(TrainerBase):
             self._batch_num_total = 0
 
         histogram_parameters = set(self.model.get_parameters_for_histogram_tensorboard_logging())
-
-        logger.info("Training")
 
         cumulative_batch_group_size = 0
         done_early = False
