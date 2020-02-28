@@ -358,10 +358,12 @@ class TestTextField(AllenNlpTestCase):
         assert len(field) == 5
         assert field[1].text == "is"
         assert [token.text for token in field] == ["This", "is", "a", "sentence", "."]
-    
+
     def test_expand_sort_key(self):
-        field = TextField([Token(t) for t in ["hello", "world"]], {"tokens": SingleIdTokenIndexer()})
+        field = TextField(
+            [Token(t) for t in ["hello", "world"]], {"tokens": SingleIdTokenIndexer()}
+        )
         assert field.expand_sort_key("tokens") == "tokens___tokens"
         assert field.expand_sort_key("tokens___tokens") == "tokens___tokens"
-        with self.assertRaises(ValueError):
+        with self.assertRaises(ConfigurationError):
             field.expand_sort_key("words")

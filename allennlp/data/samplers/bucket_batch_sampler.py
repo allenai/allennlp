@@ -156,6 +156,9 @@ class BucketBatchSampler(BatchSampler):
         schema : `Instance`, required.
             An example instance fitting the data schema. 
         """
+        for field_name, padding_key in self.sorting_keys:
+            if field_name not in schema:
+                raise ValueError(f"Invalid field name: {field_name}.")
         self.sorting_keys = [
             (field_name, schema[field_name].expand_sort_key(padding_key))
             for field_name, padding_key in self.sorting_keys

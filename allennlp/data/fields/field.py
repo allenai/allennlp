@@ -112,7 +112,7 @@ class Field(Generic[DataArray]):
         """
 
         return torch.stack(tensor_list)
-    
+
     def expand_sort_key(self, sort_key: str) -> str:
         """
         Optionally modify a user-specified sort key to match the underlying key structure of this field.

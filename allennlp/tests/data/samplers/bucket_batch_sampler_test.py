@@ -7,6 +7,7 @@ from allennlp.data.fields import TextField
 from allennlp.data.samplers import BucketBatchSampler
 from allennlp.data.dataset_readers.dataset_reader import AllennlpDataset
 from allennlp.data.dataloader import DataLoader
+from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.token_indexers import SingleIdTokenIndexer
 
@@ -134,12 +135,22 @@ class TestBucketSampler(SamplerTest):
         assert sampler.sorting_keys is None
         sampler._guess_sorting_keys(instances)
         assert sampler.sorting_keys == [("passage", "tokens___tokens")]
-    
+
     def test_expand_sorting_keys(self):
         dataset = AllennlpDataset(self.instances, vocab=self.vocab)
-        sampler = BucketBatchSampler(dataset, batch_size=2, padding_noise=0, sorting_keys=[("text", "tokens")])
+        sampler = BucketBatchSampler(
+            dataset, batch_size=2, padding_noise=0, sorting_keys=[("text", "tokens")]
+        )
         sampler._expand_sorting_keys(self.instances[0])
         assert sampler.sorting_keys == [("text", "tokens___tokens")]
+
+    def test_expand_invalid_sorting_keys_fails(self):
+        dataset = AllennlpDataset(self.instances, vocab=self.vocab)
+        sampler = BucketBatchSampler(
+            dataset, batch_size=2, padding_noise=0, sorting_keys=[("nothing", "tokens")]
+        )
+        with self.assertRaises(ConfigurationError):
+            sampler._expand_sorting_keys(self.instances[0])
 
     def test_from_params(self):
         dataset = AllennlpDataset(self.instances, self.vocab)
