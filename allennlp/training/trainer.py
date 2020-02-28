@@ -7,7 +7,10 @@ import time
 import traceback
 from typing import Dict, List, Optional, Tuple, Union, Any
 
-from apex import amp
+try:
+    from apex import amp
+except ImportError:
+    amp = None
 import torch
 import torch.distributed as dist
 import torch.optim.lr_scheduler
@@ -277,6 +280,12 @@ class Trainer(TrainerBase):
         # Enable automatic mixed precision training with NVIDIA Apex.
         self._opt_level = opt_level
         if self._opt_level is not None:
+            if amp is not None:
+                raise ConfigurationError(
+                    ("Apex not installed but opt_level was provided. Please install NVIDIA's Apex to enable"
+                     " automatic mixed precision (AMP) training. See: https://github.com/NVIDIA/apex.")
+                )
+
             self.model, self.optimizer = amp.initialize(self.model, self.optimizer, opt_level=self._opt_level)
 
         # Using `DistributedDataParallel`(ddp) brings in a quirk wrt AllenNLP's `Model` interface and its
