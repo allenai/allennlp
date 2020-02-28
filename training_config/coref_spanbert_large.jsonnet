@@ -85,10 +85,12 @@ local span_pair_embedding_dim = 3 * span_embedding_dim + feature_size;
     "coarse_to_fine": true,
     "inference_order": 2
   },
-  "iterator": {
-    "type": "bucket",
-    "sorting_keys": [["text", "tokens___token_ids"]],
-    "batch_size": 1
+  "data_loader": {
+    "batch_sampler": {
+      "type": "bucket",
+      "sorting_keys": [["text", "tokens___token_ids"]],
+      "batch_size": 1
+    }
   },
   "trainer": {
     "num_epochs": 40,
