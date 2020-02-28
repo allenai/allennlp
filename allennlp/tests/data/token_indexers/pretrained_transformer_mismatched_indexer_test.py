@@ -61,3 +61,7 @@ class TestPretrainedTransformerMismatchedIndexer(AllenNlpTestCase):
         assert indexed["mask"] == [1] * len(text)
         # [CLS] allen #nl #p is great [SEP]
         assert indexed["wordpiece_mask"] == [1] * 7
+
+    def test_get_default_sort_key(self):
+        indexer = PretrainedTransformerMismatchedIndexer("bert-base-uncased", max_length=4)
+        assert indexer.get_default_sort_key() == "token_ids"

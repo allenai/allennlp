@@ -104,6 +104,9 @@ class TokenIndexer(Registrable):
             tensor_dict[key] = torch.LongTensor(pad_sequence_to_length(val, padding_lengths[key]))
         return tensor_dict
 
+    def get_default_sort_key(self) -> str:
+        return "tokens"
+
     def __eq__(self, other) -> bool:
         if isinstance(self, other.__class__):
             return self.__dict__ == other.__dict__

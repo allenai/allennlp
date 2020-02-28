@@ -25,3 +25,7 @@ class TestSpacyTokenIndexer(AllenNlpTestCase):
         array_dict = field.as_tensor(lengths)
 
         assert list(array_dict["spacy"]["tokens"].shape) == [5, 96]
+
+    def test_get_default_sort_key(self):
+        indexer = SpacyTokenIndexer()
+        assert indexer.get_default_sort_key() == "tokens"

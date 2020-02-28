@@ -209,3 +209,7 @@ class PretrainedTransformerIndexer(TokenIndexer):
                     return False
             return True
         return NotImplemented
+
+    @overrides
+    def get_default_sort_key(self) -> str:
+        return "token_ids"

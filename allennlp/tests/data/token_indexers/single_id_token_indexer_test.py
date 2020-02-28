@@ -95,3 +95,7 @@ class TestSingleIdTokenIndexer(AllenNlpTestCase):
     def test_no_namespace_means_no_indexing(self):
         indexer = SingleIdTokenIndexer(namespace=None, feature_name="text_id")
         assert indexer.tokens_to_indices([Token(text_id=23)], None) == {"tokens": [23]}
+
+    def test_get_default_sort_key(self):
+        indexer = SingleIdTokenIndexer(namespace=None, feature_name="text_id")
+        assert indexer.get_default_sort_key() == "tokens"

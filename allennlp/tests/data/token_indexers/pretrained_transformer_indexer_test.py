@@ -153,3 +153,7 @@ class TestPretrainedTransformerIndexer(AllenNlpTestCase):
         assert indexed["token_ids"] == expected_ids
         assert indexed["segment_concat_mask"] == [1] * len(expected_ids)
         assert indexed["mask"] == [1] * 7  # original length
+
+    def test_get_default_sort_key(self):
+        indexer = PretrainedTransformerIndexer(model_name="bert-base-uncased", max_length=4)
+        assert indexer.get_default_sort_key() == "token_ids"

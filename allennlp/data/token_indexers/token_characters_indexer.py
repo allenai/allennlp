@@ -143,3 +143,7 @@ class TokenCharactersIndexer(TokenIndexer):
     @overrides
     def get_empty_token_list(self) -> IndexedTokenList:
         return {"token_characters": []}
+
+    @overrides
+    def get_default_sort_key(self) -> str:
+        return "token_characters"

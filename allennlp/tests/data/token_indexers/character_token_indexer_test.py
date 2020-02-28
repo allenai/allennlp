@@ -104,3 +104,7 @@ class CharacterTokenIndexerTest(AllenNlpTestCase):
             UserWarning, match=r"using the default value \(0\) of `min_padding_length`"
         ):
             TokenCharactersIndexer("characters")
+
+    def test_get_default_sort_key(self):
+        indexer = TokenCharactersIndexer("characters", min_padding_length=1)
+        assert indexer.get_default_sort_key() == "token_characters"

@@ -400,3 +400,7 @@ class TestELMoTokenCharactersIndexer(AllenNlpTestCase):
             ]
         ]
         assert indices["tokens"] == expected_indices
+
+    def test_get_default_sort_key(self):
+        indexer = ELMoTokenCharactersIndexer(tokens_to_add={"<first>": 1})
+        assert indexer.get_default_sort_key() == "tokens"
