@@ -27,14 +27,14 @@ class SemanticRoleLabelerPredictor(Predictor):
         Predicts the semantic roles of the supplied sentence and returns a dictionary
         with the results.
 
-        .. code-block:: js
-
-            {"words": [...],
-             "verbs": [
-                {"verb": "...", "description": "...", "tags": [...]},
-                ...
-                {"verb": "...", "description": "...", "tags": [...]},
-            ]}
+        ```
+        {"words": [...],
+         "verbs": [
+            {"verb": "...", "description": "...", "tags": [...]},
+            ...
+            {"verb": "...", "description": "...", "tags": [...]},
+        ]}
+        ```
 
         # Parameters
 
@@ -140,22 +140,22 @@ class SemanticRoleLabelerPredictor(Predictor):
         Expects JSON that looks like `[{"sentence": "..."}, {"sentence": "..."}, ...]`
         and returns JSON that looks like
 
-        .. code-block:: js
-
-            [
-                {"words": [...],
-                 "verbs": [
-                    {"verb": "...", "description": "...", "tags": [...]},
-                    ...
-                    {"verb": "...", "description": "...", "tags": [...]},
-                ]},
-                {"words": [...],
-                 "verbs": [
-                    {"verb": "...", "description": "...", "tags": [...]},
-                    ...
-                    {"verb": "...", "description": "...", "tags": [...]},
-                ]}
-            ]
+        ```
+        [
+            {"words": [...],
+             "verbs": [
+                {"verb": "...", "description": "...", "tags": [...]},
+                ...
+                {"verb": "...", "description": "...", "tags": [...]},
+            ]},
+            {"words": [...],
+             "verbs": [
+                {"verb": "...", "description": "...", "tags": [...]},
+                ...
+                {"verb": "...", "description": "...", "tags": [...]},
+            ]}
+        ]
+        ```
         """
         # For SRL, we have more instances than sentences, but the user specified
         # a batch size with respect to the number of sentences passed, so we respect
