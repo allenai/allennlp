@@ -75,11 +75,16 @@ class BucketBatchSampler(BatchSampler):
             logger.info("No sorting keys given; trying to guess a good one")
             self._guess_sorting_keys(instances)
             logger.info(f"Using {self.sorting_keys} as the sorting keys")
-        else:
-            self._expand_sorting_keys(instances[0])
+
+        has_expanded = False
 
         instances_with_lengths = []
         for instance in instances:
+            # Only expand the sorting keys once
+            if not has_expanded:
+                self._expand_sorting_keys(instance)
+                has_expanded = True
+
             # Make sure instance is indexed before calling .get_padding
             instance.index_fields(self.vocab)
             padding_lengths = cast(Dict[str, Dict[str, float]], instance.get_padding_lengths())

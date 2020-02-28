@@ -146,7 +146,8 @@ class TextField(SequenceField[TextFieldTensors]):
 
     def expand_sort_key(self, sort_key: str) -> str:
         """
-        If a sort key contains ___, we leave it unchanged. If it is a `TokenIndexer` name, we expand it to refer to the default key for that indexer.
+        If a sort key contains ___, we leave it unchanged. If it is a `TokenIndexer` name, we expand it to refer
+        to the default key for that indexer.
         """
         if "___" in sort_key:
             return sort_key
