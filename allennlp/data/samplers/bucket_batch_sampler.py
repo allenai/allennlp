@@ -160,7 +160,7 @@ class BucketBatchSampler(BatchSampler):
         # Parameters
 
         schema : `Instance`, required.
-            An example instance fitting the data schema. 
+            An example instance fitting the data schema.
         """
         for field_name, padding_key in self.sorting_keys:
             if field_name not in schema:
