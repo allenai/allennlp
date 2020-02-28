@@ -125,7 +125,6 @@ class TestTrainer(AllenNlpTestCase):
     @pytest.mark.skipif(not torch.cuda.is_available(), reason="No CUDA device registered.")
     @pytest.mark.skipif(importlib.util.find_spec("apex") is None, reason="Apex is not installed.")
     def test_trainer_can_run_amp(self):
-        from apex import amp
 
         self.model.cuda()
         trainer = Trainer(

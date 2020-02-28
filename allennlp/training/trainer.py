@@ -280,7 +280,7 @@ class Trainer(TrainerBase):
         # Enable automatic mixed precision training with NVIDIA Apex.
         self._opt_level = opt_level
         if self._opt_level is not None:
-            if amp is not None:
+            if amp is None:
                 raise ConfigurationError(
                     (
                         "Apex not installed but opt_level was provided. Please install NVIDIA's Apex to enable"
