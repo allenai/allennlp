@@ -1826,3 +1826,98 @@ def masked_topk(
         top_mask.reshape(*permuted_size).permute(*reverse_permutation),
         top_indices.reshape(*permuted_size).permute(*reverse_permutation),
     )
+
+
+def is_mask_contiguous_span(
+    mask: torch.BoolTensor, value_if_no_trues: Optional[bool] = None
+) -> torch.BoolTensor:
+    """
+    Checks whether the True values
+
+    Examples:
+    >> is_mask_contiguous_span(torch.Tensor([[0, 0, 1, 1, 1, 1, 0]]))
+    torch.Tensor([True])
+    >> is_mask_contiguous_span(torch.Tensor([[0, 0, 1, 0, 1, 1, 0]]))
+    torch.Tensor([False])
+    >> is_mask_contiguous_span(torch.Tensor([[0, 0, 0, 0, 0, 0, 0]]))
+    torch.Tensor([value_if_no_trues]) if value_if_no_trues is not None else ValueError
+    >> is_mask_contiguous_span(torch.Tensor([[1, 1, 1, 1, 1, 1, 1]]))
+    torch.Tensor([True])
+    >> is_mask_contiguous_span(torch.Tensor([[1, 1, 1, 0, 0, 0, 0]]))
+    torch.Tensor([True])
+
+    # Parameters
+    mask : `torch.BoolTensor`
+        A mask of shape (batch_size, seq_len)
+    value_if_no_trues : `bool`
+        It is ambiguous what the expected return is if encountering a sequence
+        mask which is all False. This argument sets the return value for sequences
+        in the batch that are all False. If it is None (default), then a ValueError
+        will be raised if this is encountered.
+
+    # Returns
+    A tensor of shape (batch_size,) on whether the sequence could be a span
+    """
+    # A vectorized way of detecting if the True values are contiguous is counting
+    # the number times we change value in the mask, and then seeing if happens more than twice
+    previous_value = mask[:, :-1]
+    next_value = mask[:, 1:]
+    transition_to_different_mask_value = previous_value != next_value
+    number_of_transitions = torch.sum(transition_to_different_mask_value, dim=1)
+    # We want to count starting out as True as transition into a span
+    number_of_transitions += mask[:, 0]
+    # Verify not transition too many times
+    is_contiguous_span = number_of_transitions <= 2
+    # Handle edge case where all False
+    if value_if_no_trues is None:
+        if torch.any(number_of_transitions == 0):
+            raise ValueError(
+                "While attempting to determine if a mask could represent contiguous"
+                " spans we encountered sequence with no True values. The return"
+                " value is potentially ambiguous. If all-False values are expected,"
+                " please pass in value_if_no_trues argument with how you expect"
+                " these cases to be interpreted. Otherwise, this might represent"
+                " a bug when you constructed the mask."
+            )
+    else:
+        assert isinstance(value_if_no_trues, bool)
+        is_contiguous_span[number_of_transitions == 0] = value_if_no_trues
+    return is_contiguous_span
+
+
+def does_mask_only_have_false_at_ends(
+    mask: torch.BoolTensor, allow_all_false_mask: bool = True
+) -> torch.BoolTensor:
+    """
+    Checks that if there are false values in mask, that they only occur the ends.
+    If the mask represents a "normal" padding mask then this is expected, as we
+    do not expect to encounter pads in the middle of the sequence.
+
+    Examples:
+    >> does_mask_only_have_false_at_ends(torch.Tensor([[1, 1, 1, 0]]]))
+    torch.Tensor([True])
+    >> does_mask_only_have_false_at_ends(torch.Tensor([[0, 1, 1, 0]]]))
+    torch.Tensor([False])
+    >> does_mask_only_have_false_at_ends(torch.Tensor([[0, 0, 0, 0]]]))
+    torch.Tensor([True]) if allow_all_false_mask else ValueError()
+    >> does_mask_only_have_false_at_ends(torch.Tensor([[1, 1, 1, 1]]]))
+    torch.Tensor([True])
+
+    # Parameters
+    mask : `torch.BoolTensor`
+        A mask of shape (batch_size, seq_len)
+    allow_all_false_mask : `torch.BoolTensor`
+        Whether a sequence mask is all False is allowed. If this arg is False,
+        then we will raise a value error in this case.
+
+    # Returns
+    A tensor of dim (batch_size,) representing whether each sequence in the batch
+    could only has False's at the end.
+    """
+    mask = mask.bool()
+    is_contig_span = is_mask_contiguous_span(
+        mask, value_if_no_trues=True if allow_all_false_mask else None
+    )
+    is_all_falses = torch.sum(mask, dim=1) == 0
+    first_val_is_true = mask[:, 0] == True
+    return is_contig_span & (first_val_is_true | is_all_falses)

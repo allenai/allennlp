@@ -1591,5 +1591,84 @@ class TestNnUtil(AllenNlpTestCase):
         self.assert_array_equal_with_mask(pruned_items, target_items, pruned_mask)
         self.assert_array_equal_with_mask(pruned_indices, target_indices, pruned_mask)
 
+    def test_is_mask_contiguous_span(self):
+        result = util.is_mask_contiguous_span(torch.BoolTensor([[0, 0, 0, 1, 1, 1, 0, 0]]))
+        assert_almost_equal(result.data.numpy(), [True])
+
+    def test_is_mask_contiguous_span_2(self):
+        # False
+        result = util.is_mask_contiguous_span(torch.BoolTensor([[0, 0, 0, 1, 1, 0, 1, 0]]))
+        assert_almost_equal(result.data.numpy(), [False])
+        result = util.is_mask_contiguous_span(torch.BoolTensor([[0, 1, 0, 1, 1, 1, 0, 1]]))
+        assert_almost_equal(result.data.numpy(), [False])
+
+    def test_is_mask_contiguous_span_3(self):
+        # batches
+        result = util.is_mask_contiguous_span(
+            torch.BoolTensor(
+                [[0, 0, 0, 1, 1, 0, 1, 0], [0, 1, 1, 1, 1, 0, 0, 0], [0, 1, 1, 0, 1, 0, 0, 0],]
+            )
+        )
+        assert_almost_equal(result.data.numpy(), [False, True, False])
+
+    def test_is_mask_contiguous_span_4(self):
+        result = util.is_mask_contiguous_span(torch.BoolTensor([[1, 1, 1, 1, 1, 1, 1, 1]]))
+        assert_almost_equal(result.data.numpy(), [True])
+
+    def test_is_mask_contiguous_span_5(self):
+        result = util.is_mask_contiguous_span(torch.BoolTensor([[1, 1, 1, 1, 1, 0, 0, 0]]))
+        assert_almost_equal(result.data.numpy(), [True])
+
+    def test_is_mask_contiguous_span_6(self):
+        # An all false should raise error
+        self.assertRaises(
+            ValueError,
+            lambda: util.is_mask_contiguous_span(torch.BoolTensor([[0, 0, 0, 0, 0, 0, 0, 0]])),
+        )
+
+    def test_is_mask_contiguous_span_7(self):
+        # Provide a default when all false
+        result = util.is_mask_contiguous_span(
+            torch.BoolTensor(
+                [[0, 0, 0, 1, 1, 0, 1, 0], [0, 1, 1, 1, 1, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0],]
+            ),
+            value_if_no_trues=False,
+        )
+        assert_almost_equal(result.data.numpy(), [False, True, False])
+
+    def test_does_mask_only_have_false_at_end(self):
+        result = util.does_mask_only_have_false_at_ends(
+            torch.BoolTensor([[1, 1, 1, 1, 1, 0, 0, 0]])
+        )
+        assert_almost_equal(result.data.numpy(), [True])
+
+    def test_does_mask_only_have_false_at_end_2(self):
+        result = util.does_mask_only_have_false_at_ends(
+            torch.BoolTensor([[0, 1, 1, 1, 1, 0, 0, 0]])
+        )
+        assert_almost_equal(result.data.numpy(), [False])
+
+    def test_does_mask_only_have_false_at_end_3(self):
+        result = util.does_mask_only_have_false_at_ends(
+            torch.BoolTensor([[0, 0, 0, 0, 0, 0, 0, 0]])
+        )
+        assert_almost_equal(result.data.numpy(), [True])
+
+    def test_does_mask_only_have_false_at_end_4(self):
+        self.assertRaises(
+            ValueError,
+            lambda: util.does_mask_only_have_false_at_ends(
+                torch.BoolTensor([[0, 0, 0, 0, 0, 0, 0, 0]]), allow_all_false_mask=False
+            ),
+        )
+
+    def test_does_mask_only_have_false_at_end_5(self):
+        result = util.does_mask_only_have_false_at_ends(
+            torch.BoolTensor(
+                [[0, 0, 0, 1, 1, 1, 0, 0], [0, 0, 1, 0, 1, 1, 1, 1], [1, 1, 0, 0, 0, 0, 0, 0]]
+            )
+        )
+        assert_almost_equal(result.data.numpy(), [False, False, True])
+
     def assert_array_equal_with_mask(self, a, b, mask):
         numpy.testing.assert_array_equal((a * mask).data.numpy(), (b * mask).data.numpy())

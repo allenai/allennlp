@@ -7,6 +7,7 @@ import torch
 
 from allennlp.common.checks import ConfigurationError
 import allennlp.nn.util as util
+from allennlp.nn.util import does_mask_only_have_false_at_ends
 
 VITERBI_DECODING = Tuple[List[int], float]  # a list of tags, and a viterbi score
 
@@ -173,7 +174,7 @@ class ConditionalRandomField(torch.nn.Module):
         It is important that the START and END tags are included in this.
         The START tag gets the special index equal to num_tags and END gets
         the index num_tags+1. If you are using a supported tagging scheme, 
-        it is recomended that you use a call to `allowed_transitions` in 
+        it is recommended that you use a call to `allowed_transitions` in
         order to get this List as it handles this for you.
     include_start_end_transitions : `bool`, optional (default: True)
         Whether to include the start and end transition parameters.
@@ -225,8 +226,8 @@ class ConditionalRandomField(torch.nn.Module):
         batch_size, sequence_length, num_tags = logits.size()
 
         # Transpose batch size and sequence dimensions
-        mask = mask.float().transpose(0, 1).contiguous()
-        logits = logits.transpose(0, 1).contiguous()
+        mask = mask.float().transpose(0, 1).contiguous()  # (seq_len, batch_size)
+        logits = logits.transpose(0, 1).contiguous()  # (seq_len, batch_size, num_tags)
 
         # Initial alpha is the (batch_size, num_tags) tensor of likelihoods combining the
         # transitions to the initial states and the logits for the first timestep.
@@ -273,9 +274,9 @@ class ConditionalRandomField(torch.nn.Module):
         batch_size, sequence_length, _ = logits.data.shape
 
         # Transpose batch size and sequence dimensions:
-        logits = logits.transpose(0, 1).contiguous()
-        mask = mask.float().transpose(0, 1).contiguous()
-        tags = tags.transpose(0, 1).contiguous()
+        logits = logits.transpose(0, 1).contiguous()  # (seq_len, batch_size, num_tags)
+        mask = mask.float().transpose(0, 1).contiguous()  # (seq_len, batch_size)
+        tags = tags.transpose(0, 1).contiguous()  # (seq_len, batch_size)
 
         # Start with the transition scores from start_tag to the first tag in each input
         if self.include_start_end_transitions:
@@ -335,16 +336,20 @@ class ConditionalRandomField(torch.nn.Module):
             A tensor which is the expected tag labels. It should have shape of
             `(batch_size, seq_len)`
         mask : `torch.Tensor`
-            An optional mask which is True where we care about the labeling. So
-            for example if one has pad's in the sequence it should be False there.
-            It can optionally be false in the middle of the sequence, which
-            corresponds to pretending that token is not in the sequence. When
-            finding the likelihood we skip over the False tokens.
-            If provided, it should have shape `(batch_size, seq_len)`.
+            An optional mask which is True on values that are not pad values.
+            The mask should cover the entire non-padded sequence, and gaps in
+            the mask are not currently supported (see discussion in PR #3840).
+            If provided, the mask should have shape `(batch_size, seq_len)`.
         """
 
         if mask is None:
             mask = torch.ones(*tags.size(), dtype=torch.long)
+        else:
+            if not torch.all(does_mask_only_have_false_at_ends(mask, allow_all_false_mask=False)):
+                raise ValueError(
+                    "The CRF mask should only be False for pad values "
+                    "which should be at the end of the sequence only."
+                )
 
         log_denominator = self._input_likelihood(inputs, mask)
         log_numerator = self._joint_likelihood(inputs, tags, mask)
@@ -365,10 +370,11 @@ class ConditionalRandomField(torch.nn.Module):
         For backwards compatibility, if top_k is None, then instead returns a flat list of
         tag sequences (the top tag sequence for each batch item).
         
-        If the mask is provided, we will skip over tokens where False. This means that our
-        output sequence might be shorter than the input number of logits and that the
-        output of each sequence in the batch might have a different length. If provided,
-        the mask should have shape `(batch_size, seq_len)`
+        A mask can optionally be provided which is False where there are pad values
+        or for values which we will skip over. This means the output sequence might
+        be shorter than the input number of logits and that the output of each sequence
+        in the batch might have a different length. If provided, the mask should
+        have shape `(batch_size, seq_len)`
         """
         if mask is None:
             mask = torch.ones(*logits.shape[:2], dtype=torch.long, device=logits.device)
@@ -394,7 +400,7 @@ class ConditionalRandomField(torch.nn.Module):
             :num_tags, :num_tags
         ] + -10000.0 * (1 - self._constraint_mask[:num_tags, :num_tags])
         transitions[:num_tags, :num_tags] = constrained_transitions.data
-        
+
         if self.include_start_end_transitions:
             transitions[
                 start_tag, :num_tags
