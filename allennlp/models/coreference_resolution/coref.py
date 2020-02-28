@@ -208,6 +208,7 @@ class CoreferenceResolver(Model):
 
         # Prune based on mention scores.
         num_spans_to_keep = int(math.floor(self._spans_per_word * document_length))
+        num_spans_to_keep = min(num_spans_to_keep, num_spans)
 
         # Shape: (batch_size, num_spans)
         span_mention_scores = self._mention_scorer(
