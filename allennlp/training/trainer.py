@@ -282,11 +282,15 @@ class Trainer(TrainerBase):
         if self._opt_level is not None:
             if amp is not None:
                 raise ConfigurationError(
-                    ("Apex not installed but opt_level was provided. Please install NVIDIA's Apex to enable"
-                     " automatic mixed precision (AMP) training. See: https://github.com/NVIDIA/apex.")
+                    (
+                        "Apex not installed but opt_level was provided. Please install NVIDIA's Apex to enable"
+                        " automatic mixed precision (AMP) training. See: https://github.com/NVIDIA/apex."
+                    )
                 )
 
-            self.model, self.optimizer = amp.initialize(self.model, self.optimizer, opt_level=self._opt_level)
+            self.model, self.optimizer = amp.initialize(
+                self.model, self.optimizer, opt_level=self._opt_level
+            )
 
         # Using `DistributedDataParallel`(ddp) brings in a quirk wrt AllenNLP's `Model` interface and its
         # usage. A `Model` object is wrapped by `ddp`, but assigning the wrapped model to `self.model`
@@ -309,7 +313,9 @@ class Trainer(TrainerBase):
         if self._grad_norm:
             if self._opt_level is not None:
                 # See: https://nvidia.github.io/apex/advanced.html#gradient-clipping
-                parameters_to_clip = [p for p in amp.master_params(self.optimizer) if p.grad is not None]
+                parameters_to_clip = [
+                    p for p in amp.master_params(self.optimizer) if p.grad is not None
+                ]
             else:
                 parameters_to_clip = [p for p in self.model.parameters() if p.grad is not None]
             return training_util.sparse_clip_norm(parameters_to_clip, self._grad_norm)
