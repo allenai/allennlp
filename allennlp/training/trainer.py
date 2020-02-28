@@ -294,14 +294,18 @@ class Trainer(TrainerBase):
             self._pytorch_model = self.model
 
     def rescale_gradients(self) -> Optional[float]:
-        if self._opt_level is not None:
-            if self._grad_norm:
+        """
+        Performs gradient rescaling. Is a no-op if gradient rescaling is not enabled.
+        """
+        if self._grad_norm:
+            if self._opt_level is not None:
                 # See: https://nvidia.github.io/apex/advanced.html#gradient-clipping
                 parameters_to_clip = [p for p in amp.master_params(self.optimizer) if p.grad is not None]
-                return training_util.sparse_clip_norm(parameters_to_clip, self._grad_norm)
-            return None
+            else:
+                parameters_to_clip = [p for p in self.model.parameters() if p.grad is not None]
+            return training_util.sparse_clip_norm(parameters_to_clip, self._grad_norm)
         else:
-            return training_util.rescale_gradients(self.model, self._grad_norm)
+            return None
 
     def batch_loss(self, batch: TensorDict, for_training: bool) -> torch.Tensor:
         """
