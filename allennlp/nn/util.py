@@ -1832,7 +1832,7 @@ def is_mask_contiguous_span(
     mask: torch.BoolTensor, value_if_no_trues: Optional[bool] = None
 ) -> torch.BoolTensor:
     """
-    Checks whether the True values
+    Checks whether the True values only appear contiguously in one span.
 
     Examples:
     >> is_mask_contiguous_span(torch.Tensor([[0, 0, 1, 1, 1, 1, 0]]))
