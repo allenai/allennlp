@@ -74,6 +74,9 @@ class BucketBatchSampler(BatchSampler):
             logger.info("No sorting keys given; trying to guess a good one")
             self._guess_sorting_keys(instances)
             logger.info(f"Using {self.sorting_keys} as the sorting keys")
+        else:
+            self._expand_sorting_keys(instances[0])
+
         instances_with_lengths = []
         for instance in instances:
             # Make sure instance is indexed before calling .get_padding
@@ -143,6 +146,20 @@ class BucketBatchSampler(BatchSampler):
                 "open an issue on github"
             )
         self.sorting_keys = [longest_padding_key]
+
+    def _expand_sorting_keys(self, schema: Instance) -> None:
+        """
+        Expand default sorting keys based on the default sort key set for each kind of token indexer.
+
+        # Parameters
+
+        schema : `Instance`, required.
+            An example instance fitting the data schema. 
+        """
+        self.sorting_keys = [
+            (field_name, schema[field_name].expand_sort_key(padding_key))
+            for field_name, padding_key in self.sorting_keys
+        ]
 
     def __len__(self):
         return len(self.data_source) // self.batch_size

@@ -144,6 +144,17 @@ class TextField(SequenceField[TextFieldTensors]):
             f"text: \n {formatted_text} \t\tand TokenIndexers : {indexers}"
         )
 
+    def expand_sort_key(self, sort_key: str) -> str:
+        """
+        Expand the default sort key.
+        """
+        if "___" in sort_key:
+            return sort_key
+        if sort_key in self._token_indexers:
+            suffix = self._token_indexers[sort_key].get_default_sort_key()
+            return f"{sort_key}___{suffix}"
+        raise ValueError(f"Invalid sort key {sort_key} for TextField.")
+
     # Sequence[Token] methods
     def __iter__(self) -> Iterator[Token]:
         return iter(self.tokens)

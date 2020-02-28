@@ -112,6 +112,14 @@ class Field(Generic[DataArray]):
         """
 
         return torch.stack(tensor_list)
+    
+    def expand_sort_key(self, sort_key: str) -> str:
+        """
+        Optionally modify a user-specified sort key to match the underlying key structure of this field.
+
+        This is useful for implementing default sortable fields, for example.
+        """
+        return sort_key
 
     def __eq__(self, other) -> bool:
         if isinstance(self, other.__class__):
