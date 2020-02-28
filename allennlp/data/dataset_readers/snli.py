@@ -9,7 +9,7 @@ from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.fields import Field, TextField, LabelField, MetadataField
 from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenIndexer
-from allennlp.data.tokenizers import Tokenizer, SpacyTokenizer
+from allennlp.data.tokenizers import Tokenizer, SpacyTokenizer, PretrainedTransformerTokenizer
 
 logger = logging.getLogger(__name__)
 
@@ -29,14 +29,27 @@ class SnliReader(DatasetReader):
         We use this `Tokenizer` for both the premise and the hypothesis.  See :class:`Tokenizer`.
     token_indexers : `Dict[str, TokenIndexer]`, optional (default=`{"tokens": SingleIdTokenIndexer()}`)
         We similarly use this for both the premise and the hypothesis.  See :class:`TokenIndexer`.
+    combine_input_fields : `bool`, optional
+            (default=`isinstance(tokenizer, PretrainedTransformerTokenizer)`)
+        If False, represent the premise and the hypothesis as separate fields in the instance.
+        If True, tokenize them together using `tokenizer.tokenize_sentence_pair()`
+        and provide a single `tokens` field in the instance.
     """
 
     def __init__(
-        self, tokenizer: Tokenizer = None, token_indexers: Dict[str, TokenIndexer] = None, **kwargs,
+        self,
+        tokenizer: Tokenizer = None,
+        token_indexers: Dict[str, TokenIndexer] = None,
+        combine_input_fields: bool = None,
+        **kwargs,
     ) -> None:
         super().__init__(**kwargs)
         self._tokenizer = tokenizer or SpacyTokenizer()
         self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
+        if combine_input_fields is not None:
+            self._combine_input_fields = combine_input_fields
+        else:
+            self._combine_input_fields = isinstance(self._tokenizer, PretrainedTransformerTokenizer)
 
     @overrides
     def _read(self, file_path: str):
@@ -68,16 +81,23 @@ class SnliReader(DatasetReader):
     ) -> Instance:
 
         fields: Dict[str, Field] = {}
-        premise_tokens = self._tokenizer.tokenize(premise)
-        hypothesis_tokens = self._tokenizer.tokenize(hypothesis)
-        fields["premise"] = TextField(premise_tokens, self._token_indexers)
-        fields["hypothesis"] = TextField(hypothesis_tokens, self._token_indexers)
+
+        if self._combine_input_fields:
+            tokens = self._tokenizer.tokenize_sentence_pair(premise, hypothesis)  # type: ignore
+            fields["tokens"] = TextField(tokens, self._token_indexers)
+        else:
+            premise_tokens = self._tokenizer.tokenize(premise)
+            hypothesis_tokens = self._tokenizer.tokenize(hypothesis)
+            fields["premise"] = TextField(premise_tokens, self._token_indexers)
+            fields["hypothesis"] = TextField(hypothesis_tokens, self._token_indexers)
+
+            metadata = {
+                "premise_tokens": [x.text for x in premise_tokens],
+                "hypothesis_tokens": [x.text for x in hypothesis_tokens],
+            }
+            fields["metadata"] = MetadataField(metadata)
+
         if label:
             fields["label"] = LabelField(label)
 
-        metadata = {
-            "premise_tokens": [x.text for x in premise_tokens],
-            "hypothesis_tokens": [x.text for x in hypothesis_tokens],
-        }
-        fields["metadata"] = MetadataField(metadata)
         return Instance(fields)
