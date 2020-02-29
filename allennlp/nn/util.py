@@ -694,7 +694,7 @@ def weighted_sum(matrix: torch.Tensor, attention: torch.Tensor) -> torch.Tensor:
 def sequence_cross_entropy_with_logits(
     logits: torch.FloatTensor,
     targets: torch.LongTensor,
-    weights: torch.FloatTensor,
+    weights: Union[torch.FloatTensor, torch.BoolTensor],
     average: str = "batch",
     label_smoothing: float = None,
     gamma: float = None,
@@ -715,7 +715,7 @@ def sequence_cross_entropy_with_logits(
     targets : `torch.LongTensor`, required.
         A `torch.LongTensor` of size (batch, sequence_length) which contains the
         index of the true class for each corresponding step.
-    weights : `torch.FloatTensor`, required.
+    weights : `Union[torch.FloatTensor, torch.BoolTensor]`, required.
         A `torch.FloatTensor` of size (batch, sequence_length)
     average: str, optional (default = "batch")
         If "batch", average the loss across the batches. If "token", average

@@ -231,7 +231,7 @@ class SpanConstituencyParser(Model):
             "num_spans": num_spans,
         }
         if span_labels is not None:
-            loss = sequence_cross_entropy_with_logits(logits, span_labels, span_mask.float())
+            loss = sequence_cross_entropy_with_logits(logits, span_labels, span_mask)
             self.tag_accuracy(class_probabilities, span_labels, span_mask)
             output_dict["loss"] = loss
 

@@ -475,7 +475,7 @@ class SimpleSeq2Seq(Model):
 
     @staticmethod
     def _get_loss(
-        logits: torch.LongTensor, targets: torch.LongTensor, target_mask: torch.LongTensor
+        logits: torch.LongTensor, targets: torch.LongTensor, target_mask: torch.BoolTensor
     ) -> torch.Tensor:
         """
         Compute loss.
