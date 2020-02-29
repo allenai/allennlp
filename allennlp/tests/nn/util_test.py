@@ -1119,7 +1119,7 @@ class TestNnUtil(AllenNlpTestCase):
 
     def test_add_sentence_boundary_token_ids_handles_2D_input(self):
         tensor = torch.from_numpy(numpy.array([[1, 2, 3], [4, 5, 0]]))
-        mask = (tensor > 0).long()
+        mask = tensor > 0
         bos = 9
         eos = 10
         new_tensor, new_mask = util.add_sentence_boundary_token_ids(tensor, mask, bos, eos)
@@ -1136,7 +1136,7 @@ class TestNnUtil(AllenNlpTestCase):
                 ]
             )
         )
-        mask = ((tensor > 0).sum(dim=-1) > 0).type(torch.LongTensor)
+        mask = (tensor > 0).sum(dim=-1) > 0
         bos = torch.from_numpy(numpy.array([9, 9, 9, 9]))
         eos = torch.from_numpy(numpy.array([10, 10, 10, 10]))
         new_tensor, new_mask = util.add_sentence_boundary_token_ids(tensor, mask, bos, eos)
@@ -1156,7 +1156,7 @@ class TestNnUtil(AllenNlpTestCase):
             # of an empty sequence, so here we are removing boundaries
             # from  "<S> </S>"
             numpy.array([[1, 1, 0, 0, 0], [1, 1, 1, 1, 1], [1, 1, 1, 1, 0]])
-        ).long()
+        ).bool()
         new_tensor, new_mask = util.remove_sentence_boundaries(tensor, mask)
 
         expected_new_tensor = torch.zeros(3, 3, 7)
