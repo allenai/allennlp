@@ -1270,7 +1270,7 @@ def batched_span_select(target: torch.Tensor, spans: torch.LongTensor) -> torch.
     span_embeddings : `torch.Tensor`
         A tensor with shape (batch_size, num_spans, max_batch_span_width, embedding_size]
         representing the embedded spans extracted from the batch flattened target tensor.
-    span_mask: `torch.LongTensor`
+    span_mask: `torch.BoolTensor`
         A tensor with shape (batch_size, num_spans, max_batch_span_width) representing the mask on
         the returned span embeddings.
     """
@@ -1300,12 +1300,12 @@ def batched_span_select(target: torch.Tensor, spans: torch.LongTensor) -> torch.
     # We're using <= here (and for the mask below) because the span ends are
     # inclusive, so we want to include indices which are equal to span_widths rather
     # than using it as a non-inclusive upper bound.
-    span_mask = (max_span_range_indices <= span_widths).float()
+    span_mask = max_span_range_indices <= span_widths
     raw_span_indices = span_ends - max_span_range_indices
     # We also don't want to include span indices which are less than zero,
     # which happens because some spans near the beginning of the sequence
     # have an end index < max_batch_span_width, so we add this to the mask here.
-    span_mask = span_mask * (raw_span_indices >= 0).float()
+    span_mask = span_mask & (raw_span_indices >= 0)
     span_indices = torch.nn.functional.relu(raw_span_indices.float()).long()
 
     # Shape: (batch_size, num_spans, max_batch_span_width, embedding_dim)

@@ -1062,7 +1062,7 @@ class TestNnUtil(AllenNlpTestCase):
         selected, mask = util.batched_span_select(targets, spans)
 
         selected = torch.where(
-            mask.unsqueeze(-1).bool(), selected, torch.empty_like(selected).fill_(-1)
+            mask.unsqueeze(-1), selected, torch.empty_like(selected).fill_(-1)
         )
 
         numpy.testing.assert_array_equal(
