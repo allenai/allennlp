@@ -177,7 +177,7 @@ def sort_batch_by_length(tensor: torch.Tensor, sequence_lengths: torch.Tensor):
 
 
 def get_final_encoder_states(
-    encoder_outputs: torch.Tensor, mask: torch.Tensor, bidirectional: bool = False
+    encoder_outputs: torch.Tensor, mask: torch.BoolTensor, bidirectional: bool = False
 ) -> torch.Tensor:
     """
     Given the output from a `Seq2SeqEncoder`, with shape `(batch_size, sequence_length,
@@ -196,7 +196,7 @@ def get_final_encoder_states(
     # These are the indices of the last words in the sequences (i.e. length sans padding - 1).  We
     # are assuming sequences are right padded.
     # Shape: (batch_size,)
-    last_word_indices = mask.sum(1).long() - 1
+    last_word_indices = mask.sum(1) - 1
     batch_size, _, encoder_output_dim = encoder_outputs.size()
     expanded_indices = last_word_indices.view(-1, 1, 1).expand(batch_size, 1, encoder_output_dim)
     # Shape: (batch_size, 1, encoder_output_dim)

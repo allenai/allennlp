@@ -93,7 +93,7 @@ class TestNnUtil(AllenNlpTestCase):
                 [[13, 14, 15, 16], [17, 18, 19, 20], [21, 22, 23, 24]],
             ]
         )
-        mask = torch.Tensor([[1, 1, 1], [1, 1, 0]])
+        mask = torch.BoolTensor([[True, True, True], [True, True, False]])
         final_states = util.get_final_encoder_states(encoder_outputs, mask, bidirectional=False)
         assert_almost_equal(final_states.data.numpy(), [[9, 10, 11, 12], [17, 18, 19, 20]])
         final_states = util.get_final_encoder_states(encoder_outputs, mask, bidirectional=True)
