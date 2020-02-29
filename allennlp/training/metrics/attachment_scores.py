@@ -59,7 +59,7 @@ class AttachmentScores(Metric):
         predicted_indices, predicted_labels, gold_indices, gold_labels, mask = detached
 
         if mask is None:
-            mask = torch.ones_like(predicted_indices)
+            mask = torch.ones_like(predicted_indices).bool()
 
         predicted_indices = predicted_indices.long()
         predicted_labels = predicted_labels.long()

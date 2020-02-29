@@ -502,7 +502,7 @@ class TestNnUtil(AllenNlpTestCase):
         text_field_tensors = {
             "indexer_name": {
                 "tokens": torch.LongTensor([[3, 4, 5, 0, 0], [1, 2, 0, 0, 0]]),
-                "mask": torch.LongTensor([[0, 0, 1]]),
+                "mask": torch.BoolTensor([[False, False, True]]),
             }
         }
         assert_almost_equal(util.get_text_field_mask(text_field_tensors).long().numpy(), [[0, 0, 1]])

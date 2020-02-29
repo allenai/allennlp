@@ -260,7 +260,7 @@ class GraphParser(Model):
         arc_scores: torch.Tensor,
         arc_tag_logits: torch.Tensor,
         arc_tags: torch.Tensor,
-        mask: torch.Tensor,
+        mask: torch.BoolTensor,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Computes the arc and tag loss for an adjacency matrix.
@@ -276,7 +276,7 @@ class GraphParser(Model):
         arc_tags : `torch.Tensor`, required.
             A tensor of shape (batch_size, sequence_length, sequence_length).
             The labels for every arc.
-        mask : `torch.Tensor`, required.
+        mask : `torch.BoolTensor`, required.
             A mask of shape (batch_size, sequence_length), denoting unpadded
             elements in the sequence.
 
@@ -331,7 +331,7 @@ class GraphParser(Model):
         arc_tag_logits : `torch.Tensor`, required.
             A tensor of shape (batch_size, sequence_length, sequence_length, num_tags) used to
             generate a distribution over tags for each arc.
-        mask : `torch.Tensor`, required.
+        mask : `torch.BoolTensor`, required.
             A mask of shape (batch_size, sequence_length).
 
         # Returns

@@ -38,29 +38,29 @@ class PretrainedTransformerMismatchedEmbedder(TokenEmbedder):
     def forward(
         self,
         token_ids: torch.LongTensor,
-        mask: torch.LongTensor,
+        mask: torch.BoolTensor,
         offsets: torch.LongTensor,
-        wordpiece_mask: torch.LongTensor,
+        wordpiece_mask: torch.BoolTensor,
         type_ids: Optional[torch.LongTensor] = None,
-        segment_concat_mask: Optional[torch.LongTensor] = None,
+        segment_concat_mask: Optional[torch.BoolTensor] = None,
     ) -> torch.Tensor:  # type: ignore
         """
         # Parameters
 
         token_ids: torch.LongTensor
             Shape: [batch_size, num_wordpieces] (for exception see `PretrainedTransformerEmbedder`).
-        mask: torch.LongTensor
+        mask: torch.BoolTensor
             Shape: [batch_size, num_orig_tokens].
         offsets: torch.LongTensor
             Shape: [batch_size, num_orig_tokens, 2].
             Maps indices for the original tokens, i.e. those given as input to the indexer,
             to a span in token_ids. `token_ids[i][offsets[i][j][0]:offsets[i][j][1] + 1]`
             corresponds to the original j-th token from the i-th batch.
-        wordpiece_mask: torch.LongTensor
+        wordpiece_mask: torch.BoolTensor
             Shape: [batch_size, num_wordpieces].
         type_ids: Optional[torch.LongTensor]
             Shape: [batch_size, num_wordpieces].
-        segment_concat_mask: Optional[torch.LongTensor]
+        segment_concat_mask: Optional[torch.BoolTensor]
             See `PretrainedTransformerEmbedder`.
 
         # Returns:

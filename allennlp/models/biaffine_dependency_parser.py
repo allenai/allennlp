@@ -220,7 +220,7 @@ class BiaffineDependencyParser(Model):
         head_types : `torch.FloatTensor`
             The predicted head types for each arc. A tensor
             of shape (batch_size, sequence_length).
-        mask : `torch.LongTensor`
+        mask : `torch.BoolTensor`
             A mask denoting the padded elements in the batch.
         """
         embedded_text_input = self.text_field_embedder(words)

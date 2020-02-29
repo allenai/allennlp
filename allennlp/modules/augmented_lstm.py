@@ -82,7 +82,7 @@ class AugmentedLSTMCell(torch.nn.Module):
         self,
         x: torch.Tensor,
         states=Tuple[torch.Tensor, torch.Tensor],
-        variational_dropout_mask: Optional[torch.Tensor] = None,
+        variational_dropout_mask: Optional[torch.BoolTensor] = None,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Warning: DO NOT USE THIS LAYER DIRECTLY, INSTEAD USE the AugmentedLSTM class

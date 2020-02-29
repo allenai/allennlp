@@ -137,7 +137,7 @@ class EncoderLayer(torch.nn.Module):
         self.sublayer = util.clone(SublayerConnection(size, dropout), 2)
         self.size = size
 
-    def forward(self, x: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, mask: torch.BoolTensor) -> torch.Tensor:
         """Follow Figure 1 (left) for connections."""
         x = self.sublayer[0](x, lambda x: self.self_attn(x, x, x, mask))
         return self.sublayer[1](x, self.feed_forward)
