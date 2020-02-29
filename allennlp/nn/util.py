@@ -840,7 +840,7 @@ def sequence_cross_entropy_with_logits(
 
 
 def replace_masked_values(
-    tensor: torch.Tensor, mask: torch.Tensor, replace_with: float
+    tensor: torch.Tensor, mask: torch.BoolTensor, replace_with: float
 ) -> torch.Tensor:
     """
     Replaces all masked values in `tensor` with `replace_with`.  `mask` must be broadcastable
@@ -849,13 +849,13 @@ def replace_masked_values(
 
     This just does `tensor.masked_fill()`, except the pytorch method fills in things with a mask
     value of 1, where we want the opposite.  You can do this in your own code with
-    `tensor.masked_fill(~mask.bool(), replace_with)`.
+    `tensor.masked_fill(~mask, replace_with)`.
     """
     if tensor.dim() != mask.dim():
         raise ConfigurationError(
             "tensor.dim() (%d) != mask.dim() (%d)" % (tensor.dim(), mask.dim())
         )
-    return tensor.masked_fill(~mask.bool(), replace_with)
+    return tensor.masked_fill(~mask, replace_with)
 
 
 def tensors_equal(tensor1: torch.Tensor, tensor2: torch.Tensor, tolerance: float = 1e-12) -> bool:
