@@ -17,8 +17,8 @@ from allennlp.models import load_archive
 
 class TestNnUtil(AllenNlpTestCase):
     def test_get_sequence_lengths_from_binary_mask(self):
-        binary_mask = torch.ByteTensor(
-            [[1, 1, 1, 0, 0, 0], [1, 1, 0, 0, 0, 0], [1, 1, 1, 1, 1, 1], [1, 0, 0, 0, 0, 0]]
+        binary_mask = torch.BoolTensor(
+            [[True, True, True, False, False, False], [True, True, False, False, False, False], [True, True, True, True, True, True], [True, False, False, False, False, False]]
         )
         lengths = util.get_lengths_from_binary_sequence_mask(binary_mask)
         numpy.testing.assert_array_equal(lengths.numpy(), numpy.array([3, 2, 6, 1]))
@@ -35,11 +35,11 @@ class TestNnUtil(AllenNlpTestCase):
         # Tests the following weird behaviour in Pytorch 0.1.12
         # doesn't happen for our sequence masks:
         #
-        # mask = torch.ones([260]).byte()
+        # mask = torch.ones([260]).bool()
         # mask.sum() # equals 260.
         # var_mask = t.a.V(mask)
         # var_mask.sum() # equals 4, due to 8 bit precision - the sum overflows.
-        binary_mask = torch.ones(2, 260).byte()
+        binary_mask = torch.ones(2, 260).bool()
         lengths = util.get_lengths_from_binary_sequence_mask(binary_mask)
         numpy.testing.assert_array_equal(lengths.data.numpy(), numpy.array([260, 260]))
 

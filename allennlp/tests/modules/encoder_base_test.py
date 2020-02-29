@@ -23,11 +23,11 @@ class TestEncoderBase(AllenNlpTestCase):
         tensor[1, 6:, :] = 0
         tensor[3, 2:, :] = 0
         self.tensor = tensor
-        mask = torch.ones(5, 7)
-        mask[1, 6:] = 0
-        mask[2, :] = 0  # <= completely masked
-        mask[3, 2:] = 0
-        mask[4, :] = 0  # <= completely masked
+        mask = torch.ones(5, 7).bool()
+        mask[1, 6:] = False
+        mask[2, :] = False  # <= completely masked
+        mask[3, 2:] = False
+        mask[4, :] = False  # <= completely masked
         self.mask = mask
 
         self.batch_size = 5

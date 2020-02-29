@@ -123,7 +123,7 @@ class SpanBasedF1Measure(Metric):
             possible roles associated with it).
         """
         if mask is None:
-            mask = torch.ones_like(gold_labels)
+            mask = torch.ones_like(gold_labels).bool()
 
         predictions, gold_labels, mask, prediction_map = self.detach_tensors(
             predictions, gold_labels, mask, prediction_map

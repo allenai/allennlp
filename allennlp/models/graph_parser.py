@@ -287,19 +287,18 @@ class GraphParser(Model):
         tag_nll : `torch.Tensor`, required.
             The negative log likelihood from the arc tag loss.
         """
-        float_mask = mask.float()
         arc_indices = (arc_tags != -1).float()
         # Make the arc tags not have negative values anywhere
         # (by default, no edge is indicated with -1).
         arc_tags = arc_tags * arc_indices
         arc_nll = (
             self._arc_loss(arc_scores, arc_indices)
-            * float_mask.unsqueeze(1)
-            * float_mask.unsqueeze(2)
+            * mask.unsqueeze(1)
+            * mask.unsqueeze(2)
         )
         # We want the mask for the tags to only include the unmasked words
         # and we only care about the loss with respect to the gold arcs.
-        tag_mask = float_mask.unsqueeze(1) * float_mask.unsqueeze(2) * arc_indices
+        tag_mask = mask.unsqueeze(1) * mask.unsqueeze(2) * arc_indices
 
         batch_size, sequence_length, _, num_tags = arc_tag_logits.size()
         original_shape = [batch_size, sequence_length, sequence_length]
@@ -317,7 +316,7 @@ class GraphParser(Model):
 
     @staticmethod
     def _greedy_decode(
-        arc_scores: torch.Tensor, arc_tag_logits: torch.Tensor, mask: torch.Tensor
+        arc_scores: torch.Tensor, arc_tag_logits: torch.Tensor, mask: torch.BoolTensor
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Decodes the head and head tag predictions by decoding the unlabeled arcs
@@ -350,7 +349,7 @@ class GraphParser(Model):
         # shape (batch_size, sequence_length, sequence_length, num_tags)
         arc_tag_logits = arc_tag_logits + inf_diagonal_mask.unsqueeze(0).unsqueeze(-1)
         # Mask padded tokens, because we only want to consider actual word -> word edges.
-        minus_mask = (1 - mask).to(dtype=torch.bool).unsqueeze(2)
+        minus_mask = ~mask.unsqueeze(2)
         arc_scores.masked_fill_(minus_mask, -numpy.inf)
         arc_tag_logits.masked_fill_(minus_mask.unsqueeze(-1), -numpy.inf)
         # shape (batch_size, sequence_length, sequence_length)

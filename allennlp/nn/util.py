@@ -100,14 +100,14 @@ def batch_tensor_dicts(
     return batched_tensors
 
 
-def get_lengths_from_binary_sequence_mask(mask: torch.Tensor):
+def get_lengths_from_binary_sequence_mask(mask: torch.BoolTensor):
     """
     Compute sequence lengths for each batch element in a tensor using a
     binary mask.
 
     # Parameters
 
-    mask : torch.Tensor, required.
+    mask : torch.BoolTensor, required.
         A 2D binary mask of shape (batch_size, sequence_length) to
         calculate the per-batch sequence lengths from.
 
@@ -116,7 +116,7 @@ def get_lengths_from_binary_sequence_mask(mask: torch.Tensor):
     A torch.LongTensor of shape (batch_size,) representing the lengths
     of the sequences in the batch.
     """
-    return mask.long().sum(-1)
+    return mask.sum(-1)
 
 
 def get_mask_from_sequence_lengths(sequence_lengths: torch.Tensor, max_length: int) -> torch.Tensor:

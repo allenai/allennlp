@@ -309,7 +309,6 @@ class BiaffineDependencyParser(Model):
             head_indices = torch.cat([head_indices.new_zeros(batch_size, 1), head_indices], 1)
         if head_tags is not None:
             head_tags = torch.cat([head_tags.new_zeros(batch_size, 1), head_tags], 1)
-        float_mask = mask.float()
         encoded_text = self._dropout(encoded_text)
 
         # shape (batch_size, sequence_length, arc_representation_dim)
@@ -323,7 +322,7 @@ class BiaffineDependencyParser(Model):
         attended_arcs = self.arc_attention(head_arc_representation, child_arc_representation)
 
         minus_inf = -1e8
-        minus_mask = (1 - float_mask) * minus_inf
+        minus_mask = ~mask.float() * minus_inf
         attended_arcs = attended_arcs + minus_mask.unsqueeze(2) + minus_mask.unsqueeze(1)
 
         if self.training or not self.use_mst_decoding_for_validation:
@@ -553,7 +552,7 @@ class BiaffineDependencyParser(Model):
 
         # Mask padded tokens, because we only want to consider actual words as heads.
         minus_inf = -1e8
-        minus_mask = (1 - mask.float()) * minus_inf
+        minus_mask = ~mask.float() * minus_inf
         attended_arcs = attended_arcs + minus_mask.unsqueeze(2) + minus_mask.unsqueeze(1)
 
         # Shape (batch_size, sequence_length, sequence_length)
