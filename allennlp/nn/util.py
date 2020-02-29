@@ -313,7 +313,7 @@ def masked_log_softmax(vector: torch.Tensor, mask: torch.BoolTensor, dim: int = 
 
 
 def masked_max(
-    vector: torch.Tensor, mask: torch.Tensor, dim: int, keepdim: bool = False, min_val: float = -1e7
+    vector: torch.Tensor, mask: torch.BoolTensor, dim: int, keepdim: bool = False, min_val: float = -1e7
 ) -> torch.Tensor:
     """
     To calculate max along certain dimensions on masked values
@@ -322,7 +322,7 @@ def masked_max(
 
     vector : `torch.Tensor`
         The vector to calculate max, assume unmasked parts are already zeros
-    mask : `torch.Tensor`
+    mask : `torch.BoolTensor`
         The mask of the vector. It must be broadcastable with vector.
     dim : `int`
         The dimension to calculate max
@@ -335,14 +335,13 @@ def masked_max(
 
     A `torch.Tensor` of including the maximum values.
     """
-    one_minus_mask = (1.0 - mask).to(dtype=torch.bool)
-    replaced_vector = vector.masked_fill(one_minus_mask, min_val)
+    replaced_vector = vector.masked_fill(~mask, min_val)
     max_value, _ = replaced_vector.max(dim=dim, keepdim=keepdim)
     return max_value
 
 
 def masked_mean(
-    vector: torch.Tensor, mask: torch.Tensor, dim: int, keepdim: bool = False, eps: float = 1e-8
+    vector: torch.Tensor, mask: torch.BoolTensor, dim: int, keepdim: bool = False, eps: float = 1e-8
 ) -> torch.Tensor:
     """
     To calculate mean along certain dimensions on masked values
@@ -351,7 +350,7 @@ def masked_mean(
 
     vector : `torch.Tensor`
         The vector to calculate mean.
-    mask : `torch.Tensor`
+    mask : `torch.BoolTensor`
         The mask of the vector. It must be broadcastable with vector.
     dim : `int`
         The dimension to calculate mean
@@ -364,11 +363,10 @@ def masked_mean(
 
     A `torch.Tensor` of including the mean values.
     """
-    one_minus_mask = (1.0 - mask).to(dtype=torch.bool)
-    replaced_vector = vector.masked_fill(one_minus_mask, 0.0)
+    replaced_vector = vector.masked_fill(~mask, 0.0)
 
     value_sum = torch.sum(replaced_vector, dim=dim, keepdim=keepdim)
-    value_count = torch.sum(mask.float(), dim=dim, keepdim=keepdim)
+    value_count = torch.sum(mask, dim=dim, keepdim=keepdim)
     return value_sum / value_count.clamp(min=eps)
 
 

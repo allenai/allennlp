@@ -351,25 +351,25 @@ class TestNnUtil(AllenNlpTestCase):
     def test_masked_max(self):
         # Testing the general masked 1D case.
         vector_1d = torch.FloatTensor([1.0, 12.0, 5.0])
-        mask_1d = torch.FloatTensor([1.0, 0.0, 1.0])
+        mask_1d = torch.BoolTensor([True, False, True])
         vector_1d_maxed = util.masked_max(vector_1d, mask_1d, dim=0).data.numpy()
         assert_array_almost_equal(vector_1d_maxed, 5.0)
 
         # Testing if all masks are zero, the output will be arbitrary, but it should not be nan.
         vector_1d = torch.FloatTensor([1.0, 12.0, 5.0])
-        mask_1d = torch.FloatTensor([0.0, 0.0, 0.0])
+        mask_1d = torch.BoolTensor([False, False, False])
         vector_1d_maxed = util.masked_max(vector_1d, mask_1d, dim=0).data.numpy()
         assert not numpy.isnan(vector_1d_maxed).any()
 
         # Testing batch value and batch masks
         matrix = torch.FloatTensor([[1.0, 12.0, 5.0], [-1.0, -2.0, 3.0]])
-        mask = torch.FloatTensor([[1.0, 0.0, 1.0], [1.0, 1.0, 0.0]])
+        mask = torch.BoolTensor([[True, False, True], [True, True, False]])
         matrix_maxed = util.masked_max(matrix, mask, dim=-1).data.numpy()
         assert_array_almost_equal(matrix_maxed, numpy.array([5.0, -1.0]))
 
         # Testing keepdim for batch value and batch masks
         matrix = torch.FloatTensor([[1.0, 12.0, 5.0], [-1.0, -2.0, 3.0]])
-        mask = torch.FloatTensor([[1.0, 0.0, 1.0], [1.0, 1.0, 0.0]])
+        mask = torch.BoolTensor([[True, False, True], [True, True, False]])
         matrix_maxed = util.masked_max(matrix, mask, dim=-1, keepdim=True).data.numpy()
         assert_array_almost_equal(matrix_maxed, numpy.array([[5.0], [-1.0]]))
 
@@ -377,32 +377,32 @@ class TestNnUtil(AllenNlpTestCase):
         matrix = torch.FloatTensor(
             [[[1.0, 2.0], [12.0, 3.0], [5.0, -1.0]], [[-1.0, -3.0], [-2.0, -0.5], [3.0, 8.0]]]
         )
-        mask = torch.FloatTensor([[1.0, 0.0, 1.0], [1.0, 1.0, 0.0]]).unsqueeze(-1)
+        mask = torch.BoolTensor([[True, False, True], [True, True, False]]).unsqueeze(-1)
         matrix_maxed = util.masked_max(matrix, mask, dim=1).data.numpy()
         assert_array_almost_equal(matrix_maxed, numpy.array([[5.0, 2.0], [-1.0, -0.5]]))
 
     def test_masked_mean(self):
         # Testing the general masked 1D case.
         vector_1d = torch.FloatTensor([1.0, 12.0, 5.0])
-        mask_1d = torch.FloatTensor([1.0, 0.0, 1.0])
+        mask_1d = torch.BoolTensor([True, False, True])
         vector_1d_mean = util.masked_mean(vector_1d, mask_1d, dim=0).data.numpy()
         assert_array_almost_equal(vector_1d_mean, 3.0)
 
         # Testing if all masks are zero, the output will be arbitrary, but it should not be nan.
         vector_1d = torch.FloatTensor([1.0, 12.0, 5.0])
-        mask_1d = torch.FloatTensor([0.0, 0.0, 0.0])
+        mask_1d = torch.BoolTensor([False, False, False])
         vector_1d_mean = util.masked_mean(vector_1d, mask_1d, dim=0).data.numpy()
         assert not numpy.isnan(vector_1d_mean).any()
 
         # Testing batch value and batch masks
         matrix = torch.FloatTensor([[1.0, 12.0, 5.0], [-1.0, -2.0, 3.0]])
-        mask = torch.FloatTensor([[1.0, 0.0, 1.0], [1.0, 1.0, 0.0]])
+        mask = torch.BoolTensor([[True, False, True], [True, True, False]])
         matrix_mean = util.masked_mean(matrix, mask, dim=-1).data.numpy()
         assert_array_almost_equal(matrix_mean, numpy.array([3.0, -1.5]))
 
         # Testing keepdim for batch value and batch masks
         matrix = torch.FloatTensor([[1.0, 12.0, 5.0], [-1.0, -2.0, 3.0]])
-        mask = torch.FloatTensor([[1.0, 0.0, 1.0], [1.0, 1.0, 0.0]])
+        mask = torch.BoolTensor([[True, False, True], [True, True, False]])
         matrix_mean = util.masked_mean(matrix, mask, dim=-1, keepdim=True).data.numpy()
         assert_array_almost_equal(matrix_mean, numpy.array([[3.0], [-1.5]]))
 
@@ -410,7 +410,7 @@ class TestNnUtil(AllenNlpTestCase):
         matrix = torch.FloatTensor(
             [[[1.0, 2.0], [12.0, 3.0], [5.0, -1.0]], [[-1.0, -3.0], [-2.0, -0.5], [3.0, 8.0]]]
         )
-        mask = torch.FloatTensor([[1.0, 0.0, 1.0], [1.0, 1.0, 0.0]]).unsqueeze(-1)
+        mask = torch.BoolTensor([[True, False, True], [True, True, False]]).unsqueeze(-1)
         matrix_mean = util.masked_mean(matrix, mask, dim=1).data.numpy()
         assert_array_almost_equal(matrix_mean, numpy.array([[3.0, 0.5], [-1.5, -1.75]]))
 
