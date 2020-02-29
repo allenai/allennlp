@@ -363,7 +363,7 @@ class BiaffineDependencyParser(Model):
         attended_arcs: torch.Tensor,
         head_indices: torch.Tensor,
         head_tags: torch.Tensor,
-        mask: torch.Tensor,
+        mask: torch.BoolTensor,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Computes the arc and tag loss for a sequence given gold head indices and tags.
@@ -387,7 +387,7 @@ class BiaffineDependencyParser(Model):
         head_tags : `torch.Tensor`, required.
             A tensor of shape (batch_size, sequence_length).
             The dependency labels of the heads for every word.
-        mask : `torch.Tensor`, required.
+        mask : `torch.BoolTensor`, required.
             A mask of shape (batch_size, sequence_length), denoting unpadded
             elements in the sequence.
 
@@ -398,15 +398,14 @@ class BiaffineDependencyParser(Model):
         tag_nll : `torch.Tensor`, required.
             The negative log likelihood from the arc tag loss.
         """
-        float_mask = mask.float()
         batch_size, sequence_length, _ = attended_arcs.size()
         # shape (batch_size, 1)
         range_vector = get_range_vector(batch_size, get_device_of(attended_arcs)).unsqueeze(1)
         # shape (batch_size, sequence_length, sequence_length)
         normalised_arc_logits = (
             masked_log_softmax(attended_arcs, mask)
-            * float_mask.unsqueeze(2)
-            * float_mask.unsqueeze(1)
+            * mask.unsqueeze(2)
+            * mask.unsqueeze(1)
         )
 
         # shape (batch_size, sequence_length, num_head_tags)
@@ -415,7 +414,7 @@ class BiaffineDependencyParser(Model):
         )
         normalised_head_tag_logits = masked_log_softmax(
             head_tag_logits, mask.unsqueeze(-1)
-        ) * float_mask.unsqueeze(-1)
+        ) * mask.unsqueeze(-1)
         # index matrix with shape (batch, sequence_length)
         timestep_index = get_range_vector(sequence_length, get_device_of(attended_arcs))
         child_index = (

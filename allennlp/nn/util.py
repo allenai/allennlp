@@ -279,7 +279,7 @@ def masked_softmax(
     return result
 
 
-def masked_log_softmax(vector: torch.Tensor, mask: torch.Tensor, dim: int = -1) -> torch.Tensor:
+def masked_log_softmax(vector: torch.Tensor, mask: torch.BoolTensor, dim: int = -1) -> torch.Tensor:
     """
     `torch.nn.functional.log_softmax(vector)` does not work if some elements of `vector` should be
     masked.  This performs a log_softmax on just the non-masked portions of `vector`.  Passing
@@ -301,7 +301,6 @@ def masked_log_softmax(vector: torch.Tensor, mask: torch.Tensor, dim: int = -1) 
     extreme, you've got bigger problems than this.
     """
     if mask is not None:
-        mask = mask.float()
         while mask.dim() < vector.dim():
             mask = mask.unsqueeze(1)
         # vector + mask.log() is an easy way to zero out masked elements in logspace, but it
@@ -309,7 +308,7 @@ def masked_log_softmax(vector: torch.Tensor, mask: torch.Tensor, dim: int = -1) 
         # zero in the mask for these cases.  log(1 + 1e-45) is still basically 0, so we can safely
         # just add 1e-45 before calling mask.log().  We use 1e-45 because 1e-46 is so small it
         # becomes 0 - this is just the smallest value we can actually use.
-        vector = vector + (mask + 1e-45).log()
+        vector = vector + (mask.float() + 1e-45).log()
     return torch.nn.functional.log_softmax(vector, dim=dim)
 
 
