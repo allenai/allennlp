@@ -835,6 +835,7 @@ class Trainer(TrainerBase):
         momentum_scheduler: Lazy[MomentumScheduler] = None,
         moving_average: Lazy[MovingAverage] = None,
         checkpointer: Lazy[Checkpointer] = None,
+        num_serialized_models_to_keep: int = 20,
     ) -> "Trainer":
         """
         This method exists so that we can have a documented method to construct this class using
@@ -910,4 +911,5 @@ class Trainer(TrainerBase):
             local_rank=local_rank,
             world_size=world_size,
             num_gradient_accumulation_steps=num_gradient_accumulation_steps,
+            num_serialized_models_to_keep=num_serialized_models_to_keep,
         )
