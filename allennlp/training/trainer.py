@@ -45,7 +45,6 @@ class Trainer(TrainerBase):
         patience: Optional[int] = None,
         validation_metric: str = "-loss",
         validation_data_loader: torch.utils.data.DataLoader = None,
-        shuffle: bool = True,
         num_epochs: int = 20,
         serialization_dir: Optional[str] = None,
         num_serialized_models_to_keep: int = 20,
@@ -101,8 +100,6 @@ class Trainer(TrainerBase):
         validation_dataloader : `DataLoader`, optional (default=None)
             A `DataLoader` to use for the validation set.  If `None`, then
             use the training `DataLoader` with the validation data.
-        shuffle : `bool`, optional (default=True)
-            Whether to shuffle the instances in the iterator or not.
         num_epochs : int, optional (default = 20)
             Number of training epochs.
         serialization_dir : str, optional (default=None)
@@ -197,7 +194,6 @@ class Trainer(TrainerBase):
 
         self.data_loader = data_loader
         self._validation_data_loader = validation_data_loader
-        self.shuffle = shuffle
         self.optimizer = optimizer
 
         if patience is None:  # no early stopping
@@ -332,6 +328,8 @@ class Trainer(TrainerBase):
             batch_generator, self._num_gradient_accumulation_steps
         )
 
+        logger.info("Training")
+
         num_training_batches = math.ceil(
             len(self.data_loader) / self._num_gradient_accumulation_steps
         )
@@ -352,8 +350,6 @@ class Trainer(TrainerBase):
             self._batch_num_total = 0
 
         histogram_parameters = set(self.model.get_parameters_for_histogram_tensorboard_logging())
-
-        logger.info("Training")
 
         cumulative_batch_group_size = 0
         done_early = False
@@ -820,7 +816,6 @@ class Trainer(TrainerBase):
         local_rank: int = 0,
         patience: int = None,
         validation_metric: str = "-loss",
-        shuffle: bool = True,
         num_epochs: int = 20,
         cuda_device: int = -1,
         grad_norm: float = None,
@@ -896,7 +891,6 @@ class Trainer(TrainerBase):
             patience=patience,
             validation_metric=validation_metric,
             validation_data_loader=validation_data_loader,
-            shuffle=shuffle,
             num_epochs=num_epochs,
             serialization_dir=serialization_dir,
             cuda_device=cuda_device,

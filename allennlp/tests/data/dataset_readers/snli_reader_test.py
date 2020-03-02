@@ -1,6 +1,7 @@
 import pytest
 
 from allennlp.data.dataset_readers import SnliReader
+from allennlp.data.tokenizers import PretrainedTransformerTokenizer
 from allennlp.common.util import ensure_list
 from allennlp.common.testing import AllenNlpTestCase
 
@@ -104,3 +105,46 @@ class TestSnliReader:
         assert [t.text for t in fields["premise"].tokens] == instance3["premise"]
         assert [t.text for t in fields["hypothesis"].tokens] == instance3["hypothesis"]
         assert fields["label"].label == instance3["label"]
+
+    def test_combine_input_fields(self):
+        reader = SnliReader(
+            tokenizer=PretrainedTransformerTokenizer("bert-base-uncased"), combine_input_fields=True
+        )
+        instances = reader.read(AllenNlpTestCase.FIXTURES_ROOT / "data" / "snli.jsonl")
+        instances = ensure_list(instances)
+
+        instance1 = {
+            "tokens": [
+                "[CLS]",
+                "a",
+                "person",
+                "on",
+                "a",
+                "horse",
+                "jumps",
+                "over",
+                "a",
+                "broken",
+                "down",
+                "airplane",
+                ".",
+                "[SEP]",
+                "a",
+                "person",
+                "is",
+                "training",
+                "his",
+                "horse",
+                "for",
+                "a",
+                "competition",
+                ".",
+                "[SEP]",
+            ],
+            "label": "neutral",
+        }
+
+        assert len(instances) == 3
+        fields = instances[0].fields
+        assert [t.text for t in fields["tokens"].tokens] == instance1["tokens"]
+        assert fields["label"].label == instance1["label"]

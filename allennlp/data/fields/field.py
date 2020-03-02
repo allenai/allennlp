@@ -65,7 +65,7 @@ class Field(Generic[DataArray]):
         If there are things in this field that need padding, note them here.  In order to pad a
         batch of instance, we get all of the lengths from the batch, take the max, and pad
         everything to that length (or use a pre-specified maximum length).  The return value is a
-        dictionary mapping keys to lengths, like {'num_tokens': 13}.
+        dictionary mapping keys to lengths, like `{'num_tokens': 13}`.
 
         This is always called after :func:`index`.
         """

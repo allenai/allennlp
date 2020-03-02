@@ -50,23 +50,21 @@
             ]
         ]
     },
-    "iterator": {
-        "type": "bucket",
-        "sorting_keys": [
-            [
-                "tokens",
-                "num_tokens"
-            ]
-        ],
-        "batch_size": 80
+    "data_loader": {
+        "batch_sampler": {
+            "type": "bucket",
+            "batch_size": 80
+        }
     },
     "trainer": {
         "num_epochs": 500,
         "grad_clipping": 1.0,
         "patience": 200,
-        "num_serialized_models_to_keep": 10,
         "validation_metric": "+f1-measure-overall",
         "cuda_device": 0,
+        "checkpointer": {
+            "num_serialized_models_to_keep": 10,
+        },
         "optimizer": {
             "type": "adadelta",
             "rho": 0.95

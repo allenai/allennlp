@@ -107,7 +107,7 @@ class FBetaMeasure(Metric):
         mask : `torch.Tensor`, optional (default = None).
             A masking tensor the same size as `gold_labels`.
         """
-        predictions, gold_labels, mask = self.unwrap_to_tensors(predictions, gold_labels, mask)
+        predictions, gold_labels, mask = self.detach_tensors(predictions, gold_labels, mask)
 
         # Calculate true_positive_sum, true_negative_sum, pred_sum, true_sum
         num_classes = predictions.size(-1)
@@ -120,10 +120,10 @@ class FBetaMeasure(Metric):
         # It means we call this metric at the first time
         # when `self._true_positive_sum` is None.
         if self._true_positive_sum is None:
-            self._true_positive_sum = torch.zeros(num_classes)
-            self._true_sum = torch.zeros(num_classes)
-            self._pred_sum = torch.zeros(num_classes)
-            self._total_sum = torch.zeros(num_classes)
+            self._true_positive_sum = torch.zeros(num_classes, device=predictions.device)
+            self._true_sum = torch.zeros(num_classes, device=predictions.device)
+            self._pred_sum = torch.zeros(num_classes, device=predictions.device)
+            self._total_sum = torch.zeros(num_classes, device=predictions.device)
 
         if mask is None:
             mask = torch.ones_like(gold_labels)
@@ -137,7 +137,7 @@ class FBetaMeasure(Metric):
         # Watch it:
         # The total numbers of true positives under all _predicted_ classes are zeros.
         if true_positives_bins.shape[0] == 0:
-            true_positive_sum = torch.zeros(num_classes)
+            true_positive_sum = torch.zeros(num_classes, device=predictions.device)
         else:
             true_positive_sum = torch.bincount(
                 true_positives_bins.long(), minlength=num_classes
@@ -149,13 +149,13 @@ class FBetaMeasure(Metric):
         if pred_bins.shape[0] != 0:
             pred_sum = torch.bincount(pred_bins, minlength=num_classes).float()
         else:
-            pred_sum = torch.zeros(num_classes)
+            pred_sum = torch.zeros(num_classes, device=predictions.device)
 
         gold_labels_bins = gold_labels[mask].long()
         if gold_labels.shape[0] != 0:
             true_sum = torch.bincount(gold_labels_bins, minlength=num_classes).float()
         else:
-            true_sum = torch.zeros(num_classes)
+            true_sum = torch.zeros(num_classes, device=predictions.device)
 
         self._true_positive_sum += true_positive_sum
         self._pred_sum += pred_sum
