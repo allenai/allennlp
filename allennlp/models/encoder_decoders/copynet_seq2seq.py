@@ -425,8 +425,8 @@ class CopyNetSeq2Seq(Model):
         # for this timestep only when the gold target token is not OOV or there are no
         # matching tokens in the source sentence.
         # shape: (batch_size, 1)
-        gen_mask = ((target_tokens != self._oov_index) | (target_to_source.sum(-1) == 0)).float()
-        log_gen_mask = (gen_mask.float() + 1e-45).log().unsqueeze(-1)
+        gen_mask = (target_tokens != self._oov_index) | (target_to_source.sum(-1) == 0)
+        log_gen_mask = (gen_mask + 1e-45).log().unsqueeze(-1)
         # Now we get the generation score for the gold target token.
         # shape: (batch_size, 1)
         generation_log_probs = log_probs.gather(1, target_tokens.unsqueeze(1)) + log_gen_mask
@@ -680,7 +680,7 @@ class CopyNetSeq2Seq(Model):
             # to the OOV token.
             copy_log_probs_to_add_mask = source_to_target_slice != self._oov_index
             copy_log_probs_to_add = (
-                copy_log_probs_slice + (copy_log_probs_to_add_mask.float() + 1e-45).log()
+                copy_log_probs_slice + (copy_log_probs_to_add_mask + 1e-45).log()
             )
             # shape: (batch_size, 1)
             copy_log_probs_to_add = copy_log_probs_to_add.unsqueeze(-1)
@@ -722,7 +722,7 @@ class CopyNetSeq2Seq(Model):
                 ].unsqueeze(-1)
                 # shape: (group_size,)
                 duplicate_mask = source_previous_occurences.sum(dim=-1) == 0
-                copy_log_probs_slice = copy_log_probs_slice + (duplicate_mask.float() + 1e-45).log()
+                copy_log_probs_slice = copy_log_probs_slice + (duplicate_mask + 1e-45).log()
 
             # Finally, we zero-out copy scores that we added to the generation scores
             # above so that we don't double-count them.

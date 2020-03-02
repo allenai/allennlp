@@ -308,7 +308,7 @@ def masked_log_softmax(vector: torch.Tensor, mask: torch.BoolTensor, dim: int = 
         # zero in the mask for these cases.  log(1 + 1e-45) is still basically 0, so we can safely
         # just add 1e-45 before calling mask.log().  We use 1e-45 because 1e-46 is so small it
         # becomes 0 - this is just the smallest value we can actually use.
-        vector = vector + (mask.float() + 1e-45).log()
+        vector = vector + (mask + 1e-45).log()
     return torch.nn.functional.log_softmax(vector, dim=dim)
 
 

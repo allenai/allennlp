@@ -73,10 +73,10 @@ class AttachmentScores(Metric):
             mask = mask & ~label_mask
 
         correct_indices = predicted_indices.eq(gold_indices).long() * mask
-        unlabeled_exact_match = (correct_indices + (~mask).long()).prod(dim=-1)
+        unlabeled_exact_match = (correct_indices + ~mask).prod(dim=-1)
         correct_labels = predicted_labels.eq(gold_labels).long() * mask
         correct_labels_and_indices = correct_indices * correct_labels
-        labeled_exact_match = (correct_labels_and_indices + (~mask).long()).prod(dim=-1)
+        labeled_exact_match = (correct_labels_and_indices + ~mask).prod(dim=-1)
 
         self._unlabeled_correct += correct_indices.sum()
         self._exact_unlabeled_correct += unlabeled_exact_match.sum()
