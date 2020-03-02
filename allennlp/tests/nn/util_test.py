@@ -1164,7 +1164,7 @@ class TestNnUtil(AllenNlpTestCase):
         expected_new_tensor[2, 0:2, :] = tensor[2, 1:3, :]
         assert_array_almost_equal(new_tensor.data.numpy(), expected_new_tensor.data.numpy())
 
-        expected_new_mask = torch.from_numpy(numpy.array([[0, 0, 0], [1, 1, 1], [1, 1, 0]])).long()
+        expected_new_mask = torch.from_numpy(numpy.array([[0, 0, 0], [1, 1, 1], [1, 1, 0]])).bool()
         assert (new_mask.data.numpy() == expected_new_mask.data.numpy()).all()
 
     def test_add_positional_features(self):

@@ -14,7 +14,7 @@ class BooleanAccuracyTest(AllenNlpTestCase):
         accuracy(predictions, targets)
         assert accuracy.get_metric() == 2 / 4
 
-        mask = torch.ones(4, 2, device=device)
+        mask = torch.ones(4, 2, device=device).bool()
         mask[1, 1] = 0
         accuracy(predictions, targets, mask)
         assert accuracy.get_metric() == 5 / 8
@@ -33,7 +33,7 @@ class BooleanAccuracyTest(AllenNlpTestCase):
         predictions = torch.tensor([[0, 1], [2, 3], [4, 5], [6, 7]], device=device)
         targets = torch.tensor([[0, 1], [2, 2], [4, 5], [7, 7]], device=device)
 
-        mask = torch.tensor([[0, 0], [1, 0], [1, 1], [1, 1]], device=device)
+        mask = torch.BoolTensor([[False, False], [True, False], [True, True], [True, True]], device=device)
         accuracy(predictions, targets, mask)
 
         # First example should be skipped, second is correct with mask, third is correct, fourth is wrong.
@@ -52,7 +52,7 @@ class BooleanAccuracyTest(AllenNlpTestCase):
         accuracy = BooleanAccuracy()
         predictions = torch.rand([5, 7], device=device)
         labels = torch.rand([5, 7], device=device)
-        incorrect_shape_mask = torch.randint(0, 2, [5, 8], device=device)
+        incorrect_shape_mask = torch.randint(0, 2, [5, 8], device=device).bool()
         with pytest.raises(ValueError):
             accuracy(predictions, labels, incorrect_shape_mask)
 

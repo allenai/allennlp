@@ -45,7 +45,7 @@ class CovarianceTest(AllenNlpTestCase):
         predictions = torch.randn(batch_size, num_labels, device=device)
         labels = 0.5 * predictions + torch.randn(batch_size, num_labels, device=device)
         # Random binary mask
-        mask = torch.randint(0, 2, size=(batch_size, num_labels), device=device)
+        mask = torch.randint(0, 2, size=(batch_size, num_labels), device=device).bool()
         stride = 10
 
         for i in range(batch_size // stride):

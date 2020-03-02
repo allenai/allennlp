@@ -17,7 +17,7 @@ class AttachmentScoresTest(AllenNlpTestCase):
 
         self.gold_labels = torch.Tensor([[0, 5, 2, 1, 4, 2], [0, 4, 8, 2, 0, 0]])
 
-        self.mask = torch.Tensor([[1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 0, 0]])
+        self.mask = torch.BoolTensor([[True, True, True, True, True, True], [True, True, True, True, False, False]])
 
     def _send_tensors_to_device(self, device: str):
         self.predictions = self.predictions.to(device)

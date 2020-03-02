@@ -72,11 +72,11 @@ class TestPytorchSeq2VecWrapper(AllenNlpTestCase):
         tensor[2, :, :] = 0
         tensor[3, 2:, :] = 0
         tensor[4, :, :] = 0
-        mask = torch.ones(5, 7)
-        mask[1, 6:] = 0
-        mask[2, :] = 0
-        mask[3, 2:] = 0
-        mask[4, :] = 0
+        mask = torch.ones(5, 7).bool()
+        mask[1, 6:] = False
+        mask[2, :] = False
+        mask[3, 2:] = False
+        mask[4, :] = False
 
         results = encoder(tensor, mask)
 
@@ -129,6 +129,6 @@ class TestPytorchSeq2VecWrapper(AllenNlpTestCase):
         )
 
         input_tensor = torch.randn(2, 3, 4)
-        mask = torch.ones(2, 3)
+        mask = torch.ones(2, 3).bool()
         output = model(input_tensor, mask)
         assert tuple(output.size()) == (2, 5)
