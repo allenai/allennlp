@@ -87,11 +87,13 @@
   },
   "trainer": {
     "optimizer": {
-        "type": "adam",
-        "lr": 0.001
+      "type": "adam",
+      "lr": 0.001
+    },
+    "checkpointer": {
+      "num_serialized_models_to_keep": 3,
     },
     "validation_metric": "+f1-measure-overall",
-    "num_serialized_models_to_keep": 3,
     "num_epochs": 75,
     "grad_norm": 5.0,
     "patience": 25,

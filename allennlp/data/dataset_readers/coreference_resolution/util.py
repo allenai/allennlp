@@ -58,7 +58,7 @@ def make_coref_instance(
             The id of the cluster which each possible span belongs to, or -1 if it does
                 not belong to a cluster. As these labels have variable length (it depends on
                 how many spans we are considering), we represent this a as a `SequenceLabelField`
-                with respect to the `spans `ListField`.
+                with respect to the spans `ListField`.
     """
     if max_sentences is not None and len(sentences) > max_sentences:
         sentences = sentences[:max_sentences]
