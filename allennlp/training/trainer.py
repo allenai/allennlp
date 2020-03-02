@@ -712,6 +712,10 @@ class Trainer(TrainerBase):
                     os.path.join(self._serialization_dir, f"metrics_epoch_{epoch}.json"), metrics
                 )
 
+            # If we do not have a validation data, use the training metrics.
+            if self._validation_data_loader is None:
+                this_epoch_val_metric = metrics["training_" + self._validation_metric]
+
             # The Scheduler API is agnostic to whether your schedule requires a validation metric -
             # if it doesn't, the validation metric passed here is ignored.
             if self._learning_rate_scheduler:
