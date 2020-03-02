@@ -25,7 +25,8 @@ logger = logging.getLogger(__name__)
 @DatasetReader.register("winobias")
 class WinobiasReader(DatasetReader):
     """
-    TODO(Mark): Add paper reference.
+    A dataset reader for the dataset described in
+    [Gender Bias in Coreference Resolution: Evaluation and Debiasing Methods](https://arxiv.org/abs/1804.06876)
 
     Winobias is a dataset to analyse the issue of gender bias in co-reference
     resolution. It contains simple sentences with pro/anti stereotypical gender
