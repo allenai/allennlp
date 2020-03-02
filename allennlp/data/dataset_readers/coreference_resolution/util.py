@@ -21,6 +21,7 @@ def make_coref_instance(
     gold_clusters: Optional[List[List[Tuple[int, int]]]] = None,
     wordpiece_modeling_tokenizer: PretrainedTransformerTokenizer = None,
     max_sentences: int = None,
+    remove_singleton_clusters: bool = True,
 ) -> Instance:
 
     """
@@ -45,6 +46,9 @@ def make_coref_instance(
         and the modeling will be on the word-level.
     max_sentences: int, optional (default = None)
         The maximum number of sentences in each document to keep. By default keeps all sentences.
+    remove_singleton_clusters : `bool`, optional (default = True)
+        Some datasets contain clusters that are singletons (i.e. no coreferents). This option allows
+        the removal of them.
 
     # Returns
 
@@ -92,6 +96,8 @@ def make_coref_instance(
     cluster_dict = {}
     if gold_clusters is not None:
         gold_clusters = _canonicalize_clusters(gold_clusters)
+        if remove_singleton_clusters:
+            gold_clusters = [cluster for cluster in gold_clusters if len(cluster) > 1]
 
         if wordpiece_modeling_tokenizer is not None:
             for cluster in gold_clusters:

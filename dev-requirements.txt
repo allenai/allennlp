@@ -25,6 +25,9 @@ matplotlib>=2.2.3
 # Required to run sanic tests
 aiohttp
 
+# Required for automatic mixed precision (AMP) training
+git+https://github.com/NVIDIA/apex.git@master
+
 #### DOC-RELATED PACKAGES ####
 
 # YAML manipulation
