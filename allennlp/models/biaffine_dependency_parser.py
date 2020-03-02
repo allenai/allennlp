@@ -322,7 +322,7 @@ class BiaffineDependencyParser(Model):
         attended_arcs = self.arc_attention(head_arc_representation, child_arc_representation)
 
         minus_inf = -1e8
-        minus_mask = (~mask).float() * minus_inf
+        minus_mask = ~mask * minus_inf
         attended_arcs = attended_arcs + minus_mask.unsqueeze(2) + minus_mask.unsqueeze(1)
 
         if self.training or not self.use_mst_decoding_for_validation:
@@ -550,7 +550,7 @@ class BiaffineDependencyParser(Model):
 
         # Mask padded tokens, because we only want to consider actual words as heads.
         minus_inf = -1e8
-        minus_mask = (~mask).float() * minus_inf
+        minus_mask = ~mask * minus_inf
         attended_arcs = attended_arcs + minus_mask.unsqueeze(2) + minus_mask.unsqueeze(1)
 
         # Shape (batch_size, sequence_length, sequence_length)

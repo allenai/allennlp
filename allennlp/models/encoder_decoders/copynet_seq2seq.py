@@ -728,7 +728,7 @@ class CopyNetSeq2Seq(Model):
             # above so that we don't double-count them.
             # shape: (group_size,)
             left_over_copy_log_probs = (
-                copy_log_probs_slice + ((~copy_log_probs_to_add_mask).float() + 1e-45).log()
+                copy_log_probs_slice + (~copy_log_probs_to_add_mask + 1e-45).log()
             )
             modified_log_probs_list.append(left_over_copy_log_probs.unsqueeze(-1))
         modified_log_probs_list.insert(0, generation_log_probs)
