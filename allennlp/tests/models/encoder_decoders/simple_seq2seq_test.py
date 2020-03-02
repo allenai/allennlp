@@ -31,14 +31,6 @@ class SimpleSeq2SeqTest(ModelTestCase):
             self.param_file, tolerance=1e-2, overrides=param_overrides
         )
 
-    def test_legacy_attention_model_can_train_save_and_load(self):
-        param_overrides = json.dumps(
-            {"model": {"attention": None, "attention_function": {"type": "dot_product"}}}
-        )
-        self.ensure_model_can_train_save_and_load(
-            self.param_file, tolerance=1e-2, overrides=param_overrides
-        )
-
     def test_greedy_model_can_train_save_and_load(self):
         param_overrides = json.dumps({"model": {"beam_size": None}})
         self.ensure_model_can_train_save_and_load(
