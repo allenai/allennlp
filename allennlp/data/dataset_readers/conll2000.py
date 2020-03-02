@@ -25,7 +25,9 @@ class Conll2000DatasetReader(DatasetReader):
     """
     Reads instances from a pretokenised file where each line is in the following format:
 
+    ```
     WORD POS-TAG CHUNK-TAG
+    ```
 
     with a blank line indicating the end of each sentence
     and converts it into a `Dataset` suitable for sequence tagging.
