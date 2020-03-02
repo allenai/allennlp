@@ -3,7 +3,7 @@ import torch
 from torch.nn import Linear
 
 from allennlp.common.checks import ConfigurationError
-from allennlp.modules.matrix_attention.legacy_matrix_attention import LegacyMatrixAttention
+from allennlp.modules.matrix_attention import MatrixAttention, DotProductMatrixAttention
 from allennlp.modules.seq2seq_encoders.seq2seq_encoder import Seq2SeqEncoder
 from allennlp.modules.similarity_functions import DotProductSimilarity, SimilarityFunction
 from allennlp.modules.similarity_functions import MultiHeadedSimilarity
@@ -53,7 +53,7 @@ class IntraSentenceAttentionEncoder(Seq2SeqEncoder):
         self,
         input_dim: int,
         projection_dim: int = None,
-        similarity_function: SimilarityFunction = DotProductSimilarity(),
+        attention: MatrixAttention = DotProductMatrixAttention(),
         num_attention_heads: int = 1,
         combination: str = "1,2",
         output_dim: int = None,
@@ -65,7 +65,7 @@ class IntraSentenceAttentionEncoder(Seq2SeqEncoder):
         else:
             self._projection = lambda x: x
             projection_dim = input_dim
-        self._matrix_attention = LegacyMatrixAttention(similarity_function)
+        self._matrix_attention = attention
         self._num_attention_heads = num_attention_heads
         if isinstance(similarity_function, MultiHeadedSimilarity):
             if num_attention_heads == 1:
