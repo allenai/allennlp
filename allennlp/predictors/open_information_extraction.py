@@ -210,15 +210,15 @@ class OpenIePredictor(Predictor):
 
         Expects JSON that looks like `{"sentence": "..."}`
 
-        Returns a JSON that looks like
+        Returns a JSON that looks like:
 
-        .. code-block:: js
-
-            {"tokens": [...],
-             "tag_spans": [{"ARG0": "...",
-                            "V": "...",
-                            "ARG1": "...",
-                             ...}]}
+        ```
+        {"tokens": [...],
+         "tag_spans": [{"ARG0": "...",
+                        "V": "...",
+                        "ARG1": "...",
+                         ...}]}
+        ```
         """
         sent_tokens = self._tokenizer.tokenize(inputs["sentence"])
 
