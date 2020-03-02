@@ -35,7 +35,7 @@ class BatchSampler(Registrable):
 
 
 @Sampler.register("sequential")
-class SequentialSampler(Sampler, data.SequentialSampler):
+class SequentialSampler(data.SequentialSampler, Sampler):
     """
     A registrable version of pytorch's
     [SequentialSampler](https://pytorch.org/docs/stable/data.html#torch.utils.data.SequentialSampler).
@@ -46,7 +46,7 @@ class SequentialSampler(Sampler, data.SequentialSampler):
 
 
 @Sampler.register("random")
-class RandomSampler(Sampler, data.RandomSampler):
+class RandomSampler(data.RandomSampler, Sampler):
     """
     A registrable version of pytorch's
     [RandomSampler](https://pytorch.org/docs/stable/data.html#torch.utils.data.RandomSampler).
@@ -64,13 +64,13 @@ class RandomSampler(Sampler, data.RandomSampler):
     """
 
     def __init__(
-        self, data_source: data.Dataset, replacement: bool = False, num_samples: int = None,
+        self, data_source: data.Dataset, replacement: bool = False, num_samples: int = None
     ):
         super().__init__(data_source, replacement, num_samples)
 
 
 @Sampler.register("subset_random")
-class SubsetRandomSampler(Sampler, data.SubsetRandomSampler):
+class SubsetRandomSampler(data.SubsetRandomSampler, Sampler):
     """
     A registrable version of pytorch's
     [SubsetRandomSampler](https://pytorch.org/docs/stable/data.html#torch.utils.data.SubsetRandomSampler).
@@ -86,7 +86,7 @@ class SubsetRandomSampler(Sampler, data.SubsetRandomSampler):
 
 
 @Sampler.register("weighted_random")
-class WeightedRandomSampler(Sampler, data.WeightedRandomSampler):
+class WeightedRandomSampler(data.WeightedRandomSampler, Sampler):
     """
     A registrable version of pytorch's
     [WeightedRandomSampler](https://pytorch.org/docs/stable/data.html#torch.utils.data.WeightedRandomSampler).
@@ -116,7 +116,7 @@ class WeightedRandomSampler(Sampler, data.WeightedRandomSampler):
 
 
 @BatchSampler.register("basic")
-class BasicBatchSampler(BatchSampler, data.BatchSampler):
+class BasicBatchSampler(data.BatchSampler, BatchSampler):
     """
     A registrable version of pytorch's
     [BatchSampler](https://pytorch.org/docs/stable/data.html#torch.utils.data.BatchSampler).

@@ -26,10 +26,10 @@ class Entropy(Metric):
         mask : `torch.Tensor`, optional (default = None).
             A masking tensor of shape (batch_size, ...).
         """
-        logits, mask = self.unwrap_to_tensors(logits, mask)
+        logits, mask = self.detach_tensors(logits, mask)
 
         if mask is None:
-            mask = torch.ones(logits.size()[:-1])
+            mask = torch.ones(logits.size()[:-1], device=logits.device)
 
         log_probs = torch.nn.functional.log_softmax(logits, dim=-1)
         probabilities = torch.exp(log_probs) * mask.unsqueeze(-1)

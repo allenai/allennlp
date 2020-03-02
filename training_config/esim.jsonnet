@@ -68,19 +68,21 @@
             [".*bias_hh.*", {"type": "lstm_hidden_bias"}]
         ]
     },
-    "iterator": {
-        "type": "bucket",
-        "sorting_keys": [["premise", "num_tokens"],
-                         ["hypothesis", "num_tokens"]],
-        "batch_size": 32
+    "data_loader": {
+        "batch_sampler": {
+            "type": "bucket",
+            "batch_size": 64
+        }
     },
     "trainer": {
         "optimizer": {
             "type": "adam",
             "lr": 0.0004
         },
+        "checkpointer": {
+            "num_serialized_models_to_keep": 2,
+        },
         "validation_metric": "+accuracy",
-        "num_serialized_models_to_keep": 2,
         "num_epochs": 75,
         "grad_norm": 10.0,
         "patience": 5,

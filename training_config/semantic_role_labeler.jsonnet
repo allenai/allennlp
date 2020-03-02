@@ -34,10 +34,11 @@
     },
     "binary_feature_dim": 100
   },
-  "iterator": {
-    "type": "bucket",
-    "sorting_keys": [["tokens", "num_tokens"]],
-    "batch_size" : 80
+  "data_loader": {
+    "batch_sampler": {
+      "type": "bucket",
+      "batch_size": 80
+    }
   },
 
   "trainer": {

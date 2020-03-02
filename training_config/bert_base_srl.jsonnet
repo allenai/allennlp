@@ -5,10 +5,11 @@
         "bert_model_name": "bert-base-uncased",
       },
 
-    "iterator": {
+    "data_loader": {
+      "batch_sampler": {
         "type": "bucket",
-        "batch_size": 32,
-        "sorting_keys": [["tokens", "num_tokens"]]
+        "batch_size" : 32
+      }
     },
 
     "train_data_path": std.extVar("SRL_TRAIN_DATA_PATH"),
@@ -36,10 +37,12 @@
             "num_epochs": 15,
             "num_steps_per_epoch": 8829,
         },
+        "checkpointer": {
+            "num_serialized_models_to_keep": 2,
+        },
         "grad_norm": 1.0,
         "num_epochs": 15,
         "validation_metric": "+f1-measure-overall",
-        "num_serialized_models_to_keep": 2,
         "should_log_learning_rate": true,
         "cuda_device": 0,
     },

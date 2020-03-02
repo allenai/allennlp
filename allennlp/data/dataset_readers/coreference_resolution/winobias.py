@@ -38,7 +38,7 @@ class WinobiasReader(DatasetReader):
     non-nested coreference clusters annotated using either square or round brackets.
     For example:
 
-    [The salesperson] sold (some books) to the librarian because [she] was trying to sell (them).
+    > [The salesperson] sold (some books) to the librarian because [she] was trying to sell (them).
 
 
     Returns a list of `Instances` which have four fields : `text`, a `TextField`
@@ -130,7 +130,7 @@ class WinobiasReader(DatasetReader):
                 The id of the cluster which each possible span belongs to, or -1 if it does
                  not belong to a cluster. As these labels have variable length (it depends on
                  how many spans we are considering), we represent this a as a `SequenceLabelField`
-                 with respect to the `spans `ListField`.
+                 with respect to the spans `ListField`.
         """
         metadata: Dict[str, Any] = {"original_text": sentence}
         if gold_clusters is not None:

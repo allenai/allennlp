@@ -3,7 +3,10 @@ import os
 import pathlib
 import shutil
 import tempfile
+from typing import Any, Iterable
 from unittest import TestCase
+
+import torch
 
 from allennlp.common.checks import log_pytorch_version_info
 
@@ -40,3 +43,34 @@ class AllenNlpTestCase(TestCase):
 
     def tearDown(self):
         shutil.rmtree(self.TEST_DIR)
+
+
+def parametrize(arg_names: Iterable[str], arg_values: Iterable[Iterable[Any]]):
+    """
+    Decorator to create parameterized tests.
+
+    # Parameters
+
+    arg_names : `Iterable[str]`, required.
+        Argument names to pass to the test function.
+    arg_values : `Iterable[Iterable[Any]]`, required.
+        Iterable of values to pass to each of the args.
+        The decorated test will be run for each inner iterable.
+    """
+
+    def decorator(func):
+        def wrapper(*args, **kwargs):
+            for arg_value in arg_values:
+                kwargs_extra = {name: value for name, value in zip(arg_names, arg_value)}
+                func(*args, **kwargs, **kwargs_extra)
+
+        return wrapper
+
+    return decorator
+
+
+_available_devices = ["cpu"] + (["cuda"] if torch.cuda.is_available() else [])
+multi_device = parametrize(("device",), [(device,) for device in _available_devices])
+"""
+Decorator that provides an argument `device` of type `str` for each available PyTorch device.
+"""

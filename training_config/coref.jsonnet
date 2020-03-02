@@ -78,11 +78,12 @@
     "spans_per_word": 0.4,
     "max_antecedents": 100
   },
-  "iterator": {
-    "type": "bucket",
-    "sorting_keys": [["text", "num_tokens"]],
-    "padding_noise": 0.0,
-    "batch_size": 1
+  "data_loader": {
+    "batch_sampler": {
+      "type": "bucket",
+      "padding_noise": 0.0,
+      "batch_size": 1
+    }
   },
   "trainer": {
     "num_epochs": 150,

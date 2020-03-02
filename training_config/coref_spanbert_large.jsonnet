@@ -1,15 +1,14 @@
 // Configuration for a coreference resolution model based on:
-//   Lee, Kenton et al. “End-to-end Neural Coreference Resolution.” EMNLP (2017).
-//   + BERT
+//   Lee, Kenton et al. “Higher-order Coreference Resolution with Coarse-to-fine Inference.” NAACL (2018).
+//   + SpanBERT-large
 
-local bert_model = "bert-base-uncased";
-local max_length = 128;
+local transformer_model = "SpanBERT/spanbert-large-cased";
+local max_length = 512;
 local feature_size = 20;
 local max_span_width = 30;
 
-local bert_dim = 768;  # uniquely determined by bert_model
-local lstm_dim = 200;
-local span_embedding_dim = 4 * lstm_dim + bert_dim + feature_size;
+local transformer_dim = 1024;  # uniquely determined by transformer_model
+local span_embedding_dim = 3 * transformer_dim + feature_size;
 local span_pair_embedding_dim = 3 * span_embedding_dim + feature_size;
 
 {
@@ -18,7 +17,19 @@ local span_pair_embedding_dim = 3 * span_embedding_dim + feature_size;
     "token_indexers": {
       "tokens": {
         "type": "pretrained_transformer_mismatched",
-        "model_name": bert_model,
+        "model_name": transformer_model,
+        "max_length": max_length
+      },
+    },
+    "max_span_width": max_span_width,
+    "max_sentences": 110
+  },
+  "validation_dataset_reader": {
+    "type": "coref",
+    "token_indexers": {
+      "tokens": {
+        "type": "pretrained_transformer_mismatched",
+        "model_name": transformer_model,
         "max_length": max_length
       },
     },
@@ -33,70 +44,68 @@ local span_pair_embedding_dim = 3 * span_embedding_dim + feature_size;
       "token_embedders": {
         "tokens": {
             "type": "pretrained_transformer_mismatched",
-            "model_name": bert_model,
+            "model_name": transformer_model,
             "max_length": max_length
         }
       }
     },
     "context_layer": {
-        "type": "lstm",
-        "bidirectional": true,
-        "hidden_size": lstm_dim,
-        "input_size": bert_dim,
-        "num_layers": 1
+        "type": "pass_through",
+        "input_dim": transformer_dim
     },
     "mention_feedforward": {
         "input_dim": span_embedding_dim,
         "num_layers": 2,
-        "hidden_dims": 150,
+        "hidden_dims": 1500,
         "activations": "relu",
-        "dropout": 0.2
+        "dropout": 0.3
     },
     "antecedent_feedforward": {
         "input_dim": span_pair_embedding_dim,
         "num_layers": 2,
-        "hidden_dims": 150,
+        "hidden_dims": 1500,
         "activations": "relu",
-        "dropout": 0.2
+        "dropout": 0.3
     },
-    "initializer": [
+    "initializer": {
+      "regexes": [
+        [".*_span_updating_gated_sum.*weight", {"type": "xavier_normal"}],
         [".*linear_layers.*weight", {"type": "xavier_normal"}],
-        [".*scorer._module.weight", {"type": "xavier_normal"}],
+        [".*scorer.*weight", {"type": "xavier_normal"}],
         ["_distance_embedding.weight", {"type": "xavier_normal"}],
         ["_span_width_embedding.weight", {"type": "xavier_normal"}],
         ["_context_layer._module.weight_ih.*", {"type": "xavier_normal"}],
         ["_context_layer._module.weight_hh.*", {"type": "orthogonal"}]
-    ],
-    "lexical_dropout": 0.5,
+      ]
+    },
     "feature_size": feature_size,
     "max_span_width": max_span_width,
     "spans_per_word": 0.4,
-    "max_antecedents": 100
+    "max_antecedents": 50,
+    "coarse_to_fine": true,
+    "inference_order": 2
   },
   "data_loader": {
     "batch_sampler": {
       "type": "bucket",
+      # Explicitly specifying sorting keys since the guessing heuristic could get it wrong
+      # as we a span field.
       "sorting_keys": [["text", "tokens___token_ids"]],
-      "padding_noise": 0.0,
       "batch_size": 1
     }
   },
   "trainer": {
-    "num_epochs": 150,
-    "grad_norm": 5.0,
+    "num_epochs": 40,
     "patience" : 10,
     "cuda_device" : 0,
     "validation_metric": "+coref_f1",
     "learning_rate_scheduler": {
-      "type": "reduce_on_plateau",
-      "factor": 0.5,
-      "mode": "max",
-      "patience": 2
+      "type": "slanted_triangular",
+      "cut_frac": 0.06
     },
     "optimizer": {
       "type": "huggingface_adamw",
-      "lr": 1e-3,
-      "weight_decay": 0.01,
+      "lr": 3e-4,
       "parameter_groups": [
         [[".*transformer.*"], {"lr": 1e-5}]
       ]
