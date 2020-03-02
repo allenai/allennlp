@@ -367,7 +367,7 @@ def masked_mean(
 
     value_sum = torch.sum(replaced_vector, dim=dim, keepdim=keepdim)
     value_count = torch.sum(mask, dim=dim, keepdim=keepdim)
-    return value_sum / value_count.clamp(min=eps)
+    return value_sum / value_count.float().clamp(min=eps)
 
 
 def masked_flip(padded_sequence: torch.Tensor, sequence_lengths: List[int]) -> torch.Tensor:
