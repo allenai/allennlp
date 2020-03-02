@@ -55,7 +55,9 @@ class SimpleSeq2SeqTest(ModelTestCase):
             numpy.random.randint(0, num_classes, (batch_size, num_decoding_steps))
         )
         # Mask should be either 0 or 1
-        sample_mask = torch.from_numpy(numpy.random.randint(0, 2, (batch_size, num_decoding_steps))).bool()
+        sample_mask = torch.from_numpy(
+            numpy.random.randint(0, 2, (batch_size, num_decoding_steps))
+        ).bool()
         expected_loss = sequence_cross_entropy_with_logits(
             sample_logits, sample_targets[:, 1:].contiguous(), sample_mask[:, 1:].contiguous()
         )

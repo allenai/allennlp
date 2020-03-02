@@ -18,7 +18,12 @@ from allennlp.models import load_archive
 class TestNnUtil(AllenNlpTestCase):
     def test_get_sequence_lengths_from_binary_mask(self):
         binary_mask = torch.BoolTensor(
-            [[True, True, True, False, False, False], [True, True, False, False, False, False], [True, True, True, True, True, True], [True, False, False, False, False, False]]
+            [
+                [True, True, True, False, False, False],
+                [True, True, False, False, False, False],
+                [True, True, True, True, True, True],
+                [True, False, False, False, False, False],
+            ]
         )
         lengths = util.get_lengths_from_binary_sequence_mask(binary_mask)
         numpy.testing.assert_array_equal(lengths.numpy(), numpy.array([3, 2, 6, 1]))
@@ -463,7 +468,8 @@ class TestNnUtil(AllenNlpTestCase):
             }
         }
         assert_almost_equal(
-            util.get_text_field_mask(text_field_tensors).long().numpy(), [[1, 1, 1, 0, 0], [1, 1, 0, 0, 0]]
+            util.get_text_field_mask(text_field_tensors).long().numpy(),
+            [[1, 1, 1, 0, 0], [1, 1, 0, 0, 0]],
         )
 
     def test_get_text_field_mask_returns_a_correct_mask_character_only_input(self):
@@ -478,7 +484,8 @@ class TestNnUtil(AllenNlpTestCase):
             }
         }
         assert_almost_equal(
-            util.get_text_field_mask(text_field_tensors).long().numpy(), [[1, 1, 1, 0], [1, 1, 0, 0]]
+            util.get_text_field_mask(text_field_tensors).long().numpy(),
+            [[1, 1, 1, 0], [1, 1, 0, 0]],
         )
 
     def test_get_text_field_mask_returns_a_correct_mask_list_field(self):
@@ -492,7 +499,9 @@ class TestNnUtil(AllenNlpTestCase):
                 )
             }
         }
-        actual_mask = util.get_text_field_mask(text_field_tensors, num_wrapping_dims=1).long().numpy()
+        actual_mask = (
+            util.get_text_field_mask(text_field_tensors, num_wrapping_dims=1).long().numpy()
+        )
         expected_mask = (text_field_tensors["indexer_name"]["list_tokens"].numpy() > 0).astype(
             "int32"
         )
@@ -505,7 +514,9 @@ class TestNnUtil(AllenNlpTestCase):
                 "mask": torch.BoolTensor([[False, False, True]]),
             }
         }
-        assert_almost_equal(util.get_text_field_mask(text_field_tensors).long().numpy(), [[0, 0, 1]])
+        assert_almost_equal(
+            util.get_text_field_mask(text_field_tensors).long().numpy(), [[0, 0, 1]]
+        )
 
     def test_weighted_sum_works_on_simple_input(self):
         batch_size = 1
@@ -1061,9 +1072,7 @@ class TestNnUtil(AllenNlpTestCase):
         )
         selected, mask = util.batched_span_select(targets, spans)
 
-        selected = torch.where(
-            mask.unsqueeze(-1), selected, torch.empty_like(selected).fill_(-1)
-        )
+        selected = torch.where(mask.unsqueeze(-1), selected, torch.empty_like(selected).fill_(-1))
 
         numpy.testing.assert_array_equal(
             selected,

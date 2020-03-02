@@ -457,7 +457,9 @@ class CopyNetSeq2Seq(Model):
         num_decoding_steps = target_sequence_length - 1
         # We use this to fill in the copy index when the previous input was copied.
         # shape: (batch_size,)
-        copy_input_choices = source_mask.new_full((batch_size,), fill_value=self._copy_index, dtype=torch.long)
+        copy_input_choices = source_mask.new_full(
+            (batch_size,), fill_value=self._copy_index, dtype=torch.long
+        )
         # shape: (batch_size, trimmed_source_length)
         copy_mask = source_mask[:, 1:-1]
         # We need to keep track of the probabilities assigned to tokens in the source
@@ -583,15 +585,15 @@ class CopyNetSeq2Seq(Model):
         # This is a mask indicating which last predictions were copied from the
         # the source AND not in the target vocabulary (OOV).
         # (group_size,)
-        only_copied_mask = (last_predictions >= self._target_vocab_size)
+        only_copied_mask = last_predictions >= self._target_vocab_size
 
         # If the last prediction was in the target vocab or OOV but not copied,
         # we use that as input, otherwise we use the COPY token.
         # shape: (group_size,)
-        copy_input_choices = only_copied_mask.new_full((group_size,), fill_value=self._copy_index, dtype=torch.long)
-        input_choices = (
-            last_predictions * ~only_copied_mask + copy_input_choices * only_copied_mask
+        copy_input_choices = only_copied_mask.new_full(
+            (group_size,), fill_value=self._copy_index, dtype=torch.long
         )
+        input_choices = last_predictions * ~only_copied_mask + copy_input_choices * only_copied_mask
 
         # In order to get the `selective_weights`, we need to find out which predictions
         # were copied or copied AND generated, which is the case when a prediction appears
@@ -812,7 +814,11 @@ class CopyNetSeq2Seq(Model):
         copy_mask = state["source_mask"][:, 1:-1]
         # shape: (batch_size, target_vocab_size + trimmed_source_length)
         mask = torch.cat(
-            (generation_scores.new_full(generation_scores.size(), True, dtype=torch.bool), copy_mask), dim=-1
+            (
+                generation_scores.new_full(generation_scores.size(), True, dtype=torch.bool),
+                copy_mask,
+            ),
+            dim=-1,
         )
         # Normalize generation and copy scores.
         # shape: (batch_size, target_vocab_size + trimmed_source_length)

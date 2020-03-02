@@ -402,9 +402,7 @@ class BiaffineDependencyParser(Model):
         range_vector = get_range_vector(batch_size, get_device_of(attended_arcs)).unsqueeze(1)
         # shape (batch_size, sequence_length, sequence_length)
         normalised_arc_logits = (
-            masked_log_softmax(attended_arcs, mask)
-            * mask.unsqueeze(2)
-            * mask.unsqueeze(1)
+            masked_log_softmax(attended_arcs, mask) * mask.unsqueeze(2) * mask.unsqueeze(1)
         )
 
         # shape (batch_size, sequence_length, num_head_tags)

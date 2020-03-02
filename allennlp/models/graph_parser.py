@@ -291,11 +291,7 @@ class GraphParser(Model):
         # Make the arc tags not have negative values anywhere
         # (by default, no edge is indicated with -1).
         arc_tags = arc_tags * arc_indices
-        arc_nll = (
-            self._arc_loss(arc_scores, arc_indices)
-            * mask.unsqueeze(1)
-            * mask.unsqueeze(2)
-        )
+        arc_nll = self._arc_loss(arc_scores, arc_indices) * mask.unsqueeze(1) * mask.unsqueeze(2)
         # We want the mask for the tags to only include the unmasked words
         # and we only care about the loss with respect to the gold arcs.
         tag_mask = mask.unsqueeze(1) * mask.unsqueeze(2) * arc_indices

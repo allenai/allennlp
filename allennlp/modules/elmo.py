@@ -601,8 +601,7 @@ class _ElmoBiLm(torch.nn.Module):
         # mask passed on is correct, but the values in the padded areas
         # of the char cnn representations can change.
         output_tensors = [
-            torch.cat([type_representation, type_representation], dim=-1)
-            * mask.unsqueeze(-1)
+            torch.cat([type_representation, type_representation], dim=-1) * mask.unsqueeze(-1)
         ]
         for layer_activations in torch.chunk(lstm_outputs, lstm_outputs.size(0), dim=0):
             output_tensors.append(layer_activations.squeeze(0))

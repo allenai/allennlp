@@ -137,7 +137,11 @@ class Decoder(nn.Module):
 
     @overrides
     def forward(
-        self, x: torch.Tensor, memory: torch.Tensor, src_mask: torch.BoolTensor, tgt_mask: torch.BoolTensor
+        self,
+        x: torch.Tensor,
+        memory: torch.Tensor,
+        src_mask: torch.BoolTensor,
+        tgt_mask: torch.BoolTensor,
     ) -> torch.Tensor:
         for layer in self.layers:
             x = layer(x, memory, src_mask, tgt_mask)
@@ -166,7 +170,11 @@ class DecoderLayer(nn.Module):
         self.sublayer = nn_util.clone(SublayerConnection(size, dropout), 3)
 
     def forward(
-        self, x: torch.Tensor, memory: torch.Tensor, src_mask: torch.BoolTensor, tgt_mask: torch.BoolTensor
+        self,
+        x: torch.Tensor,
+        memory: torch.Tensor,
+        src_mask: torch.BoolTensor,
+        tgt_mask: torch.BoolTensor,
     ) -> torch.Tensor:
         # Follow Figure 1 (right) for connections.
         x = self.sublayer[0](x, lambda y: self.self_attn(y, y, y, tgt_mask))

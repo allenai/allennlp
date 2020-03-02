@@ -32,7 +32,10 @@ class UnigramRecallTest(AllenNlpTestCase):
             ],
             device=device,
         )
-        mask = torch.BoolTensor([[True, True, True], [False, True, True], [True, True, False], [True, False, True]], device=device)
+        mask = torch.BoolTensor(
+            [[True, True, True], [False, True, True], [True, True, False], [True, False, True]],
+            device=device,
+        )
 
         recall(predictions, gold, mask)
         actual_recall = recall.get_metric()

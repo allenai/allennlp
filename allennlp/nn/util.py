@@ -313,7 +313,11 @@ def masked_log_softmax(vector: torch.Tensor, mask: torch.BoolTensor, dim: int = 
 
 
 def masked_max(
-    vector: torch.Tensor, mask: torch.BoolTensor, dim: int, keepdim: bool = False, min_val: float = -1e7
+    vector: torch.Tensor,
+    mask: torch.BoolTensor,
+    dim: int,
+    keepdim: bool = False,
+    min_val: float = -1e7,
 ) -> torch.Tensor:
     """
     To calculate max along certain dimensions on masked values

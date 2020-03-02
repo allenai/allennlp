@@ -32,7 +32,10 @@ class SequenceAccuracyTest(AllenNlpTestCase):
             ],
             device=device,
         )
-        mask = torch.BoolTensor([[False, True, True], [True, True, True], [True, True, False], [True, False, True]], device=device)
+        mask = torch.BoolTensor(
+            [[False, True, True], [True, True, True], [True, True, False], [True, False, True]],
+            device=device,
+        )
 
         accuracy(predictions, gold, mask)
         actual_accuracy = accuracy.get_metric()

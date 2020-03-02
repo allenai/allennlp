@@ -81,7 +81,9 @@ class TestEndpointSpanExtractor:
         # for both the forward and backward directions.
         extractor = EndpointSpanExtractor(8, "x,y", use_exclusive_start_indices=True)
         indices = torch.LongTensor([[[1, 3], [2, 4]], [[0, 2], [0, 1]]])
-        sequence_mask = torch.BoolTensor([[True, True, True, True, True], [True, True, True, False, False]])
+        sequence_mask = torch.BoolTensor(
+            [[True, True, True, True, True], [True, True, True, False, False]]
+        )
 
         span_representations = extractor(sequence_tensor, indices, sequence_mask=sequence_mask)
 

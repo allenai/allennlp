@@ -140,8 +140,7 @@ class EndpointSpanExtractor(SpanExtractor):
             # We're using sentinels, so we need to replace all the elements which were
             # outside the dimensions of the sequence_tensor with the start sentinel.
             start_embeddings = (
-                start_embeddings * ~start_sentinel_mask
-                + start_sentinel_mask * self._start_sentinel
+                start_embeddings * ~start_sentinel_mask + start_sentinel_mask * self._start_sentinel
             )
 
         combined_tensors = util.combine_tensors(

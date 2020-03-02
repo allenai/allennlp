@@ -338,7 +338,9 @@ class SimpleSeq2Seq(Model):
 
         # Initialize target predictions with the start index.
         # shape: (batch_size,)
-        last_predictions = source_mask.new_full((batch_size,), fill_value=self._start_index, dtype=torch.long)
+        last_predictions = source_mask.new_full(
+            (batch_size,), fill_value=self._start_index, dtype=torch.long
+        )
 
         step_logits: List[torch.Tensor] = []
         step_predictions: List[torch.Tensor] = []

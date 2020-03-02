@@ -183,7 +183,9 @@ class AutoRegressiveSeqDecoder(SeqDecoder):
 
             # Initialize target predictions with the start index.
             # shape: (batch_size,)
-            last_predictions = source_mask.new_full((batch_size,), fill_value=self._start_index, dtype=torch.long)
+            last_predictions = source_mask.new_full(
+                (batch_size,), fill_value=self._start_index, dtype=torch.long
+            )
 
             # shape: (steps, batch_size, target_embedding_dim)
             steps_embeddings = torch.Tensor([])

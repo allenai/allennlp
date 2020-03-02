@@ -33,7 +33,9 @@ class BooleanAccuracyTest(AllenNlpTestCase):
         predictions = torch.tensor([[0, 1], [2, 3], [4, 5], [6, 7]], device=device)
         targets = torch.tensor([[0, 1], [2, 2], [4, 5], [7, 7]], device=device)
 
-        mask = torch.BoolTensor([[False, False], [True, False], [True, True], [True, True]], device=device)
+        mask = torch.BoolTensor(
+            [[False, False], [True, False], [True, True], [True, True]], device=device
+        )
         accuracy(predictions, targets, mask)
 
         # First example should be skipped, second is correct with mask, third is correct, fourth is wrong.
