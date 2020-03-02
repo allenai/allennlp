@@ -13,7 +13,7 @@
     "token_indexers": {
       "elmo": {
         "type": "elmo_characters"
-     }
+      }
     }
   },
   "train_data_path": "https://allennlp.s3.amazonaws.com/datasets/snli/snli_1.0_train.jsonl",
@@ -83,11 +83,13 @@
   },
   "trainer": {
     "optimizer": {
-        "type": "adam",
-        "lr": 0.0004
+      "type": "adam",
+      "lr": 0.0004
+    },
+    "checkpointer": {
+      "num_serialized_models_to_keep": 2,
     },
     "validation_metric": "+accuracy",
-    "num_serialized_models_to_keep": 2,
     "num_epochs": 75,
     "grad_norm": 10.0,
     "patience": 5,
