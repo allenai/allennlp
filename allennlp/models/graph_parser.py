@@ -194,7 +194,7 @@ class GraphParser(Model):
         arc_tag_logits = arc_tag_logits.permute(0, 2, 3, 1).contiguous()
 
         minus_inf = -1e8
-        minus_mask = ~mask.float() * minus_inf
+        minus_mask = (~mask).float() * minus_inf
         arc_scores = arc_scores + minus_mask.unsqueeze(2) + minus_mask.unsqueeze(1)
 
         arc_probs, arc_tag_probs = self._greedy_decode(arc_scores, arc_tag_logits, mask)

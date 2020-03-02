@@ -338,7 +338,7 @@ class SimpleSeq2Seq(Model):
 
         # Initialize target predictions with the start index.
         # shape: (batch_size,)
-        last_predictions = source_mask.new_full((batch_size,), fill_value=self._start_index)
+        last_predictions = source_mask.new_full((batch_size,), fill_value=self._start_index, dtype=torch.long)
 
         step_logits: List[torch.Tensor] = []
         step_predictions: List[torch.Tensor] = []
@@ -392,7 +392,7 @@ class SimpleSeq2Seq(Model):
         """Make forward pass during prediction using a beam search."""
         batch_size = state["source_mask"].size()[0]
         start_predictions = state["source_mask"].new_full(
-            (batch_size,), fill_value=self._start_index
+            (batch_size,), fill_value=self._start_index, dtype=torch.long
         )
 
         # shape (all_top_k_predictions): (batch_size, beam_size, num_decoding_steps)

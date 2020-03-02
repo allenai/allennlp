@@ -40,9 +40,9 @@ def attention(
     return torch.matmul(p_attn, value), p_attn
 
 
-def subsequent_mask(size: int, device: str = "cpu") -> torch.Tensor:
+def subsequent_mask(size: int, device: str = "cpu") -> torch.BoolTensor:
     """Mask out subsequent positions."""
-    mask = torch.tril(torch.ones(size, size, device=device, dtype=torch.int32)).unsqueeze(0)
+    mask = torch.tril(torch.ones(size, size, device=device, dtype=torch.bool)).unsqueeze(0)
     return mask
 
 

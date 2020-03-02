@@ -97,7 +97,7 @@ class SimpleSeq2SeqTest(ModelTestCase):
         state = self.model._init_decoder_state(state)
         batch_size = state["source_mask"].size()[0]
         start_predictions = state["source_mask"].new_full(
-            (batch_size,), fill_value=self.model._start_index
+            (batch_size,), fill_value=self.model._start_index, dtype=torch.long
         )
         all_top_k_predictions, _ = beam_search.search(
             start_predictions, state, self.model.take_step
