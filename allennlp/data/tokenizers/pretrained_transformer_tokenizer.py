@@ -1,3 +1,4 @@
+import dataclasses
 import logging
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -66,11 +67,21 @@ class PretrainedTransformerTokenizer(Tokenizer):
         tokenizer_kwargs: Dict[str, Any] = None,
     ) -> None:
         tokenizer_kwargs = tokenizer_kwargs or {}
-        self.tokenizer = AutoTokenizer.from_pretrained(
-            model_name, use_fast=True, **tokenizer_kwargs
+        # Some tokenizers need to know during initialization whether they are going to produce special tokens or
+        # not.
+        self.tokenizer_with_special_tokens = AutoTokenizer.from_pretrained(
+            model_name, use_fast=True, add_special_tokens=True, **tokenizer_kwargs
+        )
+        self.tokenizer_without_special_tokens = AutoTokenizer.from_pretrained(
+            model_name, use_fast=True, add_special_tokens=False, **tokenizer_kwargs
         )
 
         self._add_special_tokens = add_special_tokens
+        if self._add_special_tokens:
+            self.tokenizer = self.tokenizer_with_special_tokens
+        else:
+            self.tokenizer = self.tokenizer_without_special_tokens
+
         self._max_length = max_length
         self._stride = stride
         self._truncation_strategy = truncation_strategy
@@ -136,80 +147,108 @@ class PretrainedTransformerTokenizer(Tokenizer):
         """
         return self._tokenize(text)
 
-    def intra_word_tokenize(self, tokens: List[str]) -> Tuple[List[Token], List[Tuple[int, int]]]:
+    def intra_word_tokenize(
+        self, string_tokens: List[str]
+    ) -> Tuple[List[Token], List[Tuple[int, int]]]:
         """
         Tokenizes each word into wordpieces separately and returns the wordpiece IDs.
-        Also calculates offsets such that wordpices[offsets[i][0]:offsets[i][1] + 1]
+        Also calculates offsets such that tokens[offsets[i][0]:offsets[i][1] + 1]
         corresponds to the original i-th token.
 
         This function inserts special tokens.
         """
-        wordpieces, offsets, cumulative = self.intra_word_tokenize_in_id(
-            tokens, self.num_added_start_tokens
-        )
-        wp_tokens = self.ids_to_tokens(wordpieces)
-        assert cumulative + self.num_added_end_tokens == len(wp_tokens)
-        return wp_tokens, offsets
+        return self.intra_word_tokenize_sentence_pair(string_tokens, None)[:2]
 
     def intra_word_tokenize_sentence_pair(
-        self, tokens_a: List[str], tokens_b: List[str]
-    ) -> Tuple[List[Token], List[Tuple[int, int]], List[Tuple[int, int]]]:
+        self, string_tokens_a: List[str], string_tokens_b: Optional[List[str]]
+    ) -> Tuple[List[Token], List[Tuple[int, int]], Optional[List[Tuple[int, int]]]]:
+
         """
         Tokenizes each word into wordpieces separately and returns the wordpiece IDs.
-        Also calculates offsets such that wordpices[offsets[i][0]:offsets[i][1] + 1]
+        Also calculates offsets such that wordpieces[offsets[i][0]:offsets[i][1] + 1]
         corresponds to the original i-th token.
 
         This function inserts special tokens.
         """
-        wordpieces_a, offsets_a, cumulative = self.intra_word_tokenize_in_id(
-            tokens_a, self.num_added_start_tokens
-        )
-        wordpieces_b, offsets_b, cumulative = self.intra_word_tokenize_in_id(
-            tokens_b, cumulative + self.num_added_middle_tokens
-        )
-        wp_tokens = self.ids_to_tokens(wordpieces_a, wordpieces_b)
-        assert cumulative + self.num_added_end_tokens == len(wp_tokens)
-        return wp_tokens, offsets_a, offsets_b
 
-    def intra_word_tokenize_in_id(
-        self, tokens: List[str], starting_offset: int = 0
-    ) -> Tuple[List[int], List[Tuple[int, int]], int]:
-        """
-        Similar to `intra_word_tokenize()`, except:
-        (a) returns wordpiece IDs in the vocab instead of `Token`s;
-        (b) only takes a single sequence; and
-        (c) does not insert special tokens.
-        """
-        wordpieces: List[int] = []
-        offsets = []
-        cumulative = starting_offset
-        for token in tokens:
-            subword_wordpieces = self.tokenizer.encode(token, add_special_tokens=False)
-            if len(subword_wordpieces) == 0:
-                subword_wordpieces = [self.tokenizer.unk_token_id]
+        def tokens_from_string_tokens(
+            string_tokens: List[str],
+        ) -> Tuple[List[Token], List[Tuple[int, int]]]:
+            tokens = []
+            offsets = []
+            for token_string in string_tokens:
+                print(token_string)
+                wordpieces = self.tokenizer_without_special_tokens.encode_plus(
+                    token_string,
+                    add_special_tokens=False,
+                    return_tensors=None,
+                    return_offsets_mapping=True,
+                    return_attention_mask=False,
+                    return_token_type_ids=False,
+                )
+                wp_ids, wp_offsets = wordpieces["input_ids"], wordpieces["offset_mapping"]
+                offsets.append((len(tokens), len(tokens) + len(wp_ids) - 1))
+                tokens.extend(
+                    Token(text=token_string[wp_start:wp_end], text_id=wp_id)
+                    for wp_id, (wp_start, wp_end) in zip(wp_ids, wp_offsets)
+                )
+            return tokens, offsets
 
-            wordpieces.extend(subword_wordpieces)
+        dummy_a = 2000
+        dummy_b = 3000
+        dummy_map: Dict[int, Tuple] = {dummy_a: tokens_from_string_tokens(string_tokens_a)}
+        if string_tokens_b is not None:
+            dummy_map[dummy_b] = tokens_from_string_tokens(string_tokens_b)
 
-            start_offset = cumulative
-            cumulative += len(subword_wordpieces)
-            end_offset = cumulative - 1  # inclusive
-            offsets.append((start_offset, end_offset))
-        return wordpieces, offsets, cumulative
+        if string_tokens_b is None:
+            dummy_token_ids = self.tokenizer_with_special_tokens.encode_plus(
+                [self.tokenizer_with_special_tokens.convert_ids_to_tokens(dummy_a)],
+                return_attention_mask=False,
+                add_special_tokens=True,
+            )
+        else:
+            dummy_token_ids = self.tokenizer_with_special_tokens.encode_plus(
+                self.tokenizer_with_special_tokens.convert_ids_to_tokens(dummy_a),
+                self.tokenizer_with_special_tokens.convert_ids_to_tokens(dummy_b),
+                return_attention_mask=False,
+                add_special_tokens=True,
+            )
+        dummy_type_ids = dummy_token_ids["token_type_ids"]
+        dummy_token_ids = dummy_token_ids["input_ids"]
 
-    def ids_to_tokens(
-        self, token_ids_a: List[int], token_ids_b: Optional[List[int]] = None
-    ) -> List[Token]:
-        """
-        Convert one or two sequences of token IDs to `Token`s while adding special tokens.
-        """
-        text_ids = self.tokenizer.build_inputs_with_special_tokens(token_ids_a, token_ids_b)
-        type_ids = self.tokenizer.create_token_type_ids_from_sequences(token_ids_a, token_ids_b)
+        tokens_with_special_tokens = []
+        offsets_with_special_tokens = []
+        for token_id, type_id in zip(dummy_token_ids, dummy_type_ids):
+            if token_id in dummy_map:
+                tokens, offsets = dummy_map[token_id]
+                offsets_with_special_tokens.extend(
+                    (start + len(tokens_with_special_tokens), end + len(tokens_with_special_tokens))
+                    for start, end in offsets
+                )
+                tokens_with_special_tokens.extend(
+                    dataclasses.replace(t, type_id=type_id) for t in tokens
+                )
+                del dummy_map[
+                    token_id
+                ]  # We can't output the same tokens twice, so we prevent it this way.
+            else:
+                tokens_with_special_tokens.append(
+                    Token(
+                        text_id=token_id,
+                        text=self.tokenizer.convert_ids_to_tokens(token_id),
+                        type_id=type_id,
+                    )
+                )
+        assert len(dummy_map) <= 0
 
-        tokens = [
-            Token(self.tokenizer.convert_ids_to_tokens(text_id), text_id=text_id, type_id=type_id)
-            for text_id, type_id in zip(text_ids, type_ids)
-        ]
-        return tokens
+        if string_tokens_b is None:
+            return tokens_with_special_tokens, offsets_with_special_tokens, None
+        else:
+            return (
+                tokens_with_special_tokens,
+                offsets_with_special_tokens[: len(string_tokens_a)],
+                offsets_with_special_tokens[len(string_tokens_a) :],
+            )
 
     def _determine_num_special_tokens_added(self) -> Tuple[int, int, int]:
         """

@@ -629,7 +629,4 @@ def sanitize_wordpiece(wordpiece: str) -> str:
     """
     if wordpiece.startswith("##"):
         return wordpiece[2:]
-    elif wordpiece.startswith("Ġ"):
-        return wordpiece[1:]
-    else:
-        return wordpiece
+    return wordpiece.replace("Ġ", " ")

@@ -1,7 +1,7 @@
 from typing import Dict, List, Optional, Tuple
 import logging
 import torch
-from allennlp.common.util import pad_sequence_to_length
+from allennlp.common.util import pad_sequence_to_length, sanitize_wordpiece
 
 from overrides import overrides
 
@@ -82,6 +82,7 @@ class PretrainedTransformerIndexer(TokenIndexer):
         if vocab_field_name is not None:
             pretrained_vocab = getattr(self._tokenizer, vocab_field_name)
             for word, idx in pretrained_vocab.items():
+                word = sanitize_wordpiece(word)
                 vocab._token_to_index[self._namespace][word] = idx
                 vocab._index_to_token[self._namespace][idx] = word
 
