@@ -19,12 +19,12 @@ logger = logging.getLogger(__name__)
 class QuoraParaphraseDatasetReader(DatasetReader):
     """
     Reads a file from the Quora Paraphrase dataset. The train/validation/test split of the data
-    comes from the paper [Bilateral Multi-Perspective Matching for Natural Language Sentences]
-    (https://arxiv.org/abs/1702.03814) by Zhiguo Wang et al., 2017. Each file of the data
-    is a tsv file without header. The columns are is_duplicate, question1, question2, and id.
-    All questions are pre-tokenized and tokens are space separated. We convert these keys into
-    fields named "label", "premise" and "hypothesis", so that it is compatible to some existing
-    natural language inference algorithms.
+    comes from the paper [Bilateral Multi-Perspective Matching for
+    Natural Language Sentences](https://arxiv.org/abs/1702.03814) by Zhiguo Wang et al., 2017.
+    Each file of the data is a tsv file without header. The columns are is_duplicate, question1,
+    question2, and id.  All questions are pre-tokenized and tokens are space separated. We convert
+    these keys into fields named "label", "premise" and "hypothesis", so that it is compatible t
+    some existing natural language inference algorithms.
 
     # Parameters
 

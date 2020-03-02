@@ -20,7 +20,9 @@ class SequenceTaggingDatasetReader(DatasetReader):
     """
     Reads instances from a pretokenised file where each line is in the following format:
 
+    ```
     WORD###TAG [TAB] WORD###TAG [TAB] ..... \n
+    ```
 
     and converts it into a `Dataset` suitable for sequence tagging. You can also specify
     alternative delimiters in the constructor.
