@@ -75,7 +75,7 @@ class PearsonCorrelationTest(AllenNlpTestCase):
         predictions_labels = [(predictions_1, labels_1), (predictions_2, labels_2)]
 
         # Random binary mask
-        mask = torch.randint(0, 2, size=(batch_size, num_labels), device=device)
+        mask = torch.randint(0, 2, size=(batch_size, num_labels), device=device).bool()
         stride = 10
 
         for predictions, labels in predictions_labels:

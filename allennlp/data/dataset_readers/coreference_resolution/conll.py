@@ -46,6 +46,10 @@ class ConllCorefReader(DatasetReader):
         and the modeling will be on the word-level.
     max_sentences: int, optional (default = None)
         The maximum number of sentences in each document to keep. By default keeps all sentences.
+    remove_singleton_clusters : `bool`, optional (default = False)
+        Some datasets contain clusters that are singletons (i.e. no coreferents). This option allows
+        the removal of them. Ontonotes shouldn't have these, and this option should be used for
+        testing only.
     """
 
     def __init__(
@@ -54,6 +58,7 @@ class ConllCorefReader(DatasetReader):
         token_indexers: Dict[str, TokenIndexer] = None,
         wordpiece_modeling_tokenizer: Optional[PretrainedTransformerTokenizer] = None,
         max_sentences: int = None,
+        remove_singleton_clusters: bool = False,
         **kwargs,
     ) -> None:
         super().__init__(**kwargs)
@@ -61,6 +66,7 @@ class ConllCorefReader(DatasetReader):
         self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
         self._wordpiece_modeling_tokenizer = wordpiece_modeling_tokenizer
         self._max_sentences = max_sentences
+        self._remove_singleton_clusters = remove_singleton_clusters
 
     @overrides
     def _read(self, file_path: str):
@@ -96,4 +102,5 @@ class ConllCorefReader(DatasetReader):
             gold_clusters,
             self._wordpiece_modeling_tokenizer,
             self._max_sentences,
+            self._remove_singleton_clusters,
         )

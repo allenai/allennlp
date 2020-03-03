@@ -148,7 +148,7 @@ class LanguageModel(Model):
             initializer(self)
 
     def _get_target_token_embeddings(
-        self, token_embeddings: torch.Tensor, mask: torch.Tensor, direction: int
+        self, token_embeddings: torch.Tensor, mask: torch.BoolTensor, direction: int
     ) -> torch.Tensor:
         # Need to shift the mask in the correct direction
         zero_col = token_embeddings.new_zeros(mask.size(0), 1).to(dtype=torch.bool)
@@ -275,7 +275,7 @@ class LanguageModel(Model):
         `'noncontextual_token_embeddings'` : `torch.Tensor`
             (batch_size, timesteps, token_embed_dim) tensor of bottom layer noncontextual
             representations
-        `'mask'` : `torch.Tensor`
+        `'mask'` : `torch.BoolTensor`
             (batch_size, timesteps) mask for the embeddings
         """
 

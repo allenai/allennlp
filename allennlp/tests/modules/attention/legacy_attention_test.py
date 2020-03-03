@@ -35,7 +35,7 @@ class TestLegacyAttention(AllenNlpTestCase):
         # Testing general masked non-batched case.
         vector = torch.FloatTensor([[0.3, 0.1, 0.5]])
         matrix = torch.FloatTensor([[[0.6, 0.8, 0.1], [0.15, 0.5, 0.2], [0.1, 0.4, 0.3]]])
-        mask = torch.FloatTensor([[1.0, 0.0, 1.0]])
+        mask = torch.BoolTensor([[True, False, True]])
         result = attention(vector, matrix, mask).data.numpy()
         assert_almost_equal(result, numpy.array([[0.52248482, 0.0, 0.47751518]]))
 
@@ -64,7 +64,7 @@ class TestLegacyAttention(AllenNlpTestCase):
                 [[0.6, 0.8, 0.1], [0.15, 0.5, 0.2], [0.5, 0.3, 0.2]],
             ]
         )
-        mask = torch.FloatTensor([[1.0, 1.0, 0.0], [1.0, 0.0, 1.0]])
+        mask = torch.BoolTensor([[True, True, False], [True, False, True]])
         result = attention(vector, matrix, mask).data.numpy()
         assert_almost_equal(
             result, numpy.array([[0.52871835, 0.47128162, 0.0], [0.50749944, 0.0, 0.49250056]])
@@ -78,7 +78,7 @@ class TestLegacyAttention(AllenNlpTestCase):
                 [[0.6, 0.8, 0.1], [0.15, 0.5, 0.2], [0.5, 0.3, 0.2]],
             ]
         )
-        mask = torch.FloatTensor([[1.0, 1.0, 0.0], [0.0, 0.0, 0.0]])
+        mask = torch.BoolTensor([[True, True, False], [False, False, False]])
         result = attention(vector, matrix, mask).data.numpy()
         assert_almost_equal(result, numpy.array([[0.5, 0.5, 0.0], [0.0, 0.0, 0.0]]))
 

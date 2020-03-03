@@ -25,7 +25,7 @@ class Auc(Metric):
         self,
         predictions: torch.Tensor,
         gold_labels: torch.Tensor,
-        mask: Optional[torch.Tensor] = None,
+        mask: Optional[torch.BoolTensor] = None,
     ):
         """
         # Parameters
@@ -36,7 +36,7 @@ class Auc(Metric):
             A one-dimensional label tensor of shape (batch_size), with {1, 0}
             entries for positive and negative class. If it's not binary,
             `positive_label` should be passed in the initialization.
-        mask : `torch.Tensor`, optional (default = None).
+        mask : `torch.BoolTensor`, optional (default = None).
             A one-dimensional label tensor of shape (batch_size).
         """
 
@@ -70,8 +70,7 @@ class Auc(Metric):
 
         if mask is None:
             batch_size = gold_labels.shape[0]
-            mask = torch.ones(batch_size, device=gold_labels.device)
-        mask = mask.to(dtype=torch.bool)
+            mask = torch.ones(batch_size, device=gold_labels.device).bool()
 
         self._all_predictions = self._all_predictions.to(predictions.device)
         self._all_gold_labels = self._all_gold_labels.to(gold_labels.device)

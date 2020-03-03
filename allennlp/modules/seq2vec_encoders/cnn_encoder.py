@@ -89,9 +89,9 @@ class CnnEncoder(Seq2VecEncoder):
     def get_output_dim(self) -> int:
         return self._output_dim
 
-    def forward(self, tokens: torch.Tensor, mask: torch.Tensor):
+    def forward(self, tokens: torch.Tensor, mask: torch.BoolTensor):
         if mask is not None:
-            tokens = tokens * mask.unsqueeze(-1).float()
+            tokens = tokens * mask.unsqueeze(-1)
 
         # Our input is expected to have shape `(batch_size, num_tokens, embedding_dim)`.  The
         # convolution layers expect input of shape `(batch_size, in_channels, sequence_length)`,

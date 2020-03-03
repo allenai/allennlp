@@ -182,7 +182,7 @@ class CoreferenceResolver(Model):
         num_spans = spans.size(1)
 
         # Shape: (batch_size, document_length)
-        text_mask = util.get_text_field_mask(text).float()
+        text_mask = util.get_text_field_mask(text)
 
         # Shape: (batch_size, num_spans)
         span_mask = (spans[:, :, 0] >= 0).squeeze(-1)
@@ -208,6 +208,7 @@ class CoreferenceResolver(Model):
 
         # Prune based on mention scores.
         num_spans_to_keep = int(math.floor(self._spans_per_word * document_length))
+        num_spans_to_keep = min(num_spans_to_keep, num_spans)
 
         # Shape: (batch_size, num_spans)
         span_mention_scores = self._mention_scorer(

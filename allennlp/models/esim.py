@@ -146,8 +146,8 @@ class ESIM(Model):
         """
         embedded_premise = self._text_field_embedder(premise)
         embedded_hypothesis = self._text_field_embedder(hypothesis)
-        premise_mask = get_text_field_mask(premise).float()
-        hypothesis_mask = get_text_field_mask(hypothesis).float()
+        premise_mask = get_text_field_mask(premise)
+        hypothesis_mask = get_text_field_mask(hypothesis)
 
         # apply dropout for LSTM
         if self.rnn_input_dropout:

@@ -102,7 +102,7 @@ class IntraSentenceAttentionEncoder(Seq2SeqEncoder):
         return False
 
     @overrides
-    def forward(self, tokens: torch.Tensor, mask: torch.Tensor):
+    def forward(self, tokens: torch.Tensor, mask: torch.BoolTensor):
         batch_size, sequence_length, _ = tokens.size()
         # Shape: (batch_size, sequence_length, sequence_length)
         similarity_matrix = self._matrix_attention(tokens, tokens)
