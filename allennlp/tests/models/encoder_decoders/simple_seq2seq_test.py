@@ -47,7 +47,9 @@ class SimpleSeq2SeqTest(ModelTestCase):
             numpy.random.randint(0, num_classes, (batch_size, num_decoding_steps))
         )
         # Mask should be either 0 or 1
-        sample_mask = torch.from_numpy(numpy.random.randint(0, 2, (batch_size, num_decoding_steps)))
+        sample_mask = torch.from_numpy(
+            numpy.random.randint(0, 2, (batch_size, num_decoding_steps))
+        ).bool()
         expected_loss = sequence_cross_entropy_with_logits(
             sample_logits, sample_targets[:, 1:].contiguous(), sample_mask[:, 1:].contiguous()
         )
@@ -89,7 +91,7 @@ class SimpleSeq2SeqTest(ModelTestCase):
         state = self.model._init_decoder_state(state)
         batch_size = state["source_mask"].size()[0]
         start_predictions = state["source_mask"].new_full(
-            (batch_size,), fill_value=self.model._start_index
+            (batch_size,), fill_value=self.model._start_index, dtype=torch.long
         )
         all_top_k_predictions, _ = beam_search.search(
             start_predictions, state, self.model.take_step

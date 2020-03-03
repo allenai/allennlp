@@ -1,5 +1,7 @@
-from typing import List, Iterable, Tuple, Dict, cast
 import logging
+from typing import List, Iterable, Tuple, Dict, cast
+
+import math
 from torch.utils import data
 
 from allennlp.common.util import add_noise_to_dict_values, lazy_groups_of
@@ -145,4 +147,8 @@ class BucketBatchSampler(BatchSampler):
         self.sorting_keys = [longest_padding_key]
 
     def __len__(self):
-        return len(self.data_source) // self.batch_size
+        batch_count_float = len(self.data_source) / self.batch_size
+        if self.drop_last:
+            return math.floor(batch_count_float)
+        else:
+            return math.ceil(batch_count_float)

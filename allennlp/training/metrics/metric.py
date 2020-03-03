@@ -12,7 +12,7 @@ class Metric(Registrable):
     """
 
     def __call__(
-        self, predictions: torch.Tensor, gold_labels: torch.Tensor, mask: Optional[torch.Tensor]
+        self, predictions: torch.Tensor, gold_labels: torch.Tensor, mask: Optional[torch.BoolTensor]
     ):
         """
         # Parameters
@@ -21,7 +21,7 @@ class Metric(Registrable):
             A tensor of predictions.
         gold_labels : `torch.Tensor`, required.
             A tensor corresponding to some gold label to evaluate against.
-        mask : `torch.Tensor`, optional (default = None).
+        mask : `torch.BoolTensor`, optional (default = None).
             A mask can be passed, in order to deal with metrics which are
             computed over potentially padded elements, such as sequence labels.
         """

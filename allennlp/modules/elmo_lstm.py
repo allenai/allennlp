@@ -108,13 +108,13 @@ class ElmoLstm(_EncoderBase):
         self.forward_layers = forward_layers
         self.backward_layers = backward_layers
 
-    def forward(self, inputs: torch.Tensor, mask: torch.LongTensor) -> torch.Tensor:
+    def forward(self, inputs: torch.Tensor, mask: torch.BoolTensor) -> torch.Tensor:
         """
         # Parameters
 
         inputs : `torch.Tensor`, required.
             A Tensor of shape `(batch_size, sequence_length, hidden_size)`.
-        mask : `torch.LongTensor`, required.
+        mask : `torch.BoolTensor`, required.
             A binary mask of shape `(batch_size, sequence_length)` representing the
             non-padded elements in each sequence in the batch.
 

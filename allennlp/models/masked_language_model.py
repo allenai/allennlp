@@ -75,7 +75,7 @@ class MaskedLanguageModel(Model):
     def forward(  # type: ignore
         self,
         tokens: TextFieldTensors,
-        mask_positions: torch.LongTensor,
+        mask_positions: torch.BoolTensor,
         target_ids: TextFieldTensors = None,
     ) -> Dict[str, torch.Tensor]:
         """

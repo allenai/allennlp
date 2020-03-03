@@ -183,3 +183,29 @@ class TestBucketSampler(SamplerTest):
 
         # we should have lost one instance by skipping the last batch
         assert stats["total_instances"] == len(self.instances) - 1
+
+    def test_batch_count(self):
+        dataset = AllennlpDataset(self.instances, vocab=self.vocab)
+        sampler = BucketBatchSampler(
+            dataset, batch_size=2, padding_noise=0, sorting_keys=[("text", "tokens___tokens")]
+        )
+        # We use a custom collate_fn for testing, which doesn't actually create tensors,
+        # just the allennlp Batches.
+        dataloader = DataLoader(dataset, batch_sampler=sampler, collate_fn=lambda x: Batch(x))
+
+        assert len(dataloader) == 3
+
+    def test_batch_count_with_drop_last(self):
+        dataset = AllennlpDataset(self.instances, vocab=self.vocab)
+        sampler = BucketBatchSampler(
+            dataset,
+            batch_size=2,
+            padding_noise=0,
+            sorting_keys=[("text", "tokens___tokens")],
+            drop_last=True,
+        )
+        # We use a custom collate_fn for testing, which doesn't actually create tensors,
+        # just the allennlp Batches.
+        dataloader = DataLoader(dataset, batch_sampler=sampler, collate_fn=lambda x: Batch(x))
+
+        assert len(dataloader) == 2

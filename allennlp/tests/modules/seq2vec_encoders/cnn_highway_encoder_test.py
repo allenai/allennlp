@@ -20,7 +20,7 @@ class TestCnnHighwayEncoder(AllenNlpTestCase):
         encoder = TimeDistributed(encoder)
 
         embedding = torch.from_numpy(np.random.randn(5, 6, 50, 4)).float()
-        mask = torch.ones(5, 6, 50).long()
+        mask = torch.ones(5, 6, 50).bool()
         token_embedding = encoder(embedding, mask)
 
         assert list(token_embedding.size()) == [5, 6, 16]

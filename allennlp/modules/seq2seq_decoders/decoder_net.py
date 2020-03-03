@@ -66,9 +66,9 @@ class DecoderNet(torch.nn.Module, Registrable):
         self,
         previous_state: Dict[str, torch.Tensor],
         encoder_outputs: torch.Tensor,
-        source_mask: torch.Tensor,
+        source_mask: torch.BoolTensor,
         previous_steps_predictions: torch.Tensor,
-        previous_steps_mask: Optional[torch.Tensor] = None,
+        previous_steps_mask: Optional[torch.BoolTensor] = None,
     ) -> Tuple[Dict[str, torch.Tensor], torch.Tensor]:
 
         """
@@ -84,7 +84,7 @@ class DecoderNet(torch.nn.Module, Registrable):
         encoder_outputs : `torch.Tensor`, required
             Vectors of all encoder outputs.
             Shape: (group_size, max_input_sequence_length, encoder_output_dim)
-        source_mask : `torch.Tensor`, required
+        source_mask : `torch.BoolTensor`, required
             This tensor contains mask for each input sequence.
             Shape: (group_size, max_input_sequence_length)
         previous_state : `Dict[str, torch.Tensor]`, required

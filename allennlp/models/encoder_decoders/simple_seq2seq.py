@@ -321,7 +321,9 @@ class SimpleSeq2Seq(Model):
 
         # Initialize target predictions with the start index.
         # shape: (batch_size,)
-        last_predictions = source_mask.new_full((batch_size,), fill_value=self._start_index)
+        last_predictions = source_mask.new_full(
+            (batch_size,), fill_value=self._start_index, dtype=torch.long
+        )
 
         step_logits: List[torch.Tensor] = []
         step_predictions: List[torch.Tensor] = []
@@ -375,7 +377,7 @@ class SimpleSeq2Seq(Model):
         """Make forward pass during prediction using a beam search."""
         batch_size = state["source_mask"].size()[0]
         start_predictions = state["source_mask"].new_full(
-            (batch_size,), fill_value=self._start_index
+            (batch_size,), fill_value=self._start_index, dtype=torch.long
         )
 
         # shape (all_top_k_predictions): (batch_size, beam_size, num_decoding_steps)
@@ -445,14 +447,9 @@ class SimpleSeq2Seq(Model):
         self,
         decoder_hidden_state: torch.LongTensor = None,
         encoder_outputs: torch.LongTensor = None,
-        encoder_outputs_mask: torch.LongTensor = None,
+        encoder_outputs_mask: torch.BoolTensor = None,
     ) -> torch.Tensor:
         """Apply attention over encoder outputs and decoder state."""
-        # Ensure mask is also a FloatTensor. Or else the multiplication within
-        # attention will complain.
-        # shape: (batch_size, max_input_sequence_length)
-        encoder_outputs_mask = encoder_outputs_mask.float()
-
         # shape: (batch_size, max_input_sequence_length)
         input_weights = self._attention(decoder_hidden_state, encoder_outputs, encoder_outputs_mask)
 
@@ -463,7 +460,7 @@ class SimpleSeq2Seq(Model):
 
     @staticmethod
     def _get_loss(
-        logits: torch.LongTensor, targets: torch.LongTensor, target_mask: torch.LongTensor
+        logits: torch.LongTensor, targets: torch.LongTensor, target_mask: torch.BoolTensor
     ) -> torch.Tensor:
         """
         Compute loss.

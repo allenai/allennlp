@@ -11,7 +11,7 @@ class TestMaskedLayerNorm(AllenNlpTestCase):
         mask_n = np.array([[1, 1, 0], [1, 1, 1]])
 
         x = torch.from_numpy(x_n).float()
-        mask = torch.from_numpy(mask_n)
+        mask = torch.from_numpy(mask_n).bool()
 
         layer_norm = MaskedLayerNorm(7, gamma0=0.2)
         normed_x = layer_norm(x, mask)
