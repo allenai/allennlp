@@ -190,7 +190,7 @@ class CrfTagger(Model):
 
         logits : `torch.FloatTensor`
             The logits that are the output of the `tag_projection_layer`
-        mask : `torch.LongTensor`
+        mask : `torch.BoolTensor`
             The text field mask for the input tokens
         tags : `List[List[int]]`
             The predicted tags using the Viterbi algorithm.
@@ -236,9 +236,9 @@ class CrfTagger(Model):
                     class_probabilities[i, j, tag_id] = 1
 
             for metric in self.metrics.values():
-                metric(class_probabilities, tags, mask.float())
+                metric(class_probabilities, tags, mask)
             if self.calculate_span_f1:
-                self._f1_metric(class_probabilities, tags, mask.float())
+                self._f1_metric(class_probabilities, tags, mask)
         if metadata is not None:
             output["words"] = [x["words"] for x in metadata]
         return output

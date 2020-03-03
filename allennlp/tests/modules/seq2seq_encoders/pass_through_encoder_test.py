@@ -22,7 +22,7 @@ class TestPassThroughEncoder(AllenNlpTestCase):
     def test_pass_through_encoder_with_mask(self):
         encoder = PassThroughEncoder(input_dim=9)
         tensor = torch.randn([2, 3, 9])
-        mask = torch.LongTensor([[1, 1, 1], [1, 0, 0]])
+        mask = torch.BoolTensor([[True, True, True], [True, False, False]])
         output = encoder(tensor, mask)
 
         target = tensor * mask.unsqueeze(dim=-1).float()

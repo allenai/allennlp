@@ -55,7 +55,7 @@ class TestEndpointSpanExtractor:
         span_representations = extractor(sequence_tensor, indices)
 
         # Make a mask with the second batch element completely masked.
-        indices_mask = torch.LongTensor([[1, 1], [0, 0]])
+        indices_mask = torch.BoolTensor([[True, True], [False, False]])
 
         span_representations = extractor(sequence_tensor, indices, span_indices_mask=indices_mask)
         start_embeddings, end_embeddings = span_representations.split(7, -1)
@@ -81,7 +81,9 @@ class TestEndpointSpanExtractor:
         # for both the forward and backward directions.
         extractor = EndpointSpanExtractor(8, "x,y", use_exclusive_start_indices=True)
         indices = torch.LongTensor([[[1, 3], [2, 4]], [[0, 2], [0, 1]]])
-        sequence_mask = torch.LongTensor([[1, 1, 1, 1, 1], [1, 1, 1, 0, 0]])
+        sequence_mask = torch.BoolTensor(
+            [[True, True, True, True, True], [True, True, True, False, False]]
+        )
 
         span_representations = extractor(sequence_tensor, indices, sequence_mask=sequence_mask)
 

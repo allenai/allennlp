@@ -15,11 +15,11 @@ class TestBiMPMMatching(AllenNlpTestCase):
         mask1 = []
         for w in seq_len1:
             mask1.append([1] * w.item() + [0] * (len1 - w.item()))
-        mask1 = torch.FloatTensor(mask1)
+        mask1 = torch.BoolTensor(mask1)
         mask2 = []
         for w in seq_len2:
             mask2.append([1] * w.item() + [0] * (len2 - w.item()))
-        mask2 = torch.FloatTensor(mask2)
+        mask2 = torch.BoolTensor(mask2)
 
         d = 200  # hidden dimension
         n = 20  # number of perspective

@@ -52,7 +52,7 @@ class BertPooler(Seq2VecEncoder):
     def get_output_dim(self) -> int:
         return self._embedding_dim
 
-    def forward(self, tokens: torch.Tensor, mask: torch.Tensor = None):
+    def forward(self, tokens: torch.Tensor, mask: torch.BoolTensor = None):
         pooled = self.pooler(tokens)
         pooled = self._dropout(pooled)
         return pooled

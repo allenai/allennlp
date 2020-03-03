@@ -63,14 +63,9 @@ class LstmCellDecoderNet(DecoderNet):
         self,
         decoder_hidden_state: torch.Tensor = None,
         encoder_outputs: torch.Tensor = None,
-        encoder_outputs_mask: torch.Tensor = None,
+        encoder_outputs_mask: torch.BoolTensor = None,
     ) -> torch.Tensor:
         """Apply attention over encoder outputs and decoder state."""
-        # Ensure mask is also a FloatTensor. Or else the multiplication within
-        # attention will complain.
-        # shape: (batch_size, max_input_sequence_length, encoder_output_dim)
-        encoder_outputs_mask = encoder_outputs_mask.float()
-
         # shape: (batch_size, max_input_sequence_length)
         input_weights = self._attention(decoder_hidden_state, encoder_outputs, encoder_outputs_mask)
 
@@ -105,9 +100,9 @@ class LstmCellDecoderNet(DecoderNet):
         self,
         previous_state: Dict[str, torch.Tensor],
         encoder_outputs: torch.Tensor,
-        source_mask: torch.Tensor,
+        source_mask: torch.BoolTensor,
         previous_steps_predictions: torch.Tensor,
-        previous_steps_mask: Optional[torch.Tensor] = None,
+        previous_steps_mask: Optional[torch.BoolTensor] = None,
     ) -> Tuple[Dict[str, torch.Tensor], torch.Tensor]:
 
         decoder_hidden = previous_state["decoder_hidden"]

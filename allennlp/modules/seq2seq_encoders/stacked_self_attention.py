@@ -133,7 +133,7 @@ class StackedSelfAttentionEncoder(Seq2SeqEncoder):
         return False
 
     @overrides
-    def forward(self, inputs: torch.Tensor, mask: torch.Tensor):
+    def forward(self, inputs: torch.Tensor, mask: torch.BoolTensor):
         if self._use_positional_encoding:
             output = add_positional_features(inputs)
         else:

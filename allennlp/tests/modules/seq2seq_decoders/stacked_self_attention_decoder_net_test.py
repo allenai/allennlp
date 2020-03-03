@@ -17,7 +17,7 @@ class TestStackedSelfAttentionDecoderNet(AllenNlpTestCase):
         batch_size = 5
         time_steps = 10
         encoded_state = torch.rand(batch_size, time_steps, decoder_inout_dim)
-        source_mask = torch.ones(batch_size, time_steps)
+        source_mask = torch.ones(batch_size, time_steps).bool()
         source_mask[0, 7:] = 0
         source_mask[1, 5:] = 0
         encoder_out = {"source_mask": source_mask, "encoder_outputs": encoded_state}
@@ -36,7 +36,7 @@ class TestStackedSelfAttentionDecoderNet(AllenNlpTestCase):
         batch_size = 5
         time_steps = 10
         encoded_state = torch.rand(batch_size, time_steps, decoder_inout_dim)
-        source_mask = torch.ones(batch_size, time_steps)
+        source_mask = torch.ones(batch_size, time_steps).bool()
         source_mask[0, 7:] = 0
         source_mask[1, 5:] = 0
         prev_timesteps = 3

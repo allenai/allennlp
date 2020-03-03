@@ -25,8 +25,8 @@ class MultiHeadSelfAttentionTest(AllenNlpTestCase):
             num_heads=3, input_dim=5, attention_dim=6, values_dim=9, attention_dropout_prob=0.0
         )
         tensor = torch.randn(2, 12, 5)
-        mask = torch.ones([2, 12])
-        mask[0, 6:] = 0
+        mask = torch.ones([2, 12]).bool()
+        mask[0, 6:] = False
         result = attention(tensor, mask)
         # Compute the same function without a mask, but with
         # only the unmasked elements - should be the same.

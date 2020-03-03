@@ -84,7 +84,7 @@ class SpearmanCorrelationTest(AllenNlpTestCase):
         predictions_labels_ = [(predictions1, labels1), (predictions2, labels2)]
 
         # Random binary mask
-        mask = torch.randint(0, 2, size=(batch_size, num_labels), device=device)
+        mask = torch.randint(0, 2, size=(batch_size, num_labels), device=device).bool()
 
         for predictions, labels in predictions_labels_:
             spearman_correlation.reset()

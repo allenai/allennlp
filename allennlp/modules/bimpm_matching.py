@@ -204,9 +204,9 @@ class BiMpmMatching(nn.Module, FromParams):
     def forward(
         self,
         context_1: torch.Tensor,
-        mask_1: torch.Tensor,
+        mask_1: torch.BoolTensor,
         context_2: torch.Tensor,
-        mask_2: torch.Tensor,
+        mask_2: torch.BoolTensor,
     ) -> Tuple[List[torch.Tensor], List[torch.Tensor]]:
 
         """
@@ -217,13 +217,13 @@ class BiMpmMatching(nn.Module, FromParams):
 
         context_1 : `torch.Tensor`
             Tensor of shape (batch_size, seq_len1, hidden_dim) representing the encoding of the first sentence.
-        mask_1 : `torch.Tensor`
-            Binary Tensor of shape (batch_size, seq_len1), indicating which
+        mask_1 : `torch.BoolTensor`
+            Boolean Tensor of shape (batch_size, seq_len1), indicating which
             positions in the first sentence are padding (0) and which are not (1).
         context_2 : `torch.Tensor`
             Tensor of shape (batch_size, seq_len2, hidden_dim) representing the encoding of the second sentence.
-        mask_2 : `torch.Tensor`
-            Binary Tensor of shape (batch_size, seq_len2), indicating which
+        mask_2 : `torch.BoolTensor`
+            Boolean Tensor of shape (batch_size, seq_len2), indicating which
             positions in the second sentence are padding (0) and which are not (1).
 
         # Returns
@@ -237,9 +237,6 @@ class BiMpmMatching(nn.Module, FromParams):
         # (batch,)
         len_1 = get_lengths_from_binary_sequence_mask(mask_1)
         len_2 = get_lengths_from_binary_sequence_mask(mask_2)
-
-        # (batch, seq_len*)
-        mask_1, mask_2 = mask_1.float(), mask_2.float()
 
         # explicitly set masked weights to zero
         # (batch_size, seq_len*, hidden_dim)

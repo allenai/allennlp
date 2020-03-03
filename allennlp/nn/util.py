@@ -100,14 +100,14 @@ def batch_tensor_dicts(
     return batched_tensors
 
 
-def get_lengths_from_binary_sequence_mask(mask: torch.Tensor):
+def get_lengths_from_binary_sequence_mask(mask: torch.BoolTensor):
     """
     Compute sequence lengths for each batch element in a tensor using a
     binary mask.
 
     # Parameters
 
-    mask : torch.Tensor, required.
+    mask : torch.BoolTensor, required.
         A 2D binary mask of shape (batch_size, sequence_length) to
         calculate the per-batch sequence lengths from.
 
@@ -116,7 +116,7 @@ def get_lengths_from_binary_sequence_mask(mask: torch.Tensor):
     A torch.LongTensor of shape (batch_size,) representing the lengths
     of the sequences in the batch.
     """
-    return mask.long().sum(-1)
+    return mask.sum(-1)
 
 
 def get_mask_from_sequence_lengths(sequence_lengths: torch.Tensor, max_length: int) -> torch.Tensor:
@@ -177,7 +177,7 @@ def sort_batch_by_length(tensor: torch.Tensor, sequence_lengths: torch.Tensor):
 
 
 def get_final_encoder_states(
-    encoder_outputs: torch.Tensor, mask: torch.Tensor, bidirectional: bool = False
+    encoder_outputs: torch.Tensor, mask: torch.BoolTensor, bidirectional: bool = False
 ) -> torch.Tensor:
     """
     Given the output from a `Seq2SeqEncoder`, with shape `(batch_size, sequence_length,
@@ -196,7 +196,7 @@ def get_final_encoder_states(
     # These are the indices of the last words in the sequences (i.e. length sans padding - 1).  We
     # are assuming sequences are right padded.
     # Shape: (batch_size,)
-    last_word_indices = mask.sum(1).long() - 1
+    last_word_indices = mask.sum(1) - 1
     batch_size, _, encoder_output_dim = encoder_outputs.size()
     expanded_indices = last_word_indices.view(-1, 1, 1).expand(batch_size, 1, encoder_output_dim)
     # Shape: (batch_size, 1, encoder_output_dim)
@@ -239,7 +239,7 @@ def get_dropout_mask(dropout_probability: float, tensor_for_masking: torch.Tenso
 
 def masked_softmax(
     vector: torch.Tensor,
-    mask: torch.Tensor,
+    mask: torch.BoolTensor,
     dim: int = -1,
     memory_efficient: bool = False,
     mask_fill_value: float = -1e32,
@@ -266,7 +266,6 @@ def masked_softmax(
     if mask is None:
         result = torch.nn.functional.softmax(vector, dim=dim)
     else:
-        mask = mask.float()
         while mask.dim() < vector.dim():
             mask = mask.unsqueeze(1)
         if not memory_efficient:
@@ -275,12 +274,12 @@ def masked_softmax(
             result = result * mask
             result = result / (result.sum(dim=dim, keepdim=True) + 1e-13)
         else:
-            masked_vector = vector.masked_fill((1 - mask).to(dtype=torch.bool), mask_fill_value)
+            masked_vector = vector.masked_fill(~mask, mask_fill_value)
             result = torch.nn.functional.softmax(masked_vector, dim=dim)
     return result
 
 
-def masked_log_softmax(vector: torch.Tensor, mask: torch.Tensor, dim: int = -1) -> torch.Tensor:
+def masked_log_softmax(vector: torch.Tensor, mask: torch.BoolTensor, dim: int = -1) -> torch.Tensor:
     """
     `torch.nn.functional.log_softmax(vector)` does not work if some elements of `vector` should be
     masked.  This performs a log_softmax on just the non-masked portions of `vector`.  Passing
@@ -302,7 +301,6 @@ def masked_log_softmax(vector: torch.Tensor, mask: torch.Tensor, dim: int = -1) 
     extreme, you've got bigger problems than this.
     """
     if mask is not None:
-        mask = mask.float()
         while mask.dim() < vector.dim():
             mask = mask.unsqueeze(1)
         # vector + mask.log() is an easy way to zero out masked elements in logspace, but it
@@ -315,7 +313,11 @@ def masked_log_softmax(vector: torch.Tensor, mask: torch.Tensor, dim: int = -1) 
 
 
 def masked_max(
-    vector: torch.Tensor, mask: torch.Tensor, dim: int, keepdim: bool = False, min_val: float = -1e7
+    vector: torch.Tensor,
+    mask: torch.BoolTensor,
+    dim: int,
+    keepdim: bool = False,
+    min_val: float = -1e7,
 ) -> torch.Tensor:
     """
     To calculate max along certain dimensions on masked values
@@ -324,7 +326,7 @@ def masked_max(
 
     vector : `torch.Tensor`
         The vector to calculate max, assume unmasked parts are already zeros
-    mask : `torch.Tensor`
+    mask : `torch.BoolTensor`
         The mask of the vector. It must be broadcastable with vector.
     dim : `int`
         The dimension to calculate max
@@ -337,14 +339,13 @@ def masked_max(
 
     A `torch.Tensor` of including the maximum values.
     """
-    one_minus_mask = (1.0 - mask).to(dtype=torch.bool)
-    replaced_vector = vector.masked_fill(one_minus_mask, min_val)
+    replaced_vector = vector.masked_fill(~mask, min_val)
     max_value, _ = replaced_vector.max(dim=dim, keepdim=keepdim)
     return max_value
 
 
 def masked_mean(
-    vector: torch.Tensor, mask: torch.Tensor, dim: int, keepdim: bool = False, eps: float = 1e-8
+    vector: torch.Tensor, mask: torch.BoolTensor, dim: int, keepdim: bool = False, eps: float = 1e-8
 ) -> torch.Tensor:
     """
     To calculate mean along certain dimensions on masked values
@@ -353,7 +354,7 @@ def masked_mean(
 
     vector : `torch.Tensor`
         The vector to calculate mean.
-    mask : `torch.Tensor`
+    mask : `torch.BoolTensor`
         The mask of the vector. It must be broadcastable with vector.
     dim : `int`
         The dimension to calculate mean
@@ -366,12 +367,11 @@ def masked_mean(
 
     A `torch.Tensor` of including the mean values.
     """
-    one_minus_mask = (1.0 - mask).to(dtype=torch.bool)
-    replaced_vector = vector.masked_fill(one_minus_mask, 0.0)
+    replaced_vector = vector.masked_fill(~mask, 0.0)
 
     value_sum = torch.sum(replaced_vector, dim=dim, keepdim=keepdim)
-    value_count = torch.sum(mask.float(), dim=dim, keepdim=keepdim)
-    return value_sum / value_count.clamp(min=eps)
+    value_count = torch.sum(mask, dim=dim, keepdim=keepdim)
+    return value_sum / value_count.float().clamp(min=eps)
 
 
 def masked_flip(padded_sequence: torch.Tensor, sequence_lengths: List[int]) -> torch.Tensor:
@@ -583,7 +583,7 @@ def viterbi_decode(
 
 def get_text_field_mask(
     text_field_tensors: Dict[str, Dict[str, torch.Tensor]], num_wrapping_dims: int = 0
-) -> torch.LongTensor:
+) -> torch.BoolTensor:
     """
     Takes the dictionary of tensors produced by a `TextField` and returns a mask
     with 0 where the tokens are padding, and 1 otherwise.  We also handle `TextFields`
@@ -604,15 +604,6 @@ def get_text_field_mask(
     featurized representation of each token, etc.
 
     If the input `text_field_tensors` contains the "mask" key, this is returned instead of inferring the mask.
-
-    TODO(joelgrus): can we change this?
-    NOTE: Our functions for generating masks create torch.LongTensors, because using
-    torch.ByteTensors makes it easy to run into overflow errors
-    when doing mask manipulation, such as summing to get the lengths of sequences - see below.
-    >>> mask = torch.ones([260]).byte()
-    >>> mask.sum() # equals 260.
-    >>> var_mask = torch.autograd.V(mask)
-    >>> var_mask.sum() # equals 4, due to 8 bit precision - the sum overflows.
     """
     masks = []
     for indexer_name, indexer_tensors in text_field_tensors.items():
@@ -636,10 +627,10 @@ def get_text_field_mask(
     smallest_dim = tensor_dims[0][0] - num_wrapping_dims
     if smallest_dim == 2:
         token_tensor = tensor_dims[0][1]
-        return (token_tensor != 0).long()
+        return token_tensor != 0
     elif smallest_dim == 3:
         character_tensor = tensor_dims[0][1]
-        return ((character_tensor > 0).long().sum(dim=-1) > 0).long()
+        return (character_tensor > 0).any(dim=-1)
     else:
         raise ValueError("Expected a tensor with dimension 2 or 3, found {}".format(smallest_dim))
 
@@ -707,7 +698,7 @@ def weighted_sum(matrix: torch.Tensor, attention: torch.Tensor) -> torch.Tensor:
 def sequence_cross_entropy_with_logits(
     logits: torch.FloatTensor,
     targets: torch.LongTensor,
-    weights: torch.FloatTensor,
+    weights: Union[torch.FloatTensor, torch.BoolTensor],
     average: str = "batch",
     label_smoothing: float = None,
     gamma: float = None,
@@ -728,7 +719,7 @@ def sequence_cross_entropy_with_logits(
     targets : `torch.LongTensor`, required.
         A `torch.LongTensor` of size (batch, sequence_length) which contains the
         index of the true class for each corresponding step.
-    weights : `torch.FloatTensor`, required.
+    weights : `Union[torch.FloatTensor, torch.BoolTensor]`, required.
         A `torch.FloatTensor` of size (batch, sequence_length)
     average: str, optional (default = "batch")
         If "batch", average the loss across the batches. If "token", average
@@ -853,7 +844,7 @@ def sequence_cross_entropy_with_logits(
 
 
 def replace_masked_values(
-    tensor: torch.Tensor, mask: torch.Tensor, replace_with: float
+    tensor: torch.Tensor, mask: torch.BoolTensor, replace_with: float
 ) -> torch.Tensor:
     """
     Replaces all masked values in `tensor` with `replace_with`.  `mask` must be broadcastable
@@ -862,13 +853,13 @@ def replace_masked_values(
 
     This just does `tensor.masked_fill()`, except the pytorch method fills in things with a mask
     value of 1, where we want the opposite.  You can do this in your own code with
-    `tensor.masked_fill(~mask.bool(), replace_with)`.
+    `tensor.masked_fill(~mask, replace_with)`.
     """
     if tensor.dim() != mask.dim():
         raise ConfigurationError(
             "tensor.dim() (%d) != mask.dim() (%d)" % (tensor.dim(), mask.dim())
         )
-    return tensor.masked_fill(~mask.bool(), replace_with)
+    return tensor.masked_fill(~mask, replace_with)
 
 
 def tensors_equal(tensor1: torch.Tensor, tensor2: torch.Tensor, tolerance: float = 1e-12) -> bool:
@@ -1283,7 +1274,7 @@ def batched_span_select(target: torch.Tensor, spans: torch.LongTensor) -> torch.
     span_embeddings : `torch.Tensor`
         A tensor with shape (batch_size, num_spans, max_batch_span_width, embedding_size]
         representing the embedded spans extracted from the batch flattened target tensor.
-    span_mask: `torch.LongTensor`
+    span_mask: `torch.BoolTensor`
         A tensor with shape (batch_size, num_spans, max_batch_span_width) representing the mask on
         the returned span embeddings.
     """
@@ -1313,12 +1304,12 @@ def batched_span_select(target: torch.Tensor, spans: torch.LongTensor) -> torch.
     # We're using <= here (and for the mask below) because the span ends are
     # inclusive, so we want to include indices which are equal to span_widths rather
     # than using it as a non-inclusive upper bound.
-    span_mask = (max_span_range_indices <= span_widths).float()
+    span_mask = max_span_range_indices <= span_widths
     raw_span_indices = span_ends - max_span_range_indices
     # We also don't want to include span indices which are less than zero,
     # which happens because some spans near the beginning of the sequence
     # have an end index < max_batch_span_width, so we add this to the mask here.
-    span_mask = span_mask * (raw_span_indices >= 0).float()
+    span_mask = span_mask & (raw_span_indices >= 0)
     span_indices = torch.nn.functional.relu(raw_span_indices.float()).long()
 
     # Shape: (batch_size, num_spans, max_batch_span_width, embedding_dim)
@@ -1414,7 +1405,7 @@ def bucket_values(
 
 
 def add_sentence_boundary_token_ids(
-    tensor: torch.Tensor, mask: torch.Tensor, sentence_begin_token: Any, sentence_end_token: Any
+    tensor: torch.Tensor, mask: torch.BoolTensor, sentence_begin_token: Any, sentence_end_token: Any
 ) -> Tuple[torch.Tensor, torch.Tensor]:
     """
     Add begin/end of sentence tokens to the batch of sentences.
@@ -1428,7 +1419,7 @@ def add_sentence_boundary_token_ids(
 
     tensor : `torch.Tensor`
         A tensor of shape `(batch_size, timesteps)` or `(batch_size, timesteps, dim)`
-    mask : `torch.Tensor`
+    mask : `torch.BoolTensor`
          A tensor of shape `(batch_size, timesteps)`
     sentence_begin_token: Any (anything that can be broadcast in torch for assignment)
         For 2D input, a scalar with the <S> id. For 3D input, a tensor with length dim.
@@ -1441,7 +1432,7 @@ def add_sentence_boundary_token_ids(
         The tensor with the appended and prepended boundary tokens. If the input was 2D,
         it has shape (batch_size, timesteps + 2) and if the input was 3D, it has shape
         (batch_size, timesteps + 2, dim).
-    new_mask : `torch.Tensor`
+    new_mask : `torch.BoolTensor`
         The new mask for the tensor, taking into account the appended tokens
         marking the beginning and end of the sentence.
     """
@@ -1456,13 +1447,13 @@ def add_sentence_boundary_token_ids(
         tensor_with_boundary_tokens[:, 0] = sentence_begin_token
         for i, j in enumerate(sequence_lengths):
             tensor_with_boundary_tokens[i, j + 1] = sentence_end_token
-        new_mask = (tensor_with_boundary_tokens != 0).long()
+        new_mask = tensor_with_boundary_tokens != 0
     elif len(tensor_shape) == 3:
         tensor_with_boundary_tokens[:, 1:-1, :] = tensor
         for i, j in enumerate(sequence_lengths):
             tensor_with_boundary_tokens[i, 0, :] = sentence_begin_token
             tensor_with_boundary_tokens[i, j + 1, :] = sentence_end_token
-        new_mask = ((tensor_with_boundary_tokens > 0).long().sum(dim=-1) > 0).long()
+        new_mask = (tensor_with_boundary_tokens > 0).sum(dim=-1) > 0
     else:
         raise ValueError("add_sentence_boundary_token_ids only accepts 2D and 3D input")
 
@@ -1470,7 +1461,7 @@ def add_sentence_boundary_token_ids(
 
 
 def remove_sentence_boundaries(
-    tensor: torch.Tensor, mask: torch.Tensor
+    tensor: torch.Tensor, mask: torch.BoolTensor
 ) -> Tuple[torch.Tensor, torch.Tensor]:
     """
     Remove begin/end of sentence embeddings from the batch of sentences.
@@ -1488,14 +1479,14 @@ def remove_sentence_boundaries(
 
     tensor : `torch.Tensor`
         A tensor of shape `(batch_size, timesteps, dim)`
-    mask : `torch.Tensor`
+    mask : `torch.BoolTensor`
          A tensor of shape `(batch_size, timesteps)`
 
     # Returns
 
     tensor_without_boundary_tokens : `torch.Tensor`
         The tensor after removing the boundary tokens of shape `(batch_size, timesteps - 2, dim)`
-    new_mask : `torch.Tensor`
+    new_mask : `torch.BoolTensor`
         The new mask for the tensor of shape `(batch_size, timesteps - 2)`.
     """
     # TODO: matthewp, profile this transfer
@@ -1504,11 +1495,11 @@ def remove_sentence_boundaries(
     new_shape = list(tensor_shape)
     new_shape[1] = tensor_shape[1] - 2
     tensor_without_boundary_tokens = tensor.new_zeros(*new_shape)
-    new_mask = tensor.new_zeros((new_shape[0], new_shape[1]), dtype=torch.long)
+    new_mask = tensor.new_zeros((new_shape[0], new_shape[1]), dtype=torch.bool)
     for i, j in enumerate(sequence_lengths):
         if j > 2:
             tensor_without_boundary_tokens[i, : (j - 2), :] = tensor[i, 1 : (j - 1), :]
-            new_mask[i, : (j - 2)] = 1
+            new_mask[i, : (j - 2)] = True
 
     return tensor_without_boundary_tokens, new_mask
 
