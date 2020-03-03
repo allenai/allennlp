@@ -29,7 +29,7 @@
       "hidden_dims": 2,
       "activations": "relu"
     },
-    "similarity_function": {"type": "dot_product"},
+    "matrix_attention": {"type": "dot_product"},
     "compare_feedforward": {
       "input_dim": 4,
       "num_layers": 1,

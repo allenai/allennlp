@@ -30,7 +30,7 @@
             "num_layers": 1,
             "bidirectional": true
         },
-        "similarity_function": {
+        "matrix_attention": {
             "type": "dot_product"
         },
         "projection_feedforward": {

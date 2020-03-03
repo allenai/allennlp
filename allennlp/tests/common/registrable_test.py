@@ -11,7 +11,6 @@ from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.samplers import Sampler, BatchSampler
 from allennlp.data.token_indexers.token_indexer import TokenIndexer
 from allennlp.data.tokenizers.tokenizer import Tokenizer
-from allennlp.modules.similarity_functions import SimilarityFunction
 from allennlp.modules.text_field_embedders.text_field_embedder import TextFieldEmbedder
 from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
 from allennlp.nn.regularizers.regularizer import Regularizer
@@ -96,12 +95,6 @@ class TestRegistrable(AllenNlpTestCase):
 
     def test_registry_has_builtin_text_field_embedders(self):
         assert TextFieldEmbedder.by_name("basic").__name__ == "BasicTextFieldEmbedder"
-
-    def test_registry_has_builtin_similarity_functions(self):
-        assert SimilarityFunction.by_name("dot_product").__name__ == "DotProductSimilarity"
-        assert SimilarityFunction.by_name("bilinear").__name__ == "BilinearSimilarity"
-        assert SimilarityFunction.by_name("linear").__name__ == "LinearSimilarity"
-        assert SimilarityFunction.by_name("cosine").__name__ == "CosineSimilarity"
 
     def test_implicit_include_package(self):
         # Create a new package in a temporary dir
