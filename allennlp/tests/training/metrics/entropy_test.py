@@ -39,6 +39,6 @@ class EntropyTest(AllenNlpTestCase):
         logits = torch.tensor(
             [[1, 1, 1, 1], [10000, -10000, -10000, -1000]], dtype=torch.float, device=device
         )
-        mask = torch.BoolTensor([False, True], device=device)
+        mask = torch.tensor([False, True], device=device)
         metric(logits, mask)
         assert metric.get_metric() == 0.0

@@ -50,7 +50,7 @@ class F1MeasureTest(AllenNlpTestCase):
         assert isinstance(f1, float)
 
         # Test the same thing with a mask:
-        mask = torch.BoolTensor([True, False, True, True, True, False], device=device)
+        mask = torch.tensor([True, False, True, True, True, False], device=device)
         f1_measure(predictions, targets, mask)
         precision, recall, f1 = f1_measure.get_metric()
         assert f1_measure._true_positives == 1.0
@@ -153,7 +153,7 @@ class F1MeasureTest(AllenNlpTestCase):
         assert_allclose(f1, 0.8)
 
         # Test the same thing with a mask:
-        mask = torch.BoolTensor([[False, True, False], [True, True, True]], device=device)
+        mask = torch.tensor([[False, True, False], [True, True, True]], device=device)
         f1_measure(predictions, targets, mask)
         precision, recall, f1 = f1_measure.get_metric()
         assert f1_measure._true_positives == 1.0
