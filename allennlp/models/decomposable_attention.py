@@ -6,8 +6,8 @@ from allennlp.common.checks import check_dimensions_match
 from allennlp.data import TextFieldTensors, Vocabulary
 from allennlp.models.model import Model
 from allennlp.modules import FeedForward
-from allennlp.modules import Seq2SeqEncoder, SimilarityFunction, TimeDistributed, TextFieldEmbedder
-from allennlp.modules.matrix_attention.legacy_matrix_attention import LegacyMatrixAttention
+from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder
+from allennlp.modules.matrix_attention.matrix_attention import MatrixAttention
 from allennlp.nn import InitializerApplicator
 from allennlp.nn.util import get_text_field_mask, masked_softmax, weighted_sum
 from allennlp.training.metrics import CategoricalAccuracy
@@ -39,8 +39,8 @@ class DecomposableAttention(Model):
     attend_feedforward : `FeedForward`
         This feedforward network is applied to the encoded sentence representations before the
         similarity matrix is computed between words in the premise and words in the hypothesis.
-    similarity_function : `SimilarityFunction`
-        This is the similarity function used when computing the similarity matrix between words in
+    matrix_attention : `MatrixAttention`
+        This is the attention function used when computing the similarity matrix between words in
         the premise and words in the hypothesis.
     compare_feedforward : `FeedForward`
         This feedforward network is applied to the aligned premise and hypothesis representations,
@@ -64,7 +64,7 @@ class DecomposableAttention(Model):
         vocab: Vocabulary,
         text_field_embedder: TextFieldEmbedder,
         attend_feedforward: FeedForward,
-        similarity_function: SimilarityFunction,
+        matrix_attention: MatrixAttention,
         compare_feedforward: FeedForward,
         aggregate_feedforward: FeedForward,
         premise_encoder: Optional[Seq2SeqEncoder] = None,
@@ -76,7 +76,7 @@ class DecomposableAttention(Model):
 
         self._text_field_embedder = text_field_embedder
         self._attend_feedforward = TimeDistributed(attend_feedforward)
-        self._matrix_attention = LegacyMatrixAttention(similarity_function)
+        self._matrix_attention = matrix_attention
         self._compare_feedforward = TimeDistributed(compare_feedforward)
         self._aggregate_feedforward = aggregate_feedforward
         self._premise_encoder = premise_encoder

@@ -39,7 +39,7 @@
       "num_layers": 1,
       "bidirectional": true
     },
-    "similarity_function": {"type": "dot_product"},
+    "matrix_attention": {"type": "dot_product"},
     "projection_feedforward": {
       "input_dim": 2400,
       "hidden_dims": 300,

@@ -20,7 +20,6 @@ from allennlp.modules.residual_with_layer_dropout import ResidualWithLayerDropou
 from allennlp.modules.scalar_mix import ScalarMix
 from allennlp.modules.seq2seq_encoders import Seq2SeqEncoder
 from allennlp.modules.seq2vec_encoders import Seq2VecEncoder
-from allennlp.modules.similarity_functions import SimilarityFunction
 from allennlp.modules.text_field_embedders import TextFieldEmbedder
 from allennlp.modules.time_distributed import TimeDistributed
 from allennlp.modules.token_embedders import TokenEmbedder, Embedding

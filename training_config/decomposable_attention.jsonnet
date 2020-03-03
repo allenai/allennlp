@@ -35,7 +35,7 @@
       "activations": "relu",
       "dropout": 0.2
     },
-    "similarity_function": {"type": "dot_product"},
+    "matrix_attention": {"type": "dot_product"},
     "compare_feedforward": {
       "input_dim": 400,
       "num_layers": 2,
