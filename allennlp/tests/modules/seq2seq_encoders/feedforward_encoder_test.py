@@ -27,7 +27,7 @@ class TestFeedforwardEncoder(AllenNlpTestCase):
         )
 
         # mask should work
-        mask = torch.BoolTensor([[True, True, True], [True, False, False]])
+        mask = torch.tensor([[True, True, True], [True, False, False]])
         output = encoder(tensor, mask)
         target = feedforward(tensor) * mask.unsqueeze(dim=-1).float()
         numpy.testing.assert_array_almost_equal(

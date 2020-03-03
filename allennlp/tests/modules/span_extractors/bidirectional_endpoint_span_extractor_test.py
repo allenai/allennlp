@@ -201,11 +201,11 @@ class TestBidirectonalEndpointSpanExtractor:
         # size: (batch_size=1, sequence_length=2, emb_dim=2)
         sequence_tensor = torch.FloatTensor([[[0.0, 0.0], [0.0, 0.0]]])
         # size: (batch_size=1, sequence_length=2)
-        sequence_mask = torch.BoolTensor([[False, False]])
+        sequence_mask = torch.tensor([[False, False]])
         # size: (batch_size=1, spans_count=1, 2)
         span_indices = torch.LongTensor([[[-1, -1]]])
         # size: (batch_size=1, spans_count=1)
-        span_indices_mask = torch.BoolTensor([[False]])
+        span_indices_mask = torch.tensor([[False]])
         extractor = BidirectionalEndpointSpanExtractor(
             input_dim=2, forward_combination="x,y", backward_combination="x,y"
         )
