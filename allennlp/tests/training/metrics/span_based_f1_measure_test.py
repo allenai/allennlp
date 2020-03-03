@@ -228,9 +228,7 @@ class SpanBasedF1Test(AllenNlpTestCase):
         gold_indices = [self.vocab.get_token_index(x, "tags") for x in bio_tags]
         gold_tensor = torch.tensor([gold_indices], device=device)
         prediction_tensor = torch.rand([1, 6, self.vocab.get_vocab_size("tags")], device=device)
-        mask = torch.tensor(
-            [[True, True, True, True, True, True, True, True, True]], device=device
-        )
+        mask = torch.tensor([[True, True, True, True, True, True, True, True, True]], device=device)
 
         # Make prediction so that it is exactly correct.
         for i, tag_index in enumerate(gold_indices):
