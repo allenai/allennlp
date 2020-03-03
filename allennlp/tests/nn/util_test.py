@@ -1602,3 +1602,20 @@ class TestNnUtil(AllenNlpTestCase):
 
     def assert_array_equal_with_mask(self, a, b, mask):
         numpy.testing.assert_array_equal((a * mask).data.numpy(), (b * mask).data.numpy())
+
+    def test_tensors_equal(self):
+        # Basic
+        assert util.tensors_equal(torch.tensor([1]), torch.tensor([1]))
+        assert not util.tensors_equal(torch.tensor([1]), torch.tensor([2]))
+
+        # Bool
+        assert util.tensors_equal(torch.tensor([True]), torch.tensor([True]))
+
+        # Cross dtype
+        assert util.tensors_equal(torch.tensor([1]), torch.tensor([1.0]))
+        assert util.tensors_equal(torch.tensor([1]), torch.tensor([True]))
+
+        # Containers
+        assert util.tensors_equal([torch.tensor([1])], [torch.tensor([1])])
+        assert not util.tensors_equal([torch.tensor([1])], [torch.tensor([2])])
+        assert util.tensors_equal({"key": torch.tensor([1])}, {"key": torch.tensor([1])})
