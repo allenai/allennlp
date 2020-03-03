@@ -98,7 +98,7 @@ class TestNnUtil(AllenNlpTestCase):
                 [[13, 14, 15, 16], [17, 18, 19, 20], [21, 22, 23, 24]],
             ]
         )
-        mask = torch.BoolTensor([[True, True, True], [True, True, False]])
+        mask = torch.tensor([[True, True, True], [True, True, False]])
         final_states = util.get_final_encoder_states(encoder_outputs, mask, bidirectional=False)
         assert_almost_equal(final_states.data.numpy(), [[9, 10, 11, 12], [17, 18, 19, 20]])
         final_states = util.get_final_encoder_states(encoder_outputs, mask, bidirectional=True)
@@ -147,12 +147,12 @@ class TestNnUtil(AllenNlpTestCase):
     def test_masked_softmax_masked(self):
         # Testing the general masked 1D case.
         vector_1d = torch.FloatTensor([[1.0, 2.0, 5.0]])
-        mask_1d = torch.BoolTensor([[True, False, True]])
+        mask_1d = torch.tensor([[True, False, True]])
         vector_1d_softmaxed = util.masked_softmax(vector_1d, mask_1d).data.numpy()
         assert_array_almost_equal(vector_1d_softmaxed, numpy.array([[0.01798621, 0.0, 0.98201382]]))
 
         vector_1d = torch.FloatTensor([[0.0, 2.0, 3.0, 4.0]])
-        mask_1d = torch.BoolTensor([[True, False, True, True]])
+        mask_1d = torch.tensor([[True, False, True, True]])
         vector_1d_softmaxed = util.masked_softmax(vector_1d, mask_1d).data.numpy()
         assert_array_almost_equal(
             vector_1d_softmaxed, numpy.array([[0.01321289, 0.0, 0.26538793, 0.72139918]])
@@ -161,34 +161,34 @@ class TestNnUtil(AllenNlpTestCase):
         # Testing the masked 1D case where the input is all 0s and the mask
         # is not all 0s.
         vector_1d = torch.FloatTensor([[0.0, 0.0, 0.0, 0.0]])
-        mask_1d = torch.BoolTensor([[False, False, False, True]])
+        mask_1d = torch.tensor([[False, False, False, True]])
         vector_1d_softmaxed = util.masked_softmax(vector_1d, mask_1d).data.numpy()
         assert_array_almost_equal(vector_1d_softmaxed, numpy.array([[0, 0, 0, 1]]))
 
         # Testing the masked 1D case where the input is not all 0s
         # and the mask is all 0s.
         vector_1d = torch.FloatTensor([[0.0, 2.0, 3.0, 4.0]])
-        mask_1d = torch.BoolTensor([[False, False, False, False]])
+        mask_1d = torch.tensor([[False, False, False, False]])
         vector_1d_softmaxed = util.masked_softmax(vector_1d, mask_1d).data.numpy()
         assert_array_almost_equal(vector_1d_softmaxed, numpy.array([[0.0, 0.0, 0.0, 0.0]]))
 
         # Testing the masked 1D case where the input is all 0s and
         # the mask is all 0s.
         vector_1d = torch.FloatTensor([[0.0, 0.0, 0.0, 0.0]])
-        mask_1d = torch.BoolTensor([[False, False, False, False]])
+        mask_1d = torch.tensor([[False, False, False, False]])
         vector_1d_softmaxed = util.masked_softmax(vector_1d, mask_1d).data.numpy()
         assert_array_almost_equal(vector_1d_softmaxed, numpy.array([[0.0, 0.0, 0.0, 0.0]]))
 
         # Testing the masked 1D case where there are large elements in the
         # padding.
         vector_1d = torch.FloatTensor([[1.0, 1.0, 1e5]])
-        mask_1d = torch.BoolTensor([[True, True, False]])
+        mask_1d = torch.tensor([[True, True, False]])
         vector_1d_softmaxed = util.masked_softmax(vector_1d, mask_1d).data.numpy()
         assert_array_almost_equal(vector_1d_softmaxed, numpy.array([[0.5, 0.5, 0]]))
 
         # Testing the general masked batched case.
         matrix = torch.FloatTensor([[1.0, 2.0, 5.0], [1.0, 2.0, 3.0]])
-        mask = torch.BoolTensor([[True, False, True], [True, True, True]])
+        mask = torch.tensor([[True, False, True], [True, True, True]])
         masked_matrix_softmaxed = util.masked_softmax(matrix, mask).data.numpy()
         assert_array_almost_equal(
             masked_matrix_softmaxed,
@@ -198,7 +198,7 @@ class TestNnUtil(AllenNlpTestCase):
         # Testing the masked batch case where one of the inputs is all 0s but
         # none of the masks are all 0.
         matrix = torch.FloatTensor([[0.0, 0.0, 0.0], [1.0, 2.0, 3.0]])
-        mask = torch.BoolTensor([[True, False, True], [True, True, True]])
+        mask = torch.tensor([[True, False, True], [True, True, True]])
         masked_matrix_softmaxed = util.masked_softmax(matrix, mask).data.numpy()
         assert_array_almost_equal(
             masked_matrix_softmaxed, numpy.array([[0.5, 0.0, 0.5], [0.090031, 0.244728, 0.665241]])
@@ -207,14 +207,14 @@ class TestNnUtil(AllenNlpTestCase):
         # Testing the masked batch case where one of the inputs is all 0s and
         # one of the masks are all 0.
         matrix = torch.FloatTensor([[0.0, 0.0, 0.0], [1.0, 2.0, 3.0]])
-        mask = torch.BoolTensor([[True, False, True], [False, False, False]])
+        mask = torch.tensor([[True, False, True], [False, False, False]])
         masked_matrix_softmaxed = util.masked_softmax(matrix, mask).data.numpy()
         assert_array_almost_equal(
             masked_matrix_softmaxed, numpy.array([[0.5, 0.0, 0.5], [0.0, 0.0, 0.0]])
         )
 
         matrix = torch.FloatTensor([[0.0, 0.0, 0.0], [1.0, 2.0, 3.0]])
-        mask = torch.BoolTensor([[False, False, False], [True, False, True]])
+        mask = torch.tensor([[False, False, False], [True, False, True]])
         masked_matrix_softmaxed = util.masked_softmax(matrix, mask).data.numpy()
         assert_array_almost_equal(
             masked_matrix_softmaxed, numpy.array([[0.0, 0.0, 0.0], [0.11920292, 0.0, 0.88079708]])
@@ -223,14 +223,14 @@ class TestNnUtil(AllenNlpTestCase):
     def test_masked_softmax_memory_efficient_masked(self):
         # Testing the general masked 1D case.
         vector_1d = torch.FloatTensor([[1.0, 2.0, 5.0]])
-        mask_1d = torch.BoolTensor([[True, False, True]])
+        mask_1d = torch.tensor([[True, False, True]])
         vector_1d_softmaxed = util.masked_softmax(
             vector_1d, mask_1d, memory_efficient=True
         ).data.numpy()
         assert_array_almost_equal(vector_1d_softmaxed, numpy.array([[0.01798621, 0.0, 0.98201382]]))
 
         vector_1d = torch.FloatTensor([[0.0, 2.0, 3.0, 4.0]])
-        mask_1d = torch.BoolTensor([[True, False, True, True]])
+        mask_1d = torch.tensor([[True, False, True, True]])
         vector_1d_softmaxed = util.masked_softmax(
             vector_1d, mask_1d, memory_efficient=True
         ).data.numpy()
@@ -241,7 +241,7 @@ class TestNnUtil(AllenNlpTestCase):
         # Testing the masked 1D case where the input is all 0s and the mask
         # is not all 0s.
         vector_1d = torch.FloatTensor([[0.0, 0.0, 0.0, 0.0]])
-        mask_1d = torch.BoolTensor([[False, False, False, True]])
+        mask_1d = torch.tensor([[False, False, False, True]])
         vector_1d_softmaxed = util.masked_softmax(
             vector_1d, mask_1d, memory_efficient=True
         ).data.numpy()
@@ -250,7 +250,7 @@ class TestNnUtil(AllenNlpTestCase):
         # Testing the masked 1D case where the input is not all 0s
         # and the mask is all 0s.
         vector_1d = torch.FloatTensor([[0.0, 2.0, 3.0, 4.0]])
-        mask_1d = torch.BoolTensor([[False, False, False, False]])
+        mask_1d = torch.tensor([[False, False, False, False]])
         vector_1d_softmaxed = util.masked_softmax(
             vector_1d, mask_1d, memory_efficient=True
         ).data.numpy()
@@ -259,7 +259,7 @@ class TestNnUtil(AllenNlpTestCase):
         # Testing the masked 1D case where the input is all 0s and
         # the mask is all 0s.
         vector_1d = torch.FloatTensor([[0.0, 0.0, 0.0, 0.0]])
-        mask_1d = torch.BoolTensor([[False, False, False, False]])
+        mask_1d = torch.tensor([[False, False, False, False]])
         vector_1d_softmaxed = util.masked_softmax(
             vector_1d, mask_1d, memory_efficient=True
         ).data.numpy()
@@ -268,7 +268,7 @@ class TestNnUtil(AllenNlpTestCase):
         # Testing the masked 1D case where there are large elements in the
         # padding.
         vector_1d = torch.FloatTensor([[1.0, 1.0, 1e5]])
-        mask_1d = torch.BoolTensor([[True, True, False]])
+        mask_1d = torch.tensor([[True, True, False]])
         vector_1d_softmaxed = util.masked_softmax(
             vector_1d, mask_1d, memory_efficient=True
         ).data.numpy()
@@ -276,7 +276,7 @@ class TestNnUtil(AllenNlpTestCase):
 
         # Testing the general masked batched case.
         matrix = torch.FloatTensor([[1.0, 2.0, 5.0], [1.0, 2.0, 3.0]])
-        mask = torch.BoolTensor([[True, False, True], [True, True, True]])
+        mask = torch.tensor([[True, False, True], [True, True, True]])
         masked_matrix_softmaxed = util.masked_softmax(
             matrix, mask, memory_efficient=True
         ).data.numpy()
@@ -288,7 +288,7 @@ class TestNnUtil(AllenNlpTestCase):
         # Testing the masked batch case where one of the inputs is all 0s but
         # none of the masks are all 0.
         matrix = torch.FloatTensor([[0.0, 0.0, 0.0], [1.0, 2.0, 3.0]])
-        mask = torch.BoolTensor([[True, False, True], [True, True, True]])
+        mask = torch.tensor([[True, False, True], [True, True, True]])
         masked_matrix_softmaxed = util.masked_softmax(
             matrix, mask, memory_efficient=True
         ).data.numpy()
@@ -299,7 +299,7 @@ class TestNnUtil(AllenNlpTestCase):
         # Testing the masked batch case where one of the inputs is all 0s and
         # one of the masks are all 0.
         matrix = torch.FloatTensor([[0.0, 0.0, 0.0], [1.0, 2.0, 3.0]])
-        mask = torch.BoolTensor([[True, False, True], [False, False, False]])
+        mask = torch.tensor([[True, False, True], [False, False, False]])
         masked_matrix_softmaxed = util.masked_softmax(
             matrix, mask, memory_efficient=True
         ).data.numpy()
@@ -309,7 +309,7 @@ class TestNnUtil(AllenNlpTestCase):
         )
 
         matrix = torch.FloatTensor([[0.0, 0.0, 0.0], [1.0, 2.0, 3.0]])
-        mask = torch.BoolTensor([[False, False, False], [True, False, True]])
+        mask = torch.tensor([[False, False, False], [True, False, True]])
         masked_matrix_softmaxed = util.masked_softmax(
             matrix, mask, memory_efficient=True
         ).data.numpy()
@@ -324,14 +324,14 @@ class TestNnUtil(AllenNlpTestCase):
 
         # Testing the general masked 1D case.
         vector_1d = torch.FloatTensor([[1.0, 2.0, 5.0]])
-        mask_1d = torch.BoolTensor([[True, False, True]])
+        mask_1d = torch.tensor([[True, False, True]])
         vector_1d_softmaxed = util.masked_log_softmax(vector_1d, mask_1d).data.numpy()
         assert_array_almost_equal(
             numpy.exp(vector_1d_softmaxed), numpy.array([[0.01798621, 0.0, 0.98201382]])
         )
 
         vector_1d = torch.FloatTensor([[0.0, 2.0, 3.0, 4.0]])
-        mask_1d = torch.BoolTensor([[True, False, True, True]])
+        mask_1d = torch.tensor([[True, False, True, True]])
         vector_1d_softmaxed = util.masked_log_softmax(vector_1d, mask_1d).data.numpy()
         assert_array_almost_equal(
             numpy.exp(vector_1d_softmaxed), numpy.array([[0.01321289, 0.0, 0.26538793, 0.72139918]])
@@ -340,7 +340,7 @@ class TestNnUtil(AllenNlpTestCase):
         # Testing the masked 1D case where the input is all 0s and the mask
         # is not all 0s.
         vector_1d = torch.FloatTensor([[0.0, 0.0, 0.0, 0.0]])
-        mask_1d = torch.BoolTensor([[False, False, False, True]])
+        mask_1d = torch.tensor([[False, False, False, True]])
         vector_1d_softmaxed = util.masked_log_softmax(vector_1d, mask_1d).data.numpy()
         assert_array_almost_equal(
             numpy.exp(vector_1d_softmaxed), numpy.array([[0.0, 0.0, 0.0, 1.0]])
@@ -349,32 +349,32 @@ class TestNnUtil(AllenNlpTestCase):
         # Testing the masked 1D case where the input is not all 0s
         # and the mask is all 0s.  The output here will be arbitrary, but it should not be nan.
         vector_1d = torch.FloatTensor([[0.0, 2.0, 3.0, 4.0]])
-        mask_1d = torch.BoolTensor([[False, False, False, False]])
+        mask_1d = torch.tensor([[False, False, False, False]])
         vector_1d_softmaxed = util.masked_log_softmax(vector_1d, mask_1d).data.numpy()
         assert not numpy.isnan(vector_1d_softmaxed).any()
 
     def test_masked_max(self):
         # Testing the general masked 1D case.
         vector_1d = torch.FloatTensor([1.0, 12.0, 5.0])
-        mask_1d = torch.BoolTensor([True, False, True])
+        mask_1d = torch.tensor([True, False, True])
         vector_1d_maxed = util.masked_max(vector_1d, mask_1d, dim=0).data.numpy()
         assert_array_almost_equal(vector_1d_maxed, 5.0)
 
         # Testing if all masks are zero, the output will be arbitrary, but it should not be nan.
         vector_1d = torch.FloatTensor([1.0, 12.0, 5.0])
-        mask_1d = torch.BoolTensor([False, False, False])
+        mask_1d = torch.tensor([False, False, False])
         vector_1d_maxed = util.masked_max(vector_1d, mask_1d, dim=0).data.numpy()
         assert not numpy.isnan(vector_1d_maxed).any()
 
         # Testing batch value and batch masks
         matrix = torch.FloatTensor([[1.0, 12.0, 5.0], [-1.0, -2.0, 3.0]])
-        mask = torch.BoolTensor([[True, False, True], [True, True, False]])
+        mask = torch.tensor([[True, False, True], [True, True, False]])
         matrix_maxed = util.masked_max(matrix, mask, dim=-1).data.numpy()
         assert_array_almost_equal(matrix_maxed, numpy.array([5.0, -1.0]))
 
         # Testing keepdim for batch value and batch masks
         matrix = torch.FloatTensor([[1.0, 12.0, 5.0], [-1.0, -2.0, 3.0]])
-        mask = torch.BoolTensor([[True, False, True], [True, True, False]])
+        mask = torch.tensor([[True, False, True], [True, True, False]])
         matrix_maxed = util.masked_max(matrix, mask, dim=-1, keepdim=True).data.numpy()
         assert_array_almost_equal(matrix_maxed, numpy.array([[5.0], [-1.0]]))
 
@@ -382,32 +382,32 @@ class TestNnUtil(AllenNlpTestCase):
         matrix = torch.FloatTensor(
             [[[1.0, 2.0], [12.0, 3.0], [5.0, -1.0]], [[-1.0, -3.0], [-2.0, -0.5], [3.0, 8.0]]]
         )
-        mask = torch.BoolTensor([[True, False, True], [True, True, False]]).unsqueeze(-1)
+        mask = torch.tensor([[True, False, True], [True, True, False]]).unsqueeze(-1)
         matrix_maxed = util.masked_max(matrix, mask, dim=1).data.numpy()
         assert_array_almost_equal(matrix_maxed, numpy.array([[5.0, 2.0], [-1.0, -0.5]]))
 
     def test_masked_mean(self):
         # Testing the general masked 1D case.
         vector_1d = torch.FloatTensor([1.0, 12.0, 5.0])
-        mask_1d = torch.BoolTensor([True, False, True])
+        mask_1d = torch.tensor([True, False, True])
         vector_1d_mean = util.masked_mean(vector_1d, mask_1d, dim=0).data.numpy()
         assert_array_almost_equal(vector_1d_mean, 3.0)
 
         # Testing if all masks are zero, the output will be arbitrary, but it should not be nan.
         vector_1d = torch.FloatTensor([1.0, 12.0, 5.0])
-        mask_1d = torch.BoolTensor([False, False, False])
+        mask_1d = torch.tensor([False, False, False])
         vector_1d_mean = util.masked_mean(vector_1d, mask_1d, dim=0).data.numpy()
         assert not numpy.isnan(vector_1d_mean).any()
 
         # Testing batch value and batch masks
         matrix = torch.FloatTensor([[1.0, 12.0, 5.0], [-1.0, -2.0, 3.0]])
-        mask = torch.BoolTensor([[True, False, True], [True, True, False]])
+        mask = torch.tensor([[True, False, True], [True, True, False]])
         matrix_mean = util.masked_mean(matrix, mask, dim=-1).data.numpy()
         assert_array_almost_equal(matrix_mean, numpy.array([3.0, -1.5]))
 
         # Testing keepdim for batch value and batch masks
         matrix = torch.FloatTensor([[1.0, 12.0, 5.0], [-1.0, -2.0, 3.0]])
-        mask = torch.BoolTensor([[True, False, True], [True, True, False]])
+        mask = torch.tensor([[True, False, True], [True, True, False]])
         matrix_mean = util.masked_mean(matrix, mask, dim=-1, keepdim=True).data.numpy()
         assert_array_almost_equal(matrix_mean, numpy.array([[3.0], [-1.5]]))
 
@@ -415,7 +415,7 @@ class TestNnUtil(AllenNlpTestCase):
         matrix = torch.FloatTensor(
             [[[1.0, 2.0], [12.0, 3.0], [5.0, -1.0]], [[-1.0, -3.0], [-2.0, -0.5], [3.0, 8.0]]]
         )
-        mask = torch.BoolTensor([[True, False, True], [True, True, False]]).unsqueeze(-1)
+        mask = torch.tensor([[True, False, True], [True, True, False]]).unsqueeze(-1)
         matrix_mean = util.masked_mean(matrix, mask, dim=1).data.numpy()
         assert_array_almost_equal(matrix_mean, numpy.array([[3.0, 0.5], [-1.5, -1.75]]))
 
@@ -511,7 +511,7 @@ class TestNnUtil(AllenNlpTestCase):
         text_field_tensors = {
             "indexer_name": {
                 "tokens": torch.LongTensor([[3, 4, 5, 0, 0], [1, 2, 0, 0, 0]]),
-                "mask": torch.BoolTensor([[False, False, True]]),
+                "mask": torch.tensor([[False, False, True]]),
             }
         }
         assert_almost_equal(
@@ -994,7 +994,7 @@ class TestNnUtil(AllenNlpTestCase):
 
     def test_replace_masked_values_replaces_masked_values_with_finite_value(self):
         tensor = torch.FloatTensor([[[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12]]])
-        mask = torch.BoolTensor([[True, True, False]])
+        mask = torch.tensor([[True, True, False]])
         replaced = util.replace_masked_values(tensor, mask.unsqueeze(-1), 2).data.numpy()
         assert_almost_equal(replaced, [[[1, 2, 3, 4], [5, 6, 7, 8], [2, 2, 2, 2]]])
 
@@ -1567,10 +1567,10 @@ class TestNnUtil(AllenNlpTestCase):
             [[9, 8, 9, 6, 0], [2, 2, 2, 2, 2]],
         ]).unsqueeze(-1).expand(3, 2, 5, 4)
 
-        mask = torch.BoolTensor([
-            [[0, 0, 0, 0, 0], [1, 1, 1, 1, 1]],
-            [[1, 1, 1, 1, 0], [0, 1, 1, 1, 1]],
-            [[1, 0, 1, 1, 1], [0, 1, 0, 1, 1]],
+        mask = torch.tensor([
+            [[False, False, False, False, False], [True, True, True, True, True]],
+            [[True, True, True, True, False], [False, True, True, True, True]],
+            [[True, False, True, True, True], [False, True, False, True, True]],
         ]).unsqueeze(-1).expand(3, 2, 5, 4)
 
         # This is the same as just specifying a scalar int, but we want to test this behavior

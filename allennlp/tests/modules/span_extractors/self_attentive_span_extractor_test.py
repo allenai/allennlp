@@ -50,7 +50,7 @@ class TestSelfAttentiveSpanExtractor:
         numpy.testing.assert_array_almost_equal(spans[1].data.numpy(), mean_embeddings.data.numpy())
 
         # Now test the case in which we have some masked spans in our indices.
-        indices_mask = torch.BoolTensor([[True, True], [True, False]])
+        indices_mask = torch.tensor([[True, True], [True, False]])
         span_representations = extractor(sequence_tensor, indices, span_indices_mask=indices_mask)
 
         # First element in the batch.
