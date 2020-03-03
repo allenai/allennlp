@@ -17,7 +17,7 @@ class MeanAbsoluteErrorTest(AllenNlpTestCase):
         mae(predictions, targets)
         assert mae.get_metric() == 21.0 / 12.0
 
-        mask = torch.BoolTensor(
+        mask = torch.tensor(
             [[True, True, False], [True, True, False], [True, True, False], [True, True, False]],
             device=device,
         )

@@ -32,7 +32,7 @@ class SequenceAccuracyTest(AllenNlpTestCase):
             ],
             device=device,
         )
-        mask = torch.BoolTensor(
+        mask = torch.tensor(
             [[False, True, True], [True, True, True], [True, True, False], [True, False, True]],
             device=device,
         )

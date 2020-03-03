@@ -17,7 +17,7 @@ from allennlp.models import load_archive
 
 class TestNnUtil(AllenNlpTestCase):
     def test_get_sequence_lengths_from_binary_mask(self):
-        binary_mask = torch.BoolTensor(
+        binary_mask = torch.tensor(
             [
                 [True, True, True, False, False, False],
                 [True, True, False, False, False, False],

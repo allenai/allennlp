@@ -121,7 +121,7 @@ class TestBidirectonalEndpointSpanExtractor:
                 [[0, 2], [0, 1]],
             ]
         )
-        sequence_mask = torch.BoolTensor(
+        sequence_mask = torch.tensor(
             [[True, True, True, True, True], [True, True, True, False, False]]
         )
 

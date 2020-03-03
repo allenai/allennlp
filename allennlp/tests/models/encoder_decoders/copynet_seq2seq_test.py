@@ -75,9 +75,7 @@ class CopyNetTest(ModelTestCase):
         target_to_source = torch.tensor([[0, 1, 0], [0, 0, 0], [1, 0, 1]])
         # shape: (batch_size, trimmed_input_len)
 
-        copy_mask = torch.BoolTensor(
-            [[True, True, False], [True, False, False], [True, True, True]]
-        )
+        copy_mask = torch.tensor([[True, True, False], [True, False, False], [True, True, True]])
         # shape: (batch_size, trimmed_input_len)
 
         # This is what the log likelihood result should look like.

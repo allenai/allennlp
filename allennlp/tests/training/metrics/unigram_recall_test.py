@@ -32,7 +32,7 @@ class UnigramRecallTest(AllenNlpTestCase):
             ],
             device=device,
         )
-        mask = torch.BoolTensor(
+        mask = torch.tensor(
             [[True, True, True], [False, True, True], [True, True, False], [True, False, True]],
             device=device,
         )
