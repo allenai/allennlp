@@ -32,24 +32,24 @@ class CorefPredictor(Predictor):
         """
         Predict the coreference clusters in the given document.
 
-        .. code-block:: js
-
-            {
-            "document": [tokenised document text]
-            "clusters":
-              [
-                [
-                  [start_index, end_index],
-                  [start_index, end_index]
-                ],
-                [
-                  [start_index, end_index],
-                  [start_index, end_index],
-                  [start_index, end_index],
-                ],
-                ....
-              ]
-            }
+        ```
+        {
+        "document": [tokenised document text]
+        "clusters":
+          [
+            [
+              [start_index, end_index],
+              [start_index, end_index]
+            ],
+            [
+              [start_index, end_index],
+              [start_index, end_index],
+              [start_index, end_index],
+            ],
+            ....
+          ]
+        }
+        ```
 
         # Parameters
 

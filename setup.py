@@ -102,7 +102,7 @@ setup(
     license="Apache",
     packages=find_packages(exclude=["*.tests", "*.tests.*", "tests.*", "tests"]),
     install_requires=[
-        "torch>=1.2.0,!=1.3.0",
+        "torch>1.3.1,<=1.4.0",
         "jsonnet>=0.10.0 ; sys.platform != 'win32'",
         "overrides==2.8.0",
         "nltk",
@@ -118,7 +118,7 @@ setup(
         "pytest",
         "flaky",
         "responses>=0.7",
-        "conllu==2.2.2",
+        "conllu==2.3",
         "transformers>=2.4.0,<2.5.0",
         "jsonpickle",
         "semantic_version",

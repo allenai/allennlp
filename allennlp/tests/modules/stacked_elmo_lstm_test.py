@@ -11,10 +11,10 @@ class TestElmoLstmCell(AllenNlpTestCase):
         input_tensor[1, 4:, :] = 0.0
         input_tensor[2, 2:, :] = 0.0
         input_tensor[3, 1:, :] = 0.0
-        mask = torch.ones([4, 5])
-        mask[1, 4:] = 0.0
-        mask[2, 2:] = 0.0
-        mask[3, 1:] = 0.0
+        mask = torch.ones([4, 5]).bool()
+        mask[1, 4:] = False
+        mask[2, 2:] = False
+        mask[3, 1:] = False
 
         lstm = ElmoLstm(
             num_layers=2,

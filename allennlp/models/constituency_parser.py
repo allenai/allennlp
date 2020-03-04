@@ -203,7 +203,7 @@ class SpanConstituencyParser(Model):
         mask = get_text_field_mask(tokens)
         # Looking at the span start index is enough to know if
         # this is padding or not. Shape: (batch_size, num_spans)
-        span_mask = (spans[:, :, 0] >= 0).squeeze(-1).long()
+        span_mask = (spans[:, :, 0] >= 0).squeeze(-1)
         if span_mask.dim() == 1:
             # This happens if you use batch_size 1 and encounter
             # a length 1 sentence in PTB, which do exist. -.-

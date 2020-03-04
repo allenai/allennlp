@@ -7,12 +7,9 @@ import torch.nn.functional as F
 from torch.nn.modules.linear import Linear
 from torch.nn.modules.rnn import LSTMCell
 
-from allennlp.common.checks import ConfigurationError
 from allennlp.common.util import START_SYMBOL, END_SYMBOL
 from allennlp.data import TextFieldTensors, Vocabulary
-from allennlp.modules.attention import LegacyAttention
 from allennlp.modules import Attention, TextFieldEmbedder, Seq2SeqEncoder
-from allennlp.modules.similarity_functions import SimilarityFunction
 from allennlp.models.model import Model
 from allennlp.modules.token_embedders import Embedding
 from allennlp.nn import util
@@ -52,9 +49,6 @@ class SimpleSeq2Seq(Model):
         If you want to use attention to get a dynamic summary of the encoder outputs at each step
         of decoding, this is the function used to compute similarity between the decoder hidden
         state and encoder outputs.
-    attention_function : `SimilarityFunction`, optional (default = None)
-        This is if you want to use the legacy implementation of attention. This will be deprecated
-        since it consumes more memory than the specialized attention modules.
     beam_size : `int`, optional (default = None)
         Width of the beam for beam search. If not specified, greedy decoding is used.
     scheduled_sampling_ratio : `float`, optional (default = 0.)
@@ -78,7 +72,6 @@ class SimpleSeq2Seq(Model):
         encoder: Seq2SeqEncoder,
         max_decoding_steps: int,
         attention: Attention = None,
-        attention_function: SimilarityFunction = None,
         beam_size: int = None,
         target_namespace: str = "tokens",
         target_embedding_dim: int = None,
@@ -121,17 +114,7 @@ class SimpleSeq2Seq(Model):
         num_classes = self.vocab.get_vocab_size(self._target_namespace)
 
         # Attention mechanism applied to the encoder output for each step.
-        if attention:
-            if attention_function:
-                raise ConfigurationError(
-                    "You can only specify an attention module or an "
-                    "attention function, but not both."
-                )
-            self._attention = attention
-        elif attention_function:
-            self._attention = LegacyAttention(attention_function)
-        else:
-            self._attention = None
+        self._attention = attention
 
         # Dense embedding of vocab words in the target space.
         target_embedding_dim = target_embedding_dim or source_embedder.get_output_dim()
@@ -338,7 +321,9 @@ class SimpleSeq2Seq(Model):
 
         # Initialize target predictions with the start index.
         # shape: (batch_size,)
-        last_predictions = source_mask.new_full((batch_size,), fill_value=self._start_index)
+        last_predictions = source_mask.new_full(
+            (batch_size,), fill_value=self._start_index, dtype=torch.long
+        )
 
         step_logits: List[torch.Tensor] = []
         step_predictions: List[torch.Tensor] = []
@@ -392,7 +377,7 @@ class SimpleSeq2Seq(Model):
         """Make forward pass during prediction using a beam search."""
         batch_size = state["source_mask"].size()[0]
         start_predictions = state["source_mask"].new_full(
-            (batch_size,), fill_value=self._start_index
+            (batch_size,), fill_value=self._start_index, dtype=torch.long
         )
 
         # shape (all_top_k_predictions): (batch_size, beam_size, num_decoding_steps)
@@ -462,14 +447,9 @@ class SimpleSeq2Seq(Model):
         self,
         decoder_hidden_state: torch.LongTensor = None,
         encoder_outputs: torch.LongTensor = None,
-        encoder_outputs_mask: torch.LongTensor = None,
+        encoder_outputs_mask: torch.BoolTensor = None,
     ) -> torch.Tensor:
         """Apply attention over encoder outputs and decoder state."""
-        # Ensure mask is also a FloatTensor. Or else the multiplication within
-        # attention will complain.
-        # shape: (batch_size, max_input_sequence_length)
-        encoder_outputs_mask = encoder_outputs_mask.float()
-
         # shape: (batch_size, max_input_sequence_length)
         input_weights = self._attention(decoder_hidden_state, encoder_outputs, encoder_outputs_mask)
 
@@ -480,7 +460,7 @@ class SimpleSeq2Seq(Model):
 
     @staticmethod
     def _get_loss(
-        logits: torch.LongTensor, targets: torch.LongTensor, target_mask: torch.LongTensor
+        logits: torch.LongTensor, targets: torch.LongTensor, target_mask: torch.BoolTensor
     ) -> torch.Tensor:
         """
         Compute loss.

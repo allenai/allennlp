@@ -120,7 +120,7 @@ class AutoRegressiveSeqDecoder(SeqDecoder):
         """
         batch_size = state["source_mask"].size()[0]
         start_predictions = state["source_mask"].new_full(
-            (batch_size,), fill_value=self._start_index
+            (batch_size,), fill_value=self._start_index, dtype=torch.long
         )
 
         # shape (all_top_k_predictions): (batch_size, beam_size, num_decoding_steps)
@@ -183,7 +183,9 @@ class AutoRegressiveSeqDecoder(SeqDecoder):
 
             # Initialize target predictions with the start index.
             # shape: (batch_size,)
-            last_predictions = source_mask.new_full((batch_size,), fill_value=self._start_index)
+            last_predictions = source_mask.new_full(
+                (batch_size,), fill_value=self._start_index, dtype=torch.long
+            )
 
             # shape: (steps, batch_size, target_embedding_dim)
             steps_embeddings = torch.Tensor([])
@@ -301,7 +303,7 @@ class AutoRegressiveSeqDecoder(SeqDecoder):
         return output_projections, state
 
     def _get_loss(
-        self, logits: torch.LongTensor, targets: torch.LongTensor, target_mask: torch.LongTensor
+        self, logits: torch.LongTensor, targets: torch.LongTensor, target_mask: torch.BoolTensor
     ) -> torch.Tensor:
         """
         Compute loss.

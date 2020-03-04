@@ -7,6 +7,11 @@ import time
 
 import math
 import pytest
+
+try:
+    from apex import amp
+except ImportError:
+    amp = None
 import torch
 from torch.utils.data import DataLoader
 
@@ -120,6 +125,21 @@ class TestTrainer(AllenNlpTestCase):
             Trainer(
                 self.model, self.optimizer, self.data_loader, num_epochs=2, cuda_device=[0, 1],
             )
+
+    @pytest.mark.skipif(not torch.cuda.is_available(), reason="No CUDA device registered.")
+    @pytest.mark.skipif(amp is None, reason="Apex is not installed.")
+    def test_trainer_can_run_amp(self):
+
+        self.model.cuda()
+        trainer = Trainer(
+            self.model,
+            self.optimizer,
+            self.data_loader,
+            num_epochs=2,
+            cuda_device=0,
+            opt_level="O1",
+        )
+        _ = trainer.train()
 
     def test_trainer_can_resume_training(self):
         trainer = Trainer(

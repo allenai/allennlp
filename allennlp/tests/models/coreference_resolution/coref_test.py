@@ -12,7 +12,24 @@ class CorefTest(ModelTestCase):
         )
 
     def test_coref_model_can_train_save_and_load(self):
-        self.ensure_model_can_train_save_and_load(self.param_file)
+        for coarse_to_fine in (True, False):
+            for inference_order in (1, 3):
+                self._test_coref_model_can_train_save_and_load(coarse_to_fine, inference_order)
+
+    def _test_coref_model_can_train_save_and_load(
+        self, coarse_to_fine: bool = False, inference_order: int = 1
+    ):
+        # fmt: off
+        overrides = (
+            "{"
+            + '"model.coarse_to_fine": ' + f"{str(coarse_to_fine).lower()}" + ","
+            + '"model.inference_order": ' + f"{inference_order}"
+            + "}"
+        )
+        # fmt: on
+        self.ensure_model_can_train_save_and_load(self.param_file, overrides=overrides)
+        self.tearDown()
+        self.setUp()
 
     def test_coref_bert_model_can_train_save_and_load(self):
         self.set_up_model(
@@ -42,7 +59,7 @@ class CorefTest(ModelTestCase):
                 [3, 2, 1, 0, 0, 0],
                 [4, 3, 2, 1, 0, 0],
             ]
-        )
+        ).unsqueeze(0)
 
         spans = spans.unsqueeze(0)
         antecedent_indices = antecedent_indices

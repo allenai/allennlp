@@ -69,7 +69,7 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
 
     @overrides
     def forward(
-        self, inputs: torch.Tensor, mask: torch.Tensor, hidden_state: torch.Tensor = None
+        self, inputs: torch.Tensor, mask: torch.BoolTensor, hidden_state: torch.Tensor = None
     ) -> torch.Tensor:
 
         if self.stateful and mask is None:

@@ -40,7 +40,7 @@ class ClsPooler(Seq2VecEncoder):
         return self._embedding_dim
 
     @overrides
-    def forward(self, tokens: torch.Tensor, mask: torch.Tensor = None):
+    def forward(self, tokens: torch.Tensor, mask: torch.BoolTensor = None):
         # tokens is assumed to have shape (batch_size, sequence_length, embedding_dim).
         # mask is assumed to have shape (batch_size, sequence_length) with all 1s preceding all 0s.
         if not self._cls_is_last_token:

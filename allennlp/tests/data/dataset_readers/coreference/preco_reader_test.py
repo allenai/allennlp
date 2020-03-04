@@ -10,9 +10,11 @@ from allennlp.common.testing import AllenNlpTestCase
 class TestPrecoReader:
     span_width = 5
 
-    @pytest.mark.parametrize("lazy", (True, False))
-    def test_read_from_file(self, lazy):
-        conll_reader = PrecoReader(max_span_width=self.span_width, lazy=lazy)
+    @pytest.mark.parametrize("remove_singleton_clusters", (True, False))
+    def test_read_from_file(self, remove_singleton_clusters):
+        conll_reader = PrecoReader(
+            max_span_width=self.span_width, remove_singleton_clusters=remove_singleton_clusters
+        )
         instances = ensure_list(
             conll_reader.read(str(AllenNlpTestCase.FIXTURES_ROOT / "coref" / "preco.jsonl"))
         )
@@ -331,17 +333,20 @@ class TestPrecoReader:
         gold_mentions_with_ids.remove((["you"], 0))
         assert (["you"], 0) in gold_mentions_with_ids
 
-        # Singleton mention
-        assert (["video", "games"], 2) in gold_mentions_with_ids
-        gold_mentions_with_ids.remove((["video", "games"], 2))
-        assert not any(_ for _, id_ in gold_mentions_with_ids if id_ == 2)
+        if not remove_singleton_clusters:
+            # Singleton mention
+            assert (["video", "games"], 2) in gold_mentions_with_ids
+            gold_mentions_with_ids.remove((["video", "games"], 2))
+            assert not any(_ for _, id_ in gold_mentions_with_ids if id_ == 2)
 
-        assert (["them"], 24) in gold_mentions_with_ids
-        # This is a span which exceeds our max_span_width, so it should not be considered.
-        assert (
-            ["lights", ",", "your", "television", ",", "and", "your", "computer"],
-            24,
-        ) not in gold_mentions_with_ids
+            assert (["them"], 24) in gold_mentions_with_ids
+            # This is a span which exceeds our max_span_width, so it should not be considered.
+            assert (
+                ["lights", ",", "your", "television", ",", "and", "your", "computer"],
+                24,
+            ) not in gold_mentions_with_ids
+        else:
+            assert (["video", "games"], 2) not in gold_mentions_with_ids
 
     def check_candidate_mentions_are_well_defined(self, span_starts, span_ends, text):
         candidate_mentions = []

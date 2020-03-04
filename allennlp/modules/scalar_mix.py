@@ -44,7 +44,7 @@ class ScalarMix(torch.nn.Module):
         )
         self.gamma = Parameter(torch.FloatTensor([1.0]), requires_grad=trainable)
 
-    def forward(self, tensors: List[torch.Tensor], mask: torch.Tensor = None) -> torch.Tensor:
+    def forward(self, tensors: List[torch.Tensor], mask: torch.BoolTensor = None) -> torch.Tensor:
         """
         Compute a weighted average of the `tensors`.  The input tensors an be any shape
         with at least two dimensions, but must all be the same shape.
@@ -82,10 +82,9 @@ class ScalarMix(torch.nn.Module):
             return self.gamma * sum(pieces)
 
         else:
-            mask_float = mask.float()
-            broadcast_mask = mask_float.unsqueeze(-1)
+            broadcast_mask = mask.unsqueeze(-1)
             input_dim = tensors[0].size(-1)
-            num_elements_not_masked = torch.sum(mask_float) * input_dim
+            num_elements_not_masked = torch.sum(mask) * input_dim
 
             pieces = []
             for weight, tensor in zip(normed_weights, tensors):

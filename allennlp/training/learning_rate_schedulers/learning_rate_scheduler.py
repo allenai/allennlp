@@ -23,7 +23,7 @@ class _PyTorchLearningRateSchedulerWrapper(LearningRateScheduler):
         self.lr_scheduler = lr_scheduler
 
     def get_values(self):
-        return self.lr_scheduler.get_lr()
+        return self.lr_scheduler.get_last_lr()
 
     @overrides
     def step(self, metric: float = None, epoch: int = None) -> None:

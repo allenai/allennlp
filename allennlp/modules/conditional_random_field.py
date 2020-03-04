@@ -218,7 +218,7 @@ class ConditionalRandomField(torch.nn.Module):
             torch.nn.init.normal_(self.start_transitions)
             torch.nn.init.normal_(self.end_transitions)
 
-    def _input_likelihood(self, logits: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
+    def _input_likelihood(self, logits: torch.Tensor, mask: torch.BoolTensor) -> torch.Tensor:
         """
         Computes the (batch_size,) denominator term for the log-likelihood, which is the
         sum of the likelihoods across all possible state sequences.
@@ -226,7 +226,7 @@ class ConditionalRandomField(torch.nn.Module):
         batch_size, sequence_length, num_tags = logits.size()
 
         # Transpose batch size and sequence dimensions
-        mask = mask.float().transpose(0, 1).contiguous()  # (seq_len, batch_size)
+        mask = mask.transpose(0, 1).contiguous()  # (seq_len, batch_size)
         logits = logits.transpose(0, 1).contiguous()  # (seq_len, batch_size, num_tags)
 
         # Initial alpha is the (batch_size, num_tags) tensor of likelihoods combining the
@@ -253,7 +253,7 @@ class ConditionalRandomField(torch.nn.Module):
             # In valid positions (mask == 1) we want to take the logsumexp over the current_tag dimension
             # of `inner`. Otherwise (mask == 0) we want to retain the previous alpha.
             alpha = util.logsumexp(inner, 1) * mask[i].view(batch_size, 1) + alpha * (
-                1 - mask[i]
+                ~mask[i]
             ).view(batch_size, 1)
 
         # Every sequence needs to end with a transition to the stop_tag.
@@ -266,7 +266,7 @@ class ConditionalRandomField(torch.nn.Module):
         return util.logsumexp(stops)
 
     def _joint_likelihood(
-        self, logits: torch.Tensor, tags: torch.Tensor, mask: torch.LongTensor
+        self, logits: torch.Tensor, tags: torch.Tensor, mask: torch.BoolTensor
     ) -> torch.Tensor:
         """
         Computes the numerator term for the log-likelihood, which is just score(inputs, tags)
@@ -275,7 +275,7 @@ class ConditionalRandomField(torch.nn.Module):
 
         # Transpose batch size and sequence dimensions:
         logits = logits.transpose(0, 1).contiguous()  # (seq_len, batch_size, num_tags)
-        mask = mask.float().transpose(0, 1).contiguous()  # (seq_len, batch_size)
+        mask = mask..transpose(0, 1).contiguous()  # (seq_len, batch_size)
         tags = tags.transpose(0, 1).contiguous()  # (seq_len, batch_size)
 
         # Start with the transition scores from start_tag to the first tag in each input
@@ -320,7 +320,7 @@ class ConditionalRandomField(torch.nn.Module):
         return score
 
     def forward(
-        self, inputs: torch.Tensor, tags: torch.Tensor, mask: torch.ByteTensor = None
+        self, inputs: torch.Tensor, tags: torch.Tensor, mask: torch.BoolTensor = None
     ) -> torch.Tensor:
         """
         Computes the log likelihood of the tags under the current learned
@@ -343,7 +343,7 @@ class ConditionalRandomField(torch.nn.Module):
         """
 
         if mask is None:
-            mask = torch.ones(*tags.size(), dtype=torch.long)
+            mask = torch.ones(*tags.size(), dtype=torch.bool)
         else:
             if not torch.all(does_mask_only_have_false_at_ends(mask, allow_all_false_mask=False)):
                 raise ValueError(
@@ -357,7 +357,7 @@ class ConditionalRandomField(torch.nn.Module):
         return torch.sum(log_numerator - log_denominator)
 
     def viterbi_tags(
-        self, logits: torch.Tensor, mask: torch.Tensor = None, top_k: int = None
+        self, logits: torch.Tensor, mask: torch.BoolTensor = None, top_k: int = None
     ) -> Union[List[VITERBI_DECODING], List[List[VITERBI_DECODING]]]:
         """
         Uses viterbi algorithm to find most likely tags for the given inputs.
@@ -377,7 +377,7 @@ class ConditionalRandomField(torch.nn.Module):
         have shape `(batch_size, seq_len)`
         """
         if mask is None:
-            mask = torch.ones(*logits.shape[:2], dtype=torch.long, device=logits.device)
+            mask = torch.ones(*logits.shape[:2], dtype=torch.bool, device=logits.device)
 
         if top_k is None:
             top_k = 1

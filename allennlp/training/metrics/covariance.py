@@ -36,7 +36,7 @@ class Covariance(Metric):
         self,
         predictions: torch.Tensor,
         gold_labels: torch.Tensor,
-        mask: Optional[torch.Tensor] = None,
+        mask: Optional[torch.BoolTensor] = None,
     ):
         """
         # Parameters
@@ -45,7 +45,7 @@ class Covariance(Metric):
             A tensor of predictions of shape (batch_size, ...).
         gold_labels : `torch.Tensor`, required.
             A tensor of the same shape as `predictions`.
-        mask : `torch.Tensor`, optional (default = None).
+        mask : `torch.BoolTensor`, optional (default = None).
             A tensor of the same shape as `predictions`.
         """
         predictions, gold_labels, mask = self.detach_tensors(predictions, gold_labels, mask)

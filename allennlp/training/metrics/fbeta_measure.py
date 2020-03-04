@@ -94,7 +94,7 @@ class FBetaMeasure(Metric):
         self,
         predictions: torch.Tensor,
         gold_labels: torch.Tensor,
-        mask: Optional[torch.Tensor] = None,
+        mask: Optional[torch.BoolTensor] = None,
     ):
         """
         # Parameters
@@ -104,7 +104,7 @@ class FBetaMeasure(Metric):
         gold_labels : `torch.Tensor`, required.
             A tensor of integer class label of shape (batch_size, ...). It must be the same
             shape as the `predictions` tensor without the `num_classes` dimension.
-        mask : `torch.Tensor`, optional (default = None).
+        mask : `torch.BoolTensor`, optional (default = None).
             A masking tensor the same size as `gold_labels`.
         """
         predictions, gold_labels, mask = self.detach_tensors(predictions, gold_labels, mask)
@@ -126,12 +126,11 @@ class FBetaMeasure(Metric):
             self._total_sum = torch.zeros(num_classes, device=predictions.device)
 
         if mask is None:
-            mask = torch.ones_like(gold_labels)
-        mask = mask.to(dtype=torch.bool)
+            mask = torch.ones_like(gold_labels).bool()
         gold_labels = gold_labels.float()
 
         argmax_predictions = predictions.max(dim=-1)[1].float()
-        true_positives = (gold_labels == argmax_predictions) * mask
+        true_positives = (gold_labels == argmax_predictions) & mask
         true_positives_bins = gold_labels[true_positives]
 
         # Watch it:

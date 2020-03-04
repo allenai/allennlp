@@ -37,7 +37,7 @@ class _EncoderBase(torch.nn.Module):
             Tuple[Union[PackedSequence, torch.Tensor], RnnState],
         ],
         inputs: torch.Tensor,
-        mask: torch.Tensor,
+        mask: torch.BoolTensor,
         hidden_state: Optional[RnnState] = None,
     ):
         """
@@ -63,7 +63,7 @@ class _EncoderBase(torch.nn.Module):
         inputs : `torch.Tensor`, required.
             A tensor of shape `(batch_size, sequence_length, embedding_size)` representing
             the inputs to the Encoder.
-        mask : `torch.Tensor`, required.
+        mask : `torch.BoolTensor`, required.
             A tensor of shape `(batch_size, sequence_length)`, representing masked and
             non-masked elements of the sequence for each element in the batch.
         hidden_state : `Optional[RnnState]`, (default = None).
@@ -294,13 +294,13 @@ class _EncoderBase(torch.nn.Module):
             # that there are some unused elements (zero-length) for the RNN computation.
             self._states = tuple(new_states)
 
-    def reset_states(self, mask: torch.Tensor = None) -> None:
+    def reset_states(self, mask: torch.BoolTensor = None) -> None:
         """
         Resets the internal states of a stateful encoder.
 
         # Parameters
 
-        mask : `torch.Tensor`, optional.
+        mask : `torch.BoolTensor`, optional.
             A tensor of shape `(batch_size,)` indicating which states should
             be reset. If not provided, all states will be reset.
         """
@@ -311,7 +311,7 @@ class _EncoderBase(torch.nn.Module):
             # mask to have shape (1, batch_size, 1) so that operations
             # broadcast properly.
             mask_batch_size = mask.size(0)
-            mask = mask.float().view(1, mask_batch_size, 1)
+            mask = mask.view(1, mask_batch_size, 1)
             new_states = []
             for old_state in self._states:
                 old_state_batch_size = old_state.size(1)
@@ -321,6 +321,6 @@ class _EncoderBase(torch.nn.Module):
                         f"Expected batch size: {old_state_batch_size}. "
                         f"Provided batch size: {mask_batch_size}."
                     )
-                new_state = (1 - mask) * old_state
+                new_state = ~mask * old_state
                 new_states.append(new_state.detach())
             self._states = tuple(new_states)

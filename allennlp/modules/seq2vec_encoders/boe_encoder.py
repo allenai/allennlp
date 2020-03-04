@@ -36,9 +36,9 @@ class BagOfEmbeddingsEncoder(Seq2VecEncoder):
     def get_output_dim(self) -> int:
         return self._embedding_dim
 
-    def forward(self, tokens: torch.Tensor, mask: torch.Tensor = None):
+    def forward(self, tokens: torch.Tensor, mask: torch.BoolTensor = None):
         if mask is not None:
-            tokens = tokens * mask.unsqueeze(-1).float()
+            tokens = tokens * mask.unsqueeze(-1)
 
         # Our input has shape `(batch_size, num_tokens, embedding_dim)`, so we sum out the `num_tokens`
         # dimension.
@@ -58,6 +58,6 @@ class BagOfEmbeddingsEncoder(Seq2VecEncoder):
             summed = summed / lengths.unsqueeze(-1).float()
 
             if length_mask is not None:
-                summed = summed * (length_mask > 0).float().unsqueeze(-1)
+                summed = summed * (length_mask > 0).unsqueeze(-1)
 
         return summed

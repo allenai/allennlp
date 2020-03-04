@@ -16,8 +16,14 @@ class TestClsPooler(AllenNlpTestCase):
 
     def test_cls_at_end(self):
         embedding = torch.arange(20).reshape(5, 4).unsqueeze(-1).expand(5, 4, 7)
-        mask = torch.LongTensor(
-            [[1, 1, 1, 1], [1, 1, 1, 0], [1, 1, 1, 1], [1, 0, 0, 0], [1, 1, 0, 0]]
+        mask = torch.tensor(
+            [
+                [True, True, True, True],
+                [True, True, True, False],
+                [True, True, True, True],
+                [True, False, False, False],
+                [True, True, False, False],
+            ]
         )
         expected = torch.LongTensor([3, 6, 11, 12, 17]).unsqueeze(-1).expand(5, 7)
 
