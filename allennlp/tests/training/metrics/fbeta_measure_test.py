@@ -101,7 +101,7 @@ class FBetaMeasureTest(AllenNlpTestCase):
         self.predictions = self.predictions.to(device)
         self.targets = self.targets.to(device)
 
-        mask = torch.BoolTensor([True, True, True, True, True, False], device=device)
+        mask = torch.tensor([True, True, True, True, True, False], device=device)
 
         fbeta = FBetaMeasure()
         fbeta(self.predictions, self.targets, mask)
@@ -280,7 +280,7 @@ class FBetaMeasureTest(AllenNlpTestCase):
     def test_fbeta_handles_batch_size_of_one(self, device: str):
         predictions = torch.tensor([[0.2862, 0.3479, 0.1627, 0.2033]], device=device)
         targets = torch.tensor([1], device=device)
-        mask = torch.BoolTensor([True], device=device)
+        mask = torch.tensor([True], device=device)
 
         fbeta = FBetaMeasure()
         fbeta(predictions, targets, mask)

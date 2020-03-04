@@ -74,7 +74,7 @@ class AucTest(AllenNlpTestCase):
 
         predictions = torch.randn(8, device=device)
         labels = torch.randint(0, 2, (8,), dtype=torch.long, device=device)
-        mask = torch.BoolTensor([True, True, True, True, False, False, False, False], device=device)
+        mask = torch.tensor([True, True, True, True, False, False, False, False], device=device)
 
         auc(predictions, labels, mask)
         computed_auc_value = auc.get_metric(reset=True)

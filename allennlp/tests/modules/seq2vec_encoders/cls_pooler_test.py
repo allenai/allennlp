@@ -16,7 +16,7 @@ class TestClsPooler(AllenNlpTestCase):
 
     def test_cls_at_end(self):
         embedding = torch.arange(20).reshape(5, 4).unsqueeze(-1).expand(5, 4, 7)
-        mask = torch.BoolTensor(
+        mask = torch.tensor(
             [
                 [True, True, True, True],
                 [True, True, True, False],

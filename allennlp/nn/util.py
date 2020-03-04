@@ -889,6 +889,9 @@ def tensors_equal(tensor1: torch.Tensor, tensor2: torch.Tensor, tolerance: float
             return False
         if tensor1.size() != tensor2.size():
             return False
+        # Special case for bools since they don't support subtraction
+        if tensor1.dtype == torch.bool or tensor2.dtype == torch.bool:
+            return (tensor1 == tensor2).all()
         return ((tensor1 - tensor2).abs().float() < tolerance).all()
     else:
         try:

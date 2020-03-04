@@ -301,16 +301,19 @@ def train_model(
         # instances. Hence it is safe to construct the vocabulary and write it
         # to disk before initializing the distributed context. The workers will
         # load the vocabulary from the path specified.
-        if params.get("vocabulary", Params({})).get("type", "") != "from_files":
+        vocab_dir = os.path.join(serialization_dir, "vocabulary")
+        if recover:
+            vocab = Vocabulary.from_files(vocab_dir)
+        else:
             vocab = training_util.make_vocab_from_params(
                 params.duplicate(), serialization_dir, print_statistics=dry_run
             )
-            params["vocabulary"] = {
-                "type": "from_files",
-                "directory": os.path.join(serialization_dir, "vocabulary"),
-                "padding_token": vocab._padding_token,
-                "oov_token": vocab._oov_token,
-            }
+        params["vocabulary"] = {
+            "type": "from_files",
+            "directory": vocab_dir,
+            "padding_token": vocab._padding_token,
+            "oov_token": vocab._oov_token,
+        }
 
         mp.spawn(
             _train_worker,

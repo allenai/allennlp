@@ -1,6 +1,6 @@
 import torch
 from overrides import overrides
-from allennlp.modules.attention.legacy_attention import Attention
+from allennlp.modules.attention.attention import Attention
 
 
 @Attention.register("cosine")

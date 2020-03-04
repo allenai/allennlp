@@ -54,7 +54,7 @@ class CategoricalAccuracyTest(AllenNlpTestCase):
             device=device,
         )
         targets = torch.tensor([0, 3, 0], device=device)
-        mask = torch.BoolTensor([False, True, True], device=device)
+        mask = torch.tensor([False, True, True], device=device)
         accuracy(predictions, targets, mask)
         actual_accuracy = accuracy.get_metric()
         assert_allclose(actual_accuracy, 0.50)
@@ -75,7 +75,7 @@ class CategoricalAccuracyTest(AllenNlpTestCase):
         assert_allclose(actual_accuracy, 0.6666666)
 
         # Test the same thing but with a mask:
-        mask = torch.BoolTensor([[False, True, True], [True, False, True]], device=device)
+        mask = torch.tensor([[False, True, True], [True, False, True]], device=device)
         accuracy(predictions, targets, mask)
         actual_accuracy = accuracy.get_metric(reset=True)
         assert_allclose(actual_accuracy, 0.50)
@@ -101,7 +101,7 @@ class CategoricalAccuracyTest(AllenNlpTestCase):
         assert accuracy.get_metric(reset=True) == (0.25 + 1 + 0.5) / 3.0
 
         # # # Test with mask
-        mask = torch.BoolTensor([True, False, True], device=device)
+        mask = torch.tensor([True, False, True], device=device)
         targets = torch.tensor([2, 1, 4], device=device)
         accuracy(predictions, targets, mask)
         assert accuracy.get_metric(reset=True) == (0.25 + 0.5) / 2.0
