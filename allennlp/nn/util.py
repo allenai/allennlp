@@ -244,7 +244,7 @@ def masked_softmax(
     mask: torch.BoolTensor,
     dim: int = -1,
     memory_efficient: bool = False,
-    mask_fill_value: float = -1e32,
+    mask_fill_value: float = -1e4,
 ) -> torch.Tensor:
     """
     `torch.nn.functional.softmax(vector)` does not work if some elements of `vector` should be
@@ -1786,8 +1786,8 @@ def masked_topk(
     k = k.reshape(-1)
 
     # Make sure that we don't select any masked items by setting their scores to be very
-    # negative.  These are logits, typically, so -1e20 should be plenty negative.
-    input_ = replace_masked_values(input_, mask, -1e20)
+    # negative.  These are logits, typically, so -1e4 should be plenty negative.
+    input_ = replace_masked_values(input_, mask, -1e4)
 
     # Shape: (batch_size, max_k)
     _, top_indices = input_.topk(max_k, 1)

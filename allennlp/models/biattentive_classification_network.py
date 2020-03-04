@@ -278,11 +278,11 @@ class BiattentiveClassificationNetwork(Model):
 
         # Simple Pooling layers
         max_masked_integrated_encodings = util.replace_masked_values(
-            integrated_encodings, text_mask.unsqueeze(2), -1e7
+            integrated_encodings, text_mask.unsqueeze(2), -1e4
         )
         max_pool = torch.max(max_masked_integrated_encodings, 1)[0]
         min_masked_integrated_encodings = util.replace_masked_values(
-            integrated_encodings, text_mask.unsqueeze(2), +1e7
+            integrated_encodings, text_mask.unsqueeze(2), +1e4
         )
         min_pool = torch.min(min_masked_integrated_encodings, 1)[0]
         mean_pool = torch.sum(integrated_encodings, 1) / torch.sum(text_mask, 1, keepdim=True)

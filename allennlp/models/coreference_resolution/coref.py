@@ -859,7 +859,7 @@ class CoreferenceResolver(Model):
         ).squeeze(-1)
         antecedent_scores += top_partial_coreference_scores
         antecedent_scores = util.replace_masked_values(
-            antecedent_scores, top_antecedent_mask, -1e20
+            antecedent_scores, top_antecedent_mask, -1e4
         )
 
         # Shape: (batch_size, num_spans_to_keep, 1)

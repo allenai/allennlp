@@ -256,10 +256,10 @@ class BiMpmMatching(nn.Module, FromParams):
         cosine_sim = F.cosine_similarity(context_1.unsqueeze(-2), context_2.unsqueeze(-3), dim=3)
 
         # (batch, seq_len*, 1)
-        cosine_max_1 = masked_max(cosine_sim, mask_2.unsqueeze(-2), dim=2, keepdim=True)
+        cosine_max_1 = masked_max(cosine_sim, mask_2.unsqueeze(-2), min_val=-1e4, dim=2, keepdim=True)
         cosine_mean_1 = masked_mean(cosine_sim, mask_2.unsqueeze(-2), dim=2, keepdim=True)
         cosine_max_2 = masked_max(
-            cosine_sim.permute(0, 2, 1), mask_1.unsqueeze(-2), dim=2, keepdim=True
+            cosine_sim.permute(0, 2, 1), mask_1.unsqueeze(-2), min_val=-1e4, dim=2, keepdim=True
         )
         cosine_mean_2 = masked_mean(
             cosine_sim.permute(0, 2, 1), mask_1.unsqueeze(-2), dim=2, keepdim=True
@@ -312,13 +312,13 @@ class BiMpmMatching(nn.Module, FromParams):
 
             # (batch, seq_len*, num_perspectives)
             matching_vector_1_max = masked_max(
-                matching_vector_max, mask_2.unsqueeze(-2).unsqueeze(-1), dim=2
+                matching_vector_max, mask_2.unsqueeze(-2).unsqueeze(-1), min_val=-1e4, dim=2
             )
             matching_vector_1_mean = masked_mean(
                 matching_vector_max, mask_2.unsqueeze(-2).unsqueeze(-1), dim=2
             )
             matching_vector_2_max = masked_max(
-                matching_vector_max.permute(0, 2, 1, 3), mask_1.unsqueeze(-2).unsqueeze(-1), dim=2
+                matching_vector_max.permute(0, 2, 1, 3), mask_1.unsqueeze(-2).unsqueeze(-1), min_val=-1e4, dim=2
             )
             matching_vector_2_mean = masked_mean(
                 matching_vector_max.permute(0, 2, 1, 3), mask_1.unsqueeze(-2).unsqueeze(-1), dim=2
@@ -362,9 +362,9 @@ class BiMpmMatching(nn.Module, FromParams):
         # corresponding attentive vector.
         if self.with_max_attentive_match:
             # (batch, seq_len*, hidden_dim)
-            att_max_2 = masked_max(att_2, mask_2.unsqueeze(-2).unsqueeze(-1), dim=2)
+            att_max_2 = masked_max(att_2, mask_2.unsqueeze(-2).unsqueeze(-1), min_val=-1e4, dim=2)
             att_max_1 = masked_max(
-                att_1.permute(0, 2, 1, 3), mask_1.unsqueeze(-2).unsqueeze(-1), dim=2
+                att_1.permute(0, 2, 1, 3), mask_1.unsqueeze(-2).unsqueeze(-1), min_val=-1e4, dim=2
             )
 
             # (batch, seq_len*, num_perspectives)
