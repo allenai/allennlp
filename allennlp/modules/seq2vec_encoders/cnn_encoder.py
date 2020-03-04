@@ -12,7 +12,7 @@ from allennlp.nn import Activation
 class CnnEncoder(Seq2VecEncoder):
     """
     A `CnnEncoder` is a combination of multiple convolution layers and max pooling layers.  As a
-    :class:`Seq2VecEncoder`, the input to this module is of shape `(batch_size, num_tokens,
+    [`Seq2VecEncoder`](./seq2vec_encoder.md), the input to this module is of shape `(batch_size, num_tokens,
     input_dim)`, and the output is of shape `(batch_size, output_dim)`.
 
     The CNN has one convolution layer for each ngram filter size. Each convolution operation gives
@@ -89,9 +89,9 @@ class CnnEncoder(Seq2VecEncoder):
     def get_output_dim(self) -> int:
         return self._output_dim
 
-    def forward(self, tokens: torch.Tensor, mask: torch.Tensor):
+    def forward(self, tokens: torch.Tensor, mask: torch.BoolTensor):
         if mask is not None:
-            tokens = tokens * mask.unsqueeze(-1).float()
+            tokens = tokens * mask.unsqueeze(-1)
 
         # Our input is expected to have shape `(batch_size, num_tokens, embedding_dim)`.  The
         # convolution layers expect input of shape `(batch_size, in_channels, sequence_length)`,

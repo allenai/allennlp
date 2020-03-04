@@ -8,7 +8,7 @@ from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import Params
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.modules.augmented_lstm import AugmentedLstm
+from allennlp.modules.augmented_lstm import AugmentedLstm, AugmentedLSTMCell, BiAugmentedLstm
 from allennlp.nn import InitializerApplicator, Initializer
 from allennlp.nn.util import sort_batch_by_length
 
@@ -111,12 +111,12 @@ class TestAugmentedLSTM(AllenNlpTestCase):
             lstm(tensor)
 
     def test_augmented_lstm_is_initialized_with_correct_biases(self):
-        lstm = AugmentedLstm(2, 3)
+        lstm = AugmentedLSTMCell(2, 3)
         true_state_bias = numpy.array([0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0])
         numpy.testing.assert_array_equal(lstm.state_linearity.bias.data.numpy(), true_state_bias)
 
         # Non-highway case.
-        lstm = AugmentedLstm(2, 3, use_highway=False)
+        lstm = AugmentedLSTMCell(2, 3, use_highway=False)
         true_state_bias = numpy.array([0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0])
         numpy.testing.assert_array_equal(lstm.state_linearity.bias.data.numpy(), true_state_bias)
 
@@ -128,6 +128,7 @@ class TestAugmentedLSTM(AllenNlpTestCase):
             sorted_tensor, sorted_sequence.data.tolist(), batch_first=True
         )
         lstm = AugmentedLstm(10, 11, recurrent_dropout_probability=0.5)
+
         output, (hidden_state, _) = lstm(tensor)
         output_sequence, _ = pad_packed_sequence(output, batch_first=True)
         # Test returned output sequence
@@ -184,3 +185,16 @@ class TestAugmentedLSTM(AllenNlpTestCase):
             numpy.testing.assert_array_almost_equal(
                 dropped_state[1].data.numpy(), augmented_state[1].data.numpy(), decimal=4
             )
+
+    def test_biaugmented_lstm(self):
+        for bidirectional in [True, False]:
+            bi_augmented_lstm = BiAugmentedLstm(
+                10, 11, 3, recurrent_dropout_probability=0.1, bidirectional=bidirectional
+            )
+            sorted_tensor, sorted_sequence, _, _ = sort_batch_by_length(
+                self.random_tensor, self.sequence_lengths
+            )
+            lstm_input = pack_padded_sequence(
+                sorted_tensor, sorted_sequence.data.tolist(), batch_first=True
+            )
+            bi_augmented_lstm(lstm_input)

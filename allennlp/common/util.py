@@ -9,29 +9,40 @@ import pkgutil
 import random
 import subprocess
 import sys
-from itertools import zip_longest, islice
+from contextlib import contextmanager
+from itertools import islice, zip_longest
 from logging import Filter
-from typing import Any, Callable, Dict, Iterable, Iterator, List, Optional, Tuple, TypeVar
+from pathlib import Path
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Generator,
+    Iterable,
+    Iterator,
+    List,
+    Optional,
+    Tuple,
+    TypeVar,
+    Union,
+)
 
+import numpy
+import spacy
+import torch
 import torch.distributed as dist
+from spacy.cli.download import download as spacy_download
+from spacy.language import Language as SpacyModelType
+
+from allennlp.common.checks import log_pytorch_version_info
+from allennlp.common.params import Params
+from allennlp.common.tqdm import Tqdm
 
 try:
     import resource
 except ImportError:
     # resource doesn't exist on Windows systems
     resource = None
-
-import torch
-import numpy
-import spacy
-from spacy.cli.download import download as spacy_download
-from spacy.language import Language as SpacyModelType
-
-# This base import is so we can refer to allennlp.data.Token in `sanitize()` without creating
-# circular dependencies.
-from allennlp.common.checks import log_pytorch_version_info
-from allennlp.common.params import Params
-from allennlp.common.tqdm import Tqdm
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +55,11 @@ JsonDict = Dict[str, Any]
 # those cases).
 START_SYMBOL = "@start@"
 END_SYMBOL = "@end@"
+
+
+PathType = Union[os.PathLike, str]
+T = TypeVar("T")
+ContextManagerFunctionReturnType = Generator[T, None, None]
 
 
 def sanitize(x: Any) -> Any:
@@ -96,8 +112,11 @@ def group_by_count(iterable: List[Any], count: int, default_value: Any) -> List[
     list at the end if the list is not divisable by `count`.
 
     For example:
+
+    ```
     >>> group_by_count([1, 2, 3, 4, 5, 6, 7], 3, 0)
     [[1, 2, 3], [4, 5, 6], [7, 0, 0]]
+    ```
 
     This is a short method, but it's complicated and hard to remember as a one-liner, so we just
     make a function out of it.
@@ -379,7 +398,46 @@ def get_spacy_model(
     return LOADED_SPACY_MODELS[options]
 
 
-def import_submodules(package_name: str) -> None:
+@contextmanager
+def pushd(new_dir: PathType, verbose: bool = False) -> ContextManagerFunctionReturnType[None]:
+    """
+    Changes the current directory to the given path and prepends it to `sys.path`.
+
+    This method is intended to use with `with`, so after its usage, the current directory will be
+    set to the previous value.
+    """
+    previous_dir = os.getcwd()
+    if verbose:
+        logger.info(f"Changing directory to {new_dir}")  # type: ignore
+    os.chdir(new_dir)
+    try:
+        yield
+    finally:
+        if verbose:
+            logger.info(f"Changing directory back to {previous_dir}")
+        os.chdir(previous_dir)
+
+
+@contextmanager
+def push_python_path(path: PathType) -> ContextManagerFunctionReturnType[None]:
+    """
+    Prepends the given path to `sys.path`.
+
+    This method is intended to use with `with`, so after its usage, its value willbe removed from
+    `sys.path`.
+    """
+    # In some environments, such as TC, it fails when sys.path contains a relative path, such as ".".
+    path = Path(path).resolve()
+    path = str(path)
+    sys.path.insert(0, path)
+    try:
+        yield
+    finally:
+        # Better to remove by value, in case `sys.path` was manipulated in between.
+        sys.path.remove(path)
+
+
+def import_module_and_submodules(package_name: str) -> None:
     """
     Import all submodules under the given package.
     Primarily useful so that people using AllenNLP as a library
@@ -391,21 +449,20 @@ def import_submodules(package_name: str) -> None:
     # For some reason, python doesn't always add this by default to your path, but you pretty much
     # always want it when using `--include-package`.  And if it's already there, adding it again at
     # the end won't hurt anything.
-    sys.path.append(".")
+    with push_python_path("."):
+        # Import at top level
+        module = importlib.import_module(package_name)
+        path = getattr(module, "__path__", [])
+        path_string = "" if not path else path[0]
 
-    # Import at top level
-    module = importlib.import_module(package_name)
-    path = getattr(module, "__path__", [])
-    path_string = "" if not path else path[0]
-
-    # walk_packages only finds immediate children, so need to recurse.
-    for module_finder, name, _ in pkgutil.walk_packages(path):
-        # Sometimes when you import third-party libraries that are on your path,
-        # `pkgutil.walk_packages` returns those too, so we need to skip them.
-        if path_string and module_finder.path != path_string:
-            continue
-        subpackage = f"{package_name}.{name}"
-        import_submodules(subpackage)
+        # walk_packages only finds immediate children, so need to recurse.
+        for module_finder, name, _ in pkgutil.walk_packages(path):
+            # Sometimes when you import third-party libraries that are on your path,
+            # `pkgutil.walk_packages` returns those too, so we need to skip them.
+            if path_string and module_finder.path != path_string:
+                continue
+            subpackage = f"{package_name}.{name}"
+            import_module_and_submodules(subpackage)
 
 
 def peak_memory_mb() -> float:
@@ -459,7 +516,9 @@ def gpu_memory_mb() -> Dict[int, int]:
     except:  # noqa
         # Catch *all* exceptions, because this memory check is a nice-to-have
         # and we'd never want a training run to fail because of it.
-        logger.exception("unable to check gpu_memory_mb(), continuing")
+        logger.warning(
+            "unable to check gpu_memory_mb() due to occasional failure, continuing", exc_info=True
+        )
         return {}
 
 

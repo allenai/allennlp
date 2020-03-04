@@ -25,7 +25,8 @@ logger = logging.getLogger(__name__)
 @DatasetReader.register("winobias")
 class WinobiasReader(DatasetReader):
     """
-    TODO(Mark): Add paper reference.
+    A dataset reader for the dataset described in
+    [Gender Bias in Coreference Resolution: Evaluation and Debiasing Methods](https://arxiv.org/abs/1804.06876)
 
     Winobias is a dataset to analyse the issue of gender bias in co-reference
     resolution. It contains simple sentences with pro/anti stereotypical gender
@@ -37,7 +38,7 @@ class WinobiasReader(DatasetReader):
     non-nested coreference clusters annotated using either square or round brackets.
     For example:
 
-    [The salesperson] sold (some books) to the librarian because [she] was trying to sell (them).
+    > [The salesperson] sold (some books) to the librarian because [she] was trying to sell (them).
 
 
     Returns a list of `Instances` which have four fields : `text`, a `TextField`
@@ -129,7 +130,7 @@ class WinobiasReader(DatasetReader):
                 The id of the cluster which each possible span belongs to, or -1 if it does
                  not belong to a cluster. As these labels have variable length (it depends on
                  how many spans we are considering), we represent this a as a `SequenceLabelField`
-                 with respect to the `spans `ListField`.
+                 with respect to the spans `ListField`.
         """
         metadata: Dict[str, Any] = {"original_text": sentence}
         if gold_clusters is not None:

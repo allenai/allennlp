@@ -43,10 +43,14 @@ class TensorboardWriter(FromParams):
         should_log_learning_rate: bool = False,
     ) -> None:
         if serialization_dir is not None:
-            self._train_log = SummaryWriter(os.path.join(serialization_dir, "log", "train"))
-            self._validation_log = SummaryWriter(
-                os.path.join(serialization_dir, "log", "validation")
-            )
+            # Create log directories prior to creating SummaryWriter objects
+            # in order to avoid race conditions during distributed training.
+            train_ser_dir = os.path.join(serialization_dir, "log", "train")
+            os.makedirs(train_ser_dir, exist_ok=True)
+            self._train_log = SummaryWriter(train_ser_dir)
+            val_ser_dir = os.path.join(serialization_dir, "log", "validation")
+            os.makedirs(val_ser_dir, exist_ok=True)
+            self._validation_log = SummaryWriter(val_ser_dir)
         else:
             self._train_log = self._validation_log = None
 
@@ -167,7 +171,7 @@ class TensorboardWriter(FromParams):
             no_val_message_template = "%s |  %8.3f  |  %8s"
             no_train_message_template = "%s |  %8s  |  %8.3f"
             header_template = "%s |  %-10s"
-            name_length = max([len(x) for x in metric_names])
+            name_length = max(len(x) for x in metric_names)
             logger.info(header_template, "Training".rjust(name_length + 13), "Validation")
 
         for name in metric_names:

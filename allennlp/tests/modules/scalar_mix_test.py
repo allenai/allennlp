@@ -46,7 +46,7 @@ class TestScalarMix(AllenNlpTestCase):
         tensors = [torch.randn([3, 4, 5]) for _ in range(3)]
         numpy_mask = numpy.ones((3, 4), dtype="int32")
         numpy_mask[1, 2:] = 0
-        mask = torch.from_numpy(numpy_mask)
+        mask = torch.from_numpy(numpy_mask).bool()
 
         weights = [0.1, 0.2, 0.3]
         for k in range(3):

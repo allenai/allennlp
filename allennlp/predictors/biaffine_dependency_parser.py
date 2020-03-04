@@ -79,7 +79,7 @@ LINK_TO_POSITION["acomp"] = "right"
 @Predictor.register("biaffine-dependency-parser")
 class BiaffineDependencyParserPredictor(Predictor):
     """
-    Predictor for the :class:`~allennlp.models.BiaffineDependencyParser` model.
+    Predictor for the [`BiaffineDependencyParser`](../models/biaffine_dependency_parser.md) model.
     """
 
     def __init__(

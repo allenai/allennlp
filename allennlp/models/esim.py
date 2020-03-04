@@ -1,4 +1,4 @@
-from typing import Dict, Optional, List, Any
+from typing import Dict, List, Any
 
 import torch
 
@@ -6,9 +6,9 @@ from allennlp.common.checks import check_dimensions_match
 from allennlp.data import TextFieldTensors, Vocabulary
 from allennlp.models.model import Model
 from allennlp.modules import FeedForward, InputVariationalDropout
-from allennlp.modules.matrix_attention.legacy_matrix_attention import LegacyMatrixAttention
-from allennlp.modules import Seq2SeqEncoder, SimilarityFunction, TextFieldEmbedder
-from allennlp.nn import InitializerApplicator, RegularizerApplicator
+from allennlp.modules.matrix_attention.matrix_attention import MatrixAttention
+from allennlp.modules import Seq2SeqEncoder, TextFieldEmbedder
+from allennlp.nn import InitializerApplicator
 from allennlp.nn.util import (
     get_text_field_mask,
     masked_softmax,
@@ -33,8 +33,8 @@ class ESIM(Model):
         model.
     encoder : `Seq2SeqEncoder`
         Used to encode the premise and hypothesis.
-    similarity_function : `SimilarityFunction`
-        This is the similarity function used when computing the similarity matrix between encoded
+    matrix_attention : `MatrixAttention`
+        This is the attention function used when computing the similarity matrix between encoded
         words in the premise and words in the hypothesis.
     projection_feedforward : `FeedForward`
         The feedforward network used to project down the encoded and enhanced premise and hypothesis.
@@ -48,8 +48,6 @@ class ESIM(Model):
         Dropout percentage to use.
     initializer : `InitializerApplicator`, optional (default=`InitializerApplicator()`)
         Used to initialize the model parameters.
-    regularizer : `RegularizerApplicator`, optional (default=`None`)
-        If provided, will be used to calculate the regularization penalty during training.
     """
 
     def __init__(
@@ -57,21 +55,21 @@ class ESIM(Model):
         vocab: Vocabulary,
         text_field_embedder: TextFieldEmbedder,
         encoder: Seq2SeqEncoder,
-        similarity_function: SimilarityFunction,
+        matrix_attention: MatrixAttention,
         projection_feedforward: FeedForward,
         inference_encoder: Seq2SeqEncoder,
         output_feedforward: FeedForward,
         output_logit: FeedForward,
         dropout: float = 0.5,
         initializer: InitializerApplicator = InitializerApplicator(),
-        regularizer: Optional[RegularizerApplicator] = None,
+        **kwargs,
     ) -> None:
-        super().__init__(vocab, regularizer)
+        super().__init__(vocab, **kwargs)
 
         self._text_field_embedder = text_field_embedder
         self._encoder = encoder
 
-        self._matrix_attention = LegacyMatrixAttention(similarity_function)
+        self._matrix_attention = matrix_attention
         self._projection_feedforward = projection_feedforward
 
         self._inference_encoder = inference_encoder
@@ -148,8 +146,8 @@ class ESIM(Model):
         """
         embedded_premise = self._text_field_embedder(premise)
         embedded_hypothesis = self._text_field_embedder(hypothesis)
-        premise_mask = get_text_field_mask(premise).float()
-        hypothesis_mask = get_text_field_mask(hypothesis).float()
+        premise_mask = get_text_field_mask(premise)
+        hypothesis_mask = get_text_field_mask(hypothesis)
 
         # apply dropout for LSTM
         if self.rnn_input_dropout:

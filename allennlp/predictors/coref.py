@@ -16,7 +16,7 @@ from allennlp.predictors.predictor import Predictor
 @Predictor.register("coreference-resolution")
 class CorefPredictor(Predictor):
     """
-    Predictor for the :class:`~allennlp.models.coreference_resolution.CoreferenceResolver` model.
+    Predictor for the [`CoreferenceResolver`](../models/coreference_resolution/coref.md) model.
     """
 
     def __init__(
@@ -32,24 +32,24 @@ class CorefPredictor(Predictor):
         """
         Predict the coreference clusters in the given document.
 
-        .. code-block:: js
-
-            {
-            "document": [tokenised document text]
-            "clusters":
-              [
-                [
-                  [start_index, end_index],
-                  [start_index, end_index]
-                ],
-                [
-                  [start_index, end_index],
-                  [start_index, end_index],
-                  [start_index, end_index],
-                ],
-                ....
-              ]
-            }
+        ```
+        {
+        "document": [tokenised document text]
+        "clusters":
+          [
+            [
+              [start_index, end_index],
+              [start_index, end_index]
+            ],
+            [
+              [start_index, end_index],
+              [start_index, end_index],
+              [start_index, end_index],
+            ],
+            ....
+          ]
+        }
+        ```
 
         # Parameters
 

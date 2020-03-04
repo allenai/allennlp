@@ -12,7 +12,39 @@ class CorefTest(ModelTestCase):
         )
 
     def test_coref_model_can_train_save_and_load(self):
-        self.ensure_model_can_train_save_and_load(self.param_file)
+        for coarse_to_fine in (True, False):
+            for inference_order in (1, 3):
+                self._test_coref_model_can_train_save_and_load(coarse_to_fine, inference_order)
+
+    def _test_coref_model_can_train_save_and_load(
+        self, coarse_to_fine: bool = False, inference_order: int = 1
+    ):
+        # fmt: off
+        overrides = (
+            "{"
+            + '"model.coarse_to_fine": ' + f"{str(coarse_to_fine).lower()}" + ","
+            + '"model.inference_order": ' + f"{inference_order}"
+            + "}"
+        )
+        # fmt: on
+        self.ensure_model_can_train_save_and_load(self.param_file, overrides=overrides)
+        self.tearDown()
+        self.setUp()
+
+    def test_coref_bert_model_can_train_save_and_load(self):
+        self.set_up_model(
+            self.FIXTURES_ROOT / "coref" / "coref_bert_lstm_small.jsonnet",
+            self.FIXTURES_ROOT / "coref" / "coref.gold_conll",
+        )
+        self.ensure_model_can_train_save_and_load(
+            self.param_file,
+            gradients_to_ignore={
+                "_text_field_embedder.token_embedder_tokens._matched_embedder"
+                ".transformer_model.pooler.weight",
+                "_text_field_embedder.token_embedder_tokens._matched_embedder"
+                ".transformer_model.pooler.bias",
+            },
+        )
 
     def test_decode(self):
 
@@ -27,7 +59,7 @@ class CorefTest(ModelTestCase):
                 [3, 2, 1, 0, 0, 0],
                 [4, 3, 2, 1, 0, 0],
             ]
-        )
+        ).unsqueeze(0)
 
         spans = spans.unsqueeze(0)
         antecedent_indices = antecedent_indices
@@ -40,7 +72,7 @@ class CorefTest(ModelTestCase):
             "antecedent_indices": antecedent_indices,
             "predicted_antecedents": predicted_antecedents,
         }
-        output = self.model.decode(output_dict)
+        output = self.model.make_output_human_readable(output_dict)
 
         clusters = output["clusters"][0]
         gold1 = [(1, 2), (3, 4), (17, 80)]

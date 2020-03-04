@@ -16,15 +16,21 @@
         "namespace": "source_tokens"
       },
       "pos_tags": {
-        "type": "pos_tag",
+        "type": "single_id",
+        "feature_name": "pos_",
+        "default_value": "NONE",
         "namespace": "pos"
       },
       "dependency_label": {
-        "type": "dependency_label",
+        "type": "single_id",
+        "feature_name": "dep_",
+        "default_value": "NONE",
         "namespace": "dependencies"
       },
       "ner_tags": {
-        "type": "ner_tag",
+        "type": "single_id",
+        "feature_name": "ent_type_",
+        "default_value": "NONE",
         "namespace": "ner"
       }
     },
@@ -77,11 +83,13 @@
     },
     "beam_size": 5
   },
-  "iterator": {
-    "type": "bucket",
-    "padding_noise": 0.0,
-    "batch_size" : 80,
-  },
+  "data_loader": {
+    "batch_sampler": {
+        "type": "bucket",
+        "batch_size": 80,
+        "padding_noise": 0.0
+    }
+},
   "trainer": {
     "num_epochs": 2,
     "patience": 10,

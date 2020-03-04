@@ -10,7 +10,7 @@ from allennlp.common.checks import check_dimensions_match, ConfigurationError
 from allennlp.data import TextFieldTensors, Vocabulary
 from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder
 from allennlp.models.model import Model
-from allennlp.nn import InitializerApplicator, RegularizerApplicator
+from allennlp.nn import InitializerApplicator
 from allennlp.nn.util import get_text_field_mask, sequence_cross_entropy_with_logits
 from allennlp.training.metrics import CategoricalAccuracy, SpanBasedF1Measure
 
@@ -48,8 +48,6 @@ class SimpleTagger(Model):
         to the overall statistics.
     initializer : `InitializerApplicator`, optional (default=`InitializerApplicator()`)
         Used to initialize the model parameters.
-    regularizer : `RegularizerApplicator`, optional (default=`None`)
-        If provided, will be used to calculate the regularization penalty during training.
     """
 
     def __init__(
@@ -62,9 +60,9 @@ class SimpleTagger(Model):
         label_namespace: str = "labels",
         verbose_metrics: bool = False,
         initializer: InitializerApplicator = InitializerApplicator(),
-        regularizer: Optional[RegularizerApplicator] = None,
+        **kwargs,
     ) -> None:
-        super().__init__(vocab, regularizer)
+        super().__init__(vocab, **kwargs)
 
         self.label_namespace = label_namespace
         self.text_field_embedder = text_field_embedder
@@ -158,9 +156,9 @@ class SimpleTagger(Model):
         if tags is not None:
             loss = sequence_cross_entropy_with_logits(logits, tags, mask)
             for metric in self.metrics.values():
-                metric(logits, tags, mask.float())
+                metric(logits, tags, mask)
             if self._f1_metric is not None:
-                self._f1_metric(logits, tags, mask.float())
+                self._f1_metric(logits, tags, mask)
             output_dict["loss"] = loss
 
         if metadata is not None:
@@ -168,7 +166,9 @@ class SimpleTagger(Model):
         return output_dict
 
     @overrides
-    def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+    def make_output_human_readable(
+        self, output_dict: Dict[str, torch.Tensor]
+    ) -> Dict[str, torch.Tensor]:
         """
         Does a simple position-wise argmax over each token, converts indices to string labels, and
         adds a `"tags"` key to the dictionary with the result.

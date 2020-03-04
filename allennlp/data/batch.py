@@ -5,7 +5,7 @@ through a model.
 
 import logging
 from collections import defaultdict
-from typing import Dict, List, Union, Iterator, Iterable
+from typing import Dict, Iterable, Iterator, List, Union
 
 import numpy
 import torch
@@ -31,7 +31,7 @@ class Batch(Iterable):
         """
         super().__init__()
 
-        self.instances: List[Instance] = ensure_list(instances)
+        self.instances = ensure_list(instances)
         self._check_types()
 
     def _check_types(self) -> None:
@@ -42,7 +42,7 @@ class Batch(Iterable):
             {k: v.__class__.__name__ for k, v in x.fields.items()} for x in self.instances
         ]
         # Check all the field names and Field types are the same for every instance.
-        if not all([all_instance_fields_and_types[0] == x for x in all_instance_fields_and_types]):
+        if not all(all_instance_fields_and_types[0] == x for x in all_instance_fields_and_types):
             raise ConfigurationError("You cannot construct a Batch with non-homogeneous Instances.")
 
     def get_padding_lengths(self) -> Dict[str, Dict[str, int]]:
@@ -59,8 +59,6 @@ class Batch(Iterable):
         all_instance_lengths: List[Dict[str, Dict[str, int]]] = [
             instance.get_padding_lengths() for instance in self.instances
         ]
-        if not all_instance_lengths:
-            return {**padding_lengths}
         all_field_lengths: Dict[str, List[Dict[str, int]]] = defaultdict(list)
         for instance_lengths in all_instance_lengths:
             for field_name, instance_field_lengths in instance_lengths.items():
@@ -112,20 +110,17 @@ class Batch(Iterable):
             therefore corresponds to the number of `TokenIndexers` used to index the
             `TextField`.  Each `Field` class is responsible for batching its own output.
         """
-        if padding_lengths is None:
-            padding_lengths = defaultdict(dict)
+        padding_lengths = padding_lengths or defaultdict(dict)
         # First we need to decide _how much_ to pad.  To do that, we find the max length for all
         # relevant padding decisions from the instances themselves.  Then we check whether we were
         # given a max length for a particular field and padding key.  If we were, we use that
         # instead of the instance-based one.
         if verbose:
-            logger.info(
-                "Padding batch of size %d to lengths %s", len(self.instances), str(padding_lengths)
-            )
+            logger.info(f"Padding batch of size {len(self.instances)} to lengths {padding_lengths}")
             logger.info("Getting max lengths from instances")
         instance_padding_lengths = self.get_padding_lengths()
         if verbose:
-            logger.info("Instance max lengths: %s", str(instance_padding_lengths))
+            logger.info(f"Instance max lengths: {instance_padding_lengths}")
         lengths_to_use: Dict[str, Dict[str, int]] = defaultdict(dict)
         for field_name, instance_field_lengths in instance_padding_lengths.items():
             for padding_key in instance_field_lengths.keys():
@@ -139,7 +134,7 @@ class Batch(Iterable):
         # Now we actually pad the instances to tensors.
         field_tensors: Dict[str, list] = defaultdict(list)
         if verbose:
-            logger.info("Now actually padding instances to length: %s", str(lengths_to_use))
+            logger.info(f"Now actually padding instances to length: {lengths_to_use}")
         for instance in self.instances:
             for field, tensors in instance.as_tensor_dict(lengths_to_use).items():
                 field_tensors[field].append(tensors)
@@ -149,10 +144,10 @@ class Batch(Iterable):
         # tensors together, so we grab a dictionary of field_name -> field class from the first
         # instance in the batch.
         field_classes = self.instances[0].fields
-        final_fields = {}
-        for field_name, field_tensor_list in field_tensors.items():
-            final_fields[field_name] = field_classes[field_name].batch_tensors(field_tensor_list)
-        return final_fields
+        return {
+            field_name: field_classes[field_name].batch_tensors(field_tensor_list)
+            for field_name, field_tensor_list in field_tensors.items()
+        }
 
     def __iter__(self) -> Iterator[Instance]:
         return iter(self.instances)
@@ -182,7 +177,7 @@ class Batch(Iterable):
                 f"Max: {numpy.max(lengths)}, Min: {numpy.min(lengths)}"
             )
 
-        print("\n10 Random instances: ")
-        for i in list(numpy.random.randint(len(self.instances), size=10)):
+        print("\n10 Random instances:")
+        for i in numpy.random.randint(len(self.instances), size=10):
             print(f"Instance {i}:")
             print(f"\t{self.instances[i]}")

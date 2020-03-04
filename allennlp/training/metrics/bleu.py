@@ -108,7 +108,7 @@ class BLEU(Metric):
         return math.exp(1.0 - self._reference_lengths / self._prediction_lengths)
 
     def _get_valid_tokens_mask(self, tensor: torch.LongTensor) -> torch.ByteTensor:
-        valid_tokens_mask = torch.ones(tensor.size(), dtype=torch.bool)
+        valid_tokens_mask = torch.ones_like(tensor, dtype=torch.bool)
         for index in self._exclude_indices:
             valid_tokens_mask = valid_tokens_mask & (tensor != index)
         return valid_tokens_mask
@@ -133,7 +133,7 @@ class BLEU(Metric):
 
         None
         """
-        predictions, gold_targets = self.unwrap_to_tensors(predictions, gold_targets)
+        predictions, gold_targets = self.detach_tensors(predictions, gold_targets)
         for ngram_size, _ in enumerate(self._ngram_weights, start=1):
             precision_matches, precision_totals = self._get_modified_precision_counts(
                 predictions, gold_targets, ngram_size

@@ -1,6 +1,3 @@
-import pytest
-import spacy
-
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.tokenizers.sentence_splitter import SpacySentenceSplitter
 

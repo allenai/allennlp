@@ -1,0 +1,40 @@
+name: Nightly Release
+
+on:
+  # This is 11am in Seattle time.
+  schedule:
+    - cron: '0 19 * * *'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Setup Python
+      uses: actions/setup-python@v1
+      with:
+        python-version: 3.7
+    - name: Install requirements
+      run: |
+        pip install -r dev-requirements.txt
+    - name: Set Version
+      # This is somewhat bizarre, but you can't set env variables to bash commands in the action workflow -
+      # So we have to use this odd way of exporting a variable instead.
+      run: echo ::set-env name=ALLENNLP_VERSION_SUFFIX::.dev$(date -u +%Y%m%d)
+    - name: Build Package
+      run: |
+        echo "Building packages for dev release $ALLENNLP_VERSION_SUFFIX"
+        python setup.py bdist_wheel sdist
+    - name: Test Packages
+      run: |
+        pip install $(ls dist/*.whl)
+        allennlp test-install
+    - name: Check diff from 24hr ago
+      if: success()
+      run: scripts/24hr_diff.sh
+    - name: Deploy
+      if: success()
+      env:
+        PYPI_USERNAME: ${{ secrets.PYPI_USERNAME }}
+        PYPI_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
+      run: twine upload -u $PYPI_USERNAME -p $PYPI_PASSWORD dist/*

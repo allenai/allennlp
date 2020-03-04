@@ -175,14 +175,14 @@ class GatedCnnEncoder(Seq2SeqEncoder):
 
         self._return_all_layers = return_all_layers
 
-    def forward(self, token_embeddings: torch.Tensor, mask: torch.Tensor):
+    def forward(self, token_embeddings: torch.Tensor, mask: torch.BoolTensor):
 
         # Convolutions need transposed input
         transposed_embeddings = torch.transpose(token_embeddings, 1, 2)
 
         # We need to broadcast the mask to feature dimension,
         # and to use masked_fill_ we need the inverse of the mask.
-        mask_for_fill = (1 - mask).unsqueeze(1).to(dtype=torch.bool)
+        mask_for_fill = ~mask.unsqueeze(1)
 
         if self._return_all_layers:
             # outputs will be [[all forward layers], [all backward layers]]

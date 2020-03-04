@@ -1,0 +1,1 @@
+from allennlp.tests.modules.language_model_heads import LinearLanguageModelHead

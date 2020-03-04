@@ -22,7 +22,7 @@ class SequenceAccuracy(Metric):
         self,
         predictions: torch.Tensor,
         gold_labels: torch.Tensor,
-        mask: Optional[torch.Tensor] = None,
+        mask: Optional[torch.BoolTensor] = None,
     ):
         """
         # Parameters
@@ -31,10 +31,10 @@ class SequenceAccuracy(Metric):
             A tensor of predictions of shape (batch_size, k, sequence_length).
         gold_labels : `torch.Tensor`, required.
             A tensor of integer class label of shape (batch_size, sequence_length).
-        mask : `torch.Tensor`, optional (default = None).
+        mask : `torch.BoolTensor`, optional (default = None).
             A masking tensor the same size as `gold_labels`.
         """
-        predictions, gold_labels, mask = self.unwrap_to_tensors(predictions, gold_labels, mask)
+        predictions, gold_labels, mask = self.detach_tensors(predictions, gold_labels, mask)
 
         # Some sanity checks.
         if gold_labels.dim() != predictions.dim() - 1:
@@ -76,7 +76,7 @@ class SequenceAccuracy(Metric):
         The accumulated accuracy.
         """
         if self.total_count > 0:
-            accuracy = float(self.correct_count) / float(self.total_count)
+            accuracy = self.correct_count / self.total_count
         else:
             accuracy = 0
 

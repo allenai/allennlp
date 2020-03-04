@@ -101,22 +101,28 @@
       "activations": ["relu", "linear"],
       "dropout": [0.0, 0.0]
     },
-    "initializer": [
-      [".*linear_layers.*weight", {"type": "xavier_normal"}],
-      [".*linear_layers.*bias", {"type": "constant", "val": 0}],
-      [".*weight_ih.*", {"type": "xavier_normal"}],
-      [".*weight_hh.*", {"type": "orthogonal"}],
-      [".*bias.*", {"type": "constant", "val": 0}],
-      [".*matcher.*match_weights.*", {"type": "kaiming_normal"}]
-    ]
+    "initializer": {
+      "regexes": [
+        [".*linear_layers.*weight", {"type": "xavier_normal"}],
+        [".*linear_layers.*bias", {"type": "constant", "val": 0}],
+        [".*weight_ih.*", {"type": "xavier_normal"}],
+        [".*weight_hh.*", {"type": "orthogonal"}],
+        [".*bias.*", {"type": "constant", "val": 0}],
+        [".*matcher.*match_weights.*", {"type": "kaiming_normal"}]
+      ]
+    }
   },
-  "iterator": {
-    "type": "bucket",
-    "batch_size": 64,
-    "padding_noise": 0.0
-  },
+  "data_loader": {
+    "batch_sampler": {
+        "type": "bucket",
+        "batch_size": 64,
+        "padding_noise": 0.0
+    }
+},
   "trainer": {
-    "num_serialized_models_to_keep": 2,
+    "checkpointer": {
+      "num_serialized_models_to_keep": 2
+    },
     "num_epochs": 5,
     "patience": 2,
     "cuda_device": -1,

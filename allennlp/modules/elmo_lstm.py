@@ -1,27 +1,27 @@
 """
 A stacked bidirectional LSTM with skip connections between layers.
 """
-from typing import Optional, Tuple, List
 import warnings
+from typing import List, Optional, Tuple
 
+import numpy
 import torch
 from torch.nn.utils.rnn import PackedSequence, pad_packed_sequence
+
+from allennlp.common.checks import ConfigurationError
+from allennlp.common.file_utils import cached_path
+from allennlp.modules.encoder_base import _EncoderBase
+from allennlp.modules.lstm_cell_with_projection import LstmCellWithProjection
 
 with warnings.catch_warnings():
     warnings.filterwarnings("ignore", category=FutureWarning)
     import h5py
-import numpy
-
-from allennlp.modules.lstm_cell_with_projection import LstmCellWithProjection
-from allennlp.common.checks import ConfigurationError
-from allennlp.modules.encoder_base import _EncoderBase
-from allennlp.common.file_utils import cached_path
 
 
 class ElmoLstm(_EncoderBase):
     """
     A stacked, bidirectional LSTM which uses
-    :class:`~allennlp.modules.lstm_cell_with_projection.LstmCellWithProjection`'s
+    [`LstmCellWithProjection`'s](./lstm_cell_with_projection.md)
     with highway layers between the inputs to layers.
     The inputs to the forward and backward directions are independent - forward and backward
     states are not concatenated between layers.
@@ -40,8 +40,7 @@ class ElmoLstm(_EncoderBase):
     hidden_size : `int`, required
         The dimension of the outputs of the LSTM.
     cell_size : `int`, required.
-        The dimension of the memory cell of the
-        :class:`~allennlp.modules.lstm_cell_with_projection.LstmCellWithProjection`.
+        The dimension of the memory cell of the `LstmCellWithProjection`.
     num_layers : `int`, required
         The number of bidirectional LSTMs to use.
     requires_grad : `bool`, optional
@@ -69,7 +68,7 @@ class ElmoLstm(_EncoderBase):
     ) -> None:
         super().__init__(stateful=True)
 
-        # Required to be wrapped with a :class:`PytorchSeq2SeqWrapper`.
+        # Required to be wrapped with a `PytorchSeq2SeqWrapper`.
         self.input_size = input_size
         self.hidden_size = hidden_size
         self.num_layers = num_layers
@@ -109,13 +108,13 @@ class ElmoLstm(_EncoderBase):
         self.forward_layers = forward_layers
         self.backward_layers = backward_layers
 
-    def forward(self, inputs: torch.Tensor, mask: torch.LongTensor) -> torch.Tensor:
+    def forward(self, inputs: torch.Tensor, mask: torch.BoolTensor) -> torch.Tensor:
         """
         # Parameters
 
         inputs : `torch.Tensor`, required.
             A Tensor of shape `(batch_size, sequence_length, hidden_size)`.
-        mask : `torch.LongTensor`, required.
+        mask : `torch.BoolTensor`, required.
             A binary mask of shape `(batch_size, sequence_length)` representing the
             non-padded elements in each sequence in the batch.
 

@@ -6,9 +6,9 @@ from allennlp.common.checks import check_dimensions_match
 from allennlp.data import TextFieldTensors, Vocabulary
 from allennlp.models.model import Model
 from allennlp.modules import FeedForward
-from allennlp.modules import Seq2SeqEncoder, SimilarityFunction, TimeDistributed, TextFieldEmbedder
-from allennlp.modules.matrix_attention.legacy_matrix_attention import LegacyMatrixAttention
-from allennlp.nn import InitializerApplicator, RegularizerApplicator
+from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder
+from allennlp.modules.matrix_attention.matrix_attention import MatrixAttention
+from allennlp.nn import InitializerApplicator
 from allennlp.nn.util import get_text_field_mask, masked_softmax, weighted_sum
 from allennlp.training.metrics import CategoricalAccuracy
 
@@ -22,8 +22,8 @@ class DecomposableAttention(Model):
     by Parikh et al., 2016, with some optional enhancements before the decomposable attention
     actually happens.  Parikh's original model allowed for computing an "intra-sentence" attention
     before doing the decomposable entailment step.  We generalize this to any
-    :class:`Seq2SeqEncoder` that can be applied to the premise and/or the hypothesis before
-    computing entailment.
+    [`Seq2SeqEncoder`](../modules/seq2seq_encoders/seq2seq_encoder.md) that can be applied to
+    the premise and/or the hypothesis before computing entailment.
 
     The basic outline of this model is to get an embedded representation of each word in the
     premise and hypothesis, align words between the two, compare the aligned phrases, and make a
@@ -39,8 +39,8 @@ class DecomposableAttention(Model):
     attend_feedforward : `FeedForward`
         This feedforward network is applied to the encoded sentence representations before the
         similarity matrix is computed between words in the premise and words in the hypothesis.
-    similarity_function : `SimilarityFunction`
-        This is the similarity function used when computing the similarity matrix between words in
+    matrix_attention : `MatrixAttention`
+        This is the attention function used when computing the similarity matrix between words in
         the premise and words in the hypothesis.
     compare_feedforward : `FeedForward`
         This feedforward network is applied to the aligned premise and hypothesis representations,
@@ -57,8 +57,6 @@ class DecomposableAttention(Model):
         is also `None`).
     initializer : `InitializerApplicator`, optional (default=`InitializerApplicator()`)
         Used to initialize the model parameters.
-    regularizer : `RegularizerApplicator`, optional (default=`None`)
-        If provided, will be used to calculate the regularization penalty during training.
     """
 
     def __init__(
@@ -66,19 +64,19 @@ class DecomposableAttention(Model):
         vocab: Vocabulary,
         text_field_embedder: TextFieldEmbedder,
         attend_feedforward: FeedForward,
-        similarity_function: SimilarityFunction,
+        matrix_attention: MatrixAttention,
         compare_feedforward: FeedForward,
         aggregate_feedforward: FeedForward,
         premise_encoder: Optional[Seq2SeqEncoder] = None,
         hypothesis_encoder: Optional[Seq2SeqEncoder] = None,
         initializer: InitializerApplicator = InitializerApplicator(),
-        regularizer: Optional[RegularizerApplicator] = None,
+        **kwargs,
     ) -> None:
-        super().__init__(vocab, regularizer)
+        super().__init__(vocab, **kwargs)
 
         self._text_field_embedder = text_field_embedder
         self._attend_feedforward = TimeDistributed(attend_feedforward)
-        self._matrix_attention = LegacyMatrixAttention(similarity_function)
+        self._matrix_attention = matrix_attention
         self._compare_feedforward = TimeDistributed(compare_feedforward)
         self._aggregate_feedforward = aggregate_feedforward
         self._premise_encoder = premise_encoder
@@ -139,8 +137,8 @@ class DecomposableAttention(Model):
         """
         embedded_premise = self._text_field_embedder(premise)
         embedded_hypothesis = self._text_field_embedder(hypothesis)
-        premise_mask = get_text_field_mask(premise).float()
-        hypothesis_mask = get_text_field_mask(hypothesis).float()
+        premise_mask = get_text_field_mask(premise)
+        hypothesis_mask = get_text_field_mask(hypothesis)
 
         if self._premise_encoder:
             embedded_premise = self._premise_encoder(embedded_premise, premise_mask)

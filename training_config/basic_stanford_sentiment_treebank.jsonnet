@@ -33,10 +33,11 @@
        "batch_first": true
     }
   },    
-  "iterator": {
-    "type": "bucket",
-    "sorting_keys": [["tokens", "num_tokens"]],
-    "batch_size" : 32
+  "data_loader": {
+    "batch_sampler": {
+      "type": "bucket",
+      "batch_size" : 32
+    }
   },
   "trainer": {
     "num_epochs": 5,

@@ -1,35 +1,21 @@
-from typing import Dict, Any
+from typing import Any, Dict, List, Union
 
 from overrides import overrides
 import torch
 
 from allennlp.common.checks import ConfigurationError
-from allennlp.common.params import Params
 from allennlp.common.registrable import Registrable
 from allennlp.training.scheduler import Scheduler
+from allennlp.training.optimizers import Optimizer
 
 
 class LearningRateScheduler(Scheduler, Registrable):
     def __init__(self, optimizer: torch.optim.Optimizer, last_epoch: int = -1) -> None:
         super().__init__(optimizer, "lr", last_epoch)
 
-    def get_values(self) -> None:
+    @overrides
+    def get_values(self):
         raise NotImplementedError
-
-    # Requires custom from_params so we can wrap the PyTorch LR schedulers.
-    @classmethod
-    def from_params(cls, optimizer: torch.optim.Optimizer, params: Params):  # type: ignore
-
-        scheduler_type = params.pop_choice("type", LearningRateScheduler.list_available())
-        scheduler = LearningRateScheduler.by_name(scheduler_type)(
-            optimizer, **params.as_dict()
-        )  # type: ignore
-        if isinstance(scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
-            return _PyTorchLearningRateSchedulerWithMetricsWrapper(scheduler)
-        elif isinstance(scheduler, torch.optim.lr_scheduler._LRScheduler):
-            return _PyTorchLearningRateSchedulerWrapper(scheduler)
-        else:
-            return scheduler
 
 
 class _PyTorchLearningRateSchedulerWrapper(LearningRateScheduler):
@@ -37,7 +23,7 @@ class _PyTorchLearningRateSchedulerWrapper(LearningRateScheduler):
         self.lr_scheduler = lr_scheduler
 
     def get_values(self):
-        return self.lr_scheduler.get_lr()
+        return self.lr_scheduler.get_last_lr()
 
     @overrides
     def step(self, metric: float = None, epoch: int = None) -> None:
@@ -64,10 +50,60 @@ class _PyTorchLearningRateSchedulerWithMetricsWrapper(_PyTorchLearningRateSchedu
         self.lr_scheduler.step(metric, epoch)
 
 
-# Force PyTorch learning rate schedulers into the registry.
-Registrable._registry[LearningRateScheduler] = {
-    "step": (torch.optim.lr_scheduler.StepLR, None),
-    "multi_step": (torch.optim.lr_scheduler.MultiStepLR, None),
-    "exponential": (torch.optim.lr_scheduler.ExponentialLR, None),
-    "reduce_on_plateau": (torch.optim.lr_scheduler.ReduceLROnPlateau, None),
-}
+@LearningRateScheduler.register("step")
+class StepLearningRateScheduler(_PyTorchLearningRateSchedulerWrapper):
+    def __init__(
+        self, optimizer: Optimizer, step_size: int, gamma: float = 0.1, last_epoch: int = -1
+    ) -> None:
+        lr_scheduler = torch.optim.lr_scheduler.StepLR(
+            optimizer=optimizer, step_size=step_size, gamma=gamma, last_epoch=last_epoch
+        )
+        super().__init__(lr_scheduler)
+
+
+@LearningRateScheduler.register("multi_step")
+class MultiStepLearningRateScheduler(_PyTorchLearningRateSchedulerWrapper):
+    def __init__(
+        self, optimizer: Optimizer, milestones: List[int], gamma: float = 0.1, last_epoch: int = -1
+    ) -> None:
+        lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(
+            optimizer=optimizer, milestones=milestones, gamma=gamma, last_epoch=last_epoch
+        )
+        super().__init__(lr_scheduler)
+
+
+@LearningRateScheduler.register("exponential")
+class ExponentialLearningRateScheduler(_PyTorchLearningRateSchedulerWrapper):
+    def __init__(self, optimizer: Optimizer, gamma: float = 0.1, last_epoch: int = -1) -> None:
+        lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(
+            optimizer=optimizer, gamma=gamma, last_epoch=last_epoch
+        )
+        super().__init__(lr_scheduler)
+
+
+@LearningRateScheduler.register("reduce_on_plateau")
+class ReduceOnPlateauLearningRateScheduler(_PyTorchLearningRateSchedulerWithMetricsWrapper):
+    def __init__(
+        self,
+        optimizer: Optimizer,
+        mode: str = "min",
+        factor: float = 0.1,
+        patience: int = 10,
+        verbose: bool = False,
+        threshold_mode: str = "rel",
+        threshold: float = 1e-4,
+        cooldown: int = 0,
+        min_lr: Union[float, List[float]] = 0,
+        eps: float = 1e-8,
+    ) -> None:
+        lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+            optimizer=optimizer,
+            mode=mode,
+            factor=factor,
+            patience=patience,
+            verbose=verbose,
+            threshold=threshold,
+            cooldown=cooldown,
+            min_lr=min_lr,
+        )
+        super().__init__(lr_scheduler)

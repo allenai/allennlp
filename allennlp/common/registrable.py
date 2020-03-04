@@ -1,5 +1,5 @@
 """
-:class:`~allennlp.common.registrable.Registrable` is a "mixin" for endowing
+`allennlp.common.registrable.Registrable` is a "mixin" for endowing
 any base class with a named registry for its subclasses and a decorator
 for registering them.
 """
@@ -198,7 +198,6 @@ class Registrable(FromParams):
         if default is None:
             return keys
         elif default not in keys:
-            message = "Default implementation %s is not registered" % default
-            raise ConfigurationError(message)
+            raise ConfigurationError(f"Default implementation {default} is not registered")
         else:
             return [default] + [k for k in keys if k != default]

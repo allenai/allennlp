@@ -1,29 +1,30 @@
 """
-An :class:`Activation` is just a function
+An `Activation` is just a function
 that takes some parameters and returns an element-wise activation function.
 For the most part we just use
-`PyTorch activations <https://pytorch.org/docs/master/nn.html#non-linear-activations>`_.
+[PyTorch activations](https://pytorch.org/docs/master/nn.html#non-linear-activations).
 Here we provide a thin wrapper to allow registering them and instantiating them `from_params`.
 
 The available activation functions are
 
 * "linear"
-* `"mish" <https://arxiv.org/abs/1908.08681>`_
-* `"swish" <https://arxiv.org/abs/1710.05941>`_
-* `"relu" <https://pytorch.org/docs/master/nn.html#torch.nn.ReLU>`_
-* `"relu6" <https://pytorch.org/docs/master/nn.html#torch.nn.ReLU6>`_
-* `"elu" <https://pytorch.org/docs/master/nn.html#torch.nn.ELU>`_
-* `"prelu" <https://pytorch.org/docs/master/nn.html#torch.nn.PReLU>`_
-* `"leaky_relu" <https://pytorch.org/docs/master/nn.html#torch.nn.LeakyReLU>`_
-* `"threshold" <https://pytorch.org/docs/master/nn.html#torch.nn.Threshold>`_
-* `"hardtanh" <https://pytorch.org/docs/master/nn.html#torch.nn.Hardtanh>`_
-* `"sigmoid" <https://pytorch.org/docs/master/nn.html#torch.nn.Sigmoid>`_
-* `"tanh" <https://pytorch.org/docs/master/nn.html#torch.nn.Tanh>`_
-* `"log_sigmoid" <https://pytorch.org/docs/master/nn.html#torch.nn.LogSigmoid>`_
-* `"softplus" <https://pytorch.org/docs/master/nn.html#torch.nn.Softplus>`_
-* `"softshrink" <https://pytorch.org/docs/master/nn.html#torch.nn.Softshrink>`_
-* `"softsign" <https://pytorch.org/docs/master/nn.html#torch.nn.Softsign>`_
-* `"tanhshrink" <https://pytorch.org/docs/master/nn.html#torch.nn.Tanhshrink>`_
+* ["mish"](https://arxiv.org/abs/1908.08681)
+* ["swish"](https://arxiv.org/abs/1710.05941)
+* ["relu"](https://pytorch.org/docs/master/nn.html#torch.nn.ReLU)
+* ["relu6"](https://pytorch.org/docs/master/nn.html#torch.nn.ReLU6)
+* ["elu"](https://pytorch.org/docs/master/nn.html#torch.nn.ELU)
+* ["prelu"](https://pytorch.org/docs/master/nn.html#torch.nn.PReLU)
+* ["leaky_relu"](https://pytorch.org/docs/master/nn.html#torch.nn.LeakyReLU)
+* ["threshold"](https://pytorch.org/docs/master/nn.html#torch.nn.Threshold)
+* ["hardtanh"](https://pytorch.org/docs/master/nn.html#torch.nn.Hardtanh)
+* ["sigmoid"](https://pytorch.org/docs/master/nn.html#torch.nn.Sigmoid)
+* ["tanh"](https://pytorch.org/docs/master/nn.html#torch.nn.Tanh)
+* ["log_sigmoid"](https://pytorch.org/docs/master/nn.html#torch.nn.LogSigmoid)
+* ["softplus"](https://pytorch.org/docs/master/nn.html#torch.nn.Softplus)
+* ["softshrink"](https://pytorch.org/docs/master/nn.html#torch.nn.Softshrink)
+* ["softsign"](https://pytorch.org/docs/master/nn.html#torch.nn.Softsign)
+* ["tanhshrink"](https://pytorch.org/docs/master/nn.html#torch.nn.Tanhshrink)
+* ["selu"](https://pytorch.org/docs/master/nn.html#torch.nn.SELU)
 """
 
 import torch
@@ -73,4 +74,5 @@ Registrable._registry[Activation] = {
     "softshrink": (torch.nn.Softshrink, None),
     "softsign": (torch.nn.Softsign, None),
     "tanhshrink": (torch.nn.Tanhshrink, None),
+    "selu": (torch.nn.SELU, None),
 }

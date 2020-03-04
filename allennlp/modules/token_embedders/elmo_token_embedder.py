@@ -1,11 +1,9 @@
 from typing import List
 import torch
 
-from allennlp.common import Params
 from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
 from allennlp.modules.elmo import Elmo
 from allennlp.modules.time_distributed import TimeDistributed
-from allennlp.data import Vocabulary
 
 
 @TokenEmbedder.register("elmo_token_embedder")
@@ -49,8 +47,10 @@ class ElmoTokenEmbedder(TokenEmbedder):
 
     def __init__(
         self,
-        options_file: str,
-        weight_file: str,
+        options_file: str = "https://allennlp.s3.amazonaws.com/models/elmo/2x4096_512_2048cnn_2xhighway/"
+        + "elmo_2x4096_512_2048cnn_2xhighway_options.json",
+        weight_file: str = "https://allennlp.s3.amazonaws.com/models/elmo/2x4096_512_2048cnn_2xhighway/"
+        + "elmo_2x4096_512_2048cnn_2xhighway_weights.hdf5",
         do_layer_norm: bool = False,
         dropout: float = 0.5,
         requires_grad: bool = False,
@@ -103,35 +103,3 @@ class ElmoTokenEmbedder(TokenEmbedder):
                 projection = TimeDistributed(projection)
             elmo_representations = projection(elmo_representations)
         return elmo_representations
-
-    # Custom vocab_to_cache logic requires a from_params implementation.
-    @classmethod
-    def from_params(  # type: ignore
-        cls, vocab: Vocabulary, params: Params, **extras
-    ) -> "ElmoTokenEmbedder":
-
-        params.add_file_to_archive("options_file")
-        params.add_file_to_archive("weight_file")
-        options_file = params.pop("options_file")
-        weight_file = params.pop("weight_file")
-        requires_grad = params.pop("requires_grad", False)
-        do_layer_norm = params.pop_bool("do_layer_norm", False)
-        dropout = params.pop_float("dropout", 0.5)
-        namespace_to_cache = params.pop("namespace_to_cache", None)
-        if namespace_to_cache is not None:
-            vocab_to_cache = list(vocab.get_token_to_index_vocabulary(namespace_to_cache).keys())
-        else:
-            vocab_to_cache = None
-        projection_dim = params.pop_int("projection_dim", None)
-        scalar_mix_parameters = params.pop("scalar_mix_parameters", None)
-        params.assert_empty(cls.__name__)
-        return cls(
-            options_file=options_file,
-            weight_file=weight_file,
-            do_layer_norm=do_layer_norm,
-            dropout=dropout,
-            requires_grad=requires_grad,
-            projection_dim=projection_dim,
-            vocab_to_cache=vocab_to_cache,
-            scalar_mix_parameters=scalar_mix_parameters,
-        )

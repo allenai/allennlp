@@ -109,7 +109,7 @@ class QaNetEncoder(Seq2SeqEncoder):
         return False
 
     @overrides
-    def forward(self, inputs: torch.Tensor, mask: torch.Tensor = None) -> torch.Tensor:
+    def forward(self, inputs: torch.Tensor, mask: torch.BoolTensor = None) -> torch.Tensor:
         inputs = self._input_projection_layer(inputs)
         output = inputs
         for encoder_block in self._encoder_blocks:
@@ -186,7 +186,7 @@ class QaNetEncoderBlock(Seq2SeqEncoder):
         self._use_positional_encoding = use_positional_encoding
 
         self._conv_norm_layers = torch.nn.ModuleList(
-            [LayerNorm(hidden_dim) for _ in range(num_convs)]
+            LayerNorm(hidden_dim) for _ in range(num_convs)
         )
         self._conv_layers = torch.nn.ModuleList()
         for _ in range(num_convs):
@@ -238,7 +238,7 @@ class QaNetEncoderBlock(Seq2SeqEncoder):
         return False
 
     @overrides
-    def forward(self, inputs: torch.Tensor, mask: torch.Tensor = None) -> torch.Tensor:
+    def forward(self, inputs: torch.Tensor, mask: torch.BoolTensor = None) -> torch.Tensor:
         if self._use_positional_encoding:
             output = add_positional_features(inputs)
         else:

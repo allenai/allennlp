@@ -13,7 +13,7 @@
     "token_indexers": {
       "elmo": {
         "type": "elmo_characters"
-     }
+      }
     }
   },
   "train_data_path": "https://allennlp.s3.amazonaws.com/datasets/snli/snli_1.0_train.jsonl",
@@ -39,7 +39,7 @@
       "num_layers": 1,
       "bidirectional": true
     },
-    "similarity_function": {"type": "dot_product"},
+    "matrix_attention": {"type": "dot_product"},
     "projection_feedforward": {
       "input_dim": 2400,
       "hidden_dims": 300,
@@ -75,18 +75,21 @@
       [".*bias_hh.*", {"type": "lstm_hidden_bias"}]
      ]
    },
-  "iterator": {
-    "type": "bucket",
-    "sorting_keys": [["premise", "num_tokens"], ["hypothesis", "num_tokens"]],
-    "batch_size": 32
+  "data_loader": {
+    "batch_sampler": {
+      "type": "bucket",
+      "batch_size": 32
+    }
   },
   "trainer": {
     "optimizer": {
-        "type": "adam",
-        "lr": 0.0004
+      "type": "adam",
+      "lr": 0.0004
+    },
+    "checkpointer": {
+      "num_serialized_models_to_keep": 2,
     },
     "validation_metric": "+accuracy",
-    "num_serialized_models_to_keep": 2,
     "num_epochs": 75,
     "grad_norm": 10.0,
     "patience": 5,

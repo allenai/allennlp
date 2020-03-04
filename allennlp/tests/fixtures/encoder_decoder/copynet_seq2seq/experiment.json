@@ -51,11 +51,13 @@
     "beam_size": 5,
     "max_decoding_steps": 50
   },
-  "iterator": {
-    "type": "bucket",
-    "padding_noise": 0.0,
-    "batch_size" : 80,
-  },
+  "data_loader": {
+    "batch_sampler": {
+        "type": "bucket",
+        "batch_size": 80,
+        "padding_noise": 0.0
+    }
+},
   "trainer": {
     "num_epochs": 2,
     "patience": 10,

@@ -10,7 +10,7 @@ from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder
 from allennlp.modules import ConditionalRandomField, FeedForward
 from allennlp.modules.conditional_random_field import allowed_transitions
 from allennlp.models.model import Model
-from allennlp.nn import InitializerApplicator, RegularizerApplicator
+from allennlp.nn import InitializerApplicator
 import allennlp.nn.util as util
 from allennlp.training.metrics import CategoricalAccuracy, SpanBasedF1Measure
 
@@ -59,8 +59,6 @@ class CrfTagger(Model):
         to the overall statistics.
     initializer : `InitializerApplicator`, optional (default=`InitializerApplicator()`)
         Used to initialize the model parameters.
-    regularizer : `RegularizerApplicator`, optional (default=`None`)
-        If provided, will be used to calculate the regularization penalty during training.
     top_k : `int`, optional (default=`1`)
         If provided, the number of parses to return from the crf in output_dict['top_k_tags'].
         Top k parses are returned as a list of dicts, where each dictionary is of the form:
@@ -83,10 +81,10 @@ class CrfTagger(Model):
         dropout: Optional[float] = None,
         verbose_metrics: bool = False,
         initializer: InitializerApplicator = InitializerApplicator(),
-        regularizer: Optional[RegularizerApplicator] = None,
         top_k: int = 1,
+        **kwargs,
     ) -> None:
-        super().__init__(vocab, regularizer)
+        super().__init__(vocab, **kwargs)
 
         self.label_namespace = label_namespace
         self.text_field_embedder = text_field_embedder
@@ -165,7 +163,7 @@ class CrfTagger(Model):
         tokens: TextFieldTensors,
         tags: torch.LongTensor = None,
         metadata: List[Dict[str, Any]] = None,
-        **kwargs
+        **kwargs,
     ) -> Dict[str, torch.Tensor]:
 
         """
@@ -192,7 +190,7 @@ class CrfTagger(Model):
 
         logits : `torch.FloatTensor`
             The logits that are the output of the `tag_projection_layer`
-        mask : `torch.LongTensor`
+        mask : `torch.BoolTensor`
             The text field mask for the input tokens
         tags : `List[List[int]]`
             The predicted tags using the Viterbi algorithm.
@@ -238,15 +236,17 @@ class CrfTagger(Model):
                     class_probabilities[i, j, tag_id] = 1
 
             for metric in self.metrics.values():
-                metric(class_probabilities, tags, mask.float())
+                metric(class_probabilities, tags, mask)
             if self.calculate_span_f1:
-                self._f1_metric(class_probabilities, tags, mask.float())
+                self._f1_metric(class_probabilities, tags, mask)
         if metadata is not None:
             output["words"] = [x["words"] for x in metadata]
         return output
 
     @overrides
-    def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+    def make_output_human_readable(
+        self, output_dict: Dict[str, torch.Tensor]
+    ) -> Dict[str, torch.Tensor]:
         """
         Converts the tag ids to the actual tags.
         `output_dict["tags"]` is a list of lists of tag_ids,

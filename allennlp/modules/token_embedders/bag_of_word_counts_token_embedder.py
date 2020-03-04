@@ -73,9 +73,9 @@ class BagOfWordCountsTokenEmbedder(TokenEmbedder):
         mask = get_text_field_mask({"tokens": {"tokens": inputs}})
         if self._ignore_oov:
             # also mask out positions corresponding to oov
-            mask *= (inputs != self._oov_idx).long()
+            mask &= inputs != self._oov_idx
         for document, doc_mask in zip(inputs, mask):
-            document = torch.masked_select(document, doc_mask.to(dtype=torch.bool))
+            document = torch.masked_select(document, doc_mask)
             vec = torch.bincount(document, minlength=self.vocab_size).float()
             vec = vec.view(1, -1)
             bag_of_words_vectors.append(vec)

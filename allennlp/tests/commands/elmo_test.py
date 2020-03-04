@@ -7,16 +7,17 @@ import sys
 import tempfile
 import warnings
 
-with warnings.catch_warnings():
-    warnings.filterwarnings("ignore", category=FutureWarning)
-    import h5py
 import numpy
 import pytest
 
-from allennlp.common.checks import ConfigurationError
 from allennlp.commands import main
 from allennlp.commands.elmo import ElmoEmbedder
+from allennlp.common.checks import ConfigurationError
 from allennlp.tests.modules.elmo_test import ElmoTestCase
+
+with warnings.catch_warnings():
+    warnings.filterwarnings("ignore", category=FutureWarning)
+    import h5py
 
 
 class TestElmoCommand(ElmoTestCase):
@@ -32,7 +33,7 @@ class TestElmoCommand(ElmoTestCase):
             f.write(sentence)
 
         sys.argv = [
-            "run.py",  # executable
+            "__main__.py",  # executable
             "elmo",  # command
             self.sentences_path,
             self.output_path,
@@ -64,7 +65,7 @@ class TestElmoCommand(ElmoTestCase):
             f.write(sentence)
 
         sys.argv = [
-            "run.py",  # executable
+            "__main__.py",  # executable
             "elmo",  # command
             self.sentences_path,
             self.output_path,
@@ -96,7 +97,7 @@ class TestElmoCommand(ElmoTestCase):
             f.write(sentence)
 
         sys.argv = [
-            "run.py",  # executable
+            "__main__.py",  # executable
             "elmo",  # command
             self.sentences_path,
             self.output_path,
@@ -138,7 +139,7 @@ class TestElmoCommand(ElmoTestCase):
                 f.write(line + "\n")
 
         sys.argv = [
-            "run.py",  # executable
+            "__main__.py",  # executable
             "elmo",  # command
             self.sentences_path,
             self.output_path,
@@ -173,7 +174,7 @@ class TestElmoCommand(ElmoTestCase):
                 f.write(line + "\n")
 
         sys.argv = [
-            "run.py",  # executable
+            "__main__.py",  # executable
             "elmo",  # command
             self.sentences_path,
             self.output_path,
@@ -207,7 +208,7 @@ class TestElmoCommand(ElmoTestCase):
                 f.write(line + "\n")
 
         sys.argv = [
-            "run.py",  # executable
+            "__main__.py",  # executable
             "elmo",  # command
             self.sentences_path,
             self.output_path,
@@ -240,7 +241,7 @@ class TestElmoCommand(ElmoTestCase):
                 f.write(line + "\n")
 
         sys.argv = [
-            "run.py",  # executable
+            "__main__.py",  # executable
             "elmo",  # command
             self.sentences_path,
             self.output_path,
@@ -270,7 +271,7 @@ class TestElmoCommand(ElmoTestCase):
                 f.write(line + "\n")
 
         sys.argv = [
-            "run.py",  # executable
+            "__main__.py",  # executable
             "elmo",  # command
             self.sentences_path,
             self.output_path,

@@ -12,9 +12,9 @@ class TestBidirectionalLanguageModelTransformer(AllenNlpTestCase):
             input_dim=32, hidden_dim=64, num_layers=2
         )
         token_embeddings = torch.rand(5, 10, 32)
-        mask = torch.ones(5, 10)
-        mask[0, 7:] = 0
-        mask[1, 5:] = 0
+        mask = torch.ones(5, 10).bool()
+        mask[0, 7:] = False
+        mask[1, 5:] = False
 
         output = transformer_encoder(token_embeddings, mask)
         assert list(output.size()) == [5, 10, 64]
@@ -24,9 +24,9 @@ class TestBidirectionalLanguageModelTransformer(AllenNlpTestCase):
             input_dim=32, hidden_dim=64, num_layers=2, return_all_layers=True
         )
         token_embeddings = torch.rand(5, 10, 32)
-        mask = torch.ones(5, 10)
-        mask[0, 7:] = 0
-        mask[1, 5:] = 0
+        mask = torch.ones(5, 10).bool()
+        mask[0, 7:] = False
+        mask[1, 5:] = False
 
         output = transformer_encoder(token_embeddings, mask)
         assert len(output) == 2
@@ -41,9 +41,9 @@ class TestBidirectionalLanguageModelTransformer(AllenNlpTestCase):
             input_dim=32, hidden_dim=64, num_layers=2
         )
 
-        mask = torch.ones(3, 6).int()
-        mask[0, 3:] = 0
-        mask[1, 5:] = 0
+        mask = torch.ones(3, 6).bool()
+        mask[0, 3:] = False
+        mask[1, 5:] = False
 
         forward_mask, backward_mask = transformer_encoder.get_attention_masks(mask)
 

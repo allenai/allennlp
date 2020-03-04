@@ -2,9 +2,9 @@ import numpy
 import pytest
 import torch
 
-from allennlp.modules.span_extractors import SpanExtractor, BidirectionalEndpointSpanExtractor
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import Params
+from allennlp.modules.span_extractors import BidirectionalEndpointSpanExtractor, SpanExtractor
 from allennlp.nn.util import batched_index_select
 
 
@@ -121,7 +121,9 @@ class TestBidirectonalEndpointSpanExtractor:
                 [[0, 2], [0, 1]],
             ]
         )
-        sequence_mask = torch.LongTensor([[1, 1, 1, 1, 1], [1, 1, 1, 0, 0]])
+        sequence_mask = torch.tensor(
+            [[True, True, True, True, True], [True, True, True, False, False]]
+        )
 
         span_representations = extractor(sequence_tensor, indices, sequence_mask=sequence_mask)
 
@@ -199,11 +201,11 @@ class TestBidirectonalEndpointSpanExtractor:
         # size: (batch_size=1, sequence_length=2, emb_dim=2)
         sequence_tensor = torch.FloatTensor([[[0.0, 0.0], [0.0, 0.0]]])
         # size: (batch_size=1, sequence_length=2)
-        sequence_mask = torch.LongTensor([[0, 0]])
+        sequence_mask = torch.tensor([[False, False]])
         # size: (batch_size=1, spans_count=1, 2)
         span_indices = torch.LongTensor([[[-1, -1]]])
         # size: (batch_size=1, spans_count=1)
-        span_indices_mask = torch.LongTensor([[0]])
+        span_indices_mask = torch.tensor([[False]])
         extractor = BidirectionalEndpointSpanExtractor(
             input_dim=2, forward_combination="x,y", backward_combination="x,y"
         )
