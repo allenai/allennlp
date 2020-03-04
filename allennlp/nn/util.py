@@ -119,7 +119,9 @@ def get_lengths_from_binary_sequence_mask(mask: torch.BoolTensor) -> torch.LongT
     return mask.sum(-1)
 
 
-def get_mask_from_sequence_lengths(sequence_lengths: torch.Tensor, max_length: int) -> torch.BoolTensor:
+def get_mask_from_sequence_lengths(
+    sequence_lengths: torch.Tensor, max_length: int
+) -> torch.BoolTensor:
     """
     Given a variable of shape `(batch_size,)` that represents the sequence lengths of each batch
     element, this function returns a `(batch_size, max_length)` mask variable.  For example, if
