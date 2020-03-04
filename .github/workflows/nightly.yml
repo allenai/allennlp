@@ -7,6 +7,8 @@ on:
 
 jobs:
   build:
+    # Only run this action on "allenai/allennlp", and not forks.
+    if: github.actor == "repo-owner"
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
@@ -41,8 +43,7 @@ jobs:
       if: success()
       run: scripts/24hr_diff.sh
     - name: Deploy
-      # Only run if the previous steps succeeded and we are on the upstream git repo.
-      if: success() && github.repository == 'allenai/allennlp'
+      if: success()
       env:
         PYPI_USERNAME: ${{ secrets.PYPI_USERNAME }}
         PYPI_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
