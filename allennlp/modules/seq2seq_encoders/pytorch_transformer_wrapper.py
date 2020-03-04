@@ -23,7 +23,7 @@ class PytorchTransformer(Seq2SeqEncoder):
         The middle dimension of the FeedForward network. The input and output
         dimensions are fixed to ensure sizes match up for the self attention layers.
     num_layers : `int`, required.
-        The number of stacked self attention -> feedfoward -> layer normalisation blocks.
+        The number of stacked self attention -> feedforward -> layer normalisation blocks.
     num_attention_heads : `int`, required.
         The number of attention heads to use per layer.
     use_positional_encoding : `bool`, optional, (default = True)
