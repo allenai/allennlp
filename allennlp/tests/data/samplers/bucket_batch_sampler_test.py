@@ -89,7 +89,7 @@ class TestBucketSampler(SamplerTest):
 
         dataset = AllennlpDataset(self.instances, vocab=self.vocab)
         sampler = BucketBatchSampler(
-            dataset, batch_size=2, padding_noise=0, sorting_keys=[("text", "tokens___tokens")]
+            dataset, batch_size=2, padding_noise=0, sorting_keys=["text"]
         )
 
         grouped_instances = []
@@ -133,13 +133,13 @@ class TestBucketSampler(SamplerTest):
         )
         assert sampler.sorting_keys is None
         sampler._guess_sorting_keys(instances)
-        assert sampler.sorting_keys == [("passage", "tokens___tokens")]
+        assert sampler.sorting_keys == ["passage"]
 
     def test_from_params(self):
         dataset = AllennlpDataset(self.instances, self.vocab)
         params = Params({})
 
-        sorting_keys = [("s1", "nt"), ("s2", "nt2")]
+        sorting_keys = ["s1", "s2"]
         params["sorting_keys"] = sorting_keys
         params["batch_size"] = 32
         sampler = BucketBatchSampler.from_params(params=params, data_source=dataset)
@@ -169,7 +169,7 @@ class TestBucketSampler(SamplerTest):
             dataset,
             batch_size=2,
             padding_noise=0,
-            sorting_keys=[("text", "tokens___tokens")],
+            sorting_keys=["text"],
             drop_last=True,
         )
         # We use a custom collate_fn for testing, which doesn't actually create tensors,
@@ -187,7 +187,7 @@ class TestBucketSampler(SamplerTest):
     def test_batch_count(self):
         dataset = AllennlpDataset(self.instances, vocab=self.vocab)
         sampler = BucketBatchSampler(
-            dataset, batch_size=2, padding_noise=0, sorting_keys=[("text", "tokens___tokens")]
+            dataset, batch_size=2, padding_noise=0, sorting_keys=["text"]
         )
         # We use a custom collate_fn for testing, which doesn't actually create tensors,
         # just the allennlp Batches.
@@ -201,7 +201,7 @@ class TestBucketSampler(SamplerTest):
             dataset,
             batch_size=2,
             padding_noise=0,
-            sorting_keys=[("text", "tokens___tokens")],
+            sorting_keys=["text"],
             drop_last=True,
         )
         # We use a custom collate_fn for testing, which doesn't actually create tensors,
