@@ -40,7 +40,9 @@ class Predictor(Registrable):
     that can be used for serving models through the web API or making predictions in bulk.
     """
 
-    def __init__(self, model: Model, dataset_reader: DatasetReader) -> None:
+    def __init__(self, model: Model, dataset_reader: DatasetReader, frozen: bool = True) -> None:
+        if frozen:
+            model = model.eval()
         self._model = model
         self._dataset_reader = dataset_reader
         self.cuda_device = next(self._model.named_parameters())[1].get_device()
