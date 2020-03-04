@@ -68,3 +68,6 @@ class SpanField(Field[torch.Tensor]):
         if isinstance(other, tuple) and len(other) == 2:
             return other == (self.span_start, self.span_end)
         return super().__eq__(other)
+
+    def __len__(self):
+        return 2
