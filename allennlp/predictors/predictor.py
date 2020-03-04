@@ -261,6 +261,8 @@ class Predictor(Registrable):
         dataset_reader_to_load : `str`, optional (default="validation")
             Which dataset reader to load from the archive, either "train" or
             "validation".
+        frozen : `bool`, optional (default=True)
+            If we should call `model.eval()` when building the predictor.
 
         # Returns
 
@@ -270,6 +272,7 @@ class Predictor(Registrable):
             load_archive(archive_path, cuda_device=cuda_device),
             predictor_name,
             dataset_reader_to_load=dataset_reader_to_load,
+            frozen=frozen
         )
 
     @classmethod
@@ -278,6 +281,7 @@ class Predictor(Registrable):
         archive: Archive,
         predictor_name: str = None,
         dataset_reader_to_load: str = "validation",
+        frozen: bool = True
     ) -> "Predictor":
         """
         Instantiate a `Predictor` from an [`Archive`](../models/archival.md);
@@ -286,6 +290,7 @@ class Predictor(Registrable):
         one is not found, the base class (i.e. `Predictor`) will be used. Optionally specify
         which [`DatasetReader`](../data/dataset_readers/dataset_reader.md) should be loaded;
         otherwise, the validation one will be used if it exists followed by the training dataset reader.
+        Optionally specify if the loaded model should be frozen, meaning `model.eval()` will be called.
         """
         # Duplicate the config so that the config inside the archive doesn't get consumed
         config = archive.config.duplicate()
@@ -305,6 +310,5 @@ class Predictor(Registrable):
         dataset_reader = DatasetReader.from_params(dataset_reader_params)
 
         model = archive.model
-        model.eval()
 
-        return predictor_class(model, dataset_reader)
+        return predictor_class(model, dataset_reader, frozen=frozen)
