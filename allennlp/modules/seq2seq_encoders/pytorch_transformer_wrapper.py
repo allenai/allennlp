@@ -43,7 +43,7 @@ class PytorchTransformer(Seq2SeqEncoder):
         num_layers: int,
         feedforward_hidden_dim: int = 2048,
         num_attention_heads: int = 8,
-        positional_encoding: Optional[str] = "sinusoidal",
+        positional_encoding: Optional[str] = None,
         positional_embedding_size: int = 512,
         dropout_prob: float = 0.1,
         activation: str = "relu",
