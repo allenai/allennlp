@@ -58,3 +58,6 @@ class ArrayField(Field[numpy.ndarray]):
 
     def __str__(self) -> str:
         return f"ArrayField with shape: {self.array.shape} and dtype: {self.dtype}."
+
+    def __len__(self):
+        return self.array.shape[0]

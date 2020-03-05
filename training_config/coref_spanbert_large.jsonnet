@@ -90,7 +90,7 @@ local span_pair_embedding_dim = 3 * span_embedding_dim + feature_size;
       "type": "bucket",
       # Explicitly specifying sorting keys since the guessing heuristic could get it wrong
       # as we a span field.
-      "sorting_keys": [["text", "tokens___token_ids"]],
+      "sorting_keys": ["text"],
       "batch_size": 1
     }
   },

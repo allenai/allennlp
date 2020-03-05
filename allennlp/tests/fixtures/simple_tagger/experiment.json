@@ -25,7 +25,7 @@
   "data_loader": {
       "batch_sampler": {
         "type": "bucket",
-        "sorting_keys": [["tokens", "tokens___tokens"]],
+        "sorting_keys": ["tokens"],
         "padding_noise": 0.0,
         "batch_size" : 80
     }

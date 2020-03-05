@@ -50,7 +50,7 @@ local cls_is_last_token = false;
   "data_loader": {
     "batch_sampler": {
       "type": "bucket",
-      "sorting_keys": [["tokens", "tokens___token_ids"]],
+      "sorting_keys": ["tokens"],
       "batch_size" : 32
     }
   },
