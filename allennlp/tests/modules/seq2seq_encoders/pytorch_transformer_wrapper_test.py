@@ -19,8 +19,12 @@ def test_positional_embeddings(positional_encoding: Optional[str]):
     for b in range(batch_size):
         mask[b, max_seq_len-b:] = False
 
+    assert not torch.isnan(inputs).any()
+    assert torch.isfinite(inputs).all()
     outputs = transformer(inputs, mask)
     assert outputs.size() == inputs.size()
+    assert not torch.isnan(outputs).any()
+    assert torch.isfinite(outputs).all()
 
 
 @pytest.mark.parametrize("positional_encoding", [None, "sinusoidal", "embedding"])

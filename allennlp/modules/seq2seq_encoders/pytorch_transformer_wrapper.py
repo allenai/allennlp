@@ -97,6 +97,8 @@ class PytorchTransformer(Seq2SeqEncoder):
         # For some reason the torch transformer expects the shape (sequence, batch, features), not the more
         # familiar (batch, sequence, features), so we have to fix it.
         output = output.permute(1, 0, 2)
+        # For some other reason, the torch transformer takes the mask backwards.
+        mask = ~mask
         output = self._transformer(output, src_key_padding_mask=mask)
         output = output.permute(1, 0, 2)
 
