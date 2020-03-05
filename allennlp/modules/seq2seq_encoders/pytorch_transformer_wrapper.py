@@ -70,7 +70,9 @@ class PytorchTransformer(Seq2SeqEncoder):
             self._sinusoidal_positional_encoding = False
             self._positional_embedding = nn.Embedding(positional_embedding_size, input_dim)
         else:
-            raise ValueError("positional_encoding must be one of None, 'sinusoidal', or 'embedding'")
+            raise ValueError(
+                "positional_encoding must be one of None, 'sinusoidal', or 'embedding'"
+            )
 
     @overrides
     def get_input_dim(self) -> int:
