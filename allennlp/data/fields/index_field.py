@@ -60,3 +60,6 @@ class IndexField(Field[torch.Tensor]):
         if isinstance(other, int):
             return self.sequence_index == other
         return super().__eq__(other)
+
+    def __len__(self):
+        return 1
