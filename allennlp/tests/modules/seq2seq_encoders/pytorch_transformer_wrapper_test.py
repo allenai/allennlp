@@ -15,17 +15,18 @@ def test_positional_embeddings(positional_encoding: Optional[str]):
     transformer = PytorchTransformer(dims, 3, positional_encoding=positional_encoding, num_attention_heads=n_head)
     transformer.eval()
 
-    inputs = torch.randn(batch_size, max_seq_len, dims)
-    mask = torch.ones(batch_size, max_seq_len, dtype=torch.bool)
-    for b in range(batch_size):
-        mask[b, max_seq_len-b:] = False
+    with torch.no_grad():
+        inputs = torch.randn(batch_size, max_seq_len, dims)
+        mask = torch.ones(batch_size, max_seq_len, dtype=torch.bool)
+        for b in range(batch_size):
+            mask[b, max_seq_len-b:] = False
 
-    assert not torch.isnan(inputs).any()
-    assert torch.isfinite(inputs).all()
-    outputs = transformer(inputs, mask)
-    assert outputs.size() == inputs.size()
-    assert not torch.isnan(outputs).any()
-    assert torch.isfinite(outputs).all()
+        assert not torch.isnan(inputs).any()
+        assert torch.isfinite(inputs).all()
+        outputs = transformer(inputs, mask)
+        assert outputs.size() == inputs.size()
+        assert not torch.isnan(outputs).any()
+        assert torch.isfinite(outputs).all()
 
 
 @pytest.mark.parametrize("positional_encoding", [None, "sinusoidal", "embedding"])
