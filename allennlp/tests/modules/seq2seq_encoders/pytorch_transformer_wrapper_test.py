@@ -60,3 +60,41 @@ def test_mask_works(positional_encoding: Optional[str]):
                 torch.masked_select(transformer(inputs, mask), mask.unsqueeze(2)),
                 torch.masked_select(transformer(altered_inputs, mask), mask.unsqueeze(2))))
 
+@pytest.mark.parametrize("positional_encoding", [None, "sinusoidal", "embedding"])
+def test_positional_encodings(positional_encoding: Optional[str]):
+    # All sizes are prime, making them easy to find during debugging.
+    batch_size = 3
+    max_seq_len = 11
+    n_head = 2
+    dims = 7 * n_head
+    transformer = PytorchTransformer(dims, 2, positional_encoding=positional_encoding, num_attention_heads=n_head)
+    transformer.eval()
+
+    with torch.no_grad():
+        # We test this by running it twice, once with a shuffled sequence. The results should be the same if there
+        # is no positional encoding, and different otherwise.
+        inputs = torch.randn(batch_size, max_seq_len, dims)
+        mask = torch.ones(batch_size, max_seq_len, dtype=torch.bool)
+        for b in range(batch_size):
+            mask[b, max_seq_len-b:] = False
+        unshuffled_output = transformer(inputs, mask)
+
+        shuffle = torch.arange(0, max_seq_len).unsqueeze(0).expand_as(mask).clone()
+        for b in range(batch_size):
+            # Take care not to shuffle the masked values
+            perm = torch.randperm(max_seq_len-b)
+            shuffle[b, :max_seq_len-b] = shuffle[b, perm]
+        shuffle = shuffle.unsqueeze(2).expand_as(inputs)
+        shuffled_input = torch.gather(inputs, 1, shuffle)
+        shuffled_output = transformer(shuffled_input, mask)
+
+        if positional_encoding is None:
+            assert(torch.allclose(
+                torch.gather(unshuffled_output, 1, shuffle),
+                shuffled_output,
+                atol=1e-7))
+        else:
+            assert(not torch.allclose(
+                torch.gather(unshuffled_output, 1, shuffle),
+                shuffled_output,
+                atol=1e-7))
