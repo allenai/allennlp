@@ -8,7 +8,7 @@ on:
 jobs:
   build:
     # Only run this action on "allenai/allennlp", and not forks.
-    if: github.actor == "repo-owner"
+    if: github.actor == 'repo-owner'
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
