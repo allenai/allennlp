@@ -88,9 +88,7 @@ class TestBucketSampler(SamplerTest):
     def test_create_batches_groups_correctly(self):
 
         dataset = AllennlpDataset(self.instances, vocab=self.vocab)
-        sampler = BucketBatchSampler(
-            dataset, batch_size=2, padding_noise=0, sorting_keys=["text"]
-        )
+        sampler = BucketBatchSampler(dataset, batch_size=2, padding_noise=0, sorting_keys=["text"])
 
         grouped_instances = []
         for indices in sampler:
@@ -166,11 +164,7 @@ class TestBucketSampler(SamplerTest):
     def test_drop_last_works(self):
         dataset = AllennlpDataset(self.instances, vocab=self.vocab)
         sampler = BucketBatchSampler(
-            dataset,
-            batch_size=2,
-            padding_noise=0,
-            sorting_keys=["text"],
-            drop_last=True,
+            dataset, batch_size=2, padding_noise=0, sorting_keys=["text"], drop_last=True,
         )
         # We use a custom collate_fn for testing, which doesn't actually create tensors,
         # just the allennlp Batches.
@@ -186,9 +180,7 @@ class TestBucketSampler(SamplerTest):
 
     def test_batch_count(self):
         dataset = AllennlpDataset(self.instances, vocab=self.vocab)
-        sampler = BucketBatchSampler(
-            dataset, batch_size=2, padding_noise=0, sorting_keys=["text"]
-        )
+        sampler = BucketBatchSampler(dataset, batch_size=2, padding_noise=0, sorting_keys=["text"])
         # We use a custom collate_fn for testing, which doesn't actually create tensors,
         # just the allennlp Batches.
         dataloader = DataLoader(dataset, batch_sampler=sampler, collate_fn=lambda x: Batch(x))
@@ -198,11 +190,7 @@ class TestBucketSampler(SamplerTest):
     def test_batch_count_with_drop_last(self):
         dataset = AllennlpDataset(self.instances, vocab=self.vocab)
         sampler = BucketBatchSampler(
-            dataset,
-            batch_size=2,
-            padding_noise=0,
-            sorting_keys=["text"],
-            drop_last=True,
+            dataset, batch_size=2, padding_noise=0, sorting_keys=["text"], drop_last=True,
         )
         # We use a custom collate_fn for testing, which doesn't actually create tensors,
         # just the allennlp Batches.

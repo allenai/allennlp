@@ -118,6 +118,5 @@ class Field(Generic[DataArray]):
             return self.__dict__ == other.__dict__
         return NotImplemented
 
-
     def __len__(self):
         raise NotImplementedError
