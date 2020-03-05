@@ -272,19 +272,18 @@ class _ElmoCharacterEncoder(torch.nn.Module):
         If True, compute gradient of ELMo parameters for fine tuning.
 
     The relevant section of the options file is something like:
-    .. example-code::
 
-        .. code-block:: python
-
-            {'char_cnn': {
-                'activation': 'relu',
-                'embedding': {'dim': 4},
-                'filters': [[1, 4], [2, 8], [3, 16], [4, 32], [5, 64]],
-                'max_characters_per_token': 50,
-                'n_characters': 262,
-                'n_highway': 2
-                }
-            }
+    ```
+    {'char_cnn': {
+        'activation': 'relu',
+        'embedding': {'dim': 4},
+        'filters': [[1, 4], [2, 8], [3, 16], [4, 32], [5, 64]],
+        'max_characters_per_token': 50,
+        'n_characters': 262,
+        'n_highway': 2
+        }
+    }
+    ```
     """
 
     def __init__(self, options_file: str, weight_file: str, requires_grad: bool = False) -> None:
