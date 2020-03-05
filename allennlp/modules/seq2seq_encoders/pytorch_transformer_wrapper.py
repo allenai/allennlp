@@ -1,3 +1,5 @@
+from typing import Optional
+
 from overrides import overrides
 import torch
 from torch import nn
@@ -13,7 +15,7 @@ class PytorchTransformer(Seq2SeqEncoder):
     architecture in [Attention is all you Need]
     (https://www.semanticscholar.org/paper/Attention-Is-All-You-Need-Vaswani-Shazeer/0737da0767d77606169cbf4187b83e1ab62f6077).
 
-    This class adapts the Transformer from torch.nn for use in AllenNLP.
+    This class adapts the Transformer from torch.nn for use in AllenNLP. Optionally, it adds positional encodings.
 
     # Parameters
 
@@ -41,7 +43,8 @@ class PytorchTransformer(Seq2SeqEncoder):
         num_layers: int,
         feedforward_hidden_dim: int = 2048,
         num_attention_heads: int = 8,
-        use_positional_encoding: bool = True,
+        positional_encoding: Optional[str] = "sinusoidal",
+        positional_embedding_size: int = 512,
         dropout_prob: float = 0.1,
         activation: str = "relu",
     ) -> None:
@@ -55,8 +58,19 @@ class PytorchTransformer(Seq2SeqEncoder):
             activation=activation,
         )
         self._transformer = nn.TransformerEncoder(layer, num_layers)
-        self._use_positional_encoding = use_positional_encoding
         self._input_dim = input_dim
+
+        if positional_encoding is None:
+            self._sinusoidal_positional_encoding = False
+            self._positional_embedding = None
+        elif positional_encoding == "sinusoidal":
+            self._sinusoidal_positional_encoding = True
+            self._positional_embedding = None
+        elif positional_encoding == "embedding":
+            self._sinusoidal_positional_encoding = False
+            self._positional_embedding = nn.Embedding(positional_embedding_size, input_dim)
+        else:
+            raise ValueError("positional_encoding must be one of None, 'sinusoidal', or 'embedding'")
 
     @overrides
     def get_input_dim(self) -> int:
@@ -72,11 +86,18 @@ class PytorchTransformer(Seq2SeqEncoder):
 
     @overrides
     def forward(self, inputs: torch.Tensor, mask: torch.BoolTensor):
-        if self._use_positional_encoding:
-            output = add_positional_features(inputs)
-        else:
-            output = inputs
+        output = inputs
+        if self._sinusoidal_positional_encoding:
+            output = add_positional_features(output)
+        if self._positional_embedding is not None:
+            position_ids = torch.arange(inputs.size(1), dtype=torch.long, device=output.device)
+            position_ids = position_ids.unsqueeze(0).expand(inputs.shape[:-1])
+            output = output + self._positional_embedding(position_ids)
 
-        output = self._transformer(output, mask)
+        # For some reason the torch transformer expects the shape (sequence, batch, features), not the more
+        # familiar (batch, sequence, features), so we have to fix it.
+        output = output.permute(1, 0, 2)
+        output = self._transformer(output, src_key_padding_mask=mask)
+        output = output.permute(1, 0, 2)
 
         return output
