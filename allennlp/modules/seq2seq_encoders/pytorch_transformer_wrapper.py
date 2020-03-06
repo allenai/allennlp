@@ -60,6 +60,12 @@ class PytorchTransformer(Seq2SeqEncoder):
         self._transformer = nn.TransformerEncoder(layer, num_layers)
         self._input_dim = input_dim
 
+        # initialize parameters
+        # We do this before the embeddings are initialized so we get the default initialization for the embeddings.
+        for p in self.parameters():
+            if p.dim() > 1:
+                nn.init.xavier_uniform_(p)
+
         if positional_encoding is None:
             self._sinusoidal_positional_encoding = False
             self._positional_embedding = None
