@@ -3,8 +3,6 @@ The `train` subcommand can be used to train a model.
 It requires a configuration file and a directory in
 which to write the results.
 
-.. code-block:: bash
-
    $ allennlp train --help
     usage: allennlp train [-h] -s SERIALIZATION_DIR [-r] [-f] [-o OVERRIDES]
                           [--file-friendly-logging] [--node-rank NODE_RANK]

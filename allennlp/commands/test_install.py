@@ -2,8 +2,6 @@
 The ``test-install`` subcommand verifies
 an installation by running the unit tests.
 
-.. code-block:: bash
-
     $ allennlp test-install --help
     usage: allennlp test-install [-h] [--run-all] [-k K]
                                  [--include-package INCLUDE_PACKAGE]
