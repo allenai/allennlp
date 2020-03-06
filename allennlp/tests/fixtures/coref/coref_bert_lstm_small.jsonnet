@@ -78,7 +78,7 @@ local span_pair_embedding_dim = 3 * span_embedding_dim + feature_size;
   "data_loader": {
       "batch_sampler": {
           "type": "bucket",
-          "sorting_keys": [["text", "tokens___token_ids"]],
+          "sorting_keys": ["text"],
           "batch_size": 1,
           "padding_noise": 0.0
       }

@@ -3,9 +3,7 @@ The ``find-lr`` subcommand can be used to find a good learning rate for a model.
 It requires a configuration file and a directory in
 which to write the results.
 
-.. code-block:: bash
-
-   $ allennlp find-lr --help
+    $ allennlp find-lr --help
     usage: allennlp find-lr [-h] -s SERIALIZATION_DIR [-o OVERRIDES]
                             [--start-lr START_LR] [--end-lr END_LR]
                             [--num-batches NUM_BATCHES]

@@ -49,7 +49,7 @@ local learning_rate = 0.1;
     "iterator": {
         "type": "bucket",
         "batch_size": batch_size,
-        "sorting_keys": [["sentence", "num_tokens"]]
+        "sorting_keys": ["sentence"]
     },
     "trainer": {
         "num_epochs": num_epochs,

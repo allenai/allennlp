@@ -232,14 +232,14 @@ class SemanticRoleLabelerPredictor(Predictor):
         Expects JSON that looks like `{"sentence": "..."}`
         and returns JSON that looks like
 
-        .. code-block:: js
-
-            {"words": [...],
-             "verbs": [
-                {"verb": "...", "description": "...", "tags": [...]},
-                ...
-                {"verb": "...", "description": "...", "tags": [...]},
-            ]}
+        ```
+        {"words": [...],
+         "verbs": [
+            {"verb": "...", "description": "...", "tags": [...]},
+            ...
+            {"verb": "...", "description": "...", "tags": [...]},
+        ]}
+        ```
         """
         instances = self._sentence_to_srl_instances(inputs)
 
