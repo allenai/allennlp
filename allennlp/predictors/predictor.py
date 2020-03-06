@@ -241,6 +241,7 @@ class Predictor(Registrable):
         predictor_name: str = None,
         cuda_device: int = -1,
         dataset_reader_to_load: str = "validation",
+        frozen: bool = False
     ) -> "Predictor":
         """
         Instantiate a `Predictor` from an archive path.
@@ -281,7 +282,7 @@ class Predictor(Registrable):
         archive: Archive,
         predictor_name: str = None,
         dataset_reader_to_load: str = "validation",
-        frozen: bool = True
+        frozen: bool = False
     ) -> "Predictor":
         """
         Instantiate a `Predictor` from an [`Archive`](../models/archival.md);
@@ -310,5 +311,7 @@ class Predictor(Registrable):
         dataset_reader = DatasetReader.from_params(dataset_reader_params)
 
         model = archive.model
+        if frozen:
+            model.eval()
 
-        return predictor_class(model, dataset_reader, frozen=frozen)
+        return predictor_class(model, dataset_reader)
