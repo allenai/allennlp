@@ -128,9 +128,14 @@ class MultiLabelField(Field[torch.Tensor]):
 
     @overrides
     def empty_field(self):
-        return MultiLabelField([], self._label_namespace, skip_indexing=True)
+        return MultiLabelField(
+            [], self._label_namespace, skip_indexing=True, num_labels=self._num_labels
+        )
 
     def __str__(self) -> str:
         return (
             f"MultiLabelField with labels: {self.labels} in namespace: '{self._label_namespace}'.'"
         )
+
+    def __len__(self):
+        return 1

@@ -3,7 +3,7 @@ import math
 import torch
 from torch.nn import Parameter
 from overrides import overrides
-from allennlp.modules.attention.legacy_attention import Attention
+from allennlp.modules.attention.attention import Attention
 from allennlp.nn import util
 from allennlp.nn.activations import Activation
 

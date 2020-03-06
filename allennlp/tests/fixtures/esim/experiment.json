@@ -31,7 +31,7 @@
       "num_layers": 1,
       "bidirectional": true
     },
-    "similarity_function": {"type": "dot_product"},
+    "matrix_attention": {"type": "dot_product"},
     "projection_feedforward": {
       "input_dim": 200,
       "hidden_dims": 25,
@@ -58,27 +58,33 @@
       "hidden_dims": 3,
       "activations": "linear"
     },
-     "initializer": [
-      [".*linear_layers.*weight", {"type": "xavier_uniform"}],
-      [".*linear_layers.*bias", {"type": "zero"}],
-      [".*weight_ih.*", {"type": "xavier_uniform"}],
-      [".*weight_hh.*", {"type": "orthogonal"}],
-      [".*bias_ih.*", {"type": "zero"}],
-      [".*bias_hh.*", {"type": "lstm_hidden_bias"}]
-     ]
+     "initializer": {
+       "regexes": [
+        [".*linear_layers.*weight", {"type": "xavier_uniform"}],
+        [".*linear_layers.*bias", {"type": "zero"}],
+        [".*weight_ih.*", {"type": "xavier_uniform"}],
+        [".*weight_hh.*", {"type": "orthogonal"}],
+        [".*bias_ih.*", {"type": "zero"}],
+        [".*bias_hh.*", {"type": "lstm_hidden_bias"}]
+       ]
+     }
    },
-  "iterator": {
-    "type": "bucket",
-    "batch_size": 32,
-    "padding_noise": 0.0,
-  },
+   "data_loader": {
+    "batch_sampler": {
+        "type": "bucket",
+        "batch_size": 32,
+        "padding_noise": 0.0
+    }
+},
   "trainer": {
     "optimizer": {
         "type": "adam",
         "lr": 0.0004
     },
     "validation_metric": "+accuracy",
-    "num_serialized_models_to_keep": 2,
+    "checkpointer": {
+      "num_serialized_models_to_keep": 2
+    },
     "num_epochs": 5,
     "grad_norm": 10.0,
     "patience": 2,

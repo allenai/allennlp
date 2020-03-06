@@ -86,7 +86,7 @@ def main(
     os.makedirs(output_dir, exist_ok=True)
     with gzip.open(os.path.join(output_dir, "elmo_embeddings.txt.gz"), "wb") as embeddings_file:
         for i, word in enumerate(tokens):
-            string_array = " ".join([str(x) for x in list(embedding_weight[i, :])])
+            string_array = " ".join(str(x) for x in list(embedding_weight[i, :]))
             embeddings_file.write(f"{word} {string_array}\n".encode("utf-8"))
 
     # Write out the new vocab with the <S> and </S> tokens.

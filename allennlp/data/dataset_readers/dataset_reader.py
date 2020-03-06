@@ -1,11 +1,14 @@
-from typing import Iterable, Iterator, Callable
+import itertools
+from typing import Iterable, Iterator, Callable, Optional, List
 import logging
 import os
 import pathlib
 
 import jsonpickle
+from torch.utils.data import Dataset, IterableDataset
 
 from allennlp.data.instance import Instance
+from allennlp.data.vocabulary import Vocabulary
 from allennlp.common import Tqdm, util
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.registrable import Registrable
@@ -13,7 +16,24 @@ from allennlp.common.registrable import Registrable
 logger = logging.getLogger(__name__)
 
 
-class _LazyInstances(Iterable):
+class AllennlpDataset(Dataset):
+    def __init__(self, instances: List[Instance], vocab: Vocabulary = None):
+        self.instances = instances
+        self.vocab = vocab
+
+    def __getitem__(self, idx):
+        if self.vocab is not None:
+            self.instances[idx].index_fields(self.vocab)
+        return self.instances[idx]
+
+    def __len__(self):
+        return len(self.instances)
+
+    def index_with(self, vocab: Vocabulary):
+        self.vocab = vocab
+
+
+class _LazyInstances(IterableDataset):
     """
     An `Iterable` that just wraps a thunk for generating instances and calls it for
     each call to `__iter__`.
@@ -25,25 +45,33 @@ class _LazyInstances(Iterable):
         cache_file: str = None,
         deserialize: Callable[[str], Instance] = None,
         serialize: Callable[[Instance], str] = None,
+        vocab: Vocabulary = None,
     ) -> None:
         super().__init__()
         self.instance_generator = instance_generator
         self.cache_file = cache_file
         self.deserialize = deserialize
         self.serialize = serialize
+        self.vocab = vocab
 
     def __iter__(self) -> Iterator[Instance]:
         # Case 1: Use cached instances
         if self.cache_file is not None and os.path.exists(self.cache_file):
             with open(self.cache_file) as data_file:
                 for line in data_file:
-                    yield self.deserialize(line)
+                    instance = self.deserialize(line)
+                    if self.vocab is not None:
+                        instance.index_fields(self.vocab)
+                    yield instance
+
         # Case 2: Need to cache instances
         elif self.cache_file is not None:
             with open(self.cache_file, "w") as data_file:
                 for instance in self.instance_generator():
                     data_file.write(self.serialize(instance))
                     data_file.write("\n")
+                    if self.vocab is not None:
+                        instance.index_fields(self.vocab)
                     yield instance
         # Case 3: No cache
         else:
@@ -52,7 +80,22 @@ class _LazyInstances(Iterable):
                 raise ConfigurationError(
                     "For a lazy dataset reader, _read() must return a generator"
                 )
-            yield from instances
+            for instance in instances:
+                if self.vocab is not None:
+                    instance.index_fields(self.vocab)
+                yield instance
+
+    def index_with(self, vocab: Vocabulary):
+        self.vocab = vocab
+
+    def __len__(self):
+        """
+        We rely in a couple of places that calling len on the dataloader
+        (which in turn calls len on the dataset) doesn't raise an error.
+        In the case that you have an IterableDataset and you call len, the pytorch dataloader
+        actually spits out a warning - but we need actually calling it to not crash.
+        """
+        return 1
 
 
 class DatasetReader(Registrable):
@@ -77,6 +120,8 @@ class DatasetReader(Registrable):
         we read the `Instances` from the cache instead of re-processing the data (using
         :func:`_instances_from_cache_file`).  If the cache file does _not_ exist, we will _create_
         it on our first pass through the data (using :func:`_instances_to_cache_file`).
+    max_instances : `int`, optional (default=None)
+        If given, will stop reading after this many instances. This is a useful setting for debugging.
 
         IMPORTANT CAVEAT: It is the _caller's_ responsibility to make sure that this directory is
         unique for any combination of code and parameters that you use.  That is, if you pass a
@@ -84,15 +129,21 @@ class DatasetReader(Registrable):
         parameters you set for this DatasetReader!_
     """
 
-    def __init__(self, lazy: bool = False, cache_directory: str = None) -> None:
+    def __init__(
+        self,
+        lazy: bool = False,
+        cache_directory: Optional[str] = None,
+        max_instances: Optional[int] = None,
+    ) -> None:
         self.lazy = lazy
+        self.max_instances = max_instances
         if cache_directory:
             self._cache_directory = pathlib.Path(cache_directory)
             os.makedirs(self._cache_directory, exist_ok=True)
         else:
             self._cache_directory = None
 
-    def read(self, file_path: str) -> Iterable[Instance]:
+    def read(self, file_path: str) -> Dataset:
         """
         Returns an `Iterable` containing all the instances
         in the specified dataset.
@@ -124,18 +175,26 @@ class DatasetReader(Registrable):
             cache_file = None
 
         if lazy:
-            return _LazyInstances(
+            instances: Iterable[Instance] = _LazyInstances(
                 lambda: self._read(file_path),
                 cache_file,
                 self.deserialize_instance,
                 self.serialize_instance,
             )
+            if self.max_instances is not None:
+                instances = itertools.islice(instances, 0, self.max_instances)
         else:
             # First we read the instances, either from a cache or from the original file.
             if cache_file and os.path.exists(cache_file):
                 instances = self._instances_from_cache_file(cache_file)
             else:
                 instances = self._read(file_path)
+
+            if self.max_instances is not None:
+                if isinstance(instances, list):
+                    instances = instances[: self.max_instances]
+                else:
+                    instances = itertools.islice(instances, 0, self.max_instances)
 
             # Then some validation.
             if not isinstance(instances, list):
@@ -151,7 +210,9 @@ class DatasetReader(Registrable):
                 logger.info(f"Caching instances to {cache_file}")
                 self._instances_to_cache_file(cache_file, instances)
 
-            return instances
+            instances = AllennlpDataset(instances)
+
+        return instances
 
     def _get_cache_location_for_file_path(self, file_path: str) -> str:
         return str(self._cache_directory / util.flatten_filename(str(file_path)))

@@ -1,4 +1,4 @@
-from typing import Dict, Optional, Union
+from typing import Dict, Union
 
 import numpy
 from overrides import overrides
@@ -10,7 +10,7 @@ from allennlp.common.checks import check_dimensions_match, ConfigurationError
 from allennlp.data import TextFieldTensors, Vocabulary
 from allennlp.modules import Elmo, FeedForward, Maxout, Seq2SeqEncoder, TextFieldEmbedder
 from allennlp.models.model import Model
-from allennlp.nn import InitializerApplicator, RegularizerApplicator
+from allennlp.nn import InitializerApplicator
 from allennlp.nn import util
 from allennlp.training.metrics import CategoricalAccuracy
 
@@ -66,8 +66,6 @@ class BiattentiveClassificationNetwork(Model):
         If true, concatenate pretrained ELMo representations to the integrator output.
     initializer : `InitializerApplicator`, optional (default=`InitializerApplicator()`)
         Used to initialize the model parameters.
-    regularizer : `RegularizerApplicator`, optional (default=`None`)
-        If provided, will be used to calculate the regularization penalty during training.
     """
 
     def __init__(
@@ -84,9 +82,9 @@ class BiattentiveClassificationNetwork(Model):
         use_input_elmo: bool = False,
         use_integrator_output_elmo: bool = False,
         initializer: InitializerApplicator = InitializerApplicator(),
-        regularizer: Optional[RegularizerApplicator] = None,
+        **kwargs,
     ) -> None:
-        super().__init__(vocab, regularizer)
+        super().__init__(vocab, **kwargs)
 
         self._text_field_embedder = text_field_embedder
         if "elmo" in self._text_field_embedder._token_embedders.keys():
@@ -224,7 +222,7 @@ class BiattentiveClassificationNetwork(Model):
         loss : torch.FloatTensor, optional
             A scalar loss to be optimised.
         """
-        text_mask = util.get_text_field_mask(tokens).float()
+        text_mask = util.get_text_field_mask(tokens)
         # Pop elmo tokens, since elmo embedder should not be present.
         elmo_tokens = tokens.pop("elmo", None)
         if tokens:
@@ -314,7 +312,9 @@ class BiattentiveClassificationNetwork(Model):
         return output_dict
 
     @overrides
-    def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+    def make_output_human_readable(
+        self, output_dict: Dict[str, torch.Tensor]
+    ) -> Dict[str, torch.Tensor]:
         """
         Does a simple argmax over the class probabilities, converts indices to string labels, and
         adds a `"label"` key to the dictionary with the result.

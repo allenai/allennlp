@@ -1,7 +1,9 @@
 import gc
-
 import time
 
+from flaky import flaky
+
+from allennlp.common import Params
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.tokenizers import PretrainedTransformerTokenizer
 
@@ -185,9 +187,12 @@ class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
         assert idxs == expected_idxs
 
     def test_token_idx_wikipedia(self):
-        # This will produce lots of problems with the index calculation. We check whether it catches back up at the
-        # end.
-        sentence = "Tokyo (東京 Tōkyō, English: /ˈtoʊkioʊ/,[7] Japanese: [toːkʲoː]), officially Tokyo Metropolis (東京都 Tōkyō-to), is one of the 47 prefectures of Japan."
+        # This will produce lots of problems with the index calculation.
+        # We check whether it catches back up at the end.
+        sentence = (
+            "Tokyo (東京 Tōkyō, English: /ˈtoʊkioʊ/,[7] Japanese: [toːkʲoː]), officially "
+            "Tokyo Metropolis (東京都 Tōkyō-to), is one of the 47 prefectures of Japan."
+        )
         for tokenizer_name in ["roberta-base", "bert-base-uncased", "bert-base-cased"]:
             tokenizer = PretrainedTransformerTokenizer(
                 tokenizer_name, calculate_character_offsets=True
@@ -196,6 +201,7 @@ class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
             assert tokenized[-2].text == "."
             assert tokenized[-2].idx == len(sentence) - 1
 
+    @flaky(max_runs=3)  # This test relies on elapsed wall time, so it's inherently flaky.
     def test_token_idx_performance(self):
         text = """
             Tokyo (東京 Tōkyō, English: /ˈtoʊkioʊ/,[7] Japanese: [toːkʲoː]), officially Tokyo Metropolis (東京都
@@ -302,4 +308,130 @@ class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
         assert (
             idxs[first_sentence_end_index] + len(tokens[first_sentence_end_index])
             == idxs[second_sentence_start_index]
+        )
+
+    def test_intra_word_tokenize(self):
+        tokenizer = PretrainedTransformerTokenizer("bert-base-cased")
+
+        sentence = "A, [MASK] AllenNLP sentence.".split(" ")
+        expected_tokens = [
+            "[CLS]",
+            "A",
+            ",",
+            "[MASK]",
+            "Allen",
+            "##NL",
+            "##P",
+            "sentence",
+            ".",
+            "[SEP]",
+        ]
+        expected_offsets = [(1, 2), (3, 3), (4, 6), (7, 8)]
+        tokens, offsets = tokenizer.intra_word_tokenize(sentence)
+        tokens = [t.text for t in tokens]
+        assert tokens == expected_tokens
+        assert offsets == expected_offsets
+
+        # sentence pair
+        sentence_1 = "A, [MASK] AllenNLP sentence.".split(" ")
+        sentence_2 = "A sentence.".split(" ")
+        expected_tokens = [
+            "[CLS]",
+            "A",
+            ",",
+            "[MASK]",
+            "Allen",
+            "##NL",
+            "##P",
+            "sentence",
+            ".",
+            "[SEP]",
+            "A",
+            "sentence",
+            ".",
+            "[SEP]",
+        ]
+        expected_offsets_a = [(1, 2), (3, 3), (4, 6), (7, 8)]
+        expected_offsets_b = [(10, 10), (11, 12)]
+        tokens, offsets_a, offsets_b = tokenizer.intra_word_tokenize_sentence_pair(
+            sentence_1, sentence_2
+        )
+        tokens = [t.text for t in tokens]
+        assert tokens == expected_tokens
+        assert offsets_a == expected_offsets_a
+        assert offsets_b == expected_offsets_b
+
+    def test_intra_word_tokenize_whitespaces(self):
+        tokenizer = PretrainedTransformerTokenizer("bert-base-cased")
+
+        sentence = ["A,", " ", "[MASK]", "AllenNLP", "\u007f", "sentence."]
+        expected_tokens = [
+            "[CLS]",
+            "A",
+            ",",
+            "[UNK]",
+            "[MASK]",
+            "Allen",
+            "##NL",
+            "##P",
+            "[UNK]",
+            "sentence",
+            ".",
+            "[SEP]",
+        ]
+        expected_offsets = [(1, 2), (3, 3), (4, 4), (5, 7), (8, 8), (9, 10)]
+        tokens, offsets = tokenizer.intra_word_tokenize(sentence)
+        tokens = [t.text for t in tokens]
+        assert tokens == expected_tokens
+        assert offsets == expected_offsets
+
+    def test_determine_num_special_tokens_added(self):
+        tokenizer = PretrainedTransformerTokenizer("bert-base-cased")
+        assert tokenizer._determine_num_special_tokens_added() == (1, 1, 1)
+        tokenizer = PretrainedTransformerTokenizer("xlnet-base-cased")
+        assert tokenizer._determine_num_special_tokens_added() == (0, 1, 2)
+
+    def test_tokenizer_kwargs_forced_lowercase(self):
+        text = "Hello there! General Kenobi."
+        forced_lowercase_tokenizer = PretrainedTransformerTokenizer(
+            "bert-base-cased", tokenizer_kwargs={"do_lower_case": True}
+        )
+        assert forced_lowercase_tokenizer._tokenizer_lowercases
+        tokenized = [token.text for token in forced_lowercase_tokenizer.tokenize(text)]
+        lowercase_tokens = [
+            "[CLS]",
+            "hello",
+            "there",
+            "!",
+            "general",
+            "k",
+            "##eno",
+            "##bi",
+            ".",
+            "[SEP]",
+        ]
+        assert tokenized == lowercase_tokens
+
+    def test_tokenizer_kwargs_default(self):
+        text = "Hello there! General Kenobi."
+        tokenizer = PretrainedTransformerTokenizer("bert-base-cased")
+        original_tokens = [
+            "[CLS]",
+            "Hello",
+            "there",
+            "!",
+            "General",
+            "Ken",
+            "##ob",
+            "##i",
+            ".",
+            "[SEP]",
+        ]
+        assert not tokenizer._tokenizer_lowercases
+        tokenized = [token.text for token in tokenizer.tokenize(text)]
+        assert tokenized == original_tokens
+
+    def test_from_params_kwargs(self):
+        PretrainedTransformerTokenizer.from_params(
+            Params({"model_name": "bert-base-uncased", "tokenizer_kwargs": {"do_lower_case": True}})
         )

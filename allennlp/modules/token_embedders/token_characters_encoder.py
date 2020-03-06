@@ -10,7 +10,7 @@ from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
 class TokenCharactersEncoder(TokenEmbedder):
     """
     A `TokenCharactersEncoder` takes the output of a
-    :class:`~allennlp.data.token_indexers.TokenCharactersIndexer`, which is a tensor of shape
+    [`TokenCharactersIndexer`](../../data/token_indexers/token_characters_indexer.md), which is a tensor of shape
     (batch_size, num_tokens, num_characters), embeds the characters, runs a token-level encoder, and
     returns the result, which is a tensor of shape (batch_size, num_tokens, encoding_dim).  We also
     optionally apply dropout after the token-level encoder.

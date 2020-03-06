@@ -6,7 +6,7 @@ import torch
 from allennlp.data import TextFieldTensors, Vocabulary
 from allennlp.models.model import Model
 from allennlp.modules import FeedForward, Seq2SeqEncoder, Seq2VecEncoder, TextFieldEmbedder
-from allennlp.nn import InitializerApplicator, RegularizerApplicator
+from allennlp.nn import InitializerApplicator
 from allennlp.nn.util import get_text_field_mask
 from allennlp.training.metrics import CategoricalAccuracy
 
@@ -43,8 +43,6 @@ class BasicClassifier(Model):
         Vocabulary namespace corresponding to labels. By default, we use the "labels" namespace.
     initializer : `InitializerApplicator`, optional (default=`InitializerApplicator()`)
         If provided, will be used to initialize the model parameters.
-    regularizer : `RegularizerApplicator`, optional (default=`None`)
-        If provided, will be used to calculate the regularization penalty during training.
     """
 
     def __init__(
@@ -58,10 +56,10 @@ class BasicClassifier(Model):
         num_labels: int = None,
         label_namespace: str = "labels",
         initializer: InitializerApplicator = InitializerApplicator(),
-        regularizer: Optional[RegularizerApplicator] = None,
+        **kwargs,
     ) -> None:
 
-        super().__init__(vocab, regularizer)
+        super().__init__(vocab, **kwargs)
         self._text_field_embedder = text_field_embedder
 
         if seq2seq_encoder:
@@ -117,7 +115,7 @@ class BasicClassifier(Model):
             A scalar loss to be optimised.
         """
         embedded_text = self._text_field_embedder(tokens)
-        mask = get_text_field_mask(tokens).float()
+        mask = get_text_field_mask(tokens)
 
         if self._seq2seq_encoder:
             embedded_text = self._seq2seq_encoder(embedded_text, mask=mask)
@@ -143,7 +141,9 @@ class BasicClassifier(Model):
         return output_dict
 
     @overrides
-    def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+    def make_output_human_readable(
+        self, output_dict: Dict[str, torch.Tensor]
+    ) -> Dict[str, torch.Tensor]:
         """
         Does a simple argmax over the probabilities, converts index to string label, and
         add `"label"` key to the dictionary with the result.

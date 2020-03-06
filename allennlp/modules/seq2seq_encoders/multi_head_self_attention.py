@@ -84,13 +84,13 @@ class MultiHeadSelfAttention(Seq2SeqEncoder):
         return False
 
     @overrides
-    def forward(self, inputs: torch.Tensor, mask: torch.LongTensor = None) -> torch.FloatTensor:
+    def forward(self, inputs: torch.Tensor, mask: torch.BoolTensor = None) -> torch.FloatTensor:
         """
         # Parameters
 
         inputs : `torch.FloatTensor`, required.
             A tensor of shape (batch_size, timesteps, input_dim)
-        mask : `torch.FloatTensor`, optional (default = None).
+        mask : `torch.BoolTensor`, optional (default = None).
             A tensor of shape (batch_size, timesteps).
 
         # Returns
@@ -102,7 +102,7 @@ class MultiHeadSelfAttention(Seq2SeqEncoder):
 
         batch_size, timesteps, _ = inputs.size()
         if mask is None:
-            mask = inputs.new_ones(batch_size, timesteps)
+            mask = inputs.new_ones(batch_size, timesteps).bool()
 
         # Shape (batch_size, timesteps, 2 * attention_dim + values_dim)
         combined_projection = self._combined_projection(inputs)

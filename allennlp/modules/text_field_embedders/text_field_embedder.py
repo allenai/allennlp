@@ -7,17 +7,17 @@ from allennlp.data import TextFieldTensors
 class TextFieldEmbedder(torch.nn.Module, Registrable):
     """
     A `TextFieldEmbedder` is a `Module` that takes as input the
-    :class:`~allennlp.data.DataArray` produced by a :class:`~allennlp.data.fields.TextField` and
+    [`DataArray`](../../data/fields/text_field.md) produced by a [`TextField`](../../data/fields/text_field.md) and
     returns as output an embedded representation of the tokens in that field.
 
     The `DataArrays` produced by `TextFields` are _dictionaries_ with named representations, like
     "words" and "characters".  When you create a `TextField`, you pass in a dictionary of
-    :class:`~allennlp.data.TokenIndexer` objects, telling the field how exactly the tokens in the
-    field should be represented.  This class changes the type signature of `Module.forward`,
+    [`TokenIndexer`](../../data/token_indexers/token_indexer.md) objects, telling the field how exactly the
+    tokens in the field should be represented.  This class changes the type signature of `Module.forward`,
     restricting `TextFieldEmbedders` to take inputs corresponding to a single `TextField`, which is
     a dictionary of tensors with the same names as were passed to the `TextField`.
 
-    We also add a method to the basic `Module` API: :func:`get_output_dim()`.  You might need this
+    We also add a method to the basic `Module` API: `get_output_dim()`.  You might need this
     if you want to construct a `Linear` layer using the output of this embedder, for instance.
     """
 

@@ -1,9 +1,9 @@
-from typing import Dict, Optional, List, Set, Tuple, Union
+from typing import Dict, Iterable, List, Mapping, Optional, Set, Tuple, Union
 
 import pytest
 import torch
 
-from allennlp.common import Params
+from allennlp.common import Lazy, Params
 from allennlp.common.from_params import FromParams, takes_arg, remove_optional, create_kwargs
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import DatasetReader, Tokenizer
@@ -230,8 +230,8 @@ class TestFromParams(AllenNlpTestCase):
         assert len(d.arg1) == len(vals)
         assert isinstance(d.arg1, list)
         assert isinstance(d.arg1[0], A)
-        assert all([x.b == y for x, y in zip(d.arg1, vals)])
-        assert all([x.a == tval1 for x in d.arg1])
+        assert all(x.b == y for x, y in zip(d.arg1, vals))
+        assert all(x.a == tval1 for x in d.arg1)
 
         # Tests for Tuple
         assert isinstance(d.arg2, tuple)
@@ -276,12 +276,6 @@ class TestFromParams(AllenNlpTestCase):
                 # this test we'll ignore that.
                 self.b = b
 
-        class C(FromParams):
-            def __init__(self, c: Union[A, B, Dict[str, A]]) -> None:
-                # Really you would want to be sure that `self.c` has a consistent type, but for
-                # this test we'll ignore that.
-                self.c = c
-
         params = Params({"a": 3})
         a = A.from_params(params)
         assert a.a == 3
@@ -301,6 +295,23 @@ class TestFromParams(AllenNlpTestCase):
         assert b.b[0].a == 3
         assert b.b[1].a == [4, 5]
 
+    def test_crazy_nested_union(self):
+        class A(FromParams):
+            def __init__(self, a: Union[int, List[int]]) -> None:
+                self.a = a
+
+        class B(FromParams):
+            def __init__(self, b: Union[A, List[A]]) -> None:
+                # Really you would want to be sure that `self.b` has a consistent type, but for
+                # this test we'll ignore that.
+                self.b = b
+
+        class C(FromParams):
+            def __init__(self, c: Union[A, B, Dict[str, A]]) -> None:
+                # Really you would want to be sure that `self.c` has a consistent type, but for
+                # this test we'll ignore that.
+                self.c = c
+
         # This is a contrived, ugly example (why would you want to duplicate names in a nested
         # structure like this??), but it demonstrates a potential bug when dealing with mutatable
         # parameters.  If you're not careful about keeping the parameters un-mutated in two
@@ -310,6 +321,34 @@ class TestFromParams(AllenNlpTestCase):
         assert isinstance(c.c, dict)
         assert c.c["a"].a == 3
         assert c.c["b"].a == [4, 5]
+
+    def test_union_of_castable_types(self):
+        class IntFloat(FromParams):
+            def __init__(self, a: Union[int, float]) -> None:
+                self.a = a
+
+        class FloatInt(FromParams):
+            def __init__(self, a: Union[float, int]) -> None:
+                self.a = a
+
+        float_param_str = '{"a": 1.0}'
+        int_param_str = '{"a": 1}'
+        import json
+
+        for expected_type, param_str in [(int, int_param_str), (float, float_param_str)]:
+            for cls in [IntFloat, FloatInt]:
+                c = cls.from_params(Params(json.loads(param_str)))
+                assert type(c.a) == expected_type
+
+    def test_invalid_type_conversions(self):
+        class A(FromParams):
+            def __init__(self, a: int) -> None:
+                self.a = a
+
+        with pytest.raises(TypeError):
+            A.from_params(Params({"a": "1"}))
+        with pytest.raises(TypeError):
+            A.from_params(Params({"a": 1.0}))
 
     def test_dict(self):
 
@@ -553,3 +592,156 @@ class TestFromParams(AllenNlpTestCase):
         reader = DatasetReader.from_params(params)
         assert reader.lazy is True
         assert str(reader._cache_directory) == "tmp"
+
+    def test_only_infer_superclass_params_if_unknown(self):
+
+        from allennlp.common.registrable import Registrable
+
+        class BaseClass(Registrable):
+            def __init__(self):
+                self.x = None
+                self.a = None
+                self.rest = None
+
+        @BaseClass.register("a")
+        class A(BaseClass):
+            def __init__(self, a: int, x: int, **kwargs):
+                super().__init__()
+                self.x = x
+                self.a = a
+                self.rest = kwargs
+
+        @BaseClass.register("b")
+        class B(A):
+            def __init__(self, a: str, x: int = 42, **kwargs):
+                super().__init__(x=x, a=-1, raw_a=a, **kwargs)
+
+        params = Params({"type": "b", "a": "123"})
+        # The param `x` should not be required as it has default value in `B`
+        # The correct type of the param `a` should be inferred from `B` as well.
+        instance = BaseClass.from_params(params)
+        assert instance.x == 42
+        assert instance.a == -1
+        assert len(instance.rest) == 1
+        assert type(instance.rest["raw_a"]) == str
+        assert instance.rest["raw_a"] == "123"
+
+    def test_kwargs_are_passed_to_deeper_superclasses(self):
+
+        from allennlp.common.registrable import Registrable
+
+        class BaseClass(Registrable):
+            def __init__(self):
+                self.a = None
+                self.b = None
+                self.c = None
+
+        @BaseClass.register("a")
+        class A(BaseClass):
+            def __init__(self, a: str):
+                super().__init__()
+                self.a = a
+
+        @BaseClass.register("b")
+        class B(A):
+            def __init__(self, b: str, **kwargs):
+                super().__init__(**kwargs)
+                self.b = b
+
+        @BaseClass.register("c")
+        class C(B):
+            def __init__(self, c, **kwargs):
+                super().__init__(**kwargs)
+                self.c = c
+
+        params = Params({"type": "c", "a": "a_value", "b": "b_value", "c": "c_value"})
+
+        instance = BaseClass.from_params(params)
+        assert instance.a == "a_value"
+        assert instance.b == "b_value"
+        assert instance.c == "c_value"
+
+    def test_lazy_construction_can_happen_multiple_times(self):
+        test_string = "this is a test"
+        extra_string = "extra string"
+
+        class ConstructedObject(FromParams):
+            def __init__(self, string: str, extra: str):
+                self.string = string
+                self.extra = extra
+
+        class Testing(FromParams):
+            def __init__(self, lazy_object: Lazy[ConstructedObject]):
+                first_time = lazy_object.construct(extra=extra_string)
+                second_time = lazy_object.construct(extra=extra_string)
+                assert first_time.string == test_string
+                assert first_time.extra == extra_string
+                assert second_time.string == test_string
+                assert second_time.extra == extra_string
+
+        Testing.from_params(Params({"lazy_object": {"string": test_string}}))
+
+    def test_iterable(self):
+        from allennlp.common.registrable import Registrable
+
+        class A(Registrable):
+            pass
+
+        @A.register("b")
+        class B(A):
+            def __init__(self, size: int) -> None:
+                self.size = size
+
+        class C(Registrable):
+            pass
+
+        @C.register("d")
+        class D(C):
+            def __init__(self, items: Iterable[A]) -> None:
+                self.items = items
+
+        params = Params(
+            {"type": "d", "items": [{"type": "b", "size": 1}, {"type": "b", "size": 2}]}
+        )
+        d = C.from_params(params)
+
+        assert isinstance(d.items, Iterable)
+        items = list(d.items)
+        assert len(items) == 2
+        assert all(isinstance(item, B) for item in items)
+        assert items[0].size == 1
+        assert items[1].size == 2
+
+    def test_mapping(self):
+        from allennlp.common.registrable import Registrable
+
+        class A(Registrable):
+            pass
+
+        @A.register("b")
+        class B(A):
+            def __init__(self, size: int) -> None:
+                self.size = size
+
+        class C(Registrable):
+            pass
+
+        @C.register("d")
+        class D(C):
+            def __init__(self, items: Mapping[str, A]) -> None:
+                self.items = items
+
+        params = Params(
+            {
+                "type": "d",
+                "items": {"first": {"type": "b", "size": 1}, "second": {"type": "b", "size": 2}},
+            }
+        )
+        d = C.from_params(params)
+
+        assert isinstance(d.items, Mapping)
+        assert len(d.items) == 2
+        assert all(isinstance(key, str) for key in d.items.keys())
+        assert all(isinstance(value, B) for value in d.items.values())
+        assert d.items["first"].size == 1
+        assert d.items["second"].size == 2

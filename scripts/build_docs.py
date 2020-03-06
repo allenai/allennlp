@@ -6,7 +6,14 @@ from subprocess import check_output
 from ruamel.yaml import YAML
 
 
-exclude_files = [".DS_Store", "__init__.py", "__init__.pyc", "README.md", "version.py", "run.py"]
+exclude_files = [
+    ".DS_Store",
+    "__init__.py",
+    "__init__.pyc",
+    "README.md",
+    "version.py",
+    "__main__.py",
+]
 
 
 def render_file(relative_src_path: str, src_file: str, to_file: str, modifier="++") -> None:
@@ -24,7 +31,7 @@ def render_file(relative_src_path: str, src_file: str, to_file: str, modifier="+
     else:
         namespace = f"allennlp.{relative_src_namespace}.{src_base}{modifier}"
 
-    args = ["pydocmd", "simple", namespace]
+    args = ["mathy_pydoc", namespace]
     call_result = check_output(args, env=os.environ).decode("utf-8")
     with open(to_file, "w") as f:
         f.write(call_result)
@@ -32,7 +39,7 @@ def render_file(relative_src_path: str, src_file: str, to_file: str, modifier="+
     print(f"Built docs for {src_file}: {to_file}")
 
 
-def build_docs_for_file(relative_path: str, file_name: str, docs_dir: str,) -> Dict[str, str]:
+def build_docs_for_file(relative_path: str, file_name: str, docs_dir: str) -> Dict[str, str]:
     """
     Build docs for an individual python file.
     """
@@ -69,6 +76,7 @@ def build_docs(root_path: str, docs_dir: str):
             nav_subsection = build_docs(relative_path, docs_dir)
             if not nav_subsection:
                 continue
+            nav_subsection.sort(key=lambda x: list(x)[0], reverse=False)
             nav_root.append({child: nav_subsection})
 
         else:

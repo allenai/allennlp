@@ -14,10 +14,11 @@ from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
 @TextFieldEmbedder.register("basic")
 class BasicTextFieldEmbedder(TextFieldEmbedder):
     """
-    This is a `TextFieldEmbedder` that wraps a collection of :class:`TokenEmbedder` objects.  Each
+    This is a `TextFieldEmbedder` that wraps a collection of
+    [`TokenEmbedder`](../token_embedders/token_embedder.md) objects.  Each
     `TokenEmbedder` embeds or encodes the representation output from one
-    :class:`~allennlp.data.TokenIndexer`.  As the data produced by a
-    :class:`~allennlp.data.fields.TextField` is a dictionary mapping names to these
+    [`allennlp.data.TokenIndexer`](../../data/token_indexers/token_indexer.md). As the data produced by a
+    [`allennlp.data.fields.TextField`](../../data/fields/text_field.md) is a dictionary mapping names to these
     representations, we take `TokenEmbedders` with corresponding names.  Each `TokenEmbedders`
     embeds its input, and the result is concatenated in an arbitrary (but consistent) order.
 

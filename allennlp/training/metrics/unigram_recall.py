@@ -25,7 +25,7 @@ class UnigramRecall(Metric):
         self,
         predictions: torch.Tensor,
         gold_labels: torch.Tensor,
-        mask: Optional[torch.Tensor] = None,
+        mask: Optional[torch.BoolTensor] = None,
         end_index: int = sys.maxsize,
     ):
         """
@@ -35,10 +35,10 @@ class UnigramRecall(Metric):
             A tensor of predictions of shape (batch_size, k, sequence_length).
         gold_labels : `torch.Tensor`, required.
             A tensor of integer class label of shape (batch_size, sequence_length).
-        mask : `torch.Tensor`, optional (default = None).
+        mask : `torch.BoolTensor`, optional (default = None).
             A masking tensor the same size as `gold_labels`.
         """
-        predictions, gold_labels, mask = self.unwrap_to_tensors(predictions, gold_labels, mask)
+        predictions, gold_labels, mask = self.detach_tensors(predictions, gold_labels, mask)
 
         # Some sanity checks.
         if gold_labels.dim() != predictions.dim() - 1:
@@ -71,8 +71,8 @@ class UnigramRecall(Metric):
                     # word is from cleaned gold which doesn't have 0 or
                     # end_index, so we don't need to explicitly remove those
                     # from beam.
-                    if stillsearch and (word in beam):
-                        retval += 1.0 / float(len(cleaned_gold))
+                    if stillsearch and word in beam:
+                        retval += 1 / len(cleaned_gold)
                         stillsearch = False
             correct += retval
 
@@ -85,7 +85,7 @@ class UnigramRecall(Metric):
 
         The accumulated recall.
         """
-        recall = float(self.correct_count) / float(self.total_count) if self.total_count > 0 else 0
+        recall = self.correct_count / self.total_count if self.total_count > 0 else 0
         if reset:
             self.reset()
         return recall

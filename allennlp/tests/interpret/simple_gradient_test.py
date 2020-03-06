@@ -1,9 +1,11 @@
 from pytest import approx
+
 from allennlp.common.testing import AllenNlpTestCase
+from allennlp.interpret.saliency_interpreters import SimpleGradient
 from allennlp.models.archival import load_archive
 from allennlp.predictors import Predictor
-from allennlp.interpret.saliency_interpreters import SimpleGradient
-from ..modules.language_model_heads.linear import LinearLanguageModelHead
+
+from ..modules.language_model_heads.linear import LinearLanguageModelHead  # noqa: F401
 
 
 class TestSimpleGradient(AllenNlpTestCase):

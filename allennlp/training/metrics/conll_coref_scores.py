@@ -29,9 +29,8 @@ class ConllCorefScores(Metric):
             (start, end) indices for all spans kept after span pruning in the model.
             Expected shape: (batch_size, num_spans, 2)
         antecedent_indices : `torch.Tensor`
-            For each span, the indices of all allowed antecedents for that span.  This is
-            independent of the batch dimension, as it's just based on order in the document.
-            Expected shape: (num_spans, num_antecedents)
+            For each span, the indices of all allowed antecedents for that span.
+            Expected shape: (batch_size, num_spans, num_antecedents)
         predicted_antecedents : `torch.Tensor`
             For each span, this contains the index (into antecedent_indices) of the most likely
             antecedent for that span.
@@ -40,13 +39,19 @@ class ConllCorefScores(Metric):
             A metadata dictionary for each instance in the batch.  We use the "clusters" key from
             this dictionary, which has the annotated gold coreference clusters for that instance.
         """
-        top_spans, antecedent_indices, predicted_antecedents = self.unwrap_to_tensors(
+        top_spans, antecedent_indices, predicted_antecedents = self.detach_tensors(
             top_spans, antecedent_indices, predicted_antecedents
         )
+
+        # They need to be in CPU because Scorer.ceafe uses a SciPy function.
+        top_spans = top_spans.cpu()
+        antecedent_indices = antecedent_indices.cpu()
+        predicted_antecedents = predicted_antecedents.cpu()
+
         for i, metadata in enumerate(metadata_list):
             gold_clusters, mention_to_gold = self.get_gold_clusters(metadata["clusters"])
             predicted_clusters, mention_to_predicted = self.get_predicted_clusters(
-                top_spans[i], antecedent_indices, predicted_antecedents[i]
+                top_spans[i], antecedent_indices[i], predicted_antecedents[i]
             )
             for scorer in self.scorers:
                 scorer.update(
@@ -78,17 +83,12 @@ class ConllCorefScores(Metric):
 
     @staticmethod
     def get_predicted_clusters(
-        top_spans: torch.Tensor,
-        antecedent_indices: torch.Tensor,
-        predicted_antecedents: torch.Tensor,
+        top_spans: torch.Tensor,  # (num_spans, 2)
+        antecedent_indices: torch.Tensor,  # (num_spans, num_antecedents)
+        predicted_antecedents: torch.Tensor,  # (num_spans,)
     ) -> Tuple[
         List[Tuple[Tuple[int, int], ...]], Dict[Tuple[int, int], Tuple[Tuple[int, int], ...]]
     ]:
-        # Pytorch 0.4 introduced scalar tensors, so our calls to tuple() and such below don't
-        # actually give ints unless we convert to numpy first.  So we do that here.
-        top_spans = top_spans.numpy()  # (num_spans, 2)
-        antecedent_indices = antecedent_indices.numpy()  # (num_spans, num_antecedents)
-        predicted_antecedents = predicted_antecedents.numpy()  # (num_spans,)
 
         predicted_clusters_to_ids: Dict[Tuple[int, int], int] = {}
         clusters: List[List[Tuple[int, int]]] = []
@@ -100,7 +100,9 @@ class ConllCorefScores(Metric):
             predicted_index = antecedent_indices[i, predicted_antecedent]
             # Must be a previous span.
             assert i > predicted_index
-            antecedent_span: Tuple[int, int] = tuple(top_spans[predicted_index])  # type: ignore
+            antecedent_span: Tuple[int, int] = tuple(  # type: ignore
+                top_spans[predicted_index].tolist()
+            )
 
             # Check if we've seen the span before.
             if antecedent_span in predicted_clusters_to_ids.keys():
@@ -111,7 +113,7 @@ class ConllCorefScores(Metric):
                 clusters.append([antecedent_span])
                 predicted_clusters_to_ids[antecedent_span] = predicted_cluster_id
 
-            mention: Tuple[int, int] = tuple(top_spans[i])  # type: ignore
+            mention: Tuple[int, int] = tuple(top_spans[i].tolist())  # type: ignore
             clusters[predicted_cluster_id].append(mention)
             predicted_clusters_to_ids[mention] = predicted_cluster_id
 
@@ -150,29 +152,21 @@ class Scorer:
         self.recall_denominator += r_den
 
     def get_f1(self):
-        precision = (
-            0
-            if self.precision_denominator == 0
-            else self.precision_numerator / float(self.precision_denominator)
-        )
-        recall = (
-            0
-            if self.recall_denominator == 0
-            else self.recall_numerator / float(self.recall_denominator)
-        )
+        precision = self.get_precision()
+        recall = self.get_recall()
         return 0 if precision + recall == 0 else 2 * precision * recall / (precision + recall)
 
     def get_recall(self):
-        if self.recall_numerator == 0:
+        if self.recall_denominator == 0:
             return 0
         else:
-            return self.recall_numerator / float(self.recall_denominator)
+            return self.recall_numerator / self.recall_denominator
 
     def get_precision(self):
-        if self.precision_numerator == 0:
+        if self.precision_denominator == 0:
             return 0
         else:
-            return self.precision_numerator / float(self.precision_denominator)
+            return self.precision_numerator / self.precision_denominator
 
     def get_prf(self):
         return self.get_precision(), self.get_recall(), self.get_f1()
@@ -228,13 +222,13 @@ class Scorer:
         return (
             2
             * len([mention for mention in gold_clustering if mention in predicted_clustering])
-            / float(len(gold_clustering) + len(predicted_clustering))
+            / (len(gold_clustering) + len(predicted_clustering))
         )
 
     @staticmethod
     def ceafe(clusters, gold_clusters):
         """
-        Computes the  Constrained EntityAlignment F-Measure (CEAF) for evaluating coreference.
+        Computes the Constrained Entity-Alignment F-Measure (CEAF) for evaluating coreference.
         Gold and predicted mentions are aligned into clusterings which maximise a metric - in
         this case, the F measure between gold and predicted clusters.
 

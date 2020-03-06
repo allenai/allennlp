@@ -25,11 +25,13 @@
       "tag_representation_dim": 3
     },
 
-    "iterator": {
-      "type": "bucket",
-      "padding_noise": 0.0,
-      "batch_size" : 5
-    },
+    "data_loader": {
+      "batch_sampler": {
+          "type": "bucket",
+          "batch_size": 5,
+          "padding_noise": 0.0
+      }
+  },
     "trainer": {
       "num_epochs": 1,
       "grad_norm": 1.0,

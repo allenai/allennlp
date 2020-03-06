@@ -1,4 +1,4 @@
-from typing import Dict, Optional, Tuple, Any, List
+from typing import Dict, Tuple, Any, List
 import logging
 import copy
 
@@ -14,7 +14,7 @@ from allennlp.modules import Seq2SeqEncoder, TextFieldEmbedder, Embedding, Input
 from allennlp.modules.matrix_attention.bilinear_matrix_attention import BilinearMatrixAttention
 from allennlp.modules import FeedForward
 from allennlp.models.model import Model
-from allennlp.nn import InitializerApplicator, RegularizerApplicator, Activation
+from allennlp.nn import InitializerApplicator, Activation
 from allennlp.nn.util import get_text_field_mask, get_range_vector
 from allennlp.nn.util import (
     get_device_of,
@@ -75,8 +75,6 @@ class BiaffineDependencyParser(Model):
         The dropout applied to the embedded text input.
     initializer : `InitializerApplicator`, optional (default=`InitializerApplicator()`)
         Used to initialize the model parameters.
-    regularizer : `RegularizerApplicator`, optional (default=`None`)
-        If provided, will be used to calculate the regularization penalty during training.
     """
 
     def __init__(
@@ -93,9 +91,9 @@ class BiaffineDependencyParser(Model):
         dropout: float = 0.0,
         input_dropout: float = 0.0,
         initializer: InitializerApplicator = InitializerApplicator(),
-        regularizer: Optional[RegularizerApplicator] = None,
+        **kwargs,
     ) -> None:
-        super().__init__(vocab, regularizer)
+        super().__init__(vocab, **kwargs)
 
         self.text_field_embedder = text_field_embedder
         self.encoder = encoder
@@ -222,7 +220,7 @@ class BiaffineDependencyParser(Model):
         head_types : `torch.FloatTensor`
             The predicted head types for each arc. A tensor
             of shape (batch_size, sequence_length).
-        mask : `torch.LongTensor`
+        mask : `torch.BoolTensor`
             A mask denoting the padded elements in the batch.
         """
         embedded_text_input = self.text_field_embedder(words)
@@ -267,7 +265,9 @@ class BiaffineDependencyParser(Model):
         return output_dict
 
     @overrides
-    def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+    def make_output_human_readable(
+        self, output_dict: Dict[str, torch.Tensor]
+    ) -> Dict[str, torch.Tensor]:
 
         head_tags = output_dict.pop("head_tags").cpu().detach().numpy()
         heads = output_dict.pop("heads").cpu().detach().numpy()
@@ -291,7 +291,7 @@ class BiaffineDependencyParser(Model):
     def _parse(
         self,
         embedded_text_input: torch.Tensor,
-        mask: torch.LongTensor,
+        mask: torch.BoolTensor,
         head_tags: torch.LongTensor = None,
         head_indices: torch.LongTensor = None,
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
@@ -309,7 +309,6 @@ class BiaffineDependencyParser(Model):
             head_indices = torch.cat([head_indices.new_zeros(batch_size, 1), head_indices], 1)
         if head_tags is not None:
             head_tags = torch.cat([head_tags.new_zeros(batch_size, 1), head_tags], 1)
-        float_mask = mask.float()
         encoded_text = self._dropout(encoded_text)
 
         # shape (batch_size, sequence_length, arc_representation_dim)
@@ -323,7 +322,7 @@ class BiaffineDependencyParser(Model):
         attended_arcs = self.arc_attention(head_arc_representation, child_arc_representation)
 
         minus_inf = -1e8
-        minus_mask = (1 - float_mask) * minus_inf
+        minus_mask = ~mask * minus_inf
         attended_arcs = attended_arcs + minus_mask.unsqueeze(2) + minus_mask.unsqueeze(1)
 
         if self.training or not self.use_mst_decoding_for_validation:
@@ -363,7 +362,7 @@ class BiaffineDependencyParser(Model):
         attended_arcs: torch.Tensor,
         head_indices: torch.Tensor,
         head_tags: torch.Tensor,
-        mask: torch.Tensor,
+        mask: torch.BoolTensor,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Computes the arc and tag loss for a sequence given gold head indices and tags.
@@ -387,7 +386,7 @@ class BiaffineDependencyParser(Model):
         head_tags : `torch.Tensor`, required.
             A tensor of shape (batch_size, sequence_length).
             The dependency labels of the heads for every word.
-        mask : `torch.Tensor`, required.
+        mask : `torch.BoolTensor`, required.
             A mask of shape (batch_size, sequence_length), denoting unpadded
             elements in the sequence.
 
@@ -398,15 +397,12 @@ class BiaffineDependencyParser(Model):
         tag_nll : `torch.Tensor`, required.
             The negative log likelihood from the arc tag loss.
         """
-        float_mask = mask.float()
         batch_size, sequence_length, _ = attended_arcs.size()
         # shape (batch_size, 1)
         range_vector = get_range_vector(batch_size, get_device_of(attended_arcs)).unsqueeze(1)
         # shape (batch_size, sequence_length, sequence_length)
         normalised_arc_logits = (
-            masked_log_softmax(attended_arcs, mask)
-            * float_mask.unsqueeze(2)
-            * float_mask.unsqueeze(1)
+            masked_log_softmax(attended_arcs, mask) * mask.unsqueeze(2) * mask.unsqueeze(1)
         )
 
         # shape (batch_size, sequence_length, num_head_tags)
@@ -415,7 +411,7 @@ class BiaffineDependencyParser(Model):
         )
         normalised_head_tag_logits = masked_log_softmax(
             head_tag_logits, mask.unsqueeze(-1)
-        ) * float_mask.unsqueeze(-1)
+        ) * mask.unsqueeze(-1)
         # index matrix with shape (batch, sequence_length)
         timestep_index = get_range_vector(sequence_length, get_device_of(attended_arcs))
         child_index = (
@@ -442,7 +438,7 @@ class BiaffineDependencyParser(Model):
         head_tag_representation: torch.Tensor,
         child_tag_representation: torch.Tensor,
         attended_arcs: torch.Tensor,
-        mask: torch.Tensor,
+        mask: torch.BoolTensor,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Decodes the head and head tag predictions by decoding the unlabeled arcs
@@ -480,7 +476,7 @@ class BiaffineDependencyParser(Model):
         )
         # Mask padded tokens, because we only want to consider actual words as heads.
         if mask is not None:
-            minus_mask = (1 - mask).to(dtype=torch.bool).unsqueeze(2)
+            minus_mask = ~mask.unsqueeze(2)
             attended_arcs.masked_fill_(minus_mask, -numpy.inf)
 
         # Compute the heads greedily.
@@ -500,7 +496,7 @@ class BiaffineDependencyParser(Model):
         head_tag_representation: torch.Tensor,
         child_tag_representation: torch.Tensor,
         attended_arcs: torch.Tensor,
-        mask: torch.Tensor,
+        mask: torch.BoolTensor,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Decodes the head and head tag predictions using the Edmonds' Algorithm
@@ -554,7 +550,7 @@ class BiaffineDependencyParser(Model):
 
         # Mask padded tokens, because we only want to consider actual words as heads.
         minus_inf = -1e8
-        minus_mask = (1 - mask.float()) * minus_inf
+        minus_mask = ~mask * minus_inf
         attended_arcs = attended_arcs + minus_mask.unsqueeze(2) + minus_mask.unsqueeze(1)
 
         # Shape (batch_size, sequence_length, sequence_length)
@@ -654,7 +650,7 @@ class BiaffineDependencyParser(Model):
         return head_tag_logits
 
     def _get_mask_for_eval(
-        self, mask: torch.LongTensor, pos_tags: torch.LongTensor
+        self, mask: torch.BoolTensor, pos_tags: torch.LongTensor
     ) -> torch.LongTensor:
         """
         Dependency evaluation excludes words are punctuation.
@@ -663,7 +659,7 @@ class BiaffineDependencyParser(Model):
 
         # Parameters
 
-        mask : `torch.LongTensor`, required.
+        mask : `torch.BoolTensor`, required.
             The original mask.
         pos_tags : `torch.LongTensor`, required.
             The pos tags for the sequence.
@@ -675,8 +671,8 @@ class BiaffineDependencyParser(Model):
         """
         new_mask = mask.detach()
         for label in self._pos_to_ignore:
-            label_mask = pos_tags.eq(label).long()
-            new_mask = new_mask * (1 - label_mask)
+            label_mask = pos_tags.eq(label)
+            new_mask = new_mask & ~label_mask
         return new_mask
 
     @overrides

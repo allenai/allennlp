@@ -1,4 +1,4 @@
-from typing import Dict, Optional, Tuple, Any, List
+from typing import Dict, Tuple, Any, List
 import logging
 import copy
 
@@ -13,7 +13,7 @@ from allennlp.modules import Seq2SeqEncoder, TextFieldEmbedder, Embedding, Input
 from allennlp.modules.matrix_attention.bilinear_matrix_attention import BilinearMatrixAttention
 from allennlp.modules import FeedForward
 from allennlp.models.model import Model
-from allennlp.nn import InitializerApplicator, RegularizerApplicator, Activation
+from allennlp.nn import InitializerApplicator, Activation
 from allennlp.nn.util import get_text_field_mask
 from allennlp.nn.util import get_lengths_from_binary_sequence_mask
 from allennlp.training.metrics import F1Measure
@@ -56,8 +56,6 @@ class GraphParser(Model):
         in the decoded graph. Must be between 0 and 1.
     initializer : `InitializerApplicator`, optional (default=`InitializerApplicator()`)
         Used to initialize the model parameters.
-    regularizer : `RegularizerApplicator`, optional (default=`None`)
-        If provided, will be used to calculate the regularization penalty during training.
     """
 
     def __init__(
@@ -74,9 +72,9 @@ class GraphParser(Model):
         input_dropout: float = 0.0,
         edge_prediction_threshold: float = 0.5,
         initializer: InitializerApplicator = InitializerApplicator(),
-        regularizer: Optional[RegularizerApplicator] = None,
+        **kwargs,
     ) -> None:
-        super().__init__(vocab, regularizer)
+        super().__init__(vocab, **kwargs)
 
         self.text_field_embedder = text_field_embedder
         self.encoder = encoder
@@ -179,7 +177,6 @@ class GraphParser(Model):
         embedded_text_input = self._input_dropout(embedded_text_input)
         encoded_text = self.encoder(embedded_text_input, mask)
 
-        float_mask = mask.float()
         encoded_text = self._dropout(encoded_text)
 
         # shape (batch_size, sequence_length, arc_representation_dim)
@@ -197,7 +194,7 @@ class GraphParser(Model):
         arc_tag_logits = arc_tag_logits.permute(0, 2, 3, 1).contiguous()
 
         minus_inf = -1e8
-        minus_mask = (1 - float_mask) * minus_inf
+        minus_mask = ~mask * minus_inf
         arc_scores = arc_scores + minus_mask.unsqueeze(2) + minus_mask.unsqueeze(1)
 
         arc_probs, arc_tag_probs = self._greedy_decode(arc_scores, arc_tag_logits, mask)
@@ -218,7 +215,7 @@ class GraphParser(Model):
             # Make the arc tags not have negative values anywhere
             # (by default, no edge is indicated with -1).
             arc_indices = (arc_tags != -1).float()
-            tag_mask = float_mask.unsqueeze(1) * float_mask.unsqueeze(2)
+            tag_mask = mask.unsqueeze(1) & mask.unsqueeze(2)
             one_minus_arc_probs = 1 - arc_probs
             # We stack scores here because the f1 measure expects a
             # distribution, rather than a single value.
@@ -229,7 +226,9 @@ class GraphParser(Model):
         return output_dict
 
     @overrides
-    def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+    def make_output_human_readable(
+        self, output_dict: Dict[str, torch.Tensor]
+    ) -> Dict[str, torch.Tensor]:
         arc_tag_probs = output_dict["arc_tag_probs"].cpu().detach().numpy()
         arc_probs = output_dict["arc_probs"].cpu().detach().numpy()
         mask = output_dict["mask"]
@@ -261,7 +260,7 @@ class GraphParser(Model):
         arc_scores: torch.Tensor,
         arc_tag_logits: torch.Tensor,
         arc_tags: torch.Tensor,
-        mask: torch.Tensor,
+        mask: torch.BoolTensor,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Computes the arc and tag loss for an adjacency matrix.
@@ -277,7 +276,7 @@ class GraphParser(Model):
         arc_tags : `torch.Tensor`, required.
             A tensor of shape (batch_size, sequence_length, sequence_length).
             The labels for every arc.
-        mask : `torch.Tensor`, required.
+        mask : `torch.BoolTensor`, required.
             A mask of shape (batch_size, sequence_length), denoting unpadded
             elements in the sequence.
 
@@ -288,19 +287,14 @@ class GraphParser(Model):
         tag_nll : `torch.Tensor`, required.
             The negative log likelihood from the arc tag loss.
         """
-        float_mask = mask.float()
         arc_indices = (arc_tags != -1).float()
         # Make the arc tags not have negative values anywhere
         # (by default, no edge is indicated with -1).
         arc_tags = arc_tags * arc_indices
-        arc_nll = (
-            self._arc_loss(arc_scores, arc_indices)
-            * float_mask.unsqueeze(1)
-            * float_mask.unsqueeze(2)
-        )
+        arc_nll = self._arc_loss(arc_scores, arc_indices) * mask.unsqueeze(1) * mask.unsqueeze(2)
         # We want the mask for the tags to only include the unmasked words
         # and we only care about the loss with respect to the gold arcs.
-        tag_mask = float_mask.unsqueeze(1) * float_mask.unsqueeze(2) * arc_indices
+        tag_mask = mask.unsqueeze(1) * mask.unsqueeze(2) * arc_indices
 
         batch_size, sequence_length, _, num_tags = arc_tag_logits.size()
         original_shape = [batch_size, sequence_length, sequence_length]
@@ -318,7 +312,7 @@ class GraphParser(Model):
 
     @staticmethod
     def _greedy_decode(
-        arc_scores: torch.Tensor, arc_tag_logits: torch.Tensor, mask: torch.Tensor
+        arc_scores: torch.Tensor, arc_tag_logits: torch.Tensor, mask: torch.BoolTensor
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Decodes the head and head tag predictions by decoding the unlabeled arcs
@@ -333,7 +327,7 @@ class GraphParser(Model):
         arc_tag_logits : `torch.Tensor`, required.
             A tensor of shape (batch_size, sequence_length, sequence_length, num_tags) used to
             generate a distribution over tags for each arc.
-        mask : `torch.Tensor`, required.
+        mask : `torch.BoolTensor`, required.
             A mask of shape (batch_size, sequence_length).
 
         # Returns
@@ -351,7 +345,7 @@ class GraphParser(Model):
         # shape (batch_size, sequence_length, sequence_length, num_tags)
         arc_tag_logits = arc_tag_logits + inf_diagonal_mask.unsqueeze(0).unsqueeze(-1)
         # Mask padded tokens, because we only want to consider actual word -> word edges.
-        minus_mask = (1 - mask).to(dtype=torch.bool).unsqueeze(2)
+        minus_mask = ~mask.unsqueeze(2)
         arc_scores.masked_fill_(minus_mask, -numpy.inf)
         arc_tag_logits.masked_fill_(minus_mask.unsqueeze(-1), -numpy.inf)
         # shape (batch_size, sequence_length, sequence_length)

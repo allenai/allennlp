@@ -6,7 +6,7 @@ from allennlp.training.metrics.metric import Metric
 @Metric.register("average")
 class Average(Metric):
     """
-    This :class:`Metric` breaks with the typical `Metric` API and just stores values that were
+    This [`Metric`](./metric.md) breaks with the typical `Metric` API and just stores values that were
     computed in some fashion outside of a `Metric`.  If you have some external code that computes
     the metric for you, for instance, you can use this to report the average result using our
     `Metric` API.
@@ -24,7 +24,7 @@ class Average(Metric):
         value : `float`
             The value to average.
         """
-        self._total_value += list(self.unwrap_to_tensors(value))[0]
+        self._total_value += list(self.detach_tensors(value))[0]
         self._count += 1
 
     @overrides

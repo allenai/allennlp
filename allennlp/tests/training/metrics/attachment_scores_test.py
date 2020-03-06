@@ -1,6 +1,6 @@
 import torch
 
-from allennlp.common.testing import AllenNlpTestCase
+from allennlp.common.testing import AllenNlpTestCase, multi_device
 from allennlp.training.metrics import AttachmentScores
 
 
@@ -17,9 +17,21 @@ class AttachmentScoresTest(AllenNlpTestCase):
 
         self.gold_labels = torch.Tensor([[0, 5, 2, 1, 4, 2], [0, 4, 8, 2, 0, 0]])
 
-        self.mask = torch.Tensor([[1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 0, 0]])
+        self.mask = torch.tensor(
+            [[True, True, True, True, True, True], [True, True, True, True, False, False]]
+        )
 
-    def test_perfect_scores(self):
+    def _send_tensors_to_device(self, device: str):
+        self.predictions = self.predictions.to(device)
+        self.gold_indices = self.gold_indices.to(device)
+        self.label_predictions = self.label_predictions.to(device)
+        self.gold_labels = self.gold_labels.to(device)
+        self.mask = self.mask.to(device)
+
+    @multi_device
+    def test_perfect_scores(self, device: str):
+        self._send_tensors_to_device(device)
+
         self.scorer(
             self.predictions, self.label_predictions, self.gold_indices, self.gold_labels, self.mask
         )
@@ -27,7 +39,10 @@ class AttachmentScoresTest(AllenNlpTestCase):
         for value in self.scorer.get_metric().values():
             assert value == 1.0
 
-    def test_unlabeled_accuracy_ignores_incorrect_labels(self):
+    @multi_device
+    def test_unlabeled_accuracy_ignores_incorrect_labels(self, device: str):
+        self._send_tensors_to_device(device)
+
         label_predictions = self.label_predictions
         # Change some stuff so our 4 of our label predictions are wrong.
         label_predictions[0, 3:] = 3
@@ -47,7 +62,10 @@ class AttachmentScoresTest(AllenNlpTestCase):
         # Neither should have labeled exact match.
         assert metrics["LEM"] == 0.0
 
-    def test_labeled_accuracy_is_affected_by_incorrect_heads(self):
+    @multi_device
+    def test_labeled_accuracy_is_affected_by_incorrect_heads(self, device: str):
+        self._send_tensors_to_device(device)
+
         predictions = self.predictions
         # Change some stuff so our 4 of our predictions are wrong.
         predictions[0, 3:] = 3
@@ -71,7 +89,10 @@ class AttachmentScoresTest(AllenNlpTestCase):
         assert metrics["LEM"] == 0.0
         assert metrics["UEM"] == 0.0
 
-    def test_attachment_scores_can_ignore_labels(self):
+    @multi_device
+    def test_attachment_scores_can_ignore_labels(self, device: str):
+        self._send_tensors_to_device(device)
+
         scorer = AttachmentScores(ignore_classes=[1])
 
         label_predictions = self.label_predictions

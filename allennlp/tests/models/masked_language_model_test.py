@@ -1,5 +1,6 @@
 from allennlp.common.testing import ModelTestCase
-from ..modules.language_model_heads.linear import LinearLanguageModelHead
+
+from ..modules.language_model_heads.linear import LinearLanguageModelHead  # noqa: F401
 
 
 class TestMaskedLanguageModel(ModelTestCase):

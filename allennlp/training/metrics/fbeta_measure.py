@@ -37,7 +37,7 @@ class FBetaMeasure(Metric):
     beta : `float`, optional (default = 1.0)
         The strength of recall versus precision in the F-score.
 
-    average : string, [None (default), 'micro', 'macro']
+    average : string, [None (default), 'micro', 'macro', 'weighted']
         If `None`, the scores for each class are returned. Otherwise, this
         determines the type of averaging performed on the data:
 
@@ -47,23 +47,28 @@ class FBetaMeasure(Metric):
         `'macro'`:
             Calculate metrics for each label, and find their unweighted mean.
             This does not take label imbalance into account.
+        `'weighted'`:
+            Calculate metrics for each label, and find their average weighted
+            by support (the number of true instances for each label). This
+            alters 'macro' to account for label imbalance; it can result in an
+            F-score that is not between precision and recall.
 
     labels: list, optional
         The set of labels to include and their order if `average is None`.
         Labels present in the data can be excluded, for example to calculate a
         multi-class average ignoring a majority negative class. Labels not present
-        in the data will result in 0 components in a macro average.
+        in the data will result in 0 components in a macro or weighted average.
 
     """
 
     def __init__(self, beta: float = 1.0, average: str = None, labels: List[int] = None) -> None:
-        average_options = (None, "micro", "macro")
+        average_options = {None, "micro", "macro", "weighted"}
         if average not in average_options:
             raise ConfigurationError(f"`average` has to be one of {average_options}.")
         if beta <= 0:
             raise ConfigurationError("`beta` should be >0 in the F-beta score.")
         if labels is not None and len(labels) == 0:
-            raise ConfigurationError("`labels` cannot be an empty list ")
+            raise ConfigurationError("`labels` cannot be an empty list.")
         self._beta = beta
         self._average = average
         self._labels = labels
@@ -89,7 +94,7 @@ class FBetaMeasure(Metric):
         self,
         predictions: torch.Tensor,
         gold_labels: torch.Tensor,
-        mask: Optional[torch.Tensor] = None,
+        mask: Optional[torch.BoolTensor] = None,
     ):
         """
         # Parameters
@@ -99,10 +104,10 @@ class FBetaMeasure(Metric):
         gold_labels : `torch.Tensor`, required.
             A tensor of integer class label of shape (batch_size, ...). It must be the same
             shape as the `predictions` tensor without the `num_classes` dimension.
-        mask : `torch.Tensor`, optional (default = None).
+        mask : `torch.BoolTensor`, optional (default = None).
             A masking tensor the same size as `gold_labels`.
         """
-        predictions, gold_labels, mask = self.unwrap_to_tensors(predictions, gold_labels, mask)
+        predictions, gold_labels, mask = self.detach_tensors(predictions, gold_labels, mask)
 
         # Calculate true_positive_sum, true_negative_sum, pred_sum, true_sum
         num_classes = predictions.size(-1)
@@ -115,24 +120,23 @@ class FBetaMeasure(Metric):
         # It means we call this metric at the first time
         # when `self._true_positive_sum` is None.
         if self._true_positive_sum is None:
-            self._true_positive_sum = torch.zeros(num_classes)
-            self._true_sum = torch.zeros(num_classes)
-            self._pred_sum = torch.zeros(num_classes)
-            self._total_sum = torch.zeros(num_classes)
+            self._true_positive_sum = torch.zeros(num_classes, device=predictions.device)
+            self._true_sum = torch.zeros(num_classes, device=predictions.device)
+            self._pred_sum = torch.zeros(num_classes, device=predictions.device)
+            self._total_sum = torch.zeros(num_classes, device=predictions.device)
 
         if mask is None:
-            mask = torch.ones_like(gold_labels)
-        mask = mask.to(dtype=torch.bool)
+            mask = torch.ones_like(gold_labels).bool()
         gold_labels = gold_labels.float()
 
         argmax_predictions = predictions.max(dim=-1)[1].float()
-        true_positives = (gold_labels == argmax_predictions) * mask
+        true_positives = (gold_labels == argmax_predictions) & mask
         true_positives_bins = gold_labels[true_positives]
 
         # Watch it:
         # The total numbers of true positives under all _predicted_ classes are zeros.
         if true_positives_bins.shape[0] == 0:
-            true_positive_sum = torch.zeros(num_classes)
+            true_positive_sum = torch.zeros(num_classes, device=predictions.device)
         else:
             true_positive_sum = torch.bincount(
                 true_positives_bins.long(), minlength=num_classes
@@ -144,13 +148,13 @@ class FBetaMeasure(Metric):
         if pred_bins.shape[0] != 0:
             pred_sum = torch.bincount(pred_bins, minlength=num_classes).float()
         else:
-            pred_sum = torch.zeros(num_classes)
+            pred_sum = torch.zeros(num_classes, device=predictions.device)
 
         gold_labels_bins = gold_labels[mask].long()
         if gold_labels.shape[0] != 0:
             true_sum = torch.bincount(gold_labels_bins, minlength=num_classes).float()
         else:
-            true_sum = torch.zeros(num_classes)
+            true_sum = torch.zeros(num_classes, device=predictions.device)
 
         self._true_positive_sum += true_positive_sum
         self._pred_sum += pred_sum
@@ -198,6 +202,12 @@ class FBetaMeasure(Metric):
             precision = precision.mean()
             recall = recall.mean()
             fscore = fscore.mean()
+        elif self._average == "weighted":
+            weights = true_sum
+            weights_sum = true_sum.sum()
+            precision = _prf_divide((weights * precision).sum(), weights_sum)
+            recall = _prf_divide((weights * recall).sum(), weights_sum)
+            fscore = _prf_divide((weights * fscore).sum(), weights_sum)
 
         if reset:
             self.reset()

@@ -16,20 +16,20 @@ class Entropy(Metric):
     def __call__(
         self,  # type: ignore
         logits: torch.Tensor,
-        mask: Optional[torch.Tensor] = None,
+        mask: Optional[torch.BoolTensor] = None,
     ):
         """
         # Parameters
 
         logits : `torch.Tensor`, required.
             A tensor of unnormalized log probabilities of shape (batch_size, ..., num_classes).
-        mask : `torch.Tensor`, optional (default = None).
+        mask : `torch.BoolTensor`, optional (default = None).
             A masking tensor of shape (batch_size, ...).
         """
-        logits, mask = self.unwrap_to_tensors(logits, mask)
+        logits, mask = self.detach_tensors(logits, mask)
 
         if mask is None:
-            mask = torch.ones(logits.size()[:-1])
+            mask = torch.ones(logits.size()[:-1], device=logits.device).bool()
 
         log_probs = torch.nn.functional.log_softmax(logits, dim=-1)
         probabilities = torch.exp(log_probs) * mask.unsqueeze(-1)

@@ -100,7 +100,7 @@ class SpanBasedF1Measure(Metric):
         self,
         predictions: torch.Tensor,
         gold_labels: torch.Tensor,
-        mask: Optional[torch.Tensor] = None,
+        mask: Optional[torch.BoolTensor] = None,
         prediction_map: Optional[torch.Tensor] = None,
     ):
         """
@@ -111,7 +111,7 @@ class SpanBasedF1Measure(Metric):
         gold_labels : `torch.Tensor`, required.
             A tensor of integer class label of shape (batch_size, sequence_length). It must be the same
             shape as the `predictions` tensor without the `num_classes` dimension.
-        mask : `torch.Tensor`, optional (default = None).
+        mask : `torch.BoolTensor`, optional (default = None).
             A masking tensor the same size as `gold_labels`.
         prediction_map : `torch.Tensor`, optional (default = None).
             A tensor of size (batch_size, num_classes) which provides a mapping from the index of predictions
@@ -123,9 +123,9 @@ class SpanBasedF1Measure(Metric):
             possible roles associated with it).
         """
         if mask is None:
-            mask = torch.ones_like(gold_labels)
+            mask = torch.ones_like(gold_labels).bool()
 
-        predictions, gold_labels, mask, prediction_map = self.unwrap_to_tensors(
+        predictions, gold_labels, mask, prediction_map = self.detach_tensors(
             predictions, gold_labels, mask, prediction_map
         )
 
@@ -277,9 +277,9 @@ class SpanBasedF1Measure(Metric):
 
     @staticmethod
     def _compute_metrics(true_positives: int, false_positives: int, false_negatives: int):
-        precision = float(true_positives) / float(true_positives + false_positives + 1e-13)
-        recall = float(true_positives) / float(true_positives + false_negatives + 1e-13)
-        f1_measure = 2.0 * ((precision * recall) / (precision + recall + 1e-13))
+        precision = true_positives / (true_positives + false_positives + 1e-13)
+        recall = true_positives / (true_positives + false_negatives + 1e-13)
+        f1_measure = 2.0 * (precision * recall) / (precision + recall + 1e-13)
         return precision, recall, f1_measure
 
     def reset(self):

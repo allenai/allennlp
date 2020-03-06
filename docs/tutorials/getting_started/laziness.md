@@ -169,43 +169,10 @@ dataset reader config:
   },
 ```
 
-## Laziness in `DataIterator`
+## Laziness in `DataLoader`
 
-AllenNLP uses a `DataIterator` abstraction to iterate over datasets
-using configurable batching, shuffling, and so on.  The included
-dataset readers all work with lazy datasets, but they have extra options
-that you might want to specify in that case. In particular, we'll
-look at the
-[`BasicIterator`](https://github.com/allenai/allennlp/blob/master/allennlp/data/iterators/basic_iterator.py):
-
-```python
-    def __init__(self,
-                 batch_size: int = 32,
-                 instances_per_epoch: int = None,
-                 max_instances_in_memory: int = None) -> None:
-        self._batch_size = batch_size
-        self._instances_per_epoch = instances_per_epoch
-        self._max_instances_in_memory = max_instances_in_memory
-```
-
-If you use the default parameters and call this iterator on a lazy dataset,
-it will lazily read 32 instances at a time, package those instances into a
-`Batch`, and yield them one by one. If you specify `shuffle=True` when you call
-the iterator, it will shuffle the 32 instances within each batch, but will always
-serve batches in the same order.
-
-If you have a sense for how many instances can fit in memory, you can specify
-the `max_instances_in_memory` parameter. For instance, if you were to set that
-to 3200, the iterator would load 3200 instances at a time into memory,
-potentially shuffle them, and then create 100 batches of size 32 and yield
-them up before loading the next 3200 instances.
-
-This is especially useful if you are using the `BucketIterator`,
-which can order your instances by e.g. sentence length. If you don't specify
-`max_instances_in_memory`, you'd just get each batch of 32 ordered by sentence length,
-which isn't particularly helpful.
-
-The other option here is `instances_per_epoch`. By default, each epoch is a single
-pass through the dataset. However, if you had millions of instances,
-you might want each epoch to consist of a fraction of the dataset,
-in which case you can specify the value here.
+AllenNLP uses the pytorch `DataLoader` abstraction to iterate over datasets
+using configurable batching, shuffling, and so on. Currently the `DataLoader`
+does not allow the use of custom samplers when using a lazy dataset. However,
+you can get a good approximation to e.g bucketing by simply sorting by sentence
+length in your dataset reader, for example.

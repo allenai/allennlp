@@ -1,18 +1,18 @@
-import torch
+from typing import Any, Iterable, Dict
+
 import pytest
-
+import torch
 from overrides import overrides
-from typing import Tuple, Any, Iterable, Dict
 
+from allennlp.common import Params
+from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
+from allennlp.common.util import END_SYMBOL, prepare_environment, START_SYMBOL
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.modules import Embedding
 from allennlp.modules.seq2seq_decoders import AutoRegressiveSeqDecoder
 from allennlp.modules.seq2seq_decoders import StackedSelfAttentionDecoderNet
-from allennlp.common.checks import ConfigurationError
-from allennlp.common.util import START_SYMBOL, END_SYMBOL, prepare_environment
 from allennlp.training.metrics import BLEU, Metric
-from allennlp.common import Params
 
 
 def create_vocab_and_decoder_net(decoder_inout_dim):
@@ -79,12 +79,20 @@ class TestAutoRegressiveSeqDecoder(AllenNlpTestCase):
         vocab, decoder_net = create_vocab_and_decoder_net(decoder_inout_dim)
 
         AutoRegressiveSeqDecoder(
-            vocab, decoder_net, 10, Embedding(vocab.get_vocab_size(), decoder_inout_dim)
+            vocab,
+            decoder_net,
+            10,
+            Embedding(num_embeddings=vocab.get_vocab_size(), embedding_dim=decoder_inout_dim),
         )
 
         with pytest.raises(ConfigurationError):
             AutoRegressiveSeqDecoder(
-                vocab, decoder_net, 10, Embedding(vocab.get_vocab_size(), decoder_inout_dim + 1)
+                vocab,
+                decoder_net,
+                10,
+                Embedding(
+                    num_embeddings=vocab.get_vocab_size(), embedding_dim=decoder_inout_dim + 1
+                ),
             )
 
     def test_auto_regressive_seq_decoder_forward(self):
@@ -92,13 +100,16 @@ class TestAutoRegressiveSeqDecoder(AllenNlpTestCase):
         vocab, decoder_net = create_vocab_and_decoder_net(decoder_inout_dim)
 
         auto_regressive_seq_decoder = AutoRegressiveSeqDecoder(
-            vocab, decoder_net, 10, Embedding(vocab.get_vocab_size(), decoder_inout_dim)
+            vocab,
+            decoder_net,
+            10,
+            Embedding(num_embeddings=vocab.get_vocab_size(), embedding_dim=decoder_inout_dim),
         )
 
         encoded_state = torch.rand(batch_size, time_steps, decoder_inout_dim)
-        source_mask = torch.ones(batch_size, time_steps).long()
+        source_mask = torch.ones(batch_size, time_steps).bool()
         target_tokens = {"tokens": {"tokens": torch.ones(batch_size, time_steps).long()}}
-        source_mask[0, 1:] = 0
+        source_mask[0, 1:] = False
         encoder_out = {"source_mask": source_mask, "encoder_outputs": encoded_state}
 
         assert auto_regressive_seq_decoder.forward(encoder_out) == {}
@@ -112,7 +123,10 @@ class TestAutoRegressiveSeqDecoder(AllenNlpTestCase):
         vocab, decoder_net = create_vocab_and_decoder_net(decoder_inout_dim)
 
         auto_regressive_seq_decoder = AutoRegressiveSeqDecoder(
-            vocab, decoder_net, 10, Embedding(vocab.get_vocab_size(), decoder_inout_dim)
+            vocab,
+            decoder_net,
+            10,
+            Embedding(num_embeddings=vocab.get_vocab_size(), embedding_dim=decoder_inout_dim),
         )
 
         predictions = torch.tensor([[3, 2, 5, 0, 0], [2, 2, 3, 5, 0]])
@@ -126,7 +140,10 @@ class TestAutoRegressiveSeqDecoder(AllenNlpTestCase):
         vocab, decoder_net = create_vocab_and_decoder_net(decoder_inout_dim)
 
         auto_regressive_seq_decoder = AutoRegressiveSeqDecoder(
-            vocab, decoder_net, 10, Embedding(vocab.get_vocab_size(), decoder_inout_dim)
+            vocab,
+            decoder_net,
+            10,
+            Embedding(num_embeddings=vocab.get_vocab_size(), embedding_dim=decoder_inout_dim),
         )
 
         predictions = torch.tensor([[3, 2, 5, 0, 0], [2, 2, 3, 5, 0]])
@@ -150,15 +167,15 @@ class TestAutoRegressiveSeqDecoder(AllenNlpTestCase):
             vocab,
             decoder_net,
             10,
-            Embedding(vocab.get_vocab_size(), decoder_inout_dim),
+            Embedding(num_embeddings=vocab.get_vocab_size(), embedding_dim=decoder_inout_dim),
             tensor_based_metric=BLEU(),
             token_based_metric=DummyMetric(),
         ).eval()
 
         encoded_state = torch.randn(batch_size, time_steps, decoder_inout_dim)
-        source_mask = torch.ones(batch_size, time_steps).long()
+        source_mask = torch.ones(batch_size, time_steps).bool()
         target_tokens = {"tokens": {"tokens": torch.ones(batch_size, time_steps).long()}}
-        source_mask[0, 1:] = 0
+        source_mask[0, 1:] = False
         encoder_out = {"source_mask": source_mask, "encoder_outputs": encoded_state}
 
         auto_regressive_seq_decoder.forward(encoder_out, target_tokens)

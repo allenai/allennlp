@@ -72,17 +72,13 @@
       "dropout": [0.2, 0.0]
     }
   },
-  "iterator": {
-    "type": "bucket",
-    "sorting_keys": [
-      [
-        "tokens",
-        "num_tokens"
-      ]
-    ],
-    "padding_noise": 0,
-    "batch_size": 80
-  },
+  "data_loader": {
+    "batch_sampler": {
+        "type": "bucket",
+        "batch_size": 80,
+        "padding_noise": 0.0
+    }
+},
   "trainer": {
     "num_epochs": 1,
     "grad_norm": 1,

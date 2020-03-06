@@ -9,7 +9,7 @@ from torch.nn import Linear
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.util import END_SYMBOL, START_SYMBOL
 from allennlp.modules.seq2seq_decoders.seq_decoder import SeqDecoder
-from allennlp.data import Vocabulary
+from allennlp.data import TextFieldTensors, Vocabulary
 from allennlp.modules import Embedding
 from allennlp.modules.seq2seq_decoders.decoder_net import DecoderNet
 from allennlp.nn import util
@@ -120,7 +120,7 @@ class AutoRegressiveSeqDecoder(SeqDecoder):
         """
         batch_size = state["source_mask"].size()[0]
         start_predictions = state["source_mask"].new_full(
-            (batch_size,), fill_value=self._start_index
+            (batch_size,), fill_value=self._start_index, dtype=torch.long
         )
 
         # shape (all_top_k_predictions): (batch_size, beam_size, num_decoding_steps)
@@ -136,7 +136,7 @@ class AutoRegressiveSeqDecoder(SeqDecoder):
         return output_dict
 
     def _forward_loss(
-        self, state: Dict[str, torch.Tensor], target_tokens: Dict[str, torch.LongTensor]
+        self, state: Dict[str, torch.Tensor], target_tokens: TextFieldTensors
     ) -> Dict[str, torch.Tensor]:
         """
         Make forward pass during training or do greedy search during prediction.
@@ -153,7 +153,7 @@ class AutoRegressiveSeqDecoder(SeqDecoder):
         source_mask = state["source_mask"]
 
         # shape: (batch_size, max_target_sequence_length)
-        targets = target_tokens["tokens"]["tokens"]
+        targets = util.get_token_ids_from_text_field_tensors(target_tokens)
 
         # Prepare embeddings for targets. They will be used as gold embeddings during decoder training
         # shape: (batch_size, max_target_sequence_length, embedding_dim)
@@ -183,7 +183,9 @@ class AutoRegressiveSeqDecoder(SeqDecoder):
 
             # Initialize target predictions with the start index.
             # shape: (batch_size,)
-            last_predictions = source_mask.new_full((batch_size,), fill_value=self._start_index)
+            last_predictions = source_mask.new_full(
+                (batch_size,), fill_value=self._start_index, dtype=torch.long
+            )
 
             # shape: (steps, batch_size, target_embedding_dim)
             steps_embeddings = torch.Tensor([])
@@ -301,7 +303,7 @@ class AutoRegressiveSeqDecoder(SeqDecoder):
         return output_projections, state
 
     def _get_loss(
-        self, logits: torch.LongTensor, targets: torch.LongTensor, target_mask: torch.LongTensor
+        self, logits: torch.LongTensor, targets: torch.LongTensor, target_mask: torch.BoolTensor
     ) -> torch.Tensor:
         """
         Compute loss.
@@ -396,9 +398,7 @@ class AutoRegressiveSeqDecoder(SeqDecoder):
 
     @overrides
     def forward(
-        self,
-        encoder_out: Dict[str, torch.LongTensor],
-        target_tokens: Dict[str, torch.LongTensor] = None,
+        self, encoder_out: Dict[str, torch.LongTensor], target_tokens: TextFieldTensors = None,
     ) -> Dict[str, torch.Tensor]:
         state = encoder_out
         decoder_init_state = self._decoder_net.init_decoder_state(state)
@@ -417,6 +417,7 @@ class AutoRegressiveSeqDecoder(SeqDecoder):
             output_dict.update(predictions)
 
             if target_tokens:
+                targets = util.get_token_ids_from_text_field_tensors(target_tokens)
                 if self._tensor_based_metric is not None:
                     # shape: (batch_size, beam_size, max_sequence_length)
                     top_k_predictions = output_dict["predictions"]
@@ -424,7 +425,7 @@ class AutoRegressiveSeqDecoder(SeqDecoder):
                     best_predictions = top_k_predictions[:, 0, :]
 
                     self._tensor_based_metric(  # type: ignore
-                        best_predictions, target_tokens["tokens"]["tokens"]
+                        best_predictions, targets
                     )
 
                 if self._token_based_metric is not None:
@@ -432,8 +433,7 @@ class AutoRegressiveSeqDecoder(SeqDecoder):
                     predicted_tokens = output_dict["predicted_tokens"]
 
                     self._token_based_metric(  # type: ignore
-                        predicted_tokens,
-                        self.indices_to_tokens(target_tokens["tokens"]["tokens"][:, 1:]),
+                        predicted_tokens, self.indices_to_tokens(targets[:, 1:]),
                     )
 
         return output_dict
