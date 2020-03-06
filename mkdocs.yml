@@ -18,7 +18,6 @@ theme:
 
 repo_name: allenai/allennlp
 repo_url: https://github.com/allenai/allennlp
-edit_uri: edit/master/docs/
 # TODO(markn): Consider adding GA here, if we care about it.
 
 nav:

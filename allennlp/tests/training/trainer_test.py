@@ -122,12 +122,11 @@ class TestTrainer(AllenNlpTestCase):
         self.model.cuda()
 
         with pytest.raises(ConfigurationError):
-            Trainer(
-                self.model, self.optimizer, self.data_loader, num_epochs=2, cuda_device=[0, 1],
-            )
+            Trainer(self.model, self.optimizer, self.data_loader, num_epochs=2, cuda_device=[0, 1])
 
     @pytest.mark.skipif(not torch.cuda.is_available(), reason="No CUDA device registered.")
     @pytest.mark.skipif(amp is None, reason="Apex is not installed.")
+    @pytest.mark.spawn
     def test_trainer_can_run_amp(self):
 
         self.model.cuda()
