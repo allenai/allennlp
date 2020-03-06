@@ -11,9 +11,7 @@ sentence is a size (3, num_tokens, 1024) array with the biLM representations.
 For information, see "Deep contextualized word representations", Peters et al 2018.
 https://arxiv.org/abs/1802.05365
 
-.. code-block:: console
-
-   $ allennlp elmo --help
+    $ allennlp elmo --help
     usage: allennlp elmo [-h] (--all | --top | --average)
                          [--vocab-path VOCAB_PATH] [--options-file OPTIONS_FILE]
                          [--weight-file WEIGHT_FILE] [--batch-size BATCH_SIZE]
