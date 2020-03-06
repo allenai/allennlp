@@ -143,3 +143,6 @@ class AdjacencyField(Field[torch.Tensor]):
             f"\t\twith indices:\n {formatted_indices}\n"
             f"\t\tand labels:\n {formatted_labels} \t\tin namespace: '{self._label_namespace}'."
         )
+
+    def __len__(self):
+        return len(self.sequence_field)

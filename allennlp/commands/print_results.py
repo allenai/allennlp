@@ -2,9 +2,7 @@
 The ``print-results`` subcommand allows you to print results from multiple
 allennlp serialization directories to the console in a helpful csv format.
 
-.. code-block:: bash
-
-   $ allennlp print-results --help
+    $ allennlp print-results --help
     usage: allennlp print-results [-h] [-k KEYS [KEYS ...]] [-m METRICS_FILENAME]
                                   [--include-package INCLUDE_PACKAGE]
                                   path
