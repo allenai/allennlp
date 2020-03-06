@@ -1,3 +1,7 @@
+from mathy_pydoc.__main__ import main
+from contextlib import redirect_stdout
+import sys
+import io
 from typing import Dict
 import os
 from pathlib import Path
@@ -15,7 +19,6 @@ exclude_files = [
     "__main__.py",
 ]
 
-
 def render_file(relative_src_path: str, src_file: str, to_file: str, modifier="++") -> None:
     """
     Shells out to pydocmd, which creates a .md file from the docstrings of python functions and classes in
@@ -31,10 +34,13 @@ def render_file(relative_src_path: str, src_file: str, to_file: str, modifier="+
     else:
         namespace = f"allennlp.{relative_src_namespace}.{src_base}{modifier}"
 
-    args = ["mathy_pydoc", namespace]
-    call_result = check_output(args, env=os.environ).decode("utf-8")
+    sys.argv = ["x", namespace]
+    output = io.StringIO()
+    with redirect_stdout(output):
+        main()
+
     with open(to_file, "w") as f:
-        f.write(call_result)
+        f.write(output.getvalue())
 
     print(f"Built docs for {src_file}: {to_file}")
 
