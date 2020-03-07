@@ -34,7 +34,7 @@ def render_file(relative_src_path: str, src_file: str, to_file: str, modifier="+
     else:
         namespace = f"allennlp.{relative_src_namespace}.{src_base}{modifier}"
 
-    sys.argv = ["x", namespace]
+    sys.argv = ["mathy_pydoc", namespace]
     output = io.StringIO()
     with redirect_stdout(output):
         main()
