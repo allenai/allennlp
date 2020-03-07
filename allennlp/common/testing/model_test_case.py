@@ -1,4 +1,5 @@
 import copy
+import json
 from typing import Any, Dict, Iterable, Set, Union
 
 import torch
@@ -51,6 +52,9 @@ class ModelTestCase(AllenNlpTestCase):
         cuda_device: int = -1,
         gradients_to_ignore: Set[str] = None,
         overrides: str = "",
+        metric_to_check: str = None,
+        metric_terminal_value: float = None,
+        metric_tolerance: float = 1e-4,
         disable_dropout: bool = True,
     ):
         """
@@ -74,6 +78,15 @@ class ModelTestCase(AllenNlpTestCase):
             infrequently-used parameters that are hard to force the model to use in a small test).
         overrides : `str`, optional (default = "")
             A JSON string that we will use to override values in the input parameter file.
+        metric_to_check: `str`, optional (default = None)
+            We may want to automatically perform a check that model reaches given metric when
+            training (on validation set, if it is specified). It may be useful in CI, for example.
+            You can pass any metric that is in your model returned metrics.
+        metric_terminal_value: `str`, optional (default = None)
+            When you set `metric_to_check`, you need to set the value this metric must converge to
+        metric_tolerance: `float`, optional (default=1e-4)
+            Tolerance to check you model metric against metric terminal value. One can expect some
+            variance in model metrics when the training process is highly stochastic.
         disable_dropout : `bool`, optional (default = True)
             If True we will set all dropout to 0 before checking gradients. (Otherwise, with small
             datasets, you may get zero gradients because of unlucky dropout.)
@@ -81,6 +94,15 @@ class ModelTestCase(AllenNlpTestCase):
         save_dir = self.TEST_DIR / "save_and_load_test"
         archive_file = save_dir / "model.tar.gz"
         model = train_model_from_file(param_file, save_dir, overrides=overrides)
+        metrics_file = save_dir / "metrics.json"
+        if metric_to_check is not None:
+            metrics = json.loads(metrics_file.read_text())
+            metric_value = metrics.get(f"best_validation_{metric_to_check}") or metrics.get(
+                f"training_{metric_to_check}"
+            )
+            assert metric_value is not None, f"Cannot find {metric_to_check} in metrics.json file"
+            assert metric_terminal_value is not None, "Please specify metric terminal value"
+            assert abs(metric_value - metric_terminal_value) < metric_tolerance
         loaded_model = load_archive(archive_file, cuda_device=cuda_device).model
         state_keys = model.state_dict().keys()
         loaded_state_keys = loaded_model.state_dict().keys()
