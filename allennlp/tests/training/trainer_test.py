@@ -30,7 +30,7 @@ from allennlp.training.util import sparse_clip_norm
 from allennlp.data import allennlp_collate
 
 
-class TestTrainer(AllenNlpTestCase):
+class TrainerTestBase(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
         self.instances = SequenceTaggingDatasetReader().read(
@@ -54,6 +54,8 @@ class TestTrainer(AllenNlpTestCase):
         )
         self.instances.index_with(vocab)
 
+
+class TestTrainer(TrainerTestBase):
     def test_trainer_can_run(self):
         trainer = Trainer(
             model=self.model,
@@ -125,21 +127,6 @@ class TestTrainer(AllenNlpTestCase):
             Trainer(
                 self.model, self.optimizer, self.data_loader, num_epochs=2, cuda_device=[0, 1],
             )
-
-    @pytest.mark.skipif(not torch.cuda.is_available(), reason="No CUDA device registered.")
-    @pytest.mark.skipif(amp is None, reason="Apex is not installed.")
-    def test_trainer_can_run_amp(self):
-
-        self.model.cuda()
-        trainer = Trainer(
-            self.model,
-            self.optimizer,
-            self.data_loader,
-            num_epochs=2,
-            cuda_device=0,
-            opt_level="O1",
-        )
-        _ = trainer.train()
 
     def test_trainer_can_resume_training(self):
         trainer = Trainer(
@@ -800,6 +787,23 @@ class TestTrainer(AllenNlpTestCase):
         )
 
         assert num_batches_trained_per_epoch == num_batches_expected
+
+
+class TestApexTrainer(TrainerTestBase):
+    @pytest.mark.skipif(not torch.cuda.is_available(), reason="No CUDA device registered.")
+    @pytest.mark.skipif(amp is None, reason="Apex is not installed.")
+    @pytest.mark.spawn
+    def test_trainer_can_run_amp(self):
+        self.model.cuda()
+        trainer = Trainer(
+            self.model,
+            self.optimizer,
+            self.data_loader,
+            num_epochs=2,
+            cuda_device=0,
+            opt_level="O1",
+        )
+        _ = trainer.train()
 
 
 class TestSparseClipGrad(AllenNlpTestCase):

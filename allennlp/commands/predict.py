@@ -3,8 +3,6 @@ The ``predict`` subcommand allows you to make bulk JSON-to-JSON
 or dataset to JSON predictions using a trained model and its
 :class:`~allennlp.predictors.predictor.Predictor` wrapper.
 
-.. code-block:: bash
-
     $ allennlp predict --help
     usage: allennlp predict [-h] [--output-file OUTPUT_FILE]
                             [--weights-file WEIGHTS_FILE]

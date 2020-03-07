@@ -405,7 +405,10 @@ class AutoRegressiveSeqDecoder(SeqDecoder):
         state.update(decoder_init_state)
 
         if target_tokens:
-            output_dict = self._forward_loss(state, target_tokens)
+            state_forward_loss = (
+                state if self.training else {k: v.clone() for k, v in state.items()}
+            )
+            output_dict = self._forward_loss(state_forward_loss, target_tokens)
         else:
             output_dict = {}
 
