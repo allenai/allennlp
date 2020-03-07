@@ -1,4 +1,4 @@
-from mathy_pydoc.__main__ import main
+from mathy_pydoc.__main__ import main as mathy_pydoc_main
 from contextlib import redirect_stdout
 import sys
 import io
@@ -35,12 +35,9 @@ def render_file(relative_src_path: str, src_file: str, to_file: str, modifier="+
         namespace = f"allennlp.{relative_src_namespace}.{src_base}{modifier}"
 
     sys.argv = ["mathy_pydoc", namespace]
-    output = io.StringIO()
-    with redirect_stdout(output):
-        main()
-
     with open(to_file, "w") as f:
-        f.write(output.getvalue())
+        with redirect_stdout(f):
+            mathy_pydoc_main()
 
     print(f"Built docs for {src_file}: {to_file}")
 
