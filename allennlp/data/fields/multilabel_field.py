@@ -136,3 +136,6 @@ class MultiLabelField(Field[torch.Tensor]):
         return (
             f"MultiLabelField with labels: {self.labels} in namespace: '{self._label_namespace}'.'"
         )
+
+    def __len__(self):
+        return 1

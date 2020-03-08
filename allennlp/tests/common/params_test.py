@@ -38,14 +38,14 @@ class TestParams(AllenNlpTestCase):
         overrides = (
             '{ "train_data_path": "FOO", "model": { "type": "BAR" },'
             '"model.text_field_embedder.tokens.type": "BAZ",'
-            '"data_loader.batch_sampler.sorting_keys.0.0": "question"}'
+            '"data_loader.batch_sampler.sorting_keys.0": "question"}'
         )
         params = Params.from_file(filename, overrides)
 
         assert "dataset_reader" in params
         assert "trainer" in params
         assert params["train_data_path"] == "FOO"
-        assert params["data_loader"]["batch_sampler"]["sorting_keys"][0][0] == "question"
+        assert params["data_loader"]["batch_sampler"]["sorting_keys"][0] == "question"
 
         model_params = params.pop("model")
         assert model_params.pop("type") == "BAR"

@@ -462,7 +462,7 @@ were to split strings into words and represent words as single ids under the nam
   "validation_data_path": "https://allennlp.s3.amazonaws.com/datasets/academic-papers-example/dev.jsonl",
   "iterator": {
     "type": "bucket",
-    "sorting_keys": [["abstract", "num_tokens"], ["title", "num_tokens"]],
+    "sorting_keys": ["abstract", "title"],
     "batch_size": 64
   },
   "trainer": {

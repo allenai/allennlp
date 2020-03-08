@@ -1,14 +1,21 @@
 import logging
-from typing import List, Iterable, Tuple, Dict, cast
-
+from typing import List, Iterable
+import random
 import math
+
 from torch.utils import data
 
-from allennlp.common.util import add_noise_to_dict_values, lazy_groups_of
+from allennlp.common.util import lazy_groups_of
 from allennlp.data.instance import Instance
 from allennlp.data.samplers import BatchSampler
 
 logger = logging.getLogger(__name__)
+
+
+def add_noise_to_value(value: int, noise_param: float):
+    noise_value = value * noise_param
+    noise = random.uniform(-noise_value, noise_value)
+    return value + noise
 
 
 @BatchSampler.register("bucket")
@@ -26,7 +33,7 @@ class BucketBatchSampler(BatchSampler):
         The pytorch `Dataset` of allennlp Instances to bucket.
     batch_size : int, required.
         The size of each batch of instances yielded when calling the dataloader.
-    sorting_keys : List[Tuple[str, str]], optional
+    sorting_keys : List[str], optional
         To bucket inputs into batches, we want to group the instances by padding length, so that we
         minimize the amount of padding necessary per batch. In order to do this, we need to know
         which fields need what type of padding, and in what order.
@@ -54,7 +61,7 @@ class BucketBatchSampler(BatchSampler):
         self,
         data_source: data.Dataset,
         batch_size: int,
-        sorting_keys: List[Tuple[str, str]] = None,
+        sorting_keys: List[str] = None,
         padding_noise: float = 0.1,
         drop_last: bool = False,
     ):
@@ -79,19 +86,10 @@ class BucketBatchSampler(BatchSampler):
         instances_with_lengths = []
         for instance in instances:
             # Make sure instance is indexed before calling .get_padding
-            instance.index_fields(self.vocab)
-            padding_lengths = cast(Dict[str, Dict[str, float]], instance.get_padding_lengths())
-            if self.padding_noise > 0.0:
-                noisy_lengths = {}
-                for field_name, field_lengths in padding_lengths.items():
-                    noisy_lengths[field_name] = add_noise_to_dict_values(
-                        field_lengths, self.padding_noise
-                    )
-                padding_lengths = noisy_lengths
             instance_with_lengths = (
                 [
-                    padding_lengths[field_name][padding_key]
-                    for (field_name, padding_key) in self.sorting_keys
+                    add_noise_to_value(len(instance.fields.get(field_name)), self.padding_noise)
+                    for field_name in self.sorting_keys
                 ],
                 instance,
             )
@@ -124,27 +122,26 @@ class BucketBatchSampler(BatchSampler):
             are not homogeneous, you might need more.
         """
         max_length = 0.0
-        longest_padding_key: Tuple[str, str] = None
+        longest_field: str = None
         for i, instance in enumerate(instances):
             instance.index_fields(self.vocab)
-            padding_lengths = cast(Dict[str, Dict[str, float]], instance.get_padding_lengths())
-            for field_name, field_padding in padding_lengths.items():
-                for padding_key, length in field_padding.items():
-                    if length > max_length:
-                        max_length = length
-                        longest_padding_key = (field_name, padding_key)
+            for field_name, field in instance.fields.items():
+                length = len(field)
+                if length > max_length:
+                    max_length = length
+                    longest_field = field_name
             if i > num_instances:
                 # Only use num_instances instances to guess the sorting keys.
                 break
 
-        if not longest_padding_key:
+        if not longest_field:
             # This shouldn't ever happen (you basically have to have an empty instance list), but
             # just in case...
             raise AssertionError(
                 "Found no field that needed padding; we are surprised you got this error, please "
                 "open an issue on github"
             )
-        self.sorting_keys = [longest_padding_key]
+        self.sorting_keys = [longest_field]
 
     def __len__(self):
         batch_count_float = len(self.data_source) / self.batch_size
