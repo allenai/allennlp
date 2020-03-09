@@ -19,6 +19,7 @@ exclude_files = [
     "__main__.py",
 ]
 
+
 def render_file(relative_src_path: str, src_file: str, to_file: str, modifier="++") -> None:
     """
     Shells out to pydocmd, which creates a .md file from the docstrings of python functions and classes in
