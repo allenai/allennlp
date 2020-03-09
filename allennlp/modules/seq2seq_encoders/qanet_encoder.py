@@ -5,7 +5,7 @@ from torch.nn import LayerNorm
 from torch.nn import ModuleList
 from allennlp.modules.feedforward import FeedForward
 from allennlp.modules.residual_with_layer_dropout import ResidualWithLayerDropout
-from allennlp.modules.seq2seq_encoders import PytorchTransformer
+from allennlp.modules.seq2seq_encoders.pytorch_transformer_wrapper import PytorchTransformer
 from allennlp.modules.seq2seq_encoders.seq2seq_encoder import Seq2SeqEncoder
 from allennlp.nn.activations import Activation
 from allennlp.nn.util import add_positional_features
