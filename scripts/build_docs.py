@@ -1,11 +1,9 @@
 from mathy_pydoc.__main__ import main as mathy_pydoc_main
 from contextlib import redirect_stdout
 import sys
-import io
 from typing import Dict
 import os
 from pathlib import Path
-from subprocess import check_output
 
 from ruamel.yaml import YAML
 
