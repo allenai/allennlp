@@ -1,7 +1,9 @@
+from mathy_pydoc.__main__ import main as mathy_pydoc_main
+from contextlib import redirect_stdout
+import sys
 from typing import Dict
 import os
 from pathlib import Path
-from subprocess import check_output
 
 from ruamel.yaml import YAML
 
@@ -31,12 +33,13 @@ def render_file(relative_src_path: str, src_file: str, to_file: str, modifier="+
     else:
         namespace = f"allennlp.{relative_src_namespace}.{src_base}{modifier}"
 
-    args = ["mathy_pydoc", namespace]
-    call_result = check_output(args, env=os.environ).decode("utf-8")
+    sys.argv = ["mathy_pydoc", namespace]
     with open(to_file, "w") as f:
-        f.write(call_result)
+        with redirect_stdout(f):
+            mathy_pydoc_main()
 
     print(f"Built docs for {src_file}: {to_file}")
+    print()
 
 
 def build_docs_for_file(relative_path: str, file_name: str, docs_dir: str) -> Dict[str, str]:
