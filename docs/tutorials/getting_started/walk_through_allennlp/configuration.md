@@ -18,7 +18,7 @@ Most AllenNLP classes inherit from the
 [`Registrable`](https://docs.allennlp.org/master/api/common/registrable/#registrable)
 base class,
 which gives them a named registry for their subclasses. This means that if we had
-a `Model(Registrable)` base class ([we do](https://docs.allennlp.org/master/api/allennlp.models.model.html#allennlp.models.model.Model)),
+a `Model(Registrable)` base class ([we do](http://docs.allennlp.org/master/api/models/model/#model)),
 and we decorated a subclass like
 
 ```python
@@ -130,7 +130,7 @@ If you look at the code for `SequenceTaggingDatasetReader.read()`,
 it turns each sentence into a `TextField`
 of tokens and a `SequenceLabelField` of tags. The latter isn't
 really configurable, but the former wants a dictionary of
-[TokenIndexer](https://docs.allennlp.org/master/api/allennlp.data.token_indexers.html#allennlp.data.token_indexers.token_indexer.TokenIndexer)s
+[TokenIndexer](http://docs.allennlp.org/master/api/data/token_indexers/token_indexer/#tokenindexer)s
 that indicate how to convert the tokens into arrays.
 
 Our configuration specifies two token indexers:
