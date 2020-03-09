@@ -39,6 +39,7 @@ def render_file(relative_src_path: str, src_file: str, to_file: str, modifier="+
             mathy_pydoc_main()
 
     print(f"Built docs for {src_file}: {to_file}")
+    print()
 
 
 def build_docs_for_file(relative_path: str, file_name: str, docs_dir: str) -> Dict[str, str]:
