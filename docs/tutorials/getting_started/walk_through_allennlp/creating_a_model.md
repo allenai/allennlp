@@ -10,7 +10,7 @@ subclass corresponding to the model you want to implement.
 (If there's already a `DatasetReader` for the dataset you want to use,
  of course you can reuse that one.)
 In this tutorial we'll also implement a custom PyTorch
-[`Module`](https://pytorch.org/docs/master/nn.html#torch.nn.Module),
+[`Module`](https://docs.allennlp.org/master/api/models/model/#model),
 but you won't need to do that in general.
 
 Our [simple tagger](training_and_evaluating.md) model
@@ -47,7 +47,7 @@ For example, our NER data has distinct tags that represent the beginning, middle
 of each entity type. We'd like not to allow a "beginning of a person entity" tag
 to be followed by an "end of location entity tag".
 
-As the CRF is just a component of our model, we'll implement it as a [Module](https://docs.allennlp.org/master/api/allennlp.modules.html).
+As the CRF is just a component of our model, we'll implement it as a `Module`.
 
 ## Implementing the CRF Module
 
