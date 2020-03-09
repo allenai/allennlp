@@ -538,7 +538,7 @@ here is a wrapper around pytorch's built-in LSTMs that make them conform to the 
 API.  All of the parameters except for "type" get passed directly to pytorch code.
 
 The feed-forward network has a configurable depth, width, and activation.  You can look at the
-[documentation](https://allenai.github.io/allennlp-docs/master/api/modules/feedforward/) of
+[documentation](https://docs.allennlp.org/master/api/modules/feedforward/) of
 `FeedForward` for more information on these parameters.
 
 And that's it!  You're now the proud owner of a new `DatasetReader`, `Model`, and means to train
