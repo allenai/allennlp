@@ -3,7 +3,7 @@ set -e
 
 cp README.md docs/README.md
 # Alter the relative path of the README image for the docs.
-sed -i '1s/docs/./' docs/README.md
+gsed -i '1s/docs/./' docs/README.md
 cp LICENSE docs/LICENSE.md
 cp ROADMAP.md docs/ROADMAP.md
 cp CONTRIBUTING.md docs/CONTRIBUTING.md
