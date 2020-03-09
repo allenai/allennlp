@@ -5,7 +5,7 @@ from torch.nn import LayerNorm
 from torch.nn import ModuleList
 from allennlp.modules.feedforward import FeedForward
 from allennlp.modules.residual_with_layer_dropout import ResidualWithLayerDropout
-from allennlp.modules.seq2seq_encoders.multi_head_self_attention import MultiHeadSelfAttention
+from allennlp.modules.seq2seq_encoders import PytorchTransformer
 from allennlp.modules.seq2seq_encoders.seq2seq_encoder import Seq2SeqEncoder
 from allennlp.nn.activations import Activation
 from allennlp.nn.util import add_positional_features
@@ -204,13 +204,12 @@ class QaNetEncoderBlock(Seq2SeqEncoder):
             )
 
         self.attention_norm_layer = LayerNorm(hidden_dim)
-        self.attention_layer = MultiHeadSelfAttention(
-            num_heads=num_attention_heads,
+        self.attention_layer = PytorchTransformer(
             input_dim=hidden_dim,
-            attention_dim=attention_projection_dim,
-            values_dim=attention_projection_dim,
-            attention_dropout_prob=attention_dropout_prob,
-        )
+            num_layers=1,
+            num_attention_heads=num_attention_heads,
+            dropout_prob=attention_dropout_prob,
+            feedforward_hidden_dim=attention_projection_dim)
         self.feedforward_norm_layer = LayerNorm(hidden_dim)
         self.feedforward = FeedForward(
             hidden_dim,
