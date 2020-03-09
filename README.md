@@ -11,7 +11,7 @@ for developing state-of-the-art deep learning models on a wide variety of lingui
 * [Website](https://allennlp.org/)
 * [Tutorial](https://allennlp.org/tutorials)
 * [Forum](https://discourse.allennlp.org)
-* [Documentation](https://allenai.github.io/allennlp-docs/master/)
+* [Documentation](https://allenai.github.io/allennlp-docs/master/master/)
 * [Contributing Guidelines](CONTRIBUTING.md)
 * [Pretrained Models](https://github.com/allenai/allennlp-hub/blob/master/allennlp_hub/pretrained/allennlp_pretrained.py)
 * [Continuous Build](http://build.allennlp.org/)
