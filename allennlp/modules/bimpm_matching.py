@@ -15,6 +15,7 @@ from allennlp.nn.util import (
     masked_max,
     masked_mean,
     masked_softmax,
+    tiny_value_of_dtype
 )
 
 
@@ -59,7 +60,7 @@ def multi_perspective_match(
 
 
 def multi_perspective_match_pairwise(
-    vector1: torch.Tensor, vector2: torch.Tensor, weight: torch.Tensor, eps: float = 1e-8
+    vector1: torch.Tensor, vector2: torch.Tensor, weight: torch.Tensor
 ) -> torch.Tensor:
     """
     Calculate multi-perspective cosine matching between each time step of
@@ -73,8 +74,6 @@ def multi_perspective_match_pairwise(
         A tensor of shape `(batch, seq_len2, hidden_size)`
     weight : `torch.Tensor`
         A tensor of shape `(num_perspectives, hidden_size)`
-    eps : `float` optional, (default = 1e-8)
-        A small value to avoid zero division problem
 
     # Returns
 
@@ -99,7 +98,7 @@ def multi_perspective_match_pairwise(
     norm_value = vector1_norm * vector2_norm.transpose(2, 3)
 
     # (batch, seq_len1, seq_len2, num_perspectives)
-    return (mul_result / norm_value.clamp(min=eps)).permute(0, 2, 3, 1)
+    return (mul_result / norm_value.clamp(min=tiny_value_of_dtype(norm_value.dtype))).permute(0, 2, 3, 1)
 
 
 class BiMpmMatching(nn.Module, FromParams):
@@ -256,10 +255,10 @@ class BiMpmMatching(nn.Module, FromParams):
         cosine_sim = F.cosine_similarity(context_1.unsqueeze(-2), context_2.unsqueeze(-3), dim=3)
 
         # (batch, seq_len*, 1)
-        cosine_max_1 = masked_max(cosine_sim, mask_2.unsqueeze(-2), min_val=-1e4, dim=2, keepdim=True)
+        cosine_max_1 = masked_max(cosine_sim, mask_2.unsqueeze(-2), dim=2, keepdim=True)
         cosine_mean_1 = masked_mean(cosine_sim, mask_2.unsqueeze(-2), dim=2, keepdim=True)
         cosine_max_2 = masked_max(
-            cosine_sim.permute(0, 2, 1), mask_1.unsqueeze(-2), min_val=-1e4, dim=2, keepdim=True
+            cosine_sim.permute(0, 2, 1), mask_1.unsqueeze(-2), dim=2, keepdim=True
         )
         cosine_mean_2 = masked_mean(
             cosine_sim.permute(0, 2, 1), mask_1.unsqueeze(-2), dim=2, keepdim=True
@@ -312,13 +311,13 @@ class BiMpmMatching(nn.Module, FromParams):
 
             # (batch, seq_len*, num_perspectives)
             matching_vector_1_max = masked_max(
-                matching_vector_max, mask_2.unsqueeze(-2).unsqueeze(-1), min_val=-1e4, dim=2
+                matching_vector_max, mask_2.unsqueeze(-2).unsqueeze(-1), dim=2
             )
             matching_vector_1_mean = masked_mean(
                 matching_vector_max, mask_2.unsqueeze(-2).unsqueeze(-1), dim=2
             )
             matching_vector_2_max = masked_max(
-                matching_vector_max.permute(0, 2, 1, 3), mask_1.unsqueeze(-2).unsqueeze(-1), min_val=-1e4, dim=2
+                matching_vector_max.permute(0, 2, 1, 3), mask_1.unsqueeze(-2).unsqueeze(-1), dim=2
             )
             matching_vector_2_mean = masked_mean(
                 matching_vector_max.permute(0, 2, 1, 3), mask_1.unsqueeze(-2).unsqueeze(-1), dim=2
@@ -362,9 +361,9 @@ class BiMpmMatching(nn.Module, FromParams):
         # corresponding attentive vector.
         if self.with_max_attentive_match:
             # (batch, seq_len*, hidden_dim)
-            att_max_2 = masked_max(att_2, mask_2.unsqueeze(-2).unsqueeze(-1), min_val=-1e4, dim=2)
+            att_max_2 = masked_max(att_2, mask_2.unsqueeze(-2).unsqueeze(-1), dim=2)
             att_max_1 = masked_max(
-                att_1.permute(0, 2, 1, 3), mask_1.unsqueeze(-2).unsqueeze(-1), min_val=-1e4, dim=2
+                att_1.permute(0, 2, 1, 3), mask_1.unsqueeze(-2).unsqueeze(-1), dim=2
             )
 
             # (batch, seq_len*, num_perspectives)

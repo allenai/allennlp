@@ -1619,3 +1619,19 @@ class TestNnUtil(AllenNlpTestCase):
         assert util.tensors_equal([torch.tensor([1])], [torch.tensor([1])])
         assert not util.tensors_equal([torch.tensor([1])], [torch.tensor([2])])
         assert util.tensors_equal({"key": torch.tensor([1])}, {"key": torch.tensor([1])})
+
+    def test_info_value_of_dtype(self):
+        with pytest.raises(TypeError):
+            util.info_value_of_dtype(torch.bool)
+
+        assert util.min_value_of_dtype(torch.half) == -65504.0
+        assert util.max_value_of_dtype(torch.half) == 65504.0
+        assert util.tiny_value_of_dtype(torch.half) == 6.103515625e-05
+        assert util.min_value_of_dtype(torch.float) == -3.4028234663852886e38
+        assert util.max_value_of_dtype(torch.float) == 3.4028234663852886e+38
+        assert util.tiny_value_of_dtype(torch.float) == 1.1754943508222875e-38
+
+        assert util.min_value_of_dtype(torch.uint8) == 0
+        assert util.max_value_of_dtype(torch.uint8) == 255
+        assert util.min_value_of_dtype(torch.long) == -9223372036854775808
+        assert util.max_value_of_dtype(torch.long) == 9223372036854775807
