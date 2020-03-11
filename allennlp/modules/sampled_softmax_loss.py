@@ -206,13 +206,19 @@ class SampledSoftmaxLoss(torch.nn.Module):
         # compute the logits and remove log expected counts
         # [batch_size, ]
         true_logits = (
-            (true_w * embeddings).sum(dim=1) + true_b - torch.log(target_expected_count + util.eps_value_of_dtype(target_expected_count.dtype))
+            (true_w * embeddings).sum(dim=1)
+            + true_b
+            - torch.log(
+                target_expected_count + util.eps_value_of_dtype(target_expected_count.dtype)
+            )
         )
         # [batch_size, n_samples]
         sampled_logits = (
             torch.matmul(embeddings, sampled_w.t())
             + sampled_b
-            - torch.log(sampled_expected_count + util.eps_value_of_dtype(sampled_expected_count.dtype))
+            - torch.log(
+                sampled_expected_count + util.eps_value_of_dtype(sampled_expected_count.dtype)
+            )
         )
 
         # remove true labels -- we will take

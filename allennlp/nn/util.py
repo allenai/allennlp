@@ -240,10 +240,7 @@ def get_dropout_mask(dropout_probability: float, tensor_for_masking: torch.Tenso
 
 
 def masked_softmax(
-    vector: torch.Tensor,
-    mask: torch.BoolTensor,
-    dim: int = -1,
-    memory_efficient: bool = False,
+    vector: torch.Tensor, mask: torch.BoolTensor, dim: int = -1, memory_efficient: bool = False,
 ) -> torch.Tensor:
     """
     `torch.nn.functional.softmax(vector)` does not work if some elements of `vector` should be
@@ -312,10 +309,7 @@ def masked_log_softmax(vector: torch.Tensor, mask: torch.BoolTensor, dim: int = 
 
 
 def masked_max(
-    vector: torch.Tensor,
-    mask: torch.BoolTensor,
-    dim: int,
-    keepdim: bool = False,
+    vector: torch.Tensor, mask: torch.BoolTensor, dim: int, keepdim: bool = False,
 ) -> torch.Tensor:
     """
     To calculate max along certain dimensions on masked values
@@ -826,14 +820,22 @@ def sequence_cross_entropy_with_logits(
 
     if average == "batch":
         # shape : (batch_size,)
-        per_batch_loss = negative_log_likelihood.sum(non_batch_dims) / (weights_batch_sum + eps_value_of_dtype(negative_log_likelihood.dtype))
-        num_non_empty_sequences = (weights_batch_sum > 0).sum() + eps_value_of_dtype(negative_log_likelihood.dtype)
+        per_batch_loss = negative_log_likelihood.sum(non_batch_dims) / (
+            weights_batch_sum + eps_value_of_dtype(negative_log_likelihood.dtype)
+        )
+        num_non_empty_sequences = (weights_batch_sum > 0).sum() + eps_value_of_dtype(
+            negative_log_likelihood.dtype
+        )
         return per_batch_loss.sum() / num_non_empty_sequences
     elif average == "token":
-        return negative_log_likelihood.sum() / (weights_batch_sum.sum() + eps_value_of_dtype(negative_log_likelihood.dtype))
+        return negative_log_likelihood.sum() / (
+            weights_batch_sum.sum() + eps_value_of_dtype(negative_log_likelihood.dtype)
+        )
     else:
         # shape : (batch_size,)
-        per_batch_loss = negative_log_likelihood.sum(non_batch_dims) / (weights_batch_sum + eps_value_of_dtype(negative_log_likelihood.dtype))
+        per_batch_loss = negative_log_likelihood.sum(non_batch_dims) / (
+            weights_batch_sum + eps_value_of_dtype(negative_log_likelihood.dtype)
+        )
         return per_batch_loss
 
 

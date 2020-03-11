@@ -95,7 +95,8 @@ class LogToTensorboard(Callback):
                 update_norm = torch.norm(self.param_updates[name].view(-1))
                 param_norm = torch.norm(param.view(-1)).cpu()
                 self.tensorboard.add_train_scalar(
-                    "gradient_update/" + name, update_norm / (param_norm + nn_util.eps_value_of_dtype(param_norm.dtype))
+                    "gradient_update/" + name,
+                    update_norm / (param_norm + nn_util.eps_value_of_dtype(param_norm.dtype)),
                 )
             self.param_updates.clear()
             self.tensorboard.log_histograms(trainer.model, self.histogram_parameters)
