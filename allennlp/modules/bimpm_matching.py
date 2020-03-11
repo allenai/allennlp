@@ -15,7 +15,7 @@ from allennlp.nn.util import (
     masked_max,
     masked_mean,
     masked_softmax,
-    tiny_value_of_dtype
+    eps_value_of_dtype
 )
 
 
@@ -98,7 +98,7 @@ def multi_perspective_match_pairwise(
     norm_value = vector1_norm * vector2_norm.transpose(2, 3)
 
     # (batch, seq_len1, seq_len2, num_perspectives)
-    return (mul_result / norm_value.clamp(min=tiny_value_of_dtype(norm_value.dtype))).permute(0, 2, 3, 1)
+    return (mul_result / norm_value.clamp(min=eps_value_of_dtype(norm_value.dtype))).permute(0, 2, 3, 1)
 
 
 class BiMpmMatching(nn.Module, FromParams):

@@ -22,5 +22,5 @@ class MaskedLayerNorm(torch.nn.Module):
         num_elements = broadcast_mask.sum() * self.size
         mean = (tensor * broadcast_mask).sum() / num_elements
         masked_centered = (tensor - mean) * broadcast_mask
-        std = torch.sqrt((masked_centered * masked_centered).sum() / num_elements + util.tiny_value_of_dtype(tensor.dtype))
-        return self.gamma * (tensor - mean) / (std + util.tiny_value_of_dtype(tensor.dtype)) + self.beta
+        std = torch.sqrt((masked_centered * masked_centered).sum() / num_elements + util.eps_value_of_dtype(tensor.dtype))
+        return self.gamma * (tensor - mean) / (std + util.eps_value_of_dtype(tensor.dtype)) + self.beta

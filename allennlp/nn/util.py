@@ -273,7 +273,7 @@ def masked_softmax(
             # To limit numerical errors from large vector elements outside the mask, we zero these out.
             result = torch.nn.functional.softmax(vector * mask, dim=dim)
             result = result * mask
-            result = result / (result.sum(dim=dim, keepdim=True) + tiny_value_of_dtype(result.dtype))
+            result = result / (result.sum(dim=dim, keepdim=True) + eps_value_of_dtype(result.dtype))
         else:
             masked_vector = vector.masked_fill(~mask, min_value_of_dtype(vector.dtype))
             result = torch.nn.functional.softmax(masked_vector, dim=dim)
@@ -307,7 +307,7 @@ def masked_log_softmax(vector: torch.Tensor, mask: torch.BoolTensor, dim: int = 
         # vector + mask.log() is an easy way to zero out masked elements in logspace, but it
         # results in nans when the whole vector is masked.  We need a very small value instead of a
         # zero in the mask for these cases.
-        vector = vector + (mask + tiny_value_of_dtype(vector.dtype)).log()
+        vector = vector + (mask + eps_value_of_dtype(vector.dtype)).log()
     return torch.nn.functional.log_softmax(vector, dim=dim)
 
 
@@ -365,7 +365,7 @@ def masked_mean(
 
     value_sum = torch.sum(replaced_vector, dim=dim, keepdim=keepdim)
     value_count = torch.sum(mask, dim=dim, keepdim=keepdim)
-    return value_sum / value_count.float().clamp(min=tiny_value_of_dtype(torch.float))
+    return value_sum / value_count.float().clamp(min=eps_value_of_dtype(torch.float))
 
 
 def masked_flip(padded_sequence: torch.Tensor, sequence_lengths: List[int]) -> torch.Tensor:
@@ -826,14 +826,14 @@ def sequence_cross_entropy_with_logits(
 
     if average == "batch":
         # shape : (batch_size,)
-        per_batch_loss = negative_log_likelihood.sum(non_batch_dims) / (weights_batch_sum + tiny_value_of_dtype(negative_log_likelihood.dtype))
-        num_non_empty_sequences = (weights_batch_sum > 0).sum() + tiny_value_of_dtype(negative_log_likelihood.dtype)
+        per_batch_loss = negative_log_likelihood.sum(non_batch_dims) / (weights_batch_sum + eps_value_of_dtype(negative_log_likelihood.dtype))
+        num_non_empty_sequences = (weights_batch_sum > 0).sum() + eps_value_of_dtype(negative_log_likelihood.dtype)
         return per_batch_loss.sum() / num_non_empty_sequences
     elif average == "token":
-        return negative_log_likelihood.sum() / (weights_batch_sum.sum() + tiny_value_of_dtype(negative_log_likelihood.dtype))
+        return negative_log_likelihood.sum() / (weights_batch_sum.sum() + eps_value_of_dtype(negative_log_likelihood.dtype))
     else:
         # shape : (batch_size,)
-        per_batch_loss = negative_log_likelihood.sum(non_batch_dims) / (weights_batch_sum + tiny_value_of_dtype(negative_log_likelihood.dtype))
+        per_batch_loss = negative_log_likelihood.sum(non_batch_dims) / (weights_batch_sum + eps_value_of_dtype(negative_log_likelihood.dtype))
         return per_batch_loss
 
 
@@ -1842,11 +1842,12 @@ def max_value_of_dtype(dtype: torch.dtype):
     return info_value_of_dtype(dtype).max
 
 
-def tiny_value_of_dtype(dtype: torch.dtype):
+def eps_value_of_dtype(dtype: torch.dtype):
     """
-    Returns the smallest representatble value of a given PyTorch data type.
+    Returns the smallest representatble value of a given PyTorch data type such that
+    `1.0 + eps != 1.0`.
     Only supports floating point dtypes.
     """
     if not dtype.is_floating_point:
         raise TypeError("Only supports floating point dtypes.")
-    return info_value_of_dtype(dtype).tiny
+    return info_value_of_dtype(dtype).eps

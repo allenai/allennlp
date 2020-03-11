@@ -1626,10 +1626,10 @@ class TestNnUtil(AllenNlpTestCase):
 
         assert util.min_value_of_dtype(torch.half) == -65504.0
         assert util.max_value_of_dtype(torch.half) == 65504.0
-        assert util.tiny_value_of_dtype(torch.half) == 6.103515625e-05
+        assert util.eps_value_of_dtype(torch.half) == 6.103515625e-05
         assert util.min_value_of_dtype(torch.float) == -3.4028234663852886e38
         assert util.max_value_of_dtype(torch.float) == 3.4028234663852886e+38
-        assert util.tiny_value_of_dtype(torch.float) == 1.1754943508222875e-38
+        assert util.eps_value_of_dtype(torch.float) == 1.1754943508222875e-38
 
         assert util.min_value_of_dtype(torch.uint8) == 0
         assert util.max_value_of_dtype(torch.uint8) == 255
