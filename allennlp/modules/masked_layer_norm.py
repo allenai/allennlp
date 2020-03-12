@@ -27,5 +27,6 @@ class MaskedLayerNorm(torch.nn.Module):
             + util.tiny_value_of_dtype(tensor.dtype)
         )
         return (
-            self.gamma * (tensor - mean) / (std + util.tiny_value_of_dtype(tensor.dtype)) + self.beta
+            self.gamma * (tensor - mean) / (std + util.tiny_value_of_dtype(tensor.dtype))
+            + self.beta
         )

@@ -688,7 +688,8 @@ class CopyNetSeq2Seq(Model):
             copy_log_probs_to_add = (
                 copy_log_probs_slice
                 + (
-                    copy_log_probs_to_add_mask + util.tiny_value_of_dtype(copy_log_probs_slice.dtype)
+                    copy_log_probs_to_add_mask
+                    + util.tiny_value_of_dtype(copy_log_probs_slice.dtype)
                 ).log()
             )
             # shape: (batch_size, 1)
