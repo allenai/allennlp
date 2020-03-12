@@ -1846,10 +1846,16 @@ def max_value_of_dtype(dtype: torch.dtype):
 
 def tiny_value_of_dtype(dtype: torch.dtype):
     """
-    Returns the smallest representatble value of a given PyTorch data type such that
-    `1.0 + eps != 1.0`.
+    Returns a moderately tiny value for a given PyTorch data type that is used to avoid numerical
+    issues such as division by zero.
+    This is different from `info_value_of_dtype(dtype).tiny` because it causes some NaN bugs.
     Only supports floating point dtypes.
     """
     if not dtype.is_floating_point:
         raise TypeError("Only supports floating point dtypes.")
-    return info_value_of_dtype(dtype).tiny
+    if dtype == torch.float or torch.double:
+        return 1e-13
+    elif dtype == torch.half:
+        return 1e-4
+    else:
+        raise TypeError("Does not support dtype " + str(dtype))
