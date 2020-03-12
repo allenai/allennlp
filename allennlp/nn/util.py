@@ -270,7 +270,9 @@ def masked_softmax(
             # To limit numerical errors from large vector elements outside the mask, we zero these out.
             result = torch.nn.functional.softmax(vector * mask, dim=dim)
             result = result * mask
-            result = result / (result.sum(dim=dim, keepdim=True) + tiny_value_of_dtype(result.dtype))
+            result = result / (
+                result.sum(dim=dim, keepdim=True) + tiny_value_of_dtype(result.dtype)
+            )
         else:
             masked_vector = vector.masked_fill(~mask, min_value_of_dtype(vector.dtype))
             result = torch.nn.functional.softmax(masked_vector, dim=dim)
