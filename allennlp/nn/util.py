@@ -240,11 +240,7 @@ def get_dropout_mask(dropout_probability: float, tensor_for_masking: torch.Tenso
 
 
 def masked_softmax(
-    vector: torch.Tensor,
-    mask: torch.BoolTensor,
-    dim: int = -1,
-    memory_efficient: bool = False,
-    mask_fill_value: float = -1e32,
+    vector: torch.Tensor, mask: torch.BoolTensor, dim: int = -1, memory_efficient: bool = False,
 ) -> torch.Tensor:
     """
     `torch.nn.functional.softmax(vector)` does not work if some elements of `vector` should be
@@ -274,9 +270,11 @@ def masked_softmax(
             # To limit numerical errors from large vector elements outside the mask, we zero these out.
             result = torch.nn.functional.softmax(vector * mask, dim=dim)
             result = result * mask
-            result = result / (result.sum(dim=dim, keepdim=True) + 1e-13)
+            result = result / (
+                result.sum(dim=dim, keepdim=True) + tiny_value_of_dtype(result.dtype)
+            )
         else:
-            masked_vector = vector.masked_fill(~mask, mask_fill_value)
+            masked_vector = vector.masked_fill(~mask, min_value_of_dtype(vector.dtype))
             result = torch.nn.functional.softmax(masked_vector, dim=dim)
     return result
 
@@ -307,19 +305,13 @@ def masked_log_softmax(vector: torch.Tensor, mask: torch.BoolTensor, dim: int = 
             mask = mask.unsqueeze(1)
         # vector + mask.log() is an easy way to zero out masked elements in logspace, but it
         # results in nans when the whole vector is masked.  We need a very small value instead of a
-        # zero in the mask for these cases.  log(1 + 1e-45) is still basically 0, so we can safely
-        # just add 1e-45 before calling mask.log().  We use 1e-45 because 1e-46 is so small it
-        # becomes 0 - this is just the smallest value we can actually use.
-        vector = vector + (mask + 1e-45).log()
+        # zero in the mask for these cases.
+        vector = vector + (mask + tiny_value_of_dtype(vector.dtype)).log()
     return torch.nn.functional.log_softmax(vector, dim=dim)
 
 
 def masked_max(
-    vector: torch.Tensor,
-    mask: torch.BoolTensor,
-    dim: int,
-    keepdim: bool = False,
-    min_val: float = -1e7,
+    vector: torch.Tensor, mask: torch.BoolTensor, dim: int, keepdim: bool = False,
 ) -> torch.Tensor:
     """
     To calculate max along certain dimensions on masked values
@@ -334,20 +326,18 @@ def masked_max(
         The dimension to calculate max
     keepdim : `bool`
         Whether to keep dimension
-    min_val : `float`
-        The minimal value for paddings
 
     # Returns
 
     A `torch.Tensor` of including the maximum values.
     """
-    replaced_vector = vector.masked_fill(~mask, min_val)
+    replaced_vector = vector.masked_fill(~mask, min_value_of_dtype(vector.dtype))
     max_value, _ = replaced_vector.max(dim=dim, keepdim=keepdim)
     return max_value
 
 
 def masked_mean(
-    vector: torch.Tensor, mask: torch.BoolTensor, dim: int, keepdim: bool = False, eps: float = 1e-8
+    vector: torch.Tensor, mask: torch.BoolTensor, dim: int, keepdim: bool = False
 ) -> torch.Tensor:
     """
     To calculate mean along certain dimensions on masked values
@@ -362,8 +352,6 @@ def masked_mean(
         The dimension to calculate mean
     keepdim : `bool`
         Whether to keep dimension
-    eps : `float`
-        A small value to avoid zero division problem.
 
     # Returns
 
@@ -373,7 +361,7 @@ def masked_mean(
 
     value_sum = torch.sum(replaced_vector, dim=dim, keepdim=keepdim)
     value_count = torch.sum(mask, dim=dim, keepdim=keepdim)
-    return value_sum / value_count.float().clamp(min=eps)
+    return value_sum / value_count.float().clamp(min=tiny_value_of_dtype(torch.float))
 
 
 def masked_flip(padded_sequence: torch.Tensor, sequence_lengths: List[int]) -> torch.Tensor:
@@ -757,7 +745,7 @@ def sequence_cross_entropy_with_logits(
         raise ValueError("Got average f{average}, expected one of None, 'token', or 'batch'")
 
     # make sure weights are float
-    weights = weights.float()
+    weights = weights.to(logits.dtype)
     # sum all dim except batch
     non_batch_dims = tuple(range(1, len(weights.shape)))
     # shape : (batch_size,)
@@ -834,14 +822,22 @@ def sequence_cross_entropy_with_logits(
 
     if average == "batch":
         # shape : (batch_size,)
-        per_batch_loss = negative_log_likelihood.sum(non_batch_dims) / (weights_batch_sum + 1e-13)
-        num_non_empty_sequences = (weights_batch_sum > 0).float().sum() + 1e-13
+        per_batch_loss = negative_log_likelihood.sum(non_batch_dims) / (
+            weights_batch_sum + tiny_value_of_dtype(negative_log_likelihood.dtype)
+        )
+        num_non_empty_sequences = (weights_batch_sum > 0).sum() + tiny_value_of_dtype(
+            negative_log_likelihood.dtype
+        )
         return per_batch_loss.sum() / num_non_empty_sequences
     elif average == "token":
-        return negative_log_likelihood.sum() / (weights_batch_sum.sum() + 1e-13)
+        return negative_log_likelihood.sum() / (
+            weights_batch_sum.sum() + tiny_value_of_dtype(negative_log_likelihood.dtype)
+        )
     else:
         # shape : (batch_size,)
-        per_batch_loss = negative_log_likelihood.sum(non_batch_dims) / (weights_batch_sum + 1e-13)
+        per_batch_loss = negative_log_likelihood.sum(non_batch_dims) / (
+            weights_batch_sum + tiny_value_of_dtype(negative_log_likelihood.dtype)
+        )
         return per_batch_loss
 
 
@@ -1786,8 +1782,8 @@ def masked_topk(
     k = k.reshape(-1)
 
     # Make sure that we don't select any masked items by setting their scores to be very
-    # negative.  These are logits, typically, so -1e20 should be plenty negative.
-    input_ = replace_masked_values(input_, mask, -1e20)
+    # negative.
+    input_ = replace_masked_values(input_, mask, min_value_of_dtype(input_.dtype))
 
     # Shape: (batch_size, max_k)
     _, top_indices = input_.topk(max_k, 1)
@@ -1822,3 +1818,46 @@ def masked_topk(
         top_mask.reshape(*permuted_size).permute(*reverse_permutation),
         top_indices.reshape(*permuted_size).permute(*reverse_permutation),
     )
+
+
+def info_value_of_dtype(dtype: torch.dtype):
+    """
+    Returns the `finfo` or `iinfo` object of a given PyTorch data type. Does not allow torch.bool.
+    """
+    if dtype == torch.bool:
+        raise TypeError("Does not support torch.bool")
+    elif dtype.is_floating_point:
+        return torch.finfo(dtype)
+    else:
+        return torch.iinfo(dtype)
+
+
+def min_value_of_dtype(dtype: torch.dtype):
+    """
+    Returns the minimum value of a given PyTorch data type. Does not allow torch.bool.
+    """
+    return info_value_of_dtype(dtype).min
+
+
+def max_value_of_dtype(dtype: torch.dtype):
+    """
+    Returns the maximum value of a given PyTorch data type. Does not allow torch.bool.
+    """
+    return info_value_of_dtype(dtype).max
+
+
+def tiny_value_of_dtype(dtype: torch.dtype):
+    """
+    Returns a moderately tiny value for a given PyTorch data type that is used to avoid numerical
+    issues such as division by zero.
+    This is different from `info_value_of_dtype(dtype).tiny` because it causes some NaN bugs.
+    Only supports floating point dtypes.
+    """
+    if not dtype.is_floating_point:
+        raise TypeError("Only supports floating point dtypes.")
+    if dtype == torch.float or dtype == torch.double:
+        return 1e-13
+    elif dtype == torch.half:
+        return 1e-4
+    else:
+        raise TypeError("Does not support dtype " + str(dtype))

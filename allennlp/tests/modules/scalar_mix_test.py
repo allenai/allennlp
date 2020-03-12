@@ -6,6 +6,7 @@ import numpy
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.common.checks import ConfigurationError
 from allennlp.modules import ScalarMix
+from allennlp.nn import util
 
 
 class TestScalarMix(AllenNlpTestCase):
@@ -59,7 +60,9 @@ class TestScalarMix(AllenNlpTestCase):
         for k in range(3):
             mean = numpy.mean(tensors[k].data.numpy()[numpy_mask == 1])
             std = numpy.std(tensors[k].data.numpy()[numpy_mask == 1])
-            normed_tensor = (tensors[k].data.numpy() - mean) / (std + 1e-12)
+            normed_tensor = (tensors[k].data.numpy() - mean) / (
+                std + util.tiny_value_of_dtype(torch.float)
+            )
             expected_result += normed_tensor * normed_weights[k]
         expected_result *= 0.5
 

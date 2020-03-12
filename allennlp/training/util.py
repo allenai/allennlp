@@ -66,7 +66,7 @@ def sparse_clip_norm(parameters, max_norm, norm_type=2) -> float:
                 param_norm = p.grad.data.norm(norm_type)
             total_norm += param_norm ** norm_type
         total_norm = total_norm ** (1.0 / norm_type)
-    clip_coef = max_norm / (total_norm + 1e-6)
+    clip_coef = max_norm / (total_norm + nn_util.tiny_value_of_dtype(total_norm.dtype))
     if clip_coef < 1:
         for p in parameters:
             if p.grad.is_sparse:

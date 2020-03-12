@@ -14,6 +14,7 @@ from allennlp.modules.matrix_attention.bilinear_matrix_attention import Bilinear
 from allennlp.modules import FeedForward
 from allennlp.models.model import Model
 from allennlp.nn import InitializerApplicator, Activation
+from allennlp.nn.util import min_value_of_dtype
 from allennlp.nn.util import get_text_field_mask
 from allennlp.nn.util import get_lengths_from_binary_sequence_mask
 from allennlp.training.metrics import F1Measure
@@ -193,8 +194,8 @@ class GraphParser(Model):
         # Switch to (batch_size, sequence_length, sequence_length, num_tags)
         arc_tag_logits = arc_tag_logits.permute(0, 2, 3, 1).contiguous()
 
-        minus_inf = -1e8
-        minus_mask = ~mask * minus_inf
+        # Since we'll be doing some additions, using the min value will cause underflow
+        minus_mask = ~mask * min_value_of_dtype(arc_scores.dtype) / 10
         arc_scores = arc_scores + minus_mask.unsqueeze(2) + minus_mask.unsqueeze(1)
 
         arc_probs, arc_tag_probs = self._greedy_decode(arc_scores, arc_tag_logits, mask)
