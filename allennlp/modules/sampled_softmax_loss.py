@@ -6,6 +6,7 @@ import numpy as np
 import torch
 
 from allennlp.common.checks import ConfigurationError
+from allennlp.nn import util
 
 
 def _choice(num_words: int, num_samples: int) -> Tuple[np.ndarray, int]:
@@ -205,13 +206,19 @@ class SampledSoftmaxLoss(torch.nn.Module):
         # compute the logits and remove log expected counts
         # [batch_size, ]
         true_logits = (
-            (true_w * embeddings).sum(dim=1) + true_b - torch.log(target_expected_count + 1e-7)
+            (true_w * embeddings).sum(dim=1)
+            + true_b
+            - torch.log(
+                target_expected_count + util.tiny_value_of_dtype(target_expected_count.dtype)
+            )
         )
         # [batch_size, n_samples]
         sampled_logits = (
             torch.matmul(embeddings, sampled_w.t())
             + sampled_b
-            - torch.log(sampled_expected_count + 1e-7)
+            - torch.log(
+                sampled_expected_count + util.tiny_value_of_dtype(sampled_expected_count.dtype)
+            )
         )
 
         # remove true labels -- we will take
