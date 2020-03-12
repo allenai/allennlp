@@ -21,8 +21,8 @@ class TestMaskedLayerNorm(AllenNlpTestCase):
         mean = (x_n * np.expand_dims(mask_n, axis=-1)).sum() / N
         std = np.sqrt(
             (((x_n - mean) * np.expand_dims(mask_n, axis=-1)) ** 2).sum() / N
-            + util.eps_value_of_dtype(torch.float)
+            + util.tiny_value_of_dtype(torch.float)
         )
-        expected = 0.2 * (x_n - mean) / (std + util.eps_value_of_dtype(torch.float))
+        expected = 0.2 * (x_n - mean) / (std + util.tiny_value_of_dtype(torch.float))
 
         assert np.allclose(normed_x.data.numpy(), expected)

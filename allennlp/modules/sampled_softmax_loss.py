@@ -209,7 +209,7 @@ class SampledSoftmaxLoss(torch.nn.Module):
             (true_w * embeddings).sum(dim=1)
             + true_b
             - torch.log(
-                target_expected_count + util.eps_value_of_dtype(target_expected_count.dtype)
+                target_expected_count + util.tiny_value_of_dtype(target_expected_count.dtype)
             )
         )
         # [batch_size, n_samples]
@@ -217,7 +217,7 @@ class SampledSoftmaxLoss(torch.nn.Module):
             torch.matmul(embeddings, sampled_w.t())
             + sampled_b
             - torch.log(
-                sampled_expected_count + util.eps_value_of_dtype(sampled_expected_count.dtype)
+                sampled_expected_count + util.tiny_value_of_dtype(sampled_expected_count.dtype)
             )
         )
 

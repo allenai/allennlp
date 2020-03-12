@@ -420,7 +420,7 @@ class CopyNetSeq2Seq(Model):
         copy_log_probs = (
             log_probs[:, target_size:]
             + (
-                target_to_source.to(log_probs.dtype) + util.eps_value_of_dtype(log_probs.dtype)
+                target_to_source.to(log_probs.dtype) + util.tiny_value_of_dtype(log_probs.dtype)
             ).log()
         )
         # Since `log_probs[:, target_size]` gives us the raw copy log probabilities,
@@ -431,7 +431,7 @@ class CopyNetSeq2Seq(Model):
         # matching tokens in the source sentence.
         # shape: (batch_size, 1)
         gen_mask = (target_tokens != self._oov_index) | (target_to_source.sum(-1) == 0)
-        log_gen_mask = (gen_mask + util.eps_value_of_dtype(log_probs.dtype)).log().unsqueeze(-1)
+        log_gen_mask = (gen_mask + util.tiny_value_of_dtype(log_probs.dtype)).log().unsqueeze(-1)
         # Now we get the generation score for the gold target token.
         # shape: (batch_size, 1)
         generation_log_probs = log_probs.gather(1, target_tokens.unsqueeze(1)) + log_gen_mask
@@ -688,7 +688,7 @@ class CopyNetSeq2Seq(Model):
             copy_log_probs_to_add = (
                 copy_log_probs_slice
                 + (
-                    copy_log_probs_to_add_mask + util.eps_value_of_dtype(copy_log_probs_slice.dtype)
+                    copy_log_probs_to_add_mask + util.tiny_value_of_dtype(copy_log_probs_slice.dtype)
                 ).log()
             )
             # shape: (batch_size, 1)
@@ -717,7 +717,7 @@ class CopyNetSeq2Seq(Model):
                 future_copy_log_probs = (
                     copy_log_probs[:, (i + 1) :]
                     + (
-                        source_future_occurences + util.eps_value_of_dtype(copy_log_probs.dtype)
+                        source_future_occurences + util.tiny_value_of_dtype(copy_log_probs.dtype)
                     ).log()
                 )
                 # shape: (group_size, 1 + trimmed_source_length - i)
@@ -736,7 +736,7 @@ class CopyNetSeq2Seq(Model):
                 duplicate_mask = source_previous_occurences.sum(dim=-1) == 0
                 copy_log_probs_slice = (
                     copy_log_probs_slice
-                    + (duplicate_mask + util.eps_value_of_dtype(copy_log_probs_slice.dtype)).log()
+                    + (duplicate_mask + util.tiny_value_of_dtype(copy_log_probs_slice.dtype)).log()
                 )
 
             # Finally, we zero-out copy scores that we added to the generation scores
@@ -746,7 +746,7 @@ class CopyNetSeq2Seq(Model):
                 copy_log_probs_slice
                 + (
                     ~copy_log_probs_to_add_mask
-                    + util.eps_value_of_dtype(copy_log_probs_slice.dtype)
+                    + util.tiny_value_of_dtype(copy_log_probs_slice.dtype)
                 ).log()
             )
             modified_log_probs_list.append(left_over_copy_log_probs.unsqueeze(-1))

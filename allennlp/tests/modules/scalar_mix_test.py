@@ -61,7 +61,7 @@ class TestScalarMix(AllenNlpTestCase):
             mean = numpy.mean(tensors[k].data.numpy()[numpy_mask == 1])
             std = numpy.std(tensors[k].data.numpy()[numpy_mask == 1])
             normed_tensor = (tensors[k].data.numpy() - mean) / (
-                std + util.eps_value_of_dtype(torch.float)
+                std + util.tiny_value_of_dtype(torch.float)
             )
             expected_result += normed_tensor * normed_weights[k]
         expected_result *= 0.5
