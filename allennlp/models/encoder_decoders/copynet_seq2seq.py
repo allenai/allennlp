@@ -547,7 +547,7 @@ class CopyNetSeq2Seq(Model):
         # Initialize the copy scores to zero.
         state["copy_log_probs"] = (
             state["decoder_hidden"].new_zeros((batch_size, trimmed_source_length))
-            + util.min_value_of_dtype(state["decoder_hidden"].dtype)
+            + util.tiny_value_of_dtype(state["decoder_hidden"].dtype)
         ).log()
         # shape: (batch_size,)
         start_predictions = state["source_mask"].new_full(
