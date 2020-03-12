@@ -194,7 +194,8 @@ class GraphParser(Model):
         # Switch to (batch_size, sequence_length, sequence_length, num_tags)
         arc_tag_logits = arc_tag_logits.permute(0, 2, 3, 1).contiguous()
 
-        minus_mask = ~mask * min_value_of_dtype(arc_scores.dtype)
+        # Since we'll be doing some additions, using the min value will cause underflow
+        minus_mask = ~mask * min_value_of_dtype(arc_scores.dtype) / 10
         arc_scores = arc_scores + minus_mask.unsqueeze(2) + minus_mask.unsqueeze(1)
 
         arc_probs, arc_tag_probs = self._greedy_decode(arc_scores, arc_tag_logits, mask)
