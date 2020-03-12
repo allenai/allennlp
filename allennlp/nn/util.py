@@ -1853,7 +1853,7 @@ def tiny_value_of_dtype(dtype: torch.dtype):
     """
     if not dtype.is_floating_point:
         raise TypeError("Only supports floating point dtypes.")
-    if dtype == torch.float or torch.double:
+    if dtype == torch.float or dtype == torch.double:
         return 1e-13
     elif dtype == torch.half:
         return 1e-4
