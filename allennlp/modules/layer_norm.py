@@ -1,5 +1,7 @@
 import torch
 
+from allennlp.nn import util
+
 
 class LayerNorm(torch.nn.Module):
 
@@ -16,22 +18,20 @@ class LayerNorm(torch.nn.Module):
 
     dimension : `int`, required.
         The dimension of the layer output to normalize.
-    eps : `float`, optional, (default = 1e-6)
-        An epsilon to prevent dividing by zero in the case
-        the layer has zero variance.
 
     # Returns
 
     The normalized layer output.
     """  # noqa
 
-    def __init__(self, dimension: int, eps: float = 1e-6) -> None:
+    def __init__(self, dimension: int) -> None:
         super().__init__()
         self.gamma = torch.nn.Parameter(torch.ones(dimension))
         self.beta = torch.nn.Parameter(torch.zeros(dimension))
-        self.eps = eps
 
     def forward(self, tensor: torch.Tensor):
         mean = tensor.mean(-1, keepdim=True)
         std = tensor.std(-1, unbiased=False, keepdim=True)
-        return self.gamma * (tensor - mean) / (std + self.eps) + self.beta
+        return (
+            self.gamma * (tensor - mean) / (std + util.tiny_value_of_dtype(std.dtype)) + self.beta
+        )

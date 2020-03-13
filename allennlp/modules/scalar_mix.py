@@ -4,6 +4,7 @@ import torch
 from torch.nn import ParameterList, Parameter
 
 from allennlp.common.checks import ConfigurationError
+from allennlp.nn import util
 
 
 class ScalarMix(torch.nn.Module):
@@ -68,7 +69,7 @@ class ScalarMix(torch.nn.Module):
             variance = (
                 torch.sum(((tensor_masked - mean) * broadcast_mask) ** 2) / num_elements_not_masked
             )
-            return (tensor - mean) / torch.sqrt(variance + 1e-12)
+            return (tensor - mean) / torch.sqrt(variance + util.tiny_value_of_dtype(variance.dtype))
 
         normed_weights = torch.nn.functional.softmax(
             torch.cat([parameter for parameter in self.scalar_parameters]), dim=0
