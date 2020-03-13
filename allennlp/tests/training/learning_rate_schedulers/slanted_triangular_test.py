@@ -82,7 +82,7 @@ class SlantedTriangularTest(AllenNlpTestCase):
                 if params.get("gradual_unfreezing") and epoch == 0:
                     assert scheduler.freezing_current
             # step() takes two arguments: validation metric and epoch
-            scheduler.step(None, epoch)
+            scheduler.step(None)
 
         return lrs
 

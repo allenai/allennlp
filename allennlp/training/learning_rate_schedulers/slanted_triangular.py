@@ -74,6 +74,7 @@ class SlantedTriangular(LearningRateScheduler):
                 " for gradual unfreezing / discriminative fine-tuning to make sense."
             )
         super().__init__(optimizer, last_epoch)
+        self.step()
         if discriminative_fine_tuning:
             # skip the last param_group if it is has no parameters
             exponent = 0
@@ -88,7 +89,8 @@ class SlantedTriangular(LearningRateScheduler):
         self.step_batch(0)
 
     @overrides
-    def step(self, metric: float = None, epoch: int = None) -> None:
+    def step(self, metric: float = None) -> None:
+        self.last_epoch += 1
         if len(self.batch_num_total_epoch_end) == 0:
             self.batch_num_total_epoch_end.append(0)
         else:
@@ -104,7 +106,7 @@ class SlantedTriangular(LearningRateScheduler):
                 num_layers_to_unfreeze = 1
                 self.is_first_epoch = False
             else:
-                num_layers_to_unfreeze = epoch + 2
+                num_layers_to_unfreeze = self.last_epoch + 2
             if num_layers_to_unfreeze >= len(self.optimizer.param_groups) - 1:
                 logger.info("Gradual unfreezing finished. Training all layers.")
                 self.freezing_current = False
