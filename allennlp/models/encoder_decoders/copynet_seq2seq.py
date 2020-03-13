@@ -120,8 +120,6 @@ class CopyNetSeq2Seq(Model):
         self.decoder_output_dim = self.encoder_output_dim
         self.decoder_input_dim = self.decoder_output_dim
 
-        target_vocab_size = self.vocab.get_vocab_size(self._target_namespace)
-
         # The decoder input will be a function of the embedding of the previous predicted token,
         # an attended encoder hidden state called the "attentive read", and another
         # weighted sum of the encoder hidden state called the "selective read".
@@ -130,7 +128,7 @@ class CopyNetSeq2Seq(Model):
         # corresponding to each token in the source sentence that matches the target
         # token from the previous timestep.
         self._target_embedder = Embedding(
-            num_embeddings=target_vocab_size, embedding_dim=target_embedding_dim
+            num_embeddings=self._target_vocab_size, embedding_dim=target_embedding_dim
         )
         self._attention = attention
         self._input_projection_layer = Linear(
@@ -143,7 +141,7 @@ class CopyNetSeq2Seq(Model):
 
         # We create a "generation" score for each token in the target vocab
         # with a linear projection of the decoder hidden state.
-        self._output_generation_layer = Linear(self.decoder_output_dim, target_vocab_size)
+        self._output_generation_layer = Linear(self.decoder_output_dim, self._target_vocab_size)
 
         # We create a "copying" score for each source token by applying a non-linearity
         # (tanh) to a linear projection of the encoded hidden state for that token,
@@ -167,7 +165,6 @@ class CopyNetSeq2Seq(Model):
         target_tokens: TextFieldTensors = None,
         target_token_ids: torch.Tensor = None,
     ) -> Dict[str, torch.Tensor]:
-
         """
         Make foward pass with decoder logic for producing the entire target sequence.
 
