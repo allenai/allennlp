@@ -80,7 +80,7 @@ class TestUnidirectionalLanguageModelTransformer(TestUnidirectionalLanguageModel
     def setUp(self):
         super().setUp()
 
-        self.expected_embedding_shape = (2, 8, 20)
+        self.expected_embedding_shape = (2, 8, 16)
 
         self.set_up_model(
             self.FIXTURES_ROOT / "language_model" / "experiment_unidirectional_transformer.jsonnet",

@@ -417,7 +417,12 @@ class CopyNetSeq2Seq(Model):
         # to create `selective_weights`, which are used in the next timestep to create
         # a selective read state.
         # shape: (batch_size, trimmed_source_length)
-        copy_log_probs = log_probs[:, target_size:] + (target_to_source.float() + 1e-45).log()
+        copy_log_probs = (
+            log_probs[:, target_size:]
+            + (
+                target_to_source.to(log_probs.dtype) + util.tiny_value_of_dtype(log_probs.dtype)
+            ).log()
+        )
         # Since `log_probs[:, target_size]` gives us the raw copy log probabilities,
         # we use a non-log softmax to get the normalized non-log copy probabilities.
         selective_weights = util.masked_softmax(log_probs[:, target_size:], target_to_source)
@@ -426,7 +431,7 @@ class CopyNetSeq2Seq(Model):
         # matching tokens in the source sentence.
         # shape: (batch_size, 1)
         gen_mask = (target_tokens != self._oov_index) | (target_to_source.sum(-1) == 0)
-        log_gen_mask = (gen_mask + 1e-45).log().unsqueeze(-1)
+        log_gen_mask = (gen_mask + util.tiny_value_of_dtype(log_probs.dtype)).log().unsqueeze(-1)
         # Now we get the generation score for the gold target token.
         # shape: (batch_size, 1)
         generation_log_probs = log_probs.gather(1, target_tokens.unsqueeze(1)) + log_gen_mask
@@ -541,7 +546,8 @@ class CopyNetSeq2Seq(Model):
         trimmed_source_length = source_length - 2
         # Initialize the copy scores to zero.
         state["copy_log_probs"] = (
-            state["decoder_hidden"].new_zeros((batch_size, trimmed_source_length)) + 1e-45
+            state["decoder_hidden"].new_zeros((batch_size, trimmed_source_length))
+            + util.tiny_value_of_dtype(state["decoder_hidden"].dtype)
         ).log()
         # shape: (batch_size,)
         start_predictions = state["source_mask"].new_full(
@@ -680,7 +686,11 @@ class CopyNetSeq2Seq(Model):
             # to the OOV token.
             copy_log_probs_to_add_mask = source_to_target_slice != self._oov_index
             copy_log_probs_to_add = (
-                copy_log_probs_slice + (copy_log_probs_to_add_mask + 1e-45).log()
+                copy_log_probs_slice
+                + (
+                    copy_log_probs_to_add_mask
+                    + util.tiny_value_of_dtype(copy_log_probs_slice.dtype)
+                ).log()
             )
             # shape: (batch_size, 1)
             copy_log_probs_to_add = copy_log_probs_to_add.unsqueeze(-1)
@@ -701,12 +711,15 @@ class CopyNetSeq2Seq(Model):
             if i < (trimmed_source_length - 1):
                 # Sum copy scores from future occurences of source token.
                 # shape: (group_size, trimmed_source_length - i)
-                source_future_occurences = (
-                    source_token_ids[:, (i + 1) :] == source_token_ids[:, i].unsqueeze(-1)
-                ).float()  # noqa
+                source_future_occurences = source_token_ids[:, (i + 1) :] == source_token_ids[
+                    :, i
+                ].unsqueeze(-1)
                 # shape: (group_size, trimmed_source_length - i)
                 future_copy_log_probs = (
-                    copy_log_probs[:, (i + 1) :] + (source_future_occurences + 1e-45).log()
+                    copy_log_probs[:, (i + 1) :]
+                    + (
+                        source_future_occurences + util.tiny_value_of_dtype(copy_log_probs.dtype)
+                    ).log()
                 )
                 # shape: (group_size, 1 + trimmed_source_length - i)
                 combined = torch.cat(
@@ -722,13 +735,20 @@ class CopyNetSeq2Seq(Model):
                 ].unsqueeze(-1)
                 # shape: (group_size,)
                 duplicate_mask = source_previous_occurences.sum(dim=-1) == 0
-                copy_log_probs_slice = copy_log_probs_slice + (duplicate_mask + 1e-45).log()
+                copy_log_probs_slice = (
+                    copy_log_probs_slice
+                    + (duplicate_mask + util.tiny_value_of_dtype(copy_log_probs_slice.dtype)).log()
+                )
 
             # Finally, we zero-out copy scores that we added to the generation scores
             # above so that we don't double-count them.
             # shape: (group_size,)
             left_over_copy_log_probs = (
-                copy_log_probs_slice + (~copy_log_probs_to_add_mask + 1e-45).log()
+                copy_log_probs_slice
+                + (
+                    ~copy_log_probs_to_add_mask
+                    + util.tiny_value_of_dtype(copy_log_probs_slice.dtype)
+                ).log()
             )
             modified_log_probs_list.append(left_over_copy_log_probs.unsqueeze(-1))
         modified_log_probs_list.insert(0, generation_log_probs)

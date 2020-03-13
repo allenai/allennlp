@@ -59,10 +59,10 @@ Each sentence consists of space-separated word-tag pairs, which are themselves s
 
 Typically to solve a problem like this using AllenNLP, you'll have to implement two classes.
 
-The first is a [`DatasetReader`](https://allenai.github.io/allennlp-docs/api/allennlp.data.dataset_readers.html), which contains the logic for reading a file of data
+The first is a [`DatasetReader`], which contains the logic for reading a file of data
 and producing a stream of `Instance`s (more about those shortly).
 
-The second is a [`Model`](https://allenai.github.io/allennlp-docs/api/allennlp.models.model.html), which is a PyTorch `Module` that takes `Tensor` inputs and produces a dict of `Tensor` outputs (including the training `loss` you want to optimize).
+The second is a [`Model`](https://docs.allennlp.org/master/api/models/model/#model), which is a PyTorch `Module` that takes `Tensor` inputs and produces a dict of `Tensor` outputs (including the training `loss` you want to optimize).
 
 AllenNLP handles the remaining details such as training, batching, padding, logging, model persistence, and so on.
 AllenNLP also includes many high-level abstractions that will make writing those two classes much easier.
