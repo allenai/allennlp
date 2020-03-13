@@ -14,7 +14,6 @@ from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.dataset_readers.interleaving_dataset_reader import InterleavingDatasetReader
 from allennlp.data.dataset_readers.masked_language_modeling import MaskedLanguageModelingReader
 from allennlp.data.dataset_readers.next_token_lm import NextTokenLmReader
-from allennlp.data.dataset_readers.penn_tree_bank import PennTreeBankConstituencySpanDatasetReader
 from allennlp.data.dataset_readers.semantic_dependency_parsing import (
     SemanticDependenciesDatasetReader,
 )
