@@ -716,9 +716,9 @@ class Trainer(TrainerBase):
             # The Scheduler API is agnostic to whether your schedule requires a validation metric -
             # if it doesn't, the validation metric passed here is ignored.
             if self._learning_rate_scheduler:
-                self._learning_rate_scheduler.step(this_epoch_val_metric, epoch)
+                self._learning_rate_scheduler.step(this_epoch_val_metric)
             if self._momentum_scheduler:
-                self._momentum_scheduler.step(this_epoch_val_metric, epoch)
+                self._momentum_scheduler.step(this_epoch_val_metric)
 
             if self._master:
                 self._save_checkpoint(epoch)
