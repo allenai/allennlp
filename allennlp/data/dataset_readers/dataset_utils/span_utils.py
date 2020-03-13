@@ -1,9 +1,12 @@
 from typing import Callable, List, Set, Tuple, TypeVar, Optional
 import warnings
 
-from allennlp.data.dataset_readers.dataset_utils.ontonotes import TypedStringSpan
 from allennlp.common.checks import ConfigurationError
 from allennlp.data.tokenizers.token import Token
+
+
+TypedSpan = Tuple[int, Tuple[int, int]]
+TypedStringSpan = Tuple[str, Tuple[int, int]]
 
 
 class InvalidTagSequence(Exception):

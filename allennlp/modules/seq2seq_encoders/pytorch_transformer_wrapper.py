@@ -90,7 +90,7 @@ class PytorchTransformer(Seq2SeqEncoder):
 
     @overrides
     def is_bidirectional(self):
-        return True
+        return False
 
     @overrides
     def forward(self, inputs: torch.Tensor, mask: torch.BoolTensor):
