@@ -7,7 +7,6 @@ want to serve up a model through the web service
 a `Predictor` that wraps it.
 """
 from allennlp.predictors.predictor import Predictor
-from allennlp.predictors.constituency_parser import ConstituencyParserPredictor
 from allennlp.predictors.coref import CorefPredictor
 from allennlp.predictors.decomposable_attention import DecomposableAttentionPredictor
 from allennlp.predictors.masked_language_model import MaskedLanguageModelPredictor
