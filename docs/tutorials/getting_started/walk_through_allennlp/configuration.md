@@ -15,10 +15,10 @@ each section of the configuration file in detail, explaining what all the parame
 ## A preliminary: Registrable and from_params
 
 Most AllenNLP classes inherit from the
-[`Registrable`](https://allenai.github.io/allennlp-docs/api/allennlp.common.registrable.html#allennlp.common.registrable.Registrable)
+[`Registrable`](https://docs.allennlp.org/master/api/common/registrable/#registrable)
 base class,
 which gives them a named registry for their subclasses. This means that if we had
-a `Model(Registrable)` base class ([we do](https://allenai.github.io/allennlp-docs/api/allennlp.models.model.html#allennlp.models.model.Model)),
+a `Model(Registrable)` base class ([we do](http://docs.allennlp.org/master/api/models/model/#model)),
 and we decorated a subclass like
 
 ```python
@@ -35,7 +35,7 @@ Model.by_name("custom")
 
 By convention, all such classes have a `from_params` factory method that
 allows you to instantiate instances from a
-[`Params`](https://allenai.github.io/allennlp-docs/api/allennlp.common.params.html#allennlp.common.params.Params)
+[`Params`](https://docs.allennlp.org/master/api/common/params/#params)
 object, which is basically a `dict` of parameters
 with some added functionality that we won't get into here.
 
@@ -62,24 +62,24 @@ You can also create your own script that imports your custom classes and then ca
 ## Batches and Instances and Fields
 
 We train and evaluate our models on `Batch`es. A
-[`Batch`](https://allenai.github.io/allennlp-docs/api/allennlp.data.dataset.html#allennlp.data.dataset.Batch)
+[`Batch`](https://docs.allennlp.org/master/api/data/batch/)
 is a collection of
-[`Instance`](https://allenai.github.io/allennlp-docs/api/allennlp.data.instance.html#allennlp.data.instance.Instance)s.
+[`Instance`](https://docs.allennlp.org/master/api/data/instance/#instance)s.
 In our tagging experiment,
 each dataset is a collection of tagged sentences, and each instance is one of those tagged sentences.
 
 An instance consists of
-[`Field`](https://allenai.github.io/allennlp-docs/api/allennlp.data.fields.html#allennlp.data.fields.field.Field)s,
+[`Field`](https://docs.allennlp.org/master/api/data/fields/field/#field)s,
 each of which represents some part of the instance as arrays suitable for feeding into a model.
 
 In our tagging setup, each instance will contain a
-[`TextField`](https://allenai.github.io/allennlp-docs/api/allennlp.data.fields.html#allennlp.data.fields.text_field.TextField)
+[`TextField`](https://docs.allennlp.org/master/api/data/fields/text_field/#textfield)
 representing the words/tokens of the sentence and a
-[`SequenceLabelField`](https://allenai.github.io/allennlp-docs/api/allennlp.data.fields.html#allennlp.data.fields.sequence_label_field.SequenceLabelField)
+[`SequenceLabelField`](https://docs.allennlp.org/master/api/data/fields/sequence_label_field/#sequencelabelfield)
 representing the corresponding part-of-speech tags.
 
 How do we turn a text file full of sentences into `Batches`? With a
-[`DatasetReader`](https://allenai.github.io/allennlp-docs/api/allennlp.data.dataset_readers.dataset_reader.html#allennlp.data.dataset_readers.dataset_reader.DatasetReader)
+[`DatasetReader`](https://docs.allennlp.org/master/api/data/dataset_readers/dataset_reader/#datasetreader)
 specified by our configuration file.
 
 ## DatasetReaders
@@ -104,7 +104,7 @@ The first section of our configuration file defines the `dataset_reader`:
 
 Here we've specified that we want to use the `DatasetReader` subclass that's registered
 under the name `"sequence_tagging"`. Unsurprisingly, this is the
-[`SequenceTaggingDatasetReader`](https://allenai.github.io/allennlp-docs/api/allennlp.data.dataset_readers.sequence_tagging.html#allennlp.data.dataset_readers.sequence_tagging.SequenceTaggingDatasetReader)
+[`SequenceTaggingDatasetReader`](https://docs.allennlp.org/master/api/data/dataset_readers/sequence_tagging/#sequencetaggingdatasetreader)
 subclass. This reader assumes a text file of newline-separated sentences, where each sentence looks like the following for some "word tag delimiter" `{wtd}` and some "token delimiter" `{td}`.
 
 ```
@@ -130,7 +130,7 @@ If you look at the code for `SequenceTaggingDatasetReader.read()`,
 it turns each sentence into a `TextField`
 of tokens and a `SequenceLabelField` of tags. The latter isn't
 really configurable, but the former wants a dictionary of
-[TokenIndexer](https://allenai.github.io/allennlp-docs/api/allennlp.data.token_indexers.html#allennlp.data.token_indexers.token_indexer.TokenIndexer)s
+[TokenIndexer](http://docs.allennlp.org/master/api/data/token_indexers/token_indexer/#tokenindexer)s
 that indicate how to convert the tokens into arrays.
 
 Our configuration specifies two token indexers:
@@ -148,13 +148,13 @@ Our configuration specifies two token indexers:
 ```
 
 The first, `"tokens"`, is a
-[`SingleIdTokenIndexer`](https://allenai.github.io/allennlp-docs/api/allennlp.data.token_indexers.html#allennlp.data.token_indexers.single_id_token_indexer.SingleIdTokenIndexer)
+[`SingleIdTokenIndexer`](https://docs.allennlp.org/master/api/data/token_indexers/single_id_token_indexer/#singleidtokenindexer)
 that just represents each token (word) as a single integer.
 The configuration also specifies that we *lowercase* the tokens before encoding;
 that is, that this token indexer should ignore case.
 
 The second, `"token_characters"`, is a
-[`TokenCharactersIndexer`](https://allenai.github.io/allennlp-docs/api/allennlp.data.token_indexers.html#allennlp.data.token_indexers.token_characters_indexer.TokenCharactersIndexer)
+[`TokenCharactersIndexer`](https://docs.allennlp.org/master/api/data/token_indexers/token_characters_indexer/#tokencharactersindexer)
 that represents each token as a list of int-encoded characters.
 
 Notice that this gives us two different encodings for each token.
@@ -185,12 +185,12 @@ The next section configures our model.
 
 This indicates we want to use the `Model` subclass that's registered as `"simple_tagger"`,
 which is the
-[`SimpleTagger`](https://allenai.github.io/allennlp-docs/api/allennlp.models.simple_tagger.html#allennlp.models.simple_tagger.SimpleTagger) model.
+[`SimpleTagger`](https://docs.allennlp.org/master/api/models/simple_tagger/#simpletagger) model.
 
 If you look at its code, you'll see it consists of a
-[`TextFieldEmbedder`](https://allenai.github.io/allennlp-docs/api/allennlp.modules.text_field_embedders.html#allennlp.modules.text_field_embedders.text_field_embedder.TextFieldEmbedder)
+[`TextFieldEmbedder`](https://docs.allennlp.org/master/api/modules/text_field_embedders/text_field_embedder/#textfieldembedder)
 that embeds the output of our text fields, a
-[`Seq2SeqEncoder`](https://allenai.github.io/allennlp-docs/api/allennlp.modules.seq2seq_encoders.html#allennlp.modules.seq2seq_encoders.seq2seq_encoder.Seq2SeqEncoder)
+[`Seq2SeqEncoder`](https://docs.allennlp.org/master/api/modules/seq2seq_encoders/seq2seq_encoder/#seq2seqencoder)
 that transforms that sequence into an output sequence,
 and a linear layer to convert the output sequences
 into logits representing the probabilities of predicted tags.
@@ -226,22 +226,22 @@ Let's first look at the text field embedder configuration:
 
 You can see that it has an entry for each of the named encodings in our `TextField`.
 Each entry specifies a
-[`TokenEmbedder`](https://allenai.github.io/allennlp-docs/api/allennlp.modules.token_embedders.html?highlight=embedding#allennlp.modules.token_embedders.token_embedder.TokenEmbedder)
+[`TokenEmbedder`](https://docs.allennlp.org/master/api/modules/token_embedders/token_embedder/#tokenembedder)
 that indicates how to embed
 the tokens encoded with that name. The `TextFieldEmbedder`'s output is the concatenation
 of these embeddings.
 
 The `"tokens"` input (which consists of integer encodings of the lowercased words in the input)
 gets fed into an
-[`Embedding`](https://allenai.github.io/allennlp-docs/api/allennlp.modules.token_embedders.html?highlight=embedding#allennlp.modules.token_embedders.embedding.Embedding)
+[`Embedding`](https://docs.allennlp.org/master/api/modules/token_embedders/embedding/#embedding)
 module that embeds the vocabulary words in a 50-dimensional space, as specified by the `embedding_dim` parameter.
 
 The `"token_characters"` input (which consists of integer-sequence encodings of the characters in each word)
 gets fed into a
-[`TokenCharactersEncoder`](https://allenai.github.io/allennlp-docs/api/allennlp.modules.token_embedders.html?highlight=embedding#allennlp.modules.token_embedders.token_characters_encoder.TokenCharactersEncoder),
+[`TokenCharactersEncoder`](https://docs.allennlp.org/master/api/modules/token_embedders/token_characters_encoder/#tokencharactersencoder),
 which embeds the characters in an 8-dimensional space
 and then applies a
-[`CnnEncoder`](https://allenai.github.io/allennlp-docs/api/allennlp.modules.seq2vec_encoders.html#allennlp.modules.seq2vec_encoders.cnn_encoder.CnnEncoder)
+[`CnnEncoder`](https://docs.allennlp.org/master/api/modules/seq2vec_encoders/cnn_encoder/#cnnencoder)
 that uses 50 filters and so also produces a 50-dimensional output. You can see that this encoder also uses a 20% dropout during training.
 
 The output of this `TextFieldEmbedder` is a 50-dimensional vector for `"tokens"`
@@ -258,7 +258,7 @@ code.
 
 The output of the `TextFieldEmbedder` is processed by the "stacked encoder",
 which needs to be a
-[`Seq2SeqEncoder`](https://allenai.github.io/allennlp-docs/api/allennlp.modules.seq2seq_encoders.html#allennlp.modules.seq2seq_encoders.seq2seq_encoder.Seq2SeqEncoder):
+[`Seq2SeqEncoder`](https://docs.allennlp.org/master/api/modules/seq2seq_encoders/seq2seq_encoder/#seq2seqencoder):
 
 ```js
     "encoder": {
@@ -289,7 +289,7 @@ The rest of the config file is dedicated to the training process.
 ```
 
 We'll iterate over our datasets using a
-[`BasicIterator`](https://allenai.github.io/allennlp-docs/api/allennlp.data.iterators.html#allennlp.data.iterators.basic_iterator.BasicIterator)
+[`BasicIterator`](https://docs.allennlp.org/master/api/allennlp.data.iterators.html#allennlp.data.iterators.basic_iterator.BasicIterator)
 that pads our data and processes it in batches of size 32.
 
 

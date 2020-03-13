@@ -1,13 +1,14 @@
 {
-  "dataset_reader":{"type":"srl"},
-  "train_data_path": "allennlp/tests/fixtures/data/srl",
-  "validation_data_path": "allennlp/tests/fixtures/data/srl",
+  "dataset_reader":{"type":"sequence_tagging"},
+  "train_data_path": "allennlp/tests/fixtures/data/sequence_tagging.tsv",
+  "validation_data_path": "allennlp/tests/fixtures/data/sequence_tagging.tsv",
   "model": {
-    "type": "srl",
+    "type": "simple_tagger",
     "text_field_embedder": {
       "token_embedders": {
         "tokens": {
             "type": "embedding",
+            "projection_dim": 2,
             "pretrained_file": "allennlp/tests/fixtures/embeddings/glove.6B.100d.sample.txt.gz",
             "embedding_dim": 100,
             "trainable": true
@@ -16,29 +17,27 @@
     },
     "encoder": {
       "type": "lstm",
-      "input_size": 150,
-      "hidden_size": 10,
+      "input_size": 2,
+      "hidden_size": 4,
       "num_layers": 1
-    },
-    "binary_feature_dim": 50
+    }
   },
   "data_loader": {
-    "batch_sampler": {
+      "batch_sampler": {
         "type": "bucket",
-        "batch_size": 80,
-        "padding_noise": 0.0
+        "sorting_keys": ["tokens"],
+        "padding_noise": 0.0,
+        "batch_size" : 80
     }
 },
-
   "trainer": {
-    "num_epochs": 1,
+    "num_epochs": 40,
     "grad_norm": 1.0,
     "patience": 500,
     "cuda_device": -1,
     "optimizer": {
-      "type": "adadelta",
-      "lr": 0.000001,
-      "rho": 0.9
+      "type": "adam",
+      "lr": 0.01
     }
   }
 }

@@ -15,6 +15,7 @@ from allennlp.nn.util import (
     masked_max,
     masked_mean,
     masked_softmax,
+    tiny_value_of_dtype,
 )
 
 
@@ -59,7 +60,7 @@ def multi_perspective_match(
 
 
 def multi_perspective_match_pairwise(
-    vector1: torch.Tensor, vector2: torch.Tensor, weight: torch.Tensor, eps: float = 1e-8
+    vector1: torch.Tensor, vector2: torch.Tensor, weight: torch.Tensor
 ) -> torch.Tensor:
     """
     Calculate multi-perspective cosine matching between each time step of
@@ -73,8 +74,6 @@ def multi_perspective_match_pairwise(
         A tensor of shape `(batch, seq_len2, hidden_size)`
     weight : `torch.Tensor`
         A tensor of shape `(num_perspectives, hidden_size)`
-    eps : `float` optional, (default = 1e-8)
-        A small value to avoid zero division problem
 
     # Returns
 
@@ -99,7 +98,9 @@ def multi_perspective_match_pairwise(
     norm_value = vector1_norm * vector2_norm.transpose(2, 3)
 
     # (batch, seq_len1, seq_len2, num_perspectives)
-    return (mul_result / norm_value.clamp(min=eps)).permute(0, 2, 3, 1)
+    return (mul_result / norm_value.clamp(min=tiny_value_of_dtype(norm_value.dtype))).permute(
+        0, 2, 3, 1
+    )
 
 
 class BiMpmMatching(nn.Module, FromParams):

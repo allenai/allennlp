@@ -6,7 +6,7 @@ Our 2018 EMNLP tutorial is available at https://github.com/allenai/writing-code-
 
 ## Tutorials Have Moved!
 
-Our tutorials now live in the [docs directory](../docs/tutorials). You can view them via our [docs website](https://allenai.github.io/allennlp-docs/). This directory now only contains the introductory, interactive tagging tutorial present on our main website, [allennlp.org](https://allennlp.org/).
+Our tutorials now live in the [docs directory](../docs/tutorials). You can view them via our [docs website](https://docs.allennlp.org/master/). This directory now only contains the introductory, interactive tagging tutorial present on our main website, [allennlp.org](https://allennlp.org/).
 
 ## Internal Tutorials
 
