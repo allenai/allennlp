@@ -74,7 +74,7 @@ class TestFromParams(AllenNlpTestCase):
         # error message when something like this is passed to FromParams.
         params = Params({"initializer": [["regex1", "uniform"], ["regex2", "orthogonal"]]})
         with pytest.raises(ConfigurationError, match="dictionary.*InitializerApplicator"):
-            initializer = InitializerApplicator.from_params(params=params.pop("initializer"))
+            InitializerApplicator.from_params(params=params.pop("initializer"))
 
     def test_create_kwargs(self):
         kwargs = create_kwargs(MyClass, MyClass, Params({"my_int": 5}), my_bool=True, my_float=4.4)
