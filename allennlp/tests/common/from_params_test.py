@@ -3,10 +3,10 @@ from typing import Dict, Iterable, List, Mapping, Optional, Set, Tuple, Union
 import pytest
 import torch
 
-from allennlp.common import Lazy, Params
+from allennlp.common import Lazy, Params, Registrable
 from allennlp.common.from_params import FromParams, takes_arg, remove_optional, create_kwargs
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.data import DatasetReader, Tokenizer
+from allennlp.data import DataLoader, DatasetReader, Sampler, Tokenizer
 from allennlp.models import Model
 from allennlp.models.archival import load_archive
 from allennlp.common.checks import ConfigurationError
@@ -584,6 +584,22 @@ class TestFromParams(AllenNlpTestCase):
         }
         with pytest.raises(ConfigurationError):
             Model.from_params(vocab=trained_model.vocab, params=Params(model_params))
+
+    def test_bare_string_params(self):
+        dataset = [1]
+        class TestLoader(Registrable):
+            @classmethod
+            def from_partial_objects(cls, data_loader: Lazy[DataLoader]) -> DataLoader:
+                return data_loader.construct(dataset=dataset)
+
+        TestLoader.register("test", constructor="from_partial_objects")(TestLoader)
+
+        data_loader = TestLoader.from_params(
+            Params({"type": "test", "data_loader": {"sampler": "random"}})
+        )
+        assert data_loader.sampler.__class__.__name__ == "RandomSampler"
+        assert data_loader.sampler.data_source is dataset
+        assert False
 
     def test_kwargs_are_passed_to_superclass(self):
         params = Params(
