@@ -6,7 +6,7 @@ import torch
 from allennlp.common import Lazy, Params, Registrable
 from allennlp.common.from_params import FromParams, takes_arg, remove_optional, create_kwargs
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.data import DataLoader, DatasetReader, Sampler, Tokenizer
+from allennlp.data import DataLoader, DatasetReader, Tokenizer
 from allennlp.models import Model
 from allennlp.models.archival import load_archive
 from allennlp.common.checks import ConfigurationError
@@ -587,6 +587,7 @@ class TestFromParams(AllenNlpTestCase):
 
     def test_bare_string_params(self):
         dataset = [1]
+
         class TestLoader(Registrable):
             @classmethod
             def from_partial_objects(cls, data_loader: Lazy[DataLoader]) -> DataLoader:
@@ -595,11 +596,22 @@ class TestFromParams(AllenNlpTestCase):
         TestLoader.register("test", constructor="from_partial_objects")(TestLoader)
 
         data_loader = TestLoader.from_params(
-            Params({"type": "test", "data_loader": {"sampler": "random"}})
+            Params(
+                {
+                    "type": "test",
+                    "data_loader": {
+                        "batch_sampler": {
+                            "type": "basic",
+                            "batch_size": 2,
+                            "drop_last": True,
+                            "sampler": "random",
+                        }
+                    },
+                }
+            )
         )
-        assert data_loader.sampler.__class__.__name__ == "RandomSampler"
-        assert data_loader.sampler.data_source is dataset
-        assert False
+        assert data_loader.batch_sampler.sampler.__class__.__name__ == "RandomSampler"
+        assert data_loader.batch_sampler.sampler.data_source is dataset
 
     def test_kwargs_are_passed_to_superclass(self):
         params = Params(
