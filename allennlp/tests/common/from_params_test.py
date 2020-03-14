@@ -608,8 +608,6 @@ class TestFromParams(AllenNlpTestCase):
                 super().__init__(**kwargs)
                 self.b = b
 
-        from numbers import Number
-
         @A.register("b2")
         class B2(Number, A):
             def __init__(self, b: float, **kwargs):
