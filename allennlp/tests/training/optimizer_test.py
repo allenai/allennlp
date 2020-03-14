@@ -4,7 +4,7 @@ from allennlp.data import Vocabulary
 from allennlp.data.dataset_readers import SequenceTaggingDatasetReader
 from allennlp.data import DataLoader
 from allennlp.models.simple_tagger import SimpleTagger
-from allennlp.training import Trainer
+from allennlp.training import GradientDescentTrainer
 from allennlp.training.optimizers import Optimizer
 
 
@@ -91,4 +91,4 @@ class TestDenseSparseAdam(AllenNlpTestCase):
         parameters = [[n, p] for n, p in self.model.named_parameters() if p.requires_grad]
         optimizer = Optimizer.from_params(model_parameters=parameters, params=optimizer_params)
         self.instances.index_with(self.vocab)
-        Trainer(self.model, optimizer, DataLoader(self.instances, 2)).train()
+        GradientDescentTrainer(self.model, optimizer, DataLoader(self.instances, 2)).train()
