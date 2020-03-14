@@ -601,6 +601,7 @@ class TestFromParams(AllenNlpTestCase):
                 self.a = a
 
         from numbers import Number
+
         @A.register("b1")
         class B1(A, Number):
             def __init__(self, b: float, **kwargs):
@@ -608,6 +609,7 @@ class TestFromParams(AllenNlpTestCase):
                 self.b = b
 
         from numbers import Number
+
         @A.register("b2")
         class B2(Number, A):
             def __init__(self, b: float, **kwargs):
