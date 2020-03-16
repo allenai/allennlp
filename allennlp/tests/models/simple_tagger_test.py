@@ -9,7 +9,7 @@ from allennlp.common.params import Params
 from allennlp.data.dataset_readers import DatasetReader
 from allennlp.data import DataLoader
 from allennlp.models import Model
-from allennlp.training import Trainer, TrainerBase
+from allennlp.training import GradientDescentTrainer, Trainer
 
 
 class SimpleTaggerTest(ModelTestCase):
@@ -56,7 +56,7 @@ class SimpleTaggerTest(ModelTestCase):
         assert penalty == 0
 
         data_loader = DataLoader(self.instances, batch_size=32)
-        trainer = Trainer(self.model, None, data_loader)  # optimizer,
+        trainer = GradientDescentTrainer(self.model, None, data_loader)  # optimizer,
 
         # You get a RuntimeError if you call `model.forward` twice on the same inputs.
         # The data and config are such that the whole dataset is one batch.
@@ -96,7 +96,7 @@ class SimpleTaggerRegularizationTest(ModelTestCase):
         self.data_loader = DataLoader.from_params(
             dataset=self.instances, params=params["data_loader"]
         )
-        self.trainer = TrainerBase.from_params(
+        self.trainer = Trainer.from_params(
             model=self.model,
             data_loader=self.data_loader,
             serialization_dir=self.TEST_DIR,

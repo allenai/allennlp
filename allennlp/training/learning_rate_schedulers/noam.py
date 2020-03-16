@@ -36,7 +36,7 @@ class NoamLR(LearningRateScheduler):
         super().__init__(optimizer, last_epoch=last_epoch)
 
     @overrides
-    def step(self, metric: float = None, epoch: int = None) -> None:
+    def step(self, metric: float = None) -> None:
         pass
 
     def step_batch(self, batch_num_total: int = None) -> None:

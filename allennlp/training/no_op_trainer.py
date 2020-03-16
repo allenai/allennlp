@@ -3,11 +3,11 @@ from typing import Dict, Any
 
 from allennlp.models import Model
 from allennlp.training.checkpointer import Checkpointer
-from allennlp.training.trainer_base import TrainerBase
+from allennlp.training.trainer import Trainer
 
 
-@TrainerBase.register("no_op")
-class NoOpTrainer(TrainerBase):
+@Trainer.register("no_op")
+class NoOpTrainer(Trainer):
     def __init__(self, serialization_dir: str, model: Model) -> None:
         """
         A trivial trainer to assist in making model archives for models that do not actually

@@ -46,7 +46,6 @@ class Scheduler:
         self.base_values = [
             group[self._initial_param_group_field] for group in self.optimizer.param_groups
         ]
-        self.step(epoch=last_epoch)
         self.last_epoch = last_epoch
 
     def state_dict(self) -> Dict[str, Any]:
@@ -69,11 +68,8 @@ class Scheduler:
     def get_values(self):
         raise NotImplementedError
 
-    def step(self, metric: float = None, epoch: int = None) -> None:
-        if epoch is None:
-            self.last_epoch += 1  # type: ignore
-        else:
-            self.last_epoch = epoch
+    def step(self, metric: float = None) -> None:
+        self.last_epoch += 1
         self.metric = metric
         for param_group, value in zip(self.optimizer.param_groups, self.get_values()):
             param_group[self.param_group_field] = value

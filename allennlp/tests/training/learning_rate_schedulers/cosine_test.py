@@ -124,8 +124,8 @@ class CosineWithRestartsTest(AllenNlpTestCase):
                 optimizer=optimizer, params=Params(params)
             )
             lrs = [optimizer.param_groups[0]["lr"]]
-            for epoch in range(epochs):
-                scheduler.step(epoch)
+            for _ in range(epochs):
+                scheduler.step()
                 lrs.append(optimizer.param_groups[0]["lr"])
 
             for it, lr in lr_checks:
@@ -163,7 +163,7 @@ class CosineWithRestartsTest(AllenNlpTestCase):
                     scheduler = init_and_restore_scheduler(optimizer, params, state_dict=state)
 
                 # Take step and record learning rate.
-                scheduler.step(1, epoch)
+                scheduler.step(1)
                 lrs.append(optimizer.param_groups[0]["lr"])
 
                 # Save state again.
