@@ -15,6 +15,7 @@ pip-wheel-metadata/
 .idea
 .venv/
 .vscode/
+/*.iml
 
 
 # jupyter notebooks
