@@ -125,6 +125,10 @@ class ELMoTokenCharactersIndexer(TokenIndexer):
         pass
 
     @overrides
+    def get_empty_token_list(self) -> IndexedTokenList:
+        return {"tokens": []}
+
+    @overrides
     def tokens_to_indices(
         self, tokens: List[Token], vocabulary: Vocabulary
     ) -> Dict[str, List[List[int]]]:

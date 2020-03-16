@@ -17,12 +17,10 @@ import torch.optim.lr_scheduler
 from torch.nn.parallel import DistributedDataParallel
 
 
-from allennlp.common import Lazy, Tqdm
-from allennlp.common.checks import ConfigurationError, check_for_gpu
+from allennlp.common import Lazy, Registrable, Tqdm
 from allennlp.common import util as common_util
-
+from allennlp.common.checks import ConfigurationError, check_for_gpu
 from allennlp.data import DataLoader
-
 from allennlp.data.dataloader import TensorDict
 from allennlp.models.model import Model
 from allennlp.nn import util as nn_util
@@ -34,13 +32,69 @@ from allennlp.training.momentum_schedulers import MomentumScheduler
 from allennlp.training.moving_average import MovingAverage
 from allennlp.training.optimizers import Optimizer
 from allennlp.training.tensorboard_writer import TensorboardWriter
-from allennlp.training.trainer_base import TrainerBase
 
 logger = logging.getLogger(__name__)
 
 
-@TrainerBase.register("default", constructor="from_partial_objects")
-class Trainer(TrainerBase):
+class Trainer(Registrable):
+    """
+    The base class for an AllenNLP trainer. It can do pretty much
+    anything you want. Your subclass should implement `train`
+    and also probably `from_params`.
+    """
+
+    default_implementation = "gradient_descent"
+
+    def __init__(
+        self,
+        serialization_dir: str,
+        cuda_device: int = -1,
+        distributed: bool = False,
+        local_rank: int = 0,
+        world_size: int = 1,
+    ) -> None:
+
+        check_for_gpu(cuda_device)
+        self._serialization_dir = serialization_dir
+
+        if isinstance(cuda_device, list):
+            raise ConfigurationError(
+                "In allennlp 1.0, the Trainer can only be assigned a single `cuda_device`. "
+                "Instead, we use torch's DistributedDataParallel at the command level, meaning "
+                "our Trainer always uses a single GPU per process."
+            )
+
+        if not isinstance(cuda_device, int):
+            raise ConfigurationError("Expected an int for cuda_device, got {}".format(cuda_device))
+
+        if distributed and world_size <= 1:
+            raise ConfigurationError(
+                "Distributed training can be performed only with more than 1 GPU device. Check "
+                "`cuda_device` key in the experiment configuration."
+            )
+
+        self.cuda_device = cuda_device
+
+        self._distributed = distributed
+        self._rank = local_rank
+        self._master = self._rank == 0
+        self._world_size = world_size
+
+    def _move_to_gpu(self, model: Model) -> Model:
+        if self.cuda_device != -1:
+            return model.cuda(self.cuda_device)
+        else:
+            return model
+
+    def train(self) -> Dict[str, Any]:
+        """
+        Train a model and return the results.
+        """
+        raise NotImplementedError
+
+
+@Trainer.register("gradient_descent", constructor="from_partial_objects")
+class GradientDescentTrainer(Trainer):
     def __init__(
         self,
         model: Model,
@@ -51,8 +105,6 @@ class Trainer(TrainerBase):
         validation_data_loader: torch.utils.data.DataLoader = None,
         num_epochs: int = 20,
         serialization_dir: Optional[str] = None,
-        num_serialized_models_to_keep: int = 20,
-        keep_serialized_model_every_num_seconds: int = None,
         checkpointer: Checkpointer = None,
         model_save_interval: float = None,
         cuda_device: int = -1,
@@ -60,10 +112,7 @@ class Trainer(TrainerBase):
         grad_clipping: Optional[float] = None,
         learning_rate_scheduler: Optional[LearningRateScheduler] = None,
         momentum_scheduler: Optional[MomentumScheduler] = None,
-        summary_interval: int = 100,
-        histogram_interval: int = None,
-        should_log_parameter_statistics: bool = True,
-        should_log_learning_rate: bool = False,
+        tensorboard_writer: TensorboardWriter = None,
         log_batch_size_period: Optional[int] = None,
         moving_average: Optional[MovingAverage] = None,
         distributed: bool = False,
@@ -110,20 +159,9 @@ class Trainer(TrainerBase):
         serialization_dir : str, optional (default=None)
             Path to directory for saving and loading model files. Models will not be saved if
             this parameter is not passed.
-        num_serialized_models_to_keep : `int`, optional (default=20)
-            Number of previous model checkpoints to retain.  Default is to keep 20 checkpoints.
-            A value of None or -1 means all checkpoints will be kept.
-        keep_serialized_model_every_num_seconds : `int`, optional (default=None)
-            If num_serialized_models_to_keep is not None, then occasionally it's useful to
-            save models at a given interval in addition to the last num_serialized_models_to_keep.
-            To do so, specify keep_serialized_model_every_num_seconds as the number of seconds
-            between permanently saved checkpoints.  Note that this option is only used if
-            num_serialized_models_to_keep is not None, otherwise all checkpoints are kept.
         checkpointer : `Checkpointer`, optional (default=None)
-            An instance of class Checkpointer to use instead of the default. If a checkpointer is specified,
-            the arguments num_serialized_models_to_keep and keep_serialized_model_every_num_seconds should
-            not be specified. The caller is responsible for initializing the checkpointer so that it is
-            consistent with serialization_dir.
+            A `Checkpointer` is responsible for periodically saving model weights.  If none is given
+            here, we will construct one with default parameters.
         model_save_interval : `float`, optional (default=None)
             If provided, then serialize models every `model_save_interval`
             seconds within single epochs.  In all cases, models are also saved
@@ -148,27 +186,9 @@ class Trainer(TrainerBase):
         momentum_scheduler : `MomentumScheduler`, optional (default = None)
             If specified, the momentum will be updated at the end of each batch or epoch
             according to the schedule.
-        summary_interval : `int`, optional, (default = 100)
-            Number of batches between logging scalars to tensorboard
-        histogram_interval : `int`, optional, (default = `None`)
-            If not None, then log histograms to tensorboard every `histogram_interval` batches.
-            When this parameter is specified, the following additional logging is enabled:
-                * Histograms of model parameters
-                * The ratio of parameter update norm to parameter norm
-                * Histogram of layer activations
-            We log histograms of the parameters returned by
-            `model.get_parameters_for_histogram_tensorboard_logging`.
-            The layer activations are logged for any modules in the `Model` that have
-            the attribute `should_log_activations` set to `True`.  Logging
-            histograms requires a number of GPU-CPU copies during training and is typically
-            slow, so we recommend logging histograms relatively infrequently.
-            Note: only Modules that return tensors, tuples of tensors or dicts
-            with tensors as values currently support activation logging.
-        should_log_parameter_statistics : `bool`, optional, (default = True)
-            Whether to send parameter statistics (mean and standard deviation
-            of parameters and gradients) to tensorboard.
-        should_log_learning_rate : `bool`, optional, (default = False)
-            Whether to send parameter specific learning rate to tensorboard.
+        tensorboard_writer : `TensorboardWriter`, optional
+            If this is not provided, we will construct a `TensorboardWriter` with default
+            parameters and use that.
         log_batch_size_period : `int`, optional, (default = `None`)
             If defined, how often to log the average batch size.
         moving_average : `MovingAverage`, optional, (default = None)
@@ -226,23 +246,9 @@ class Trainer(TrainerBase):
         self._num_epochs = num_epochs
 
         if checkpointer is not None:
-            # We can't easily check if these parameters were passed in, so check against their default values.
-            # We don't check against serialization_dir since it is also used by the parent class.
-            if (
-                num_serialized_models_to_keep != 20
-                or keep_serialized_model_every_num_seconds is not None
-            ):
-                raise ConfigurationError(
-                    "When passing a custom Checkpointer, you may not also pass in separate checkpointer "
-                    "args 'num_serialized_models_to_keep' or 'keep_serialized_model_every_num_seconds'."
-                )
             self._checkpointer = checkpointer
         else:
-            self._checkpointer = Checkpointer(
-                serialization_dir,
-                keep_serialized_model_every_num_seconds,
-                num_serialized_models_to_keep,
-            )
+            self._checkpointer = Checkpointer(serialization_dir)
 
         self._model_save_interval = model_save_interval
 
@@ -258,24 +264,15 @@ class Trainer(TrainerBase):
         # `_enable_activation_logging`.
         self._batch_num_total = 0
 
-        self._tensorboard = TensorboardWriter(
-            get_batch_num_total=lambda: self._batch_num_total,
-            serialization_dir=serialization_dir,
-            summary_interval=summary_interval,
-            histogram_interval=histogram_interval,
-            should_log_parameter_statistics=should_log_parameter_statistics,
-            should_log_learning_rate=should_log_learning_rate,
-        )
+        self._tensorboard = tensorboard_writer or TensorboardWriter(serialization_dir)
+        self._tensorboard.get_batch_num_total = lambda: self._batch_num_total
+        self._tensorboard.enable_activation_logging(self.model)
 
         self._log_batch_size_period = log_batch_size_period
 
         self._last_log = 0.0  # time of last logging
 
         self._num_gradient_accumulation_steps = num_gradient_accumulation_steps
-
-        # Enable activation logging.
-        if histogram_interval is not None:
-            self._tensorboard.enable_activation_logging(self.model)
 
         # Enable automatic mixed precision training with NVIDIA Apex.
         self._opt_level = opt_level
@@ -452,7 +449,8 @@ class Trainer(TrainerBase):
                     update_norm = torch.norm(param_updates[name].view(-1))
                     param_norm = torch.norm(param.view(-1)).cpu()
                     self._tensorboard.add_train_scalar(
-                        "gradient_update/" + name, update_norm / (param_norm + 1e-7)
+                        "gradient_update/" + name,
+                        update_norm / (param_norm + nn_util.tiny_value_of_dtype(param_norm.dtype)),
                     )
             else:
                 self.optimizer.step()
@@ -715,9 +713,9 @@ class Trainer(TrainerBase):
             # The Scheduler API is agnostic to whether your schedule requires a validation metric -
             # if it doesn't, the validation metric passed here is ignored.
             if self._learning_rate_scheduler:
-                self._learning_rate_scheduler.step(this_epoch_val_metric, epoch)
+                self._learning_rate_scheduler.step(this_epoch_val_metric)
             if self._momentum_scheduler:
-                self._momentum_scheduler.step(this_epoch_val_metric, epoch)
+                self._momentum_scheduler.step(this_epoch_val_metric)
 
             if self._master:
                 self._save_checkpoint(epoch)
@@ -863,10 +861,6 @@ class Trainer(TrainerBase):
         grad_norm: float = None,
         grad_clipping: float = None,
         model_save_interval: float = None,
-        summary_interval: int = 100,
-        histogram_interval: int = None,
-        should_log_parameter_statistics: bool = True,
-        should_log_learning_rate: bool = False,
         log_batch_size_period: int = None,
         distributed: bool = None,
         world_size: int = 1,
@@ -876,6 +870,7 @@ class Trainer(TrainerBase):
         optimizer: Lazy[Optimizer] = None,
         learning_rate_scheduler: Lazy[LearningRateScheduler] = None,
         momentum_scheduler: Lazy[MomentumScheduler] = None,
+        tensorboard_writer: Lazy[TensorboardWriter] = None,
         moving_average: Lazy[MovingAverage] = None,
         checkpointer: Lazy[Checkpointer] = None,
     ) -> "Trainer":
@@ -926,6 +921,7 @@ class Trainer(TrainerBase):
         momentum_scheduler_ = momentum_scheduler.construct(optimizer=optimizer_)
 
         checkpointer_ = checkpointer.construct() or Checkpointer(serialization_dir)
+        tensorboard_writer_ = tensorboard_writer.construct() or TensorboardWriter(serialization_dir)
 
         return cls(
             model,
@@ -941,12 +937,9 @@ class Trainer(TrainerBase):
             grad_clipping=grad_clipping,
             learning_rate_scheduler=learning_rate_scheduler_,
             momentum_scheduler=momentum_scheduler_,
+            tensorboard_writer=tensorboard_writer_,
             checkpointer=checkpointer_,
             model_save_interval=model_save_interval,
-            summary_interval=summary_interval,
-            histogram_interval=histogram_interval,
-            should_log_parameter_statistics=should_log_parameter_statistics,
-            should_log_learning_rate=should_log_learning_rate,
             log_batch_size_period=log_batch_size_period,
             moving_average=moving_average_,
             distributed=distributed,

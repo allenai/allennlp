@@ -26,8 +26,8 @@ class _PyTorchLearningRateSchedulerWrapper(LearningRateScheduler):
         return self.lr_scheduler.get_last_lr()
 
     @overrides
-    def step(self, metric: float = None, epoch: int = None) -> None:
-        self.lr_scheduler.step(epoch)
+    def step(self, metric: float = None) -> None:
+        self.lr_scheduler.step()
 
     @overrides
     def state_dict(self) -> Dict[str, Any]:
@@ -40,14 +40,14 @@ class _PyTorchLearningRateSchedulerWrapper(LearningRateScheduler):
 
 class _PyTorchLearningRateSchedulerWithMetricsWrapper(_PyTorchLearningRateSchedulerWrapper):
     @overrides
-    def step(self, metric: float = None, epoch: int = None) -> None:
+    def step(self, metric: float = None) -> None:
         if metric is None:
             raise ConfigurationError(
                 "This learning rate scheduler requires "
                 "a validation metric to compute the schedule and therefore "
                 "must be used with a validation dataset."
             )
-        self.lr_scheduler.step(metric, epoch)
+        self.lr_scheduler.step(metric)
 
 
 @LearningRateScheduler.register("step")

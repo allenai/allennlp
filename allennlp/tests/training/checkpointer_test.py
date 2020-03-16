@@ -5,8 +5,6 @@ import time
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.training.checkpointer import Checkpointer
 from allennlp.common.params import Params
-from allennlp.training.trainer import Trainer
-from allennlp.common.checks import ConfigurationError
 
 
 class TestCheckpointer(AllenNlpTestCase):
@@ -91,55 +89,6 @@ class TestCheckpointer(AllenNlpTestCase):
             )
         models, training = self.retrieve_and_delete_saved()
         assert models == training == target
-
-    def test_configuration_error_when_passed_as_conflicting_argument_to_trainer(self):
-        """
-        Users should initialize Trainer either with an instance of Checkpointer or by specifying
-        parameter values for num_serialized_models_to_keep and keep_serialized_model_every_num_seconds.
-        Check that Trainer raises a ConfigurationError if both methods are used at the same time.
-        """
-        with self.assertRaises(ConfigurationError):
-            Trainer(
-                None,
-                None,
-                None,
-                None,
-                num_serialized_models_to_keep=30,
-                keep_serialized_model_every_num_seconds=None,
-                checkpointer=Checkpointer(
-                    serialization_dir=self.TEST_DIR,
-                    num_serialized_models_to_keep=40,
-                    keep_serialized_model_every_num_seconds=2,
-                ),
-            )
-        with self.assertRaises(ConfigurationError):
-            Trainer(
-                None,
-                None,
-                None,
-                None,
-                num_serialized_models_to_keep=20,
-                keep_serialized_model_every_num_seconds=2,
-                checkpointer=Checkpointer(
-                    serialization_dir=self.TEST_DIR,
-                    num_serialized_models_to_keep=40,
-                    keep_serialized_model_every_num_seconds=2,
-                ),
-            )
-        try:
-            Trainer(
-                None,
-                None,
-                None,
-                None,
-                checkpointer=Checkpointer(
-                    serialization_dir=self.TEST_DIR,
-                    num_serialized_models_to_keep=40,
-                    keep_serialized_model_every_num_seconds=2,
-                ),
-            )
-        except ConfigurationError:
-            self.fail("Configuration Error raised for passed checkpointer")
 
     def test_registered_subclass(self):
         """

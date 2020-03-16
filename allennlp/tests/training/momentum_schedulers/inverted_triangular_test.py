@@ -42,30 +42,32 @@ class InvertedTriangularTest(AllenNlpTestCase):
         assert optimizer.param_groups[0]["momentum"] == self.base_momentum
         # After first epoch, `step` is called, and momentum should be adjusted for
         # the next epoch.
-        scheduler.step(epoch=0)
+        scheduler.step()
         assert isclose(
             optimizer.param_groups[0]["momentum"],
             self.base_momentum - (self.base_momentum - self.base_momentum / 5) * (1 / 6),
         )
         # After second epoch, `step` is called and momentum is updated for 3rd epoch.
-        scheduler.step(epoch=1)
+        scheduler.step()
         assert isclose(
             optimizer.param_groups[0]["momentum"],
             self.base_momentum - (self.base_momentum - self.base_momentum / 5) * (2 / 6),
         )
+        scheduler.last_epoch = 4
         # ... after the 6th epoch (epoch id 5), momentum should be set to `base_momentum / ratio`.
-        scheduler.step(epoch=5)
+        scheduler.step()
         assert isclose(optimizer.param_groups[0]["momentum"], self.base_momentum / 5)
         # Then the momentum stars increasing again.
-        scheduler.step(epoch=6)
+        scheduler.step()
         assert isclose(
             optimizer.param_groups[0]["momentum"],
             self.base_momentum / 5 + (self.base_momentum - self.base_momentum / 5) * (1 / 10),
         )
         # After the 16th epoch (6 + 10) (epoch id 15), momentum should be back to the base level.
-        scheduler.step(epoch=15)
+        scheduler.last_epoch = 14
+        scheduler.step()
         assert isclose(optimizer.param_groups[0]["momentum"], self.base_momentum)
-        scheduler.step(epoch=16)
+        scheduler.step()
         assert isclose(optimizer.param_groups[0]["momentum"], self.base_momentum)
-        scheduler.step(epoch=17)
+        scheduler.step()
         assert isclose(optimizer.param_groups[0]["momentum"], self.base_momentum)
