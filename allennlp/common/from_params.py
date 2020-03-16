@@ -336,11 +336,10 @@ def construct_arg(
             # In some cases we allow a string instead of a param dict, so
             # we need to handle that case separately.
             if isinstance(popped_params, str):
-                return annotation.by_name(popped_params)()
-            else:
-                if isinstance(popped_params, dict):
-                    popped_params = Params(popped_params)
-                return annotation.from_params(params=popped_params, **subextras)
+                popped_params = Params({"type": popped_params})
+            elif isinstance(popped_params, dict):
+                popped_params = Params(popped_params)
+            return annotation.from_params(params=popped_params, **subextras)
         elif not optional:
             # Not optional and not supplied, that's an error!
             raise ConfigurationError(f"expected key {argument_name} for {class_name}")

@@ -58,7 +58,7 @@ from allennlp.common.util import prepare_environment
 from allennlp.data import Vocabulary
 from allennlp.data import DataLoader
 from allennlp.models import Model
-from allennlp.training import Trainer, TrainerBase
+from allennlp.training import GradientDescentTrainer, Trainer
 from allennlp.training.util import create_serialization_dir, datasets_from_params
 
 logger = logging.getLogger(__name__)
@@ -223,10 +223,12 @@ def find_learning_rate_model(
         if any(re.search(regex, name) for regex in no_grad_regexes):
             parameter.requires_grad_(False)
 
-    trainer_choice = trainer_params.pop("type", "default")
-    if trainer_choice != "default":
-        raise ConfigurationError("currently find-learning-rate only works with the default Trainer")
-    trainer: Trainer = TrainerBase.from_params(  # type: ignore
+    trainer_choice = trainer_params.pop("type", "gradient_descent")
+    if trainer_choice != "gradient_descent":
+        raise ConfigurationError(
+            "currently find-learning-rate only works with the GradintDescentTrainer"
+        )
+    trainer: GradientDescentTrainer = Trainer.from_params(  # type: ignore
         model=model,
         serialization_dir=serialization_dir,
         data_loader=data_loader,
@@ -251,7 +253,7 @@ def find_learning_rate_model(
 
 
 def search_learning_rate(
-    trainer: Trainer,
+    trainer: GradientDescentTrainer,
     start_lr: float = 1e-5,
     end_lr: float = 10,
     num_batches: int = 100,
@@ -259,11 +261,11 @@ def search_learning_rate(
     stopping_factor: float = None,
 ) -> Tuple[List[float], List[float]]:
     """
-    Runs training loop on the model using :class:`~allennlp.training.trainer.Trainer`
+    Runs training loop on the model using :class:`~allennlp.training.trainer.GradientDescentTrainer`
     increasing learning rate from ``start_lr`` to ``end_lr`` recording the losses.
     # Parameters
 
-    trainer: :class:`~allennlp.training.trainer.Trainer`
+    trainer: :class:`~allennlp.training.trainer.GradientDescentTrainer`
     start_lr : ``float``
         The learning rate to start the search.
     end_lr : ``float``
