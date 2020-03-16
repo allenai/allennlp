@@ -549,6 +549,14 @@ class FromParams:
         if isinstance(params, str):
             params = Params({"type": params})
 
+        if not isinstance(params, Params):
+            raise ConfigurationError(
+                "from_params was passed a `params` object that was not a `Params`. This probably "
+                "indicates malformed parameters in a configuration file, where something that "
+                "should have been a dictionary was actually a list, or something else. "
+                f"This happened when constructing an object of type {cls}."
+            )
+
         registered_subclasses = Registrable._registry.get(cls)
 
         if registered_subclasses is not None and not constructor_to_call:

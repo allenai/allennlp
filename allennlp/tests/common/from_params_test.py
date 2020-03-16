@@ -67,6 +67,15 @@ class TestFromParams(AllenNlpTestCase):
         assert my_class.my_int == 10
         assert my_class.my_bool
 
+    def test_good_error_message_when_passing_non_params(self):
+        from allennlp.nn import InitializerApplicator
+
+        # This was how we used to take initializer params.  We want to be sure we give a reasonable
+        # error message when something like this is passed to FromParams.
+        params = Params({"initializer": [["regex1", "uniform"], ["regex2", "orthogonal"]]})
+        with pytest.raises(ConfigurationError, match="dictionary.*InitializerApplicator"):
+            InitializerApplicator.from_params(params=params.pop("initializer"))
+
     def test_create_kwargs(self):
         kwargs = create_kwargs(MyClass, MyClass, Params({"my_int": 5}), my_bool=True, my_float=4.4)
 
