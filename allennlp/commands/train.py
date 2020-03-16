@@ -55,7 +55,7 @@ from allennlp.data import DatasetReader, Vocabulary
 from allennlp.data import DataLoader
 from allennlp.models.archival import archive_model, CONFIG_NAME
 from allennlp.models.model import _DEFAULT_WEIGHTS, Model
-from allennlp.training.trainer_base import TrainerBase
+from allennlp.training.trainer import Trainer
 from allennlp.training import util as training_util
 
 logger = logging.getLogger(__name__)
@@ -484,8 +484,8 @@ class TrainModel(Registrable):
     This class exists so that we can easily read a configuration file with the `allennlp train`
     command.  The basic logic is that we call `train_loop =
     TrainModel.from_params(params_from_config_file)`, then `train_loop.run()`.  This class performs
-    very little logic, pushing most of it to the `TrainerBase` that has a `train()` method.  The
-    point here is to construct all of the dependencies for the `TrainerBase` in a way that we can do
+    very little logic, pushing most of it to the `Trainer` that has a `train()` method.  The
+    point here is to construct all of the dependencies for the `Trainer` in a way that we can do
     it using `from_params()`, while having all of those dependencies transparently documented and
     not hidden in calls to `params.pop()`.  If you are writing your own training loop, you almost
     certainly should not use this class, but you might look at the code for this class to see what
@@ -505,7 +505,7 @@ class TrainModel(Registrable):
         self,
         serialization_dir: str,
         model: Model,
-        trainer: TrainerBase,
+        trainer: Trainer,
         evaluation_data_loader: DataLoader = None,
         evaluate_on_test: bool = False,
         batch_weight_key: str = "",
@@ -551,7 +551,7 @@ class TrainModel(Registrable):
         train_data_path: str,
         model: Lazy[Model],
         data_loader: Lazy[DataLoader],
-        trainer: Lazy[TrainerBase],
+        trainer: Lazy[Trainer],
         vocabulary: Lazy[Vocabulary] = None,
         datasets_for_vocab_creation: List[str] = None,
         validation_dataset_reader: DatasetReader = None,
@@ -597,7 +597,7 @@ class TrainModel(Registrable):
         data_loader: `Lazy[DataLoader]`
             The data_loader we use to batch instances from the dataset reader at training and (by
             default) validation time. This is lazy because it takes a dataset in it's constructor.
-        trainer: `Lazy[TrainerBase]`
+        trainer: `Lazy[Trainer]`
             The `Trainer` that actually implements the training loop.  This is a lazy object because
             it depends on the model that's going to be trained.
         vocabulary: `Lazy[Vocabulary]`, optional (default=None)

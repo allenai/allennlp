@@ -16,7 +16,7 @@ from allennlp.commands.find_learning_rate import (
     find_learning_rate_model,
     FindLearningRate,
 )
-from allennlp.training import TrainerBase
+from allennlp.training import Trainer
 from allennlp.training.util import datasets_from_params
 
 
@@ -184,7 +184,7 @@ class TestSearchLearningRate(AllenNlpTestCase):
         trainer_params = params.pop("trainer")
         serialization_dir = os.path.join(self.TEST_DIR, "test_search_learning_rate")
 
-        self.trainer = TrainerBase.from_params(
+        self.trainer = Trainer.from_params(
             model=model,
             serialization_dir=serialization_dir,
             data_loader=data_loader,
