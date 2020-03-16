@@ -13,27 +13,26 @@
   },
   "train_data_path": "https://allennlp.s3.amazonaws.com/datasets/sst/train.txt",
   "validation_data_path": "https://allennlp.s3.amazonaws.com/datasets/sst/dev.txt",
-  "test_data_path": "https://allennlp.s3.amazonaws.com/datasets/sst/test.txt",  
+  "test_data_path": "https://allennlp.s3.amazonaws.com/datasets/sst/test.txt",
   "model": {
-    "type": "basic_classifier",        
+    "type": "basic_classifier",
     "text_field_embedder": {
       "token_embedders": {
         "tokens": {
           "type": "embedding",
-          "embedding_dim": 300,          
+          "embedding_dim": 300,
           "pretrained_file": "https://allennlp.s3.amazonaws.com/datasets/glove/glove.840B.300d.txt.gz",
-          "trainable": false          
-          }
+          "trainable": false
+        }
       }
     },
     "seq2vec_encoder": {
-       "type": "lstm",                     
+       "type": "lstm",
        "input_size": 300,
        "hidden_size": 512,
-       "num_layers": 2,
-       "batch_first": true
+       "num_layers": 2
     }
-  },    
+  },
   "data_loader": {
     "batch_sampler": {
       "type": "bucket",
