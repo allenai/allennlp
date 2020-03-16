@@ -9,7 +9,7 @@ from allennlp.common import Lazy, Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import DataLoader
-from allennlp.training import TrainerBase
+from allennlp.training import Trainer
 from allennlp.training.learning_rate_schedulers import LearningRateScheduler, SlantedTriangular
 from allennlp.training.optimizers import Optimizer
 
@@ -115,7 +115,7 @@ class SlantedTriangularTest(AllenNlpTestCase):
         # contents, so this should be safe.
         instances = AllennlpDataset([1] * 40)
         optim = self._get_optimizer()
-        trainer = TrainerBase.from_params(
+        trainer = Trainer.from_params(
             model=self.model,
             optimizer=Lazy(lambda **kwargs: optim),
             serialization_dir=self.TEST_DIR,
@@ -145,7 +145,7 @@ class SlantedTriangularTest(AllenNlpTestCase):
                 },
             }
         )
-        trainer = TrainerBase.from_params(
+        trainer = Trainer.from_params(
             model=self.model,
             optimizer=Lazy(lambda **kwargs: optim),
             serialization_dir=self.TEST_DIR,
