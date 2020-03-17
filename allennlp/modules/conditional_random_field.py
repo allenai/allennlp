@@ -246,8 +246,8 @@ class ConditionalRandomField(torch.nn.Module):
             # Add all the scores together and logexp over the current_tag axis.
             inner = broadcast_alpha + emit_scores + transition_scores
 
-            # In valid positions (mask == 1) we want to take the logsumexp over the current_tag dimension
-            # of `inner`. Otherwise (mask == 0) we want to retain the previous alpha.
+            # In valid positions (mask == True) we want to take the logsumexp over the current_tag dimension
+            # of `inner`. Otherwise (mask == False) we want to retain the previous alpha.
             alpha = util.logsumexp(inner, 1) * mask[i].view(batch_size, 1) + alpha * (
                 ~mask[i]
             ).view(batch_size, 1)

@@ -63,10 +63,10 @@ class PretrainedTransformerMismatchedIndexer(TokenIndexer):
         wordpieces, offsets = self._allennlp_tokenizer.intra_word_tokenize([t.text for t in tokens])
         output: IndexedTokenList = {
             "token_ids": [t.text_id for t in wordpieces],
-            "mask": [1] * len(tokens),  # for original tokens (i.e. word-level)
+            "mask": [True] * len(tokens),  # for original tokens (i.e. word-level)
             "type_ids": [t.type_id for t in wordpieces],
             "offsets": offsets,
-            "wordpiece_mask": [1] * len(wordpieces),  # for wordpieces (i.e. subword-level)
+            "wordpiece_mask": [True] * len(wordpieces),  # for wordpieces (i.e. subword-level)
         }
 
         return self._matched_indexer._postprocess_output(output)
