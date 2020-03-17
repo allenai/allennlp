@@ -188,12 +188,18 @@ class PretrainedTransformerIndexer(TokenIndexer):
         tensor_dict = {}
         for key, val in tokens.items():
             if val and isinstance(val[0], bool):
-                tensor = torch.BoolTensor(pad_sequence_to_length(val, padding_lengths[key], default_value=lambda: False))
+                tensor = torch.BoolTensor(
+                    pad_sequence_to_length(val, padding_lengths[key], default_value=lambda: False)
+                )
             else:
                 tensor = torch.LongTensor(
-                    pad_sequence_to_length(val,
-                    padding_lengths[key],
-                    default_value=lambda: 0 if key == "type_ids" else self._tokenizer.pad_token_id),
+                    pad_sequence_to_length(
+                        val,
+                        padding_lengths[key],
+                        default_value=lambda: 0
+                        if key == "type_ids"
+                        else self._tokenizer.pad_token_id,
+                    ),
                 )
             tensor_dict[key] = tensor
         return tensor_dict

@@ -102,7 +102,9 @@ class TokenIndexer(Registrable):
         tensor_dict = {}
         for key, val in tokens.items():
             if val and isinstance(val[0], bool):
-                tensor = torch.BoolTensor(pad_sequence_to_length(val, padding_lengths[key], default_value=lambda: False))
+                tensor = torch.BoolTensor(
+                    pad_sequence_to_length(val, padding_lengths[key], default_value=lambda: False)
+                )
             else:
                 tensor = torch.LongTensor(pad_sequence_to_length(val, padding_lengths[key]))
             tensor_dict[key] = tensor
