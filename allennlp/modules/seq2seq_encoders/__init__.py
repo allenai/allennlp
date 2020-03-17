@@ -19,9 +19,6 @@ The available Seq2Seq encoders are
 - `"pytorch_transformer"` : allennlp.modules.seq2seq_encoders.PytorchTransformer
 """
 
-from allennlp.modules.seq2seq_encoders.bidirectional_language_model_transformer import (
-    BidirectionalLanguageModelTransformer,
-)
 from allennlp.modules.seq2seq_encoders.compose_encoder import ComposeEncoder
 from allennlp.modules.seq2seq_encoders.feedforward_encoder import FeedForwardEncoder
 from allennlp.modules.seq2seq_encoders.gated_cnn_encoder import GatedCnnEncoder

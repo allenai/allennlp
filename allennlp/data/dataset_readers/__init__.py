@@ -12,8 +12,6 @@ from allennlp.data.dataset_readers.conll2003 import Conll2003DatasetReader
 from allennlp.data.dataset_readers.conll2000 import Conll2000DatasetReader
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.dataset_readers.interleaving_dataset_reader import InterleavingDatasetReader
-from allennlp.data.dataset_readers.masked_language_modeling import MaskedLanguageModelingReader
-from allennlp.data.dataset_readers.next_token_lm import NextTokenLmReader
 from allennlp.data.dataset_readers.semantic_dependency_parsing import (
     SemanticDependenciesDatasetReader,
 )
@@ -25,9 +23,6 @@ from allennlp.data.dataset_readers.stanford_sentiment_tree_bank import (
     StanfordSentimentTreeBankDatasetReader,
 )
 from allennlp.data.dataset_readers.quora_paraphrase import QuoraParaphraseDatasetReader
-from allennlp.data.dataset_readers.simple_language_modeling import (
-    SimpleLanguageModelingDatasetReader,
-)
 from allennlp.data.dataset_readers.babi import BabiReader
 from allennlp.data.dataset_readers.copynet_seq2seq import CopyNetDatasetReader
 from allennlp.data.dataset_readers.text_classification_json import TextClassificationJsonReader
