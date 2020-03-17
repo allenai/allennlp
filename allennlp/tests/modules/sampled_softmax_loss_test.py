@@ -5,7 +5,7 @@ import numpy as np
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.modules.sampled_softmax_loss import _choice, SampledSoftmaxLoss
-from modules import SoftmaxLoss
+from allennlp.modules import SoftmaxLoss
 
 
 class TestSampledSoftmaxLoss(AllenNlpTestCase):
