@@ -1,0 +1,19 @@
+-DOCSTART- -X- -X- O
+
+U.N.	NNP	I-NP	I-ORG
+official	NN	I-NP	O
+Ekeus	NNP	I-NP	I-PER
+heads	VBZ	I-VP	O
+for	IN	I-PP	O
+Baghdad	NNP	I-NP	I-LOC
+.	.	O	O
+
+-DOCSTART- -X- -X- O
+
+AI2	NNP	I-NP	I-ORG
+engineer	NN	I-NP	O
+Joel	NNP	I-NP	I-PER
+lives	VBZ	I-VP	O
+in	IN	I-PP	O
+Seattle	NNP	I-NP	I-LOC
+.	.	O	O
