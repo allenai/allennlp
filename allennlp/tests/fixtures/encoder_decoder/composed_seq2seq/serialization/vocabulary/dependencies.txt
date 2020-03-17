@@ -1,9 +1,0 @@
-@@UNKNOWN@@
-NONE
-nsubj
-ROOT
-det
-attr
-predet
-aux
-acomp
