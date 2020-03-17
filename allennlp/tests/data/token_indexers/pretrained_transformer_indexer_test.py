@@ -115,13 +115,13 @@ class TestPretrainedTransformerIndexer(AllenNlpTestCase):
             allennlp_tokens = allennlp_tokenizer.tokenize(string_no_specials)
             vocab = Vocabulary()
             indexed = indexer.tokens_to_indices(allennlp_tokens, vocab)
-            expected_masks = [1] * len(indexed["token_ids"])
+            expected_masks = [True] * len(indexed["token_ids"])
             assert indexed["mask"] == expected_masks
             max_length = 10
             padding_lengths = {key: max_length for key in indexed.keys()}
             padded_tokens = indexer.as_padded_tensor_dict(indexed, padding_lengths)
             padding_length = max_length - len(indexed["mask"])
-            expected_masks = expected_masks + ([0] * padding_length)
+            expected_masks = expected_masks + ([False] * padding_length)
             assert len(padded_tokens["mask"]) == max_length
             assert padded_tokens["mask"].tolist() == expected_masks
 
@@ -151,5 +151,5 @@ class TestPretrainedTransformerIndexer(AllenNlpTestCase):
         vocab = Vocabulary()
         indexed = indexer.tokens_to_indices(allennlp_tokens, vocab)
         assert indexed["token_ids"] == expected_ids
-        assert indexed["segment_concat_mask"] == [1] * len(expected_ids)
-        assert indexed["mask"] == [1] * 7  # original length
+        assert indexed["segment_concat_mask"] == [True] * len(expected_ids)
+        assert indexed["mask"] == [True] * 7  # original length
