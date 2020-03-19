@@ -294,9 +294,7 @@ class CrossValidateModel(TrainModel):
         logger.info(f"Reading data from {data_path}")
         dataset = dataset_reader.read(data_path)
 
-        vocabulary_ = vocabulary.construct(instances=dataset)
-        if not vocabulary_:
-            vocabulary_ = Vocabulary.from_instances(dataset)
+        vocabulary_ = vocabulary.construct(instances=dataset) or Vocabulary.from_instances(dataset)
         model_ = model.construct(vocab=vocabulary_)
 
         if common_util.is_master():
