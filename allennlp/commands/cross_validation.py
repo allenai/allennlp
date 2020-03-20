@@ -1,20 +1,24 @@
 import copy
 import logging
 import os
-from typing import Any, Dict
+from typing import Any, Callable, Dict, Optional, Sequence
 
-from overrides import overrides
 from torch.utils.data import Dataset, Subset
 
 from allennlp.commands import CrossValidator
+from allennlp.commands.cross_validator import default_get_groups, default_get_labels
 from allennlp.commands.train import TrainModel
 from allennlp.common import Lazy, Registrable, util as common_util
-from allennlp.data import DataLoader, DatasetReader, Vocabulary
+from allennlp.data import DataLoader, DatasetReader, Vocabulary, Instance
 from allennlp.models.model import Model
 from allennlp.training import Trainer, util as training_util
 from allennlp.training.metrics import Average
 
 logger = logging.getLogger(__name__)
+
+
+def instances_get_key(instances: Sequence[Instance], key: str) -> Sequence[Any]:
+    return [instance[key] for instance in instances]
 
 
 @TrainModel.register("cross_validation", constructor="from_partial_objects")
@@ -27,6 +31,12 @@ class CrossValidateModel(Registrable):
         model: Model,
         trainer_builder: Lazy[Trainer],
         cross_validator: CrossValidator,
+        instances_labels_fn: Callable[
+            [Sequence[Instance]], Optional[Sequence[Any]]
+        ] = default_get_labels,
+        instances_groups_fn: Callable[
+            [Sequence[Instance]], Optional[Sequence[Any]]
+        ] = default_get_groups,
         batch_weight_key: str = "",
         retrain: bool = False,
     ) -> None:
@@ -36,16 +46,22 @@ class CrossValidateModel(Registrable):
         self.model = model
         self.trainer_builder = trainer_builder
         self.cross_validator = cross_validator
+        self.instances_labels_fn = instances_labels_fn
+        self.instances_groups_fn = instances_groups_fn
         self.batch_weight_key = batch_weight_key
         self.retrain = retrain
 
     def run(self) -> Dict[str, Any]:
         metrics_by_fold = []
 
-        n_splits = self.cross_validator.get_n_splits(self.dataset)
+        n_splits = self.cross_validator.get_n_splits(
+            self.dataset, labels_fn=self.instances_labels_fn, groups_fn=self.instances_groups_fn
+        )
 
         for fold_index, (train_indices, test_indices) in enumerate(
-            self.cross_validator(self.dataset)
+            self.cross_validator(
+                self.dataset, labels_fn=self.instances_labels_fn, groups_fn=self.instances_groups_fn
+            )
         ):
             logger.info(f"Fold {fold_index}/{n_splits - 1}")
 
@@ -118,7 +134,6 @@ class CrossValidateModel(Registrable):
         )
 
     @classmethod
-    @overrides
     def from_partial_objects(
         cls,
         serialization_dir: str,
@@ -131,6 +146,8 @@ class CrossValidateModel(Registrable):
         cross_validator: CrossValidator,
         local_rank: int,  # It's passed transparently directly to the trainer.
         vocabulary: Lazy[Vocabulary] = None,
+        instance_label_key: Optional[str] = None,
+        instance_group_key: Optional[str] = None,
         retrain: bool = False,
     ) -> "CrossValidateModel":
         logger.info(f"Reading data from {data_path}")
@@ -145,6 +162,18 @@ class CrossValidateModel(Registrable):
 
         dataset.index_with(model_.vocab)
 
+        instances_labels_fn = (
+            lambda instances: instances_get_key(instances, instance_label_key)
+            if instance_label_key
+            else default_get_labels
+        )
+
+        instances_groups_fn = (
+            lambda instances: instances_get_key(instances, instance_group_key)
+            if instance_group_key
+            else default_get_groups
+        )
+
         return cls(
             serialization_dir=serialization_dir,
             dataset=dataset,
@@ -152,6 +181,8 @@ class CrossValidateModel(Registrable):
             data_loader_builder=data_loader,
             trainer_builder=trainer,
             cross_validator=cross_validator,
+            instances_labels_fn=instances_labels_fn,
+            instances_groups_fn=instances_groups_fn,
             batch_weight_key=batch_weight_key,
             retrain=retrain,
         )

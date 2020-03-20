@@ -1,4 +1,4 @@
-from typing import Any, Iterator, Optional, Sequence, Tuple, Union
+from typing import Any, Callable, Iterator, Optional, Sequence, Tuple, Union
 
 import sklearn.model_selection
 from numpy.random.mtrand import RandomState
@@ -9,33 +9,52 @@ from allennlp.common import Registrable
 from allennlp.data import Instance
 
 
+def default_get_labels(instances: Sequence[Instance]) -> Optional[Sequence[Any]]:
+    return [instance["label"] for instance in instances] if "label" in instances[0] else None
+
+
+def default_get_groups(instances: Sequence[Instance]) -> Optional[Sequence[Any]]:
+    return [instance["group"] for instance in instances] if "group" in instances[0] else None
+
+
 class CrossValidator(Registrable, BaseCrossValidator):
     default_implementation = "k_fold"
 
     def __call__(
-        self, instances: Sequence[Instance]
+        self,
+        instances: Sequence[Instance],
+        labels_fn: Callable[[Sequence[Instance]], Optional[Sequence[Any]]] = default_get_labels,
+        groups_fn: Callable[[Sequence[Instance]], Optional[Sequence[Any]]] = default_get_groups,
     ) -> Iterator[Tuple[Sequence[int], Sequence[int]]]:
-        groups, labels = self._labels_groups(instances)
+        labels, groups = self._labels_groups(instances, labels_fn=labels_fn, groups_fn=groups_fn)
         return super().split(instances, labels, groups=groups)
 
     @overrides
-    def split(self, instances: Sequence[Instance]) -> Iterator[Tuple[Sequence[int], Sequence[int]]]:
-        return self(instances)
+    def split(
+        self,
+        instances: Sequence[Instance],
+        labels_fn: Callable[[Sequence[Instance]], Optional[Sequence[Any]]] = default_get_labels,
+        groups_fn: Callable[[Sequence[Instance]], Optional[Sequence[Any]]] = default_get_groups,
+    ) -> Iterator[Tuple[Sequence[int], Sequence[int]]]:
+        return self(instances, labels_fn=labels_fn, groups_fn=groups_fn)
 
     @overrides
-    def get_n_splits(self, instances: Sequence[Instance]) -> int:
-        groups, labels = self._labels_groups(instances)
+    def get_n_splits(
+        self,
+        instances: Sequence[Instance],
+        labels_fn: Callable[[Sequence[Instance]], Optional[Sequence[Any]]] = default_get_labels,
+        groups_fn: Callable[[Sequence[Instance]], Optional[Sequence[Any]]] = default_get_groups,
+    ) -> int:
+        labels, groups = self._labels_groups(instances, labels_fn=labels_fn, groups_fn=groups_fn)
         return super().get_n_splits(instances, labels, groups=groups)
 
     @staticmethod
     def _labels_groups(
         instances: Sequence[Instance],
-    ) -> Tuple[Optional[Sequence[Union[str, int]]], Optional[Sequence[Any]]]:
-        labels = [instance["label"] for instance in instances] if "label" in instances[0] else None
-        groups = (
-            [instance["_group"] for instance in instances] if "_group" in instances[0] else None
-        )
-        return groups, labels
+        labels_fn: Callable[[Sequence[Instance]], Optional[Sequence[Any]]] = default_get_labels,
+        groups_fn: Callable[[Sequence[Instance]], Optional[Sequence[Any]]] = default_get_groups,
+    ) -> Tuple[Optional[Sequence[Any]], Optional[Sequence[Any]]]:
+        return labels_fn(instances), groups_fn(instances)
 
 
 @CrossValidator.register("group_k_fold")
