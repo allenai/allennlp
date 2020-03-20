@@ -3,8 +3,20 @@ import re
 import time
 
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.training.checkpointer import Checkpointer
 from allennlp.common.params import Params
+from allennlp.training import Checkpointer, Trainer
+
+
+class FakeTrainer(Trainer):
+    def __init__(self, model_state, training_states):
+        self._model_state = model_state
+        self._training_states = training_states
+
+    def prep_state_for_checkpointing(self):
+        return self._model_state, self._training_states
+
+    def restore_state_after_checkpointing(self):
+        pass
 
 
 class TestCheckpointer(AllenNlpTestCase):
@@ -44,8 +56,7 @@ class TestCheckpointer(AllenNlpTestCase):
         for e in range(num_epochs):
             checkpointer.save_checkpoint(
                 epoch=e,
-                model_state={"epoch": e},
-                training_states={"epoch": e},
+                trainer=FakeTrainer(model_state={"epoch": e}, training_states={"epoch": e}),
                 is_best_so_far=False,
             )
         models, training = self.retrieve_and_delete_saved()
@@ -57,7 +68,9 @@ class TestCheckpointer(AllenNlpTestCase):
         )
         for e in range(10):
             checkpointer.save_checkpoint(
-                epoch=e, model_state={"epoch": e}, training_states={"epoch": e}, is_best_so_far=True
+                epoch=e,
+                trainer=FakeTrainer(model_state={"epoch": e}, training_states={"epoch": e}),
+                is_best_so_far=True,
             )
         files = os.listdir(self.TEST_DIR)
         assert "model_state_epoch_1.th" not in files
@@ -83,8 +96,7 @@ class TestCheckpointer(AllenNlpTestCase):
                 time.sleep(2)
             checkpointer.save_checkpoint(
                 epoch=e,
-                model_state={"epoch": e},
-                training_states={"epoch": e},
+                trainer=FakeTrainer(model_state={"epoch": e}, training_states={"epoch": e}),
                 is_best_so_far=False,
             )
         models, training = self.retrieve_and_delete_saved()

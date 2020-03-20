@@ -5,12 +5,13 @@ import os
 import re
 import time
 import traceback
-from typing import Dict, List, Optional, Tuple, Union, Any
+from typing import Dict, List, Optional, Tuple, Any
 
 try:
     from apex import amp
 except ImportError:
     amp = None
+from overrides import overrides
 import torch
 import torch.distributed as dist
 import torch.optim.lr_scheduler
@@ -92,6 +93,12 @@ class Trainer(Registrable):
         """
         raise NotImplementedError
 
+    def prep_state_for_checkpointing(self) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+        raise NotImplementedError
+
+    def restore_state_after_checkpointing(self) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+        raise NotImplementedError
+
 
 @Trainer.register("gradient_descent", constructor="from_partial_objects")
 class GradientDescentTrainer(Trainer):
@@ -106,7 +113,6 @@ class GradientDescentTrainer(Trainer):
         num_epochs: int = 20,
         serialization_dir: Optional[str] = None,
         checkpointer: Checkpointer = None,
-        model_save_interval: float = None,
         cuda_device: int = -1,
         grad_norm: Optional[float] = None,
         grad_clipping: Optional[float] = None,
@@ -134,7 +140,7 @@ class GradientDescentTrainer(Trainer):
             scalar tensor representing the loss function to be optimized.
 
             If you are training your model using GPUs, your model should already be
-            on the correct device. (If you use `Trainer.from_params` this will be
+            on the correct device. (If you are using our `train` command this will be
             handled for you.)
         optimizer : `torch.nn.Optimizer`, required.
             An instance of a Pytorch Optimizer, instantiated with the parameters of the
@@ -161,10 +167,6 @@ class GradientDescentTrainer(Trainer):
         checkpointer : `Checkpointer`, optional (default=None)
             A `Checkpointer` is responsible for periodically saving model weights.  If none is given
             here, we will construct one with default parameters.
-        model_save_interval : `float`, optional (default=None)
-            If provided, then serialize models every `model_save_interval`
-            seconds within single epochs.  In all cases, models are also saved
-            at the end of every epoch if `serialization_dir` is provided.
         cuda_device : `int`, optional (default = -1)
             An integer specifying the CUDA device(s) to use for this process. If -1, the CPU is used.
             Data parallelism is controlled at the allennlp train level, so each trainer will have a single
@@ -246,8 +248,6 @@ class GradientDescentTrainer(Trainer):
             self._checkpointer = checkpointer
         else:
             self._checkpointer = Checkpointer(serialization_dir)
-
-        self._model_save_interval = model_save_interval
 
         self._grad_norm = grad_norm
         self._grad_clipping = grad_clipping
@@ -373,7 +373,6 @@ class GradientDescentTrainer(Trainer):
             batch_group_generator_tqdm = batch_group_generator
 
         self._last_log = time.time()
-        last_save_time = time.time()
 
         batches_this_epoch = 0
         if self._batch_num_total is None:
@@ -464,16 +463,9 @@ class GradientDescentTrainer(Trainer):
                     self.model, self.optimizer, batch_grad_norm, metrics, batch_group, param_updates
                 )
 
-            # Save model if needed.
-            if (
-                self._model_save_interval is not None
-                and (time.time() - last_save_time > self._model_save_interval)
-                and self._master
-            ):
-                last_save_time = time.time()
-                self._save_checkpoint(
-                    "{0}.{1}".format(epoch, training_util.time_to_str(int(last_save_time)))
-                )
+            if self._master:
+                self._checkpointer.maybe_save_checkpoint(self, epoch, batches_this_epoch)
+
         if self._distributed and not done_early:
             logger.warning(
                 f"Worker {torch.distributed.get_rank()} completed its entire epoch (training)."
@@ -580,6 +572,7 @@ class GradientDescentTrainer(Trainer):
 
         return val_loss, batches_this_epoch
 
+    @overrides
     def train(self) -> Dict[str, Any]:
         """
         Trains the supplied model with the supplied parameters.
@@ -687,7 +680,9 @@ class GradientDescentTrainer(Trainer):
                 self._momentum_scheduler.step(this_epoch_val_metric)
 
             if self._master:
-                self._save_checkpoint(epoch)
+                self._checkpointer.save_checkpoint(
+                    epoch, self, is_best_so_far=self._metric_tracker.is_best_so_far()
+                )
 
             # Wait for the master to finish saving the checkpoint
             if self._distributed:
@@ -716,21 +711,14 @@ class GradientDescentTrainer(Trainer):
 
         return metrics
 
-    def _save_checkpoint(self, epoch: Union[int, str]) -> None:
-        """
-        Saves a checkpoint of the model to self._serialization_dir.
-        Is a no-op if self._serialization_dir is None.
-
-        # Parameters
-
-        epoch : Union[int, str], required.
-            The epoch of training.  If the checkpoint is saved in the middle
-            of an epoch, the parameter is a string with the epoch and timestamp.
-        """
-        # If moving averages are used for parameters, we save
-        # the moving average values into checkpoint, instead of the current values.
+    @overrides
+    def prep_state_for_checkpointing(self) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         if self._moving_average is not None:
+            # Assigning average value to model parameters.  The checkpointer will call
+            # `restore_state_after_checkpointing` when it is done to put this back to what it was.
             self._moving_average.assign_average_value()
+
+        model_state = self.model.state_dict()
 
         # These are the training states we need to persist.
         training_states = {
@@ -745,14 +733,10 @@ class GradientDescentTrainer(Trainer):
         if self._momentum_scheduler is not None:
             training_states["momentum_scheduler"] = self._momentum_scheduler.state_dict()
 
-        self._checkpointer.save_checkpoint(
-            model_state=self.model.state_dict(),
-            epoch=epoch,
-            training_states=training_states,
-            is_best_so_far=self._metric_tracker.is_best_so_far(),
-        )
+        return model_state, training_states
 
-        # Restore the original values for parameters so that training will not be affected.
+    @overrides
+    def restore_state_after_checkpointing(self) -> None:
         if self._moving_average is not None:
             self._moving_average.restore()
 
@@ -829,7 +813,6 @@ class GradientDescentTrainer(Trainer):
         cuda_device: int = -1,
         grad_norm: float = None,
         grad_clipping: float = None,
-        model_save_interval: float = None,
         distributed: bool = None,
         world_size: int = 1,
         num_gradient_accumulation_steps: int = 1,
@@ -907,7 +890,6 @@ class GradientDescentTrainer(Trainer):
             momentum_scheduler=momentum_scheduler_,
             tensorboard_writer=tensorboard_writer_,
             checkpointer=checkpointer_,
-            model_save_interval=model_save_interval,
             moving_average=moving_average_,
             distributed=distributed,
             local_rank=local_rank,
