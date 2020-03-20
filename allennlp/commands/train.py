@@ -445,7 +445,7 @@ def _train_worker(
             f"for distributed training in worker {global_rank}"
         )
 
-    train_loop = TrainingMethod.from_params(
+    train_loop = TrainModel.from_params(
         params=params,
         serialization_dir=serialization_dir,
         local_rank=process_rank,
@@ -479,23 +479,7 @@ def _train_worker(
     return None
 
 
-class TrainingMethod(Registrable):
-    default_implementation = "train_test"
-
-    def __init__(self, serialization_dir: str, model: Model) -> None:
-        super().__init__()
-        self.serialization_dir = serialization_dir
-        self.model = model
-
-    def run(self) -> Dict[str, Any]:
-        raise NotImplementedError
-
-    def finish(self, metrics: Dict[str, Any]) -> None:
-        raise NotImplementedError
-
-
-@TrainingMethod.register("train_test", constructor="from_partial_objects")
-class TrainModel(TrainingMethod):
+class TrainModel(Registrable):
     """
     This class exists so that we can easily read a configuration file with the `allennlp train`
     command.  The basic logic is that we call `train_loop =
@@ -515,6 +499,8 @@ class TrainModel(TrainingMethod):
     of all of the allowed top-level keys in a configuration file used with `allennlp train`.
     """
 
+    default_implementation = "default"
+
     def __init__(
         self,
         serialization_dir: str,
@@ -524,18 +510,17 @@ class TrainModel(TrainingMethod):
         evaluate_on_test: bool = False,
         batch_weight_key: str = "",
     ) -> None:
-        super().__init__(serialization_dir=serialization_dir, model=model)
+        self.serialization_dir = serialization_dir
+        self.model = model
         self.trainer = trainer
         self.evaluation_data_loader = evaluation_data_loader
         self.evaluate_on_test = evaluate_on_test
         self.batch_weight_key = batch_weight_key
 
-    @overrides
     def run(self) -> Dict[str, Any]:
         return self.trainer.train()
 
-    @overrides
-    def finish(self, metrics: Dict[str, Any]) -> None:
+    def finish(self, metrics: Dict[str, Any]):
         if self.evaluation_data_loader and self.evaluate_on_test:
             logger.info("The model will be evaluated using the best epoch weights.")
             test_metrics = training_util.evaluate(
@@ -711,3 +696,6 @@ class TrainModel(TrainingMethod):
             evaluate_on_test=evaluate_on_test,
             batch_weight_key=batch_weight_key,
         )
+
+
+TrainModel.register("default", constructor="from_partial_objects")(TrainModel)
