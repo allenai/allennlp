@@ -30,22 +30,13 @@ class CrossValidateModel(Registrable):
         batch_weight_key: str = "",
         retrain: bool = False,
     ) -> None:
-        data_loader = data_loader_builder.construct(dataset=dataset)
-
-        # The "main" trainer. It's used to pass to super and when `retrain` option is set.
-        #
-        # We don't need to pass `serialization_dir` and `local_rank` here, because they will have
-        # been passed through the trainer by from_params already, because they were keyword
-        # arguments to construct this class in the first place.
-        trainer = trainer_builder.construct(model=model, data_loader=data_loader)
-
-        super().__init__(serialization_dir=serialization_dir, model=model, trainer=trainer)
-
+        self.serialization_dir = serialization_dir
         self.dataset = dataset
         self.data_loader_builder = data_loader_builder
+        self.model = model
         self.trainer_builder = trainer_builder
-        self.batch_weight_key = batch_weight_key
         self.cross_validator = cross_validator
+        self.batch_weight_key = batch_weight_key
         self.retrain = retrain
 
     def run(self) -> Dict[str, Any]:
@@ -110,7 +101,14 @@ class CrossValidateModel(Registrable):
                 metrics[f"average_{metric_key}"] = average.get_metric()
 
         if self.retrain:
-            self.trainer.train()
+            data_loader = self.data_loader_builder.construct(dataset=self.dataset)
+
+            # We don't need to pass `serialization_dir` and `local_rank` here, because they will
+            # have been passed through the trainer by `from_params` already,
+            # because they were keyword arguments to construct this class in the first place.
+            trainer = self.trainer_builder.construct(model=self.model, data_loader=data_loader)
+
+            trainer.train()
 
         return metrics
 
