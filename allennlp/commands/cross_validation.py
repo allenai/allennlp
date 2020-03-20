@@ -50,7 +50,8 @@ class CrossValidateModel(TrainingMethod):
             logger.info(f"Fold {fold_index}/{n_splits - 1}")
 
             serialization_dir = os.path.join(self.serialization_dir, f"fold_{fold_index}")
-            os.makedirs(serialization_dir, exist_ok=True)
+            if common_util.is_master():
+                os.makedirs(serialization_dir, exist_ok=True)
 
             train_dataset = Subset(self.dataset, train_indices)
             # FIXME: `BucketBatchSampler` needs the dataset to have a vocab, so we workaround it:
@@ -79,9 +80,12 @@ class CrossValidateModel(TrainingMethod):
                 else:
                     fold_metrics[metric_key] = metric_value
 
-            common_util.dump_metrics(
-                os.path.join(subtrainer._serialization_dir, "metrics.json"), fold_metrics, log=True
-            )
+            if common_util.is_master():
+                common_util.dump_metrics(
+                    os.path.join(subtrainer._serialization_dir, "metrics.json"),
+                    fold_metrics,
+                    log=True,
+                )
 
             metrics_by_fold.append(fold_metrics)
 
