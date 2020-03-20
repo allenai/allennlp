@@ -125,9 +125,7 @@ class TensorboardWriter(FromParams):
 
             if (self._batches_this_epoch - 1) % self._batch_size_interval == 0:
                 average = self._cumulative_batch_group_size / self._batches_this_epoch
-                logger.info(
-                    f"current batch size: {batch_group_size} mean batch size: {average}"
-                )
+                logger.info(f"current batch size: {batch_group_size} mean batch size: {average}")
                 self.add_train_scalar("current_batch_size", batch_group_size)
                 self.add_train_scalar("mean_batch_size", average)
 
@@ -216,7 +214,9 @@ class TensorboardWriter(FromParams):
         if not self._histogram_parameters:
             # Avoiding calling this every batch.  If we ever use two separate models with a single
             # writer, this is wrong, but I doubt that will ever happen.
-            self._histogram_parameters = set(model.get_parameters_for_histogram_tensorboard_logging())
+            self._histogram_parameters = set(
+                model.get_parameters_for_histogram_tensorboard_logging()
+            )
         for name, param in model.named_parameters():
             if name in self._histogram_parameters:
                 self.add_train_histogram("parameter_histogram/" + name, param)
