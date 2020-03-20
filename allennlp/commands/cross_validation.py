@@ -5,8 +5,7 @@ from typing import Any, Callable, Dict, Optional, Sequence
 
 from torch.utils.data import Dataset, Subset
 
-from allennlp.commands import CrossValidator
-from allennlp.commands.cross_validator import default_get_groups, default_get_labels
+from allennlp.commands.cross_validator import CrossValidator, default_get_groups, default_get_labels
 from allennlp.commands.train import TrainModel
 from allennlp.common import Lazy, Registrable, util as common_util
 from allennlp.data import DataLoader, DatasetReader, Vocabulary, Instance
