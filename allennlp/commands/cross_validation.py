@@ -7,7 +7,7 @@ from overrides import overrides
 from torch.utils.data import Dataset, Subset
 
 from allennlp.commands import CrossValidator
-from allennlp.commands.train import TrainModel
+from allennlp.commands.train import TrainingMethod
 from allennlp.common import Lazy, util as common_util
 from allennlp.data import DataLoader, Vocabulary, DatasetReader
 from allennlp.models.model import Model
@@ -17,8 +17,8 @@ from allennlp.training.metrics import Average
 logger = logging.getLogger(__name__)
 
 
-@TrainModel.register("cross_validation", constructor="from_partial_objects")
-class CrossValidateModel(TrainModel):
+@TrainingMethod.register("cross_validation", constructor="from_partial_objects")
+class CrossValidateModel(TrainingMethod):
     def __init__(
         self,
         serialization_dir: str,
@@ -30,17 +30,7 @@ class CrossValidateModel(TrainModel):
         batch_weight_key: str = "",
         retrain: bool = False,
     ) -> None:
-        data_loader = data_loader_builder.construct(dataset=dataset)
-
-        # The "main" trainer. It's used to pass to super and when `retrain` option is set.
-        #
-        # We don't need to pass `serialization_dir` and `local_rank` here, because they will have
-        # been passed through the trainer by from_params already, because they were keyword
-        # arguments to construct this class in the first place.
-        trainer = trainer_builder.construct(model=model, data_loader=data_loader)
-
-        super().__init__(serialization_dir=serialization_dir, model=model, trainer=trainer)
-
+        super().__init__(serialization_dir=serialization_dir, model=model)
         self.dataset = dataset
         self.data_loader_builder = data_loader_builder
         self.trainer_builder = trainer_builder
@@ -107,12 +97,19 @@ class CrossValidateModel(TrainModel):
                 metrics[f"average_{metric_key}"] = average.get_metric()
 
         if self.retrain:
-            self.trainer.train()
+            data_loader = self.data_loader_builder.construct(dataset=self.dataset)
+
+            # We don't need to pass `serialization_dir` and `local_rank` here, because they will
+            # have been passed through the trainer by `from_params` already,
+            # because they were keyword arguments to construct this class in the first place.
+            trainer = self.trainer_builder.construct(model=self.model, data_loader=data_loader)
+
+            trainer.train()
 
         return metrics
 
     @overrides
-    def finish(self, metrics: Dict[str, Any]):
+    def finish(self, metrics: Dict[str, Any]) -> None:
         common_util.dump_metrics(
             os.path.join(self.serialization_dir, "metrics.json"), metrics, log=True
         )
