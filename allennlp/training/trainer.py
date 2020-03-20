@@ -113,7 +113,6 @@ class GradientDescentTrainer(Trainer):
         learning_rate_scheduler: Optional[LearningRateScheduler] = None,
         momentum_scheduler: Optional[MomentumScheduler] = None,
         tensorboard_writer: TensorboardWriter = None,
-        log_batch_size_period: Optional[int] = None,
         moving_average: Optional[MovingAverage] = None,
         distributed: bool = False,
         local_rank: int = 0,
@@ -189,8 +188,6 @@ class GradientDescentTrainer(Trainer):
         tensorboard_writer : `TensorboardWriter`, optional
             If this is not provided, we will construct a `TensorboardWriter` with default
             parameters and use that.
-        log_batch_size_period : `int`, optional, (default = `None`)
-            If defined, how often to log the average batch size.
         moving_average : `MovingAverage`, optional, (default = None)
             If provided, we will maintain moving averages for all parameters. During training, we
             employ a shadow variable for each parameter, which maintains the moving average. During
@@ -267,8 +264,6 @@ class GradientDescentTrainer(Trainer):
         self._tensorboard = tensorboard_writer or TensorboardWriter(serialization_dir)
         self._tensorboard.get_batch_num_total = lambda: self._batch_num_total
         self._tensorboard.enable_activation_logging(self.model)
-
-        self._log_batch_size_period = log_batch_size_period
 
         self._last_log = 0.0  # time of last logging
 
@@ -384,9 +379,6 @@ class GradientDescentTrainer(Trainer):
         if self._batch_num_total is None:
             self._batch_num_total = 0
 
-        histogram_parameters = set(self.model.get_parameters_for_histogram_tensorboard_logging())
-
-        cumulative_batch_group_size = 0
         done_early = False
         for batch_group in batch_group_generator_tqdm:
             if self._distributed:
@@ -435,10 +427,12 @@ class GradientDescentTrainer(Trainer):
             if self._momentum_scheduler:
                 self._momentum_scheduler.step_batch(batch_num_total)
 
+            param_updates = None
             if self._tensorboard.should_log_histograms_this_batch() and self._master:
-                # get the magnitude of parameter updates for logging
-                # We need a copy of current parameters to compute magnitude of updates,
-                # and copy them to CPU so large models won't go OOM on the GPU.
+                # Get the magnitude of parameter updates for logging.  We need to do some
+                # computation before and after the optimizer step, and it's expensive because of
+                # GPU/CPU copies (necessary for large models, and for shipping to tensorboard), so
+                # we don't do this every batch, only when it's requested.
                 param_updates = {
                     name: param.detach().cpu().clone()
                     for name, param in self.model.named_parameters()
@@ -446,12 +440,6 @@ class GradientDescentTrainer(Trainer):
                 self.optimizer.step()
                 for name, param in self.model.named_parameters():
                     param_updates[name].sub_(param.detach().cpu())
-                    update_norm = torch.norm(param_updates[name].view(-1))
-                    param_norm = torch.norm(param.view(-1)).cpu()
-                    self._tensorboard.add_train_scalar(
-                        "gradient_update/" + name,
-                        update_norm / (param_norm + nn_util.tiny_value_of_dtype(param_norm.dtype)),
-                    )
             else:
                 self.optimizer.step()
 
@@ -472,28 +460,9 @@ class GradientDescentTrainer(Trainer):
             if self._master:
                 description = training_util.description_from_metrics(metrics)
                 batch_group_generator_tqdm.set_description(description, refresh=False)
-
-            # Log parameter values to Tensorboard (only from the master)
-            if self._tensorboard.should_log_this_batch() and self._master:
-                self._tensorboard.log_parameter_and_gradient_statistics(self.model, batch_grad_norm)
-                self._tensorboard.log_learning_rates(self.model, self.optimizer)
-
-                self._tensorboard.add_train_scalar("loss/loss_train", metrics["loss"])
-                self._tensorboard.log_metrics({"epoch_metrics/" + k: v for k, v in metrics.items()})
-
-            if self._tensorboard.should_log_histograms_this_batch() and self._master:
-                self._tensorboard.log_histograms(self.model, histogram_parameters)
-
-            if self._log_batch_size_period:
-                batch_group_size = sum(training_util.get_batch_size(batch) for batch in batch_group)
-                cumulative_batch_group_size += batch_group_size
-                if (batches_this_epoch - 1) % self._log_batch_size_period == 0:
-                    average = cumulative_batch_group_size / batches_this_epoch
-                    logger.info(
-                        f"current batch size: {batch_group_size} mean batch size: {average}"
-                    )
-                    self._tensorboard.add_train_scalar("current_batch_size", batch_group_size)
-                    self._tensorboard.add_train_scalar("mean_batch_size", average)
+                self._tensorboard.log_batch(
+                    self.model, self.optimizer, batch_grad_norm, metrics, batch_group, param_updates
+                )
 
             # Save model if needed.
             if (
@@ -861,7 +830,6 @@ class GradientDescentTrainer(Trainer):
         grad_norm: float = None,
         grad_clipping: float = None,
         model_save_interval: float = None,
-        log_batch_size_period: int = None,
         distributed: bool = None,
         world_size: int = 1,
         num_gradient_accumulation_steps: int = 1,
@@ -940,7 +908,6 @@ class GradientDescentTrainer(Trainer):
             tensorboard_writer=tensorboard_writer_,
             checkpointer=checkpointer_,
             model_save_interval=model_save_interval,
-            log_batch_size_period=log_batch_size_period,
             moving_average=moving_average_,
             distributed=distributed,
             local_rank=local_rank,
