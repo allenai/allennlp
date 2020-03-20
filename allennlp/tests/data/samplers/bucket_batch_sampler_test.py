@@ -86,7 +86,6 @@ class SamplerTest(AllenNlpTestCase):
 
 class TestBucketSampler(SamplerTest):
     def test_create_batches_groups_correctly(self):
-
         dataset = AllennlpDataset(self.instances, vocab=self.vocab)
         sampler = BucketBatchSampler(dataset, batch_size=2, padding_noise=0, sorting_keys=["text"])
 

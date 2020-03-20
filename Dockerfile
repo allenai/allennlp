@@ -50,7 +50,7 @@ COPY tutorials/ tutorials/
 COPY training_config training_config/
 COPY setup.py setup.py
 COPY README.md README.md
-COPY mkdocs.yml mkdocs.yml
+COPY mkdocs-skeleton.yml mkdocs-skeleton.yml
 
 RUN pip install --editable .
 

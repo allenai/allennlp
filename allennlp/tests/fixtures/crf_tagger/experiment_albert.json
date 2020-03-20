@@ -1,0 +1,36 @@
+{
+  "dataset_reader": {
+    "type": "conll2003",
+    "tag_label": "ner",
+    "token_indexers": {
+      "transformer": {
+        "type": "pretrained_transformer_mismatched",
+        "model_name": "albert-base-v2"
+      }
+    }
+  },
+  "train_data_path": "allennlp/tests/fixtures/data/conll2003.txt",
+  "validation_data_path": "allennlp/tests/fixtures/data/conll2003.txt",
+  "model": {
+    "type": "crf_tagger",
+    "include_start_end_transitions": false,
+    "text_field_embedder": {
+      "token_embedders": {
+        "transformer": {
+          "type": "pretrained_transformer_mismatched",
+          "model_name": "albert-base-v2"
+        }
+      }
+    },
+    "encoder": {
+      "type": "pass_through",
+      "input_dim": 768
+    }
+  },
+  "data_loader": {"batch_size": 32},
+  "trainer": {
+    "optimizer": "adam",
+    "num_epochs": 5,
+    "cuda_device": -1
+  }
+}
