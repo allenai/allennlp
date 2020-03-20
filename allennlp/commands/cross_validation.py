@@ -95,16 +95,13 @@ class CrossValidateModel(TrainModel):
         metrics = {}
 
         for metric_key, fold_0_metric_value in metrics_by_fold[0].items():
+            for fold_index, fold_metrics in enumerate(metrics_by_fold):
+                metrics[f"fold{fold_index}_{metric_key}"] = fold_metrics[metric_key]
             if isinstance(fold_0_metric_value, float):
                 average = Average()
-                for fold_index, fold_metrics in enumerate(metrics_by_fold):
-                    metric_value = fold_metrics[metric_key]
-                    metrics[f"fold{fold_index}_{metric_key}"] = metric_value
-                    average(metric_value)
+                for fold_metrics in metrics_by_fold:
+                    average(fold_metrics[metric_key])
                 metrics[f"average_{metric_key}"] = average.get_metric()
-            else:
-                for fold_index, fold_metrics in enumerate(metrics_by_fold):
-                    metrics[f"fold{fold_index}_{metric_key}"] = fold_metrics[metric_key]
 
         if self.retrain:
             self.trainer.train()
