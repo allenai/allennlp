@@ -163,13 +163,13 @@ class CrossValidateModel(Registrable):
         dataset.index_with(model_.vocab)
 
         instances_labels_fn = (
-            lambda instances: instances_get_key(instances, instance_label_key)
+            (lambda instances: instances_get_key(instances, instance_label_key))
             if instance_label_key
             else default_get_labels
         )
 
         instances_groups_fn = (
-            lambda instances: instances_get_key(instances, instance_group_key)
+            (lambda instances: instances_get_key(instances, instance_group_key))
             if instance_group_key
             else default_get_groups
         )
