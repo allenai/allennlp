@@ -8,8 +8,8 @@ from torch.utils.data import Dataset, Subset
 
 from allennlp.commands import CrossValidator
 from allennlp.commands.train import TrainModel
-from allennlp.common import Lazy, util as common_util
-from allennlp.data import DataLoader, Vocabulary, DatasetReader
+from allennlp.common import Lazy, Registrable, util as common_util
+from allennlp.data import DataLoader, DatasetReader, Vocabulary
 from allennlp.models.model import Model
 from allennlp.training import Trainer, util as training_util
 from allennlp.training.metrics import Average
@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 @TrainModel.register("cross_validation", constructor="from_partial_objects")
-class CrossValidateModel(TrainModel):
+class CrossValidateModel(Registrable):
     def __init__(
         self,
         serialization_dir: str,
@@ -48,7 +48,6 @@ class CrossValidateModel(TrainModel):
         self.cross_validator = cross_validator
         self.retrain = retrain
 
-    @overrides
     def run(self) -> Dict[str, Any]:
         metrics_by_fold = []
 
@@ -115,8 +114,7 @@ class CrossValidateModel(TrainModel):
 
         return metrics
 
-    @overrides
-    def finish(self, metrics: Dict[str, Any]):
+    def finish(self, metrics: Dict[str, Any]) -> None:
         common_util.dump_metrics(
             os.path.join(self.serialization_dir, "metrics.json"), metrics, log=True
         )

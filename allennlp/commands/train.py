@@ -520,7 +520,7 @@ class TrainModel(Registrable):
     def run(self) -> Dict[str, Any]:
         return self.trainer.train()
 
-    def finish(self, metrics: Dict[str, Any]):
+    def finish(self, metrics: Dict[str, Any]) -> None:
         if self.evaluation_data_loader and self.evaluate_on_test:
             logger.info("The model will be evaluated using the best epoch weights.")
             test_metrics = training_util.evaluate(
