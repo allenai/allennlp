@@ -63,7 +63,10 @@ class CrossValidateModel(TrainModel):
             os.makedirs(serialization_dir, exist_ok=True)
 
             train_dataset = Subset(self.dataset, train_indices)
+            # FIXME: `BucketBatchSampler` needs the dataset to have a vocab, so we workaround it:
+            train_dataset.vocab = self.dataset.vocab
             test_dataset = Subset(self.dataset, test_indices)
+            test_dataset.vocab = self.dataset.vocab
 
             train_data_loader = self.data_loader_builder.construct(dataset=train_dataset)
             test_data_loader = self.data_loader_builder.construct(dataset=test_dataset)
