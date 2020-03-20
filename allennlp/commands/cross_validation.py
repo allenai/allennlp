@@ -1,176 +1,18 @@
 import copy
 import logging
 import os
-from typing import Any, Dict, Iterator, Optional, Sequence, Tuple, Union
+from typing import Any, Dict
 
-import sklearn.model_selection
-from numpy.random.mtrand import RandomState
 from overrides import overrides
-from sklearn.model_selection import BaseCrossValidator
 from torch.utils.data import Dataset, Subset
 
+from allennlp.commands import CrossValidator
 from allennlp.commands.train import TrainModel
-from allennlp.common import Lazy, Registrable, util as common_util
-from allennlp.data import DataLoader, Instance, Vocabulary, DatasetReader
+from allennlp.common import Lazy, util as common_util
+from allennlp.data import DataLoader, Vocabulary, DatasetReader
 from allennlp.models.model import Model
 from allennlp.training import Trainer, util as training_util
 from allennlp.training.metrics import Average
-
-
-class CrossValidator(Registrable, BaseCrossValidator):
-    default_implementation = "k_fold"
-
-    def __call__(
-        self, instances: Sequence[Instance]
-    ) -> Iterator[Tuple[Sequence[int], Sequence[int]]]:
-        groups, labels = self._labels_groups(instances)
-        return super().split(instances, labels, groups=groups)
-
-    @overrides
-    def split(self, instances: Sequence[Instance]) -> Iterator[Tuple[Sequence[int], Sequence[int]]]:
-        return self(instances)
-
-    @overrides
-    def get_n_splits(self, instances: Sequence[Instance]) -> int:
-        groups, labels = self._labels_groups(instances)
-        return super().get_n_splits(instances, labels, groups=groups)
-
-    @staticmethod
-    def _labels_groups(
-        instances: Sequence[Instance],
-    ) -> Tuple[Optional[Sequence[Union[str, int]]], Optional[Sequence[Any]]]:
-        labels = [instance["label"] for instance in instances] if "label" in instances[0] else None
-        groups = (
-            [instance["_group"] for instance in instances] if "_group" in instances[0] else None
-        )
-        return groups, labels
-
-
-@CrossValidator.register("group_k_fold")
-class GroupKFold(CrossValidator, sklearn.model_selection.GroupKFold):
-    def __init__(self, n_splits: int = 5) -> None:
-        super().__init__(n_splits=n_splits)
-
-
-@CrossValidator.register("group_shuffle_split")
-class GroupShuffleSplit(CrossValidator, sklearn.model_selection.GroupShuffleSplit):
-    def __init__(
-        self,
-        n_splits: int = 10,
-        test_size: Optional[Union[float, int]] = None,
-        train_size: Optional[Union[float, int]] = None,
-        random_state: Optional[Union[int, RandomState]] = None,
-    ) -> None:
-        super().__init__(
-            n_splits=n_splits, test_size=test_size, train_size=train_size, random_state=random_state
-        )
-
-
-@CrossValidator.register("k_fold")
-class KFold(CrossValidator, sklearn.model_selection.KFold):
-    def __init__(
-        self,
-        n_splits: int = 5,
-        shuffle: bool = False,
-        random_state: Optional[Union[int, RandomState]] = None,
-    ) -> None:
-        super().__init__(n_splits=n_splits, shuffle=shuffle, random_state=random_state)
-
-
-@CrossValidator.register("leave_one_group_out")
-class LeaveOneGroupOut(CrossValidator, sklearn.model_selection.LeaveOneGroupOut):
-    pass
-
-
-@CrossValidator.register("leave_one_out")
-class LeaveOneOut(CrossValidator, sklearn.model_selection.LeaveOneOut):
-    pass
-
-
-@CrossValidator.register("leave_p_groups_out")
-class LeavePGroupsOut(CrossValidator, sklearn.model_selection.LeavePGroupsOut):
-    def __init__(self, n_groups: int) -> None:
-        super().__init__(n_groups=n_groups)
-
-
-@CrossValidator.register("leave_p_out")
-class LeavePOut(CrossValidator, sklearn.model_selection.LeavePOut):
-    def __init__(self, p: int) -> None:
-        super().__init__(p=p)
-
-
-@CrossValidator.register("predefined_split")
-class PredefinedSplit(CrossValidator, sklearn.model_selection.PredefinedSplit):
-    def __init__(self, test_fold: Sequence[int]) -> None:
-        super().__init__(test_fold=test_fold)
-
-
-@CrossValidator.register("repeated_k_fold")
-class RepeatedKFold(CrossValidator, sklearn.model_selection.RepeatedKFold):
-    def __init__(
-        self,
-        n_splits: int = 5,
-        n_repeats: int = 10,
-        random_state: Optional[Union[int, RandomState]] = None,
-    ) -> None:
-        super().__init__(n_splits=n_splits, n_repeats=n_repeats, random_state=random_state)
-
-
-@CrossValidator.register("repeated_stratified_k_fold")
-class RepeatedStratifiedKFold(CrossValidator, sklearn.model_selection.RepeatedStratifiedKFold):
-    def __init__(
-        self,
-        n_splits: int = 5,
-        n_repeats: int = 10,
-        random_state: Optional[Union[int, RandomState]] = None,
-    ) -> None:
-        super().__init__(n_splits=n_splits, n_repeats=n_repeats, random_state=random_state)
-
-
-@CrossValidator.register("shuffle_split")
-class ShuffleSplit(CrossValidator, sklearn.model_selection.ShuffleSplit):
-    def __init__(
-        self,
-        n_splits: int = 10,
-        test_size: Optional[Union[float, int]] = None,
-        train_size: Optional[Union[float, int]] = None,
-        random_state: Optional[Union[int, RandomState]] = None,
-    ) -> None:
-        super().__init__(
-            n_splits=n_splits, test_size=test_size, train_size=train_size, random_state=random_state
-        )
-
-
-@CrossValidator.register("stratified_k_fold")
-class StratifiedKFold(CrossValidator, sklearn.model_selection.StratifiedKFold):
-    def __init__(
-        self,
-        n_splits: int = 5,
-        shuffle: bool = False,
-        random_state: Optional[Union[int, RandomState]] = None,
-    ) -> None:
-        super().__init__(n_splits=n_splits, shuffle=shuffle, random_state=random_state)
-
-
-@CrossValidator.register("stratified_shuffle_split")
-class StratifiedShuffleSplit(CrossValidator, sklearn.model_selection.StratifiedShuffleSplit):
-    def __init__(
-        self,
-        n_splits: int = 10,
-        test_size: Optional[Union[float, int]] = None,
-        train_size: Optional[Union[float, int]] = None,
-        random_state: Optional[Union[int, RandomState]] = None,
-    ) -> None:
-        super().__init__(
-            n_splits=n_splits, test_size=test_size, train_size=train_size, random_state=random_state
-        )
-
-
-@CrossValidator.register("time_series_split")
-class TimeSeriesSplit(CrossValidator, sklearn.model_selection.TimeSeriesSplit):
-    def __init__(self, n_splits: int = 5, max_train_size: Optional[int] = None) -> None:
-        super().__init__(n_splits=n_splits, max_train_size=max_train_size)
-
 
 logger = logging.getLogger(__name__)
 

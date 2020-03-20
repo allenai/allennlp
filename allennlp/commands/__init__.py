@@ -5,8 +5,8 @@ from typing import Any, Optional
 from overrides import overrides
 
 from allennlp import __version__
-from allennlp.commands.cross_validation import (
-    CrossValidateModel,
+from allennlp.commands.cross_validation import CrossValidateModel
+from allennlp.commands.cross_validator import (
     CrossValidator,
     GroupKFold,
     GroupShuffleSplit,
