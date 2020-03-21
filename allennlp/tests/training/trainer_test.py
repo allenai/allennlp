@@ -597,7 +597,11 @@ class TestTrainer(TrainerTestBase):
             data_loader,
             num_epochs=2,
             serialization_dir=self.TEST_DIR,
-            model_save_interval=0.0001,
+            checkpointer=Checkpointer(
+                serialization_dir=self.TEST_DIR,
+                model_save_interval=0.0001,
+                num_serialized_models_to_keep=10,
+            ),
         )
 
         trainer.train()
@@ -626,7 +630,7 @@ class TestTrainer(TrainerTestBase):
             self.data_loader,
             num_epochs=2,
             serialization_dir=self.TEST_DIR,
-            model_save_interval=0.0001,
+            checkpointer=Checkpointer(serialization_dir=self.TEST_DIR, model_save_interval=0.0001),
         )
         epoch = restore_trainer._restore_checkpoint()
         assert epoch == 2
@@ -758,6 +762,9 @@ class TestTrainer(TrainerTestBase):
             validation_data_loader=self.validation_data_loader,
             num_epochs=3,
             serialization_dir=self.TEST_DIR,
+            checkpointer=Checkpointer(
+                serialization_dir=self.TEST_DIR, num_serialized_models_to_keep=4
+            ),
         )
         trainer.train()
 
