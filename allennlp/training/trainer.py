@@ -598,7 +598,7 @@ class GradientDescentTrainer(Trainer):
                     break
 
             batch_outputs = self.batch_outputs(batch, for_training=False)
-            loss = batch_outputs["loss"]
+            loss = batch_outputs.get("loss")
             if loss is not None:
                 # You shouldn't necessarily have to compute a loss for validation, so we allow for
                 # `loss` to be None.  We need to be careful, though - `batches_this_epoch` is
