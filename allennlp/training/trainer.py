@@ -113,13 +113,15 @@ class BatchCallback(Registrable):
     of this, but you can implement your own callback and do whatever you want, such as saving
     predictions to disk or extra logging.
     """
+
     def __call__(
         self,
-        trainer: 'GradientDescentTrainer',
+        trainer: "GradientDescentTrainer",
         batch_inputs: List[List[TensorDict]],
         batch_outputs: List[List[Dict[str, Any]]],
         epoch: int,
         batch_number: int,
+        is_training: bool,
     ) -> None:
         raise NotImplementedError
 
@@ -131,7 +133,10 @@ class EpochCallback(Registrable):
     implementation of this, but you can implement your own callback and do whatever you want, such
     as additional modifications of the trainer's state in between epochs.
     """
-    def __call__(self, trainer: 'GradientDescentTrainer', epoch: int) -> None:
+
+    def __call__(
+        self, trainer: "GradientDescentTrainer", metrics: Dict[str, Any], epoch: int
+    ) -> None:
         raise NotImplementedError
 
 
@@ -360,27 +365,25 @@ class GradientDescentTrainer(Trainer):
         else:
             return None
 
-    def batch_loss(self, batch: TensorDict, for_training: bool) -> torch.Tensor:
+    def batch_outputs(self, batch: TensorDict, for_training: bool) -> Dict[str, torch.Tensor]:
         """
-        Does a forward pass on the given batches and returns the `loss` value in the result.
-        If `for_training` is `True` also applies regularization penalty.
+        Does a forward pass on the given batch and returns the output dictionary that the model
+        returns, after adding any specified regularization penalty to the loss (if training).
         """
         batch = nn_util.move_to_device(batch, self.cuda_device)
         output_dict = self._pytorch_model(**batch)
 
-        try:
-            loss = output_dict["loss"]
-            if for_training:
-                loss += self.model.get_regularization_penalty()
-        except KeyError:
-            if for_training:
-                raise RuntimeError(
-                    "The model you are trying to optimize does not contain a"
-                    " 'loss' key in the output of model.forward(inputs)."
-                )
-            loss = None
+        if for_training:
+            try:
+                output_dict["loss"] += self.model.get_regularization_penalty()
+            except KeyError:
+                if for_training:
+                    raise RuntimeError(
+                        "The model you are trying to optimize does not contain a"
+                        " 'loss' key in the output of model.forward(inputs)."
+                    )
 
-        return loss
+        return output_dict
 
     def _train_epoch(self, epoch: int) -> Dict[str, float]:
         """
@@ -451,8 +454,11 @@ class GradientDescentTrainer(Trainer):
 
             self.optimizer.zero_grad()
 
+            batch_group_outputs = []
             for batch in batch_group:
-                loss = self.batch_loss(batch, for_training=True)
+                batch_outputs = self.batch_outputs(batch, for_training=True)
+                batch_group_outputs.append(batch_outputs)
+                loss = batch_outputs["loss"]
                 if torch.isnan(loss):
                     raise ValueError("nan loss encountered")
                 loss = loss / len(batch_group)
@@ -511,6 +517,15 @@ class GradientDescentTrainer(Trainer):
 
             if self._master:
                 self._checkpointer.maybe_save_checkpoint(self, epoch, batches_this_epoch)
+                if self._batch_callback:
+                    self._batch_callback(
+                        self,
+                        batch_group,
+                        batch_group_outputs,
+                        epoch,
+                        batches_this_epoch,
+                        is_training=True,
+                    )
 
         if self._distributed and not done_early:
             logger.warning(
@@ -582,7 +597,8 @@ class GradientDescentTrainer(Trainer):
                     )
                     break
 
-            loss = self.batch_loss(batch, for_training=False)
+            batch_outputs = self.batch_outputs(batch, for_training=False)
+            loss = batch_outputs["loss"]
             if loss is not None:
                 # You shouldn't necessarily have to compute a loss for validation, so we allow for
                 # `loss` to be None.  We need to be careful, though - `batches_this_epoch` is
@@ -602,6 +618,17 @@ class GradientDescentTrainer(Trainer):
             )
             description = training_util.description_from_metrics(val_metrics)
             val_generator_tqdm.set_description(description, refresh=False)
+
+            if self._master:
+                if self._batch_callback:
+                    self._batch_callback(
+                        self,
+                        batch_group,
+                        batch_group_outputs,
+                        epoch,
+                        batches_this_epoch,
+                        is_training=False,
+                    )
 
         if self._distributed and not done_early:
             logger.warning(
@@ -646,9 +673,15 @@ class GradientDescentTrainer(Trainer):
         for key, value in self._metric_tracker.best_epoch_metrics.items():
             metrics["best_validation_" + key] = value
 
+        if self._epoch_callback:
+            self._epoch_callback(self, metrics={}, epoch=0)
+
         for epoch in range(epoch_counter, self._num_epochs):
             epoch_start_time = time.time()
             train_metrics = self._train_epoch(epoch)
+            if self._epoch_callback:
+                self._epoch_callback(self, metrics=train_metrics, epoch=epoch)
+
 
             # get peak of memory usage
             if "cpu_memory_MB" in train_metrics:
