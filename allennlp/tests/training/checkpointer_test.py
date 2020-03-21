@@ -44,9 +44,9 @@ class TestCheckpointer(AllenNlpTestCase):
 
     def test_default(self):
         """
-        Tests that the default behavior keeps just the last 20 checkpoints.
+        Tests that the default behavior keeps just the last 2 checkpoints.
         """
-        default_num_to_keep = 20
+        default_num_to_keep = 2
         num_epochs = 30
         target = list(range(num_epochs - default_num_to_keep, num_epochs))
 
