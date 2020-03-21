@@ -129,7 +129,7 @@ class BatchCallback(Registrable):
 class EpochCallback(Registrable):
     """
     An optional callback that you can pass to the `GradientDescentTrainer` that will be called at
-    the end of every epoch (and before the start of training, with `epoch=0`). We have no default
+    the end of every epoch (and before the start of training, with `epoch=-1`). We have no default
     implementation of this, but you can implement your own callback and do whatever you want, such
     as additional modifications of the trainer's state in between epochs.
     """
@@ -554,7 +554,7 @@ class GradientDescentTrainer(Trainer):
             metrics["gpu_" + str(gpu_num) + "_memory_MB"] = memory
         return metrics
 
-    def _validation_loss(self) -> Tuple[float, int]:
+    def _validation_loss(self, epoch: int) -> Tuple[float, int]:
         """
         Computes the validation loss. Returns it and the number of batches.
         """
@@ -623,8 +623,8 @@ class GradientDescentTrainer(Trainer):
                 if self._batch_callback:
                     self._batch_callback(
                         self,
-                        batch_group,
-                        batch_group_outputs,
+                        [batch],
+                        [batch_outputs],
                         epoch,
                         batches_this_epoch,
                         is_training=False,
@@ -674,7 +674,7 @@ class GradientDescentTrainer(Trainer):
             metrics["best_validation_" + key] = value
 
         if self._epoch_callback:
-            self._epoch_callback(self, metrics={}, epoch=0)
+            self._epoch_callback(self, metrics={}, epoch=-1)
 
         for epoch in range(epoch_counter, self._num_epochs):
             epoch_start_time = time.time()
@@ -695,7 +695,7 @@ class GradientDescentTrainer(Trainer):
             if self._validation_data_loader is not None:
                 with torch.no_grad():
                     # We have a validation set, so compute all the metrics on it.
-                    val_loss, num_batches = self._validation_loss()
+                    val_loss, num_batches = self._validation_loss(epoch)
 
                     # It is safe again to wait till the validation is done. This is
                     # important to get the metrics right.
@@ -901,6 +901,8 @@ class GradientDescentTrainer(Trainer):
         tensorboard_writer: Lazy[TensorboardWriter] = None,
         moving_average: Lazy[MovingAverage] = None,
         checkpointer: Lazy[Checkpointer] = None,
+        batch_callback: Optional[BatchCallback] = None,
+        epoch_callback: Optional[EpochCallback] = None,
     ) -> "Trainer":
         """
         This method exists so that we can have a documented method to construct this class using
@@ -968,6 +970,8 @@ class GradientDescentTrainer(Trainer):
             tensorboard_writer=tensorboard_writer_,
             checkpointer=checkpointer_,
             moving_average=moving_average_,
+            batch_callback=batch_callback,
+            epoch_callback=epoch_callback,
             distributed=distributed,
             local_rank=local_rank,
             world_size=world_size,
