@@ -5,13 +5,13 @@ import os
 import re
 import time
 import traceback
-from typing import Dict, List, Optional, Tuple, Any
+from contextlib import contextmanager
+from typing import Any, Dict, Iterator, List, Optional, Tuple
 
 try:
     from apex import amp
 except ImportError:
     amp = None
-from overrides import overrides
 import torch
 import torch.distributed as dist
 import torch.optim.lr_scheduler
@@ -93,10 +93,16 @@ class Trainer(Registrable):
         """
         raise NotImplementedError
 
-    def prep_state_for_checkpointing(self) -> Tuple[Dict[str, Any], Dict[str, Any]]:
-        raise NotImplementedError
+    @contextmanager
+    def get_checkpoint_state(self) -> Iterator[Tuple[Dict[str, Any], Dict[str, Any]]]:
+        """
+        Returns a tuple of (model state, training state), where training state could have several
+        internal components (e.g., for an, optimizer, learning rate scheduler, etc.).
 
-    def restore_state_after_checkpointing(self) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+        This is a context manager, and should be called as `with trainer.get_checkpoint_state() as
+        state:`, so that the trainer has the opportunity to change and restore its internal state
+        for checkpointing.  This is used, e.g., for moving averages of model weights.
+        """
         raise NotImplementedError
 
 
@@ -572,7 +578,6 @@ class GradientDescentTrainer(Trainer):
 
         return val_loss, batches_this_epoch
 
-    @overrides
     def train(self) -> Dict[str, Any]:
         """
         Trains the supplied model with the supplied parameters.
@@ -711,8 +716,8 @@ class GradientDescentTrainer(Trainer):
 
         return metrics
 
-    @overrides
-    def prep_state_for_checkpointing(self) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+    @contextmanager
+    def get_checkpoint_state(self) -> Iterator[Tuple[Dict[str, Any], Dict[str, Any]]]:
         if self._moving_average is not None:
             # Assigning average value to model parameters.  The checkpointer will call
             # `restore_state_after_checkpointing` when it is done to put this back to what it was.
@@ -733,12 +738,11 @@ class GradientDescentTrainer(Trainer):
         if self._momentum_scheduler is not None:
             training_states["momentum_scheduler"] = self._momentum_scheduler.state_dict()
 
-        return model_state, training_states
-
-    @overrides
-    def restore_state_after_checkpointing(self) -> None:
-        if self._moving_average is not None:
-            self._moving_average.restore()
+        try:
+            yield model_state, training_states
+        finally:
+            if self._moving_average is not None:
+                self._moving_average.restore()
 
     def _restore_checkpoint(self) -> int:
         """

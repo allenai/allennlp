@@ -1,5 +1,6 @@
 import os
-from typing import Any, Dict, Tuple
+from contextlib import contextmanager
+from typing import Any, Dict, Iterator, Tuple
 
 from allennlp.models import Model
 from allennlp.training.checkpointer import Checkpointer
@@ -24,8 +25,6 @@ class NoOpTrainer(Trainer):
         checkpointer.save_checkpoint(epoch=0, trainer=self, is_best_so_far=True)
         return {}
 
-    def prep_state_for_checkpointing(self) -> Tuple[Dict[str, Any], Dict[str, Any]]:
-        return self.model.state_dict(), {}
-
-    def restore_state_after_checkpointing(self) -> Tuple[Dict[str, Any], Dict[str, Any]]:
-        pass
+    @contextmanager
+    def get_checkpoint_state(self) -> Iterator[Tuple[Dict[str, Any], Dict[str, Any]]]:
+        yield self.model.state_dict(), {}

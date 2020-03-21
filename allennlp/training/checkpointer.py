@@ -26,8 +26,8 @@ class Checkpointer(Registrable):
 
     # Parameters
 
-    num_serialized_models_to_keep : `int`, optional (default=20)
-        Number of previous model checkpoints to retain.  Default is to keep 20 checkpoints.
+    num_serialized_models_to_keep : `int`, optional (default=2)
+        Number of previous model checkpoints to retain.  Default is to keep 2 checkpoints.
         A value of None or -1 means all checkpoints will be kept.
     keep_serialized_model_every_num_seconds : `int`, optional (default=None)
         If num_serialized_models_to_keep is not None, then occasionally it's useful to
@@ -45,7 +45,7 @@ class Checkpointer(Registrable):
         self,
         serialization_dir: str = None,
         keep_serialized_model_every_num_seconds: int = None,
-        num_serialized_models_to_keep: int = 20,
+        num_serialized_models_to_keep: int = 2,
         model_save_interval: float = None,
     ) -> None:
         self._serialization_dir = serialization_dir
@@ -87,16 +87,16 @@ class Checkpointer(Registrable):
         is_best_so_far: bool = False,
     ) -> None:
         if self._serialization_dir is not None:
-            model_state, training_states = trainer.prep_state_for_checkpointing()
-            model_path = os.path.join(
-                self._serialization_dir, "model_state_epoch_{}.th".format(epoch)
-            )
-            torch.save(model_state, model_path)
-            training_path = os.path.join(
-                self._serialization_dir, "training_state_epoch_{}.th".format(epoch)
-            )
-            torch.save({**training_states, "epoch": epoch}, training_path)
-            trainer.restore_state_after_checkpointing()
+            with trainer.get_checkpoint_state() as state:
+                model_state, training_states = state
+                model_path = os.path.join(
+                    self._serialization_dir, "model_state_epoch_{}.th".format(epoch)
+                )
+                torch.save(model_state, model_path)
+                training_path = os.path.join(
+                    self._serialization_dir, "training_state_epoch_{}.th".format(epoch)
+                )
+                torch.save({**training_states, "epoch": epoch}, training_path)
 
             # The main checkpointing logic is now done, this is just shuffling files around, to keep
             # track of best weights, and to remove old checkpoints, if desired.

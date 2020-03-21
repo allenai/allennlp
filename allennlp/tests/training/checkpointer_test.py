@@ -1,6 +1,7 @@
 import os
 import re
 import time
+from contextlib import contextmanager
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.common.params import Params
@@ -12,11 +13,9 @@ class FakeTrainer(Trainer):
         self._model_state = model_state
         self._training_states = training_states
 
-    def prep_state_for_checkpointing(self):
-        return self._model_state, self._training_states
-
-    def restore_state_after_checkpointing(self):
-        pass
+    @contextmanager
+    def get_checkpoint_state(self):
+        yield self._model_state, self._training_states
 
 
 class TestCheckpointer(AllenNlpTestCase):
