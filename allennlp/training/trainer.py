@@ -118,7 +118,7 @@ class BatchCallback(Registrable):
         self,
         trainer: "GradientDescentTrainer",
         batch_inputs: List[List[TensorDict]],
-        batch_outputs: List[List[Dict[str, Any]]],
+        batch_outputs: List[Dict[str, Any]],
         epoch: int,
         batch_number: int,
         is_training: bool,
@@ -681,7 +681,6 @@ class GradientDescentTrainer(Trainer):
             train_metrics = self._train_epoch(epoch)
             if self._epoch_callback:
                 self._epoch_callback(self, metrics=train_metrics, epoch=epoch)
-
 
             # get peak of memory usage
             if "cpu_memory_MB" in train_metrics:

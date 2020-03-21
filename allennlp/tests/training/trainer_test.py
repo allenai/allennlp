@@ -822,14 +822,14 @@ class TestTrainer(TrainerTestBase):
                 self,
                 trainer: "GradientDescentTrainer",
                 batch_inputs: List[List[TensorDict]],
-                batch_outputs: List[List[Dict[str, Any]]],
+                batch_outputs: List[Dict[str, Any]],
                 epoch: int,
                 batch_number: int,
                 is_training: bool,
             ) -> None:
                 if not hasattr(trainer, "batch_callback_calls"):
-                    trainer.batch_callback_calls = []
-                trainer.batch_callback_calls.append((epoch, batch_number, is_training))
+                    trainer.batch_callback_calls = []  # type: ignore
+                trainer.batch_callback_calls.append((epoch, batch_number, is_training))  # type: ignore
 
         trainer = GradientDescentTrainer(
             self.model,
@@ -854,8 +854,8 @@ class TestTrainer(TrainerTestBase):
                 self, trainer: "GradientDescentTrainer", metrics: Dict[str, Any], epoch: int
             ) -> None:
                 if not hasattr(trainer, "epoch_callback_calls"):
-                    trainer.epoch_callback_calls = []
-                trainer.epoch_callback_calls.append(epoch)
+                    trainer.epoch_callback_calls = []  # type: ignore
+                trainer.epoch_callback_calls.append(epoch)  # type: ignore
 
         trainer = GradientDescentTrainer(
             self.model,

@@ -314,7 +314,7 @@ def search_learning_rate(
             param_group["lr"] = current_lr
 
         trainer.optimizer.zero_grad()
-        loss = trainer.batch_loss(batch, for_training=True)
+        loss = trainer.batch_outputs(batch, for_training=True)["loss"]
         loss.backward()
         loss = loss.detach().cpu().item()
 
