@@ -106,6 +106,35 @@ class Trainer(Registrable):
         raise NotImplementedError
 
 
+class BatchCallback(Registrable):
+    """
+    An optional callback that you can pass to the `GradientDescentTrainer` that will be called at
+    the end of every batch, during both training and validation.  We have no default implementation
+    of this, but you can implement your own callback and do whatever you want, such as saving
+    predictions to disk or extra logging.
+    """
+    def __call__(
+        self,
+        trainer: 'GradientDescentTrainer',
+        batch_inputs: List[List[TensorDict]],
+        batch_outputs: List[List[Dict[str, Any]]],
+        epoch: int,
+        batch_number: int,
+    ) -> None:
+        raise NotImplementedError
+
+
+class EpochCallback(Registrable):
+    """
+    An optional callback that you can pass to the `GradientDescentTrainer` that will be called at
+    the end of every epoch (and before the start of training, with `epoch=0`). We have no default
+    implementation of this, but you can implement your own callback and do whatever you want, such
+    as additional modifications of the trainer's state in between epochs.
+    """
+    def __call__(self, trainer: 'GradientDescentTrainer', epoch: int) -> None:
+        raise NotImplementedError
+
+
 @Trainer.register("gradient_descent", constructor="from_partial_objects")
 class GradientDescentTrainer(Trainer):
     """
@@ -222,6 +251,8 @@ class GradientDescentTrainer(Trainer):
         momentum_scheduler: Optional[MomentumScheduler] = None,
         tensorboard_writer: TensorboardWriter = None,
         moving_average: Optional[MovingAverage] = None,
+        batch_callback: Optional[BatchCallback] = None,
+        epoch_callback: Optional[EpochCallback] = None,
         distributed: bool = False,
         local_rank: int = 0,
         world_size: int = 1,
@@ -268,6 +299,8 @@ class GradientDescentTrainer(Trainer):
         self._learning_rate_scheduler = learning_rate_scheduler
         self._momentum_scheduler = momentum_scheduler
         self._moving_average = moving_average
+        self._batch_callback = batch_callback
+        self._epoch_callback = epoch_callback
 
         # We keep the total batch number as an instance variable because it
         # is used inside a closure for the hook which logs activations in
