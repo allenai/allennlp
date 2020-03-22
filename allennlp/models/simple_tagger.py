@@ -73,6 +73,9 @@ class SimpleTagger(Model):
             Linear(self.encoder.get_output_dim(), self.num_classes)
         )
 
+        # Used when `ignore_loss_on_o_tags` is `True` in `self.forward`.
+        self._o_tag_index = self.vocab.get_token_index("O", namespace=self.label_namespace)
+
         check_dimensions_match(
             text_field_embedder.get_output_dim(),
             encoder.get_input_dim(),
@@ -107,6 +110,7 @@ class SimpleTagger(Model):
         tokens: TextFieldTensors,
         tags: torch.LongTensor = None,
         metadata: List[Dict[str, Any]] = None,
+        ignore_loss_on_o_tags: bool = False,
     ) -> Dict[str, torch.Tensor]:
 
         """
@@ -126,6 +130,10 @@ class SimpleTagger(Model):
             `(batch_size, num_tokens)`.
         metadata : `List[Dict[str, Any]]`, optional, (default = None)
             metadata containing the original words in the sentence to be tagged under a 'words' key.
+        ignore_loss_on_o_tags : `bool`, optional (default = False)
+            If True, we compute the loss only for actual spans in `tags`, and not on `O` tokens.
+            This is useful for computing gradients of the loss on a _single span_, for
+            interpretation / attacking.
 
         # Returns
 
@@ -154,7 +162,11 @@ class SimpleTagger(Model):
         output_dict = {"logits": logits, "class_probabilities": class_probabilities}
 
         if tags is not None:
-            loss = sequence_cross_entropy_with_logits(logits, tags, mask)
+            if ignore_loss_on_o_tags:
+                tag_mask = mask & (tags != self._o_tag_index)
+            else:
+                tag_mask = mask
+            loss = sequence_cross_entropy_with_logits(logits, tags, tag_mask)
             for metric in self.metrics.values():
                 metric(logits, tags, mask)
             if self._f1_metric is not None:
