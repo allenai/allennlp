@@ -104,9 +104,6 @@ class CrfTagger(Model):
             output_dim = self.encoder.get_output_dim()
         self.tag_projection_layer = TimeDistributed(Linear(output_dim, self.num_tags))
 
-        # Used when `ignore_loss_on_o_tags` is `True` in `self.forward`.
-        self._o_tag_index = self.vocab.get_token_index("O", namespace=self.label_namespace)
-
         # if  constrain_crf_decoding and calculate_span_f1 are not
         # provided, (i.e., they're None), set them to True
         # if label_encoding is provided and False if it isn't.
@@ -232,7 +229,8 @@ class CrfTagger(Model):
 
         if tags is not None:
             if ignore_loss_on_o_tags:
-                crf_mask = mask & (tags != self._o_tag_index)
+                o_tag_index = self.vocab.get_token_index("O", namespace=self.label_namespace)
+                crf_mask = mask & (tags != o_tag_index)
             else:
                 crf_mask = mask
             # Add negative log-likelihood as loss

@@ -73,9 +73,6 @@ class SimpleTagger(Model):
             Linear(self.encoder.get_output_dim(), self.num_classes)
         )
 
-        # Used when `ignore_loss_on_o_tags` is `True` in `self.forward`.
-        self._o_tag_index = self.vocab.get_token_index("O", namespace=self.label_namespace)
-
         check_dimensions_match(
             text_field_embedder.get_output_dim(),
             encoder.get_input_dim(),
@@ -163,7 +160,8 @@ class SimpleTagger(Model):
 
         if tags is not None:
             if ignore_loss_on_o_tags:
-                tag_mask = mask & (tags != self._o_tag_index)
+                o_tag_index = self.vocab.get_token_index("O", namespace=self.label_namespace)
+                tag_mask = mask & (tags != o_tag_index)
             else:
                 tag_mask = mask
             loss = sequence_cross_entropy_with_logits(logits, tags, tag_mask)
