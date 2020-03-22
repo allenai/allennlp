@@ -15,6 +15,8 @@ class ElmoTokenEmbedder(TokenEmbedder):
     ELMo representations at the input of your network.  It's essentially a wrapper
     around Elmo(num_output_representations=1, ...)
 
+    Registered as a `TokenEmbedder` with name "elmo_token_embedder".
+
     # Parameters
 
     options_file : `str`, required.

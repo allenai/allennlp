@@ -21,6 +21,8 @@ class CrfTagger(Model):
     The `CrfTagger` encodes a sequence of text with a `Seq2SeqEncoder`,
     then uses a Conditional Random Field model to predict a tag for each token in the sequence.
 
+    Registered as a `Model` with name "crf_tagger".
+
     # Parameters
 
     vocab : `Vocabulary`, required

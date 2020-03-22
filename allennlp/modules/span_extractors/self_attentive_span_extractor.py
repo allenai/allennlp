@@ -17,6 +17,8 @@ class SelfAttentiveSpanExtractor(SpanExtractor):
     corresponding vector representations of the words in the span by this distribution,
     returning a weighted representation of each span.
 
+    Registered as a `SpanExtractor` with name "self_attentive".
+
     # Parameters
 
     input_dim : `int`, required.

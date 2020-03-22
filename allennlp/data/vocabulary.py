@@ -133,6 +133,17 @@ class Vocabulary(Registrable):
     methods on this class allow you to pass in a namespace; by default we use the 'tokens'
     namespace, and you can omit the namespace argument everywhere and just use the default.
 
+    This class is registered as a `Vocabulary` with four different names, which all point to
+    different `@classmethod` constructors found in this class.  `from_instances` is registered as
+    "from_instances", `from_files` is registered as "from_files", `from_files_and_instances` is
+    registered as "extend", and `empty` is registered as "empty".  If you are using a configuration
+    file to construct a vocabulary, you can use any of those strings as the "type" key in the
+    configuration file to use the corresponding `@classmethod` to construct the object.
+    "from_instances" is the default.  Look at the docstring for the `@classmethod` to see what keys
+    are allowed in the configuration file (when there is an `instances` argument to the
+    `@classmethod`, it will be passed in separately and does not need a corresponding key in the
+    configuration file).
+
     # Parameters
 
     counter : `Dict[str, Dict[str, int]]`, optional (default=`None`)

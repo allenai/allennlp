@@ -10,6 +10,8 @@ class CosineMatrixAttention(MatrixAttention):
     """
     Computes attention between every entry in matrix_1 with every entry in matrix_2 using cosine
     similarity.
+
+    Registered as a `MatrixAttention` with name "cosine".
     """
 
     @overrides

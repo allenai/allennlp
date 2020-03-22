@@ -115,6 +115,9 @@ class PytorchSeq2VecWrapper(Seq2VecEncoder):
 
 @Seq2VecEncoder.register("gru")
 class GruSeq2VecEncoder(PytorchSeq2VecWrapper):
+    """
+    Registered as a `Seq2VecEncoder` with name "gru".
+    """
     def __init__(
         self,
         input_size: int,
@@ -138,6 +141,9 @@ class GruSeq2VecEncoder(PytorchSeq2VecWrapper):
 
 @Seq2VecEncoder.register("lstm")
 class LstmSeq2VecEncoder(PytorchSeq2VecWrapper):
+    """
+    Registered as a `Seq2VecEncoder` with name "lstm".
+    """
     def __init__(
         self,
         input_size: int,
@@ -161,6 +167,9 @@ class LstmSeq2VecEncoder(PytorchSeq2VecWrapper):
 
 @Seq2VecEncoder.register("rnn")
 class RnnSeq2VecEncoder(PytorchSeq2VecWrapper):
+    """
+    Registered as a `Seq2VecEncoder` with name "rnn".
+    """
     def __init__(
         self,
         input_size: int,
@@ -186,6 +195,9 @@ class RnnSeq2VecEncoder(PytorchSeq2VecWrapper):
 
 @Seq2VecEncoder.register("augmented_lstm")
 class AugmentedLstmSeq2VecEncoder(PytorchSeq2VecWrapper):
+    """
+    Registered as a `Seq2VecEncoder` with name "augmented_lstm".
+    """
     def __init__(
         self,
         input_size: int,
@@ -208,6 +220,9 @@ class AugmentedLstmSeq2VecEncoder(PytorchSeq2VecWrapper):
 
 @Seq2VecEncoder.register("alternating_lstm")
 class StackedAlternatingLstmSeq2VecEncoder(PytorchSeq2VecWrapper):
+    """
+    Registered as a `Seq2VecEncoder` with name "alternating_lstm".
+    """
     def __init__(
         self,
         input_size: int,
@@ -230,6 +245,9 @@ class StackedAlternatingLstmSeq2VecEncoder(PytorchSeq2VecWrapper):
 
 @Seq2VecEncoder.register("stacked_bidirectional_lstm")
 class StackedBidirectionalLstmSeq2VecEncoder(PytorchSeq2VecWrapper):
+    """
+    Registered as a `Seq2VecEncoder` with name "stacked_bidirectional_lstm".
+    """
     def __init__(
         self,
         input_size: int,

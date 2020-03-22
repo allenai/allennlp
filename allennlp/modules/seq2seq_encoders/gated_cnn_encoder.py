@@ -138,6 +138,7 @@ class GatedCnnEncoder(Seq2SeqEncoder):
     [[2, 512, 1]], [[2, 512, 2]], [[2, 512, 4]], [[2, 512, 8]],   # receptive field == 57
     ]
 
+    Registered as a `Seq2SeqEncoder` with name "gated-cnn-encoder".
 
     # Parameters
 

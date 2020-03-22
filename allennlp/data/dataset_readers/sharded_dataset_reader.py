@@ -22,6 +22,8 @@ class ShardedDatasetReader(DatasetReader):
     The order the files are processed in is deterministic to enable the
     instances to be filtered according to worker rank in the distributed case.
 
+    Registered as a `DatasetReader` with name "sharded".
+
     # Parameters
 
     base_reader : `DatasetReader`

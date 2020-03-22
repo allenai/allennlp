@@ -25,6 +25,8 @@ class ESIM(Model):
     (https://www.semanticscholar.org/paper/Enhanced-LSTM-for-Natural-Language-Inference-Chen-Zhu/83e7654d545fbbaaf2328df365a781fb67b841b4)
     by Chen et al., 2017.
 
+    Registered as a `Model` with name "esim".
+
     # Parameters
 
     vocab : `Vocabulary`

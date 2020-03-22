@@ -16,6 +16,8 @@ class SingleIdTokenIndexer(TokenIndexer):
     """
     This :class:`TokenIndexer` represents tokens as single integers.
 
+    Registered as a `TokenIndexer` with name "single_id".
+
     # Parameters
 
     namespace : `Optional[str]`, optional (default=`tokens`)

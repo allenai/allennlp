@@ -18,6 +18,8 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
     """
     Uses a pretrained model from `transformers` as a `TokenEmbedder`.
 
+    Registered as a `TokenEmbedder` with name "pretrained_transformer".
+
     # Parameters
 
     model_name : `str`

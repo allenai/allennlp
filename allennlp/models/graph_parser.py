@@ -27,6 +27,8 @@ class GraphParser(Model):
     """
     A Parser for arbitrary graph structures.
 
+    Registered as a `Model` with name "graph_parser".
+
     # Parameters
 
     vocab : `Vocabulary`, required

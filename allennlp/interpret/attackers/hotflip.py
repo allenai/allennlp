@@ -38,6 +38,8 @@ class Hotflip(Attacker):
     This also requires a model to `have` a token vocabulary in the first place, which can be
     problematic for models that only have character vocabularies.
 
+    Registered as an `Attacker` with name "hotflip".
+
     # Parameters
 
     predictor : `Predictor`
