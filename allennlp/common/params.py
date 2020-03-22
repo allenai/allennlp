@@ -1,9 +1,3 @@
-"""
-The `allennlp.common.params.Params` class represents a dictionary of
-parameters (e.g. for configuring a model), with added functionality around
-logging and validation.
-"""
-
 from typing import Any, Dict, List
 from collections.abc import MutableMapping
 from collections import OrderedDict
@@ -210,7 +204,7 @@ class Params(MutableMapping):
        specification of the actual parameters used than is given in a JSON file, because
        those may not specify what default values were used, whereas this will log them.
 
-    !!! Params consumption
+    !!! Consumption
         The convention for using a `Params` object in AllenNLP is that you will consume the parameters
         as you read them, so that there are none left when you've read everything you expect.  This
         lets us easily validate that you didn't pass in any `extra` parameters, just by making sure
@@ -312,22 +306,29 @@ class Params(MutableMapping):
 
         # Parameters
 
-        key: str
+        key: `str`
+
             Key to get the value from in the param dictionary
-        choices: List[Any]
+
+        choices: `List[Any]`
+
             A list of valid options for values corresponding to `key`.  For example, if you're
             specifying the type of encoder to use for some part of your model, the choices might be
             the list of encoder classes we know about and can instantiate.  If the value we find in
             the param dictionary is not in `choices`, we raise a `ConfigurationError`, because
             the user specified an invalid value in their parameter file.
-        default_to_first_choice: bool, optional (default=False)
+
+        default_to_first_choice: `bool`, optional (default=False)
+
             If this is `True`, we allow the `key` to not be present in the parameter
             dictionary.  If the key is not present, we will use the return as the value the first
             choice in the `choices` list.  If this is `False`, we raise a
             `ConfigurationError`, because specifying the `key` is required (e.g., you `have` to
             specify your model class when running an experiment, but you can feel free to use
             default settings for encoders if you want).
-        allow_class_names : bool, optional (default = True)
+
+        allow_class_names: `bool`, optional (default = True)
+
             If this is `True`, then we allow unknown choices that look like fully-qualified class names.
             This is to allow e.g. specifying a model type as my_library.my_model.MyModel
             and importing it on the fly. Our check for "looks like" is extremely lenient
@@ -354,9 +355,12 @@ class Params(MutableMapping):
 
         # Parameters
 
-        quiet: bool, optional (default = False)
+        quiet: `bool`, optional (default = False)
+
             Whether to log the parameters before returning them as a dict.
-        infer_type_and_cast : bool, optional (default = False)
+
+        infer_type_and_cast: `bool`, optional (default = False)
+
             If True, we infer types and cast (e.g. things that look like floats to floats).
         """
         if infer_type_and_cast:
@@ -456,12 +460,17 @@ class Params(MutableMapping):
 
         # Parameters
 
-        params_file : `str`
+        params_file: `str`
+
             The path to the configuration file to load.
-        params_overrides : `str`, optional
+
+        params_overrides: `str`, optional
+
             A dict of overrides that can be applied to final object.
             e.g. {"model.embedding_dim": 10}
-        ext_vars : `dict`, optional
+
+        ext_vars: `dict`, optional
+
             Our config files are Jsonnet, which allows specifying external variables
             for later substitution. Typically we substitute these using environment
             variables; however, you can also specify them here, in which case they
@@ -492,7 +501,8 @@ class Params(MutableMapping):
 
         # Parameters
 
-        preference_orders: List[List[str]], optional
+        preference_orders: `List[List[str]]`, optional
+
             `preference_orders` is list of partial preference orders. ["A", "B", "C"] means
             "A" > "B" > "C". For multiple preference_orders first will be considered first.
             Keys not found, will have last but alphabetical preference. Default Preferences:
