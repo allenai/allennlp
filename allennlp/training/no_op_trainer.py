@@ -12,6 +12,7 @@ class NoOpTrainer(Trainer):
     """
     Registered as a `Trainer` with name "no_op".
     """
+
     def __init__(self, serialization_dir: str, model: Model) -> None:
         """
         A trivial trainer to assist in making model archives for models that do not actually

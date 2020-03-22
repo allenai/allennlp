@@ -203,6 +203,7 @@ class GradientDescentTrainer(Trainer):
         See the Apex [documentation](https://nvidia.github.io/apex/amp.html#opt-levels-and-properties) for
         more details. If `None`, Amp is not used. Defaults to `None`.
     """
+
     def __init__(
         self,
         model: Model,

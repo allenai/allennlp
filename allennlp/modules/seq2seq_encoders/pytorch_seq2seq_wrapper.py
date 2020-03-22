@@ -132,6 +132,7 @@ class GruSeq2SeqEncoder(PytorchSeq2SeqWrapper):
     """
     Registered as a `Seq2SeqEncoder` with name "gru".
     """
+
     def __init__(
         self,
         input_size: int,
@@ -159,6 +160,7 @@ class LstmSeq2SeqEncoder(PytorchSeq2SeqWrapper):
     """
     Registered as a `Seq2SeqEncoder` with name "lstm".
     """
+
     def __init__(
         self,
         input_size: int,
@@ -186,6 +188,7 @@ class RnnSeq2SeqEncoder(PytorchSeq2SeqWrapper):
     """
     Registered as a `Seq2SeqEncoder` with name "rnn".
     """
+
     def __init__(
         self,
         input_size: int,
@@ -215,6 +218,7 @@ class AugmentedLstmSeq2SeqEncoder(PytorchSeq2SeqWrapper):
     """
     Registered as a `Seq2SeqEncoder` with name "augmented_lstm".
     """
+
     def __init__(
         self,
         input_size: int,
@@ -241,6 +245,7 @@ class StackedAlternatingLstmSeq2SeqEncoder(PytorchSeq2SeqWrapper):
     """
     Registered as a `Seq2SeqEncoder` with name "alternating_lstm".
     """
+
     def __init__(
         self,
         input_size: int,
@@ -267,6 +272,7 @@ class StackedBidirectionalLstmSeq2SeqEncoder(PytorchSeq2SeqWrapper):
     """
     Registered as a `Seq2SeqEncoder` with name "stacked_bidirectional_lstm".
     """
+
     def __init__(
         self,
         input_size: int,

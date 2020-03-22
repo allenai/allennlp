@@ -55,6 +55,7 @@ class StepLearningRateScheduler(_PyTorchLearningRateSchedulerWrapper):
     """
     Registered as a `LearningRateScheduler` with name "step".
     """
+
     def __init__(
         self, optimizer: Optimizer, step_size: int, gamma: float = 0.1, last_epoch: int = -1
     ) -> None:
@@ -69,6 +70,7 @@ class MultiStepLearningRateScheduler(_PyTorchLearningRateSchedulerWrapper):
     """
     Registered as a `LearningRateScheduler` with name "multi_step".
     """
+
     def __init__(
         self, optimizer: Optimizer, milestones: List[int], gamma: float = 0.1, last_epoch: int = -1
     ) -> None:
@@ -83,6 +85,7 @@ class ExponentialLearningRateScheduler(_PyTorchLearningRateSchedulerWrapper):
     """
     Registered as a `LearningRateScheduler` with name "exponential".
     """
+
     def __init__(self, optimizer: Optimizer, gamma: float = 0.1, last_epoch: int = -1) -> None:
         lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(
             optimizer=optimizer, gamma=gamma, last_epoch=last_epoch
@@ -95,6 +98,7 @@ class ReduceOnPlateauLearningRateScheduler(_PyTorchLearningRateSchedulerWithMetr
     """
     Registered as a `LearningRateScheduler` with name "reduce_on_plateau".
     """
+
     def __init__(
         self,
         optimizer: Optimizer,

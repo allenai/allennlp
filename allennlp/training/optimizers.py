@@ -157,6 +157,7 @@ class AdamOptimizer(Optimizer, torch.optim.Adam):
     """
     Registered as an `Optimizer` with name "adam".
     """
+
     def __init__(
         self,
         model_parameters: List[Tuple[str, torch.nn.Parameter]],
@@ -182,6 +183,7 @@ class SparseAdamOptimizer(Optimizer, torch.optim.SparseAdam):
     """
     Registered as an `Optimizer` with name "sparse_adam".
     """
+
     def __init__(
         self,
         model_parameters: List[Tuple[str, torch.nn.Parameter]],
@@ -203,6 +205,7 @@ class AdamaxOptimizer(Optimizer, torch.optim.Adamax):
     """
     Registered as an `Optimizer` with name "adamax".
     """
+
     def __init__(
         self,
         model_parameters: List[Tuple[str, torch.nn.Parameter]],
@@ -226,6 +229,7 @@ class AdamWOptimizer(Optimizer, torch.optim.AdamW):
     """
     Registered as an `Optimizer` with name "adamw".
     """
+
     def __init__(
         self,
         model_parameters: List[Tuple[str, torch.nn.Parameter]],
@@ -251,6 +255,7 @@ class HuggingfaceAdamWOptimizer(Optimizer, transformers.AdamW):
     """
     Registered as an `Optimizer` with name "huggingface_adamw".
     """
+
     def __init__(
         self,
         model_parameters: List[Tuple[str, torch.nn.Parameter]],
@@ -276,6 +281,7 @@ class AdagradOptimizer(Optimizer, torch.optim.Adagrad):
     """
     Registered as an `Optimizer` with name "adagrad".
     """
+
     def __init__(
         self,
         model_parameters: List[Tuple[str, torch.nn.Parameter]],
@@ -301,6 +307,7 @@ class AdadeltaOptimizer(Optimizer, torch.optim.Adadelta):
     """
     Registered as an `Optimizer` with name "adadelta".
     """
+
     def __init__(
         self,
         model_parameters: List[Tuple[str, torch.nn.Parameter]],
@@ -324,6 +331,7 @@ class SgdOptimizer(Optimizer, torch.optim.SGD):
     """
     Registered as an `Optimizer` with name "sgd".
     """
+
     def __init__(
         self,
         model_parameters: List[Tuple[str, torch.nn.Parameter]],
@@ -349,6 +357,7 @@ class RmsPropOptimizer(Optimizer, torch.optim.RMSprop):
     """
     Registered as an `Optimizer` with name "rmsprop".
     """
+
     def __init__(
         self,
         model_parameters: List[Tuple[str, torch.nn.Parameter]],
@@ -376,6 +385,7 @@ class AveragedSgdOptimizer(Optimizer, torch.optim.ASGD):
     """
     Registered as an `Optimizer` with name "averaged_sgd".
     """
+
     def __init__(
         self,
         model_parameters: List[Tuple[str, torch.nn.Parameter]],
