@@ -13,11 +13,11 @@ logger = logging.getLogger(__name__)
 
 class MultiLabelField(Field[torch.Tensor]):
     """
-    A `MultiLabelField` is an extension of the :class:`LabelField` that allows for multiple labels.
+    A `MultiLabelField` is an extension of the `LabelField` that allows for multiple labels.
     It is particularly useful in multi-label classification where more than one label can be correct.
-    As with the :class:`LabelField`, labels are either strings of text or 0-indexed integers (if you wish
+    As with the `LabelField`, labels are either strings of text or 0-indexed integers (if you wish
     to skip indexing by passing skip_indexing=True).
-    If the labels need indexing, we will use a :class:`Vocabulary` to convert the string labels
+    If the labels need indexing, we will use a `Vocabulary` to convert the string labels
     into integers.
 
     This field will get converted into a vector of length equal to the vocabulary size with

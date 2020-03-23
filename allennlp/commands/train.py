@@ -156,7 +156,7 @@ def train_model_from_file(
     dry_run: bool = False,
 ) -> Optional[Model]:
     """
-    A wrapper around :func:`train_model` which loads the params from a file.
+    A wrapper around `train_model` which loads the params from a file.
 
     # Parameters
 
@@ -164,12 +164,12 @@ def train_model_from_file(
         A json parameter file specifying an AllenNLP experiment.
     serialization_dir : `str`
         The directory in which to save results and logs. We just pass this along to
-        :func:`train_model`.
+        `train_model`.
     overrides : `str`
         A JSON string that we will use to override values in the input parameter file.
     file_friendly_logging : `bool`, optional (default=False)
         If `True`, we make our output more friendly to saved model files.  We just pass this
-        along to :func:`train_model`.
+        along to `train_model`.
     recover : `bool`, optional (default=False)
         If `True`, we will try to recover a training run from an existing serialization
         directory.  This is only intended for use when something actually crashed during the middle
@@ -215,7 +215,7 @@ def train_model(
     dry_run: bool = False,
 ) -> Optional[Model]:
     """
-    Trains the model specified in the given :class:`Params` object, using the data and training
+    Trains the model specified in the given `Params` object, using the data and training
     parameters also specified in that object, and saves the results in `serialization_dir`.
 
     # Parameters

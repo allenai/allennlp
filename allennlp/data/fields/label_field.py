@@ -15,7 +15,7 @@ class LabelField(Field[torch.Tensor]):
     """
     A `LabelField` is a categorical label of some kind, where the labels are either strings of
     text or 0-indexed integers (if you wish to skip indexing by passing skip_indexing=True).
-    If the labels need indexing, we will use a :class:`Vocabulary` to convert the string labels
+    If the labels need indexing, we will use a `Vocabulary` to convert the string labels
     into integers.
 
     This field will get converted into an integer index representing the class label.

@@ -19,7 +19,7 @@ class TokenIndexer(Registrable):
     """
     A `TokenIndexer` determines how string tokens get represented as arrays of indices in a model.
     This class both converts strings into numerical values, with the help of a
-    :class:`~allennlp.data.vocabulary.Vocabulary`, and it produces actual arrays.
+    `allennlp.data.vocabulary.Vocabulary`, and it produces actual arrays.
 
     Tokens can be represented as single IDs (e.g., the word "cat" gets represented by the number
     34), or as lists of character IDs (e.g., "cat" gets represented by the numbers [23, 10, 18]),
@@ -29,11 +29,11 @@ class TokenIndexer(Registrable):
     # Parameters
 
     token_min_padding_length : `int`, optional (default=`0`)
-        The minimum padding length required for the :class:`TokenIndexer`. For example,
-        the minimum padding length of :class:`SingleIdTokenIndexer` is the largest size of
-        filter when using :class:`CnnEncoder`.
+        The minimum padding length required for the `TokenIndexer`. For example,
+        the minimum padding length of `SingleIdTokenIndexer` is the largest size of
+        filter when using `CnnEncoder`.
         Note that if you set this for one TokenIndexer, you likely have to set it for all
-        :class:`TokenIndexer` for the same field, otherwise you'll get mismatched tensor sizes.
+        `TokenIndexer` for the same field, otherwise you'll get mismatched tensor sizes.
     """
 
     default_implementation = "single_id"
@@ -44,7 +44,7 @@ class TokenIndexer(Registrable):
 
     def count_vocab_items(self, token: Token, counter: Dict[str, Dict[str, int]]):
         """
-        The :class:`Vocabulary` needs to assign indices to whatever strings we see in the training
+        The `Vocabulary` needs to assign indices to whatever strings we see in the training
         data (possibly doing some frequency filtering and using an OOV, or out of vocabulary,
         token).  This method takes a token and a dictionary of counts and increments counts for
         whatever vocabulary items are present in the token.  If this is a single token ID

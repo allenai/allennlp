@@ -115,11 +115,11 @@ class DatasetReader(Registrable):
         reloads the dataset each time it's called. Otherwise, `instances()` returns a list.
     cache_directory : `str`, optional (default=None)
         If given, we will use this directory to store a cache of already-processed `Instances` in
-        every file passed to :func:`read`, serialized (by default, though you can override this) as
+        every file passed to `read`, serialized (by default, though you can override this) as
         one string-formatted `Instance` per line.  If the cache file for a given `file_path` exists,
         we read the `Instances` from the cache instead of re-processing the data (using
-        :func:`_instances_from_cache_file`).  If the cache file does _not_ exist, we will _create_
-        it on our first pass through the data (using :func:`_instances_to_cache_file`).
+        `_instances_from_cache_file`).  If the cache file does _not_ exist, we will _create_
+        it on our first pass through the data (using `_instances_to_cache_file`).
     max_instances : `int`, optional (default=None)
         If given, will stop reading after this many instances. This is a useful setting for debugging.
 
@@ -240,10 +240,10 @@ class DatasetReader(Registrable):
         """
         Does whatever tokenization or processing is necessary to go from textual input to an
         `Instance`.  The primary intended use for this is with a
-        :class:`~allennlp.predictors.predictor.Predictor`, which gets text input as a JSON
+        `allennlp.predictors.predictor.Predictor`, which gets text input as a JSON
         object and needs to process it to be input to a model.
 
-        The intent here is to share code between :func:`_read` and what happens at
+        The intent here is to share code between `_read` and what happens at
         model serving time, or any other time you want to make a prediction from new data.  We need
         to process the data in the same way it was done at training time.  Allowing the
         `DatasetReader` to process new text lets us accomplish this, as we can just call

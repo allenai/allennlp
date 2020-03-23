@@ -35,7 +35,7 @@ class SequenceTaggingDatasetReader(DatasetReader):
         The text that separates each WORD-TAG pair from the next pair. If `None`
         then the line will just be split on whitespace.
     token_indexers : `Dict[str, TokenIndexer]`, optional (default=`{"tokens": SingleIdTokenIndexer()}`)
-        We use this to define the input representation for the text.  See :class:`TokenIndexer`.
+        We use this to define the input representation for the text.  See `TokenIndexer`.
         Note that the `output` tags will always correspond to single token IDs based on how they
         are pre-tokenised in the data file.
     """

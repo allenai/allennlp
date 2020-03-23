@@ -41,7 +41,7 @@ class Model(torch.nn.Module, Registrable):
     api, the output dictionary of your Model must include a "loss" key, which will be
     optimised during the training process.
 
-    Finally, you can optionally implement :func:`Model.get_metrics` in order to make use
+    Finally, you can optionally implement `Model.get_metrics` in order to make use
     of early stopping and best-model serialization based on a validation metric in
     `Trainer`. Metrics that begin with "_" will not be logged
     to the progress bar by `Trainer`.

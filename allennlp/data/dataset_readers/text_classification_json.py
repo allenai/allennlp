@@ -28,7 +28,7 @@ class TextClassificationJsonReader(DatasetReader):
     token_indexers : `Dict[str, TokenIndexer]`, optional
         optional (default=`{"tokens": SingleIdTokenIndexer()}`)
         We use this to define the input representation for the text.
-        See :class:`TokenIndexer`.
+        See `TokenIndexer`.
     tokenizer : `Tokenizer`, optional (default = `{"tokens": SpacyTokenizer()}`)
         Tokenizer to use to split the input text into words or other kinds of tokens.
     segment_sentences : `bool`, optional (default = `False`)

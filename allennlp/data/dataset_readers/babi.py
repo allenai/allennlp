@@ -28,7 +28,7 @@ class BabiReader(DatasetReader):
         Whether to keep each sentence in the context or to concatenate them.
         Default is `False` that corresponds to concatenation.
     token_indexers : `Dict[str, TokenIndexer]`, optional (default=`{"tokens": SingleIdTokenIndexer()}`)
-        We use this to define the input representation for the text.  See :class:`TokenIndexer`.
+        We use this to define the input representation for the text.  See `TokenIndexer`.
     """
 
     def __init__(

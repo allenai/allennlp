@@ -6,7 +6,7 @@ from allennlp.data.vocabulary import Vocabulary
 
 class Instance(Mapping[str, Field]):
     """
-    An `Instance` is a collection of :class:`~allennlp.data.fields.field.Field` objects,
+    An `Instance` is a collection of `allennlp.data.fields.field.Field` objects,
     specifying the inputs and outputs to
     some model.  We don't make a distinction between inputs and outputs here, though - all
     operations are done on all fields, and when we return arrays, we return them as dictionaries
@@ -88,7 +88,7 @@ class Instance(Mapping[str, Field]):
         """
         Pads each `Field` in this instance to the lengths given in `padding_lengths` (which is
         keyed by field name, then by padding key, the same as the return value in
-        :func:`get_padding_lengths`), returning a list of torch tensors for each field.
+        `get_padding_lengths`), returning a list of torch tensors for each field.
 
         If `padding_lengths` is omitted, we will call `self.get_padding_lengths()` to get the
         sizes of the tensors to create.

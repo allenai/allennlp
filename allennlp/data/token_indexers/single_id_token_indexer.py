@@ -14,12 +14,12 @@ _DEFAULT_VALUE = "THIS IS A REALLY UNLIKELY VALUE THAT HAS TO BE A STRING"
 @TokenIndexer.register("single_id")
 class SingleIdTokenIndexer(TokenIndexer):
     """
-    This :class:`TokenIndexer` represents tokens as single integers.
+    This `TokenIndexer` represents tokens as single integers.
 
     # Parameters
 
     namespace : `Optional[str]`, optional (default=`tokens`)
-        We will use this namespace in the :class:`Vocabulary` to map strings to indices.  If you
+        We will use this namespace in the `Vocabulary` to map strings to indices.  If you
         explicitly pass in `None` here, we will skip indexing and vocabulary lookups.  This means
         that the `feature_name` you use must correspond to an integer value (like `text_id`, for
         instance, which gets set by some tokenizers, such as when using byte encoding).
@@ -31,7 +31,7 @@ class SingleIdTokenIndexer(TokenIndexer):
     end_tokens : `List[str]`, optional (default=`None`)
         These are appended to the tokens provided to `tokens_to_indices`.
     feature_name : `str`, optional (default=`text`)
-        We will use the :class:`Token` attribute with this name as input.  This is potentially
+        We will use the `Token` attribute with this name as input.  This is potentially
         useful, e.g., for using NER tags instead of (or in addition to) surface forms as your inputs
         (passing `ent_type_` here would do that).  If you use a non-default value here, you almost
         certainly want to also change the `namespace` parameter, and you might want to give a
@@ -43,7 +43,7 @@ class SingleIdTokenIndexer(TokenIndexer):
         is not given, we will crash if a token doesn't have a value for the given `feature_name`, so
         that you don't get weird, silent errors by default.
     token_min_padding_length : `int`, optional (default=`0`)
-        See :class:`TokenIndexer`.
+        See `TokenIndexer`.
     """
 
     def __init__(

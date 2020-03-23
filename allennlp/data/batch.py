@@ -1,5 +1,5 @@
 """
-A :class:`~Batch` represents a collection of `Instance` s to be fed
+A `Batch` represents a collection of `Instance` s to be fed
 through a model.
 """
 

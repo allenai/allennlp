@@ -178,7 +178,7 @@ class Hotflip(Attacker):
         grad_input_field : `str`, optional (default='grad_input_1')
             If there is more than one field that gets embedded in your model (e.g., a question and
             a passage, or a premise and a hypothesis), this tells us the key to use to get the
-            correct gradients.  This selects from the output of :func:`Predictor.get_gradients`.
+            correct gradients.  This selects from the output of `Predictor.get_gradients`.
         ignore_tokens : `List[str]`, optional (default=DEFAULT_IGNORE_TOKENS)
             These tokens will not be flipped.  The default list includes some simple punctuation,
             OOV and padding tokens, and common control tokens for BERT, etc.

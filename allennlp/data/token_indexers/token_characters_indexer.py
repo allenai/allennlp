@@ -16,15 +16,15 @@ from allennlp.data.vocabulary import Vocabulary
 @TokenIndexer.register("characters")
 class TokenCharactersIndexer(TokenIndexer):
     """
-    This :class:`TokenIndexer` represents tokens as lists of character indices.
+    This `TokenIndexer` represents tokens as lists of character indices.
 
     # Parameters
 
     namespace : `str`, optional (default=`token_characters`)
-        We will use this namespace in the :class:`Vocabulary` to map the characters in each token
+        We will use this namespace in the `Vocabulary` to map the characters in each token
         to indices.
     character_tokenizer : `CharacterTokenizer`, optional (default=`CharacterTokenizer()`)
-        We use a :class:`CharacterTokenizer` to handle splitting tokens into characters, as it has
+        We use a `CharacterTokenizer` to handle splitting tokens into characters, as it has
         options for byte encoding and other things.  The default here is to instantiate a
         `CharacterTokenizer` with its default parameters, which uses unicode characters and
         retains casing.
@@ -33,10 +33,10 @@ class TokenCharactersIndexer(TokenIndexer):
     end_tokens : `List[str]`, optional (default=`None`)
         These are appended to the tokens provided to `tokens_to_indices`.
     min_padding_length : `int`, optional (default=`0`)
-        We use this value as the minimum length of padding. Usually used with :class:`CnnEncoder`, its
+        We use this value as the minimum length of padding. Usually used with `CnnEncoder`, its
         value should be set to the maximum value of `ngram_filter_sizes` correspondingly.
     token_min_padding_length : `int`, optional (default=`0`)
-        See :class:`TokenIndexer`.
+        See `TokenIndexer`.
     """
 
     def __init__(

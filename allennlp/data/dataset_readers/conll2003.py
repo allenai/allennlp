@@ -55,7 +55,7 @@ class Conll2003DatasetReader(DatasetReader):
     # Parameters
 
     token_indexers : `Dict[str, TokenIndexer]`, optional (default=`{"tokens": SingleIdTokenIndexer()}`)
-        We use this to define the input representation for the text.  See :class:`TokenIndexer`.
+        We use this to define the input representation for the text.  See `TokenIndexer`.
     tag_label : `str`, optional (default=`ner`)
         Specify `ner`, `pos`, or `chunk` to have that tag loaded into the instance field `tag`.
     feature_labels : `Sequence[str]`, optional (default=`()`)

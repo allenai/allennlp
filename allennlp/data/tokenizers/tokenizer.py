@@ -15,13 +15,13 @@ class Tokenizer(Registrable):
     here, though you could imagine wanting to do other kinds of tokenization for structured or
     other inputs.
 
-    See the parameters to, e.g., :class:`~.SpacyTokenizer`, or whichever tokenizer
+    See the parameters to, e.g., `.SpacyTokenizer`, or whichever tokenizer
     you want to use.
 
-    If the base input to your model is words, you should use a :class:`~.SpacyTokenizer`, even if
+    If the base input to your model is words, you should use a `.SpacyTokenizer`, even if
     you also want to have a character-level encoder to get an additional vector for each word
     token.  Splitting word tokens into character arrays is handled separately, in the
-    :class:`..token_representations.TokenRepresentation` class.
+    `..token_representations.TokenRepresentation` class.
     """
 
     default_implementation = "spacy"

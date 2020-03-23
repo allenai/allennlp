@@ -19,7 +19,7 @@ class PretrainedTransformerIndexer(TokenIndexer):
     This `TokenIndexer` assumes that Tokens already have their indexes in them (see `text_id` field).
     We still require `model_name` because we want to form allennlp vocabulary from pretrained one.
     This `Indexer` is only really appropriate to use if you've also used a
-    corresponding :class:`PretrainedTransformerTokenizer` to tokenize your input.  Otherwise you'll
+    corresponding `PretrainedTransformerTokenizer` to tokenize your input.  Otherwise you'll
     have a mismatch between your tokens and your vocabulary, and you'll get a lot of UNK tokens.
 
     # Parameters

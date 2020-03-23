@@ -28,7 +28,7 @@ class Field(Generic[DataArray]):
     def count_vocab_items(self, counter: Dict[str, Dict[str, int]]):
         """
         If there are strings in this field that need to be converted into integers through a
-        :class:`Vocabulary`, here is where we count them, to determine which tokens are in or out
+        `Vocabulary`, here is where we count them, to determine which tokens are in or out
         of the vocabulary.
 
         If your `Field` does not have any strings that need to be converted into indices, you do
@@ -52,7 +52,7 @@ class Field(Generic[DataArray]):
 
     def index(self, vocab: Vocabulary):
         """
-        Given a :class:`Vocabulary`, converts all strings in this field into (typically) integers.
+        Given a `Vocabulary`, converts all strings in this field into (typically) integers.
         This `modifies` the `Field` object, it does not return anything.
 
         If your `Field` does not have any strings that need to be converted into indices, you do
@@ -67,7 +67,7 @@ class Field(Generic[DataArray]):
         everything to that length (or use a pre-specified maximum length).  The return value is a
         dictionary mapping keys to lengths, like `{'num_tokens': 13}`.
 
-        This is always called after :func:`index`.
+        This is always called after `index`.
         """
         raise NotImplementedError
 
@@ -81,7 +81,7 @@ class Field(Generic[DataArray]):
 
         padding_lengths : `Dict[str, int]`
             This dictionary will have the same keys that were produced in
-            :func:`get_padding_lengths`.  The values specify the lengths to use when padding each
+            `get_padding_lengths`.  The values specify the lengths to use when padding each
             relevant dimension, aggregated across all instances in a batch.
         """
         raise NotImplementedError
@@ -91,7 +91,7 @@ class Field(Generic[DataArray]):
         So that `ListField` can pad the number of fields in a list (e.g., the number of answer
         option `TextFields`), we need a representation of an empty field of each type.  This
         returns that.  This will only ever be called when we're to the point of calling
-        :func:`as_tensor`, so you don't need to worry about `get_padding_lengths`,
+        `as_tensor`, so you don't need to worry about `get_padding_lengths`,
         `count_vocab_items`, etc., being called on this empty field.
 
         We make this an instance method instead of a static method so that if there is any state
