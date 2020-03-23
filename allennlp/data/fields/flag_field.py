@@ -9,9 +9,6 @@ class FlagField(Field[Any]):
     """
     A class representing a flag, which must be constant across all instances in a batch.
     This will be passed to a `forward` method as a single value of whatever type you pass in.
-
-    This is intended for use with boolean flags, but in principle it should also work with any other
-    type.
     """
 
     def __init__(self, flag_value: Any) -> None:
