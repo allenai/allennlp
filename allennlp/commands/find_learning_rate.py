@@ -261,8 +261,10 @@ def search_learning_rate(
     stopping_factor: float = None,
 ) -> Tuple[List[float], List[float]]:
     """
-    Runs training loop on the model using `allennlp.training.trainer.GradientDescentTrainer`
-    increasing learning rate from ``start_lr`` to ``end_lr`` recording the losses.
+    Runs training loop on the model using
+    [`GradientDescentTrainer`](../../training/trainer/#gradientdescenttrainer) increasing learning
+    rate from `start_lr` to `end_lr` recording the losses.
+    
     # Parameters
 
     trainer: `allennlp.training.trainer.GradientDescentTrainer`
