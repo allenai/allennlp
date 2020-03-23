@@ -21,6 +21,8 @@ class SimpleTagger(Model):
     This `SimpleTagger` simply encodes a sequence of text with a stacked `Seq2SeqEncoder`, then
     predicts a tag for each token in the sequence.
 
+    Registered as a `Model` with name "simple_tagger".
+
     # Parameters
 
     vocab : `Vocabulary`, required

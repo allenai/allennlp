@@ -108,6 +108,102 @@ class Trainer(Registrable):
 
 @Trainer.register("gradient_descent", constructor="from_partial_objects")
 class GradientDescentTrainer(Trainer):
+    """
+    A trainer for doing supervised learning with gradient descent. It just takes a labeled dataset
+    and a `DataLoader`, and uses the supplied `Optimizer` to learn the weights for your model over
+    some fixed number of epochs. You can also pass in a validation dataloader and enable early
+    stopping. There are many other bells and whistles as well.
+
+    Registered as a `Trainer` with the name "gradient_descent" (and is also the default `Trainer`).
+    The constructor that is registered is `from_partial_objects` - see the arguments to that
+    function for the exact keys that should be used, if you are using a configuration file.  They
+    largely match the arguments to `__init__`, and we don't repeat their docstrings in
+    `from_partial_objects`.
+
+    # Parameters
+
+    model : `Model`, required.
+        An AllenNLP model to be optimized. Pytorch Modules can also be optimized if
+        their `forward` method returns a dictionary with a "loss" key, containing a
+        scalar tensor representing the loss function to be optimized.
+
+        If you are training your model using GPUs, your model should already be
+        on the correct device. (If you are using our `train` command this will be
+        handled for you.)
+    optimizer : `torch.nn.Optimizer`, required.
+        An instance of a Pytorch Optimizer, instantiated with the parameters of the
+        model to be optimized.
+    data_loader : `DataLoader`, required.
+        A pytorch `DataLoader` containing your `Dataset`, yielding padded indexed batches.
+    patience : Optional[int] > 0, optional (default=None)
+        Number of epochs to be patient before early stopping: the training is stopped
+        after `patience` epochs with no improvement. If given, it must be `> 0`.
+        If None, early stopping is disabled.
+    validation_metric : str, optional (default="loss")
+        Validation metric to measure for whether to stop training using patience
+        and whether to serialize an `is_best` model each epoch. The metric name
+        must be prepended with either "+" or "-", which specifies whether the metric
+        is an increasing or decreasing function.
+    validation_dataloader : `DataLoader`, optional (default=None)
+        A `DataLoader` to use for the validation set.  If `None`, then
+        use the training `DataLoader` with the validation data.
+    num_epochs : int, optional (default = 20)
+        Number of training epochs.
+    serialization_dir : str, optional (default=None)
+        Path to directory for saving and loading model files. Models will not be saved if
+        this parameter is not passed.
+    checkpointer : `Checkpointer`, optional (default=None)
+        A `Checkpointer` is responsible for periodically saving model weights.  If none is given
+        here, we will construct one with default parameters.
+    cuda_device : `int`, optional (default = -1)
+        An integer specifying the CUDA device(s) to use for this process. If -1, the CPU is used.
+        Data parallelism is controlled at the allennlp train level, so each trainer will have a single
+        GPU.
+    grad_norm : `float`, optional, (default = None).
+        If provided, gradient norms will be rescaled to have a maximum of this value.
+    grad_clipping : `float`, optional (default = `None`).
+        If provided, gradients will be clipped `during the backward pass` to have an (absolute)
+        maximum of this value.  If you are getting `NaNs` in your gradients during training
+        that are not solved by using `grad_norm`, you may need this.
+    learning_rate_scheduler : `LearningRateScheduler`, optional (default = None)
+        If specified, the learning rate will be decayed with respect to
+        this schedule at the end of each epoch (or batch, if the scheduler implements
+        the `step_batch` method). If you use `torch.optim.lr_scheduler.ReduceLROnPlateau`,
+        this will use the `validation_metric` provided to determine if learning has plateaued.
+        To support updating the learning rate on every batch, this can optionally implement
+        `step_batch(batch_num_total)` which updates the learning rate given the batch number.
+    momentum_scheduler : `MomentumScheduler`, optional (default = None)
+        If specified, the momentum will be updated at the end of each batch or epoch
+        according to the schedule.
+    tensorboard_writer : `TensorboardWriter`, optional
+        If this is not provided, we will construct a `TensorboardWriter` with default
+        parameters and use that.
+    moving_average : `MovingAverage`, optional, (default = None)
+        If provided, we will maintain moving averages for all parameters. During training, we
+        employ a shadow variable for each parameter, which maintains the moving average. During
+        evaluation, we backup the original parameters and assign the moving averages to corresponding
+        parameters. Be careful that when saving the checkpoint, we will save the moving averages of
+        parameters. This is necessary because we want the saved model to perform as well as the validated
+        model if we load it later. But this may cause problems if you restart the training from checkpoint.
+    distributed : `bool`, optional, (default = False)
+        If set, PyTorch's `DistributedDataParallel` is used to train the model in multiple GPUs. This also
+        requires `world_size` to be greater than 1.
+    local_rank : `int`, optional, (default = 0)
+        This is the unique identifier of the `Trainer` in a distributed process group. The GPU device id is
+        used as the rank.
+    world_size : `int`, (default = 1)
+        The number of `Trainer` workers participating in the distributed training.
+    num_gradient_accumulation_steps : `int`, optional, (default = 1)
+        Gradients are accumulated for the given number of steps before doing an optimizer step. This can
+        be useful to accommodate batches that are larger than the RAM size. Refer Thomas Wolf's
+        [post](https://tinyurl.com/y5mv44fw) for details on Gradient Accumulation.
+    opt_level : `str`, optional, (default = `None`)
+        Each opt_level establishes a set of properties that govern Amp’s implementation of pure or mixed
+        precision training. Must be a choice of `"O0"`, `"O1"`, `"O2"`, or `"O3"`.
+        See the Apex [documentation](https://nvidia.github.io/apex/amp.html#opt-levels-and-properties) for
+        more details. If `None`, Amp is not used. Defaults to `None`.
+    """
+
     def __init__(
         self,
         model: Model,
@@ -132,95 +228,6 @@ class GradientDescentTrainer(Trainer):
         num_gradient_accumulation_steps: int = 1,
         opt_level: Optional[str] = None,
     ) -> None:
-        """
-        A trainer for doing supervised learning. It just takes a labeled dataset
-        and a `DataLoader`, and uses the supplied `Optimizer` to learn the weights
-        for your model over some fixed number of epochs. You can also pass in a validation
-        dataloader and enable early stopping. There are many other bells and whistles as well.
-
-        # Parameters
-
-        model : `Model`, required.
-            An AllenNLP model to be optimized. Pytorch Modules can also be optimized if
-            their `forward` method returns a dictionary with a "loss" key, containing a
-            scalar tensor representing the loss function to be optimized.
-
-            If you are training your model using GPUs, your model should already be
-            on the correct device. (If you are using our `train` command this will be
-            handled for you.)
-        optimizer : `torch.nn.Optimizer`, required.
-            An instance of a Pytorch Optimizer, instantiated with the parameters of the
-            model to be optimized.
-        data_loader : `DataLoader`, required.
-            A pytorch `DataLoader` containing your `Dataset`, yielding padded indexed batches.
-        patience : Optional[int] > 0, optional (default=None)
-            Number of epochs to be patient before early stopping: the training is stopped
-            after `patience` epochs with no improvement. If given, it must be `> 0`.
-            If None, early stopping is disabled.
-        validation_metric : str, optional (default="loss")
-            Validation metric to measure for whether to stop training using patience
-            and whether to serialize an `is_best` model each epoch. The metric name
-            must be prepended with either "+" or "-", which specifies whether the metric
-            is an increasing or decreasing function.
-        validation_dataloader : `DataLoader`, optional (default=None)
-            A `DataLoader` to use for the validation set.  If `None`, then
-            use the training `DataLoader` with the validation data.
-        num_epochs : int, optional (default = 20)
-            Number of training epochs.
-        serialization_dir : str, optional (default=None)
-            Path to directory for saving and loading model files. Models will not be saved if
-            this parameter is not passed.
-        checkpointer : `Checkpointer`, optional (default=None)
-            A `Checkpointer` is responsible for periodically saving model weights.  If none is given
-            here, we will construct one with default parameters.
-        cuda_device : `int`, optional (default = -1)
-            An integer specifying the CUDA device(s) to use for this process. If -1, the CPU is used.
-            Data parallelism is controlled at the allennlp train level, so each trainer will have a single
-            GPU.
-        grad_norm : `float`, optional, (default = None).
-            If provided, gradient norms will be rescaled to have a maximum of this value.
-        grad_clipping : `float`, optional (default = `None`).
-            If provided, gradients will be clipped `during the backward pass` to have an (absolute)
-            maximum of this value.  If you are getting `NaNs` in your gradients during training
-            that are not solved by using `grad_norm`, you may need this.
-        learning_rate_scheduler : `LearningRateScheduler`, optional (default = None)
-            If specified, the learning rate will be decayed with respect to
-            this schedule at the end of each epoch (or batch, if the scheduler implements
-            the `step_batch` method). If you use `torch.optim.lr_scheduler.ReduceLROnPlateau`,
-            this will use the `validation_metric` provided to determine if learning has plateaued.
-            To support updating the learning rate on every batch, this can optionally implement
-            `step_batch(batch_num_total)` which updates the learning rate given the batch number.
-        momentum_scheduler : `MomentumScheduler`, optional (default = None)
-            If specified, the momentum will be updated at the end of each batch or epoch
-            according to the schedule.
-        tensorboard_writer : `TensorboardWriter`, optional
-            If this is not provided, we will construct a `TensorboardWriter` with default
-            parameters and use that.
-        moving_average : `MovingAverage`, optional, (default = None)
-            If provided, we will maintain moving averages for all parameters. During training, we
-            employ a shadow variable for each parameter, which maintains the moving average. During
-            evaluation, we backup the original parameters and assign the moving averages to corresponding
-            parameters. Be careful that when saving the checkpoint, we will save the moving averages of
-            parameters. This is necessary because we want the saved model to perform as well as the validated
-            model if we load it later. But this may cause problems if you restart the training from checkpoint.
-        distributed : `bool`, optional, (default = False)
-            If set, PyTorch's `DistributedDataParallel` is used to train the model in multiple GPUs. This also
-            requires `world_size` to be greater than 1.
-        local_rank : `int`, optional, (default = 0)
-            This is the unique identifier of the `Trainer` in a distributed process group. The GPU device id is
-            used as the rank.
-        world_size : `int`, (default = 1)
-            The number of `Trainer` workers participating in the distributed training.
-        num_gradient_accumulation_steps : `int`, optional, (default = 1)
-            Gradients are accumulated for the given number of steps before doing an optimizer step. This can
-            be useful to accommodate batches that are larger than the RAM size. Refer Thomas Wolf's
-            [post](https://tinyurl.com/y5mv44fw) for details on Gradient Accumulation.
-        opt_level : `str`, optional, (default = `None`)
-            Each opt_level establishes a set of properties that govern Amp’s implementation of pure or mixed
-            precision training. Must be a choice of `"O0"`, `"O1"`, `"O2"`, or `"O3"`.
-            See the Apex [documentation](https://nvidia.github.io/apex/amp.html#opt-levels-and-properties) for
-            more details. If `None`, Amp is not used. Defaults to `None`.
-        """
         super().__init__(serialization_dir, cuda_device, distributed, local_rank, world_size)
 
         # I am not calling move_to_gpu here, because if the model is

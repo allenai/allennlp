@@ -17,6 +17,8 @@ class BagOfWordCountsTokenEmbedder(TokenEmbedder):
 
     By default, we ignore padding tokens.
 
+    Registered as a `TokenEmbedder` with name "bag_of_word_counts".
+
     # Parameters
 
     vocab : `Vocabulary`

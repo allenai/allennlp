@@ -17,6 +17,8 @@ class BertPooler(Seq2VecEncoder):
     token-embedder -> seq2vec encoder setup, this is the Seq2VecEncoder to use.
     (For example, if you want to experiment with other embedding / encoding combinations.)
 
+    Registered as a `Seq2VecEncoder` with name "bert_pooler".
+
     # Parameters
 
     pretrained_model : `Union[str, BertModel]`, required

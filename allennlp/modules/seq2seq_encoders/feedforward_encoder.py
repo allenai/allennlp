@@ -9,6 +9,8 @@ from allennlp.modules.seq2seq_encoders.seq2seq_encoder import Seq2SeqEncoder
 class FeedForwardEncoder(Seq2SeqEncoder):
     """
     This class applies the `FeedForward` to each item in sequences.
+
+    Registered as a `Seq2SeqEncoder` with name "feedforward".
     """
 
     def __init__(self, feedforward: FeedForward) -> None:

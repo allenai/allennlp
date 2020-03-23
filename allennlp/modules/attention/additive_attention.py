@@ -15,6 +15,8 @@ class AdditiveAttention(Attention):
     This attention is often referred as concat or additive attention. It was introduced in
     <https://arxiv.org/abs/1409.0473> by Bahdanau et al.
 
+    Registered as an `Attention` with name "additive".
+
     # Parameters
 
     vector_dim : `int`, required

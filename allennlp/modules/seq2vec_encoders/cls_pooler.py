@@ -12,6 +12,8 @@ class ClsPooler(Seq2VecEncoder):
     Just takes the first vector from a list of vectors (which in a transformer is typically the
     [CLS] token) and returns it.  For BERT, it's recommended to use `BertPooler` instead.
 
+    Registered as a `Seq2VecEncoder` with name "cls_pooler".
+
     # Parameters
 
     embedding_dim: int, optional

@@ -35,6 +35,8 @@ class BiattentiveClassificationNetwork(Model):
     which is passed through a maxout network or some feed-forward layers
     to output a classification (`output_layer`).
 
+    Registered as a `Model` with name "bcn".
+
     # Parameters
 
     vocab : `Vocabulary`, required

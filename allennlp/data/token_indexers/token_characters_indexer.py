@@ -18,6 +18,8 @@ class TokenCharactersIndexer(TokenIndexer):
     """
     This :class:`TokenIndexer` represents tokens as lists of character indices.
 
+    Registered as a `TokenIndexer` with name "characters".
+
     # Parameters
 
     namespace : `str`, optional (default=`token_characters`)

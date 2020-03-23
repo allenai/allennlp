@@ -22,6 +22,8 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
     representations, we take `TokenEmbedders` with corresponding names.  Each `TokenEmbedders`
     embeds its input, and the result is concatenated in an arbitrary (but consistent) order.
 
+    Registered as a `TextFieldEmbedder` with name "basic", which is also the default.
+
     # Parameters
 
 

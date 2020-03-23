@@ -19,6 +19,8 @@ class SentenceTaggerPredictor(Predictor):
     a single set of tags for it.  In particular, it can be used with
     the [`CrfTagger`](../models/crf_tagger.md) model
     and also the [`SimpleTagger`](../models/simple_tagger.md) model.
+
+    Registered as a `Predictor` with name "sentence-tagger".
     """
 
     def __init__(

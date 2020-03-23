@@ -37,11 +37,12 @@ class Embedding(TokenEmbedder):
         3. use a non-trainable embedding
         4. project the resultant embeddings to some other dimension (which only makes sense with
            non-trainable embeddings).
-        5. build all of this easily `from_params`
 
     Note that if you are using our data API and are trying to embed a
     [`TextField`](../../data/fields/text_field.md), you should use a
     [`TextFieldEmbedder`](../text_field_embedders/text_field_embedder.md) instead of using this directly.
+
+    Registered as a `TokenEmbedder` with name "embedding".
 
     # Parameters
 

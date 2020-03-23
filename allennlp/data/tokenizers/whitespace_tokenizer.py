@@ -16,6 +16,8 @@ class WhitespaceTokenizer(Tokenizer):
 
     Note that we use `text.split()`, which means that the amount of whitespace between the
     tokens does not matter.  This will never result in spaces being included as tokens.
+
+    Registered as a `Tokenizer` with name "whitespace" and "just_spaces".
     """
 
     @overrides

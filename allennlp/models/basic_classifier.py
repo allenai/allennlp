@@ -21,6 +21,8 @@ class BasicClassifier(Model):
     `Seq2SeqEncoder` is not provided, we will pass the embedded text directly to the
     `Seq2VecEncoder`.
 
+    Registered as a `Model` with name "basic_classifier".
+
     # Parameters
 
     vocab : `Vocabulary`

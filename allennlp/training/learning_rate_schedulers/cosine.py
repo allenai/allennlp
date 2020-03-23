@@ -18,6 +18,8 @@ class CosineWithRestarts(LearningRateScheduler):
     This is described in the paper https://arxiv.org/abs/1608.03983. Note that early
     stopping should typically be avoided when using this schedule.
 
+    Registered as a `LearningRateScheduler` with name "cosine".
+
     # Parameters
 
     optimizer : `torch.optim.Optimizer`
