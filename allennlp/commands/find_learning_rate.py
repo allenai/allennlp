@@ -263,6 +263,7 @@ def search_learning_rate(
     """
     Runs training loop on the model using :class:`~allennlp.training.trainer.GradientDescentTrainer`
     increasing learning rate from ``start_lr`` to ``end_lr`` recording the losses.
+
     # Parameters
 
     trainer: :class:`~allennlp.training.trainer.GradientDescentTrainer`
@@ -277,6 +278,7 @@ def search_learning_rate(
     stopping_factor : ``float``
         Stop the search when the current loss exceeds the best loss recorded by
         multiple of stopping factor. If ``None`` search proceeds till the ``end_lr``
+
     # Returns
 
     (learning_rates, losses) : ``Tuple[List[float], List[float]]``
