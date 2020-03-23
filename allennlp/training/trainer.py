@@ -256,8 +256,8 @@ class GradientDescentTrainer(Trainer):
         momentum_scheduler: Optional[MomentumScheduler] = None,
         tensorboard_writer: TensorboardWriter = None,
         moving_average: Optional[MovingAverage] = None,
-        batch_callback: Optional[BatchCallback] = None,
-        epoch_callback: Optional[EpochCallback] = None,
+        batch_callbacks: List[BatchCallback] = None,
+        epoch_callbacks: List[EpochCallback] = None,
         distributed: bool = False,
         local_rank: int = 0,
         world_size: int = 1,
@@ -304,8 +304,8 @@ class GradientDescentTrainer(Trainer):
         self._learning_rate_scheduler = learning_rate_scheduler
         self._momentum_scheduler = momentum_scheduler
         self._moving_average = moving_average
-        self._batch_callback = batch_callback
-        self._epoch_callback = epoch_callback
+        self._batch_callbacks = batch_callbacks or []
+        self._epoch_callbacks = epoch_callbacks or []
 
         # We keep the total batch number as an instance variable because it
         # is used inside a closure for the hook which logs activations in
@@ -517,8 +517,8 @@ class GradientDescentTrainer(Trainer):
 
             if self._master:
                 self._checkpointer.maybe_save_checkpoint(self, epoch, batches_this_epoch)
-                if self._batch_callback:
-                    self._batch_callback(
+                for callback in self._batch_callbacks:
+                    callback(
                         self,
                         batch_group,
                         batch_group_outputs,
@@ -620,8 +620,8 @@ class GradientDescentTrainer(Trainer):
             val_generator_tqdm.set_description(description, refresh=False)
 
             if self._master:
-                if self._batch_callback:
-                    self._batch_callback(
+                for callback in self._batch_callbacks:
+                    callback(
                         self,
                         [batch],
                         [batch_outputs],
@@ -673,14 +673,12 @@ class GradientDescentTrainer(Trainer):
         for key, value in self._metric_tracker.best_epoch_metrics.items():
             metrics["best_validation_" + key] = value
 
-        if self._epoch_callback:
-            self._epoch_callback(self, metrics={}, epoch=-1)
+        for callback in self._epoch_callbacks:
+            callback(self, metrics={}, epoch=-1)
 
         for epoch in range(epoch_counter, self._num_epochs):
             epoch_start_time = time.time()
             train_metrics = self._train_epoch(epoch)
-            if self._epoch_callback:
-                self._epoch_callback(self, metrics=train_metrics, epoch=epoch)
 
             # get peak of memory usage
             if "cpu_memory_MB" in train_metrics:
@@ -764,6 +762,9 @@ class GradientDescentTrainer(Trainer):
             # Wait for the master to finish saving the checkpoint
             if self._distributed:
                 dist.barrier()
+
+            for callback in self._epoch_callbacks:
+                callbacks(self, metrics=metrics, epoch=epoch)
 
             epoch_elapsed_time = time.time() - epoch_start_time
             logger.info("Epoch duration: %s", datetime.timedelta(seconds=epoch_elapsed_time))
@@ -900,8 +901,8 @@ class GradientDescentTrainer(Trainer):
         tensorboard_writer: Lazy[TensorboardWriter] = None,
         moving_average: Lazy[MovingAverage] = None,
         checkpointer: Lazy[Checkpointer] = None,
-        batch_callback: Optional[BatchCallback] = None,
-        epoch_callback: Optional[EpochCallback] = None,
+        batch_callbacks: List[BatchCallback] = None,
+        epoch_callbacks: List[EpochCallback] = None,
     ) -> "Trainer":
         """
         This method exists so that we can have a documented method to construct this class using
@@ -969,8 +970,8 @@ class GradientDescentTrainer(Trainer):
             tensorboard_writer=tensorboard_writer_,
             checkpointer=checkpointer_,
             moving_average=moving_average_,
-            batch_callback=batch_callback,
-            epoch_callback=epoch_callback,
+            batch_callbacks=batch_callbacks,
+            epoch_callbacks=epoch_callbacks,
             distributed=distributed,
             local_rank=local_rank,
             world_size=world_size,
