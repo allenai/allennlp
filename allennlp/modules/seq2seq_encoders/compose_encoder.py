@@ -12,6 +12,8 @@ class ComposeEncoder(Seq2SeqEncoder):
 
     Among other things, this can be used to add a "pre-contextualizer" before a Seq2SeqEncoder.
 
+    Registered as a `Seq2SeqEncoder` with name "compose".
+
     # Parameters
 
     encoders : `List[Seq2SeqEncoder]`, required.

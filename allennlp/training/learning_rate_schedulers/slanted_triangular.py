@@ -25,6 +25,8 @@ class SlantedTriangular(LearningRateScheduler):
 
     Note that with this schedule, early stopping should typically be avoided.
 
+    Registered as a `LearningRateScheduler` with name "slanted_triangular".
+
     # Parameters
 
     num_epochs : `int`, required.

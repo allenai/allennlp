@@ -99,6 +99,8 @@ class ELMoTokenCharactersIndexer(TokenIndexer):
     """
     Convert a token to an array of character ids to compute ELMo representations.
 
+    Registered as a `TokenIndexer` with name "elmo_characters".
+
     # Parameters
 
     namespace : `str`, optional (default=`elmo_characters`)

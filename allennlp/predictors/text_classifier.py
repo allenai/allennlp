@@ -17,6 +17,8 @@ class TextClassifierPredictor(Predictor):
     Predictor for any model that takes in a sentence and returns
     a single class for it.  In particular, it can be used with
     the [`BasicClassifier`](../models/basic_classifier.md) model.
+
+    Registered as a `Predictor` with name "text_classifier".
     """
 
     def predict(self, sentence: str) -> JsonDict:

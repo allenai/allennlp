@@ -12,6 +12,8 @@ class EmptyEmbedder(TokenEmbedder):
     `TokenIndexer`. It's only in very rare cases, like simplicity in data processing for language
     modeling (where we use just one `TextField` to handle input embedding and computing target ids),
     where you might want to use this.
+
+    Registered as a `TokenEmbedder` with name "empty".
     """
 
     def __init__(self) -> None:

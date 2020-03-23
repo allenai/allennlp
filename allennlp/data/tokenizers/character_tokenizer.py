@@ -11,6 +11,8 @@ class CharacterTokenizer(Tokenizer):
     """
     A `CharacterTokenizer` splits strings into character tokens.
 
+    Registered as a `Tokenizer` with name "character".
+
     # Parameters
 
     byte_encoding : str, optional (default=`None`)

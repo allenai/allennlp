@@ -8,8 +8,10 @@ import time
 
 import torch
 
+import allennlp
 from allennlp.common import Registrable
 from allennlp.nn import util as nn_util
+from allennlp.training import util as training_util
 
 logger = logging.getLogger(__name__)
 
@@ -21,38 +23,83 @@ class Checkpointer(Registrable):
     Dict[str, Any]), but they will be fed to `torch.save` so they should be serializable
     in that sense. They will also be restored as Dict[str, Any], which means the calling
     code is responsible for knowing what to do with them.
+
+    # Parameters
+
+    num_serialized_models_to_keep : `int`, optional (default=2)
+        Number of previous model checkpoints to retain.  Default is to keep 2 checkpoints.
+        A value of None or -1 means all checkpoints will be kept.
+    keep_serialized_model_every_num_seconds : `int`, optional (default=None)
+        If num_serialized_models_to_keep is not None, then occasionally it's useful to
+        save models at a given interval in addition to the last num_serialized_models_to_keep.
+        To do so, specify keep_serialized_model_every_num_seconds as the number of seconds
+        between permanently saved checkpoints.  Note that this option is only used if
+        num_serialized_models_to_keep is not None, otherwise all checkpoints are kept.
+    model_save_interval : `float`, optional (default=None)
+        If provided, then serialize models every `model_save_interval`
+        seconds within single epochs.  In all cases, models are also saved
+        at the end of every epoch if `serialization_dir` is provided.
     """
 
     def __init__(
         self,
         serialization_dir: str = None,
         keep_serialized_model_every_num_seconds: int = None,
-        num_serialized_models_to_keep: int = 20,
+        num_serialized_models_to_keep: int = 2,
+        model_save_interval: float = None,
     ) -> None:
         self._serialization_dir = serialization_dir
         self._keep_serialized_model_every_num_seconds = keep_serialized_model_every_num_seconds
         self._num_serialized_models_to_keep = num_serialized_models_to_keep
+        self._model_save_interval = model_save_interval
 
         self._last_permanent_saved_checkpoint_time = time.time()
         self._serialized_paths: List[Tuple[float, str, str]] = []
+        self._last_save_time = time.time()
+
+    def maybe_save_checkpoint(
+        self, trainer: "allennlp.training.trainer.Trainer", epoch: int, batches_this_epoch: int
+    ) -> None:
+        """
+        Given amount of time lapsed between the last save and now (tracked internally), the
+        current epoch, and the number of batches seen so far this epoch, this method decides whether
+        to save a checkpoint or not.  If we decide to save a checkpoint, we grab whatever state we
+        need out of the `Trainer` and save it.
+
+        This function is intended to be called at the end of each batch in an epoch (perhaps because
+        your data is large enough that you don't really have "epochs").  The default implementation
+        only looks at time, not batch or epoch number, though those parameters are available to you
+        if you want to customize the behavior of this function.
+        """
+        if self._model_save_interval is None:
+            return
+        if time.time() - self._last_save_time < self._model_save_interval:
+            return
+
+        self._last_save_time = time.time()
+        epoch_str = f"{epoch}.{training_util.time_to_str(int(self._last_save_time))}"
+        self.save_checkpoint(epoch_str, trainer)
 
     def save_checkpoint(
         self,
         epoch: Union[int, str],
-        model_state: Dict[str, Any],
-        training_states: Dict[str, Any],
-        is_best_so_far: bool,
+        trainer: "allennlp.training.trainer.Trainer",
+        is_best_so_far: bool = False,
     ) -> None:
         if self._serialization_dir is not None:
-            model_path = os.path.join(
-                self._serialization_dir, "model_state_epoch_{}.th".format(epoch)
-            )
-            torch.save(model_state, model_path)
-            training_path = os.path.join(
-                self._serialization_dir, "training_state_epoch_{}.th".format(epoch)
-            )
-            torch.save({**training_states, "epoch": epoch}, training_path)
+            with trainer.get_checkpoint_state() as state:
+                model_state, training_states = state
+                model_path = os.path.join(
+                    self._serialization_dir, "model_state_epoch_{}.th".format(epoch)
+                )
+                torch.save(model_state, model_path)
+                training_path = os.path.join(
+                    self._serialization_dir, "training_state_epoch_{}.th".format(epoch)
+                )
+                torch.save({**training_states, "epoch": epoch}, training_path)
 
+            # The main checkpointing logic is now done, this is just shuffling files around, to keep
+            # track of best weights, and to remove old checkpoints, if desired.
             if is_best_so_far:
                 logger.info(
                     "Best validation performance so far. Copying weights to '%s/best.th'.",

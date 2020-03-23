@@ -23,6 +23,8 @@ class SnliReader(DatasetReader):
     "premise" and "hypothesis", along with a metadata field containing the tokenized strings of the
     premise and hypothesis.
 
+    Registered as a `DatasetReader` with name "snli".
+
     # Parameters
 
     tokenizer : `Tokenizer`, optional (default=`SpacyTokenizer()`)

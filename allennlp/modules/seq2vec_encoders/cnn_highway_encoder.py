@@ -18,6 +18,8 @@ class CnnHighwayEncoder(Seq2VecEncoder):
     https://arxiv.org/abs/1508.06615
     with an optional projection.
 
+    Registered as a `Seq2VecEncoder` with name "cnn-highway".
+
     # Parameters
 
     embedding_dim : `int`, required

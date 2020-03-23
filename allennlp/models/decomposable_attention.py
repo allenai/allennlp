@@ -30,6 +30,8 @@ class DecomposableAttention(Model):
     final entailment decision based on this aggregated comparison.  Each step in this process uses
     a feedforward network to modify the representation.
 
+    Registered as a `Model` with name "decomposable_attention".
+
     # Parameters
 
     vocab : `Vocabulary`

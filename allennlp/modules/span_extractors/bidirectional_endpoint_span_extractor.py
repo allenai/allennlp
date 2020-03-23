@@ -36,6 +36,8 @@ class BidirectionalEndpointSpanExtractor(SpanExtractor):
     The computed similarity function would then be `[x; y; x*y]`, which can then be optionally
     concatenated with an embedded representation of the width of the span.
 
+    Registered as a `SpanExtractor` with name "bidirectional_endpoint".
+
     # Parameters
 
     input_dim : `int`, required

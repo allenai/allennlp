@@ -37,6 +37,8 @@ class StanfordSentimentTreeBankDatasetReader(DatasetReader):
         tokens : `TextField` and
         label : `LabelField`
 
+    Registered as a `DatasetReader` with name "sst_tokens".
+
     # Parameters
 
     token_indexers : `Dict[str, TokenIndexer]`, optional (default=`{"tokens": SingleIdTokenIndexer()}`)

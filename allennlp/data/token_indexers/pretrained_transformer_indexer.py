@@ -22,6 +22,8 @@ class PretrainedTransformerIndexer(TokenIndexer):
     corresponding :class:`PretrainedTransformerTokenizer` to tokenize your input.  Otherwise you'll
     have a mismatch between your tokens and your vocabulary, and you'll get a lot of UNK tokens.
 
+    Registered as a `TokenIndexer` with name "pretrained_transformer".
+
     # Parameters
 
     model_name : `str`

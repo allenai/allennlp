@@ -15,6 +15,8 @@ from allennlp.nn import util
 class SmoothGradient(SaliencyInterpreter):
     """
     Interprets the prediction using SmoothGrad (https://arxiv.org/abs/1706.03825)
+
+    Registered as a `SaliencyInterpreter` with name "smooth-gradient".
     """
 
     def __init__(self, predictor: Predictor) -> None:

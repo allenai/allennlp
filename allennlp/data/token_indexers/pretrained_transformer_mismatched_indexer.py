@@ -23,6 +23,8 @@ class PretrainedTransformerMismatchedIndexer(TokenIndexer):
     `PretrainedTransformerMismatchedEmbedder` to embed these wordpieces and then pull out a single
     vector for each original word.
 
+    Registered as a `TokenIndexer` with name "pretrained_transformer_mismatched".
+
     # Parameters
 
     model_name : `str`

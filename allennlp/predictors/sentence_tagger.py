@@ -6,7 +6,7 @@ import numpy
 
 from allennlp.common.util import JsonDict
 from allennlp.data import DatasetReader, Instance
-from allennlp.data.fields import TextField, SequenceLabelField
+from allennlp.data.fields import FlagField, TextField, SequenceLabelField
 from allennlp.data.tokenizers.spacy_tokenizer import SpacyTokenizer
 from allennlp.models import Model
 from allennlp.predictors.predictor import Predictor
@@ -19,6 +19,8 @@ class SentenceTaggerPredictor(Predictor):
     a single set of tags for it.  In particular, it can be used with
     the [`CrfTagger`](../models/crf_tagger.md) model
     and also the [`SimpleTagger`](../models/simple_tagger.md) model.
+
+    Registered as a `Predictor` with name "sentence-tagger".
     """
 
     def __init__(
@@ -65,6 +67,10 @@ class SentenceTaggerPredictor(Predictor):
 
         Mary  went to Seattle to visit Microsoft Research
         O      O    O    O     O   O     B-Org     L-Org
+
+        We additionally add a flag to these instances to tell the model to only compute loss on
+        non-O tags, so that we get gradients that are specific to the particular span prediction
+        that each instance represents.
         """
         predicted_tags = outputs["tags"]
         predicted_spans = []
@@ -98,7 +104,7 @@ class SentenceTaggerPredictor(Predictor):
             new_instance.add_field(
                 "tags", SequenceLabelField(labels, text_field), self._model.vocab
             )
+            new_instance.add_field("ignore_loss_on_o_tags", FlagField(True))
             instances.append(new_instance)
-        instances.reverse()  # NER tags are in the opposite order as desired for the interpret UI
 
         return instances

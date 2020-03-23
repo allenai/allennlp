@@ -39,6 +39,8 @@ class SequentialSampler(data.SequentialSampler, Sampler):
     """
     A registrable version of pytorch's
     [SequentialSampler](https://pytorch.org/docs/stable/data.html#torch.utils.data.SequentialSampler).
+
+    Registered as a `Sampler` with name "sequential".
     """
 
     def __init__(self, data_source: data.Dataset):
@@ -52,6 +54,8 @@ class RandomSampler(data.RandomSampler, Sampler):
     [RandomSampler](https://pytorch.org/docs/stable/data.html#torch.utils.data.RandomSampler).
     Samples elements randomly. If without replacement, then sample from a shuffled dataset.
     If with replacement, then user can specify `num_samples` to draw.
+
+    Registered as a `Sampler` with name "random".
 
     # Parameters
     data_source: `Dataset`, reqired
@@ -76,6 +80,8 @@ class SubsetRandomSampler(data.SubsetRandomSampler, Sampler):
     [SubsetRandomSampler](https://pytorch.org/docs/stable/data.html#torch.utils.data.SubsetRandomSampler).
     Samples elements randomly from a given list of indices, without replacement.
 
+    Registered as a `Sampler` with name "subset_random".
+
     # Parameters
     indices: `List[int]`
         a sequence of indices to sample from.
@@ -91,6 +97,8 @@ class WeightedRandomSampler(data.WeightedRandomSampler, Sampler):
     A registrable version of pytorch's
     [WeightedRandomSampler](https://pytorch.org/docs/stable/data.html#torch.utils.data.WeightedRandomSampler).
     Samples elements from `[0,...,len(weights)-1]` with given probabilities (weights).
+
+    Registered as a `Sampler` with name "weighted_random".
 
     # Parameters:
     weights : `List[float]`
@@ -121,6 +129,8 @@ class BasicBatchSampler(data.BatchSampler, BatchSampler):
     A registrable version of pytorch's
     [BatchSampler](https://pytorch.org/docs/stable/data.html#torch.utils.data.BatchSampler).
     Wraps another sampler to yield a mini-batch of indices.
+
+    Registered as a `BatchSampler` with name "basic".
 
     # Parameters
     sampler: `Sampler`
