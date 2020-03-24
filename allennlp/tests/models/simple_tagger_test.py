@@ -63,8 +63,8 @@ class SimpleTaggerTest(ModelTestCase):
         training_batch = next(iter(data_loader))
         validation_batch = next(iter(data_loader))
 
-        training_loss = trainer.batch_loss(training_batch, for_training=True).item()
-        validation_loss = trainer.batch_loss(validation_batch, for_training=False).item()
+        training_loss = trainer.batch_outputs(training_batch, for_training=True)["loss"].item()
+        validation_loss = trainer.batch_outputs(validation_batch, for_training=False)["loss"].item()
 
         # Training loss should have the regularization penalty, but validation loss should not.
         numpy.testing.assert_almost_equal(training_loss, validation_loss)
@@ -129,8 +129,10 @@ class SimpleTaggerRegularizationTest(ModelTestCase):
         training_batch = next(iter(self.data_loader))
         validation_batch = next(iter(self.data_loader))
 
-        training_loss = self.trainer.batch_loss(training_batch, for_training=True).data
-        validation_loss = self.trainer.batch_loss(validation_batch, for_training=False).data
+        training_loss = self.trainer.batch_outputs(training_batch, for_training=True)["loss"].data
+        validation_loss = self.trainer.batch_outputs(validation_batch, for_training=False)[
+            "loss"
+        ].data
 
         # Training loss should have the regularization penalty, but validation loss should not.
         assert (training_loss != validation_loss).all()

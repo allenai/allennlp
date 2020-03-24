@@ -106,6 +106,40 @@ class Trainer(Registrable):
         raise NotImplementedError
 
 
+class BatchCallback(Registrable):
+    """
+    An optional callback that you can pass to the `GradientDescentTrainer` that will be called at
+    the end of every batch, during both training and validation.  We have no default implementation
+    of this, but you can implement your own callback and do whatever you want, such as saving
+    predictions to disk or extra logging.
+    """
+
+    def __call__(
+        self,
+        trainer: "GradientDescentTrainer",
+        batch_inputs: List[List[TensorDict]],
+        batch_outputs: List[Dict[str, Any]],
+        epoch: int,
+        batch_number: int,
+        is_training: bool,
+    ) -> None:
+        raise NotImplementedError
+
+
+class EpochCallback(Registrable):
+    """
+    An optional callback that you can pass to the `GradientDescentTrainer` that will be called at
+    the end of every epoch (and before the start of training, with `epoch=-1`). We have no default
+    implementation of this, but you can implement your own callback and do whatever you want, such
+    as additional modifications of the trainer's state in between epochs.
+    """
+
+    def __call__(
+        self, trainer: "GradientDescentTrainer", metrics: Dict[str, Any], epoch: int
+    ) -> None:
+        raise NotImplementedError
+
+
 @Trainer.register("gradient_descent", constructor="from_partial_objects")
 class GradientDescentTrainer(Trainer):
     """
@@ -185,6 +219,12 @@ class GradientDescentTrainer(Trainer):
         parameters. Be careful that when saving the checkpoint, we will save the moving averages of
         parameters. This is necessary because we want the saved model to perform as well as the validated
         model if we load it later. But this may cause problems if you restart the training from checkpoint.
+    batch_callbacks : `List[BatchCallback]`, optional (default = None)
+        A list of callbacks that will be called at the end of every batch, during both train and
+        validation.
+    epoch_callbacks : `List[EpochCallback]`, optional (default = None)
+        A list of callbacks that will be called at the end of every epoch, and at the start of
+        training (with epoch = -1).
     distributed : `bool`, optional, (default = False)
         If set, PyTorch's `DistributedDataParallel` is used to train the model in multiple GPUs. This also
         requires `world_size` to be greater than 1.
@@ -222,6 +262,8 @@ class GradientDescentTrainer(Trainer):
         momentum_scheduler: Optional[MomentumScheduler] = None,
         tensorboard_writer: TensorboardWriter = None,
         moving_average: Optional[MovingAverage] = None,
+        batch_callbacks: List[BatchCallback] = None,
+        epoch_callbacks: List[EpochCallback] = None,
         distributed: bool = False,
         local_rank: int = 0,
         world_size: int = 1,
@@ -268,6 +310,8 @@ class GradientDescentTrainer(Trainer):
         self._learning_rate_scheduler = learning_rate_scheduler
         self._momentum_scheduler = momentum_scheduler
         self._moving_average = moving_average
+        self._batch_callbacks = batch_callbacks or []
+        self._epoch_callbacks = epoch_callbacks or []
 
         # We keep the total batch number as an instance variable because it
         # is used inside a closure for the hook which logs activations in
@@ -327,27 +371,25 @@ class GradientDescentTrainer(Trainer):
         else:
             return None
 
-    def batch_loss(self, batch: TensorDict, for_training: bool) -> torch.Tensor:
+    def batch_outputs(self, batch: TensorDict, for_training: bool) -> Dict[str, torch.Tensor]:
         """
-        Does a forward pass on the given batches and returns the `loss` value in the result.
-        If `for_training` is `True` also applies regularization penalty.
+        Does a forward pass on the given batch and returns the output dictionary that the model
+        returns, after adding any specified regularization penalty to the loss (if training).
         """
         batch = nn_util.move_to_device(batch, self.cuda_device)
         output_dict = self._pytorch_model(**batch)
 
-        try:
-            loss = output_dict["loss"]
-            if for_training:
-                loss += self.model.get_regularization_penalty()
-        except KeyError:
-            if for_training:
-                raise RuntimeError(
-                    "The model you are trying to optimize does not contain a"
-                    " 'loss' key in the output of model.forward(inputs)."
-                )
-            loss = None
+        if for_training:
+            try:
+                output_dict["loss"] += self.model.get_regularization_penalty()
+            except KeyError:
+                if for_training:
+                    raise RuntimeError(
+                        "The model you are trying to optimize does not contain a"
+                        " 'loss' key in the output of model.forward(inputs)."
+                    )
 
-        return loss
+        return output_dict
 
     def _train_epoch(self, epoch: int) -> Dict[str, float]:
         """
@@ -418,8 +460,11 @@ class GradientDescentTrainer(Trainer):
 
             self.optimizer.zero_grad()
 
+            batch_group_outputs = []
             for batch in batch_group:
-                loss = self.batch_loss(batch, for_training=True)
+                batch_outputs = self.batch_outputs(batch, for_training=True)
+                batch_group_outputs.append(batch_outputs)
+                loss = batch_outputs["loss"]
                 if torch.isnan(loss):
                     raise ValueError("nan loss encountered")
                 loss = loss / len(batch_group)
@@ -478,6 +523,15 @@ class GradientDescentTrainer(Trainer):
 
             if self._master:
                 self._checkpointer.maybe_save_checkpoint(self, epoch, batches_this_epoch)
+                for callback in self._batch_callbacks:
+                    callback(
+                        self,
+                        batch_group,
+                        batch_group_outputs,
+                        epoch,
+                        batches_this_epoch,
+                        is_training=True,
+                    )
 
         if self._distributed and not done_early:
             logger.warning(
@@ -506,7 +560,7 @@ class GradientDescentTrainer(Trainer):
             metrics["gpu_" + str(gpu_num) + "_memory_MB"] = memory
         return metrics
 
-    def _validation_loss(self) -> Tuple[float, int]:
+    def _validation_loss(self, epoch: int) -> Tuple[float, int]:
         """
         Computes the validation loss. Returns it and the number of batches.
         """
@@ -549,7 +603,8 @@ class GradientDescentTrainer(Trainer):
                     )
                     break
 
-            loss = self.batch_loss(batch, for_training=False)
+            batch_outputs = self.batch_outputs(batch, for_training=False)
+            loss = batch_outputs.get("loss")
             if loss is not None:
                 # You shouldn't necessarily have to compute a loss for validation, so we allow for
                 # `loss` to be None.  We need to be careful, though - `batches_this_epoch` is
@@ -569,6 +624,17 @@ class GradientDescentTrainer(Trainer):
             )
             description = training_util.description_from_metrics(val_metrics)
             val_generator_tqdm.set_description(description, refresh=False)
+
+            if self._master:
+                for callback in self._batch_callbacks:
+                    callback(
+                        self,
+                        [batch],
+                        [batch_outputs],
+                        epoch,
+                        batches_this_epoch,
+                        is_training=False,
+                    )
 
         if self._distributed and not done_early:
             logger.warning(
@@ -613,6 +679,9 @@ class GradientDescentTrainer(Trainer):
         for key, value in self._metric_tracker.best_epoch_metrics.items():
             metrics["best_validation_" + key] = value
 
+        for callback in self._epoch_callbacks:
+            callback(self, metrics={}, epoch=-1)
+
         for epoch in range(epoch_counter, self._num_epochs):
             epoch_start_time = time.time()
             train_metrics = self._train_epoch(epoch)
@@ -629,7 +698,7 @@ class GradientDescentTrainer(Trainer):
             if self._validation_data_loader is not None:
                 with torch.no_grad():
                     # We have a validation set, so compute all the metrics on it.
-                    val_loss, num_batches = self._validation_loss()
+                    val_loss, num_batches = self._validation_loss(epoch)
 
                     # It is safe again to wait till the validation is done. This is
                     # important to get the metrics right.
@@ -699,6 +768,9 @@ class GradientDescentTrainer(Trainer):
             # Wait for the master to finish saving the checkpoint
             if self._distributed:
                 dist.barrier()
+
+            for callback in self._epoch_callbacks:
+                callback(self, metrics=metrics, epoch=epoch)
 
             epoch_elapsed_time = time.time() - epoch_start_time
             logger.info("Epoch duration: %s", datetime.timedelta(seconds=epoch_elapsed_time))
@@ -835,6 +907,8 @@ class GradientDescentTrainer(Trainer):
         tensorboard_writer: Lazy[TensorboardWriter] = None,
         moving_average: Lazy[MovingAverage] = None,
         checkpointer: Lazy[Checkpointer] = None,
+        batch_callbacks: List[BatchCallback] = None,
+        epoch_callbacks: List[EpochCallback] = None,
     ) -> "Trainer":
         """
         This method exists so that we can have a documented method to construct this class using
@@ -902,6 +976,8 @@ class GradientDescentTrainer(Trainer):
             tensorboard_writer=tensorboard_writer_,
             checkpointer=checkpointer_,
             moving_average=moving_average_,
+            batch_callbacks=batch_callbacks,
+            epoch_callbacks=epoch_callbacks,
             distributed=distributed,
             local_rank=local_rank,
             world_size=world_size,
