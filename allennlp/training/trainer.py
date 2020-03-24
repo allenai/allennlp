@@ -219,6 +219,12 @@ class GradientDescentTrainer(Trainer):
         parameters. Be careful that when saving the checkpoint, we will save the moving averages of
         parameters. This is necessary because we want the saved model to perform as well as the validated
         model if we load it later. But this may cause problems if you restart the training from checkpoint.
+    batch_callbacks : `List[BatchCallback]`, optional (default = None)
+        A list of callbacks that will be called at the end of every batch, during both train and
+        validation.
+    epoch_callbacks : `List[EpochCallback]`, optional (default = None)
+        A list of callbacks that will be called at the end of every epoch, and at the start of
+        training (with epoch = -1).
     distributed : `bool`, optional, (default = False)
         If set, PyTorch's `DistributedDataParallel` is used to train the model in multiple GPUs. This also
         requires `world_size` to be greater than 1.
