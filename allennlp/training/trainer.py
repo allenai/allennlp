@@ -770,7 +770,7 @@ class GradientDescentTrainer(Trainer):
                 dist.barrier()
 
             for callback in self._epoch_callbacks:
-                callbacks(self, metrics=metrics, epoch=epoch)
+                callback(self, metrics=metrics, epoch=epoch)
 
             epoch_elapsed_time = time.time() - epoch_start_time
             logger.info("Epoch duration: %s", datetime.timedelta(seconds=epoch_elapsed_time))

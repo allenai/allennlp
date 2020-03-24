@@ -837,7 +837,7 @@ class TestTrainer(TrainerTestBase):
             self.data_loader,
             num_epochs=2,
             validation_data_loader=self.validation_data_loader,
-            batch_callback=FakeBatchCallback(),
+            batch_callbacks=[FakeBatchCallback()],
         )
         trainer.train()
         expected_calls = [
@@ -863,7 +863,7 @@ class TestTrainer(TrainerTestBase):
             self.data_loader,
             num_epochs=4,
             validation_data_loader=self.validation_data_loader,
-            epoch_callback=FakeEpochCallback(),
+            epoch_callbacks=[FakeEpochCallback()],
         )
         trainer.train()
         expected_calls = [epoch for epoch in range(-1, 4)]
