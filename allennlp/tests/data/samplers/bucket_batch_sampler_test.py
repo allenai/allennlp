@@ -100,6 +100,8 @@ class TestBucketSampler(SamplerTest):
         for group in grouped_instances:
             if group in expected_groups:
                 expected_groups.remove(group)
+            else:
+                assert False
         assert expected_groups == []
 
     def test_guess_sorting_key_picks_the_longest_key(self):
