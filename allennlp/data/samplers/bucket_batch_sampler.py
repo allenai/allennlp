@@ -101,11 +101,15 @@ class BucketBatchSampler(BatchSampler):
     def __iter__(self) -> Iterable[List[int]]:
 
         indices = self._argsort_by_padding(self.data_source)
+        batches = []
         for group in lazy_groups_of(indices, self.batch_size):
             batch_indices = list(group)
             if self.drop_last and len(batch_indices) < self.batch_size:
                 continue
-            yield batch_indices
+            batches.append(batch_indices)
+        random.shuffle(batches)
+        for batch in batches:
+            yield batch
 
     def _guess_sorting_keys(self, instances: Iterable[Instance], num_instances: int = 10) -> None:
         """
