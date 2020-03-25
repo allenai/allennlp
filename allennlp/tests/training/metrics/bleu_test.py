@@ -25,7 +25,7 @@ class BleuTest(AllenNlpTestCase):
         tensor = torch.tensor([1, 2, 3, 1, 2, 0], device=device)
 
         # Unigrams.
-        counts = Counter(self.metric._ngrams(tensor, 1))
+        counts: Counter = Counter(self.metric._ngrams(tensor, 1))
         unigram_check = {(1,): 2, (2,): 2, (3,): 1}
         assert counts == unigram_check
 
