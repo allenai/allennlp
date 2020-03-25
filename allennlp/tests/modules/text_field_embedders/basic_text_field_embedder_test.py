@@ -182,7 +182,7 @@ class TestBasicTextFieldEmbedder(AllenNlpTestCase):
         inputs = {
             "bert": {
                 "token_ids": (torch.rand(3, 5) * 10).long(),
-                "mask": (torch.rand(3, 5) * 1).long(),
+                "mask": (torch.rand(3, 5) * 1).bool(),
             },
             "token_characters": {"token_characters": (torch.rand(3, 5, 5) * 1).long()},
         }

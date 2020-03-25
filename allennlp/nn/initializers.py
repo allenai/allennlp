@@ -168,48 +168,80 @@ class _InitializerWrapper(Initializer):
 
 @Initializer.register("normal")
 class NormalInitializer(_InitializerWrapper):
+    """
+    Registered as an `Initializer` with name "normal".
+    """
+
     def __init__(self, mean: float = 0.0, std: float = 0.1):
         super().__init__(init_function=torch.nn.init.normal_, mean=mean, std=std)
 
 
 @Initializer.register("orthogonal")
 class OrthogonalInitializer(_InitializerWrapper):
+    """
+    Registered as an `Initializer` with name "orthogonal".
+    """
+
     def __init__(self, gain: float = 1.0):
         super().__init__(init_function=torch.nn.init.orthogonal_, gain=gain)
 
 
 @Initializer.register("uniform")
 class UniformInitializer(_InitializerWrapper):
+    """
+    Registered as an `Initializer` with name "uniform".
+    """
+
     def __init__(self, a: float = 0.0, b: float = 1.0):
         super().__init__(init_function=torch.nn.init.uniform_, a=a, b=b)
 
 
 @Initializer.register("constant")
 class ConstantInitializer(_InitializerWrapper):
+    """
+    Registered as an `Initializer` with name "constant".
+    """
+
     def __init__(self, val: float):
         super().__init__(init_function=torch.nn.init.constant_, val=val)
 
 
 @Initializer.register("dirac")
 class DiracInitializer(_InitializerWrapper):
+    """
+    Registered as an `Initializer` with name "dirac".
+    """
+
     def __init__(self):
         super().__init__(init_function=torch.nn.init.dirac_)
 
 
 @Initializer.register("xavier_uniform")
 class XavierUniformInitializer(_InitializerWrapper):
+    """
+    Registered as an `Initializer` with name "xavir_uniform".
+    """
+
     def __init__(self, gain: float = 1.0):
         super().__init__(init_function=torch.nn.init.xavier_uniform_, gain=gain)
 
 
 @Initializer.register("xavier_normal")
 class XavierNormalInitializer(_InitializerWrapper):
+    """
+    Registered as an `Initializer` with name "xavier_normal".
+    """
+
     def __init__(self, gain: float = 1.0):
         super().__init__(init_function=torch.nn.init.xavier_normal_, gain=gain)
 
 
 @Initializer.register("kaiming_uniform")
 class KaimingUniformInitializer(_InitializerWrapper):
+    """
+    Registered as an `Initializer` with name "kaiming_uniform".
+    """
+
     def __init__(self, a: float = 0.0, mode: str = "fan_in", nonlinearity: str = "leaky_relu"):
         super().__init__(
             init_function=torch.nn.init.kaiming_uniform_, a=a, mode=mode, nonlinearity=nonlinearity
@@ -218,6 +250,10 @@ class KaimingUniformInitializer(_InitializerWrapper):
 
 @Initializer.register("kaiming_normal")
 class KaimingNormalInitializer(_InitializerWrapper):
+    """
+    Registered as an `Initializer` with name "kaiming_normal".
+    """
+
     def __init__(self, a: float = 0.0, mode: str = "fan_in", nonlinearity: str = "leaky_relu"):
         super().__init__(
             init_function=torch.nn.init.kaiming_normal_, a=a, mode=mode, nonlinearity=nonlinearity
@@ -226,36 +262,60 @@ class KaimingNormalInitializer(_InitializerWrapper):
 
 @Initializer.register("sparse")
 class SparseInitializer(_InitializerWrapper):
+    """
+    Registered as an `Initializer` with name "sparse".
+    """
+
     def __init__(self, sparsity: float, std: float = 0.01):
         super().__init__(init_function=torch.nn.init.sparse_, sparsity=sparsity, std=std)
 
 
 @Initializer.register("eye")
 class EyeInitializer(_InitializerWrapper):
+    """
+    Registered as an `Initializer` with name "eye".
+    """
+
     def __init__(self):
         super().__init__(init_function=torch.nn.init.eye_)
 
 
 @Initializer.register("block_orthogonal")
 class BlockOrthogonalInitializer(_InitializerWrapper):
+    """
+    Registered as an `Initializer` with name "block_orthogonal".
+    """
+
     def __init__(self, split_sizes: List[int], gain: float = 1.0):
         super().__init__(init_function=block_orthogonal, split_sizes=split_sizes, gain=gain)
 
 
 @Initializer.register("uniform_unit_scaling")
 class UniformUnitScalingInitializer(_InitializerWrapper):
+    """
+    Registered as an `Initializer` with name "uniform_unit_scaling".
+    """
+
     def __init__(self, nonlinearity: str = "linear"):
         super().__init__(init_function=uniform_unit_scaling, nonlinearity=nonlinearity)
 
 
 @Initializer.register("zero")
 class ZeroInitializer(_InitializerWrapper):
+    """
+    Registered as an `Initializer` with name "zero".
+    """
+
     def __init__(self):
         super().__init__(init_function=zero)
 
 
 @Initializer.register("lstm_hidden_bias")
 class LstmHiddenBiasInitializer(_InitializerWrapper):
+    """
+    Registered as an `Initializer` with name "lstm_hidden_bias".
+    """
+
     def __init__(self):
         super().__init__(init_function=lstm_hidden_bias)
 
@@ -308,6 +368,8 @@ class PretrainedModelInitializer(Initializer):
                 }
             ]
     ```
+
+    Registered as an `Initializer` with name "pretrained".
 
     # Parameters
 

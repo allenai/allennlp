@@ -22,6 +22,8 @@ class PretrainedTransformerIndexer(TokenIndexer):
     corresponding :class:`PretrainedTransformerTokenizer` to tokenize your input.  Otherwise you'll
     have a mismatch between your tokens and your vocabulary, and you'll get a lot of UNK tokens.
 
+    Registered as a `TokenIndexer` with name "pretrained_transformer".
+
     # Parameters
 
     model_name : `str`
@@ -98,7 +100,7 @@ class PretrainedTransformerIndexer(TokenIndexer):
 
         indices, type_ids = self._extract_token_and_type_ids(tokens)
         # The mask has 1 for real tokens and 0 for padding tokens. Only real tokens are attended to.
-        output = {"token_ids": indices, "mask": [1] * len(indices)}
+        output: IndexedTokenList = {"token_ids": indices, "mask": [True] * len(indices)}
         if type_ids is not None:
             output["type_ids"] = type_ids
 
@@ -168,7 +170,7 @@ class PretrainedTransformerIndexer(TokenIndexer):
             output["type_ids"] = self._tokenizer.create_token_type_ids_from_sequences(
                 indices[self._num_added_start_tokens : -self._num_added_end_tokens]
             )
-            output["segment_concat_mask"] = [1] * len(indices)
+            output["segment_concat_mask"] = [True] * len(indices)
 
         return output
 
@@ -184,19 +186,25 @@ class PretrainedTransformerIndexer(TokenIndexer):
         self, tokens: IndexedTokenList, padding_lengths: Dict[str, int]
     ) -> Dict[str, torch.Tensor]:
         # Different transformers use different padding values for tokens, but for mask and type id, the padding
-        # value is always 0.
-        return {
-            key: torch.LongTensor(
-                pad_sequence_to_length(
-                    val,
-                    padding_lengths[key],
-                    default_value=lambda: 0
-                    if key in {"mask", "type_ids"}
-                    else self._tokenizer.pad_token_id,
+        # value is always False/0.
+        tensor_dict = {}
+        for key, val in tokens.items():
+            if val and isinstance(val[0], bool):
+                tensor = torch.BoolTensor(
+                    pad_sequence_to_length(val, padding_lengths[key], default_value=lambda: False)
                 )
-            )
-            for key, val in tokens.items()
-        }
+            else:
+                tensor = torch.LongTensor(
+                    pad_sequence_to_length(
+                        val,
+                        padding_lengths[key],
+                        default_value=lambda: 0
+                        if key == "type_ids"
+                        else self._tokenizer.pad_token_id,
+                    ),
+                )
+            tensor_dict[key] = tensor
+        return tensor_dict
 
     def __eq__(self, other):
         if isinstance(other, PretrainedTransformerIndexer):

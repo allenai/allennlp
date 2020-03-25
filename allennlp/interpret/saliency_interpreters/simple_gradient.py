@@ -10,6 +10,10 @@ from allennlp.nn import util
 
 @SaliencyInterpreter.register("simple-gradient")
 class SimpleGradient(SaliencyInterpreter):
+    """
+    Registered as a `SaliencyInterpreter` with name "simple-gradient".
+    """
+
     def saliency_interpret_from_json(self, inputs: JsonDict) -> JsonDict:
         """
         Interprets the model's prediction for inputs.  Gets the gradients of the loss with respect

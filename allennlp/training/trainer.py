@@ -5,7 +5,8 @@ import os
 import re
 import time
 import traceback
-from typing import Dict, List, Optional, Tuple, Union, Any
+from contextlib import contextmanager
+from typing import Any, Dict, Iterator, List, Optional, Tuple
 
 try:
     from apex import amp
@@ -92,9 +93,157 @@ class Trainer(Registrable):
         """
         raise NotImplementedError
 
+    @contextmanager
+    def get_checkpoint_state(self) -> Iterator[Tuple[Dict[str, Any], Dict[str, Any]]]:
+        """
+        Returns a tuple of (model state, training state), where training state could have several
+        internal components (e.g., for an, optimizer, learning rate scheduler, etc.).
+
+        This is a context manager, and should be called as `with trainer.get_checkpoint_state() as
+        state:`, so that the trainer has the opportunity to change and restore its internal state
+        for checkpointing.  This is used, e.g., for moving averages of model weights.
+        """
+        raise NotImplementedError
+
+
+class BatchCallback(Registrable):
+    """
+    An optional callback that you can pass to the `GradientDescentTrainer` that will be called at
+    the end of every batch, during both training and validation.  We have no default implementation
+    of this, but you can implement your own callback and do whatever you want, such as saving
+    predictions to disk or extra logging.
+    """
+
+    def __call__(
+        self,
+        trainer: "GradientDescentTrainer",
+        batch_inputs: List[List[TensorDict]],
+        batch_outputs: List[Dict[str, Any]],
+        epoch: int,
+        batch_number: int,
+        is_training: bool,
+    ) -> None:
+        raise NotImplementedError
+
+
+class EpochCallback(Registrable):
+    """
+    An optional callback that you can pass to the `GradientDescentTrainer` that will be called at
+    the end of every epoch (and before the start of training, with `epoch=-1`). We have no default
+    implementation of this, but you can implement your own callback and do whatever you want, such
+    as additional modifications of the trainer's state in between epochs.
+    """
+
+    def __call__(
+        self, trainer: "GradientDescentTrainer", metrics: Dict[str, Any], epoch: int
+    ) -> None:
+        raise NotImplementedError
+
 
 @Trainer.register("gradient_descent", constructor="from_partial_objects")
 class GradientDescentTrainer(Trainer):
+    """
+    A trainer for doing supervised learning with gradient descent. It just takes a labeled dataset
+    and a `DataLoader`, and uses the supplied `Optimizer` to learn the weights for your model over
+    some fixed number of epochs. You can also pass in a validation dataloader and enable early
+    stopping. There are many other bells and whistles as well.
+
+    Registered as a `Trainer` with the name "gradient_descent" (and is also the default `Trainer`).
+    The constructor that is registered is `from_partial_objects` - see the arguments to that
+    function for the exact keys that should be used, if you are using a configuration file.  They
+    largely match the arguments to `__init__`, and we don't repeat their docstrings in
+    `from_partial_objects`.
+
+    # Parameters
+
+    model : `Model`, required.
+        An AllenNLP model to be optimized. Pytorch Modules can also be optimized if
+        their `forward` method returns a dictionary with a "loss" key, containing a
+        scalar tensor representing the loss function to be optimized.
+
+        If you are training your model using GPUs, your model should already be
+        on the correct device. (If you are using our `train` command this will be
+        handled for you.)
+    optimizer : `torch.nn.Optimizer`, required.
+        An instance of a Pytorch Optimizer, instantiated with the parameters of the
+        model to be optimized.
+    data_loader : `DataLoader`, required.
+        A pytorch `DataLoader` containing your `Dataset`, yielding padded indexed batches.
+    patience : Optional[int] > 0, optional (default=None)
+        Number of epochs to be patient before early stopping: the training is stopped
+        after `patience` epochs with no improvement. If given, it must be `> 0`.
+        If None, early stopping is disabled.
+    validation_metric : str, optional (default="loss")
+        Validation metric to measure for whether to stop training using patience
+        and whether to serialize an `is_best` model each epoch. The metric name
+        must be prepended with either "+" or "-", which specifies whether the metric
+        is an increasing or decreasing function.
+    validation_dataloader : `DataLoader`, optional (default=None)
+        A `DataLoader` to use for the validation set.  If `None`, then
+        use the training `DataLoader` with the validation data.
+    num_epochs : int, optional (default = 20)
+        Number of training epochs.
+    serialization_dir : str, optional (default=None)
+        Path to directory for saving and loading model files. Models will not be saved if
+        this parameter is not passed.
+    checkpointer : `Checkpointer`, optional (default=None)
+        A `Checkpointer` is responsible for periodically saving model weights.  If none is given
+        here, we will construct one with default parameters.
+    cuda_device : `int`, optional (default = -1)
+        An integer specifying the CUDA device(s) to use for this process. If -1, the CPU is used.
+        Data parallelism is controlled at the allennlp train level, so each trainer will have a single
+        GPU.
+    grad_norm : `float`, optional, (default = None).
+        If provided, gradient norms will be rescaled to have a maximum of this value.
+    grad_clipping : `float`, optional (default = `None`).
+        If provided, gradients will be clipped `during the backward pass` to have an (absolute)
+        maximum of this value.  If you are getting `NaNs` in your gradients during training
+        that are not solved by using `grad_norm`, you may need this.
+    learning_rate_scheduler : `LearningRateScheduler`, optional (default = None)
+        If specified, the learning rate will be decayed with respect to
+        this schedule at the end of each epoch (or batch, if the scheduler implements
+        the `step_batch` method). If you use `torch.optim.lr_scheduler.ReduceLROnPlateau`,
+        this will use the `validation_metric` provided to determine if learning has plateaued.
+        To support updating the learning rate on every batch, this can optionally implement
+        `step_batch(batch_num_total)` which updates the learning rate given the batch number.
+    momentum_scheduler : `MomentumScheduler`, optional (default = None)
+        If specified, the momentum will be updated at the end of each batch or epoch
+        according to the schedule.
+    tensorboard_writer : `TensorboardWriter`, optional
+        If this is not provided, we will construct a `TensorboardWriter` with default
+        parameters and use that.
+    moving_average : `MovingAverage`, optional, (default = None)
+        If provided, we will maintain moving averages for all parameters. During training, we
+        employ a shadow variable for each parameter, which maintains the moving average. During
+        evaluation, we backup the original parameters and assign the moving averages to corresponding
+        parameters. Be careful that when saving the checkpoint, we will save the moving averages of
+        parameters. This is necessary because we want the saved model to perform as well as the validated
+        model if we load it later. But this may cause problems if you restart the training from checkpoint.
+    batch_callbacks : `List[BatchCallback]`, optional (default = None)
+        A list of callbacks that will be called at the end of every batch, during both train and
+        validation.
+    epoch_callbacks : `List[EpochCallback]`, optional (default = None)
+        A list of callbacks that will be called at the end of every epoch, and at the start of
+        training (with epoch = -1).
+    distributed : `bool`, optional, (default = False)
+        If set, PyTorch's `DistributedDataParallel` is used to train the model in multiple GPUs. This also
+        requires `world_size` to be greater than 1.
+    local_rank : `int`, optional, (default = 0)
+        This is the unique identifier of the `Trainer` in a distributed process group. The GPU device id is
+        used as the rank.
+    world_size : `int`, (default = 1)
+        The number of `Trainer` workers participating in the distributed training.
+    num_gradient_accumulation_steps : `int`, optional, (default = 1)
+        Gradients are accumulated for the given number of steps before doing an optimizer step. This can
+        be useful to accommodate batches that are larger than the RAM size. Refer Thomas Wolf's
+        [post](https://tinyurl.com/y5mv44fw) for details on Gradient Accumulation.
+    opt_level : `str`, optional, (default = `None`)
+        Each opt_level establishes a set of properties that govern Amp’s implementation of pure or mixed
+        precision training. Must be a choice of `"O0"`, `"O1"`, `"O2"`, or `"O3"`.
+        See the Apex [documentation](https://nvidia.github.io/apex/amp.html#opt-levels-and-properties) for
+        more details. If `None`, Amp is not used. Defaults to `None`.
+    """
+
     def __init__(
         self,
         model: Model,
@@ -106,116 +255,21 @@ class GradientDescentTrainer(Trainer):
         num_epochs: int = 20,
         serialization_dir: Optional[str] = None,
         checkpointer: Checkpointer = None,
-        model_save_interval: float = None,
         cuda_device: int = -1,
         grad_norm: Optional[float] = None,
         grad_clipping: Optional[float] = None,
         learning_rate_scheduler: Optional[LearningRateScheduler] = None,
         momentum_scheduler: Optional[MomentumScheduler] = None,
         tensorboard_writer: TensorboardWriter = None,
-        log_batch_size_period: Optional[int] = None,
         moving_average: Optional[MovingAverage] = None,
+        batch_callbacks: List[BatchCallback] = None,
+        epoch_callbacks: List[EpochCallback] = None,
         distributed: bool = False,
         local_rank: int = 0,
         world_size: int = 1,
         num_gradient_accumulation_steps: int = 1,
         opt_level: Optional[str] = None,
     ) -> None:
-        """
-        A trainer for doing supervised learning. It just takes a labeled dataset
-        and a `DataLoader`, and uses the supplied `Optimizer` to learn the weights
-        for your model over some fixed number of epochs. You can also pass in a validation
-        dataloader and enable early stopping. There are many other bells and whistles as well.
-
-        # Parameters
-
-        model : `Model`, required.
-            An AllenNLP model to be optimized. Pytorch Modules can also be optimized if
-            their `forward` method returns a dictionary with a "loss" key, containing a
-            scalar tensor representing the loss function to be optimized.
-
-            If you are training your model using GPUs, your model should already be
-            on the correct device. (If you use `Trainer.from_params` this will be
-            handled for you.)
-        optimizer : `torch.nn.Optimizer`, required.
-            An instance of a Pytorch Optimizer, instantiated with the parameters of the
-            model to be optimized.
-        data_loader : `DataLoader`, required.
-            A pytorch `DataLoader` containing your `Dataset`, yielding padded indexed batches.
-        patience : Optional[int] > 0, optional (default=None)
-            Number of epochs to be patient before early stopping: the training is stopped
-            after `patience` epochs with no improvement. If given, it must be `> 0`.
-            If None, early stopping is disabled.
-        validation_metric : str, optional (default="loss")
-            Validation metric to measure for whether to stop training using patience
-            and whether to serialize an `is_best` model each epoch. The metric name
-            must be prepended with either "+" or "-", which specifies whether the metric
-            is an increasing or decreasing function.
-        validation_dataloader : `DataLoader`, optional (default=None)
-            A `DataLoader` to use for the validation set.  If `None`, then
-            use the training `DataLoader` with the validation data.
-        num_epochs : int, optional (default = 20)
-            Number of training epochs.
-        serialization_dir : str, optional (default=None)
-            Path to directory for saving and loading model files. Models will not be saved if
-            this parameter is not passed.
-        checkpointer : `Checkpointer`, optional (default=None)
-            A `Checkpointer` is responsible for periodically saving model weights.  If none is given
-            here, we will construct one with default parameters.
-        model_save_interval : `float`, optional (default=None)
-            If provided, then serialize models every `model_save_interval`
-            seconds within single epochs.  In all cases, models are also saved
-            at the end of every epoch if `serialization_dir` is provided.
-        cuda_device : `int`, optional (default = -1)
-            An integer specifying the CUDA device(s) to use for this process. If -1, the CPU is used.
-            Data parallelism is controlled at the allennlp train level, so each trainer will have a single
-            GPU.
-        grad_norm : `float`, optional, (default = None).
-            If provided, gradient norms will be rescaled to have a maximum of this value.
-        grad_clipping : `float`, optional (default = `None`).
-            If provided, gradients will be clipped `during the backward pass` to have an (absolute)
-            maximum of this value.  If you are getting `NaNs` in your gradients during training
-            that are not solved by using `grad_norm`, you may need this.
-        learning_rate_scheduler : `LearningRateScheduler`, optional (default = None)
-            If specified, the learning rate will be decayed with respect to
-            this schedule at the end of each epoch (or batch, if the scheduler implements
-            the `step_batch` method). If you use `torch.optim.lr_scheduler.ReduceLROnPlateau`,
-            this will use the `validation_metric` provided to determine if learning has plateaued.
-            To support updating the learning rate on every batch, this can optionally implement
-            `step_batch(batch_num_total)` which updates the learning rate given the batch number.
-        momentum_scheduler : `MomentumScheduler`, optional (default = None)
-            If specified, the momentum will be updated at the end of each batch or epoch
-            according to the schedule.
-        tensorboard_writer : `TensorboardWriter`, optional
-            If this is not provided, we will construct a `TensorboardWriter` with default
-            parameters and use that.
-        log_batch_size_period : `int`, optional, (default = `None`)
-            If defined, how often to log the average batch size.
-        moving_average : `MovingAverage`, optional, (default = None)
-            If provided, we will maintain moving averages for all parameters. During training, we
-            employ a shadow variable for each parameter, which maintains the moving average. During
-            evaluation, we backup the original parameters and assign the moving averages to corresponding
-            parameters. Be careful that when saving the checkpoint, we will save the moving averages of
-            parameters. This is necessary because we want the saved model to perform as well as the validated
-            model if we load it later. But this may cause problems if you restart the training from checkpoint.
-        distributed : `bool`, optional, (default = False)
-            If set, PyTorch's `DistributedDataParallel` is used to train the model in multiple GPUs. This also
-            requires `world_size` to be greater than 1.
-        local_rank : `int`, optional, (default = 0)
-            This is the unique identifier of the `Trainer` in a distributed process group. The GPU device id is
-            used as the rank.
-        world_size : `int`, (default = 1)
-            The number of `Trainer` workers participating in the distributed training.
-        num_gradient_accumulation_steps : `int`, optional, (default = 1)
-            Gradients are accumulated for the given number of steps before doing an optimizer step. This can
-            be useful to accommodate batches that are larger than the RAM size. Refer Thomas Wolf's
-            [post](https://tinyurl.com/y5mv44fw) for details on Gradient Accumulation.
-        opt_level : `str`, optional, (default = `None`)
-            Each opt_level establishes a set of properties that govern Amp’s implementation of pure or mixed
-            precision training. Must be a choice of `"O0"`, `"O1"`, `"O2"`, or `"O3"`.
-            See the Apex [documentation](https://nvidia.github.io/apex/amp.html#opt-levels-and-properties) for
-            more details. If `None`, Amp is not used. Defaults to `None`.
-        """
         super().__init__(serialization_dir, cuda_device, distributed, local_rank, world_size)
 
         # I am not calling move_to_gpu here, because if the model is
@@ -250,14 +304,14 @@ class GradientDescentTrainer(Trainer):
         else:
             self._checkpointer = Checkpointer(serialization_dir)
 
-        self._model_save_interval = model_save_interval
-
         self._grad_norm = grad_norm
         self._grad_clipping = grad_clipping
 
         self._learning_rate_scheduler = learning_rate_scheduler
         self._momentum_scheduler = momentum_scheduler
         self._moving_average = moving_average
+        self._batch_callbacks = batch_callbacks or []
+        self._epoch_callbacks = epoch_callbacks or []
 
         # We keep the total batch number as an instance variable because it
         # is used inside a closure for the hook which logs activations in
@@ -267,8 +321,6 @@ class GradientDescentTrainer(Trainer):
         self._tensorboard = tensorboard_writer or TensorboardWriter(serialization_dir)
         self._tensorboard.get_batch_num_total = lambda: self._batch_num_total
         self._tensorboard.enable_activation_logging(self.model)
-
-        self._log_batch_size_period = log_batch_size_period
 
         self._last_log = 0.0  # time of last logging
 
@@ -319,27 +371,25 @@ class GradientDescentTrainer(Trainer):
         else:
             return None
 
-    def batch_loss(self, batch: TensorDict, for_training: bool) -> torch.Tensor:
+    def batch_outputs(self, batch: TensorDict, for_training: bool) -> Dict[str, torch.Tensor]:
         """
-        Does a forward pass on the given batches and returns the `loss` value in the result.
-        If `for_training` is `True` also applies regularization penalty.
+        Does a forward pass on the given batch and returns the output dictionary that the model
+        returns, after adding any specified regularization penalty to the loss (if training).
         """
         batch = nn_util.move_to_device(batch, self.cuda_device)
         output_dict = self._pytorch_model(**batch)
 
-        try:
-            loss = output_dict["loss"]
-            if for_training:
-                loss += self.model.get_regularization_penalty()
-        except KeyError:
-            if for_training:
-                raise RuntimeError(
-                    "The model you are trying to optimize does not contain a"
-                    " 'loss' key in the output of model.forward(inputs)."
-                )
-            loss = None
+        if for_training:
+            try:
+                output_dict["loss"] += self.model.get_regularization_penalty()
+            except KeyError:
+                if for_training:
+                    raise RuntimeError(
+                        "The model you are trying to optimize does not contain a"
+                        " 'loss' key in the output of model.forward(inputs)."
+                    )
 
-        return loss
+        return output_dict
 
     def _train_epoch(self, epoch: int) -> Dict[str, float]:
         """
@@ -378,15 +428,11 @@ class GradientDescentTrainer(Trainer):
             batch_group_generator_tqdm = batch_group_generator
 
         self._last_log = time.time()
-        last_save_time = time.time()
 
         batches_this_epoch = 0
         if self._batch_num_total is None:
             self._batch_num_total = 0
 
-        histogram_parameters = set(self.model.get_parameters_for_histogram_tensorboard_logging())
-
-        cumulative_batch_group_size = 0
         done_early = False
         for batch_group in batch_group_generator_tqdm:
             if self._distributed:
@@ -414,8 +460,11 @@ class GradientDescentTrainer(Trainer):
 
             self.optimizer.zero_grad()
 
+            batch_group_outputs = []
             for batch in batch_group:
-                loss = self.batch_loss(batch, for_training=True)
+                batch_outputs = self.batch_outputs(batch, for_training=True)
+                batch_group_outputs.append(batch_outputs)
+                loss = batch_outputs["loss"]
                 if torch.isnan(loss):
                     raise ValueError("nan loss encountered")
                 loss = loss / len(batch_group)
@@ -435,10 +484,12 @@ class GradientDescentTrainer(Trainer):
             if self._momentum_scheduler:
                 self._momentum_scheduler.step_batch(batch_num_total)
 
+            param_updates = None
             if self._tensorboard.should_log_histograms_this_batch() and self._master:
-                # get the magnitude of parameter updates for logging
-                # We need a copy of current parameters to compute magnitude of updates,
-                # and copy them to CPU so large models won't go OOM on the GPU.
+                # Get the magnitude of parameter updates for logging.  We need to do some
+                # computation before and after the optimizer step, and it's expensive because of
+                # GPU/CPU copies (necessary for large models, and for shipping to tensorboard), so
+                # we don't do this every batch, only when it's requested.
                 param_updates = {
                     name: param.detach().cpu().clone()
                     for name, param in self.model.named_parameters()
@@ -446,12 +497,6 @@ class GradientDescentTrainer(Trainer):
                 self.optimizer.step()
                 for name, param in self.model.named_parameters():
                     param_updates[name].sub_(param.detach().cpu())
-                    update_norm = torch.norm(param_updates[name].view(-1))
-                    param_norm = torch.norm(param.view(-1)).cpu()
-                    self._tensorboard.add_train_scalar(
-                        "gradient_update/" + name,
-                        update_norm / (param_norm + nn_util.tiny_value_of_dtype(param_norm.dtype)),
-                    )
             else:
                 self.optimizer.step()
 
@@ -472,39 +517,22 @@ class GradientDescentTrainer(Trainer):
             if self._master:
                 description = training_util.description_from_metrics(metrics)
                 batch_group_generator_tqdm.set_description(description, refresh=False)
-
-            # Log parameter values to Tensorboard (only from the master)
-            if self._tensorboard.should_log_this_batch() and self._master:
-                self._tensorboard.log_parameter_and_gradient_statistics(self.model, batch_grad_norm)
-                self._tensorboard.log_learning_rates(self.model, self.optimizer)
-
-                self._tensorboard.add_train_scalar("loss/loss_train", metrics["loss"])
-                self._tensorboard.log_metrics({"epoch_metrics/" + k: v for k, v in metrics.items()})
-
-            if self._tensorboard.should_log_histograms_this_batch() and self._master:
-                self._tensorboard.log_histograms(self.model, histogram_parameters)
-
-            if self._log_batch_size_period:
-                batch_group_size = sum(training_util.get_batch_size(batch) for batch in batch_group)
-                cumulative_batch_group_size += batch_group_size
-                if (batches_this_epoch - 1) % self._log_batch_size_period == 0:
-                    average = cumulative_batch_group_size / batches_this_epoch
-                    logger.info(
-                        f"current batch size: {batch_group_size} mean batch size: {average}"
-                    )
-                    self._tensorboard.add_train_scalar("current_batch_size", batch_group_size)
-                    self._tensorboard.add_train_scalar("mean_batch_size", average)
-
-            # Save model if needed.
-            if (
-                self._model_save_interval is not None
-                and (time.time() - last_save_time > self._model_save_interval)
-                and self._master
-            ):
-                last_save_time = time.time()
-                self._save_checkpoint(
-                    "{0}.{1}".format(epoch, training_util.time_to_str(int(last_save_time)))
+                self._tensorboard.log_batch(
+                    self.model, self.optimizer, batch_grad_norm, metrics, batch_group, param_updates
                 )
+
+            if self._master:
+                self._checkpointer.maybe_save_checkpoint(self, epoch, batches_this_epoch)
+                for callback in self._batch_callbacks:
+                    callback(
+                        self,
+                        batch_group,
+                        batch_group_outputs,
+                        epoch,
+                        batches_this_epoch,
+                        is_training=True,
+                    )
+
         if self._distributed and not done_early:
             logger.warning(
                 f"Worker {torch.distributed.get_rank()} completed its entire epoch (training)."
@@ -532,7 +560,7 @@ class GradientDescentTrainer(Trainer):
             metrics["gpu_" + str(gpu_num) + "_memory_MB"] = memory
         return metrics
 
-    def _validation_loss(self) -> Tuple[float, int]:
+    def _validation_loss(self, epoch: int) -> Tuple[float, int]:
         """
         Computes the validation loss. Returns it and the number of batches.
         """
@@ -575,7 +603,8 @@ class GradientDescentTrainer(Trainer):
                     )
                     break
 
-            loss = self.batch_loss(batch, for_training=False)
+            batch_outputs = self.batch_outputs(batch, for_training=False)
+            loss = batch_outputs.get("loss")
             if loss is not None:
                 # You shouldn't necessarily have to compute a loss for validation, so we allow for
                 # `loss` to be None.  We need to be careful, though - `batches_this_epoch` is
@@ -595,6 +624,17 @@ class GradientDescentTrainer(Trainer):
             )
             description = training_util.description_from_metrics(val_metrics)
             val_generator_tqdm.set_description(description, refresh=False)
+
+            if self._master:
+                for callback in self._batch_callbacks:
+                    callback(
+                        self,
+                        [batch],
+                        [batch_outputs],
+                        epoch,
+                        batches_this_epoch,
+                        is_training=False,
+                    )
 
         if self._distributed and not done_early:
             logger.warning(
@@ -639,6 +679,9 @@ class GradientDescentTrainer(Trainer):
         for key, value in self._metric_tracker.best_epoch_metrics.items():
             metrics["best_validation_" + key] = value
 
+        for callback in self._epoch_callbacks:
+            callback(self, metrics={}, epoch=-1)
+
         for epoch in range(epoch_counter, self._num_epochs):
             epoch_start_time = time.time()
             train_metrics = self._train_epoch(epoch)
@@ -655,7 +698,7 @@ class GradientDescentTrainer(Trainer):
             if self._validation_data_loader is not None:
                 with torch.no_grad():
                     # We have a validation set, so compute all the metrics on it.
-                    val_loss, num_batches = self._validation_loss()
+                    val_loss, num_batches = self._validation_loss(epoch)
 
                     # It is safe again to wait till the validation is done. This is
                     # important to get the metrics right.
@@ -718,11 +761,16 @@ class GradientDescentTrainer(Trainer):
                 self._momentum_scheduler.step(this_epoch_val_metric)
 
             if self._master:
-                self._save_checkpoint(epoch)
+                self._checkpointer.save_checkpoint(
+                    epoch, self, is_best_so_far=self._metric_tracker.is_best_so_far()
+                )
 
             # Wait for the master to finish saving the checkpoint
             if self._distributed:
                 dist.barrier()
+
+            for callback in self._epoch_callbacks:
+                callback(self, metrics=metrics, epoch=epoch)
 
             epoch_elapsed_time = time.time() - epoch_start_time
             logger.info("Epoch duration: %s", datetime.timedelta(seconds=epoch_elapsed_time))
@@ -747,21 +795,14 @@ class GradientDescentTrainer(Trainer):
 
         return metrics
 
-    def _save_checkpoint(self, epoch: Union[int, str]) -> None:
-        """
-        Saves a checkpoint of the model to self._serialization_dir.
-        Is a no-op if self._serialization_dir is None.
-
-        # Parameters
-
-        epoch : Union[int, str], required.
-            The epoch of training.  If the checkpoint is saved in the middle
-            of an epoch, the parameter is a string with the epoch and timestamp.
-        """
-        # If moving averages are used for parameters, we save
-        # the moving average values into checkpoint, instead of the current values.
+    @contextmanager
+    def get_checkpoint_state(self) -> Iterator[Tuple[Dict[str, Any], Dict[str, Any]]]:
         if self._moving_average is not None:
+            # Assigning average value to model parameters.  The checkpointer will call
+            # `restore_state_after_checkpointing` when it is done to put this back to what it was.
             self._moving_average.assign_average_value()
+
+        model_state = self.model.state_dict()
 
         # These are the training states we need to persist.
         training_states = {
@@ -776,16 +817,11 @@ class GradientDescentTrainer(Trainer):
         if self._momentum_scheduler is not None:
             training_states["momentum_scheduler"] = self._momentum_scheduler.state_dict()
 
-        self._checkpointer.save_checkpoint(
-            model_state=self.model.state_dict(),
-            epoch=epoch,
-            training_states=training_states,
-            is_best_so_far=self._metric_tracker.is_best_so_far(),
-        )
-
-        # Restore the original values for parameters so that training will not be affected.
-        if self._moving_average is not None:
-            self._moving_average.restore()
+        try:
+            yield model_state, training_states
+        finally:
+            if self._moving_average is not None:
+                self._moving_average.restore()
 
     def _restore_checkpoint(self) -> int:
         """
@@ -860,8 +896,6 @@ class GradientDescentTrainer(Trainer):
         cuda_device: int = -1,
         grad_norm: float = None,
         grad_clipping: float = None,
-        model_save_interval: float = None,
-        log_batch_size_period: int = None,
         distributed: bool = None,
         world_size: int = 1,
         num_gradient_accumulation_steps: int = 1,
@@ -873,6 +907,8 @@ class GradientDescentTrainer(Trainer):
         tensorboard_writer: Lazy[TensorboardWriter] = None,
         moving_average: Lazy[MovingAverage] = None,
         checkpointer: Lazy[Checkpointer] = None,
+        batch_callbacks: List[BatchCallback] = None,
+        epoch_callbacks: List[EpochCallback] = None,
     ) -> "Trainer":
         """
         This method exists so that we can have a documented method to construct this class using
@@ -939,9 +975,9 @@ class GradientDescentTrainer(Trainer):
             momentum_scheduler=momentum_scheduler_,
             tensorboard_writer=tensorboard_writer_,
             checkpointer=checkpointer_,
-            model_save_interval=model_save_interval,
-            log_batch_size_period=log_batch_size_period,
             moving_average=moving_average_,
+            batch_callbacks=batch_callbacks,
+            epoch_callbacks=epoch_callbacks,
             distributed=distributed,
             local_rank=local_rank,
             world_size=world_size,

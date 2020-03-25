@@ -34,6 +34,8 @@ class CcgBankDatasetReader(DatasetReader):
     you'll need to first concatenate some of those files into a training set, a validation set,
     and a test set.
 
+    Registered as a `DatasetReader` with name "ccgbank".
+
     # Parameters
 
     token_indexers : `Dict[str, TokenIndexer]`, optional (default=`{"tokens": SingleIdTokenIndexer()}`)

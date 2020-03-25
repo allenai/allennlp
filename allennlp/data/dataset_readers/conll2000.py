@@ -38,6 +38,8 @@ class Conll2000DatasetReader(DatasetReader):
     And if you specify any `feature_labels` (you probably shouldn't),
     the corresponding values will get loaded into their own `SequenceLabelField` s.
 
+    Registered as a `DatasetReader` with name "conll2000".
+
     # Parameters
 
     token_indexers : `Dict[str, TokenIndexer]`, optional (default=`{"tokens": SingleIdTokenIndexer()}`)

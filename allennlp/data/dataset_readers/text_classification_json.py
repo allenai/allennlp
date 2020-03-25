@@ -23,6 +23,8 @@ class TextClassificationJsonReader(DatasetReader):
         tokens : `TextField` and
         label : `LabelField`
 
+    Registered as a `DatasetReader` with name "text_classification_json".
+
     # Parameters
 
     token_indexers : `Dict[str, TokenIndexer]`, optional

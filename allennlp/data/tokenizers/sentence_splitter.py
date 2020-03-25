@@ -39,6 +39,8 @@ class SpacySentenceSplitter(SentenceSplitter):
     since it uses punctuation to detect sentence boundaries. This can be activated with the `rule_based` flag.
 
     By default, `SpacySentenceSplitter` calls the default spacy boundary detector.
+
+    Registered as a `SentenceSplitter` with name "spacy".
     """
 
     def __init__(self, language: str = "en_core_web_sm", rule_based: bool = False) -> None:

@@ -64,8 +64,8 @@ class TestPretrainedTransformerEmbedder(AllenNlpTestCase):
         assert tokens["bert"]["token_ids"].shape == (2, max_length)
 
         assert tokens["bert"]["mask"].tolist() == [
-            [1, 1, 1, 1, 1, 1, 1, 1, 1],
-            [1, 1, 1, 1, 1, 1, 1, 0, 0],
+            [True, True, True, True, True, True, True, True, True],
+            [True, True, True, True, True, True, True, False, False],
         ]
 
         # Attention mask
@@ -132,12 +132,12 @@ class TestPretrainedTransformerEmbedder(AllenNlpTestCase):
         assert tokens["bert"]["token_ids"].shape == (2, segment_concat_length)
 
         assert tokens["bert"]["mask"].tolist() == [
-            [1, 1, 1, 1, 1, 1, 1, 1, 1],
-            [1, 1, 1, 1, 1, 1, 1, 0, 0],
+            [True, True, True, True, True, True, True, True, True],
+            [True, True, True, True, True, True, True, False, False],
         ]
         assert tokens["bert"]["segment_concat_mask"].tolist() == [
-            [1] * segment_concat_length,
-            [1] * (segment_concat_length - 4) + [0] * 4,  # 4 is hard-coded length difference
+            [True] * segment_concat_length,
+            [True] * (segment_concat_length - 4) + [False] * 4,  # 4 is hard-coded length difference
         ]
 
         # Attention mask

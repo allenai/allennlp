@@ -26,6 +26,8 @@ class QuoraParaphraseDatasetReader(DatasetReader):
     these keys into fields named "label", "premise" and "hypothesis", so that it is compatible t
     some existing natural language inference algorithms.
 
+    Registered as a `DatasetReader` with name "quora_paraphrase".
+
     # Parameters
 
     tokenizer : `Tokenizer`, optional

@@ -598,7 +598,7 @@ def get_text_field_mask(
     masks = []
     for indexer_name, indexer_tensors in text_field_tensors.items():
         if "mask" in indexer_tensors:
-            masks.append(indexer_tensors["mask"])
+            masks.append(indexer_tensors["mask"].bool())
     if len(masks) == 1:
         return masks[0]
     elif len(masks) > 1:
@@ -1407,7 +1407,7 @@ def bucket_values(
 
 def add_sentence_boundary_token_ids(
     tensor: torch.Tensor, mask: torch.BoolTensor, sentence_begin_token: Any, sentence_end_token: Any
-) -> Tuple[torch.Tensor, torch.Tensor]:
+) -> Tuple[torch.Tensor, torch.BoolTensor]:
     """
     Add begin/end of sentence tokens to the batch of sentences.
     Given a batch of sentences with size `(batch_size, timesteps)` or

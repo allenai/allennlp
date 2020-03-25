@@ -7,6 +7,8 @@ from allennlp.modules.attention.attention import Attention
 class DotProductAttention(Attention):
     """
     Computes attention between a vector and a matrix using dot product.
+
+    Registered as an `Attention` with name "dot_product".
     """
 
     @overrides

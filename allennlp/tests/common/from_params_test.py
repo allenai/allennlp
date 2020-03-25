@@ -67,6 +67,15 @@ class TestFromParams(AllenNlpTestCase):
         assert my_class.my_int == 10
         assert my_class.my_bool
 
+    def test_good_error_message_when_passing_non_params(self):
+        from allennlp.nn import InitializerApplicator
+
+        # This was how we used to take initializer params.  We want to be sure we give a reasonable
+        # error message when something like this is passed to FromParams.
+        params = Params({"initializer": [["regex1", "uniform"], ["regex2", "orthogonal"]]})
+        with pytest.raises(ConfigurationError, match="dictionary.*InitializerApplicator"):
+            InitializerApplicator.from_params(params=params.pop("initializer"))
+
     def test_create_kwargs(self):
         kwargs = create_kwargs(MyClass, MyClass, Params({"my_int": 5}), my_bool=True, my_float=4.4)
 
@@ -620,6 +629,35 @@ class TestFromParams(AllenNlpTestCase):
         reader = DatasetReader.from_params(params)
         assert reader.lazy is True
         assert str(reader._cache_directory) == "tmp"
+
+    def test_kwargs_with_multiple_inheritance(self):
+        # Basic idea: have two identical classes, differing only in the order of their multiple
+        # inheritance, and make sure that passing kwargs up to the super class works in both cases.
+        class A(Registrable):
+            def __init__(self, a: int):
+                self.a = a
+
+        from numbers import Number
+
+        @A.register("b1")
+        class B1(A, Number):
+            def __init__(self, b: float, **kwargs):
+                super().__init__(**kwargs)
+                self.b = b
+
+        @A.register("b2")
+        class B2(Number, A):
+            def __init__(self, b: float, **kwargs):
+                super().__init__(**kwargs)
+                self.b = b
+
+        b = B1.from_params(params=Params({"a": 4, "b": 5}))
+        assert b.b == 5
+        assert b.a == 4
+
+        b = B2.from_params(params=Params({"a": 4, "b": 5}))
+        assert b.b == 5
+        assert b.a == 4
 
     def test_only_infer_superclass_params_if_unknown(self):
 

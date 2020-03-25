@@ -15,10 +15,10 @@ class TestPretrainedTransformerMismatchedIndexer(AllenNlpTestCase):
         vocab = Vocabulary()
         indexed = indexer.tokens_to_indices([Token(word) for word in text], vocab)
         assert indexed["token_ids"] == expected_ids
-        assert indexed["mask"] == [1] * len(text)
+        assert indexed["mask"] == [True] * len(text)
         # Hardcoding a few things because we know how BERT tokenization works
         assert indexed["offsets"] == [(1, 3), (4, 4), (5, 5)]
-        assert indexed["wordpiece_mask"] == [1] * len(expected_ids)
+        assert indexed["wordpiece_mask"] == [True] * len(expected_ids)
 
         keys = indexed.keys()
         assert indexer.get_empty_token_list() == {key: [] for key in keys}
@@ -28,7 +28,12 @@ class TestPretrainedTransformerMismatchedIndexer(AllenNlpTestCase):
         padded_tokens = indexer.as_padded_tensor_dict(indexed, padding_lengths)
         for key in keys:
             padding_length = max_length - len(indexed[key])
-            padding = (0, 0) if key == "offsets" else 0
+            if key == "offsets":
+                padding = (0, 0)
+            elif "mask" in key:
+                padding = False
+            else:
+                padding = 0
             expected_value = indexed[key] + ([padding] * padding_length)
             assert len(padded_tokens[key]) == max_length
             if key == "offsets":
@@ -56,8 +61,8 @@ class TestPretrainedTransformerMismatchedIndexer(AllenNlpTestCase):
 
         assert indexed["token_ids"] == expected_ids
         # [CLS] allen ##nl [SEP] [CLS] #p is [SEP] [CLS] great [SEP]
-        assert indexed["segment_concat_mask"] == [1] * len(expected_ids)
+        assert indexed["segment_concat_mask"] == [True] * len(expected_ids)
         # allennlp is great
-        assert indexed["mask"] == [1] * len(text)
+        assert indexed["mask"] == [True] * len(text)
         # [CLS] allen #nl #p is great [SEP]
-        assert indexed["wordpiece_mask"] == [1] * 7
+        assert indexed["wordpiece_mask"] == [True] * 7

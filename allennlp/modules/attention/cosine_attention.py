@@ -8,6 +8,8 @@ from allennlp.nn import util
 class CosineAttention(Attention):
     """
     Computes attention between a vector and a matrix using cosine similarity.
+
+    Registered as an `Attention` with name "cosine".
     """
 
     @overrides
