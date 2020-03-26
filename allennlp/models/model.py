@@ -7,6 +7,10 @@ import logging
 import os
 from typing import Dict, Union, List, Set, Type
 
+try:
+    from apex import amp
+except ImportError:
+    amp = None
 import numpy
 import torch
 
@@ -270,12 +274,20 @@ class Model(torch.nn.Module, Registrable):
 
         model_params = config.get("model")
 
+        training_params = config.get("trainer", Params({}))
+        opt_level = training_params.get("opt_level")
+
         # The experiment config tells us how to _train_ a model, including where to get pre-trained
         # embeddings from.  We're now _loading_ the model, so those embeddings will already be
         # stored in our weights.  We don't need any pretrained weight file anymore, and we don't
         # want the code to look for it, so we remove it from the parameters here.
         remove_pretrained_embedding_params(model_params)
         model = Model.from_params(vocab=vocab, params=model_params)
+
+        # If the model was trained with amp and amp is available, we should re-intialize it with
+        # the opt_level that was used
+        if amp is not None and opt_level is not None:
+            model = amp.intialize(model, opt_level=opt_level)
 
         # If vocab+embedding extension was done, the model initialized from from_params
         # and one defined by state dict in weights_file might not have same embedding shapes.
