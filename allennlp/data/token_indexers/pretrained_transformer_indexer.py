@@ -70,22 +70,30 @@ class PretrainedTransformerIndexer(TokenIndexer):
         if self._added_to_vocabulary:
             return
 
-        vocab_field_name = None
-        if hasattr(self._tokenizer, "vocab"):
-            vocab_field_name = "vocab"
-        elif hasattr(self._tokenizer, "encoder"):
-            vocab_field_name = "encoder"
+        # Find the key under which the vocab is hiding.
+        for vocab_field_name in ["vocab", "encoder", "sp_model"]:
+            if hasattr(self._tokenizer, vocab_field_name):
+                break
+        else:
+            vocab_field_name = None
+
+        if vocab_field_name is not None:
+            pretrained_vocab = getattr(self._tokenizer, vocab_field_name)
+            if vocab_field_name == "sp_model":
+                for idx in range(len(pretrained_vocab)):
+                    word = pretrained_vocab.id_to_piece(idx)
+                    vocab._token_to_index[self._namespace][word] = idx
+                    vocab._index_to_token[self._namespace][idx] = word
+            else:
+                for word, idx in pretrained_vocab.items():
+                    vocab._token_to_index[self._namespace][word] = idx
+                    vocab._index_to_token[self._namespace][idx] = word
         else:
             logger.warning(
                 """Wasn't able to fetch vocabulary from pretrained transformers lib.
                 Neither <vocab> nor <encoder> are the valid fields for vocab.
                 Your tokens will still be correctly indexed, but vocabulary file will not be saved."""
             )
-        if vocab_field_name is not None:
-            pretrained_vocab = getattr(self._tokenizer, vocab_field_name)
-            for word, idx in pretrained_vocab.items():
-                vocab._token_to_index[self._namespace][word] = idx
-                vocab._index_to_token[self._namespace][idx] = word
 
         self._added_to_vocabulary = True
 
