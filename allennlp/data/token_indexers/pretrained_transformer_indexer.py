@@ -193,24 +193,27 @@ class PretrainedTransformerIndexer(TokenIndexer):
     def as_padded_tensor_dict(
         self, tokens: IndexedTokenList, padding_lengths: Dict[str, int]
     ) -> Dict[str, torch.Tensor]:
-        # Different transformers use different padding values for tokens, but for mask and type id, the padding
-        # value is always False/0.
         tensor_dict = {}
         for key, val in tokens.items():
-            if val and isinstance(val[0], bool):
-                tensor = torch.BoolTensor(
-                    pad_sequence_to_length(val, padding_lengths[key], default_value=lambda: False)
-                )
+            if key == "type_ids":
+                padding_value = 0
+                mktensor = torch.LongTensor
+            elif key == "mask":
+                padding_value = False
+                mktensor = torch.BoolTensor
+            elif len(val) > 0 and isinstance(val[0], bool):
+                padding_value = False
+                mktensor = torch.BoolTensor
             else:
-                tensor = torch.LongTensor(
-                    pad_sequence_to_length(
-                        val,
-                        padding_lengths[key],
-                        default_value=lambda: 0
-                        if key == "type_ids"
-                        else self._tokenizer.pad_token_id,
-                    ),
+                padding_value = self._tokenizer.pad_token_id
+                mktensor = torch.LongTensor
+
+            tensor = mktensor(
+                pad_sequence_to_length(
+                    val, padding_lengths[key], default_value=lambda: padding_value
                 )
+            )
+
             tensor_dict[key] = tensor
         return tensor_dict
 
