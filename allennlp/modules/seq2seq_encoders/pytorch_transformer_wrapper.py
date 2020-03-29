@@ -17,6 +17,8 @@ class PytorchTransformer(Seq2SeqEncoder):
 
     This class adapts the Transformer from torch.nn for use in AllenNLP. Optionally, it adds positional encodings.
 
+    Registered as a `Seq2SeqEncoder` with name "pytorch_transformer".
+
     # Parameters
 
     input_dim : `int`, required.

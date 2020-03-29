@@ -22,6 +22,8 @@ class PretrainedTransformerIndexer(TokenIndexer):
     corresponding :class:`PretrainedTransformerTokenizer` to tokenize your input.  Otherwise you'll
     have a mismatch between your tokens and your vocabulary, and you'll get a lot of UNK tokens.
 
+    Registered as a `TokenIndexer` with name "pretrained_transformer".
+
     # Parameters
 
     model_name : `str`
@@ -68,22 +70,30 @@ class PretrainedTransformerIndexer(TokenIndexer):
         if self._added_to_vocabulary:
             return
 
-        vocab_field_name = None
-        if hasattr(self._tokenizer, "vocab"):
-            vocab_field_name = "vocab"
-        elif hasattr(self._tokenizer, "encoder"):
-            vocab_field_name = "encoder"
+        # Find the key under which the vocab is hiding.
+        for vocab_field_name in ["vocab", "encoder", "sp_model"]:
+            if hasattr(self._tokenizer, vocab_field_name):
+                break
+        else:
+            vocab_field_name = None
+
+        if vocab_field_name is not None:
+            pretrained_vocab = getattr(self._tokenizer, vocab_field_name)
+            if vocab_field_name == "sp_model":
+                for idx in range(len(pretrained_vocab)):
+                    word = pretrained_vocab.id_to_piece(idx)
+                    vocab._token_to_index[self._namespace][word] = idx
+                    vocab._index_to_token[self._namespace][idx] = word
+            else:
+                for word, idx in pretrained_vocab.items():
+                    vocab._token_to_index[self._namespace][word] = idx
+                    vocab._index_to_token[self._namespace][idx] = word
         else:
             logger.warning(
                 """Wasn't able to fetch vocabulary from pretrained transformers lib.
                 Neither <vocab> nor <encoder> are the valid fields for vocab.
                 Your tokens will still be correctly indexed, but vocabulary file will not be saved."""
             )
-        if vocab_field_name is not None:
-            pretrained_vocab = getattr(self._tokenizer, vocab_field_name)
-            for word, idx in pretrained_vocab.items():
-                vocab._token_to_index[self._namespace][word] = idx
-                vocab._index_to_token[self._namespace][idx] = word
 
         self._added_to_vocabulary = True
 
@@ -98,7 +108,7 @@ class PretrainedTransformerIndexer(TokenIndexer):
 
         indices, type_ids = self._extract_token_and_type_ids(tokens)
         # The mask has 1 for real tokens and 0 for padding tokens. Only real tokens are attended to.
-        output = {"token_ids": indices, "mask": [1] * len(indices)}
+        output: IndexedTokenList = {"token_ids": indices, "mask": [True] * len(indices)}
         if type_ids is not None:
             output["type_ids"] = type_ids
 
@@ -168,7 +178,7 @@ class PretrainedTransformerIndexer(TokenIndexer):
             output["type_ids"] = self._tokenizer.create_token_type_ids_from_sequences(
                 indices[self._num_added_start_tokens : -self._num_added_end_tokens]
             )
-            output["segment_concat_mask"] = [1] * len(indices)
+            output["segment_concat_mask"] = [True] * len(indices)
 
         return output
 
@@ -184,19 +194,25 @@ class PretrainedTransformerIndexer(TokenIndexer):
         self, tokens: IndexedTokenList, padding_lengths: Dict[str, int]
     ) -> Dict[str, torch.Tensor]:
         # Different transformers use different padding values for tokens, but for mask and type id, the padding
-        # value is always 0.
-        return {
-            key: torch.LongTensor(
-                pad_sequence_to_length(
-                    val,
-                    padding_lengths[key],
-                    default_value=lambda: 0
-                    if key in {"mask", "type_ids"}
-                    else self._tokenizer.pad_token_id,
+        # value is always False/0.
+        tensor_dict = {}
+        for key, val in tokens.items():
+            if val and isinstance(val[0], bool):
+                tensor = torch.BoolTensor(
+                    pad_sequence_to_length(val, padding_lengths[key], default_value=lambda: False)
                 )
-            )
-            for key, val in tokens.items()
-        }
+            else:
+                tensor = torch.LongTensor(
+                    pad_sequence_to_length(
+                        val,
+                        padding_lengths[key],
+                        default_value=lambda: 0
+                        if key == "type_ids"
+                        else self._tokenizer.pad_token_id,
+                    ),
+                )
+            tensor_dict[key] = tensor
+        return tensor_dict
 
     def __eq__(self, other):
         if isinstance(other, PretrainedTransformerIndexer):

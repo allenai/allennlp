@@ -13,6 +13,8 @@ class BilinearAttention(Attention):
     function has a matrix of weights `W` and a bias `b`, and the similarity between the vector
     `x` and the matrix `y` is computed as `x^T W y + b`.
 
+    Registered as an `Attention` with name "bilinear".
+
     # Parameters
 
     vector_dim : `int`, required

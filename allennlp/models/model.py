@@ -46,6 +46,11 @@ class Model(torch.nn.Module, Registrable):
     `Trainer`. Metrics that begin with "_" will not be logged
     to the progress bar by `Trainer`.
 
+    The `from_archive` method on this class is registered as a `Model` with name "from_archive".
+    So, if you are using a configuration file, you can specify a model as `{"type": "from_archive",
+    "archive_file": "/path/to/archive.tar.gz"}`, which will pull out the model from the given
+    location and return it.
+
     # Parameters
 
     vocab: `Vocabulary`

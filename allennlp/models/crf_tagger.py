@@ -21,6 +21,8 @@ class CrfTagger(Model):
     The `CrfTagger` encodes a sequence of text with a `Seq2SeqEncoder`,
     then uses a Conditional Random Field model to predict a tag for each token in the sequence.
 
+    Registered as a `Model` with name "crf_tagger".
+
     # Parameters
 
     vocab : `Vocabulary`, required
@@ -163,7 +165,8 @@ class CrfTagger(Model):
         tokens: TextFieldTensors,
         tags: torch.LongTensor = None,
         metadata: List[Dict[str, Any]] = None,
-        **kwargs,
+        ignore_loss_on_o_tags: bool = False,
+        **kwargs,  # to allow for a more general dataset reader that passes args we don't need
     ) -> Dict[str, torch.Tensor]:
 
         """
@@ -178,11 +181,15 @@ class CrfTagger(Model):
             sequence.  The dictionary is designed to be passed directly to a `TextFieldEmbedder`,
             which knows how to combine different word representations into a single vector per
             token in your input.
-        tags : `torch.LongTensor`, optional (default = `None`)
+        tags : `torch.LongTensor`, optional (default = None)
             A torch tensor representing the sequence of integer gold class labels of shape
             `(batch_size, num_tokens)`.
         metadata : `List[Dict[str, Any]]`, optional, (default = None)
             metadata containg the original words in the sentence to be tagged under a 'words' key.
+        ignore_loss_on_o_tags : `bool`, optional (default = False)
+            If True, we compute the loss only for actual spans in `tags`, and not on `O` tokens.
+            This is useful for computing gradients of the loss on a _single span_, for
+            interpretation / attacking.
 
         # Returns
 
@@ -223,8 +230,13 @@ class CrfTagger(Model):
             output["top_k_tags"] = best_paths
 
         if tags is not None:
+            if ignore_loss_on_o_tags:
+                o_tag_index = self.vocab.get_token_index("O", namespace=self.label_namespace)
+                crf_mask = mask & (tags != o_tag_index)
+            else:
+                crf_mask = mask
             # Add negative log-likelihood as loss
-            log_likelihood = self.crf(logits, tags, mask)
+            log_likelihood = self.crf(logits, tags, crf_mask)
 
             output["loss"] = -log_likelihood
 

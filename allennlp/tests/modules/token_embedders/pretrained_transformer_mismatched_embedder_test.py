@@ -87,8 +87,8 @@ class TestPretrainedTransformerMismatchedEmbedder(AllenNlpTestCase):
         tokens = tensor_dict["tokens"]
 
         assert tokens["bert"]["mask"].tolist() == [
-            [1, 1, 1, 1, 1],
-            [1, 1, 1, 0, 0],
+            [True, True, True, True, True],
+            [True, True, True, False, False],
         ]
         assert tokens["bert"]["offsets"].tolist() == [
             [[1, 1], [2, 2], [3, 5], [6, 6], [7, 7]],

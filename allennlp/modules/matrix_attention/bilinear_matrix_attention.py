@@ -13,6 +13,8 @@ class BilinearMatrixAttention(MatrixAttention):
     a matrix of weights `W` and a bias `b`, and the similarity between the two matrices `X`
     and `Y` is computed as `X W Y^T + b`.
 
+    Registered as a `MatrixAttention` with name "bilinear".
+
     # Parameters
 
     matrix_1_dim : `int`, required

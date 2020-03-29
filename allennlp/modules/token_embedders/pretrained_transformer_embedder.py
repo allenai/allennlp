@@ -18,6 +18,8 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
     """
     Uses a pretrained model from `transformers` as a `TokenEmbedder`.
 
+    Registered as a `TokenEmbedder` with name "pretrained_transformer".
+
     # Parameters
 
     model_name : `str`
@@ -223,7 +225,7 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
 
         embeddings = embeddings.reshape(batch_size, num_segments * self._max_length, embedding_size)
         mask = mask.reshape(batch_size, num_segments * self._max_length)
-        # We assume that all 1s in the mask preceed all 0s, and add an assert for that.
+        # We assume that all 1s in the mask precede all 0s, and add an assert for that.
         # Open an issue on GitHub if this breaks for you.
         # Shape: (batch_size,)
         seq_lengths = mask.sum(-1)

@@ -13,6 +13,8 @@ class PretrainedTransformerMismatchedEmbedder(TokenEmbedder):
     Use this embedder to embed wordpieces given by `PretrainedTransformerMismatchedIndexer`
     and to pool the resulting vectors to get word-level representations.
 
+    Registered as a `TokenEmbedder` with name "pretrained_transformer_mismatchd".
+
     # Parameters
 
     model_name : `str`

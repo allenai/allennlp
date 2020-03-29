@@ -17,6 +17,8 @@ from allennlp.predictors.predictor import Predictor
 class CorefPredictor(Predictor):
     """
     Predictor for the [`CoreferenceResolver`](../models/coreference_resolution/coref.md) model.
+
+    Registered as a `Predictor` with name "coreference-resolution".
     """
 
     def __init__(

@@ -28,6 +28,8 @@ class PretrainedTransformerTokenizer(Tokenizer):
     This tokenizer also indexes tokens and adds the indexes to the `Token` fields so that
     they can be picked up by `PretrainedTransformerIndexer`.
 
+    Registered as a `Tokenizer` with name "pretrained_transformer".
+
     # Parameters
 
     model_name : `str`

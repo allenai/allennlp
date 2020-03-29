@@ -77,6 +77,8 @@ class SemanticDependenciesDatasetReader(DatasetReader):
     Reads a file in the SemEval 2015 Task 18 (Broad-coverage Semantic Dependency Parsing)
     format.
 
+    Registered as a `DatasetReader` with name "semantic_dependencies".
+
     # Parameters
 
     token_indexers : `Dict[str, TokenIndexer]`, optional (default=`{"tokens": SingleIdTokenIndexer()}`)

@@ -12,6 +12,8 @@ class NoamLR(LearningRateScheduler):
     to the inverse square root of the step number, scaled by the inverse square root of the
     dimensionality of the model. Time will tell if this is just madness or it's actually important.
 
+    Registered as a `LearningRateScheduler` with name "noam".
+
     # Parameters
 
     model_size : `int`, required.

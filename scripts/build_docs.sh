@@ -7,6 +7,7 @@ sed -i '1s/docs/./' docs/README.md
 cp LICENSE docs/LICENSE.md
 cp ROADMAP.md docs/ROADMAP.md
 cp CONTRIBUTING.md docs/CONTRIBUTING.md
+cp mkdocs-skeleton.yml mkdocs.yml
 python scripts/build_docs.py
 
 mkdocs build

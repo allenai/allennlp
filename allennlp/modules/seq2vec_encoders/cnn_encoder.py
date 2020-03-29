@@ -28,6 +28,8 @@ class CnnEncoder(Seq2VecEncoder):
     details, refer to "A Sensitivity Analysis of (and Practitioners’ Guide to) Convolutional Neural
     Networks for Sentence Classification", Zhang and Wallace 2016, particularly Figure 1.
 
+    Registered as a `Seq2VecEncoder` with name "cnn".
+
     # Parameters
 
     embedding_dim : `int`, required

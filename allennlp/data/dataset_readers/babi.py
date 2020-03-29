@@ -22,6 +22,8 @@ class BabiReader(DatasetReader):
     if one wants to load multiple tasks together it has to merge them into a
     single file and use this reader.
 
+    Registered as a `DatasetReader` with name "babi".
+
     # Parameters
 
     keep_sentences : `bool`, optional, (default = `False`)

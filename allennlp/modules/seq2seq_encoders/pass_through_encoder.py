@@ -10,6 +10,8 @@ class PassThroughEncoder(Seq2SeqEncoder):
     This class allows you to specify skipping a `Seq2SeqEncoder` just
     by changing a configuration file. This is useful for ablations and
     measuring the impact of different elements of your model.
+
+    Registered as a `Seq2SeqEncoder` with name "pass_through".
     """
 
     def __init__(self, input_dim: int) -> None:

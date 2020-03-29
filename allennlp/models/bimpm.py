@@ -27,6 +27,8 @@ class BiMpm(Model):
     Also please refer to the [TensorFlow implementation](https://github.com/zhiguowang/BiMPM/) and
     [PyTorch implementation](https://github.com/galsang/BIMPM-pytorch).
 
+    Registered as a `Model` with name "bimpm".
+
     # Parameters
 
     vocab : `Vocabulary`

@@ -52,6 +52,10 @@ class _PyTorchLearningRateSchedulerWithMetricsWrapper(_PyTorchLearningRateSchedu
 
 @LearningRateScheduler.register("step")
 class StepLearningRateScheduler(_PyTorchLearningRateSchedulerWrapper):
+    """
+    Registered as a `LearningRateScheduler` with name "step".
+    """
+
     def __init__(
         self, optimizer: Optimizer, step_size: int, gamma: float = 0.1, last_epoch: int = -1
     ) -> None:
@@ -63,6 +67,10 @@ class StepLearningRateScheduler(_PyTorchLearningRateSchedulerWrapper):
 
 @LearningRateScheduler.register("multi_step")
 class MultiStepLearningRateScheduler(_PyTorchLearningRateSchedulerWrapper):
+    """
+    Registered as a `LearningRateScheduler` with name "multi_step".
+    """
+
     def __init__(
         self, optimizer: Optimizer, milestones: List[int], gamma: float = 0.1, last_epoch: int = -1
     ) -> None:
@@ -74,6 +82,10 @@ class MultiStepLearningRateScheduler(_PyTorchLearningRateSchedulerWrapper):
 
 @LearningRateScheduler.register("exponential")
 class ExponentialLearningRateScheduler(_PyTorchLearningRateSchedulerWrapper):
+    """
+    Registered as a `LearningRateScheduler` with name "exponential".
+    """
+
     def __init__(self, optimizer: Optimizer, gamma: float = 0.1, last_epoch: int = -1) -> None:
         lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(
             optimizer=optimizer, gamma=gamma, last_epoch=last_epoch
@@ -83,6 +95,10 @@ class ExponentialLearningRateScheduler(_PyTorchLearningRateSchedulerWrapper):
 
 @LearningRateScheduler.register("reduce_on_plateau")
 class ReduceOnPlateauLearningRateScheduler(_PyTorchLearningRateSchedulerWithMetricsWrapper):
+    """
+    Registered as a `LearningRateScheduler` with name "reduce_on_plateau".
+    """
+
     def __init__(
         self,
         optimizer: Optimizer,

@@ -9,6 +9,8 @@ class DotProductMatrixAttention(MatrixAttention):
     """
     Computes attention between every entry in matrix_1 with every entry in matrix_2 using a dot
     product.
+
+    Registered as a `MatrixAttention` with name "dot_product".
     """
 
     @overrides
