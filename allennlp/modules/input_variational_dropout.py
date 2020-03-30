@@ -3,8 +3,8 @@ import torch
 
 class InputVariationalDropout(torch.nn.Dropout):
     """
-    Apply the dropout technique in Gal and Ghahramani, "Dropout as a Bayesian Approximation:
-    Representing Model Uncertainty in Deep Learning" (https://arxiv.org/abs/1506.02142) to a
+    Apply the dropout technique in Gal and Ghahramani, [Dropout as a Bayesian Approximation:
+    Representing Model Uncertainty in Deep Learning](https://arxiv.org/abs/1506.02142) to a
     3D tensor.
 
     This module accepts a 3D tensor of shape `(batch_size, num_timesteps, embedding_dim)`
