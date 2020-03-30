@@ -31,6 +31,9 @@ class FlagField(Field[Any]):
     def __str__(self) -> str:
         return f"FlagField({self.flag_value})"
 
+    def __len__(self) -> int:
+        return 1
+
     @overrides
     def batch_tensors(self, tensor_list: List[Any]) -> Any:
         if len(set(tensor_list)) != 1:
