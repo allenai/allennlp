@@ -129,7 +129,11 @@ class SimpleTaggerRegularizationTest(ModelTestCase):
         training_batch = next(iter(self.data_loader))
         validation_batch = next(iter(self.data_loader))
 
-        training_loss = self.trainer.batch_outputs(training_batch, for_training=True)["loss"].data
+        training_batch_outputs = self.trainer.batch_outputs(training_batch, for_training=True)
+        training_loss = training_batch_outputs["loss"].data
+
+        assert (penalty == training_batch_outputs["reg_loss"]).all()
+
         validation_loss = self.trainer.batch_outputs(validation_batch, for_training=False)[
             "loss"
         ].data
