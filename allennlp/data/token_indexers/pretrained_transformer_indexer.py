@@ -108,9 +108,11 @@ class PretrainedTransformerIndexer(TokenIndexer):
 
         indices, type_ids = self._extract_token_and_type_ids(tokens)
         # The mask has 1 for real tokens and 0 for padding tokens. Only real tokens are attended to.
-        output: IndexedTokenList = {"token_ids": indices, "mask": [True] * len(indices)}
-        if type_ids is not None:
-            output["type_ids"] = type_ids
+        output: IndexedTokenList = {
+            "token_ids": indices,
+            "mask": [True] * len(indices),
+            "type_ids": type_ids,
+        }
 
         return self._postprocess_output(output)
 
@@ -138,7 +140,7 @@ class PretrainedTransformerIndexer(TokenIndexer):
             if type_ids is not None and getattr(token, "type_id", None) is not None:
                 type_ids.append(token.type_id)
             else:
-                type_ids = None
+                type_ids.append(0)
 
         return indices, type_ids
 
