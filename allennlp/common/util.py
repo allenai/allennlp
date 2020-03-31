@@ -330,7 +330,8 @@ def prepare_global_logging(
     if os.environ.get("ALLENNLP_DEBUG"):
         LEVEL = logging.DEBUG
     else:
-        LEVEL = logging.INFO
+        level_name = os.environ.get("ALLENNLP_LOG_LEVEL")
+        LEVEL = logging._nameToLevel.get(level_name, logging.INFO)
 
     if rank == 0:
         # stdout/stderr handlers are added only for the
