@@ -108,9 +108,11 @@ class PretrainedTransformerIndexer(TokenIndexer):
 
         indices, type_ids = self._extract_token_and_type_ids(tokens)
         # The mask has 1 for real tokens and 0 for padding tokens. Only real tokens are attended to.
-        output: IndexedTokenList = {"token_ids": indices, "mask": [True] * len(indices)}
-        if type_ids is not None:
-            output["type_ids"] = type_ids
+        output: IndexedTokenList = {
+            "token_ids": indices,
+            "mask": [True] * len(indices),
+            "type_ids": type_ids,
+        }
 
         return self._postprocess_output(output)
 
@@ -138,7 +140,7 @@ class PretrainedTransformerIndexer(TokenIndexer):
             if type_ids is not None and getattr(token, "type_id", None) is not None:
                 type_ids.append(token.type_id)
             else:
-                type_ids = None
+                type_ids.append(0)
 
         return indices, type_ids
 
@@ -193,24 +195,27 @@ class PretrainedTransformerIndexer(TokenIndexer):
     def as_padded_tensor_dict(
         self, tokens: IndexedTokenList, padding_lengths: Dict[str, int]
     ) -> Dict[str, torch.Tensor]:
-        # Different transformers use different padding values for tokens, but for mask and type id, the padding
-        # value is always False/0.
         tensor_dict = {}
         for key, val in tokens.items():
-            if val and isinstance(val[0], bool):
-                tensor = torch.BoolTensor(
-                    pad_sequence_to_length(val, padding_lengths[key], default_value=lambda: False)
-                )
+            if key == "type_ids":
+                padding_value = 0
+                mktensor = torch.LongTensor
+            elif key == "mask":
+                padding_value = False
+                mktensor = torch.BoolTensor
+            elif len(val) > 0 and isinstance(val[0], bool):
+                padding_value = False
+                mktensor = torch.BoolTensor
             else:
-                tensor = torch.LongTensor(
-                    pad_sequence_to_length(
-                        val,
-                        padding_lengths[key],
-                        default_value=lambda: 0
-                        if key == "type_ids"
-                        else self._tokenizer.pad_token_id,
-                    ),
+                padding_value = self._tokenizer.pad_token_id
+                mktensor = torch.LongTensor
+
+            tensor = mktensor(
+                pad_sequence_to_length(
+                    val, padding_lengths[key], default_value=lambda: padding_value
                 )
+            )
+
             tensor_dict[key] = tensor
         return tensor_dict
 
