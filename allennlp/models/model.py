@@ -285,9 +285,18 @@ class Model(torch.nn.Module, Registrable):
         model = Model.from_params(vocab=vocab, params=model_params)
 
         # If the model was trained with amp and amp is available, we should re-intialize it with
-        # the opt_level that was used
-        if amp is not None and opt_level is not None:
-            model = amp.intialize(model, opt_level=opt_level)
+        # the opt_level that was used. If the model was trained with amp but amp is not availble, log a warning
+        # so this doesn't pass silently.
+        if opt_level is not None:
+            if amp is None:
+                logger.warning(
+                    (
+                        f"This model was trained with amp (opt_level: {opt_level}) but amp is not available."
+                        " Any further training will be full-precision."
+                    )
+                )
+            else:
+                model = amp.intialize(model, opt_level=opt_level)
 
         # If vocab+embedding extension was done, the model initialized from from_params
         # and one defined by state dict in weights_file might not have same embedding shapes.
