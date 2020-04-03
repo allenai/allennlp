@@ -836,6 +836,9 @@ class GradientDescentTrainer(Trainer):
             training_states["learning_rate_scheduler"] = self._learning_rate_scheduler.state_dict()
         if self._momentum_scheduler is not None:
             training_states["momentum_scheduler"] = self._momentum_scheduler.state_dict()
+        # If model was trained with amp, we should persist the amp state.
+        if self._opt_level is not None:
+            training_states["amp"] = amp.state_dict()
 
         try:
             yield model_state, training_states
@@ -867,6 +870,12 @@ class GradientDescentTrainer(Trainer):
             # No checkpoint to restore, start at 0
             return 0
 
+        # The apex docs recommend calling amp.initialize before calling load_state_dict.
+        if self._opt_level is not None and "amp" in training_state:
+            self.model, self.optimizer = amp.initialize(
+                self.model, self.optimizer, opt_level=self._opt_level
+            )
+            amp.load_state_dict(training_state["amp"])
         self.model.load_state_dict(model_state)
         self.optimizer.load_state_dict(training_state["optimizer"])
         if (
