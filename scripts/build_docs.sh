@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -e
+set -Eeuo pipefail
 
 cp README.md docs/README.md
 # Alter the relative path of the README image for the docs.
