@@ -139,6 +139,69 @@ class TestTrainer(TrainerTestBase):
                 self.model, self.optimizer, self.data_loader, num_epochs=2, cuda_device=[0, 1],
             )
 
+    def test_trainer_respects_epoch_size_equals_total(self):
+        batches_one_pass_through_data = len(self.data_loader)
+        batches_per_epoch = batches_one_pass_through_data
+        assert batches_per_epoch == batches_one_pass_through_data
+        num_epochs = 3
+
+        trainer = GradientDescentTrainer(
+            self.model,
+            self.optimizer,
+            self.data_loader,
+            validation_data_loader=self.validation_data_loader,
+            num_epochs=num_epochs,
+            serialization_dir=self.TEST_DIR,
+            batches_per_epoch=batches_per_epoch,
+        )
+        assert trainer._batch_num_total == 0
+        metrics = trainer.train()
+        epoch = metrics["epoch"]
+        assert epoch == num_epochs - 1
+        assert trainer._batch_num_total == num_epochs * batches_per_epoch
+
+    def test_trainer_respects_epoch_size_larger_tnan_total(self):
+        batches_one_pass_through_data = len(self.data_loader)
+        batches_per_epoch = batches_one_pass_through_data + int(batches_one_pass_through_data / 2)
+        assert batches_per_epoch > batches_one_pass_through_data
+        num_epochs = 3
+
+        trainer = GradientDescentTrainer(
+            self.model,
+            self.optimizer,
+            self.data_loader,
+            validation_data_loader=self.validation_data_loader,
+            num_epochs=num_epochs,
+            serialization_dir=self.TEST_DIR,
+            batches_per_epoch=batches_per_epoch,
+        )
+        assert trainer._batch_num_total == 0
+        metrics = trainer.train()
+        epoch = metrics["epoch"]
+        assert epoch == num_epochs - 1
+        assert trainer._batch_num_total == num_epochs * batches_per_epoch
+
+    def test_trainer_respects_epoch_size_smaller_tnan_total(self):
+        batches_one_pass_through_data = len(self.data_loader)
+        batches_per_epoch = batches_one_pass_through_data - int(batches_one_pass_through_data / 2)
+        assert batches_per_epoch < batches_one_pass_through_data
+        num_epochs = 2
+
+        trainer = GradientDescentTrainer(
+            self.model,
+            self.optimizer,
+            self.data_loader,
+            validation_data_loader=self.validation_data_loader,
+            num_epochs=num_epochs,
+            serialization_dir=self.TEST_DIR,
+            batches_per_epoch=batches_per_epoch,
+        )
+        assert trainer._batch_num_total == 0
+        metrics = trainer.train()
+        epoch = metrics["epoch"]
+        assert epoch == num_epochs - 1
+        assert trainer._batch_num_total == num_epochs * batches_per_epoch
+
     def test_trainer_can_resume_training(self):
         trainer = GradientDescentTrainer(
             self.model,
