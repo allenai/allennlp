@@ -64,37 +64,16 @@ class PretrainedTransformerIndexer(TokenIndexer):
 
     def _add_encoding_to_vocabulary_if_needed(self, vocab: Vocabulary) -> None:
         """
-        Copies tokens from ```transformers``` model to the specified namespace.
-        Transformers vocab is taken from the <vocab>/<encoder> keys of the tokenizer object.
+        Copies tokens from ```transformers``` model's vocab to the specified namespace.
         """
         if self._added_to_vocabulary:
             return
 
-        # Find the key under which the vocab is hiding.
-        for vocab_field_name in ["vocab", "encoder", "sp_model"]:
-            if hasattr(self._tokenizer, vocab_field_name):
-                break
-        else:
-            vocab_field_name = None
-
-        if vocab_field_name is not None:
-            pretrained_vocab = getattr(self._tokenizer, vocab_field_name)
-            if vocab_field_name == "sp_model":
-                for idx in range(len(pretrained_vocab)):
-                    word = pretrained_vocab.id_to_piece(idx)
-                    vocab._token_to_index[self._namespace][word] = idx
-                    vocab._index_to_token[self._namespace][idx] = word
-            else:
-                for word, idx in pretrained_vocab.items():
-                    vocab._token_to_index[self._namespace][word] = idx
-                    vocab._index_to_token[self._namespace][idx] = word
-        else:
-            logger.warning(
-                """Wasn't able to fetch vocabulary from pretrained transformers lib.
-                Neither <vocab> nor <encoder> are the valid fields for vocab.
-                Your tokens will still be correctly indexed, but vocabulary file will not be saved."""
-            )
-
+        pretrained_vocab = self._tokenizer.get_vocab()
+        for word, idx in pretrained_vocab.items():
+            vocab._token_to_index[self._namespace][word] = idx
+            vocab._index_to_token[self._namespace][idx] = word
+        
         self._added_to_vocabulary = True
 
     @overrides
