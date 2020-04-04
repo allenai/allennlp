@@ -73,7 +73,7 @@ class PretrainedTransformerIndexer(TokenIndexer):
         for word, idx in pretrained_vocab.items():
             vocab._token_to_index[self._namespace][word] = idx
             vocab._index_to_token[self._namespace][idx] = word
-        
+
         self._added_to_vocabulary = True
 
     @overrides
