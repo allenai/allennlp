@@ -28,7 +28,7 @@ class PretrainedTransformerIndexer(TokenIndexer):
 
     model_name : `str`
         The name of the `transformers` model to use.
-    namespace : `str`, optional (default=`from_transformeres`)
+    namespace : `str`, optional (default=`from_transformers`)
         We will add the tokens in the pytorch_transformer vocabulary to this vocabulary namespace.
         We use a somewhat confusing default value of `tags` so that we do not add padding or UNK
         tokens to this namespace, which would break on loading because we wouldn't find our default
@@ -43,7 +43,7 @@ class PretrainedTransformerIndexer(TokenIndexer):
     def __init__(
         self,
         model_name: str,
-        namespace: str = "from_transformeres",
+        namespace: str = "from_transformers",
         max_length: int = None,
         **kwargs,
     ) -> None:
