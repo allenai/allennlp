@@ -15,6 +15,7 @@ except ImportError:
     amp = None
 import torch
 from torch.utils.data import DataLoader
+from allennlp.data.dataloader import DataLoader as AllennlpDataLoader
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import Params
@@ -58,6 +59,18 @@ class TrainerTestBase(AllenNlpTestCase):
         self.model = SimpleTagger.from_params(vocab=self.vocab, params=self.model_params)
         self.optimizer = torch.optim.SGD(self.model.parameters(), 0.01, momentum=0.9)
         self.data_loader = DataLoader(self.instances, batch_size=2, collate_fn=allennlp_collate)
+        self.data_loader_smaller_epoch = AllennlpDataLoader(
+            self.instances, batch_size=2, collate_fn=allennlp_collate, batches_per_epoch=1
+        )
+        self.data_loader_larger_epoch = AllennlpDataLoader(
+            self.instances, batch_size=2, collate_fn=allennlp_collate, batches_per_epoch=5
+        )
+        self.data_loader_equal_epoch = AllennlpDataLoader(
+            self.instances,
+            batch_size=2,
+            collate_fn=allennlp_collate,
+            batches_per_epoch=len(self.data_loader),
+        )
         self.validation_data_loader = DataLoader(
             self.instances, batch_size=2, collate_fn=allennlp_collate
         )
@@ -140,19 +153,16 @@ class TestTrainer(TrainerTestBase):
             )
 
     def test_trainer_respects_epoch_size_equals_total(self):
-        batches_one_pass_through_data = len(self.data_loader)
-        batches_per_epoch = batches_one_pass_through_data
-        assert batches_per_epoch == batches_one_pass_through_data
         num_epochs = 3
+        batches_per_epoch = len(self.data_loader_equal_epoch)
 
         trainer = GradientDescentTrainer(
             self.model,
             self.optimizer,
-            self.data_loader,
+            self.data_loader_equal_epoch,
             validation_data_loader=self.validation_data_loader,
             num_epochs=num_epochs,
             serialization_dir=self.TEST_DIR,
-            batches_per_epoch=batches_per_epoch,
         )
         assert trainer._batch_num_total == 0
         metrics = trainer.train()
@@ -161,19 +171,15 @@ class TestTrainer(TrainerTestBase):
         assert trainer._batch_num_total == num_epochs * batches_per_epoch
 
     def test_trainer_respects_epoch_size_larger_tnan_total(self):
-        batches_one_pass_through_data = len(self.data_loader)
-        batches_per_epoch = batches_one_pass_through_data + int(batches_one_pass_through_data / 2)
-        assert batches_per_epoch > batches_one_pass_through_data
         num_epochs = 3
-
+        batches_per_epoch = len(self.data_loader_larger_epoch)
         trainer = GradientDescentTrainer(
             self.model,
             self.optimizer,
-            self.data_loader,
+            self.data_loader_larger_epoch,
             validation_data_loader=self.validation_data_loader,
             num_epochs=num_epochs,
             serialization_dir=self.TEST_DIR,
-            batches_per_epoch=batches_per_epoch,
         )
         assert trainer._batch_num_total == 0
         metrics = trainer.train()
@@ -182,19 +188,16 @@ class TestTrainer(TrainerTestBase):
         assert trainer._batch_num_total == num_epochs * batches_per_epoch
 
     def test_trainer_respects_epoch_size_smaller_tnan_total(self):
-        batches_one_pass_through_data = len(self.data_loader)
-        batches_per_epoch = batches_one_pass_through_data - int(batches_one_pass_through_data / 2)
-        assert batches_per_epoch < batches_one_pass_through_data
         num_epochs = 2
+        batches_per_epoch = len(self.data_loader_smaller_epoch)
 
         trainer = GradientDescentTrainer(
             self.model,
             self.optimizer,
-            self.data_loader,
+            self.data_loader_smaller_epoch,
             validation_data_loader=self.validation_data_loader,
             num_epochs=num_epochs,
             serialization_dir=self.TEST_DIR,
-            batches_per_epoch=batches_per_epoch,
         )
         assert trainer._batch_num_total == 0
         metrics = trainer.train()
