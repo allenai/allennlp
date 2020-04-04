@@ -73,7 +73,7 @@ class PretrainedTransformerIndexer(TokenIndexer):
         if self._added_to_vocabulary:
             return
 
-        vocab.extend_from_precomputed_encoding(
+        vocab.extend_from_dictionary(
             self._tokenizer.get_vocab(), self._namespace, resave_to_files=True
         )
 
