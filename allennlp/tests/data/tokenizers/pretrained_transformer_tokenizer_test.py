@@ -13,7 +13,18 @@ class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
         tokenizer = PretrainedTransformerTokenizer("roberta-base")
 
         sentence = "A, <mask> AllenNLP sentence."
-        expected_tokens = ["<s>", "A", ",", "<mask>", "Allen", "N", "LP", "Ġsentence", ".", "</s>"]
+        expected_tokens = [
+            "<s>",
+            "ĠA",
+            ",",
+            "<mask>",
+            "ĠAllen",
+            "N",
+            "LP",
+            "Ġsentence",
+            ".",
+            "</s>",
+        ]
         tokens = [t.text for t in tokenizer.tokenize(sentence)]
         assert tokens == expected_tokens
 
@@ -22,17 +33,17 @@ class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
         sentence_2 = "A sentence."
         expected_tokens = [
             "<s>",
-            "A",
+            "ĠA",
             ",",
             "<mask>",
-            "Allen",
+            "ĠAllen",
             "N",
             "LP",
             "Ġsentence",
             ".",
             "</s>",
             "</s>",
-            "A",
+            "ĠA",
             "Ġsentence",
             ".",
             "</s>",
@@ -167,11 +178,11 @@ class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
         sentence = "A, naïve <mask> AllenNLP sentence."
         expected_tokens = [
             "<s>",
-            "A",
+            "ĠA",
             ",",
             "ĠnaÃ¯ve",  # RoBERTa has a funny way of encoding combining characters.
             "<mask>",
-            "Allen",
+            "ĠAllen",
             "N",
             "LP",
             "Ġsentence",
@@ -242,7 +253,7 @@ class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
         second_sentence = "It was a shitzu."
         expected_tokens = [
             "<s>",
-            "I",
+            "ĠI",
             "Ġwent",
             "Ġto",
             "Ġthe",
@@ -258,7 +269,7 @@ class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
             ".",
             "</s>",
             "</s>",
-            "It",
+            "ĠIt",
             "Ġwas",
             "Ġa",
             "Ġsh",
