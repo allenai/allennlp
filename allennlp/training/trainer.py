@@ -140,6 +140,30 @@ class EpochCallback(Registrable):
         raise NotImplementedError
 
 
+class CustomlySizedEpochDataLoader:
+    """
+    A wrapper around pytorch's `DataLoader` which mimics its behaviour but
+    allows to produce generators of user defined sizes.
+    Just call `iter` method to get a new generator over the next `batches_per_epoch` batches.
+    """
+
+    def __init__(self, data_loader: DataLoader, batches_per_epoch: int):
+        self._batches_per_epoch = batches_per_epoch
+        self._data_loader = data_loader
+        self._data_generator = iter(data_loader)
+
+    def __len__(self):
+        return self._batches_per_epoch
+
+    def __iter__(self):
+        for i in range(self._batches_per_epoch):
+            try:
+                yield next(self._data_generator)
+            except StopIteration:  # loader_iter is exhausted
+                self._data_generator = iter(self._data_loader)  # refresh it it
+                yield next(self._data_generator)  # and give back required instance
+
+
 @Trainer.register("gradient_descent", constructor="from_partial_objects")
 class GradientDescentTrainer(Trainer):
     """
@@ -242,6 +266,10 @@ class GradientDescentTrainer(Trainer):
         precision training. Must be a choice of `"O0"`, `"O1"`, `"O2"`, or `"O3"`.
         See the Apex [documentation](https://nvidia.github.io/apex/amp.html#opt-levels-and-properties) for
         more details. If `None`, Amp is not used. Defaults to `None`.
+    batches_per_epoch: `int`, optional, (default = `None`)
+        Epoch will consist of that many GPU batches (as opposite to the effective batches obtained with 
+        Gradient Accumulation). 
+        `None` value (default) means that the epoch size will equal the full path through the data.
     """
 
     def __init__(
@@ -269,6 +297,7 @@ class GradientDescentTrainer(Trainer):
         world_size: int = 1,
         num_gradient_accumulation_steps: int = 1,
         opt_level: Optional[str] = None,
+        batches_per_epoch: int = None,
     ) -> None:
         super().__init__(serialization_dir, cuda_device, distributed, local_rank, world_size)
 
@@ -276,7 +305,11 @@ class GradientDescentTrainer(Trainer):
         # not already on the GPU then the optimizer is going to be wrong.
         self.model = model
 
-        self.data_loader = data_loader
+        if batches_per_epoch is not None:
+            self.data_loader = CustomlySizedEpochDataLoader(data_loader, batches_per_epoch)
+        else:
+            self.data_loader = data_loader
+
         self._validation_data_loader = validation_data_loader
         self.optimizer = optimizer
 
@@ -922,6 +955,7 @@ class GradientDescentTrainer(Trainer):
         patience: int = None,
         validation_metric: str = "-loss",
         num_epochs: int = 20,
+        batches_per_epoch: int = None,
         cuda_device: int = -1,
         grad_norm: float = None,
         grad_clipping: float = None,
@@ -974,14 +1008,16 @@ class GradientDescentTrainer(Trainer):
             optimizer_ = Optimizer.default(parameters)
 
         try:
-            batches_per_epoch = len(data_loader)
+            total_batches = len(data_loader)
         except TypeError:
             # If the dataset is lazy, it won't have a length.
-            batches_per_epoch = None
+            total_batches = None
 
         moving_average_ = moving_average.construct(parameters=parameters)
         learning_rate_scheduler_ = learning_rate_scheduler.construct(
-            optimizer=optimizer_, num_epochs=num_epochs, num_steps_per_epoch=batches_per_epoch
+            optimizer=optimizer_,
+            num_epochs=num_epochs,
+            num_steps_per_epoch=batches_per_epoch or total_batches,
         )
         momentum_scheduler_ = momentum_scheduler.construct(optimizer=optimizer_)
 
@@ -1012,4 +1048,5 @@ class GradientDescentTrainer(Trainer):
             world_size=world_size,
             num_gradient_accumulation_steps=num_gradient_accumulation_steps,
             opt_level=opt_level,
+            batches_per_epoch=batches_per_epoch,
         )
