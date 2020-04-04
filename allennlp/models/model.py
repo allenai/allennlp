@@ -284,7 +284,7 @@ class Model(torch.nn.Module, Registrable):
         remove_pretrained_embedding_params(model_params)
         model = Model.from_params(vocab=vocab, params=model_params)
 
-        # If the model was trained with amp and amp is available, we should re-intialize it with
+        # If the model was trained with amp and amp is available, we should re-initialize it with
         # the opt_level that was used. If the model was trained with amp but amp is not availble, log a warning
         # so this doesn't pass silently.
         if opt_level is not None:
@@ -296,7 +296,7 @@ class Model(torch.nn.Module, Registrable):
                     )
                 )
             else:
-                model = amp.intialize(model, opt_level=opt_level)
+                model = amp.initialize(model, opt_level=opt_level)
 
         # If vocab+embedding extension was done, the model initialized from from_params
         # and one defined by state dict in weights_file might not have same embedding shapes.
