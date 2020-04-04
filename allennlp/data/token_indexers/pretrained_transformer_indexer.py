@@ -28,7 +28,7 @@ class PretrainedTransformerIndexer(TokenIndexer):
 
     model_name : `str`
         The name of the `transformers` model to use.
-    namespace : `str`, optional (default=`tags`)
+    namespace : `str`, optional (default=`from_transformeres`)
         We will add the tokens in the pytorch_transformer vocabulary to this vocabulary namespace.
         We use a somewhat confusing default value of `tags` so that we do not add padding or UNK
         tokens to this namespace, which would break on loading because we wouldn't find our default
@@ -41,7 +41,11 @@ class PretrainedTransformerIndexer(TokenIndexer):
     """
 
     def __init__(
-        self, model_name: str, namespace: str = "tags", max_length: int = None, **kwargs
+        self,
+        model_name: str,
+        namespace: str = "from_transformeres",
+        max_length: int = None,
+        **kwargs,
     ) -> None:
         super().__init__(**kwargs)
         self._namespace = namespace
@@ -65,35 +69,13 @@ class PretrainedTransformerIndexer(TokenIndexer):
     def _add_encoding_to_vocabulary_if_needed(self, vocab: Vocabulary) -> None:
         """
         Copies tokens from ```transformers``` model to the specified namespace.
-        Transformers vocab is taken from the <vocab>/<encoder> keys of the tokenizer object.
         """
         if self._added_to_vocabulary:
             return
 
-        # Find the key under which the vocab is hiding.
-        for vocab_field_name in ["vocab", "encoder", "sp_model"]:
-            if hasattr(self._tokenizer, vocab_field_name):
-                break
-        else:
-            vocab_field_name = None
-
-        if vocab_field_name is not None:
-            pretrained_vocab = getattr(self._tokenizer, vocab_field_name)
-            if vocab_field_name == "sp_model":
-                for idx in range(len(pretrained_vocab)):
-                    word = pretrained_vocab.id_to_piece(idx)
-                    vocab._token_to_index[self._namespace][word] = idx
-                    vocab._index_to_token[self._namespace][idx] = word
-            else:
-                for word, idx in pretrained_vocab.items():
-                    vocab._token_to_index[self._namespace][word] = idx
-                    vocab._index_to_token[self._namespace][idx] = word
-        else:
-            logger.warning(
-                """Wasn't able to fetch vocabulary from pretrained transformers lib.
-                Neither <vocab> nor <encoder> are the valid fields for vocab.
-                Your tokens will still be correctly indexed, but vocabulary file will not be saved."""
-            )
+        vocab.extend_from_precomputed_encoding(
+            self._tokenizer.get_vocab(), self._namespace, resave_to_files=True
+        )
 
         self._added_to_vocabulary = True
 

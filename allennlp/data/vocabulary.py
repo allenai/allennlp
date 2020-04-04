@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_NON_PADDED_NAMESPACES = ("*tags", "*labels")
+DEFAULT_NON_PADDED_NAMESPACES = ("*tags", "*labels", "*from_transformers")
 DEFAULT_PADDING_TOKEN = "@@PADDING@@"
 DEFAULT_OOV_TOKEN = "@@UNKNOWN@@"
 NAMESPACE_PADDING_FILE = "non_padded_namespaces.txt"
@@ -223,6 +223,7 @@ class Vocabulary(Registrable):
         self._padding_token = padding_token if padding_token is not None else DEFAULT_PADDING_TOKEN
         self._oov_token = oov_token if oov_token is not None else DEFAULT_OOV_TOKEN
 
+        self._last_save_directory = None
         self._non_padded_namespaces = set(non_padded_namespaces)
 
         self._token_to_index = _TokenToIndexDefaultDict(
@@ -603,6 +604,8 @@ class Vocabulary(Registrable):
                 for i in range(start_index, num_tokens):
                     print(mapping[i].replace("\n", "@@NEWLINE@@"), file=token_file)
 
+        self._last_save_directory = directory
+
     def is_padded(self, namespace: str) -> bool:
         """
         Returns whether or not there are padding and OOV tokens added to the given namespace.
@@ -626,6 +629,29 @@ class Vocabulary(Registrable):
             return index
         else:
             return self._token_to_index[namespace][token]
+
+    def extend_from_precomputed_encoding(
+        self,
+        precomputed_encoding: Dict[str, int],
+        namespace: str = "from_transformers",
+        resave_to_files: bool = False,
+    ) -> None:
+        """
+        Populates given namespace with precomputed encoding, for example from pretrained transformers.
+        We also optionally resave vocabulary to files in this method since we understand it can be used
+        after our initial vocab construction and saving procedure.
+        """
+        for word, idx in precomputed_encoding.items():
+            self._token_to_index[namespace][word] = idx
+            self._index_to_token[namespace][idx] = word
+
+        if resave_to_files:
+            if self._last_save_directory is not None:
+                self.save_to_files(self._last_save_directory)
+            else:
+                logging.warning(
+                    "vocabulary folder on disk is missing, newly populated namespace will not be saved to files"
+                )
 
     def add_tokens_to_namespace(self, tokens: List[str], namespace: str = "tokens") -> List[int]:
         """
