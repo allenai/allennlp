@@ -284,6 +284,13 @@ class Model(torch.nn.Module, Registrable):
         remove_pretrained_embedding_params(model_params)
         model = Model.from_params(vocab=vocab, params=model_params)
 
+        # Force model to cpu or gpu, as appropriate, to make sure that the embeddings are
+        # in sync with the weights
+        if cuda_device >= 0:
+            model.cuda(cuda_device)
+        else:
+            model.cpu()
+
         # If the model was trained with amp and amp is available, we should re-initialize it with
         # the opt_level that was used. If the model was trained with amp but amp is not availble, log a warning
         # so this doesn't pass silently.
@@ -292,7 +299,7 @@ class Model(torch.nn.Module, Registrable):
                 logger.warning(
                     (
                         f"This model was trained with amp (opt_level: {opt_level}) but amp is not available."
-                        " Any further training will be full-precision."
+                        " Any further training or inference will happen at full-precision."
                     )
                 )
             else:
@@ -308,13 +315,6 @@ class Model(torch.nn.Module, Registrable):
 
         model_state = torch.load(weights_file, map_location=util.device_mapping(cuda_device))
         model.load_state_dict(model_state)
-
-        # Force model to cpu or gpu, as appropriate, to make sure that the embeddings are
-        # in sync with the weights
-        if cuda_device >= 0:
-            model.cuda(cuda_device)
-        else:
-            model.cpu()
 
         return model
 
