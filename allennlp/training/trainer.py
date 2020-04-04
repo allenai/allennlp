@@ -267,8 +267,8 @@ class GradientDescentTrainer(Trainer):
         See the Apex [documentation](https://nvidia.github.io/apex/amp.html#opt-levels-and-properties) for
         more details. If `None`, Amp is not used. Defaults to `None`.
     batches_per_epoch: `int`, optional, (default = `None`)
-        Epoch will consist of that many GPU batches (as opposite to the effective batches obtained with 
-        Gradient Accumulation). 
+        Epoch will consist of that many GPU batches (as opposite to the effective batches obtained with
+        Gradient Accumulation).
         `None` value (default) means that the epoch size will equal the full path through the data.
     """
 
