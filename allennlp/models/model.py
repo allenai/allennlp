@@ -289,7 +289,14 @@ class Model(torch.nn.Module, Registrable):
         remove_pretrained_embedding_params(model_params)
         model = Model.from_params(vocab=vocab, params=model_params)
 
-        # If the model was trained with amp and amp is available, we should re-intialize it with
+        # Force model to cpu or gpu, as appropriate, to make sure that the embeddings are
+        # in sync with the weights
+        if cuda_device >= 0:
+            model.cuda(cuda_device)
+        else:
+            model.cpu()
+
+        # If the model was trained with amp and amp is available, we should re-initialize it with
         # the opt_level that was used. If the model was trained with amp but amp is not available, log a
         # warning so this doesn't pass silently.
         if cuda_device >= 0 and opt_level is not None:
@@ -301,7 +308,7 @@ class Model(torch.nn.Module, Registrable):
                     )
                 )
             else:
-                model = amp.intialize(model, opt_level=opt_level)
+                model = amp.initialize(model, opt_level=opt_level)
 
         # If vocab+embedding extension was done, the model initialized from from_params
         # and one defined by state dict in weights_file might not have same embedding shapes.
@@ -313,13 +320,6 @@ class Model(torch.nn.Module, Registrable):
 
         model_state = torch.load(weights_file, map_location=util.device_mapping(cuda_device))
         model.load_state_dict(model_state)
-
-        # Force model to cpu or gpu, as appropriate, to make sure that the embeddings are
-        # in sync with the weights
-        if cuda_device >= 0:
-            model.cuda(cuda_device)
-        else:
-            model.cpu()
 
         return model
 
