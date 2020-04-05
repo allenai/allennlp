@@ -297,7 +297,7 @@ class Model(torch.nn.Module, Registrable):
                 logger.warning(
                     (
                         f"This model was trained with amp (opt_level: {opt_level}) but amp is not available."
-                        " Any further training or inference will be full-precision."
+                        " Any further training or inference will happen at full-precision."
                     )
                 )
             else:
