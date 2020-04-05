@@ -129,10 +129,10 @@ def archive_model(
 
 def load_archive(
     archive_file: str,
-    weights_file: str = None,
     cuda_device: int = -1,
     opt_level: str = None,
     overrides: str = "",
+    weights_file: str = None,
 ) -> Archive:
     """
     Instantiates an Archive from an archived `tar.gz` file.
@@ -141,8 +141,6 @@ def load_archive(
 
     archive_file : `str`
         The archive file to load the model from.
-    weights_file : `str`, optional (default = None)
-        The weights file to use.  If unspecified, weights.th in the archive_file will be used.
     cuda_device : `int`, optional (default = -1)
         If `cuda_device` is >= 0, the model will be loaded onto the
         corresponding GPU. Otherwise it will be loaded onto the CPU.
@@ -154,6 +152,8 @@ def load_archive(
         Amp is not used and this argument is ignored.
     overrides : `str`, optional (default = "")
         JSON overrides to apply to the unarchived `Params` object.
+    weights_file : `str`, optional (default = None)
+        The weights file to use.  If unspecified, weights.th in the archive_file will be used.
     """
     # redirect to the cache, if necessary
     resolved_archive_file = cached_path(archive_file)
@@ -194,7 +194,7 @@ def load_archive(
         weights_file=weights_path,
         serialization_dir=serialization_dir,
         cuda_device=cuda_device,
-        opt_level=opt_level
+        opt_level=opt_level,
     )
 
     return Archive(model=model, config=config)
