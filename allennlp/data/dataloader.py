@@ -37,9 +37,10 @@ class DataLoader(Registrable, data.DataLoader):
     my_loader = DataLoader(dataset, batch_size=32, collate_fn=allennlp_collate)
     ```
 
-    Secondly, this class adds `batches_per_epoch` parameter which defines the epoch size in GPU batches
-    (as opposite to the effective batches obtained with Gradient Accumulation).
-    `None` value (default) means that the epoch size will equal the full pass through the data.
+    Secondly, this class adds a `batches_per_epoch` parameter which, if given, determines the number
+    of batches after which an epoch ends.  If this is `None`, then an epoch is set to be one full pass
+    through your data.  You might use this if you have a very large dataset and want more frequent
+    checkpoints and evaluations on validation data, for instance.
     """
 
     def __init__(
