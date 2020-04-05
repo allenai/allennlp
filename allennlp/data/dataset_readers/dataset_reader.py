@@ -41,7 +41,7 @@ class _LazyInstances(IterableDataset):
 
     def __init__(
         self,
-        instance_generator: Callable[[], Iterable[Instance]],
+        instance_generator: Callable[[str], Iterable[Instance]],
         file_path: str,
         cache_file: str = None,
         deserialize: Callable[[str], Instance] = None,
