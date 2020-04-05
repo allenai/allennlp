@@ -277,7 +277,6 @@ class GradientDescentTrainer(Trainer):
         self.model = model
 
         self.data_loader = data_loader
-
         self._validation_data_loader = validation_data_loader
         self.optimizer = optimizer
 
@@ -982,7 +981,7 @@ class GradientDescentTrainer(Trainer):
 
         moving_average_ = moving_average.construct(parameters=parameters)
         learning_rate_scheduler_ = learning_rate_scheduler.construct(
-            optimizer=optimizer_, num_epochs=num_epochs, num_steps_per_epoch=batches_per_epoch,
+            optimizer=optimizer_, num_epochs=num_epochs, num_steps_per_epoch=batches_per_epoch
         )
         momentum_scheduler_ = momentum_scheduler.construct(optimizer=optimizer_)
 
