@@ -78,15 +78,7 @@ class DataLoader(Registrable, data.DataLoader):
             multiprocessing_context=multiprocessing_context,
         )
         self._data_generator = super().__iter__()
-        # allennlp by default overrides the len() method for IterableDatasets to return 1
-        self._batches_per_epoch = batches_per_epoch or super().__len__()
-        if (
-            batches_per_epoch is None
-            and isinstance(self.dataset, IterableDataset)
-            and super().__len__() == 1
-        ):
-            # so we set the correct value here for the epoch size
-            self._batches_per_epoch = None
+        self._batches_per_epoch = batches_per_epoch
 
     def __len__(self):
         return self._batches_per_epoch
