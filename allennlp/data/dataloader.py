@@ -80,7 +80,9 @@ class DataLoader(Registrable, data.DataLoader):
         self._batches_per_epoch = batches_per_epoch
 
     def __len__(self):
-        return self._batches_per_epoch
+        if self._batches_per_epoch is not None
+            return self._batches_per_epoch
+        return super.__len__()
 
     def __iter__(self):
         if self._batches_per_epoch is None:
