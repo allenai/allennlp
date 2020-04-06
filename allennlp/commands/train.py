@@ -552,12 +552,12 @@ class TrainModel(Registrable):
         model: Lazy[Model],
         data_loader: Lazy[DataLoader],
         trainer: Lazy[Trainer],
-        vocabulary: Lazy[Vocabulary] = None,
-        datasets_for_vocab_creation: List[str] = None,
-        validation_dataset_reader: DatasetReader = None,
-        validation_data_path: str = None,
-        validation_data_loader: Lazy[DataLoader] = None,
-        test_data_path: str = None,
+        vocabulary: Optional[Lazy[Vocabulary]] = None,
+        datasets_for_vocab_creation: Optional[List[str]] = None,
+        validation_dataset_reader: Optional[DatasetReader] = None,
+        validation_data_path: Optional[str] = None,
+        validation_data_loader: Optional[Lazy[DataLoader]] = None,
+        test_data_path: Optional[str] = None,
         evaluate_on_test: bool = False,
     ) -> "TrainModel":
         """
@@ -633,21 +633,38 @@ class TrainModel(Registrable):
             test_data_path=test_data_path,
         )
 
-        if datasets_for_vocab_creation:
+        if datasets_for_vocab_creation is None:
+            datasets_for_vocab_creation = datasets.keys()
+        else:
             for key in datasets_for_vocab_creation:
                 if key not in datasets:
                     raise ConfigurationError(f"invalid 'dataset_for_vocab_creation' {key}")
 
+        key_to_dataset_reader = {
+            "train": dataset_reader,
+            "test": validation_dataset_reader or dataset_reader,
+            "validation": validation_dataset_reader or dataset_reader,
+        }
+        vocabulary_from_readers = None
+        for key in datasets_for_vocab_creation:
+            reader_vocab = key_to_dataset_reader[key].get_vocabulary()
+            if vocabulary_from_readers is None:
+                vocabulary_from_readers = reader_vocab
+            else:
+                vocabulary_from_readers.extend_from_vocab(reader_vocab)
+
         instance_generator = (
             instance
             for key, dataset in datasets.items()
-            if not datasets_for_vocab_creation or key in datasets_for_vocab_creation
+            if key in datasets_for_vocab_creation
             for instance in dataset
         )
 
         vocabulary_ = vocabulary.construct(instances=instance_generator)
         if not vocabulary_:
             vocabulary_ = Vocabulary.from_instances(instance_generator)
+        if vocabulary_from_readers is not None:
+            vocabulary_.extend_from_vocab(vocabulary_from_readers)
         model_ = model.construct(vocab=vocabulary_)
 
         # Initializing the model can have side effect of expanding the vocabulary.

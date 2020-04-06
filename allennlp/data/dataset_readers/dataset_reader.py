@@ -229,6 +229,12 @@ class DatasetReader(Registrable):
         """
         raise NotImplementedError
 
+    def get_vocabulary(self) -> Optional[Vocabulary]:
+        """Returns the vocabulary used in the created instances. By default, this
+        returns `None`, which causes the vocabulary to be automatically discovered
+        before training."""
+        return None
+
     def _instances_from_cache_file(self, cache_filename: str) -> Iterable[Instance]:
         with open(cache_filename, "r") as cache_file:
             for line in cache_file:

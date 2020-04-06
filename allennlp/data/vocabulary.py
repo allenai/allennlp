@@ -367,6 +367,14 @@ class Vocabulary(Registrable):
         return vocab
 
     @classmethod
+    def from_transformers(cls, model_name: str, namespace: str = "tokens"):
+        vocab = cls.empty()
+        import transformers
+        tokenizer = transformers.AutoTokenizer.from_pretrained(model_name)
+        vocab.extend_from_dictionary(tokenizer.get_vocab(), namespace)
+        return vocab
+
+    @classmethod
     def empty(cls) -> "Vocabulary":
         """
         This method returns a bare vocabulary instantiated with `cls()` (so, `Vocabulary()` if you
@@ -454,6 +462,14 @@ class Vocabulary(Registrable):
         for namespace in vocab.get_namespaces():
             for token in vocab.get_token_to_index_vocabulary(namespace):
                 self.add_token_to_namespace(token, namespace)
+
+    def extend_from_dictionary(self, encoding_dictionary: Dict[str, int], namespace: str = "from_transformers") -> None:
+        """
+         Populates given namespace with precomputed encoding, for example from pretrained transformers.
+         """
+        for word, idx in encoding_dictionary.items():
+            self._token_to_index[namespace][word] = idx
+            self._index_to_token[namespace][idx] = word
 
     def _extend(
         self,
