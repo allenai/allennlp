@@ -296,18 +296,28 @@ class Model(torch.nn.Module, Registrable):
         else:
             model.cpu()
 
-        # If the model was trained with amp and amp is available, we should re-initialize it with
-        # the opt_level that was used. If the model was trained with amp but amp is not available, log a
-        # warning so this doesn't pass silently.
-        if cuda_device >= 0 and opt_level is not None:
+        # If opt_level is not None (i.e. it exists in the loaded models params or was provided
+        # as argument to this method), call amp.initialize on the loaded model.
+        # Log a warning if amp is not installed or we are loading onto the cpu so that these
+        # cases do not pass silently.
+        if opt_level is not None:
             if amp is None:
                 logger.warning(
                     (
-                        f"This model was trained with amp (opt_level: {opt_level}) but amp is not available."
+                        f"Apex must be installed to enable mixed-precision via amp."
+                        f" Got opt_level is not None (opt_level={opt_level}) but Apex is not installed."
                         " Any further training or inference will happen at full-precision."
                     )
                 )
-            else:
+            if cuda_device == -1:
+                logger.warning(
+                    (
+                        f"A CUDA device must be specified to enable mixed-precision via amp."
+                        f" Got cuda_device=={cuda_device} but opt_level is not None (opt_level={opt_level})."
+                        " Any further training or inference will happen at full-precision."
+                    )
+                )
+            if amp is not None and cuda_device >= 0:
                 model = amp.initialize(model, opt_level=opt_level)
 
         # If vocab+embedding extension was done, the model initialized from from_params
