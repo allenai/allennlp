@@ -2,7 +2,6 @@ from typing import List, Dict, Union
 
 import torch
 from torch.utils import data
-from torch.utils.data import IterableDataset
 
 from allennlp.common.registrable import Registrable
 from allennlp.data.instance import Instance
