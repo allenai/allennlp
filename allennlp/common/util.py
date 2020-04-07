@@ -632,11 +632,13 @@ def is_distributed() -> bool:
 
 def sanitize_wordpiece(wordpiece: str) -> str:
     """
-    Sanitizes wordpieces from BERT or RoBERTa tokenizers.
+    Sanitizes wordpieces from BERT, RoBERTa or ALBERT tokenizers.
     """
     if wordpiece.startswith("##"):
         return wordpiece[2:]
     elif wordpiece.startswith("Ġ"):
+        return wordpiece[1:]
+    elif wordpiece.startswith("▁"):
         return wordpiece[1:]
     else:
         return wordpiece
