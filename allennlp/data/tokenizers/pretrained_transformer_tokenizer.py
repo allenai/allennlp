@@ -55,8 +55,9 @@ class PretrainedTransformerTokenizer(Tokenizer):
     tokenizer_kwargs: 'Dict[str, Any]'
         Dictionary with additional arguments for `AutoTokenizer.from_pretrained`.
 
-    Argument descriptions are from
-    https://github.com/huggingface/transformers/blob/155c782a2ccd103cf63ad48a2becd7c76a7d2115/transformers/tokenization_utils.py#L691
+    [0]: https://github.com/huggingface/transformers/blob/155c782a2ccd103cf63ad48a2becd7c76a7d2115/transformers/tokenization_utils.py#L691
+
+    Argument descriptions are from [0].
     """
 
     def __init__(
