@@ -23,7 +23,7 @@ class DataLoader(Registrable, data.DataLoader):
     """
     A registrable version of the pytorch
     [DataLoader](https://pytorch.org/docs/stable/data.html#torch.utils.data.DataLoader).
-    The only reason this class exists is so that we can construct a DataLoader
+    Firstly, this class exists is so that we can construct a DataLoader
     from a configuration file and have a different default `collate_fn`.
     You can use this class directly in python code, but it is identical to using
     pytorch dataloader with allennlp's custom collate function:
@@ -36,6 +36,11 @@ class DataLoader(Registrable, data.DataLoader):
     # Instances which have _already_ been indexed.
     my_loader = DataLoader(dataset, batch_size=32, collate_fn=allennlp_collate)
     ```
+
+    Secondly, this class adds a `batches_per_epoch` parameter which, if given, determines the number
+    of batches after which an epoch ends.  If this is `None`, then an epoch is set to be one full pass
+    through your data.  You might use this if you have a very large dataset and want more frequent
+    checkpoints and evaluations on validation data, for instance.
     """
 
     def __init__(
@@ -55,6 +60,7 @@ class DataLoader(Registrable, data.DataLoader):
         timeout: int = 0,
         worker_init_fn=None,
         multiprocessing_context: str = None,
+        batches_per_epoch: int = None,
     ):
         super().__init__(
             dataset=dataset,
@@ -70,6 +76,19 @@ class DataLoader(Registrable, data.DataLoader):
             worker_init_fn=worker_init_fn,
             multiprocessing_context=multiprocessing_context,
         )
+        self._batches_per_epoch = batches_per_epoch or super().__len__()
+        self._data_generator = super().__iter__()
+
+    def __len__(self):
+        return self._batches_per_epoch
+
+    def __iter__(self):
+        for i in range(self._batches_per_epoch):
+            try:
+                yield next(self._data_generator)
+            except StopIteration:  # data_generator is exhausted
+                self._data_generator = super().__iter__()  # so refresh it
+                yield next(self._data_generator)  # and yield required instance
 
     @classmethod
     def from_partial_objects(
@@ -85,6 +104,7 @@ class DataLoader(Registrable, data.DataLoader):
         timeout: int = 0,
         worker_init_fn=None,
         multiprocessing_context: str = None,
+        batches_per_epoch: int = None,
     ) -> "DataLoader":
 
         if batch_sampler is not None:
@@ -112,6 +132,7 @@ class DataLoader(Registrable, data.DataLoader):
             timeout=timeout,
             worker_init_fn=worker_init_fn,
             multiprocessing_context=multiprocessing_context,
+            batches_per_epoch=batches_per_epoch,
         )
 
 

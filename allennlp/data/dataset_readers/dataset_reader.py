@@ -41,7 +41,8 @@ class _LazyInstances(IterableDataset):
 
     def __init__(
         self,
-        instance_generator: Callable[[], Iterable[Instance]],
+        instance_generator: Callable[[str], Iterable[Instance]],
+        file_path: str,
         cache_file: str = None,
         deserialize: Callable[[str], Instance] = None,
         serialize: Callable[[Instance], str] = None,
@@ -49,6 +50,7 @@ class _LazyInstances(IterableDataset):
     ) -> None:
         super().__init__()
         self.instance_generator = instance_generator
+        self.file_path = file_path
         self.cache_file = cache_file
         self.deserialize = deserialize
         self.serialize = serialize
@@ -67,7 +69,7 @@ class _LazyInstances(IterableDataset):
         # Case 2: Need to cache instances
         elif self.cache_file is not None:
             with open(self.cache_file, "w") as data_file:
-                for instance in self.instance_generator():
+                for instance in self.instance_generator(self.file_path):
                     data_file.write(self.serialize(instance))
                     data_file.write("\n")
                     if self.vocab is not None:
@@ -75,7 +77,7 @@ class _LazyInstances(IterableDataset):
                     yield instance
         # Case 3: No cache
         else:
-            instances = self.instance_generator()
+            instances = self.instance_generator(self.file_path)
             if isinstance(instances, list):
                 raise ConfigurationError(
                     "For a lazy dataset reader, _read() must return a generator"
@@ -176,7 +178,8 @@ class DatasetReader(Registrable):
 
         if lazy:
             instances: Iterable[Instance] = _LazyInstances(
-                lambda: self._read(file_path),
+                self._read,
+                file_path,
                 cache_file,
                 self.deserialize_instance,
                 self.serialize_instance,
