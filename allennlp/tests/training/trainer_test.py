@@ -15,6 +15,7 @@ except ImportError:
     amp = None
 import torch
 from torch.utils.data import DataLoader
+from allennlp.data.dataloader import DataLoader as AllennlpDataLoader
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import Params
@@ -138,6 +139,75 @@ class TestTrainer(TrainerTestBase):
             GradientDescentTrainer(
                 self.model, self.optimizer, self.data_loader, num_epochs=2, cuda_device=[0, 1],
             )
+
+    def test_trainer_respects_epoch_size_equals_total(self):
+        batches_per_epoch = 4
+        num_epochs = 3
+        data_loader_equal_epoch = AllennlpDataLoader(
+            self.instances,
+            batch_size=2,
+            collate_fn=allennlp_collate,
+            batches_per_epoch=batches_per_epoch,
+        )
+        trainer = GradientDescentTrainer(
+            self.model,
+            self.optimizer,
+            data_loader_equal_epoch,
+            validation_data_loader=self.validation_data_loader,
+            num_epochs=num_epochs,
+            serialization_dir=self.TEST_DIR,
+        )
+        assert trainer._batch_num_total == 0
+        metrics = trainer.train()
+        epoch = metrics["epoch"]
+        assert epoch == num_epochs - 1
+        assert trainer._batch_num_total == num_epochs * batches_per_epoch
+
+    def test_trainer_respects_epoch_size_larger_tnan_total(self):
+        batches_per_epoch = 7
+        num_epochs = 3
+        data_loader_larger_epoch = AllennlpDataLoader(
+            self.instances,
+            batch_size=2,
+            collate_fn=allennlp_collate,
+            batches_per_epoch=batches_per_epoch,
+        )
+        trainer = GradientDescentTrainer(
+            self.model,
+            self.optimizer,
+            data_loader_larger_epoch,
+            validation_data_loader=self.validation_data_loader,
+            num_epochs=num_epochs,
+            serialization_dir=self.TEST_DIR,
+        )
+        assert trainer._batch_num_total == 0
+        metrics = trainer.train()
+        epoch = metrics["epoch"]
+        assert epoch == num_epochs - 1
+        assert trainer._batch_num_total == num_epochs * batches_per_epoch
+
+    def test_trainer_respects_epoch_size_smaller_tnan_total(self):
+        batches_per_epoch = 1
+        num_epochs = 2
+        data_loader_smaller_epoch = AllennlpDataLoader(
+            self.instances,
+            batch_size=2,
+            collate_fn=allennlp_collate,
+            batches_per_epoch=batches_per_epoch,
+        )
+        trainer = GradientDescentTrainer(
+            self.model,
+            self.optimizer,
+            data_loader_smaller_epoch,
+            validation_data_loader=self.validation_data_loader,
+            num_epochs=num_epochs,
+            serialization_dir=self.TEST_DIR,
+        )
+        assert trainer._batch_num_total == 0
+        metrics = trainer.train()
+        epoch = metrics["epoch"]
+        assert epoch == num_epochs - 1
+        assert trainer._batch_num_total == num_epochs * batches_per_epoch
 
     def test_trainer_can_resume_training(self):
         trainer = GradientDescentTrainer(
