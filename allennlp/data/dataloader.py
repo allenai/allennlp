@@ -76,19 +76,24 @@ class DataLoader(Registrable, data.DataLoader):
             worker_init_fn=worker_init_fn,
             multiprocessing_context=multiprocessing_context,
         )
-        self._batches_per_epoch = batches_per_epoch or super().__len__()
         self._data_generator = super().__iter__()
+        self._batches_per_epoch = batches_per_epoch
 
     def __len__(self):
-        return self._batches_per_epoch
+        if self._batches_per_epoch is not None:
+            return self._batches_per_epoch
+        return super().__len__()
 
     def __iter__(self):
-        for i in range(self._batches_per_epoch):
-            try:
-                yield next(self._data_generator)
-            except StopIteration:  # data_generator is exhausted
-                self._data_generator = super().__iter__()  # so refresh it
-                yield next(self._data_generator)  # and yield required instance
+        if self._batches_per_epoch is None:
+            yield from super().__iter__()
+        else:
+            for i in range(self._batches_per_epoch):
+                try:
+                    yield next(self._data_generator)
+                except StopIteration:  # data_generator is exhausted
+                    self._data_generator = super().__iter__()  # so refresh it
+                    yield next(self._data_generator)  # and yield required instance
 
     @classmethod
     def from_partial_objects(

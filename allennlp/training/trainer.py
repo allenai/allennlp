@@ -976,11 +976,7 @@ class GradientDescentTrainer(Trainer):
         if not optimizer_:
             optimizer_ = Optimizer.default(parameters)
 
-        try:
-            batches_per_epoch = len(data_loader)
-        except TypeError:
-            # If the dataset is lazy, it won't have a length.
-            batches_per_epoch = None
+        batches_per_epoch = len(data_loader)  # returns "1" instead of TypeError for _LazyInstances
 
         moving_average_ = moving_average.construct(parameters=parameters)
         learning_rate_scheduler_ = learning_rate_scheduler.construct(
