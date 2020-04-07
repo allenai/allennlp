@@ -58,7 +58,7 @@ class PretrainedTransformerTokenizer(Tokenizer):
     [0]: https://github.com/huggingface/transformers/blob/155c782a2ccd103cf63ad48a2becd7c76a7d2115/transformers/tokenization_utils.py#L691
 
     Argument descriptions are from [0].
-    """
+    """  # noqa: E501
 
     def __init__(
         self,
