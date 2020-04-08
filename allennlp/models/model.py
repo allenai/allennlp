@@ -254,7 +254,12 @@ class Model(torch.nn.Module, Registrable):
 
     @classmethod
     def _load(
-        cls, config: Params, serialization_dir: str, weights_file: str = None, cuda_device: int = -1
+        cls,
+        config: Params,
+        serialization_dir: str,
+        weights_file: str = None,
+        cuda_device: int = -1,
+        opt_level: str = None,
     ) -> "Model":
         """
         Instantiates an already-trained model, based on the experiment
@@ -275,7 +280,7 @@ class Model(torch.nn.Module, Registrable):
         model_params = config.get("model")
 
         training_params = config.get("trainer", Params({}))
-        opt_level = training_params.get("opt_level")
+        opt_level = opt_level or training_params.get("opt_level")
 
         # The experiment config tells us how to _train_ a model, including where to get pre-trained
         # embeddings from.  We're now _loading_ the model, so those embeddings will already be
@@ -291,18 +296,28 @@ class Model(torch.nn.Module, Registrable):
         else:
             model.cpu()
 
-        # If the model was trained with amp and amp is available, we should re-initialize it with
-        # the opt_level that was used. If the model was trained with amp but amp is not availble, log a warning
-        # so this doesn't pass silently.
+        # If opt_level is not None (i.e. it exists in the loaded models params or was provided
+        # as argument to this method), call amp.initialize on the loaded model.
+        # Log a warning if amp is not installed or we are loading onto the cpu so that these
+        # cases do not pass silently.
         if opt_level is not None:
             if amp is None:
                 logger.warning(
                     (
-                        f"This model was trained with amp (opt_level: {opt_level}) but amp is not available."
+                        f"Apex must be installed to enable mixed-precision via amp."
+                        f" Got opt_level is not None (opt_level={opt_level}) but Apex is not installed."
                         " Any further training or inference will happen at full-precision."
                     )
                 )
-            else:
+            if cuda_device == -1:
+                logger.warning(
+                    (
+                        f"A CUDA device must be specified to enable mixed-precision via amp."
+                        f" Got cuda_device=={cuda_device} but opt_level is not None (opt_level={opt_level})."
+                        " Any further training or inference will happen at full-precision."
+                    )
+                )
+            if amp is not None and cuda_device >= 0:
                 model = amp.initialize(model, opt_level=opt_level)
 
         # If vocab+embedding extension was done, the model initialized from from_params
@@ -320,7 +335,12 @@ class Model(torch.nn.Module, Registrable):
 
     @classmethod
     def load(
-        cls, config: Params, serialization_dir: str, weights_file: str = None, cuda_device: int = -1
+        cls,
+        config: Params,
+        serialization_dir: str,
+        weights_file: str = None,
+        cuda_device: int = -1,
+        opt_level: str = None,
     ) -> "Model":
         """
         Instantiates an already-trained model, based on the experiment
@@ -341,7 +361,12 @@ class Model(torch.nn.Module, Registrable):
         cuda_device: int = -1
             By default we load the model on the CPU, but if you want to load it
             for GPU usage you can specify the id of your GPU here
-
+        opt_level : `str`, optional, (default = `None`)
+            Each `opt_level` establishes a set of properties that govern Amp’s implementation of pure or mixed
+            precision training. Must be a choice of `"O0"`, `"O1"`, `"O2"`, or `"O3"`.
+            See the Apex [documentation](https://nvidia.github.io/apex/amp.html#opt-levels-and-properties) for
+            more details. If `None`, defaults to the `opt_level` found in the model params. If `cuda_device==-1`,
+            Amp is not used and this argument is ignored.
 
         # Returns
 
@@ -359,7 +384,7 @@ class Model(torch.nn.Module, Registrable):
         # This allows subclasses of Model to override _load.
 
         model_class: Type[Model] = cls.by_name(model_type)  # type: ignore
-        return model_class._load(config, serialization_dir, weights_file, cuda_device)
+        return model_class._load(config, serialization_dir, weights_file, cuda_device, opt_level)
 
     def extend_embedder_vocab(self, embedding_sources_mapping: Dict[str, str] = None) -> None:
         """
