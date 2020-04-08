@@ -46,6 +46,9 @@ class TrainerTestBase(AllenNlpTestCase):
         self.instances = SequenceTaggingDatasetReader().read(
             self.FIXTURES_ROOT / "data" / "sequence_tagging.tsv"
         )
+        self.instances_lazy = SequenceTaggingDatasetReader(lazy=True).read(
+            self.FIXTURES_ROOT / "data" / "sequence_tagging.tsv"
+        )
         vocab = Vocabulary.from_instances(self.instances)
         self.vocab = vocab
         self.model_params = Params(
@@ -59,10 +62,14 @@ class TrainerTestBase(AllenNlpTestCase):
         self.model = SimpleTagger.from_params(vocab=self.vocab, params=self.model_params)
         self.optimizer = torch.optim.SGD(self.model.parameters(), 0.01, momentum=0.9)
         self.data_loader = DataLoader(self.instances, batch_size=2, collate_fn=allennlp_collate)
+        self.data_loader_lazy = DataLoader(
+            self.instances_lazy, batch_size=2, collate_fn=allennlp_collate
+        )
         self.validation_data_loader = DataLoader(
             self.instances, batch_size=2, collate_fn=allennlp_collate
         )
         self.instances.index_with(vocab)
+        self.instances_lazy.index_with(vocab)
 
 
 class TestTrainer(TrainerTestBase):
@@ -139,6 +146,45 @@ class TestTrainer(TrainerTestBase):
             GradientDescentTrainer(
                 self.model, self.optimizer, self.data_loader, num_epochs=2, cuda_device=[0, 1],
             )
+
+    def test_data_loader_lazy_epoch_size_correct(self):
+        num_epochs = 3
+        trainer = GradientDescentTrainer(
+            self.model,
+            self.optimizer,
+            self.data_loader_lazy,
+            validation_data_loader=self.validation_data_loader,
+            num_epochs=num_epochs,
+            serialization_dir=self.TEST_DIR,
+        )
+        assert trainer._batch_num_total == 0
+        metrics = trainer.train()
+        epoch = metrics["epoch"]
+        assert epoch == num_epochs - 1
+        assert trainer._batch_num_total == num_epochs * 2
+
+    def test_data_loader_lazy_epoch_size_correct_custom_epoch_size(self):
+        batches_per_epoch = 3
+        num_epochs = 3
+        data_loader_custom_epoch_lazy = AllennlpDataLoader(
+            self.instances_lazy,
+            batch_size=2,
+            collate_fn=allennlp_collate,
+            batches_per_epoch=batches_per_epoch,
+        )
+        trainer = GradientDescentTrainer(
+            self.model,
+            self.optimizer,
+            data_loader_custom_epoch_lazy,
+            validation_data_loader=self.validation_data_loader,
+            num_epochs=num_epochs,
+            serialization_dir=self.TEST_DIR,
+        )
+        assert trainer._batch_num_total == 0
+        metrics = trainer.train()
+        epoch = metrics["epoch"]
+        assert epoch == num_epochs - 1
+        assert trainer._batch_num_total == num_epochs * batches_per_epoch
 
     def test_trainer_respects_epoch_size_equals_total(self):
         batches_per_epoch = 4

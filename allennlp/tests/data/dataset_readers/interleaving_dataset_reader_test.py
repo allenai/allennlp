@@ -34,7 +34,7 @@ class TestInterleavingDatasetReader(AllenNlpTestCase):
 
         file_path = f"""{{
             "a": "{data_dir / 'babi.txt'}",
-            "b": "{data_dir / 'conll2000.txt'}",
+            "b": "{data_dir / 'conll2003.txt'}",
             "c": "{data_dir / 'conll2003.txt'}"
         }}"""
 
@@ -55,7 +55,7 @@ class TestInterleavingDatasetReader(AllenNlpTestCase):
 
         file_path = f"""{{
             "f": "{data_dir / 'babi.txt'}",
-            "g": "{data_dir / 'conll2000.txt'}",
+            "g": "{data_dir / 'conll2003.txt'}",
             "h": "{data_dir / 'conll2003.txt'}"
         }}"""
 
