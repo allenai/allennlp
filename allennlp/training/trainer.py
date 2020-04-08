@@ -154,6 +154,9 @@ class GradientDescentTrainer(Trainer):
     largely match the arguments to `__init__`, and we don't repeat their docstrings in
     `from_partial_objects`.
 
+    [0]: https://tinyurl.com/y5mv44fw
+    [1]: https://nvidia.github.io/apex/amp.html#opt-levels-and-properties
+
     # Parameters
 
     model : `Model`, required.
@@ -235,12 +238,12 @@ class GradientDescentTrainer(Trainer):
         The number of `Trainer` workers participating in the distributed training.
     num_gradient_accumulation_steps : `int`, optional, (default = 1)
         Gradients are accumulated for the given number of steps before doing an optimizer step. This can
-        be useful to accommodate batches that are larger than the RAM size. Refer Thomas Wolf's
-        [post](https://tinyurl.com/y5mv44fw) for details on Gradient Accumulation.
+        be useful to accommodate batches that are larger than the RAM size. Refer [Thomas Wolf's
+        post][0] for details on Gradient Accumulation.
     opt_level : `str`, optional, (default = `None`)
         Each opt_level establishes a set of properties that govern Amp’s implementation of pure or mixed
         precision training. Must be a choice of `"O0"`, `"O1"`, `"O2"`, or `"O3"`.
-        See the Apex [documentation](https://nvidia.github.io/apex/amp.html#opt-levels-and-properties) for
+        See [the Apex documentation][1] for
         more details. If `None`, Amp is not used. Defaults to `None`.
     """
 
