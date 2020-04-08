@@ -6,7 +6,7 @@ import torch
 from allennlp.data import TextFieldTensors, Vocabulary
 from allennlp.models.model import Model
 from allennlp.modules import FeedForward, Seq2SeqEncoder, Seq2VecEncoder, TextFieldEmbedder
-from allennlp.nn import InitializerApplicator
+from allennlp.nn import InitializerApplicator, util
 from allennlp.nn.util import get_text_field_mask
 from allennlp.training.metrics import CategoricalAccuracy
 
@@ -134,7 +134,7 @@ class BasicClassifier(Model):
         probs = torch.nn.functional.softmax(logits, dim=-1)
 
         output_dict = {"logits": logits, "probs": probs}
-
+        output_dict["token_ids"] = util.get_token_ids_from_text_field_tensors(tokens)
         if label is not None:
             loss = self._loss(logits, label.long().view(-1))
             output_dict["loss"] = loss
@@ -163,6 +163,17 @@ class BasicClassifier(Model):
             )
             classes.append(label_str)
         output_dict["label"] = classes
+        tokens = []
+        for instance_tokens in output_dict["token_ids"]:
+            tokens.append(
+                [
+                    self.vocab.get_token_from_index(
+                        token_id.item(),namespace="tags"
+                    )
+                    for token_id in instance_tokens
+                ]
+            )
+        output_dict["tokens"] = tokens
         return output_dict
 
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
