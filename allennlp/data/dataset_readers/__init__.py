@@ -15,7 +15,6 @@ from allennlp.data.dataset_readers.semantic_dependency_parsing import (
 )
 from allennlp.data.dataset_readers.sequence_tagging import SequenceTaggingDatasetReader
 from allennlp.data.dataset_readers.sharded_dataset_reader import ShardedDatasetReader
-from allennlp.data.dataset_readers.snli import SnliReader
 from allennlp.data.dataset_readers.stanford_sentiment_tree_bank import (
     StanfordSentimentTreeBankDatasetReader,
 )
