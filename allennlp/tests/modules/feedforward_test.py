@@ -1,4 +1,5 @@
 from numpy.testing import assert_almost_equal
+import inspect
 import pytest
 import torch
 
@@ -65,3 +66,30 @@ class TestFeedForward(AllenNlpTestCase):
         # This output was checked by hand - ReLU makes output after first hidden layer [0, 0, 0],
         # which then gets a bias added in the second layer to be [1, 1, 1].
         assert_almost_equal(output, [[1, 1, 1]])
+
+    def test_textual_representation_contains_activations(self):
+        params = Params(
+            {"input_dim": 2, "hidden_dims": 3, "activations": ["linear", "relu"], "num_layers": 2}
+        )
+        feedforward = FeedForward.from_params(params)
+        expected_text_representation = inspect.cleandoc(
+            """
+            FeedForward(
+              (_activations): ModuleList(
+                (0): Linear()
+                (1): ReLU()
+              )
+              (_linear_layers): ModuleList(
+                (0): Linear(in_features=2, out_features=3, bias=True)
+                (1): Linear(in_features=3, out_features=3, bias=True)
+              )
+              (_dropout): ModuleList(
+                (0): Dropout(p=0.0, inplace=False)
+                (1): Dropout(p=0.0, inplace=False)
+              )
+            )
+            """
+        )
+        actual_text_representation = str(feedforward)
+
+        self.assertEqual(actual_text_representation, expected_text_representation)

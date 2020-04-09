@@ -62,7 +62,7 @@ class FeedForward(torch.nn.Module, FromParams):
             raise ConfigurationError(
                 "len(dropout) (%d) != num_layers (%d)" % (len(dropout), num_layers)
             )
-        self._activations = activations
+        self._activations = torch.nn.ModuleList(activations)
         input_dims = [input_dim] + hidden_dims[:-1]
         linear_layers = []
         for layer_input_dim, layer_output_dim in zip(input_dims, hidden_dims):
