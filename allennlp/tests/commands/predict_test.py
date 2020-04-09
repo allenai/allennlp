@@ -226,7 +226,7 @@ class TestPredict(AllenNlpTestCase):
         model_type = archive.config.get("model").get("type")
         # Makes sure that we don't have a DEFAULT_PREDICTOR for it. Otherwise the base class
         # implementation wouldn't be used
-        del DEFAULT_PREDICTORS['basic_classifier']
+        del DEFAULT_PREDICTORS["basic_classifier"]
         assert model_type not in DEFAULT_PREDICTORS
 
         # Doesn't use a --predictor
@@ -248,7 +248,7 @@ class TestPredict(AllenNlpTestCase):
         assert len(results) == 3
         for result in results:
             assert set(result.keys()) == {"logits", "probs", "label", "loss"}
-        DEFAULT_PREDICTORS['basic_classifier'] = "text_classifier"
+        DEFAULT_PREDICTORS["basic_classifier"] = "text_classifier"
 
     def test_batch_prediction_works_with_known_model(self):
         with open(self.infile, "w") as f:

@@ -7,9 +7,7 @@ from allennlp.interpret.attackers import InputReduction
 class TestInputReduction(AllenNlpTestCase):
     def test_input_reduction(self):
         # test using classification model
-        inputs = {
-            "sentence": "I always write unit tests for my code."
-        }
+        inputs = {"sentence": "I always write unit tests for my code."}
 
         archive = load_archive(
             self.FIXTURES_ROOT / "basic_classifier" / "serialization" / "model.tar.gz"

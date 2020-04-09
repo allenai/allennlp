@@ -561,8 +561,7 @@ class TestFromParams(AllenNlpTestCase):
             assert torch.all(trained_parameter == transfer_parameter)
         # Any other module's parameters shouldn't be same (eg. _feedforward)
         for trained_parameter, transfer_parameter in zip(
-            trained_model._feedforward.parameters(),
-            transfer_model._feedforward.parameters(),
+            trained_model._feedforward.parameters(), transfer_model._feedforward.parameters(),
         ):
             assert torch.all(trained_parameter != transfer_parameter)
 
