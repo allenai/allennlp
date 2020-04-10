@@ -7,6 +7,7 @@ import torch
 
 from allennlp.common import FromParams
 from allennlp.common.checks import ConfigurationError
+from allennlp.nn import Activation
 
 
 class FeedForward(torch.nn.Module, FromParams):
@@ -24,10 +25,10 @@ class FeedForward(torch.nn.Module, FromParams):
         The output dimension of each of the `Linear` layers.  If this is a single `int`, we use
         it for all `Linear` layers.  If it is a `List[int]`, `len(hidden_dims)` must be
         `num_layers`.
-    activations : `Union[torch.nn.Module, List[torch.nn.Module]]`, required
+    activations : `Union[Activation, List[Activation]]`, required
         The activation function to use after each `Linear` layer.  If this is a single function,
-        we use it after all `Linear` layers.  If it is a `List[torch.nn.Module]`,
-        `len(activations)` must be `num_layers`.
+        we use it after all `Linear` layers.  If it is a `List[Activation]`,
+        `len(activations)` must be `num_layers`. Activation must have torch.nn.Module type.
     dropout : `Union[float, List[float]]`, optional (default = 0.0)
         If given, we will apply this amount of dropout after each layer.  Semantics of `float`
         versus `List[float]` is the same as with other parameters.
@@ -57,7 +58,7 @@ class FeedForward(torch.nn.Module, FromParams):
         input_dim: int,
         num_layers: int,
         hidden_dims: Union[int, List[int]],
-        activations: Union[torch.nn.Module, List[torch.nn.Module]],
+        activations: Union[Activation, List[Activation]],
         dropout: Union[float, List[float]] = 0.0,
     ) -> None:
 
