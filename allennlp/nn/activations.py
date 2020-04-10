@@ -33,7 +33,7 @@ import torch
 from allennlp.common import Registrable
 
 
-class Activation(Registrable):
+class Activation(torch.nn.Module, Registrable):
     """
     Pytorch has a number of built-in activation functions.  We group those here under a common
     type, just to make it easier to configure and instantiate them `from_params` using
@@ -59,7 +59,8 @@ class _ActivationLambda(torch.nn.Module):
 
     def __init__(self, func: Callable[[torch.Tensor], torch.Tensor], name: str):
         super().__init__()
-        # Override class name to match activation name as PyTorch uses that field to create the textual representation.
+        # Override class name to match activation name as PyTorch uses that field to create the textual
+        # representation.
         self.__class__.__name__ = name
         self.func = func
 

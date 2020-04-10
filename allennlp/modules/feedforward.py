@@ -7,7 +7,6 @@ import torch
 
 from allennlp.common import FromParams
 from allennlp.common.checks import ConfigurationError
-from allennlp.nn import Activation
 
 
 class FeedForward(torch.nn.Module, FromParams):
@@ -25,13 +24,32 @@ class FeedForward(torch.nn.Module, FromParams):
         The output dimension of each of the `Linear` layers.  If this is a single `int`, we use
         it for all `Linear` layers.  If it is a `List[int]`, `len(hidden_dims)` must be
         `num_layers`.
-    activations : `Union[Callable, List[Callable]]`, required
+    activations : `Union[torch.nn.Module, List[torch.nn.Module]]`, required
         The activation function to use after each `Linear` layer.  If this is a single function,
-        we use it after all `Linear` layers.  If it is a `List[Callable]`,
+        we use it after all `Linear` layers.  If it is a `List[torch.nn.Module]`,
         `len(activations)` must be `num_layers`.
     dropout : `Union[float, List[float]]`, optional (default = 0.0)
         If given, we will apply this amount of dropout after each layer.  Semantics of `float`
         versus `List[float]` is the same as with other parameters.
+
+    Example:
+    ```
+        >>> FeedForward(124, 2, [64, 32], torch.nn.ReLU(), 0.2)
+        FeedForward(
+          (_activations): ModuleList(
+            (0): ReLU()
+            (1): ReLU()
+          )
+          (_linear_layers): ModuleList(
+            (0): Linear(in_features=124, out_features=64, bias=True)
+            (1): Linear(in_features=64, out_features=32, bias=True)
+          )
+          (_dropout): ModuleList(
+            (0): Dropout(p=0.2, inplace=False)
+            (1): Dropout(p=0.2, inplace=False)
+          )
+        )
+    ```
     """
 
     def __init__(
@@ -39,7 +57,7 @@ class FeedForward(torch.nn.Module, FromParams):
         input_dim: int,
         num_layers: int,
         hidden_dims: Union[int, List[int]],
-        activations: Union[Activation, List[Activation]],
+        activations: Union[torch.nn.Module, List[torch.nn.Module]],
         dropout: Union[float, List[float]] = 0.0,
     ) -> None:
 
