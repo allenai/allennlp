@@ -57,6 +57,7 @@ class BasicClassifier(Model):
         dropout: float = None,
         num_labels: int = None,
         label_namespace: str = "labels",
+        namespace: str = "tokens",
         initializer: InitializerApplicator = InitializerApplicator(),
         **kwargs,
     ) -> None:
@@ -81,6 +82,7 @@ class BasicClassifier(Model):
         else:
             self._dropout = None
         self._label_namespace = label_namespace
+        self._namespace = namespace
 
         if num_labels:
             self._num_labels = num_labels
@@ -168,7 +170,7 @@ class BasicClassifier(Model):
             tokens.append(
                 [
                     self.vocab.get_token_from_index(
-                        token_id.item(),namespace="tags"
+                        token_id.item(),namespace=self._namespace
                     )
                     for token_id in instance_tokens
                 ]
