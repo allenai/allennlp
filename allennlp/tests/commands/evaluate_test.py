@@ -102,17 +102,23 @@ class TestEvaluate(AllenNlpTestCase):
 
     def test_evaluate_works_with_vocab_expansion(self):
         archive_path = str(
-            self.FIXTURES_ROOT / "decomposable_attention" / "serialization" / "model.tar.gz"
+            self.FIXTURES_ROOT / "basic_classifier" / "serialization" / "model.tar.gz"
         )
         # snli2 has a extra token ("seahorse") in it.
-        evaluate_data_path = str(self.FIXTURES_ROOT / "data" / "snli2.jsonl")
+        evaluate_data_path = str(
+            self.FIXTURES_ROOT / "data" / "text_classification_json" / "imdb_corpus2.jsonl"
+        )
         embeddings_filename = str(
-            self.FIXTURES_ROOT / "data" / "seahorse_embeddings.gz"
-        )  # has only seahorse vector
+            self.FIXTURES_ROOT / "data" / "unawarded_embeddings.gz"
+        )  # has only unawarded vector
         embedding_sources_mapping = json.dumps(
             {"_text_field_embedder.token_embedder_tokens": embeddings_filename}
         )
         kebab_args = ["evaluate", archive_path, evaluate_data_path, "--cuda-device", "-1"]
+
+        # TODO(mattg): the unawarded_embeddings.gz file above doesn't exist, but this test still
+        # passes.  This suggests that vocab extension in evaluate isn't currently doing anything,
+        # and so it is broken.
 
         # Evaluate 1 with no vocab expansion,
         # Evaluate 2 with vocab expansion with no pretrained embedding file.
