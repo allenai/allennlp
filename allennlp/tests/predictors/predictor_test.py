@@ -35,14 +35,13 @@ class TestPredictor(AllenNlpTestCase):
 
     def test_get_gradients(self):
         inputs = {
-            "premise": "I always write unit tests",
-            "hypothesis": "One time I did not write any unit tests",
+            "sentence": "I always write unit tests",
         }
 
         archive = load_archive(
-            self.FIXTURES_ROOT / "decomposable_attention" / "serialization" / "model.tar.gz"
+            self.FIXTURES_ROOT / "basic_classifier" / "serialization" / "model.tar.gz"
         )
-        predictor = Predictor.from_archive(archive, "textual-entailment")
+        predictor = Predictor.from_archive(archive)
 
         instance = predictor._json_to_instance(inputs)
         outputs = predictor._model.forward_on_instance(instance)
@@ -50,8 +49,5 @@ class TestPredictor(AllenNlpTestCase):
         for instance in labeled_instances:
             grads = predictor.get_gradients([instance])[0]
             assert "grad_input_1" in grads
-            assert "grad_input_2" in grads
             assert grads["grad_input_1"] is not None
-            assert grads["grad_input_2"] is not None
-            assert len(grads["grad_input_1"][0]) == 9  # 9 words in hypothesis
-            assert len(grads["grad_input_2"][0]) == 5  # 5 words in premise
+            assert len(grads["grad_input_1"][0]) == 5  # 9 words in hypothesis
