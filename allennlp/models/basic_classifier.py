@@ -169,9 +169,7 @@ class BasicClassifier(Model):
         for instance_tokens in output_dict["token_ids"]:
             tokens.append(
                 [
-                    self.vocab.get_token_from_index(
-                        token_id.item(),namespace=self._namespace
-                    )
+                    self.vocab.get_token_from_index(token_id.item(), namespace=self._namespace)
                     for token_id in instance_tokens
                 ]
             )
