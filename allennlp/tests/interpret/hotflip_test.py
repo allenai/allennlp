@@ -8,19 +8,16 @@ from allennlp.predictors import Predictor
 
 class TestHotflip(AllenNlpTestCase):
     def test_hotflip(self):
-        inputs = {
-            "premise": "I always write unit tests for my code.",
-            "hypothesis": "One time I didn't write any unit tests for my code.",
-        }
+        inputs = {"sentence": "I always write unit tests for my code."}
 
         archive = load_archive(
-            self.FIXTURES_ROOT / "decomposable_attention" / "serialization" / "model.tar.gz"
+            self.FIXTURES_ROOT / "basic_classifier" / "serialization" / "model.tar.gz"
         )
-        predictor = Predictor.from_archive(archive, "textual-entailment")
+        predictor = Predictor.from_archive(archive)
 
         hotflipper = Hotflip(predictor)
         hotflipper.initialize()
-        attack = hotflipper.attack_from_json(inputs, "hypothesis", "grad_input_1")
+        attack = hotflipper.attack_from_json(inputs, "tokens", "grad_input_1")
         assert attack is not None
         assert "final" in attack
         assert "original" in attack
@@ -31,15 +28,12 @@ class TestHotflip(AllenNlpTestCase):
 
     def test_with_token_characters_indexer(self):
 
-        inputs = {
-            "premise": "I always write unit tests for my code.",
-            "hypothesis": "One time I didn't write any unit tests for my code.",
-        }
+        inputs = {"sentence": "I always write unit tests for my code."}
 
         archive = load_archive(
-            self.FIXTURES_ROOT / "decomposable_attention" / "serialization" / "model.tar.gz"
+            self.FIXTURES_ROOT / "basic_classifier" / "serialization" / "model.tar.gz"
         )
-        predictor = Predictor.from_archive(archive, "textual-entailment")
+        predictor = Predictor.from_archive(archive)
         predictor._dataset_reader._token_indexers["chars"] = TokenCharactersIndexer(
             min_padding_length=1
         )
@@ -47,7 +41,7 @@ class TestHotflip(AllenNlpTestCase):
 
         hotflipper = Hotflip(predictor)
         hotflipper.initialize()
-        attack = hotflipper.attack_from_json(inputs, "hypothesis", "grad_input_1")
+        attack = hotflipper.attack_from_json(inputs, "tokens", "grad_input_1")
         assert attack is not None
         assert "final" in attack
         assert "original" in attack
