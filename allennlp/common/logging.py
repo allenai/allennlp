@@ -1,63 +1,44 @@
 """
 A custom 'logging.Logger' that has additional {warning,debug,etc.}_once() methods
-which allow for logged methods to be logged only once. Uses a 'logging.Filter'
-to enforce the 'log_once' restriction.
+which allow for logged methods to be logged only once.
 """
 import logging
-
-LOGGED_ONCE_MSG_PREFIX = "LOGGED ONCE: "
-
-
-class DuplicateFilterByPrefix(logging.Filter):
-    """
-    A 'logging.Filter' subclass which filters duplicate messages if they have the LOGGED_ONCE_MSG_PREFIX.
-    """
-
-    def __init__(self):
-        self.msgs = set()
-
-    def filter(self, record):
-        allow = True
-        if record.msg.startswith(LOGGED_ONCE_MSG_PREFIX):
-            allow = record.msg not in self.msgs
-        self.msgs.add(record.msg)
-        return allow
 
 
 class AllenNlpLogger(logging.Logger):
     """
-    A custom subclass of 'logging.Logger' that uses a filter to implement {LOG_LEVEL}_once() methods.
+    A custom subclass of 'logging.Logger' that keeps a set of messages to
+    implement {debug,info,etc.}_once() methods.
     """
 
+    def __init__(self, name):
+        super().__init__(name)
+        self.msgs = set()
+
     def debug_once(self, msg, *args, **kwargs):
-        msg = LOGGED_ONCE_MSG_PREFIX + msg
-        self.debug(msg, *args, **kwargs)
+        if msg not in self.msgs:
+            self.debug(msg, *args, **kwargs)
+        self.msgs.add(msg)
 
     def info_once(self, msg, *args, **kwargs):
-        msg = LOGGED_ONCE_MSG_PREFIX + msg
-        self.info(msg, *args, **kwargs)
+        if msg not in self.msgs:
+            self.info(msg, *args, **kwargs)
+        self.msgs.add(msg)
 
     def warning_once(self, msg, *args, **kwargs):
-        msg = LOGGED_ONCE_MSG_PREFIX + msg
-        self.warning(msg, *args, **kwargs)
+        if msg not in self.msgs:
+            self.warning(msg, *args, **kwargs)
+        self.msgs.add(msg)
 
     def error_once(self, msg, *args, **kwargs):
-        msg = LOGGED_ONCE_MSG_PREFIX + msg
-        self.error(msg, *args, **kwargs)
+        if msg not in self.msgs:
+            self.error(msg, *args, **kwargs)
+        self.msgs.add(msg)
 
     def critical_once(self, msg, *args, **kwargs):
-        msg = LOGGED_ONCE_MSG_PREFIX + msg
-        self.critical(msg, *args, **kwargs)
+        if msg not in self.msgs:
+            self.critical(msg, *args, **kwargs)
+        self.msgs.add(msg)
 
 
 logging.setLoggerClass(AllenNlpLogger)
-
-
-def getLogger(name):
-    """
-    A method like 'logging.getLogger' but additionally adds the custom filter.
-    """
-    logger = logging.getLogger(name)
-    filter = DuplicateFilterByPrefix()
-    logger.addFilter(filter)
-    return logger
