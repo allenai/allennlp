@@ -291,6 +291,6 @@ class PretrainedTransformerTokenizer(Tokenizer):
             else:
                 num_end += 1
 
-        assert num_start + num_middle + num_end == self.tokenizer.num_added_tokens(pair=True)
-        assert num_start + num_end == self.tokenizer.num_added_tokens(pair=False)
+        assert num_start + num_middle + num_end == self.tokenizer.num_special_tokens_to_add(pair=True)
+        assert num_start + num_end == self.tokenizer.num_special_tokens_to_add(pair=False)
         return num_start, num_middle, num_end
