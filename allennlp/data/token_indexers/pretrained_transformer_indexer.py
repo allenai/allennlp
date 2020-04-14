@@ -69,9 +69,14 @@ class PretrainedTransformerIndexer(TokenIndexer):
         if self._added_to_vocabulary:
             return
 
-        pretrained_vocab = self._tokenizer.get_vocab()
-        for word, idx in pretrained_vocab.items():
-            word = sanitize_wordpiece(word)
+        try:
+            vocab_items = self._tokenizer.get_vocab().items()
+        except NotImplementedError:
+            vocab_items = (
+                (self._tokenizer.convert_ids_to_tokens(idx), idx)
+                for idx in range(self._tokenizer.vocab_size)
+            )
+        for word, idx in vocab_items:
             vocab._token_to_index[self._namespace][word] = idx
             vocab._index_to_token[self._namespace][idx] = word
 
