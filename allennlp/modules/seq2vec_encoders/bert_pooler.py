@@ -17,6 +17,8 @@ class BertPooler(Seq2VecEncoder):
     token-embedder -> seq2vec encoder setup, this is the Seq2VecEncoder to use.
     (For example, if you want to experiment with other embedding / encoding combinations.)
 
+    Registered as a `Seq2VecEncoder` with name "bert_pooler".
+
     # Parameters
 
     pretrained_model : `Union[str, BertModel]`, required
@@ -52,7 +54,7 @@ class BertPooler(Seq2VecEncoder):
     def get_output_dim(self) -> int:
         return self._embedding_dim
 
-    def forward(self, tokens: torch.Tensor, mask: torch.Tensor = None):
+    def forward(self, tokens: torch.Tensor, mask: torch.BoolTensor = None):
         pooled = self.pooler(tokens)
         pooled = self._dropout(pooled)
         return pooled

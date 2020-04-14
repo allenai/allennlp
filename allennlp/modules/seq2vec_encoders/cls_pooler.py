@@ -12,6 +12,8 @@ class ClsPooler(Seq2VecEncoder):
     Just takes the first vector from a list of vectors (which in a transformer is typically the
     [CLS] token) and returns it.  For BERT, it's recommended to use `BertPooler` instead.
 
+    Registered as a `Seq2VecEncoder` with name "cls_pooler".
+
     # Parameters
 
     embedding_dim: int, optional
@@ -40,7 +42,7 @@ class ClsPooler(Seq2VecEncoder):
         return self._embedding_dim
 
     @overrides
-    def forward(self, tokens: torch.Tensor, mask: torch.Tensor = None):
+    def forward(self, tokens: torch.Tensor, mask: torch.BoolTensor = None):
         # tokens is assumed to have shape (batch_size, sequence_length, embedding_dim).
         # mask is assumed to have shape (batch_size, sequence_length) with all 1s preceding all 0s.
         if not self._cls_is_last_token:

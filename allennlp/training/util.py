@@ -66,7 +66,7 @@ def sparse_clip_norm(parameters, max_norm, norm_type=2) -> float:
                 param_norm = p.grad.data.norm(norm_type)
             total_norm += param_norm ** norm_type
         total_norm = total_norm ** (1.0 / norm_type)
-    clip_coef = max_norm / (total_norm + 1e-6)
+    clip_coef = max_norm / (total_norm + nn_util.tiny_value_of_dtype(total_norm.dtype))
     if clip_coef < 1:
         for p in parameters:
             if p.grad.is_sparse:
@@ -325,6 +325,7 @@ def rescale_gradients(model: Model, grad_norm: Optional[float] = None) -> Option
 def get_metrics(
     model: Model,
     total_loss: float,
+    total_reg_loss: float,
     num_batches: int,
     reset: bool = False,
     world_size: int = 1,
@@ -337,6 +338,7 @@ def get_metrics(
     """
     metrics = model.get_metrics(reset=reset)
     metrics["loss"] = float(total_loss / num_batches) if num_batches > 0 else 0.0
+    metrics["reg_loss"] = float(total_reg_loss / num_batches) if num_batches > 0 else 0.0
 
     if world_size > 1:
         # In distributed mode, average out all metrics across GPUs

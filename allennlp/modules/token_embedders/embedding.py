@@ -37,11 +37,12 @@ class Embedding(TokenEmbedder):
         3. use a non-trainable embedding
         4. project the resultant embeddings to some other dimension (which only makes sense with
            non-trainable embeddings).
-        5. build all of this easily `from_params`
 
     Note that if you are using our data API and are trying to embed a
     [`TextField`](../../data/fields/text_field.md), you should use a
     [`TextFieldEmbedder`](../text_field_embedders/text_field_embedder.md) instead of using this directly.
+
+    Registered as a `TokenEmbedder` with name "embedding".
 
     # Parameters
 
@@ -74,7 +75,7 @@ class Embedding(TokenEmbedder):
         construct it in the original training. We store vocab_namespace used during the original
         training as an attribute, so that it can be retrieved during fine-tuning.
     pretrained_file : `str`, (optional, default=None)
-        Path to a file of word vectors to intialize the embedding matrix. It can be the
+        Path to a file of word vectors to initialize the embedding matrix. It can be the
         path to a local file or a URL of a (cached) remote file. Two formats are supported:
             * hdf5 file - containing an embedding matrix in the form of a torch.Tensor;
             * text file - an utf-8 encoded text file with space separated fields.

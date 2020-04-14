@@ -86,20 +86,21 @@ class SamplerTest(AllenNlpTestCase):
 
 class TestBucketSampler(SamplerTest):
     def test_create_batches_groups_correctly(self):
-
         dataset = AllennlpDataset(self.instances, vocab=self.vocab)
-        sampler = BucketBatchSampler(
-            dataset, batch_size=2, padding_noise=0, sorting_keys=[("text", "tokens___tokens")]
-        )
+        sampler = BucketBatchSampler(dataset, batch_size=2, padding_noise=0, sorting_keys=["text"])
 
         grouped_instances = []
         for indices in sampler:
             grouped_instances.append([self.instances[idx] for idx in indices])
-        assert grouped_instances == [
+        expected_groups = [
             [self.instances[4], self.instances[2]],
             [self.instances[0], self.instances[1]],
             [self.instances[3]],
         ]
+        for group in grouped_instances:
+            assert group in expected_groups
+            expected_groups.remove(group)
+        assert expected_groups == []
 
     def test_guess_sorting_key_picks_the_longest_key(self):
         dataset = AllennlpDataset(self.instances, vocab=self.vocab)
@@ -133,13 +134,13 @@ class TestBucketSampler(SamplerTest):
         )
         assert sampler.sorting_keys is None
         sampler._guess_sorting_keys(instances)
-        assert sampler.sorting_keys == [("passage", "tokens___tokens")]
+        assert sampler.sorting_keys == ["passage"]
 
     def test_from_params(self):
         dataset = AllennlpDataset(self.instances, self.vocab)
         params = Params({})
 
-        sorting_keys = [("s1", "nt"), ("s2", "nt2")]
+        sorting_keys = ["s1", "s2"]
         params["sorting_keys"] = sorting_keys
         params["batch_size"] = 32
         sampler = BucketBatchSampler.from_params(params=params, data_source=dataset)
@@ -166,11 +167,7 @@ class TestBucketSampler(SamplerTest):
     def test_drop_last_works(self):
         dataset = AllennlpDataset(self.instances, vocab=self.vocab)
         sampler = BucketBatchSampler(
-            dataset,
-            batch_size=2,
-            padding_noise=0,
-            sorting_keys=[("text", "tokens___tokens")],
-            drop_last=True,
+            dataset, batch_size=2, padding_noise=0, sorting_keys=["text"], drop_last=True,
         )
         # We use a custom collate_fn for testing, which doesn't actually create tensors,
         # just the allennlp Batches.
@@ -183,3 +180,23 @@ class TestBucketSampler(SamplerTest):
 
         # we should have lost one instance by skipping the last batch
         assert stats["total_instances"] == len(self.instances) - 1
+
+    def test_batch_count(self):
+        dataset = AllennlpDataset(self.instances, vocab=self.vocab)
+        sampler = BucketBatchSampler(dataset, batch_size=2, padding_noise=0, sorting_keys=["text"])
+        # We use a custom collate_fn for testing, which doesn't actually create tensors,
+        # just the allennlp Batches.
+        dataloader = DataLoader(dataset, batch_sampler=sampler, collate_fn=lambda x: Batch(x))
+
+        assert len(dataloader) == 3
+
+    def test_batch_count_with_drop_last(self):
+        dataset = AllennlpDataset(self.instances, vocab=self.vocab)
+        sampler = BucketBatchSampler(
+            dataset, batch_size=2, padding_noise=0, sorting_keys=["text"], drop_last=True,
+        )
+        # We use a custom collate_fn for testing, which doesn't actually create tensors,
+        # just the allennlp Batches.
+        dataloader = DataLoader(dataset, batch_sampler=sampler, collate_fn=lambda x: Batch(x))
+
+        assert len(dataloader) == 2

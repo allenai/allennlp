@@ -18,6 +18,8 @@ class CnnHighwayEncoder(Seq2VecEncoder):
     https://arxiv.org/abs/1508.06615
     with an optional projection.
 
+    Registered as a `Seq2VecEncoder` with name "cnn-highway".
+
     # Parameters
 
     embedding_dim : `int`, required
@@ -98,7 +100,7 @@ class CnnHighwayEncoder(Seq2VecEncoder):
         else:
             self._layer_norm = lambda tensor: tensor
 
-    def forward(self, inputs: torch.Tensor, mask: torch.Tensor) -> Dict[str, torch.Tensor]:
+    def forward(self, inputs: torch.Tensor, mask: torch.BoolTensor) -> Dict[str, torch.Tensor]:
         """
         Compute context insensitive token embeddings for ELMo representations.
 

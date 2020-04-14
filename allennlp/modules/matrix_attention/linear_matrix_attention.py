@@ -28,6 +28,8 @@ class LinearMatrixAttention(MatrixAttention):
     similarity function is computed as `x * w * y + b` (with `w` the diagonal of `W`), you can
     accomplish that with this class by using "x*y" for `combination`.
 
+    Registered as a `MatrixAttention` with name "linear".
+
     # Parameters
 
     tensor_1_dim : `int`, required

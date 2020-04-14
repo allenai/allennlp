@@ -3,10 +3,10 @@ from typing import Dict, Iterable, List, Mapping, Optional, Set, Tuple, Union
 import pytest
 import torch
 
-from allennlp.common import Lazy, Params
+from allennlp.common import Lazy, Params, Registrable
 from allennlp.common.from_params import FromParams, takes_arg, remove_optional, create_kwargs
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.data import DatasetReader, Tokenizer
+from allennlp.data import DataLoader, DatasetReader, Tokenizer
 from allennlp.models import Model
 from allennlp.models.archival import load_archive
 from allennlp.common.checks import ConfigurationError
@@ -66,6 +66,15 @@ class TestFromParams(AllenNlpTestCase):
         assert isinstance(my_class, MyClass)
         assert my_class.my_int == 10
         assert my_class.my_bool
+
+    def test_good_error_message_when_passing_non_params(self):
+        from allennlp.nn import InitializerApplicator
+
+        # This was how we used to take initializer params.  We want to be sure we give a reasonable
+        # error message when something like this is passed to FromParams.
+        params = Params({"initializer": [["regex1", "uniform"], ["regex2", "orthogonal"]]})
+        with pytest.raises(ConfigurationError, match="dictionary.*InitializerApplicator"):
+            InitializerApplicator.from_params(params=params.pop("initializer"))
 
     def test_create_kwargs(self):
         kwargs = create_kwargs(MyClass, MyClass, Params({"my_int": 5}), my_bool=True, my_float=4.4)
@@ -514,14 +523,14 @@ class TestFromParams(AllenNlpTestCase):
     def test_transferring_of_modules(self):
 
         model_archive = str(
-            self.FIXTURES_ROOT / "decomposable_attention" / "serialization" / "model.tar.gz"
+            self.FIXTURES_ROOT / "basic_classifier" / "serialization" / "model.tar.gz"
         )
         trained_model = load_archive(model_archive).model
 
-        config_file = str(self.FIXTURES_ROOT / "decomposable_attention" / "experiment.json")
+        config_file = str(self.FIXTURES_ROOT / "basic_classifier" / "experiment_seq2seq.jsonnet")
         model_params = Params.from_file(config_file).pop("model").as_dict(quiet=True)
 
-        # Override only text_field_embedder (freeze) and attend_feedforward params (tunable)
+        # Override only text_field_embedder (freeze) and seq2seq_encoder params (tunable)
         model_params["text_field_embedder"] = {
             "_pretrained": {
                 "archive_file": model_archive,
@@ -529,31 +538,30 @@ class TestFromParams(AllenNlpTestCase):
                 "freeze": True,
             }
         }
-        model_params["attend_feedforward"] = {
+        model_params["seq2seq_encoder"] = {
             "_pretrained": {
                 "archive_file": model_archive,
-                "module_path": "_attend_feedforward._module",
+                "module_path": "_seq2seq_encoder",
                 "freeze": False,
             }
         }
 
         transfer_model = Model.from_params(vocab=trained_model.vocab, params=Params(model_params))
 
-        # TextFieldEmbedder and AttendFeedforward parameters should be transferred
+        # TextFieldEmbedder and Seq2SeqEncoder parameters should be transferred
         for trained_parameter, transfer_parameter in zip(
             trained_model._text_field_embedder.parameters(),
             transfer_model._text_field_embedder.parameters(),
         ):
             assert torch.all(trained_parameter == transfer_parameter)
         for trained_parameter, transfer_parameter in zip(
-            trained_model._attend_feedforward.parameters(),
-            transfer_model._attend_feedforward.parameters(),
+            trained_model._seq2seq_encoder.parameters(),
+            transfer_model._seq2seq_encoder.parameters(),
         ):
             assert torch.all(trained_parameter == transfer_parameter)
-        # Any other module's parameters shouldn't be same (eg. compare_feedforward)
+        # Any other module's parameters shouldn't be same (eg. _feedforward)
         for trained_parameter, transfer_parameter in zip(
-            trained_model._compare_feedforward.parameters(),
-            transfer_model._compare_feedforward.parameters(),
+            trained_model._feedforward.parameters(), transfer_model._feedforward.parameters(),
         ):
             assert torch.all(trained_parameter != transfer_parameter)
 
@@ -561,29 +569,57 @@ class TestFromParams(AllenNlpTestCase):
         for parameter in transfer_model._text_field_embedder.parameters():
             assert not parameter.requires_grad
 
-        # # AttendFeedforward should have requires_grad On
-        for parameter in transfer_model._attend_feedforward.parameters():
+        # # Seq2SeqEncoder should have requires_grad On
+        for parameter in transfer_model._seq2seq_encoder.parameters():
             assert parameter.requires_grad
 
     def test_transferring_of_modules_ensures_type_consistency(self):
 
         model_archive = str(
-            self.FIXTURES_ROOT / "decomposable_attention" / "serialization" / "model.tar.gz"
+            self.FIXTURES_ROOT / "basic_classifier" / "serialization" / "model.tar.gz"
         )
         trained_model = load_archive(model_archive).model
 
-        config_file = str(self.FIXTURES_ROOT / "decomposable_attention" / "experiment.json")
+        config_file = str(self.FIXTURES_ROOT / "basic_classifier" / "experiment_seq2seq.jsonnet")
         model_params = Params.from_file(config_file).pop("model").as_dict(quiet=True)
 
-        # Override only text_field_embedder and make it load AttendFeedForward
+        # Override only text_field_embedder and make it load Seq2SeqEncoder
         model_params["text_field_embedder"] = {
             "_pretrained": {
                 "archive_file": model_archive,
-                "module_path": "_attend_feedforward._module",
+                "module_path": "_seq2seq_encoder._module",
             }
         }
         with pytest.raises(ConfigurationError):
             Model.from_params(vocab=trained_model.vocab, params=Params(model_params))
+
+    def test_bare_string_params(self):
+        dataset = [1]
+
+        class TestLoader(Registrable):
+            @classmethod
+            def from_partial_objects(cls, data_loader: Lazy[DataLoader]) -> DataLoader:
+                return data_loader.construct(dataset=dataset)
+
+        TestLoader.register("test", constructor="from_partial_objects")(TestLoader)
+
+        data_loader = TestLoader.from_params(
+            Params(
+                {
+                    "type": "test",
+                    "data_loader": {
+                        "batch_sampler": {
+                            "type": "basic",
+                            "batch_size": 2,
+                            "drop_last": True,
+                            "sampler": "random",
+                        }
+                    },
+                }
+            )
+        )
+        assert data_loader.batch_sampler.sampler.__class__.__name__ == "RandomSampler"
+        assert data_loader.batch_sampler.sampler.data_source is dataset
 
     def test_kwargs_are_passed_to_superclass(self):
         params = Params(
@@ -592,6 +628,35 @@ class TestFromParams(AllenNlpTestCase):
         reader = DatasetReader.from_params(params)
         assert reader.lazy is True
         assert str(reader._cache_directory) == "tmp"
+
+    def test_kwargs_with_multiple_inheritance(self):
+        # Basic idea: have two identical classes, differing only in the order of their multiple
+        # inheritance, and make sure that passing kwargs up to the super class works in both cases.
+        class A(Registrable):
+            def __init__(self, a: int):
+                self.a = a
+
+        from numbers import Number
+
+        @A.register("b1")
+        class B1(A, Number):
+            def __init__(self, b: float, **kwargs):
+                super().__init__(**kwargs)
+                self.b = b
+
+        @A.register("b2")
+        class B2(Number, A):
+            def __init__(self, b: float, **kwargs):
+                super().__init__(**kwargs)
+                self.b = b
+
+        b = B1.from_params(params=Params({"a": 4, "b": 5}))
+        assert b.b == 5
+        assert b.a == 4
+
+        b = B2.from_params(params=Params({"a": 4, "b": 5}))
+        assert b.b == 5
+        assert b.a == 4
 
     def test_only_infer_superclass_params_if_unknown(self):
 

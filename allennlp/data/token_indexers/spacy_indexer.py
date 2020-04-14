@@ -19,6 +19,8 @@ class SpacyTokenIndexer(TokenIndexer):
     easier integration with a spacy pipeline and no out of vocabulary
     tokens.
 
+    Registered as a `TokenIndexer` with name "spacy".
+
     # Parameters
 
     hidden_dim : `int`, optional (default=`96`)

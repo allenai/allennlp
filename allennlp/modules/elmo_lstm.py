@@ -33,6 +33,8 @@ class ElmoLstm(_EncoderBase):
     This is non-standard, but can be thought of as having an "end of sentence" state, which is
     carried across different sentences.
 
+    [0]: https://arxiv.org/abs/1512.05287
+
     # Parameters
 
     input_size : `int`, required
@@ -47,8 +49,7 @@ class ElmoLstm(_EncoderBase):
         If True, compute gradient of ELMo parameters for fine tuning.
     recurrent_dropout_probability : `float`, optional (default = 0.0)
         The dropout probability to be used in a dropout scheme as stated in
-        [A Theoretically Grounded Application of Dropout in Recurrent Neural Networks]
-        (https://arxiv.org/abs/1512.05287).
+        [A Theoretically Grounded Application of Dropout in Recurrent Neural Networks][0].
     state_projection_clip_value : `float`, optional, (default = None)
         The magnitude with which to clip the hidden_state after projecting it.
     memory_cell_clip_value : `float`, optional, (default = None)
@@ -108,13 +109,13 @@ class ElmoLstm(_EncoderBase):
         self.forward_layers = forward_layers
         self.backward_layers = backward_layers
 
-    def forward(self, inputs: torch.Tensor, mask: torch.LongTensor) -> torch.Tensor:
+    def forward(self, inputs: torch.Tensor, mask: torch.BoolTensor) -> torch.Tensor:
         """
         # Parameters
 
         inputs : `torch.Tensor`, required.
             A Tensor of shape `(batch_size, sequence_length, hidden_size)`.
-        mask : `torch.LongTensor`, required.
+        mask : `torch.BoolTensor`, required.
             A binary mask of shape `(batch_size, sequence_length)` representing the
             non-padded elements in each sequence in the batch.
 

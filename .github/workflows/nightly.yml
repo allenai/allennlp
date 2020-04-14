@@ -7,6 +7,8 @@ on:
 
 jobs:
   build:
+    # Only run this action on "allenai/allennlp", and not forks.
+    if: github.repository == 'allenai/allennlp'
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
@@ -16,6 +18,14 @@ jobs:
         python-version: 3.7
     - name: Install requirements
       run: |
+        # We install the library and the dev-requirements, because
+        # NVIDIA Apex needs pytorch to be installed _when it is built_,
+        # not just when it is used. As it does not have a pip release,
+        # it is installed from github, which means it is built before it is
+        # installed. Then, below, we pip install the wheel we build,
+        # including the `--ignore-installed` flag to ensure that we
+        # ignore the installed master branch of allennlp.
+        pip install -e .
         pip install -r dev-requirements.txt
     - name: Set Version
       # This is somewhat bizarre, but you can't set env variables to bash commands in the action workflow -
@@ -27,7 +37,7 @@ jobs:
         python setup.py bdist_wheel sdist
     - name: Test Packages
       run: |
-        pip install $(ls dist/*.whl)
+        pip install $(ls dist/*.whl) --ignore-installed
         allennlp test-install
     - name: Check diff from 24hr ago
       if: success()

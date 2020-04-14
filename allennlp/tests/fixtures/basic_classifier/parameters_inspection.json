@@ -1,0 +1,27 @@
+{
+    "_classification_layer": {
+        "bias": "tunable",
+        "weight": "tunable"
+    },
+    "_feedforward": {
+        "_linear_layers": {
+            "0": {
+                "bias": "tunable",
+                "weight": "tunable"
+            }
+        }
+    },
+    "_seq2seq_encoder": {
+        "_module": {
+            "bias_hh_l0": "tunable",
+            "bias_ih_l0": "tunable",
+            "weight_hh_l0": "tunable",
+            "weight_ih_l0": "tunable"
+        }
+    },
+    "_text_field_embedder": {
+        "token_embedder_tokens": {
+            "weight": "tunable"
+        }
+    }
+}

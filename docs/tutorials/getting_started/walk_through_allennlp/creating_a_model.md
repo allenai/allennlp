@@ -3,14 +3,14 @@
 Using the included models is fine, but at some point you'll probably want to implement your own models, which is what this tutorial is for.
 
 Generally speaking, in order to implement a new model, you'll need to implement a
-[`DatasetReader`](https://allenai.github.io/allennlp-docs/api/allennlp.data.dataset_readers.html)
+[`DatasetReader`](https://docs.allennlp.org/master/api/allennlp.data.dataset_readers.html)
 subclass to read in your datasets and a
-[`Model`](https://allenai.github.io/allennlp-docs/api/allennlp.models.model.html)
+[`Model`](https://docs.allennlp.org/master/api/allennlp.models.model.html)
 subclass corresponding to the model you want to implement.
 (If there's already a `DatasetReader` for the dataset you want to use,
  of course you can reuse that one.)
 In this tutorial we'll also implement a custom PyTorch
-[`Module`](https://pytorch.org/docs/master/nn.html#torch.nn.Module),
+[`Module`](https://docs.allennlp.org/master/api/models/model/#model),
 but you won't need to do that in general.
 
 Our [simple tagger](training_and_evaluating.md) model
@@ -25,7 +25,7 @@ on the [CoNLL 2003 dataset](https://www.clips.uantwerpen.be/conll2003/ner/),
 which (due to licensing reasons) you'll have to source for yourself.
 
 The simple tagger gets about 88%
-[span-based F1](https://allenai.github.io/allennlp-docs/api/allennlp.training.metrics.html#span-based-f1-measure)
+[span-based F1](https://docs.allennlp.org/master/api/allennlp.training.metrics.html#span-based-f1-measure)
 on the validation dataset. We'd like to do better.
 
 One way to approach this is to add a [Conditional Random Field](https://en.wikipedia.org/wiki/Conditional_random_field)
@@ -47,7 +47,7 @@ For example, our NER data has distinct tags that represent the beginning, middle
 of each entity type. We'd like not to allow a "beginning of a person entity" tag
 to be followed by an "end of location entity tag".
 
-As the CRF is just a component of our model, we'll implement it as a [Module](https://allenai.github.io/allennlp-docs/api/allennlp.modules.html).
+As the CRF is just a component of our model, we'll implement it as a `Module`.
 
 ## Implementing the CRF Module
 

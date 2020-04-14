@@ -17,6 +17,8 @@ class SelfAttentiveSpanExtractor(SpanExtractor):
     corresponding vector representations of the words in the span by this distribution,
     returning a weighted representation of each span.
 
+    Registered as a `SpanExtractor` with name "self_attentive".
+
     # Parameters
 
     input_dim : `int`, required.
@@ -47,7 +49,7 @@ class SelfAttentiveSpanExtractor(SpanExtractor):
         self,
         sequence_tensor: torch.FloatTensor,
         span_indices: torch.LongTensor,
-        span_indices_mask: torch.LongTensor = None,
+        span_indices_mask: torch.BoolTensor = None,
     ) -> torch.FloatTensor:
         # shape (batch_size, sequence_length, 1)
         global_attention_logits = self._global_attention(sequence_tensor)
@@ -74,6 +76,6 @@ class SelfAttentiveSpanExtractor(SpanExtractor):
             # Above we were masking the widths of spans with respect to the max
             # span width in the batch. Here we are masking the spans which were
             # originally passed in as padding.
-            return attended_text_embeddings * span_indices_mask.unsqueeze(-1).float()
+            return attended_text_embeddings * span_indices_mask.unsqueeze(-1)
 
         return attended_text_embeddings

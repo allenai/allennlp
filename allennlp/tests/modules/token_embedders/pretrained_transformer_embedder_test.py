@@ -21,7 +21,7 @@ class TestPretrainedTransformerEmbedder(AllenNlpTestCase):
         params = Params({"model_name": "bert-base-uncased"})
         embedder = PretrainedTransformerEmbedder.from_params(params)
         token_ids = torch.randint(0, 100, (1, 4))
-        mask = torch.randint(0, 2, (1, 4))
+        mask = torch.randint(0, 2, (1, 4)).bool()
         output = embedder(token_ids=token_ids, mask=mask)
         assert tuple(output.size()) == (1, 4, 768)
 
@@ -64,8 +64,8 @@ class TestPretrainedTransformerEmbedder(AllenNlpTestCase):
         assert tokens["bert"]["token_ids"].shape == (2, max_length)
 
         assert tokens["bert"]["mask"].tolist() == [
-            [1, 1, 1, 1, 1, 1, 1, 1, 1],
-            [1, 1, 1, 1, 1, 1, 1, 0, 0],
+            [True, True, True, True, True, True, True, True, True],
+            [True, True, True, True, True, True, True, False, False],
         ]
 
         # Attention mask
@@ -75,7 +75,7 @@ class TestPretrainedTransformerEmbedder(AllenNlpTestCase):
     def test_big_token_type_ids(self):
         token_embedder = PretrainedTransformerEmbedder("roberta-base")
         token_ids = torch.LongTensor([[1, 2, 3], [2, 3, 4]])
-        mask = torch.ones_like(token_ids)
+        mask = torch.ones_like(token_ids).bool()
         type_ids = torch.zeros_like(token_ids)
         type_ids[1, 1] = 1
         with pytest.raises(ValueError):
@@ -84,7 +84,7 @@ class TestPretrainedTransformerEmbedder(AllenNlpTestCase):
     def test_xlnet_token_type_ids(self):
         token_embedder = PretrainedTransformerEmbedder("xlnet-base-cased")
         token_ids = torch.LongTensor([[1, 2, 3], [2, 3, 4]])
-        mask = torch.ones_like(token_ids)
+        mask = torch.ones_like(token_ids).bool()
         type_ids = torch.zeros_like(token_ids)
         type_ids[1, 1] = 1
         token_embedder(token_ids, mask, type_ids)
@@ -132,12 +132,12 @@ class TestPretrainedTransformerEmbedder(AllenNlpTestCase):
         assert tokens["bert"]["token_ids"].shape == (2, segment_concat_length)
 
         assert tokens["bert"]["mask"].tolist() == [
-            [1, 1, 1, 1, 1, 1, 1, 1, 1],
-            [1, 1, 1, 1, 1, 1, 1, 0, 0],
+            [True, True, True, True, True, True, True, True, True],
+            [True, True, True, True, True, True, True, False, False],
         ]
         assert tokens["bert"]["segment_concat_mask"].tolist() == [
-            [1] * segment_concat_length,
-            [1] * (segment_concat_length - 4) + [0] * 4,  # 4 is hard-coded length difference
+            [True] * segment_concat_length,
+            [True] * (segment_concat_length - 4) + [False] * 4,  # 4 is hard-coded length difference
         ]
 
         # Attention mask

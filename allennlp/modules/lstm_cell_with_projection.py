@@ -18,6 +18,8 @@ class LstmCellWithProjection(torch.nn.Module):
     it cannot make use of CUDNN optimizations for stacked RNNs due to and
     variational dropout and the custom nature of the cell state.
 
+    [0]: https://arxiv.org/abs/1512.05287
+
     # Parameters
 
     input_size : `int`, required.
@@ -32,7 +34,7 @@ class LstmCellWithProjection(torch.nn.Module):
     recurrent_dropout_probability : `float`, optional (default = 0.0)
         The dropout probability to be used in a dropout scheme as stated in
         [A Theoretically Grounded Application of Dropout in Recurrent Neural Networks]
-        (https://arxiv.org/abs/1512.05287). Implementation wise, this simply
+        [0]. Implementation wise, this simply
         applies a fixed dropout mask per sequence to the recurrent connection of the
         LSTM.
     state_projection_clip_value : `float`, optional, (default = None)

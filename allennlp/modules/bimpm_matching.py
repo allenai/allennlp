@@ -15,6 +15,7 @@ from allennlp.nn.util import (
     masked_max,
     masked_mean,
     masked_softmax,
+    tiny_value_of_dtype,
 )
 
 
@@ -59,7 +60,7 @@ def multi_perspective_match(
 
 
 def multi_perspective_match_pairwise(
-    vector1: torch.Tensor, vector2: torch.Tensor, weight: torch.Tensor, eps: float = 1e-8
+    vector1: torch.Tensor, vector2: torch.Tensor, weight: torch.Tensor
 ) -> torch.Tensor:
     """
     Calculate multi-perspective cosine matching between each time step of
@@ -73,8 +74,6 @@ def multi_perspective_match_pairwise(
         A tensor of shape `(batch, seq_len2, hidden_size)`
     weight : `torch.Tensor`
         A tensor of shape `(num_perspectives, hidden_size)`
-    eps : `float` optional, (default = 1e-8)
-        A small value to avoid zero division problem
 
     # Returns
 
@@ -99,7 +98,9 @@ def multi_perspective_match_pairwise(
     norm_value = vector1_norm * vector2_norm.transpose(2, 3)
 
     # (batch, seq_len1, seq_len2, num_perspectives)
-    return (mul_result / norm_value.clamp(min=eps)).permute(0, 2, 3, 1)
+    return (mul_result / norm_value.clamp(min=tiny_value_of_dtype(norm_value.dtype))).permute(
+        0, 2, 3, 1
+    )
 
 
 class BiMpmMatching(nn.Module, FromParams):
@@ -204,9 +205,9 @@ class BiMpmMatching(nn.Module, FromParams):
     def forward(
         self,
         context_1: torch.Tensor,
-        mask_1: torch.Tensor,
+        mask_1: torch.BoolTensor,
         context_2: torch.Tensor,
-        mask_2: torch.Tensor,
+        mask_2: torch.BoolTensor,
     ) -> Tuple[List[torch.Tensor], List[torch.Tensor]]:
 
         """
@@ -217,13 +218,13 @@ class BiMpmMatching(nn.Module, FromParams):
 
         context_1 : `torch.Tensor`
             Tensor of shape (batch_size, seq_len1, hidden_dim) representing the encoding of the first sentence.
-        mask_1 : `torch.Tensor`
-            Binary Tensor of shape (batch_size, seq_len1), indicating which
+        mask_1 : `torch.BoolTensor`
+            Boolean Tensor of shape (batch_size, seq_len1), indicating which
             positions in the first sentence are padding (0) and which are not (1).
         context_2 : `torch.Tensor`
             Tensor of shape (batch_size, seq_len2, hidden_dim) representing the encoding of the second sentence.
-        mask_2 : `torch.Tensor`
-            Binary Tensor of shape (batch_size, seq_len2), indicating which
+        mask_2 : `torch.BoolTensor`
+            Boolean Tensor of shape (batch_size, seq_len2), indicating which
             positions in the second sentence are padding (0) and which are not (1).
 
         # Returns
@@ -237,9 +238,6 @@ class BiMpmMatching(nn.Module, FromParams):
         # (batch,)
         len_1 = get_lengths_from_binary_sequence_mask(mask_1)
         len_2 = get_lengths_from_binary_sequence_mask(mask_2)
-
-        # (batch, seq_len*)
-        mask_1, mask_2 = mask_1.float(), mask_2.float()
 
         # explicitly set masked weights to zero
         # (batch_size, seq_len*, hidden_dim)

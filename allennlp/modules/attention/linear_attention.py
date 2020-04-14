@@ -3,7 +3,7 @@ import math
 import torch
 from torch.nn import Parameter
 from overrides import overrides
-from allennlp.modules.attention.legacy_attention import Attention
+from allennlp.modules.attention.attention import Attention
 from allennlp.nn import util
 from allennlp.nn.activations import Activation
 
@@ -25,6 +25,8 @@ class LinearAttention(Attention):
     Note that if you want a bilinear similarity function with a diagonal weight matrix W, where the
     similarity function is computed as `x * w * y + b` (with `w` the diagonal of `W`), you can
     accomplish that with this class by using "x*y" for `combination`.
+
+    Registered as an `Attention` with name "linear".
 
     # Parameters
 

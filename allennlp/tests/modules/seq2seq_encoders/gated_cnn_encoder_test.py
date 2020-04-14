@@ -12,9 +12,9 @@ class TestGatedCnnEncoder(AllenNlpTestCase):
         )
 
         token_embeddings = torch.rand(5, 10, 32)
-        mask = torch.ones(5, 10)
-        mask[0, 7:] = 0
-        mask[1, 5:] = 0
+        mask = torch.ones(5, 10).bool()
+        mask[0, 7:] = False
+        mask[1, 5:] = False
 
         output = cnn_encoder(token_embeddings, mask)
         assert list(output.size()) == [5, 10, 64]
@@ -25,9 +25,9 @@ class TestGatedCnnEncoder(AllenNlpTestCase):
         )
 
         token_embeddings = torch.rand(5, 10, 32)
-        mask = torch.ones(5, 10)
-        mask[0, 7:] = 0
-        mask[1, 5:] = 0
+        mask = torch.ones(5, 10).bool()
+        mask[0, 7:] = False
+        mask[1, 5:] = False
 
         output = cnn_encoder(token_embeddings, mask)
         assert list(output.size()) == [5, 10, 64]
@@ -40,9 +40,9 @@ class TestGatedCnnEncoder(AllenNlpTestCase):
         )
 
         token_embeddings = torch.rand(5, 10, 32)
-        mask = torch.ones(5, 10)
-        mask[0, 7:] = 0
-        mask[1, 5:] = 0
+        mask = torch.ones(5, 10).bool()
+        mask[0, 7:] = False
+        mask[1, 5:] = False
 
         output = cnn_encoder(token_embeddings, mask)
         assert len(output) == 3

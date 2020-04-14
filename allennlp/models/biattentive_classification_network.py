@@ -35,6 +35,8 @@ class BiattentiveClassificationNetwork(Model):
     which is passed through a maxout network or some feed-forward layers
     to output a classification (`output_layer`).
 
+    Registered as a `Model` with name "bcn".
+
     # Parameters
 
     vocab : `Vocabulary`, required
@@ -222,7 +224,7 @@ class BiattentiveClassificationNetwork(Model):
         loss : torch.FloatTensor, optional
             A scalar loss to be optimised.
         """
-        text_mask = util.get_text_field_mask(tokens).float()
+        text_mask = util.get_text_field_mask(tokens)
         # Pop elmo tokens, since elmo embedder should not be present.
         elmo_tokens = tokens.pop("elmo", None)
         if tokens:
@@ -278,11 +280,15 @@ class BiattentiveClassificationNetwork(Model):
 
         # Simple Pooling layers
         max_masked_integrated_encodings = util.replace_masked_values(
-            integrated_encodings, text_mask.unsqueeze(2), -1e7
+            integrated_encodings,
+            text_mask.unsqueeze(2),
+            util.min_value_of_dtype(integrated_encodings.dtype),
         )
         max_pool = torch.max(max_masked_integrated_encodings, 1)[0]
         min_masked_integrated_encodings = util.replace_masked_values(
-            integrated_encodings, text_mask.unsqueeze(2), +1e7
+            integrated_encodings,
+            text_mask.unsqueeze(2),
+            util.max_value_of_dtype(integrated_encodings.dtype),
         )
         min_pool = torch.min(min_masked_integrated_encodings, 1)[0]
         mean_pool = torch.sum(integrated_encodings, 1) / torch.sum(text_mask, 1, keepdim=True)

@@ -18,16 +18,16 @@ repository=https://test.pypi.org/legacy/
 username=allennlp
 password= Get the password from LastPass.
 ```
-run chmod 600 ./pypirc so only you can read/write.
+run chmod 600 ~/.pypirc so only you can read/write.
 
-1. Change the version in docs/conf.py and setup.py.
+2. Change the version in docs/conf.py and setup.py.
 
-2. Commit these changes with the message: "Release: VERSION"
+3. Commit these changes with the message: "Release: VERSION"
 
-3. Add a tag in git to mark the release: "git tag VERSION -m'Adds tag VERSION for pypi' "
+4. Add a tag in git to mark the release: "git tag VERSION -m'Adds tag VERSION for pypi' "
    Push the tag to git: git push --tags origin master
 
-4. Build both the sources and the wheel. Do not change anything in setup.py between
+5. Build both the sources and the wheel. Do not change anything in setup.py between
    creating the wheel and the source distribution (obviously).
 
    For the wheel, run: "python setup.py bdist_wheel" in the top level allennlp directory.
@@ -36,7 +36,7 @@ run chmod 600 ./pypirc so only you can read/write.
    For the sources, run: "python setup.py sdist"
    You should now have a /dist directory with both .whl and .tar.gz source versions of allennlp.
 
-5. Check that everything looks correct by uploading the package to the pypi test server:
+6. Check that everything looks correct by uploading the package to the pypi test server:
 
    twine upload dist/* -r pypitest
    (pypi suggest using twine as other methods upload files via plaintext.)
@@ -44,10 +44,10 @@ run chmod 600 ./pypirc so only you can read/write.
    Check that you can install it in a virtualenv by running:
    pip install -i https://testpypi.python.org/pypi allennlp
 
-6. Upload the final version to actual pypi:
+7. Upload the final version to actual pypi:
    twine upload dist/* -r pypi
 
-7. Copy the release notes from RELEASE.md to the tag in github once everything is looking hunky-dory.
+8. Copy the release notes from RELEASE.md to the tag in github once everything is looking hunky-dory.
 
 """
 import sys
@@ -102,7 +102,7 @@ setup(
     license="Apache",
     packages=find_packages(exclude=["*.tests", "*.tests.*", "tests.*", "tests"]),
     install_requires=[
-        "torch>=1.2.0,!=1.3.0",
+        "torch>1.3.1,<=1.4.0",
         "jsonnet>=0.10.0 ; sys.platform != 'win32'",
         "overrides==2.8.0",
         "nltk",
@@ -118,8 +118,8 @@ setup(
         "pytest",
         "flaky",
         "responses>=0.7",
-        "conllu==2.2.2",
-        "transformers>=2.5.1",
+        "conllu==2.3.2",
+        "transformers>=2.8.0,<2.9.0",
         "jsonpickle",
         "semantic_version",
         "dataclasses;python_version<'3.7'",

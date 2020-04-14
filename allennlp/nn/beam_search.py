@@ -14,6 +14,8 @@ class BeamSearch:
     """
     Implements the beam search algorithm for decoding the most likely sequences.
 
+    [0]: https://arxiv.org/abs/1702.01806
+
     # Parameters
 
     end_index : `int`
@@ -28,7 +30,7 @@ class BeamSearch:
         If not given, this just defaults to `beam_size`. Setting this parameter
         to a number smaller than `beam_size` may give better results, as it can introduce
         more diversity into the search. See [Beam Search Strategies for Neural Machine Translation.
-        Freitag and Al-Onaizan, 2017](https://arxiv.org/abs/1702.01806).
+        Freitag and Al-Onaizan, 2017][0].
     """
 
     def __init__(

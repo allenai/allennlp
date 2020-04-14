@@ -21,8 +21,8 @@ class SpanExtractor(torch.nn.Module, Registrable):
         self,
         sequence_tensor: torch.FloatTensor,
         span_indices: torch.LongTensor,
-        sequence_mask: torch.LongTensor = None,
-        span_indices_mask: torch.LongTensor = None,
+        sequence_mask: torch.BoolTensor = None,
+        span_indices_mask: torch.BoolTensor = None,
     ):
         """
         Given a sequence tensor, extract spans and return representations of
@@ -39,10 +39,10 @@ class SpanExtractor(torch.nn.Module, Registrable):
             A tensor of shape `(batch_size, num_spans, 2)`, where the last
             dimension represents the inclusive start and end indices of the
             span to be extracted from the `sequence_tensor`.
-        sequence_mask : `torch.LongTensor`, optional (default = `None`).
+        sequence_mask : `torch.BoolTensor`, optional (default = `None`).
             A tensor of shape (batch_size, sequence_length) representing padded
             elements of the sequence.
-        span_indices_mask : `torch.LongTensor`, optional (default = `None`).
+        span_indices_mask : `torch.BoolTensor`, optional (default = `None`).
             A tensor of shape (batch_size, num_spans) representing the valid
             spans in the `indices` tensor. This mask is optional because
             sometimes it's easier to worry about masking after calling this

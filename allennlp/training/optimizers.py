@@ -154,6 +154,10 @@ class Optimizer(Registrable):
 
 @Optimizer.register("adam")
 class AdamOptimizer(Optimizer, torch.optim.Adam):
+    """
+    Registered as an `Optimizer` with name "adam".
+    """
+
     def __init__(
         self,
         model_parameters: List[Tuple[str, torch.nn.Parameter]],
@@ -176,6 +180,10 @@ class AdamOptimizer(Optimizer, torch.optim.Adam):
 
 @Optimizer.register("sparse_adam")
 class SparseAdamOptimizer(Optimizer, torch.optim.SparseAdam):
+    """
+    Registered as an `Optimizer` with name "sparse_adam".
+    """
+
     def __init__(
         self,
         model_parameters: List[Tuple[str, torch.nn.Parameter]],
@@ -194,6 +202,10 @@ class SparseAdamOptimizer(Optimizer, torch.optim.SparseAdam):
 
 @Optimizer.register("adamax")
 class AdamaxOptimizer(Optimizer, torch.optim.Adamax):
+    """
+    Registered as an `Optimizer` with name "adamax".
+    """
+
     def __init__(
         self,
         model_parameters: List[Tuple[str, torch.nn.Parameter]],
@@ -214,6 +226,10 @@ class AdamaxOptimizer(Optimizer, torch.optim.Adamax):
 
 @Optimizer.register("adamw")
 class AdamWOptimizer(Optimizer, torch.optim.AdamW):
+    """
+    Registered as an `Optimizer` with name "adamw".
+    """
+
     def __init__(
         self,
         model_parameters: List[Tuple[str, torch.nn.Parameter]],
@@ -236,6 +252,10 @@ class AdamWOptimizer(Optimizer, torch.optim.AdamW):
 
 @Optimizer.register("huggingface_adamw")
 class HuggingfaceAdamWOptimizer(Optimizer, transformers.AdamW):
+    """
+    Registered as an `Optimizer` with name "huggingface_adamw".
+    """
+
     def __init__(
         self,
         model_parameters: List[Tuple[str, torch.nn.Parameter]],
@@ -258,6 +278,10 @@ class HuggingfaceAdamWOptimizer(Optimizer, transformers.AdamW):
 
 @Optimizer.register("adagrad")
 class AdagradOptimizer(Optimizer, torch.optim.Adagrad):
+    """
+    Registered as an `Optimizer` with name "adagrad".
+    """
+
     def __init__(
         self,
         model_parameters: List[Tuple[str, torch.nn.Parameter]],
@@ -280,6 +304,10 @@ class AdagradOptimizer(Optimizer, torch.optim.Adagrad):
 
 @Optimizer.register("adadelta")
 class AdadeltaOptimizer(Optimizer, torch.optim.Adadelta):
+    """
+    Registered as an `Optimizer` with name "adadelta".
+    """
+
     def __init__(
         self,
         model_parameters: List[Tuple[str, torch.nn.Parameter]],
@@ -300,6 +328,10 @@ class AdadeltaOptimizer(Optimizer, torch.optim.Adadelta):
 
 @Optimizer.register("sgd")
 class SgdOptimizer(Optimizer, torch.optim.SGD):
+    """
+    Registered as an `Optimizer` with name "sgd".
+    """
+
     def __init__(
         self,
         model_parameters: List[Tuple[str, torch.nn.Parameter]],
@@ -322,6 +354,10 @@ class SgdOptimizer(Optimizer, torch.optim.SGD):
 
 @Optimizer.register("rmsprop")
 class RmsPropOptimizer(Optimizer, torch.optim.RMSprop):
+    """
+    Registered as an `Optimizer` with name "rmsprop".
+    """
+
     def __init__(
         self,
         model_parameters: List[Tuple[str, torch.nn.Parameter]],
@@ -346,6 +382,10 @@ class RmsPropOptimizer(Optimizer, torch.optim.RMSprop):
 
 @Optimizer.register("averaged_sgd")
 class AveragedSgdOptimizer(Optimizer, torch.optim.ASGD):
+    """
+    Registered as an `Optimizer` with name "averaged_sgd".
+    """
+
     def __init__(
         self,
         model_parameters: List[Tuple[str, torch.nn.Parameter]],
@@ -374,6 +414,8 @@ class DenseSparseAdam(Optimizer, torch.optim.Optimizer):
 
     Implements Adam algorithm with dense & sparse gradients.
     It has been proposed in Adam: A Method for Stochastic Optimization.
+
+    Registered as an `Optimizer` with name "dense_sparse_adam".
 
     # Parameters
 

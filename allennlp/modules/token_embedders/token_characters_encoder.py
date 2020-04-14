@@ -16,6 +16,8 @@ class TokenCharactersEncoder(TokenEmbedder):
     optionally apply dropout after the token-level encoder.
 
     We take the embedding and encoding modules as input, so this class is itself quite simple.
+
+    Registered as a `TokenEmbedder` with name "character_encoding".
     """
 
     def __init__(self, embedding: Embedding, encoder: Seq2VecEncoder, dropout: float = 0.0) -> None:

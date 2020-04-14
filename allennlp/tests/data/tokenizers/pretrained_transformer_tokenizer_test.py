@@ -8,19 +8,7 @@ class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
         tokenizer = PretrainedTransformerTokenizer("roberta-base")
 
         sentence = "A, <mask> AllenNLP sentence."
-        expected_tokens = [
-            "<s>",
-            "A",
-            ",",
-            " ",
-            "<mask>",
-            " Allen",
-            "N",
-            "LP",
-            " sentence",
-            ".",
-            "</s>",
-        ]
+        expected_tokens = ["<s>", " A", ",", "<mask>", " Allen", "N", "LP", " sentence", ".", "</s>"]
         tokens = [t.text for t in tokenizer.tokenize(sentence)]
         assert tokens == expected_tokens
 
@@ -29,7 +17,7 @@ class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
         sentence_2 = "A sentence."
         expected_tokens = [
             "<s>",
-            "A",
+            " A",
             ",",
             " ",
             "<mask>",
@@ -40,7 +28,7 @@ class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
             ".",
             "</s>",
             "</s>",
-            "A",
+            " A",
             " sentence",
             ".",
             "</s>",
@@ -93,10 +81,10 @@ class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
         sentence = "A, [MASK] AllenNLP sentence."
         expected_tokens = [
             "[CLS]",
-            "A",
+            "a",
             ",",
             "[MASK]",
-            "Allen",
+            "allen",
             "NL",
             "P",
             "sentence",
@@ -111,11 +99,11 @@ class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
         sentence = "A, naïve [MASK] AllenNLP sentence."
         expected_tokens = [
             "[CLS]",
-            "A",
+            "a",
             ",",
             "naïve",
             "[MASK]",
-            "Allen",
+            "allen",
             "NL",
             "P",
             "sentence",
@@ -171,7 +159,7 @@ class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
         sentence = "A, naïve <mask> AllenNLP sentence."
         expected_tokens = [
             "<s>",
-            "A",
+            " A",
             ",",
             " naïve",
             "<mask>",
@@ -206,7 +194,7 @@ class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
         second_sentence = "It was a shitzu."
         expected_tokens = [
             "<s>",
-            "I",
+            " I",
             " went",
             " to",
             " the",
@@ -222,7 +210,7 @@ class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
             ".",
             "</s>",
             "</s>",
-            "It",
+            " It",
             " was",
             " a",
             " sh",

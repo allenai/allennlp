@@ -40,7 +40,9 @@ class Predictor(Registrable):
     that can be used for serving models through the web API or making predictions in bulk.
     """
 
-    def __init__(self, model: Model, dataset_reader: DatasetReader) -> None:
+    def __init__(self, model: Model, dataset_reader: DatasetReader, frozen: bool = True) -> None:
+        if frozen:
+            model.eval()
         self._model = model
         self._dataset_reader = dataset_reader
         self.cuda_device = next(self._model.named_parameters())[1].get_device()
@@ -239,6 +241,7 @@ class Predictor(Registrable):
         predictor_name: str = None,
         cuda_device: int = -1,
         dataset_reader_to_load: str = "validation",
+        frozen: bool = True,
     ) -> "Predictor":
         """
         Instantiate a `Predictor` from an archive path.
@@ -259,6 +262,8 @@ class Predictor(Registrable):
         dataset_reader_to_load : `str`, optional (default="validation")
             Which dataset reader to load from the archive, either "train" or
             "validation".
+        frozen : `bool`, optional (default=True)
+            If we should call `model.eval()` when building the predictor.
 
         # Returns
 
@@ -268,6 +273,7 @@ class Predictor(Registrable):
             load_archive(archive_path, cuda_device=cuda_device),
             predictor_name,
             dataset_reader_to_load=dataset_reader_to_load,
+            frozen=frozen,
         )
 
     @classmethod
@@ -276,6 +282,7 @@ class Predictor(Registrable):
         archive: Archive,
         predictor_name: str = None,
         dataset_reader_to_load: str = "validation",
+        frozen: bool = True,
     ) -> "Predictor":
         """
         Instantiate a `Predictor` from an [`Archive`](../models/archival.md);
@@ -284,6 +291,7 @@ class Predictor(Registrable):
         one is not found, the base class (i.e. `Predictor`) will be used. Optionally specify
         which [`DatasetReader`](../data/dataset_readers/dataset_reader.md) should be loaded;
         otherwise, the validation one will be used if it exists followed by the training dataset reader.
+        Optionally specify if the loaded model should be frozen, meaning `model.eval()` will be called.
         """
         # Duplicate the config so that the config inside the archive doesn't get consumed
         config = archive.config.duplicate()
@@ -303,6 +311,7 @@ class Predictor(Registrable):
         dataset_reader = DatasetReader.from_params(dataset_reader_params)
 
         model = archive.model
-        model.eval()
+        if frozen:
+            model.eval()
 
         return predictor_class(model, dataset_reader)

@@ -33,10 +33,12 @@ class Conll2003DatasetReader(DatasetReader):
     """
     Reads instances from a pretokenised file where each line is in the following format:
 
+    ```
     WORD POS-TAG CHUNK-TAG NER-TAG
+    ```
 
     with a blank line indicating the end of each sentence
-    and '-DOCSTART- -X- -X- O' indicating the end of each article,
+    and `-DOCSTART- -X- -X- O` indicating the end of each article,
     and converts it into a `Dataset` suitable for sequence tagging.
 
     Each `Instance` contains the words in the `"tokens"` `TextField`.
@@ -49,6 +51,8 @@ class Conll2003DatasetReader(DatasetReader):
     each sentence as an independent `Instance`. (Technically the reader splits sentences
     on any combination of blank lines and "DOCSTART" tags; in particular, it does the right
     thing on well formed inputs.)
+
+    Registered as a `DatasetReader` with name "conll2003".
 
     # Parameters
 

@@ -99,6 +99,8 @@ class ELMoTokenCharactersIndexer(TokenIndexer):
     """
     Convert a token to an array of character ids to compute ELMo representations.
 
+    Registered as a `TokenIndexer` with name "elmo_characters".
+
     # Parameters
 
     namespace : `str`, optional (default=`elmo_characters`)
@@ -123,6 +125,10 @@ class ELMoTokenCharactersIndexer(TokenIndexer):
     @overrides
     def count_vocab_items(self, token: Token, counter: Dict[str, Dict[str, int]]):
         pass
+
+    @overrides
+    def get_empty_token_list(self) -> IndexedTokenList:
+        return {"tokens": []}
 
     @overrides
     def tokens_to_indices(

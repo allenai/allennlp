@@ -28,6 +28,8 @@ class PretrainedTransformerTokenizer(Tokenizer):
     This tokenizer also indexes tokens and adds the indexes to the `Token` fields so that
     they can be picked up by `PretrainedTransformerIndexer`.
 
+    Registered as a `Tokenizer` with name "pretrained_transformer".
+
     # Parameters
 
     model_name : `str`
@@ -53,9 +55,10 @@ class PretrainedTransformerTokenizer(Tokenizer):
     tokenizer_kwargs: 'Dict[str, Any]'
         Dictionary with additional arguments for `AutoTokenizer.from_pretrained`.
 
-    Argument descriptions are from
-    https://github.com/huggingface/transformers/blob/155c782a2ccd103cf63ad48a2becd7c76a7d2115/transformers/tokenization_utils.py#L691
-    """
+    [0]: https://github.com/huggingface/transformers/blob/155c782a2ccd103cf63ad48a2becd7c76a7d2115/transformers/tokenization_utils.py#L691
+
+    Argument descriptions are from [0].
+    """  # noqa: E501
 
     def __init__(
         self,

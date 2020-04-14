@@ -23,6 +23,8 @@ def parse_sentence(
 
     Each word in the sentence is returned as a dictionary with the following
     format:
+
+    ```
     'id': '1',
     'form': 'Pierre',
     'lemma': 'Pierre',
@@ -32,6 +34,7 @@ def parse_sentence(
     'top': '-',
     'pred': '+',
     'frame': 'named:x-c'
+    ```
 
     Along with a list of arcs and their corresponding tags. Note that
     in semantic dependency parsing words can have more than one head
@@ -73,6 +76,8 @@ class SemanticDependenciesDatasetReader(DatasetReader):
     """
     Reads a file in the SemEval 2015 Task 18 (Broad-coverage Semantic Dependency Parsing)
     format.
+
+    Registered as a `DatasetReader` with name "semantic_dependencies".
 
     # Parameters
 

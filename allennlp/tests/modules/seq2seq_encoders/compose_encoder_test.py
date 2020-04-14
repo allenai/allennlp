@@ -63,7 +63,7 @@ class TestPassThroughEncoder(AllenNlpTestCase):
 
     def test_pass_through_encoder_with_mask(self):
         tensor = torch.randn([2, 3, 9])
-        mask = torch.LongTensor([[1, 1, 1], [1, 0, 0]])
+        mask = torch.tensor([[True, True, True], [True, False, False]])
         output = self.encoder(tensor, mask)
 
         for encoder in self.encoder.encoders:

@@ -21,6 +21,8 @@ class BasicClassifier(Model):
     `Seq2SeqEncoder` is not provided, we will pass the embedded text directly to the
     `Seq2VecEncoder`.
 
+    Registered as a `Model` with name "basic_classifier".
+
     # Parameters
 
     vocab : `Vocabulary`
@@ -115,7 +117,7 @@ class BasicClassifier(Model):
             A scalar loss to be optimised.
         """
         embedded_text = self._text_field_embedder(tokens)
-        mask = get_text_field_mask(tokens).float()
+        mask = get_text_field_mask(tokens)
 
         if self._seq2seq_encoder:
             embedded_text = self._seq2seq_encoder(embedded_text, mask=mask)

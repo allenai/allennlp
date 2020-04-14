@@ -10,6 +10,8 @@ class PassThroughEncoder(Seq2SeqEncoder):
     This class allows you to specify skipping a `Seq2SeqEncoder` just
     by changing a configuration file. This is useful for ablations and
     measuring the impact of different elements of your model.
+
+    Registered as a `Seq2SeqEncoder` with name "pass_through".
     """
 
     def __init__(self, input_dim: int) -> None:
@@ -29,13 +31,13 @@ class PassThroughEncoder(Seq2SeqEncoder):
         return False
 
     @overrides
-    def forward(self, inputs: torch.Tensor, mask: torch.LongTensor = None) -> torch.Tensor:
+    def forward(self, inputs: torch.Tensor, mask: torch.BoolTensor = None) -> torch.Tensor:
         """
         # Parameters
 
         inputs : `torch.Tensor`, required.
             A tensor of shape (batch_size, timesteps, input_dim)
-        mask : `torch.LongTensor`, optional (default = None).
+        mask : `torch.BoolTensor`, optional (default = None).
             A tensor of shape (batch_size, timesteps).
 
         # Returns
@@ -48,4 +50,4 @@ class PassThroughEncoder(Seq2SeqEncoder):
         else:
             # We should mask out the output instead of the input.
             # But here, output = input, so we directly mask out the input.
-            return inputs * mask.unsqueeze(dim=-1).float()
+            return inputs * mask.unsqueeze(dim=-1)
