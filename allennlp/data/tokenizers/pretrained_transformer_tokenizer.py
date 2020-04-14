@@ -71,7 +71,8 @@ class PretrainedTransformerTokenizer(Tokenizer):
         tokenizer_kwargs: Dict[str, Any] = None,
     ) -> None:
         tokenizer_kwargs = tokenizer_kwargs or {}
-        self.tokenizer = AutoTokenizer.from_pretrained(model_name, **tokenizer_kwargs)
+        # As of transformers==2.8.0, fast tokenizers are broken.
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name, **tokenizer_kwargs, use_fast=False)
 
         # Huggingface tokenizers have different ways of remembering whether they lowercase or not. Detecting it
         # this way seems like the least brittle way to do it.
