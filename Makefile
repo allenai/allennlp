@@ -11,13 +11,13 @@ MD_DOCS_TGT = site/
 MD_DOCS_EXTRAS = $(addprefix $(MD_DOCS_ROOT),README.md LICENSE.md ROADMAP.md CONTRIBUTING.md)
 
 ifeq ($(shell uname),Darwin)
-ifeq ($(shell which gsed),)
-$(error Please install GNU sed with 'brew install gnu-sed')
+	ifeq ($(shell which gsed),)
+		$(error Please install GNU sed with 'brew install gnu-sed')
+	else
+		SED = gsed
+	endif
 else
-SED = gsed
-endif
-else
-SED = sed
+	SED = sed
 endif
 
 .PHONY : build-docs

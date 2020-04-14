@@ -16,10 +16,10 @@ API_TOC_KEY = "API"
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("target_yaml")
-    parser.add_argument("source_yaml")
-    parser.add_argument("docs_root")
-    parser.add_argument("api_docs_path")
+    parser.add_argument("target_yaml", help="Path to the target mkdocs config file.")
+    parser.add_argument("source_yaml", help="Path to the mkdocs skeleton config file.")
+    parser.add_argument("docs_root", help="The root of the markdown docs folder.")
+    parser.add_argument("api_docs_path", help="The root of the API docs within the markdown docs root folder.")
     return parser.parse_args()
 
 
