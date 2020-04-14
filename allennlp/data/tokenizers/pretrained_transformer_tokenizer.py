@@ -95,20 +95,20 @@ class PretrainedTransformerTokenizer(Tokenizer):
             self.num_added_end_tokens,
         ) = self._determine_num_special_tokens_added()
 
-    def _tokenize(self, sentence_1: str, sentence_2: str = None) -> List[Token]:
+    @overrides
+    def tokenize(self, text: str) -> List[Token]:
         """
-        This method works on both sentence and sentence pair.
+        This method only handles a single sentence (or sequence) of text.
+        Refer to the `tokenize_sentence_pair` method if you have a sentence pair.
         """
-
         encoded_tokens = self.tokenizer.encode_plus(
-            text=sentence_1,
-            text_pair=sentence_2,
+            text=text,
             add_special_tokens=self._add_special_tokens,
             max_length=self._max_length,
             stride=self._stride,
             truncation_strategy=self._truncation_strategy,
             return_tensors=None,
-            return_offsets_mapping=True,
+            return_offsets_mapping=self.tokenizer.is_fast,
             return_attention_mask=False,
             return_token_type_ids=True,
         )
@@ -116,39 +116,24 @@ class PretrainedTransformerTokenizer(Tokenizer):
         token_ids, token_type_ids, token_offsets = (
             encoded_tokens["input_ids"],
             encoded_tokens["token_type_ids"],
-            encoded_tokens["offset_mapping"],
+            encoded_tokens.get("offset_mapping"),
         )
+        if token_offsets is None:
+            token_offsets = [None] * len(token_ids)
 
         tokens = []
         for token_id, token_type_id, offsets in zip(token_ids, token_type_ids, token_offsets):
-            if offsets is None:
+            if offsets is None or offsets[0] >= offsets[1]:
                 token_str = self.tokenizer.convert_ids_to_tokens(
                     token_id, skip_special_tokens=False
                 )
                 start = None
             else:
                 start, end = offsets
-                if start < len(sentence_1):
-                    token_str = sentence_1[start:end]
-                else:
-                    token_str = sentence_2[start - len(sentence_1) : end - len(sentence_1)]
+                token_str = text[start:end]
 
             tokens.append(Token(text=token_str, text_id=token_id, type_id=token_type_id, idx=start))
         return tokens
-
-    def tokenize_sentence_pair(self, sentence_1: str, sentence_2: str) -> List[Token]:
-        """
-        This methods properly handles a pair of sentences.
-        """
-        return self._tokenize(sentence_1, sentence_2)
-
-    @overrides
-    def tokenize(self, text: str) -> List[Token]:
-        """
-        This method only handles a single sentence (or sequence) of text.
-        Refer to the `tokenize_sentence_pair` method if you have a sentence pair.
-        """
-        return self._tokenize(text)
 
     def intra_word_tokenize(
         self, string_tokens: List[str]
