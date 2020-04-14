@@ -190,7 +190,7 @@ class PretrainedTransformerTokenizer(Tokenizer):
     def intra_word_tokenize(self, tokens: List[str]) -> Tuple[List[Token], List[Tuple[int, int]]]:
         """
         Tokenizes each word into wordpieces separately and returns the wordpiece IDs.
-        Also calculates offsets such that wordpices[offsets[i][0]:offsets[i][1] + 1]
+        Also calculates offsets such that wordpieces[offsets[i][0]:offsets[i][1] + 1]
         corresponds to the original i-th token.
 
         This function inserts special tokens.
@@ -207,7 +207,7 @@ class PretrainedTransformerTokenizer(Tokenizer):
     ) -> Tuple[List[Token], List[Tuple[int, int]], List[Tuple[int, int]]]:
         """
         Tokenizes each word into wordpieces separately and returns the wordpiece IDs.
-        Also calculates offsets such that wordpices[offsets[i][0]:offsets[i][1] + 1]
+        Also calculates offsets such that wordpieces[offsets[i][0]:offsets[i][1] + 1]
         corresponds to the original i-th token.
 
         This function inserts special tokens.
