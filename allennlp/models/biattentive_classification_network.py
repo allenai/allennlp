@@ -277,7 +277,7 @@ class BiattentiveClassificationNetwork(Model):
 
         # Build the input to the integrator
         integrator_input = torch.cat(
-            [encoded_tokens, encoded_tokens - encoded_text, encoded_tokens * encoded_text,], 2,
+            [encoded_tokens, encoded_tokens - encoded_text, encoded_tokens * encoded_text], 2,
         )
         integrated_encodings = self._integrator(integrator_input, text_mask)
 
