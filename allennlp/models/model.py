@@ -123,7 +123,7 @@ class Model(torch.nn.Module, Registrable):
 
         # Returns
 
-        `Dict[str, torch.Tensor]`
+        output_dict : `Dict[str, torch.Tensor]`
             The outputs from the model. In order to train a model using the
             `Trainer` api, you must provide a "loss" key pointing to a
             scalar `torch.Tensor` representing the loss to be optimized.
@@ -370,7 +370,7 @@ class Model(torch.nn.Module, Registrable):
 
         # Returns
 
-        `Model`
+        model : `Model`
             The model specified in the configuration, loaded with the serialized
             vocabulary and the trained weights.
         """

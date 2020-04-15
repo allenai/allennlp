@@ -98,7 +98,7 @@ class Batch(Iterable):
 
         # Returns
 
-        `Dict[str, DataArray]`
+        tensors : `Dict[str, DataArray]`
             A dictionary of tensors, keyed by field name, suitable for passing as input to a model.
             This is a `batch` of instances, so, e.g., if the instances have a "question" field and
             an "answer" field, the "question" fields for all of the instances will be grouped
