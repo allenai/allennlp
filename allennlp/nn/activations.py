@@ -29,6 +29,7 @@ The available activation functions are
 from typing import Callable
 
 import torch
+from overrides import overrides
 
 from allennlp.common import Registrable
 
@@ -59,13 +60,15 @@ class _ActivationLambda(torch.nn.Module):
 
     def __init__(self, func: Callable[[torch.Tensor], torch.Tensor], name: str):
         super().__init__()
-        # Override class name to match activation name as PyTorch uses that field to create the textual
-        # representation.
-        self.__class__.__name__ = name
-        self.func = func
+        self._name = name
+        self._func = func
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return self.func(x)
+        return self._func(x)
+
+    @overrides
+    def _get_name(self):
+        return self._name
 
 
 # There are no classes to decorate, so we hack these into Registrable._registry.
