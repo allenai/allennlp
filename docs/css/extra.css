@@ -1,4 +1,9 @@
 h4 {
     font-size: 0.9rem !important;
     font-weight: 400 !important;
+    margin-top: 1.2em !important;
+}
+
+h3, h4 {
+    color: #162328;
 }

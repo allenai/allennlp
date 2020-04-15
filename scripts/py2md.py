@@ -64,6 +64,8 @@ def main():
     pydocmd = PydocMarkdown()
     pydocmd.loaders[0].modules = [opts.module]
     pydocmd.processors = [FilterProcessor(), AllenNlpMdProcessor(), CrossrefProcessor()]
+    pydocmd.renderer.add_method_class_prefix = True
+    pydocmd.renderer.add_member_class_prefix = True
     if opts.out:
         pydocmd.renderer.filename = opts.out
 

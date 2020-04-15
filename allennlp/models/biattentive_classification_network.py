@@ -8,7 +8,13 @@ import torch.nn.functional as F
 
 from allennlp.common.checks import check_dimensions_match, ConfigurationError
 from allennlp.data import TextFieldTensors, Vocabulary
-from allennlp.modules import Elmo, FeedForward, Maxout, Seq2SeqEncoder, TextFieldEmbedder
+from allennlp.modules import (
+    Elmo,
+    FeedForward,
+    Maxout,
+    Seq2SeqEncoder,
+    TextFieldEmbedder,
+)
 from allennlp.models.model import Model
 from allennlp.nn import InitializerApplicator
 from allennlp.nn import util
@@ -19,9 +25,9 @@ from allennlp.training.metrics import CategoricalAccuracy
 class BiattentiveClassificationNetwork(Model):
     """
     This class implements the Biattentive Classification Network model described
-    in section 5 of [Learned in Translation: Contextualized Word Vectors (NIPS 2017)]
-    (https://arxiv.org/abs/1708.00107) for text classification. We assume we're
-    given a piece of text, and we predict some output label.
+    in section 5 of
+    [Learned in Translation: Contextualized Word Vectors (NIPS 2017)](https://arxiv.org/abs/1708.00107)
+    for text classification. We assume we're given a piece of text, and we predict some output label.
 
     At a high level, the model starts by embedding the tokens and running them through
     a feed-forward neural net (`pre_encode_feedforward`). Then, we encode these
@@ -270,7 +276,7 @@ class BiattentiveClassificationNetwork(Model):
 
         # Build the input to the integrator
         integrator_input = torch.cat(
-            [encoded_tokens, encoded_tokens - encoded_text, encoded_tokens * encoded_text], 2
+            [encoded_tokens, encoded_tokens - encoded_text, encoded_tokens * encoded_text,], 2,
         )
         integrated_encodings = self._integrator(integrator_input, text_mask)
 
