@@ -9,3 +9,4 @@ from allennlp.data.tokenizers.letters_digits_tokenizer import LettersDigitsToken
 from allennlp.data.tokenizers.pretrained_transformer_tokenizer import PretrainedTransformerTokenizer
 from allennlp.data.tokenizers.character_tokenizer import CharacterTokenizer
 from allennlp.data.tokenizers.sentence_splitter import SentenceSplitter
+from allennlp.data.tokenizers.whitespace_tokenizer import WhitespaceTokenizer

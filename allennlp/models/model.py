@@ -5,7 +5,7 @@ an AllenNLP model.
 
 import logging
 import os
-from typing import Dict, Union, List, Set, Type
+from typing import Dict, Union, List, Set, Type, Optional
 
 try:
     from apex import amp
@@ -257,9 +257,9 @@ class Model(torch.nn.Module, Registrable):
         cls,
         config: Params,
         serialization_dir: str,
-        weights_file: str = None,
+        weights_file: Optional[str] = None,
         cuda_device: int = -1,
-        opt_level: str = None,
+        opt_level: Optional[str] = None,
     ) -> "Model":
         """
         Instantiates an already-trained model, based on the experiment
@@ -338,9 +338,9 @@ class Model(torch.nn.Module, Registrable):
         cls,
         config: Params,
         serialization_dir: str,
-        weights_file: str = None,
+        weights_file: Optional[str] = None,
         cuda_device: int = -1,
-        opt_level: str = None,
+        opt_level: Optional[str] = None,
     ) -> "Model":
         """
         Instantiates an already-trained model, based on the experiment
