@@ -64,17 +64,23 @@ class PretrainedTransformerTokenizer(Tokenizer):
         self,
         model_name: str,
         add_special_tokens: bool = True,
-        max_length: int = None,
+        max_length: Optional[int] = None,
         stride: int = 0,
         truncation_strategy: str = "longest_first",
         calculate_character_offsets: bool = False,
-        tokenizer_kwargs: Dict[str, Any] = None,
+        tokenizer_kwargs: Optional[Dict[str, Any]] = None,
     ) -> None:
-        tokenizer_kwargs = tokenizer_kwargs or {}
+        if tokenizer_kwargs is None:
+            tokenizer_kwargs = {}
+        else:
+            tokenizer_kwargs = tokenizer_kwargs.copy()
+        if "use_fast" in tokenizer_kwargs:
+            if tokenizer_kwargs["use_fast"]:
+                logger.warning("Fast huggingface tokenizers are known to break in certain scenarios.")
+        else:
+            tokenizer_kwargs["use_fast"] = False
         # As of transformers==2.8.0, fast tokenizers are broken.
-        self.tokenizer = AutoTokenizer.from_pretrained(
-            model_name, **tokenizer_kwargs, use_fast=False
-        )
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name, **tokenizer_kwargs)
 
         # Huggingface tokenizers have different ways of remembering whether they lowercase or not. Detecting it
         # this way seems like the least brittle way to do it.
