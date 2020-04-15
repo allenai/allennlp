@@ -23,6 +23,8 @@ class AllenNlpDocstringProcessor(Struct):
     Use to turn our docstrings into Markdown.
     """
 
+    CROSS_REF_RE = re.compile(f"(:(class|func|mod):`~?([a-zA-Z0-9_.]+)`)")
+
     @override
     def process(self, graph, resolver):
         graph.visit(self.process_node)
@@ -38,6 +40,18 @@ class AllenNlpDocstringProcessor(Struct):
                 codeblock_opened = not codeblock_opened
             if not codeblock_opened:
                 line, current_section = self._preprocess_line(line, current_section)
+                # Replace sphinx style crossreferences with markdown links.
+                for match, ty, name in self.CROSS_REF_RE.findall(line):
+                    if name.startswith("allennlp."):
+                        path = name.split(".")
+                        if ty == "mod":
+                            href = "/api/" + "/".join(path[1:])
+                        else:
+                            href = "/api/" + "/".join(path[1:-1]) + "#" + path[-1].lower()
+                        cross_ref = f"[`{path[-1]}`]({href})"
+                    else:
+                        cross_ref = f"`{name}`"
+                    line = line.replace(match, cross_ref)
             lines.append(line)
         node.docstring = "\n".join(lines)
 
