@@ -148,7 +148,6 @@ class AllenNlpRenderer(MarkdownRenderer):
         return code
 
     def _render_module_breadcrumbs(self, fp, mod: Module):
-        #  breadcrumbs = "[*allennlp*](/api)[*.modules*](/api/modules)[*.seq2seq_encoders*](/api/modules/seq2seq_encoders)[**.pytorch_transformer_wrapper**](/api/modules/seq2seq_encoders/pytorch_transformer_wrapper)"
         submods = mod.name.split(".")
         if submods[0] != "allennlp":
             return
@@ -163,7 +162,7 @@ class AllenNlpRenderer(MarkdownRenderer):
             #  href = "/api/" + "/".join(submods[1 : i + 1])
             #  breadcrumbs.append(f"[{title}]({href})")
             breadcrumbs.append(title)
-        fp.write("\[ " + "".join(breadcrumbs) + " \]\n\n---\n\n")
+        fp.write("[ " + "".join(breadcrumbs) + " ]\n\n---\n\n")
 
     def _render_object(self, fp, level, obj):
         if not isinstance(obj, Module) or self.render_module_header:
