@@ -1,5 +1,5 @@
 """
-A :class:`~Batch` represents a collection of `Instance` s to be fed
+A #Batch represents a collection of `Instance` s to be fed
 through a model.
 """
 
@@ -22,13 +22,12 @@ class Batch(Iterable):
     """
     A batch of Instances. In addition to containing the instances themselves,
     it contains helper functions for converting the data into tensors.
+
+    A Batch just takes an iterable of instances in its constructor and hangs onto them
+    in a list.
     """
 
     def __init__(self, instances: Iterable[Instance]) -> None:
-        """
-        A Batch just takes an iterable of instances in its constructor and hangs onto them
-        in a list.
-        """
         super().__init__()
 
         self.instances = ensure_list(instances)
@@ -90,6 +89,7 @@ class Batch(Iterable):
 
             Entries in this dictionary are keyed first by field name (e.g., "question"), then by
             padding key (e.g., "num_tokens").
+
         verbose : `bool`, optional (default=`False`)
             Should we output logging information when we're doing this padding?  If the batch is
             large, this is nice to have, because padding a large batch could take a long time.
@@ -98,7 +98,7 @@ class Batch(Iterable):
 
         # Returns
 
-        tensors : `Dict[str, DataArray]`
+        `Dict[str, DataArray]`
             A dictionary of tensors, keyed by field name, suitable for passing as input to a model.
             This is a `batch` of instances, so, e.g., if the instances have a "question" field and
             an "answer" field, the "question" fields for all of the instances will be grouped
