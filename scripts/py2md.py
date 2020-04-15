@@ -11,7 +11,6 @@ from nr.databind.core import Struct
 from nr.interface import implements, override
 from pydoc_markdown import PydocMarkdown
 from pydoc_markdown.contrib.loaders.python import PythonLoader
-from pydoc_markdown.contrib.processors.crossref import CrossrefProcessor
 from pydoc_markdown.contrib.renderers.markdown import MarkdownRenderer
 from pydoc_markdown.interfaces import Processor, Renderer
 from pydoc_markdown.reflection import Argument, Module, Function, Class
@@ -49,6 +48,8 @@ class AllenNlpDocstringProcessor(Struct):
                         else:
                             href = "/api/" + "/".join(path[1:-1]) + "#" + path[-1].lower()
                         cross_ref = f"[`{path[-1]}`]({href})"
+                    elif "." not in name:
+                        cross_ref = f"[`{name}`](#{name.lower()})"
                     else:
                         cross_ref = f"`{name}`"
                     line = line.replace(match, cross_ref)
@@ -204,7 +205,7 @@ def main():
 
     pydocmd = PydocMarkdown(
         loaders=[PythonLoader(modules=[opts.module])],
-        processors=[AllenNlpFilterProcessor(), AllenNlpDocstringProcessor(), CrossrefProcessor()],
+        processors=[AllenNlpFilterProcessor(), AllenNlpDocstringProcessor()],
         renderer=AllenNlpRenderer(
             filename=opts.out,
             add_method_class_prefix=False,
