@@ -33,7 +33,7 @@ git+https://github.com/NVIDIA/apex.git@master
 # YAML manipulation
 ruamel.yaml
 
-pydoc-markdown==3.0.0
+git+https://github.com/NiklasRosenstein/pydoc-markdown.git@master
 markdown-include==0.5.1
 # Package for the material theme for mkdocs
 mkdocs-material==5.1.0
