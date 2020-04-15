@@ -37,7 +37,8 @@ class AllenNlpMdProcessor(Struct):
         else:
             if line and not line.startswith(" "):
                 if (
-                    current_section in ("arguments", "parameters", "attributes", "members")
+                    current_section
+                    in ("arguments", "parameters", "attributes", "members", "returns")
                     and ":" in line
                 ):
                     ident, ty = line.split(":", 1)
@@ -46,7 +47,7 @@ class AllenNlpMdProcessor(Struct):
                     else:
                         line = f"- __{ident}__ :<br>"
                 elif current_section in ("returns", "raises"):
-                    line = f"{line}<br>"
+                    line = f"- {line} <br>"
 
         return line, current_section
 
@@ -66,6 +67,7 @@ def main():
     pydocmd.processors = [FilterProcessor(), AllenNlpMdProcessor(), CrossrefProcessor()]
     pydocmd.renderer.add_method_class_prefix = True
     pydocmd.renderer.add_member_class_prefix = True
+    pydocmd.renderer.signature_with_def = True
     if opts.out:
         pydocmd.renderer.filename = opts.out
 
