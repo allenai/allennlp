@@ -653,8 +653,18 @@ def sanitize_ptb_tokenized_string(text: str) -> str:
         return text
 
     # Replace quotation marks and parentheses
-    token_map = {"``": "\"", "''": "\"", "-lrb-": "(", "-rrb-": ")", "-lsb-": "[", "-rsb-": "]",
-                 "-lcb-": "{", "-rcb-": "}", "<s>": "", "</s>": ""}
+    token_map = {
+        "``": '"',
+        "''": '"',
+        "-lrb-": "(",
+        "-rrb-": ")",
+        "-lsb-": "[",
+        "-rsb-": "]",
+        "-lcb-": "{",
+        "-rcb-": "}",
+        "<s>": "",
+        "</s>": "",
+    }
 
     # Merge punctuation with previous tokens
     punct_forward = {"`", "$", "#"}
@@ -664,11 +674,11 @@ def sanitize_ptb_tokenized_string(text: str) -> str:
     em_forward = {"(", "[", "{"}
     em_backward = {"n't", "na", ")", "]", "}"}
 
-    new_tokens = []
+    new_tokens: List[str] = []
 
     merge_fwd = False
     for i, orig_token in enumerate(tokens):
-        tokens[i] = token_map[orig_token] if orig_token in token_map else orig_token
+        tokens[i] = token_map[orig_token.lower()] if orig_token.lower() in token_map else orig_token
         new_token = tokens[i].lower()
 
         # merge_fwd was set by previous token, so it should be prepended to current token
@@ -680,9 +690,17 @@ def sanitize_ptb_tokenized_string(text: str) -> str:
 
         # Special cases for `` and '', those tells us if " is the start or end of a quotation.
         # Also always merge tokens starting with ' backward and don't merge back if we just merged forward
-        merge_bckwd = not merge_fwd and (orig_token == "''" or new_token in em_backward or\
-                      new_token.startswith("'") or all(c in punct_backward for c in new_token))
-        merge_fwd = orig_token == "``" or new_token in em_forward or all(c in punct_forward for c in new_token)
+        merge_bckwd = not merge_fwd and (
+            orig_token == "''"
+            or new_token in em_backward
+            or new_token.startswith("'")
+            or all(c in punct_backward for c in new_token)
+        )
+        merge_fwd = (
+            orig_token == "``"
+            or new_token in em_forward
+            or all(c in punct_forward for c in new_token)
+        )
 
         if merge_bckwd and new_tokens:
             new_tokens[-1] += tokens[i]

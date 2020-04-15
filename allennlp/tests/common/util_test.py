@@ -89,8 +89,10 @@ class TestCommonUtils(AllenNlpTestCase):
 
     def test_sanitize_ptb_tokenized_string(self):
         def create_surrounding_test_case(start_ptb_token, end_ptb_token, start_token, end_token):
-            return "a {} b c {} d".format(start_ptb_token, end_ptb_token),\
-                   "a {}b c{} d".format(start_token, end_token)
+            return (
+                "a {} b c {} d".format(start_ptb_token, end_ptb_token),
+                "a {}b c{} d".format(start_token, end_token),
+            )
 
         def create_fwd_token_test_case(fwd_token):
             return "a {} b".format(fwd_token), "a {}b".format(fwd_token)
@@ -108,8 +110,10 @@ class TestCommonUtils(AllenNlpTestCase):
             create_surrounding_test_case("-lcb-", "-rcb-", "{", "}"),
             # Parentheses don't have to match
             create_surrounding_test_case("-lsb-", "-rcb-", "[", "}"),
+            # Also check that casing doesn't matter
+            create_surrounding_test_case("-LsB-", "-rcB-", "[", "}"),
             # Quotes
-            create_surrounding_test_case("``", "''", "\"", "\""),
+            create_surrounding_test_case("``", "''", '"', '"'),
             # Start/end tokens
             create_surrounding_test_case("<s>", "</s>", "", ""),
             # Tokens that merge forward
@@ -121,6 +125,10 @@ class TestCommonUtils(AllenNlpTestCase):
             # Merge tokens backwards when matching (n't or na) (special cases, parentheses behave in the same way)
             ("I do n't", "I don't"),
             ("gon na", "gonna"),
+            # Also make sure casing is preserved
+            ("gon NA", "gonNA"),
+            # This is a no op
+            ("A b C d", "A b C d"),
         ]
 
         for ptb_string, expected in test_cases:
