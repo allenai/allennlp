@@ -1,16 +1,28 @@
+#!/usr/bin/env python
+
+"""
+Turn docstring from a single module into a markdown file.
+"""
+
 import argparse
 import re
 
 from nr.databind.core import Struct
 from nr.interface import implements, override
 from pydoc_markdown import PydocMarkdown
-from pydoc_markdown.contrib.processors.filter import FilterProcessor
+from pydoc_markdown.contrib.loaders.python import PythonLoader
 from pydoc_markdown.contrib.processors.crossref import CrossrefProcessor
-from pydoc_markdown.interfaces import Processor
+from pydoc_markdown.contrib.renderers.markdown import MarkdownRenderer
+from pydoc_markdown.interfaces import Processor, Renderer
+from pydoc_markdown.reflection import Argument, Module, Function, Class
 
 
 @implements(Processor)
-class AllenNlpMdProcessor(Struct):
+class AllenNlpDocstringProcessor(Struct):
+    """
+    Use to turn our docstrings into Markdown.
+    """
+
     @override
     def process(self, graph, resolver):
         graph.visit(self.process_node)
@@ -52,6 +64,85 @@ class AllenNlpMdProcessor(Struct):
         return line, current_section
 
 
+@implements(Processor)
+class AllenNlpFilterProcessor(Struct):
+    """
+    Used to filter out nodes that we don't want to document.
+    """
+
+    SPECIAL_MEMBERS = ("__path__", "__annotations__", "__name__", "__all__", "__init__")
+
+    def process(self, graph, _resolver):
+        graph.visit(self._process_node)
+
+    def _process_node(self, node):
+        def _check(node):
+            if node.parent and node.parent.name.startswith("_"):
+                return False
+            if node.name.startswith("_") and not node.name.endswith("_"):
+                return False
+            if node.name in self.SPECIAL_MEMBERS:
+                return False
+            if node.name == "logger" and isinstance(node.parent, Module):
+                return False
+            return True
+
+        if not _check(node):
+            node.visible = False
+
+
+@implements(Renderer)
+class AllenNlpRenderer(MarkdownRenderer):
+    def _format_function_signature(
+        self, func: Function, override_name: str = None, add_method_bar: bool = True
+    ) -> str:
+        parts = []
+        for dec in func.decorators:
+            parts.append("@{}{}\n".format(dec.name, dec.args or ""))
+        if self.signature_python_help_style and not func.is_method():
+            parts.append("{} = ".format(func.path()))
+        if func.is_async:
+            parts.append("async ")
+        if self.signature_with_def:
+            parts.append("def ")
+        if self.signature_class_prefix and (
+            func.is_function() and func.parent and func.parent.is_class()
+        ):
+            parts.append(func.parent.name + ".")
+        parts.append((override_name or func.name))
+        signature_args = Argument.format_arglist(func.args)
+        if (
+            len(parts[-1])
+            + len(signature_args)
+            + (0 if not func.return_ else len(str(func.return_)))
+            > 60
+        ):
+            parts.append("(\n    " + signature_args.replace(", ", ",\n    ") + "\n)")
+        else:
+            parts.append("(" + signature_args + ")")
+        if func.return_:
+            parts.append(" -> {}".format(func.return_))
+        result = "".join(parts)
+        if add_method_bar and func.is_method():
+            result = "\n".join(" | " + l for l in result.split("\n"))
+        return result
+
+    def _format_classdef_signature(self, cls: Class) -> str:
+        bases = ", ".join(map(str, cls.bases))
+        if cls.metaclass:
+            bases += ", metaclass=" + str(cls.metaclass)
+        code = "class {}({})".format(cls.name, bases)
+        if self.signature_python_help_style:
+            code = cls.path() + " = " + code
+        if self.classdef_render_init_signature_if_needed and (
+            "__init__" in cls.members and not cls.members["__init__"].visible
+        ):
+            code += ":\n" + self._format_function_signature(
+                cls.members["__init__"], add_method_bar=True
+            )
+        return code
+
+
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("module", type=str, help="The Python module to parse.")
@@ -62,14 +153,18 @@ def parse_args():
 def main():
     opts = parse_args()
 
-    pydocmd = PydocMarkdown()
-    pydocmd.loaders[0].modules = [opts.module]
-    pydocmd.processors = [FilterProcessor(), AllenNlpMdProcessor(), CrossrefProcessor()]
-    pydocmd.renderer.add_method_class_prefix = True
-    pydocmd.renderer.add_member_class_prefix = True
-    pydocmd.renderer.signature_with_def = True
-    if opts.out:
-        pydocmd.renderer.filename = opts.out
+    pydocmd = PydocMarkdown(
+        loaders=[PythonLoader(modules=[opts.module])],
+        processors=[AllenNlpFilterProcessor(), AllenNlpDocstringProcessor(), CrossrefProcessor()],
+        renderer=AllenNlpRenderer(
+            filename=opts.out,
+            add_method_class_prefix=False,
+            add_member_class_prefix=False,
+            data_code_block=True,
+            signature_with_def=True,
+            use_fixed_header_levels=False,
+        ),
+    )
 
     pydocmd.load_modules()
     pydocmd.process()
