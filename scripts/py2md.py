@@ -142,6 +142,36 @@ class AllenNlpRenderer(MarkdownRenderer):
             )
         return code
 
+    def _render_module_breadcrumbs(self, fp, mod: Module):
+        #  breadcrumbs = "[*allennlp*](/api)[*.modules*](/api/modules)[*.seq2seq_encoders*](/api/modules/seq2seq_encoders)[**.pytorch_transformer_wrapper**](/api/modules/seq2seq_encoders/pytorch_transformer_wrapper)"
+        submods = mod.name.split(".")
+        if submods[0] != "allennlp":
+            return
+        breadcrumbs = []
+        for i, submod_name in enumerate(submods):
+            href = "/api/" + "/".join(submods[1 : i + 1])
+            if i == 0:
+                title = f"*{submod_name}*"
+            elif i == len(submods) - 1:
+                title = f"**.{submod_name}**"
+            else:
+                title = f"*.{submod_name}*"
+            breadcrumbs.append(f"[{title}]({href})")
+        fp.write("\[ " + "".join(breadcrumbs) + " \]\n\n---\n\n")
+
+    def _render_object(self, fp, level, obj):
+        if not isinstance(obj, Module) or self.render_module_header:
+            self._render_header(fp, level, obj)
+        if isinstance(obj, Module):
+            self._render_module_breadcrumbs(fp, obj)
+        self._render_signature_block(fp, obj)
+        if obj.docstring:
+            lines = obj.docstring.split("\n")
+            if self.docstrings_as_blockquote:
+                lines = ["> " + x for x in lines]
+            fp.write("\n".join(lines))
+            fp.write("\n\n")
+
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -163,6 +193,7 @@ def main():
             data_code_block=True,
             signature_with_def=True,
             use_fixed_header_levels=False,
+            render_module_header=False,
         ),
     )
 
