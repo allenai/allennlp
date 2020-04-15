@@ -119,7 +119,10 @@ class AllenNlpRenderer(MarkdownRenderer):
             + (0 if not func.return_ else len(str(func.return_)))
             > 60
         ):
-            parts.append("(\n    " + signature_args.replace(", ", ",\n    ") + "\n)")
+            signature_args = ",\n    ".join(
+                filter(lambda s: s.strip() not in ("", ","), (str(arg) for arg in func.args))
+            )
+            parts.append("(\n    " + signature_args + "\n)")
         else:
             parts.append("(" + signature_args + ")")
         if func.return_:
