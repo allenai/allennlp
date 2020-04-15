@@ -39,20 +39,6 @@ class AllenNlpDocstringProcessor(Struct):
                 codeblock_opened = not codeblock_opened
             if not codeblock_opened:
                 line, current_section = self._preprocess_line(line, current_section)
-                # Replace sphinx style crossreferences with markdown links.
-                for match, ty, name in self.CROSS_REF_RE.findall(line):
-                    if name.startswith("allennlp."):
-                        path = name.split(".")
-                        if ty == "mod":
-                            href = "/api/" + "/".join(path[1:])
-                        else:
-                            href = "/api/" + "/".join(path[1:-1]) + "#" + path[-1].lower()
-                        cross_ref = f"[`{path[-1]}`]({href})"
-                    elif "." not in name:
-                        cross_ref = f"[`{name}`](#{name.lower()})"
-                    else:
-                        cross_ref = f"`{name}`"
-                    line = line.replace(match, cross_ref)
             lines.append(line)
         node.docstring = "\n".join(lines)
 
@@ -76,7 +62,28 @@ class AllenNlpDocstringProcessor(Struct):
                 elif current_section in ("returns", "raises"):
                     line = f"- {line} <br>"
 
+            line = self._transform_cross_references(line)
+
         return line, current_section
+
+    def _transform_cross_references(self, line: str) -> str:
+        """
+        Replace sphinx style crossreferences with markdown links.
+        """
+        for match, ty, name in self.CROSS_REF_RE.findall(line):
+            if name.startswith("allennlp."):
+                path = name.split(".")
+                if ty == "mod":
+                    href = "/api/" + "/".join(path[1:])
+                else:
+                    href = "/api/" + "/".join(path[1:-1]) + "#" + path[-1].lower()
+                cross_ref = f"[`{path[-1]}`]({href})"
+            elif "." not in name:
+                cross_ref = f"[`{name}`](#{name.lower()})"
+            else:
+                cross_ref = f"`{name}`"
+            line = line.replace(match, cross_ref)
+        return line
 
 
 @implements(Processor)
