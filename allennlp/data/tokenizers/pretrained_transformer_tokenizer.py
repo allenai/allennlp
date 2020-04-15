@@ -76,7 +76,9 @@ class PretrainedTransformerTokenizer(Tokenizer):
             tokenizer_kwargs = tokenizer_kwargs.copy()
         if "use_fast" in tokenizer_kwargs:
             if tokenizer_kwargs["use_fast"]:
-                logger.warning("Fast huggingface tokenizers are known to break in certain scenarios.")
+                logger.warning(
+                    "Fast huggingface tokenizers are known to break in certain scenarios."
+                )
         else:
             tokenizer_kwargs["use_fast"] = False
         # As of transformers==2.8.0, fast tokenizers are broken.
