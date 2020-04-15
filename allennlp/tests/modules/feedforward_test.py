@@ -69,7 +69,12 @@ class TestFeedForward(AllenNlpTestCase):
 
     def test_textual_representation_contains_activations(self):
         params = Params(
-            {"input_dim": 2, "hidden_dims": 3, "activations": ["linear", "relu", "swish"], "num_layers": 3}
+            {
+                "input_dim": 2,
+                "hidden_dims": 3,
+                "activations": ["linear", "relu", "swish"],
+                "num_layers": 3,
+            }
         )
         feedforward = FeedForward.from_params(params)
         expected_text_representation = inspect.cleandoc(
