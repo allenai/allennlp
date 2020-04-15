@@ -111,6 +111,8 @@ class AllenNlpRenderer(MarkdownRenderer):
             parts.append(func.parent.name + ".")
         parts.append((override_name or func.name))
         signature_args = Argument.format_arglist(func.args)
+        if signature_args.endswith(","):
+            signature_args = signature_args[:-1].strip()
         if (
             len(parts[-1])
             + len(signature_args)
@@ -149,14 +151,15 @@ class AllenNlpRenderer(MarkdownRenderer):
             return
         breadcrumbs = []
         for i, submod_name in enumerate(submods):
-            href = "/api/" + "/".join(submods[1 : i + 1])
             if i == 0:
                 title = f"*{submod_name}*"
             elif i == len(submods) - 1:
                 title = f"**.{submod_name}**"
             else:
                 title = f"*.{submod_name}*"
-            breadcrumbs.append(f"[{title}]({href})")
+            #  href = "/api/" + "/".join(submods[1 : i + 1])
+            #  breadcrumbs.append(f"[{title}]({href})")
+            breadcrumbs.append(title)
         fp.write("\[ " + "".join(breadcrumbs) + " \]\n\n---\n\n")
 
     def _render_object(self, fp, level, obj):
