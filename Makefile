@@ -30,7 +30,7 @@ serve-docs : $(MD_DOCS_CONF) $(MD_DOCS) $(MD_DOCS_EXTRAS)
 
 .PHONY : build-all-api-docs
 build-all-api-docs : $(MD_DOCS_SRC) scripts/py2md.py
-	@$(MD_DOCS_CMD) $(subst /,.,$(subst .py,,$(MD_DOCS_SRC))) -c 8 -o $(MD_DOCS)
+	@$(MD_DOCS_CMD) $(subst /,.,$(subst .py,,$(MD_DOCS_SRC))) -o $(MD_DOCS)
 
 .PHONY : update-docs
 update-docs : $(MD_DOCS) $(MD_DOCS_EXTRAS)

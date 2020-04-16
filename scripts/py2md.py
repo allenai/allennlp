@@ -5,8 +5,9 @@ Turn docstring from a single module into a markdown file.
 """
 
 import argparse
+from collections import deque
 import logging
-from multiprocessing import Pool
+from multiprocessing import Pool, cpu_count
 import os
 from pathlib import Path
 import re
@@ -251,13 +252,6 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("modules", nargs="+", type=str, help="""The Python modules to parse.""")
     parser.add_argument(
-        "-c",
-        "--concurrency",
-        type=int,
-        default=1,
-        help="""The number of threads to use. Defaults to 1.""",
-    )
-    parser.add_argument(
         "-o",
         "--out",
         nargs="+",
@@ -272,11 +266,18 @@ def parse_args():
 def main():
     opts = parse_args()
     outputs = opts.out if opts.out else [None] * len(opts.modules)
-    if opts.concurrency > 1 and opts.out:
-        logging.info("Using %d threads", opts.concurrency)
-        with Pool(opts.concurrency) as p:
-            list(p.imap(_py2md_wrapper, zip(opts.modules, outputs), 10))
+    if len(outputs) != len(opts.modules):
+        raise ValueError("Number inputs and outputs should be the same.")
+    if opts.out:
+        # If writing to files, can process in parallel.
+        n_threads = cpu_count()
+        chunk_size = max([1, int(len(outputs) / n_threads)])
+        logging.info("Using %d threads", n_threads)
+        with Pool(n_threads) as p:
+            deque(p.imap(_py2md_wrapper, zip(opts.modules, outputs), chunk_size), maxlen=0)
     else:
+        # If writing to stdout, need to process sequentially. Otherwise the output
+        # could get intertwined.
         for module, out in zip(opts.modules, outputs):
             py2md(module, out)
     logging.info("Processed %d modules", len(opts.modules))
