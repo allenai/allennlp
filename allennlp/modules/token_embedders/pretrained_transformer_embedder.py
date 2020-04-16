@@ -84,9 +84,11 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         segment_concat_mask: Optional[torch.BoolTensor]
             Shape: [batch_size, num_segment_concat_wordpieces].
 
-        # Returns:
+        # Returns
 
-        Shape: [batch_size, num_wordpieces, embedding_size].
+        `torch.Tensor`
+            Shape: [batch_size, num_wordpieces, embedding_size].
+
         """
 
         # Some of the huggingface transformers don't support type ids at all and crash when you supply them. For
