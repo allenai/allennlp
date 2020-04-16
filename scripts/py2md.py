@@ -48,7 +48,7 @@ class AllenNlpDocstringProcessor(Struct):
             current_section = match.group(1).strip().lower()
             line = re.sub(r"#+ (.*)$", r"__\1__\n", line)
         else:
-            if line and not line.startswith(" "):
+            if line and not line.startswith(" ") and not line.startswith("!!! "):
                 if (
                     current_section
                     in ("arguments", "parameters", "attributes", "members", "returns")

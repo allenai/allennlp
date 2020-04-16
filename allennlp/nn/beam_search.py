@@ -88,7 +88,7 @@ class BeamSearch:
 
         # Returns
 
-        Tuple[torch.Tensor, torch.Tensor]
+        `Tuple[torch.Tensor, torch.Tensor]`
             Tuple of `(predictions, log_probabilities)`, where `predictions`
             has shape `(batch_size, beam_size, max_steps)` and `log_probabilities`
             has shape `(batch_size, beam_size)`.
