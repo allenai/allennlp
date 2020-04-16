@@ -2,4 +2,5 @@
 
 set -Eeuo pipefail
 
+make clean
 make build-docs --jobs 16
