@@ -28,6 +28,10 @@ build-docs : $(MD_DOCS_CONF) $(MD_DOCS) $(MD_DOCS_EXTRAS)
 serve-docs : $(MD_DOCS_CONF) $(MD_DOCS) $(MD_DOCS_EXTRAS)
 	mkdocs serve --dirtyreload
 
+.PHONY : build-all-api-docs
+build-all-api-docs : $(MD_DOCS_SRC) scripts/py2md.py
+	@$(MD_DOCS_CMD) $(subst /,.,$(subst .py,,$(MD_DOCS_SRC))) -o $(MD_DOCS)
+
 .PHONY : update-docs
 update-docs : $(MD_DOCS) $(MD_DOCS_EXTRAS)
 
@@ -45,9 +49,9 @@ $(MD_DOCS_ROOT)%.md : %.md
 $(MD_DOCS_CONF) : $(MD_DOCS_CONF_SRC) $(MD_DOCS)
 	python scripts/build_docs_config.py $@ $(MD_DOCS_CONF_SRC) $(MD_DOCS_ROOT) $(MD_DOCS_API_ROOT)
 
-$(MD_DOCS_API_ROOT)%.md : $(SRC)/%.py
+$(MD_DOCS_API_ROOT)%.md : $(SRC)/%.py scripts/py2md.py
 	mkdir -p $(shell dirname $@)
-	$(MD_DOCS_CMD) $(subst /,.,$(subst .py,,$<)) > $@
+	$(MD_DOCS_CMD) $(subst /,.,$(subst .py,,$<)) --out $@
 
 .PHONY : clean
 clean :
