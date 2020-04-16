@@ -85,7 +85,7 @@ with
 ```
 .
 
-For an example of this see the config for a [Transformer ELMo augmented constituency parser](https://github.com/allenai/allennlp/tree/v0.9.0/training_config/constituency_parser_transformer_elmo.jsonnet) and compare with the [original ELMo augmented constituency parser](https://github.com/allenai/allennlp/tree/v0.9.0/training_config/constituency_parser_elmo.jsonnet).
+For an example of this see the config for a [Transformer ELMo augmented constituency parser](https://github.com/allenai/allennlp-models/tree/v1.0.0.rc1/training_config/syntax/constituency_parser_transformer_elmo.jsonnet) and compare with the [original ELMo augmented constituency parser](https://github.com/allenai/allennlp-models/tree/v1.0.0.rc1/training_config/syntax/constituency_parser_elmo.jsonnet).
 
 ## Calling the `BidirectionalLanguageModelTokenEmbedder` directly
 

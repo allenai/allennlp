@@ -131,7 +131,7 @@ Note that this simple case only includes one layer of ELMo representation
 in the final model.
 In some case (e.g. SQuAD and SNLI) we found that including multiple layers improved performance.  Multiple layers require code changes (see below).
 
-We will use existing SRL model [configuration file](https://github.com/allenai/allennlp/tree/v0.9.0/training_config/semantic_role_labeler.jsonnet) as an example to illustrate the changes.  Without ELMo, it uses 100 dimensional pre-trained GloVe vectors.
+We will use existing SRL model [configuration file](https://github.com/allenai/allennlp-models/tree/v1.0.0.rc1/training_config/srl/semantic_role_labeler.jsonnet) as an example to illustrate the changes.  Without ELMo, it uses 100 dimensional pre-trained GloVe vectors.
 
 To add ELMo, there are three relevant changes.  First, modify the `text_field_embedder` section by adding an `elmo` section as follows:
 
@@ -220,7 +220,7 @@ For context, all of the experiments for the ELMo paper were done before AllenNLP
 In some cases, we haven't had the resources to tune the AllenNLP implementations to match the existing performance numbers yet; if you are able to do this for some of the models and submit back a tuned model, we (and many others) would greatly appreciate it.
 
 For the tasks in Table 1, this table lists the corresponding AllenNLP config files in cases where we have a re-implementation, and notes about reproducing the results in cases where we do not.
-The config files are in the [training_config/](https://github.com/allenai/allennlp/blob/v0.9.0/training_config/) folder.
+The config files are in the [training_config/](https://github.com/allenai/allennlp-models/blob/v1.0.0.rc1/training_config/) folder.
 
 |Task |    Configs |  Notes
 |-----|------------|-------|

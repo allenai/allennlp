@@ -3,7 +3,7 @@
 ### Training a Model
 
 In this tutorial we'll train a simple part-of-speech tagger using AllenNLP.
-The model is defined in [allennlp/models/simple_tagger.py](https://github.com/allenai/allennlp/blob/v0.9.0/allennlp/models/simple_tagger.py).
+The model is defined in [allennlp/models/simple_tagger.py](https://github.com/allenai/allennlp/blob/v1.0.0.rc1/allennlp/models/simple_tagger.py).
 It consists of a word embedding layer followed by an LSTM.
 
 Our dataset will be a subset of the [Brown Corpus](https://www.nltk.org/nltk_data/).
