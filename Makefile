@@ -45,7 +45,7 @@ $(MD_DOCS_ROOT)%.md : %.md
 $(MD_DOCS_CONF) : $(MD_DOCS_CONF_SRC) $(MD_DOCS)
 	python scripts/build_docs_config.py $@ $(MD_DOCS_CONF_SRC) $(MD_DOCS_ROOT) $(MD_DOCS_API_ROOT)
 
-$(MD_DOCS_API_ROOT)%.md : $(SRC)/%.py
+$(MD_DOCS_API_ROOT)%.md : $(SRC)/%.py scripts/py2md.py
 	mkdir -p $(shell dirname $@)
 	$(MD_DOCS_CMD) $(subst /,.,$(subst .py,,$<)) > $@
 
