@@ -5,7 +5,10 @@ Turn docstring from a single module into a markdown file.
 """
 
 import argparse
+import os
+from pathlib import Path
 import re
+from typing import Optional
 
 from nr.databind.core import Struct
 from nr.interface import implements, override
@@ -34,10 +37,18 @@ class AllenNlpDocstringProcessor(Struct):
         lines = []
         codeblock_opened = False
         current_section = None
+        consecutive_blank_line_count = 0
         for line in node.docstring.split("\n"):
             if line.startswith("```"):
                 codeblock_opened = not codeblock_opened
             if not codeblock_opened:
+                if not line.strip():
+                    consecutive_blank_line_count += 1
+                    # Two blank lines ends a section.
+                    if consecutive_blank_line_count >= 2:
+                        current_section = None
+                else:
+                    consecutive_blank_line_count = 0
                 line, current_section = self._preprocess_line(line, current_section)
             lines.append(line)
         node.docstring = "\n".join(lines)
@@ -200,21 +211,12 @@ class AllenNlpRenderer(MarkdownRenderer):
             fp.write("\n\n")
 
 
-def parse_args():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("module", type=str, help="The Python module to parse.")
-    parser.add_argument("-o", "--out", type=str, help="Output file, default is stdout.")
-    return parser.parse_args()
-
-
-def main():
-    opts = parse_args()
-
+def py2md(module: str, out: Optional[str] = None) -> None:
     pydocmd = PydocMarkdown(
-        loaders=[PythonLoader(modules=[opts.module])],
+        loaders=[PythonLoader(modules=[module])],
         processors=[AllenNlpFilterProcessor(), AllenNlpDocstringProcessor()],
         renderer=AllenNlpRenderer(
-            filename=opts.out,
+            filename=out,
             add_method_class_prefix=False,
             add_member_class_prefix=False,
             data_code_block=True,
@@ -223,10 +225,34 @@ def main():
             render_module_header=False,
         ),
     )
+    out_path = Path(out)
+    os.makedirs(out_path.parent, exist_ok=True)
 
     pydocmd.load_modules()
     pydocmd.process()
     pydocmd.render()
+
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("modules", nargs="+", type=str, help="""The Python modules to parse.""")
+    parser.add_argument(
+        "-o",
+        "--out",
+        nargs="+",
+        type=str,
+        help="""Output files.
+                If given, must have the same number of items as 'modules'.
+                If not given, stdout is used.""",
+    )
+    return parser.parse_args()
+
+
+def main():
+    opts = parse_args()
+    outputs = opts.out if opts.out else [None] * len(opts.modules)
+    for module, out in zip(opts.modules, outputs):
+        py2md(module, out)
 
 
 if __name__ == "__main__":

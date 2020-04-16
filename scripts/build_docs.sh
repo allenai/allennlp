@@ -3,4 +3,5 @@
 set -Eeuo pipefail
 
 make clean
-make build-docs --jobs 16
+make build-all-api-docs
+make build-docs
