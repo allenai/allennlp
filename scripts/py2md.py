@@ -5,7 +5,13 @@ Turn docstring from a single module into a markdown file.
 """
 
 import argparse
+from collections import deque
+import logging
+from multiprocessing import Pool, cpu_count
+import os
+from pathlib import Path
 import re
+from typing import Optional, Tuple
 
 from nr.databind.core import Struct
 from nr.interface import implements, override
@@ -14,6 +20,9 @@ from pydoc_markdown.contrib.loaders.python import PythonLoader
 from pydoc_markdown.contrib.renderers.markdown import MarkdownRenderer
 from pydoc_markdown.interfaces import Processor, Renderer
 from pydoc_markdown.reflection import Argument, Module, Function, Class
+
+
+logging.basicConfig(level=logging.INFO)
 
 
 @implements(Processor)
@@ -34,10 +43,18 @@ class AllenNlpDocstringProcessor(Struct):
         lines = []
         codeblock_opened = False
         current_section = None
+        consecutive_blank_line_count = 0
         for line in node.docstring.split("\n"):
             if line.startswith("```"):
                 codeblock_opened = not codeblock_opened
             if not codeblock_opened:
+                if not line.strip():
+                    consecutive_blank_line_count += 1
+                    # Two blank lines ends a section.
+                    if consecutive_blank_line_count >= 2:
+                        current_section = None
+                else:
+                    consecutive_blank_line_count = 0
                 line, current_section = self._preprocess_line(line, current_section)
             lines.append(line)
         node.docstring = "\n".join(lines)
@@ -200,21 +217,12 @@ class AllenNlpRenderer(MarkdownRenderer):
             fp.write("\n\n")
 
 
-def parse_args():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("module", type=str, help="The Python module to parse.")
-    parser.add_argument("-o", "--out", type=str, help="Output file, default is stdout.")
-    return parser.parse_args()
-
-
-def main():
-    opts = parse_args()
-
+def py2md(module: str, out: Optional[str] = None) -> None:
     pydocmd = PydocMarkdown(
-        loaders=[PythonLoader(modules=[opts.module])],
+        loaders=[PythonLoader(modules=[module])],
         processors=[AllenNlpFilterProcessor(), AllenNlpDocstringProcessor()],
         renderer=AllenNlpRenderer(
-            filename=opts.out,
+            filename=out,
             add_method_class_prefix=False,
             add_member_class_prefix=False,
             data_code_block=True,
@@ -223,10 +231,56 @@ def main():
             render_module_header=False,
         ),
     )
+    if out:
+        out_path = Path(out)
+        os.makedirs(out_path.parent, exist_ok=True)
 
     pydocmd.load_modules()
     pydocmd.process()
     pydocmd.render()
+    logging.info("Processed %s", module)
+
+
+def _py2md_wrapper(x: Tuple[str, str]):
+    """
+    Used to wrap py2md since we can't pickle a lambda (needed for multiprocessing).
+    """
+    return py2md(x[0], x[1])
+
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("modules", nargs="+", type=str, help="""The Python modules to parse.""")
+    parser.add_argument(
+        "-o",
+        "--out",
+        nargs="+",
+        type=str,
+        help="""Output files.
+                If given, must have the same number of items as 'modules'.
+                If not given, stdout is used.""",
+    )
+    return parser.parse_args()
+
+
+def main():
+    opts = parse_args()
+    outputs = opts.out if opts.out else [None] * len(opts.modules)
+    if len(outputs) != len(opts.modules):
+        raise ValueError("Number inputs and outputs should be the same.")
+    if opts.out:
+        # If writing to files, can process in parallel.
+        n_threads = cpu_count()
+        chunk_size = max([1, int(len(outputs) / n_threads)])
+        logging.info("Using %d threads", n_threads)
+        with Pool(n_threads) as p:
+            deque(p.imap(_py2md_wrapper, zip(opts.modules, outputs), chunk_size), maxlen=0)
+    else:
+        # If writing to stdout, need to process sequentially. Otherwise the output
+        # could get intertwined.
+        for module, out in zip(opts.modules, outputs):
+            py2md(module, out)
+    logging.info("Processed %d modules", len(opts.modules))
 
 
 if __name__ == "__main__":
