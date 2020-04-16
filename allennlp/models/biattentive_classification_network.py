@@ -8,7 +8,13 @@ import torch.nn.functional as F
 
 from allennlp.common.checks import check_dimensions_match, ConfigurationError
 from allennlp.data import TextFieldTensors, Vocabulary
-from allennlp.modules import Elmo, FeedForward, Maxout, Seq2SeqEncoder, TextFieldEmbedder
+from allennlp.modules import (
+    Elmo,
+    FeedForward,
+    Maxout,
+    Seq2SeqEncoder,
+    TextFieldEmbedder,
+)
 from allennlp.models.model import Model
 from allennlp.nn import InitializerApplicator
 from allennlp.nn import util
@@ -19,9 +25,9 @@ from allennlp.training.metrics import CategoricalAccuracy
 class BiattentiveClassificationNetwork(Model):
     """
     This class implements the Biattentive Classification Network model described
-    in section 5 of [Learned in Translation: Contextualized Word Vectors (NIPS 2017)]
-    (https://arxiv.org/abs/1708.00107) for text classification. We assume we're
-    given a piece of text, and we predict some output label.
+    in section 5 of
+    [Learned in Translation: Contextualized Word Vectors (NIPS 2017)](https://arxiv.org/abs/1708.00107)
+    for text classification. We assume we're given a piece of text, and we predict some output label.
 
     At a high level, the model starts by embedding the tokens and running them through
     a feed-forward neural net (`pre_encode_feedforward`). Then, we encode these
@@ -215,14 +221,15 @@ class BiattentiveClassificationNetwork(Model):
             The output of `TextField.as_array()`.
         label : torch.LongTensor, optional (default = None)
             A variable representing the label for each instance in the batch.
+
         # Returns
 
         An output dictionary consisting of:
-        class_probabilities : torch.FloatTensor
-            A tensor of shape `(batch_size, num_classes)` representing a
-            distribution over the label classes for each instance.
-        loss : torch.FloatTensor, optional
-            A scalar loss to be optimised.
+            - `class_probabilities` (`torch.FloatTensor`) :
+                A tensor of shape `(batch_size, num_classes)` representing a
+                distribution over the label classes for each instance.
+            - `loss` (`torch.FloatTensor`, optional) :
+                A scalar loss to be optimised.
         """
         text_mask = util.get_text_field_mask(tokens)
         # Pop elmo tokens, since elmo embedder should not be present.
@@ -270,7 +277,7 @@ class BiattentiveClassificationNetwork(Model):
 
         # Build the input to the integrator
         integrator_input = torch.cat(
-            [encoded_tokens, encoded_tokens - encoded_text, encoded_tokens * encoded_text], 2
+            [encoded_tokens, encoded_tokens - encoded_text, encoded_tokens * encoded_text], 2,
         )
         integrated_encodings = self._integrator(integrator_input, text_mask)
 

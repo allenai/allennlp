@@ -3,7 +3,7 @@ The `train` subcommand can be used to train a model.
 It requires a configuration file and a directory in
 which to write the results.
 
-   $ allennlp train --help
+    $ allennlp train --help
     usage: allennlp train [-h] -s SERIALIZATION_DIR [-r] [-f] [-o OVERRIDES]
                           [--file-friendly-logging] [--node-rank NODE_RANK]
                           [--dry-run] [--include-package INCLUDE_PACKAGE]
@@ -500,6 +500,9 @@ class TrainModel(Registrable):
     """
 
     default_implementation = "default"
+    """
+    The default implementation is registered as 'default'.
+    """
 
     def __init__(
         self,

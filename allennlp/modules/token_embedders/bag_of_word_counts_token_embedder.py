@@ -67,8 +67,9 @@ class BagOfWordCountsTokenEmbedder(TokenEmbedder):
 
         # Returns
 
-        The bag-of-words representations for the input sequence, shape
-        `(batch_size, vocab_size)`
+        `torch.Tensor`
+            The bag-of-words representations for the input sequence, shape
+            `(batch_size, vocab_size)`
         """
         bag_of_words_vectors = []
 

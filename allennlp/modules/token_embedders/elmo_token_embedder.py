@@ -94,8 +94,9 @@ class ElmoTokenEmbedder(TokenEmbedder):
 
         # Returns
 
-        The ELMo representations for the input sequence, shape
-        `(batch_size, timesteps, embedding_dim)`
+        `torch.Tensor`
+            The ELMo representations for the input sequence, shape
+            `(batch_size, timesteps, embedding_dim)`
         """
         elmo_output = self._elmo(tokens, word_inputs)
         elmo_representations = elmo_output["elmo_representations"][0]
