@@ -5,10 +5,12 @@ Turn docstring from a single module into a markdown file.
 """
 
 import argparse
+import logging
+from multiprocessing import Pool
 import os
 from pathlib import Path
 import re
-from typing import Optional
+from typing import Optional, Tuple
 
 from nr.databind.core import Struct
 from nr.interface import implements, override
@@ -17,6 +19,9 @@ from pydoc_markdown.contrib.loaders.python import PythonLoader
 from pydoc_markdown.contrib.renderers.markdown import MarkdownRenderer
 from pydoc_markdown.interfaces import Processor, Renderer
 from pydoc_markdown.reflection import Argument, Module, Function, Class
+
+
+logging.basicConfig(level=logging.INFO)
 
 
 @implements(Processor)
@@ -225,17 +230,33 @@ def py2md(module: str, out: Optional[str] = None) -> None:
             render_module_header=False,
         ),
     )
-    out_path = Path(out)
-    os.makedirs(out_path.parent, exist_ok=True)
+    if out:
+        out_path = Path(out)
+        os.makedirs(out_path.parent, exist_ok=True)
 
     pydocmd.load_modules()
     pydocmd.process()
     pydocmd.render()
+    logging.info("Processed %s", module)
+
+
+def _py2md_wrapper(x: Tuple[str, str]):
+    """
+    Used to wrap py2md since we can't pickle a lambda (needed for multiprocessing).
+    """
+    return py2md(x[0], x[1])
 
 
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("modules", nargs="+", type=str, help="""The Python modules to parse.""")
+    parser.add_argument(
+        "-c",
+        "--concurrency",
+        type=int,
+        default=1,
+        help="""The number of threads to use. Defaults to 1.""",
+    )
     parser.add_argument(
         "-o",
         "--out",
@@ -251,8 +272,14 @@ def parse_args():
 def main():
     opts = parse_args()
     outputs = opts.out if opts.out else [None] * len(opts.modules)
-    for module, out in zip(opts.modules, outputs):
-        py2md(module, out)
+    if opts.concurrency > 1 and opts.out:
+        logging.info("Using %d threads", opts.concurrency)
+        with Pool(opts.concurrency) as p:
+            list(p.imap(_py2md_wrapper, zip(opts.modules, outputs), 10))
+    else:
+        for module, out in zip(opts.modules, outputs):
+            py2md(module, out)
+    logging.info("Processed %d modules", len(opts.modules))
 
 
 if __name__ == "__main__":
