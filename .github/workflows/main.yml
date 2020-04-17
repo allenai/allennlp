@@ -64,6 +64,8 @@ jobs:
     # TODO: remove codecov report publishing from TeamCity build and then uncomment this:
     # - name: Upload coverage to Codecov
     #   if: matrix.python == '3.7'
-    #   uses: codecov/codecov-action@v1.0.2
-    #   with:
-    #     token: ${{ secrets.CODECOV_TOKEN }}
+    #   run: |
+    #     . .venv/bin/activate
+    #     codecov
+    #   env:
+    #     CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
