@@ -105,10 +105,10 @@ just run the following command to get an environment that will run on either the
 
    ```bash
    mkdir -p $HOME/.allennlp/
-   docker run --rm -v $HOME/.allennlp:/root/.allennlp allennlp/allennlp:v0.9.0
+   docker run --rm -v $HOME/.allennlp:/root/.allennlp allennlp/allennlp:v1.0.0.rc1
    ```
 
-You can test the Docker environment with `docker run --rm -v $HOME/.allennlp:/root/.allennlp allennlp/allennlp:v0.9.0 test-install`.
+You can test the Docker environment with `docker run --rm -v $HOME/.allennlp:/root/.allennlp allennlp/allennlp:v1.0.0.rc1 test-install`.
 
 ### Installing from source
 

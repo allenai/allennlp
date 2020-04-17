@@ -5,6 +5,7 @@ import math
 
 from torch.utils import data
 
+from allennlp.common.checks import ConfigurationError
 from allennlp.common.util import lazy_groups_of
 from allennlp.data.instance import Instance
 from allennlp.data.samplers import BatchSampler
@@ -91,14 +92,17 @@ class BucketBatchSampler(BatchSampler):
         instances_with_lengths = []
         for instance in instances:
             # Make sure instance is indexed before calling .get_padding
-            instance_with_lengths = (
-                [
-                    add_noise_to_value(len(instance.fields.get(field_name)), self.padding_noise)
-                    for field_name in self.sorting_keys
-                ],
-                instance,
-            )
-            instances_with_lengths.append(instance_with_lengths)
+            lengths = []
+            for field_name in self.sorting_keys:
+                if field_name not in instance.fields:
+                    raise ConfigurationError(
+                        f'Sorting key "{field_name}" is not a field in instance. '
+                        f"Available fields/keys are {list(instance.fields.keys())}."
+                    )
+                lengths.append(
+                    add_noise_to_value(len(instance.fields[field_name]), self.padding_noise)
+                )
+            instances_with_lengths.append((lengths, instance))
         with_indices = [(x, i) for i, x in enumerate(instances_with_lengths)]
         with_indices.sort(key=lambda x: x[0][0])
         return [instance_with_index[-1] for instance_with_index in with_indices]
