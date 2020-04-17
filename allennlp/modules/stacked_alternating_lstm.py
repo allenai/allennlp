@@ -39,7 +39,7 @@ class StackedAlternatingLstm(torch.nn.Module):
 
     # Returns
 
-    output_accumulator : PackedSequence
+    output_accumulator : `PackedSequence`
         The outputs of the interleaved LSTMs per timestep. A tensor of shape
         (batch_size, max_timesteps, hidden_size) where for a given batch
         element, all outputs past the sequence length for that batch are
@@ -93,9 +93,9 @@ class StackedAlternatingLstm(torch.nn.Module):
 
         # Returns
 
-        output_sequence : PackedSequence
+        output_sequence : `PackedSequence`
             The encoded sequence of shape (batch_size, sequence_length, hidden_size)
-        final_states: Tuple[torch.Tensor, torch.Tensor]
+        final_states: `Tuple[torch.Tensor, torch.Tensor]`
             The per-layer final (state, memory) states of the LSTM, each with shape
             (num_layers, batch_size, hidden_size).
         """

@@ -26,7 +26,6 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
 
     # Parameters
 
-
     token_embedders : `Dict[str, TokenEmbedder]`, required.
         A dictionary mapping token embedder names to implementations.
         These names should match the corresponding indexer used to generate
