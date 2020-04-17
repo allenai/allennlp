@@ -25,18 +25,21 @@ jobs:
 
     - uses: actions/cache@v1
       with:
-        path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ matrix.python }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
+        path: .venv
+        key: ${{ runner.os }}-deps-${{ matrix.python }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
         restore-keys: |
-          ${{ runner.os }}-pip-${{ matrix.python }}
+          ${{ runner.os }}-deps-${{ matrix.python }}
 
     - name: Install requirements
       run: |
+        python -m venv .venv
+        . .venv/bin/activate
         pip install -e .
         pip install --upgrade -r dev-requirements.txt
 
     - name: Show pip freeze
       run: |
+        . .venv/bin/activate
         pip freeze
 
     - name: Check for large files
@@ -45,14 +48,17 @@ jobs:
 
     - name: Lint
       run: |
+        . .venv/bin/activate
         make lint
 
     - name: Type check
       run: |
+        . .venv/bin/activate
         make typecheck
 
     - name: Run tests
       run: |
+        . .venv/bin/activate
         make test-with-cov
 
     # TODO: remove codecov report publishing from TeamCity build and then uncomment this:
