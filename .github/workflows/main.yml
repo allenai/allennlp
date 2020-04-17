@@ -59,7 +59,7 @@ jobs:
     - name: Run tests
       run: |
         . .venv/bin/activate
-        make test-with-cov
+        PATH=.venv/bin:$PATH make test-with-cov
 
     # TODO: remove codecov report publishing from TeamCity build and then uncomment this:
     # - name: Upload coverage to Codecov
