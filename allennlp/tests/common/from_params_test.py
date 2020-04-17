@@ -810,3 +810,10 @@ class TestFromParams(AllenNlpTestCase):
         assert all(isinstance(value, B) for value in d.items.values())
         assert d.items["first"].size == 1
         assert d.items["second"].size == 2
+
+    def test_raises_when_there_are_no_implementations(self):
+        class A(Registrable):
+            pass
+
+        with pytest.raises(ConfigurationError):
+            A.from_params("inexistent_class")
