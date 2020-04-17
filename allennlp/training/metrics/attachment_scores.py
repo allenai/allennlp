@@ -15,9 +15,9 @@ class AttachmentScores(Metric):
     to this metric is the sampled predictions, not the distribution
     itself.
 
-    Parameters
-    ----------
-    ignore_classes : ``List[int]``, optional (default = None)
+    # Parameters
+
+    ignore_classes : `List[int]`, optional (default = None)
         A list of label ids to ignore when computing metrics.
     """
 
@@ -37,28 +37,30 @@ class AttachmentScores(Metric):
         predicted_labels: torch.Tensor,
         gold_indices: torch.Tensor,
         gold_labels: torch.Tensor,
-        mask: Optional[torch.Tensor] = None,
+        mask: Optional[torch.BoolTensor] = None,
     ):
         """
-        Parameters
-        ----------
-        predicted_indices : ``torch.Tensor``, required.
+        # Parameters
+
+        predicted_indices : `torch.Tensor`, required.
             A tensor of head index predictions of shape (batch_size, timesteps).
-        predicted_labels : ``torch.Tensor``, required.
+        predicted_labels : `torch.Tensor`, required.
             A tensor of arc label predictions of shape (batch_size, timesteps).
-        gold_indices : ``torch.Tensor``, required.
-            A tensor of the same shape as ``predicted_indices``.
-        gold_labels : ``torch.Tensor``, required.
-            A tensor of the same shape as ``predicted_labels``.
-        mask: ``torch.Tensor``, optional (default = None).
-            A tensor of the same shape as ``predicted_indices``.
+        gold_indices : `torch.Tensor`, required.
+            A tensor of the same shape as `predicted_indices`.
+        gold_labels : `torch.Tensor`, required.
+            A tensor of the same shape as `predicted_labels`.
+        mask : `torch.BoolTensor`, optional (default = None).
+            A tensor of the same shape as `predicted_indices`.
         """
-        unwrapped = self.unwrap_to_tensors(
+        detached = self.detach_tensors(
             predicted_indices, predicted_labels, gold_indices, gold_labels, mask
         )
-        predicted_indices, predicted_labels, gold_indices, gold_labels, mask = unwrapped
+        predicted_indices, predicted_labels, gold_indices, gold_labels, mask = detached
 
-        mask = mask.long()
+        if mask is None:
+            mask = torch.ones_like(predicted_indices).bool()
+
         predicted_indices = predicted_indices.long()
         predicted_labels = predicted_labels.long()
         gold_indices = gold_indices.long()
@@ -68,25 +70,25 @@ class AttachmentScores(Metric):
         # gold labels which we should ignore.
         for label in self._ignore_classes:
             label_mask = gold_labels.eq(label)
-            mask = mask * (~label_mask).long()
+            mask = mask & ~label_mask
 
         correct_indices = predicted_indices.eq(gold_indices).long() * mask
-        unlabeled_exact_match = (correct_indices + (1 - mask)).prod(dim=-1)
+        unlabeled_exact_match = (correct_indices + ~mask).prod(dim=-1)
         correct_labels = predicted_labels.eq(gold_labels).long() * mask
         correct_labels_and_indices = correct_indices * correct_labels
-        labeled_exact_match = (correct_labels_and_indices + (1 - mask)).prod(dim=-1)
+        labeled_exact_match = (correct_labels_and_indices + ~mask).prod(dim=-1)
 
         self._unlabeled_correct += correct_indices.sum()
         self._exact_unlabeled_correct += unlabeled_exact_match.sum()
         self._labeled_correct += correct_labels_and_indices.sum()
         self._exact_labeled_correct += labeled_exact_match.sum()
         self._total_sentences += correct_indices.size(0)
-        self._total_words += correct_indices.numel() - (1 - mask).sum()
+        self._total_words += correct_indices.numel() - (~mask).sum()
 
     def get_metric(self, reset: bool = False):
         """
-        Returns
-        -------
+        # Returns
+
         The accumulated metrics as a dictionary.
         """
         unlabeled_attachment_score = 0.0

@@ -26,29 +26,31 @@ class Hotflip(Attacker):
     """
     Runs the HotFlip style attack at the word-level https://arxiv.org/abs/1712.06751.  We use the
     first-order taylor approximation described in https://arxiv.org/abs/1903.06620, in the function
-    ``_first_order_taylor()``.
+    `_first_order_taylor()`.
 
     We try to re-use the embedding matrix from the model when deciding what other words to flip a
     token to.  For a large class of models, this is straightforward.  When there is a
     character-level encoder, however (e.g., with ELMo, any char-CNN, etc.), or a combination of
     encoders (e.g., ELMo + glove), we need to construct a fake embedding matrix that we can use in
-    ``_first_order_taylor()``.  We do this by getting a list of words from the model's vocabulary
+    `_first_order_taylor()`.  We do this by getting a list of words from the model's vocabulary
     and embedding them using the encoder.  This can be expensive, both in terms of time and memory
-    usage, so we take a ``max_tokens`` parameter to limit the size of this fake embedding matrix.
+    usage, so we take a `max_tokens` parameter to limit the size of this fake embedding matrix.
     This also requires a model to `have` a token vocabulary in the first place, which can be
     problematic for models that only have character vocabularies.
 
-    Parameters
-    ----------
-    predictor : ``Predictor``
+    Registered as an `Attacker` with name "hotflip".
+
+    # Parameters
+
+    predictor : `Predictor`
         The model (inside a Predictor) that we're attacking.  We use this to get gradients and
         predictions.
-    vocab_namespace : ``str``, optional (default='tokens')
+    vocab_namespace : `str`, optional (default='tokens')
         We use this to know three things: (1) which tokens we should ignore when producing flips
         (we don't consider non-alphanumeric tokens); (2) what the string value is of the token that
         we produced, so we can show something human-readable to the user; and (3) if we need to
         construct a fake embedding matrix, we use the tokens in the vocabulary as flip candidates.
-    max_tokens : ``int``, optional (default=5000)
+    max_tokens : `int`, optional (default=5000)
         This is only used when we need to construct a fake embedding matrix.  That matrix can take
         a lot of memory when the vocab size is large.  This parameter puts a cap on the number of
         tokens to use, so the fake embedding matrix doesn't take as much memory.
@@ -68,15 +70,17 @@ class Hotflip(Attacker):
                 self.invalid_replacement_indices.append(i)
         self.embedding_matrix: torch.Tensor = None
         self.embedding_layer: torch.nn.Module = None
+        # get device number
+        self.cuda_device = predictor.cuda_device
 
     def initialize(self):
         """
         Call this function before running attack_from_json(). We put the call to
-        ``_construct_embedding_matrix()`` in this function to prevent a large amount of compute
+        `_construct_embedding_matrix()` in this function to prevent a large amount of compute
         being done when __init__() is called.
         """
         if self.embedding_matrix is None:
-            self.embedding_matrix = self._construct_embedding_matrix().cpu()
+            self.embedding_matrix = self._construct_embedding_matrix()
 
     def _construct_embedding_matrix(self) -> Embedding:
         """
@@ -120,32 +124,32 @@ class Hotflip(Attacker):
                 all_indices = [
                     self.vocab._token_to_index[self.namespace][token] for token in all_tokens
                 ]
-                inputs[indexer_name] = torch.LongTensor(all_indices).unsqueeze(0)
+                inputs[indexer_name] = {"tokens": torch.LongTensor(all_indices).unsqueeze(0)}
             elif isinstance(token_indexer, TokenCharactersIndexer):
                 tokens = [Token(x) for x in all_tokens]
                 max_token_length = max(len(x) for x in all_tokens)
-                indexed_tokens = token_indexer.tokens_to_indices(
-                    tokens, self.vocab, "token_characters"
-                )
-                padded_tokens = token_indexer.as_padded_tensor(
-                    indexed_tokens,
-                    {"token_characters": len(tokens)},
-                    {"num_token_characters": max_token_length},
-                )
-                inputs[indexer_name] = torch.LongTensor(
-                    padded_tokens["token_characters"]
-                ).unsqueeze(0)
+                # sometime max_token_length is too short for cnn encoder
+                max_token_length = max(max_token_length, token_indexer._min_padding_length)
+                indexed_tokens = token_indexer.tokens_to_indices(tokens, self.vocab)
+                padding_lengths = token_indexer.get_padding_lengths(indexed_tokens)
+                padded_tokens = token_indexer.as_padded_tensor_dict(indexed_tokens, padding_lengths)
+                inputs[indexer_name] = {
+                    "token_characters": torch.LongTensor(
+                        padded_tokens["token_characters"]
+                    ).unsqueeze(0)
+                }
             elif isinstance(token_indexer, ELMoTokenCharactersIndexer):
                 elmo_tokens = []
                 for token in all_tokens:
                     elmo_indexed_token = token_indexer.tokens_to_indices(
-                        [Token(text=token)], self.vocab, "sentence"
-                    )["sentence"]
+                        [Token(text=token)], self.vocab
+                    )["tokens"]
                     elmo_tokens.append(elmo_indexed_token[0])
-                inputs[indexer_name] = torch.LongTensor(elmo_tokens).unsqueeze(0)
+                inputs[indexer_name] = {"tokens": torch.LongTensor(elmo_tokens).unsqueeze(0)}
             else:
                 raise RuntimeError("Unsupported token indexer:", token_indexer)
-        return inputs
+
+        return util.move_to_device(inputs, self.cuda_device)
 
     def attack_from_json(
         self,
@@ -157,8 +161,8 @@ class Hotflip(Attacker):
     ) -> JsonDict:
         """
         Replaces one token at a time from the input until the model's prediction changes.
-        ``input_field_to_attack`` is for example ``tokens``, it says what the input field is
-        called.  ``grad_input_field`` is for example ``grad_input_1``, which is a key into a grads
+        `input_field_to_attack` is for example `tokens`, it says what the input field is
+        called.  `grad_input_field` is for example `grad_input_1`, which is a key into a grads
         dictionary.
 
         The method computes the gradient w.r.t. the tokens, finds the token with the maximum
@@ -166,28 +170,28 @@ class Hotflip(Attacker):
         approximation of the loss.  This process is iteratively repeated until the prediction
         changes.  Once a token is replaced, it is not flipped again.
 
-        Parameters
-        ----------
-        inputs : ``JsonDict``
-            The model inputs, the same as what is passed to a ``Predictor``.
-        input_field_to_attack : ``str``, optional (default='tokens')
+        # Parameters
+
+        inputs : `JsonDict`
+            The model inputs, the same as what is passed to a `Predictor`.
+        input_field_to_attack : `str`, optional (default='tokens')
             The field that has the tokens that we're going to be flipping.  This must be a
-            ``TextField``.
-        grad_input_field : ``str``, optional (default='grad_input_1')
+            `TextField`.
+        grad_input_field : `str`, optional (default='grad_input_1')
             If there is more than one field that gets embedded in your model (e.g., a question and
             a passage, or a premise and a hypothesis), this tells us the key to use to get the
             correct gradients.  This selects from the output of :func:`Predictor.get_gradients`.
-        ignore_tokens : ``List[str]``, optional (default=DEFAULT_IGNORE_TOKENS)
+        ignore_tokens : `List[str]`, optional (default=DEFAULT_IGNORE_TOKENS)
             These tokens will not be flipped.  The default list includes some simple punctuation,
             OOV and padding tokens, and common control tokens for BERT, etc.
-        target : ``JsonDict``, optional (default=None)
+        target : `JsonDict`, optional (default=None)
             If given, this will be a `targeted` hotflip attack, where instead of just trying to
             change a model's prediction from what it current is predicting, we try to change it to
-            a `specific` target value.  This is a ``JsonDict`` because it needs to specify the
+            a `specific` target value.  This is a `JsonDict` because it needs to specify the
             field name and target value.  For example, for a masked LM, this would be something
-            like ``{"words": ["she"]}``, because ``"words"`` is the field name, there is one mask
+            like `{"words": ["she"]}`, because `"words"` is the field name, there is one mask
             token (hence the list of length one), and we want to change the prediction from
-            whatever it was to ``"she"``.
+            whatever it was to `"she"`.
         """
         if self.embedding_matrix is None:
             self.initialize()
@@ -267,10 +271,8 @@ class Hotflip(Attacker):
                     break
                 flipped.append(index_of_token_to_flip)
 
-                # TODO(mattg): This is quite a bit of a hack for getting the vocab id...  I don't
-                # have better ideas at the moment, though.
-                indexer_name = self.namespace
-                input_tokens = text_field._indexed_tokens[indexer_name]
+                text_field_tensors = text_field.as_tensor(text_field.get_padding_lengths())
+                input_tokens = util.get_token_ids_from_text_field_tensors(text_field_tensors)
                 original_id_of_token_to_flip = input_tokens[index_of_token_to_flip]
 
                 # Get new token using taylor approximation.
@@ -324,7 +326,7 @@ class Hotflip(Attacker):
         function uses the grad, alongside the embedding_matrix to select the token that maximizes the
         first-order taylor approximation of the loss.
         """
-        grad = torch.from_numpy(grad)
+        grad = util.move_to_device(torch.from_numpy(grad), self.cuda_device)
         if token_idx >= self.embedding_matrix.size(0):
             # This happens when we've truncated our fake embedding matrix.  We need to do a dot
             # product with the word vector of the current token; if that token is out of
@@ -333,7 +335,8 @@ class Hotflip(Attacker):
             word_embedding = self.embedding_layer(inputs)[0]
         else:
             word_embedding = torch.nn.functional.embedding(
-                torch.LongTensor([token_idx]), self.embedding_matrix
+                util.move_to_device(torch.LongTensor([token_idx]), self.cuda_device),
+                self.embedding_matrix,
             )
         word_embedding = word_embedding.detach().unsqueeze(0)
         grad = grad.unsqueeze(0).unsqueeze(0)

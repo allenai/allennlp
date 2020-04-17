@@ -21,17 +21,20 @@
         "hidden_size": 4,
         "num_layers": 1
       },
-      "regularizer": [
-        ["weight$", {"type": "l2", "alpha": 10}],
-        ["bias$", {"type": "l1", "alpha": 5}]
-      ]
+      "regularizer": {
+        "regexes": [
+          ["weight$", {"type": "l2", "alpha": 10}],
+          ["bias$", {"type": "l1", "alpha": 5}]
+        ]
+      }
     },
-    "iterator": {
-      "type": "bucket",
-      "sorting_keys": [["tokens", "num_tokens"]],
-      "padding_noise": 0.0,
-      "batch_size" : 80
-    },
+    "data_loader": {
+      "batch_sampler": {
+          "type": "bucket",
+          "batch_size": 80,
+          "padding_noise": 0.0
+      }
+  },
     "trainer": {
       "num_epochs": 1,
       "grad_norm": 1.0,

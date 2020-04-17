@@ -2,9 +2,7 @@
 The ``print-results`` subcommand allows you to print results from multiple
 allennlp serialization directories to the console in a helpful csv format.
 
-.. code-block:: bash
-
-   $ allennlp print-results --help
+    $ allennlp print-results --help
     usage: allennlp print-results [-h] [-k KEYS [KEYS ...]] [-m METRICS_FILENAME]
                                   [--include-package INCLUDE_PACKAGE]
                                   path
@@ -27,22 +25,25 @@ allennlp serialization directories to the console in a helpful csv format.
                             additional packages to include
 """
 import argparse
+import json
 import logging
 import os
-import json
+
+from overrides import overrides
+
 from allennlp.commands.subcommand import Subcommand
 
 logger = logging.getLogger(__name__)
 
 
+@Subcommand.register("print-results")
 class PrintResults(Subcommand):
-    def add_subparser(
-        self, name: str, parser: argparse._SubParsersAction
-    ) -> argparse.ArgumentParser:
+    @overrides
+    def add_subparser(self, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
 
         description = """Print results from allennlp training runs in a helpful CSV format."""
         subparser = parser.add_parser(
-            name,
+            self.name,
             description=description,
             help="Print results from allennlp serialization directories to the console.",
         )
@@ -85,15 +86,15 @@ def print_results_from_args(args: argparse.Namespace):
 
     results_dict = {}
     for root, _, files in os.walk(path):
-
         if metrics_name in files:
             full_name = os.path.join(root, metrics_name)
-            metrics = json.load(open(full_name))
+            with open(full_name) as file_:
+                metrics = json.load(file_)
             results_dict[full_name] = metrics
 
     sorted_keys = sorted(list(results_dict.keys()))
     print(f"model_run, {', '.join(keys)}")
     for name in sorted_keys:
         results = results_dict[name]
-        keys_to_print = [str(results.get(key, "N/A")) for key in keys]
+        keys_to_print = (str(results.get(key, "N/A")) for key in keys)
         print(f"{name}, {', '.join(keys_to_print)}")

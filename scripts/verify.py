@@ -14,7 +14,7 @@ def main(checks):
         print("Verifying with " + str(checks))
         if "pytest" in checks:
             print("Tests (pytest):", flush=True)
-            run("pytest -v --color=yes", shell=True, check=True)
+            run("pytest --color=yes -rf", shell=True, check=True)
 
         if "flake8" in checks:
             print("Linter (flake8)", flush=True)
@@ -34,33 +34,22 @@ def main(checks):
                 " --ignore-missing-imports"
                 # This is necessary because PyTorch has some type stubs but they're incomplete,
                 # and mypy will follow them and generate a lot of spurious errors.
-                " --no-site-packages "
+                " --no-site-packages"
                 # We are extremely lax about specifying Optional[] types, so we need this flag.
                 # TODO: tighten up our type annotations and remove this
-                " --no-strict-optional",
+                " --no-strict-optional"
+                # Some versions of mypy crash randomly when caching, probably because of our use of
+                # NamedTuple (https://github.com/python/mypy/issues/7281).
+                " --cache-dir=/dev/null",
                 shell=True,
                 check=True,
             )
             print("mypy checks passed")
 
-        if "build-docs" in checks:
-            print("Documentation (build):", flush=True)
-            run("cd doc; make html-strict", shell=True, check=True)
-
-        if "check-docs" in checks:
-            print("Documentation (check):", flush=True)
-            run("./scripts/check_docs.py", shell=True, check=True)
-            print("check docs passed")
-
         if "check-links" in checks:
             print("Checking links in Markdown files:", flush=True)
             run("./scripts/check_links.py", shell=True, check=True)
             print("check links passed")
-
-        if "check-requirements" in checks:
-            print("Checking requirements.txt against setup.py", flush=True)
-            run("./scripts/check_requirements_and_setup.py", shell=True, check=True)
-            print("check requirements passed")
 
         if "check-large-files" in checks:
             print("Checking all added files have size <= 2MB", flush=True)
@@ -78,8 +67,6 @@ if __name__ == "__main__":
         "flake8",
         "mypy",
         "black",
-        "build-docs",
-        "check-docs",
         "check-links",
         "check-requirements",
         "check-large-files",

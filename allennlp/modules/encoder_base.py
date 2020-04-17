@@ -15,9 +15,9 @@ RnnStateStorage = Tuple[torch.Tensor, ...]
 class _EncoderBase(torch.nn.Module):
 
     """
-    This abstract class serves as a base for the 3 ``Encoder`` abstractions in AllenNLP.
-    - :class:`~allennlp.modules.seq2seq_encoders.Seq2SeqEncoders`
-    - :class:`~allennlp.modules.seq2vec_encoders.Seq2VecEncoders`
+    This abstract class serves as a base for the 3 `Encoder` abstractions in AllenNLP.
+    - [`Seq2SeqEncoders`](./seq2seq_encoders/seq2seq_encoder.md)
+    - [`Seq2VecEncoders`](./seq2vec_encoders/seq2vec_encoder.md)
 
     Additionally, this class provides functionality for sorting sequences by length
     so they can be consumed by Pytorch RNN classes, which require their inputs to be
@@ -37,14 +37,14 @@ class _EncoderBase(torch.nn.Module):
             Tuple[Union[PackedSequence, torch.Tensor], RnnState],
         ],
         inputs: torch.Tensor,
-        mask: torch.Tensor,
+        mask: torch.BoolTensor,
         hidden_state: Optional[RnnState] = None,
     ):
         """
         This function exists because Pytorch RNNs require that their inputs be sorted
         before being passed as input. As all of our Seq2xxxEncoders use this functionality,
         it is provided in a base class. This method can be called on any module which
-        takes as input a ``PackedSequence`` and some ``hidden_state``, which can either be a
+        takes as input a `PackedSequence` and some `hidden_state`, which can either be a
         tuple of tensors or a tensor.
 
         As all of our Seq2xxxEncoders have different return types, we return `sorted`
@@ -55,40 +55,40 @@ class _EncoderBase(torch.nn.Module):
         of the module outputs is left to the subclasses because their outputs have different
         types and handling them smoothly here is difficult.
 
-        Parameters
-        ----------
-        module : ``Callable[[PackedSequence, Optional[RnnState]],
-                            Tuple[Union[PackedSequence, torch.Tensor], RnnState]]``, required.
-            A function to run on the inputs. In most cases, this is a ``torch.nn.Module``.
-        inputs : ``torch.Tensor``, required.
-            A tensor of shape ``(batch_size, sequence_length, embedding_size)`` representing
+        # Parameters
+
+        module : `Callable[[PackedSequence, Optional[RnnState]],
+                            Tuple[Union[PackedSequence, torch.Tensor], RnnState]]`, required.
+            A function to run on the inputs. In most cases, this is a `torch.nn.Module`.
+        inputs : `torch.Tensor`, required.
+            A tensor of shape `(batch_size, sequence_length, embedding_size)` representing
             the inputs to the Encoder.
-        mask : ``torch.Tensor``, required.
-            A tensor of shape ``(batch_size, sequence_length)``, representing masked and
+        mask : `torch.BoolTensor`, required.
+            A tensor of shape `(batch_size, sequence_length)`, representing masked and
             non-masked elements of the sequence for each element in the batch.
-        hidden_state : ``Optional[RnnState]``, (default = None).
+        hidden_state : `Optional[RnnState]`, (default = None).
             A single tensor of shape (num_layers, batch_size, hidden_size) representing the
             state of an RNN with or a tuple of
             tensors of shapes (num_layers, batch_size, hidden_size) and
             (num_layers, batch_size, memory_size), representing the hidden state and memory
             state of an LSTM-like RNN.
 
-        Returns
-        -------
-        module_output : ``Union[torch.Tensor, PackedSequence]``.
+        # Returns
+
+        module_output : `Union[torch.Tensor, PackedSequence]`.
             A Tensor or PackedSequence representing the output of the Pytorch Module.
-            The batch size dimension will be equal to ``num_valid``, as sequences of zero
+            The batch size dimension will be equal to `num_valid`, as sequences of zero
             length are clipped off before the module is called, as Pytorch cannot handle
             zero length sequences.
-        final_states : ``Optional[RnnState]``
+        final_states : `Optional[RnnState]`
             A Tensor representing the hidden state of the Pytorch Module. This can either
             be a single tensor of shape (num_layers, num_valid, hidden_size), for instance in
             the case of a GRU, or a tuple of tensors, such as those required for an LSTM.
-        restoration_indices : ``torch.LongTensor``
-            A tensor of shape ``(batch_size,)``, describing the re-indexing required to transform
+        restoration_indices : `torch.LongTensor`
+            A tensor of shape `(batch_size,)`, describing the re-indexing required to transform
             the outputs back to their original batch order.
         """
-        # In some circumstances you may have sequences of zero length. ``pack_padded_sequence``
+        # In some circumstances you may have sequences of zero length. `pack_padded_sequence`
         # requires all sequence lengths to be > 0, so remove sequences of zero length before
         # calling self._module, then fill with zeros.
 
@@ -97,9 +97,12 @@ class _EncoderBase(torch.nn.Module):
         num_valid = torch.sum(mask[:, 0]).int().item()
 
         sequence_lengths = get_lengths_from_binary_sequence_mask(mask)
-        sorted_inputs, sorted_sequence_lengths, restoration_indices, sorting_indices = sort_batch_by_length(
-            inputs, sequence_lengths
-        )
+        (
+            sorted_inputs,
+            sorted_sequence_lengths,
+            restoration_indices,
+            sorting_indices,
+        ) = sort_batch_by_length(inputs, sequence_lengths)
 
         # Now create a PackedSequence with only the non-empty, sorted sequences.
         packed_sequence_input = pack_padded_sequence(
@@ -140,35 +143,35 @@ class _EncoderBase(torch.nn.Module):
         which are completely padded. Importantly, this `mutates` the state if the
         current batch size is larger than when it was previously called.
 
-        Parameters
-        ----------
-        batch_size : ``int``, required.
+        # Parameters
+
+        batch_size : `int`, required.
             The batch size can change size across calls to stateful RNNs, so we need
             to know if we need to expand or shrink the states before returning them.
             Expanded states will be set to zero.
-        num_valid : ``int``, required.
+        num_valid : `int`, required.
             The batch may contain completely padded sequences which get removed before
             the sequence is passed through the encoder. We also need to clip these off
             of the state too.
-        sorting_indices ``torch.LongTensor``, required.
+        sorting_indices `torch.LongTensor`, required.
             Pytorch RNNs take sequences sorted by length. When we return the states to be
-            used for a given call to ``module.forward``, we need the states to match up to
+            used for a given call to `module.forward`, we need the states to match up to
             the sorted sequences, so before returning them, we sort the states using the
             same indices used to sort the sequences.
 
-        Returns
-        -------
+        # Returns
+
         This method has a complex return type because it has to deal with the first time it
         is called, when it has no state, and the fact that types of RNN have heterogeneous
         states.
 
-        If it is the first time the module has been called, it returns ``None``, regardless
-        of the type of the ``Module``.
+        If it is the first time the module has been called, it returns `None`, regardless
+        of the type of the `Module`.
 
-        Otherwise, for LSTMs, it returns a tuple of ``torch.Tensors`` with shape
-        ``(num_layers, num_valid, state_size)`` and ``(num_layers, num_valid, memory_size)``
-        respectively, or for GRUs, it returns a single ``torch.Tensor`` of shape
-        ``(num_layers, num_valid, state_size)``.
+        Otherwise, for LSTMs, it returns a tuple of `torch.Tensors` with shape
+        `(num_layers, num_valid, state_size)` and `(num_layers, num_valid, memory_size)`
+        respectively, or for GRUs, it returns a single `torch.Tensor` of shape
+        `(num_layers, num_valid, state_size)`.
         """
         # We don't know the state sizes the first time calling forward,
         # so we let the module define what it's initial hidden state looks like.
@@ -226,12 +229,12 @@ class _EncoderBase(torch.nn.Module):
         computational graph, such that the graph can be garbage collected after
         each batch iteration.
 
-        Parameters
-        ----------
-        final_states : ``RnnStateStorage``, required.
+        # Parameters
+
+        final_states : `RnnStateStorage`, required.
             The hidden states returned as output from the RNN.
-        restoration_indices : ``torch.LongTensor``, required.
-            The indices that invert the sorting used in ``sort_and_run_forward``
+        restoration_indices : `torch.LongTensor`, required.
+            The indices that invert the sorting used in `sort_and_run_forward`
             to order the states with respect to the lengths of the sequences in
             the batch.
         """
@@ -291,14 +294,14 @@ class _EncoderBase(torch.nn.Module):
             # that there are some unused elements (zero-length) for the RNN computation.
             self._states = tuple(new_states)
 
-    def reset_states(self, mask: torch.Tensor = None) -> None:
+    def reset_states(self, mask: torch.BoolTensor = None) -> None:
         """
         Resets the internal states of a stateful encoder.
 
-        Parameters
-        ----------
-        mask : ``torch.Tensor``, optional.
-            A tensor of shape ``(batch_size,)`` indicating which states should
+        # Parameters
+
+        mask : `torch.BoolTensor`, optional.
+            A tensor of shape `(batch_size,)` indicating which states should
             be reset. If not provided, all states will be reset.
         """
         if mask is None:
@@ -308,7 +311,7 @@ class _EncoderBase(torch.nn.Module):
             # mask to have shape (1, batch_size, 1) so that operations
             # broadcast properly.
             mask_batch_size = mask.size(0)
-            mask = mask.float().view(1, mask_batch_size, 1)
+            mask = mask.view(1, mask_batch_size, 1)
             new_states = []
             for old_state in self._states:
                 old_state_batch_size = old_state.size(1)
@@ -318,6 +321,6 @@ class _EncoderBase(torch.nn.Module):
                         f"Expected batch size: {old_state_batch_size}. "
                         f"Provided batch size: {mask_batch_size}."
                     )
-                new_state = (1 - mask) * old_state
+                new_state = ~mask * old_state
                 new_states.append(new_state.detach())
             self._states = tuple(new_states)

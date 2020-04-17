@@ -3,9 +3,7 @@ The ``find-lr`` subcommand can be used to find a good learning rate for a model.
 It requires a configuration file and a directory in
 which to write the results.
 
-.. code-block:: bash
-
-   $ allennlp find-lr --help
+    $ allennlp find-lr --help
     usage: allennlp find-lr [-h] -s SERIALIZATION_DIR [-o OVERRIDES]
                             [--start-lr START_LR] [--end-lr END_LR]
                             [--num-batches NUM_BATCHES]
@@ -43,36 +41,38 @@ which to write the results.
                             additional packages to include
 """
 
-from typing import List, Tuple
 import argparse
-import re
-import os
-import math
 import logging
-import shutil
+import math
+import os
+import re
+from typing import List, Tuple
+import itertools
+
+from overrides import overrides
 
 from allennlp.commands.subcommand import Subcommand
-from allennlp.common.checks import ConfigurationError, check_for_gpu
 from allennlp.common import Params, Tqdm
-from allennlp.common.util import prepare_environment, lazy_groups_of
-from allennlp.data import Vocabulary, DataIterator
+from allennlp.common.checks import check_for_gpu, ConfigurationError
+from allennlp.common.util import prepare_environment
+from allennlp.data import Vocabulary
+from allennlp.data import DataLoader
 from allennlp.models import Model
-from allennlp.training import Trainer
-from allennlp.training.util import datasets_from_params
-
+from allennlp.training import GradientDescentTrainer, Trainer
+from allennlp.training.util import create_serialization_dir, datasets_from_params
 
 logger = logging.getLogger(__name__)
 
 
+@Subcommand.register("find-lr")
 class FindLearningRate(Subcommand):
-    def add_subparser(
-        self, name: str, parser: argparse._SubParsersAction
-    ) -> argparse.ArgumentParser:
+    @overrides
+    def add_subparser(self, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
 
         description = """Find a learning rate range where loss decreases quickly
                          for the specified model and dataset."""
         subparser = parser.add_parser(
-            name, description=description, help="Find a learning rate range."
+            self.name, description=description, help="Find a learning rate range."
         )
 
         subparser.add_argument(
@@ -159,41 +159,36 @@ def find_learning_rate_model(
     """
     Runs learning rate search for given `num_batches` and saves the results in ``serialization_dir``
 
-    Parameters
-    ----------
+    # Parameters
+
     params : ``Params``
         A parameter object specifying an AllenNLP Experiment.
     serialization_dir : ``str``
         The directory in which to save results.
-    start_lr: ``float``
+    start_lr : ``float``
         Learning rate to start the search.
-    end_lr: ``float``
+    end_lr : ``float``
         Learning rate upto which search is done.
-    num_batches: ``int``
+    num_batches : ``int``
         Number of mini-batches to run Learning rate finder.
-    linear_steps: ``bool``
+    linear_steps : ``bool``
         Increase learning rate linearly if False exponentially.
-    stopping_factor: ``float``
+    stopping_factor : ``float``
         Stop the search when the current loss exceeds the best loss recorded by
         multiple of stopping factor. If ``None`` search proceeds till the ``end_lr``
-    force: ``bool``
+    force : ``bool``
         If True and the serialization directory already exists, everything in it will
         be removed prior to finding the learning rate.
     """
-    if os.path.exists(serialization_dir) and force:
-        shutil.rmtree(serialization_dir)
-
-    if os.path.exists(serialization_dir) and os.listdir(serialization_dir):
-        raise ConfigurationError(
-            f"Serialization directory {serialization_dir} already exists and is " f"not empty."
-        )
-
-    os.makedirs(serialization_dir, exist_ok=True)
+    create_serialization_dir(params, serialization_dir, recover=False, force=force)
 
     prepare_environment(params)
 
     cuda_device = params.params.get("trainer").get("cuda_device", -1)
     check_for_gpu(cuda_device)
+    distributed_params = params.params.get("distributed")
+    # See https://github.com/allenai/allennlp/issues/3658
+    assert not distributed_params, "find-lr is not compatible with DistributedDataParallel."
 
     all_datasets = datasets_from_params(params)
     datasets_for_vocab_creation = set(params.pop("datasets_for_vocab_creation", all_datasets))
@@ -208,7 +203,7 @@ def find_learning_rate_model(
     )
     vocab = Vocabulary.from_params(
         params.pop("vocabulary", {}),
-        (
+        instances=(
             instance
             for key, dataset in all_datasets.items()
             for instance in dataset
@@ -216,29 +211,28 @@ def find_learning_rate_model(
         ),
     )
 
-    model = Model.from_params(vocab=vocab, params=params.pop("model"))
-    iterator = DataIterator.from_params(params.pop("iterator"))
-    iterator.index_with(vocab)
-
     train_data = all_datasets["train"]
+    train_data.index_with(vocab)
+    model = Model.from_params(vocab=vocab, params=params.pop("model"))
+    data_loader = DataLoader.from_params(dataset=train_data, params=params.pop("data_loader"))
 
     trainer_params = params.pop("trainer")
+
     no_grad_regexes = trainer_params.pop("no_grad", ())
     for name, parameter in model.named_parameters():
         if any(re.search(regex, name) for regex in no_grad_regexes):
             parameter.requires_grad_(False)
 
-    trainer_choice = trainer_params.pop("type", "default")
-    if trainer_choice != "default":
-        raise ConfigurationError("currently find-learning-rate only works with the default Trainer")
-    trainer = Trainer.from_params(
+    trainer_choice = trainer_params.pop("type", "gradient_descent")
+    if trainer_choice != "gradient_descent":
+        raise ConfigurationError(
+            "currently find-learning-rate only works with the GradientDescentTrainer"
+        )
+    trainer: GradientDescentTrainer = Trainer.from_params(  # type: ignore
         model=model,
         serialization_dir=serialization_dir,
-        iterator=iterator,
-        train_data=train_data,
-        validation_data=None,
+        data_loader=data_loader,
         params=trainer_params,
-        validation_iterator=None,
     )
 
     logger.info(
@@ -259,7 +253,7 @@ def find_learning_rate_model(
 
 
 def search_learning_rate(
-    trainer: Trainer,
+    trainer: GradientDescentTrainer,
     start_lr: float = 1e-5,
     end_lr: float = 10,
     num_batches: int = 100,
@@ -267,25 +261,27 @@ def search_learning_rate(
     stopping_factor: float = None,
 ) -> Tuple[List[float], List[float]]:
     """
-    Runs training loop on the model using :class:`~allennlp.training.trainer.Trainer`
+    Runs training loop on the model using :class:`~allennlp.training.trainer.GradientDescentTrainer`
     increasing learning rate from ``start_lr`` to ``end_lr`` recording the losses.
-    Parameters
-    ----------
-    trainer: :class:`~allennlp.training.trainer.Trainer`
-    start_lr: ``float``
+
+    # Parameters
+
+    trainer: :class:`~allennlp.training.trainer.GradientDescentTrainer`
+    start_lr : ``float``
         The learning rate to start the search.
-    end_lr: ``float``
+    end_lr : ``float``
         The learning rate upto which search is done.
-    num_batches: ``int``
+    num_batches : ``int``
         Number of batches to run the learning rate finder.
-    linear_steps: ``bool``
+    linear_steps : ``bool``
         Increase learning rate linearly if False exponentially.
-    stopping_factor: ``float``
+    stopping_factor : ``float``
         Stop the search when the current loss exceeds the best loss recorded by
         multiple of stopping factor. If ``None`` search proceeds till the ``end_lr``
-    Returns
-    -------
-    (learning_rates, losses): ``Tuple[List[float], List[float]]``
+
+    # Returns
+
+    (learning_rates, losses) : ``Tuple[List[float], List[float]]``
         Returns list of learning rates and corresponding losses.
         Note: The losses are recorded before applying the corresponding learning rate
     """
@@ -296,11 +292,8 @@ def search_learning_rate(
 
     trainer.model.train()
 
-    num_gpus = len(trainer._cuda_devices)
-
-    raw_train_generator = trainer.iterator(trainer.train_data, shuffle=trainer.shuffle)
-    train_generator = lazy_groups_of(raw_train_generator, num_gpus)
-    train_generator_tqdm = Tqdm.tqdm(train_generator, total=num_batches)
+    infinite_generator = itertools.cycle(trainer.data_loader)
+    train_generator_tqdm = Tqdm.tqdm(infinite_generator, total=num_batches)
 
     learning_rates = []
     losses = []
@@ -310,7 +303,7 @@ def search_learning_rate(
     else:
         lr_update_factor = (end_lr / start_lr) ** (1.0 / num_batches)
 
-    for i, batch_group in enumerate(train_generator_tqdm):
+    for i, batch in enumerate(train_generator_tqdm):
 
         if linear_steps:
             current_lr = start_lr + (lr_update_factor * i)
@@ -321,7 +314,7 @@ def search_learning_rate(
             param_group["lr"] = current_lr
 
         trainer.optimizer.zero_grad()
-        loss = trainer.batch_loss(batch_group, for_training=True)
+        loss = trainer.batch_outputs(batch, for_training=True)["loss"]
         loss.backward()
         loss = loss.detach().cpu().item()
 
@@ -355,10 +348,19 @@ def _smooth(values: List[float], beta: float) -> List[float]:
 
 
 def _save_plot(learning_rates: List[float], losses: List[float], save_path: str):
-    import matplotlib
 
-    matplotlib.use("Agg")  # noqa
-    import matplotlib.pyplot as plt
+    try:
+        import matplotlib
+
+        matplotlib.use("Agg")  # noqa
+        import matplotlib.pyplot as plt
+
+    except ModuleNotFoundError as error:
+
+        logger.warn(
+            "To use allennlp find-learning-rate, please install matplotlib: pip install matplotlib>=2.2.3 ."
+        )
+        raise error
 
     plt.ylabel("loss")
     plt.xlabel("learning rate (log10 scale)")

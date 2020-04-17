@@ -1,26 +1,25 @@
 import json
 import os
 import re
-import tempfile
 from collections import OrderedDict
 
 import pytest
 
 from allennlp.common.checks import ConfigurationError
-from allennlp.common.params import Params, unflatten, with_fallback, parse_overrides, infer_and_cast
+from allennlp.common.params import infer_and_cast, Params, parse_overrides, unflatten, with_fallback
 from allennlp.common.testing import AllenNlpTestCase
 
 
 class TestParams(AllenNlpTestCase):
     def test_load_from_file(self):
-        filename = self.FIXTURES_ROOT / "bidaf" / "experiment.json"
+        filename = self.FIXTURES_ROOT / "simple_tagger" / "experiment.json"
         params = Params.from_file(filename)
 
         assert "dataset_reader" in params
         assert "trainer" in params
 
         model_params = params.pop("model")
-        assert model_params.pop("type") == "bidaf"
+        assert model_params.pop("type") == "simple_tagger"
 
     def test_replace_none(self):
         params = Params({"a": "None", "b": [1.0, "None", 2], "c": {"d": "None"}})
@@ -29,23 +28,24 @@ class TestParams(AllenNlpTestCase):
         assert params["c"]["d"] is None
 
     def test_bad_unicode_environment_variables(self):
-        filename = self.FIXTURES_ROOT / "bidaf" / "experiment.json"
+        filename = self.FIXTURES_ROOT / "simple_tagger" / "experiment.json"
         os.environ["BAD_ENVIRONMENT_VARIABLE"] = "\udce2"
         Params.from_file(filename)
         del os.environ["BAD_ENVIRONMENT_VARIABLE"]
 
     def test_overrides(self):
-        filename = self.FIXTURES_ROOT / "bidaf" / "experiment.json"
+        filename = self.FIXTURES_ROOT / "simple_tagger" / "experiment.json"
         overrides = (
             '{ "train_data_path": "FOO", "model": { "type": "BAR" },'
-            '"model.text_field_embedder.tokens.type": "BAZ", "iterator.sorting_keys.0.0": "question"}'
+            '"model.text_field_embedder.tokens.type": "BAZ",'
+            '"data_loader.batch_sampler.sorting_keys.0": "question"}'
         )
         params = Params.from_file(filename, overrides)
 
         assert "dataset_reader" in params
         assert "trainer" in params
         assert params["train_data_path"] == "FOO"
-        assert params["iterator"]["sorting_keys"][0][0] == "question"
+        assert params["data_loader"]["batch_sampler"]["sorting_keys"][0] == "question"
 
         model_params = params.pop("model")
         assert model_params.pop("type") == "BAR"
@@ -90,14 +90,14 @@ class TestParams(AllenNlpTestCase):
             preferred=override_dict,
             fallback={
                 "train_data": "/test",
-                "model": "bidaf",
+                "model": "simple_tagger",
                 "trainer": {"num_epochs": 100, "optimizer": "sgd"},
             },
         )
 
         assert params == {
             "train_data": "/train",
-            "model": "bidaf",
+            "model": "simple_tagger",
             "trainer": {"num_epochs": 10, "optimizer": "sgd"},
         }
 
@@ -228,117 +228,6 @@ class TestParams(AllenNlpTestCase):
             if os.environ[var] == str(self.TEST_DIR):
                 del os.environ[var]
 
-    def test_add_file_to_archive(self):
-        # Creates actual files since add_file_to_archive will throw an exception
-        # if the file does not exist.
-        tempdir = tempfile.mkdtemp()
-        my_file = os.path.join(tempdir, "my_file.txt")
-        my_other_file = os.path.join(tempdir, "my_other_file.txt")
-        open(my_file, "w").close()
-        open(my_other_file, "w").close()
-
-        # Some nested classes just to exercise the ``from_params``
-        # and ``add_file_to_archive`` methods.
-
-        class C:
-            def __init__(self, c_file: str) -> None:
-                self.c_file = c_file
-
-            @classmethod
-            def from_params(cls, params: Params) -> "C":
-                params.add_file_to_archive("c_file")
-                c_file = params.pop("c_file")
-
-                return cls(c_file)
-
-        class B:
-            def __init__(self, filename: str, c) -> None:
-                self.filename = filename
-                self.c_dict = {"here": c}
-
-            @classmethod
-            def from_params(cls, params: Params) -> "B":
-                params.add_file_to_archive("filename")
-
-                filename = params.pop("filename")
-                c_params = params.pop("c")
-                c = C.from_params(c_params)
-
-                return cls(filename, c)
-
-        class A:
-            def __init__(self, b) -> None:
-                self.b = b
-
-            @classmethod
-            def from_params(cls, params: Params) -> "A":
-                b_params = params.pop("b")
-                return cls(B.from_params(b_params))
-
-        params = Params({"a": {"b": {"filename": my_file, "c": {"c_file": my_other_file}}}})
-
-        # Construct ``A`` from params but then just throw it away.
-        A.from_params(params.pop("a"))
-
-        assert params.files_to_archive == {"a.b.filename": my_file, "a.b.c.c_file": my_other_file}
-
-    def test_add_file_with_list_history_to_archive(self):
-        # Creates actual files since add_file_to_archive will throw an exception
-        # if the file does not exist.
-        tempdir = tempfile.mkdtemp()
-        my_file = os.path.join(tempdir, "my_file.txt")
-        my_other_file = os.path.join(tempdir, "my_other_file.txt")
-        open(my_file, "w").close()
-        open(my_other_file, "w").close()
-
-        # Some nested classes just to exercise the ``from_params``
-        # and ``add_file_to_archive`` methods.
-
-        class C:
-            def __init__(self, c_file: str) -> None:
-                self.c_file = c_file
-
-            @classmethod
-            def from_params(cls, params: Params) -> "C":
-                params.add_file_to_archive("c_file")
-                c_file = params.pop("c_file")
-
-                return cls(c_file)
-
-        class B:
-            def __init__(self, filename: str, c) -> None:
-                self.filename = filename
-                self.c_dict = {"here": c}
-
-            @classmethod
-            def from_params(cls, params: Params) -> "B":
-                params.add_file_to_archive("filename")
-
-                filename = params.pop("filename")
-                c_params = params.pop("c")
-                c = C.from_params(c_params)
-
-                return cls(filename, c)
-
-        class A:
-            def __init__(self, bs) -> None:
-                self.bs = bs
-
-            @classmethod
-            def from_params(cls, params: Params) -> "A":
-                bs = params.pop("bs")
-                return cls(bs=[B.from_params(b_params) for b_params in bs])
-
-        params = Params({"a": {"bs": [{"filename": my_file, "c": {"c_file": my_other_file}}]}})
-
-        # Construct ``A`` from params but then just throw it away.
-        A.from_params(params.pop("a"))
-
-        assert params.files_to_archive == {
-            "a.bs.0.filename": my_file,
-            "a.bs.0.c.c_file": my_other_file,
-        }
-
     def test_as_ordered_dict(self):
         # keyD > keyC > keyE; keyDA > keyDB; Next all other keys alphabetically
         preference_orders = [["keyD", "keyC", "keyE"], ["keyDA", "keyDB"]]
@@ -400,15 +289,6 @@ class TestParams(AllenNlpTestCase):
 
         assert params.as_dict() == lots_of_strings
         assert params.as_dict(infer_type_and_cast=True) == casted
-
-    def test_duplicate_copies_all_params_state(self):
-
-        params = Params({}, loading_from_archive=True, files_to_archive={"hey": "this is a path"})
-
-        new_params = params.duplicate()
-
-        assert new_params.loading_from_archive
-        assert new_params.files_to_archive == {"hey": "this is a path"}
 
     def test_pop_choice(self):
         choices = ["my_model", "other_model"]

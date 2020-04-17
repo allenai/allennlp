@@ -12,8 +12,8 @@ from allennlp.data.tokenizers.tokenizer import Tokenizer
 @Tokenizer.register("spacy")
 class SpacyTokenizer(Tokenizer):
     """
-    A ``Tokenizer`` that uses spaCy's tokenizer.  It's fast and reasonable - this is the
-    recommended ``Tokenizer``. By default it will return allennlp Tokens,
+    A `Tokenizer` that uses spaCy's tokenizer.  It's fast and reasonable - this is the
+    recommended `Tokenizer`. By default it will return allennlp Tokens,
     which are small, efficient NamedTuples (and are serializable). If you want
     to keep the original spaCy tokens, pass keep_spacy_tokens=True.  Note that we leave one particular piece of
     post-processing for later: the decision of whether or not to lowercase the token.  This is for
@@ -22,28 +22,30 @@ class SpacyTokenizer(Tokenizer):
     for your word embedding, but retain capitalization in a character-level representation, we need
     to retain the capitalization here.
 
-    Parameters
-    ----------
-    language : ``str``, optional, (default="en_core_web_sm")
+    Registered as a `Tokenizer` with name "spacy", which is currently the default.
+
+    # Parameters
+
+    language : `str`, optional, (default="en_core_web_sm")
         Spacy model name.
-    pos_tags : ``bool``, optional, (default=False)
-        If ``True``, performs POS tagging with spacy model on the tokens.
+    pos_tags : `bool`, optional, (default=False)
+        If `True`, performs POS tagging with spacy model on the tokens.
         Generally used in conjunction with :class:`~allennlp.data.token_indexers.pos_tag_indexer.PosTagIndexer`.
-    parse : ``bool``, optional, (default=False)
-        If ``True``, performs dependency parsing with spacy model on the tokens.
+    parse : `bool`, optional, (default=False)
+        If `True`, performs dependency parsing with spacy model on the tokens.
         Generally used in conjunction with :class:`~allennlp.data.token_indexers.pos_tag_indexer.DepLabelIndexer`.
-    ner : ``bool``, optional, (default=False)
-        If ``True``, performs dependency parsing with spacy model on the tokens.
+    ner : `bool`, optional, (default=False)
+        If `True`, performs dependency parsing with spacy model on the tokens.
         Generally used in conjunction with :class:`~allennlp.data.token_indexers.ner_tag_indexer.NerTagIndexer`.
-    keep_spacy_tokens : ``bool``, optional, (default=False)
-        If ``True``, will preserve spacy token objects, We copy spacy tokens into our own class by default instead
+    keep_spacy_tokens : `bool`, optional, (default=False)
+        If `True`, will preserve spacy token objects, We copy spacy tokens into our own class by default instead
         because spacy Cython Tokens can't be pickled.
-    split_on_spaces : ``bool``, optional, (default=False)
-        If ``True``, will split by spaces without performing tokenization.
+    split_on_spaces : `bool`, optional, (default=False)
+        If `True`, will split by spaces without performing tokenization.
         Used when your data is already tokenized, but you want to perform pos, ner or parsing on the tokens.
-    start_tokens : ``Optional[List[str]]``, optional, (default=None)
+    start_tokens : `Optional[List[str]]`, optional, (default=None)
         If given, these tokens will be added to the beginning of every string we tokenize.
-    end_tokens : ``Optional[List[str]]``, optional, (default=None)
+    end_tokens : `Optional[List[str]]`, optional, (default=None)
         If given, these tokens will be added to the end of every string we tokenize.
     """
 

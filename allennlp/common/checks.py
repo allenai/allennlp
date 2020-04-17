@@ -24,7 +24,9 @@ class ConfigurationError(Exception):
         self.message = message
 
     def __str__(self):
-        return repr(self.message)
+        # TODO(brendanr): Is there some reason why we need repr here? It
+        # produces horrible output for simple multi-line error messages.
+        return self.message
 
 
 class ExperimentalFeatureWarning(RuntimeWarning):
@@ -52,14 +54,36 @@ def check_dimensions_match(
         )
 
 
-def parse_cuda_device(cuda_device: Union[str, int, List[int]]) -> Union[int, List[int]]:
+def parse_cuda_device(cuda_device: Union[str, int, List[int]]) -> int:
     """
     Disambiguates single GPU and multiple GPU settings for cuda_device param.
     """
 
+    message = """
+    In allennlp 1.0, the Trainer cannot be passed multiple cuda devices.
+    Instead, use the faster Distributed Data Parallel. For instance, if you previously had config like:
+        {
+          "trainer": {
+            "cuda_device": [0, 1, 2, 3],
+            "num_epochs": 20,
+            ...
+          }
+        }
+        simply change it to:
+        {
+          "distributed": {
+            "cuda_devices": [0, 1, 2, 3],
+          },
+          "trainer": {
+            "num_epochs": 20,
+            ...
+          }
+        }
+        """
+
     def from_list(strings):
         if len(strings) > 1:
-            return [int(d) for d in strings]
+            raise ConfigurationError(message)
         elif len(strings) == 1:
             return int(strings[0])
         else:
@@ -76,8 +100,7 @@ def parse_cuda_device(cuda_device: Union[str, int, List[int]]) -> Union[int, Lis
         return int(cuda_device)  # type: ignore
 
 
-def check_for_gpu(device_id: Union[int, list]):
-    device_id = parse_cuda_device(device_id)
+def check_for_gpu(device_id: Union[int, List[int]]):
     if isinstance(device_id, list):
         for did in device_id:
             check_for_gpu(did)

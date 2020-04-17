@@ -108,7 +108,7 @@ class GatedCnnEncoder(Seq2SeqEncoder):
     """
     **This is work-in-progress and has not been fully tested yet. Use at your own risk!**
 
-    A ``Seq2SeqEncoder`` that uses a Gated CNN.
+    A `Seq2SeqEncoder` that uses a Gated CNN.
 
     see
 
@@ -138,16 +138,17 @@ class GatedCnnEncoder(Seq2SeqEncoder):
     [[2, 512, 1]], [[2, 512, 2]], [[2, 512, 4]], [[2, 512, 8]],   # receptive field == 57
     ]
 
+    Registered as a `Seq2SeqEncoder` with name "gated-cnn-encoder".
 
-    Parameters
-    ----------
-    input_dim : int
+    # Parameters
+
+    input_dim : `int`, required
         The dimension of the inputs.
-    layers : ``Sequence[Sequence[Sequence[int]]]```
-        The layer dimensions for each ``ResidualBlock``.
-    dropout : float, optional (default = 0.0)
-        The dropout for each ``ResidualBlock``.
-    return_all_layers : bool, optional (default: False)
+    layers : `Sequence[Sequence[Sequence[int]]]`, required
+        The layer dimensions for each `ResidualBlock`.
+    dropout : `float`, optional (default = 0.0)
+        The dropout for each `ResidualBlock`.
+    return_all_layers : `bool`, optional (default = False)
         Whether to return all layers or just the last layer.
     """
 
@@ -175,14 +176,14 @@ class GatedCnnEncoder(Seq2SeqEncoder):
 
         self._return_all_layers = return_all_layers
 
-    def forward(self, token_embeddings: torch.Tensor, mask: torch.Tensor):
+    def forward(self, token_embeddings: torch.Tensor, mask: torch.BoolTensor):
 
         # Convolutions need transposed input
         transposed_embeddings = torch.transpose(token_embeddings, 1, 2)
 
         # We need to broadcast the mask to feature dimension,
         # and to use masked_fill_ we need the inverse of the mask.
-        mask_for_fill = (1 - mask).unsqueeze(1).to(dtype=torch.bool)
+        mask_for_fill = ~mask.unsqueeze(1)
 
         if self._return_all_layers:
             # outputs will be [[all forward layers], [all backward layers]]

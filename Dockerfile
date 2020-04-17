@@ -1,4 +1,4 @@
-FROM python:3.6.8-stretch
+FROM python:3.6.10-stretch
 
 ENV LC_ALL=C.UTF-8
 ENV LANG=C.UTF-8
@@ -35,17 +35,21 @@ RUN apt-get update --fix-missing && apt-get install -y \
 
 # Copy select files needed for installing requirements.
 # We only copy what we need here so small changes to the repository does not trigger re-installation of the requirements.
-COPY requirements.txt .
-RUN pip install -r requirements.txt
+COPY setup.py .
+COPY README.md .
+COPY allennlp/version.py allennlp/version.py
+RUN pip install -e .
+COPY dev-requirements.txt .
+RUN pip install -r dev-requirements.txt
 
 COPY scripts/ scripts/
 COPY allennlp/ allennlp/
 COPY pytest.ini pytest.ini
 COPY .flake8 .flake8
 COPY tutorials/ tutorials/
-COPY training_config training_config/
 COPY setup.py setup.py
 COPY README.md README.md
+COPY mkdocs-skeleton.yml mkdocs-skeleton.yml
 
 RUN pip install --editable .
 

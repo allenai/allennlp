@@ -1,12 +1,12 @@
-from typing import Dict, Optional, List, Set, Tuple, Union
+from typing import Dict, Iterable, List, Mapping, Optional, Set, Tuple, Union
 
 import pytest
 import torch
 
-from allennlp.common import Params
+from allennlp.common import Lazy, Params, Registrable
 from allennlp.common.from_params import FromParams, takes_arg, remove_optional, create_kwargs
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.data.tokenizers import Tokenizer
+from allennlp.data import DataLoader, DatasetReader, Tokenizer
 from allennlp.models import Model
 from allennlp.models.archival import load_archive
 from allennlp.common.checks import ConfigurationError
@@ -67,8 +67,17 @@ class TestFromParams(AllenNlpTestCase):
         assert my_class.my_int == 10
         assert my_class.my_bool
 
+    def test_good_error_message_when_passing_non_params(self):
+        from allennlp.nn import InitializerApplicator
+
+        # This was how we used to take initializer params.  We want to be sure we give a reasonable
+        # error message when something like this is passed to FromParams.
+        params = Params({"initializer": [["regex1", "uniform"], ["regex2", "orthogonal"]]})
+        with pytest.raises(ConfigurationError, match="dictionary.*InitializerApplicator"):
+            InitializerApplicator.from_params(params=params.pop("initializer"))
+
     def test_create_kwargs(self):
-        kwargs = create_kwargs(MyClass, Params({"my_int": 5}), my_bool=True, my_float=4.4)
+        kwargs = create_kwargs(MyClass, MyClass, Params({"my_int": 5}), my_bool=True, my_float=4.4)
 
         # my_float should not be included because it's not a param of the MyClass constructor
         assert kwargs == {"my_int": 5, "my_bool": True}
@@ -93,7 +102,7 @@ class TestFromParams(AllenNlpTestCase):
 
             # custom from params
             @classmethod
-            def from_params(cls, params: Params, size: int) -> "C":  # type: ignore
+            def from_params(cls, params: Params, size: int, **extras) -> "C":  # type: ignore
                 name = params.pop("name")
                 return cls(size=size, name=name)
 
@@ -148,7 +157,7 @@ class TestFromParams(AllenNlpTestCase):
                 return self.b == other.b
 
             @classmethod
-            def from_params(cls, params: Params, a: int) -> "A":  # type: ignore
+            def from_params(cls, params: Params, a: int, **extras) -> "A":  # type: ignore
                 # A custom from params
                 b = params.pop_int("b")
                 val = params.pop("val", "C")
@@ -162,7 +171,7 @@ class TestFromParams(AllenNlpTestCase):
                 self.b = b
 
             @classmethod
-            def from_params(cls, params: Params, c: int) -> "B":  # type: ignore
+            def from_params(cls, params: Params, c: int, **extras) -> "B":  # type: ignore
                 b = params.pop_int("b")
                 params.assert_empty(cls.__name__)
                 return cls(c=c, b=b)
@@ -226,12 +235,12 @@ class TestFromParams(AllenNlpTestCase):
         tval2 = 6
         d = BaseClass.from_params(params=params, extra=extra, a=tval1, c=tval2, n=10)
 
-        # Tests for List Parameters
+        # Tests for List # Parameters
         assert len(d.arg1) == len(vals)
         assert isinstance(d.arg1, list)
         assert isinstance(d.arg1[0], A)
-        assert all([x.b == y for x, y in zip(d.arg1, vals)])
-        assert all([x.a == tval1 for x in d.arg1])
+        assert all(x.b == y for x, y in zip(d.arg1, vals))
+        assert all(x.a == tval1 for x in d.arg1)
 
         # Tests for Tuple
         assert isinstance(d.arg2, tuple)
@@ -276,12 +285,6 @@ class TestFromParams(AllenNlpTestCase):
                 # this test we'll ignore that.
                 self.b = b
 
-        class C(FromParams):
-            def __init__(self, c: Union[A, B, Dict[str, A]]) -> None:
-                # Really you would want to be sure that `self.c` has a consistent type, but for
-                # this test we'll ignore that.
-                self.c = c
-
         params = Params({"a": 3})
         a = A.from_params(params)
         assert a.a == 3
@@ -301,6 +304,23 @@ class TestFromParams(AllenNlpTestCase):
         assert b.b[0].a == 3
         assert b.b[1].a == [4, 5]
 
+    def test_crazy_nested_union(self):
+        class A(FromParams):
+            def __init__(self, a: Union[int, List[int]]) -> None:
+                self.a = a
+
+        class B(FromParams):
+            def __init__(self, b: Union[A, List[A]]) -> None:
+                # Really you would want to be sure that `self.b` has a consistent type, but for
+                # this test we'll ignore that.
+                self.b = b
+
+        class C(FromParams):
+            def __init__(self, c: Union[A, B, Dict[str, A]]) -> None:
+                # Really you would want to be sure that `self.c` has a consistent type, but for
+                # this test we'll ignore that.
+                self.c = c
+
         # This is a contrived, ugly example (why would you want to duplicate names in a nested
         # structure like this??), but it demonstrates a potential bug when dealing with mutatable
         # parameters.  If you're not careful about keeping the parameters un-mutated in two
@@ -310,6 +330,34 @@ class TestFromParams(AllenNlpTestCase):
         assert isinstance(c.c, dict)
         assert c.c["a"].a == 3
         assert c.c["b"].a == [4, 5]
+
+    def test_union_of_castable_types(self):
+        class IntFloat(FromParams):
+            def __init__(self, a: Union[int, float]) -> None:
+                self.a = a
+
+        class FloatInt(FromParams):
+            def __init__(self, a: Union[float, int]) -> None:
+                self.a = a
+
+        float_param_str = '{"a": 1.0}'
+        int_param_str = '{"a": 1}'
+        import json
+
+        for expected_type, param_str in [(int, int_param_str), (float, float_param_str)]:
+            for cls in [IntFloat, FloatInt]:
+                c = cls.from_params(Params(json.loads(param_str)))
+                assert type(c.a) == expected_type
+
+    def test_invalid_type_conversions(self):
+        class A(FromParams):
+            def __init__(self, a: int) -> None:
+                self.a = a
+
+        with pytest.raises(TypeError):
+            A.from_params(Params({"a": "1"}))
+        with pytest.raises(TypeError):
+            A.from_params(Params({"a": 1.0}))
 
     def test_dict(self):
 
@@ -475,14 +523,14 @@ class TestFromParams(AllenNlpTestCase):
     def test_transferring_of_modules(self):
 
         model_archive = str(
-            self.FIXTURES_ROOT / "decomposable_attention" / "serialization" / "model.tar.gz"
+            self.FIXTURES_ROOT / "basic_classifier" / "serialization" / "model.tar.gz"
         )
         trained_model = load_archive(model_archive).model
 
-        config_file = str(self.FIXTURES_ROOT / "decomposable_attention" / "experiment.json")
+        config_file = str(self.FIXTURES_ROOT / "basic_classifier" / "experiment_seq2seq.jsonnet")
         model_params = Params.from_file(config_file).pop("model").as_dict(quiet=True)
 
-        # Override only text_field_embedder (freeze) and attend_feedforward params (tunable)
+        # Override only text_field_embedder (freeze) and seq2seq_encoder params (tunable)
         model_params["text_field_embedder"] = {
             "_pretrained": {
                 "archive_file": model_archive,
@@ -490,31 +538,30 @@ class TestFromParams(AllenNlpTestCase):
                 "freeze": True,
             }
         }
-        model_params["attend_feedforward"] = {
+        model_params["seq2seq_encoder"] = {
             "_pretrained": {
                 "archive_file": model_archive,
-                "module_path": "_attend_feedforward._module",
+                "module_path": "_seq2seq_encoder",
                 "freeze": False,
             }
         }
 
         transfer_model = Model.from_params(vocab=trained_model.vocab, params=Params(model_params))
 
-        # TextFieldEmbedder and AttendFeedforward parameters should be transferred
+        # TextFieldEmbedder and Seq2SeqEncoder parameters should be transferred
         for trained_parameter, transfer_parameter in zip(
             trained_model._text_field_embedder.parameters(),
             transfer_model._text_field_embedder.parameters(),
         ):
             assert torch.all(trained_parameter == transfer_parameter)
         for trained_parameter, transfer_parameter in zip(
-            trained_model._attend_feedforward.parameters(),
-            transfer_model._attend_feedforward.parameters(),
+            trained_model._seq2seq_encoder.parameters(),
+            transfer_model._seq2seq_encoder.parameters(),
         ):
             assert torch.all(trained_parameter == transfer_parameter)
-        # Any other module's parameters shouldn't be same (eg. compare_feedforward)
+        # Any other module's parameters shouldn't be same (eg. _feedforward)
         for trained_parameter, transfer_parameter in zip(
-            trained_model._compare_feedforward.parameters(),
-            transfer_model._compare_feedforward.parameters(),
+            trained_model._feedforward.parameters(), transfer_model._feedforward.parameters(),
         ):
             assert torch.all(trained_parameter != transfer_parameter)
 
@@ -522,26 +569,244 @@ class TestFromParams(AllenNlpTestCase):
         for parameter in transfer_model._text_field_embedder.parameters():
             assert not parameter.requires_grad
 
-        # # AttendFeedforward should have requires_grad On
-        for parameter in transfer_model._attend_feedforward.parameters():
+        # # Seq2SeqEncoder should have requires_grad On
+        for parameter in transfer_model._seq2seq_encoder.parameters():
             assert parameter.requires_grad
 
     def test_transferring_of_modules_ensures_type_consistency(self):
 
         model_archive = str(
-            self.FIXTURES_ROOT / "decomposable_attention" / "serialization" / "model.tar.gz"
+            self.FIXTURES_ROOT / "basic_classifier" / "serialization" / "model.tar.gz"
         )
         trained_model = load_archive(model_archive).model
 
-        config_file = str(self.FIXTURES_ROOT / "decomposable_attention" / "experiment.json")
+        config_file = str(self.FIXTURES_ROOT / "basic_classifier" / "experiment_seq2seq.jsonnet")
         model_params = Params.from_file(config_file).pop("model").as_dict(quiet=True)
 
-        # Override only text_field_embedder and make it load AttendFeedForward
+        # Override only text_field_embedder and make it load Seq2SeqEncoder
         model_params["text_field_embedder"] = {
             "_pretrained": {
                 "archive_file": model_archive,
-                "module_path": "_attend_feedforward._module",
+                "module_path": "_seq2seq_encoder._module",
             }
         }
         with pytest.raises(ConfigurationError):
             Model.from_params(vocab=trained_model.vocab, params=Params(model_params))
+
+    def test_bare_string_params(self):
+        dataset = [1]
+
+        class TestLoader(Registrable):
+            @classmethod
+            def from_partial_objects(cls, data_loader: Lazy[DataLoader]) -> DataLoader:
+                return data_loader.construct(dataset=dataset)
+
+        TestLoader.register("test", constructor="from_partial_objects")(TestLoader)
+
+        data_loader = TestLoader.from_params(
+            Params(
+                {
+                    "type": "test",
+                    "data_loader": {
+                        "batch_sampler": {
+                            "type": "basic",
+                            "batch_size": 2,
+                            "drop_last": True,
+                            "sampler": "random",
+                        }
+                    },
+                }
+            )
+        )
+        assert data_loader.batch_sampler.sampler.__class__.__name__ == "RandomSampler"
+        assert data_loader.batch_sampler.sampler.data_source is dataset
+
+    def test_kwargs_are_passed_to_superclass(self):
+        params = Params(
+            {"type": "text_classification_json", "lazy": True, "cache_directory": "tmp"}
+        )
+        reader = DatasetReader.from_params(params)
+        assert reader.lazy is True
+        assert str(reader._cache_directory) == "tmp"
+
+    def test_kwargs_with_multiple_inheritance(self):
+        # Basic idea: have two identical classes, differing only in the order of their multiple
+        # inheritance, and make sure that passing kwargs up to the super class works in both cases.
+        class A(Registrable):
+            def __init__(self, a: int):
+                self.a = a
+
+        from numbers import Number
+
+        @A.register("b1")
+        class B1(A, Number):
+            def __init__(self, b: float, **kwargs):
+                super().__init__(**kwargs)
+                self.b = b
+
+        @A.register("b2")
+        class B2(Number, A):
+            def __init__(self, b: float, **kwargs):
+                super().__init__(**kwargs)
+                self.b = b
+
+        b = B1.from_params(params=Params({"a": 4, "b": 5}))
+        assert b.b == 5
+        assert b.a == 4
+
+        b = B2.from_params(params=Params({"a": 4, "b": 5}))
+        assert b.b == 5
+        assert b.a == 4
+
+    def test_only_infer_superclass_params_if_unknown(self):
+
+        from allennlp.common.registrable import Registrable
+
+        class BaseClass(Registrable):
+            def __init__(self):
+                self.x = None
+                self.a = None
+                self.rest = None
+
+        @BaseClass.register("a")
+        class A(BaseClass):
+            def __init__(self, a: int, x: int, **kwargs):
+                super().__init__()
+                self.x = x
+                self.a = a
+                self.rest = kwargs
+
+        @BaseClass.register("b")
+        class B(A):
+            def __init__(self, a: str, x: int = 42, **kwargs):
+                super().__init__(x=x, a=-1, raw_a=a, **kwargs)
+
+        params = Params({"type": "b", "a": "123"})
+        # The param `x` should not be required as it has default value in `B`
+        # The correct type of the param `a` should be inferred from `B` as well.
+        instance = BaseClass.from_params(params)
+        assert instance.x == 42
+        assert instance.a == -1
+        assert len(instance.rest) == 1
+        assert type(instance.rest["raw_a"]) == str
+        assert instance.rest["raw_a"] == "123"
+
+    def test_kwargs_are_passed_to_deeper_superclasses(self):
+
+        from allennlp.common.registrable import Registrable
+
+        class BaseClass(Registrable):
+            def __init__(self):
+                self.a = None
+                self.b = None
+                self.c = None
+
+        @BaseClass.register("a")
+        class A(BaseClass):
+            def __init__(self, a: str):
+                super().__init__()
+                self.a = a
+
+        @BaseClass.register("b")
+        class B(A):
+            def __init__(self, b: str, **kwargs):
+                super().__init__(**kwargs)
+                self.b = b
+
+        @BaseClass.register("c")
+        class C(B):
+            def __init__(self, c, **kwargs):
+                super().__init__(**kwargs)
+                self.c = c
+
+        params = Params({"type": "c", "a": "a_value", "b": "b_value", "c": "c_value"})
+
+        instance = BaseClass.from_params(params)
+        assert instance.a == "a_value"
+        assert instance.b == "b_value"
+        assert instance.c == "c_value"
+
+    def test_lazy_construction_can_happen_multiple_times(self):
+        test_string = "this is a test"
+        extra_string = "extra string"
+
+        class ConstructedObject(FromParams):
+            def __init__(self, string: str, extra: str):
+                self.string = string
+                self.extra = extra
+
+        class Testing(FromParams):
+            def __init__(self, lazy_object: Lazy[ConstructedObject]):
+                first_time = lazy_object.construct(extra=extra_string)
+                second_time = lazy_object.construct(extra=extra_string)
+                assert first_time.string == test_string
+                assert first_time.extra == extra_string
+                assert second_time.string == test_string
+                assert second_time.extra == extra_string
+
+        Testing.from_params(Params({"lazy_object": {"string": test_string}}))
+
+    def test_iterable(self):
+        from allennlp.common.registrable import Registrable
+
+        class A(Registrable):
+            pass
+
+        @A.register("b")
+        class B(A):
+            def __init__(self, size: int) -> None:
+                self.size = size
+
+        class C(Registrable):
+            pass
+
+        @C.register("d")
+        class D(C):
+            def __init__(self, items: Iterable[A]) -> None:
+                self.items = items
+
+        params = Params(
+            {"type": "d", "items": [{"type": "b", "size": 1}, {"type": "b", "size": 2}]}
+        )
+        d = C.from_params(params)
+
+        assert isinstance(d.items, Iterable)
+        items = list(d.items)
+        assert len(items) == 2
+        assert all(isinstance(item, B) for item in items)
+        assert items[0].size == 1
+        assert items[1].size == 2
+
+    def test_mapping(self):
+        from allennlp.common.registrable import Registrable
+
+        class A(Registrable):
+            pass
+
+        @A.register("b")
+        class B(A):
+            def __init__(self, size: int) -> None:
+                self.size = size
+
+        class C(Registrable):
+            pass
+
+        @C.register("d")
+        class D(C):
+            def __init__(self, items: Mapping[str, A]) -> None:
+                self.items = items
+
+        params = Params(
+            {
+                "type": "d",
+                "items": {"first": {"type": "b", "size": 1}, "second": {"type": "b", "size": 2}},
+            }
+        )
+        d = C.from_params(params)
+
+        assert isinstance(d.items, Mapping)
+        assert len(d.items) == 2
+        assert all(isinstance(key, str) for key in d.items.keys())
+        assert all(isinstance(value, B) for value in d.items.values())
+        assert d.items["first"].size == 1
+        assert d.items["second"].size == 2

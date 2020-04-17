@@ -33,11 +33,11 @@ class TestPytorchSeq2SeqWrapper(AllenNlpTestCase):
         tensor[2, :, :] = 0
         tensor[3, 2:, :] = 0
         tensor[4, :, :] = 0
-        mask = torch.ones(5, 7)
-        mask[1, 6:] = 0
-        mask[2, :] = 0
-        mask[3, 2:] = 0
-        mask[4, :] = 0
+        mask = torch.ones(5, 7).bool()
+        mask[1, 6:] = False
+        mask[2, :] = False
+        mask[3, 2:] = False
+        mask[4, :] = False
 
         results = encoder(tensor, mask)
 
@@ -62,11 +62,11 @@ class TestPytorchSeq2SeqWrapper(AllenNlpTestCase):
         input_tensor[2, 4:, :] = 0
         input_tensor[3, 2:, :] = 0
         input_tensor[4, 1:, :] = 0
-        mask = torch.ones(5, 7)
-        mask[1, 6:] = 0
-        mask[2, 4:] = 0
-        mask[3, 2:] = 0
-        mask[4, 1:] = 0
+        mask = torch.ones(5, 7).bool()
+        mask[1, 6:] = False
+        mask[2, 4:] = False
+        mask[3, 2:] = False
+        mask[4, 1:] = False
 
         sequence_lengths = get_lengths_from_binary_sequence_mask(mask)
         packed_sequence = pack_padded_sequence(
@@ -85,11 +85,11 @@ class TestPytorchSeq2SeqWrapper(AllenNlpTestCase):
         input_tensor[1, 4:, :] = 0
         input_tensor[2, 2:, :] = 0
         input_tensor[3, 6:, :] = 0
-        mask = torch.ones(5, 7)
-        mask[0, 3:] = 0
-        mask[1, 4:] = 0
-        mask[2, 2:] = 0
-        mask[3, 6:] = 0
+        mask = torch.ones(5, 7).bool()
+        mask[0, 3:] = False
+        mask[1, 4:] = False
+        mask[2, 2:] = False
+        mask[3, 6:] = False
 
         sequence_lengths = get_lengths_from_binary_sequence_mask(mask)
         sorted_inputs, sorted_sequence_lengths, restoration_indices, _ = sort_batch_by_length(
@@ -112,8 +112,8 @@ class TestPytorchSeq2SeqWrapper(AllenNlpTestCase):
         encoder = PytorchSeq2SeqWrapper(lstm)
         input_tensor = torch.rand([5, 8, 3])
         input_tensor[:, 7, :] = 0
-        mask = torch.ones(5, 8)
-        mask[:, 7] = 0
+        mask = torch.ones(5, 8).bool()
+        mask[:, 7] = False
 
         encoder_output = encoder(input_tensor, mask)
         assert encoder_output.size(1) == 8
@@ -128,11 +128,11 @@ class TestPytorchSeq2SeqWrapper(AllenNlpTestCase):
         lstm = LSTM(bidirectional=True, num_layers=3, input_size=3, hidden_size=7, batch_first=True)
         encoder = PytorchSeq2SeqWrapper(lstm)
         input_tensor = torch.rand([5, 7, 3])
-        mask = torch.ones(5, 7)
-        mask[0, 3:] = 0
-        mask[1, 4:] = 0
-        mask[2, 0:] = 0
-        mask[3, 6:] = 0
+        mask = torch.ones(5, 7).bool()
+        mask[0, 3:] = False
+        mask[1, 4:] = False
+        mask[2, 0:] = False
+        mask[3, 6:] = False
 
         # Initial states are of shape (num_layers * num_directions, batch_size, hidden_dim)
         initial_states = torch.randn(6, 5, 7), torch.randn(6, 5, 7)
@@ -143,11 +143,11 @@ class TestPytorchSeq2SeqWrapper(AllenNlpTestCase):
         lstm = LSTM(bidirectional=True, num_layers=3, input_size=3, hidden_size=7, batch_first=True)
         encoder = PytorchSeq2SeqWrapper(lstm)
         input_tensor = torch.rand([5, 7, 3])
-        mask = torch.ones(5, 7)
-        mask[0, 3:] = 0
-        mask[1, 4:] = 0
-        mask[2, 0:] = 0  # zero length sequence
-        mask[3, 6:] = 0
+        mask = torch.ones(5, 7).bool()
+        mask[0, 3:] = False
+        mask[1, 4:] = False
+        mask[2, 0:] = 0  # zero length False
+        mask[3, 6:] = False
 
         output = encoder(input_tensor, mask)
 
@@ -164,7 +164,7 @@ class TestPytorchSeq2SeqWrapper(AllenNlpTestCase):
         states = []
         for batch_size, sequence_length in zip(batch_sizes, sequence_lengths):
             tensor = torch.rand([batch_size, sequence_length, 3])
-            mask = torch.ones(batch_size, sequence_length)
+            mask = torch.ones(batch_size, sequence_length).bool()
             mask.data[0, 3:] = 0
             encoder_output = encoder(tensor, mask)
             states.append(encoder._states)
@@ -185,7 +185,7 @@ class TestPytorchSeq2SeqWrapper(AllenNlpTestCase):
         states = []
         for batch_size in batch_sizes:
             tensor = torch.rand([batch_size, 5, 3])
-            mask = torch.ones(batch_size, 5)
+            mask = torch.ones(batch_size, 5).bool()
             mask.data[0, 3:] = 0
             encoder_output = encoder(tensor, mask)
             states.append(encoder._states)

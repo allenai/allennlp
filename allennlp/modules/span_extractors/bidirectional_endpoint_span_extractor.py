@@ -1,11 +1,11 @@
 import torch
-from torch.nn.parameter import Parameter
 from overrides import overrides
+from torch.nn.parameter import Parameter
 
+from allennlp.common.checks import ConfigurationError
 from allennlp.modules.span_extractors.span_extractor import SpanExtractor
 from allennlp.modules.token_embedders.embedding import Embedding
 from allennlp.nn import util
-from allennlp.common.checks import ConfigurationError
 
 
 @SpanExtractor.register("bidirectional_endpoint")
@@ -17,8 +17,8 @@ class BidirectionalEndpointSpanExtractor(SpanExtractor):
     because when you consider the forward and backward directions separately, the end index
     of the span for the backward direction's representation is actually the start index.
 
-    By default, this ``SpanExtractor`` represents spans as
-    ``sequence_tensor[inclusive_span_end] - sequence_tensor[exclusive_span_start]``
+    By default, this `SpanExtractor` represents spans as
+    `sequence_tensor[inclusive_span_end] - sequence_tensor[exclusive_span_start]`
     meaning that the representation is the difference between the the last word in the span
     and the word `before` the span started. Note that the start and end indices are with
     respect to the direction that the RNN is going in, so for the backward direction, the
@@ -28,36 +28,38 @@ class BidirectionalEndpointSpanExtractor(SpanExtractor):
     final combination.
 
     The following other types of representation are supported for both the forward and backward
-    directions, assuming that ``x = span_start_embeddings`` and ``y = span_end_embeddings``.
+    directions, assuming that `x = span_start_embeddings` and `y = span_end_embeddings`.
 
-    ``x``, ``y``, ``x*y``, ``x+y``, ``x-y``, ``x/y``, where each of those binary operations
+    `x`, `y`, `x*y`, `x+y`, `x-y`, `x/y`, where each of those binary operations
     is performed elementwise.  You can list as many combinations as you want, comma separated.
-    For example, you might give ``x,y,x*y`` as the ``combination`` parameter to this class.
-    The computed similarity function would then be ``[x; y; x*y]``, which can then be optionally
+    For example, you might give `x,y,x*y` as the `combination` parameter to this class.
+    The computed similarity function would then be `[x; y; x*y]`, which can then be optionally
     concatenated with an embedded representation of the width of the span.
 
-    Parameters
-    ----------
-    input_dim : ``int``, required.
-        The final dimension of the ``sequence_tensor``.
-    forward_combination : str, optional (default = "y-x").
-        The method used to combine the ``forward_start_embeddings`` and ``forward_end_embeddings``
+    Registered as a `SpanExtractor` with name "bidirectional_endpoint".
+
+    # Parameters
+
+    input_dim : `int`, required
+        The final dimension of the `sequence_tensor`.
+    forward_combination : `str`, optional (default = "y-x").
+        The method used to combine the `forward_start_embeddings` and `forward_end_embeddings`
         for the forward direction of the bidirectional representation.
         See above for a full description.
-    backward_combination : str, optional (default = "x-y").
-        The method used to combine the ``backward_start_embeddings`` and ``backward_end_embeddings``
+    backward_combination : `str`, optional (default = "x-y").
+        The method used to combine the `backward_start_embeddings` and `backward_end_embeddings`
         for the backward direction of the bidirectional representation.
         See above for a full description.
-    num_width_embeddings : ``int``, optional (default = None).
+    num_width_embeddings : `int`, optional (default = None).
         Specifies the number of buckets to use when representing
         span width features.
-    span_width_embedding_dim : ``int``, optional (default = None).
+    span_width_embedding_dim : `int`, optional (default = None).
         The embedding size for the span_width features.
-    bucket_widths : ``bool``, optional (default = False).
-        Whether to bucket the span widths into log-space buckets. If ``False``,
+    bucket_widths : `bool`, optional (default = False).
+        Whether to bucket the span widths into log-space buckets. If `False`,
         the raw span widths are used.
-    use_sentinels : ``bool``, optional (default = ``True``).
-        If ``True``, sentinels are used to represent exclusive span indices for the elements
+    use_sentinels : `bool`, optional (default = `True`).
+        If `True`, sentinels are used to represent exclusive span indices for the elements
         in the first and last positions in the sequence (as the exclusive indices for these
         elements are outside of the the sequence boundary). This is not strictly necessary,
         as you may know that your exclusive start and end indices are always within your sequence
@@ -89,8 +91,10 @@ class BidirectionalEndpointSpanExtractor(SpanExtractor):
                 "is bidirectional (and hence divisible by 2)."
             )
         if num_width_embeddings is not None and span_width_embedding_dim is not None:
-            self._span_width_embedding = Embedding(num_width_embeddings, span_width_embedding_dim)
-        elif not all([num_width_embeddings is None, span_width_embedding_dim is None]):
+            self._span_width_embedding = Embedding(
+                num_embeddings=num_width_embeddings, embedding_dim=span_width_embedding_dim
+            )
+        elif num_width_embeddings is not None or span_width_embedding_dim is not None:
             raise ConfigurationError(
                 "To use a span width embedding representation, you must"
                 "specify both num_width_buckets and span_width_embedding_dim."
@@ -127,8 +131,8 @@ class BidirectionalEndpointSpanExtractor(SpanExtractor):
         self,
         sequence_tensor: torch.FloatTensor,
         span_indices: torch.LongTensor,
-        sequence_mask: torch.LongTensor = None,
-        span_indices_mask: torch.LongTensor = None,
+        sequence_mask: torch.BoolTensor = None,
+        span_indices_mask: torch.BoolTensor = None,
     ) -> torch.FloatTensor:
 
         # Both of shape (batch_size, sequence_length, embedding_size / 2)
@@ -145,15 +149,15 @@ class BidirectionalEndpointSpanExtractor(SpanExtractor):
             span_starts = span_starts * span_indices_mask
             span_ends = span_ends * span_indices_mask
         # We want `exclusive` span starts, so we remove 1 from the forward span starts
-        # as the AllenNLP ``SpanField`` is inclusive.
+        # as the AllenNLP `SpanField` is inclusive.
         # shape (batch_size, num_spans)
         exclusive_span_starts = span_starts - 1
         # shape (batch_size, num_spans, 1)
-        start_sentinel_mask = (exclusive_span_starts == -1).long().unsqueeze(-1)
+        start_sentinel_mask = (exclusive_span_starts == -1).unsqueeze(-1)
 
         # We want `exclusive` span ends for the backward direction
         # (so that the `start` of the span in that direction is exlusive), so
-        # we add 1 to the span ends as the AllenNLP ``SpanField`` is inclusive.
+        # we add 1 to the span ends as the AllenNLP `SpanField` is inclusive.
         exclusive_span_ends = span_ends + 1
 
         if sequence_mask is not None:
@@ -166,16 +170,14 @@ class BidirectionalEndpointSpanExtractor(SpanExtractor):
             ) * sequence_tensor.size(1)
 
         # shape (batch_size, num_spans, 1)
-        end_sentinel_mask = (
-            (exclusive_span_ends >= sequence_lengths.unsqueeze(-1)).long().unsqueeze(-1)
-        )
+        end_sentinel_mask = (exclusive_span_ends >= sequence_lengths.unsqueeze(-1)).unsqueeze(-1)
 
         # As we added 1 to the span_ends to make them exclusive, which might have caused indices
         # equal to the sequence_length to become out of bounds, we multiply by the inverse of the
         # end_sentinel mask to erase these indices (as we will replace them anyway in the block below).
         # The same argument follows for the exclusive span start indices.
-        exclusive_span_ends = exclusive_span_ends * (1 - end_sentinel_mask.squeeze(-1))
-        exclusive_span_starts = exclusive_span_starts * (1 - start_sentinel_mask.squeeze(-1))
+        exclusive_span_ends = exclusive_span_ends * ~end_sentinel_mask.squeeze(-1)
+        exclusive_span_starts = exclusive_span_starts * ~start_sentinel_mask.squeeze(-1)
 
         # We'll check the indices here at runtime, because it's difficult to debug
         # if this goes wrong and it's tricky to get right.
@@ -212,15 +214,13 @@ class BidirectionalEndpointSpanExtractor(SpanExtractor):
             # If we're using sentinels, we need to replace all the elements which were
             # outside the dimensions of the sequence_tensor with either the start sentinel,
             # or the end sentinel.
-            float_end_sentinel_mask = end_sentinel_mask.float()
-            float_start_sentinel_mask = start_sentinel_mask.float()
             forward_start_embeddings = (
-                forward_start_embeddings * (1 - float_start_sentinel_mask)
-                + float_start_sentinel_mask * self._start_sentinel
+                forward_start_embeddings * ~start_sentinel_mask
+                + start_sentinel_mask * self._start_sentinel
             )
             backward_start_embeddings = (
-                backward_start_embeddings * (1 - float_end_sentinel_mask)
-                + float_end_sentinel_mask * self._end_sentinel
+                backward_start_embeddings * ~end_sentinel_mask
+                + end_sentinel_mask * self._end_sentinel
             )
 
         # Now we combine the forward and backward spans in the manner specified by the
@@ -249,5 +249,5 @@ class BidirectionalEndpointSpanExtractor(SpanExtractor):
             return torch.cat([span_embeddings, span_width_embeddings], -1)
 
         if span_indices_mask is not None:
-            return span_embeddings * span_indices_mask.float().unsqueeze(-1)
+            return span_embeddings * span_indices_mask.unsqueeze(-1)
         return span_embeddings

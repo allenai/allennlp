@@ -49,7 +49,7 @@ class EvalbBracketingScorerTest(AllenNlpTestCase):
         # If precision and recall are zero, evalb returns nan f1.
         # This checks that we handle the zero division.
         tree1 = Tree.fromstring(
-            "(PP (VROOT (PP That) (VROOT (PP could) " "(VROOT (PP cost) (VROOT (PP him))))) (PP .))"
+            "(PP (VROOT (PP That) (VROOT (PP could) (VROOT (PP cost) (VROOT (PP him))))) (PP .))"
         )
         tree2 = Tree.fromstring("(S (NP (D the) (N dog)) (VP (V chased) (NP (D the) (N cat))))")
         evalb_scorer = EvalbBracketingScorer()

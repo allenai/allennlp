@@ -1,21 +1,23 @@
 import copy
-from typing import Any, Dict, Set, Union, Iterable
+import json
+from typing import Any, Dict, Iterable, Set, Union
 
-from numpy.testing import assert_allclose
 import torch
+from numpy.testing import assert_allclose
 
 from allennlp.commands.train import train_model_from_file
 from allennlp.common import Params
 from allennlp.common.testing.test_case import AllenNlpTestCase
-from allennlp.data import DataIterator, DatasetReader, Vocabulary
-from allennlp.data.dataset import Batch
-from allennlp.models import Model, load_archive
+from allennlp.data import DatasetReader, Vocabulary
+from allennlp.data import DataLoader
+from allennlp.data.batch import Batch
+from allennlp.models import load_archive, Model
 
 
 class ModelTestCase(AllenNlpTestCase):
     """
-    A subclass of :class:`~allennlp.common.testing.test_case.AllenNlpTestCase`
-    with added methods for testing :class:`~allennlp.models.model.Model` subclasses.
+    A subclass of [`AllenNlpTestCase`](./allennlp_test_case.md)
+    with added methods for testing [`Model`](../../models/model.md) subclasses.
     """
 
     def set_up_model(self, param_file, dataset_file):
@@ -25,7 +27,7 @@ class ModelTestCase(AllenNlpTestCase):
 
         reader = DatasetReader.from_params(params["dataset_reader"])
         # The dataset reader might be lazy, but a lazy list here breaks some of our tests.
-        instances = list(reader.read(str(dataset_file)))
+        instances = reader.read(str(dataset_file))
         # Use parameters for vocabulary if they are present in the config file, so that choices like
         # "non_padded_namespaces", "min_count" etc. can be set if needed.
         if "vocabulary" in params:
@@ -35,11 +37,12 @@ class ModelTestCase(AllenNlpTestCase):
             vocab = Vocabulary.from_instances(instances)
         self.vocab = vocab
         self.instances = instances
+        self.instances.index_with(vocab)
         self.model = Model.from_params(vocab=self.vocab, params=params["model"])
 
         # TODO(joelgrus) get rid of these
         # (a lot of the model tests use them, so they'll have to be changed)
-        self.dataset = Batch(self.instances)
+        self.dataset = Batch(list(self.instances))
         self.dataset.index_instances(self.vocab)
 
     def ensure_model_can_train_save_and_load(
@@ -49,36 +52,57 @@ class ModelTestCase(AllenNlpTestCase):
         cuda_device: int = -1,
         gradients_to_ignore: Set[str] = None,
         overrides: str = "",
+        metric_to_check: str = None,
+        metric_terminal_value: float = None,
+        metric_tolerance: float = 1e-4,
         disable_dropout: bool = True,
     ):
         """
-        Parameters
-        ----------
-        param_file : ``str``
+        # Parameters
+
+        param_file : `str`
             Path to a training configuration file that we will use to train the model for this
             test.
-        tolerance : ``float``, optional (default=1e-4)
+        tolerance : `float`, optional (default=1e-4)
             When comparing model predictions between the originally-trained model and the model
-            after saving and loading, we will use this tolerance value (passed as ``rtol`` to
-            ``numpy.testing.assert_allclose``).
-        cuda_device : ``int``, optional (default=-1)
+            after saving and loading, we will use this tolerance value (passed as `rtol` to
+            `numpy.testing.assert_allclose`).
+        cuda_device : `int`, optional (default=-1)
             The device to run the test on.
-        gradients_to_ignore : ``Set[str]``, optional (default=None)
+        gradients_to_ignore : `Set[str]`, optional (default=None)
             This test runs a gradient check to make sure that we're actually computing gradients
             for all of the parameters in the model.  If you really want to ignore certain
             parameters when doing that check, you can pass their names here.  This is not
             recommended unless you're `really` sure you don't need to have non-zero gradients for
             those parameters (e.g., some of the beam search / state machine models have
             infrequently-used parameters that are hard to force the model to use in a small test).
-        overrides : ``str``, optional (default = "")
+        overrides : `str`, optional (default = "")
             A JSON string that we will use to override values in the input parameter file.
-        disable_dropout : ``bool``, optional (default = True)
+        metric_to_check: `str`, optional (default = None)
+            We may want to automatically perform a check that model reaches given metric when
+            training (on validation set, if it is specified). It may be useful in CI, for example.
+            You can pass any metric that is in your model returned metrics.
+        metric_terminal_value: `str`, optional (default = None)
+            When you set `metric_to_check`, you need to set the value this metric must converge to
+        metric_tolerance: `float`, optional (default=1e-4)
+            Tolerance to check you model metric against metric terminal value. One can expect some
+            variance in model metrics when the training process is highly stochastic.
+        disable_dropout : `bool`, optional (default = True)
             If True we will set all dropout to 0 before checking gradients. (Otherwise, with small
             datasets, you may get zero gradients because of unlucky dropout.)
         """
         save_dir = self.TEST_DIR / "save_and_load_test"
         archive_file = save_dir / "model.tar.gz"
         model = train_model_from_file(param_file, save_dir, overrides=overrides)
+        metrics_file = save_dir / "metrics.json"
+        if metric_to_check is not None:
+            metrics = json.loads(metrics_file.read_text())
+            metric_value = metrics.get(f"best_validation_{metric_to_check}") or metrics.get(
+                f"training_{metric_to_check}"
+            )
+            assert metric_value is not None, f"Cannot find {metric_to_check} in metrics.json file"
+            assert metric_terminal_value is not None, "Please specify metric terminal value"
+            assert abs(metric_value - metric_terminal_value) < metric_tolerance
         loaded_model = load_archive(archive_file, cuda_device=cuda_device).model
         state_keys = model.state_dict().keys()
         loaded_state_keys = loaded_model.state_dict().keys()
@@ -93,22 +117,27 @@ class ModelTestCase(AllenNlpTestCase):
         params = Params.from_file(param_file, params_overrides=overrides)
         reader = DatasetReader.from_params(params["dataset_reader"])
 
-        # Need to duplicate params because Iterator.from_params will consume.
-        iterator_params = params["iterator"]
-        iterator_params2 = Params(copy.deepcopy(iterator_params.as_dict()))
+        print("Reading with original model")
+        model_dataset = reader.read(params["validation_data_path"])
+        model_dataset.index_with(model.vocab)
 
-        iterator = DataIterator.from_params(iterator_params)
-        iterator2 = DataIterator.from_params(iterator_params2)
+        print("Reading with loaded model")
+        loaded_dataset = reader.read(params["validation_data_path"])
+        loaded_dataset.index_with(loaded_model.vocab)
+
+        # Need to duplicate params because DataLoader.from_params will consume.
+        data_loader_params = params["data_loader"]
+        data_loader_params["shuffle"] = False
+        data_loader_params2 = Params(copy.deepcopy(data_loader_params.as_dict()))
+
+        data_loader = DataLoader.from_params(dataset=model_dataset, params=data_loader_params)
+        data_loader2 = DataLoader.from_params(dataset=loaded_dataset, params=data_loader_params2)
 
         # We'll check that even if we index the dataset with each model separately, we still get
         # the same result out.
-        model_dataset = reader.read(params["validation_data_path"])
-        iterator.index_with(model.vocab)
-        model_batch = next(iterator(model_dataset, shuffle=False))
+        model_batch = next(iter(data_loader))
 
-        loaded_dataset = reader.read(params["validation_data_path"])
-        iterator2.index_with(loaded_model.vocab)
-        loaded_batch = next(iterator2(loaded_dataset, shuffle=False))
+        loaded_batch = next(iter(data_loader2))
 
         # Check gradients are None for non-trainable parameters and check that
         # trainable parameters receive some gradient if they are trainable.
@@ -130,7 +159,9 @@ class ModelTestCase(AllenNlpTestCase):
             for module in model_.modules():
                 if hasattr(module, "stateful") and module.stateful:
                     module.reset_states()
+        print("Predicting with original model")
         model_predictions = model(**model_batch)
+        print("Predicting with loaded model")
         loaded_model_predictions = loaded_model(**loaded_batch)
 
         # Check loaded model's loss exists and we can compute gradients, for continuing training.
@@ -235,9 +266,9 @@ class ModelTestCase(AllenNlpTestCase):
         Ensures that the model performs the same on a batch of instances as on individual instances.
         Ignores metrics matching the regexp .*loss.* and those specified explicitly.
 
-        Parameters
-        ----------
-        keys_to_ignore : ``Iterable[str]``, optional (default=())
+        # Parameters
+
+        keys_to_ignore : `Iterable[str]`, optional (default=())
             Names of metrics that should not be taken into account, e.g. "batch_weight".
         """
         self.model.eval()

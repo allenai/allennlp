@@ -18,23 +18,25 @@ class StackedBidirectionalLstm(torch.nn.Module):
     from the last layer of the LSTM. Note that this will be slower, as it
     doesn't use CUDNN.
 
-    Parameters
-    ----------
-    input_size : int, required
+    [0]: https://arxiv.org/abs/1512.05287
+
+    # Parameters
+
+    input_size : `int`, required
         The dimension of the inputs to the LSTM.
-    hidden_size : int, required
+    hidden_size : `int`, required
         The dimension of the outputs of the LSTM.
-    num_layers : int, required
+    num_layers : `int`, required
         The number of stacked Bidirectional LSTMs to use.
-    recurrent_dropout_probability: float, optional (default = 0.0)
+    recurrent_dropout_probability : `float`, optional (default = 0.0)
         The recurrent dropout probability to be used in a dropout scheme as
-        stated in `A Theoretically Grounded Application of Dropout in Recurrent
-        Neural Networks <https://arxiv.org/abs/1512.05287>`_ .
-    layer_dropout_probability: float, optional (default = 0.0)
+        stated in [A Theoretically Grounded Application of Dropout in Recurrent
+        Neural Networks][0].
+    layer_dropout_probability : `float`, optional (default = 0.0)
         The layer wise dropout probability to be used in a dropout scheme as
-        stated in  `A Theoretically Grounded Application of Dropout in
-        Recurrent Neural Networks <https://arxiv.org/abs/1512.05287>`_ .
-    use_highway: bool, optional (default = True)
+        stated in [A Theoretically Grounded Application of Dropout in Recurrent
+        Neural Networks][0].
+    use_highway : `bool`, optional (default = True)
         Whether or not to use highway connections between layers. This effectively involves
         reparameterising the normal output of an LSTM as::
 
@@ -53,7 +55,7 @@ class StackedBidirectionalLstm(torch.nn.Module):
     ) -> None:
         super().__init__()
 
-        # Required to be wrapped with a :class:`PytorchSeq2SeqWrapper`.
+        # Required to be wrapped with a `PytorchSeq2SeqWrapper`.
         self.input_size = input_size
         self.hidden_size = hidden_size
         self.num_layers = num_layers
@@ -91,16 +93,16 @@ class StackedBidirectionalLstm(torch.nn.Module):
         self, inputs: PackedSequence, initial_state: Optional[TensorPair] = None
     ) -> Tuple[PackedSequence, TensorPair]:
         """
-        Parameters
-        ----------
-        inputs : ``PackedSequence``, required.
-            A batch first ``PackedSequence`` to run the stacked LSTM over.
+        # Parameters
+
+        inputs : `PackedSequence`, required.
+            A batch first `PackedSequence` to run the stacked LSTM over.
         initial_state : Tuple[torch.Tensor, torch.Tensor], optional, (default = None)
             A tuple (state, memory) representing the initial hidden state and memory
             of the LSTM. Each tensor has shape (num_layers, batch_size, output_dimension * 2).
 
-        Returns
-        -------
+        # Returns
+
         output_sequence : PackedSequence
             The encoded sequence of shape (batch_size, sequence_length, hidden_size * 2)
         final_states: torch.Tensor

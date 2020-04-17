@@ -2,8 +2,6 @@
 The ``test-install`` subcommand verifies
 an installation by running the unit tests.
 
-.. code-block:: bash
-
     $ allennlp test-install --help
     usage: allennlp test-install [-h] [--run-all] [-k K]
                                  [--include-package INCLUDE_PACKAGE]
@@ -26,20 +24,24 @@ import pathlib
 import sys
 
 import pytest
+from overrides import overrides
 
 import allennlp
 from allennlp.commands.subcommand import Subcommand
+from allennlp.common.util import pushd
 
 logger = logging.getLogger(__name__)
 
 
+@Subcommand.register("test-install")
 class TestInstall(Subcommand):
-    def add_subparser(
-        self, name: str, parser: argparse._SubParsersAction
-    ) -> argparse.ArgumentParser:
+    @overrides
+    def add_subparser(self, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
 
         description = """Test that installation works by running the unit tests."""
-        subparser = parser.add_parser(name, description=description, help="Run the unit tests.")
+        subparser = parser.add_parser(
+            self.name, description=description, help="Run the unit tests."
+        )
 
         subparser.add_argument(
             "--run-all",
@@ -61,27 +63,23 @@ def _get_module_root():
 
 
 def _run_test(args: argparse.Namespace):
-    initial_working_dir = os.getcwd()
     module_parent = _get_module_root().parent
     logger.info("Changing directory to %s", module_parent)
-    os.chdir(module_parent)
-    test_dir = os.path.join(module_parent, "allennlp")
-    logger.info("Running tests at %s", test_dir)
+    with pushd(module_parent):
+        test_dir = os.path.join(module_parent, "allennlp")
+        logger.info("Running tests at %s", test_dir)
 
-    if args.k:
-        pytest_k = ["-k", args.k]
-        pytest_m = ["-m", "not java"]
-        if args.run_all:
-            logger.warning("the argument '-k' overwrites '--run-all'.")
-    elif args.run_all:
-        pytest_k = []
-        pytest_m = []
-    else:
-        pytest_k = ["-k", "not sniff_test"]
-        pytest_m = ["-m", "not java"]
+        if args.k:
+            pytest_k = ["-k", args.k]
+            pytest_m = ["-m", "not java"]
+            if args.run_all:
+                logger.warning("the argument '-k' overwrites '--run-all'.")
+        elif args.run_all:
+            pytest_k = []
+            pytest_m = []
+        else:
+            pytest_k = ["-k", "not sniff_test"]
+            pytest_m = ["-m", "not java"]
 
-    exit_code = pytest.main([test_dir, "--color=no"] + pytest_k + pytest_m)
-
-    # Change back to original working directory after running tests
-    os.chdir(initial_working_dir)
-    sys.exit(exit_code)
+        exit_code = pytest.main([test_dir, "--color=no"] + pytest_k + pytest_m)
+        sys.exit(exit_code)

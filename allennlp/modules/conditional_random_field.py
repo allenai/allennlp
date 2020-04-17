@@ -17,18 +17,18 @@ def allowed_transitions(constraint_type: str, labels: Dict[int, str]) -> List[Tu
     additionally include transitions for the start and end states, which are used
     by the conditional random field.
 
-    Parameters
-    ----------
-    constraint_type : ``str``, required
+    # Parameters
+
+    constraint_type : `str`, required
         Indicates which constraint to apply. Current choices are
         "BIO", "IOB1", "BIOUL", and "BMES".
-    labels : ``Dict[int, str]``, required
+    labels : `Dict[int, str]`, required
         A mapping {label_id -> label}. Most commonly this would be the value from
         Vocabulary.get_index_to_token_vocabulary()
 
-    Returns
-    -------
-    ``List[Tuple[int, int]]``
+    # Returns
+
+    `List[Tuple[int, int]]`
         The allowed transitions (from_label_id, to_label_id).
     """
     num_labels = len(labels)
@@ -60,32 +60,32 @@ def is_transition_allowed(
     constraint_type: str, from_tag: str, from_entity: str, to_tag: str, to_entity: str
 ):
     """
-    Given a constraint type and strings ``from_tag`` and ``to_tag`` that
+    Given a constraint type and strings `from_tag` and `to_tag` that
     represent the origin and destination of the transition, return whether
     the transition is allowed under the given constraint type.
 
-    Parameters
-    ----------
-    constraint_type : ``str``, required
+    # Parameters
+
+    constraint_type : `str`, required
         Indicates which constraint to apply. Current choices are
         "BIO", "IOB1", "BIOUL", and "BMES".
-    from_tag : ``str``, required
+    from_tag : `str`, required
         The tag that the transition originates from. For example, if the
-        label is ``I-PER``, the ``from_tag`` is ``I``.
-    from_entity: ``str``, required
-        The entity corresponding to the ``from_tag``. For example, if the
-        label is ``I-PER``, the ``from_entity`` is ``PER``.
-    to_tag : ``str``, required
+        label is `I-PER`, the `from_tag` is `I`.
+    from_entity : `str`, required
+        The entity corresponding to the `from_tag`. For example, if the
+        label is `I-PER`, the `from_entity` is `PER`.
+    to_tag : `str`, required
         The tag that the transition leads to. For example, if the
-        label is ``I-PER``, the ``to_tag`` is ``I``.
-    to_entity: ``str``, required
-        The entity corresponding to the ``to_tag``. For example, if the
-        label is ``I-PER``, the ``to_entity`` is ``PER``.
+        label is `I-PER`, the `to_tag` is `I`.
+    to_entity : `str`, required
+        The entity corresponding to the `to_tag`. For example, if the
+        label is `I-PER`, the `to_entity` is `PER`.
 
-    Returns
-    -------
-    ``bool``
-        Whether the transition is allowed under the given ``constraint_type``.
+    # Returns
+
+    `bool`
+        Whether the transition is allowed under the given `constraint_type`.
     """
 
     if to_tag == "START" or from_tag == "END":
@@ -163,16 +163,16 @@ class ConditionalRandomField(torch.nn.Module):
 
     See, e.g. http://www.cs.columbia.edu/~mcollins/fb.pdf
 
-    Parameters
-    ----------
-    num_tags : int, required
+    # Parameters
+
+    num_tags : `int`, required
         The number of tags.
-    constraints : List[Tuple[int, int]], optional (default: None)
+    constraints : `List[Tuple[int, int]]`, optional (default: None)
         An optional list of allowed transitions (from_tag_id, to_tag_id).
-        These are applied to ``viterbi_tags()`` but do not affect ``forward()``.
+        These are applied to `viterbi_tags()` but do not affect `forward()`.
         These should be derived from `allowed_transitions` so that the
         start and end transitions are handled correctly for your tag type.
-    include_start_end_transitions : bool, optional (default: True)
+    include_start_end_transitions : `bool`, optional (default: True)
         Whether to include the start and end transition parameters.
     """
 
@@ -214,7 +214,7 @@ class ConditionalRandomField(torch.nn.Module):
             torch.nn.init.normal_(self.start_transitions)
             torch.nn.init.normal_(self.end_transitions)
 
-    def _input_likelihood(self, logits: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
+    def _input_likelihood(self, logits: torch.Tensor, mask: torch.BoolTensor) -> torch.Tensor:
         """
         Computes the (batch_size,) denominator term for the log-likelihood, which is the
         sum of the likelihoods across all possible state sequences.
@@ -222,7 +222,7 @@ class ConditionalRandomField(torch.nn.Module):
         batch_size, sequence_length, num_tags = logits.size()
 
         # Transpose batch size and sequence dimensions
-        mask = mask.float().transpose(0, 1).contiguous()
+        mask = mask.transpose(0, 1).contiguous()
         logits = logits.transpose(0, 1).contiguous()
 
         # Initial alpha is the (batch_size, num_tags) tensor of likelihoods combining the
@@ -246,10 +246,10 @@ class ConditionalRandomField(torch.nn.Module):
             # Add all the scores together and logexp over the current_tag axis.
             inner = broadcast_alpha + emit_scores + transition_scores
 
-            # In valid positions (mask == 1) we want to take the logsumexp over the current_tag dimension
-            # of ``inner``. Otherwise (mask == 0) we want to retain the previous alpha.
+            # In valid positions (mask == True) we want to take the logsumexp over the current_tag dimension
+            # of `inner`. Otherwise (mask == False) we want to retain the previous alpha.
             alpha = util.logsumexp(inner, 1) * mask[i].view(batch_size, 1) + alpha * (
-                1 - mask[i]
+                ~mask[i]
             ).view(batch_size, 1)
 
         # Every sequence needs to end with a transition to the stop_tag.
@@ -262,7 +262,7 @@ class ConditionalRandomField(torch.nn.Module):
         return util.logsumexp(stops)
 
     def _joint_likelihood(
-        self, logits: torch.Tensor, tags: torch.Tensor, mask: torch.LongTensor
+        self, logits: torch.Tensor, tags: torch.Tensor, mask: torch.BoolTensor
     ) -> torch.Tensor:
         """
         Computes the numerator term for the log-likelihood, which is just score(inputs, tags)
@@ -271,7 +271,7 @@ class ConditionalRandomField(torch.nn.Module):
 
         # Transpose batch size and sequence dimensions:
         logits = logits.transpose(0, 1).contiguous()
-        mask = mask.float().transpose(0, 1).contiguous()
+        mask = mask.transpose(0, 1).contiguous()
         tags = tags.transpose(0, 1).contiguous()
 
         # Start with the transition scores from start_tag to the first tag in each input
@@ -316,14 +316,14 @@ class ConditionalRandomField(torch.nn.Module):
         return score
 
     def forward(
-        self, inputs: torch.Tensor, tags: torch.Tensor, mask: torch.ByteTensor = None
+        self, inputs: torch.Tensor, tags: torch.Tensor, mask: torch.BoolTensor = None
     ) -> torch.Tensor:
         """
         Computes the log likelihood.
         """
 
         if mask is None:
-            mask = torch.ones(*tags.size(), dtype=torch.long)
+            mask = torch.ones(*tags.size(), dtype=torch.bool)
 
         log_denominator = self._input_likelihood(inputs, mask)
         log_numerator = self._joint_likelihood(inputs, tags, mask)
@@ -331,7 +331,7 @@ class ConditionalRandomField(torch.nn.Module):
         return torch.sum(log_numerator - log_denominator)
 
     def viterbi_tags(
-        self, logits: torch.Tensor, mask: torch.Tensor, top_k: int = None
+        self, logits: torch.Tensor, mask: torch.BoolTensor = None, top_k: int = None
     ) -> Union[List[VITERBI_DECODING], List[List[VITERBI_DECODING]]]:
         """
         Uses viterbi algorithm to find most likely tags for the given inputs.
@@ -344,6 +344,9 @@ class ConditionalRandomField(torch.nn.Module):
         For backwards compatibility, if top_k is None, then instead returns a flat list of
         tag sequences (the top tag sequence for each batch item).
         """
+        if mask is None:
+            mask = torch.ones(*logits.shape[:2], dtype=torch.bool, device=logits.device)
+
         if top_k is None:
             top_k = 1
             flatten_output = True
@@ -390,18 +393,20 @@ class ConditionalRandomField(torch.nn.Module):
         tag_sequence = torch.Tensor(max_seq_length + 2, num_tags + 2)
 
         for prediction, prediction_mask in zip(logits, mask):
-            sequence_length = torch.sum(prediction_mask)
+            mask_indices = prediction_mask.nonzero().squeeze()
+            masked_prediction = torch.index_select(prediction, 0, mask_indices)
+            sequence_length = masked_prediction.shape[0]
 
             # Start with everything totally unlikely
             tag_sequence.fill_(-10000.0)
             # At timestep 0 we must have the START_TAG
             tag_sequence[0, start_tag] = 0.0
             # At steps 1, ..., sequence_length we just use the incoming prediction
-            tag_sequence[1 : (sequence_length + 1), :num_tags] = prediction[:sequence_length]
+            tag_sequence[1 : (sequence_length + 1), :num_tags] = masked_prediction
             # And at the last timestep we must have the END_TAG
             tag_sequence[sequence_length + 1, end_tag] = 0.0
 
-            # We pass the tags and the transitions to ``viterbi_decode``.
+            # We pass the tags and the transitions to `viterbi_decode`.
             viterbi_paths, viterbi_scores = util.viterbi_decode(
                 tag_sequence=tag_sequence[: (sequence_length + 2)],
                 transition_matrix=transitions,

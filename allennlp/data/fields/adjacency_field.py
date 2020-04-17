@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 class AdjacencyField(Field[torch.Tensor]):
     """
-    A ``AdjacencyField`` defines directed adjacency relations between elements
+    A `AdjacencyField` defines directed adjacency relations between elements
     in a :class:`~allennlp.data.fields.sequence_field.SequenceField`.
     Because it's a labeling of some other field, we take that field as input here
     and use it to determine our padding and other things.
@@ -24,19 +24,19 @@ class AdjacencyField(Field[torch.Tensor]):
     where the (i, j)th array element is either a binary flag indicating there is an edge from i to j,
     or an integer label k, indicating there is a label from i to j of type k.
 
-    Parameters
-    ----------
-    indices : ``List[Tuple[int, int]]``
-    sequence_field : ``SequenceField``
-        A field containing the sequence that this ``AdjacencyField`` is labeling.  Most often,
-        this is a ``TextField``, for tagging edge relations between tokens in a sentence.
-    labels : ``List[str]``, optional, default = None
+    # Parameters
+
+    indices : `List[Tuple[int, int]]`
+    sequence_field : `SequenceField`
+        A field containing the sequence that this `AdjacencyField` is labeling.  Most often,
+        this is a `TextField`, for tagging edge relations between tokens in a sentence.
+    labels : `List[str]`, optional, default = None
         Optional labels for the edges of the adjacency matrix.
-    label_namespace : ``str``, optional (default='labels')
+    label_namespace : `str`, optional (default='labels')
         The namespace to use for converting tag strings into integers.  We convert tag strings to
-        integers for you, and this parameter tells the ``Vocabulary`` object which mapping from
+        integers for you, and this parameter tells the `Vocabulary` object which mapping from
         strings to integers to use (so that "O" as a tag doesn't get the same id as "O" as a word).
-    padding_value : ``int``, (optional, default = -1)
+    padding_value : `int`, (optional, default = -1)
         The value to use as padding.
     """
 
@@ -68,7 +68,7 @@ class AdjacencyField(Field[torch.Tensor]):
             raise ConfigurationError(f"Indices must be unique, but found {indices}")
 
         if not all(
-            [0 <= index[1] < field_length and 0 <= index[0] < field_length for index in indices]
+            0 <= index[1] < field_length and 0 <= index[0] < field_length for index in indices
         ):
             raise ConfigurationError(
                 f"Label indices and sequence length "
@@ -133,13 +133,16 @@ class AdjacencyField(Field[torch.Tensor]):
     def __str__(self) -> str:
         length = self.sequence_field.sequence_length()
         formatted_labels = "".join(
-            ["\t\t" + labels + "\n" for labels in textwrap.wrap(repr(self.labels), 100)]
+            "\t\t" + labels + "\n" for labels in textwrap.wrap(repr(self.labels), 100)
         )
         formatted_indices = "".join(
-            ["\t\t" + index + "\n" for index in textwrap.wrap(repr(self.indices), 100)]
+            "\t\t" + index + "\n" for index in textwrap.wrap(repr(self.indices), 100)
         )
         return (
             f"AdjacencyField of length {length}\n"
             f"\t\twith indices:\n {formatted_indices}\n"
             f"\t\tand labels:\n {formatted_labels} \t\tin namespace: '{self._label_namespace}'."
         )
+
+    def __len__(self):
+        return len(self.sequence_field)

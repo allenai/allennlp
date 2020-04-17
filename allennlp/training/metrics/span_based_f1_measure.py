@@ -44,19 +44,21 @@ class SpanBasedF1Measure(Metric):
         tags_to_spans_function: Optional[TAGS_TO_SPANS_FUNCTION_TYPE] = None,
     ) -> None:
         """
-        Parameters
-        ----------
-        vocabulary : ``Vocabulary``, required.
+        # Parameters
+
+        vocabulary : `Vocabulary`, required.
             A vocabulary containing the tag namespace.
-        tag_namespace : str, required.
+
+        tag_namespace : `str`, required.
             This metric assumes that a BIO format is used in which the
             labels are of the format: ["B-LABEL", "I-LABEL"].
+
         ignore_classes : List[str], optional.
             Span labels which will be ignored when computing span metrics.
             A "span label" is the part that comes after the BIO label, so it
             would be "ARG1" for the tag "B-ARG1". For example by passing:
 
-             ``ignore_classes=["V"]``
+             `ignore_classes=["V"]`
             the following sequence would not consider the "V" span at index (2, 3)
             when computing the precision, recall and F1 metrics.
 
@@ -64,11 +66,13 @@ class SpanBasedF1Measure(Metric):
 
             This is helpful for instance, to avoid computing metrics for "V"
             spans in a BIO tagging scheme which are typically not included.
-        label_encoding : ``str``, optional (default = "BIO")
+
+        label_encoding : `str`, optional (default = "BIO")
             The encoding used to specify label span endpoints in the sequence.
             Valid options are "BIO", "IOB1", "BIOUL" or "BMES".
-        tags_to_spans_function: ``Callable``, optional (default = ``None``)
-            If ``label_encoding`` is ``None``, ``tags_to_spans_function`` will be
+
+        tags_to_spans_function : `Callable`, optional (default = `None`)
+            If `label_encoding` is `None`, `tags_to_spans_function` will be
             used to generate spans.
         """
         if label_encoding and tags_to_spans_function:
@@ -100,32 +104,32 @@ class SpanBasedF1Measure(Metric):
         self,
         predictions: torch.Tensor,
         gold_labels: torch.Tensor,
-        mask: Optional[torch.Tensor] = None,
+        mask: Optional[torch.BoolTensor] = None,
         prediction_map: Optional[torch.Tensor] = None,
     ):
         """
-        Parameters
-        ----------
-        predictions : ``torch.Tensor``, required.
+        # Parameters
+
+        predictions : `torch.Tensor`, required.
             A tensor of predictions of shape (batch_size, sequence_length, num_classes).
-        gold_labels : ``torch.Tensor``, required.
+        gold_labels : `torch.Tensor`, required.
             A tensor of integer class label of shape (batch_size, sequence_length). It must be the same
-            shape as the ``predictions`` tensor without the ``num_classes`` dimension.
-        mask: ``torch.Tensor``, optional (default = None).
-            A masking tensor the same size as ``gold_labels``.
-        prediction_map: ``torch.Tensor``, optional (default = None).
+            shape as the `predictions` tensor without the `num_classes` dimension.
+        mask : `torch.BoolTensor`, optional (default = None).
+            A masking tensor the same size as `gold_labels`.
+        prediction_map : `torch.Tensor`, optional (default = None).
             A tensor of size (batch_size, num_classes) which provides a mapping from the index of predictions
             to the indices of the label vocabulary. If provided, the output label at each timestep will be
-            ``vocabulary.get_index_to_token_vocabulary(prediction_map[batch, argmax(predictions[batch, t]))``,
-            rather than simply ``vocabulary.get_index_to_token_vocabulary(argmax(predictions[batch, t]))``.
+            `vocabulary.get_index_to_token_vocabulary(prediction_map[batch, argmax(predictions[batch, t]))`,
+            rather than simply `vocabulary.get_index_to_token_vocabulary(argmax(predictions[batch, t]))`.
             This is useful in cases where each Instance in the dataset is associated with a different possible
             subset of labels from a large label-space (IE FrameNet, where each frame has a different set of
             possible roles associated with it).
         """
         if mask is None:
-            mask = torch.ones_like(gold_labels)
+            mask = torch.ones_like(gold_labels).bool()
 
-        predictions, gold_labels, mask, prediction_map = self.unwrap_to_tensors(
+        predictions, gold_labels, mask, prediction_map = self.detach_tensors(
             predictions, gold_labels, mask, prediction_map
         )
 
@@ -209,14 +213,14 @@ class SpanBasedF1Measure(Metric):
         of the last occurrence of the span. Handling this is important, because predicting continued
         spans is difficult and typically will effect overall average F1 score by ~ 2 points.
 
-        Parameters
-        ----------
-        spans : ``List[TypedStringSpan]``, required.
+        # Parameters
+
+        spans : `List[TypedStringSpan]`, required.
             A list of (label, (start, end)) spans.
 
-        Returns
-        -------
-        A ``List[TypedStringSpan]`` with continued arguments replaced with a single span.
+        # Returns
+
+        A `List[TypedStringSpan]` with continued arguments replaced with a single span.
         """
         span_set: Set[TypedStringSpan] = set(spans)
         continued_labels: List[str] = [
@@ -236,15 +240,16 @@ class SpanBasedF1Measure(Metric):
 
     def get_metric(self, reset: bool = False):
         """
-        Returns
-        -------
-        A Dict per label containing following the span based metrics:
-        precision : float
-        recall : float
-        f1-measure : float
+        # Returns
 
-        Additionally, an ``overall`` key is included, which provides the precision,
-        recall and f1-measure for all spans.
+        `Dict[str, float]`
+            A Dict per label containing following the span based metrics:
+            - precision : `float`
+            - recall : `float`
+            - f1-measure : `float`
+
+            Additionally, an `overall` key is included, which provides the precision,
+            recall and f1-measure for all spans.
         """
         all_tags: Set[str] = set()
         all_tags.update(self._true_positives.keys())
@@ -277,9 +282,9 @@ class SpanBasedF1Measure(Metric):
 
     @staticmethod
     def _compute_metrics(true_positives: int, false_positives: int, false_negatives: int):
-        precision = float(true_positives) / float(true_positives + false_positives + 1e-13)
-        recall = float(true_positives) / float(true_positives + false_negatives + 1e-13)
-        f1_measure = 2.0 * ((precision * recall) / (precision + recall + 1e-13))
+        precision = true_positives / (true_positives + false_positives + 1e-13)
+        recall = true_positives / (true_positives + false_negatives + 1e-13)
+        f1_measure = 2.0 * (precision * recall) / (precision + recall + 1e-13)
         return precision, recall, f1_measure
 
     def reset(self):

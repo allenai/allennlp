@@ -14,15 +14,15 @@ class BLEU(Metric):
     Bilingual Evaluation Understudy (BLEU).
 
     BLEU is a common metric used for evaluating the quality of machine translations
-    against a set of reference translations. See `Papineni et. al.,
-    "BLEU: a method for automatic evaluation of machine translation", 2002
-    <https://www.semanticscholar.org/paper/8ff93cfd37dced279134c9d642337a2085b31f59/>`_.
+    against a set of reference translations. See [Papineni et. al.,
+    "BLEU: a method for automatic evaluation of machine translation", 2002]
+    (https://www.semanticscholar.org/paper/8ff93cfd37dced279134c9d642337a2085b31f59/).
 
-    Parameters
-    ----------
-    ngram_weights : ``Iterable[float]``, optional (default = (0.25, 0.25, 0.25, 0.25))
+    # Parameters
+
+    ngram_weights : `Iterable[float]`, optional (default = (0.25, 0.25, 0.25, 0.25))
         Weights to assign to scores for each ngram size.
-    exclude_indices : ``Set[int]``, optional (default = None)
+    exclude_indices : `Set[int]`, optional (default = None)
         Indices to exclude when calculating ngrams. This should usually include
         the indices of the start, end, and pad tokens.
 
@@ -108,7 +108,7 @@ class BLEU(Metric):
         return math.exp(1.0 - self._reference_lengths / self._prediction_lengths)
 
     def _get_valid_tokens_mask(self, tensor: torch.LongTensor) -> torch.ByteTensor:
-        valid_tokens_mask = torch.ones(tensor.size(), dtype=torch.bool)
+        valid_tokens_mask = torch.ones_like(tensor, dtype=torch.bool)
         for index in self._exclude_indices:
             valid_tokens_mask = valid_tokens_mask & (tensor != index)
         return valid_tokens_mask
@@ -122,18 +122,18 @@ class BLEU(Metric):
         """
         Update precision counts.
 
-        Parameters
-        ----------
-        predictions : ``torch.LongTensor``, required
+        # Parameters
+
+        predictions : `torch.LongTensor`, required
             Batched predicted tokens of shape `(batch_size, max_sequence_length)`.
-        references : ``torch.LongTensor``, required
+        references : `torch.LongTensor`, required
             Batched reference (gold) translations with shape `(batch_size, max_gold_sequence_length)`.
 
-        Returns
-        -------
+        # Returns
+
         None
         """
-        predictions, gold_targets = self.unwrap_to_tensors(predictions, gold_targets)
+        predictions, gold_targets = self.detach_tensors(predictions, gold_targets)
         for ngram_size, _ in enumerate(self._ngram_weights, start=1):
             precision_matches, precision_totals = self._get_modified_precision_counts(
                 predictions, gold_targets, ngram_size

@@ -6,8 +6,9 @@ import torch
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Token, Vocabulary, Instance
 from allennlp.data.fields import TextField, LabelField, ListField, IndexField, SequenceLabelField
-from allennlp.data.iterators import BasicIterator
 from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenCharactersIndexer
+from allennlp.data.dataloader import DataLoader
+from allennlp.data.dataset_readers.dataset_reader import AllennlpDataset
 from allennlp.data.tokenizers import SpacyTokenizer
 from allennlp.models import Model
 from allennlp.modules import Embedding
@@ -88,14 +89,14 @@ class TestListField(AllenNlpTestCase):
         list_field = ListField([self.field1, self.field2, self.field3])
         list_field.index(self.vocab)
         lengths = list_field.get_padding_lengths()
-        assert lengths == {"num_fields": 3, "list_words_length": 5, "list_num_tokens": 5}
+        assert lengths == {"num_fields": 3, "list_words___tokens": 5}
 
     def test_list_field_can_handle_empty_text_fields(self):
         list_field = ListField([self.field1, self.field2, self.empty_text_field])
         list_field.index(self.vocab)
         tensor_dict = list_field.as_tensor(list_field.get_padding_lengths())
         numpy.testing.assert_array_equal(
-            tensor_dict["words"].detach().cpu().numpy(),
+            tensor_dict["words"]["tokens"].detach().cpu().numpy(),
             numpy.array([[2, 3, 4, 5, 0], [2, 3, 4, 1, 5], [0, 0, 0, 0, 0]]),
         )
 
@@ -122,13 +123,13 @@ class TestListField(AllenNlpTestCase):
         list_field.index(self.vocab)
         tensor_dict = list_field.as_tensor(list_field.get_padding_lengths())
         numpy.testing.assert_array_almost_equal(
-            tensor_dict["words"][0].detach().cpu().numpy(), numpy.array([2, 3, 4, 5, 0])
+            tensor_dict["words"]["tokens"][0].detach().cpu().numpy(), numpy.array([2, 3, 4, 5, 0])
         )
         numpy.testing.assert_array_almost_equal(
-            tensor_dict["words"][1].detach().cpu().numpy(), numpy.array([2, 3, 4, 1, 5])
+            tensor_dict["words"]["tokens"][1].detach().cpu().numpy(), numpy.array([2, 3, 4, 1, 5])
         )
         numpy.testing.assert_array_almost_equal(
-            tensor_dict["words"][2].detach().cpu().numpy(), numpy.array([2, 3, 1, 5, 0])
+            tensor_dict["words"]["tokens"][2].detach().cpu().numpy(), numpy.array([2, 3, 1, 5, 0])
         )
 
     def test_nested_list_fields_are_padded_correctly(self):
@@ -147,23 +148,28 @@ class TestListField(AllenNlpTestCase):
         list_field = ListField([self.field1, self.field2, self.field3])
         list_field.index(self.vocab)
         padding_lengths = list_field.get_padding_lengths()
-        padding_lengths["list_words_length"] = 7
+        padding_lengths["list_words___tokens"] = 7
         padding_lengths["num_fields"] = 5
         tensor_dict = list_field.as_tensor(padding_lengths)
         numpy.testing.assert_array_almost_equal(
-            tensor_dict["words"][0].detach().cpu().numpy(), numpy.array([2, 3, 4, 5, 0, 0, 0])
+            tensor_dict["words"]["tokens"][0].detach().cpu().numpy(),
+            numpy.array([2, 3, 4, 5, 0, 0, 0]),
         )
         numpy.testing.assert_array_almost_equal(
-            tensor_dict["words"][1].detach().cpu().numpy(), numpy.array([2, 3, 4, 1, 5, 0, 0])
+            tensor_dict["words"]["tokens"][1].detach().cpu().numpy(),
+            numpy.array([2, 3, 4, 1, 5, 0, 0]),
         )
         numpy.testing.assert_array_almost_equal(
-            tensor_dict["words"][2].detach().cpu().numpy(), numpy.array([2, 3, 1, 5, 0, 0, 0])
+            tensor_dict["words"]["tokens"][2].detach().cpu().numpy(),
+            numpy.array([2, 3, 1, 5, 0, 0, 0]),
         )
         numpy.testing.assert_array_almost_equal(
-            tensor_dict["words"][3].detach().cpu().numpy(), numpy.array([0, 0, 0, 0, 0, 0, 0])
+            tensor_dict["words"]["tokens"][3].detach().cpu().numpy(),
+            numpy.array([0, 0, 0, 0, 0, 0, 0]),
         )
         numpy.testing.assert_array_almost_equal(
-            tensor_dict["words"][4].detach().cpu().numpy(), numpy.array([0, 0, 0, 0, 0, 0, 0])
+            tensor_dict["words"]["tokens"][4].detach().cpu().numpy(),
+            numpy.array([0, 0, 0, 0, 0, 0, 0]),
         )
 
     def test_as_tensor_can_handle_multiple_token_indexers(self):
@@ -176,8 +182,8 @@ class TestListField(AllenNlpTestCase):
         list_field.index(self.vocab)
         padding_lengths = list_field.get_padding_lengths()
         tensor_dict = list_field.as_tensor(padding_lengths)
-        words = tensor_dict["words"].detach().cpu().numpy()
-        characters = tensor_dict["characters"].detach().cpu().numpy()
+        words = tensor_dict["words"]["tokens"].detach().cpu().numpy()
+        characters = tensor_dict["characters"]["token_characters"].detach().cpu().numpy()
         numpy.testing.assert_array_almost_equal(
             words, numpy.array([[2, 3, 4, 5, 0], [2, 3, 4, 1, 5], [2, 3, 1, 5, 0]])
         )
@@ -231,8 +237,8 @@ class TestListField(AllenNlpTestCase):
         list_field.index(self.vocab)
         padding_lengths = list_field.get_padding_lengths()
         tensor_dict = list_field.as_tensor(padding_lengths)
-        words = tensor_dict["words"].detach().cpu().numpy()
-        characters = tensor_dict["characters"].detach().cpu().numpy()
+        words = tensor_dict["words"]["tokens"].detach().cpu().numpy()
+        characters = tensor_dict["characters"]["token_characters"].detach().cpu().numpy()
 
         numpy.testing.assert_array_almost_equal(
             words, numpy.array([[0, 0, 0, 0, 0], [2, 3, 4, 5, 0], [2, 3, 4, 1, 5]])
@@ -291,13 +297,12 @@ class TestListField(AllenNlpTestCase):
         instance.as_tensor_dict()
 
     def test_batch_with_some_empty_lists_works(self):
-        dataset = [self.empty_instance, self.non_empty_instance]
+        dataset = AllennlpDataset([self.empty_instance, self.non_empty_instance], self.vocab)
 
         model = DummyModel(self.vocab)
         model.eval()
-        iterator = BasicIterator(batch_size=2)
-        iterator.index_with(self.vocab)
-        batch = next(iterator(dataset, shuffle=False))
+        loader = DataLoader(dataset, batch_size=2)
+        batch = next(iter(loader))
         model.forward(**batch)
 
     # This use case may seem a bit peculiar. It's intended for situations where
@@ -307,11 +312,55 @@ class TestListField(AllenNlpTestCase):
     # makes a whole lot more sense to just have a minimally-sized tensor that
     # gets entirely masked and has no effect on the rest of the model.
     def test_batch_of_entirely_empty_lists_works(self):
-        dataset = [self.empty_instance, self.empty_instance]
+        dataset = AllennlpDataset([self.empty_instance, self.empty_instance], self.vocab)
 
         model = DummyModel(self.vocab)
         model.eval()
-        iterator = BasicIterator(batch_size=2)
-        iterator.index_with(self.vocab)
-        batch = next(iterator(dataset, shuffle=False))
+        loader = DataLoader(dataset, batch_size=2)
+        batch = next(iter(loader))
         model.forward(**batch)
+
+    def test_list_of_text_padding(self):
+        from allennlp.data.token_indexers import PretrainedTransformerIndexer
+        from allennlp.data.tokenizers import Token
+        from allennlp.data.fields import (
+            TextField,
+            ListField,
+        )
+        from allennlp.data import Vocabulary
+
+        word_indexer = {"tokens": PretrainedTransformerIndexer("albert-base-v2")}
+        text_field = TextField(
+            [
+                Token(t, text_id=2, type_id=1)
+                for t in ["▁allen", "n", "lp", "▁has", "▁no", "▁bugs", "."]
+            ],
+            word_indexer,
+        )
+        list_field = ListField([text_field])
+
+        vocab = Vocabulary()
+        list_field.index(vocab)
+
+        padding_lengths = {
+            "list_tokens___mask": 10,
+            "list_tokens___token_ids": 10,
+            "list_tokens___type_ids": 10,
+            "num_fields": 2,
+        }
+
+        tensors = list_field.as_tensor(padding_lengths)["tokens"]
+        assert tensors["mask"].size() == (2, 10)
+        assert tensors["mask"][0, 0] == True  # noqa: E712
+        assert tensors["mask"][0, 9] == False  # noqa: E712
+        assert (tensors["mask"][1, :] == False).all()  # noqa: E712
+
+        assert tensors["token_ids"].size() == (2, 10)
+        assert tensors["token_ids"][0, 0] == 2
+        assert tensors["token_ids"][0, 9] == 0
+        assert (tensors["token_ids"][1, :] == 0).all()
+
+        assert tensors["type_ids"].size() == (2, 10)
+        assert tensors["type_ids"][0, 0] == 1
+        assert tensors["type_ids"][0, 9] == 0
+        assert (tensors["type_ids"][1, :] == 0).all()

@@ -6,7 +6,7 @@ import torch
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.util import pad_sequence_to_length
 from allennlp.data.tokenizers.token import Token
-from allennlp.data.token_indexers.token_indexer import TokenIndexer
+from allennlp.data.token_indexers.token_indexer import TokenIndexer, IndexedTokenList
 from allennlp.data.vocabulary import Vocabulary
 
 
@@ -31,7 +31,7 @@ class ELMoCharacterMapper:
     character indexers.
 
     We allow to add optional additional special tokens with designated
-    character ids with ``tokens_to_add``.
+    character ids with `tokens_to_add`.
     """
 
     max_word_length = 50
@@ -95,18 +95,20 @@ class ELMoCharacterMapper:
 
 
 @TokenIndexer.register("elmo_characters")
-class ELMoTokenCharactersIndexer(TokenIndexer[List[int]]):
+class ELMoTokenCharactersIndexer(TokenIndexer):
     """
     Convert a token to an array of character ids to compute ELMo representations.
 
-    Parameters
-    ----------
-    namespace : ``str``, optional (default=``elmo_characters``)
-    tokens_to_add : ``Dict[str, int]``, optional (default=``None``)
+    Registered as a `TokenIndexer` with name "elmo_characters".
+
+    # Parameters
+
+    namespace : `str`, optional (default=`elmo_characters`)
+    tokens_to_add : `Dict[str, int]`, optional (default=`None`)
         If not None, then provides a mapping of special tokens to character
         ids. When using pre-trained models, then the character id must be
         less then 261, and we recommend using un-used ids (e.g. 1-32).
-    token_min_padding_length : ``int``, optional (default=``0``)
+    token_min_padding_length : `int`, optional (default=`0`)
         See :class:`TokenIndexer`.
     """
 
@@ -125,8 +127,12 @@ class ELMoTokenCharactersIndexer(TokenIndexer[List[int]]):
         pass
 
     @overrides
+    def get_empty_token_list(self) -> IndexedTokenList:
+        return {"tokens": []}
+
+    @overrides
     def tokens_to_indices(
-        self, tokens: List[Token], vocabulary: Vocabulary, index_name: str
+        self, tokens: List[Token], vocabulary: Vocabulary
     ) -> Dict[str, List[List[int]]]:
         # TODO(brendanr): Retain the token to index mappings in the vocabulary and remove this
 
@@ -136,32 +142,23 @@ class ELMoTokenCharactersIndexer(TokenIndexer[List[int]]):
 
         if any(text is None for text in texts):
             raise ConfigurationError(
-                "ELMoTokenCharactersIndexer needs a tokenizer " "that retains text"
+                "ELMoTokenCharactersIndexer needs a tokenizer that retains text"
             )
-        return {index_name: [self._mapper.convert_word_to_char_ids(text) for text in texts]}
+        return {"tokens": [self._mapper.convert_word_to_char_ids(text) for text in texts]}
 
     @overrides
-    def get_padding_lengths(self, token: List[int]) -> Dict[str, int]:
-
-        return {}
-
-    @staticmethod
-    def _default_value_for_padding():
-        return [0] * ELMoCharacterMapper.max_word_length
-
-    @overrides
-    def as_padded_tensor(
-        self,
-        tokens: Dict[str, List[List[int]]],
-        desired_num_tokens: Dict[str, int],
-        padding_lengths: Dict[str, int],
+    def as_padded_tensor_dict(
+        self, tokens: IndexedTokenList, padding_lengths: Dict[str, int]
     ) -> Dict[str, torch.Tensor]:
+        # Overriding this method only because we need a different padding token than the default.
+        tensor_dict = {}
 
-        return {
-            key: torch.LongTensor(
-                pad_sequence_to_length(
-                    val, desired_num_tokens[key], default_value=self._default_value_for_padding
-                )
+        def padding_token():
+            return [0] * ELMoCharacterMapper.max_word_length
+
+        tensor_dict["tokens"] = torch.LongTensor(
+            pad_sequence_to_length(
+                tokens["tokens"], padding_lengths["tokens"], default_value=padding_token
             )
-            for key, val in tokens.items()
-        }
+        )
+        return tensor_dict

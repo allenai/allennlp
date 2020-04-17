@@ -28,26 +28,26 @@ class EvalbBracketingScorer(Metric):
     You can download the source for EVALB from here: <https://nlp.cs.nyu.edu/evalb/>.
 
     Note that this software is 20 years old. In order to compile it on modern hardware,
-    you may need to remove an ``include <malloc.h>`` statement in ``evalb.c`` before it
+    you may need to remove an `include <malloc.h>` statement in `evalb.c` before it
     will compile.
 
     AllenNLP contains the EVALB software, but you will need to compile it yourself
     before using it because the binary it generates is system dependent. To build it,
-    run ``make`` inside the ``allennlp/tools/EVALB`` directory.
+    run `make` inside the `allennlp/tools/EVALB` directory.
 
     Note that this metric reads and writes from disk quite a bit. You probably don't
     want to include it in your training loop; instead, you should calculate this on
     a validation set only.
 
-    Parameters
-    ----------
-    evalb_directory_path : ``str``, required.
+    # Parameters
+
+    evalb_directory_path : `str`, required.
         The directory containing the EVALB executable.
-    evalb_param_filename: ``str``, optional (default = "COLLINS.prm")
+    evalb_param_filename : `str`, optional (default = "COLLINS.prm")
         The relative name of the EVALB configuration file used when scoring the trees.
         By default, this uses the COLLINS.prm configuration file which comes with EVALB.
         This configuration ignores POS tags and some punctuation labels.
-    evalb_num_errors_to_kill: ``int``, optional (default = "10")
+    evalb_num_errors_to_kill : `int`, optional (default = "10")
         The number of errors to tolerate from EVALB before terminating evaluation.
     """
 
@@ -84,11 +84,11 @@ class EvalbBracketingScorer(Metric):
     @overrides
     def __call__(self, predicted_trees: List[Tree], gold_trees: List[Tree]) -> None:  # type: ignore
         """
-        Parameters
-        ----------
-        predicted_trees : ``List[Tree]``
+        # Parameters
+
+        predicted_trees : `List[Tree]`
             A list of predicted NLTK Trees to compute score for.
-        gold_trees : ``List[Tree]``
+        gold_trees : `List[Tree]`
             A list of gold NLTK Trees to use as a reference.
         """
         if not os.path.exists(self._evalb_program_path):
@@ -148,8 +148,8 @@ class EvalbBracketingScorer(Metric):
     @overrides
     def get_metric(self, reset: bool = False):
         """
-        Returns
-        -------
+        # Returns
+
         The average precision, recall and f1.
         """
         recall = (

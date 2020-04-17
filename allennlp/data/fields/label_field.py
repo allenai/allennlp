@@ -13,27 +13,27 @@ logger = logging.getLogger(__name__)
 
 class LabelField(Field[torch.Tensor]):
     """
-    A ``LabelField`` is a categorical label of some kind, where the labels are either strings of
+    A `LabelField` is a categorical label of some kind, where the labels are either strings of
     text or 0-indexed integers (if you wish to skip indexing by passing skip_indexing=True).
     If the labels need indexing, we will use a :class:`Vocabulary` to convert the string labels
     into integers.
 
     This field will get converted into an integer index representing the class label.
 
-    Parameters
-    ----------
-    label : ``Union[str, int]``
-    label_namespace : ``str``, optional (default="labels")
+    # Parameters
+
+    label : `Union[str, int]`
+    label_namespace : `str`, optional (default="labels")
         The namespace to use for converting label strings into integers.  We map label strings to
         integers for you (e.g., "entailment" and "contradiction" get converted to 0, 1, ...),
-        and this namespace tells the ``Vocabulary`` object which mapping from strings to integers
+        and this namespace tells the `Vocabulary` object which mapping from strings to integers
         to use (so "entailment" as a label doesn't get the same integer id as "entailment" as a
         word).  If you have multiple different label fields in your data, you should make sure you
         use different namespaces for each one, always using the suffix "labels" (e.g.,
         "passage_labels" and "question_labels").
-    skip_indexing : ``bool``, optional (default=False)
+    skip_indexing : `bool`, optional (default=False)
         If your labels are 0-indexed integers, you can pass in this flag, and we'll skip the indexing
-        step.  If this is ``False`` and your labels are not strings, this throws a ``ConfigurationError``.
+        step.  If this is `False` and your labels are not strings, this throws a `ConfigurationError`.
     """
 
     # Most often, you probably don't want to have OOV/PAD tokens with a LabelField, so we warn you
@@ -105,3 +105,6 @@ class LabelField(Field[torch.Tensor]):
 
     def __str__(self) -> str:
         return f"LabelField with label: {self.label} in namespace: '{self._label_namespace}'.'"
+
+    def __len__(self):
+        return 1

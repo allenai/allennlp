@@ -5,13 +5,13 @@ import torch
 
 class Scheduler:
     """
-    A ``Scheduler`` is a generalization of PyTorch learning rate schedulers.
+    A `Scheduler` is a generalization of PyTorch learning rate schedulers.
 
     A scheduler can be used to update any field in an optimizer's parameter groups,
     not just the learning rate.
 
     During training using the AllenNLP `Trainer`, this is the API and calling
-    sequence for ``step`` and ``step_batch``::
+    sequence for `step` and `step_batch`::
 
        scheduler = ... # creates scheduler, calls self.step(epoch=-1) in __init__
 
@@ -46,12 +46,11 @@ class Scheduler:
         self.base_values = [
             group[self._initial_param_group_field] for group in self.optimizer.param_groups
         ]
-        self.step(epoch=last_epoch)
         self.last_epoch = last_epoch
 
     def state_dict(self) -> Dict[str, Any]:
         """
-        Returns the state of the scheduler as a ``dict``.
+        Returns the state of the scheduler as a `dict`.
         """
         return {key: value for key, value in self.__dict__.items() if key != "optimizer"}
 
@@ -59,21 +58,18 @@ class Scheduler:
         """
         Load the schedulers state.
 
-        Parameters
-        ----------
-        state_dict : ``Dict[str, Any]``
-            Scheduler state. Should be an object returned from a call to ``state_dict``.
+        # Parameters
+
+        state_dict : `Dict[str, Any]`
+            Scheduler state. Should be an object returned from a call to `state_dict`.
         """
         self.__dict__.update(state_dict)
 
     def get_values(self):
         raise NotImplementedError
 
-    def step(self, metric: float = None, epoch: int = None) -> None:
-        if epoch is None:
-            self.last_epoch += 1  # type: ignore
-        else:
-            self.last_epoch = epoch
+    def step(self, metric: float = None) -> None:
+        self.last_epoch += 1
         self.metric = metric
         for param_group, value in zip(self.optimizer.param_groups, self.get_values()):
             param_group[self.param_group_field] = value

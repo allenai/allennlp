@@ -9,19 +9,19 @@ from allennlp.data.fields.sequence_field import SequenceField
 
 class SpanField(Field[torch.Tensor]):
     """
-    A ``SpanField`` is a pair of inclusive, zero-indexed (start, end) indices into a
+    A `SpanField` is a pair of inclusive, zero-indexed (start, end) indices into a
     :class:`~allennlp.data.fields.sequence_field.SequenceField`, used to represent a span of text.
     Because it's a pair of indices into a :class:`SequenceField`, we take one of those as input
     to make the span's dependence explicit and to validate that the span is well defined.
 
-    Parameters
-    ----------
-    span_start : ``int``, required.
+    # Parameters
+
+    span_start : `int`, required.
         The index of the start of the span in the :class:`SequenceField`.
-    span_end : ``int``, required.
+    span_end : `int`, required.
         The inclusive index of the end of the span in the :class:`SequenceField`.
-    sequence_field : ``SequenceField``, required.
-        A field containing the sequence that this ``SpanField`` is a span inside.
+    sequence_field : `SequenceField`, required.
+        A field containing the sequence that this `SpanField` is a span inside.
     """
 
     def __init__(self, span_start: int, span_end: int, sequence_field: SequenceField) -> None:
@@ -68,3 +68,6 @@ class SpanField(Field[torch.Tensor]):
         if isinstance(other, tuple) and len(other) == 2:
             return other == (self.span_start, self.span_end)
         return super().__eq__(other)
+
+    def __len__(self):
+        return 2

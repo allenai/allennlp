@@ -5,7 +5,7 @@ from allennlp.predictors import Predictor
 
 class SaliencyInterpreter(Registrable):
     """
-    A ``SaliencyInterpreter`` interprets an AllenNLP Predictor's outputs by assigning a saliency
+    A `SaliencyInterpreter` interprets an AllenNLP Predictor's outputs by assigning a saliency
     score to each input token.
     """
 
@@ -17,17 +17,17 @@ class SaliencyInterpreter(Registrable):
         This function finds a modification to the input text that would change the model's
         prediction in some desired manner (e.g., an adversarial attack).
 
-        Parameters
-        ----------
-        inputs : ``JsonDict``
+        # Parameters
+
+        inputs : `JsonDict`
             The input you want to interpret (the same as the argument to a Predictor, e.g., predict_json()).
 
-        Returns
-        -------
-        interpretation : ``JsonDict``
+        # Returns
+
+        interpretation : `JsonDict`
             Contains the normalized saliency values for each input token. The dict has entries for
-            each instance in the inputs JsonDict, e.g., ``{instance_1: ..., instance_2:, ... }``.
+            each instance in the inputs JsonDict, e.g., `{instance_1: ..., instance_2:, ... }`.
             Each one of those entries has entries for the saliency of the inputs, e.g.,
-            ``{grad_input_1: ..., grad_input_2: ... }``.
+            `{grad_input_1: ..., grad_input_2: ... }`.
         """
         raise NotImplementedError("Implement this for saliency interpretations")

@@ -10,8 +10,10 @@ from allennlp.data.tokenizers.tokenizer import Tokenizer
 @Tokenizer.register("letters_digits")
 class LettersDigitsTokenizer(Tokenizer):
     """
-    A ``Tokenizer`` which keeps runs of (unicode) letters and runs of digits together, while
+    A `Tokenizer` which keeps runs of (unicode) letters and runs of digits together, while
     every other non-whitespace character becomes a separate word.
+
+    Registered as a `Tokenizer` with name "letters_digits".
     """
 
     @overrides

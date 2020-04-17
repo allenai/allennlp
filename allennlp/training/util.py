@@ -1,27 +1,24 @@
 """
 Helper functions for Trainers
 """
-from typing import Any, Union, Dict, Iterable, List, Optional, Tuple
 import datetime
-import json
 import logging
-import pathlib
 import os
 import shutil
+from typing import Any, Dict, Iterable, List, Optional, Union
 
 import torch
-from torch.nn.parallel import replicate, parallel_apply
-from torch.nn.parallel.scatter_gather import gather
+import torch.distributed as dist
+from torch.utils.data import DataLoader, Dataset
 
-from allennlp.common.checks import ConfigurationError, check_for_gpu
+from allennlp.common.checks import check_for_gpu, ConfigurationError
 from allennlp.common.params import Params
 from allennlp.common.tqdm import Tqdm
+from allennlp.data import Instance, Vocabulary
+from allennlp.data.batch import Batch
 from allennlp.data.dataset_readers import DatasetReader
-from allennlp.data import Instance
-from allennlp.data.iterators import DataIterator
-from allennlp.data.iterators.data_iterator import TensorDict
-from allennlp.models.model import Model
 from allennlp.models.archival import CONFIG_NAME
+from allennlp.models.model import Model
 from allennlp.nn import util as nn_util
 
 logger = logging.getLogger(__name__)
@@ -40,17 +37,17 @@ def sparse_clip_norm(parameters, max_norm, norm_type=2) -> float:
     concatenated into a single vector. Gradients are modified in-place.
     Supports sparse gradients.
 
-    Parameters
-    ----------
-    parameters : ``(Iterable[torch.Tensor])``
-        An iterable of Tensors that will have gradients normalized.
-    max_norm : ``float``
-        The max norm of the gradients.
-    norm_type : ``float``
-        The type of the used p-norm. Can be ``'inf'`` for infinity norm.
+    # Parameters
 
-    Returns
-    -------
+    parameters : `(Iterable[torch.Tensor])`
+        An iterable of Tensors that will have gradients normalized.
+    max_norm : `float`
+        The max norm of the gradients.
+    norm_type : `float`
+        The type of the used p-norm. Can be `'inf'` for infinity norm.
+
+    # Returns
+
     Total norm of the parameters (viewed as a single vector).
     """
     parameters = list(filter(lambda p: p.grad is not None, parameters))
@@ -69,7 +66,7 @@ def sparse_clip_norm(parameters, max_norm, norm_type=2) -> float:
                 param_norm = p.grad.data.norm(norm_type)
             total_norm += param_norm ** norm_type
         total_norm = total_norm ** (1.0 / norm_type)
-    clip_coef = max_norm / (total_norm + 1e-6)
+    clip_coef = max_norm / (total_norm + nn_util.tiny_value_of_dtype(total_norm.dtype))
     if clip_coef < 1:
         for p in parameters:
             if p.grad.is_sparse:
@@ -130,41 +127,69 @@ def str_to_time(time_str: str) -> datetime.datetime:
     return datetime.datetime(*pieces)
 
 
-def datasets_from_params(
-    params: Params, cache_directory: str = None, cache_prefix: str = None
-) -> Dict[str, Iterable[Instance]]:
+def read_all_datasets(
+    train_data_path: str,
+    dataset_reader: DatasetReader,
+    validation_dataset_reader: DatasetReader = None,
+    validation_data_path: str = None,
+    test_data_path: str = None,
+) -> Dict[str, Dataset]:
+    """
+    Reads all datasets (perhaps lazily, if the corresponding dataset readers are lazy) and returns a
+    dictionary mapping dataset name ("train", "validation" or "test") to the iterable resulting from
+    `reader.read(filename)`.
+    """
+
+    logger.info("Reading training data from %s", train_data_path)
+    train_data = dataset_reader.read(train_data_path)
+
+    datasets: Dict[str, Dataset] = {"train": train_data}
+
+    validation_dataset_reader = validation_dataset_reader or dataset_reader
+
+    if validation_data_path is not None:
+        logger.info("Reading validation data from %s", validation_data_path)
+        validation_data = validation_dataset_reader.read(validation_data_path)
+        datasets["validation"] = validation_data
+
+    if test_data_path is not None:
+        logger.info("Reading test data from %s", test_data_path)
+        test_data = validation_dataset_reader.read(test_data_path)
+        datasets["test"] = test_data
+
+    return datasets
+
+
+def datasets_from_params(params: Params) -> Dict[str, Dataset]:
     """
     Load all the datasets specified by the config.
 
-    Parameters
-    ----------
-    params : ``Params``
-    cache_directory : ``str``, optional
-        If given, we will instruct the ``DatasetReaders`` that we construct to cache their
+    # Parameters
+
+    params : `Params`
+    cache_directory : `str`, optional
+        If given, we will instruct the `DatasetReaders` that we construct to cache their
         instances in this location (or read their instances from caches in this location, if a
         suitable cache already exists).  This is essentially a `base` directory for the cache, as
-        we will additionally add the ``cache_prefix`` to this directory, giving an actual cache
-        location of ``cache_directory + cache_prefix``.
-    cache_prefix : ``str``, optional
-        This works in conjunction with the ``cache_directory``.  The idea is that the
-        ``cache_directory`` contains caches for all different parameter settings, while the
-        ``cache_prefix`` captures a specific set of parameters that led to a particular cache file.
-        That is, if you change the tokenization settings inside your ``DatasetReader``, you don't
+        we will additionally add the `cache_prefix` to this directory, giving an actual cache
+        location of `cache_directory + cache_prefix`.
+    cache_prefix : `str`, optional
+        This works in conjunction with the `cache_directory`.  The idea is that the
+        `cache_directory` contains caches for all different parameter settings, while the
+        `cache_prefix` captures a specific set of parameters that led to a particular cache file.
+        That is, if you change the tokenization settings inside your `DatasetReader`, you don't
         want to read cached data that used the old settings.  In order to avoid this, we compute a
-        hash of the parameters used to construct each ``DatasetReader`` and use that as a "prefix"
-        to the cache files inside the base ``cache_directory``.  So, a given ``input_file`` would
-        be cached essentially as ``cache_directory + cache_prefix + input_file``, where you specify
-        a ``cache_directory``, the ``cache_prefix`` is based on the dataset reader parameters, and
-        the ``input_file`` is whatever path you provided to ``DatasetReader.read()``.  In order to
+        hash of the parameters used to construct each `DatasetReader` and use that as a "prefix"
+        to the cache files inside the base `cache_directory`.  So, a given `input_file` would
+        be cached essentially as `cache_directory + cache_prefix + input_file`, where you specify
+        a `cache_directory`, the `cache_prefix` is based on the dataset reader parameters, and
+        the `input_file` is whatever path you provided to `DatasetReader.read()`.  In order to
         allow you to give recognizable names to these prefixes if you want them, you can manually
-        specify the ``cache_prefix``.  Note that in some rare cases this can be dangerous, as we'll
+        specify the `cache_prefix`.  Note that in some rare cases this can be dangerous, as we'll
         use the `same` prefix for both train and validation dataset readers.
     """
     dataset_reader_params = params.pop("dataset_reader")
     validation_dataset_reader_params = params.pop("validation_dataset_reader", None)
-    train_cache_dir, validation_cache_dir = _set_up_cache_files(
-        dataset_reader_params, validation_dataset_reader_params, cache_directory, cache_prefix
-    )
 
     dataset_reader = DatasetReader.from_params(dataset_reader_params)
 
@@ -174,10 +199,6 @@ def datasets_from_params(
         validation_and_test_dataset_reader = DatasetReader.from_params(
             validation_dataset_reader_params
         )
-
-    if train_cache_dir:
-        dataset_reader.cache_data(train_cache_dir)
-        validation_and_test_dataset_reader.cache_data(validation_cache_dir)
 
     train_data_path = params.pop("train_data_path")
     logger.info("Reading training data from %s", train_data_path)
@@ -200,53 +221,6 @@ def datasets_from_params(
     return datasets
 
 
-def _set_up_cache_files(
-    train_params: Params,
-    validation_params: Params = None,
-    cache_directory: str = None,
-    cache_prefix: str = None,
-) -> Tuple[str, str]:
-    if not cache_directory:
-        return None, None
-
-    # We need to compute the parameter hash before the parameters get destroyed when they're
-    # passed to `DatasetReader.from_params`.
-    if not cache_prefix:
-        cache_prefix = _dataset_reader_param_hash(train_params)
-        if validation_params:
-            validation_cache_prefix = _dataset_reader_param_hash(validation_params)
-        else:
-            validation_cache_prefix = cache_prefix
-    else:
-        validation_cache_prefix = cache_prefix
-
-    train_cache_dir = pathlib.Path(cache_directory) / cache_prefix
-    validation_cache_dir = pathlib.Path(cache_directory) / validation_cache_prefix
-
-    # For easy human inspection of what parameters were used to create the cache.  This will
-    # overwrite old files, but they should be identical.  This could bite someone who gave
-    # their own prefix instead of letting us compute it, and then _re-used_ that name with
-    # different parameters, without clearing the cache first.  But correctly handling that case
-    # is more work than it's worth.
-    os.makedirs(train_cache_dir, exist_ok=True)
-    with open(train_cache_dir / "params.json", "w") as param_file:
-        json.dump(train_params.as_dict(quiet=True), param_file)
-    os.makedirs(validation_cache_dir, exist_ok=True)
-    with open(validation_cache_dir / "params.json", "w") as param_file:
-        if validation_params:
-            json.dump(validation_params.as_dict(quiet=True), param_file)
-        else:
-            json.dump(train_params.as_dict(quiet=True), param_file)
-    return str(train_cache_dir), str(validation_cache_dir)
-
-
-def _dataset_reader_param_hash(params: Params) -> str:
-    copied_params = params.duplicate()
-    # Laziness doesn't affect how the data is computed, so it shouldn't affect the hash.
-    copied_params.pop("lazy", default=None)
-    return copied_params.get_hash()
-
-
 def create_serialization_dir(
     params: Params, serialization_dir: str, recover: bool, force: bool
 ) -> None:
@@ -254,17 +228,17 @@ def create_serialization_dir(
     This function creates the serialization directory if it doesn't exist.  If it already exists
     and is non-empty, then it verifies that we're recovering from a training with an identical configuration.
 
-    Parameters
-    ----------
-    params: ``Params``
+    # Parameters
+
+    params : `Params`
         A parameter object specifying an AllenNLP Experiment.
-    serialization_dir: ``str``
+    serialization_dir : `str`
         The directory in which to save results and logs.
-    recover: ``bool``
-        If ``True``, we will try to recover from an existing serialization directory, and crash if
+    recover : `bool`
+        If `True`, we will try to recover from an existing serialization directory, and crash if
         the directory doesn't exist, or doesn't match the configuration we're given.
-    force: ``bool``
-        If ``True``, we will overwrite the serialization directory if it already exists.
+    force : `bool`
+        If `True`, we will overwrite the serialization directory if it already exists.
     """
     if recover and force:
         raise ConfigurationError("Illegal arguments: both force and recover are true.")
@@ -276,7 +250,7 @@ def create_serialization_dir(
         if not recover:
             raise ConfigurationError(
                 f"Serialization directory ({serialization_dir}) already exists and is "
-                f"not empty. Specify --recover to recover training from existing output."
+                f"not empty. Specify --recover to recover from an existing output folder."
             )
 
         logger.info(f"Recovering from prior training at {serialization_dir}.")
@@ -307,7 +281,7 @@ def create_serialization_dir(
             )
             fail = True
         for key in flat_params.keys():
-            if flat_params.get(key, None) != flat_loaded.get(key, None):
+            if flat_params.get(key) != flat_loaded.get(key):
                 logger.error(
                     f"Value for '{key}' in training configuration does not match that the value in "
                     f"the serialization directory we're recovering from: "
@@ -316,7 +290,7 @@ def create_serialization_dir(
                 fail = True
         if fail:
             raise ConfigurationError(
-                "Training configuration does not match the configuration we're " "recovering from."
+                "Training configuration does not match the configuration we're recovering from."
             )
     else:
         if recover:
@@ -325,36 +299,6 @@ def create_serialization_dir(
                 "does not exist.  There is nothing to recover from."
             )
         os.makedirs(serialization_dir, exist_ok=True)
-
-
-def data_parallel(
-    batch_group: List[TensorDict], model: Model, cuda_devices: List
-) -> Dict[str, torch.Tensor]:
-    """
-    Performs a forward pass using multiple GPUs.  This is a simplification
-    of torch.nn.parallel.data_parallel to support the allennlp model
-    interface.
-    """
-    assert len(batch_group) <= len(cuda_devices)
-
-    moved = [
-        nn_util.move_to_device(batch, device) for batch, device in zip(batch_group, cuda_devices)
-    ]
-
-    used_device_ids = cuda_devices[: len(moved)]
-    # Counterintuitively, it appears replicate expects the source device id to be the first element
-    # in the device id list. See torch.cuda.comm.broadcast_coalesced, which is called indirectly.
-    replicas = replicate(model, used_device_ids)
-
-    # We pass all our arguments as kwargs. Create a list of empty tuples of the
-    # correct shape to serve as (non-existent) positional arguments.
-    inputs = [()] * len(batch_group)
-    outputs = parallel_apply(replicas, inputs, moved, used_device_ids)
-
-    # Only the 'loss' is needed.
-    # a (num_gpu, ) tensor with loss on each GPU
-    losses = gather([output["loss"].unsqueeze(0) for output in outputs], used_device_ids[0], 0)
-    return {"loss": losses.mean()}
 
 
 def enable_gradient_clipping(model: Model, grad_clipping: Optional[float]) -> None:
@@ -379,32 +323,49 @@ def rescale_gradients(model: Model, grad_norm: Optional[float] = None) -> Option
 
 
 def get_metrics(
-    model: Model, total_loss: float, num_batches: int, reset: bool = False
+    model: Model,
+    total_loss: float,
+    total_reg_loss: float,
+    num_batches: int,
+    reset: bool = False,
+    world_size: int = 1,
+    cuda_device: Union[int, List] = 0,
 ) -> Dict[str, float]:
     """
-    Gets the metrics but sets ``"loss"`` to
-    the total loss divided by the ``num_batches`` so that
-    the ``"loss"`` metric is "average loss per batch".
+    Gets the metrics but sets `"loss"` to
+    the total loss divided by the `num_batches` so that
+    the `"loss"` metric is "average loss per batch".
     """
     metrics = model.get_metrics(reset=reset)
     metrics["loss"] = float(total_loss / num_batches) if num_batches > 0 else 0.0
-    return metrics
+    metrics["reg_loss"] = float(total_reg_loss / num_batches) if num_batches > 0 else 0.0
+
+    if world_size > 1:
+        # In distributed mode, average out all metrics across GPUs
+        aggregated_metrics = {}
+        for metric_name, metric_val in metrics.items():
+            if isinstance(cuda_device, list):
+                metric_tensor = torch.tensor(metric_val).to(torch.device(cuda_device[0]))
+            else:
+                metric_tensor = torch.tensor(metric_val).to(torch.device(cuda_device))
+            dist.all_reduce(metric_tensor, op=dist.ReduceOp.SUM)
+            reduced_metric = metric_tensor.item() / world_size
+            aggregated_metrics[metric_name] = reduced_metric
+        return aggregated_metrics
+    else:
+        return metrics
 
 
 def evaluate(
-    model: Model,
-    instances: Iterable[Instance],
-    data_iterator: DataIterator,
-    cuda_device: int,
-    batch_weight_key: str,
+    model: Model, data_loader: DataLoader, cuda_device: int, batch_weight_key: str,
 ) -> Dict[str, Any]:
     check_for_gpu(cuda_device)
     with torch.no_grad():
         model.eval()
 
-        iterator = data_iterator(instances, num_epochs=1, shuffle=False)
+        iterator = iter(data_loader)
         logger.info("Iterating over dataset")
-        generator_tqdm = Tqdm.tqdm(iterator, total=data_iterator.get_num_batches(instances))
+        generator_tqdm = Tqdm.tqdm(iterator, total=len(data_loader))
 
         # Number of batches in instances.
         batch_count = 0
@@ -485,3 +446,52 @@ def description_from_metrics(metrics: Dict[str, float]) -> str:
         )
         + " ||"
     )
+
+
+def make_vocab_from_params(
+    params: Params, serialization_dir: str, print_statistics: bool = False
+) -> Vocabulary:
+    vocab_params = params.pop("vocabulary", {})
+    os.makedirs(serialization_dir, exist_ok=True)
+    vocab_dir = os.path.join(serialization_dir, "vocabulary")
+
+    if os.path.isdir(vocab_dir) and os.listdir(vocab_dir) is not None:
+        raise ConfigurationError(
+            "The 'vocabulary' directory in the provided serialization directory is non-empty"
+        )
+
+    all_datasets = datasets_from_params(params)
+    datasets_for_vocab_creation = set(params.pop("datasets_for_vocab_creation", all_datasets))
+
+    for dataset in datasets_for_vocab_creation:
+        if dataset not in all_datasets:
+            raise ConfigurationError(f"invalid 'dataset_for_vocab_creation' {dataset}")
+
+    logger.info(
+        "From dataset instances, %s will be considered for vocabulary creation.",
+        ", ".join(datasets_for_vocab_creation),
+    )
+
+    instances: Iterable[Instance] = (
+        instance
+        for key, dataset in all_datasets.items()
+        if key in datasets_for_vocab_creation
+        for instance in dataset
+    )
+
+    if print_statistics:
+        instances = list(instances)
+
+    vocab = Vocabulary.from_params(vocab_params, instances=instances)
+
+    logger.info(f"writing the vocabulary to {vocab_dir}.")
+    vocab.save_to_files(vocab_dir)
+    logger.info("done creating vocab")
+
+    if print_statistics:
+        dataset = Batch(instances)
+        dataset.index_instances(vocab)
+        dataset.print_statistics()
+        vocab.print_statistics()
+
+    return vocab

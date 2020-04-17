@@ -1,9 +1,9 @@
 import torch
-from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
-from allennlp.data import Vocabulary
-from allennlp.common import Params
-from allennlp.nn.util import get_text_field_mask
+
 from allennlp.common.checks import ConfigurationError
+from allennlp.data import Vocabulary
+from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
+from allennlp.nn.util import get_text_field_mask
 
 
 @TokenEmbedder.register("bag_of_word_counts")
@@ -17,22 +17,24 @@ class BagOfWordCountsTokenEmbedder(TokenEmbedder):
 
     By default, we ignore padding tokens.
 
-    Parameters
-    ----------
-    vocab: ``Vocabulary``
-    vocab_namespace: ``str``
+    Registered as a `TokenEmbedder` with name "bag_of_word_counts".
+
+    # Parameters
+
+    vocab : `Vocabulary`
+    vocab_namespace : `str`, optional (default = "tokens")
         namespace of vocabulary to embed
-    projection_dim : ``int``, optional (default = ``None``)
+    projection_dim : `int`, optional (default = `None`)
         if specified, will project the resulting bag of words representation
         to specified dimension.
-    ignore_oov : ``bool``, optional (default = ``False``)
+    ignore_oov : `bool`, optional (default = `False`)
         If true, we ignore the OOV token.
     """
 
     def __init__(
         self,
         vocab: Vocabulary,
-        vocab_namespace: str,
+        vocab_namespace: str = "tokens",
         projection_dim: int = None,
         ignore_oov: bool = False,
     ) -> None:
@@ -57,25 +59,26 @@ class BagOfWordCountsTokenEmbedder(TokenEmbedder):
 
     def forward(self, inputs: torch.Tensor) -> torch.Tensor:
         """
-        Parameters
-        ----------
-        inputs: ``torch.Tensor``
-            Shape ``(batch_size, timesteps, sequence_length)`` of word ids
+        # Parameters
+
+        inputs : `torch.Tensor`
+            Shape `(batch_size, timesteps, sequence_length)` of word ids
             representing the current batch.
 
-        Returns
-        -------
-        The bag-of-words representations for the input sequence, shape
-        ``(batch_size, vocab_size)``
+        # Returns
+
+        `torch.Tensor`
+            The bag-of-words representations for the input sequence, shape
+            `(batch_size, vocab_size)`
         """
         bag_of_words_vectors = []
 
-        mask = get_text_field_mask({"tokens": inputs})
+        mask = get_text_field_mask({"tokens": {"tokens": inputs}})
         if self._ignore_oov:
             # also mask out positions corresponding to oov
-            mask *= (inputs != self._oov_idx).long()
+            mask &= inputs != self._oov_idx
         for document, doc_mask in zip(inputs, mask):
-            document = torch.masked_select(document, doc_mask.to(dtype=torch.bool))
+            document = torch.masked_select(document, doc_mask)
             vec = torch.bincount(document, minlength=self.vocab_size).float()
             vec = vec.view(1, -1)
             bag_of_words_vectors.append(vec)
@@ -85,24 +88,3 @@ class BagOfWordCountsTokenEmbedder(TokenEmbedder):
             projection = self._projection
             bag_of_words_output = projection(bag_of_words_output)
         return bag_of_words_output
-
-    @classmethod
-    def from_params(  # type: ignore
-        cls, vocab: Vocabulary, params: Params
-    ) -> "BagOfWordCountsTokenEmbedder":
-
-        """
-        we look for a ``vocab_namespace`` key in the parameter dictionary
-        to know which vocabulary to use.
-        """
-
-        vocab_namespace = params.pop("vocab_namespace", "tokens")
-        projection_dim = params.pop_int("projection_dim", None)
-        ignore_oov = params.pop_bool("ignore_oov", False)
-        params.assert_empty(cls.__name__)
-        return cls(
-            vocab=vocab,
-            vocab_namespace=vocab_namespace,
-            ignore_oov=ignore_oov,
-            projection_dim=projection_dim,
-        )

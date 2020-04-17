@@ -5,18 +5,27 @@ import pytest
 import torch
 
 from allennlp.common import Params
-from allennlp.data import Vocabulary, DataIterator
+from allennlp.data import Vocabulary
+from allennlp.data import DataLoader
 from allennlp.models import Model
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.commands.train import Trainer
 from allennlp.commands.find_learning_rate import (
     search_learning_rate,
     find_learning_rate_from_args,
     find_learning_rate_model,
     FindLearningRate,
 )
+from allennlp.training import Trainer
 from allennlp.training.util import datasets_from_params
+
+
+def is_matplotlib_installed():
+    try:
+        import matplotlib  # noqa: F401 - Matplotlib is optional.
+    except:  # noqa: E722. Any exception means we don't have a working matplotlib.
+        return False
+    return True
 
 
 class TestFindLearningRate(AllenNlpTestCase):
@@ -34,11 +43,12 @@ class TestFindLearningRate(AllenNlpTestCase):
                 "dataset_reader": {"type": "sequence_tagging"},
                 "train_data_path": str(self.FIXTURES_ROOT / "data" / "sequence_tagging.tsv"),
                 "validation_data_path": str(self.FIXTURES_ROOT / "data" / "sequence_tagging.tsv"),
-                "iterator": {"type": "basic", "batch_size": 2},
+                "data_loader": {"batch_size": 2},
                 "trainer": {"cuda_device": -1, "num_epochs": 2, "optimizer": "adam"},
             }
         )
 
+    @pytest.mark.skipif(not is_matplotlib_installed(), reason="matplotlib dependency is optional")
     def test_find_learning_rate(self):
         find_learning_rate_model(
             self.params(),
@@ -100,10 +110,10 @@ class TestFindLearningRate(AllenNlpTestCase):
     def test_find_learning_rate_args(self):
         parser = argparse.ArgumentParser(description="Testing")
         subparsers = parser.add_subparsers(title="Commands", metavar="")
-        FindLearningRate().add_subparser("find_lr", subparsers)
+        FindLearningRate().add_subparser(subparsers)
 
         for serialization_arg in ["-s", "--serialization-dir"]:
-            raw_args = ["find_lr", "path/to/params", serialization_arg, "serialization_dir"]
+            raw_args = ["find-lr", "path/to/params", serialization_arg, "serialization_dir"]
 
             args = parser.parse_args(raw_args)
 
@@ -113,28 +123,33 @@ class TestFindLearningRate(AllenNlpTestCase):
 
         # config is required
         with self.assertRaises(SystemExit) as cm:
-            args = parser.parse_args(["find_lr", "-s", "serialization_dir"])
+            parser.parse_args(["find-lr", "-s", "serialization_dir"])
             assert cm.exception.code == 2  # argparse code for incorrect usage
 
         # serialization dir is required
         with self.assertRaises(SystemExit) as cm:
-            args = parser.parse_args(["find_lr", "path/to/params"])
+            parser.parse_args(["find-lr", "path/to/params"])
             assert cm.exception.code == 2  # argparse code for incorrect usage
 
     @pytest.mark.skipif(torch.cuda.device_count() < 2, reason="Need multiple GPUs.")
     def test_find_learning_rate_multi_gpu(self):
         params = self.params()
-        params["trainer"]["cuda_device"] = [0, 1]
-        find_learning_rate_model(
-            params,
-            os.path.join(self.TEST_DIR, "test_find_learning_rate_multi_gpu"),
-            start_lr=1e-5,
-            end_lr=1,
-            num_batches=100,
-            linear_steps=True,
-            stopping_factor=None,
-            force=False,
-        )
+        del params["trainer"]["cuda_device"]
+        params["distributed"] = Params({})
+        params["distributed"]["cuda_devices"] = [0, 1]
+
+        with pytest.raises(AssertionError) as execinfo:
+            find_learning_rate_model(
+                params,
+                os.path.join(self.TEST_DIR, "test_find_learning_rate_multi_gpu"),
+                start_lr=1e-5,
+                end_lr=1,
+                num_batches=100,
+                linear_steps=True,
+                stopping_factor=None,
+                force=False,
+            )
+        assert "DistributedDataParallel" in str(execinfo.value)
 
 
 class TestSearchLearningRate(AllenNlpTestCase):
@@ -152,27 +167,28 @@ class TestSearchLearningRate(AllenNlpTestCase):
                 "dataset_reader": {"type": "sequence_tagging"},
                 "train_data_path": str(self.FIXTURES_ROOT / "data" / "sequence_tagging.tsv"),
                 "validation_data_path": str(self.FIXTURES_ROOT / "data" / "sequence_tagging.tsv"),
-                "iterator": {"type": "basic", "batch_size": 2},
+                "data_loader": {"batch_size": 2},
                 "trainer": {"cuda_device": -1, "num_epochs": 2, "optimizer": "adam"},
             }
         )
         all_datasets = datasets_from_params(params)
         vocab = Vocabulary.from_params(
             params.pop("vocabulary", {}),
-            (instance for dataset in all_datasets.values() for instance in dataset),
+            instances=(instance for dataset in all_datasets.values() for instance in dataset),
         )
         model = Model.from_params(vocab=vocab, params=params.pop("model"))
-        iterator = DataIterator.from_params(params.pop("iterator"))
-        iterator.index_with(vocab)
         train_data = all_datasets["train"]
+        train_data.index_with(vocab)
+
+        data_loader = DataLoader.from_params(dataset=train_data, params=params.pop("data_loader"))
         trainer_params = params.pop("trainer")
         serialization_dir = os.path.join(self.TEST_DIR, "test_search_learning_rate")
 
         self.trainer = Trainer.from_params(
-            model,
-            serialization_dir,
-            iterator,
-            train_data,
+            model=model,
+            serialization_dir=serialization_dir,
+            data_loader=data_loader,
+            train_data=train_data,
             params=trainer_params,
             validation_data=None,
             validation_iterator=None,

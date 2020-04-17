@@ -4,6 +4,7 @@ import pytest
 import torch
 
 from allennlp.nn import InitializerApplicator, Initializer
+from allennlp.nn.initializers import PretrainedModelInitializer
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.common.params import Params
@@ -48,20 +49,12 @@ class TestPretrainedModelInitializer(AllenNlpTestCase):
         weights_file_path: str,
         parameter_name_overrides: Optional[Dict[str, str]] = None,
     ) -> InitializerApplicator:
-        parameter_name_overrides = parameter_name_overrides or {}
-        initializer_params = Params(
-            {
-                "type": "pretrained",
-                "weights_file_path": weights_file_path,
-                "parameter_name_overrides": parameter_name_overrides,
-            }
-        )
-        params = Params({"initializer": [(regex, initializer_params)]})
-        return InitializerApplicator.from_params(params["initializer"])
+        initializer = PretrainedModelInitializer(weights_file_path, parameter_name_overrides)
+        return InitializerApplicator([(regex, initializer)])
 
     def test_random_initialization(self):
         # The tests in the class rely on the fact that the parameters for
-        # ``self.net1`` and ``self.net2`` are randomly initialized and not
+        # `self.net1` and `self.net2` are randomly initialized and not
         # equal at the beginning. This test makes sure that's true
         assert not self._are_equal(self.net1.linear_1, self.net2.linear_1)
         assert not self._are_equal(self.net1.linear_2, self.net2.linear_3)

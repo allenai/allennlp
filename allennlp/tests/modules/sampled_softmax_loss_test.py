@@ -5,7 +5,7 @@ import numpy as np
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.modules.sampled_softmax_loss import _choice, SampledSoftmaxLoss
-from allennlp.models.language_model import _SoftmaxLoss
+from allennlp.modules import SoftmaxLoss
 
 
 class TestSampledSoftmaxLoss(AllenNlpTestCase):
@@ -26,7 +26,7 @@ class TestSampledSoftmaxLoss(AllenNlpTestCase):
 
     def test_sampled_equals_unsampled_during_eval(self):
         sampled_softmax = SampledSoftmaxLoss(num_words=10000, embedding_dim=12, num_samples=40)
-        unsampled_softmax = _SoftmaxLoss(num_words=10000, embedding_dim=12)
+        unsampled_softmax = SoftmaxLoss(num_words=10000, embedding_dim=12)
 
         sampled_softmax.eval()
         unsampled_softmax.eval()
@@ -62,7 +62,7 @@ class TestSampledSoftmaxLoss(AllenNlpTestCase):
 
     def test_sampled_equals_unsampled_when_biased_against_non_sampled_positions(self):
         sampled_softmax = SampledSoftmaxLoss(num_words=10000, embedding_dim=12, num_samples=10)
-        unsampled_softmax = _SoftmaxLoss(num_words=10000, embedding_dim=12)
+        unsampled_softmax = SoftmaxLoss(num_words=10000, embedding_dim=12)
 
         # fake out choice function
         FAKE_SAMPLES = [100, 200, 300, 400, 500, 600, 700, 800, 900, 9999]

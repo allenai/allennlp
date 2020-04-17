@@ -21,7 +21,7 @@ class TestSeq2VecEncoder(AllenNlpTestCase):
         )
         encoder = Seq2VecEncoder.from_params(params)
 
-        assert encoder.__class__.__name__ == "PytorchSeq2VecWrapper"
+        assert encoder.__class__.__name__ == "LstmSeq2VecEncoder"
         assert encoder._module.__class__.__name__ == "LSTM"
         assert encoder._module.num_layers == 3
         assert encoder._module.input_size == 5

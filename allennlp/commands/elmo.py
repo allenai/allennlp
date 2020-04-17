@@ -11,9 +11,7 @@ sentence is a size (3, num_tokens, 1024) array with the biLM representations.
 For information, see "Deep contextualized word representations", Peters et al 2018.
 https://arxiv.org/abs/1802.05365
 
-.. code-block:: console
-
-   $ allennlp elmo --help
+    $ allennlp elmo --help
     usage: allennlp elmo [-h] (--all | --top | --average)
                          [--vocab-path VOCAB_PATH] [--options-file OPTIONS_FILE]
                          [--weight-file WEIGHT_FILE] [--batch-size BATCH_SIZE]
@@ -68,23 +66,24 @@ import argparse
 import json
 import logging
 import os
-from typing import IO, List, Iterable, Tuple
 import warnings
+from typing import IO, Iterable, List, Tuple
+
+import numpy
+import torch
+from overrides import overrides
+
+from allennlp.commands.subcommand import Subcommand
+from allennlp.common.checks import ConfigurationError
+from allennlp.common.tqdm import Tqdm
+from allennlp.common.util import lazy_groups_of, prepare_global_logging
+from allennlp.data.token_indexers.elmo_indexer import ELMoTokenCharactersIndexer
+from allennlp.modules.elmo import _ElmoBiLm, batch_to_ids
+from allennlp.nn.util import remove_sentence_boundaries
 
 with warnings.catch_warnings():
     warnings.filterwarnings("ignore", category=FutureWarning)
     import h5py
-
-import numpy
-import torch
-
-from allennlp.common.tqdm import Tqdm
-from allennlp.common.util import lazy_groups_of, prepare_global_logging
-from allennlp.common.checks import ConfigurationError
-from allennlp.data.token_indexers.elmo_indexer import ELMoTokenCharactersIndexer
-from allennlp.nn.util import remove_sentence_boundaries
-from allennlp.modules.elmo import _ElmoBiLm, batch_to_ids
-from allennlp.commands.subcommand import Subcommand
 
 logger = logging.getLogger(__name__)
 
@@ -93,6 +92,7 @@ DEFAULT_WEIGHT_FILE = "https://allennlp.s3.amazonaws.com/models/elmo/2x4096_512_
 DEFAULT_BATCH_SIZE = 64
 
 
+@Subcommand.register("elmo")
 class Elmo(Subcommand):
     """
     Note that ELMo maintains an internal state dependent on previous batches.
@@ -102,13 +102,14 @@ class Elmo(Subcommand):
     See https://github.com/allenai/allennlp/blob/master/tutorials/how_to/elmo.md for more details.
     """
 
-    def add_subparser(
-        self, name: str, parser: argparse._SubParsersAction
-    ) -> argparse.ArgumentParser:
+    @overrides
+    def add_subparser(self, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
 
         description = """Create word vectors using ELMo."""
         subparser = parser.add_parser(
-            name, description=description, help="Create word vectors using a pretrained ELMo model."
+            self.name,
+            description=description,
+            help="Create word vectors using a pretrained ELMo model.",
         )
 
         subparser.add_argument(
@@ -186,9 +187,8 @@ class ElmoEmbedder:
         cuda_device: int = -1,
     ) -> None:
         """
-        Parameters
-        ----------
-        options_file : ``str``, optional
+        # Parameters
+                 options_file : ``str``, optional
             A path or URL to an ELMo options file.
         weight_file : ``str``, optional
             A path or URL to an ELMo weights file.
@@ -206,13 +206,13 @@ class ElmoEmbedder:
 
     def batch_to_embeddings(self, batch: List[List[str]]) -> Tuple[torch.Tensor, torch.Tensor]:
         """
-        Parameters
-        ----------
+        # Parameters
+
         batch : ``List[List[str]]``, required
             A list of tokenized sentences.
 
-        Returns
-        -------
+        # Returns
+
             A tuple of tensors, the first representing activations (batch_size, 3, num_timesteps, 1024) and
         the second a mask (batch_size, num_timesteps).
         """
@@ -244,13 +244,13 @@ class ElmoEmbedder:
         Please note that ELMo has internal state and will give different results for the same input.
         See the comment under the class definition.
 
-        Parameters
-        ----------
+        # Parameters
+
         sentence : ``List[str]``, required
             A tokenized sentence.
 
-        Returns
-        -------
+        # Returns
+
         A tensor containing the ELMo vectors.
         """
 
@@ -263,13 +263,13 @@ class ElmoEmbedder:
         Please note that ELMo has internal state and will give different results for the same input.
         See the comment under the class definition.
 
-        Parameters
-        ----------
+        # Parameters
+
         batch : ``List[List[str]]``, required
             A list of tokenized sentences.
 
-        Returns
-        -------
+        # Returns
+
             A list of tensors, each representing the ELMo vectors for the input sentence at the same index.
         """
         elmo_embeddings = []
@@ -299,15 +299,15 @@ class ElmoEmbedder:
         Please note that ELMo has internal state and will give different results for the same input.
         See the comment under the class definition.
 
-        Parameters
-        ----------
+        # Parameters
+
         sentences : ``Iterable[List[str]]``, required
             An iterable of tokenized sentences.
         batch_size : ``int``, required
             The number of sentences ELMo should process at once.
 
-        Returns
-        -------
+        # Returns
+
             A list of tensors, each representing the ELMo vectors for the input sentence at the same index.
         """
         for batch in lazy_groups_of(iter(sentences), batch_size):
@@ -327,8 +327,8 @@ class ElmoEmbedder:
         The ELMo embeddings are written out in HDF5 format, where each sentence embedding
         is saved in a dataset with the line number in the original file as the key.
 
-        Parameters
-        ----------
+        # Parameters
+
         input_file : ``IO``, required
             A file with one tokenized sentence per line.
         output_file_path : ``str``, required

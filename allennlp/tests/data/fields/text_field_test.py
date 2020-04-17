@@ -1,17 +1,14 @@
 from collections import defaultdict
 from typing import Dict, List
 
-import pytest
 import numpy
-import torch
+import pytest
 
+from allennlp.common.checks import ConfigurationError
+from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Token, Vocabulary
 from allennlp.data.fields import TextField
 from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenCharactersIndexer, TokenIndexer
-
-from allennlp.common.testing import AllenNlpTestCase
-from allennlp.common.checks import ConfigurationError
-from allennlp.common.util import pad_sequence_to_length
 
 
 class DictReturningTokenIndexer(TokenIndexer):
@@ -23,7 +20,7 @@ class DictReturningTokenIndexer(TokenIndexer):
         pass
 
     def tokens_to_indices(
-        self, tokens: List[Token], vocabulary: Vocabulary, index_name: str
+        self, tokens: List[Token], vocabulary: Vocabulary
     ) -> Dict[str, List[int]]:
         return {
             "token_ids": (
@@ -33,24 +30,6 @@ class DictReturningTokenIndexer(TokenIndexer):
             ),
             "additional_key": [22, 29],
         }
-
-    def get_padding_lengths(self, token: int) -> Dict[str, int]:
-        return {}
-
-    def as_padded_tensor(
-        self,
-        tokens: Dict[str, List[int]],
-        desired_num_tokens: Dict[str, int],
-        padding_lengths: Dict[str, int],
-    ) -> Dict[str, torch.Tensor]:
-        return {
-            key: torch.LongTensor(pad_sequence_to_length(val, desired_num_tokens[key]))
-            for key, val in tokens.items()
-        }
-
-    def get_keys(self, index_name: str) -> List[str]:
-
-        return ["token_ids", "additional_key"]
 
 
 class TestTextField(AllenNlpTestCase):
@@ -145,14 +124,14 @@ class TestTextField(AllenNlpTestCase):
         )
         field.index(vocab)
 
-        assert field._indexed_tokens["words"] == [capital_a_index, sentence_index]
+        assert field._indexed_tokens["words"]["tokens"] == [capital_a_index, sentence_index]
 
         field1 = TextField(
             [Token(t) for t in ["A", "sentence"]],
             {"characters": TokenCharactersIndexer(namespace="characters", min_padding_length=1)},
         )
         field1.index(vocab)
-        assert field1._indexed_tokens["characters"] == [
+        assert field1._indexed_tokens["characters"]["token_characters"] == [
             [capital_a_char_index],
             [s_index, e_index, n_index, t_index, e_index, n_index, c_index, e_index],
         ]
@@ -164,8 +143,8 @@ class TestTextField(AllenNlpTestCase):
             },
         )
         field2.index(vocab)
-        assert field2._indexed_tokens["words"] == [capital_a_index, sentence_index]
-        assert field2._indexed_tokens["characters"] == [
+        assert field2._indexed_tokens["words"]["tokens"] == [capital_a_index, sentence_index]
+        assert field2._indexed_tokens["characters"]["token_characters"] == [
             [capital_a_char_index],
             [s_index, e_index, n_index, t_index, e_index, n_index, c_index, e_index],
         ]
@@ -186,7 +165,7 @@ class TestTextField(AllenNlpTestCase):
         )
         field.index(self.vocab)
         padding_lengths = field.get_padding_lengths()
-        assert padding_lengths == {"words_length": 5, "num_tokens": 5}
+        assert padding_lengths == {"words___tokens": 5}
 
         field = TextField(
             [Token(t) for t in ["This", "is", "a", "sentence", "."]],
@@ -197,9 +176,8 @@ class TestTextField(AllenNlpTestCase):
         field.index(self.vocab)
         padding_lengths = field.get_padding_lengths()
         assert padding_lengths == {
-            "num_tokens": 5,
-            "characters_length": 5,
-            "num_token_characters": 8,
+            "characters___token_characters": 5,
+            "characters___num_token_characters": 8,
         }
 
         field = TextField(
@@ -212,10 +190,9 @@ class TestTextField(AllenNlpTestCase):
         field.index(self.vocab)
         padding_lengths = field.get_padding_lengths()
         assert padding_lengths == {
-            "num_tokens": 5,
-            "characters_length": 5,
-            "words_length": 5,
-            "num_token_characters": 8,
+            "characters___token_characters": 5,
+            "characters___num_token_characters": 8,
+            "words___tokens": 5,
         }
 
     def test_as_tensor_handles_words(self):
@@ -227,7 +204,7 @@ class TestTextField(AllenNlpTestCase):
         padding_lengths = field.get_padding_lengths()
         tensor_dict = field.as_tensor(padding_lengths)
         numpy.testing.assert_array_almost_equal(
-            tensor_dict["words"].detach().cpu().numpy(), numpy.array([1, 1, 1, 2, 1])
+            tensor_dict["words"]["tokens"].detach().cpu().numpy(), numpy.array([1, 1, 1, 2, 1])
         )
 
     def test_as_tensor_handles_longer_lengths(self):
@@ -237,10 +214,11 @@ class TestTextField(AllenNlpTestCase):
         )
         field.index(self.vocab)
         padding_lengths = field.get_padding_lengths()
-        padding_lengths["words_length"] = 10
+        padding_lengths["words___tokens"] = 10
         tensor_dict = field.as_tensor(padding_lengths)
         numpy.testing.assert_array_almost_equal(
-            tensor_dict["words"].detach().cpu().numpy(), numpy.array([1, 1, 1, 2, 1, 0, 0, 0, 0, 0])
+            tensor_dict["words"]["tokens"].detach().cpu().numpy(),
+            numpy.array([1, 1, 1, 2, 1, 0, 0, 0, 0, 0]),
         )
 
     def test_as_tensor_handles_characters(self):
@@ -263,7 +241,8 @@ class TestTextField(AllenNlpTestCase):
             ]
         )
         numpy.testing.assert_array_almost_equal(
-            tensor_dict["characters"].detach().cpu().numpy(), expected_character_array
+            tensor_dict["characters"]["token_characters"].detach().cpu().numpy(),
+            expected_character_array,
         )
 
     def test_as_tensor_handles_characters_if_empty_field(self):
@@ -278,7 +257,8 @@ class TestTextField(AllenNlpTestCase):
         tensor_dict = field.as_tensor(padding_lengths)
         expected_character_array = numpy.array([])
         numpy.testing.assert_array_almost_equal(
-            tensor_dict["characters"].detach().cpu().numpy(), expected_character_array
+            tensor_dict["characters"]["token_characters"].detach().cpu().numpy(),
+            expected_character_array,
         )
 
     def test_as_tensor_handles_words_and_characters_with_longer_lengths(self):
@@ -291,16 +271,16 @@ class TestTextField(AllenNlpTestCase):
         )
         field.index(self.vocab)
         padding_lengths = field.get_padding_lengths()
-        padding_lengths["words_length"] = 5
-        padding_lengths["characters_length"] = 5
-        padding_lengths["num_token_characters"] = 10
+        padding_lengths["words___tokens"] = 5
+        padding_lengths["characters___token_characters"] = 5
+        padding_lengths["characters___num_token_characters"] = 10
         tensor_dict = field.as_tensor(padding_lengths)
 
         numpy.testing.assert_array_almost_equal(
-            tensor_dict["words"].detach().cpu().numpy(), numpy.array([1, 2, 1, 0, 0])
+            tensor_dict["words"]["tokens"].detach().cpu().numpy(), numpy.array([1, 2, 1, 0, 0])
         )
         numpy.testing.assert_array_almost_equal(
-            tensor_dict["characters"].detach().cpu().numpy(),
+            tensor_dict["characters"]["token_characters"].detach().cpu().numpy(),
             numpy.array(
                 [
                     [1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -331,22 +311,21 @@ class TestTextField(AllenNlpTestCase):
         field.index(self.vocab)
         padding_lengths = field.get_padding_lengths()
         assert padding_lengths == {
-            "token_ids_length": 5,
-            "additional_key_length": 2,
-            "words_length": 2,
-            "characters_length": 2,
-            "num_token_characters": 8,
-            "num_tokens": 5,
+            "field_with_dict___token_ids": 5,
+            "field_with_dict___additional_key": 2,
+            "words___tokens": 2,
+            "characters___token_characters": 2,
+            "characters___num_token_characters": 8,
         }
-        padding_lengths["token_ids_length"] = 7
-        padding_lengths["additional_key_length"] = 3
-        padding_lengths["words_length"] = 4
-        padding_lengths["characters_length"] = 4
+        padding_lengths["field_with_dict___token_ids"] = 7
+        padding_lengths["field_with_dict___additional_key"] = 3
+        padding_lengths["words___tokens"] = 4
+        padding_lengths["characters___token_characters"] = 4
         tensors = field.as_tensor(padding_lengths)
-        assert list(tensors["token_ids"].shape) == [7]
-        assert list(tensors["additional_key"].shape) == [3]
-        assert list(tensors["words"].shape) == [4]
-        assert list(tensors["characters"].shape) == [4, 8]
+        assert list(tensors["field_with_dict"]["token_ids"].shape) == [7]
+        assert list(tensors["field_with_dict"]["additional_key"].shape) == [3]
+        assert list(tensors["words"]["tokens"].shape) == [4]
+        assert list(tensors["characters"]["token_characters"].shape) == [4, 8]
 
     def test_token_padding_lengths_are_computed_correctly(self):
         field = TextField(
@@ -362,17 +341,16 @@ class TestTextField(AllenNlpTestCase):
         field.index(self.vocab)
         padding_lengths = field.get_padding_lengths()
         assert padding_lengths == {
-            "token_ids_length": 5,
-            "additional_key_length": 3,
-            "words_length": 3,
-            "characters_length": 3,
-            "num_token_characters": 8,
-            "num_tokens": 5,
+            "field_with_dict___token_ids": 5,
+            "field_with_dict___additional_key": 3,
+            "words___tokens": 3,
+            "characters___token_characters": 3,
+            "characters___num_token_characters": 8,
         }
         tensors = field.as_tensor(padding_lengths)
-        assert tensors["additional_key"].tolist()[-1] == 0
-        assert tensors["words"].tolist()[-1] == 0
-        assert tensors["characters"].tolist()[-1] == [0] * 8
+        assert tensors["field_with_dict"]["additional_key"].tolist()[-1] == 0
+        assert tensors["words"]["tokens"].tolist()[-1] == 0
+        assert tensors["characters"]["token_characters"].tolist()[-1] == [0] * 8
 
     def test_sequence_methods(self):
         field = TextField([Token(t) for t in ["This", "is", "a", "sentence", "."]], {})

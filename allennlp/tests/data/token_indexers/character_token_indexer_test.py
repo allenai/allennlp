@@ -26,12 +26,11 @@ class CharacterTokenIndexerTest(AllenNlpTestCase):
 
     def test_as_array_produces_token_sequence(self):
         indexer = TokenCharactersIndexer("characters", min_padding_length=1)
-        padded_tokens = indexer.as_padded_tensor(
-            {"k": [[1, 2, 3, 4, 5], [1, 2, 3], [1]]},
-            desired_num_tokens={"k": 4},
-            padding_lengths={"num_token_characters": 10},
+        padded_tokens = indexer.as_padded_tensor_dict(
+            {"token_characters": [[1, 2, 3, 4, 5], [1, 2, 3], [1]]},
+            padding_lengths={"token_characters": 4, "num_token_characters": 10},
         )
-        assert padded_tokens["k"].tolist() == [
+        assert padded_tokens["token_characters"].tolist() == [
             [1, 2, 3, 4, 5, 0, 0, 0, 0, 0],
             [1, 2, 3, 0, 0, 0, 0, 0, 0, 0],
             [1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -48,8 +47,8 @@ class CharacterTokenIndexerTest(AllenNlpTestCase):
         vocab.add_token_to_namespace("c", namespace="characters")
 
         indexer = TokenCharactersIndexer("characters", min_padding_length=1)
-        indices = indexer.tokens_to_indices([Token("sentential")], vocab, "char")
-        assert indices == {"char": [[3, 4, 5, 6, 4, 5, 6, 1, 1, 1]]}
+        indices = indexer.tokens_to_indices([Token("sentential")], vocab)
+        assert indices == {"token_characters": [[3, 4, 5, 6, 4, 5, 6, 1, 1, 1]]}
 
     def test_start_and_end_tokens(self):
         vocab = Vocabulary()
@@ -66,8 +65,10 @@ class CharacterTokenIndexerTest(AllenNlpTestCase):
         indexer = TokenCharactersIndexer(
             "characters", start_tokens=["<s>"], end_tokens=["</s>"], min_padding_length=1
         )
-        indices = indexer.tokens_to_indices([Token("sentential")], vocab, "char")
-        assert indices == {"char": [[8, 3, 9], [3, 4, 5, 6, 4, 5, 6, 1, 1, 1], [8, 10, 3, 9]]}
+        indices = indexer.tokens_to_indices([Token("sentential")], vocab)
+        assert indices == {
+            "token_characters": [[8, 3, 9], [3, 4, 5, 6, 4, 5, 6, 1, 1, 1], [8, 10, 3, 9]]
+        }
 
     def test_min_padding_length(self):
         sentence = "AllenNLP is awesome ."
@@ -89,17 +90,9 @@ class CharacterTokenIndexerTest(AllenNlpTestCase):
         vocab.add_token_to_namespace(".", namespace="characters")  # 15
 
         indexer = TokenCharactersIndexer("characters", min_padding_length=10)
-        indices = indexer.tokens_to_indices(tokens, vocab, "char")
-        key_padding_lengths = "num_token_characters"
-        value_padding_lengths = 0
-        for token in indices["char"]:
-            item = indexer.get_padding_lengths(token)
-            value = item.values()
-            value_padding_lengths = max(value_padding_lengths, max(value))
-        padded = indexer.as_padded_tensor(
-            indices, {"char": len(indices["char"])}, {key_padding_lengths: value_padding_lengths}
-        )
-        assert padded["char"].tolist() == [
+        indices = indexer.tokens_to_indices(tokens, vocab)
+        padded = indexer.as_padded_tensor_dict(indices, indexer.get_padding_lengths(indices))
+        assert padded["token_characters"].tolist() == [
             [2, 3, 3, 4, 5, 6, 7, 8, 0, 0],
             [9, 10, 0, 0, 0, 0, 0, 0, 0, 0],
             [11, 12, 4, 10, 13, 14, 4, 0, 0, 0],
