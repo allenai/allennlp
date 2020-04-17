@@ -10,6 +10,16 @@ MD_DOCS_CONF_SRC = mkdocs-skeleton.yml
 MD_DOCS_TGT = site/
 MD_DOCS_EXTRAS = $(addprefix $(MD_DOCS_ROOT),README.md LICENSE.md ROADMAP.md CONTRIBUTING.md)
 
+ifeq ($(shell uname),Darwin)
+	ifeq ($(shell which gsed),)
+		$(error Please install GNU sed with 'brew install gnu-sed')
+	else
+		SED = gsed
+	endif
+else
+	SED = sed
+endif
+
 #
 # Testing helpers.
 #
@@ -38,16 +48,6 @@ test-with-cov :
 #
 # Documention helpelrs.
 #
-
-ifeq ($(shell uname),Darwin)
-	ifeq ($(shell which gsed),)
-		$(error Please install GNU sed with 'brew install gnu-sed')
-	else
-		SED = gsed
-	endif
-else
-	SED = sed
-endif
 
 .PHONY : build-docs
 build-docs : $(MD_DOCS_CONF) $(MD_DOCS) $(MD_DOCS_EXTRAS)
