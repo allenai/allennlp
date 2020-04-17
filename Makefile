@@ -10,6 +10,35 @@ MD_DOCS_CONF_SRC = mkdocs-skeleton.yml
 MD_DOCS_TGT = site/
 MD_DOCS_EXTRAS = $(addprefix $(MD_DOCS_ROOT),README.md LICENSE.md ROADMAP.md CONTRIBUTING.md)
 
+#
+# Testing helpers.
+#
+
+.PHONY : lint
+lint :
+	flake8 -v
+	black -v --check .
+
+.PHONY : typecheck
+typecheck :
+	mypy allennlp \
+		--ignore-missing-imports \
+		--no-strict-optional \
+		--no-site-packages \
+		--cache-dir=/dev/null
+
+.PHONY : test
+test :
+	pytest -v --color=yes --durations=40 -k "not sniff_test"
+
+.PHONY : test-with-cov
+test-with-cov :
+	pytest -v --color=yes --cov=allennlp/ --cov-report=xml --durations=40 -k "not sniff_test"
+
+#
+# Documention helpelrs.
+#
+
 ifeq ($(shell uname),Darwin)
 	ifeq ($(shell which gsed),)
 		$(error Please install GNU sed with 'brew install gnu-sed')

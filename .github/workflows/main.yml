@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+    - master
+  push:
+    branches:
+    - master
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ['3.6', '3.7']
+
+    steps:
+    - uses: actions/checkout@v1
+
+    - name: Setup Python
+      uses: actions/setup-python@v1
+      with:
+        python-version: ${{ matrix.python }}
+
+    - uses: actions/cache@v1
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ matrix.python }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-${{ matrix.python }}
+
+    - name: Install requirements
+      run: |
+        pip install -e .
+        pip install --upgrade -r dev-requirements.txt
+
+    - name: Show pip freeze
+      run: |
+        pip freeze
+
+    - name: Lint
+      run: |
+        make lint
+
+    - name: Type check
+      run: |
+        make typecheck
+
+    - name: Run tests
+      run: |
+        make test-with-cov
+
+    # TODO: remove codecov report publishing from TeamCity build and then uncomment this:
+    # - name: Upload coverage to Codecov
+    #   if: matrix.python == '3.7'
+    #   uses: codecov/codecov-action@v1.0.2
+    #   with:
+    #     token: ${{ secrets.CODECOV_TOKEN }}
