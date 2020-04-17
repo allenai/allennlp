@@ -39,11 +39,11 @@ typecheck :
 
 .PHONY : test
 test :
-	pytest -v --color=yes --durations=40 -k "not sniff_test" $(SRC)
+	python -m pytest -v --color=yes --durations=40 -k "not sniff_test" $(SRC)
 
 .PHONY : test-with-cov
 test-with-cov :
-	pytest -v --color=yes --cov=allennlp/ --cov-report=xml --durations=40 -k "not sniff_test" $(SRC)
+	python -m pytest -v --color=yes --cov=allennlp/ --cov-report=xml --durations=40 -k "not sniff_test" $(SRC)
 
 #
 # Documention helpelrs.
