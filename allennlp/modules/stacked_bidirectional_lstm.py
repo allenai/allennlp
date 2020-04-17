@@ -103,9 +103,9 @@ class StackedBidirectionalLstm(torch.nn.Module):
 
         # Returns
 
-        output_sequence : PackedSequence
+        output_sequence : `PackedSequence`
             The encoded sequence of shape (batch_size, sequence_length, hidden_size * 2)
-        final_states: torch.Tensor
+        final_states: `torch.Tensor`
             The per-layer final (state, memory) states of the LSTM, each with shape
             (num_layers * 2, batch_size, hidden_size * 2).
         """
