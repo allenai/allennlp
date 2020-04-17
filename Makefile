@@ -26,12 +26,12 @@ endif
 
 .PHONY : lint
 lint :
-	flake8 -v
-	black -v --check .
+	flake8 -v ./scripts $(SRC)
+	black -v --check ./scripts $(SRC)
 
 .PHONY : typecheck
 typecheck :
-	mypy allennlp \
+	mypy $(SRC) \
 		--ignore-missing-imports \
 		--no-strict-optional \
 		--no-site-packages \
@@ -39,11 +39,11 @@ typecheck :
 
 .PHONY : test
 test :
-	pytest -v --color=yes --durations=40 -k "not sniff_test"
+	pytest -v --color=yes --durations=40 -k "not sniff_test" $(SRC)
 
 .PHONY : test-with-cov
 test-with-cov :
-	pytest -v --color=yes --cov=allennlp/ --cov-report=xml --durations=40 -k "not sniff_test"
+	pytest -v --color=yes --cov=allennlp/ --cov-report=xml --durations=40 -k "not sniff_test" $(SRC)
 
 #
 # Documention helpelrs.
