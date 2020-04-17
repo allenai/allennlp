@@ -39,6 +39,10 @@ jobs:
       run: |
         pip freeze
 
+    - name: Check for large files
+      run: |
+        ./scripts/check_large_files.sh
+
     - name: Lint
       run: |
         make lint
