@@ -41,7 +41,7 @@ jobs:
 
     - name: Check for large files
       run: |
-        ./scripts/check_large_files.sh
+        ./scripts/check_large_files.sh 2
 
     - name: Lint
       run: |
