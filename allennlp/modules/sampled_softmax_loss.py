@@ -47,12 +47,14 @@ class SampledSoftmaxLoss(torch.nn.Module):
     """
     Based on the default log_uniform_candidate_sampler in tensorflow.
 
-    NOTE: num_words DOES NOT include padding id.
+    !!! NOTE
+        num_words DOES NOT include padding id.
 
-    NOTE: In all cases except (tie_embeddings=True and use_character_inputs=False)
-    the weights are dimensioned as num_words and do not include an entry for the padding (0) id.
-    For the (tie_embeddings=True and use_character_inputs=False) case,
-    then the embeddings DO include the extra 0 padding, to be consistent with the word embedding layer.
+    !!! NOTE
+        In all cases except (tie_embeddings=True and use_character_inputs=False)
+        the weights are dimensioned as num_words and do not include an entry for the padding (0) id.
+        For the (tie_embeddings=True and use_character_inputs=False) case,
+        then the embeddings DO include the extra 0 padding, to be consistent with the word embedding layer.
 
     # Parameters
 

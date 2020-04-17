@@ -150,12 +150,13 @@ class Elmo(torch.nn.Module, FromParams):
 
         # Returns
 
-        Dict with keys:
-        `'elmo_representations'` : `List[torch.Tensor]`
-            A `num_output_representations` list of ELMo representations for the input sequence.
-            Each representation is shape `(batch_size, timesteps, embedding_dim)`
-        `'mask'`:  `torch.BoolTensor`
-            Shape `(batch_size, timesteps)` long tensor with sequence mask.
+        `Dict[str, Union[torch.Tensor, List[torch.Tensor]]]`
+            A dict with the following keys:
+            - `'elmo_representations'` (`List[torch.Tensor]`) :
+              A `num_output_representations` list of ELMo representations for the input sequence.
+              Each representation is shape `(batch_size, timesteps, embedding_dim)`
+            - `'mask'` (`torch.BoolTensor`) :
+              Shape `(batch_size, timesteps)` long tensor with sequence mask.
         """
         # reshape the input if needed
         original_shape = inputs.size()
