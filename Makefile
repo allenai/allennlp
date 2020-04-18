@@ -43,7 +43,7 @@ test :
 
 .PHONY : test-with-cov
 test-with-cov :
-	pytest --color=yes -rf --cov=$(SRC) --durations=40 -k "not sniff_test" $(SRC)
+	pytest --color=yes -rf --cov-config=.coveragerc --cov=$(SRC) --durations=40 -k "not sniff_test" $(SRC)
 
 #
 # Documention helpelrs.
