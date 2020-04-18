@@ -102,4 +102,4 @@ jobs:
 
     - name: Clean up
       run: |
-        pip uninstall allennlp_models
+        pip uninstall --yes allennlp_models
