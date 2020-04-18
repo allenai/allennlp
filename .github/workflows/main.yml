@@ -38,7 +38,6 @@ jobs:
     - name: Debug info
       run: |
         echo "Site packages:"
-        python -c 'import sysconfig; print(sysconfig.get_paths()["purelib"])'
         pip freeze
 
     - name: Lint
