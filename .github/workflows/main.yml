@@ -25,10 +25,10 @@ jobs:
 
     - uses: actions/cache@v1
       with:
-        path: ${{ env.pythonLocation }}/lib/python${{ matrix.python }}/site-packages
-        key: ${{ runner.os }}-deps-${{ matrix.python }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
+        path: ${{ env.pythonLocation }}
+        key: ${{ runner.os }}-pydeps-${{ matrix.python }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
         restore-keys: |
-          ${{ runner.os }}-deps-${{ matrix.python }}
+          ${{ runner.os }}-pydeps-${{ matrix.python }}
 
     - name: Install requirements
       run: |
