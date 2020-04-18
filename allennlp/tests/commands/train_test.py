@@ -1,10 +1,11 @@
 import argparse
 import json
+import math
 import os
 import re
 import shutil
 from collections import OrderedDict
-from typing import Iterable
+from typing import Iterable, Optional, List, Dict, Any
 
 import pytest
 import torch
@@ -14,8 +15,14 @@ from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import DatasetReader, Instance, Vocabulary
+from allennlp.data.dataloader import TensorDict
 from allennlp.models import load_archive, Model
 from allennlp.models.archival import CONFIG_NAME
+from allennlp.training import BatchCallback, GradientDescentTrainer
+from allennlp.training.learning_rate_schedulers import (
+    ExponentialLearningRateScheduler,
+    LearningRateScheduler,
+)
 
 SEQUENCE_TAGGING_DATA_PATH = str(AllenNlpTestCase.FIXTURES_ROOT / "data" / "sequence_tagging.tsv")
 SEQUENCE_TAGGING_SHARDS_PATH = str(AllenNlpTestCase.FIXTURES_ROOT / "data" / "shards" / "*")
@@ -120,7 +127,6 @@ class TestTrain(AllenNlpTestCase):
 
     @pytest.mark.skipif(torch.cuda.device_count() < 2, reason="Need multiple GPUs.")
     def test_train_model_distributed_with_sharded_reader(self):
-
         params = lambda: Params(
             {
                 "model": {
@@ -303,6 +309,81 @@ class TestTrain(AllenNlpTestCase):
         )
 
         train_model(params, serialization_dir=os.path.join(self.TEST_DIR, "train_with_test_set"))
+
+    def test_train_number_of_steps(self):
+        number_of_epochs = 2
+
+        last_num_steps_per_epoch: Optional[int] = None
+
+        @LearningRateScheduler.register("mock")
+        class MockLRScheduler(ExponentialLearningRateScheduler):
+            def __init__(self, optimizer: torch.optim.Optimizer, num_steps_per_epoch: int):
+                super().__init__(optimizer)
+                nonlocal last_num_steps_per_epoch
+                last_num_steps_per_epoch = num_steps_per_epoch
+
+        batch_callback_counter = 0
+
+        @BatchCallback.register("counter")
+        class CounterBatchCallback(BatchCallback):
+            def __call__(
+                self,
+                trainer: GradientDescentTrainer,
+                batch_inputs: List[List[TensorDict]],
+                batch_outputs: List[Dict[str, Any]],
+                epoch: int,
+                batch_number: int,
+                is_training: bool,
+            ) -> None:
+                nonlocal batch_callback_counter
+                if is_training:
+                    batch_callback_counter += 1
+
+        params = Params(
+            {
+                "model": {
+                    "type": "simple_tagger",
+                    "text_field_embedder": {
+                        "token_embedders": {"tokens": {"type": "embedding", "embedding_dim": 5}}
+                    },
+                    "encoder": {"type": "lstm", "input_size": 5, "hidden_size": 7, "num_layers": 2},
+                },
+                "dataset_reader": {"type": "sequence_tagging"},
+                "train_data_path": SEQUENCE_TAGGING_DATA_PATH,
+                "test_data_path": SEQUENCE_TAGGING_DATA_PATH,
+                "validation_data_path": SEQUENCE_TAGGING_DATA_PATH,
+                "evaluate_on_test": True,
+                "data_loader": {"batch_size": 2},
+                "trainer": {
+                    "num_epochs": number_of_epochs,
+                    "optimizer": "adam",
+                    "learning_rate_scheduler": {"type": "mock"},
+                    "batch_callbacks": ["counter"],
+                },
+            }
+        )
+        train_model(
+            params.duplicate(), serialization_dir=os.path.join(self.TEST_DIR, "train_normal")
+        )
+        assert batch_callback_counter == last_num_steps_per_epoch * number_of_epochs
+        batch_callback_counter = 0
+        normal_steps_per_epoch = last_num_steps_per_epoch
+
+        original_batch_size = params["data_loader"]["batch_size"]
+        params["data_loader"]["batch_size"] = 1
+        train_model(
+            params.duplicate(), serialization_dir=os.path.join(self.TEST_DIR, "train_with_bs1")
+        )
+        assert batch_callback_counter == last_num_steps_per_epoch * number_of_epochs
+        batch_callback_counter = 0
+        assert normal_steps_per_epoch == math.ceil(last_num_steps_per_epoch / original_batch_size)
+
+        params["data_loader"]["batch_size"] = original_batch_size
+        params["trainer"]["num_gradient_accumulation_steps"] = 3
+        train_model(params, serialization_dir=os.path.join(self.TEST_DIR, "train_with_ga"))
+        assert batch_callback_counter == last_num_steps_per_epoch * number_of_epochs
+        batch_callback_counter = 0
+        assert math.ceil(normal_steps_per_epoch / 3) == last_num_steps_per_epoch
 
     def test_train_args(self):
         parser = argparse.ArgumentParser(description="Testing")
