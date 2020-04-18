@@ -102,4 +102,39 @@ jobs:
 
     - name: Clean up
       run: |
+        # Don't want this in the cache since the other workflow uses same cache.
         pip uninstall --yes allennlp_models
+
+  docs:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ['3.7']  # no need to build against multiple versions.
+
+    steps:
+    - uses: actions/checkout@v1
+
+    - name: Setup Python
+      uses: actions/setup-python@v1
+      with:
+        python-version: ${{ matrix.python }}
+
+    - uses: actions/cache@v1
+      with:
+        path: ${{ env.pythonLocation }}
+        key: ${{ runner.os }}-pydeps-${{ matrix.python }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pydeps-${{ matrix.python }}
+
+    - name: Install requirements
+      run: |
+        pip install -e .
+        pip install --upgrade -r dev-requirements.txt
+
+    - name: Debug info
+      run: |
+        pip freeze
+
+    - name: Build docs
+      run: |
+        ./scripts/build_docs.sh
