@@ -25,47 +25,37 @@ jobs:
 
     - uses: actions/cache@v1
       with:
-        path: .venv
-        key: ${{ runner.os }}-deps-${{ matrix.python }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ matrix.python }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
         restore-keys: |
-          ${{ runner.os }}-deps-${{ matrix.python }}
+          ${{ runner.os }}-pip-${{ matrix.python }}
 
     - name: Install requirements
       run: |
-        python -m venv .venv
-        . .venv/bin/activate
         pip install -e .
         pip install --upgrade -r dev-requirements.txt
 
-    - name: Show pip freeze
+    - name: Debug info
       run: |
-        . .venv/bin/activate
+        echo "Site packages:"
+        python -c 'import sysconfig; print(sysconfig.get_paths()["purelib"])'
         pip freeze
-
-    - name: Check for large files
-      run: |
-        ./scripts/check_large_files.sh 2
 
     - name: Lint
       run: |
-        . .venv/bin/activate
         make lint
 
     - name: Type check
       run: |
-        . .venv/bin/activate
         make typecheck
 
     - name: Run tests
       run: |
-        . .venv/bin/activate
-        PATH=.venv/bin:$PATH make test-with-cov
+        make test-with-cov
 
     # TODO: remove codecov report publishing from TeamCity build and then uncomment this:
     # - name: Upload coverage to Codecov
     #   if: matrix.python == '3.7'
-    #   run: |
-    #     . .venv/bin/activate
-    #     codecov
-    #   env:
-    #     CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+    #   uses: codecov/codecov-action@v1.0.2
+    #   with:
+    #     token: ${{ secrets.CODECOV_TOKEN }}
