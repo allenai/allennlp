@@ -18,28 +18,24 @@ jobs:
     steps:
     - uses: actions/checkout@v1
 
-    - &setup_python
-      name: Setup Python
+    - name: Setup Python
       uses: actions/setup-python@v1
       with:
         python-version: ${{ matrix.python }}
 
-    - &restore_cache
-      uses: actions/cache@v1
+    - uses: actions/cache@v1
       with:
         path: ${{ env.pythonLocation }}
         key: ${{ runner.os }}-pydeps-${{ matrix.python }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
         restore-keys: |
           ${{ runner.os }}-pydeps-${{ matrix.python }}
 
-    - &install_deps
-      name: Install requirements
+    - name: Install requirements
       run: |
         pip install -e .
         pip install --upgrade -r dev-requirements.txt
 
-    - &debug
-      name: Debug info
+    - name: Debug info
       run: |
         pip freeze
 
@@ -72,10 +68,26 @@ jobs:
     steps:
     - uses: actions/checkout@v1
 
-    - *setup_python
-    - *restore_cache
-    - *install_deps
-    - *debug
+    - name: Setup Python
+      uses: actions/setup-python@v1
+      with:
+        python-version: ${{ matrix.python }}
+
+    - uses: actions/cache@v1
+      with:
+        path: ${{ env.pythonLocation }}
+        key: ${{ runner.os }}-pydeps-${{ matrix.python }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pydeps-${{ matrix.python }}
+
+    - name: Install requirements
+      run: |
+        pip install -e .
+        pip install --upgrade -r dev-requirements.txt
+
+    - name: Debug info
+      run: |
+        pip freeze
 
     - name: Pull and install models repo
       env:
