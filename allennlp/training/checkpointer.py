@@ -193,7 +193,7 @@ class Checkpointer(Registrable):
 
         # Returns
 
-        states: Tuple[Dict[str, Any], Dict[str, Any]]
+        states : `Tuple[Dict[str, Any], Dict[str, Any]]`
             The model state and the training state.
         """
         latest_checkpoint = self.find_latest_checkpoint()

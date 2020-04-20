@@ -107,14 +107,14 @@ class BasicClassifier(Model):
 
         An output dictionary consisting of:
 
-        logits : torch.FloatTensor
-            A tensor of shape `(batch_size, num_labels)` representing
-            unnormalized log probabilities of the label.
-        probs : torch.FloatTensor
-            A tensor of shape `(batch_size, num_labels)` representing
-            probabilities of the label.
-        loss : torch.FloatTensor, optional
-            A scalar loss to be optimised.
+            - `logits` (`torch.FloatTensor`) :
+                A tensor of shape `(batch_size, num_labels)` representing
+                unnormalized log probabilities of the label.
+            - `probs` (`torch.FloatTensor`) :
+                A tensor of shape `(batch_size, num_labels)` representing
+                probabilities of the label.
+            - `loss` : (`torch.FloatTensor`, optional) :
+                A scalar loss to be optimised.
         """
         embedded_text = self._text_field_embedder(tokens)
         mask = get_text_field_mask(tokens)

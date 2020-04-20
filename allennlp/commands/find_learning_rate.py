@@ -226,7 +226,7 @@ def find_learning_rate_model(
     trainer_choice = trainer_params.pop("type", "gradient_descent")
     if trainer_choice != "gradient_descent":
         raise ConfigurationError(
-            "currently find-learning-rate only works with the GradintDescentTrainer"
+            "currently find-learning-rate only works with the GradientDescentTrainer"
         )
     trainer: GradientDescentTrainer = Trainer.from_params(  # type: ignore
         model=model,
