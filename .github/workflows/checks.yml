@@ -1,4 +1,8 @@
 name: Checks
+# This is the main workflow for checking pull requests. It consists of two jobs:
+# one for the core library and one for compatability with the models library.
+#
+# Both of the jobs are ran on Python 3.6 and Python 3.7 in parallel.
 
 on:
   pull_request:

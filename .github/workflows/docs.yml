@@ -1,4 +1,11 @@
 name: Docs
+# This workflow has one job, literally: building and deploying the API documentation
+# for every release and master commit.
+#
+# For now the docs are deployed by just committing all of the generated files to the
+# allennlp-docs repo. For a master commit the files are put in the 'master'
+# folder in allennlp-docs, and for a release they are put in a folder with the release
+# tag name (eg. 'v1.0.0').
 
 on:
   push:

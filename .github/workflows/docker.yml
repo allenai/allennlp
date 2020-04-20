@@ -1,4 +1,12 @@
 name: Docker
+# This workflow is in charge of building the AllenNLP Docker images and pushing them
+# to Docker Hub.
+#
+# For master commits, an image called 'allennlp/commit:COMMIT_SHA' is built with
+# a pip installation of the library from the corresponding commit.
+#
+# For releases, an image called 'allennlp/allennlp:RELEASE_TAG' is build with
+# a pip installation of the corresponding PyPI release.
 
 on:
   push:

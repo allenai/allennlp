@@ -46,7 +46,7 @@ test-with-cov :
 	pytest --color=yes -rf --cov-config=.coveragerc --cov=$(SRC) --durations=40 -k "not sniff_test" $(SRC)
 
 #
-# Documention helpelrs.
+# Documention helpers.
 #
 
 .PHONY : build-all-api-docs
