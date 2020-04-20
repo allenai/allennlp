@@ -169,6 +169,6 @@ jobs:
         dockerfile: Dockerfile.pip
         tags: ${{ github.event.pull_request.head.sha }}
         always_pull: true
-        build_args: SOURCE_COMMIT=${{ github.sha }}
+        build_args: SOURCE_COMMIT=${{ github.event.pull_request.head.sha }}
         # Only push on master branch of "allenai/allennlp".
         push: ${{ github.repository == 'allenai/allennlp' && github.ref == 'master' }}
