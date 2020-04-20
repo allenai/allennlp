@@ -444,7 +444,7 @@ class InitializerApplicator(FromParams):
         A list mapping parameter regexes to initializers.  We will check each parameter against
         each regex in turn, and apply the initializer paired with the first matching regex, if
         any. If "prevent" is assigned to any regex, then it will override and prevent the matched
-        parameters to be initialzed.
+        parameters to be initialized.
 
     prevent_regexes: `List[str]`, optional (default=None)
         Any parameter name matching one of these regexes will not be initialized, regardless of
