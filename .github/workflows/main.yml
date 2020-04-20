@@ -32,6 +32,7 @@ jobs:
 
     - name: Install requirements
       run: |
+        pip install --upgrade pip setuptools wheel
         pip install -e .
         pip install --upgrade -r dev-requirements.txt
 
@@ -86,6 +87,7 @@ jobs:
 
     - name: Install requirements
       run: |
+        pip install --upgrade pip setuptools wheel
         pip install -e .
         pip install --upgrade -r dev-requirements.txt
 
@@ -132,6 +134,7 @@ jobs:
 
     - name: Install requirements
       run: |
+        pip install --upgrade pip setuptools wheel
         pip install -e .
         pip install --upgrade -r dev-requirements.txt
 
