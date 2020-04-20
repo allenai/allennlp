@@ -4,10 +4,6 @@ on:
   push:
     branches:
     - master
-  # TODO: remove 'pull_request' trigger
-  pull_request:
-    branches:
-    - master
   release:
     types: [published]
 
@@ -21,11 +17,12 @@ jobs:
     - name: Setup environment
       run: |
         if [[ $GITHUB_EVENT_NAME == 'release' ]]; then
-            echo "Preparing environment for release $GITHUB_REF";
+            TAG=${GITHUB_REF/refs\/tags\//};
+            VERSION=$(echo $TAG | sed 's/^v//g');
+            echo "Preparing environment for release $TAG";
             echo "::set-env name=DOCKER_REPO::allennlp/allennlp";
-            echo "::set-env name=DOCKER_TAG::$GITHUB_REF";
+            echo "::set-env name=DOCKER_TAG::$TAG";
             echo "::set-env name=BUILD_ARG_NAME::VERSION";
-            VERSION=$(echo $GITHUB_REF | sed 's/^v//g');
             echo "::set-env name=BUILD_ARG_VALUE::$VERSION";
         else
             echo "Preparing environment for commit $GITHUB_SHA";
