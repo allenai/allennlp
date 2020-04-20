@@ -159,8 +159,6 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-      with:
-        ref
 
     - name: Build and push
       uses: docker/build-push-action@v1
