@@ -145,3 +145,10 @@ jobs:
     - name: Build docs
       run: |
         ./scripts/build_docs.sh
+
+    - name: Deploy docs
+      # Only run this step on master branch of "allenai/allennlp".
+      if: github.repository == 'allenai/allennlp' && github.ref == 'master'
+      run: |
+        # TODO:
+        echo "Deploying docs"
