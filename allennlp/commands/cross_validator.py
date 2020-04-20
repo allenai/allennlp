@@ -10,11 +10,11 @@ from allennlp.data import Instance
 
 
 def default_get_labels(instances: Sequence[Instance]) -> Optional[Sequence[Any]]:
-    return [instance["label"] for instance in instances] if "label" in instances[0] else None
+    return [instance["label"].label for instance in instances] if "label" in instances[0] else None
 
 
 def default_get_groups(instances: Sequence[Instance]) -> Optional[Sequence[Any]]:
-    return [instance["group"] for instance in instances] if "group" in instances[0] else None
+    return [instance["group"].array for instance in instances] if "group" in instances[0] else None
 
 
 class CrossValidator(Registrable, BaseCrossValidator):
