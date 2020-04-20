@@ -13,32 +13,32 @@ class AllenNlpLogger(logging.Logger):
 
     def __init__(self, name):
         super().__init__(name)
-        self.msgs = set()
+        self._seen_msgs = set()
 
     def debug_once(self, msg, *args, **kwargs):
-        if msg not in self.msgs:
+        if msg not in self._seen_msgs:
             self.debug(msg, *args, **kwargs)
-        self.msgs.add(msg)
+            self._seen_msgs.add(msg)
 
     def info_once(self, msg, *args, **kwargs):
-        if msg not in self.msgs:
+        if msg not in self._seen_msgs:
             self.info(msg, *args, **kwargs)
-        self.msgs.add(msg)
+            self._seen_msgs.add(msg)
 
     def warning_once(self, msg, *args, **kwargs):
-        if msg not in self.msgs:
+        if msg not in self._seen_msgs:
             self.warning(msg, *args, **kwargs)
-        self.msgs.add(msg)
+            self._seen_msgs.add(msg)
 
     def error_once(self, msg, *args, **kwargs):
-        if msg not in self.msgs:
+        if msg not in self._seen_msgs:
             self.error(msg, *args, **kwargs)
-        self.msgs.add(msg)
+            self._seen_msgs.add(msg)
 
     def critical_once(self, msg, *args, **kwargs):
-        if msg not in self.msgs:
+        if msg not in self._seen_msgs:
             self.critical(msg, *args, **kwargs)
-        self.msgs.add(msg)
+            self._seen_msgs.add(msg)
 
 
 logging.setLoggerClass(AllenNlpLogger)
