@@ -64,36 +64,21 @@ class PretrainedTransformerIndexer(TokenIndexer):
 
     def _add_encoding_to_vocabulary_if_needed(self, vocab: Vocabulary) -> None:
         """
-        Copies tokens from ```transformers``` model to the specified namespace.
-        Transformers vocab is taken from the <vocab>/<encoder> keys of the tokenizer object.
+        Copies tokens from ```transformers``` model's vocab to the specified namespace.
         """
         if self._added_to_vocabulary:
             return
 
-        # Find the key under which the vocab is hiding.
-        for vocab_field_name in ["vocab", "encoder", "sp_model"]:
-            if hasattr(self._tokenizer, vocab_field_name):
-                break
-        else:
-            vocab_field_name = None
-
-        if vocab_field_name is not None:
-            pretrained_vocab = getattr(self._tokenizer, vocab_field_name)
-            if vocab_field_name == "sp_model":
-                for idx in range(len(pretrained_vocab)):
-                    word = pretrained_vocab.id_to_piece(idx)
-                    vocab._token_to_index[self._namespace][word] = idx
-                    vocab._index_to_token[self._namespace][idx] = word
-            else:
-                for word, idx in pretrained_vocab.items():
-                    vocab._token_to_index[self._namespace][word] = idx
-                    vocab._index_to_token[self._namespace][idx] = word
-        else:
-            logger.warning(
-                """Wasn't able to fetch vocabulary from pretrained transformers lib.
-                Neither <vocab> nor <encoder> are the valid fields for vocab.
-                Your tokens will still be correctly indexed, but vocabulary file will not be saved."""
+        try:
+            vocab_items = self._tokenizer.get_vocab().items()
+        except NotImplementedError:
+            vocab_items = (
+                (self._tokenizer.convert_ids_to_tokens(idx), idx)
+                for idx in range(self._tokenizer.vocab_size)
             )
+        for word, idx in vocab_items:
+            vocab._token_to_index[self._namespace][word] = idx
+            vocab._index_to_token[self._namespace][idx] = word
 
         self._added_to_vocabulary = True
 
@@ -108,9 +93,11 @@ class PretrainedTransformerIndexer(TokenIndexer):
 
         indices, type_ids = self._extract_token_and_type_ids(tokens)
         # The mask has 1 for real tokens and 0 for padding tokens. Only real tokens are attended to.
-        output: IndexedTokenList = {"token_ids": indices, "mask": [True] * len(indices)}
-        if type_ids is not None:
-            output["type_ids"] = type_ids
+        output: IndexedTokenList = {
+            "token_ids": indices,
+            "mask": [True] * len(indices),
+            "type_ids": type_ids,
+        }
 
         return self._postprocess_output(output)
 
@@ -138,7 +125,7 @@ class PretrainedTransformerIndexer(TokenIndexer):
             if type_ids is not None and getattr(token, "type_id", None) is not None:
                 type_ids.append(token.type_id)
             else:
-                type_ids = None
+                type_ids.append(0)
 
         return indices, type_ids
 
@@ -193,24 +180,27 @@ class PretrainedTransformerIndexer(TokenIndexer):
     def as_padded_tensor_dict(
         self, tokens: IndexedTokenList, padding_lengths: Dict[str, int]
     ) -> Dict[str, torch.Tensor]:
-        # Different transformers use different padding values for tokens, but for mask and type id, the padding
-        # value is always False/0.
         tensor_dict = {}
         for key, val in tokens.items():
-            if val and isinstance(val[0], bool):
-                tensor = torch.BoolTensor(
-                    pad_sequence_to_length(val, padding_lengths[key], default_value=lambda: False)
-                )
+            if key == "type_ids":
+                padding_value = 0
+                mktensor = torch.LongTensor
+            elif key == "mask":
+                padding_value = False
+                mktensor = torch.BoolTensor
+            elif len(val) > 0 and isinstance(val[0], bool):
+                padding_value = False
+                mktensor = torch.BoolTensor
             else:
-                tensor = torch.LongTensor(
-                    pad_sequence_to_length(
-                        val,
-                        padding_lengths[key],
-                        default_value=lambda: 0
-                        if key == "type_ids"
-                        else self._tokenizer.pad_token_id,
-                    ),
+                padding_value = self._tokenizer.pad_token_id
+                mktensor = torch.LongTensor
+
+            tensor = mktensor(
+                pad_sequence_to_length(
+                    val, padding_lengths[key], default_value=lambda: padding_value
                 )
+            )
+
             tensor_dict[key] = tensor
         return tensor_dict
 

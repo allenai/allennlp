@@ -52,24 +52,35 @@ class PretrainedTransformerTokenizer(Tokenizer):
         - 'do_not_truncate': Do not truncate (raise an error if the input sequence is longer than max_length)
     calculate_character_offsets : `bool`, optional (default=False)
         Attempts to reconstruct character offsets for the instances of Token that this tokenizer produces.
-    tokenizer_kwargs: 'Dict[str, Any]'
-        Dictionary with additional arguments for `AutoTokenizer.from_pretrained`.
+    tokenizer_kwargs: `Dict[str, Any]`
+        Dictionary with
+        [additional arguments](https://github.com/huggingface/transformers/blob/155c782a2ccd103cf63ad48a2becd7c76a7d2115/transformers/tokenization_utils.py#L691)
+        for `AutoTokenizer.from_pretrained`.
 
-    Argument descriptions are from
-    https://github.com/huggingface/transformers/blob/155c782a2ccd103cf63ad48a2becd7c76a7d2115/transformers/tokenization_utils.py#L691
-    """
+    """  # noqa: E501
 
     def __init__(
         self,
         model_name: str,
         add_special_tokens: bool = True,
-        max_length: int = None,
+        max_length: Optional[int] = None,
         stride: int = 0,
         truncation_strategy: str = "longest_first",
         calculate_character_offsets: bool = False,
-        tokenizer_kwargs: Dict[str, Any] = None,
+        tokenizer_kwargs: Optional[Dict[str, Any]] = None,
     ) -> None:
-        tokenizer_kwargs = tokenizer_kwargs or {}
+        if tokenizer_kwargs is None:
+            tokenizer_kwargs = {}
+        else:
+            tokenizer_kwargs = tokenizer_kwargs.copy()
+        if "use_fast" in tokenizer_kwargs:
+            if tokenizer_kwargs["use_fast"]:
+                logger.warning(
+                    "Fast huggingface tokenizers are known to break in certain scenarios."
+                )
+        else:
+            tokenizer_kwargs["use_fast"] = False
+        # As of transformers==2.8.0, fast tokenizers are broken.
         self.tokenizer = AutoTokenizer.from_pretrained(model_name, **tokenizer_kwargs)
 
         # Huggingface tokenizers have different ways of remembering whether they lowercase or not. Detecting it
@@ -105,6 +116,7 @@ class PretrainedTransformerTokenizer(Tokenizer):
             stride=self._stride,
             truncation_strategy=self._truncation_strategy,
             return_tensors=None,
+            return_token_type_ids=True,
         )
         # token_ids contains a final list with ids for both regular and special tokens
         token_ids, token_type_ids = encoded_tokens["input_ids"], encoded_tokens["token_type_ids"]
@@ -188,7 +200,7 @@ class PretrainedTransformerTokenizer(Tokenizer):
     def intra_word_tokenize(self, tokens: List[str]) -> Tuple[List[Token], List[Tuple[int, int]]]:
         """
         Tokenizes each word into wordpieces separately and returns the wordpiece IDs.
-        Also calculates offsets such that wordpices[offsets[i][0]:offsets[i][1] + 1]
+        Also calculates offsets such that wordpieces[offsets[i][0]:offsets[i][1] + 1]
         corresponds to the original i-th token.
 
         This function inserts special tokens.
@@ -205,7 +217,7 @@ class PretrainedTransformerTokenizer(Tokenizer):
     ) -> Tuple[List[Token], List[Tuple[int, int]], List[Tuple[int, int]]]:
         """
         Tokenizes each word into wordpieces separately and returns the wordpiece IDs.
-        Also calculates offsets such that wordpices[offsets[i][0]:offsets[i][1] + 1]
+        Also calculates offsets such that wordpieces[offsets[i][0]:offsets[i][1] + 1]
         corresponds to the original i-th token.
 
         This function inserts special tokens.

@@ -73,8 +73,8 @@ class Predictor(Registrable):
 
         # Returns
 
-        List[instance]
-        A list of `Instance`'s.
+        `List[instance]`
+            A list of `Instance`'s.
         """
 
         instance = self._json_to_instance(inputs)
@@ -267,7 +267,8 @@ class Predictor(Registrable):
 
         # Returns
 
-        A Predictor instance.
+        `Predictor`
+            A Predictor instance.
         """
         return Predictor.from_archive(
             load_archive(archive_path, cuda_device=cuda_device),

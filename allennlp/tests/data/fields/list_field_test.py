@@ -319,3 +319,48 @@ class TestListField(AllenNlpTestCase):
         loader = DataLoader(dataset, batch_size=2)
         batch = next(iter(loader))
         model.forward(**batch)
+
+    def test_list_of_text_padding(self):
+        from allennlp.data.token_indexers import PretrainedTransformerIndexer
+        from allennlp.data.tokenizers import Token
+        from allennlp.data.fields import (
+            TextField,
+            ListField,
+        )
+        from allennlp.data import Vocabulary
+
+        word_indexer = {"tokens": PretrainedTransformerIndexer("albert-base-v2")}
+        text_field = TextField(
+            [
+                Token(t, text_id=2, type_id=1)
+                for t in ["▁allen", "n", "lp", "▁has", "▁no", "▁bugs", "."]
+            ],
+            word_indexer,
+        )
+        list_field = ListField([text_field])
+
+        vocab = Vocabulary()
+        list_field.index(vocab)
+
+        padding_lengths = {
+            "list_tokens___mask": 10,
+            "list_tokens___token_ids": 10,
+            "list_tokens___type_ids": 10,
+            "num_fields": 2,
+        }
+
+        tensors = list_field.as_tensor(padding_lengths)["tokens"]
+        assert tensors["mask"].size() == (2, 10)
+        assert tensors["mask"][0, 0] == True  # noqa: E712
+        assert tensors["mask"][0, 9] == False  # noqa: E712
+        assert (tensors["mask"][1, :] == False).all()  # noqa: E712
+
+        assert tensors["token_ids"].size() == (2, 10)
+        assert tensors["token_ids"][0, 0] == 2
+        assert tensors["token_ids"][0, 9] == 0
+        assert (tensors["token_ids"][1, :] == 0).all()
+
+        assert tensors["type_ids"].size() == (2, 10)
+        assert tensors["type_ids"][0, 0] == 1
+        assert tensors["type_ids"][0, 9] == 0
+        assert (tensors["type_ids"][1, :] == 0).all()

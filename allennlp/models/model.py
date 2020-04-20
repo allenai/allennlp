@@ -5,8 +5,12 @@ an AllenNLP model.
 
 import logging
 import os
-from typing import Dict, Union, List, Set, Type
+from typing import Dict, Union, List, Set, Type, Optional
 
+try:
+    from apex import amp
+except ImportError:
+    amp = None
 import numpy
 import torch
 
@@ -112,7 +116,7 @@ class Model(torch.nn.Module, Registrable):
 
         # Parameters
 
-        inputs:
+        *inputs :
             Tensors comprising everything needed to perform a training update, `including` labels,
             which should be optional (i.e have a default value of `None`).  At inference time,
             simply pass the relevant inputs, not including the labels.
@@ -147,7 +151,7 @@ class Model(torch.nn.Module, Registrable):
 
         # Parameters
 
-        instances : List[Instance], required
+        instances : `List[Instance]`, required
             The instances to run the model on.
 
         # Returns
@@ -250,7 +254,12 @@ class Model(torch.nn.Module, Registrable):
 
     @classmethod
     def _load(
-        cls, config: Params, serialization_dir: str, weights_file: str = None, cuda_device: int = -1
+        cls,
+        config: Params,
+        serialization_dir: str,
+        weights_file: Optional[str] = None,
+        cuda_device: int = -1,
+        opt_level: Optional[str] = None,
     ) -> "Model":
         """
         Instantiates an already-trained model, based on the experiment
@@ -270,12 +279,46 @@ class Model(torch.nn.Module, Registrable):
 
         model_params = config.get("model")
 
+        training_params = config.get("trainer", Params({}))
+        opt_level = opt_level or training_params.get("opt_level")
+
         # The experiment config tells us how to _train_ a model, including where to get pre-trained
         # embeddings from.  We're now _loading_ the model, so those embeddings will already be
         # stored in our weights.  We don't need any pretrained weight file anymore, and we don't
         # want the code to look for it, so we remove it from the parameters here.
         remove_pretrained_embedding_params(model_params)
         model = Model.from_params(vocab=vocab, params=model_params)
+
+        # Force model to cpu or gpu, as appropriate, to make sure that the embeddings are
+        # in sync with the weights
+        if cuda_device >= 0:
+            model.cuda(cuda_device)
+        else:
+            model.cpu()
+
+        # If opt_level is not None (i.e. it exists in the loaded models params or was provided
+        # as argument to this method), call amp.initialize on the loaded model.
+        # Log a warning if amp is not installed or we are loading onto the cpu so that these
+        # cases do not pass silently.
+        if opt_level is not None:
+            if amp is None:
+                logger.warning(
+                    (
+                        f"Apex must be installed to enable mixed-precision via amp."
+                        f" Got opt_level is not None (opt_level={opt_level}) but Apex is not installed."
+                        " Any further training or inference will happen at full-precision."
+                    )
+                )
+            if cuda_device == -1:
+                logger.warning(
+                    (
+                        f"A CUDA device must be specified to enable mixed-precision via amp."
+                        f" Got cuda_device=={cuda_device} but opt_level is not None (opt_level={opt_level})."
+                        " Any further training or inference will happen at full-precision."
+                    )
+                )
+            if amp is not None and cuda_device >= 0:
+                model = amp.initialize(model, opt_level=opt_level)
 
         # If vocab+embedding extension was done, the model initialized from from_params
         # and one defined by state dict in weights_file might not have same embedding shapes.
@@ -288,18 +331,16 @@ class Model(torch.nn.Module, Registrable):
         model_state = torch.load(weights_file, map_location=util.device_mapping(cuda_device))
         model.load_state_dict(model_state)
 
-        # Force model to cpu or gpu, as appropriate, to make sure that the embeddings are
-        # in sync with the weights
-        if cuda_device >= 0:
-            model.cuda(cuda_device)
-        else:
-            model.cpu()
-
         return model
 
     @classmethod
     def load(
-        cls, config: Params, serialization_dir: str, weights_file: str = None, cuda_device: int = -1
+        cls,
+        config: Params,
+        serialization_dir: str,
+        weights_file: Optional[str] = None,
+        cuda_device: int = -1,
+        opt_level: Optional[str] = None,
     ) -> "Model":
         """
         Instantiates an already-trained model, based on the experiment
@@ -307,24 +348,29 @@ class Model(torch.nn.Module, Registrable):
 
         # Parameters
 
-        config: Params
+        config : `Params`
             The configuration that was used to train the model. It should definitely
             have a `model` section, and should probably have a `trainer` section
             as well.
-        serialization_dir: str = None
+        serialization_dir: `str = None`
             The directory containing the serialized weights, parameters, and vocabulary
             of the model.
-        weights_file: str = None
+        weights_file: `str = None`
             By default we load the weights from `best.th` in the serialization
             directory, but you can override that value here.
-        cuda_device: int = -1
+        cuda_device: `int = -1`
             By default we load the model on the CPU, but if you want to load it
             for GPU usage you can specify the id of your GPU here
-
+        opt_level : `str`, optional (default = `None`)
+            Each `opt_level` establishes a set of properties that govern Amp’s implementation of pure or mixed
+            precision training. Must be a choice of `"O0"`, `"O1"`, `"O2"`, or `"O3"`.
+            See the Apex [documentation](https://nvidia.github.io/apex/amp.html#opt-levels-and-properties) for
+            more details. If `None`, defaults to the `opt_level` found in the model params. If `cuda_device==-1`,
+            Amp is not used and this argument is ignored.
 
         # Returns
 
-        model: Model
+        model : `Model`
             The model specified in the configuration, loaded with the serialized
             vocabulary and the trained weights.
         """
@@ -338,7 +384,7 @@ class Model(torch.nn.Module, Registrable):
         # This allows subclasses of Model to override _load.
 
         model_class: Type[Model] = cls.by_name(model_type)  # type: ignore
-        return model_class._load(config, serialization_dir, weights_file, cuda_device)
+        return model_class._load(config, serialization_dir, weights_file, cuda_device, opt_level)
 
     def extend_embedder_vocab(self, embedding_sources_mapping: Dict[str, str] = None) -> None:
         """
@@ -350,7 +396,7 @@ class Model(torch.nn.Module, Registrable):
 
         # Parameters
 
-        embedding_sources_mapping : Dict[str, str], (optional, default=None)
+        embedding_sources_mapping : `Dict[str, str]`, optional (default = `None`)
             Mapping from model_path to pretrained-file path of the embedding
             modules. If pretrained-file used at time of embedding initialization
             isn't available now, user should pass this mapping. Model path is
@@ -364,7 +410,7 @@ class Model(torch.nn.Module, Registrable):
             if hasattr(module, "extend_vocab"):
                 pretrained_file = embedding_sources_mapping.get(model_path)
                 module.extend_vocab(
-                    self.vocab, extension_pretrained_file=pretrained_file, model_path=model_path
+                    self.vocab, extension_pretrained_file=pretrained_file, model_path=model_path,
                 )
 
     @classmethod
