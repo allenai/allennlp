@@ -46,6 +46,6 @@ jobs:
     - name: Deploy
       if: success()
       env:
-        PYPI_USERNAME: ${{ secrets.PYPI_USERNAME }}
+        PYPI_USERNAME: allennlp
         PYPI_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
       run: twine upload -u $PYPI_USERNAME -p $PYPI_PASSWORD dist/*

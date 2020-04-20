@@ -51,7 +51,7 @@ jobs:
         ./scripts/build_docs.sh
 
     - name: Deploy docs
-      with:
+      env:
         DOCS_DEPLOY_KEY: ${{ secrets.DOCS_DEPLOY_KEY }}
       run: |
         if [[ $GITHUB_EVENT_NAME == 'release' ]]; then
