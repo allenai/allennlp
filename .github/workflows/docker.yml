@@ -1,0 +1,43 @@
+name: Docker
+
+on:
+  # TODO: delete `pull_request` trigger.
+  pull_request:
+    branches:
+    - master
+  push:
+    branches:
+    - master
+
+jobs:
+  build_and_push:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Build image
+      run: |
+        tar -czvf context.tar.gz Dockerfile.pip scripts/ai2_internal/resumable_train.sh
+        # docker build \
+        #     --pull \
+        #     --build-arg SOURCE_COMMIT=$GITHUB_SHA \
+        #     -f Dockerfile.pip \
+        #     -t allennlp/commit:$GITHUB_SHA - < context.tar.gz
+        docker build \
+            --pull \
+            --build-arg SOURCE_COMMIT=6cb944c43cda33f3f870d8e253b424069ccdabe3 \
+            -f Dockerfile.pip \
+            -t allennlp/commit:6cb944c43cda33f3f870d8e253b424069ccdabe3 - < context.tar.gz
+
+    - name: Test image
+      run: |
+        # docker run --rm allennlp/commit:$GITHUB_SHA test-install
+        docker run --rm allennlp/commit:6cb944c43cda33f3f870d8e253b424069ccdabe3 test-install
+
+    - name: Push image
+      # Only run on master branch of "allenai/allennlp".
+      if: github.repository == 'allenai/allennlp' && github.ref == 'master' 
+      run: |
+        docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
+        docker push allennlp/commit:$GITHUB_SHA

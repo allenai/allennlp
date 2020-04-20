@@ -1,0 +1,52 @@
+name: Docs
+
+on:
+  pull_request:
+    branches:
+    - master
+  push:
+    branches:
+    - master
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ['3.7']  # no need to build against multiple versions for now.
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Setup Python
+      uses: actions/setup-python@v1
+      with:
+        python-version: ${{ matrix.python }}
+
+    - uses: actions/cache@v1
+      with:
+        path: ${{ env.pythonLocation }}
+        key: ${{ runner.os }}-pydeps-${{ matrix.python }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pydeps-${{ matrix.python }}
+
+    - name: Install requirements
+      run: |
+        pip install --upgrade pip setuptools wheel
+        pip install -e .
+        pip install --upgrade -r dev-requirements.txt
+
+    - name: Debug info
+      run: |
+        pip freeze
+
+    - name: Build docs
+      run: |
+        ./scripts/build_docs.sh
+
+    - name: Deploy docs
+      # Only run this step on master branch of "allenai/allennlp".
+      if: github.repository == 'allenai/allennlp' && github.ref == 'master'
+      run: |
+        # TODO:
+        echo "Deploying docs"

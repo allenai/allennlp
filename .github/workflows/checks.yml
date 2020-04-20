@@ -1,4 +1,4 @@
-name: CI
+name: Checks
 
 on:
   pull_request:
@@ -9,7 +9,7 @@ on:
     - master
 
 jobs:
-  build:
+  core:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -110,65 +110,3 @@ jobs:
       run: |
         # Don't want this in the cache since the other workflow uses same cache.
         pip uninstall --yes allennlp_models
-
-  docs:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python: ['3.7']  # no need to build against multiple versions.
-
-    steps:
-    - uses: actions/checkout@v2
-
-    - name: Setup Python
-      uses: actions/setup-python@v1
-      with:
-        python-version: ${{ matrix.python }}
-
-    - uses: actions/cache@v1
-      with:
-        path: ${{ env.pythonLocation }}
-        key: ${{ runner.os }}-pydeps-${{ matrix.python }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
-        restore-keys: |
-          ${{ runner.os }}-pydeps-${{ matrix.python }}
-
-    - name: Install requirements
-      run: |
-        pip install --upgrade pip setuptools wheel
-        pip install -e .
-        pip install --upgrade -r dev-requirements.txt
-
-    - name: Debug info
-      run: |
-        pip freeze
-
-    - name: Build docs
-      run: |
-        ./scripts/build_docs.sh
-
-    - name: Deploy docs
-      # Only run this step on master branch of "allenai/allennlp".
-      if: github.repository == 'allenai/allennlp' && github.ref == 'master'
-      run: |
-        # TODO:
-        echo "Deploying docs"
-
-  # Builds image created with a pip installation at the corresponding commit.
-  docker:
-    runs-on: ubuntu-latest
-
-    steps:
-    - uses: actions/checkout@v2
-
-    - name: Build and push
-      uses: docker/build-push-action@v1
-      with:
-        username: ${{ secrets.DOCKER_USERNAME }}
-        password: ${{ secrets.DOCKER_PASSWORD }}
-        repository: allennlp/commit
-        dockerfile: Dockerfile.pip
-        tags: ${{ github.event.pull_request.head.sha }}
-        always_pull: true
-        build_args: SOURCE_COMMIT=${{ github.event.pull_request.head.sha }}
-        # Only push on master branch of "allenai/allennlp".
-        push: ${{ github.repository == 'allenai/allennlp' && github.ref == 'master' }}
