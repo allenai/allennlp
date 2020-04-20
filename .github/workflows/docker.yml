@@ -4,6 +4,12 @@ on:
   push:
     branches:
     - master
+  # TODO: remove 'pull_request' trigger
+  pull_request:
+    branches:
+    - master
+  release:
+    types: [published]
 
 jobs:
   build:
@@ -12,24 +18,38 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
+    - name: Setup environment
+      run: |
+        if [[ $GITHUB_EVENT_NAME == 'release' ]]; then
+            echo "Preparing environment for release $GITHUB_REF";
+            echo "::set-env name=DOCKER_REPO::allennlp/allennlp";
+            echo "::set-env name=DOCKER_TAG::$GITHUB_REF";
+            echo "::set-env name=BUILD_ARG_NAME::VERSION";
+            VERSION=$(echo $GITHUB_REF | sed 's/^v//g');
+            echo "::set-env name=BUILD_ARG_VALUE::$VERSION";
+        else
+            echo "Preparing environment for commit $GITHUB_SHA";
+            echo "::set-env name=DOCKER_REPO::allennlp/commit";
+            echo "::set-env name=DOCKER_TAG::$GITHUB_SHA";
+            echo "::set-env name=BUILD_ARG_NAME::SOURCE_COMMIT";
+            echo "::set-env name=BUILD_ARG_VALUE::$GITHUB_SHA";
+        fi
+
     - name: Build image
       run: |
         # Create a small context for the Docker with only the files that we need.
         tar -czvf context.tar.gz Dockerfile.pip scripts/ai2_internal/resumable_train.sh
         docker build \
             --pull \
-            --build-arg SOURCE_COMMIT=$GITHUB_SHA \
+            --build-arg $BUILD_ARG_NAME=$BUILD_ARG_VALUE \
             -f Dockerfile.pip \
-            -t allennlp/commit:$GITHUB_SHA - < context.tar.gz
+            -t $DOCKER_REPO:$DOCKER_TAG - < context.tar.gz
 
     - name: Test image
       run: |
-        docker run --rm allennlp/commit:$GITHUB_SHA test-install
+        docker run --rm $DOCKER_REPO:$DOCKER_TAG test-install
 
     - name: Push image
-      # Only run on "allenai/allennlp", not forks.
-      if: github.repository == 'allenai/allennlp'
       run: |
         docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
-        # TODO:
-        # docker push allennlp/commit:$GITHUB_SHA
+        docker push $DOCKER_REPO:$DOCKER_TAG

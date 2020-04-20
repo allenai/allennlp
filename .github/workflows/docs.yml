@@ -4,6 +4,8 @@ on:
   push:
     branches:
     - master
+  release:
+    types: [published]
 
 jobs:
   build:
@@ -41,9 +43,12 @@ jobs:
       run: |
         ./scripts/build_docs.sh
 
-    - name: Deploy docs
-      # Only run this step "allenai/allennlp", not forks.
-      if: github.repository == 'allenai/allennlp'
+    - name: Deploy master docs
+      if: github.event_name == 'push'
       run: |
-        # TODO:
-        echo "Deploying docs"
+        echo "Deploying master docs"
+
+    - name: Deploy release docs
+      if: github.event_name == 'release'
+      run: |
+        echo "Deploying release docs"
