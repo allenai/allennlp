@@ -43,12 +43,32 @@ jobs:
       run: |
         ./scripts/build_docs.sh
 
-    - name: Deploy master docs
-      if: github.event_name == 'push'
+    - name: Deploy docs
+      with:
+        DOCS_DEPLOY_KEY: ${{ secrets.DOCS_DEPLOY_KEY }}
       run: |
-        echo "Deploying master docs"
+        if [[ $GITHUB_EVENT_NAME == 'release' ]]; then
+            DIRECTORY=master;
+        else
+            DIRECTORY=${GITHUB_REF/refs\/tags\//};
+        fi
 
-    - name: Deploy release docs
-      if: github.event_name == 'release'
-      run: |
-        echo "Deploying release docs"
+        # Configure git.
+        git config --global user.email "ai2service@allenai.org"
+        git config --global user.name "ai2service"
+        git config --global push.default simple
+        
+        # Add GitHub to known hosts.
+        mkdir -p ~/.ssh
+        eval "$(ssh-agent -s)"
+        ssh-keyscan github.com >> ~/.ssh/known_hosts
+        
+        # Checkout allennlp-docs to /allennlp-docs
+        echo $DOCS_DEPLOY_KEY > /ssh/allennlp-docs.key
+        ssh-add /ssh/allennlp-docs.key
+        GIT_SSH_COMMAND='ssh -i /ssh/allennlp-docs.key' git clone git@github.com:allenai/allennlp-docs.git /allennlp-docs
+        
+        # Copy the generated docs to the checked out docs repo
+        rm -rf /allennlp-docs/$DIRECTORY/
+        mkdir -p /allennlp-docs/$DIRECTORY
+        cp -r site/* /allennlp-docs/$DIRECTORY
