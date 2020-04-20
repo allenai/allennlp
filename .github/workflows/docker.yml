@@ -31,4 +31,5 @@ jobs:
       if: github.repository == 'allenai/allennlp'
       run: |
         docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
-        docker push allennlp/commit:$GITHUB_SHA
+        # TODO:
+        # docker push allennlp/commit:$GITHUB_SHA

@@ -1,9 +1,6 @@
 name: Docs
 
 on:
-  pull_request:
-    branches:
-    - master
   push:
     branches:
     - master
@@ -45,8 +42,8 @@ jobs:
         ./scripts/build_docs.sh
 
     - name: Deploy docs
-      # Only run this step on master branch of "allenai/allennlp".
-      if: github.repository == 'allenai/allennlp' && github.ref == 'master'
+      # Only run this step "allenai/allennlp", not forks.
+      if: github.repository == 'allenai/allennlp'
       run: |
         # TODO:
         echo "Deploying docs"
