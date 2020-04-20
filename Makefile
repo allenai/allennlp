@@ -20,6 +20,35 @@ else
 	SED = sed
 endif
 
+#
+# Testing helpers.
+#
+
+.PHONY : lint
+lint :
+	flake8 -v ./scripts $(SRC)
+	black -v --check ./scripts $(SRC)
+
+.PHONY : typecheck
+typecheck :
+	mypy $(SRC) \
+		--ignore-missing-imports \
+		--no-strict-optional \
+		--no-site-packages \
+		--cache-dir=/dev/null
+
+.PHONY : test
+test :
+	pytest --color=yes -rf --durations=40 -k "not sniff_test" $(SRC)
+
+.PHONY : test-with-cov
+test-with-cov :
+	pytest --color=yes -rf --cov-config=.coveragerc --cov=$(SRC) --durations=40 -k "not sniff_test" $(SRC)
+
+#
+# Documention helpers.
+#
+
 .PHONY : build-all-api-docs
 build-all-api-docs :
 	@$(MD_DOCS_CMD) $(subst /,.,$(subst .py,,$(MD_DOCS_SRC))) -o $(MD_DOCS)

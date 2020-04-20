@@ -1,0 +1,60 @@
+name: Docker
+# This workflow is in charge of building the AllenNLP Docker images and pushing them
+# to Docker Hub.
+#
+# For master commits, an image called 'allennlp/commit:COMMIT_SHA' is built with
+# a pip installation of the library from the corresponding commit.
+#
+# For releases, an image called 'allennlp/allennlp:RELEASE_TAG' is build with
+# a pip installation of the corresponding PyPI release.
+
+on:
+  push:
+    branches:
+    - master
+  release:
+    types: [published]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Setup environment
+      run: |
+        if [[ $GITHUB_EVENT_NAME == 'release' ]]; then
+            TAG=${GITHUB_REF/refs\/tags\//};
+            VERSION=$(echo $TAG | sed 's/^v//g');
+            echo "Preparing environment for release $TAG";
+            echo "::set-env name=DOCKER_REPO::allennlp/allennlp";
+            echo "::set-env name=DOCKER_TAG::$TAG";
+            echo "::set-env name=BUILD_ARG_NAME::VERSION";
+            echo "::set-env name=BUILD_ARG_VALUE::$VERSION";
+        else
+            echo "Preparing environment for commit $GITHUB_SHA";
+            echo "::set-env name=DOCKER_REPO::allennlp/commit";
+            echo "::set-env name=DOCKER_TAG::$GITHUB_SHA";
+            echo "::set-env name=BUILD_ARG_NAME::SOURCE_COMMIT";
+            echo "::set-env name=BUILD_ARG_VALUE::$GITHUB_SHA";
+        fi
+
+    - name: Build image
+      run: |
+        # Create a small context for the Docker with only the files that we need.
+        tar -czvf context.tar.gz Dockerfile.pip scripts/ai2_internal/resumable_train.sh
+        docker build \
+            --pull \
+            --build-arg $BUILD_ARG_NAME=$BUILD_ARG_VALUE \
+            -f Dockerfile.pip \
+            -t $DOCKER_REPO:$DOCKER_TAG - < context.tar.gz
+
+    - name: Test image
+      run: |
+        docker run --rm $DOCKER_REPO:$DOCKER_TAG test-install
+
+    - name: Push image
+      run: |
+        docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
+        docker push $DOCKER_REPO:$DOCKER_TAG

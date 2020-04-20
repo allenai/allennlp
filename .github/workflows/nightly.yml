@@ -25,6 +25,7 @@ jobs:
         # installed. Then, below, we pip install the wheel we build,
         # including the `--ignore-installed` flag to ensure that we
         # ignore the installed master branch of allennlp.
+        pip install --upgrade pip setuptools wheel
         pip install -e .
         pip install -r dev-requirements.txt
     - name: Set Version

@@ -1,0 +1,81 @@
+name: Docs
+# This workflow has one job, literally: building and deploying the API documentation
+# for every release and master commit.
+#
+# For now the docs are deployed by just committing all of the generated files to the
+# allennlp-docs repo. For a master commit the files are put in the 'master'
+# folder in allennlp-docs, and for a release they are put in a folder with the release
+# tag name (eg. 'v1.0.0').
+
+on:
+  push:
+    branches:
+    - master
+  release:
+    types: [published]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ['3.7']  # no need to build against multiple versions for now.
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Setup Python
+      uses: actions/setup-python@v1
+      with:
+        python-version: ${{ matrix.python }}
+
+    - uses: actions/cache@v1
+      with:
+        path: ${{ env.pythonLocation }}
+        key: ${{ runner.os }}-pydeps-${{ matrix.python }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pydeps-${{ matrix.python }}
+
+    - name: Install requirements
+      run: |
+        pip install --upgrade pip setuptools wheel
+        pip install -e .
+        pip install --upgrade -r dev-requirements.txt
+
+    - name: Debug info
+      run: |
+        pip freeze
+
+    - name: Build docs
+      run: |
+        ./scripts/build_docs.sh
+
+    - name: Deploy docs
+      with:
+        DOCS_DEPLOY_KEY: ${{ secrets.DOCS_DEPLOY_KEY }}
+      run: |
+        if [[ $GITHUB_EVENT_NAME == 'release' ]]; then
+            DIRECTORY=master;
+        else
+            DIRECTORY=${GITHUB_REF/refs\/tags\//};
+        fi
+
+        # Configure git.
+        git config --global user.email "ai2service@allenai.org"
+        git config --global user.name "ai2service"
+        git config --global push.default simple
+        
+        # Add GitHub to known hosts.
+        mkdir -p ~/.ssh
+        eval "$(ssh-agent -s)"
+        ssh-keyscan github.com >> ~/.ssh/known_hosts
+        
+        # Checkout allennlp-docs to /allennlp-docs
+        echo $DOCS_DEPLOY_KEY > /ssh/allennlp-docs.key
+        ssh-add /ssh/allennlp-docs.key
+        GIT_SSH_COMMAND='ssh -i /ssh/allennlp-docs.key' git clone git@github.com:allenai/allennlp-docs.git /allennlp-docs
+        
+        # Copy the generated docs to the checked out docs repo
+        rm -rf /allennlp-docs/$DIRECTORY/
+        mkdir -p /allennlp-docs/$DIRECTORY
+        cp -r site/* /allennlp-docs/$DIRECTORY

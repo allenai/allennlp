@@ -1,0 +1,116 @@
+name: Checks
+# This is the main workflow for checking pull requests. It consists of two jobs:
+# one for the core library and one for compatability with the models library.
+#
+# Both of the jobs are ran on Python 3.6 and Python 3.7 in parallel.
+
+on:
+  pull_request:
+    branches:
+    - master
+  push:
+    branches:
+    - master
+
+jobs:
+  core:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ['3.6', '3.7']
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Setup Python
+      uses: actions/setup-python@v1
+      with:
+        python-version: ${{ matrix.python }}
+
+    - uses: actions/cache@v1
+      with:
+        path: ${{ env.pythonLocation }}
+        key: ${{ runner.os }}-pydeps-${{ matrix.python }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pydeps-${{ matrix.python }}
+
+    - name: Install requirements
+      run: |
+        pip install --upgrade pip setuptools wheel
+        pip install -e .
+        pip install --upgrade -r dev-requirements.txt
+
+    - name: Debug info
+      run: |
+        pip freeze
+
+    - name: Lint
+      run: |
+        make lint
+
+    - name: Type check
+      run: |
+        make typecheck
+
+    - name: Run tests
+      run: |
+        make test-with-cov
+
+    # TODO: remove codecov report publishing from TeamCity build and then uncomment this:
+    # - name: Upload coverage to Codecov
+    #   if: matrix.python == '3.7'
+    #   run: |
+    #     # Ignore codecov failures as the codecov server is not
+    #     # very reliable but we don't want to report a failure
+    #     # in the github UI just because the coverage report failed to
+    #     # be published.
+    #     codecov || echo "codecov upload failed"
+    #   env:
+    #     CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+  models:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ['3.6', '3.7']
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Setup Python
+      uses: actions/setup-python@v1
+      with:
+        python-version: ${{ matrix.python }}
+
+    - uses: actions/cache@v1
+      with:
+        path: ${{ env.pythonLocation }}
+        key: ${{ runner.os }}-pydeps-${{ matrix.python }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pydeps-${{ matrix.python }}
+
+    - name: Install requirements
+      run: |
+        pip install --upgrade pip setuptools wheel
+        pip install -e .
+        pip install --upgrade -r dev-requirements.txt
+
+    - name: Debug info
+      run: |
+        pip freeze
+
+    - name: Pull and install models repo
+      env:
+        EXCLUDE_ALLENNLP_IN_SETUP: "true"
+      run: |
+        git clone https://github.com/allenai/allennlp-models.git
+        cd allennlp-models && pip install -e . && pip install -r dev-requirements.txt
+
+    - name: Run models tests
+      run: |
+        cd allennlp-models && make test
+
+    - name: Clean up
+      run: |
+        # Don't want this in the cache since the other workflow uses same cache.
+        pip uninstall --yes allennlp_models
