@@ -152,3 +152,20 @@ jobs:
       run: |
         # TODO:
         echo "Deploying docs"
+
+  # Builds image created with a pip installation at the corresponding commit.
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Build and push
+        uses: docker/build-push-action@v1
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+          repository: allennlp/commit
+          dockerfile: Dockerfile.pip
+          tags: ${{ github.sha }}
+          always_pull: true
+          build_args: SOURCE_COMMIT=${{ github.sha }}
+          # Only push on master branch of "allenai/allennlp".
+          push: ${{ github.repository == 'allenai/allennlp' && github.ref == 'master' }}
