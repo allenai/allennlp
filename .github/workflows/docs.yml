@@ -71,6 +71,7 @@ jobs:
         ssh-keyscan github.com >> ~/.ssh/known_hosts
         
         # Checkout allennlp-docs to /allennlp-docs
+        mkdir -p /ssh
         echo $DOCS_DEPLOY_KEY > /ssh/allennlp-docs.key
         ssh-add /ssh/allennlp-docs.key
         GIT_SSH_COMMAND='ssh -i /ssh/allennlp-docs.key' git clone git@github.com:allenai/allennlp-docs.git /allennlp-docs
