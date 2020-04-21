@@ -65,6 +65,8 @@ jobs:
         # very reliable but we don't want to report a failure
         # in the github UI just because the coverage report failed to
         # be published.
+        # This will also fail for forked repositories since the secret token won't
+        # be available.
         codecov -t $CODECOV_TOKEN || echo "codecov upload failed"
 
   models:
