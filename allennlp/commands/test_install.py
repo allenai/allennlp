@@ -30,7 +30,7 @@ import allennlp
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common.util import pushd
 
-logging.basicConfig(level=logging.DEBUG)
+
 logger = logging.getLogger(__name__)
 
 
