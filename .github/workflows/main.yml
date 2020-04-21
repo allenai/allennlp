@@ -271,31 +271,31 @@ jobs:
       with:
         ssh-private-key: ${{ secrets.DOCS_DEPLOY_KEY }}
 
-    - name: Setup Python
-      uses: actions/setup-python@v1
-      with:
-        python-version: ${{ matrix.python }}
+    # - name: Setup Python
+    #   uses: actions/setup-python@v1
+    #   with:
+    #     python-version: ${{ matrix.python }}
 
-    - uses: actions/cache@v1
-      with:
-        path: ${{ env.pythonLocation }}
-        key: ${{ runner.os }}-pydeps-${{ matrix.python }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
-        restore-keys: |
-          ${{ runner.os }}-pydeps-${{ matrix.python }}
+    # - uses: actions/cache@v1
+    #   with:
+    #     path: ${{ env.pythonLocation }}
+    #     key: ${{ runner.os }}-pydeps-${{ matrix.python }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
+    #     restore-keys: |
+    #       ${{ runner.os }}-pydeps-${{ matrix.python }}
 
-    - name: Install requirements
-      run: |
-        pip install --upgrade pip setuptools wheel
-        pip install -e .
-        pip install --upgrade -r dev-requirements.txt
+    # - name: Install requirements
+    #   run: |
+    #     pip install --upgrade pip setuptools wheel
+    #     pip install -e .
+    #     pip install --upgrade -r dev-requirements.txt
 
-    - name: Debug info
-      run: |
-        pip freeze
+    # - name: Debug info
+    #   run: |
+    #     pip freeze
 
-    - name: Build docs
-      run: |
-        ./scripts/build_docs.sh
+    # - name: Build docs
+    #   run: |
+    #     ./scripts/build_docs.sh
 
     - name: Configure Git
       # TODO: uncomment these lines.
