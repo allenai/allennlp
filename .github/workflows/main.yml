@@ -14,6 +14,8 @@ on:
 jobs:
   check_core:
     name: Check Core
+    # TODO: remove this.
+    needs: [docs]
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -71,6 +73,8 @@ jobs:
 
   check_models:
     name: Check Models
+    # TODO: remove this.
+    needs: [docs]
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -293,8 +297,7 @@ jobs:
       uses: shimataro/ssh-key-action@v2
       with:
         key: ${{ secrets.DOCS_DEPLOY_KEY }}
-        name: ai2service
-        # known_hosts: ${{ secrets.KNOWN_HOSTS }}
+        known_hosts: ${{ secrets.KNOWN_HOSTS }}
 
     - name: Configure Git
       # TODO: uncomment these lines.
@@ -309,8 +312,6 @@ jobs:
       # TODO: uncomment these lines.
       # # Only run this on main repo, not forks.
       # if: github.repository == 'allenai/allennlp'
-      env:
-        DOCS_DEPLOY_KEY: ${{ secrets.DOCS_DEPLOY_KEY }}
       run: |
         if [[ $GITHUB_EVENT_NAME == 'release' ]]; then
             DIRECTORY=master;
@@ -318,11 +319,8 @@ jobs:
             DIRECTORY=${GITHUB_REF/refs\/tags\//};
         fi
 
-        ssh-keyscan github.com >> ~/.ssh/known_hosts
-        chmod 644 ~/.ssh/known_hosts
-
         # Checkout allennlp-docs to /allennlp-docs
-        GIT_SSH_COMMAND='ssh -i ~/.ssh/allennlp-docs.key' git clone git@github.com:allenai/allennlp-docs.git ~/allennlp-docs
+        git clone git@github.com:allenai/allennlp-docs.git ~/allennlp-docs
         
         # Copy the generated docs to the checked out docs repo
         rm -rf ~/allennlp-docs/$DIRECTORY/
@@ -334,7 +332,7 @@ jobs:
         git add .
         git commit -m "automated update of the docs"
         # TODO: uncomment this.
-        # GIT_SSH_COMMAND='ssh -i ~/.ssh/allennlp-docs.key' git push
+        # git push
 
   # Publish the core distribution files to PyPI.
   publish:
