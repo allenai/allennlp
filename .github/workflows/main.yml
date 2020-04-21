@@ -264,12 +264,12 @@ jobs:
         python: ['3.7']  # no need to build against multiple versions for now.
 
     steps:
+    - uses: actions/checkout@v1
+
     - name: Setup SSH Client 🔑
       uses: webfactory/ssh-agent@v0.2.0
       with:
         ssh-private-key: ${{ secrets.DOCS_DEPLOY_KEY }}
-
-    - uses: actions/checkout@v2
 
     - name: Setup Python
       uses: actions/setup-python@v1
