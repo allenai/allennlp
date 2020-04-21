@@ -1,0 +1,291 @@
+name: Release
+
+on:
+  push:
+    branches:
+    - master
+  release:
+    types: [published]
+  # TODO: add nightly schedule.
+  # TODO: remove this 'pull_request' trigger.
+  pull_request:
+    branches:
+    - master
+
+jobs:
+  # Builds the PyPI distribution files.
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ['3.7']  # only build on Python 3.7 for now.
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Setup Python
+      uses: actions/setup-python@v1
+      with:
+        python-version: ${{ matrix.python }}
+
+    - uses: actions/cache@v1
+      with:
+        path: ${{ env.pythonLocation }}
+        key: ${{ runner.os }}-pydeps-${{ matrix.python }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pydeps-${{ matrix.python }}
+
+    - name: Install requirements
+      run: |
+        pip install --upgrade pip setuptools wheel
+        pip install -e .
+        pip install --upgrade -r dev-requirements.txt
+
+    - name: Pull and install models repo
+      env:
+        EXCLUDE_ALLENNLP_IN_SETUP: "true"
+      run: |
+        git clone https://github.com/allenai/allennlp-models.git
+        cd allennlp-models && pip install -e . && pip install -r dev-requirements.txt
+
+    - name: Build core package
+      run: |
+        echo "Building packages for core release"
+        python setup.py bdist_wheel sdist
+
+    - name: Build models package
+      run: |
+        echo "Building packages for models release"
+        cd allennlp-models && python setup.py bdist_wheel sdist
+
+    - name: Save core package
+      uses: actions/upload-artifact@v1
+      with:
+        name: core-package
+        path: dist
+
+    - name: Save models package
+      uses: actions/upload-artifact@v1
+      with:
+        name: models-package
+        path: allennlp-models/dist
+
+    - name: Clean up
+      run: |
+        # Don't want this in the cache since the other workflow uses same cache.
+        pip uninstall --yes allennlp_models
+
+  # Tests installing from the distribution files.
+  test:
+    needs: [build]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ['3.6', '3.7']
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Setup Python
+      uses: actions/setup-python@v1
+      with:
+        python-version: ${{ matrix.python }}
+
+    - name: Install requirements
+      run: |
+        pip install --upgrade pip setuptools wheel
+
+    - name: Download core package
+      uses: actions/download-artifact@v1
+      with:
+        name: core-package
+        path: dist
+
+    - name: Download models package
+      uses: actions/download-artifact@v1
+      with:
+        name: models-package
+        path: allennlp-models/dist
+
+    - name: Install core package
+      run: |
+        pip install $(ls dist/*.whl)
+
+    - name: Install models package
+      run: |
+        cd allennlp-models && pip install $(ls dist/*.whl)
+
+    - name: Test install
+      run: |
+        allennlp test-install
+
+  # Builds Docker image from the core distribution files and uploads to Docker Hub.
+  docker:
+    needs: [build, test]
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Download core package
+      uses: actions/download-artifact@v1
+      with:
+        name: core-package
+        path: dist
+
+    - name: Build image
+      run: |
+        # Create a small context for the Docker with only the files that we need.
+        tar -czvf context.tar.gz \
+            Dockerfile.whl \
+            scripts/ai2_internal/resumable_train.sh \
+            dist/*.whl
+        docker build \
+            --pull \
+            -f Dockerfile.whl \
+            -t allennlp - < context.tar.gz
+
+    - name: Test image
+      run: |
+        docker run --rm allennlp test-install
+
+    - name: Upload master image
+      if: github.event_name == 'push'
+      run: |
+        docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
+        docker tag allennlp allennlp/commit:$GITHUB_SHA
+        docker push allennlp/commit:$GITHUB_SHA
+
+    - name: Upload release image
+      if: github.event_name == 'release'
+      run: |
+        docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
+        TAG=${GITHUB_REF/refs\/tags\//};
+        docker tag allennlp allennlp/allennlp:$TAG
+        docker push allennlp/allennlp:$TAG
+
+  # Builds the API documentation and pushes it to the appropriate folder in the allennlp-docs repo.
+  docs:
+    needs: [build, test]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ['3.7']  # no need to build against multiple versions for now.
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Setup Python
+      uses: actions/setup-python@v1
+      with:
+        python-version: ${{ matrix.python }}
+
+    - uses: actions/cache@v1
+      with:
+        path: ${{ env.pythonLocation }}
+        key: ${{ runner.os }}-pydeps-${{ matrix.python }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pydeps-${{ matrix.python }}
+
+    - name: Install requirements
+      run: |
+        pip install --upgrade pip setuptools wheel
+        pip install -e .
+        pip install --upgrade -r dev-requirements.txt
+
+    - name: Debug info
+      run: |
+        pip freeze
+
+    - name: Build docs
+      run: |
+        ./scripts/build_docs.sh
+
+    - name: Deploy docs
+      env:
+        DOCS_DEPLOY_KEY: ${{ secrets.DOCS_DEPLOY_KEY }}
+      run: |
+        if [[ $GITHUB_EVENT_NAME == 'release' ]]; then
+            DIRECTORY=master;
+        else
+            DIRECTORY=${GITHUB_REF/refs\/tags\//};
+        fi
+
+        # Configure git.
+        git config --global user.email "ai2service@allenai.org"
+        git config --global user.name "ai2service"
+        git config --global push.default simple
+        
+        # Setup SSH.
+        mkdir -p ~/.ssh
+        chmod 700 ~/.ssh
+
+        eval "$(ssh-agent -s)"
+
+        ssh-keyscan github.com >> ~/.ssh/known_hosts
+        chmod 644 ~/.ssh/known_hosts
+
+        echo $DOCS_DEPLOY_KEY > ~/.ssh/allennlp-docs.key
+        chmod 600 ~/.ssh/allennlp-docs.key
+
+        ssh-add ~/.ssh/allennlp-docs.key
+
+        # Checkout allennlp-docs to /allennlp-docs
+        GIT_SSH_COMMAND='ssh -i ~/.ssh/allennlp-docs.key' git clone git@github.com:allenai/allennlp-docs.git ~/allennlp-docs
+        
+        # Copy the generated docs to the checked out docs repo
+        rm -rf ~/allennlp-docs/$DIRECTORY/
+        mkdir -p ~/allennlp-docs/$DIRECTORY
+        cp -r site/* ~/allennlp-docs/$DIRECTORY
+
+        # And push them up to GitHub
+        cd ~/allennlp-docs/$DIRECTORY
+        git add .
+        git commit -m "automated update of the docs"
+        # TODO: uncomment this.
+        # GIT_SSH_COMMAND='ssh -i ~/.ssh/allennlp-docs.key' git push
+
+  # Publish the distribution files to PyPI for both core and models.
+  publish:
+    if: github.repository == 'allenai/allennlp' && github.event_name == 'release'
+    needs: [build, test, docker, docs]
+    # Only publish on "allenai/allennlp", and not forks.
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Setup Python
+      uses: actions/setup-python@v1
+      with:
+        python-version: 3.7
+
+    - name: Install requirements
+      run: |
+        pip install --upgrade pip setuptools wheel twine
+
+    - name: Download core package
+      uses: actions/download-artifact@v1
+      with:
+        name: core-package
+        path: dist
+
+    - name: Download models package
+      uses: actions/download-artifact@v1
+      with:
+        name: models-package
+        path: allennlp-models/dist
+
+    - name: Publish core package
+      env:
+        PYPI_USERNAME: allennlp
+        PYPI_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
+      run: |
+        twine upload -u $PYPI_USERNAME -p $PYPI_PASSWORD dist/*
+
+    - name: Publish models package
+      env:
+        PYPI_USERNAME: allennlp
+        PYPI_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
+      run: |
+        twine upload -u $PYPI_USERNAME -p $PYPI_PASSWORD allennlp-models/dist/*
