@@ -121,8 +121,7 @@ jobs:
   build_package:
     name: Build Package
     needs: [check_core, check_models]
-    # TODO: uncomment these lines
-    # if: github.event_name != 'pull_request'
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -164,8 +163,7 @@ jobs:
   test_package:
     name: Test Package
     needs: [build_package]
-    # TODO: uncomment
-    # if: github.event_name != 'pull_request'
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -198,10 +196,8 @@ jobs:
   # Builds Docker image from the core distribution files and uploads to Docker Hub.
   docker:
     name: Docker
-    # TODO: add 'test_package' to 'needs'.
-    needs: [build_package]
-    # TODO: uncomment
-    # if: github.event_name != 'pull_request'
+    needs: [build_package, test_package]
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
 
     steps:
@@ -323,9 +319,10 @@ jobs:
 
   # Publish the core distribution files to PyPI.
   publish:
-    if: github.repository == 'allenai/allennlp' && github.event_name == 'release'
+    name: PyPI
     needs: [build_package, test_package, docker, docs]
-    # Only publish on "allenai/allennlp", and not forks.
+    # Only publish on releases to "allenai/allennlp" and not forks.
+    if: github.repository == 'allenai/allennlp' && github.event_name == 'release'
     runs-on: ubuntu-latest
 
     steps:
