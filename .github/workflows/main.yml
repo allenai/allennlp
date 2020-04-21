@@ -249,8 +249,8 @@ jobs:
   # allennlp-docs repo.
   docs:
     name: Docs
-    needs: [build_package, test_package]
     # TODO: uncomment
+    # needs: [build_package, test_package]
     # if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     strategy:
@@ -313,9 +313,9 @@ jobs:
         ssh-keyscan github.com >> ~/.ssh/known_hosts
         chmod 644 ~/.ssh/known_hosts
 
-        echo "-----BEGIN OPENSSH PRIVATE KEY-----" > ~/.ssh/allennlp-docs.key
+        echo "-----BEGIN RSA PRIVATE KEY-----" > ~/.ssh/allennlp-docs.key
         echo $DOCS_DEPLOY_KEY | tr " " "\n" >> ~/.ssh/allennlp-docs.key
-        echo "-----END OPENSSH PRIVATE KEY-----" >> ~/.ssh/allennlp-docs.key
+        echo "-----END RSA PRIVATE KEY-----" >> ~/.ssh/allennlp-docs.key
         chmod 600 ~/.ssh/allennlp-docs.key
 
         ssh-add ~/.ssh/allennlp-docs.key
