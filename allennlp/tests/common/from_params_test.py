@@ -816,4 +816,4 @@ class TestFromParams(AllenNlpTestCase):
             pass
 
         with pytest.raises(ConfigurationError):
-            A.from_params("inexistent_class")
+            A.from_params("nonexistent_class")
