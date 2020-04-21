@@ -186,7 +186,7 @@ class GradientDescentTrainer(Trainer):
         must be prepended with either "+" or "-", which specifies whether the metric
         is an increasing or decreasing function.
 
-    validation_dataloader : `DataLoader`, optional (default=None)
+    validation_data_loader : `DataLoader`, optional (default=None)
         A `DataLoader` to use for the validation set.  If `None`, then
         use the training `DataLoader` with the validation data.
 
