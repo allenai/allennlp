@@ -1,8 +1,9 @@
 import os
 import logging
+import random
+
 from allennlp.common.logging import AllenNlpLogger
 from allennlp.common.testing import AllenNlpTestCase
-import random
 
 
 class TestLogging(AllenNlpTestCase):
@@ -11,6 +12,7 @@ class TestLogging(AllenNlpTestCase):
         logger = logging.getLogger(str(random.random()))
         self.test_log_file = os.path.join(self.TEST_DIR, "test.log")
         logger.addHandler(logging.FileHandler(self.test_log_file))
+        logger.setLevel(logging.DEBUG)
         self.logger = logger
         self._msg = "test message"
 
