@@ -189,7 +189,7 @@ You can test your installation by running  `allennlp test-install`.
 
 ## Issues
 
-Everyone is welcome to file issues with either feature requests, bug reports, or general questions.  As a small team with our own internal goals, we may ask for contributions if a prompt fix doesn't fit into our roadmap.  We allow users a two week window to follow up on questions, after which we will close issues.  They can be re-opened if there is further discussion.
+Everyone is welcome to file issues with either feature requests, bug reports, or general questions.  As a small team with our own internal goals, we may ask for contributions if a prompt fix doesn't fit into our roadmap.  To keep things tidy we will often close issues we think are answered, but don't hesitate to follow up if further discussion is needed.
 
 ## Contributions
 
