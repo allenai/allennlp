@@ -4,7 +4,6 @@ import random
 
 from allennlp.common.logging import AllenNlpLogger
 from allennlp.common.testing import AllenNlpTestCase
-import pytest
 
 
 class TestLogging(AllenNlpTestCase):
@@ -13,10 +12,10 @@ class TestLogging(AllenNlpTestCase):
         logger = logging.getLogger(str(random.random()))
         self.test_log_file = os.path.join(self.TEST_DIR, "test.log")
         logger.addHandler(logging.FileHandler(self.test_log_file))
+        logger.setLevel(logging.DEBUG)
         self.logger = logger
         self._msg = "test message"
 
-    @pytest.mark.skip("fails on test-install command in certain environments for unknown reason")
     def test_debug_once(self):
         self.logger.debug_once(self._msg)
         self.logger.debug_once(self._msg)
@@ -52,7 +51,6 @@ class TestLogging(AllenNlpTestCase):
         with open(self.test_log_file, "r") as f:
             assert len(f.readlines()) == 1
 
-    @pytest.mark.skip("fails on test-install command in certain environments for unknown reason")
     def test_debug_once_different_args(self):
         self.logger.debug_once("There are %d lights.", 4)
         self.logger.debug_once("There are %d lights.", 5)
