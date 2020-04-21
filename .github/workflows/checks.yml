@@ -56,17 +56,16 @@ jobs:
       run: |
         make test-with-cov
 
-    # TODO: remove codecov report publishing from TeamCity build and then uncomment this:
-    # - name: Upload coverage to Codecov
-    #   if: matrix.python == '3.7'
-    #   run: |
-    #     # Ignore codecov failures as the codecov server is not
-    #     # very reliable but we don't want to report a failure
-    #     # in the github UI just because the coverage report failed to
-    #     # be published.
-    #     codecov || echo "codecov upload failed"
-    #   env:
-    #     CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+    - name: Upload coverage to Codecov
+      if: matrix.python == '3.7'
+      run: |
+        # Ignore codecov failures as the codecov server is not
+        # very reliable but we don't want to report a failure
+        # in the github UI just because the coverage report failed to
+        # be published.
+        codecov || echo "codecov upload failed"
+      env:
+        CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
   models:
     runs-on: ubuntu-latest
