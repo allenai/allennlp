@@ -71,12 +71,17 @@ jobs:
         ssh-keyscan github.com >> ~/.ssh/known_hosts
         
         # Checkout allennlp-docs to /allennlp-docs
-        mkdir -p /ssh
-        echo $DOCS_DEPLOY_KEY > /ssh/allennlp-docs.key
-        ssh-add /ssh/allennlp-docs.key
-        GIT_SSH_COMMAND='ssh -i /ssh/allennlp-docs.key' git clone git@github.com:allenai/allennlp-docs.git /allennlp-docs
+        echo $DOCS_DEPLOY_KEY > ~/allennlp-docs.key
+        ssh-add ~/allennlp-docs.key
+        GIT_SSH_COMMAND='ssh -i ~/allennlp-docs.key' git clone git@github.com:allenai/allennlp-docs.git ~/allennlp-docs
         
         # Copy the generated docs to the checked out docs repo
-        rm -rf /allennlp-docs/$DIRECTORY/
-        mkdir -p /allennlp-docs/$DIRECTORY
-        cp -r site/* /allennlp-docs/$DIRECTORY
+        rm -rf ~/allennlp-docs/$DIRECTORY/
+        mkdir -p ~/allennlp-docs/$DIRECTORY
+        cp -r site/* ~/allennlp-docs/$DIRECTORY
+
+        # And push them up to GitHub
+        cd ~/allennlp-docs/$DIRECTORY
+        git add .
+        git commit -m "automated update of the docs"
+        GIT_SSH_COMMAND='ssh -i ~/allennlp-docs.key' git push
