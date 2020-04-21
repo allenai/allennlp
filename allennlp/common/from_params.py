@@ -564,6 +564,17 @@ class FromParams:
         else:
             # This is not a base class, so convert our params and extras into a dict of kwargs.
 
+            # If there was a "type" given, we probably didn't want to end up here.
+            if "type" in params:
+                value = params.pop("type")
+                message = (
+                    f"{value} not in acceptable choices for {params.history}type. "
+                    "You should either use the --include-package flag to make sure the correct module "
+                    "is loaded, or use a fully qualified class name in your config file like "
+                    """{"model": "my_module.models.MyModel"} to have it imported automatically."""
+                )
+                raise ConfigurationError(message)
+
             # See the docstring for an explanation of what's going on here.
             if not constructor_to_inspect:
                 constructor_to_inspect = cls.__init__
