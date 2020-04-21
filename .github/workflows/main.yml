@@ -313,7 +313,9 @@ jobs:
         ssh-keyscan github.com >> ~/.ssh/known_hosts
         chmod 644 ~/.ssh/known_hosts
 
-        echo $DOCS_DEPLOY_KEY > ~/.ssh/allennlp-docs.key
+        echo "-----BEGIN OPENSSH PRIVATE KEY-----" > ~/.ssh/allennlp-docs.key
+        echo $DOCS_DEPLOY_KEY | tr " " "\n" >> ~/.ssh/allennlp-docs.key
+        echo "-----END OPENSSH PRIVATE KEY-----" >> ~/.ssh/allennlp-docs.key
         chmod 600 ~/.ssh/allennlp-docs.key
 
         ssh-add ~/.ssh/allennlp-docs.key
