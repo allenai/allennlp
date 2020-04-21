@@ -286,6 +286,25 @@ jobs:
       run: |
         ./scripts/build_docs.sh
 
+    - name: Install SSH deploy key
+      # TODO: uncomment these lines.
+      # # Only run this on main repo, not forks.
+      # if: github.repository == 'allenai/allennlp'
+      uses: shimataro/ssh-key-action@v2
+      with:
+        key: ${{ secrets.DOCS_DEPLOY_KEY }}
+        name: ai2service
+        # known_hosts: ${{ secrets.KNOWN_HOSTS }}
+
+    - name: Configure Git
+      # TODO: uncomment these lines.
+      # # Only run this on main repo, not forks.
+      # if: github.repository == 'allenai/allennlp'
+      run: |
+        git config --global user.email "ai2service@allenai.org"
+        git config --global user.name "ai2service"
+        git config --global push.default simple
+
     - name: Deploy docs
       # TODO: uncomment these lines.
       # # Only run this on main repo, not forks.
@@ -299,26 +318,8 @@ jobs:
             DIRECTORY=${GITHUB_REF/refs\/tags\//};
         fi
 
-        # Configure git.
-        git config --global user.email "ai2service@allenai.org"
-        git config --global user.name "ai2service"
-        git config --global push.default simple
-        
-        # Setup SSH.
-        mkdir -p ~/.ssh
-        chmod 700 ~/.ssh
-
-        eval "$(ssh-agent -s)"
-
         ssh-keyscan github.com >> ~/.ssh/known_hosts
         chmod 644 ~/.ssh/known_hosts
-
-        echo "-----BEGIN RSA PRIVATE KEY-----" > ~/.ssh/allennlp-docs.key
-        echo $DOCS_DEPLOY_KEY | tr " " "\n" >> ~/.ssh/allennlp-docs.key
-        echo "-----END RSA PRIVATE KEY-----" >> ~/.ssh/allennlp-docs.key
-        chmod 600 ~/.ssh/allennlp-docs.key
-
-        ssh-add ~/.ssh/allennlp-docs.key
 
         # Checkout allennlp-docs to /allennlp-docs
         GIT_SSH_COMMAND='ssh -i ~/.ssh/allennlp-docs.key' git clone git@github.com:allenai/allennlp-docs.git ~/allennlp-docs
