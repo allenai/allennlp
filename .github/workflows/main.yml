@@ -14,8 +14,6 @@ on:
 jobs:
   check_core:
     name: Check Core
-    # TODO: remove this.
-    needs: [docs]
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -73,8 +71,6 @@ jobs:
 
   check_models:
     name: Check Models
-    # TODO: remove this.
-    needs: [docs]
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -124,10 +120,8 @@ jobs:
   # Builds package distribution files for PyPI.
   build_package:
     name: Build Package
-    # TODO: remove this
-    needs: [docs]
+    needs: [check_core, check_models]
     # TODO: uncomment these lines
-    # needs: [check_core, check_models]
     # if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     strategy:
@@ -204,7 +198,8 @@ jobs:
   # Builds Docker image from the core distribution files and uploads to Docker Hub.
   docker:
     name: Docker
-    needs: [build_package, test_package]
+    # TODO: add 'test_package' to 'needs'.
+    needs: [build_package]
     # TODO: uncomment
     # if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
@@ -255,9 +250,8 @@ jobs:
   # allennlp-docs repo.
   docs:
     name: Docs
-    # TODO: uncomment
-    # needs: [build_package, test_package]
-    # if: github.event_name != 'pull_request'
+    needs: [build_package, test_package]
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -298,18 +292,14 @@ jobs:
         ./scripts/build_docs.sh
 
     - name: Configure Git
-      # TODO: uncomment these lines.
-      # # Only run this on main repo, not forks.
-      # if: github.repository == 'allenai/allennlp'
       run: |
         git config --global user.email "ai2service@allenai.org"
         git config --global user.name "ai2service"
         git config --global push.default simple
 
     - name: Deploy docs
-      # TODO: uncomment these lines.
-      # # Only run this on main repo, not forks.
-      # if: github.repository == 'allenai/allennlp'
+      # Only run this on main repo, not forks.
+      if: github.repository == 'allenai/allennlp'
       run: |
         if [[ $GITHUB_EVENT_NAME == 'release' ]]; then
             DIRECTORY=master;
@@ -329,8 +319,7 @@ jobs:
         cd ~/allennlp-docs/$DIRECTORY
         git add .
         git commit -m "automated update of the docs"
-        # TODO: uncomment this.
-        # git push
+        git push
 
   # Publish the core distribution files to PyPI.
   publish:
