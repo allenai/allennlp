@@ -17,6 +17,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    # Only run this action on "allenai/allennlp", and not forks.
+    if: github.repository == 'allenai/allennlp'
     strategy:
       matrix:
         python: ['3.7']  # no need to build against multiple versions for now.

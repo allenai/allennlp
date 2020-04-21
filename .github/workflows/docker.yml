@@ -18,6 +18,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    # Only run this action on "allenai/allennlp", and not forks.
+    if: github.repository == 'allenai/allennlp'
 
     steps:
     - uses: actions/checkout@v2
