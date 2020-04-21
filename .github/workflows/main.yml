@@ -269,7 +269,7 @@ jobs:
     - name: Setup SSH Client 🔑
       uses: webfactory/ssh-agent@v0.2.0
       with:
-        ssh-private-key: ${{ secrets.DOCS_DEPLOY_KEY }}
+        ssh-private-key: ${{ secrets.SSH_KEY }}
 
     # - name: Setup Python
     #   uses: actions/setup-python@v1
