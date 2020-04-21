@@ -238,7 +238,7 @@ jobs:
       if: github.repository == 'allenai/allennlp' && github.event_name == 'release'
       run: |
         docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
-        TAG=${GITHUB_REF/refs\/tags\//};
+        TAG=${GITHUB_REF/\/refs\/tags\//};
         docker tag allennlp allennlp/allennlp:$TAG
         docker push allennlp/allennlp:$TAG
 
@@ -298,9 +298,9 @@ jobs:
       if: github.repository == 'allenai/allennlp'
       run: |
         if [[ $GITHUB_EVENT_NAME == 'release' ]]; then
-            DIRECTORY=master;
+            DIRECTORY=${GITHUB_REF/\/refs\/tags\//};
         else
-            DIRECTORY=${GITHUB_REF/refs\/tags\//};
+            DIRECTORY=master;
         fi
 
         # Checkout allennlp-docs to /allennlp-docs
