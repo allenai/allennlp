@@ -124,6 +124,8 @@ jobs:
   # Builds package distribution files for PyPI.
   build_package:
     name: Build Package
+    # TODO: remove this
+    needs: [docs]
     # TODO: uncomment these lines
     # needs: [check_core, check_models]
     # if: github.event_name != 'pull_request'
@@ -276,6 +278,11 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-pydeps-${{ matrix.python }}
 
+    - name: Setup SSH Client 🔑
+      uses: webfactory/ssh-agent@v0.2.0
+      with:
+        ssh-private-key: ${{ secrets.DOCS_DEPLOY_KEY }}
+
     - name: Install requirements
       run: |
         pip install --upgrade pip setuptools wheel
@@ -289,15 +296,6 @@ jobs:
     - name: Build docs
       run: |
         ./scripts/build_docs.sh
-
-    - name: Install SSH deploy key
-      # TODO: uncomment these lines.
-      # # Only run this on main repo, not forks.
-      # if: github.repository == 'allenai/allennlp'
-      uses: shimataro/ssh-key-action@v2
-      with:
-        key: ${{ secrets.DOCS_DEPLOY_KEY }}
-        known_hosts: ${{ secrets.KNOWN_HOSTS }}
 
     - name: Configure Git
       # TODO: uncomment these lines.
