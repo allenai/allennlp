@@ -264,6 +264,11 @@ jobs:
         python: ['3.7']  # no need to build against multiple versions for now.
 
     steps:
+    - name: Setup SSH Client 🔑
+      uses: webfactory/ssh-agent@v0.2.0
+      with:
+        ssh-private-key: ${{ secrets.DOCS_DEPLOY_KEY }}
+
     - uses: actions/checkout@v2
 
     - name: Setup Python
@@ -277,11 +282,6 @@ jobs:
         key: ${{ runner.os }}-pydeps-${{ matrix.python }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
         restore-keys: |
           ${{ runner.os }}-pydeps-${{ matrix.python }}
-
-    - name: Setup SSH Client 🔑
-      uses: webfactory/ssh-agent@v0.2.0
-      with:
-        ssh-private-key: ${{ secrets.DOCS_DEPLOY_KEY }}
 
     - name: Install requirements
       run: |
