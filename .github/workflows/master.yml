@@ -1,10 +1,7 @@
-name: CI
+name: Master
 
 on:
   # TODO: add nightly schedule.
-  pull_request:
-    branches:
-    - master
   push:
     branches:
     - master
@@ -37,8 +34,7 @@ jobs:
     - name: Install requirements
       run: |
         pip install --upgrade pip setuptools wheel
-        pip install -e .
-        pip install --upgrade -r dev-requirements.txt
+        pip install --upgrade -e . -r dev-requirements.txt
 
     - name: Debug info
       run: |
@@ -94,8 +90,7 @@ jobs:
     - name: Install requirements
       run: |
         pip install --upgrade pip setuptools wheel
-        pip install -e .
-        pip install --upgrade -r dev-requirements.txt
+        pip install --upgrade -e . -r dev-requirements.txt
 
     - name: Debug info
       run: |
@@ -106,7 +101,7 @@ jobs:
         EXCLUDE_ALLENNLP_IN_SETUP: "true"
       run: |
         git clone https://github.com/allenai/allennlp-models.git
-        cd allennlp-models && pip install -e . && pip install -r dev-requirements.txt
+        cd allennlp-models && pip install --upgrade -e . -r dev-requirements.txt
 
     - name: Run models tests
       run: |
@@ -121,7 +116,6 @@ jobs:
   build_package:
     name: Build Package
     needs: [check_core, check_models]
-    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -145,8 +139,7 @@ jobs:
     - name: Install requirements
       run: |
         pip install --upgrade pip setuptools wheel
-        pip install -e .
-        pip install --upgrade -r dev-requirements.txt
+        pip install --upgrade -e . -r dev-requirements.txt
 
     - name: Build core package
       run: |
@@ -163,7 +156,6 @@ jobs:
   test_package:
     name: Test Package
     needs: [build_package]
-    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -196,8 +188,7 @@ jobs:
   # Builds Docker image from the core distribution files and uploads to Docker Hub.
   docker:
     name: Docker
-    needs: [build_package, test_package]
-    if: github.event_name != 'pull_request'
+    needs: [build_package]
     runs-on: ubuntu-latest
 
     steps:
@@ -246,8 +237,7 @@ jobs:
   # allennlp-docs repo.
   docs:
     name: Docs
-    needs: [build_package, test_package]
-    if: github.event_name != 'pull_request'
+    needs: [build_package, test_package, docker]
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -276,8 +266,7 @@ jobs:
     - name: Install requirements
       run: |
         pip install --upgrade pip setuptools wheel
-        pip install -e .
-        pip install --upgrade -r dev-requirements.txt
+        pip install --upgrade -e . -r dev-requirements.txt
 
     - name: Debug info
       run: |
