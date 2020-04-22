@@ -101,7 +101,7 @@ jobs:
         EXCLUDE_ALLENNLP_IN_SETUP: "true"
       run: |
         git clone https://github.com/allenai/allennlp-models.git
-        cd allennlp-models && pip install -e . && pip install -r dev-requirements.txt
+        cd allennlp-models && pip install --upgrade -e . -r dev-requirements.txt
 
     - name: Run models tests
       run: |
@@ -190,7 +190,7 @@ jobs:
   # Builds Docker image from the core distribution files and uploads to Docker Hub.
   docker:
     name: Docker
-    needs: [build_package, test_package]
+    needs: [build_package]
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
 
@@ -240,7 +240,7 @@ jobs:
   # allennlp-docs repo.
   docs:
     name: Docs
-    needs: [build_package, test_package]
+    needs: [build_package, test_package, docker]
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     strategy:

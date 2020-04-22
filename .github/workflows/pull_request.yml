@@ -98,7 +98,7 @@ jobs:
         EXCLUDE_ALLENNLP_IN_SETUP: "true"
       run: |
         git clone https://github.com/allenai/allennlp-models.git
-        cd allennlp-models && pip install -e . && pip install -r dev-requirements.txt
+        cd allennlp-models && pip install --upgrade -e . -r dev-requirements.txt
 
     - name: Run models tests
       run: |
