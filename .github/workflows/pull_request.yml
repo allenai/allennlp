@@ -30,8 +30,7 @@ jobs:
 
     - name: Install requirements
       run: |
-        pip install --upgrade pip setuptools wheel
-        pip install --upgrade --upgrade-strategy eager -e . -r dev-requirements.txt
+        make install
 
     - name: Debug info
       run: |
@@ -86,8 +85,7 @@ jobs:
 
     - name: Install requirements
       run: |
-        pip install --upgrade pip setuptools wheel
-        pip install --upgrade --upgrade-strategy eager -e . -r dev-requirements.txt
+        make install
 
     - name: Debug info
       run: |
@@ -98,7 +96,7 @@ jobs:
         EXCLUDE_ALLENNLP_IN_SETUP: "true"
       run: |
         git clone https://github.com/allenai/allennlp-models.git
-        cd allennlp-models && pip install --upgrade -e . -r dev-requirements.txt
+        cd allennlp-models && pip install --upgrade --upgrade-strategy eager -e . -r dev-requirements.txt
 
     - name: Run models tests
       run: |
