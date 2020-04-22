@@ -4,14 +4,15 @@ import torch
 from torch.nn import ParameterList, Parameter
 
 from allennlp.common.checks import ConfigurationError
+from allennlp.nn import util
 
 
 class ScalarMix(torch.nn.Module):
     """
-    Computes a parameterised scalar mixture of N tensors, ``mixture = gamma * sum(s_k * tensor_k)``
-    where ``s = softmax(w)``, with ``w`` and ``gamma`` scalar parameters.
+    Computes a parameterised scalar mixture of N tensors, `mixture = gamma * sum(s_k * tensor_k)`
+    where `s = softmax(w)`, with `w` and `gamma` scalar parameters.
 
-    In addition, if ``do_layer_norm=True`` then apply layer normalization to each tensor
+    In addition, if `do_layer_norm=True` then apply layer normalization to each tensor
     before weighting.
     """
 
@@ -44,17 +45,17 @@ class ScalarMix(torch.nn.Module):
         )
         self.gamma = Parameter(torch.FloatTensor([1.0]), requires_grad=trainable)
 
-    def forward(self, tensors: List[torch.Tensor], mask: torch.Tensor = None) -> torch.Tensor:
+    def forward(self, tensors: List[torch.Tensor], mask: torch.BoolTensor = None) -> torch.Tensor:
         """
-        Compute a weighted average of the ``tensors``.  The input tensors an be any shape
+        Compute a weighted average of the `tensors`.  The input tensors an be any shape
         with at least two dimensions, but must all be the same shape.
 
-        When ``do_layer_norm=True``, the ``mask`` is required input.  If the ``tensors`` are
-        dimensioned  ``(dim_0, ..., dim_{n-1}, dim_n)``, then the ``mask`` is dimensioned
-        ``(dim_0, ..., dim_{n-1})``, as in the typical case with ``tensors`` of shape
-        ``(batch_size, timesteps, dim)`` and ``mask`` of shape ``(batch_size, timesteps)``.
+        When `do_layer_norm=True`, the `mask` is required input.  If the `tensors` are
+        dimensioned  `(dim_0, ..., dim_{n-1}, dim_n)`, then the `mask` is dimensioned
+        `(dim_0, ..., dim_{n-1})`, as in the typical case with `tensors` of shape
+        `(batch_size, timesteps, dim)` and `mask` of shape `(batch_size, timesteps)`.
 
-        When ``do_layer_norm=False`` the ``mask`` is ignored.
+        When `do_layer_norm=False` the `mask` is ignored.
         """
         if len(tensors) != self.mixture_size:
             raise ConfigurationError(
@@ -68,7 +69,7 @@ class ScalarMix(torch.nn.Module):
             variance = (
                 torch.sum(((tensor_masked - mean) * broadcast_mask) ** 2) / num_elements_not_masked
             )
-            return (tensor - mean) / torch.sqrt(variance + 1e-12)
+            return (tensor - mean) / torch.sqrt(variance + util.tiny_value_of_dtype(variance.dtype))
 
         normed_weights = torch.nn.functional.softmax(
             torch.cat([parameter for parameter in self.scalar_parameters]), dim=0
@@ -82,10 +83,9 @@ class ScalarMix(torch.nn.Module):
             return self.gamma * sum(pieces)
 
         else:
-            mask_float = mask.float()
-            broadcast_mask = mask_float.unsqueeze(-1)
+            broadcast_mask = mask.unsqueeze(-1)
             input_dim = tensors[0].size(-1)
-            num_elements_not_masked = torch.sum(mask_float) * input_dim
+            num_elements_not_masked = torch.sum(mask) * input_dim
 
             pieces = []
             for weight, tensor in zip(normed_weights, tensors):

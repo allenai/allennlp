@@ -22,12 +22,14 @@ class BabiReader(DatasetReader):
     if one wants to load multiple tasks together it has to merge them into a
     single file and use this reader.
 
+    Registered as a `DatasetReader` with name "babi".
+
     # Parameters
 
-    keep_sentences : ``bool``, optional, (default = ``False``)
+    keep_sentences : `bool`, optional, (default = `False`)
         Whether to keep each sentence in the context or to concatenate them.
-        Default is ``False`` that corresponds to concatenation.
-    token_indexers : ``Dict[str, TokenIndexer]``, optional (default=``{"tokens": SingleIdTokenIndexer()}``)
+        Default is `False` that corresponds to concatenation.
+    token_indexers : `Dict[str, TokenIndexer]`, optional (default=`{"tokens": SingleIdTokenIndexer()}`)
         We use this to define the input representation for the text.  See :class:`TokenIndexer`.
     """
 

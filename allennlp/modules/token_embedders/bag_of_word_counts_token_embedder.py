@@ -17,15 +17,17 @@ class BagOfWordCountsTokenEmbedder(TokenEmbedder):
 
     By default, we ignore padding tokens.
 
+    Registered as a `TokenEmbedder` with name "bag_of_word_counts".
+
     # Parameters
 
-    vocab : ``Vocabulary``
-    vocab_namespace : ``str``, optional (default = "tokens")
+    vocab : `Vocabulary`
+    vocab_namespace : `str`, optional (default = "tokens")
         namespace of vocabulary to embed
-    projection_dim : ``int``, optional (default = ``None``)
+    projection_dim : `int`, optional (default = `None`)
         if specified, will project the resulting bag of words representation
         to specified dimension.
-    ignore_oov : ``bool``, optional (default = ``False``)
+    ignore_oov : `bool`, optional (default = `False`)
         If true, we ignore the OOV token.
     """
 
@@ -59,23 +61,24 @@ class BagOfWordCountsTokenEmbedder(TokenEmbedder):
         """
         # Parameters
 
-        inputs : ``torch.Tensor``
-            Shape ``(batch_size, timesteps, sequence_length)`` of word ids
+        inputs : `torch.Tensor`
+            Shape `(batch_size, timesteps, sequence_length)` of word ids
             representing the current batch.
 
         # Returns
 
-        The bag-of-words representations for the input sequence, shape
-        ``(batch_size, vocab_size)``
+        `torch.Tensor`
+            The bag-of-words representations for the input sequence, shape
+            `(batch_size, vocab_size)`
         """
         bag_of_words_vectors = []
 
         mask = get_text_field_mask({"tokens": {"tokens": inputs}})
         if self._ignore_oov:
             # also mask out positions corresponding to oov
-            mask *= (inputs != self._oov_idx).long()
+            mask &= inputs != self._oov_idx
         for document, doc_mask in zip(inputs, mask):
-            document = torch.masked_select(document, doc_mask.to(dtype=torch.bool))
+            document = torch.masked_select(document, doc_mask)
             vec = torch.bincount(document, minlength=self.vocab_size).float()
             vec = vec.view(1, -1)
             bag_of_words_vectors.append(vec)

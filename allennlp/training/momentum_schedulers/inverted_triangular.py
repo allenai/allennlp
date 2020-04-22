@@ -8,11 +8,13 @@ class InvertedTriangular(MomentumScheduler):
     """
     Adjust momentum during training according to an inverted triangle-like schedule.
 
-    The momentum starts off high, then decreases linearly for ``cool_down`` epochs,
-    until reaching ``1 / ratio`` th of the original value. Then the momentum increases
-    linearly for ``warm_up`` epochs until reaching its original value again. If there
+    The momentum starts off high, then decreases linearly for `cool_down` epochs,
+    until reaching `1 / ratio` th of the original value. Then the momentum increases
+    linearly for `warm_up` epochs until reaching its original value again. If there
     are still more epochs left over to train, the momentum will stay flat at the original
     value.
+
+    Registered as a `MomentumScheduler` with name "inverted_triangular".
     """
 
     def __init__(

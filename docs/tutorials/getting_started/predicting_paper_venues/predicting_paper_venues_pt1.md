@@ -462,7 +462,7 @@ were to split strings into words and represent words as single ids under the nam
   "validation_data_path": "https://allennlp.s3.amazonaws.com/datasets/academic-papers-example/dev.jsonl",
   "iterator": {
     "type": "bucket",
-    "sorting_keys": [["abstract", "num_tokens"], ["title", "num_tokens"]],
+    "sorting_keys": ["abstract", "title"],
     "batch_size": 64
   },
   "trainer": {
@@ -538,7 +538,7 @@ here is a wrapper around pytorch's built-in LSTMs that make them conform to the 
 API.  All of the parameters except for "type" get passed directly to pytorch code.
 
 The feed-forward network has a configurable depth, width, and activation.  You can look at the
-[documentation](https://allenai.github.io/allennlp-docs/api/allennlp.modules.feedforward.html) of
+[documentation](https://docs.allennlp.org/master/api/modules/feedforward/) of
 `FeedForward` for more information on these parameters.
 
 And that's it!  You're now the proud owner of a new `DatasetReader`, `Model`, and means to train

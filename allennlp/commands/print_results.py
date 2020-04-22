@@ -2,9 +2,7 @@
 The ``print-results`` subcommand allows you to print results from multiple
 allennlp serialization directories to the console in a helpful csv format.
 
-.. code-block:: bash
-
-   $ allennlp print-results --help
+    $ allennlp print-results --help
     usage: allennlp print-results [-h] [-k KEYS [KEYS ...]] [-m METRICS_FILENAME]
                                   [--include-package INCLUDE_PACKAGE]
                                   path
@@ -31,19 +29,21 @@ import json
 import logging
 import os
 
+from overrides import overrides
+
 from allennlp.commands.subcommand import Subcommand
 
 logger = logging.getLogger(__name__)
 
 
+@Subcommand.register("print-results")
 class PrintResults(Subcommand):
-    def add_subparser(
-        self, name: str, parser: argparse._SubParsersAction
-    ) -> argparse.ArgumentParser:
+    @overrides
+    def add_subparser(self, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
 
         description = """Print results from allennlp training runs in a helpful CSV format."""
         subparser = parser.add_parser(
-            name,
+            self.name,
             description=description,
             help="Print results from allennlp serialization directories to the console.",
         )

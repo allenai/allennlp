@@ -7,9 +7,9 @@ from allennlp.common.testing import ModelTestCase
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import Params
 from allennlp.data.dataset_readers import DatasetReader
-from allennlp.data.iterators import DataIterator, BasicIterator
+from allennlp.data import DataLoader
 from allennlp.models import Model
-from allennlp.training import Trainer
+from allennlp.training import GradientDescentTrainer, Trainer
 
 
 class SimpleTaggerTest(ModelTestCase):
@@ -30,7 +30,7 @@ class SimpleTaggerTest(ModelTestCase):
     def test_forward_pass_runs_correctly(self):
         training_tensors = self.dataset.as_tensor_dict()
         output_dict = self.model(**training_tensors)
-        output_dict = self.model.decode(output_dict)
+        output_dict = self.model.make_output_human_readable(output_dict)
         class_probs = output_dict["class_probabilities"][0].data.numpy()
         numpy.testing.assert_almost_equal(numpy.sum(class_probs, -1), numpy.array([1, 1, 1, 1]))
 
@@ -55,16 +55,16 @@ class SimpleTaggerTest(ModelTestCase):
         penalty = self.model.get_regularization_penalty()
         assert penalty == 0
 
-        iterator = BasicIterator(batch_size=32)
-        trainer = Trainer(self.model, None, iterator, self.instances)  # optimizer,
+        data_loader = DataLoader(self.instances, batch_size=32)
+        trainer = GradientDescentTrainer(self.model, None, data_loader)  # optimizer,
 
         # You get a RuntimeError if you call `model.forward` twice on the same inputs.
         # The data and config are such that the whole dataset is one batch.
-        training_batch = next(iterator(self.instances, num_epochs=1))
-        validation_batch = next(iterator(self.instances, num_epochs=1))
+        training_batch = next(iter(data_loader))
+        validation_batch = next(iter(data_loader))
 
-        training_loss = trainer.batch_loss(training_batch, for_training=True).item()
-        validation_loss = trainer.batch_loss(validation_batch, for_training=False).item()
+        training_loss = trainer.batch_outputs(training_batch, for_training=True)["loss"].item()
+        validation_loss = trainer.batch_outputs(validation_batch, for_training=False)["loss"].item()
 
         # Training loss should have the regularization penalty, but validation loss should not.
         numpy.testing.assert_almost_equal(training_loss, validation_loss)
@@ -93,9 +93,14 @@ class SimpleTaggerRegularizationTest(ModelTestCase):
         self.set_up_model(param_file, self.FIXTURES_ROOT / "data" / "sequence_tagging.tsv")
         params = Params.from_file(param_file)
         self.reader = DatasetReader.from_params(params["dataset_reader"])
-        self.iterator = DataIterator.from_params(params["iterator"])
+        self.data_loader = DataLoader.from_params(
+            dataset=self.instances, params=params["data_loader"]
+        )
         self.trainer = Trainer.from_params(
-            self.model, self.TEST_DIR, self.iterator, self.dataset, None, params.get("trainer")
+            model=self.model,
+            data_loader=self.data_loader,
+            serialization_dir=self.TEST_DIR,
+            params=params.get("trainer"),
         )
 
     def test_regularization(self):
@@ -121,11 +126,17 @@ class SimpleTaggerRegularizationTest(ModelTestCase):
 
         # You get a RuntimeError if you call `model.forward` twice on the same inputs.
         # The data and config are such that the whole dataset is one batch.
-        training_batch = next(self.iterator(self.instances, num_epochs=1))
-        validation_batch = next(self.iterator(self.instances, num_epochs=1))
+        training_batch = next(iter(self.data_loader))
+        validation_batch = next(iter(self.data_loader))
 
-        training_loss = self.trainer.batch_loss(training_batch, for_training=True).data
-        validation_loss = self.trainer.batch_loss(validation_batch, for_training=False).data
+        training_batch_outputs = self.trainer.batch_outputs(training_batch, for_training=True)
+        training_loss = training_batch_outputs["loss"].data
+
+        assert (penalty == training_batch_outputs["reg_loss"]).all()
+
+        validation_loss = self.trainer.batch_outputs(validation_batch, for_training=False)[
+            "loss"
+        ].data
 
         # Training loss should have the regularization penalty, but validation loss should not.
         assert (training_loss != validation_loss).all()

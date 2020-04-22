@@ -16,7 +16,9 @@ class TextClassifierPredictor(Predictor):
     """
     Predictor for any model that takes in a sentence and returns
     a single class for it.  In particular, it can be used with
-    the :class:`~allennlp.models.basic_classifier.BasicClassifier` model
+    the [`BasicClassifier`](../models/basic_classifier.md) model.
+
+    Registered as a `Predictor` with name "text_classifier".
     """
 
     def predict(self, sentence: str) -> JsonDict:
@@ -25,8 +27,8 @@ class TextClassifierPredictor(Predictor):
     @overrides
     def _json_to_instance(self, json_dict: JsonDict) -> Instance:
         """
-        Expects JSON that looks like ``{"sentence": "..."}``.
-        Runs the underlying model, and adds the ``"label"`` to the output.
+        Expects JSON that looks like `{"sentence": "..."}`.
+        Runs the underlying model, and adds the `"label"` to the output.
         """
         sentence = json_dict["sentence"]
         if not hasattr(self._dataset_reader, "tokenizer") and not hasattr(

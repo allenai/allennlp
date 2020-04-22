@@ -6,11 +6,12 @@ import numpy as np
 import torch
 
 from allennlp.common.checks import ConfigurationError
+from allennlp.nn import util
 
 
 def _choice(num_words: int, num_samples: int) -> Tuple[np.ndarray, int]:
     """
-    Chooses ``num_samples`` samples without replacement from [0, ..., num_words).
+    Chooses `num_samples` samples without replacement from [0, ..., num_words).
     Returns a tuple (samples, num_tries).
     """
     num_tries = 0
@@ -46,28 +47,30 @@ class SampledSoftmaxLoss(torch.nn.Module):
     """
     Based on the default log_uniform_candidate_sampler in tensorflow.
 
-    NOTE: num_words DOES NOT include padding id.
+    !!! NOTE
+        num_words DOES NOT include padding id.
 
-    NOTE: In all cases except (tie_embeddings=True and use_character_inputs=False)
-    the weights are dimensioned as num_words and do not include an entry for the padding (0) id.
-    For the (tie_embeddings=True and use_character_inputs=False) case,
-    then the embeddings DO include the extra 0 padding, to be consistent with the word embedding layer.
+    !!! NOTE
+        In all cases except (tie_embeddings=True and use_character_inputs=False)
+        the weights are dimensioned as num_words and do not include an entry for the padding (0) id.
+        For the (tie_embeddings=True and use_character_inputs=False) case,
+        then the embeddings DO include the extra 0 padding, to be consistent with the word embedding layer.
 
     # Parameters
 
-    num_words, ``int``, required
+    num_words, `int`, required
         The number of words in the vocabulary
-    embedding_dim, ``int``, required
+    embedding_dim, `int`, required
         The dimension to softmax over
-    num_samples, ``int``, required
+    num_samples, `int`, required
         During training take this many samples. Must be less than num_words.
-    sparse, ``bool``, optional (default = False)
+    sparse, `bool`, optional (default = False)
         If this is true, we use a sparse embedding matrix.
-    unk_id, ``int``, optional (default = None)
+    unk_id, `int`, optional (default = None)
         If provided, the id that represents unknown characters.
-    use_character_inputs, ``bool``, optional (default = True)
+    use_character_inputs, `bool`, optional (default = True)
         Whether to use character inputs
-    use_fast_sampler, ``bool``, optional (default = False)
+    use_fast_sampler, `bool`, optional (default = False)
         Whether to use the fast cython sampler.
     """
 
@@ -96,9 +99,13 @@ class SampledSoftmaxLoss(torch.nn.Module):
         # Glorit init (std=(1.0 / sqrt(fan_in))
         if sparse:
             # create our own sparse embedding
-            self.softmax_w = torch.nn.Embedding(num_words, embedding_dim, sparse=True)
+            self.softmax_w = torch.nn.Embedding(
+                num_embeddings=num_words, embedding_dim=embedding_dim, sparse=True
+            )
             self.softmax_w.weight.data.normal_(mean=0.0, std=1.0 / np.sqrt(embedding_dim))
-            self.softmax_b = torch.nn.Embedding(num_words, 1, sparse=True)
+            self.softmax_b = torch.nn.Embedding(
+                num_embeddings=num_words, embedding_dim=1, sparse=True
+            )
             self.softmax_b.weight.data.fill_(0.0)
         else:
             # just create tensors to use as the embeddings
@@ -201,13 +208,19 @@ class SampledSoftmaxLoss(torch.nn.Module):
         # compute the logits and remove log expected counts
         # [batch_size, ]
         true_logits = (
-            (true_w * embeddings).sum(dim=1) + true_b - torch.log(target_expected_count + 1e-7)
+            (true_w * embeddings).sum(dim=1)
+            + true_b
+            - torch.log(
+                target_expected_count + util.tiny_value_of_dtype(target_expected_count.dtype)
+            )
         )
         # [batch_size, n_samples]
         sampled_logits = (
             torch.matmul(embeddings, sampled_w.t())
             + sampled_b
-            - torch.log(sampled_expected_count + 1e-7)
+            - torch.log(
+                sampled_expected_count + util.tiny_value_of_dtype(sampled_expected_count.dtype)
+            )
         )
 
         # remove true labels -- we will take

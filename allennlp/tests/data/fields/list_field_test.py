@@ -6,8 +6,9 @@ import torch
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Token, Vocabulary, Instance
 from allennlp.data.fields import TextField, LabelField, ListField, IndexField, SequenceLabelField
-from allennlp.data.iterators import BasicIterator
 from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenCharactersIndexer
+from allennlp.data.dataloader import DataLoader
+from allennlp.data.dataset_readers.dataset_reader import AllennlpDataset
 from allennlp.data.tokenizers import SpacyTokenizer
 from allennlp.models import Model
 from allennlp.modules import Embedding
@@ -296,13 +297,12 @@ class TestListField(AllenNlpTestCase):
         instance.as_tensor_dict()
 
     def test_batch_with_some_empty_lists_works(self):
-        dataset = [self.empty_instance, self.non_empty_instance]
+        dataset = AllennlpDataset([self.empty_instance, self.non_empty_instance], self.vocab)
 
         model = DummyModel(self.vocab)
         model.eval()
-        iterator = BasicIterator(batch_size=2)
-        iterator.index_with(self.vocab)
-        batch = next(iterator(dataset, shuffle=False))
+        loader = DataLoader(dataset, batch_size=2)
+        batch = next(iter(loader))
         model.forward(**batch)
 
     # This use case may seem a bit peculiar. It's intended for situations where
@@ -312,11 +312,55 @@ class TestListField(AllenNlpTestCase):
     # makes a whole lot more sense to just have a minimally-sized tensor that
     # gets entirely masked and has no effect on the rest of the model.
     def test_batch_of_entirely_empty_lists_works(self):
-        dataset = [self.empty_instance, self.empty_instance]
+        dataset = AllennlpDataset([self.empty_instance, self.empty_instance], self.vocab)
 
         model = DummyModel(self.vocab)
         model.eval()
-        iterator = BasicIterator(batch_size=2)
-        iterator.index_with(self.vocab)
-        batch = next(iterator(dataset, shuffle=False))
+        loader = DataLoader(dataset, batch_size=2)
+        batch = next(iter(loader))
         model.forward(**batch)
+
+    def test_list_of_text_padding(self):
+        from allennlp.data.token_indexers import PretrainedTransformerIndexer
+        from allennlp.data.tokenizers import Token
+        from allennlp.data.fields import (
+            TextField,
+            ListField,
+        )
+        from allennlp.data import Vocabulary
+
+        word_indexer = {"tokens": PretrainedTransformerIndexer("albert-base-v2")}
+        text_field = TextField(
+            [
+                Token(t, text_id=2, type_id=1)
+                for t in ["▁allen", "n", "lp", "▁has", "▁no", "▁bugs", "."]
+            ],
+            word_indexer,
+        )
+        list_field = ListField([text_field])
+
+        vocab = Vocabulary()
+        list_field.index(vocab)
+
+        padding_lengths = {
+            "list_tokens___mask": 10,
+            "list_tokens___token_ids": 10,
+            "list_tokens___type_ids": 10,
+            "num_fields": 2,
+        }
+
+        tensors = list_field.as_tensor(padding_lengths)["tokens"]
+        assert tensors["mask"].size() == (2, 10)
+        assert tensors["mask"][0, 0] == True  # noqa: E712
+        assert tensors["mask"][0, 9] == False  # noqa: E712
+        assert (tensors["mask"][1, :] == False).all()  # noqa: E712
+
+        assert tensors["token_ids"].size() == (2, 10)
+        assert tensors["token_ids"][0, 0] == 2
+        assert tensors["token_ids"][0, 9] == 0
+        assert (tensors["token_ids"][1, :] == 0).all()
+
+        assert tensors["type_ids"].size() == (2, 10)
+        assert tensors["type_ids"][0, 0] == 1
+        assert tensors["type_ids"][0, 9] == 0
+        assert (tensors["type_ids"][1, :] == 0).all()

@@ -36,7 +36,7 @@ class TestPrintResults(AllenNlpTestCase):
 
     def test_print_results(self):
         kebab_args = [
-            "run.py",
+            "__main__.py",
             "print-results",
             str(self.TEST_DIR),
             "--keys",
@@ -61,7 +61,7 @@ class TestPrintResults(AllenNlpTestCase):
 
     def test_print_results_with_metrics_filename(self):
         kebab_args = [
-            "run.py",
+            "__main__.py",
             "print-results",
             str(self.TEST_DIR),
             "--keys",

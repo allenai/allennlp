@@ -1,12 +1,17 @@
-from typing import Dict, List, Tuple, Any
 from collections import OrderedDict
+from copy import deepcopy
+from typing import Any, Dict, List, Tuple
 
 import torch
 
-from allennlp.training.optimizers import Optimizer
+from allennlp.data.dataset_readers.dataset_reader import AllennlpDataset
+from allennlp.common import Lazy, Params
+from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.training.learning_rate_schedulers import LearningRateScheduler
-from allennlp.common.params import Params
+from allennlp.data import DataLoader
+from allennlp.training import Trainer
+from allennlp.training.learning_rate_schedulers import LearningRateScheduler, SlantedTriangular
+from allennlp.training.optimizers import Optimizer
 
 
 def is_hat_shaped(learning_rates: List[float]):
@@ -49,12 +54,16 @@ class SlantedTriangularTest(AllenNlpTestCase):
     def _get_optimizer(self, lr: float = 1.0):
         optimizer_params = Params({"type": "sgd", "lr": lr})
         optimizer_params["parameter_groups"] = [[[f"^{m}"], {}] for m in self.model._modules]
-        return Optimizer.from_params(self.model.named_parameters(), optimizer_params)
+        return Optimizer.from_params(
+            model_parameters=self.model.named_parameters(), params=optimizer_params
+        )
 
     def _run_scheduler_get_lrs(self, params, num_steps_per_epoch):
         optimizer = self._get_optimizer()
         params["type"] = "slanted_triangular"
-        scheduler = LearningRateScheduler.from_params(optimizer, Params(params))
+        scheduler = LearningRateScheduler.from_params(
+            optimizer=optimizer, params=Params(deepcopy(params))
+        )
         lrs = []
 
         batch_num_total = 0
@@ -73,7 +82,7 @@ class SlantedTriangularTest(AllenNlpTestCase):
                 if params.get("gradual_unfreezing") and epoch == 0:
                     assert scheduler.freezing_current
             # step() takes two arguments: validation metric and epoch
-            scheduler.step(None, epoch)
+            scheduler.step(None)
 
         return lrs
 
@@ -88,11 +97,68 @@ class SlantedTriangularTest(AllenNlpTestCase):
             + [float(k) for k in range(10)]
         )
 
+    def test_from_params_in_trainer(self):
+        # This is more of an integration test, making sure that a bunch of pieces fit together
+        # correctly, but it matters most for this learning rate scheduler, so we're testing it here.
+        params = Params(
+            {
+                "num_epochs": 5,
+                "learning_rate_scheduler": {
+                    "type": "slanted_triangular",
+                    "gradual_unfreezing": True,
+                    "discriminative_fine_tuning": True,
+                    "decay_factor": 0.5,
+                },
+            }
+        )
+        # The method called in the logic below only checks the length of this list, not its
+        # contents, so this should be safe.
+        instances = AllennlpDataset([1] * 40)
+        optim = self._get_optimizer()
+        trainer = Trainer.from_params(
+            model=self.model,
+            optimizer=Lazy(lambda **kwargs: optim),
+            serialization_dir=self.TEST_DIR,
+            params=params,
+            data_loader=DataLoader(instances, batch_size=10),
+        )
+        assert isinstance(trainer._learning_rate_scheduler, SlantedTriangular)
+
+        # This is what we wrote this test for: to be sure that num_epochs is passed correctly, and
+        # that num_steps_per_epoch is computed and passed correctly.  This logic happens inside of
+        # `Trainer.from_partial_objects`.
+        assert trainer._learning_rate_scheduler.num_epochs == 5
+        assert trainer._learning_rate_scheduler.num_steps_per_epoch == 4
+
+        # And we'll do one more to make sure that we can override num_epochs in the scheduler if we
+        # really want to.  Not sure why you would ever want to in this case; this is just testing
+        # the functionality.
+        params = Params(
+            {
+                "num_epochs": 5,
+                "learning_rate_scheduler": {
+                    "type": "slanted_triangular",
+                    "num_epochs": 3,
+                    "gradual_unfreezing": True,
+                    "discriminative_fine_tuning": True,
+                    "decay_factor": 0.5,
+                },
+            }
+        )
+        trainer = Trainer.from_params(
+            model=self.model,
+            optimizer=Lazy(lambda **kwargs: optim),
+            serialization_dir=self.TEST_DIR,
+            params=params,
+            data_loader=DataLoader(instances, batch_size=10),
+        )
+        assert trainer._learning_rate_scheduler.num_epochs == 3
+
     def test_from_params(self):
         optim = self._get_optimizer()
         sched = LearningRateScheduler.from_params(
-            optim,
-            Params(
+            optimizer=optim,
+            params=Params(
                 {
                     "type": "slanted_triangular",
                     "num_epochs": 5,
@@ -115,13 +181,14 @@ class SlantedTriangularTest(AllenNlpTestCase):
         assert optim.param_groups[-2]["lr"] == 1.0 / sched.ratio
         assert optim.param_groups[-3]["lr"] == 0.5 / sched.ratio
 
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ConfigurationError):
             # num_epochs and num_steps_per_epoch are required
             LearningRateScheduler.from_params(
-                optim, Params({"type": "slanted_triangular", "num_epochs": 5})
+                optimizer=optim, params=Params({"type": "slanted_triangular", "num_epochs": 5})
             )
             LearningRateScheduler.from_params(
-                optim, Params({"type": "slanted_triangular", "num_steps_epochs": 10})
+                optimizer=optim,
+                params=Params({"type": "slanted_triangular", "num_steps_epochs": 10}),
             )
 
     def test_schedules(self):

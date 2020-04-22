@@ -36,19 +36,19 @@ class ResidualWithLayerDropout(torch.nn.Module):
 
         # Parameters
 
-        layer_input ``torch.FloatTensor`` required
+        layer_input `torch.FloatTensor` required
             The input tensor of this layer.
-        layer_output ``torch.FloatTensor`` required
+        layer_output `torch.FloatTensor` required
             The output tensor of this layer, with the same shape as the layer_input.
-        layer_index ``int``
+        layer_index `int`
             The layer index, starting from 1. This is used to calcuate the dropout prob
             together with the `total_layers` parameter.
-        total_layers ``int``
+        total_layers `int`
             The total number of layers.
 
         # Returns
 
-        output : ``torch.FloatTensor``
+        output : `torch.FloatTensor`
             A tensor with the same shape as `layer_input` and `layer_output`.
         """
         if layer_index is not None and total_layers is not None:

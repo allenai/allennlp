@@ -38,27 +38,27 @@ class _NamespaceDependentDefaultDict(defaultdict):
     labels, characters, or whatever else you want, into integers.  The issue is that some of those
     namespaces (words and characters) should have integers reserved for padding and
     out-of-vocabulary tokens, while others (labels and tags) shouldn't.  This class allows you to
-    specify filters on the namespace (the key used in the ``defaultdict``), and use different
+    specify filters on the namespace (the key used in the `defaultdict`), and use different
     default values depending on whether the namespace passes the filter.
 
-    To do filtering, we take a set of ``non_padded_namespaces``.  This is a set of strings
+    To do filtering, we take a set of `non_padded_namespaces`.  This is a set of strings
     that are either matched exactly against the keys, or treated as suffixes, if the
-    string starts with ``*``.  In other words, if ``*tags`` is in ``non_padded_namespaces`` then
-    ``passage_tags``, ``question_tags``, etc. (anything that ends with ``tags``) will have the
-    ``non_padded`` default value.
+    string starts with `*`.  In other words, if `*tags` is in `non_padded_namespaces` then
+    `passage_tags`, `question_tags`, etc. (anything that ends with `tags`) will have the
+    `non_padded` default value.
 
     # Parameters
 
-    non_padded_namespaces : ``Iterable[str]``
+    non_padded_namespaces : `Iterable[str]`
         A set / list / tuple of strings describing which namespaces are not padded.  If a namespace
         (key) is missing from this dictionary, we will use :func:`namespace_match` to see whether
         the namespace should be padded.  If the given namespace matches any of the strings in this
-        list, we will use ``non_padded_function`` to initialize the value for that namespace, and
-        we will use ``padded_function`` otherwise.
-    padded_function : ``Callable[[], Any]``
+        list, we will use `non_padded_function` to initialize the value for that namespace, and
+        we will use `padded_function` otherwise.
+    padded_function : `Callable[[], Any]`
         A zero-argument function to call to initialize a value for a namespace that `should` be
         padded.
-    non_padded_function : ``Callable[[], Any]``
+    non_padded_function : `Callable[[], Any]`
         A zero-argument function to call to initialize a value for a namespace that should `not` be
         padded.
     """
@@ -133,26 +133,40 @@ class Vocabulary(Registrable):
     methods on this class allow you to pass in a namespace; by default we use the 'tokens'
     namespace, and you can omit the namespace argument everywhere and just use the default.
 
+    This class is registered as a `Vocabulary` with four different names, which all point to
+    different `@classmethod` constructors found in this class.  `from_instances` is registered as
+    "from_instances", `from_files` is registered as "from_files", `from_files_and_instances` is
+    registered as "extend", and `empty` is registered as "empty".  If you are using a configuration
+    file to construct a vocabulary, you can use any of those strings as the "type" key in the
+    configuration file to use the corresponding `@classmethod` to construct the object.
+    "from_instances" is the default.  Look at the docstring for the `@classmethod` to see what keys
+    are allowed in the configuration file (when there is an `instances` argument to the
+    `@classmethod`, it will be passed in separately and does not need a corresponding key in the
+    configuration file).
+
     # Parameters
 
-    counter : ``Dict[str, Dict[str, int]]``, optional (default=``None``)
+    counter : `Dict[str, Dict[str, int]]`, optional (default=`None`)
         A collection of counts from which to initialize this vocabulary.  We will examine the
         counts and, together with the other parameters to this class, use them to decide which
-        words are in-vocabulary.  If this is ``None``, we just won't initialize the vocabulary with
+        words are in-vocabulary.  If this is `None`, we just won't initialize the vocabulary with
         anything.
-    min_count : ``Dict[str, int]``, optional (default=None)
+
+    min_count : `Dict[str, int]`, optional (default=None)
         When initializing the vocab from a counter, you can specify a minimum count, and every
         token with a count less than this will not be added to the dictionary.  These minimum
         counts are `namespace-specific`, so you can specify different minimums for labels versus
         words tokens, for example.  If a namespace does not have a key in the given dictionary, we
         will add all seen tokens to that namespace.
-    max_vocab_size : ``Union[int, Dict[str, int]]``, optional (default=``None``)
+
+    max_vocab_size : `Union[int, Dict[str, int]]`, optional (default=`None`)
         If you want to cap the number of tokens in your vocabulary, you can do so with this
         parameter.  If you specify a single integer, every namespace will have its vocabulary fixed
         to be no larger than this.  If you specify a dictionary, then each namespace in the
-        ``counter`` can have a separate maximum vocabulary size.  Any missing key will have a value
-        of ``None``, which means no cap on the vocabulary size.
-    non_padded_namespaces : ``Iterable[str]``, optional
+        `counter` can have a separate maximum vocabulary size.  Any missing key will have a value
+        of `None`, which means no cap on the vocabulary size.
+
+    non_padded_namespaces : `Iterable[str]`, optional
         By default, we assume you are mapping word / character tokens to integers, and so you want
         to reserve word indices for padding and out-of-vocabulary tokens.  However, if you are
         mapping NER or SRL tags, or class labels, to integers, you probably do not want to reserve
@@ -160,38 +174,45 @@ class Vocabulary(Registrable):
         namespaces should `not` have padding and OOV tokens added.
 
         The format of each element of this is either a string, which must match field names
-        exactly,  or ``*`` followed by a string, which we match as a suffix against field names.
+        exactly,  or `*` followed by a string, which we match as a suffix against field names.
 
         We try to make the default here reasonable, so that you don't have to think about this.
-        The default is ``("*tags", "*labels")``, so as long as your namespace ends in "tags" or
+        The default is `("*tags", "*labels")`, so as long as your namespace ends in "tags" or
         "labels" (which is true by default for all tag and label fields in this code), you don't
         have to specify anything here.
-    pretrained_files : ``Dict[str, str]``, optional
+
+    pretrained_files : `Dict[str, str]`, optional
         If provided, this map specifies the path to optional pretrained embedding files for each
         namespace. This can be used to either restrict the vocabulary to only words which appear
         in this file, or to ensure that any words in this file are included in the vocabulary
-        regardless of their count, depending on the value of ``only_include_pretrained_words``.
+        regardless of their count, depending on the value of `only_include_pretrained_words`.
         Words which appear in the pretrained embedding file but not in the data are NOT included
         in the Vocabulary.
-    min_pretrained_embeddings : ``Dict[str, int]``, optional
+
+    min_pretrained_embeddings : `Dict[str, int]`, optional
         If provided, specifies for each namespace a minimum number of lines (typically the
         most common words) to keep from pretrained embedding files, even for words not
         appearing in the data.
-    only_include_pretrained_words : ``bool``, optional (default=False)
+
+    only_include_pretrained_words : `bool`, optional (default=False)
         This defines the strategy for using any pretrained embedding files which may have been
-        specified in ``pretrained_files``. If False, an inclusive strategy is used: and words
-        which are in the ``counter`` and in the pretrained file are added to the ``Vocabulary``,
-        regardless of whether their count exceeds ``min_count`` or not. If True, we use an
+        specified in `pretrained_files`. If False, an inclusive strategy is used: and words
+        which are in the `counter` and in the pretrained file are added to the `Vocabulary`,
+        regardless of whether their count exceeds `min_count` or not. If True, we use an
         exclusive strategy: words are only included in the Vocabulary if they are in the pretrained
-        embedding file (their count must still be at least ``min_count``).
-    tokens_to_add : ``Dict[str, List[str]]``, optional (default=None)
+        embedding file (their count must still be at least `min_count`).
+
+    tokens_to_add : `Dict[str, List[str]]`, optional (default=None)
         If given, this is a list of tokens to add to the vocabulary, keyed by the namespace to add
         the tokens to.  This is a way to be sure that certain items appear in your vocabulary,
         regardless of any other vocabulary computation.
-    padding_token : ``str``,  optional (default=DEFAULT_PADDING_TOKEN)
+
+    padding_token : `str`,  optional (default=DEFAULT_PADDING_TOKEN)
         If given, this the string used for padding.
-    oov_token : ``str``,  optional (default=DEFAULT_OOV_TOKEN)
+
+    oov_token : `str`,  optional (default=DEFAULT_OOV_TOKEN)
         If given, this the string used for the out of vocabulary (OOVs) tokens.
+
     """
 
     default_implementation = "from_instances"
@@ -283,11 +304,11 @@ class Vocabulary(Registrable):
         oov_token: Optional[str] = DEFAULT_OOV_TOKEN,
     ) -> "Vocabulary":
         """
-        Loads a ``Vocabulary`` that was serialized using ``save_to_files``.
+        Loads a `Vocabulary` that was serialized using `save_to_files`.
 
         # Parameters
 
-        directory : ``str``
+        directory : `str`
             The directory containing the serialized vocabulary.
         """
         logger.info("Loading token dictionary from %s.", directory)
@@ -355,6 +376,20 @@ class Vocabulary(Registrable):
         )
         return vocab
 
+    @classmethod
+    def empty(cls) -> "Vocabulary":
+        """
+        This method returns a bare vocabulary instantiated with `cls()` (so, `Vocabulary()` if you
+        haven't made a subclass of this object).  The only reason to call `Vocabulary.empty()`
+        instead of `Vocabulary()` is if you are instantiating this object from a config file.  We
+        register this constructor with the key "empty", so if you know that you don't need to
+        compute a vocabulary (either because you're loading a pre-trained model from an archive
+        file, you're using a pre-trained transformer that has its own vocabulary, or something
+        else), you can use this to avoid having the default vocabulary construction code iterate
+        through the data.
+        """
+        return cls()
+
     def set_from_file(
         self,
         filename: str,
@@ -370,22 +405,22 @@ class Vocabulary(Registrable):
 
         # Parameters
 
-        filename : ``str``
+        filename : `str`
             The file containing the vocabulary to load.  It should be formatted as one token per
             line, with nothing else in the line.  The index we assign to the token is the line
-            number in the file (1-indexed if ``is_padded``, 0-indexed otherwise).  Note that this
+            number in the file (1-indexed if `is_padded`, 0-indexed otherwise).  Note that this
             file should contain the OOV token string!
-        is_padded : ``bool``, optional (default=True)
+        is_padded : `bool`, optional (default=True)
             Is this vocabulary padded?  For token / word / character vocabularies, this should be
-            ``True``; while for tag or label vocabularies, this should typically be ``False``.  If
-            ``True``, we add a padding token with index 0, and we enforce that the ``oov_token`` is
+            `True`; while for tag or label vocabularies, this should typically be `False`.  If
+            `True`, we add a padding token with index 0, and we enforce that the `oov_token` is
             present in the file.
-        oov_token : ``str``, optional (default=DEFAULT_OOV_TOKEN)
+        oov_token : `str`, optional (default=DEFAULT_OOV_TOKEN)
             What token does this vocabulary use to represent out-of-vocabulary characters?  This
             must show up as a line in the vocabulary file.  When we find it, we replace
-            ``oov_token`` with ``self._oov_token``, because we only use one OOV token across
+            `oov_token` with `self._oov_token`, because we only use one OOV token across
             namespaces.
-        namespace : ``str``, optional (default="tokens")
+        namespace : `str`, optional (default="tokens")
             What namespace should we overwrite with this vocab file?
         """
         if is_padded:
@@ -416,6 +451,20 @@ class Vocabulary(Registrable):
             instance.count_vocab_items(namespace_token_counts)
         self._extend(counter=namespace_token_counts)
 
+    def extend_from_vocab(self, vocab: "Vocabulary") -> None:
+        """
+        Adds all vocabulary items from all namespaces in the given vocabulary to this vocabulary.
+        Useful if you want to load a model and extends its vocabulary from new instances.
+
+        We also add all non-padded namespaces from the given vocabulary to this vocabulary.
+        """
+        self._non_padded_namespaces.update(vocab._non_padded_namespaces)
+        self._token_to_index._non_padded_namespaces.update(vocab._non_padded_namespaces)
+        self._index_to_token._non_padded_namespaces.update(vocab._non_padded_namespaces)
+        for namespace in vocab.get_namespaces():
+            for token in vocab.get_token_to_index_vocabulary(namespace):
+                self.add_token_to_namespace(token, namespace)
+
     def _extend(
         self,
         counter: Dict[str, Dict[str, int]] = None,
@@ -429,7 +478,7 @@ class Vocabulary(Registrable):
     ) -> None:
         """
         This method can be used for extending already generated vocabulary.  It takes same
-        parameters as Vocabulary initializer. The ``_token_to_index`` and ``_index_to_token``
+        parameters as Vocabulary initializer. The `_token_to_index` and `_index_to_token`
         mappings of calling vocabulary will be retained.  It is an inplace operation so None will be
         returned.
         """
@@ -548,7 +597,7 @@ class Vocabulary(Registrable):
 
         # Parameters
 
-        directory : ``str``
+        directory : `str`
             The directory where we save the serialized vocabulary.
         """
         os.makedirs(directory, exist_ok=True)
@@ -579,7 +628,7 @@ class Vocabulary(Registrable):
 
     def add_token_to_namespace(self, token: str, namespace: str = "tokens") -> int:
         """
-        Adds ``token`` to the index, if it is not already present.  Either way, we return the index of
+        Adds `token` to the index, if it is not already present.  Either way, we return the index of
         the token.
         """
         if not isinstance(token, str):
@@ -597,7 +646,7 @@ class Vocabulary(Registrable):
 
     def add_tokens_to_namespace(self, tokens: List[str], namespace: str = "tokens") -> List[int]:
         """
-        Adds ``tokens`` to the index, if they are not already present.  Either way, we return the
+        Adds `tokens` to the index, if they are not already present.  Either way, we return the
         indices of the tokens in the order that they were given.
         """
         return [self.add_token_to_namespace(token, namespace) for token in tokens]
@@ -624,6 +673,9 @@ class Vocabulary(Registrable):
 
     def get_vocab_size(self, namespace: str = "tokens") -> int:
         return len(self._token_to_index[namespace])
+
+    def get_namespaces(self) -> Set[str]:
+        return set(self._index_to_token.keys())
 
     def __eq__(self, other):
         if isinstance(self, other.__class__):
@@ -681,7 +733,9 @@ class Vocabulary(Registrable):
             )
 
 
-# the tricky part is that `Vocabulary` is both the base class and the default implementation
+# We can't decorate `Vocabulary` with `Vocabulary.register()`, because `Vocabulary` hasn't been
+# defined yet.  So we put these down here.
 Vocabulary.register("from_instances", constructor="from_instances")(Vocabulary)
 Vocabulary.register("from_files", constructor="from_files")(Vocabulary)
 Vocabulary.register("extend", constructor="from_files_and_instances")(Vocabulary)
+Vocabulary.register("empty", constructor="empty")(Vocabulary)

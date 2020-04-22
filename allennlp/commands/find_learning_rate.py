@@ -3,9 +3,7 @@ The ``find-lr`` subcommand can be used to find a good learning rate for a model.
 It requires a configuration file and a directory in
 which to write the results.
 
-.. code-block:: bash
-
-   $ allennlp find-lr --help
+    $ allennlp find-lr --help
     usage: allennlp find-lr [-h] -s SERIALIZATION_DIR [-o OVERRIDES]
                             [--start-lr START_LR] [--end-lr END_LR]
                             [--num-batches NUM_BATCHES]
@@ -49,28 +47,32 @@ import math
 import os
 import re
 from typing import List, Tuple
+import itertools
+
+from overrides import overrides
 
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common import Params, Tqdm
 from allennlp.common.checks import check_for_gpu, ConfigurationError
 from allennlp.common.util import prepare_environment
-from allennlp.data import DataIterator, Vocabulary
+from allennlp.data import Vocabulary
+from allennlp.data import DataLoader
 from allennlp.models import Model
-from allennlp.training import Trainer
+from allennlp.training import GradientDescentTrainer, Trainer
 from allennlp.training.util import create_serialization_dir, datasets_from_params
 
 logger = logging.getLogger(__name__)
 
 
+@Subcommand.register("find-lr")
 class FindLearningRate(Subcommand):
-    def add_subparser(
-        self, name: str, parser: argparse._SubParsersAction
-    ) -> argparse.ArgumentParser:
+    @overrides
+    def add_subparser(self, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
 
         description = """Find a learning rate range where loss decreases quickly
                          for the specified model and dataset."""
         subparser = parser.add_parser(
-            name, description=description, help="Find a learning rate range."
+            self.name, description=description, help="Find a learning rate range."
         )
 
         subparser.add_argument(
@@ -184,6 +186,9 @@ def find_learning_rate_model(
 
     cuda_device = params.params.get("trainer").get("cuda_device", -1)
     check_for_gpu(cuda_device)
+    distributed_params = params.params.get("distributed")
+    # See https://github.com/allenai/allennlp/issues/3658
+    assert not distributed_params, "find-lr is not compatible with DistributedDataParallel."
 
     all_datasets = datasets_from_params(params)
     datasets_for_vocab_creation = set(params.pop("datasets_for_vocab_creation", all_datasets))
@@ -206,11 +211,10 @@ def find_learning_rate_model(
         ),
     )
 
-    model = Model.from_params(vocab=vocab, params=params.pop("model"))
-    iterator = DataIterator.from_params(params.pop("iterator"))
-    iterator.index_with(vocab)
-
     train_data = all_datasets["train"]
+    train_data.index_with(vocab)
+    model = Model.from_params(vocab=vocab, params=params.pop("model"))
+    data_loader = DataLoader.from_params(dataset=train_data, params=params.pop("data_loader"))
 
     trainer_params = params.pop("trainer")
 
@@ -219,17 +223,16 @@ def find_learning_rate_model(
         if any(re.search(regex, name) for regex in no_grad_regexes):
             parameter.requires_grad_(False)
 
-    trainer_choice = trainer_params.pop("type", "default")
-    if trainer_choice != "default":
-        raise ConfigurationError("currently find-learning-rate only works with the default Trainer")
-    trainer = Trainer.from_params(
+    trainer_choice = trainer_params.pop("type", "gradient_descent")
+    if trainer_choice != "gradient_descent":
+        raise ConfigurationError(
+            "currently find-learning-rate only works with the GradientDescentTrainer"
+        )
+    trainer: GradientDescentTrainer = Trainer.from_params(  # type: ignore
         model=model,
         serialization_dir=serialization_dir,
-        iterator=iterator,
-        train_data=train_data,
-        validation_data=None,
+        data_loader=data_loader,
         params=trainer_params,
-        validation_iterator=None,
     )
 
     logger.info(
@@ -250,7 +253,7 @@ def find_learning_rate_model(
 
 
 def search_learning_rate(
-    trainer: Trainer,
+    trainer: GradientDescentTrainer,
     start_lr: float = 1e-5,
     end_lr: float = 10,
     num_batches: int = 100,
@@ -258,11 +261,12 @@ def search_learning_rate(
     stopping_factor: float = None,
 ) -> Tuple[List[float], List[float]]:
     """
-    Runs training loop on the model using :class:`~allennlp.training.trainer.Trainer`
+    Runs training loop on the model using :class:`~allennlp.training.trainer.GradientDescentTrainer`
     increasing learning rate from ``start_lr`` to ``end_lr`` recording the losses.
+
     # Parameters
 
-    trainer: :class:`~allennlp.training.trainer.Trainer`
+    trainer: :class:`~allennlp.training.trainer.GradientDescentTrainer`
     start_lr : ``float``
         The learning rate to start the search.
     end_lr : ``float``
@@ -274,6 +278,7 @@ def search_learning_rate(
     stopping_factor : ``float``
         Stop the search when the current loss exceeds the best loss recorded by
         multiple of stopping factor. If ``None`` search proceeds till the ``end_lr``
+
     # Returns
 
     (learning_rates, losses) : ``Tuple[List[float], List[float]]``
@@ -287,8 +292,8 @@ def search_learning_rate(
 
     trainer.model.train()
 
-    train_generator = trainer.iterator(trainer.train_data, shuffle=trainer.shuffle)
-    train_generator_tqdm = Tqdm.tqdm(train_generator, total=num_batches)
+    infinite_generator = itertools.cycle(trainer.data_loader)
+    train_generator_tqdm = Tqdm.tqdm(infinite_generator, total=num_batches)
 
     learning_rates = []
     losses = []
@@ -309,7 +314,7 @@ def search_learning_rate(
             param_group["lr"] = current_lr
 
         trainer.optimizer.zero_grad()
-        loss = trainer.batch_loss(batch, for_training=True)
+        loss = trainer.batch_outputs(batch, for_training=True)["loss"]
         loss.backward()
         loss = loss.detach().cpu().item()
 

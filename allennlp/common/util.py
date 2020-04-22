@@ -9,29 +9,40 @@ import pkgutil
 import random
 import subprocess
 import sys
-from itertools import zip_longest, islice
+from contextlib import contextmanager
+from itertools import islice, zip_longest
 from logging import Filter
-from typing import Any, Callable, Dict, Iterable, Iterator, List, Optional, Tuple, TypeVar
+from pathlib import Path
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Generator,
+    Iterable,
+    Iterator,
+    List,
+    Optional,
+    Tuple,
+    TypeVar,
+    Union,
+)
 
+import numpy
+import spacy
+import torch
 import torch.distributed as dist
+from spacy.cli.download import download as spacy_download
+from spacy.language import Language as SpacyModelType
+
+from allennlp.common.checks import log_pytorch_version_info
+from allennlp.common.params import Params
+from allennlp.common.tqdm import Tqdm
 
 try:
     import resource
 except ImportError:
     # resource doesn't exist on Windows systems
     resource = None
-
-import torch
-import numpy
-import spacy
-from spacy.cli.download import download as spacy_download
-from spacy.language import Language as SpacyModelType
-
-# This base import is so we can refer to allennlp.data.Token in `sanitize()` without creating
-# circular dependencies.
-from allennlp.common.checks import log_pytorch_version_info
-from allennlp.common.params import Params
-from allennlp.common.tqdm import Tqdm
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +55,11 @@ JsonDict = Dict[str, Any]
 # those cases).
 START_SYMBOL = "@start@"
 END_SYMBOL = "@end@"
+
+
+PathType = Union[os.PathLike, str]
+T = TypeVar("T")
+ContextManagerFunctionReturnType = Generator[T, None, None]
 
 
 def sanitize(x: Any) -> Any:
@@ -92,12 +108,15 @@ def sanitize(x: Any) -> Any:
 
 def group_by_count(iterable: List[Any], count: int, default_value: Any) -> List[List[Any]]:
     """
-    Takes a list and groups it into sublists of size ``count``, using ``default_value`` to pad the
-    list at the end if the list is not divisable by ``count``.
+    Takes a list and groups it into sublists of size `count`, using `default_value` to pad the
+    list at the end if the list is not divisable by `count`.
 
     For example:
+
+    ```
     >>> group_by_count([1, 2, 3, 4, 5, 6, 7], 3, 0)
     [[1, 2, 3], [4, 5, 6], [7, 0, 0]]
+    ```
 
     This is a short method, but it's complicated and hard to remember as a one-liner, so we just
     make a function out of it.
@@ -160,18 +179,21 @@ def pad_sequence_to_length(
     else:
         padded_sequence = sequence[-desired_length:]
     # Continues to pad with default_value() until we reach the desired length.
-    for _ in range(desired_length - len(padded_sequence)):
-        if padding_on_right:
-            padded_sequence.append(default_value())
-        else:
-            padded_sequence.insert(0, default_value())
+    pad_length = desired_length - len(padded_sequence)
+    # This just creates the default value once, so if it's a list, and if it gets mutated
+    # later, it could cause subtle bugs. But the risk there is low, and this is much faster.
+    values_to_pad = [default_value()] * pad_length
+    if padding_on_right:
+        padded_sequence = padded_sequence + values_to_pad
+    else:
+        padded_sequence = values_to_pad + padded_sequence
     return padded_sequence
 
 
 def add_noise_to_dict_values(dictionary: Dict[A, float], noise_param: float) -> Dict[A, float]:
     """
-    Returns a new dictionary with noise added to every key in ``dictionary``.  The noise is
-    uniformly distributed within ``noise_param`` percent of the value for every value in the
+    Returns a new dictionary with noise added to every key in `dictionary`.  The noise is
+    uniformly distributed within `noise_param` percent of the value for every value in the
     dictionary.
     """
     new_dict = {}
@@ -184,9 +206,9 @@ def add_noise_to_dict_values(dictionary: Dict[A, float], noise_param: float) -> 
 
 def namespace_match(pattern: str, namespace: str):
     """
-    Matches a namespace pattern against a namespace string.  For example, ``*tags`` matches
-    ``passage_tags`` and ``question_tags`` and ``tokens`` matches ``tokens`` but not
-    ``stemmed_tokens``.
+    Matches a namespace pattern against a namespace string.  For example, `*tags` matches
+    `passage_tags` and `question_tags` and `tokens` matches `tokens` but not
+    `stemmed_tokens`.
     """
     if pattern[0] == "*" and namespace.endswith(pattern[1:]):
         return True
@@ -208,7 +230,7 @@ def prepare_environment(params: Params):
     # Parameters
 
     params: Params object or dict, required.
-        A ``Params`` object or dict holding the json parameters.
+        A `Params` object or dict holding the json parameters.
     """
     seed = params.pop_int("random_seed", 13370)
     numpy_seed = params.pop_int("numpy_seed", 1337)
@@ -308,7 +330,8 @@ def prepare_global_logging(
     if os.environ.get("ALLENNLP_DEBUG"):
         LEVEL = logging.DEBUG
     else:
-        LEVEL = logging.INFO
+        level_name = os.environ.get("ALLENNLP_LOG_LEVEL")
+        LEVEL = logging._nameToLevel.get(level_name, logging.INFO)
 
     if rank == 0:
         # stdout/stderr handlers are added only for the
@@ -379,7 +402,46 @@ def get_spacy_model(
     return LOADED_SPACY_MODELS[options]
 
 
-def import_submodules(package_name: str) -> None:
+@contextmanager
+def pushd(new_dir: PathType, verbose: bool = False) -> ContextManagerFunctionReturnType[None]:
+    """
+    Changes the current directory to the given path and prepends it to `sys.path`.
+
+    This method is intended to use with `with`, so after its usage, the current directory will be
+    set to the previous value.
+    """
+    previous_dir = os.getcwd()
+    if verbose:
+        logger.info(f"Changing directory to {new_dir}")  # type: ignore
+    os.chdir(new_dir)
+    try:
+        yield
+    finally:
+        if verbose:
+            logger.info(f"Changing directory back to {previous_dir}")
+        os.chdir(previous_dir)
+
+
+@contextmanager
+def push_python_path(path: PathType) -> ContextManagerFunctionReturnType[None]:
+    """
+    Prepends the given path to `sys.path`.
+
+    This method is intended to use with `with`, so after its usage, its value willbe removed from
+    `sys.path`.
+    """
+    # In some environments, such as TC, it fails when sys.path contains a relative path, such as ".".
+    path = Path(path).resolve()
+    path = str(path)
+    sys.path.insert(0, path)
+    try:
+        yield
+    finally:
+        # Better to remove by value, in case `sys.path` was manipulated in between.
+        sys.path.remove(path)
+
+
+def import_module_and_submodules(package_name: str) -> None:
     """
     Import all submodules under the given package.
     Primarily useful so that people using AllenNLP as a library
@@ -391,21 +453,20 @@ def import_submodules(package_name: str) -> None:
     # For some reason, python doesn't always add this by default to your path, but you pretty much
     # always want it when using `--include-package`.  And if it's already there, adding it again at
     # the end won't hurt anything.
-    sys.path.append(".")
+    with push_python_path("."):
+        # Import at top level
+        module = importlib.import_module(package_name)
+        path = getattr(module, "__path__", [])
+        path_string = "" if not path else path[0]
 
-    # Import at top level
-    module = importlib.import_module(package_name)
-    path = getattr(module, "__path__", [])
-    path_string = "" if not path else path[0]
-
-    # walk_packages only finds immediate children, so need to recurse.
-    for module_finder, name, _ in pkgutil.walk_packages(path):
-        # Sometimes when you import third-party libraries that are on your path,
-        # `pkgutil.walk_packages` returns those too, so we need to skip them.
-        if path_string and module_finder.path != path_string:
-            continue
-        subpackage = f"{package_name}.{name}"
-        import_submodules(subpackage)
+        # walk_packages only finds immediate children, so need to recurse.
+        for module_finder, name, _ in pkgutil.walk_packages(path):
+            # Sometimes when you import third-party libraries that are on your path,
+            # `pkgutil.walk_packages` returns those too, so we need to skip them.
+            if path_string and module_finder.path != path_string:
+                continue
+            subpackage = f"{package_name}.{name}"
+            import_module_and_submodules(subpackage)
 
 
 def peak_memory_mb() -> float:
@@ -441,10 +502,10 @@ def gpu_memory_mb() -> Dict[int, int]:
 
     # Returns
 
-    ``Dict[int, int]``
+    `Dict[int, int]`
         Keys are device ids as integers.
         Values are memory usage as integers in MB.
-        Returns an empty ``dict`` if GPUs are not available.
+        Returns an empty `dict` if GPUs are not available.
     """
     try:
         result = subprocess.check_output(
@@ -459,7 +520,9 @@ def gpu_memory_mb() -> Dict[int, int]:
     except:  # noqa
         # Catch *all* exceptions, because this memory check is a nice-to-have
         # and we'd never want a training run to fail because of it.
-        logger.exception("unable to check gpu_memory_mb(), continuing")
+        logger.warning(
+            "unable to check gpu_memory_mb() due to occasional failure, continuing", exc_info=True
+        )
         return {}
 
 
@@ -552,7 +615,7 @@ def is_master(
         world_size = dist.get_world_size()
 
     if num_procs_per_node is None and os.environ:
-        num_procs_per_node = int(os.environ.get("ALLENNLP_PROCS_PER_NODE"), world_size)
+        num_procs_per_node = int(os.environ.get("ALLENNLP_PROCS_PER_NODE", world_size))
 
     # rank == 0 would do in a single-node multi-GPU setup. However,
     # in a multi-node case, every node has a logical master and hence
@@ -569,11 +632,79 @@ def is_distributed() -> bool:
 
 def sanitize_wordpiece(wordpiece: str) -> str:
     """
-    Sanitizes wordpieces from BERT or RoBERTa tokenizers.
+    Sanitizes wordpieces from BERT, RoBERTa or ALBERT tokenizers.
     """
     if wordpiece.startswith("##"):
         return wordpiece[2:]
     elif wordpiece.startswith("Ġ"):
         return wordpiece[1:]
+    elif wordpiece.startswith("▁"):
+        return wordpiece[1:]
     else:
         return wordpiece
+
+
+def sanitize_ptb_tokenized_string(text: str) -> str:
+    """
+    Sanitizes string that was tokenized using PTBTokenizer
+    """
+    tokens = text.split(" ")
+    if len(tokens) == 0:
+        return text
+
+    # Replace quotation marks and parentheses
+    token_map = {
+        "``": '"',
+        "''": '"',
+        "-lrb-": "(",
+        "-rrb-": ")",
+        "-lsb-": "[",
+        "-rsb-": "]",
+        "-lcb-": "{",
+        "-rcb-": "}",
+        "<s>": "",
+        "</s>": "",
+    }
+
+    # Merge punctuation with previous tokens
+    punct_forward = {"`", "$", "#"}
+    punct_backward = {".", ",", "!", "?", ":", ";", "%", "'"}
+
+    # Exact matches that get merged forward or backward
+    em_forward = {"(", "[", "{"}
+    em_backward = {"n't", "na", ")", "]", "}"}
+
+    new_tokens: List[str] = []
+
+    merge_fwd = False
+    for i, orig_token in enumerate(tokens):
+        tokens[i] = token_map[orig_token.lower()] if orig_token.lower() in token_map else orig_token
+        new_token = tokens[i].lower()
+
+        # merge_fwd was set by previous token, so it should be prepended to current token
+        if merge_fwd:
+            tokens[i] = tokens[i - 1] + tokens[i]
+
+        if len(tokens[i]) == 0:
+            continue
+
+        # Special cases for `` and '', those tells us if " is the start or end of a quotation.
+        # Also always merge tokens starting with ' backward and don't merge back if we just merged forward
+        merge_bckwd = not merge_fwd and (
+            orig_token == "''"
+            or new_token in em_backward
+            or new_token.startswith("'")
+            or all(c in punct_backward for c in new_token)
+        )
+        merge_fwd = (
+            orig_token == "``"
+            or new_token in em_forward
+            or all(c in punct_forward for c in new_token)
+        )
+
+        if merge_bckwd and new_tokens:
+            new_tokens[-1] += tokens[i]
+        elif not new_tokens or not merge_fwd or i == len(tokens) - 1:
+            new_tokens.append(tokens[i])
+
+    return " ".join(new_tokens)

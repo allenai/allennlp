@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Any, Dict, List
 
 import torch
 
@@ -11,15 +11,13 @@ from allennlp.data.vocabulary import Vocabulary
 # corresponding to this TokenIndexer.  Each argument that the TokenEmbedder needs will have one
 # entry in the IndexedTokenList dictionary, and that argument will typically be a list of integers
 # (for single ID word embeddings) or a nested list of integers (for character ID word embeddings),
-# though it could also be a mask, or any other data that you want to pass.  We're labeling this as
-# `Dict[str, List[int]]` just for convenience here, as it's the typical case.  The `List[int]` could
-# actually have arbitrary type.
-IndexedTokenList = Dict[str, List[int]]
+# though it could also be a mask, or any other data that you want to pass.
+IndexedTokenList = Dict[str, List[Any]]
 
 
 class TokenIndexer(Registrable):
     """
-    A ``TokenIndexer`` determines how string tokens get represented as arrays of indices in a model.
+    A `TokenIndexer` determines how string tokens get represented as arrays of indices in a model.
     This class both converts strings into numerical values, with the help of a
     :class:`~allennlp.data.vocabulary.Vocabulary`, and it produces actual arrays.
 
@@ -30,7 +28,7 @@ class TokenIndexer(Registrable):
 
     # Parameters
 
-    token_min_padding_length : ``int``, optional (default=``0``)
+    token_min_padding_length : `int`, optional (default=`0`)
         The minimum padding length required for the :class:`TokenIndexer`. For example,
         the minimum padding length of :class:`SingleIdTokenIndexer` is the largest size of
         filter when using :class:`CnnEncoder`.
@@ -57,11 +55,11 @@ class TokenIndexer(Registrable):
 
     def tokens_to_indices(self, tokens: List[Token], vocabulary: Vocabulary) -> IndexedTokenList:
         """
-        Takes a list of tokens and converts them to an ``IndexedTokenList``.
+        Takes a list of tokens and converts them to an `IndexedTokenList`.
         This could be just an ID for each token from the vocabulary.
         Or it could split each token into characters and return one ID per character.
         Or (for instance, in the case of byte-pair encoding) there might not be a clean
-        mapping from individual tokens to indices, and the ``IndexedTokenList`` could be a complex
+        mapping from individual tokens to indices, and the `IndexedTokenList` could be a complex
         data structure.
         """
         raise NotImplementedError
@@ -75,7 +73,7 @@ class TokenIndexer(Registrable):
 
     def get_padding_lengths(self, indexed_tokens: IndexedTokenList) -> Dict[str, int]:
         """
-        This method returns a padding dictionary for the given ``indexed_tokens`` specifying all
+        This method returns a padding dictionary for the given `indexed_tokens` specifying all
         lengths that need padding.  If all you have is a list of single ID tokens, this is just the
         length of the list, and that's what the default implementation will give you.  If you have
         something more complicated, like a list of character ids for token, you'll need to override
@@ -92,18 +90,24 @@ class TokenIndexer(Registrable):
         """
         This method pads a list of tokens given the input padding lengths (which could actually
         truncate things, depending on settings) and returns that padded list of input tokens as a
-        ``Dict[str, torch.Tensor]``.  This is a dictionary because there should be one key per
-        argument that the ``TokenEmbedder`` corresponding to this class expects in its ``forward()``
-        method (where the argument name in the ``TokenEmbedder`` needs to make the key in this
+        `Dict[str, torch.Tensor]`.  This is a dictionary because there should be one key per
+        argument that the `TokenEmbedder` corresponding to this class expects in its `forward()`
+        method (where the argument name in the `TokenEmbedder` needs to make the key in this
         dictionary).
 
-        The base class implements the case when all you want to do is create a padded ``LongTensor``
-        for every list in the ``tokens`` dictionary.  If your ``TokenIndexer`` needs more complex
+        The base class implements the case when all you want to do is create a padded `LongTensor`
+        for every list in the `tokens` dictionary.  If your `TokenIndexer` needs more complex
         logic than that, you need to override this method.
         """
         tensor_dict = {}
         for key, val in tokens.items():
-            tensor_dict[key] = torch.LongTensor(pad_sequence_to_length(val, padding_lengths[key]))
+            if val and isinstance(val[0], bool):
+                tensor = torch.BoolTensor(
+                    pad_sequence_to_length(val, padding_lengths[key], default_value=lambda: False)
+                )
+            else:
+                tensor = torch.LongTensor(pad_sequence_to_length(val, padding_lengths[key]))
+            tensor_dict[key] = tensor
         return tensor_dict
 
     def __eq__(self, other) -> bool:

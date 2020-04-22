@@ -12,17 +12,19 @@ _VALID_SCHEMES = {"round_robin", "all_at_once"}
 @DatasetReader.register("interleaving")
 class InterleavingDatasetReader(DatasetReader):
     """
-    A ``DatasetReader`` that wraps multiple other dataset readers,
-    and interleaves their instances, adding a ``MetadataField`` to
+    A `DatasetReader` that wraps multiple other dataset readers,
+    and interleaves their instances, adding a `MetadataField` to
     indicate the provenance of each instance.
 
-    Unlike most of our other dataset readers, here the ``file_path`` passed into
-    ``read()`` should be a JSON-serialized dictionary with one file_path
+    Unlike most of our other dataset readers, here the `file_path` passed into
+    `read()` should be a JSON-serialized dictionary with one file_path
     per wrapped dataset reader (and with corresponding keys).
+
+    Registered as a `DatasetReader` with name "interleaving".
 
     # Parameters
 
-    readers : ``Dict[str, DatasetReader]``
+    readers : `Dict[str, DatasetReader]`
         The dataset readers to wrap. The keys of this dictionary will be used
         as the values in the MetadataField indicating provenance.
     dataset_field_name : str, optional (default = "dataset")

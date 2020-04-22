@@ -1,34 +1,52 @@
 import copy
 import glob
 import json
-import math
 import os
 import re
 import time
+from typing import Any, Dict, List
 
+import math
 import pytest
+
+try:
+    from apex import amp
+except ImportError:
+    amp = None
 import torch
+from torch.utils.data import DataLoader
+from allennlp.data.dataloader import DataLoader as AllennlpDataLoader
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import Params
-from allennlp.common.testing import AllenNlpTestCase, ModelTestCase
+from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Vocabulary
+from allennlp.data.dataloader import TensorDict
 from allennlp.data.dataset_readers import SequenceTaggingDatasetReader
-from allennlp.data.iterators import BasicIterator
 from allennlp.models.model import Model
 from allennlp.models.simple_tagger import SimpleTagger
-from allennlp.training import Trainer
-from allennlp.training.learning_rate_schedulers import LearningRateScheduler
+from allennlp.training import (
+    GradientDescentTrainer,
+    Checkpointer,
+    TensorboardWriter,
+    BatchCallback,
+    EpochCallback,
+)
+from allennlp.training.learning_rate_schedulers import CosineWithRestarts
+from allennlp.training.learning_rate_schedulers import ExponentialLearningRateScheduler
 from allennlp.training.momentum_schedulers import MomentumScheduler
 from allennlp.training.moving_average import ExponentialMovingAverage
-from allennlp.training.trainer_base import TrainerBase
 from allennlp.training.util import sparse_clip_norm
+from allennlp.data import allennlp_collate
 
 
-class TestTrainer(AllenNlpTestCase):
+class TrainerTestBase(AllenNlpTestCase):
     def setUp(self):
         super().setUp()
         self.instances = SequenceTaggingDatasetReader().read(
+            self.FIXTURES_ROOT / "data" / "sequence_tagging.tsv"
+        )
+        self.instances_lazy = SequenceTaggingDatasetReader(lazy=True).read(
             self.FIXTURES_ROOT / "data" / "sequence_tagging.tsv"
         )
         vocab = Vocabulary.from_instances(self.instances)
@@ -43,16 +61,24 @@ class TestTrainer(AllenNlpTestCase):
         )
         self.model = SimpleTagger.from_params(vocab=self.vocab, params=self.model_params)
         self.optimizer = torch.optim.SGD(self.model.parameters(), 0.01, momentum=0.9)
-        self.iterator = BasicIterator(batch_size=2)
-        self.iterator.index_with(vocab)
+        self.data_loader = DataLoader(self.instances, batch_size=2, collate_fn=allennlp_collate)
+        self.data_loader_lazy = DataLoader(
+            self.instances_lazy, batch_size=2, collate_fn=allennlp_collate
+        )
+        self.validation_data_loader = DataLoader(
+            self.instances, batch_size=2, collate_fn=allennlp_collate
+        )
+        self.instances.index_with(vocab)
+        self.instances_lazy.index_with(vocab)
 
+
+class TestTrainer(TrainerTestBase):
     def test_trainer_can_run(self):
-        trainer = Trainer(
+        trainer = GradientDescentTrainer(
             model=self.model,
             optimizer=self.optimizer,
-            iterator=self.iterator,
-            train_dataset=self.instances,
-            validation_dataset=self.instances,
+            data_loader=self.data_loader,
+            validation_data_loader=self.validation_data_loader,
             num_epochs=2,
         )
         metrics = trainer.train()
@@ -66,12 +92,11 @@ class TestTrainer(AllenNlpTestCase):
         assert isinstance(metrics["best_epoch"], int)
 
         # Making sure that both increasing and decreasing validation metrics work.
-        trainer = Trainer(
+        trainer = GradientDescentTrainer(
             model=self.model,
             optimizer=self.optimizer,
-            iterator=self.iterator,
-            train_dataset=self.instances,
-            validation_dataset=self.instances,
+            data_loader=self.data_loader,
+            validation_data_loader=self.validation_data_loader,
             validation_metric="+loss",
             num_epochs=2,
         )
@@ -90,12 +115,11 @@ class TestTrainer(AllenNlpTestCase):
 
     def test_trainer_can_run_exponential_moving_average(self):
         moving_average = ExponentialMovingAverage(self.model.named_parameters(), decay=0.9999)
-        trainer = Trainer(
+        trainer = GradientDescentTrainer(
             model=self.model,
             optimizer=self.optimizer,
-            iterator=self.iterator,
-            train_dataset=self.instances,
-            validation_dataset=self.instances,
+            data_loader=self.data_loader,
+            validation_data_loader=self.validation_data_loader,
             num_epochs=2,
             moving_average=moving_average,
         )
@@ -104,8 +128,8 @@ class TestTrainer(AllenNlpTestCase):
     @pytest.mark.skipif(not torch.cuda.is_available(), reason="No CUDA device registered.")
     def test_trainer_can_run_cuda(self):
         self.model.cuda()
-        trainer = Trainer(
-            self.model, self.optimizer, self.iterator, self.instances, num_epochs=2, cuda_device=0
+        trainer = GradientDescentTrainer(
+            self.model, self.optimizer, self.data_loader, num_epochs=2, cuda_device=0
         )
         metrics = trainer.train()
         assert "peak_cpu_memory_MB" in metrics
@@ -118,35 +142,134 @@ class TestTrainer(AllenNlpTestCase):
     def test_passing_trainer_multiple_gpus_raises_error(self):
         self.model.cuda()
 
-        multigpu_iterator = BasicIterator(batch_size=4)
-        multigpu_iterator.index_with(self.vocab)
         with pytest.raises(ConfigurationError):
-            Trainer(
-                self.model,
-                self.optimizer,
-                multigpu_iterator,
-                self.instances,
-                num_epochs=2,
-                cuda_device=[0, 1],
+            GradientDescentTrainer(
+                self.model, self.optimizer, self.data_loader, num_epochs=2, cuda_device=[0, 1],
             )
 
-    def test_trainer_can_resume_training(self):
-        trainer = Trainer(
+    def test_data_loader_lazy_epoch_size_correct(self):
+        num_epochs = 3
+        trainer = GradientDescentTrainer(
             self.model,
             self.optimizer,
-            self.iterator,
+            self.data_loader_lazy,
+            validation_data_loader=self.validation_data_loader,
+            num_epochs=num_epochs,
+            serialization_dir=self.TEST_DIR,
+        )
+        assert trainer._batch_num_total == 0
+        metrics = trainer.train()
+        epoch = metrics["epoch"]
+        assert epoch == num_epochs - 1
+        assert trainer._batch_num_total == num_epochs * 2
+
+    def test_data_loader_lazy_epoch_size_correct_custom_epoch_size(self):
+        batches_per_epoch = 3
+        num_epochs = 3
+        data_loader_custom_epoch_lazy = AllennlpDataLoader(
+            self.instances_lazy,
+            batch_size=2,
+            collate_fn=allennlp_collate,
+            batches_per_epoch=batches_per_epoch,
+        )
+        trainer = GradientDescentTrainer(
+            self.model,
+            self.optimizer,
+            data_loader_custom_epoch_lazy,
+            validation_data_loader=self.validation_data_loader,
+            num_epochs=num_epochs,
+            serialization_dir=self.TEST_DIR,
+        )
+        assert trainer._batch_num_total == 0
+        metrics = trainer.train()
+        epoch = metrics["epoch"]
+        assert epoch == num_epochs - 1
+        assert trainer._batch_num_total == num_epochs * batches_per_epoch
+
+    def test_trainer_respects_epoch_size_equals_total(self):
+        batches_per_epoch = 4
+        num_epochs = 3
+        data_loader_equal_epoch = AllennlpDataLoader(
             self.instances,
-            validation_dataset=self.instances,
+            batch_size=2,
+            collate_fn=allennlp_collate,
+            batches_per_epoch=batches_per_epoch,
+        )
+        trainer = GradientDescentTrainer(
+            self.model,
+            self.optimizer,
+            data_loader_equal_epoch,
+            validation_data_loader=self.validation_data_loader,
+            num_epochs=num_epochs,
+            serialization_dir=self.TEST_DIR,
+        )
+        assert trainer._batch_num_total == 0
+        metrics = trainer.train()
+        epoch = metrics["epoch"]
+        assert epoch == num_epochs - 1
+        assert trainer._batch_num_total == num_epochs * batches_per_epoch
+
+    def test_trainer_respects_epoch_size_larger_tnan_total(self):
+        batches_per_epoch = 7
+        num_epochs = 3
+        data_loader_larger_epoch = AllennlpDataLoader(
+            self.instances,
+            batch_size=2,
+            collate_fn=allennlp_collate,
+            batches_per_epoch=batches_per_epoch,
+        )
+        trainer = GradientDescentTrainer(
+            self.model,
+            self.optimizer,
+            data_loader_larger_epoch,
+            validation_data_loader=self.validation_data_loader,
+            num_epochs=num_epochs,
+            serialization_dir=self.TEST_DIR,
+        )
+        assert trainer._batch_num_total == 0
+        metrics = trainer.train()
+        epoch = metrics["epoch"]
+        assert epoch == num_epochs - 1
+        assert trainer._batch_num_total == num_epochs * batches_per_epoch
+
+    def test_trainer_respects_epoch_size_smaller_tnan_total(self):
+        batches_per_epoch = 1
+        num_epochs = 2
+        data_loader_smaller_epoch = AllennlpDataLoader(
+            self.instances,
+            batch_size=2,
+            collate_fn=allennlp_collate,
+            batches_per_epoch=batches_per_epoch,
+        )
+        trainer = GradientDescentTrainer(
+            self.model,
+            self.optimizer,
+            data_loader_smaller_epoch,
+            validation_data_loader=self.validation_data_loader,
+            num_epochs=num_epochs,
+            serialization_dir=self.TEST_DIR,
+        )
+        assert trainer._batch_num_total == 0
+        metrics = trainer.train()
+        epoch = metrics["epoch"]
+        assert epoch == num_epochs - 1
+        assert trainer._batch_num_total == num_epochs * batches_per_epoch
+
+    def test_trainer_can_resume_training(self):
+        trainer = GradientDescentTrainer(
+            self.model,
+            self.optimizer,
+            self.data_loader,
+            validation_data_loader=self.validation_data_loader,
             num_epochs=1,
             serialization_dir=self.TEST_DIR,
         )
         trainer.train()
-        new_trainer = Trainer(
+        new_trainer = GradientDescentTrainer(
             self.model,
             self.optimizer,
-            self.iterator,
-            self.instances,
-            validation_dataset=self.instances,
+            self.data_loader,
+            validation_data_loader=self.validation_data_loader,
             num_epochs=3,
             serialization_dir=self.TEST_DIR,
         )
@@ -163,12 +286,11 @@ class TestTrainer(AllenNlpTestCase):
     def test_trainer_can_resume_training_for_exponential_moving_average(self):
         moving_average = ExponentialMovingAverage(self.model.named_parameters())
 
-        trainer = Trainer(
+        trainer = GradientDescentTrainer(
             self.model,
             self.optimizer,
-            self.iterator,
-            self.instances,
-            validation_dataset=self.instances,
+            self.data_loader,
+            validation_data_loader=self.validation_data_loader,
             num_epochs=1,
             serialization_dir=self.TEST_DIR,
             moving_average=moving_average,
@@ -176,12 +298,11 @@ class TestTrainer(AllenNlpTestCase):
         trainer.train()
 
         new_moving_average = ExponentialMovingAverage(self.model.named_parameters())
-        new_trainer = Trainer(
+        new_trainer = GradientDescentTrainer(
             self.model,
             self.optimizer,
-            self.iterator,
-            self.instances,
-            validation_dataset=self.instances,
+            self.data_loader,
+            validation_data_loader=self.validation_data_loader,
             num_epochs=3,
             serialization_dir=self.TEST_DIR,
             moving_average=new_moving_average,
@@ -199,12 +320,11 @@ class TestTrainer(AllenNlpTestCase):
     def test_metric_only_considered_best_so_far_when_strictly_better_than_those_before_it_increasing_metric(
         self,
     ):
-        new_trainer = Trainer(
+        new_trainer = GradientDescentTrainer(
             self.model,
             self.optimizer,
-            self.iterator,
-            self.instances,
-            validation_dataset=self.instances,
+            self.data_loader,
+            validation_data_loader=self.validation_data_loader,
             num_epochs=3,
             serialization_dir=self.TEST_DIR,
             patience=5,
@@ -235,12 +355,11 @@ class TestTrainer(AllenNlpTestCase):
     def test_metric_only_considered_best_so_far_when_strictly_better_than_those_before_it_decreasing_metric(
         self,
     ):
-        new_trainer = Trainer(
+        new_trainer = GradientDescentTrainer(
             self.model,
             self.optimizer,
-            self.iterator,
-            self.instances,
-            validation_dataset=self.instances,
+            self.data_loader,
+            validation_data_loader=self.validation_data_loader,
             num_epochs=3,
             serialization_dir=self.TEST_DIR,
             patience=5,
@@ -268,12 +387,11 @@ class TestTrainer(AllenNlpTestCase):
         new_tracker.add_metrics([0.3, 0.3, 0.3, 0.2, 0.5, 0.1, 13])
 
     def test_should_stop_early_with_increasing_metric(self):
-        new_trainer = Trainer(
+        new_trainer = GradientDescentTrainer(
             self.model,
             self.optimizer,
-            self.iterator,
-            self.instances,
-            validation_dataset=self.instances,
+            self.data_loader,
+            validation_data_loader=self.validation_data_loader,
             num_epochs=3,
             serialization_dir=self.TEST_DIR,
             patience=5,
@@ -292,12 +410,11 @@ class TestTrainer(AllenNlpTestCase):
 
     def test_should_stop_early_with_flat_lining_metric(self):
         flatline = [0.2] * 6
-        tracker = Trainer(
+        tracker = GradientDescentTrainer(
             self.model,
             self.optimizer,
-            self.iterator,
-            self.instances,
-            validation_dataset=self.instances,
+            self.data_loader,
+            validation_data_loader=self.validation_data_loader,
             num_epochs=3,
             serialization_dir=self.TEST_DIR,
             patience=5,
@@ -306,12 +423,11 @@ class TestTrainer(AllenNlpTestCase):
         tracker.add_metrics(flatline)
         assert tracker.should_stop_early
 
-        tracker = Trainer(
+        tracker = GradientDescentTrainer(
             self.model,
             self.optimizer,
-            self.iterator,
-            self.instances,
-            validation_dataset=self.instances,
+            self.data_loader,
+            validation_data_loader=self.validation_data_loader,
             num_epochs=3,
             serialization_dir=self.TEST_DIR,
             patience=5,
@@ -321,12 +437,11 @@ class TestTrainer(AllenNlpTestCase):
         assert tracker.should_stop_early
 
     def test_should_stop_early_with_decreasing_metric(self):
-        new_trainer = Trainer(
+        new_trainer = GradientDescentTrainer(
             self.model,
             self.optimizer,
-            self.iterator,
-            self.instances,
-            validation_dataset=self.instances,
+            self.data_loader,
+            validation_data_loader=self.validation_data_loader,
             num_epochs=3,
             serialization_dir=self.TEST_DIR,
             patience=5,
@@ -348,12 +463,11 @@ class TestTrainer(AllenNlpTestCase):
 
     def test_should_stop_early_with_early_stopping_disabled(self):
         # Increasing metric
-        trainer = Trainer(
+        trainer = GradientDescentTrainer(
             self.model,
             self.optimizer,
-            self.iterator,
-            self.instances,
-            validation_dataset=self.instances,
+            self.data_loader,
+            validation_data_loader=self.validation_data_loader,
             num_epochs=100,
             patience=None,
             validation_metric="+test",
@@ -363,12 +477,11 @@ class TestTrainer(AllenNlpTestCase):
         assert not tracker.should_stop_early()
 
         # Decreasing metric
-        trainer = Trainer(
+        trainer = GradientDescentTrainer(
             self.model,
             self.optimizer,
-            self.iterator,
-            self.instances,
-            validation_dataset=self.instances,
+            self.data_loader,
+            validation_data_loader=self.validation_data_loader,
             num_epochs=100,
             patience=None,
             validation_metric="-test",
@@ -385,12 +498,11 @@ class TestTrainer(AllenNlpTestCase):
                 "it must be a positive integer or None "
                 "\\(if you want to disable early stopping\\)",
             ):
-                Trainer(
+                GradientDescentTrainer(
                     self.model,
                     self.optimizer,
-                    self.iterator,
-                    self.instances,
-                    validation_dataset=self.instances,
+                    self.data_loader,
+                    validation_data_loader=self.validation_data_loader,
                     num_epochs=100,
                     patience=patience,
                     validation_metric="+test",
@@ -398,32 +510,32 @@ class TestTrainer(AllenNlpTestCase):
 
     def test_trainer_can_run_and_resume_with_momentum_scheduler(self):
         scheduler = MomentumScheduler.from_params(
-            self.optimizer, Params({"type": "inverted_triangular", "cool_down": 2, "warm_up": 2})
+            optimizer=self.optimizer,
+            params=Params({"type": "inverted_triangular", "cool_down": 2, "warm_up": 2}),
         )
-        trainer = Trainer(
+        trainer = GradientDescentTrainer(
             model=self.model,
             optimizer=self.optimizer,
-            iterator=self.iterator,
+            data_loader=self.data_loader,
             momentum_scheduler=scheduler,
             validation_metric="-loss",
-            train_dataset=self.instances,
-            validation_dataset=self.instances,
+            validation_data_loader=self.validation_data_loader,
             num_epochs=4,
             serialization_dir=self.TEST_DIR,
         )
         trainer.train()
 
         new_scheduler = MomentumScheduler.from_params(
-            self.optimizer, Params({"type": "inverted_triangular", "cool_down": 2, "warm_up": 2})
+            optimizer=self.optimizer,
+            params=Params({"type": "inverted_triangular", "cool_down": 2, "warm_up": 2}),
         )
-        new_trainer = Trainer(
+        new_trainer = GradientDescentTrainer(
             model=self.model,
             optimizer=self.optimizer,
-            iterator=self.iterator,
+            data_loader=self.data_loader,
             momentum_scheduler=new_scheduler,
             validation_metric="-loss",
-            train_dataset=self.instances,
-            validation_dataset=self.instances,
+            validation_data_loader=self.validation_data_loader,
             num_epochs=6,
             serialization_dir=self.TEST_DIR,
         )
@@ -433,52 +545,44 @@ class TestTrainer(AllenNlpTestCase):
         new_trainer.train()
 
     def test_trainer_can_run_with_lr_scheduler(self):
-        lr_params = Params({"type": "reduce_on_plateau"})
-        lr_scheduler = LearningRateScheduler.from_params(self.optimizer, lr_params)
-        trainer = Trainer(
+        lr_scheduler = ExponentialLearningRateScheduler(self.optimizer, gamma=0.5)
+        trainer = GradientDescentTrainer(
             model=self.model,
             optimizer=self.optimizer,
-            iterator=self.iterator,
+            data_loader=self.data_loader,
             learning_rate_scheduler=lr_scheduler,
             validation_metric="-loss",
-            train_dataset=self.instances,
-            validation_dataset=self.instances,
+            validation_data_loader=self.validation_data_loader,
             num_epochs=2,
         )
         trainer.train()
 
     def test_trainer_can_resume_with_lr_scheduler(self):
-        lr_scheduler = LearningRateScheduler.from_params(
-            self.optimizer, Params({"type": "exponential", "gamma": 0.5})
-        )
-        trainer = Trainer(
+        lr_scheduler = CosineWithRestarts(self.optimizer, t_initial=5)
+        trainer = GradientDescentTrainer(
             model=self.model,
             optimizer=self.optimizer,
-            iterator=self.iterator,
+            data_loader=self.data_loader,
             learning_rate_scheduler=lr_scheduler,
-            train_dataset=self.instances,
-            validation_dataset=self.instances,
+            validation_data_loader=self.validation_data_loader,
             num_epochs=2,
             serialization_dir=self.TEST_DIR,
         )
         trainer.train()
 
-        new_lr_scheduler = LearningRateScheduler.from_params(
-            self.optimizer, Params({"type": "exponential", "gamma": 0.5})
-        )
-        new_trainer = Trainer(
+        new_lr_scheduler = CosineWithRestarts(self.optimizer, t_initial=5)
+        new_trainer = GradientDescentTrainer(
             model=self.model,
             optimizer=self.optimizer,
-            iterator=self.iterator,
+            data_loader=self.data_loader,
             learning_rate_scheduler=new_lr_scheduler,
-            train_dataset=self.instances,
-            validation_dataset=self.instances,
+            validation_data_loader=self.validation_data_loader,
             num_epochs=4,
             serialization_dir=self.TEST_DIR,
         )
         epoch = new_trainer._restore_checkpoint()
         assert epoch == 2
-        assert new_trainer._learning_rate_scheduler.lr_scheduler.last_epoch == 1
+        assert new_trainer._learning_rate_scheduler.last_epoch == 1
         new_trainer.train()
 
     def test_trainer_raises_on_model_with_no_loss_key(self):
@@ -487,11 +591,10 @@ class TestTrainer(AllenNlpTestCase):
                 return {}
 
         with pytest.raises(RuntimeError):
-            trainer = Trainer(
+            trainer = GradientDescentTrainer(
                 FakeModel(None),
                 self.optimizer,
-                self.iterator,
-                self.instances,
+                self.data_loader,
                 num_epochs=2,
                 serialization_dir=self.TEST_DIR,
             )
@@ -502,26 +605,28 @@ class TestTrainer(AllenNlpTestCase):
         for module in self.model.modules():
             module.should_log_activations = True
 
-        trainer = Trainer(
+        trainer = GradientDescentTrainer(
             self.model,
             self.optimizer,
-            self.iterator,
-            self.instances,
+            self.data_loader,
             num_epochs=3,
             serialization_dir=self.TEST_DIR,
-            histogram_interval=2,
+            tensorboard_writer=TensorboardWriter(
+                serialization_dir=self.TEST_DIR, histogram_interval=2
+            ),
         )
         trainer.train()
 
     def test_trainer_respects_num_serialized_models_to_keep(self):
-        trainer = Trainer(
+        trainer = GradientDescentTrainer(
             self.model,
             self.optimizer,
-            self.iterator,
-            self.instances,
+            self.data_loader,
             num_epochs=5,
             serialization_dir=self.TEST_DIR,
-            num_serialized_models_to_keep=3,
+            checkpointer=Checkpointer(
+                serialization_dir=self.TEST_DIR, num_serialized_models_to_keep=3
+            ),
         )
         trainer.train()
 
@@ -532,15 +637,16 @@ class TestTrainer(AllenNlpTestCase):
             assert sorted(epochs) == [2, 3, 4]
 
     def test_trainer_saves_metrics_every_epoch(self):
-        trainer = Trainer(
+        trainer = GradientDescentTrainer(
             model=self.model,
             optimizer=self.optimizer,
-            iterator=self.iterator,
-            train_dataset=self.instances,
-            validation_dataset=self.instances,
+            data_loader=self.data_loader,
+            validation_data_loader=self.validation_data_loader,
             num_epochs=5,
             serialization_dir=self.TEST_DIR,
-            num_serialized_models_to_keep=3,
+            checkpointer=Checkpointer(
+                serialization_dir=self.TEST_DIR, num_serialized_models_to_keep=3
+            ),
         )
         trainer.train()
 
@@ -554,28 +660,33 @@ class TestTrainer(AllenNlpTestCase):
 
     def test_trainer_respects_keep_serialized_model_every_num_seconds(self):
         # To test:
-        #   Create an iterator that sleeps for 2.5 second per epoch, so the total training
-        #       time for one epoch is slightly greater then 2.5 seconds.
+        #   Create an fake data loader that sleeps for 2.5 second per epoch, so the total
+        #   training time for one epoch is slightly greater then 2.5 seconds.
         #   Run for 6 epochs, keeping the last 2 models, models also kept every 5 seconds.
         #   Check the resulting checkpoints.  Should then have models at epochs
         #       2, 4, plus the last two at 5 and 6.
-        class WaitingIterator(BasicIterator):
-            def _create_batches(self, *args, **kwargs):
+
+        class SlowDataLoader:
+            data_loader = DataLoader(self.instances, batch_size=2, collate_fn=allennlp_collate)
+
+            def __iter__(self):
                 time.sleep(2.5)
-                return super()._create_batches(*args, **kwargs)
+                return iter(self.data_loader)
 
-        iterator = WaitingIterator(batch_size=2)
-        iterator.index_with(self.vocab)
+            def __len__(self):
+                return len(self.data_loader)
 
-        trainer = Trainer(
+        trainer = GradientDescentTrainer(
             self.model,
             self.optimizer,
-            iterator,
-            self.instances,
+            SlowDataLoader(),
             num_epochs=6,
             serialization_dir=self.TEST_DIR,
-            num_serialized_models_to_keep=2,
-            keep_serialized_model_every_num_seconds=5,
+            checkpointer=Checkpointer(
+                serialization_dir=self.TEST_DIR,
+                num_serialized_models_to_keep=2,
+                keep_serialized_model_every_num_seconds=5,
+            ),
         )
         trainer.train()
 
@@ -587,34 +698,34 @@ class TestTrainer(AllenNlpTestCase):
             assert sorted(epochs) == [1, 3, 4, 5]
 
     def test_trainer_can_log_learning_rates_tensorboard(self):
-        iterator = BasicIterator(batch_size=4)
-        iterator.index_with(self.vocab)
-
-        trainer = Trainer(
+        data_loader = DataLoader(self.instances, batch_size=4, collate_fn=allennlp_collate)
+        trainer = GradientDescentTrainer(
             self.model,
             self.optimizer,
-            iterator,
-            self.instances,
+            data_loader,
             num_epochs=2,
             serialization_dir=self.TEST_DIR,
-            should_log_learning_rate=True,
-            summary_interval=2,
+            tensorboard_writer=TensorboardWriter(
+                serialization_dir=self.TEST_DIR, should_log_learning_rate=True, summary_interval=2,
+            ),
         )
 
         trainer.train()
 
     def test_trainer_saves_models_at_specified_interval(self):
-        iterator = BasicIterator(batch_size=4)
-        iterator.index_with(self.vocab)
+        data_loader = DataLoader(self.instances, batch_size=4, collate_fn=allennlp_collate)
 
-        trainer = Trainer(
+        trainer = GradientDescentTrainer(
             self.model,
             self.optimizer,
-            iterator,
-            self.instances,
+            data_loader,
             num_epochs=2,
             serialization_dir=self.TEST_DIR,
-            model_save_interval=0.0001,
+            checkpointer=Checkpointer(
+                serialization_dir=self.TEST_DIR,
+                model_save_interval=0.0001,
+                num_serialized_models_to_keep=10,
+            ),
         )
 
         trainer.train()
@@ -637,35 +748,27 @@ class TestTrainer(AllenNlpTestCase):
             os.remove(os.path.join(self.TEST_DIR, "training_state_epoch_{}.th".format(k)))
         os.remove(os.path.join(self.TEST_DIR, "best.th"))
 
-        restore_trainer = Trainer(
+        restore_trainer = GradientDescentTrainer(
             self.model,
             self.optimizer,
-            self.iterator,
-            self.instances,
+            self.data_loader,
             num_epochs=2,
             serialization_dir=self.TEST_DIR,
-            model_save_interval=0.0001,
+            checkpointer=Checkpointer(serialization_dir=self.TEST_DIR, model_save_interval=0.0001),
         )
         epoch = restore_trainer._restore_checkpoint()
         assert epoch == 2
         # One batch per epoch.
         assert restore_trainer._batch_num_total == 2
 
-    def test_trainer_from_base_class_params(self):
-        params = Params.from_file(self.FIXTURES_ROOT / "simple_tagger" / "experiment.json")
-
-        # Can instantiate from base class params
-        TrainerBase.from_params(params, self.TEST_DIR)
-
     def test_trainer_saves_and_loads_best_validation_metrics_correctly_1(self):
         # Use -loss and run 1 epoch of original-training, and one of restored-training
         # Run 1 epoch of original training.
-        trainer = Trainer(
+        trainer = GradientDescentTrainer(
             self.model,
             self.optimizer,
-            self.iterator,
-            self.instances,
-            validation_dataset=self.instances,
+            self.data_loader,
+            validation_data_loader=self.validation_data_loader,
             validation_metric="-loss",
             num_epochs=1,
             serialization_dir=self.TEST_DIR,
@@ -679,12 +782,11 @@ class TestTrainer(AllenNlpTestCase):
         assert "loss" in best_validation_metrics_epoch_1
 
         # Run 1 epoch of restored training.
-        restore_trainer = Trainer(
+        restore_trainer = GradientDescentTrainer(
             self.model,
             self.optimizer,
-            self.iterator,
-            self.instances,
-            validation_dataset=self.instances,
+            self.data_loader,
+            validation_data_loader=self.validation_data_loader,
             validation_metric="-loss",
             num_epochs=2,
             serialization_dir=self.TEST_DIR,
@@ -701,12 +803,11 @@ class TestTrainer(AllenNlpTestCase):
     def test_trainer_saves_and_loads_best_validation_metrics_correctly_2(self):
         # Use -loss and run 1 epoch of original-training, and one of restored-training
         # Run 1 epoch of original training.
-        trainer = Trainer(
+        trainer = GradientDescentTrainer(
             self.model,
             self.optimizer,
-            self.iterator,
-            self.instances,
-            validation_dataset=self.instances,
+            self.data_loader,
+            validation_data_loader=self.validation_data_loader,
             validation_metric="+loss",
             num_epochs=1,
             serialization_dir=self.TEST_DIR,
@@ -721,12 +822,11 @@ class TestTrainer(AllenNlpTestCase):
         assert "loss" in best_validation_metrics_epoch_1
 
         # Run 1 more epoch of restored training.
-        restore_trainer = Trainer(
+        restore_trainer = GradientDescentTrainer(
             self.model,
             self.optimizer,
-            self.iterator,
-            self.instances,
-            validation_dataset=self.instances,
+            self.data_loader,
+            validation_data_loader=self.validation_data_loader,
             validation_metric="+loss",
             num_epochs=2,
             serialization_dir=self.TEST_DIR,
@@ -745,12 +845,11 @@ class TestTrainer(AllenNlpTestCase):
     ):
         # Instead of -loss, use +loss to assure 2nd epoch is considered worse.
         # Run 1 epoch of original training.
-        original_trainer = Trainer(
+        original_trainer = GradientDescentTrainer(
             self.model,
             self.optimizer,
-            self.iterator,
-            self.instances,
-            validation_dataset=self.instances,
+            self.data_loader,
+            validation_data_loader=self.validation_data_loader,
             validation_metric="+loss",
             num_epochs=1,
             serialization_dir=self.TEST_DIR,
@@ -758,12 +857,11 @@ class TestTrainer(AllenNlpTestCase):
         training_metrics = original_trainer.train()
 
         # Run 1 epoch of restored training.
-        restored_trainer = Trainer(
+        restored_trainer = GradientDescentTrainer(
             self.model,
             self.optimizer,
-            self.iterator,
-            self.instances,
-            validation_dataset=self.instances,
+            self.data_loader,
+            validation_data_loader=self.validation_data_loader,
             validation_metric="+loss",
             num_epochs=2,
             serialization_dir=self.TEST_DIR,
@@ -781,14 +879,16 @@ class TestTrainer(AllenNlpTestCase):
         assert training_metrics["validation_loss"] > restored_metrics["validation_loss"]
 
     def test_restoring_works_with_older_checkpointing(self):
-        trainer = Trainer(
+        trainer = GradientDescentTrainer(
             self.model,
             self.optimizer,
-            self.iterator,
-            self.instances,
-            validation_dataset=self.instances,
+            self.data_loader,
+            validation_data_loader=self.validation_data_loader,
             num_epochs=3,
             serialization_dir=self.TEST_DIR,
+            checkpointer=Checkpointer(
+                serialization_dir=self.TEST_DIR, num_serialized_models_to_keep=4
+            ),
         )
         trainer.train()
 
@@ -813,12 +913,11 @@ class TestTrainer(AllenNlpTestCase):
         instances = list(self.instances)
         steps_to_accumulate = 2
 
-        trainer = Trainer(
+        trainer = GradientDescentTrainer(
             self.model,
             self.optimizer,
-            self.iterator,
-            instances,
-            validation_dataset=instances,
+            self.data_loader,
+            validation_data_loader=self.validation_data_loader,
             num_epochs=2,
             num_gradient_accumulation_steps=steps_to_accumulate,
         )
@@ -828,10 +927,80 @@ class TestTrainer(AllenNlpTestCase):
 
         num_batches_trained_per_epoch = trainer._batch_num_total // (metrics["training_epochs"] + 1)
         num_batches_expected = math.ceil(
-            math.ceil(len(instances) / self.iterator._batch_size) / steps_to_accumulate
+            math.ceil(len(instances) / self.data_loader.batch_size) / steps_to_accumulate
         )
 
         assert num_batches_trained_per_epoch == num_batches_expected
+
+    def test_batch_callback_is_called_at_every_batch(self):
+        class FakeBatchCallback(BatchCallback):
+            def __call__(
+                self,
+                trainer: "GradientDescentTrainer",
+                batch_inputs: List[List[TensorDict]],
+                batch_outputs: List[Dict[str, Any]],
+                epoch: int,
+                batch_number: int,
+                is_training: bool,
+            ) -> None:
+                if not hasattr(trainer, "batch_callback_calls"):
+                    trainer.batch_callback_calls = []  # type: ignore
+                trainer.batch_callback_calls.append((epoch, batch_number, is_training))  # type: ignore
+
+        trainer = GradientDescentTrainer(
+            self.model,
+            self.optimizer,
+            self.data_loader,
+            num_epochs=2,
+            validation_data_loader=self.validation_data_loader,
+            batch_callbacks=[FakeBatchCallback()],
+        )
+        trainer.train()
+        expected_calls = [
+            (epoch, batch_number + 1, is_train)
+            for epoch in range(2)
+            for is_train in (True, False)
+            for batch_number in range(len(self.instances) // 2)
+        ]
+        assert trainer.batch_callback_calls == expected_calls
+
+    def test_epoch_callback_is_called_at_every_epoch(self):
+        class FakeEpochCallback(EpochCallback):
+            def __call__(
+                self, trainer: "GradientDescentTrainer", metrics: Dict[str, Any], epoch: int
+            ) -> None:
+                if not hasattr(trainer, "epoch_callback_calls"):
+                    trainer.epoch_callback_calls = []  # type: ignore
+                trainer.epoch_callback_calls.append(epoch)  # type: ignore
+
+        trainer = GradientDescentTrainer(
+            self.model,
+            self.optimizer,
+            self.data_loader,
+            num_epochs=4,
+            validation_data_loader=self.validation_data_loader,
+            epoch_callbacks=[FakeEpochCallback()],
+        )
+        trainer.train()
+        expected_calls = [epoch for epoch in range(-1, 4)]
+        assert trainer.epoch_callback_calls == expected_calls
+
+
+class TestApexTrainer(TrainerTestBase):
+    @pytest.mark.skipif(not torch.cuda.is_available(), reason="No CUDA device registered.")
+    @pytest.mark.skipif(amp is None, reason="Apex is not installed.")
+    @pytest.mark.spawn
+    def test_trainer_can_run_amp(self):
+        self.model.cuda()
+        trainer = GradientDescentTrainer(
+            self.model,
+            self.optimizer,
+            self.data_loader,
+            num_epochs=2,
+            cuda_device=0,
+            opt_level="O1",
+        )
+        _ = trainer.train()
 
 
 class TestSparseClipGrad(AllenNlpTestCase):
@@ -852,16 +1021,3 @@ class TestSparseClipGrad(AllenNlpTestCase):
         # Final norm should be 1.5
         grad = embedding.weight.grad.coalesce()
         self.assertAlmostEqual(grad._values().norm(2.0).item(), 1.5, places=5)
-
-
-class TestLanguageModelWithMultiprocessDatasetReader(ModelTestCase):
-    def setUp(self):
-        super().setUp()
-        self.set_up_model(
-            self.FIXTURES_ROOT / "language_model" / "experiment_multiprocessing_reader.jsonnet",
-            # Note the glob on the end of this path.
-            self.FIXTURES_ROOT / "language_model" / "sentences*",
-        )
-
-    def test_unidirectional_language_model_can_train_save_and_load(self):
-        self.ensure_model_can_train_save_and_load(self.param_file)

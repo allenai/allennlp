@@ -12,9 +12,11 @@ class ComposeEncoder(Seq2SeqEncoder):
 
     Among other things, this can be used to add a "pre-contextualizer" before a Seq2SeqEncoder.
 
+    Registered as a `Seq2SeqEncoder` with name "compose".
+
     # Parameters
 
-    encoders : ``List[Seq2SeqEncoder]``, required.
+    encoders : `List[Seq2SeqEncoder]`, required.
         A non-empty list of encoders to compose. The encoders must match in bidirectionality.
     """
 
@@ -42,17 +44,13 @@ class ComposeEncoder(Seq2SeqEncoder):
             last_enc = enc
 
     @overrides
-    def forward(
-        self,  # pylint: disable=arguments-differ
-        inputs: torch.Tensor,
-        mask: torch.LongTensor = None,
-    ) -> torch.Tensor:
+    def forward(self, inputs: torch.Tensor, mask: torch.BoolTensor = None) -> torch.Tensor:
         """
         # Parameters
 
-        inputs : ``torch.Tensor``, required.
+        inputs : `torch.Tensor`, required.
             A tensor of shape (batch_size, timesteps, input_dim)
-        mask : ``torch.LongTensor``, optional (default = None).
+        mask : `torch.BoolTensor`, optional (default = None).
             A tensor of shape (batch_size, timesteps).
 
         # Returns

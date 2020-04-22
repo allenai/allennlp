@@ -10,11 +10,11 @@ import tempfile
 
 import pytest
 
-from allennlp.common.checks import ConfigurationError
-from allennlp.common.util import JsonDict
-from allennlp.common.testing import AllenNlpTestCase
 from allennlp.commands import main
 from allennlp.commands.predict import Predict
+from allennlp.common.checks import ConfigurationError
+from allennlp.common.testing import AllenNlpTestCase
+from allennlp.common.util import JsonDict, push_python_path
 from allennlp.data.dataset_readers import DatasetReader, TextClassificationJsonReader
 from allennlp.models.archival import load_archive
 from allennlp.predictors import Predictor, TextClassifierPredictor
@@ -30,8 +30,6 @@ class TestPredict(AllenNlpTestCase):
         self.classifier_data_path = (
             self.FIXTURES_ROOT / "data" / "text_classification_json" / "imdb_corpus.jsonl"
         )
-        self.esim_model_path = self.FIXTURES_ROOT / "esim" / "serialization" / "model.tar.gz"
-        self.esim_data_path = self.FIXTURES_ROOT / "data" / "snli.jsonl"
         self.tempdir = pathlib.Path(tempfile.mkdtemp())
         self.infile = self.tempdir / "inputs.txt"
         self.outfile = self.tempdir / "outputs.txt"
@@ -39,7 +37,7 @@ class TestPredict(AllenNlpTestCase):
     def test_add_predict_subparser(self):
         parser = argparse.ArgumentParser(description="Testing")
         subparsers = parser.add_subparsers(title="Commands", metavar="")
-        Predict().add_subparser("predict", subparsers)
+        Predict().add_subparser(subparsers)
 
         kebab_args = [
             "predict",  # command
@@ -69,7 +67,7 @@ class TestPredict(AllenNlpTestCase):
             f.write("""{"sentence": "the mariners won the super bowl in 2037"}\n""")
 
         sys.argv = [
-            "run.py",  # executable
+            "__main__.py",  # executable
             "predict",  # command
             str(self.classifier_model_path),
             str(self.infile),  # input_file
@@ -94,7 +92,7 @@ class TestPredict(AllenNlpTestCase):
     def test_using_dataset_reader_works_with_known_model(self):
 
         sys.argv = [
-            "run.py",  # executable
+            "__main__.py",  # executable
             "predict",  # command
             str(self.classifier_model_path),
             str(self.classifier_data_path),  # input_file
@@ -138,7 +136,7 @@ class TestPredict(AllenNlpTestCase):
 
         # --use-dataset-reader argument only should use validation
         sys.argv = [
-            "run.py",  # executable
+            "__main__.py",  # executable
             "predict",  # command
             str(self.classifier_model_path),
             str(self.classifier_data_path),  # input_file
@@ -159,7 +157,7 @@ class TestPredict(AllenNlpTestCase):
 
         # --use-dataset-reader, override with train
         sys.argv = [
-            "run.py",  # executable
+            "__main__.py",  # executable
             "predict",  # command
             str(self.classifier_model_path),
             str(self.classifier_data_path),  # input_file
@@ -182,7 +180,7 @@ class TestPredict(AllenNlpTestCase):
 
         # --use-dataset-reader, override with validation
         sys.argv = [
-            "run.py",  # executable
+            "__main__.py",  # executable
             "predict",  # command
             str(self.classifier_model_path),
             str(self.classifier_data_path),  # input_file
@@ -206,7 +204,7 @@ class TestPredict(AllenNlpTestCase):
         # No --use-dataset-reader flag, fails because the loading logic
         # is not implemented in the testing predictor
         sys.argv = [
-            "run.py",  # executable
+            "__main__.py",  # executable
             "predict",  # command
             str(self.classifier_model_path),
             str(self.classifier_data_path),  # input_file
@@ -223,19 +221,20 @@ class TestPredict(AllenNlpTestCase):
 
     def test_base_predictor(self):
         # Tests when no Predictor is found and the base class implementation is used
-        model_path = str(self.esim_model_path)
+        model_path = str(self.classifier_model_path)
         archive = load_archive(model_path)
         model_type = archive.config.get("model").get("type")
         # Makes sure that we don't have a DEFAULT_PREDICTOR for it. Otherwise the base class
         # implementation wouldn't be used
+        del DEFAULT_PREDICTORS["basic_classifier"]
         assert model_type not in DEFAULT_PREDICTORS
 
         # Doesn't use a --predictor
         sys.argv = [
-            "run.py",  # executable
+            "__main__.py",  # executable
             "predict",  # command
             model_path,
-            str(self.esim_data_path),  # input_file
+            str(self.classifier_data_path),  # input_file
             "--output-file",
             str(self.outfile),
             "--silent",
@@ -248,7 +247,8 @@ class TestPredict(AllenNlpTestCase):
 
         assert len(results) == 3
         for result in results:
-            assert set(result.keys()) == {"label_logits", "label_probs", "loss"}
+            assert set(result.keys()) == {"logits", "probs", "label", "loss"}
+        DEFAULT_PREDICTORS["basic_classifier"] = "text_classifier"
 
     def test_batch_prediction_works_with_known_model(self):
         with open(self.infile, "w") as f:
@@ -256,7 +256,7 @@ class TestPredict(AllenNlpTestCase):
             f.write("""{"sentence": "the mariners won the super bowl in 2037"}\n""")
 
         sys.argv = [
-            "run.py",  # executable
+            "__main__.py",  # executable
             "predict",  # command
             str(self.classifier_model_path),
             str(self.infile),  # input_file
@@ -281,7 +281,7 @@ class TestPredict(AllenNlpTestCase):
 
     def test_fails_without_required_args(self):
         sys.argv = [
-            "run.py",
+            "__main__.py",
             "predict",
             "/path/to/archive",
         ]  # executable  # command  # archive, but no input file
@@ -306,7 +306,7 @@ class TestPredict(AllenNlpTestCase):
             f.write("""{"sentence": "the mariners won the super bowl in 2037"}\n""")
 
         sys.argv = [
-            "run.py",  # executable
+            "__main__.py",  # executable
             "predict",  # command
             str(self.classifier_model_path),
             str(self.infile),  # input_file
@@ -337,58 +337,55 @@ class TestPredict(AllenNlpTestCase):
         (packagedir / "__init__.py").touch()
 
         # And add that directory to the path
-        sys.path.insert(0, str(self.TEST_DIR))
+        with push_python_path(self.TEST_DIR):
+            # Write out a duplicate predictor there, but registered under a different name.
+            from allennlp.predictors import text_classifier
 
-        # Write out a duplicate predictor there, but registered under a different name.
-        from allennlp.predictors import text_classifier
+            with open(text_classifier.__file__) as f:
+                code = f.read().replace(
+                    """@Predictor.register("text_classifier")""",
+                    """@Predictor.register("duplicate-test-predictor")""",
+                )
 
-        with open(text_classifier.__file__) as f:
-            code = f.read().replace(
-                """@Predictor.register("text_classifier")""",
-                """@Predictor.register("duplicate-test-predictor")""",
-            )
+            with open(os.path.join(packagedir, "predictor.py"), "w") as f:
+                f.write(code)
 
-        with open(os.path.join(packagedir, "predictor.py"), "w") as f:
-            f.write(code)
+            self.infile = os.path.join(self.TEST_DIR, "inputs.txt")
+            self.outfile = os.path.join(self.TEST_DIR, "outputs.txt")
 
-        self.infile = os.path.join(self.TEST_DIR, "inputs.txt")
-        self.outfile = os.path.join(self.TEST_DIR, "outputs.txt")
+            with open(self.infile, "w") as f:
+                f.write("""{"sentence": "the seahawks won the super bowl in 2016"}\n""")
+                f.write("""{"sentence": "the mariners won the super bowl in 2037"}\n""")
 
-        with open(self.infile, "w") as f:
-            f.write("""{"sentence": "the seahawks won the super bowl in 2016"}\n""")
-            f.write("""{"sentence": "the mariners won the super bowl in 2037"}\n""")
+            sys.argv = [
+                "__main__.py",  # executable
+                "predict",  # command
+                str(self.classifier_model_path),
+                str(self.infile),  # input_file
+                "--output-file",
+                str(self.outfile),
+                "--predictor",
+                "duplicate-test-predictor",
+                "--silent",
+            ]
 
-        sys.argv = [
-            "run.py",  # executable
-            "predict",  # command
-            str(self.classifier_model_path),
-            str(self.infile),  # input_file
-            "--output-file",
-            str(self.outfile),
-            "--predictor",
-            "duplicate-test-predictor",
-            "--silent",
-        ]
+            # Should raise ConfigurationError, because predictor is unknown
+            with pytest.raises(ConfigurationError):
+                main()
 
-        # Should raise ConfigurationError, because predictor is unknown
-        with pytest.raises(ConfigurationError):
+            # But once we include testpackage, it should be known
+            sys.argv.extend(["--include-package", "testpackage"])
             main()
 
-        # But once we include testpackage, it should be known
-        sys.argv.extend(["--include-package", "testpackage"])
-        main()
+            assert os.path.exists(self.outfile)
 
-        assert os.path.exists(self.outfile)
+            with open(self.outfile, "r") as f:
+                results = [json.loads(line) for line in f]
 
-        with open(self.outfile, "r") as f:
-            results = [json.loads(line) for line in f]
-
-        assert len(results) == 2
-        # Overridden predictor should output extra field
-        for result in results:
-            assert set(result.keys()) == {"label", "logits", "probs"}
-
-        sys.path.remove(str(self.TEST_DIR))
+            assert len(results) == 2
+            # Overridden predictor should output extra field
+            for result in results:
+                assert set(result.keys()) == {"label", "logits", "probs"}
 
     def test_alternative_file_formats(self):
         @Predictor.register("classification-csv")
@@ -414,7 +411,7 @@ class TestPredict(AllenNlpTestCase):
             writer.writerow(["the mariners won the super bowl in 2037", "neg"])
 
         sys.argv = [
-            "run.py",  # executable
+            "__main__.py",  # executable
             "predict",  # command
             str(self.classifier_model_path),
             str(self.infile),  # input_file
@@ -428,7 +425,7 @@ class TestPredict(AllenNlpTestCase):
         main()
         assert os.path.exists(self.outfile)
 
-        with open(self.outfile, "r") as f:
+        with open(self.outfile) as f:
             reader = csv.reader(f)
             results = [row for row in reader]
 

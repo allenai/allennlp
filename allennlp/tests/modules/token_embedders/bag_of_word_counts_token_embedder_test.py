@@ -1,13 +1,12 @@
 import numpy as np
-from numpy.testing import assert_almost_equal
 import pytest
 import torch
+from numpy.testing import assert_almost_equal
 
-from allennlp.common import Params
+from allennlp.common.checks import ConfigurationError
+from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Vocabulary
 from allennlp.modules.token_embedders import BagOfWordCountsTokenEmbedder
-from allennlp.common.testing import AllenNlpTestCase
-from allennlp.common.checks import ConfigurationError
 
 
 class TestBagOfWordCountsTokenEmbedder(AllenNlpTestCase):

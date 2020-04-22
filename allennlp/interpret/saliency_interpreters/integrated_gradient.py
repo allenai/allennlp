@@ -13,6 +13,8 @@ from allennlp.nn import util
 class IntegratedGradient(SaliencyInterpreter):
     """
     Interprets the prediction using Integrated Gradients (https://arxiv.org/abs/1703.01365)
+
+    Registered as a `SaliencyInterpreter` with name "integrated-gradient".
     """
 
     def saliency_interpret_from_json(self, inputs: JsonDict) -> JsonDict:
@@ -60,7 +62,7 @@ class IntegratedGradient(SaliencyInterpreter):
 
     def _integrate_gradients(self, instance: Instance) -> Dict[str, numpy.ndarray]:
         """
-        Returns integrated gradients for the given :class:`~allennlp.data.instance.Instance`
+        Returns integrated gradients for the given [`Instance`](../../data/instance.md)
         """
         ig_grads: Dict[str, Any] = {}
 

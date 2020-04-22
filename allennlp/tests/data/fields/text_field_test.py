@@ -1,17 +1,14 @@
 from collections import defaultdict
 from typing import Dict, List
 
-import pytest
 import numpy
-import torch
+import pytest
 
+from allennlp.common.checks import ConfigurationError
+from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Token, Vocabulary
 from allennlp.data.fields import TextField
 from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenCharactersIndexer, TokenIndexer
-
-from allennlp.common.testing import AllenNlpTestCase
-from allennlp.common.checks import ConfigurationError
-from allennlp.common.util import pad_sequence_to_length
 
 
 class DictReturningTokenIndexer(TokenIndexer):

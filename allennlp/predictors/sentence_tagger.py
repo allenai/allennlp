@@ -6,7 +6,7 @@ import numpy
 
 from allennlp.common.util import JsonDict
 from allennlp.data import DatasetReader, Instance
-from allennlp.data.fields import TextField, SequenceLabelField
+from allennlp.data.fields import FlagField, TextField, SequenceLabelField
 from allennlp.data.tokenizers.spacy_tokenizer import SpacyTokenizer
 from allennlp.models import Model
 from allennlp.predictors.predictor import Predictor
@@ -17,9 +17,10 @@ class SentenceTaggerPredictor(Predictor):
     """
     Predictor for any model that takes in a sentence and returns
     a single set of tags for it.  In particular, it can be used with
-    the :class:`~allennlp.models.crf_tagger.CrfTagger` model
-    and also
-    the :class:`~allennlp.models.simple_tagger.SimpleTagger` model.
+    the [`CrfTagger`](../models/crf_tagger.md) model
+    and also the [`SimpleTagger`](../models/simple_tagger.md) model.
+
+    Registered as a `Predictor` with name "sentence-tagger".
     """
 
     def __init__(
@@ -34,8 +35,8 @@ class SentenceTaggerPredictor(Predictor):
     @overrides
     def _json_to_instance(self, json_dict: JsonDict) -> Instance:
         """
-        Expects JSON that looks like ``{"sentence": "..."}``.
-        Runs the underlying model, and adds the ``"words"`` to the output.
+        Expects JSON that looks like `{"sentence": "..."}`.
+        Runs the underlying model, and adds the `"words"` to the output.
         """
         sentence = json_dict["sentence"]
         tokens = self._tokenizer.tokenize(sentence)
@@ -66,6 +67,10 @@ class SentenceTaggerPredictor(Predictor):
 
         Mary  went to Seattle to visit Microsoft Research
         O      O    O    O     O   O     B-Org     L-Org
+
+        We additionally add a flag to these instances to tell the model to only compute loss on
+        non-O tags, so that we get gradients that are specific to the particular span prediction
+        that each instance represents.
         """
         predicted_tags = outputs["tags"]
         predicted_spans = []
@@ -99,7 +104,7 @@ class SentenceTaggerPredictor(Predictor):
             new_instance.add_field(
                 "tags", SequenceLabelField(labels, text_field), self._model.vocab
             )
+            new_instance.add_field("ignore_loss_on_o_tags", FlagField(True))
             instances.append(new_instance)
-        instances.reverse()  # NER tags are in the opposite order as desired for the interpret UI
 
         return instances

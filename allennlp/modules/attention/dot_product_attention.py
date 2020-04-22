@@ -1,12 +1,14 @@
 import torch
 from overrides import overrides
-from allennlp.modules.attention.legacy_attention import Attention
+from allennlp.modules.attention.attention import Attention
 
 
 @Attention.register("dot_product")
 class DotProductAttention(Attention):
     """
     Computes attention between a vector and a matrix using dot product.
+
+    Registered as an `Attention` with name "dot_product".
     """
 
     @overrides

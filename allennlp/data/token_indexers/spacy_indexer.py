@@ -19,12 +19,14 @@ class SpacyTokenIndexer(TokenIndexer):
     easier integration with a spacy pipeline and no out of vocabulary
     tokens.
 
+    Registered as a `TokenIndexer` with name "spacy".
+
     # Parameters
 
-    hidden_dim : ``int``, optional (default=``96``)
+    hidden_dim : `int`, optional (default=`96`)
         The dimension of the vectors that spacy generates for
         representing words.
-    token_min_padding_length : ``int``, optional (default=``0``)
+    token_min_padding_length : `int`, optional (default=`0`)
         See :class:`TokenIndexer`.
     """
 
@@ -43,15 +45,11 @@ class SpacyTokenIndexer(TokenIndexer):
     def tokens_to_indices(
         self, tokens: List[SpacyToken], vocabulary: Vocabulary
     ) -> Dict[str, List[numpy.ndarray]]:
-
-        if not all([isinstance(x, SpacyToken) for x in tokens]):
+        if not all(isinstance(x, SpacyToken) for x in tokens):
             raise ValueError(
                 "The spacy indexer requires you to use a Tokenizer which produces SpacyTokens."
             )
-        indices: List[numpy.ndarray] = []
-        for token in tokens:
-            indices.append(token.vector)
-
+        indices: List[numpy.ndarray] = [token.vector for token in tokens]
         return {"tokens": indices}
 
     @overrides

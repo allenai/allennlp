@@ -7,7 +7,7 @@ from allennlp.training.metrics.fbeta_measure import FBetaMeasure
 @Metric.register("f1")
 class F1Measure(FBetaMeasure):
     """
-    Computes Precision, Recall and F1 with respect to a given ``positive_label``.
+    Computes Precision, Recall and F1 with respect to a given `positive_label`.
     For example, for a BIO tagging scheme, you would pass the classification index of
     the tag you are interested in, resulting in the Precision, Recall and F1 score being
     calculated for this tag only.
@@ -21,10 +21,9 @@ class F1Measure(FBetaMeasure):
         """
         # Returns
 
-        A tuple of the following metrics based on the accumulated count statistics:
-        precision : float
-        recall : float
-        f1-measure : float
+        precision : `float`
+        recall : `float`
+        f1-measure : `float`
         """
         metric = super().get_metric(reset=reset)
         # Because we just care about the class `positive_label`

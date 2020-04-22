@@ -5,21 +5,21 @@ import numpy
 import pytest
 import torch
 
-with warnings.catch_warnings():
-    warnings.filterwarnings("ignore", category=FutureWarning)
-    import h5py
-
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Vocabulary
 from allennlp.modules.token_embedders.embedding import (
-    Embedding,
     _read_pretrained_embeddings_file,
+    Embedding,
     EmbeddingsTextFile,
     format_embeddings_file_uri,
     parse_embeddings_file_uri,
 )
+
+with warnings.catch_warnings():
+    warnings.filterwarnings("ignore", category=FutureWarning)
+    import h5py
 
 
 class TestEmbedding(AllenNlpTestCase):
@@ -49,7 +49,7 @@ class TestEmbedding(AllenNlpTestCase):
                 "projection_dim": 20,
             }
         )
-        embedding_layer = Embedding.from_vocab_or_file(vocab, **params.as_dict(quiet=True))
+        embedding_layer = Embedding.from_params(params, vocab=vocab)
         input_tensor = torch.LongTensor([[3, 2, 1, 0]])
         embedded = embedding_layer(input_tensor).data.numpy()
         assert embedded.shape == (1, 4, 20)
@@ -69,7 +69,7 @@ class TestEmbedding(AllenNlpTestCase):
             embeddings_file.write("word 1.0 2.3 -1.0\n".encode("utf-8"))
             embeddings_file.write(f"{unicode_space} 3.4 3.3 5.0\n".encode("utf-8"))
         params = Params({"pretrained_file": embeddings_filename, "embedding_dim": 3})
-        embedding_layer = Embedding.from_vocab_or_file(vocab, **params.as_dict(quiet=True))
+        embedding_layer = Embedding.from_params(params, vocab=vocab)
         word_vector = embedding_layer.weight.data[vocab.get_token_index("word")]
         assert numpy.allclose(word_vector.numpy(), numpy.array([1.0, 2.3, -1.0]))
         word_vector = embedding_layer.weight.data[vocab.get_token_index(unicode_space)]
@@ -85,7 +85,7 @@ class TestEmbedding(AllenNlpTestCase):
         with gzip.open(embeddings_filename, "wb") as embeddings_file:
             embeddings_file.write("word 1.0 2.3 -1.0\n".encode("utf-8"))
         params = Params({"pretrained_file": embeddings_filename, "embedding_dim": 3})
-        embedding_layer = Embedding.from_vocab_or_file(vocab, **params.as_dict(quiet=True))
+        embedding_layer = Embedding.from_params(params, vocab=vocab)
         word_vector = embedding_layer.weight.data[vocab.get_token_index("word2")]
         assert not numpy.allclose(word_vector.numpy(), numpy.array([0.0, 0.0, 0.0]))
 
@@ -99,7 +99,7 @@ class TestEmbedding(AllenNlpTestCase):
             _ = fout.create_dataset("embedding", embeddings.shape, dtype="float32", data=embeddings)
 
         params = Params({"pretrained_file": embeddings_filename, "embedding_dim": 5})
-        embedding_layer = Embedding.from_vocab_or_file(vocab, **params.as_dict(quiet=True))
+        embedding_layer = Embedding.from_params(params, vocab=vocab)
         assert numpy.allclose(embedding_layer.weight.data.numpy(), embeddings)
 
     def test_read_hdf5_raises_on_invalid_shape(self):
@@ -112,7 +112,7 @@ class TestEmbedding(AllenNlpTestCase):
 
         params = Params({"pretrained_file": embeddings_filename, "embedding_dim": 5})
         with pytest.raises(ConfigurationError):
-            _ = Embedding.from_vocab_or_file(vocab, **params.as_dict(quiet=True))
+            _ = Embedding.from_params(params, vocab=vocab)
 
     def test_read_embedding_file_inside_archive(self):
         token2vec = {
@@ -138,15 +138,13 @@ class TestEmbedding(AllenNlpTestCase):
             "providing a uri of the type: "
             "\\(path_or_url_to_archive\\)#path_inside_archive\\.",
         ):
-            Embedding.from_vocab_or_file(vocab, **params.as_dict(quiet=True))
+            Embedding.from_params(params, vocab=vocab)
 
         for ext in [".zip", ".tar.gz"]:
             archive_path = str(self.FIXTURES_ROOT / "embeddings/multi-file-archive") + ext
             file_uri = format_embeddings_file_uri(archive_path, "folder/fake_embeddings.5d.txt")
             params = Params({"pretrained_file": file_uri, "embedding_dim": 5})
-            embeddings = Embedding.from_vocab_or_file(
-                vocab, **params.as_dict(quiet=True)
-            ).weight.data
+            embeddings = Embedding.from_params(params, vocab=vocab).weight.data
             for tok, vec in token2vec.items():
                 i = vocab.get_token_index(tok)
                 assert torch.equal(embeddings[i], vec), "Problem with format " + archive_path
@@ -219,7 +217,7 @@ class TestEmbedding(AllenNlpTestCase):
         vocab.add_token_to_namespace("word1", "tokens_a")
         vocab.add_token_to_namespace("word2", "tokens_a")
         embedding_params = Params({"vocab_namespace": "tokens_a", "embedding_dim": 10})
-        embedder = Embedding.from_vocab_or_file(vocab, **embedding_params.as_dict(quiet=True))
+        embedder = Embedding.from_params(embedding_params, vocab=vocab)
         original_weight = embedder.weight
 
         assert original_weight.shape[0] == 4
@@ -238,7 +236,7 @@ class TestEmbedding(AllenNlpTestCase):
         vocab.add_token_to_namespace("word1")
         vocab.add_token_to_namespace("word2")
         embedding_params = Params({"vocab_namespace": "tokens", "embedding_dim": 10})
-        embedder = Embedding.from_vocab_or_file(vocab, **embedding_params.as_dict(quiet=True))
+        embedder = Embedding.from_params(embedding_params, vocab=vocab)
         original_weight = embedder.weight
 
         assert original_weight.shape[0] == 4
@@ -257,7 +255,7 @@ class TestEmbedding(AllenNlpTestCase):
         vocab.add_token_to_namespace("word1", "tokens_a")
         vocab.add_token_to_namespace("word2", "tokens_a")
         embedding_params = Params({"vocab_namespace": "tokens_a", "embedding_dim": 10})
-        embedder = Embedding.from_vocab_or_file(vocab, **embedding_params.as_dict(quiet=True))
+        embedder = Embedding.from_params(embedding_params, vocab=vocab)
 
         # Previous models won't have _vocab_namespace attribute. Force it to be None
         embedder._vocab_namespace = None
@@ -293,7 +291,7 @@ class TestEmbedding(AllenNlpTestCase):
                 "pretrained_file": embeddings_filename,
             }
         )
-        embedder = Embedding.from_vocab_or_file(vocab, **embedding_params.as_dict(quiet=True))
+        embedder = Embedding.from_params(embedding_params, vocab=vocab)
 
         # Change weight to simulate embedding training
         embedder.weight.data += 1
@@ -323,7 +321,7 @@ class TestEmbedding(AllenNlpTestCase):
         # Case1: When vocab is already in sync with embeddings it should be a no-op.
         vocab = Vocabulary({"tokens": {"word1": 1, "word2": 1}})
         embedding_params = Params({"vocab_namespace": "tokens", "embedding_dim": 10})
-        embedder = Embedding.from_vocab_or_file(vocab, **embedding_params.as_dict(quiet=True))
+        embedder = Embedding.from_params(embedding_params, vocab=vocab)
         original_weight = embedder.weight
         embedder.extend_vocab(vocab, "tokens")
         assert torch.all(embedder.weight == original_weight)
@@ -334,7 +332,7 @@ class TestEmbedding(AllenNlpTestCase):
         vocab.add_token_to_namespace("word1", "tokens")
         vocab.add_token_to_namespace("word2", "tokens")
         embedding_params = Params({"vocab_namespace": "tokens", "embedding_dim": 10})
-        embedder = Embedding.from_vocab_or_file(vocab, **embedding_params.as_dict(quiet=True))
+        embedder = Embedding.from_params(embedding_params, vocab=vocab)
         # Previous models won't have _vocab_namespace attribute. Force it to be None
         embedder._vocab_namespace = None
         embedder.weight = torch.nn.Parameter(embedder.weight[:1, :])
@@ -347,6 +345,32 @@ class TestEmbedding(AllenNlpTestCase):
         # it should raise configuration error.
         vocab = Vocabulary({"tokens": {"word1": 1, "word2": 1}})
         embedding_params = Params({"vocab_namespace": "tokens", "embedding_dim": 10})
-        embedder = Embedding.from_vocab_or_file(vocab, **embedding_params.as_dict(quiet=True))
+        embedder = Embedding.from_params(embedding_params, vocab=vocab)
         with pytest.raises(ConfigurationError):
             embedder.extend_vocab(Vocabulary(), "tokens")
+
+    def test_embedding_constructed_directly_with_pretrained_file(self):
+
+        vocab = Vocabulary()
+        vocab.add_token_to_namespace("word")
+        vocab.add_token_to_namespace("word2")
+        unicode_space = "\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0"
+        vocab.add_token_to_namespace(unicode_space)
+        embeddings_filename = str(self.TEST_DIR / "embeddings.gz")
+        with gzip.open(embeddings_filename, "wb") as embeddings_file:
+            embeddings_file.write("word 1.0 2.3 -1.0\n".encode("utf-8"))
+            embeddings_file.write(f"{unicode_space} 3.4 3.3 5.0\n".encode("utf-8"))
+
+        num_embeddings = vocab.get_vocab_size()
+        embedding_layer = Embedding(
+            embedding_dim=3,
+            num_embeddings=num_embeddings,
+            pretrained_file=embeddings_filename,
+            vocab=vocab,
+        )
+        word_vector = embedding_layer.weight.data[vocab.get_token_index("word")]
+        assert numpy.allclose(word_vector.numpy(), numpy.array([1.0, 2.3, -1.0]))
+        word_vector = embedding_layer.weight.data[vocab.get_token_index(unicode_space)]
+        assert numpy.allclose(word_vector.numpy(), numpy.array([3.4, 3.3, 5.0]))
+        word_vector = embedding_layer.weight.data[vocab.get_token_index("word2")]
+        assert not numpy.allclose(word_vector.numpy(), numpy.array([1.0, 2.3, -1.0]))

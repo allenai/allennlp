@@ -9,20 +9,20 @@ from allennlp.common.util import get_spacy_model
 
 class SentenceSplitter(Registrable):
     """
-    A ``SentenceSplitter`` splits strings into sentences.
+    A `SentenceSplitter` splits strings into sentences.
     """
 
     default_implementation = "spacy"
 
     def split_sentences(self, text: str) -> List[str]:
         """
-        Splits a ``text`` :class:`str` paragraph into a list of :class:`str`, where each is a sentence.
+        Splits a `text` :class:`str` paragraph into a list of :class:`str`, where each is a sentence.
         """
         raise NotImplementedError
 
     def batch_split_sentences(self, texts: List[str]) -> List[List[str]]:
         """
-        Default implementation is to just iterate over the texts and call ``split_sentences``.
+        Default implementation is to just iterate over the texts and call `split_sentences`.
         """
         return [self.split_sentences(text) for text in texts]
 
@@ -30,7 +30,7 @@ class SentenceSplitter(Registrable):
 @SentenceSplitter.register("spacy")
 class SpacySentenceSplitter(SentenceSplitter):
     """
-    A ``SentenceSplitter`` that uses spaCy's built-in sentence boundary detection.
+    A `SentenceSplitter` that uses spaCy's built-in sentence boundary detection.
 
     Spacy's default sentence splitter uses a dependency parse to detect sentence boundaries, so
     it is slow, but accurate.
@@ -38,7 +38,9 @@ class SpacySentenceSplitter(SentenceSplitter):
     Another option is to use rule-based sentence boundary detection. It's fast and has a small memory footprint,
     since it uses punctuation to detect sentence boundaries. This can be activated with the `rule_based` flag.
 
-    By default, ``SpacySentenceSplitter`` calls the default spacy boundary detector.
+    By default, `SpacySentenceSplitter` calls the default spacy boundary detector.
+
+    Registered as a `SentenceSplitter` with name "spacy".
     """
 
     def __init__(self, language: str = "en_core_web_sm", rule_based: bool = False) -> None:

@@ -65,7 +65,7 @@ class TestStackedBidirectionalLstm:
         )
         encoder = Seq2VecEncoder.from_params(params)
         input_tensor = torch.rand(4, 5, 3)
-        mask = torch.ones(4, 5)
+        mask = torch.ones(4, 5).bool()
         output = encoder(input_tensor, mask)
         assert output.detach().numpy().shape == (4, 18)
 

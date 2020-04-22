@@ -3,35 +3,38 @@ import torch
 from torch.nn.utils.rnn import pad_packed_sequence
 
 from allennlp.common.checks import ConfigurationError
+from allennlp.modules.augmented_lstm import AugmentedLstm
 from allennlp.modules.seq2seq_encoders.seq2seq_encoder import Seq2SeqEncoder
+from allennlp.modules.stacked_alternating_lstm import StackedAlternatingLstm
+from allennlp.modules.stacked_bidirectional_lstm import StackedBidirectionalLstm
 
 
 class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
     """
     Pytorch's RNNs have two outputs: the hidden state for every time step, and the hidden state at
     the last time step for every layer.  We just want the first one as a single output.  This
-    wrapper pulls out that output, and adds a :func:`get_output_dim` method, which is useful if you
+    wrapper pulls out that output, and adds a `get_output_dim` method, which is useful if you
     want to, e.g., define a linear + softmax layer on top of this to get some distribution over a
     set of labels.  The linear layer needs to know its input dimension before it is called, and you
-    can get that from ``get_output_dim``.
+    can get that from `get_output_dim`.
 
     In order to be wrapped with this wrapper, a class must have the following members:
 
-        - ``self.input_size: int``
-        - ``self.hidden_size: int``
-        - ``def forward(inputs: PackedSequence, hidden_state: torch.Tensor) ->
-          Tuple[PackedSequence, torch.Tensor]``.
-        - ``self.bidirectional: bool`` (optional)
+        - `self.input_size: int`
+        - `self.hidden_size: int`
+        - `def forward(inputs: PackedSequence, hidden_state: torch.Tensor) ->
+          Tuple[PackedSequence, torch.Tensor]`.
+        - `self.bidirectional: bool` (optional)
 
     This is what pytorch's RNN's look like - just make sure your class looks like those, and it
     should work.
 
     Note that we *require* you to pass a binary mask of shape (batch_size, sequence_length)
     when you call this module, to avoid subtle bugs around masking.  If you already have a
-    ``PackedSequence`` you can pass ``None`` as the second parameter.
+    `PackedSequence` you can pass `None` as the second parameter.
 
     We support stateful RNNs where the final state from each batch is used as the initial
-    state for the subsequent batch by passing ``stateful=True`` to the constructor.
+    state for the subsequent batch by passing `stateful=True` to the constructor.
     """
 
     def __init__(self, module: torch.nn.Module, stateful: bool = False) -> None:
@@ -66,7 +69,7 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
 
     @overrides
     def forward(
-        self, inputs: torch.Tensor, mask: torch.Tensor, hidden_state: torch.Tensor = None
+        self, inputs: torch.Tensor, mask: torch.BoolTensor, hidden_state: torch.Tensor = None
     ) -> torch.Tensor:
 
         if self.stateful and mask is None:
@@ -122,3 +125,170 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
 
         # Restore the original indices and return the sequence.
         return unpacked_sequence_tensor.index_select(0, restoration_indices)
+
+
+@Seq2SeqEncoder.register("gru")
+class GruSeq2SeqEncoder(PytorchSeq2SeqWrapper):
+    """
+    Registered as a `Seq2SeqEncoder` with name "gru".
+    """
+
+    def __init__(
+        self,
+        input_size: int,
+        hidden_size: int,
+        num_layers: int = 1,
+        bias: bool = True,
+        dropout: float = 0.0,
+        bidirectional: bool = False,
+        stateful: bool = False,
+    ):
+        module = torch.nn.GRU(
+            input_size=input_size,
+            hidden_size=hidden_size,
+            num_layers=num_layers,
+            bias=bias,
+            batch_first=True,
+            dropout=dropout,
+            bidirectional=bidirectional,
+        )
+        super().__init__(module=module, stateful=stateful)
+
+
+@Seq2SeqEncoder.register("lstm")
+class LstmSeq2SeqEncoder(PytorchSeq2SeqWrapper):
+    """
+    Registered as a `Seq2SeqEncoder` with name "lstm".
+    """
+
+    def __init__(
+        self,
+        input_size: int,
+        hidden_size: int,
+        num_layers: int = 1,
+        bias: bool = True,
+        dropout: float = 0.0,
+        bidirectional: bool = False,
+        stateful: bool = False,
+    ):
+        module = torch.nn.LSTM(
+            input_size=input_size,
+            hidden_size=hidden_size,
+            num_layers=num_layers,
+            bias=bias,
+            batch_first=True,
+            dropout=dropout,
+            bidirectional=bidirectional,
+        )
+        super().__init__(module=module, stateful=stateful)
+
+
+@Seq2SeqEncoder.register("rnn")
+class RnnSeq2SeqEncoder(PytorchSeq2SeqWrapper):
+    """
+    Registered as a `Seq2SeqEncoder` with name "rnn".
+    """
+
+    def __init__(
+        self,
+        input_size: int,
+        hidden_size: int,
+        num_layers: int = 1,
+        nonlinearity: str = "tanh",
+        bias: bool = True,
+        dropout: float = 0.0,
+        bidirectional: bool = False,
+        stateful: bool = False,
+    ):
+        module = torch.nn.RNN(
+            input_size=input_size,
+            hidden_size=hidden_size,
+            num_layers=num_layers,
+            nonlinearity=nonlinearity,
+            bias=bias,
+            batch_first=True,
+            dropout=dropout,
+            bidirectional=bidirectional,
+        )
+        super().__init__(module=module, stateful=stateful)
+
+
+@Seq2SeqEncoder.register("augmented_lstm")
+class AugmentedLstmSeq2SeqEncoder(PytorchSeq2SeqWrapper):
+    """
+    Registered as a `Seq2SeqEncoder` with name "augmented_lstm".
+    """
+
+    def __init__(
+        self,
+        input_size: int,
+        hidden_size: int,
+        go_forward: bool = True,
+        recurrent_dropout_probability: float = 0.0,
+        use_highway: bool = True,
+        use_input_projection_bias: bool = True,
+        stateful: bool = False,
+    ) -> None:
+        module = AugmentedLstm(
+            input_size=input_size,
+            hidden_size=hidden_size,
+            go_forward=go_forward,
+            recurrent_dropout_probability=recurrent_dropout_probability,
+            use_highway=use_highway,
+            use_input_projection_bias=use_input_projection_bias,
+        )
+        super().__init__(module=module, stateful=stateful)
+
+
+@Seq2SeqEncoder.register("alternating_lstm")
+class StackedAlternatingLstmSeq2SeqEncoder(PytorchSeq2SeqWrapper):
+    """
+    Registered as a `Seq2SeqEncoder` with name "alternating_lstm".
+    """
+
+    def __init__(
+        self,
+        input_size: int,
+        hidden_size: int,
+        num_layers: int,
+        recurrent_dropout_probability: float = 0.0,
+        use_highway: bool = True,
+        use_input_projection_bias: bool = True,
+        stateful: bool = False,
+    ) -> None:
+        module = StackedAlternatingLstm(
+            input_size=input_size,
+            hidden_size=hidden_size,
+            num_layers=num_layers,
+            recurrent_dropout_probability=recurrent_dropout_probability,
+            use_highway=use_highway,
+            use_input_projection_bias=use_input_projection_bias,
+        )
+        super().__init__(module=module, stateful=stateful)
+
+
+@Seq2SeqEncoder.register("stacked_bidirectional_lstm")
+class StackedBidirectionalLstmSeq2SeqEncoder(PytorchSeq2SeqWrapper):
+    """
+    Registered as a `Seq2SeqEncoder` with name "stacked_bidirectional_lstm".
+    """
+
+    def __init__(
+        self,
+        input_size: int,
+        hidden_size: int,
+        num_layers: int,
+        recurrent_dropout_probability: float = 0.0,
+        layer_dropout_probability: float = 0.0,
+        use_highway: bool = True,
+        stateful: bool = False,
+    ) -> None:
+        module = StackedBidirectionalLstm(
+            input_size=input_size,
+            hidden_size=hidden_size,
+            num_layers=num_layers,
+            recurrent_dropout_probability=recurrent_dropout_probability,
+            layer_dropout_probability=layer_dropout_probability,
+            use_highway=use_highway,
+        )
+        super().__init__(module=module, stateful=stateful)

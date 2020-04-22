@@ -12,6 +12,7 @@ from allennlp.common.file_utils import (
     get_from_cache,
     cached_path,
     split_s3_path,
+    open_compressed,
 )
 from allennlp.common.testing import AllenNlpTestCase
 
@@ -196,3 +197,14 @@ class TestFileUtils(AllenNlpTestCase):
 
         with open(filename, "rb") as cached_file:
             assert cached_file.read() == self.glove_bytes
+
+    def test_open_compressed(self):
+        uncompressed_file = self.FIXTURES_ROOT / "embeddings/fake_embeddings.5d.txt"
+        with open_compressed(uncompressed_file) as f:
+            uncompressed_lines = [line.strip() for line in f]
+
+        for suffix in ["bz2", "gz"]:
+            compressed_file = f"{uncompressed_file}.{suffix}"
+            with open_compressed(compressed_file) as f:
+                compressed_lines = [line.strip() for line in f]
+            assert compressed_lines == uncompressed_lines

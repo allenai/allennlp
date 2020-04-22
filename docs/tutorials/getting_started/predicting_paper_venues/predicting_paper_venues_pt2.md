@@ -37,7 +37,7 @@ abstraction that wraps a model and does precisely this.
 Most of the functionality you need for a `Predictor` is already implemented in the base class.
 Usually you only need to implement the `predict_json` function,
 which specifies how to turn a JSON dict of inputs into an AllenNLP
-[`Instance`](https://allenai.github.io/allennlp-docs/api/allennlp.data.instance.html).
+[`Instance`](https://docs.allennlp.org/master/api/data/instance/).
 Since we want to return more than an Instance in this function, we use `predict_instance` serialize the Instance to JSON dict.
 And our `DatasetReader` already has a
 [`text_to_instance`](https://github.com/allenai/allennlp-as-a-library-example/blob/master/my_library/dataset_readers/semantic_scholar_papers.py#L68)
