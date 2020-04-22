@@ -31,7 +31,7 @@ jobs:
     - name: Install requirements
       run: |
         pip install --upgrade pip setuptools wheel
-        pip install --upgrade -e . -r dev-requirements.txt
+        pip install --upgrade --upgrade-strategy eager -e . -r dev-requirements.txt
 
     - name: Debug info
       run: |
@@ -87,7 +87,7 @@ jobs:
     - name: Install requirements
       run: |
         pip install --upgrade pip setuptools wheel
-        pip install --upgrade -e . -r dev-requirements.txt
+        pip install --upgrade --upgrade-strategy eager -e . -r dev-requirements.txt
 
     - name: Debug info
       run: |
