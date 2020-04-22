@@ -25,11 +25,13 @@ jobs:
       with:
         path: ${{ env.pythonLocation }}
         key: ${{ runner.os }}-pydeps-${{ matrix.python }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pydeps-${{ matrix.python }}
 
     - name: Install requirements
       run: |
         pip install --upgrade pip setuptools wheel
-        pip install --upgrade -e . -r dev-requirements.txt
+        pip install --upgrade --upgrade-strategy eager -e . -r dev-requirements.txt
 
     - name: Debug info
       run: |
@@ -79,11 +81,13 @@ jobs:
       with:
         path: ${{ env.pythonLocation }}
         key: ${{ runner.os }}-pydeps-${{ matrix.python }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pydeps-${{ matrix.python }}
 
     - name: Install requirements
       run: |
         pip install --upgrade pip setuptools wheel
-        pip install --upgrade -e . -r dev-requirements.txt
+        pip install --upgrade --upgrade-strategy eager -e . -r dev-requirements.txt
 
     - name: Debug info
       run: |
@@ -94,7 +98,7 @@ jobs:
         EXCLUDE_ALLENNLP_IN_SETUP: "true"
       run: |
         git clone https://github.com/allenai/allennlp-models.git
-        cd allennlp-models && pip install --upgrade -e . -r dev-requirements.txt
+        cd allennlp-models && pip install --upgrade --upgrade-strategy eager -e . -r dev-requirements.txt
 
     - name: Run models tests
       run: |
