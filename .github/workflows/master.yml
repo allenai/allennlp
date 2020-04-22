@@ -34,8 +34,7 @@ jobs:
     - name: Install requirements
       run: |
         pip install --upgrade pip setuptools wheel
-        pip install -e .
-        pip install --upgrade -r dev-requirements.txt
+        pip install --upgrade -e . -r dev-requirements.txt
 
     - name: Debug info
       run: |
@@ -91,8 +90,7 @@ jobs:
     - name: Install requirements
       run: |
         pip install --upgrade pip setuptools wheel
-        pip install -e .
-        pip install --upgrade -r dev-requirements.txt
+        pip install --upgrade -e . -r dev-requirements.txt
 
     - name: Debug info
       run: |
@@ -142,8 +140,7 @@ jobs:
     - name: Install requirements
       run: |
         pip install --upgrade pip setuptools wheel
-        pip install -e .
-        pip install --upgrade -r dev-requirements.txt
+        pip install --upgrade -e . -r dev-requirements.txt
 
     - name: Build core package
       run: |
@@ -273,8 +270,7 @@ jobs:
     - name: Install requirements
       run: |
         pip install --upgrade pip setuptools wheel
-        pip install -e .
-        pip install --upgrade -r dev-requirements.txt
+        pip install --upgrade -e . -r dev-requirements.txt
 
     - name: Debug info
       run: |
