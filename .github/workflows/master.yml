@@ -1,10 +1,7 @@
-name: CI
+name: Master
 
 on:
   # TODO: add nightly schedule.
-  pull_request:
-    branches:
-    - master
   push:
     branches:
     - master
