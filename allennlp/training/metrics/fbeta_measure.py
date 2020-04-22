@@ -53,7 +53,7 @@ class FBetaMeasure(Metric):
             alters 'macro' to account for label imbalance; it can result in an
             F-score that is not between precision and recall.
 
-    labels: list, optional
+    labels: `list`, optional
         The set of labels to include and their order if `average is None`.
         Labels present in the data can be excluded, for example to calculate a
         multi-class average ignoring a majority negative class. Labels not present
@@ -166,12 +166,12 @@ class FBetaMeasure(Metric):
         """
         # Returns
 
-        A tuple of the following metrics based on the accumulated count statistics:
-        precisions : List[float]
-        recalls : List[float]
-        f1-measures : List[float]
+        precisions : `List[float]`
+        recalls : `List[float]`
+        f1-measures : `List[float]`
 
-        If `self.average` is not `None`, you will get `float` instead of `List[float]`.
+        !!! Note
+            If `self.average` is not `None`, you will get `float` instead of `List[float]`.
         """
         if self._true_positive_sum is None:
             raise RuntimeError("You never call this metric before.")

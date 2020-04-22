@@ -121,7 +121,7 @@ class LstmCellWithProjection(torch.nn.Module):
             (batch_size, max_timesteps, hidden_size) where for a given batch
             element, all outputs past the sequence length for that batch are
             zero tensors.
-        final_state : `Tuple[`torch.FloatTensor, torch.FloatTensor]`
+        final_state : `Tuple[torch.FloatTensor, torch.FloatTensor]`
             A tuple (state, memory) representing the initial hidden state and memory
             of the LSTM. The `state` has shape (1, batch_size, hidden_size) and the
             `memory` has shape (1, batch_size, cell_size).
