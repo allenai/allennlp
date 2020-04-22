@@ -1,10 +1,26 @@
-<p align="center"><img width="40%" src="docs/img/allennlp-logo-dark.png" /></p>
-
-[![Build Status](http://build.allennlp.org/app/rest/builds/buildType:(id:AllenNLP_AllenNLPCommits)/statusIcon)](http://build.allennlp.org/viewType.html?buildTypeId=AllenNLP_AllenNLPCommits&guest=1)
-[![codecov](https://codecov.io/gh/allenai/allennlp/branch/master/graph/badge.svg)](https://codecov.io/gh/allenai/allennlp)
-
-An [Apache 2.0](https://github.com/allenai/allennlp/blob/master/LICENSE) NLP research library, built on PyTorch,
-for developing state-of-the-art deep learning models on a wide variety of linguistic tasks.
+<div align="center">
+    <br>
+    <img src="https://raw.githubusercontent.com/allenai/allennlp/master/docs/img/allennlp-logo-dark.png" width="400"/>
+    <p>
+    An Apache 2.0 NLP research library, built on PyTorch, for developing state-of-the-art deep learning models on a wide variety of linguistic tasks.
+    </p>
+    <hr/>
+</div>
+<p align="center">
+    <a href="https://github.com/allenai/allennlp/actions">
+        <img alt="Build" src="https://github.com/allenai/allennlp/workflows/CI/badge.svg?event=push&branch=master">
+    </a>
+    <a href="https://pypi.org/project/allennlp/">
+        <img alt="PyPI" src="https://img.shields.io/pypi/v/allennlp">
+    </a>
+    <a href="https://github.com/allenai/allennlp/blob/master/LICENSE">
+        <img alt="License" src="https://img.shields.io/github/license/allenai/allennlp.svg?color=blue&cachedrop">
+    </a>
+    <a href="https://codecov.io/gh/allenai/allennlp">
+        <img alt="Codecov" src="https://codecov.io/gh/allenai/allennlp/branch/master/graph/badge.svg">
+    </a>
+</p>
+<br/>
 
 ## Quick Links
 
@@ -14,7 +30,7 @@ for developing state-of-the-art deep learning models on a wide variety of lingui
 * [Documentation](https://docs.allennlp.org/master/)
 * [Contributing Guidelines](CONTRIBUTING.md)
 * [Pretrained Models](https://github.com/allenai/allennlp-hub/blob/master/allennlp_hub/pretrained/allennlp_pretrained.py)
-* [Continuous Build](http://build.allennlp.org/)
+* [Continuous Build](https:/github.com/allenai/allennlp/actions)
 * [Nightly Releases](https://pypi.org/project/allennlp/#history)
 
 ## Package Overview
