@@ -6,15 +6,15 @@ by AllenNLP with the methods provided in this module.
 
 There are two ways of declaring plugins for discovery:
 
-    * Writing the package name to import in a file (typically ".allennlp_plugins", in the current
-    directory from which the command "allennlp" is run). This is the simplest approach.
+- Writing the package name to import in a file (typically ".allennlp_plugins", in the current
+  directory from which the command "allennlp" is run). This is the simplest approach.
 
-    * Creating a folder called "allennlp_plugins" that's in the Python path when you run the
-    "allennlp" command (typically under your project's root directory), then creating a subfolder
-    with the name you want and creating an "__init__.py" file that imports the code you want (e.g.,
-    your Python package). This option is preferred when you want to create a pip-installable
-    package and you want to make your AllenNLP plugin available when users install your package.
-    See [allennlp-server](https://github.com/allenai/allennlp-server) for an example.
+- Creating a folder called "allennlp_plugins" that's in the Python path when you run the
+  "allennlp" command (typically under your project's root directory), then creating a subfolder
+  with the name you want and creating an "__init__.py" file that imports the code you want (e.g.,
+  your Python package). This option is preferred when you want to create a pip-installable
+  package and you want to make your AllenNLP plugin available when users install your package.
+  See [allennlp-server](https://github.com/allenai/allennlp-server) for an example.
 """
 import importlib
 import logging

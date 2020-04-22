@@ -33,10 +33,12 @@ git+https://github.com/NVIDIA/apex.git@master
 # YAML manipulation
 ruamel.yaml
 
-mathy_pydoc>=0.6.7,<0.8.0
+# Generating markdown files from Python modules.
+git+https://github.com/NiklasRosenstein/pydoc-markdown.git@b469839ceb598df3d7e7126b81bff88dfd1343e3
+
 markdown-include==0.5.1
 # Package for the material theme for mkdocs
-mkdocs-material==5.1.0
+mkdocs-material==5.1.1
 
 #### PACKAGE-UPLOAD PACKAGES ####
 
