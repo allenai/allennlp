@@ -116,7 +116,6 @@ jobs:
   build_package:
     name: Build Package
     needs: [check_core, check_models]
-    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -157,7 +156,6 @@ jobs:
   test_package:
     name: Test Package
     needs: [build_package]
-    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -191,7 +189,6 @@ jobs:
   docker:
     name: Docker
     needs: [build_package]
-    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
 
     steps:
@@ -241,7 +238,6 @@ jobs:
   docs:
     name: Docs
     needs: [build_package, test_package, docker]
-    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     strategy:
       matrix:
