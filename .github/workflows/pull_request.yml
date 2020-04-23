@@ -59,6 +59,11 @@ jobs:
         # be available.
         codecov -t $CODECOV_TOKEN || echo "codecov upload failed"
 
+    - name: Clean up
+      if: always()
+      run: |
+        pip uninstall --yes allennlp
+
   check_models:
     name: Check Models
     runs-on: ubuntu-latest
@@ -99,6 +104,7 @@ jobs:
         cd allennlp-models && make test
 
     - name: Clean up
+      if: always()
       run: |
-        # Don't want this in the cache since the other workflow uses same cache.
+        pip uninstall --yes allennlp
         pip uninstall --yes allennlp_models
