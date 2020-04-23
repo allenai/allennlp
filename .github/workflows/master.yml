@@ -7,7 +7,7 @@ on:
   release:
     types: [published]
   schedule:
-  - cron: '37 11 * * 0,1,2,3'  # nightly at 11:37 UTC Sunday - Thursday
+  - cron: '37 11 * * 1,2,3,4,5'  # early morning (11:37 UTC / 2:37 AM PDT) Monday - Friday
 
 jobs:
   check_core:
@@ -28,9 +28,7 @@ jobs:
     - uses: actions/cache@v1
       with:
         path: ${{ env.pythonLocation }}
-        key: ${{ runner.os }}-pydeps-${{ matrix.python }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
-        restore-keys: |
-          ${{ runner.os }}-pydeps-${{ matrix.python }}
+        key: ${{ runner.os }}-pydeps-${{ env.pythonLocation }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
 
     - name: Install requirements
       run: |
@@ -65,6 +63,13 @@ jobs:
         # be available.
         codecov -t $CODECOV_TOKEN || echo "codecov upload failed"
 
+    - name: Clean up
+      if: always()
+      run: |
+        # Could run into issues with the cache if we don't uninstall the editable.
+        # See https://github.com/pypa/pip/issues/4537.
+        pip uninstall --yes allennlp
+
   check_models:
     name: Check Models
     runs-on: ubuntu-latest
@@ -83,9 +88,7 @@ jobs:
     - uses: actions/cache@v1
       with:
         path: ${{ env.pythonLocation }}
-        key: ${{ runner.os }}-pydeps-${{ matrix.python }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
-        restore-keys: |
-          ${{ runner.os }}-pydeps-${{ matrix.python }}
+        key: ${{ runner.os }}-pydeps-${{ env.pythonLocation }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
 
     - name: Install requirements
       run: |
@@ -107,18 +110,15 @@ jobs:
         cd allennlp-models && make test
 
     - name: Clean up
+      if: always()
       run: |
-        # Don't want this in the cache since the other workflow uses same cache.
+        pip uninstall --yes allennlp
         pip uninstall --yes allennlp_models
 
   # Builds package distribution files for PyPI.
   build_package:
     name: Build Package
-    needs: [check_core, check_models]
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python: ['3.7']  # only build on Python 3.7 for now.
 
     steps:
     - uses: actions/checkout@v2
@@ -126,23 +126,30 @@ jobs:
     - name: Setup Python
       uses: actions/setup-python@v1
       with:
-        python-version: ${{ matrix.python }}
+        python-version: 3.7
 
     - uses: actions/cache@v1
       with:
         path: ${{ env.pythonLocation }}
-        key: ${{ runner.os }}-pydeps-${{ matrix.python }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
-        restore-keys: |
-          ${{ runner.os }}-pydeps-${{ matrix.python }}
+        key: ${{ runner.os }}-pydeps-${{ env.pythonLocation }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
 
-    - name: Set version suffix
-      # Only due this for nightly builds.
+    - name: Set version suffix (nightly)
       if: github.event_name == 'schedule'
       run: |
         # This is somewhat bizarre, but you can't set env variables to bash
         # commands in the action workflow - so we have to use this odd way of
         # exporting a variable instead.
         echo ::set-env name=ALLENNLP_VERSION_SUFFIX::.dev$(date -u +%Y%m%d)
+
+    - name: Set version suffix (release)
+      if: github.event_name == 'release'
+      run: |
+        # Remove '/refs/tags/' to get the actual tag from the release.
+        TAG=${GITHUB_REF#/refs/tags/};
+        # The tag might have a suffix like `.rc1`, which we need to set
+        # as an environment variable so that the package is built with this suffix.
+        SUFFIX=$(echo $TAG | sed -E 's/v[0-9]+\.[0-9]+\.[0-9]+//')
+        echo "::set-env name=ALLENNLP_VERSION_SUFFIX::$SUFFIX"
 
     - name: Install requirements
       run: |
@@ -161,10 +168,15 @@ jobs:
         name: core-package
         path: dist
 
+    - name: Clean up
+      if: always()
+      run: |
+        pip uninstall --yes allennlp
+
   # Tests installing from the distribution files.
   test_package:
     name: Test Package
-    needs: [build_package]
+    needs: [build_package]  # needs the package artifact created from 'build_package' job.
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -197,7 +209,7 @@ jobs:
   # Builds Docker image from the core distribution files and uploads to Docker Hub.
   docker:
     name: Docker
-    needs: [build_package]
+    needs: [build_package]  # needs the package artifact created from 'build_package' job.
     runs-on: ubuntu-latest
 
     steps:
@@ -238,7 +250,7 @@ jobs:
       if: github.repository == 'allenai/allennlp' && github.event_name == 'release'
       run: |
         docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
-        TAG=${GITHUB_REF/\/refs\/tags\//};
+        TAG=${GITHUB_REF#/refs/tags/};
         docker tag allennlp allennlp/allennlp:$TAG
         docker push allennlp/allennlp:$TAG
 
@@ -246,11 +258,7 @@ jobs:
   # allennlp-docs repo.
   docs:
     name: Docs
-    needs: [build_package, test_package, docker]
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python: ['3.7']  # no need to build against multiple versions for now.
 
     steps:
     - uses: actions/checkout@v1
@@ -263,14 +271,12 @@ jobs:
     - name: Setup Python
       uses: actions/setup-python@v1
       with:
-        python-version: ${{ matrix.python }}
+        python-version: 3.7
 
     - uses: actions/cache@v1
       with:
         path: ${{ env.pythonLocation }}
-        key: ${{ runner.os }}-pydeps-${{ matrix.python }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
-        restore-keys: |
-          ${{ runner.os }}-pydeps-${{ matrix.python }}
+        key: ${{ runner.os }}-pydeps-${{ env.pythonLocation }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
 
     - name: Install requirements
       run: |
@@ -315,10 +321,15 @@ jobs:
         git commit -m "automated update of the docs"
         git push
 
+    - name: Clean up
+      if: always()
+      run: |
+        pip uninstall --yes allennlp
+
   # Publish the core distribution files to PyPI.
   publish:
     name: PyPI
-    needs: [build_package, test_package, docker, docs]
+    needs: [check_core, check_models, build_package, test_package, docker, docs]
     # Only publish to PyPI on releases and nightly builds to "allenai/allennlp" (not forks).
     if: github.repository == 'allenai/allennlp' && github.event_name != 'push'
     runs-on: ubuntu-latest
