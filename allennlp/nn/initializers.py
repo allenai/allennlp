@@ -471,7 +471,7 @@ class InitializerApplicator(FromParams):
         logger.info("Initializing parameters")
         unused_regexes = {initializer[0] for initializer in self._initializers}
         uninitialized_parameters = set()
-        # Store which initialisers were applied to which parameters.
+        # Store which initializers were applied to which parameters.
         for name, parameter in module.named_parameters():
             for initializer_regex, initializer in self._initializers:
                 allow = self._prevent_regex is None or not bool(
