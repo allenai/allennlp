@@ -10,8 +10,9 @@ to `git@github.com:allenai/allennlp.git` (or the `HTTPS` equivalent).
 The format of the tag should be `v{VERSION}`, i.e. the intended version of the release preceeded with a `v`.
 So for the version `1.0.0` release the tag will be `v1.0.0`.
 
-> ❗️ If this is pre-release, such as `rc1`, make sure the suffix is separated with another `.`, so
-✅ `v1.0.0.rc1` = good and ❌ `v1.0.0rc1` = bad.
+> ❗️ If this is pre-release, such as `rc1`, make sure the suffix is separated with another `.`, for example
+> - ✅ `v1.0.0.rc1` = good,
+> - ❌ `v1.0.0rc1` = bad.
 
 To make things easier, start by setting the tag to an environment variable, `TAG`.
 Then you can copy and paste the commands below without worrying about mistyping the tag.
