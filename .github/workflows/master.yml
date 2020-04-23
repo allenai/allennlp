@@ -221,9 +221,15 @@ jobs:
         name: core-package
         path: dist
 
+    - name: Pull Docker build cache
+      run: |
+        # Pull layers to speed up build / push.
+        # The `|| true` is so this step doesn't fail if the 'latest' tag doesn't exist.
+        docker pull allennlp/commit:latest || true
+
     - name: Build image
       run: |
-        # Create a small context for the Docker with only the files that we need.
+        # Create a small context for the Docker image with only the files that we need.
         tar -czvf context.tar.gz \
             Dockerfile.whl \
             scripts/ai2_internal/resumable_train.sh \
@@ -242,8 +248,14 @@ jobs:
       if: github.repository == 'allenai/allennlp' && github.event_name == 'push'
       run: |
         docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
+
+        # Tag with current commit and 'latest'.
         docker tag allennlp allennlp/commit:$GITHUB_SHA
+        docker tag allennlp allennlp/commit:latest
+
+        # Push both tags.
         docker push allennlp/commit:$GITHUB_SHA
+        docker push allennlp/commit:latest
 
     - name: Upload release image
       # Only run this for releases on the main repo, not forks.
@@ -251,8 +263,14 @@ jobs:
       run: |
         docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
         TAG=${GITHUB_REF#refs/tags/};
+
+        # Tag with release version and 'latest'.
         docker tag allennlp allennlp/allennlp:$TAG
+        docker tag allennlp allennlp/allennlp:latest
+
+        # Push both tags.
         docker push allennlp/allennlp:$TAG
+        docker push allennlp/allennlp:latest
 
   # Builds the API documentation and pushes it to the appropriate folder in the
   # allennlp-docs repo.
