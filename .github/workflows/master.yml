@@ -221,12 +221,6 @@ jobs:
         name: core-package
         path: dist
 
-    - name: Pull Docker build cache
-      run: |
-        # Pull layers to speed up build / push.
-        # The `|| true` is so this step doesn't fail if the 'latest' tag doesn't exist.
-        docker pull allennlp/commit:latest || true
-
     - name: Build image
       run: |
         # Create a small context for the Docker image with only the files that we need.
