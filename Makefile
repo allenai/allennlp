@@ -20,6 +20,10 @@ else
 	SED = sed
 endif
 
+.PHONY : version
+version :
+	@python -c 'from allennlp.version import VERSION; print(f"AllenNLP v{VERSION}")'
+
 #
 # Testing helpers.
 #
@@ -44,6 +48,22 @@ test :
 .PHONY : test-with-cov
 test-with-cov :
 	pytest --color=yes -rf --cov-config=.coveragerc --cov=$(SRC) --durations=40 -k "not sniff_test" $(SRC)
+
+#
+# Setup helpers
+#
+
+.PHONY : install
+install :
+	# Ensure pip, setuptools, and wheel are up-to-date.
+	pip install --upgrade pip setuptools wheel
+	# Due to a weird thing with pip, we may need egg-info before running `pip install -e`.
+	# See https://github.com/pypa/pip/issues/4537.
+	python setup.py install_egg_info
+	# Install allennlp as editable and all dependencies except apex since that requires torch to already be installed.
+	grep -Ev 'NVIDIA/apex\.git' dev-requirements.txt | pip install --upgrade --upgrade-strategy eager -e . -r /dev/stdin
+	# Now install apex.
+	grep -E 'NVIDIA/apex\.git' dev-requirements.txt | pip install --upgrade -r /dev/stdin
 
 #
 # Documention helpers.
