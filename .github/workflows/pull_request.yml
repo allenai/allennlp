@@ -24,9 +24,7 @@ jobs:
     - uses: actions/cache@v1
       with:
         path: ${{ env.pythonLocation }}
-        key: ${{ runner.os }}-pydeps-${{ matrix.python }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
-        restore-keys: |
-          ${{ runner.os }}-pydeps-${{ matrix.python }}
+        key: ${{ runner.os }}-pydeps-${{ env.pythonLocation }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
 
     - name: Install requirements
       run: |
@@ -79,9 +77,7 @@ jobs:
     - uses: actions/cache@v1
       with:
         path: ${{ env.pythonLocation }}
-        key: ${{ runner.os }}-pydeps-${{ matrix.python }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
-        restore-keys: |
-          ${{ runner.os }}-pydeps-${{ matrix.python }}
+        key: ${{ runner.os }}-pydeps-${{ env.pythonLocation }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
 
     - name: Install requirements
       run: |

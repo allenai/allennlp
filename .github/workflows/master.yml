@@ -28,9 +28,7 @@ jobs:
     - uses: actions/cache@v1
       with:
         path: ${{ env.pythonLocation }}
-        key: ${{ runner.os }}-pydeps-${{ matrix.python }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
-        restore-keys: |
-          ${{ runner.os }}-pydeps-${{ matrix.python }}
+        key: ${{ runner.os }}-pydeps-${{ env.pythonLocation }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
 
     - name: Install requirements
       run: |
@@ -83,9 +81,7 @@ jobs:
     - uses: actions/cache@v1
       with:
         path: ${{ env.pythonLocation }}
-        key: ${{ runner.os }}-pydeps-${{ matrix.python }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
-        restore-keys: |
-          ${{ runner.os }}-pydeps-${{ matrix.python }}
+        key: ${{ runner.os }}-pydeps-${{ env.pythonLocation }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
 
     - name: Install requirements
       run: |
@@ -115,9 +111,6 @@ jobs:
   build_package:
     name: Build Package
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python: ['3.7']  # only build on Python 3.7 for now.
 
     steps:
     - uses: actions/checkout@v2
@@ -125,14 +118,12 @@ jobs:
     - name: Setup Python
       uses: actions/setup-python@v1
       with:
-        python-version: ${{ matrix.python }}
+        python-version: 3.7
 
     - uses: actions/cache@v1
       with:
         path: ${{ env.pythonLocation }}
-        key: ${{ runner.os }}-pydeps-${{ matrix.python }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
-        restore-keys: |
-          ${{ runner.os }}-pydeps-${{ matrix.python }}
+        key: ${{ runner.os }}-pydeps-${{ env.pythonLocation }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
 
     - name: Set version suffix (nightly)
       if: github.event_name == 'schedule'
@@ -255,9 +246,6 @@ jobs:
   docs:
     name: Docs
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python: ['3.7']  # no need to build against multiple versions for now.
 
     steps:
     - uses: actions/checkout@v1
@@ -270,14 +258,12 @@ jobs:
     - name: Setup Python
       uses: actions/setup-python@v1
       with:
-        python-version: ${{ matrix.python }}
+        python-version: 3.7
 
     - uses: actions/cache@v1
       with:
         path: ${{ env.pythonLocation }}
-        key: ${{ runner.os }}-pydeps-${{ matrix.python }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
-        restore-keys: |
-          ${{ runner.os }}-pydeps-${{ matrix.python }}
+        key: ${{ runner.os }}-pydeps-${{ env.pythonLocation }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
 
     - name: Install requirements
       run: |
