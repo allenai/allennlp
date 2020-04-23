@@ -114,7 +114,6 @@ jobs:
   # Builds package distribution files for PyPI.
   build_package:
     name: Build Package
-    needs: [check_core, check_models]
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -164,7 +163,7 @@ jobs:
   # Tests installing from the distribution files.
   test_package:
     name: Test Package
-    needs: [build_package]
+    needs: [build_package]  # needs the package artifact created from 'build_package' job.
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -197,7 +196,7 @@ jobs:
   # Builds Docker image from the core distribution files and uploads to Docker Hub.
   docker:
     name: Docker
-    needs: [build_package]
+    needs: [build_package]  # needs the package artifact created from 'build_package' job.
     runs-on: ubuntu-latest
 
     steps:
@@ -246,7 +245,6 @@ jobs:
   # allennlp-docs repo.
   docs:
     name: Docs
-    needs: [build_package, test_package, docker]
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -318,7 +316,7 @@ jobs:
   # Publish the core distribution files to PyPI.
   publish:
     name: PyPI
-    needs: [build_package, test_package, docker, docs]
+    needs: [check_core, check_models, build_package, test_package, docker, docs]
     # Only publish to PyPI on releases and nightly builds to "allenai/allennlp" (not forks).
     if: github.repository == 'allenai/allennlp' && github.event_name != 'push'
     runs-on: ubuntu-latest
