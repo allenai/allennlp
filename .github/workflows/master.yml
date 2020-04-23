@@ -1,12 +1,13 @@
 name: Master
 
 on:
-  # TODO: add nightly schedule.
   push:
     branches:
     - master
   release:
     types: [published]
+  schedule:
+  - cron: '37 11 * * 1,2,3,4,5'  # early morning (11:37 UTC / 2:37 AM PDT) Monday - Friday
 
 jobs:
   check_core:
@@ -33,8 +34,7 @@ jobs:
 
     - name: Install requirements
       run: |
-        pip install --upgrade pip setuptools wheel
-        pip install --upgrade -e . -r dev-requirements.txt
+        make install
 
     - name: Debug info
       run: |
@@ -89,8 +89,7 @@ jobs:
 
     - name: Install requirements
       run: |
-        pip install --upgrade pip setuptools wheel
-        pip install --upgrade -e . -r dev-requirements.txt
+        make install
 
     - name: Debug info
       run: |
@@ -101,7 +100,7 @@ jobs:
         EXCLUDE_ALLENNLP_IN_SETUP: "true"
       run: |
         git clone https://github.com/allenai/allennlp-models.git
-        cd allennlp-models && pip install --upgrade -e . -r dev-requirements.txt
+        cd allennlp-models && pip install --upgrade --upgrade-strategy eager -e . -r dev-requirements.txt
 
     - name: Run models tests
       run: |
@@ -115,7 +114,6 @@ jobs:
   # Builds package distribution files for PyPI.
   build_package:
     name: Build Package
-    needs: [check_core, check_models]
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -136,14 +134,24 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-pydeps-${{ matrix.python }}
 
+    - name: Set version suffix
+      # Only due this for nightly builds.
+      if: github.event_name == 'schedule'
+      run: |
+        # This is somewhat bizarre, but you can't set env variables to bash
+        # commands in the action workflow - so we have to use this odd way of
+        # exporting a variable instead.
+        echo ::set-env name=ALLENNLP_VERSION_SUFFIX::.dev$(date -u +%Y%m%d)
+
     - name: Install requirements
       run: |
-        pip install --upgrade pip setuptools wheel
-        pip install --upgrade -e . -r dev-requirements.txt
+        make install
 
     - name: Build core package
       run: |
         echo "Building packages for core release"
+        # Just print out the version for debugging.
+        make version
         python setup.py bdist_wheel sdist
 
     - name: Save core package
@@ -155,7 +163,7 @@ jobs:
   # Tests installing from the distribution files.
   test_package:
     name: Test Package
-    needs: [build_package]
+    needs: [build_package]  # needs the package artifact created from 'build_package' job.
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -188,7 +196,7 @@ jobs:
   # Builds Docker image from the core distribution files and uploads to Docker Hub.
   docker:
     name: Docker
-    needs: [build_package]
+    needs: [build_package]  # needs the package artifact created from 'build_package' job.
     runs-on: ubuntu-latest
 
     steps:
@@ -237,7 +245,6 @@ jobs:
   # allennlp-docs repo.
   docs:
     name: Docs
-    needs: [build_package, test_package, docker]
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -265,8 +272,7 @@ jobs:
 
     - name: Install requirements
       run: |
-        pip install --upgrade pip setuptools wheel
-        pip install --upgrade -e . -r dev-requirements.txt
+        make install
 
     - name: Debug info
       run: |
@@ -283,8 +289,9 @@ jobs:
         git config --global push.default simple
 
     - name: Deploy docs
-      # Only run this on main repo, not forks.
-      if: github.repository == 'allenai/allennlp'
+      # Only run this on main repo (not forks) for commits and releases but not for
+      # nightly builds.
+      if: github.repository == 'allenai/allennlp' && github.event_name != 'schedule'
       run: |
         if [[ $GITHUB_EVENT_NAME == 'release' ]]; then
             DIRECTORY=${GITHUB_REF/\/refs\/tags\//};
@@ -309,9 +316,9 @@ jobs:
   # Publish the core distribution files to PyPI.
   publish:
     name: PyPI
-    needs: [build_package, test_package, docker, docs]
-    # Only publish on releases to "allenai/allennlp" and not forks.
-    if: github.repository == 'allenai/allennlp' && github.event_name == 'release'
+    needs: [check_core, check_models, build_package, test_package, docker, docs]
+    # Only publish to PyPI on releases and nightly builds to "allenai/allennlp" (not forks).
+    if: github.repository == 'allenai/allennlp' && github.event_name != 'push'
     runs-on: ubuntu-latest
 
     steps:
