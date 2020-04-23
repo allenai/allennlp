@@ -15,31 +15,31 @@ Then you can copy and paste the commands below without worrying about mistyping 
 
 ## Steps
 
-**Step 1:** Add the tag in git to mark the release:
+1.  Add the tag in git to mark the release:
 
-```
-git tag $TAG -m "Release $TAG"
-```
+    ```
+    git tag $TAG -m "Release $TAG"
+    ```
 
-**Step 2:** Push the tag to the main repo.
+2. Push the tag to the main repo.
 
-```
-git push --tags origin master
-```
+    ```
+    git push --tags origin master
+    ```
 
-**Step 3:** Find the tag you just pushed [on GitHub](https://github.com/allenai/allennlp/tags) and
+3. Find the tag you just pushed [on GitHub](https://github.com/allenai/allennlp/tags) and
 click edit. Then add some release notes including the commit history since the last release which you can get with
 
-```bash
-git log `git describe --always --tags --abbrev=0 HEAD^^`..HEAD^ --oneline
-```
+    ```bash
+    git log `git describe --always --tags --abbrev=0 HEAD^^`..HEAD^ --oneline
+    ```
 
-Or, if you're using fish,
+    Or, if you're using fish,
 
-```fish
-git log (git describe --always --tags --abbrev=0 HEAD^^)..HEAD^ --oneline
-```
+    ```fish
+   git log (git describe --always --tags --abbrev=0 HEAD^^)..HEAD^ --oneline
+   ```
 
-**Step 4:** Click "Publish Release", and if this is a pre-release make sure you check that box.
+4. Click "Publish Release", and if this is a pre-release make sure you check that box.
 
 That's it! GitHub Actions will handle the rest.
