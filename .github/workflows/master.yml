@@ -320,7 +320,7 @@ jobs:
     name: PyPI
     needs: [build_package, test_package, docker, docs]
     # Only publish to PyPI on releases and nightly builds to "allenai/allennlp" (not forks).
-    if: github.repository == 'allenai/allennlp' && github.event_name != 'pull_request'
+    if: github.repository == 'allenai/allennlp' && github.event_name != 'push'
     runs-on: ubuntu-latest
 
     steps:
