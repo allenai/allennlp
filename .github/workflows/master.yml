@@ -65,6 +65,13 @@ jobs:
         # be available.
         codecov -t $CODECOV_TOKEN || echo "codecov upload failed"
 
+    - name: Clean up
+      if: always()
+      run: |
+        # Could run into issues with the cache if we don't uninstall the editable.
+        # See https://github.com/pypa/pip/issues/4537.
+        pip uninstall --yes allennlp
+
   check_models:
     name: Check Models
     runs-on: ubuntu-latest
@@ -107,8 +114,9 @@ jobs:
         cd allennlp-models && make test
 
     - name: Clean up
+      if: always()
       run: |
-        # Don't want this in the cache since the other workflow uses same cache.
+        pip uninstall --yes allennlp
         pip uninstall --yes allennlp_models
 
   # Builds package distribution files for PyPI.
@@ -159,6 +167,11 @@ jobs:
       with:
         name: core-package
         path: dist
+
+    - name: Clean up
+      if: always()
+      run: |
+        pip uninstall --yes allennlp
 
   # Tests installing from the distribution files.
   test_package:
@@ -312,6 +325,11 @@ jobs:
         git add .
         git commit -m "automated update of the docs"
         git push
+
+    - name: Clean up
+      if: always()
+      run: |
+        pip uninstall --yes allennlp
 
   # Publish the core distribution files to PyPI.
   publish:
