@@ -144,8 +144,8 @@ jobs:
     - name: Set version suffix (release)
       if: github.event_name == 'release'
       run: |
-        # Remove '/refs/tags/' to get the actual tag from the release.
-        TAG=${GITHUB_REF#/refs/tags/};
+        # Remove 'refs/tags/' to get the actual tag from the release.
+        TAG=${GITHUB_REF#refs/tags/};
         # The tag might have a suffix like `.rc1`, which we need to set
         # as an environment variable so that the package is built with this suffix.
         SUFFIX=$(echo $TAG | sed -E 's/v[0-9]+\.[0-9]+\.[0-9]+//')
@@ -250,7 +250,7 @@ jobs:
       if: github.repository == 'allenai/allennlp' && github.event_name == 'release'
       run: |
         docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
-        TAG=${GITHUB_REF#/refs/tags/};
+        TAG=${GITHUB_REF#refs/tags/};
         docker tag allennlp allennlp/allennlp:$TAG
         docker push allennlp/allennlp:$TAG
 
@@ -302,7 +302,7 @@ jobs:
       if: github.repository == 'allenai/allennlp' && github.event_name != 'schedule'
       run: |
         if [[ $GITHUB_EVENT_NAME == 'release' ]]; then
-            DIRECTORY=${GITHUB_REF/\/refs\/tags\//};
+            DIRECTORY=${GITHUB_REF#refs/tags/};
         else
             DIRECTORY=master;
         fi
