@@ -28,9 +28,7 @@ jobs:
     - uses: actions/cache@v1
       with:
         path: ${{ env.pythonLocation }}
-        key: ${{ runner.os }}-pydeps-${{ matrix.python }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
-        restore-keys: |
-          ${{ runner.os }}-pydeps-${{ matrix.python }}
+        key: ${{ runner.os }}-pydeps-${{ env.pythonLocation }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
 
     - name: Install requirements
       run: |
@@ -90,9 +88,7 @@ jobs:
     - uses: actions/cache@v1
       with:
         path: ${{ env.pythonLocation }}
-        key: ${{ runner.os }}-pydeps-${{ matrix.python }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
-        restore-keys: |
-          ${{ runner.os }}-pydeps-${{ matrix.python }}
+        key: ${{ runner.os }}-pydeps-${{ env.pythonLocation }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
 
     - name: Install requirements
       run: |
@@ -123,9 +119,6 @@ jobs:
   build_package:
     name: Build Package
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python: ['3.7']  # only build on Python 3.7 for now.
 
     steps:
     - uses: actions/checkout@v2
@@ -133,23 +126,30 @@ jobs:
     - name: Setup Python
       uses: actions/setup-python@v1
       with:
-        python-version: ${{ matrix.python }}
+        python-version: 3.7
 
     - uses: actions/cache@v1
       with:
         path: ${{ env.pythonLocation }}
-        key: ${{ runner.os }}-pydeps-${{ matrix.python }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
-        restore-keys: |
-          ${{ runner.os }}-pydeps-${{ matrix.python }}
+        key: ${{ runner.os }}-pydeps-${{ env.pythonLocation }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
 
-    - name: Set version suffix
-      # Only due this for nightly builds.
+    - name: Set version suffix (nightly)
       if: github.event_name == 'schedule'
       run: |
         # This is somewhat bizarre, but you can't set env variables to bash
         # commands in the action workflow - so we have to use this odd way of
         # exporting a variable instead.
         echo ::set-env name=ALLENNLP_VERSION_SUFFIX::.dev$(date -u +%Y%m%d)
+
+    - name: Set version suffix (release)
+      if: github.event_name == 'release'
+      run: |
+        # Remove '/refs/tags/' to get the actual tag from the release.
+        TAG=${GITHUB_REF#/refs/tags/};
+        # The tag might have a suffix like `.rc1`, which we need to set
+        # as an environment variable so that the package is built with this suffix.
+        SUFFIX=$(echo $TAG | sed -E 's/v[0-9]+\.[0-9]+\.[0-9]+//')
+        echo "::set-env name=ALLENNLP_VERSION_SUFFIX::$SUFFIX"
 
     - name: Install requirements
       run: |
@@ -250,7 +250,7 @@ jobs:
       if: github.repository == 'allenai/allennlp' && github.event_name == 'release'
       run: |
         docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
-        TAG=${GITHUB_REF/\/refs\/tags\//};
+        TAG=${GITHUB_REF#/refs/tags/};
         docker tag allennlp allennlp/allennlp:$TAG
         docker push allennlp/allennlp:$TAG
 
@@ -259,9 +259,6 @@ jobs:
   docs:
     name: Docs
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python: ['3.7']  # no need to build against multiple versions for now.
 
     steps:
     - uses: actions/checkout@v1
@@ -274,14 +271,12 @@ jobs:
     - name: Setup Python
       uses: actions/setup-python@v1
       with:
-        python-version: ${{ matrix.python }}
+        python-version: 3.7
 
     - uses: actions/cache@v1
       with:
         path: ${{ env.pythonLocation }}
-        key: ${{ runner.os }}-pydeps-${{ matrix.python }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
-        restore-keys: |
-          ${{ runner.os }}-pydeps-${{ matrix.python }}
+        key: ${{ runner.os }}-pydeps-${{ env.pythonLocation }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
 
     - name: Install requirements
       run: |
