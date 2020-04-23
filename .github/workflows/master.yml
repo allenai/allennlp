@@ -1,12 +1,13 @@
 name: Master
 
 on:
-  # TODO: add nightly schedule.
   push:
     branches:
     - master
   release:
     types: [published]
+  schedule:
+  - cron: '37 11 * * 0,1,2,3'  # nightly at 11:37 UTC Sunday - Thursday
 
 jobs:
   check_core:
@@ -134,6 +135,15 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-pydeps-${{ matrix.python }}
 
+    - name: Set version suffix
+      # Only due this for nightly builds.
+      if: github.event_name == 'schedule'
+      run: |
+        # This is somewhat bizarre, but you can't set env variables to bash
+        # commands in the action workflow - so we have to use this odd way of
+        # exporting a variable instead.
+        echo ::set-env name=ALLENNLP_VERSION_SUFFIX::.dev$(date -u +%Y%m%d)
+
     - name: Install requirements
       run: |
         make install
@@ -141,6 +151,8 @@ jobs:
     - name: Build core package
       run: |
         echo "Building packages for core release"
+        # Just print out the version for debugging.
+        make version
         python setup.py bdist_wheel sdist
 
     - name: Save core package
@@ -279,8 +291,9 @@ jobs:
         git config --global push.default simple
 
     - name: Deploy docs
-      # Only run this on main repo, not forks.
-      if: github.repository == 'allenai/allennlp'
+      # Only run this on main repo (not forks) for commits and releases but not for
+      # nightly builds.
+      if: github.repository == 'allenai/allennlp' && github.event_name != 'schedule'
       run: |
         if [[ $GITHUB_EVENT_NAME == 'release' ]]; then
             DIRECTORY=${GITHUB_REF/\/refs\/tags\//};
@@ -306,8 +319,8 @@ jobs:
   publish:
     name: PyPI
     needs: [build_package, test_package, docker, docs]
-    # Only publish on releases to "allenai/allennlp" and not forks.
-    if: github.repository == 'allenai/allennlp' && github.event_name == 'release'
+    # Only publish to PyPI on releases and nightly builds to "allenai/allennlp" (not forks).
+    if: github.repository == 'allenai/allennlp' && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
 
     steps:

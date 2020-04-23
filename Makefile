@@ -20,6 +20,10 @@ else
 	SED = sed
 endif
 
+.PHONY : version
+version :
+	@python -c 'from allennlp.version import VERSION; print(f"AllenNLP v{VERSION}")'
+
 #
 # Testing helpers.
 #
