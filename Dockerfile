@@ -47,7 +47,6 @@ COPY allennlp/ allennlp/
 COPY pytest.ini pytest.ini
 COPY .flake8 .flake8
 COPY tutorials/ tutorials/
-COPY training_config training_config/
 COPY setup.py setup.py
 COPY README.md README.md
 COPY mkdocs-skeleton.yml mkdocs-skeleton.yml

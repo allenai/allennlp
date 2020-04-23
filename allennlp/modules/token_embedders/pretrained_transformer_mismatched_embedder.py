@@ -65,9 +65,10 @@ class PretrainedTransformerMismatchedEmbedder(TokenEmbedder):
         segment_concat_mask: Optional[torch.BoolTensor]
             See `PretrainedTransformerEmbedder`.
 
-        # Returns:
+        # Returns
 
-        Shape: [batch_size, num_orig_tokens, embedding_size].
+        `torch.Tensor`
+            Shape: [batch_size, num_orig_tokens, embedding_size].
         """
         # Shape: [batch_size, num_wordpieces, embedding_size].
         embeddings = self._matched_embedder(

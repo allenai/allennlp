@@ -151,18 +151,21 @@ class Vocabulary(Registrable):
         counts and, together with the other parameters to this class, use them to decide which
         words are in-vocabulary.  If this is `None`, we just won't initialize the vocabulary with
         anything.
+
     min_count : `Dict[str, int]`, optional (default=None)
         When initializing the vocab from a counter, you can specify a minimum count, and every
         token with a count less than this will not be added to the dictionary.  These minimum
         counts are `namespace-specific`, so you can specify different minimums for labels versus
         words tokens, for example.  If a namespace does not have a key in the given dictionary, we
         will add all seen tokens to that namespace.
+
     max_vocab_size : `Union[int, Dict[str, int]]`, optional (default=`None`)
         If you want to cap the number of tokens in your vocabulary, you can do so with this
         parameter.  If you specify a single integer, every namespace will have its vocabulary fixed
         to be no larger than this.  If you specify a dictionary, then each namespace in the
         `counter` can have a separate maximum vocabulary size.  Any missing key will have a value
         of `None`, which means no cap on the vocabulary size.
+
     non_padded_namespaces : `Iterable[str]`, optional
         By default, we assume you are mapping word / character tokens to integers, and so you want
         to reserve word indices for padding and out-of-vocabulary tokens.  However, if you are
@@ -177,6 +180,7 @@ class Vocabulary(Registrable):
         The default is `("*tags", "*labels")`, so as long as your namespace ends in "tags" or
         "labels" (which is true by default for all tag and label fields in this code), you don't
         have to specify anything here.
+
     pretrained_files : `Dict[str, str]`, optional
         If provided, this map specifies the path to optional pretrained embedding files for each
         namespace. This can be used to either restrict the vocabulary to only words which appear
@@ -184,10 +188,12 @@ class Vocabulary(Registrable):
         regardless of their count, depending on the value of `only_include_pretrained_words`.
         Words which appear in the pretrained embedding file but not in the data are NOT included
         in the Vocabulary.
+
     min_pretrained_embeddings : `Dict[str, int]`, optional
         If provided, specifies for each namespace a minimum number of lines (typically the
         most common words) to keep from pretrained embedding files, even for words not
         appearing in the data.
+
     only_include_pretrained_words : `bool`, optional (default=False)
         This defines the strategy for using any pretrained embedding files which may have been
         specified in `pretrained_files`. If False, an inclusive strategy is used: and words
@@ -195,14 +201,18 @@ class Vocabulary(Registrable):
         regardless of whether their count exceeds `min_count` or not. If True, we use an
         exclusive strategy: words are only included in the Vocabulary if they are in the pretrained
         embedding file (their count must still be at least `min_count`).
+
     tokens_to_add : `Dict[str, List[str]]`, optional (default=None)
         If given, this is a list of tokens to add to the vocabulary, keyed by the namespace to add
         the tokens to.  This is a way to be sure that certain items appear in your vocabulary,
         regardless of any other vocabulary computation.
+
     padding_token : `str`,  optional (default=DEFAULT_PADDING_TOKEN)
         If given, this the string used for padding.
+
     oov_token : `str`,  optional (default=DEFAULT_OOV_TOKEN)
         If given, this the string used for the out of vocabulary (OOVs) tokens.
+
     """
 
     default_implementation = "from_instances"

@@ -45,11 +45,11 @@ def make_parameter_groups(
     `groups` contains something like:
 
     ```
-     [
-          (["regex1", "regex2"], {"lr": 1e-3}),
-          (["regex3"], {"lr": 1e-4})
-     ]
-     ```
+    [
+        (["regex1", "regex2"], {"lr": 1e-3}),
+        (["regex3"], {"lr": 1e-4})
+    ]
+    ```
 
     The return value in the right format to be passed directly as the `params` argument to a pytorch
     `Optimizer`.  If there are multiple groups specified, this is list of dictionaries, where each
