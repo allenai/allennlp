@@ -1,0 +1,2 @@
+[run]
+omit = allennlp/tests/*

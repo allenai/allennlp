@@ -186,7 +186,7 @@ class GradientDescentTrainer(Trainer):
         must be prepended with either "+" or "-", which specifies whether the metric
         is an increasing or decreasing function.
 
-    validation_dataloader : `DataLoader`, optional (default=None)
+    validation_data_loader : `DataLoader`, optional (default=None)
         A `DataLoader` to use for the validation set.  If `None`, then
         use the training `DataLoader` with the validation data.
 
@@ -1000,6 +1000,7 @@ class GradientDescentTrainer(Trainer):
             optimizer_ = Optimizer.default(parameters)
 
         batches_per_epoch = len(data_loader)  # returns "1" instead of TypeError for _LazyInstances
+        batches_per_epoch = math.ceil(batches_per_epoch / num_gradient_accumulation_steps)
 
         moving_average_ = moving_average.construct(parameters=parameters)
         learning_rate_scheduler_ = learning_rate_scheduler.construct(

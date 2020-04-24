@@ -10,7 +10,7 @@ mypy==0.770
 black
 
 # For creating git precommit hooks
-pre-commit==2.2.0
+pre-commit==2.3.0
 
 # Allows generation of coverage reports with pytest.
 pytest-cov
@@ -38,7 +38,7 @@ git+https://github.com/NiklasRosenstein/pydoc-markdown.git@b469839ceb598df3d7e71
 
 markdown-include==0.5.1
 # Package for the material theme for mkdocs
-mkdocs-material==5.1.0
+mkdocs-material==5.1.1
 
 #### PACKAGE-UPLOAD PACKAGES ####
 
