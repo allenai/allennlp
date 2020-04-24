@@ -10,9 +10,11 @@ to `git@github.com:allenai/allennlp.git` (or the `HTTPS` equivalent).
 The format of the tag should be `v{VERSION}`, i.e. the intended version of the release preceeded with a `v`.
 So for the version `1.0.0` release the tag will be `v1.0.0`.
 
-> ❗️ If this is pre-release, such as `rc1`, make sure the suffix is separated with another `.`, for example
+> ❗️ If this is a pre-release, such as `rc1`, it's not necessary to update `version.py`, as the pre-release suffix will be automatically taken from the tag. However, for this to work properly and to be consistent with our versioning conventions, make sure the suffix is separated with another `.`, for example
 > - ✅ `v1.0.0.rc1` = good,
 > - ❌ `v1.0.0rc1` = bad.
+>
+> Note that the release on PyPI may not have the dot before the suffix since PyPI has its own weird versioning rules.
 
 To make things easier, start by setting the tag to an environment variable, `TAG`.
 Then you can copy and paste the commands below without worrying about mistyping the tag.
