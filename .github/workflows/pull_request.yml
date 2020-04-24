@@ -24,14 +24,11 @@ jobs:
     - uses: actions/cache@v1
       with:
         path: ${{ env.pythonLocation }}
-        key: ${{ runner.os }}-pydeps-${{ matrix.python }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
-        restore-keys: |
-          ${{ runner.os }}-pydeps-${{ matrix.python }}
+        key: ${{ runner.os }}-pydeps-${{ env.pythonLocation }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
 
     - name: Install requirements
       run: |
-        pip install --upgrade pip setuptools wheel
-        pip install --upgrade -e . -r dev-requirements.txt
+        make install
 
     - name: Debug info
       run: |
@@ -62,6 +59,11 @@ jobs:
         # be available.
         codecov -t $CODECOV_TOKEN || echo "codecov upload failed"
 
+    - name: Clean up
+      if: always()
+      run: |
+        pip uninstall --yes allennlp
+
   check_models:
     name: Check Models
     runs-on: ubuntu-latest
@@ -80,14 +82,11 @@ jobs:
     - uses: actions/cache@v1
       with:
         path: ${{ env.pythonLocation }}
-        key: ${{ runner.os }}-pydeps-${{ matrix.python }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
-        restore-keys: |
-          ${{ runner.os }}-pydeps-${{ matrix.python }}
+        key: ${{ runner.os }}-pydeps-${{ env.pythonLocation }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
 
     - name: Install requirements
       run: |
-        pip install --upgrade pip setuptools wheel
-        pip install --upgrade -e . -r dev-requirements.txt
+        make install
 
     - name: Debug info
       run: |
@@ -98,13 +97,14 @@ jobs:
         EXCLUDE_ALLENNLP_IN_SETUP: "true"
       run: |
         git clone https://github.com/allenai/allennlp-models.git
-        cd allennlp-models && pip install --upgrade -e . -r dev-requirements.txt
+        cd allennlp-models && pip install --upgrade --upgrade-strategy eager -e . -r dev-requirements.txt
 
     - name: Run models tests
       run: |
         cd allennlp-models && make test
 
     - name: Clean up
+      if: always()
       run: |
-        # Don't want this in the cache since the other workflow uses same cache.
+        pip uninstall --yes allennlp
         pip uninstall --yes allennlp_models
