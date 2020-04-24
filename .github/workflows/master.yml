@@ -225,12 +225,12 @@ jobs:
       run: |
         # Create a small context for the Docker image with only the files that we need.
         tar -czvf context.tar.gz \
-            Dockerfile.whl \
+            Dockerfile \
             scripts/ai2_internal/resumable_train.sh \
             dist/*.whl
         docker build \
             --pull \
-            -f Dockerfile.whl \
+            -f Dockerfile \
             -t allennlp - < context.tar.gz
 
     - name: Test image
