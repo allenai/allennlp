@@ -315,7 +315,7 @@ jobs:
         else
             echo "::set-env name=DOCS_FOLDER::master";
         fi
-        echo "Will deploy docs to $DOCS_FOLDER, release type $RELEASE_TYPE"
+        echo "Will deploy docs to $DOCS_FOLDER"
 
     - name: Stage docs
       # Only run this on main repo (not forks) for commits and releases but not for
