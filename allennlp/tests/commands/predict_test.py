@@ -85,7 +85,7 @@ class TestPredict(AllenNlpTestCase):
 
         assert len(results) == 2
         for result in results:
-            assert set(result.keys()) == {"label", "logits", "probs"}
+            assert set(result.keys()) == {"label", "logits", "probs", "tokens", "token_ids"}
 
         shutil.rmtree(self.tempdir)
 
@@ -111,7 +111,7 @@ class TestPredict(AllenNlpTestCase):
 
         assert len(results) == 3
         for result in results:
-            assert set(result.keys()) == {"label", "logits", "loss", "probs"}
+            assert set(result.keys()) == {"label", "logits", "loss", "probs", "tokens", "token_ids"}
 
         shutil.rmtree(self.tempdir)
 
@@ -247,7 +247,7 @@ class TestPredict(AllenNlpTestCase):
 
         assert len(results) == 3
         for result in results:
-            assert set(result.keys()) == {"logits", "probs", "label", "loss"}
+            assert set(result.keys()) == {"logits", "probs", "label", "loss", "tokens", "token_ids"}
         DEFAULT_PREDICTORS["basic_classifier"] = "text_classifier"
 
     def test_batch_prediction_works_with_known_model(self):
@@ -275,7 +275,7 @@ class TestPredict(AllenNlpTestCase):
 
         assert len(results) == 2
         for result in results:
-            assert set(result.keys()) == {"label", "logits", "probs"}
+            assert set(result.keys()) == {"label", "logits", "probs", "tokens", "token_ids"}
 
         shutil.rmtree(self.tempdir)
 
@@ -326,7 +326,7 @@ class TestPredict(AllenNlpTestCase):
         assert len(results) == 2
         # Overridden predictor should output extra field
         for result in results:
-            assert set(result.keys()) == {"label", "logits", "explicit", "probs"}
+            assert set(result.keys()) == {"label", "logits", "explicit", "probs", "tokens", "token_ids"}
 
         shutil.rmtree(self.tempdir)
 
@@ -385,7 +385,7 @@ class TestPredict(AllenNlpTestCase):
             assert len(results) == 2
             # Overridden predictor should output extra field
             for result in results:
-                assert set(result.keys()) == {"label", "logits", "probs"}
+                assert set(result.keys()) == {"label", "logits", "probs", "tokens", "token_ids"}
 
     def test_alternative_file_formats(self):
         @Predictor.register("classification-csv")
