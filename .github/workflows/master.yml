@@ -223,15 +223,7 @@ jobs:
 
     - name: Build image
       run: |
-        # Create a small context for the Docker image with only the files that we need.
-        tar -czvf context.tar.gz \
-            Dockerfile \
-            scripts/ai2_internal/resumable_train.sh \
-            dist/*.whl
-        docker build \
-            --pull \
-            -f Dockerfile \
-            -t allennlp - < context.tar.gz
+        make docker-image DOCKER_TAG=allennlp
 
     - name: Test image
       run: |
