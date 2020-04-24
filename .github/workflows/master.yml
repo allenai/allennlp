@@ -133,7 +133,7 @@ jobs:
         path: ${{ env.pythonLocation }}
         key: ${{ runner.os }}-pydeps-${{ env.pythonLocation }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
 
-    - name: Set version suffix (nightly)
+    - name: Set nightly version suffix (nightly)
       if: github.event_name == 'schedule'
       run: |
         # This is somewhat bizarre, but you can't set env variables to bash
@@ -141,15 +141,16 @@ jobs:
         # exporting a variable instead.
         echo ::set-env name=ALLENNLP_VERSION_SUFFIX::.dev$(date -u +%Y%m%d)
 
-    - name: Set version suffix (release)
+    - name: Check version and release tag match
       if: github.event_name == 'release'
       run: |
         # Remove 'refs/tags/' to get the actual tag from the release.
         TAG=${GITHUB_REF#refs/tags/};
-        # The tag might have a suffix like `.rc1`, which we need to set
-        # as an environment variable so that the package is built with this suffix.
-        SUFFIX=$(echo $TAG | sed -E 's/v[0-9]+\.[0-9]+\.[0-9]+//')
-        echo "::set-env name=ALLENNLP_VERSION_SUFFIX::$SUFFIX"
+        VERSION=v$(scripts/get_version.py)
+        if [ "$TAG" != "$VERSION" ]; then
+            echo "Bad tag or version. Tag $TAG does not match $VERSION";
+            exit 1;
+        fi
 
     - name: Install requirements
       run: |
@@ -333,7 +334,7 @@ jobs:
   # Publish the core distribution files to PyPI.
   publish:
     name: PyPI
-    needs: [check_core, check_models, build_package, test_package, docker, docs]
+    needs: [check_version, check_core, check_models, build_package, test_package, docker, docs]
     # Only publish to PyPI on releases and nightly builds to "allenai/allennlp" (not forks).
     if: github.repository == 'allenai/allennlp' && github.event_name != 'push'
     runs-on: ubuntu-latest
