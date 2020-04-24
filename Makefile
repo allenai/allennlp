@@ -10,6 +10,8 @@ MD_DOCS_CONF_SRC = mkdocs-skeleton.yml
 MD_DOCS_TGT = site/
 MD_DOCS_EXTRAS = $(addprefix $(MD_DOCS_ROOT),README.md LICENSE.md ROADMAP.md CONTRIBUTING.md)
 
+DOCKER_TAG = allennlp/allennlp
+
 ifeq ($(shell uname),Darwin)
 	ifeq ($(shell which gsed),)
 		$(error Please install GNU sed with 'brew install gnu-sed')
@@ -19,6 +21,10 @@ ifeq ($(shell uname),Darwin)
 else
 	SED = sed
 endif
+
+.PHONY : version
+version :
+	@python -c 'from allennlp.version import VERSION; print(f"AllenNLP v{VERSION}")'
 
 #
 # Testing helpers.
@@ -53,6 +59,9 @@ test-with-cov :
 install :
 	# Ensure pip, setuptools, and wheel are up-to-date.
 	pip install --upgrade pip setuptools wheel
+	# Due to a weird thing with pip, we may need egg-info before running `pip install -e`.
+	# See https://github.com/pypa/pip/issues/4537.
+	python setup.py install_egg_info
 	# Install allennlp as editable and all dependencies except apex since that requires torch to already be installed.
 	grep -Ev 'NVIDIA/apex\.git' dev-requirements.txt | pip install --upgrade --upgrade-strategy eager -e . -r /dev/stdin
 	# Now install apex.
@@ -100,3 +109,19 @@ clean :
 	rm -rf $(MD_DOCS_TGT)
 	rm -rf $(MD_DOCS_API_ROOT)
 	rm -f $(MD_DOCS_ROOT)*.md
+
+#
+# Docker helpers.
+#
+
+.PHONY : docker-image
+docker-image :
+	# Create a small context for the Docker image with only the files that we need.
+	tar -czvf context.tar.gz \
+			Dockerfile \
+			scripts/ai2_internal/resumable_train.sh \
+			dist/*.whl
+	docker build \
+			--pull \
+			-f Dockerfile \
+			-t $(DOCKER_TAG) - < context.tar.gz
