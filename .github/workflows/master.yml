@@ -133,7 +133,7 @@ jobs:
         path: ${{ env.pythonLocation }}
         key: ${{ runner.os }}-pydeps-${{ env.pythonLocation }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
 
-    - name: Set nightly version suffix (nightly)
+    - name: Set nightly version suffix
       if: github.event_name == 'schedule'
       run: |
         # This is somewhat bizarre, but you can't set env variables to bash
@@ -334,7 +334,7 @@ jobs:
   # Publish the core distribution files to PyPI.
   publish:
     name: PyPI
-    needs: [check_version, check_core, check_models, build_package, test_package, docker, docs]
+    needs: [check_core, check_models, build_package, test_package, docker, docs]
     # Only publish to PyPI on releases and nightly builds to "allenai/allennlp" (not forks).
     if: github.repository == 'allenai/allennlp' && github.event_name != 'push'
     runs-on: ubuntu-latest
