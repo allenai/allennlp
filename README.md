@@ -121,10 +121,10 @@ just run the following command to get an environment that will run on either the
 
    ```bash
    mkdir -p $HOME/.allennlp/
-   docker run --rm -v $HOME/.allennlp:/root/.allennlp allennlp/allennlp:v1.0.0.rc1
+   docker run --rm -v $HOME/.allennlp:/root/.allennlp allennlp/allennlp:latest
    ```
 
-You can test the Docker environment with `docker run --rm -v $HOME/.allennlp:/root/.allennlp allennlp/allennlp:v1.0.0.rc1 test-install`.
+You can test the Docker environment with `docker run --rm -v $HOME/.allennlp:/root/.allennlp allennlp/allennlp:latest test-install`.
 
 ### Installing from source
 
@@ -184,17 +184,29 @@ For various reasons you may need to create your own AllenNLP Docker image.
 The same image can be used either with a CPU or a GPU.
 
 First, you need to [install Docker](https://www.docker.com/get-started).
-Then run the following command (it will take some time, as it completely builds the environment needed to run AllenNLP.)
+Then you will need a wheel of allennlp in the `dist/` directory.
+You can either obtain a pre-built wheel from a PyPI release or build a new wheel from
+source.
 
-```bash
-docker build -f Dockerfile.pip --tag allennlp/allennlp:latest .
-```
+PyPI release wheels can be downloaded by going to https://pypi.org/project/allennlp/#history,
+clicking on the desired release, and then clicking "Download files" in the left sidebar.
+After downloading, make you sure you put the wheel in the `dist/` directory
+(which may not exist if you haven't built a wheel from source yet).
+
+To build a wheel from source, just run `python setup.py wheel`.
+
+*Before building the image, make sure you only have one wheel in the `dist/` directory.*
+
+Once you have your wheel, run `make docker-image`. By default this builds an image
+with the tag `allennlp/allennlp`. You can change this to anything you want
+by setting the `DOCKER_TAG` flag when you call `make`. For example,
+`make docker-image DOCKER_TAG=my-allennlp`.
 
 You should now be able to see this image listed by running `docker images allennlp`.
 
 ```
 REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
-allennlp/allennlp            latest              b66aee6cb593        5 minutes ago       2.38GB
+allennlp/allennlp   latest              b66aee6cb593        5 minutes ago       2.38GB
 ```
 
 ### Running the Docker image
