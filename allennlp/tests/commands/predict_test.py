@@ -326,7 +326,14 @@ class TestPredict(AllenNlpTestCase):
         assert len(results) == 2
         # Overridden predictor should output extra field
         for result in results:
-            assert set(result.keys()) == {"label", "logits", "explicit", "probs", "tokens", "token_ids"}
+            assert set(result.keys()) == {
+                "label",
+                "logits",
+                "explicit",
+                "probs",
+                "tokens",
+                "token_ids",
+            }
 
         shutil.rmtree(self.tempdir)
 
