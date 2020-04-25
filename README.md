@@ -30,7 +30,7 @@
 * [Documentation](https://docs.allennlp.org/master/)
 * [Contributing Guidelines](CONTRIBUTING.md)
 * [Pretrained Models](https://github.com/allenai/allennlp-hub/blob/master/allennlp_hub/pretrained/allennlp_pretrained.py)
-* [Continuous Build](https:/github.com/allenai/allennlp/actions)
+* [Continuous Build](https://github.com/allenai/allennlp/actions)
 * [Nightly Releases](https://pypi.org/project/allennlp/#history)
 
 ## Package Overview
