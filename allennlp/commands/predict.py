@@ -1,7 +1,7 @@
 """
 The ``predict`` subcommand allows you to make bulk JSON-to-JSON
 or dataset to JSON predictions using a trained model and its
-:class:`~allennlp.predictors.predictor.Predictor` wrapper.
+[Predictor](../predictors/predictor.md#predictor) wrapper.
 
     $ allennlp predict --help
     usage: allennlp predict [-h] [--output-file OUTPUT_FILE]

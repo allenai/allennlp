@@ -5,7 +5,7 @@ Given a pre-processed input text file, this command outputs the internal
 layers used to compute ELMo representations to a single (potentially large) file.
 
 The input file is previously tokenized, whitespace separated text, one sentence per line.
-The output is a hdf5 file (<https://h5py.readthedocs.io/en/latest/>) where, with the --all flag, each
+The output is a [hdf5 file](https://h5py.readthedocs.io/en/latest/) where, with the --all flag, each
 sentence is a size (3, num_tokens, 1024) array with the biLM representations.
 
 For information, see "Deep contextualized word representations", Peters et al 2018.
@@ -188,11 +188,11 @@ class ElmoEmbedder:
     ) -> None:
         """
         # Parameters
-                 options_file : ``str``, optional
+                 options_file : `str`, optional
             A path or URL to an ELMo options file.
-        weight_file : ``str``, optional
+        weight_file : `str`, optional
             A path or URL to an ELMo weights file.
-        cuda_device : ``int``, optional, (default=-1)
+        cuda_device : `int`, optional, (default=-1)
             The GPU device to run on.
         """
         self.indexer = ELMoTokenCharactersIndexer()
@@ -208,7 +208,7 @@ class ElmoEmbedder:
         """
         # Parameters
 
-        batch : ``List[List[str]]``, required
+        batch : `List[List[str]]`, required
             A list of tokenized sentences.
 
         # Returns
@@ -246,7 +246,7 @@ class ElmoEmbedder:
 
         # Parameters
 
-        sentence : ``List[str]``, required
+        sentence : `List[str]`, required
             A tokenized sentence.
 
         # Returns
@@ -265,7 +265,7 @@ class ElmoEmbedder:
 
         # Parameters
 
-        batch : ``List[List[str]]``, required
+        batch : `List[List[str]]`, required
             A list of tokenized sentences.
 
         # Returns
@@ -301,9 +301,9 @@ class ElmoEmbedder:
 
         # Parameters
 
-        sentences : ``Iterable[List[str]]``, required
+        sentences : `Iterable[List[str]]`, required
             An iterable of tokenized sentences.
-        batch_size : ``int``, required
+        batch_size : `int`, required
             The number of sentences ELMo should process at once.
 
         # Returns
@@ -329,22 +329,22 @@ class ElmoEmbedder:
 
         # Parameters
 
-        input_file : ``IO``, required
+        input_file : `IO`, required
             A file with one tokenized sentence per line.
-        output_file_path : ``str``, required
+        output_file_path : `str`, required
             A path to the output hdf5 file.
-        output_format : ``str``, optional, (default = "all")
+        output_format : `str`, optional, (default = "all")
             The embeddings to output.  Must be one of "all", "top", or "average".
-        batch_size : ``int``, optional, (default = 64)
+        batch_size : `int`, optional, (default = 64)
             The number of sentences to process in ELMo at one time.
-        forget_sentences : ``bool``, optional, (default = False).
+        forget_sentences : `bool`, optional, (default = False).
             If use_sentence_keys is False, whether or not to include a string
             serialized JSON dictionary that associates sentences with their
             line number (its HDF5 key). The mapping is placed in the
             "sentence_to_index" HDF5 key. This is useful if
             you want to use the embeddings without keeping the original file
             of sentences around.
-        use_sentence_keys : ``bool``, optional, (default = False).
+        use_sentence_keys : `bool`, optional, (default = False).
             Whether or not to use full sentences as keys. By default,
             the line numbers of the input file are used as ids, which is more robust.
         """

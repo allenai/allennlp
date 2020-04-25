@@ -261,27 +261,27 @@ def search_learning_rate(
     stopping_factor: float = None,
 ) -> Tuple[List[float], List[float]]:
     """
-    Runs training loop on the model using :class:`~allennlp.training.trainer.GradientDescentTrainer`
-    increasing learning rate from ``start_lr`` to ``end_lr`` recording the losses.
+    Runs training loop on the model using [GradientDescentTrainer](../training/trainer.md#gradientdescenttrainer)
+    increasing learning rate from `start_lr` to `end_lr` recording the losses.
 
     # Parameters
 
-    trainer: :class:`~allennlp.training.trainer.GradientDescentTrainer`
-    start_lr : ``float``
+    trainer: [GradientDescentTrainer](../training/trainer.md#gradientdescenttrainer)
+    start_lr : `float`
         The learning rate to start the search.
-    end_lr : ``float``
+    end_lr : `float`
         The learning rate upto which search is done.
-    num_batches : ``int``
+    num_batches : `int`
         Number of batches to run the learning rate finder.
-    linear_steps : ``bool``
+    linear_steps : `bool`
         Increase learning rate linearly if False exponentially.
-    stopping_factor : ``float``
+    stopping_factor : `float`
         Stop the search when the current loss exceeds the best loss recorded by
-        multiple of stopping factor. If ``None`` search proceeds till the ``end_lr``
+        multiple of stopping factor. If `None` search proceeds till the `end_lr`
 
     # Returns
 
-    (learning_rates, losses) : ``Tuple[List[float], List[float]]``
+    (learning_rates, losses) : `Tuple[List[float], List[float]]`
         Returns list of learning rates and corresponding losses.
         Note: The losses are recorded before applying the corresponding learning rate
     """

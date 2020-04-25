@@ -20,7 +20,7 @@ class Subcommand(Registrable):
     ``allennlp special-evaluate ...``
 
     you would create a ``Subcommand`` subclass and then pass it as an override to
-    :func:`~allennlp.commands.main` .
+    [`main`](#main).
     """
 
     reverse_registry: Dict[Type, str] = {}
