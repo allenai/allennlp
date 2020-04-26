@@ -268,9 +268,9 @@ def main():
     outputs = opts.out if opts.out else [None] * len(opts.modules)
     if len(outputs) != len(opts.modules):
         raise ValueError("Number inputs and outputs should be the same.")
-    if opts.out:
+    n_threads = cpu_count()
+    if len(opts.modules) > n_threads and opts.out:
         # If writing to files, can process in parallel.
-        n_threads = cpu_count()
         chunk_size = max([1, int(len(outputs) / n_threads)])
         logging.info("Using %d threads", n_threads)
         with Pool(n_threads) as p:

@@ -6,6 +6,7 @@ allennlp.egg-info/
 build/
 dist/
 pip-wheel-metadata/
+context.tar.gz
 
 
 # dev tools

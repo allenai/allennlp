@@ -37,9 +37,10 @@ def multi_perspective_match(
 
     # Returns
 
-    A tuple of two tensors consisting multi-perspective matching results.
-    The first one is of the shape (batch, seq_len, 1), the second one is of shape
-    (batch, seq_len, num_perspectives)
+    `torch.Tensor` :
+        Shape `(batch, seq_len, 1)`.
+    `torch.Tensor` :
+        Shape `(batch, seq_len, num_perspectives)`.
     """
     assert vector1.size(0) == vector2.size(0)
     assert weight.size(1) == vector1.size(2) == vector1.size(2)
@@ -77,8 +78,9 @@ def multi_perspective_match_pairwise(
 
     # Returns
 
-    A tensor of shape (batch, seq_len1, seq_len2, num_perspectives) consisting
-    multi-perspective matching results
+    `torch.Tensor` :
+        A tensor of shape `(batch, seq_len1, seq_len2, num_perspectives)` consisting
+        multi-perspective matching results
     """
     num_perspectives = weight.size(0)
 
@@ -229,8 +231,9 @@ class BiMpmMatching(nn.Module, FromParams):
 
         # Returns
 
-        A tuple of matching vectors for the two sentences. Each of which is a list of
-        matching vectors of shape (batch, seq_len, num_perspectives or 1)
+        `Tuple[List[torch.Tensor], List[torch.Tensor]]` :
+            A tuple of matching vectors for the two sentences. Each of which is a list of
+            matching vectors of shape (batch, seq_len, num_perspectives or 1)
         """
         assert (not mask_2.requires_grad) and (not mask_1.requires_grad)
         assert context_1.size(-1) == context_2.size(-1) == self.hidden_dim
