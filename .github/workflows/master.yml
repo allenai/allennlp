@@ -133,27 +133,35 @@ jobs:
         path: ${{ env.pythonLocation }}
         key: ${{ runner.os }}-pydeps-${{ env.pythonLocation }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
 
-    - name: Set version suffix (nightly)
+    - name: Install requirements
+      run: |
+        make install
+
+    - name: Check and set nightly version
       if: github.event_name == 'schedule'
       run: |
+        # Verify that current version is ahead of the last release.
+        LATEST=$(scripts/get_version.py latest)
+        CURRENT=$(scripts/get_version.py current)
+        if [ "$CURRENT" == "$LATEST" ]; then
+            echo "Current version needs to be ahead of latest release in order to build nightly release";
+            exit 1;
+        fi
         # This is somewhat bizarre, but you can't set env variables to bash
         # commands in the action workflow - so we have to use this odd way of
         # exporting a variable instead.
         echo ::set-env name=ALLENNLP_VERSION_SUFFIX::.dev$(date -u +%Y%m%d)
 
-    - name: Set version suffix (release)
+    - name: Check version and release tag match
       if: github.event_name == 'release'
       run: |
         # Remove 'refs/tags/' to get the actual tag from the release.
         TAG=${GITHUB_REF#refs/tags/};
-        # The tag might have a suffix like `.rc1`, which we need to set
-        # as an environment variable so that the package is built with this suffix.
-        SUFFIX=$(echo $TAG | sed -E 's/v[0-9]+\.[0-9]+\.[0-9]+//')
-        echo "::set-env name=ALLENNLP_VERSION_SUFFIX::$SUFFIX"
-
-    - name: Install requirements
-      run: |
-        make install
+        VERSION=$(scripts/get_version.py current)
+        if [ "$TAG" != "$VERSION" ]; then
+            echo "Bad tag or version. Tag $TAG does not match $VERSION";
+            exit 1;
+        fi
 
     - name: Build core package
       run: |
