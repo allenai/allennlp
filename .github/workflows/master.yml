@@ -7,7 +7,7 @@ on:
   release:
     types: [published]
   schedule:
-  - cron: '37 11 * * 1,2,3,4,5'  # early morning (11:37 UTC / 2:37 AM PDT) Monday - Friday
+  - cron: '37 11 * * 1,2,3,4,5'  # early morning (11:37 UTC / 4:37 AM PDT) Monday - Friday
 
 jobs:
   check_core:
@@ -223,15 +223,7 @@ jobs:
 
     - name: Build image
       run: |
-        # Create a small context for the Docker image with only the files that we need.
-        tar -czvf context.tar.gz \
-            Dockerfile.whl \
-            scripts/ai2_internal/resumable_train.sh \
-            dist/*.whl
-        docker build \
-            --pull \
-            -f Dockerfile.whl \
-            -t allennlp - < context.tar.gz
+        make docker-image DOCKER_TAG=allennlp
 
     - name: Test image
       run: |

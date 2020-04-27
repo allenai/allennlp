@@ -582,7 +582,7 @@ class _ElmoBiLm(torch.nn.Module):
                 type_representation, mask = add_sentence_boundary_token_ids(
                     embedded_inputs, mask_without_bos_eos, self._bos_embedding, self._eos_embedding
                 )
-            except RuntimeError:
+            except (RuntimeError, IndexError):
                 # Back off to running the character convolutions,
                 # as we might not have the words in the cache.
                 token_embedding = self._token_embedder(inputs)
