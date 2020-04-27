@@ -80,17 +80,19 @@ def can_construct_from_params(type_: Type) -> bool:
 
     return hasattr(type_, "from_params")
 
+
 def is_base_registrable(cls) -> bool:
     """
     Checks whether this is a class that directly inherits from Registrable, or is a subclass of such
     a class.
     """
     from allennlp.common.registrable import Registrable  # import here to avoid circular imports
+
     if not issubclass(cls, Registrable):
         return False
     method_resolution_order = inspect.getmro(cls)[1:]
     for base_class in method_resolution_order:
-        if issubclass(base_class, Registrable) and not base_class is Registrable:
+        if issubclass(base_class, Registrable) and base_class is not Registrable:
             return False
     return True
 
