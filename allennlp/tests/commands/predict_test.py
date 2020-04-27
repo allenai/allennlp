@@ -18,7 +18,6 @@ from allennlp.common.util import JsonDict, push_python_path
 from allennlp.data.dataset_readers import DatasetReader, TextClassificationJsonReader
 from allennlp.models.archival import load_archive
 from allennlp.predictors import Predictor, TextClassifierPredictor
-from allennlp.predictors.predictor import DEFAULT_PREDICTORS
 
 
 class TestPredict(AllenNlpTestCase):
