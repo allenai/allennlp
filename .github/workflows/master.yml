@@ -343,10 +343,10 @@ jobs:
         # Fail immediately if any step fails.
         set -e
 
-        cd ~/allennlp-docs/
-
         LATEST=$(./scripts/get_version.py latest)
         STABLE=$(./scripts/get_version.py stable)
+
+        cd ~/allennlp-docs/
 
         echo "Updating latest/index.html to point to $LATEST"
         mkdir -p latest
