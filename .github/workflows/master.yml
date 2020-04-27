@@ -276,6 +276,8 @@ jobs:
     - uses: actions/checkout@v1
 
     - name: Setup SSH Client 🔑
+      # Only run this on main repo (not forks).
+      if: github.repository == 'allenai/allennlp'
       uses: webfactory/ssh-agent@v0.2.0
       with:
         ssh-private-key: ${{ secrets.DOCS_DEPLOY_KEY }}
@@ -303,6 +305,8 @@ jobs:
         ./scripts/build_docs.sh
 
     - name: Configure Git
+      # Only run this on main repo (not forks).
+      if: github.repository == 'allenai/allennlp'
       run: |
         git config --global user.email "ai2service@allenai.org"
         git config --global user.name "ai2service"
