@@ -319,13 +319,14 @@ jobs:
         else
             echo "::set-env name=DOCS_FOLDER::master";
         fi
-        echo "Will deploy docs to $DOCS_FOLDER"
 
     - name: Stage docs
       # Only run this on main repo (not forks) for commits and releases but not for
       # nightly builds.
       if: github.repository == 'allenai/allennlp' && github.event_name != 'schedule'
       run: |
+        echo "Staging docs to $DOCS_FOLDER"
+
         # Checkout allennlp-docs to /allennlp-docs
         git clone git@github.com:allenai/allennlp-docs.git ~/allennlp-docs
         
