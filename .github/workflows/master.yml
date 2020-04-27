@@ -335,31 +335,41 @@ jobs:
       # nightly builds.
       if: github.repository == 'allenai/allennlp' && github.event_name == 'release'
       run: |
+        # Fail immediately if any step fails.
+        set -e
+
         cd ~/allennlp-docs/
-        echo "Updating latest/index.html"
+
+        LATEST=$(./scripts/get_version.py latest)
+        STABLE=$(./scripts/get_version.py stable)
+
+        echo "Updating latest/index.html to point to $LATEST"
         mkdir -p latest
         cat >latest/index.html << EOL
         <!DOCTYPE html>
         <html>
           <head>
-            <meta http-equiv="Refresh" content="0; url=/${DOCS_FOLDER}/" />
+            <meta http-equiv="Refresh" content="0; url=/${LATEST}/" />
           </head>
           <body>
-            <p>Please follow <a href="/${DOCS_FOLDER}/">this link</a>.</p>
+            <p>Please follow <a href="/${LATEST}/">this link</a>.</p>
           </body>
         </html>
         EOL
-        cat latest/index.html
 
-        SUFFIX=$(echo $DOCS_FOLDER | sed -E 's/v[0-9]+\.[0-9]+\.[0-9]+//')
-        if [[ -z $SUFFIX ]] || [[ "$SUFFIX" == *"post"* ]]; then
-            # If there's no suffix to the version or the suffix is a 'post',
-            # then it's considered stable.
-            echo "Updating stable/index.html";
-            mkdir -p stable;
-            cp latest/index.html stable/index.html;
-            cat stable/index.html;
-        fi
+        echo "Updating stable/index.html to point to $STABLE"
+        mkdir -p stable
+        cat >stable/index.html << EOL
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <meta http-equiv="Refresh" content="0; url=/${STABLE}/" />
+          </head>
+          <body>
+            <p>Please follow <a href="/${STABLE}/">this link</a>.</p>
+          </body>
+        </html>
+        EOL
 
     - name: Deploy docs
       # Only run this on main repo (not forks) for commits and releases but not for
