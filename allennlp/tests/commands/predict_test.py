@@ -226,6 +226,7 @@ class TestPredict(AllenNlpTestCase):
         # Makes sure that we don't have a default_predictor for it. Otherwise the base class
         # implementation wouldn't be used
         from allennlp.models import Model
+
         model_class, _ = Model.resolve_class_name(model_type)
         saved_default_predictor = model_class.default_predictor
         model_class.default_predictor = None
@@ -248,7 +249,14 @@ class TestPredict(AllenNlpTestCase):
 
             assert len(results) == 3
             for result in results:
-                assert set(result.keys()) == {"logits", "probs", "label", "loss", "tokens", "token_ids"}
+                assert set(result.keys()) == {
+                    "logits",
+                    "probs",
+                    "label",
+                    "loss",
+                    "tokens",
+                    "token_ids",
+                }
         finally:
             model_class.default_predictor = saved_default_predictor
 
