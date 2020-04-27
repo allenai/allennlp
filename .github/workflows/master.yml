@@ -133,9 +133,20 @@ jobs:
         path: ${{ env.pythonLocation }}
         key: ${{ runner.os }}-pydeps-${{ env.pythonLocation }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
 
-    - name: Set nightly version suffix
+    - name: Install requirements
+      run: |
+        make install
+
+    - name: Check and set nightly version
       if: github.event_name == 'schedule'
       run: |
+        # Verify that current version is ahead of the last release.
+        LATEST=$(scripts/get_version.py latest)
+        CURRENT=$(scripts/get_version.py current)
+        if [ "$CURRENT" == "$LATEST" ]; then
+            echo "Current version needs to be ahead of latest release in order to build nightly release";
+            exit 1;
+        fi
         # This is somewhat bizarre, but you can't set env variables to bash
         # commands in the action workflow - so we have to use this odd way of
         # exporting a variable instead.
@@ -146,15 +157,11 @@ jobs:
       run: |
         # Remove 'refs/tags/' to get the actual tag from the release.
         TAG=${GITHUB_REF#refs/tags/};
-        VERSION=v$(scripts/get_version.py)
+        VERSION=$(scripts/get_version.py current)
         if [ "$TAG" != "$VERSION" ]; then
             echo "Bad tag or version. Tag $TAG does not match $VERSION";
             exit 1;
         fi
-
-    - name: Install requirements
-      run: |
-        make install
 
     - name: Build core package
       run: |
