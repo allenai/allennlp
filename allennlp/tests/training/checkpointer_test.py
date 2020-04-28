@@ -118,3 +118,6 @@ class TestCheckpointer(AllenNlpTestCase):
         )
         assert sub_inst.__class__ == CheckpointerSubclass
         assert sub_inst.x == 1 and sub_inst.y == 3
+
+    def test_base_class_from_params(self):
+        Checkpointer.from_params(Params({}))
