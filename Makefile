@@ -64,6 +64,8 @@ install :
 	python setup.py install_egg_info
 	# Install allennlp as editable and all dependencies except apex since that requires torch to already be installed.
 	grep -Ev 'NVIDIA/apex\.git' dev-requirements.txt | pip install --upgrade --upgrade-strategy eager -e . -r /dev/stdin
+	# Another workaround: Make sure typing isn't installed
+	pip freeze | grep "^typing=" > /dev/null && pip uninstall -y typing
 	# Now install apex.
 	grep -E 'NVIDIA/apex\.git' dev-requirements.txt | pip install --upgrade -r /dev/stdin
 
