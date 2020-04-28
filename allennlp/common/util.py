@@ -36,6 +36,7 @@ from spacy.language import Language as SpacyModelType
 
 from allennlp.common.checks import log_pytorch_version_info
 from allennlp.common.params import Params
+from allennlp.common.tee import TeeHandler
 from allennlp.common.tqdm import Tqdm
 
 try:
@@ -249,21 +250,6 @@ def prepare_environment(params: Params):
     log_pytorch_version_info()
 
 
-class FileFriendlyLogFilter(Filter):
-    """
-    TQDM and requests use carriage returns to get the training line to update for each batch
-    without adding more lines to the terminal output.  Displaying those in a file won't work
-    correctly, so we'll just make sure that each batch shows up on its one line.
-    """
-
-    def filter(self, record):
-        if "\r" in record.msg:
-            record.msg = record.msg.replace("\r", "")
-            if not record.msg or record.msg[-1] != "\n":
-                record.msg += "\n"
-        return True
-
-
 class ErrorFilter(Filter):
     """
     Filters out everything that is at the ERROR level or higher. This is meant to be used
@@ -296,35 +282,46 @@ def prepare_global_logging(
 
     Tqdm.set_slower_interval(file_friendly_logging)
 
-    # Handlers for stdout/err logging
-    output_stream_log_handler = logging.StreamHandler(sys.stdout)
-    error_stream_log_handler = logging.StreamHandler(sys.stderr)
-
+    stdout_file: str
+    stderr_file: str
+    worker_filter: Optional[WorkerLogFilter] = None
     if world_size == 1:
         # This case is not distributed training and hence will stick to the older
         # log file names
-        output_file_log_handler = logging.FileHandler(
-            filename=os.path.join(serialization_dir, "stdout.log")
-        )
-        error_file_log_handler = logging.FileHandler(
-            filename=os.path.join(serialization_dir, "stderr.log")
-        )
+        stdout_file = os.path.join(serialization_dir, "stdout.log")
+        stderr_file = os.path.join(serialization_dir, "stderr.log")
     else:
         # Create log files with worker ids
-        output_file_log_handler = logging.FileHandler(
-            filename=os.path.join(serialization_dir, f"stdout_worker{rank}.log")
-        )
-        error_file_log_handler = logging.FileHandler(
-            filename=os.path.join(serialization_dir, f"stderr_worker{rank}.log")
-        )
+        stdout_file = os.path.join(serialization_dir, f"stdout_worker{rank}.log")
+        stderr_file = os.path.join(serialization_dir, f"stderr_worker{rank}.log")
 
         # This adds the worker's rank to messages being logged to files.
         # This will help when combining multiple worker log files using `less` command.
         worker_filter = WorkerLogFilter(rank)
-        output_file_log_handler.addFilter(worker_filter)
-        error_file_log_handler.addFilter(worker_filter)
 
-    formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(name)s - %(message)s")
+    # Patch stdout/err.
+    stdout_patch = TeeHandler(
+        stdout_file,
+        sys.stdout,
+        file_friendly_terminal_output=file_friendly_logging,
+        silent=rank != 0,  # don't print to terminal from non-master workers.
+    )
+    sys.stdout = stdout_patch  # type: ignore
+    stderr_patch = TeeHandler(
+        stderr_file,
+        sys.stderr,
+        file_friendly_terminal_output=file_friendly_logging,
+        silent=rank != 0,  # don't print to terminal from non-master workers.
+    )
+    sys.stderr = stderr_patch  # type: ignore
+
+    # Handlers for stdout/err logging
+    output_handler = logging.StreamHandler(sys.stdout)
+    error_handler = logging.StreamHandler(sys.stderr)
+
+    if worker_filter is not None:
+        output_handler.addFilter(worker_filter)
+        error_handler.addFilter(worker_filter)
 
     root_logger = logging.getLogger()
 
@@ -335,8 +332,9 @@ def prepare_global_logging(
         for handler in root_logger.handlers:
             root_logger.removeHandler(handler)
 
-    # file handlers need to be handled for tqdm's \r char
-    file_friendly_log_filter = FileFriendlyLogFilter()
+    formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(name)s - %(message)s")
+    output_handler.setFormatter(formatter)
+    error_handler.setFormatter(formatter)
 
     if os.environ.get("ALLENNLP_DEBUG"):
         LEVEL = logging.DEBUG
@@ -344,38 +342,15 @@ def prepare_global_logging(
         level_name = os.environ.get("ALLENNLP_LOG_LEVEL")
         LEVEL = logging._nameToLevel.get(level_name, logging.INFO)
 
-    if rank == 0:
-        # stdout/stderr handlers are added only for the
-        # master worker. This is to avoid cluttering the console
-        # screen with too many log messages from all workers.
-        output_stream_log_handler.setFormatter(formatter)
-        error_stream_log_handler.setFormatter(formatter)
+    output_handler.setLevel(LEVEL)
+    error_handler.setLevel(logging.ERROR)
 
-        output_stream_log_handler.setLevel(LEVEL)
-        error_stream_log_handler.setLevel(logging.ERROR)
+    # filter out everything at the ERROR or higher level for output stream
+    # so that error messages don't appear twice in the logs.
+    output_handler.addFilter(ErrorFilter())
 
-        # filter out everything at the ERROR or higher level for stdout stream
-        # so that error messages don't appear twice in the terminal output.
-        output_stream_log_handler.addFilter(ErrorFilter())
-
-        if file_friendly_logging:
-            output_stream_log_handler.addFilter(file_friendly_log_filter)
-            error_stream_log_handler.addFilter(file_friendly_log_filter)
-
-        root_logger.addHandler(output_stream_log_handler)
-        root_logger.addHandler(error_stream_log_handler)
-
-    output_file_log_handler.addFilter(file_friendly_log_filter)
-    error_file_log_handler.addFilter(file_friendly_log_filter)
-
-    output_file_log_handler.setFormatter(formatter)
-    error_file_log_handler.setFormatter(formatter)
-
-    output_file_log_handler.setLevel(LEVEL)
-    error_file_log_handler.setLevel(logging.ERROR)
-
-    root_logger.addHandler(output_file_log_handler)
-    root_logger.addHandler(error_file_log_handler)
+    root_logger.addHandler(output_handler)
+    root_logger.addHandler(error_handler)
 
     root_logger.setLevel(LEVEL)
 
