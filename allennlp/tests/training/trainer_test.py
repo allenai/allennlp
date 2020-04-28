@@ -36,7 +36,6 @@ from allennlp.training.learning_rate_schedulers import CosineWithRestarts
 from allennlp.training.learning_rate_schedulers import ExponentialLearningRateScheduler
 from allennlp.training.momentum_schedulers import MomentumScheduler
 from allennlp.training.moving_average import ExponentialMovingAverage
-from allennlp.training.util import sparse_clip_norm
 from allennlp.data import allennlp_collate
 
 
@@ -955,23 +954,3 @@ class TestApexTrainer(TrainerTestBase):
             opt_level="O1",
         )
         _ = trainer.train()
-
-
-class TestSparseClipGrad(AllenNlpTestCase):
-    def test_sparse_clip_grad(self):
-        # create a sparse embedding layer, then take gradient
-        embedding = torch.nn.Embedding(100, 16, sparse=True)
-        embedding.zero_grad()
-        ids = (torch.rand(17) * 100).long()
-        # Set some of the ids to the same value so that the sparse gradient
-        # has repeated indices.  This tests some additional logic.
-        ids[:5] = 5
-        loss = embedding(ids).sum()
-        loss.backward()
-        assert embedding.weight.grad.is_sparse
-
-        # Now try to clip the gradients.
-        _ = sparse_clip_norm([embedding.weight], 1.5)
-        # Final norm should be 1.5
-        grad = embedding.weight.grad.coalesce()
-        self.assertAlmostEqual(grad._values().norm(2.0).item(), 1.5, places=5)
