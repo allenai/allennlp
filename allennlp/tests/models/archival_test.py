@@ -96,3 +96,8 @@ class ArchivalTest(AllenNlpTestCase):
         # check that params are the same
         params2 = archive.config
         assert params2.as_dict() == params_copy
+
+    def test_can_load_from_archive_model(self):
+        serialization_dir = self.FIXTURES_ROOT / "basic_classifier" / "from_archive_serialization"
+        archive_path = serialization_dir / "model.tar.gz"
+        load_archive(archive_path)
