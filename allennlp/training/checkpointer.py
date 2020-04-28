@@ -41,6 +41,8 @@ class Checkpointer(Registrable):
         at the end of every epoch if `serialization_dir` is provided.
     """
 
+    default_implementation = "default"
+
     def __init__(
         self,
         serialization_dir: str = None,
@@ -223,3 +225,6 @@ class Checkpointer(Registrable):
                 "so you're just getting the last weights"
             )
             return {}
+
+
+Checkpointer.register("default")(Checkpointer)
