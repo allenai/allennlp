@@ -145,7 +145,6 @@ This will make `allennlp` available on your system but it will use the sources f
 you made of the source repository.
 
 You can test your installation with `allennlp test-install`.
-`./scripts/verify.py` will run the full suite of tests used by our continuous build environment.
 
 ## Running AllenNLP
 
