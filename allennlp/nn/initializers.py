@@ -443,8 +443,7 @@ class InitializerApplicator(FromParams):
     regexes : `List[Tuple[str, Initializer]]`, optional (default = [])
         A list mapping parameter regexes to initializers.  We will check each parameter against
         each regex in turn, and apply the initializer paired with the first matching regex, if
-        any. If "prevent" is assigned to any regex, then it will override and prevent the matched
-        parameters to be initialzed.
+        any.
 
     prevent_regexes: `List[str]`, optional (default=None)
         Any parameter name matching one of these regexes will not be initialized, regardless of
@@ -472,7 +471,7 @@ class InitializerApplicator(FromParams):
         logger.info("Initializing parameters")
         unused_regexes = {initializer[0] for initializer in self._initializers}
         uninitialized_parameters = set()
-        # Store which initialisers were applied to which parameters.
+        # Store which initializers were applied to which parameters.
         for name, parameter in module.named_parameters():
             for initializer_regex, initializer in self._initializers:
                 allow = self._prevent_regex is None or not bool(

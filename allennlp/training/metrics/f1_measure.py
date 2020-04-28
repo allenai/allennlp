@@ -21,10 +21,9 @@ class F1Measure(FBetaMeasure):
         """
         # Returns
 
-        A tuple of the following metrics based on the accumulated count statistics:
-        precision : float
-        recall : float
-        f1-measure : float
+        precision : `float`
+        recall : `float`
+        f1-measure : `float`
         """
         metric = super().get_metric(reset=reset)
         # Because we just care about the class `positive_label`

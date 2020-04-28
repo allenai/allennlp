@@ -25,6 +25,8 @@ class TextClassificationJsonReader(DatasetReader):
 
     Registered as a `DatasetReader` with name "text_classification_json".
 
+    [0]: https://www.cs.cmu.edu/~hovy/papers/16HLT-hierarchical-attention-networks.pdf
+
     # Parameters
 
     token_indexers : `Dict[str, TokenIndexer]`, optional
@@ -35,8 +37,8 @@ class TextClassificationJsonReader(DatasetReader):
         Tokenizer to use to split the input text into words or other kinds of tokens.
     segment_sentences : `bool`, optional (default = `False`)
         If True, we will first segment the text into sentences using SpaCy and then tokenize words.
-        Necessary for some models that require pre-segmentation of sentences, like the Hierarchical
-        Attention Network (https://www.cs.cmu.edu/~hovy/papers/16HLT-hierarchical-attention-networks.pdf).
+        Necessary for some models that require pre-segmentation of sentences, like [the Hierarchical
+        Attention Network][0].
     max_sequence_length : `int`, optional (default = `None`)
         If specified, will truncate tokens to specified maximum length.
     skip_label_indexing : `bool`, optional (default = `False`)

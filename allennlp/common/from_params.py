@@ -77,7 +77,24 @@ def can_construct_from_params(type_: Type) -> bool:
             return True
         args = getattr(type_, "__args__")
         return all(can_construct_from_params(arg) for arg in args)
+
     return hasattr(type_, "from_params")
+
+
+def is_base_registrable(cls) -> bool:
+    """
+    Checks whether this is a class that directly inherits from Registrable, or is a subclass of such
+    a class.
+    """
+    from allennlp.common.registrable import Registrable  # import here to avoid circular imports
+
+    if not issubclass(cls, Registrable):
+        return False
+    method_resolution_order = inspect.getmro(cls)[1:]
+    for base_class in method_resolution_order:
+        if issubclass(base_class, Registrable) and base_class is not Registrable:
+            return False
+    return True
 
 
 def remove_optional(annotation: type):
@@ -209,7 +226,7 @@ def pop_and_construct_arg(
 ) -> Any:
     """
     Does the work of actually constructing an individual argument for
-    [`create_kwargs`](./from_params#create_kwargs).
+    [`create_kwargs`](./#create_kwargs).
 
     Here we're in the inner loop of iterating over the parameters to a particular constructor,
     trying to construct just one of them.  The information we get for that parameter is its name,
@@ -521,6 +538,17 @@ class FromParams:
 
         registered_subclasses = Registrable._registry.get(cls)
 
+        if is_base_registrable(cls) and registered_subclasses is None:
+            # NOTE(mattg): There are some potential corner cases in this logic if you have nested
+            # Registrable types.  We don't currently have any of those, but if we ever get them,
+            # adding some logic to check `constructor_to_call` should solve the issue.  Not
+            # bothering to add that unnecessary complexity for now.
+            raise ConfigurationError(
+                "Tried to construct an abstract Registrable base class that has no registered "
+                "concrete types. This might mean that you need to use --include-package to get "
+                "your concrete classes actually registered."
+            )
+
         if registered_subclasses is not None and not constructor_to_call:
             # We know `cls` inherits from Registrable, so we'll use a cast to make mypy happy.
 
@@ -575,6 +603,7 @@ class FromParams:
                 # Without this logic, create_kwargs will look at object.__init__ and see that
                 # it takes *args and **kwargs and look for those.
                 kwargs: Dict[str, Any] = {}
+                params.assert_empty(cls.__name__)
             else:
                 # This class has a constructor, so create kwargs for it.
                 kwargs = create_kwargs(constructor_to_inspect, cls, params, **extras)

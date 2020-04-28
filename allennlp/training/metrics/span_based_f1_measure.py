@@ -48,9 +48,11 @@ class SpanBasedF1Measure(Metric):
 
         vocabulary : `Vocabulary`, required.
             A vocabulary containing the tag namespace.
-        tag_namespace : str, required.
+
+        tag_namespace : `str`, required.
             This metric assumes that a BIO format is used in which the
             labels are of the format: ["B-LABEL", "I-LABEL"].
+
         ignore_classes : List[str], optional.
             Span labels which will be ignored when computing span metrics.
             A "span label" is the part that comes after the BIO label, so it
@@ -64,9 +66,11 @@ class SpanBasedF1Measure(Metric):
 
             This is helpful for instance, to avoid computing metrics for "V"
             spans in a BIO tagging scheme which are typically not included.
+
         label_encoding : `str`, optional (default = "BIO")
             The encoding used to specify label span endpoints in the sequence.
             Valid options are "BIO", "IOB1", "BIOUL" or "BMES".
+
         tags_to_spans_function : `Callable`, optional (default = `None`)
             If `label_encoding` is `None`, `tags_to_spans_function` will be
             used to generate spans.
@@ -238,13 +242,14 @@ class SpanBasedF1Measure(Metric):
         """
         # Returns
 
-        A Dict per label containing following the span based metrics:
-        precision : float
-        recall : float
-        f1-measure : float
+        `Dict[str, float]`
+            A Dict per label containing following the span based metrics:
+            - precision : `float`
+            - recall : `float`
+            - f1-measure : `float`
 
-        Additionally, an `overall` key is included, which provides the precision,
-        recall and f1-measure for all spans.
+            Additionally, an `overall` key is included, which provides the precision,
+            recall and f1-measure for all spans.
         """
         all_tags: Set[str] = set()
         all_tags.update(self._true_positives.keys())
