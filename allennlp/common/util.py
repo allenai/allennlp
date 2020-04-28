@@ -264,6 +264,17 @@ class FileFriendlyLogFilter(Filter):
         return True
 
 
+class ErrorFilter(Filter):
+    """
+    Filters out everything that is at the ERROR level or higher. This is meant to be used
+    with a stdout handler when a stderr handler is also configured. That way ERROR
+    messages aren't duplicated.
+    """
+
+    def filter(self, record):
+        return record.levelno < logging.ERROR
+
+
 class WorkerLogFilter(Filter):
     def __init__(self, rank=-1):
         super().__init__()
@@ -342,6 +353,10 @@ def prepare_global_logging(
 
         output_stream_log_handler.setLevel(LEVEL)
         error_stream_log_handler.setLevel(logging.ERROR)
+
+        # filter out everything at the ERROR or higher level for stdout stream
+        # so that error messages don't appear twice in the terminal output.
+        output_stream_log_handler.addFilter(ErrorFilter())
 
         if file_friendly_logging:
             output_stream_log_handler.addFilter(file_friendly_log_filter)
