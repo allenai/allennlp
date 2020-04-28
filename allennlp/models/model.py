@@ -380,6 +380,17 @@ class Model(torch.nn.Module, Registrable):
             config["model"] if isinstance(config["model"], str) else config["model"]["type"]
         )
 
+        if model_type == "from_archive":
+            # This string is hard-coded to be the same thing that's hard-coded in the registry
+            # below.  Not super ideal to have to special-case this, but looking at the logic, this
+            # is because the existing logic is quite a bit of a hack.  Pretty sure the other logic
+            # could be simplified so this wouldn't need to be special cased.  More work than it's
+            # worth for now, though.
+            # TODO(mattg): In this case, we're ignoring a bunch of the other provided options.  If
+            # that's a problem, we could easily add them to the from_archive method, so we can still
+            # pass them along.
+            return Model.from_archive(config["model"]["archive_file"])
+
         # Load using an overridable _load method.
         # This allows subclasses of Model to override _load.
 
