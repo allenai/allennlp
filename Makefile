@@ -67,7 +67,7 @@ install :
 	# Now install apex.
 	grep -E 'NVIDIA/apex\.git' dev-requirements.txt | pip install --upgrade -r /dev/stdin
 	# Another workaround: Make sure typing isn't installed
-	pip freeze | grep "^typing=" > /dev/null && pip uninstall typing
+	pip freeze | grep "^typing=" > /dev/null && pip uninstall -y typing
 
 #
 # Documention helpers.
