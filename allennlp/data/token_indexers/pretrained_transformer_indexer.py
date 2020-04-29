@@ -230,6 +230,10 @@ class PretrainedTransformerIndexer(TokenIndexer):
                 mktensor = torch.BoolTensor
             else:
                 padding_value = self._tokenizer.pad_token_id
+                if padding_value is None:
+                    padding_value = (
+                        0  # Some tokenizers don't have padding tokens and rely on the mask only.
+                    )
                 mktensor = torch.LongTensor
 
             tensor = mktensor(

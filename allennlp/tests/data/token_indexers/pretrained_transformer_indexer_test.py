@@ -107,8 +107,11 @@ class TestPretrainedTransformerIndexer(AllenNlpTestCase):
         assert vocab.get_token_to_index_vocabulary(namespace=namespace) == tokenizer.encoder
 
     def test_mask(self):
-        # We try these two models, because BERT pads tokens with 0, but RoBERTa pads tokens with 1.
-        for model in ["bert-base-uncased", "roberta-base"]:
+        # We try these models, because
+        #  - BERT pads tokens with 0
+        #  - RoBERTa pads tokens with 1
+        #  - GPT2 has no padding token, so we choose 0
+        for model in ["bert-base-uncased", "roberta-base", "gpt2"]:
             allennlp_tokenizer = PretrainedTransformerTokenizer(model)
             indexer = PretrainedTransformerIndexer(model_name=model)
             string_no_specials = "AllenNLP is great"
@@ -126,7 +129,10 @@ class TestPretrainedTransformerIndexer(AllenNlpTestCase):
             assert padded_tokens["mask"].tolist() == expected_masks
 
             assert len(padded_tokens["token_ids"]) == max_length
-            padding_suffix = [allennlp_tokenizer.tokenizer.pad_token_id] * padding_length
+            pad_token_id = allennlp_tokenizer.tokenizer.pad_token_id
+            if pad_token_id is None:
+                pad_token_id = 0
+            padding_suffix = [pad_token_id] * padding_length
             assert padded_tokens["token_ids"][-padding_length:].tolist() == padding_suffix
 
     def test_long_sequence_splitting(self):

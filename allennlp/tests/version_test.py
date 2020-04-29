@@ -1,31 +1,52 @@
-import os
-from unittest import TestCase
-from semantic_version import Version
+import re
+
+import pytest
+
+from allennlp.version import VERSION
 
 
-def load_version():
-    with open("allennlp/version.py", "r") as version_file:
-        globals = {}
-        exec(version_file.read(), globals)
-        return Version(globals["VERSION"])
+# Regex to check that the current version set in `allennlp.version` adheres to
+# PEP 440, as well as some of our own internal conventions, such as the `.dev`
+# suffix being used only for nightly builds.
+# 0.0.0rc0.post0.dev20200424
+VALID_VERSION_RE = re.compile(
+    r"^"
+    r"(0|[1-9]\d*)"  # major
+    r"\.(0|[1-9]\d*)"  # minor
+    r"\.(0|[1-9]\d*)"  # patch
+    r"(rc(0|[1-9]\d*))?"  # patch suffix
+    r"(\.post(0|[1-9]\d*))?"  # [.postN]
+    r"(\.dev2020[0-9]{4})?"  # [.devDATE]
+    r"$"
+)
 
 
-class TestVersion(TestCase):
-    def test_default_suffix(self):
-        if "ALLENNLP_VERSION_SUFFIX" in os.environ:
-            del os.environ["ALLENNLP_VERSION_SUFFIX"]
-        version = load_version()
-        assert version.prerelease == ("unreleased",)
-        assert version.build == ()
+def is_valid(version: str) -> bool:
+    return VALID_VERSION_RE.match(version) is not None
 
-    def test_empty_suffix(self):
-        os.environ["ALLENNLP_VERSION_SUFFIX"] = ""
-        version = load_version()
-        assert version.prerelease == ()
-        assert version.build == ()
 
-    def test_nightly_suffix(self):
-        os.environ["ALLENNLP_VERSION_SUFFIX"] = "-dev20200212+c6147ad3"
-        version = load_version()
-        assert version.prerelease == ("dev20200212",)
-        assert version.build == ("c6147ad3",)
+@pytest.mark.parametrize(
+    "version, valid",
+    [
+        # Valid versions:
+        ("1.0.0", True),
+        ("1.0.0rc3", True),
+        ("1.0.0.post0", True),
+        ("1.0.0.post1", True),
+        ("1.0.0rc3.post0", True),
+        ("1.0.0rc3.post0.dev20200424", True),
+        # Invalid versions:
+        ("1.0.0.rc3", False),
+        ("1.0.0rc01", False),
+        ("1.0.0rc3.dev2020424", False),
+    ],
+)
+def test_is_valid_helper(version: str, valid: bool):
+    assert is_valid(version) is valid
+
+
+def test_version():
+    """
+    Ensures current version is consistent with our conventions.
+    """
+    assert is_valid(VERSION)
