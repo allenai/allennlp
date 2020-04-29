@@ -1,19 +1,13 @@
-name: Checks
-# This is the main workflow for checking pull requests. It consists of two jobs:
-# one for the core library and one for compatability with the models library.
-#
-# Both of the jobs are ran on Python 3.6 and Python 3.7 in parallel.
+name: PR
 
 on:
   pull_request:
     branches:
     - master
-  push:
-    branches:
-    - master
 
 jobs:
-  core:
+  check_core:
+    name: Check Core
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -30,15 +24,11 @@ jobs:
     - uses: actions/cache@v1
       with:
         path: ${{ env.pythonLocation }}
-        key: ${{ runner.os }}-pydeps-${{ matrix.python }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
-        restore-keys: |
-          ${{ runner.os }}-pydeps-${{ matrix.python }}
+        key: ${{ runner.os }}-pydeps-${{ env.pythonLocation }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
 
     - name: Install requirements
       run: |
-        pip install --upgrade pip setuptools wheel
-        pip install -e .
-        pip install --upgrade -r dev-requirements.txt
+        make install
 
     - name: Debug info
       run: |
@@ -69,7 +59,13 @@ jobs:
         # be available.
         codecov -t $CODECOV_TOKEN || echo "codecov upload failed"
 
-  models:
+    - name: Clean up
+      if: always()
+      run: |
+        pip uninstall --yes allennlp
+
+  check_models:
+    name: Check Models
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -86,15 +82,11 @@ jobs:
     - uses: actions/cache@v1
       with:
         path: ${{ env.pythonLocation }}
-        key: ${{ runner.os }}-pydeps-${{ matrix.python }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
-        restore-keys: |
-          ${{ runner.os }}-pydeps-${{ matrix.python }}
+        key: ${{ runner.os }}-pydeps-${{ env.pythonLocation }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
 
     - name: Install requirements
       run: |
-        pip install --upgrade pip setuptools wheel
-        pip install -e .
-        pip install --upgrade -r dev-requirements.txt
+        make install
 
     - name: Debug info
       run: |
@@ -105,13 +97,14 @@ jobs:
         EXCLUDE_ALLENNLP_IN_SETUP: "true"
       run: |
         git clone https://github.com/allenai/allennlp-models.git
-        cd allennlp-models && pip install -e . && pip install -r dev-requirements.txt
+        cd allennlp-models && pip install --upgrade --upgrade-strategy eager -e . -r dev-requirements.txt
 
     - name: Run models tests
       run: |
         cd allennlp-models && make test
 
     - name: Clean up
+      if: always()
       run: |
-        # Don't want this in the cache since the other workflow uses same cache.
+        pip uninstall --yes allennlp
         pip uninstall --yes allennlp_models

@@ -49,6 +49,7 @@ from overrides import overrides
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common import Params, Registrable, Lazy
 from allennlp.common.checks import check_for_gpu, ConfigurationError
+from allennlp.common.logging import prepare_global_logging
 from allennlp.common import util as common_util
 from allennlp.common.plugins import import_plugins
 from allennlp.data import DatasetReader, Vocabulary
@@ -393,7 +394,7 @@ def _train_worker(
     best_model : `Optional[Model]`
         The model with the best epoch weights or `None` if in distributed training or in dry run.
     """
-    common_util.prepare_global_logging(
+    prepare_global_logging(
         serialization_dir, file_friendly_logging, rank=process_rank, world_size=world_size
     )
     common_util.prepare_environment(params)
