@@ -50,7 +50,7 @@ setup(
     license="Apache",
     packages=find_packages(exclude=["*.tests", "*.tests.*", "tests.*", "tests"]),
     install_requires=[
-        "torch>1.3.1,<1.5.1",
+        "torch>1.3.1,<1.6.0",
         "jsonnet>=0.10.0 ; sys.platform != 'win32'",
         "overrides==2.8.0",
         "nltk",
