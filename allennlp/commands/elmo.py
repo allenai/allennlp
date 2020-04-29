@@ -1,5 +1,5 @@
 """
-The ``elmo`` subcommand allows you to make bulk ELMo predictions.
+The `elmo` subcommand allows you to make bulk ELMo predictions.
 
 Given a pre-processed input text file, this command outputs the internal
 layers used to compute ELMo representations to a single (potentially large) file.
@@ -99,7 +99,7 @@ class Elmo(Subcommand):
     As a result, ELMo will return differing results if the same sentence is
     passed to the same ``Elmo`` instance multiple times.
 
-    See https://github.com/allenai/allennlp/blob/master/tutorials/how_to/elmo.md for more details.
+    See [the ELMo tutorial](https://github.com/allenai/allennlp/blob/master/tutorials/how_to/elmo.md) for more details.
     """
 
     @overrides

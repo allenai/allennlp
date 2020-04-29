@@ -1,5 +1,5 @@
 """
-Base class for subcommands under ``allennlp.run``.
+Base class for subcommands under `allennlp.run`.
 """
 import argparse
 from typing import Callable, Dict, Optional, Type, TypeVar
@@ -17,9 +17,9 @@ class Subcommand(Registrable):
     An abstract class representing subcommands for allennlp.run.
     If you wanted to (for example) create your own custom `special-evaluate` command to use like
 
-    ``allennlp special-evaluate ...``
+    `allennlp special-evaluate ...`
 
-    you would create a ``Subcommand`` subclass and then pass it as an override to
+    you would create a `Subcommand` subclass and then pass it as an override to
     [`main`](#main).
     """
 

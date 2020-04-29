@@ -1,5 +1,5 @@
 """
-The ``find-lr`` subcommand can be used to find a good learning rate for a model.
+The `find-lr` subcommand can be used to find a good learning rate for a model.
 It requires a configuration file and a directory in
 which to write the results.
 
@@ -161,22 +161,22 @@ def find_learning_rate_model(
 
     # Parameters
 
-    params : ``Params``
+    params : [`Params`](../common/params.md#params)
         A parameter object specifying an AllenNLP Experiment.
-    serialization_dir : ``str``
+    serialization_dir : `str`
         The directory in which to save results.
-    start_lr : ``float``
+    start_lr : `float`
         Learning rate to start the search.
-    end_lr : ``float``
+    end_lr : `float`
         Learning rate upto which search is done.
-    num_batches : ``int``
+    num_batches : `int`
         Number of mini-batches to run Learning rate finder.
-    linear_steps : ``bool``
+    linear_steps : `bool`
         Increase learning rate linearly if False exponentially.
-    stopping_factor : ``float``
+    stopping_factor : `float`
         Stop the search when the current loss exceeds the best loss recorded by
-        multiple of stopping factor. If ``None`` search proceeds till the ``end_lr``
-    force : ``bool``
+        multiple of stopping factor. If `None` search proceeds till the `end_lr`
+    force : `bool`
         If True and the serialization directory already exists, everything in it will
         be removed prior to finding the learning rate.
     """
@@ -261,12 +261,12 @@ def search_learning_rate(
     stopping_factor: float = None,
 ) -> Tuple[List[float], List[float]]:
     """
-    Runs training loop on the model using [GradientDescentTrainer](../training/trainer.md#gradientdescenttrainer)
+    Runs training loop on the model using [`GradientDescentTrainer`](../training/trainer.md#gradientdescenttrainer)
     increasing learning rate from `start_lr` to `end_lr` recording the losses.
 
     # Parameters
 
-    trainer: [GradientDescentTrainer](../training/trainer.md#gradientdescenttrainer)
+    trainer: [`GradientDescentTrainer`](../training/trainer.md#gradientdescenttrainer)
     start_lr : `float`
         The learning rate to start the search.
     end_lr : `float`
