@@ -153,3 +153,15 @@ class TestPretrainedTransformerIndexer(AllenNlpTestCase):
         assert indexed["token_ids"] == expected_ids
         assert indexed["segment_concat_mask"] == [True] * len(expected_ids)
         assert indexed["mask"] == [True] * 7  # original length
+
+    def test_indices_to_tokens(self):
+        allennlp_tokenizer = PretrainedTransformerTokenizer("bert-base-uncased")
+        indexer = PretrainedTransformerIndexer(model_name="bert-base-uncased", max_length=4)
+        string_no_specials = "AllenNLP is great"
+
+        allennlp_tokens = allennlp_tokenizer.tokenize(string_no_specials)
+        vocab = Vocabulary()
+        indexed = indexer.tokens_to_indices(allennlp_tokens, vocab)
+        tokens_from_indices = indexer.indices_to_tokens(indexed, vocab)
+
+        assert allennlp_tokens == tokens_from_indices

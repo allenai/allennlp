@@ -5,7 +5,8 @@ import datetime
 import logging
 import os
 import shutil
-from typing import Any, Dict, Iterable, List, Optional, Union
+from typing import Any, Dict, Iterable, List, Optional, Union, Tuple, Set
+from collections import Counter
 
 import torch
 import torch.distributed as dist
@@ -495,3 +496,20 @@ def make_vocab_from_params(
         vocab.print_statistics()
 
     return vocab
+
+
+def ngrams(
+    tensor: torch.LongTensor, ngram_size: int, exclude_indices: Set[int]
+) -> Dict[Tuple[int, ...], int]:
+    ngram_counts: Dict[Tuple[int, ...], int] = Counter()
+    if ngram_size > tensor.size(-1):
+        return ngram_counts
+    for start_position in range(ngram_size):
+        for tensor_slice in tensor[start_position:].split(ngram_size, dim=-1):
+            if tensor_slice.size(-1) < ngram_size:
+                break
+            ngram = tuple(x.item() for x in tensor_slice)
+            if any(x in exclude_indices for x in ngram):
+                continue
+            ngram_counts[ngram] += 1
+    return ngram_counts

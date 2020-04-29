@@ -101,6 +101,43 @@ class PretrainedTransformerIndexer(TokenIndexer):
 
         return self._postprocess_output(output)
 
+    @overrides
+    def indices_to_tokens(
+        self, indexed_tokens: IndexedTokenList, vocabulary: Vocabulary
+    ) -> List[Token]:
+        token_ids = indexed_tokens["token_ids"]
+        type_ids = indexed_tokens["type_ids"] if "type_ids" in indexed_tokens else None
+
+        token_ids = self._preprocess_segmented_tokens(token_ids)
+
+        return [
+            Token(
+                text=vocabulary.get_token_from_index(token_ids[i], self._namespace),
+                text_id=token_ids[i],
+                type_id=type_ids[i] if type_ids is not None else None,
+            )
+            for i in range(len(token_ids))
+        ]
+
+    def _preprocess_segmented_tokens(self, tokens: List[Token]):
+        if self._max_length is None:
+            return tokens
+
+        segments_no_special_tokens = [
+            segment[self._num_added_start_tokens : -self._num_added_end_tokens]
+            for segment in [
+                tokens[i : i + self._max_length] for i in range(0, len(tokens), self._max_length)
+            ]
+        ]
+
+        flattened_tokens = [t for segment in segments_no_special_tokens for t in segment]
+        special_tokens = self._tokenizer.build_inputs_with_special_tokens([])
+        start, end = (
+            special_tokens[: self._num_added_start_tokens],
+            special_tokens[-self._num_added_end_tokens :],
+        )
+        return start + flattened_tokens + end
+
     def _extract_token_and_type_ids(
         self, tokens: List[Token]
     ) -> Tuple[List[int], Optional[List[int]]]:

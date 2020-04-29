@@ -577,13 +577,15 @@ def viterbi_decode(
 
 
 def get_text_field_mask(
-    text_field_tensors: Dict[str, Dict[str, torch.Tensor]], num_wrapping_dims: int = 0
+    text_field_tensors: Dict[str, Dict[str, torch.Tensor]],
+    num_wrapping_dims: int = 0,
+    padding_id: int = 0,
 ) -> torch.BoolTensor:
     """
     Takes the dictionary of tensors produced by a `TextField` and returns a mask
-    with 0 where the tokens are padding, and 1 otherwise.  We also handle `TextFields`
-    wrapped by an arbitrary number of `ListFields`, where the number of wrapping `ListFields`
-    is given by `num_wrapping_dims`.
+    with 0 where the tokens are padding, and 1 otherwise. `padding_id` specifies the id of padding tokens.
+    We also handle `TextFields` wrapped by an arbitrary number of `ListFields`, where the number of wrapping
+    `ListFields` is given by `num_wrapping_dims`.
 
     If `num_wrapping_dims == 0`, the returned mask has shape `(batch_size, num_tokens)`.
     If `num_wrapping_dims > 0` then the returned mask has `num_wrapping_dims` extra
@@ -622,10 +624,10 @@ def get_text_field_mask(
     smallest_dim = tensor_dims[0][0] - num_wrapping_dims
     if smallest_dim == 2:
         token_tensor = tensor_dims[0][1]
-        return token_tensor != 0
+        return token_tensor != padding_id
     elif smallest_dim == 3:
         character_tensor = tensor_dims[0][1]
-        return (character_tensor > 0).any(dim=-1)
+        return (character_tensor != padding_id).any(dim=-1)
     else:
         raise ValueError("Expected a tensor with dimension 2 or 3, found {}".format(smallest_dim))
 

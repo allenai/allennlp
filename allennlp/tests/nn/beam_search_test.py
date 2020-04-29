@@ -22,7 +22,7 @@ transition_probabilities = torch.tensor(
 
 
 def take_step(
-    last_predictions: torch.Tensor, state: Dict[str, torch.Tensor]
+    last_predictions: torch.Tensor, state: Dict[str, torch.Tensor], step: int
 ) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:
     """
     Take decoding step.
