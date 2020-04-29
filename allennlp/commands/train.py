@@ -215,8 +215,8 @@ def train_model(
     dry_run: bool = False,
 ) -> Optional[Model]:
     """
-    Trains the model specified in the given [`Params`](../common/params.md#params) object, using the data and training
-    parameters also specified in that object, and saves the results in `serialization_dir`.
+    Trains the model specified in the given [`Params`](../common/params.md#params) object, using the data
+    and training parameters also specified in that object, and saves the results in `serialization_dir`.
 
     # Parameters
 
