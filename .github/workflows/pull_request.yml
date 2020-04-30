@@ -23,7 +23,7 @@ jobs:
 
     - name: Run test image
       run: |
-        docker run --rm allennlp/test 'import torch; print(torch.cuda.is_available())'
+        docker run --rm --gpus 2 allennlp/test 'import torch; print(torch.cuda.is_available())'
 
   check_core:
     name: Check Core
