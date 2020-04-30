@@ -94,7 +94,7 @@ jobs:
 
     - name: Pull and install models repo
       env:
-        EXCLUDE_ALLENNLP_IN_SETUP: "true"
+        ALLENNLP_VERSION_OVERRIDE: ""  # Don't replace the core library.
       run: |
         git clone https://github.com/allenai/allennlp-models.git
         cd allennlp-models && pip install --upgrade --upgrade-strategy eager -e . -r dev-requirements.txt

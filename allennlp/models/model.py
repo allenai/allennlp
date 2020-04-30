@@ -67,6 +67,7 @@ class Model(torch.nn.Module, Registrable):
     """
 
     _warn_for_unseparable_batches: Set[str] = set()
+    default_predictor: Optional[str] = None
 
     def __init__(self, vocab: Vocabulary, regularizer: RegularizerApplicator = None) -> None:
         super().__init__()
