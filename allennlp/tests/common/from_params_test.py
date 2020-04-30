@@ -810,3 +810,38 @@ class TestFromParams(AllenNlpTestCase):
         assert all(isinstance(value, B) for value in d.items.values())
         assert d.items["first"].size == 1
         assert d.items["second"].size == 2
+
+    def test_extra_parameters_are_not_allowed_when_there_is_no_constructor(self):
+        class A(FromParams):
+            pass
+
+        with pytest.raises(ConfigurationError, match="Extra parameters"):
+            A.from_params(Params({"some_spurious": "key", "value": "pairs"}))
+
+    def test_raises_when_there_are_no_implementations(self):
+        class A(Registrable):
+            pass
+
+        with pytest.raises(ConfigurationError, match="no registered concrete types"):
+            A.from_params("nonexistent_class")
+
+        with pytest.raises(ConfigurationError, match="no registered concrete types"):
+            A.from_params(Params({"some_spurious": "key", "value": "pairs"}))
+
+        with pytest.raises(ConfigurationError, match="no registered concrete types"):
+            A.from_params(Params({}))
+
+        # Some paths through the code are different if there is a constructor here versus not.  We
+        # don't actually go through this logic anymore, but it's here as a regression test.
+        class B(Registrable):
+            def __init__(self):
+                pass
+
+        with pytest.raises(ConfigurationError, match="no registered concrete types"):
+            B.from_params("nonexistent_class")
+
+        with pytest.raises(ConfigurationError, match="no registered concrete types"):
+            B.from_params(Params({"some_spurious": "key", "value": "pairs"}))
+
+        with pytest.raises(ConfigurationError, match="no registered concrete types"):
+            B.from_params(Params({}))

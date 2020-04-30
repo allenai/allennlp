@@ -100,7 +100,7 @@ jobs:
 
     - name: Pull and install models repo
       env:
-        EXCLUDE_ALLENNLP_IN_SETUP: "true"
+        ALLENNLP_VERSION_OVERRIDE: ""  # Don't replace the core library.
       run: |
         git clone https://github.com/allenai/allennlp-models.git
         cd allennlp-models && pip install --upgrade --upgrade-strategy eager -e . -r dev-requirements.txt
@@ -133,27 +133,35 @@ jobs:
         path: ${{ env.pythonLocation }}
         key: ${{ runner.os }}-pydeps-${{ env.pythonLocation }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
 
-    - name: Set version suffix (nightly)
+    - name: Install requirements
+      run: |
+        make install
+
+    - name: Check and set nightly version
       if: github.event_name == 'schedule'
       run: |
+        # Verify that current version is ahead of the last release.
+        LATEST=$(scripts/get_version.py latest)
+        CURRENT=$(scripts/get_version.py current)
+        if [ "$CURRENT" == "$LATEST" ]; then
+            echo "Current version needs to be ahead of latest release in order to build nightly release";
+            exit 1;
+        fi
         # This is somewhat bizarre, but you can't set env variables to bash
         # commands in the action workflow - so we have to use this odd way of
         # exporting a variable instead.
         echo ::set-env name=ALLENNLP_VERSION_SUFFIX::.dev$(date -u +%Y%m%d)
 
-    - name: Set version suffix (release)
+    - name: Check version and release tag match
       if: github.event_name == 'release'
       run: |
         # Remove 'refs/tags/' to get the actual tag from the release.
         TAG=${GITHUB_REF#refs/tags/};
-        # The tag might have a suffix like `.rc1`, which we need to set
-        # as an environment variable so that the package is built with this suffix.
-        SUFFIX=$(echo $TAG | sed -E 's/v[0-9]+\.[0-9]+\.[0-9]+//')
-        echo "::set-env name=ALLENNLP_VERSION_SUFFIX::$SUFFIX"
-
-    - name: Install requirements
-      run: |
-        make install
+        VERSION=$(scripts/get_version.py current)
+        if [ "$TAG" != "$VERSION" ]; then
+            echo "Bad tag or version. Tag $TAG does not match $VERSION";
+            exit 1;
+        fi
 
     - name: Build core package
       run: |
@@ -268,6 +276,8 @@ jobs:
     - uses: actions/checkout@v1
 
     - name: Setup SSH Client 🔑
+      # Only run this on main repo (not forks).
+      if: github.repository == 'allenai/allennlp'
       uses: webfactory/ssh-agent@v0.2.0
       with:
         ssh-private-key: ${{ secrets.DOCS_DEPLOY_KEY }}
@@ -295,33 +305,85 @@ jobs:
         ./scripts/build_docs.sh
 
     - name: Configure Git
+      # Only run this on main repo (not forks).
+      if: github.repository == 'allenai/allennlp'
       run: |
         git config --global user.email "ai2service@allenai.org"
         git config --global user.name "ai2service"
         git config --global push.default simple
+
+    - name: Set target folders
+      run: |
+        if [[ $GITHUB_EVENT_NAME == 'release' ]]; then
+            echo "::set-env name=DOCS_FOLDER::${GITHUB_REF#refs/tags/}"
+        else
+            echo "::set-env name=DOCS_FOLDER::master";
+        fi
+
+    - name: Stage docs
+      # Only run this on main repo (not forks) for commits and releases but not for
+      # nightly builds.
+      if: github.repository == 'allenai/allennlp' && github.event_name != 'schedule'
+      run: |
+        echo "Staging docs to $DOCS_FOLDER"
+
+        # Checkout allennlp-docs to /allennlp-docs
+        git clone git@github.com:allenai/allennlp-docs.git ~/allennlp-docs
+        
+        # Copy the generated docs to the checked out docs repo
+        rm -rf ~/allennlp-docs/$DOCS_FOLDER/
+        mkdir -p ~/allennlp-docs/$DOCS_FOLDER
+        cp -r site/* ~/allennlp-docs/$DOCS_FOLDER
+
+    - name: Update shortcuts
+      # Only run this on main repo (not forks) for commits and releases but not for
+      # nightly builds.
+      if: github.repository == 'allenai/allennlp' && github.event_name == 'release'
+      run: |
+        # Fail immediately if any step fails.
+        set -e
+
+        LATEST=$(./scripts/get_version.py latest)
+        STABLE=$(./scripts/get_version.py stable)
+
+        cd ~/allennlp-docs/
+
+        echo "Updating latest/index.html to point to $LATEST"
+        mkdir -p latest
+        cat >latest/index.html << EOL
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <meta http-equiv="Refresh" content="0; url=/${LATEST}/" />
+          </head>
+          <body>
+            <p>Please follow <a href="/${LATEST}/">this link</a>.</p>
+          </body>
+        </html>
+        EOL
+
+        echo "Updating stable/index.html to point to $STABLE"
+        mkdir -p stable
+        cat >stable/index.html << EOL
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <meta http-equiv="Refresh" content="0; url=/${STABLE}/" />
+          </head>
+          <body>
+            <p>Please follow <a href="/${STABLE}/">this link</a>.</p>
+          </body>
+        </html>
+        EOL
 
     - name: Deploy docs
       # Only run this on main repo (not forks) for commits and releases but not for
       # nightly builds.
       if: github.repository == 'allenai/allennlp' && github.event_name != 'schedule'
       run: |
-        if [[ $GITHUB_EVENT_NAME == 'release' ]]; then
-            DIRECTORY=${GITHUB_REF#refs/tags/};
-        else
-            DIRECTORY=master;
-        fi
-
-        # Checkout allennlp-docs to /allennlp-docs
-        git clone git@github.com:allenai/allennlp-docs.git ~/allennlp-docs
-        
-        # Copy the generated docs to the checked out docs repo
-        rm -rf ~/allennlp-docs/$DIRECTORY/
-        mkdir -p ~/allennlp-docs/$DIRECTORY
-        cp -r site/* ~/allennlp-docs/$DIRECTORY
-
         # And push them up to GitHub
-        cd ~/allennlp-docs/$DIRECTORY
-        git add .
+        cd ~/allennlp-docs/
+        git add -A
         git commit -m "automated update of the docs"
         git push
 
