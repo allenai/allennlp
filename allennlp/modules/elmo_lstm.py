@@ -33,6 +33,8 @@ class ElmoLstm(_EncoderBase):
     This is non-standard, but can be thought of as having an "end of sentence" state, which is
     carried across different sentences.
 
+    [0]: https://arxiv.org/abs/1512.05287
+
     # Parameters
 
     input_size : `int`, required
@@ -47,8 +49,7 @@ class ElmoLstm(_EncoderBase):
         If True, compute gradient of ELMo parameters for fine tuning.
     recurrent_dropout_probability : `float`, optional (default = 0.0)
         The dropout probability to be used in a dropout scheme as stated in
-        [A Theoretically Grounded Application of Dropout in Recurrent Neural Networks]
-        (https://arxiv.org/abs/1512.05287).
+        [A Theoretically Grounded Application of Dropout in Recurrent Neural Networks][0].
     state_projection_clip_value : `float`, optional, (default = None)
         The magnitude with which to clip the hidden_state after projecting it.
     memory_cell_clip_value : `float`, optional, (default = None)
@@ -120,8 +121,9 @@ class ElmoLstm(_EncoderBase):
 
         # Returns
 
-        A `torch.Tensor` of shape (num_layers, batch_size, sequence_length, hidden_size),
-        where the num_layers dimension represents the LSTM output from that layer.
+        `torch.Tensor`
+            A `torch.Tensor` of shape (num_layers, batch_size, sequence_length, hidden_size),
+            where the num_layers dimension represents the LSTM output from that layer.
         """
         batch_size, total_sequence_length = mask.size()
         stacked_sequence_output, final_states, restoration_indices = self.sort_and_run_forward(

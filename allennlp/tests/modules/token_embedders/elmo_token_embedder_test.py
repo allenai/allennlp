@@ -22,14 +22,8 @@ class TestElmoTokenEmbedder(ModelTestCase):
         dataset.index_instances(self.vocab)
         training_tensors = dataset.as_tensor_dict()
         output_dict = self.model(**training_tensors)
-        tags = output_dict["tags"]
-        assert len(tags) == 2
-        assert len(tags[0]) == 7
-        assert len(tags[1]) == 7
-        for example_tags in tags:
-            for tag_id in example_tags:
-                tag = self.model.vocab.get_token_from_index(tag_id, namespace="labels")
-                assert tag in {"O", "I-ORG", "I-PER", "I-LOC"}
+        probs = output_dict["class_probabilities"]
+        assert probs.size() == (2, 7, self.model.vocab.get_vocab_size("labels"))
 
     def test_forward_works_with_projection_layer(self):
         params = Params(

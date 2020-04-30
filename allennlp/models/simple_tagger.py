@@ -137,14 +137,14 @@ class SimpleTagger(Model):
         # Returns
 
         An output dictionary consisting of:
-        logits : torch.FloatTensor
-            A tensor of shape `(batch_size, num_tokens, tag_vocab_size)` representing
-            unnormalised log probabilities of the tag classes.
-        class_probabilities : torch.FloatTensor
-            A tensor of shape `(batch_size, num_tokens, tag_vocab_size)` representing
-            a distribution of the tag classes per word.
-        loss : torch.FloatTensor, optional
-            A scalar loss to be optimised.
+            - `logits` (`torch.FloatTensor`) :
+                A tensor of shape `(batch_size, num_tokens, tag_vocab_size)` representing
+                unnormalised log probabilities of the tag classes.
+            - `class_probabilities` (`torch.FloatTensor`) :
+                A tensor of shape `(batch_size, num_tokens, tag_vocab_size)` representing
+                a distribution of the tag classes per word.
+            - `loss` (`torch.FloatTensor`, optional) :
+                A scalar loss to be optimised.
 
         """
         embedded_text_input = self.text_field_embedder(tokens)
@@ -215,3 +215,5 @@ class SimpleTagger(Model):
             else:
                 metrics_to_return.update({x: y for x, y in f1_dict.items() if "overall" in x})
         return metrics_to_return
+
+    default_predictor = "sentence-tagger"

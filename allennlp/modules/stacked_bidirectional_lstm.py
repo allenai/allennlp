@@ -18,6 +18,8 @@ class StackedBidirectionalLstm(torch.nn.Module):
     from the last layer of the LSTM. Note that this will be slower, as it
     doesn't use CUDNN.
 
+    [0]: https://arxiv.org/abs/1512.05287
+
     # Parameters
 
     input_size : `int`, required
@@ -29,11 +31,11 @@ class StackedBidirectionalLstm(torch.nn.Module):
     recurrent_dropout_probability : `float`, optional (default = 0.0)
         The recurrent dropout probability to be used in a dropout scheme as
         stated in [A Theoretically Grounded Application of Dropout in Recurrent
-        Neural Networks](https://arxiv.org/abs/1512.05287).
+        Neural Networks][0].
     layer_dropout_probability : `float`, optional (default = 0.0)
         The layer wise dropout probability to be used in a dropout scheme as
         stated in [A Theoretically Grounded Application of Dropout in Recurrent
-        Neural Networks](https://arxiv.org/abs/1512.05287).
+        Neural Networks][0].
     use_highway : `bool`, optional (default = True)
         Whether or not to use highway connections between layers. This effectively involves
         reparameterising the normal output of an LSTM as::
@@ -101,9 +103,9 @@ class StackedBidirectionalLstm(torch.nn.Module):
 
         # Returns
 
-        output_sequence : PackedSequence
+        output_sequence : `PackedSequence`
             The encoded sequence of shape (batch_size, sequence_length, hidden_size * 2)
-        final_states: torch.Tensor
+        final_states: `torch.Tensor`
             The per-layer final (state, memory) states of the LSTM, each with shape
             (num_layers * 2, batch_size, hidden_size * 2).
         """

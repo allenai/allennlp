@@ -444,5 +444,5 @@ class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
 
     def test_from_params_kwargs(self):
         PretrainedTransformerTokenizer.from_params(
-            Params({"model_name": "bert-base-uncased", "tokenizer_kwargs": {"do_lower_case": True}})
+            Params({"model_name": "bert-base-uncased", "tokenizer_kwargs": {"use_fast": True}})
         )

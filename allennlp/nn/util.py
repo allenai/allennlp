@@ -107,14 +107,15 @@ def get_lengths_from_binary_sequence_mask(mask: torch.BoolTensor) -> torch.LongT
 
     # Parameters
 
-    mask : torch.BoolTensor, required.
+    mask : `torch.BoolTensor`, required.
         A 2D binary mask of shape (batch_size, sequence_length) to
         calculate the per-batch sequence lengths from.
 
     # Returns
 
-    A torch.LongTensor of shape (batch_size,) representing the lengths
-    of the sequences in the batch.
+    `torch.LongTensor`
+        A torch.LongTensor of shape (batch_size,) representing the lengths
+        of the sequences in the batch.
     """
     return mask.sum(-1)
 
@@ -152,14 +153,14 @@ def sort_batch_by_length(tensor: torch.Tensor, sequence_lengths: torch.Tensor):
 
     # Returns
 
-    sorted_tensor : torch.FloatTensor
+    sorted_tensor : `torch.FloatTensor`
         The original tensor sorted along the batch dimension with respect to sequence_lengths.
-    sorted_sequence_lengths : torch.LongTensor
+    sorted_sequence_lengths : `torch.LongTensor`
         The original sequence_lengths sorted by decreasing size.
-    restoration_indices : torch.LongTensor
+    restoration_indices : `torch.LongTensor`
         Indices into the sorted_tensor such that
         `sorted_tensor.index_select(0, restoration_indices) == original_tensor`
-    permutation_index : torch.LongTensor
+    permutation_index : `torch.LongTensor`
         The indices used to sort the tensor. This is useful if you want to sort many
         tensors using the same ordering.
     """
@@ -227,9 +228,10 @@ def get_dropout_mask(dropout_probability: float, tensor_for_masking: torch.Tenso
 
     # Returns
 
-    A torch.FloatTensor consisting of the binary mask scaled by 1/ (1 - dropout_probability).
-    This scaling ensures expected values and variances of the output of applying this mask
-     and the original tensor are the same.
+    `torch.FloatTensor`
+        A torch.FloatTensor consisting of the binary mask scaled by 1/ (1 - dropout_probability).
+        This scaling ensures expected values and variances of the output of applying this mask
+        and the original tensor are the same.
     """
     binary_mask = (torch.rand(tensor_for_masking.size()) > dropout_probability).to(
         tensor_for_masking.device
@@ -329,7 +331,8 @@ def masked_max(
 
     # Returns
 
-    A `torch.Tensor` of including the maximum values.
+    `torch.Tensor`
+        A `torch.Tensor` of including the maximum values.
     """
     replaced_vector = vector.masked_fill(~mask, min_value_of_dtype(vector.dtype))
     max_value, _ = replaced_vector.max(dim=dim, keepdim=keepdim)
@@ -355,7 +358,8 @@ def masked_mean(
 
     # Returns
 
-    A `torch.Tensor` of including the mean values.
+    `torch.Tensor`
+        A `torch.Tensor` of including the mean values.
     """
     replaced_vector = vector.masked_fill(~mask, 0.0)
 
@@ -366,20 +370,21 @@ def masked_mean(
 
 def masked_flip(padded_sequence: torch.Tensor, sequence_lengths: List[int]) -> torch.Tensor:
     """
-        Flips a padded tensor along the time dimension without affecting masked entries.
+    Flips a padded tensor along the time dimension without affecting masked entries.
 
-        # Parameters
+    # Parameters
 
-        padded_sequence : `torch.Tensor`
-            The tensor to flip along the time dimension.
-            Assumed to be of dimensions (batch size, num timesteps, ...)
-        sequence_lengths : `torch.Tensor`
-            A list containing the lengths of each unpadded sequence in the batch.
+    padded_sequence : `torch.Tensor`
+        The tensor to flip along the time dimension.
+        Assumed to be of dimensions (batch size, num timesteps, ...)
+    sequence_lengths : `torch.Tensor`
+        A list containing the lengths of each unpadded sequence in the batch.
 
-        # Returns
+    # Returns
 
+    `torch.Tensor`
         A `torch.Tensor` of the same shape as padded_sequence.
-        """
+    """
     assert padded_sequence.size(0) == len(
         sequence_lengths
     ), f"sequence_lengths length ${len(sequence_lengths)} does not match batch size ${padded_sequence.size(0)}"
@@ -437,9 +442,9 @@ def viterbi_decode(
 
     # Returns
 
-    viterbi_path : List[int]
+    viterbi_path : `List[int]`
         The tag indices of the maximum likelihood tag sequence.
-    viterbi_score : torch.Tensor
+    viterbi_score : `torch.Tensor`
         The score of the viterbi path.
     """
     if top_k is None:
@@ -736,9 +741,10 @@ def sequence_cross_entropy_with_logits(
 
     # Returns
 
-    A torch.FloatTensor representing the cross entropy loss.
-    If `average=="batch"` or `average=="token"`, the returned loss is a scalar.
-    If `average is None`, the returned loss is a vector of shape (batch_size,).
+    `torch.FloatTensor`
+        A torch.FloatTensor representing the cross entropy loss.
+        If `average=="batch"` or `average=="token"`, the returned loss is a scalar.
+        If `average is None`, the returned loss is a vector of shape (batch_size,).
 
     """
     if average not in {None, "token", "batch"}:
@@ -958,7 +964,8 @@ def _rindex(sequence: Sequence[T], obj: T) -> int:
 
     # Returns
 
-    zero-based index associated to the position of the last item equal to obj
+    `int`
+        zero-based index associated to the position of the last item equal to obj
     """
     for i in range(len(sequence) - 1, -1, -1):
         if sequence[i] == obj:
@@ -1384,8 +1391,9 @@ def bucket_values(
 
     # Returns
 
-    A tensor of the same shape as the input, containing the indices of the buckets
-    the values were placed in.
+    `torch.Tensor`
+        A tensor of the same shape as the input, containing the indices of the buckets
+        the values were placed in.
     """
     # Chunk the values into semi-logscale buckets using .floor().
     # This is a semi-logscale bucketing because we divide by log(2) after taking the log.
@@ -1423,9 +1431,9 @@ def add_sentence_boundary_token_ids(
     mask : `torch.BoolTensor`
          A tensor of shape `(batch_size, timesteps)`
     sentence_begin_token: Any (anything that can be broadcast in torch for assignment)
-        For 2D input, a scalar with the <S> id. For 3D input, a tensor with length dim.
+        For 2D input, a scalar with the `<S>` id. For 3D input, a tensor with length dim.
     sentence_end_token: Any (anything that can be broadcast in torch for assignment)
-        For 2D input, a scalar with the </S> id. For 3D input, a tensor with length dim.
+        For 2D input, a scalar with the `</S>` id. For 3D input, a tensor with length dim.
 
     # Returns
 
@@ -1511,8 +1519,7 @@ def add_positional_features(
 
     """
     Implements the frequency-based positional encoding described
-    in [Attention is all you Need]
-    (https://www.semanticscholar.org/paper/Attention-Is-All-You-Need-Vaswani-Shazeer/0737da0767d77606169cbf4187b83e1ab62f6077).
+    in [Attention is All you Need][0].
 
     Adds sinusoids of different frequencies to a `Tensor`. A sinusoid of a
     different frequency and phase is added to each dimension of the input `Tensor`.
@@ -1522,6 +1529,8 @@ def add_positional_features(
     (min_timescale, max_timescale). For each timescale, the two sinusoidal
     signals sin(timestep / timescale) and cos(timestep / timescale) are
     generated and concatenated along the hidden_dim dimension.
+
+    [0]: https://www.semanticscholar.org/paper/Attention-Is-All-You-Need-Vaswani-Shazeer/0737da0767d77606169cbf4187b83e1ab62f6077
 
     # Parameters
 
@@ -1534,7 +1543,8 @@ def add_positional_features(
 
     # Returns
 
-    The input tensor augmented with the sinusoidal frequencies.
+    `torch.Tensor`
+        The input tensor augmented with the sinusoidal frequencies.
     """  # noqa
     _, timesteps, hidden_dim = tensor.size()
 

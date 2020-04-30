@@ -523,14 +523,14 @@ class TestFromParams(AllenNlpTestCase):
     def test_transferring_of_modules(self):
 
         model_archive = str(
-            self.FIXTURES_ROOT / "decomposable_attention" / "serialization" / "model.tar.gz"
+            self.FIXTURES_ROOT / "basic_classifier" / "serialization" / "model.tar.gz"
         )
         trained_model = load_archive(model_archive).model
 
-        config_file = str(self.FIXTURES_ROOT / "decomposable_attention" / "experiment.json")
+        config_file = str(self.FIXTURES_ROOT / "basic_classifier" / "experiment_seq2seq.jsonnet")
         model_params = Params.from_file(config_file).pop("model").as_dict(quiet=True)
 
-        # Override only text_field_embedder (freeze) and attend_feedforward params (tunable)
+        # Override only text_field_embedder (freeze) and seq2seq_encoder params (tunable)
         model_params["text_field_embedder"] = {
             "_pretrained": {
                 "archive_file": model_archive,
@@ -538,31 +538,30 @@ class TestFromParams(AllenNlpTestCase):
                 "freeze": True,
             }
         }
-        model_params["attend_feedforward"] = {
+        model_params["seq2seq_encoder"] = {
             "_pretrained": {
                 "archive_file": model_archive,
-                "module_path": "_attend_feedforward._module",
+                "module_path": "_seq2seq_encoder",
                 "freeze": False,
             }
         }
 
         transfer_model = Model.from_params(vocab=trained_model.vocab, params=Params(model_params))
 
-        # TextFieldEmbedder and AttendFeedforward parameters should be transferred
+        # TextFieldEmbedder and Seq2SeqEncoder parameters should be transferred
         for trained_parameter, transfer_parameter in zip(
             trained_model._text_field_embedder.parameters(),
             transfer_model._text_field_embedder.parameters(),
         ):
             assert torch.all(trained_parameter == transfer_parameter)
         for trained_parameter, transfer_parameter in zip(
-            trained_model._attend_feedforward.parameters(),
-            transfer_model._attend_feedforward.parameters(),
+            trained_model._seq2seq_encoder.parameters(),
+            transfer_model._seq2seq_encoder.parameters(),
         ):
             assert torch.all(trained_parameter == transfer_parameter)
-        # Any other module's parameters shouldn't be same (eg. compare_feedforward)
+        # Any other module's parameters shouldn't be same (eg. _feedforward)
         for trained_parameter, transfer_parameter in zip(
-            trained_model._compare_feedforward.parameters(),
-            transfer_model._compare_feedforward.parameters(),
+            trained_model._feedforward.parameters(), transfer_model._feedforward.parameters(),
         ):
             assert torch.all(trained_parameter != transfer_parameter)
 
@@ -570,25 +569,25 @@ class TestFromParams(AllenNlpTestCase):
         for parameter in transfer_model._text_field_embedder.parameters():
             assert not parameter.requires_grad
 
-        # # AttendFeedforward should have requires_grad On
-        for parameter in transfer_model._attend_feedforward.parameters():
+        # # Seq2SeqEncoder should have requires_grad On
+        for parameter in transfer_model._seq2seq_encoder.parameters():
             assert parameter.requires_grad
 
     def test_transferring_of_modules_ensures_type_consistency(self):
 
         model_archive = str(
-            self.FIXTURES_ROOT / "decomposable_attention" / "serialization" / "model.tar.gz"
+            self.FIXTURES_ROOT / "basic_classifier" / "serialization" / "model.tar.gz"
         )
         trained_model = load_archive(model_archive).model
 
-        config_file = str(self.FIXTURES_ROOT / "decomposable_attention" / "experiment.json")
+        config_file = str(self.FIXTURES_ROOT / "basic_classifier" / "experiment_seq2seq.jsonnet")
         model_params = Params.from_file(config_file).pop("model").as_dict(quiet=True)
 
-        # Override only text_field_embedder and make it load AttendFeedForward
+        # Override only text_field_embedder and make it load Seq2SeqEncoder
         model_params["text_field_embedder"] = {
             "_pretrained": {
                 "archive_file": model_archive,
-                "module_path": "_attend_feedforward._module",
+                "module_path": "_seq2seq_encoder._module",
             }
         }
         with pytest.raises(ConfigurationError):
@@ -811,3 +810,38 @@ class TestFromParams(AllenNlpTestCase):
         assert all(isinstance(value, B) for value in d.items.values())
         assert d.items["first"].size == 1
         assert d.items["second"].size == 2
+
+    def test_extra_parameters_are_not_allowed_when_there_is_no_constructor(self):
+        class A(FromParams):
+            pass
+
+        with pytest.raises(ConfigurationError, match="Extra parameters"):
+            A.from_params(Params({"some_spurious": "key", "value": "pairs"}))
+
+    def test_raises_when_there_are_no_implementations(self):
+        class A(Registrable):
+            pass
+
+        with pytest.raises(ConfigurationError, match="no registered concrete types"):
+            A.from_params("nonexistent_class")
+
+        with pytest.raises(ConfigurationError, match="no registered concrete types"):
+            A.from_params(Params({"some_spurious": "key", "value": "pairs"}))
+
+        with pytest.raises(ConfigurationError, match="no registered concrete types"):
+            A.from_params(Params({}))
+
+        # Some paths through the code are different if there is a constructor here versus not.  We
+        # don't actually go through this logic anymore, but it's here as a regression test.
+        class B(Registrable):
+            def __init__(self):
+                pass
+
+        with pytest.raises(ConfigurationError, match="no registered concrete types"):
+            B.from_params("nonexistent_class")
+
+        with pytest.raises(ConfigurationError, match="no registered concrete types"):
+            B.from_params(Params({"some_spurious": "key", "value": "pairs"}))
+
+        with pytest.raises(ConfigurationError, match="no registered concrete types"):
+            B.from_params(Params({}))

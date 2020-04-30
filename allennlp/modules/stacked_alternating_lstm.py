@@ -16,8 +16,10 @@ class StackedAlternatingLstm(torch.nn.Module):
     """
     A stacked LSTM with LSTM layers which alternate between going forwards over
     the sequence and going backwards. This implementation is based on the
-    description in [Deep Semantic Role Labelling - What works and what's next]
-    (https://homes.cs.washington.edu/~luheng/files/acl2017_hllz.pdf).
+    description in [Deep Semantic Role Labelling - What works and what's next][0].
+
+    [0]: https://www.aclweb.org/anthology/P17-1044.pdf
+    [1]: https://arxiv.org/abs/1512.05287
 
     # Parameters
 
@@ -29,8 +31,7 @@ class StackedAlternatingLstm(torch.nn.Module):
         The number of stacked LSTMs to use.
     recurrent_dropout_probability : `float`, optional (default = 0.0)
         The dropout probability to be used in a dropout scheme as stated in
-        [A Theoretically Grounded Application of Dropout in Recurrent Neural Networks]
-        (https://arxiv.org/abs/1512.05287).
+        [A Theoretically Grounded Application of Dropout in Recurrent Neural Networks][1].
     use_input_projection_bias : `bool`, optional (default = True)
         Whether or not to use a bias on the input projection layer. This is mainly here
         for backwards compatibility reasons and will be removed (and set to False)
@@ -38,7 +39,7 @@ class StackedAlternatingLstm(torch.nn.Module):
 
     # Returns
 
-    output_accumulator : PackedSequence
+    output_accumulator : `PackedSequence`
         The outputs of the interleaved LSTMs per timestep. A tensor of shape
         (batch_size, max_timesteps, hidden_size) where for a given batch
         element, all outputs past the sequence length for that batch are
@@ -92,9 +93,9 @@ class StackedAlternatingLstm(torch.nn.Module):
 
         # Returns
 
-        output_sequence : PackedSequence
+        output_sequence : `PackedSequence`
             The encoded sequence of shape (batch_size, sequence_length, hidden_size)
-        final_states: Tuple[torch.Tensor, torch.Tensor]
+        final_states: `Tuple[torch.Tensor, torch.Tensor]`
             The per-layer final (state, memory) states of the LSTM, each with shape
             (num_layers, batch_size, hidden_size).
         """

@@ -69,8 +69,14 @@ class PretrainedTransformerIndexer(TokenIndexer):
         if self._added_to_vocabulary:
             return
 
-        pretrained_vocab = self._tokenizer.get_vocab()
-        for word, idx in pretrained_vocab.items():
+        try:
+            vocab_items = self._tokenizer.get_vocab().items()
+        except NotImplementedError:
+            vocab_items = (
+                (self._tokenizer.convert_ids_to_tokens(idx), idx)
+                for idx in range(self._tokenizer.vocab_size)
+            )
+        for word, idx in vocab_items:
             vocab._token_to_index[self._namespace][word] = idx
             vocab._index_to_token[self._namespace][idx] = word
 
@@ -187,6 +193,10 @@ class PretrainedTransformerIndexer(TokenIndexer):
                 mktensor = torch.BoolTensor
             else:
                 padding_value = self._tokenizer.pad_token_id
+                if padding_value is None:
+                    padding_value = (
+                        0  # Some tokenizers don't have padding tokens and rely on the mask only.
+                    )
                 mktensor = torch.LongTensor
 
             tensor = mktensor(

@@ -2,6 +2,9 @@ site_name: AllenNLP
 site_description: AllenNLP is a ..
 site_url: https://allennlp.org/
 
+extra_css:
+  - "css/extra.css"
+
 theme:
   name: material
   palette:
