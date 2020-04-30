@@ -53,7 +53,7 @@ test-with-cov :
 
 .PHONY : gpu-test
 gpu-test :
-	pytest --color=yes -rf -m gpu $(SRC)
+	pytest --color=yes -v -rf -m gpu $(SRC)
 
 #
 # Setup helpers
