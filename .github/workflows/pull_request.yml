@@ -15,7 +15,11 @@ jobs:
 
     - name: Debug info
       run: |
-        docker --version
+        whoami
+        pwd
+        ls
+        echo $PATH
+        which python
 
   check_core:
     name: Check Core
