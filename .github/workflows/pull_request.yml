@@ -17,6 +17,14 @@ jobs:
       run: |
         docker --version
 
+    - name: Build test image
+      run: |
+        docker build --pull -f Dockerfile.test -t allennlp/test .
+
+    - name: Run test image
+      run: |
+        docker run --rm allennlp/test 'import torch; print(torch.cuda.is_available())'
+
   check_core:
     name: Check Core
     runs-on: ubuntu-latest

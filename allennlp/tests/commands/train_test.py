@@ -90,6 +90,7 @@ class TestTrain(AllenNlpTestCase):
                 recover=True,
             )
 
+    @pytest.mark.gpu
     @pytest.mark.skipif(torch.cuda.device_count() < 2, reason="Need multiple GPUs.")
     def test_train_model_distributed(self):
         params = lambda: Params(
@@ -125,6 +126,7 @@ class TestTrain(AllenNlpTestCase):
         # Check we can load the serialized model
         assert load_archive(out_dir).model
 
+    @pytest.mark.gpu
     @pytest.mark.skipif(torch.cuda.device_count() < 2, reason="Need multiple GPUs.")
     def test_train_model_distributed_with_sharded_reader(self):
         params = lambda: Params(

@@ -51,6 +51,10 @@ test :
 test-with-cov :
 	pytest --color=yes -rf --cov-config=.coveragerc --cov=$(SRC) --durations=40 -k "not sniff_test" $(SRC)
 
+.PHONY : gpu-test
+gpu-test :
+	pytest --color=yes -rf -m gpu $(SRC)
+
 #
 # Setup helpers
 #
