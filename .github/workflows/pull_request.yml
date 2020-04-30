@@ -46,6 +46,10 @@ jobs:
       run: |
         make test-with-cov
 
+    - name: Ensure docs can build
+      run: |
+        make build-docs
+
     - name: Upload coverage to Codecov
       if: matrix.python == '3.7'
       env:
