@@ -20,7 +20,7 @@ WORKDIR /stage/allennlp
 
 # Add minimal files necessary to install dependencies.
 COPY allennlp/version.py allennlp/version.py
-RUN touch allennlp/__init__.py
+RUN touch allennlp/__init__.py && touch README.md
 COPY setup.py setup.py
 COPY dev-requirements.txt dev-requirements.txt
 
