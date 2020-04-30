@@ -36,6 +36,6 @@ RUN pip uninstall -y allennlp && \
 
 # Add remaining files needed to run tests.
 COPY Makefile Makefile
-COPY pytest.ini
+COPY pytest.ini pytest.ini
 
 ENTRYPOINT ["make"]
