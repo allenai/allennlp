@@ -6,6 +6,17 @@ on:
     - master
 
 jobs:
+  gpu_tests:
+    name: GPU Checks
+    runs-on: [self-hosted, GPU]
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Debug info
+      run: |
+        ls -lh
+
   check_core:
     name: Check Core
     runs-on: ubuntu-latest
