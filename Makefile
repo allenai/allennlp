@@ -134,3 +134,7 @@ docker-image :
 			--pull \
 			-f Dockerfile \
 			-t $(DOCKER_TAG) - < context.tar.gz
+
+.PHONY : docker-test-image
+docker-test-image :
+	docker build --pull -f Dockerfile.test -t allennlp/test .

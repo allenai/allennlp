@@ -18,9 +18,24 @@ LABEL com.nvidia.volumes.needed="nvidia_driver"
 
 WORKDIR /stage/allennlp
 
+# Add minimal files necessary to install dependencies.
+COPY allennlp/version.py allennlp/version.py
+RUN touch allennlp/__init__.py
 COPY setup.py setup.py
 COPY dev-requirements.txt dev-requirements.txt
 
-RUN pip install torch
+# Install deps.
+RUN pip install --no-cache-dir -e . && \
+    pip install --no-cache-dir -r dev-requirements.txt
 
-ENTRYPOINT ["python", "-c"]
+# Now add actual package source and re-install just the package.
+RUN rm -rf allennlp/
+COPY allennlp allennlp
+RUN pip uninstall -y allennlp && \
+    pip install --no-deps -e .
+
+# Add remaining files needed to run tests.
+COPY Makefile Makefile
+COPY pytest.ini
+
+ENTRYPOINT ["make"]

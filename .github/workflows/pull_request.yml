@@ -19,11 +19,11 @@ jobs:
 
     - name: Build test image
       run: |
-        docker build --pull -f Dockerfile.test -t allennlp/test .
+        make docker-test-image
 
     - name: Run test image
       run: |
-        docker run --rm --gpus 2 allennlp/test 'import torch; print(torch.cuda.is_available())'
+        docker run --rm --gpus 2 allennlp/test 'gpu-test'
 
   check_core:
     name: Check Core
