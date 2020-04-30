@@ -1,6 +1,6 @@
 # Dockerfile used for running GPU tests in self-hosted GitHub Actions runner.
 
-FROM python:3.6.10-stretch
+FROM python:3.7
 
 ENV LC_ALL=C.UTF-8
 ENV LANG=C.UTF-8
