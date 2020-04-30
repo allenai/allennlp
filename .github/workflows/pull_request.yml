@@ -15,7 +15,7 @@ jobs:
 
     - name: Debug info
       run: |
-        ls -lh
+        docker --version
 
   check_core:
     name: Check Core
@@ -27,57 +27,57 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    - name: Setup Python
-      uses: actions/setup-python@v1
-      with:
-        python-version: ${{ matrix.python }}
+    # - name: Setup Python
+    #   uses: actions/setup-python@v1
+    #   with:
+    #     python-version: ${{ matrix.python }}
 
-    - uses: actions/cache@v1
-      with:
-        path: ${{ env.pythonLocation }}
-        key: ${{ runner.os }}-pydeps-${{ env.pythonLocation }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
+    # - uses: actions/cache@v1
+    #   with:
+    #     path: ${{ env.pythonLocation }}
+    #     key: ${{ runner.os }}-pydeps-${{ env.pythonLocation }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
 
-    - name: Install requirements
-      run: |
-        make install
+    # - name: Install requirements
+    #   run: |
+    #     make install
 
-    - name: Debug info
-      run: |
-        pip freeze
+    # - name: Debug info
+    #   run: |
+    #     pip freeze
 
-    - name: Lint
-      run: |
-        make lint
+    # - name: Lint
+    #   run: |
+    #     make lint
 
-    - name: Type check
-      run: |
-        make typecheck
+    # - name: Type check
+    #   run: |
+    #     make typecheck
 
-    - name: Run tests
-      run: |
-        make test-with-cov
+    # - name: Run tests
+    #   run: |
+    #     make test-with-cov
 
-    - name: Ensure docs can build
-      run: |
-        make build-docs
+    # - name: Ensure docs can build
+    #   run: |
+    #     make build-docs
 
-    - name: Upload coverage to Codecov
-      if: matrix.python == '3.7'
-      env:
-        CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-      run: |
-        # Ignore codecov failures as the codecov server is not
-        # very reliable but we don't want to report a failure
-        # in the github UI just because the coverage report failed to
-        # be published.
-        # This will also fail for forked repositories since the secret token won't
-        # be available.
-        codecov -t $CODECOV_TOKEN || echo "codecov upload failed"
+    # - name: Upload coverage to Codecov
+    #   if: matrix.python == '3.7'
+    #   env:
+    #     CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+    #   run: |
+    #     # Ignore codecov failures as the codecov server is not
+    #     # very reliable but we don't want to report a failure
+    #     # in the github UI just because the coverage report failed to
+    #     # be published.
+    #     # This will also fail for forked repositories since the secret token won't
+    #     # be available.
+    #     codecov -t $CODECOV_TOKEN || echo "codecov upload failed"
 
-    - name: Clean up
-      if: always()
-      run: |
-        pip uninstall --yes allennlp
+    # - name: Clean up
+    #   if: always()
+    #   run: |
+    #     pip uninstall --yes allennlp
 
   check_models:
     name: Check Models
@@ -89,37 +89,37 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    - name: Setup Python
-      uses: actions/setup-python@v1
-      with:
-        python-version: ${{ matrix.python }}
+    # - name: Setup Python
+    #   uses: actions/setup-python@v1
+    #   with:
+    #     python-version: ${{ matrix.python }}
 
-    - uses: actions/cache@v1
-      with:
-        path: ${{ env.pythonLocation }}
-        key: ${{ runner.os }}-pydeps-${{ env.pythonLocation }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
+    # - uses: actions/cache@v1
+    #   with:
+    #     path: ${{ env.pythonLocation }}
+    #     key: ${{ runner.os }}-pydeps-${{ env.pythonLocation }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
 
-    - name: Install requirements
-      run: |
-        make install
+    # - name: Install requirements
+    #   run: |
+    #     make install
 
-    - name: Debug info
-      run: |
-        pip freeze
+    # - name: Debug info
+    #   run: |
+    #     pip freeze
 
-    - name: Pull and install models repo
-      env:
-        ALLENNLP_VERSION_OVERRIDE: ""  # Don't replace the core library.
-      run: |
-        git clone https://github.com/allenai/allennlp-models.git
-        cd allennlp-models && pip install --upgrade --upgrade-strategy eager -e . -r dev-requirements.txt
+    # - name: Pull and install models repo
+    #   env:
+    #     ALLENNLP_VERSION_OVERRIDE: ""  # Don't replace the core library.
+    #   run: |
+    #     git clone https://github.com/allenai/allennlp-models.git
+    #     cd allennlp-models && pip install --upgrade --upgrade-strategy eager -e . -r dev-requirements.txt
 
-    - name: Run models tests
-      run: |
-        cd allennlp-models && make test
+    # - name: Run models tests
+    #   run: |
+    #     cd allennlp-models && make test
 
-    - name: Clean up
-      if: always()
-      run: |
-        pip uninstall --yes allennlp
-        pip uninstall --yes allennlp_models
+    # - name: Clean up
+    #   if: always()
+    #   run: |
+    #     pip uninstall --yes allennlp
+    #     pip uninstall --yes allennlp_models
