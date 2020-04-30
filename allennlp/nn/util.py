@@ -1667,7 +1667,7 @@ def find_embedding_layer(model: torch.nn.Module) -> torch.nn.Module:
     # use our shortcut of just returning the wordpiece embedding.
     mismatched = False
     for module in model.modules():
-        if 'Mismatched' in module.__class__.__name__:
+        if "Mismatched" in module.__class__.__name__:
             # We don't currently have a good way to check whether an embedder is mismatched, and it
             # doesn't seem like it's worth it to try to add an API call for this somewhere,
             # especially as we can't really call it here in a type-safe way, anyway, as we're
