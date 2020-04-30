@@ -34,7 +34,7 @@ class MockSeq2SeqEncoder(Seq2SeqEncoder):
 def _make_feedforward(input_dim, output_dim):
     return FeedForwardEncoder(
         FeedForward(
-            input_dim=input_dim, num_layers=1, activations=torch.relu, hidden_dims=output_dim
+            input_dim=input_dim, num_layers=1, activations=torch.nn.ReLU(), hidden_dims=output_dim
         )
     )
 

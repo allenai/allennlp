@@ -9,7 +9,9 @@ from allennlp.nn import Activation
 
 class TestFeedforwardEncoder(AllenNlpTestCase):
     def test_get_dimension_is_correct(self):
-        feedforward = FeedForward(input_dim=10, num_layers=1, hidden_dims=10, activations="linear")
+        feedforward = FeedForward(
+            input_dim=10, num_layers=1, hidden_dims=10, activations=Activation.by_name("linear")()
+        )
         encoder = FeedForwardEncoder(feedforward)
         assert encoder.get_input_dim() == feedforward.get_input_dim()
         assert encoder.get_output_dim() == feedforward.get_output_dim()
