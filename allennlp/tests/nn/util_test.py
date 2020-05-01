@@ -11,6 +11,13 @@ from flaky import flaky
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.common.util import sanitize
+from allennlp.data import Token, Vocabulary
+from allennlp.data.fields import TextField
+from allennlp.data.token_indexers import (
+    ELMoTokenCharactersIndexer,
+    TokenCharactersIndexer,
+    SingleIdTokenIndexer,
+)
 from allennlp.nn import util
 from allennlp.models import load_archive
 
@@ -1635,3 +1642,31 @@ class TestNnUtil(AllenNlpTestCase):
         assert util.max_value_of_dtype(torch.uint8) == 255
         assert util.min_value_of_dtype(torch.long) == -9223372036854775808
         assert util.max_value_of_dtype(torch.long) == 9223372036854775807
+
+    def test_get_token_ids_from_text_field_tensors(self):
+        # Setting up a number of diffrent indexers, that we can test later.
+        string_tokens = ["This", "is", "a", "test"]
+        tokens = [Token(x) for x in string_tokens]
+        vocab = Vocabulary()
+        vocab.add_tokens_to_namespace(string_tokens, "tokens")
+        vocab.add_tokens_to_namespace(
+            set([char for token in string_tokens for char in token]), "token_characters"
+        )
+        elmo_indexer = ELMoTokenCharactersIndexer()
+        token_chars_indexer = TokenCharactersIndexer()
+        single_id_indexer = SingleIdTokenIndexer()
+        indexers = {"elmo": elmo_indexer, "chars": token_chars_indexer, "tokens": single_id_indexer}
+
+        # In all of the tests below, we'll want to recover the token ides that were produced by the
+        # single_id indexer, so we grab that output first.
+        text_field = TextField(tokens, {"tokens": single_id_indexer})
+        text_field.index(vocab)
+        tensors = text_field.as_tensor(text_field.get_padding_lengths())
+        expected_token_ids = tensors["tokens"]["tokens"]
+
+        # Now the actual tests.
+        text_field = TextField(tokens, indexers)
+        text_field.index(vocab)
+        tensors = text_field.as_tensor(text_field.get_padding_lengths())
+        token_ids = util.get_token_ids_from_text_field_tensors(tensors)
+        assert (token_ids == expected_token_ids).all()
