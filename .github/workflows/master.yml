@@ -242,7 +242,7 @@ jobs:
   docker:
     name: Docker
     needs: [build_package]  # needs the package artifact created from 'build_package' job.
-    runs-on: [self-hosted]
+    runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v2
@@ -253,35 +253,40 @@ jobs:
         name: core-package
         path: dist
 
-    - name: Set Docker label
-      run: |
-        if [[ $GITHUB_EVENT_NAME == 'release' ]]; then
-            echo "::set-env name=DOCKER_TAG::allennlp/allennlp:${GITHUB_REF#refs/tags/}";
-        else
-            echo "::set-env name=DOCKER_TAG::allennlp/commit:${GITHUB_SHA}";
-        fi
-
     - name: Build image
       run: |
-        make docker-image DOCKER_TAG="$DOCKER_TAG"
+        make docker-image
 
     - name: Test image
       run: |
-        make docker-run DOCKER_TAG="$DOCKER_TAG" ARGS='test-install'
+        make docker-run ARGS='test-install'
 
-    - name: Upload image
-      # Only run this for pushes and releases to master on the main repo.
-      if: github.repository == 'allenai/allennlp' && github.event_name != 'schedule'
+    - name: Upload master image
+      # Only run this for pushes to master on the main repo, not forks.
+      if: github.repository == 'allenai/allennlp' && github.event_name == 'push'
       run: |
         docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
-        echo "Uploading $DOCKER_TAG"
-        docker push "$DOCKER_TAG"
 
-    - name: Add 'latest' label
-      # Also push a 'latest' label if this is a release.
+        # Tag with current commit and 'latest'.
+        docker tag allennlp/allennlp:latest allennlp/commit:$GITHUB_SHA
+        docker tag allennlp/allennlp:latest allennlp/commit:latest
+
+        # Push both tags.
+        docker push allennlp/commit:$GITHUB_SHA
+        docker push allennlp/commit:latest
+
+    - name: Upload release image
+      # Only run this for releases on the main repo, not forks.
       if: github.repository == 'allenai/allennlp' && github.event_name == 'release'
       run: |
-        docker tag "$DOCKER_TAG" allennlp/allennlp:latest
+        docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
+        TAG=${GITHUB_REF#refs/tags/};
+
+        # Tag with release version.
+        docker tag allennlp/allennlp:latest allennlp/allennlp:$TAG
+
+        # Push both tags.
+        docker push allennlp/allennlp:$TAG
         docker push allennlp/allennlp:latest
 
   # Builds the API documentation and pushes it to the appropriate folder in the
