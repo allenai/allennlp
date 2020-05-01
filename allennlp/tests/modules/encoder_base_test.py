@@ -310,6 +310,7 @@ class TestEncoderBase(AllenNlpTestCase):
         encoder_base._update_states([final_states[0]], self.restoration_indices)
         encoder_base.sort_and_run_forward(self.rnn, self.tensor, self.mask)
 
+    @pytest.mark.gpu
     @pytest.mark.skipif(not torch.cuda.is_available(), reason="requires cuda")
     def test_non_contiguous_initial_states_handled_on_gpu(self):
         # Some PyTorch operations which produce contiguous tensors on the CPU produce

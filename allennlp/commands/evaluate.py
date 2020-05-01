@@ -1,5 +1,5 @@
 """
-The ``evaluate`` subcommand can be used to
+The `evaluate` subcommand can be used to
 evaluate a trained model against a dataset
 and report any metrics calculated by the model.
 

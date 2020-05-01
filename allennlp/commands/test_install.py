@@ -1,5 +1,5 @@
 """
-The ``test-install`` subcommand verifies
+The `test-install` subcommand verifies
 an installation by running the unit tests.
 
     $ allennlp test-install --help

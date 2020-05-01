@@ -1,0 +1,41 @@
+# Dockerfile used for running GPU tests in self-hosted GitHub Actions runner.
+
+FROM python:3.7
+
+ENV LC_ALL=C.UTF-8
+ENV LANG=C.UTF-8
+
+ENV PATH /usr/local/nvidia/bin/:$PATH
+ENV LD_LIBRARY_PATH /usr/local/nvidia/lib:/usr/local/nvidia/lib64
+
+# Tell nvidia-docker the driver spec that we need as well as to
+# use all available devices, which are mounted at /usr/local/nvidia.
+# The LABEL supports an older version of nvidia-docker, the env
+# variables a newer one.
+ENV NVIDIA_VISIBLE_DEVICES all
+ENV NVIDIA_DRIVER_CAPABILITIES compute,utility
+LABEL com.nvidia.volumes.needed="nvidia_driver"
+
+WORKDIR /stage/allennlp
+
+# Add minimal files necessary to install dependencies.
+COPY allennlp/version.py allennlp/version.py
+RUN touch allennlp/__init__.py && touch README.md
+COPY setup.py setup.py
+COPY dev-requirements.txt dev-requirements.txt
+
+# Install deps.
+RUN pip install --no-cache-dir -e . && \
+    pip install --no-cache-dir -r dev-requirements.txt
+
+# Now add actual package source and re-install just the package.
+RUN rm -rf allennlp/
+COPY allennlp allennlp
+RUN pip uninstall -y allennlp && \
+    pip install --no-deps -e .
+
+# Add remaining files needed to run tests.
+COPY Makefile Makefile
+COPY pytest.ini pytest.ini
+
+ENTRYPOINT ["make"]

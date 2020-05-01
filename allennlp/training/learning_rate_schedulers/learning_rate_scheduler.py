@@ -118,8 +118,10 @@ class ReduceOnPlateauLearningRateScheduler(_PyTorchLearningRateSchedulerWithMetr
             factor=factor,
             patience=patience,
             verbose=verbose,
+            threshold_mode=threshold_mode,
             threshold=threshold,
             cooldown=cooldown,
             min_lr=min_lr,
+            eps=eps,
         )
         super().__init__(lr_scheduler)

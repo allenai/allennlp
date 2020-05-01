@@ -6,6 +6,21 @@ on:
     - master
 
 jobs:
+  gpu_checks:
+    name: GPU Checks
+    runs-on: [self-hosted, GPU]
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Build test image
+      run: |
+        make docker-test-image
+
+    - name: Run GPU tests
+      run: |
+        docker run --rm --gpus 2 allennlp/test 'gpu-test'
+
   check_core:
     name: Check Core
     runs-on: ubuntu-latest
@@ -45,6 +60,10 @@ jobs:
     - name: Run tests
       run: |
         make test-with-cov
+
+    - name: Ensure docs can build
+      run: |
+        make build-docs
 
     - name: Upload coverage to Codecov
       if: matrix.python == '3.7'
@@ -94,7 +113,7 @@ jobs:
 
     - name: Pull and install models repo
       env:
-        EXCLUDE_ALLENNLP_IN_SETUP: "true"
+        ALLENNLP_VERSION_OVERRIDE: ""  # Don't replace the core library.
       run: |
         git clone https://github.com/allenai/allennlp-models.git
         cd allennlp-models && pip install --upgrade --upgrade-strategy eager -e . -r dev-requirements.txt
