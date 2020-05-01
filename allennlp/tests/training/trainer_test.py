@@ -15,6 +15,7 @@ except ImportError:
     amp = None
 import torch
 from torch.utils.data import DataLoader
+from torch.nn.utils import clip_grad_norm_
 from allennlp.data.dataloader import DataLoader as AllennlpDataLoader
 
 from allennlp.common.checks import ConfigurationError
@@ -36,7 +37,6 @@ from allennlp.training.learning_rate_schedulers import CosineWithRestarts
 from allennlp.training.learning_rate_schedulers import ExponentialLearningRateScheduler
 from allennlp.training.momentum_schedulers import MomentumScheduler
 from allennlp.training.moving_average import ExponentialMovingAverage
-from allennlp.training.util import sparse_clip_norm
 from allennlp.data import allennlp_collate
 
 
@@ -1019,7 +1019,7 @@ class TestSparseClipGrad(AllenNlpTestCase):
         assert embedding.weight.grad.is_sparse
 
         # Now try to clip the gradients.
-        _ = sparse_clip_norm([embedding.weight], 1.5)
+        _ = clip_grad_norm_([embedding.weight], 1.5)
         # Final norm should be 1.5
         grad = embedding.weight.grad.coalesce()
         self.assertAlmostEqual(grad._values().norm(2.0).item(), 1.5, places=5)
