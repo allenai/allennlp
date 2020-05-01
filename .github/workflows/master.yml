@@ -233,7 +233,7 @@ jobs:
   docker:
     name: Docker
     needs: [build_package]  # needs the package artifact created from 'build_package' job.
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted]
 
     steps:
     - uses: actions/checkout@v2

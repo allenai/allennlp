@@ -1,4 +1,4 @@
-# Dockerfile used for running GPU tests in self-hosted GitHub Actions runner.
+# Used to build an image for running tests.
 
 FROM python:3.7
 
@@ -18,24 +18,26 @@ LABEL com.nvidia.volumes.needed="nvidia_driver"
 
 WORKDIR /stage/allennlp
 
-# Add minimal files necessary to install dependencies.
+# Installing AllenNLP's dependencies is the most time-consuming part of building
+# this Docker image, so we make use of layer caching here by adding the minimal files
+# necessary to install the dependencies. Since most of the dependencies are defined
+# in the setup.py file, we create a "shell" package of allennlp using the same setup file
+# and then pip install it, after which we uninstall it so that we'll only have the dependencies
+# installed.
 COPY allennlp/version.py allennlp/version.py
 RUN touch allennlp/__init__.py && touch README.md
 COPY setup.py setup.py
 COPY dev-requirements.txt dev-requirements.txt
 
-# Install deps.
+# Now install deps by installing the shell package, and then uninstall it so we can
+# re-install the full package below.
 RUN pip install --no-cache-dir -e . && \
-    pip install --no-cache-dir -r dev-requirements.txt
+    pip install --no-cache-dir -r dev-requirements.txt && \
+    pip uninstall -y allennlp && \
+    rm -rf allennlp/
 
-# Now add actual package source and re-install just the package.
-RUN rm -rf allennlp/
-COPY allennlp allennlp
-RUN pip uninstall -y allennlp && \
-    pip install --no-deps -e .
-
-# Add remaining files needed to run tests.
-COPY Makefile Makefile
-COPY pytest.ini pytest.ini
+# Now add the full package source and re-install just the package.
+COPY . .
+RUN pip install --no-cache-dir --no-deps -e .
 
 ENTRYPOINT ["make"]
