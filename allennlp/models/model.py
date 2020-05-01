@@ -385,6 +385,12 @@ class Model(torch.nn.Module, Registrable):
         # This allows subclasses of Model to override _load.
 
         model_class: Type[Model] = cls.by_name(model_type)  # type: ignore
+        if not isinstance(model_class, type):
+            # If you're using from_archive to specify your model (e.g., for fine tuning), then you
+            # can't currently override the behavior of _load; we just use the default Model._load.
+            # If we really need to change this, we would need to implement a recursive
+            # get_model_class method, that recurses whenever it finds a from_archive model type.
+            model_class = Model
         return model_class._load(config, serialization_dir, weights_file, cuda_device, opt_level)
 
     def extend_embedder_vocab(self, embedding_sources_mapping: Dict[str, str] = None) -> None:
