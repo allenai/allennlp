@@ -104,7 +104,7 @@ class TestElmoBiLm(ElmoTestCase):
         # Now finally we can iterate through batches.
         loader = DataLoader(dataset, 3)
         for i, batch in enumerate(loader):
-            lm_embeddings = elmo_bilm(batch["elmo"]["character_ids"]["tokens"])
+            lm_embeddings = elmo_bilm(batch["elmo"]["character_ids"]["elmo_tokens"])
             top_layer_embeddings, mask = remove_sentence_boundaries(
                 lm_embeddings["activations"][2], lm_embeddings["mask"]
             )
@@ -134,8 +134,10 @@ class TestElmoBiLm(ElmoTestCase):
         words_to_cache = list(vocab.get_token_to_index_vocabulary("tokens").keys())
         elmo_bilm = _ElmoBiLm(self.options_file, self.weight_file, vocab_to_cache=words_to_cache)
 
-        elmo_bilm(in_vocab_tensor["character_ids"]["tokens"], in_vocab_tensor["tokens"]["tokens"])
-        elmo_bilm(oov_tensor["character_ids"]["tokens"], oov_tensor["tokens"]["tokens"])
+        elmo_bilm(
+            in_vocab_tensor["character_ids"]["elmo_tokens"], in_vocab_tensor["tokens"]["tokens"]
+        )
+        elmo_bilm(oov_tensor["character_ids"]["elmo_tokens"], oov_tensor["tokens"]["tokens"])
 
     def test_elmo_bilm_can_cache_char_cnn_embeddings(self):
         sentences = [["This", "is", "a", "sentence"], ["Here", "'s", "one"], ["Another", "one"]]
@@ -143,12 +145,14 @@ class TestElmoBiLm(ElmoTestCase):
         words_to_cache = list(vocab.get_token_to_index_vocabulary("tokens").keys())
         elmo_bilm = _ElmoBiLm(self.options_file, self.weight_file)
         elmo_bilm.eval()
-        no_cache = elmo_bilm(tensor["character_ids"]["tokens"], tensor["character_ids"]["tokens"])
+        no_cache = elmo_bilm(
+            tensor["character_ids"]["elmo_tokens"], tensor["character_ids"]["elmo_tokens"]
+        )
 
         # ELMo is stateful, so we need to actually re-initialise it for this comparison to work.
         elmo_bilm = _ElmoBiLm(self.options_file, self.weight_file, vocab_to_cache=words_to_cache)
         elmo_bilm.eval()
-        cached = elmo_bilm(tensor["character_ids"]["tokens"], tensor["tokens"]["tokens"])
+        cached = elmo_bilm(tensor["character_ids"]["elmo_tokens"], tensor["tokens"]["tokens"])
 
         numpy.testing.assert_array_almost_equal(
             no_cache["mask"].data.cpu().numpy(), cached["mask"].data.cpu().numpy()
@@ -179,7 +183,7 @@ class TestElmo(ElmoTestCase):
         dataset = Batch(instances)
         vocab = Vocabulary()
         dataset.index_instances(vocab)
-        return dataset.as_tensor_dict()["elmo"]["character_ids"]["tokens"]
+        return dataset.as_tensor_dict()["elmo"]["character_ids"]["elmo_tokens"]
 
     def test_elmo(self):
         # Correctness checks are in ElmoBiLm and ScalarMix, here we just add a shallow test
@@ -272,13 +276,15 @@ class TestElmo(ElmoTestCase):
         elmo_bilm = Elmo(self.options_file, self.weight_file, 1, vocab_to_cache=words_to_cache)
         elmo_bilm.eval()
 
-        individual_dim = elmo_bilm(tensor["character_ids"]["tokens"], tensor["tokens"]["tokens"])
+        individual_dim = elmo_bilm(
+            tensor["character_ids"]["elmo_tokens"], tensor["tokens"]["tokens"]
+        )
         elmo_bilm = Elmo(self.options_file, self.weight_file, 1, vocab_to_cache=words_to_cache)
         elmo_bilm.eval()
 
         expanded_word_ids = torch.stack([tensor["tokens"]["tokens"] for _ in range(4)], dim=1)
         expanded_char_ids = torch.stack(
-            [tensor["character_ids"]["tokens"] for _ in range(4)], dim=1
+            [tensor["character_ids"]["elmo_tokens"] for _ in range(4)], dim=1
         )
         expanded_result = elmo_bilm(expanded_char_ids, expanded_word_ids)
         split_result = [
@@ -334,11 +340,11 @@ class TestElmoTokenRepresentation(ElmoTestCase):
         # There are 457 tokens. Reshape into 10 batches of 50 tokens.
         sentences = []
         for k in range(10):
-            char_indices = indices["tokens"][(k * 50) : ((k + 1) * 50)]
+            char_indices = indices["elmo_tokens"][(k * 50) : ((k + 1) * 50)]
             sentences.append(
                 indexer.as_padded_tensor_dict(
-                    {"tokens": char_indices}, padding_lengths={"tokens": 50}
-                )["tokens"]
+                    {"elmo_tokens": char_indices}, padding_lengths={"elmo_tokens": 50}
+                )["elmo_tokens"]
             )
         batch = torch.stack(sentences)
 
@@ -366,7 +372,7 @@ class TestElmoTokenRepresentation(ElmoTestCase):
 
         for correct_index, token in [[0, "<S>"], [2, "</S>"]]:
             indices = indexer.tokens_to_indices([Token(token)], Vocabulary())
-            indices = torch.from_numpy(numpy.array(indices["tokens"])).view(1, 1, -1)
+            indices = torch.from_numpy(numpy.array(indices["elmo_tokens"])).view(1, 1, -1)
             embeddings = elmo_token_embedder(indices)["token_embedding"]
             assert numpy.allclose(
                 embeddings[0, correct_index, :].data.numpy(), embeddings[0, 1, :].data.numpy()
