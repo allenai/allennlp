@@ -233,6 +233,7 @@ jobs:
   # Builds Docker image from the core distribution files and uploads to Docker Hub.
   docker:
     name: Docker
+    if: github.repository == 'allenai/allennlp'  # self-hosted runner only available on main repo
     needs: [build_package]  # needs the package artifact created from 'build_package' job.
     runs-on: [self-hosted]
 
