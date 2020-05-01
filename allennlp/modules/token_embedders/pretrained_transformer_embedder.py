@@ -52,7 +52,7 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
     def _number_of_token_type_embeddings(self):
         config = self.transformer_model.config
         if isinstance(config, XLNetConfig):
-            return 2  # XLNet has hardcoded 2
+            return 3  # XLNet has 3 type ids
         elif hasattr(config, "type_vocab_size"):
             return config.type_vocab_size
         else:

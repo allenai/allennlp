@@ -246,7 +246,7 @@ def batch_to_ids(batch: List[List[str]]) -> torch.Tensor:
     dataset = Batch(instances)
     vocab = Vocabulary()
     dataset.index_instances(vocab)
-    return dataset.as_tensor_dict()["elmo"]["character_ids"]["tokens"]
+    return dataset.as_tensor_dict()["elmo"]["character_ids"]["elmo_tokens"]
 
 
 class _ElmoCharacterEncoder(torch.nn.Module):
