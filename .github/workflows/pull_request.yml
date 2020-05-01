@@ -6,28 +6,6 @@ on:
     - master
 
 jobs:
-  docker:
-    name: Docker
-    needs: [build_package]  # needs the package artifact created from 'build_package' job.
-    runs-on: ubuntu-latest
-
-    steps:
-    - uses: actions/checkout@v2
-
-    - name: Download core package
-      uses: actions/download-artifact@v1
-      with:
-        name: core-package
-        path: dist
-
-    - name: Build image
-      run: |
-        make docker-image
-
-    - name: Test image
-      run: |
-        make docker-run ARGS='test-install'
-
   gpu_checks:
     name: GPU Checks
     runs-on: [self-hosted, GPU]
