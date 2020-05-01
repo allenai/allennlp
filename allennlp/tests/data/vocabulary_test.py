@@ -174,7 +174,6 @@ class TestVocabulary(AllenNlpTestCase):
         assert default_dict["foobaz"] == 3
 
     def test_unknown_token(self):
-
         # We're putting this behavior in a test so that the behavior is documented.  There is
         # solver code that depends in a small way on how we treat the unknown token, so any
         # breaking change to this behavior should break a test, so you know you've done something
@@ -184,6 +183,41 @@ class TestVocabulary(AllenNlpTestCase):
         oov_index = vocab.get_token_index(oov_token)
         assert oov_index == 1
         assert vocab.get_token_index("unseen word") == oov_index
+
+    def test_get_token_index(self):
+        # The behavior of get_token_index depends on whether or not the namespace has an OOV token.
+        vocab = Vocabulary(
+            counter={"labels": {"foo": 3, "bar": 2}, "tokens": {"foo": 3, "bar": 2}},
+            non_padded_namespaces=["labels"],
+        )
+
+        # Quick sanity check, this is what the token to index mappings should look like.
+        expected_token_to_index_dicts = {
+            "tokens": {vocab._padding_token: 0, vocab._oov_token: 1, "foo": 2, "bar": 3},
+            "labels": {"foo": 0, "bar": 1},
+        }
+        assert vocab._token_to_index["tokens"] == expected_token_to_index_dicts["tokens"]
+        assert vocab._token_to_index["labels"] == expected_token_to_index_dicts["labels"]
+
+        # get_token_index should return the OOV token index for OOV tokens when it can.
+        assert vocab.get_token_index("baz", "tokens") == 1
+
+        # get_token_index should raise helpful error message when token is OOV and there
+        # is no default OOV token in the namespace.
+        with pytest.raises(
+            KeyError,
+            match=r"'baz' not found .* and namespace does not contain the default OOV token .*",
+        ):
+            vocab.get_token_index("baz", "labels")
+
+        # same should happen for the default OOV token itself, if not in namespace.
+        with pytest.raises(KeyError, match=rf"'{vocab._oov_token}' not found .*"):
+            vocab.get_token_index(vocab._oov_token, "labels")
+
+        # Now just make sure the token_to_index mappings haven't been modified
+        # (since we're defaultdicts we need to be a little careful here).
+        assert vocab._token_to_index["tokens"] == expected_token_to_index_dicts["tokens"]
+        assert vocab._token_to_index["labels"] == expected_token_to_index_dicts["labels"]
 
     def test_set_from_file_reads_padded_files(self):
 
