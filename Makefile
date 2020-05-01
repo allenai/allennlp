@@ -51,6 +51,10 @@ test :
 test-with-cov :
 	pytest --color=yes -rf --cov-config=.coveragerc --cov=$(SRC) --durations=40 -k "not sniff_test" $(SRC)
 
+.PHONY : gpu-test
+gpu-test :
+	pytest --color=yes -v -rf -m gpu $(SRC)
+
 #
 # Setup helpers
 #
@@ -130,3 +134,7 @@ docker-image :
 			--pull \
 			-f Dockerfile \
 			-t $(DOCKER_TAG) - < context.tar.gz
+
+.PHONY : docker-test-image
+docker-test-image :
+	docker build --pull -f Dockerfile.test -t allennlp/test .

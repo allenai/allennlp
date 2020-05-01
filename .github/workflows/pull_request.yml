@@ -6,6 +6,21 @@ on:
     - master
 
 jobs:
+  gpu_checks:
+    name: GPU Checks
+    runs-on: [self-hosted, GPU]
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Build test image
+      run: |
+        make docker-test-image
+
+    - name: Run GPU tests
+      run: |
+        docker run --rm --gpus 2 allennlp/test 'gpu-test'
+
   check_core:
     name: Check Core
     runs-on: ubuntu-latest
