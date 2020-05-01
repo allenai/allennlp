@@ -96,3 +96,22 @@ class ArchivalTest(AllenNlpTestCase):
         # check that params are the same
         params2 = archive.config
         assert params2.as_dict() == params_copy
+
+    def test_can_load_from_archive_model(self):
+        serialization_dir = self.FIXTURES_ROOT / "basic_classifier" / "from_archive_serialization"
+        archive_path = serialization_dir / "model.tar.gz"
+        model = load_archive(archive_path).model
+
+        # We want to be sure that we don't just not crash, but also be sure that we loaded the right
+        # weights for the model.  We'll do that by making sure that we didn't just load the model
+        # that's in the `archive_path` of the config file, which is this one.
+        base_model_path = self.FIXTURES_ROOT / "basic_classifier" / "serialization" / "model.tar.gz"
+        base_model = load_archive(base_model_path).model
+        base_model_params = dict(base_model.named_parameters())
+        for name, parameters in model.named_parameters():
+            if parameters.size() == base_model_params[name].size():
+                assert not (parameters == base_model_params[name]).all()
+            else:
+                # In this case, the parameters are definitely different, no need for the above
+                # check.
+                pass

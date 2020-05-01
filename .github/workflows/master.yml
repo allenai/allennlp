@@ -12,6 +12,7 @@ on:
 jobs:
   gpu_checks:
     name: GPU Checks
+    if: github.repository == 'allenai/allennlp'  # self-hosted runner only available on main repo
     runs-on: [self-hosted, GPU]
 
     steps:

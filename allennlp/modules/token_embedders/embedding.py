@@ -311,6 +311,7 @@ class Embedding(TokenEmbedder):
         device = self.weight.data.device
         extended_weight = torch.cat([self.weight.data, extra_weight.to(device)], dim=0)
         self.weight = torch.nn.Parameter(extended_weight, requires_grad=self.weight.requires_grad)
+        self.num_embeddings = extended_num_embeddings
 
 
 def _read_pretrained_embeddings_file(
