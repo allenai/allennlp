@@ -131,6 +131,7 @@ class TestFindLearningRate(AllenNlpTestCase):
             parser.parse_args(["find-lr", "path/to/params"])
             assert cm.exception.code == 2  # argparse code for incorrect usage
 
+    @pytest.mark.gpu
     @pytest.mark.skipif(torch.cuda.device_count() < 2, reason="Need multiple GPUs.")
     def test_find_learning_rate_multi_gpu(self):
         params = self.params()

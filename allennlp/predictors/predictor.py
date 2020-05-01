@@ -15,24 +15,6 @@ from allennlp.models import Model
 from allennlp.models.archival import Archive, load_archive
 from allennlp.nn import util
 
-# a mapping from model `type` to the default Predictor for that type
-DEFAULT_PREDICTORS = {
-    "atis_parser": "atis-parser",
-    "basic_classifier": "text_classifier",
-    "biaffine_parser": "biaffine-dependency-parser",
-    "bimpm": "textual-entailment",
-    "constituency_parser": "constituency-parser",
-    "coref": "coreference-resolution",
-    "crf_tagger": "sentence-tagger",
-    "decomposable_attention": "textual-entailment",
-    "event2mind": "event2mind",
-    "simple_tagger": "sentence-tagger",
-    "srl": "semantic-role-labeling",
-    "srl_bert": "semantic-role-labeling",
-    "quarel_parser": "quarel-parser",
-    "wikitables_mml_parser": "wikitables-parser",
-}
-
 
 class Predictor(Registrable):
     """
@@ -299,8 +281,8 @@ class Predictor(Registrable):
 
         if not predictor_name:
             model_type = config.get("model").get("type")
-            if model_type in DEFAULT_PREDICTORS:
-                predictor_name = DEFAULT_PREDICTORS[model_type]
+            model_class, _ = Model.resolve_class_name(model_type)
+            predictor_name = model_class.default_predictor
         predictor_class: Type[Predictor] = Predictor.by_name(  # type: ignore
             predictor_name
         ) if predictor_name is not None else cls

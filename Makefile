@@ -32,8 +32,8 @@ version :
 
 .PHONY : lint
 lint :
-	flake8 -v ./scripts $(SRC)
-	black -v --check ./scripts $(SRC)
+	flake8 ./scripts $(SRC)
+	black --check ./scripts $(SRC)
 
 .PHONY : typecheck
 typecheck :
@@ -51,12 +51,18 @@ test :
 test-with-cov :
 	pytest --color=yes -rf --cov-config=.coveragerc --cov=$(SRC) --durations=40 -k "not sniff_test" $(SRC)
 
+.PHONY : gpu-test
+gpu-test :
+	pytest --color=yes -v -rf -m gpu $(SRC)
+
 #
 # Setup helpers
 #
 
 .PHONY : install
 install :
+	# Making sure the typing backport isn't installed.
+	pip uninstall -y typing
 	# Ensure pip, setuptools, and wheel are up-to-date.
 	pip install --upgrade pip setuptools wheel
 	# Due to a weird thing with pip, we may need egg-info before running `pip install -e`.
@@ -64,6 +70,9 @@ install :
 	python setup.py install_egg_info
 	# Install allennlp as editable and all dependencies except apex since that requires torch to already be installed.
 	grep -Ev 'NVIDIA/apex\.git' dev-requirements.txt | pip install --upgrade --upgrade-strategy eager -e . -r /dev/stdin
+	# The above command will probably install the typing backport because of pydoc-markdown,
+	# so we have to uninstall it again.
+	pip uninstall -y typing
 	# Now install apex.
 	grep -E 'NVIDIA/apex\.git' dev-requirements.txt | pip install --upgrade -r /dev/stdin
 
@@ -125,3 +134,7 @@ docker-image :
 			--pull \
 			-f Dockerfile \
 			-t $(DOCKER_TAG) - < context.tar.gz
+
+.PHONY : docker-test-image
+docker-test-image :
+	docker build --pull -f Dockerfile.test -t allennlp/test .

@@ -18,7 +18,6 @@ from allennlp.common.util import JsonDict, push_python_path
 from allennlp.data.dataset_readers import DatasetReader, TextClassificationJsonReader
 from allennlp.models.archival import load_archive
 from allennlp.predictors import Predictor, TextClassifierPredictor
-from allennlp.predictors.predictor import DEFAULT_PREDICTORS
 
 
 class TestPredict(AllenNlpTestCase):
@@ -224,31 +223,42 @@ class TestPredict(AllenNlpTestCase):
         model_path = str(self.classifier_model_path)
         archive = load_archive(model_path)
         model_type = archive.config.get("model").get("type")
-        # Makes sure that we don't have a DEFAULT_PREDICTOR for it. Otherwise the base class
+        # Makes sure that we don't have a default_predictor for it. Otherwise the base class
         # implementation wouldn't be used
-        del DEFAULT_PREDICTORS["basic_classifier"]
-        assert model_type not in DEFAULT_PREDICTORS
+        from allennlp.models import Model
 
-        # Doesn't use a --predictor
-        sys.argv = [
-            "__main__.py",  # executable
-            "predict",  # command
-            model_path,
-            str(self.classifier_data_path),  # input_file
-            "--output-file",
-            str(self.outfile),
-            "--silent",
-            "--use-dataset-reader",
-        ]
-        main()
-        assert os.path.exists(self.outfile)
-        with open(self.outfile, "r") as f:
-            results = [json.loads(line) for line in f]
+        model_class, _ = Model.resolve_class_name(model_type)
+        saved_default_predictor = model_class.default_predictor
+        model_class.default_predictor = None
+        try:
+            # Doesn't use a --predictor
+            sys.argv = [
+                "__main__.py",  # executable
+                "predict",  # command
+                model_path,
+                str(self.classifier_data_path),  # input_file
+                "--output-file",
+                str(self.outfile),
+                "--silent",
+                "--use-dataset-reader",
+            ]
+            main()
+            assert os.path.exists(self.outfile)
+            with open(self.outfile, "r") as f:
+                results = [json.loads(line) for line in f]
 
-        assert len(results) == 3
-        for result in results:
-            assert set(result.keys()) == {"logits", "probs", "label", "loss", "tokens", "token_ids"}
-        DEFAULT_PREDICTORS["basic_classifier"] = "text_classifier"
+            assert len(results) == 3
+            for result in results:
+                assert set(result.keys()) == {
+                    "logits",
+                    "probs",
+                    "label",
+                    "loss",
+                    "tokens",
+                    "token_ids",
+                }
+        finally:
+            model_class.default_predictor = saved_default_predictor
 
     def test_batch_prediction_works_with_known_model(self):
         with open(self.infile, "w") as f:

@@ -49,6 +49,7 @@ from overrides import overrides
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common import Params, Registrable, Lazy
 from allennlp.common.checks import check_for_gpu, ConfigurationError
+from allennlp.common.logging import prepare_global_logging
 from allennlp.common import util as common_util
 from allennlp.common.plugins import import_plugins
 from allennlp.data import DatasetReader, Vocabulary
@@ -156,7 +157,7 @@ def train_model_from_file(
     dry_run: bool = False,
 ) -> Optional[Model]:
     """
-    A wrapper around :func:`train_model` which loads the params from a file.
+    A wrapper around [`train_model`](#train_model) which loads the params from a file.
 
     # Parameters
 
@@ -164,12 +165,12 @@ def train_model_from_file(
         A json parameter file specifying an AllenNLP experiment.
     serialization_dir : `str`
         The directory in which to save results and logs. We just pass this along to
-        :func:`train_model`.
+        [`train_model`](#train_model).
     overrides : `str`
         A JSON string that we will use to override values in the input parameter file.
     file_friendly_logging : `bool`, optional (default=False)
         If `True`, we make our output more friendly to saved model files.  We just pass this
-        along to :func:`train_model`.
+        along to [`train_model`](#train_model).
     recover : `bool`, optional (default=False)
         If `True`, we will try to recover a training run from an existing serialization
         directory.  This is only intended for use when something actually crashed during the middle
@@ -215,8 +216,8 @@ def train_model(
     dry_run: bool = False,
 ) -> Optional[Model]:
     """
-    Trains the model specified in the given :class:`Params` object, using the data and training
-    parameters also specified in that object, and saves the results in `serialization_dir`.
+    Trains the model specified in the given [`Params`](../common/params.md#params) object, using the data
+    and training parameters also specified in that object, and saves the results in `serialization_dir`.
 
     # Parameters
 
@@ -393,7 +394,7 @@ def _train_worker(
     best_model : `Optional[Model]`
         The model with the best epoch weights or `None` if in distributed training or in dry run.
     """
-    common_util.prepare_global_logging(
+    prepare_global_logging(
         serialization_dir, file_friendly_logging, rank=process_rank, world_size=world_size
     )
     common_util.prepare_environment(params)
