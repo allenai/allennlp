@@ -193,8 +193,8 @@ class TestVocabulary(AllenNlpTestCase):
 
         # Quick sanity check, this is what the token to index mappings should look like.
         expected_token_to_index_dicts = {
-            "tokens": {vocab._padding_token: 0, vocab._oov_token: 1, "foo": 2, "bar": 3,},
-            "labels": {"foo": 0, "bar": 1,},
+            "tokens": {vocab._padding_token: 0, vocab._oov_token: 1, "foo": 2, "bar": 3},
+            "labels": {"foo": 0, "bar": 1},
         }
         assert vocab._token_to_index["tokens"] == expected_token_to_index_dicts["tokens"]
         assert vocab._token_to_index["labels"] == expected_token_to_index_dicts["labels"]
