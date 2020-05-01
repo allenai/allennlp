@@ -651,15 +651,18 @@ class Vocabulary(Registrable):
         return self._token_to_index[namespace]
 
     def get_token_index(self, token: str, namespace: str = "tokens") -> int:
-        if token in self._token_to_index[namespace]:
+        try:
             return self._token_to_index[namespace][token]
-        else:
+        except KeyError:
             try:
                 return self._token_to_index[namespace][self._oov_token]
             except KeyError:
                 logger.error("Namespace: %s", namespace)
                 logger.error("Token: %s", token)
-                raise
+                raise KeyError(
+                    f"'{token}' not found in vocab namespace '{namespace}', "
+                    f"and namespace does not contain an OOV token to replace it with"
+                )
 
     def get_token_from_index(self, index: int, namespace: str = "tokens") -> str:
         return self._index_to_token[namespace][index]
