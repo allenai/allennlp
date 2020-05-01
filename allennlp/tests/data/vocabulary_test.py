@@ -191,6 +191,7 @@ class TestVocabulary(AllenNlpTestCase):
             non_padded_namespaces=["labels"],
         )
 
+        # Quick sanity check, this is what the token to index mappings should look like.
         expected_token_to_index_dicts = {
             "tokens": {vocab._padding_token: 0, vocab._oov_token: 1, "foo": 2, "bar": 3,},
             "labels": {"foo": 0, "bar": 1,},
@@ -201,18 +202,18 @@ class TestVocabulary(AllenNlpTestCase):
         # get_token_index should return the OOV token index for OOV tokens when it can.
         assert vocab.get_token_index("baz", "tokens") == 1
 
-        # get_token_index should raise helpful error message when token is OOV and there.
-        # is no OOV token in the namespace.
+        # get_token_index should raise helpful error message when token is OOV and there
+        # is no default OOV token in the namespace.
         with pytest.raises(
             KeyError, match=r"'baz' not found .* and namespace does not contain an OOV token .*"
         ):
             vocab.get_token_index("baz", "labels")
 
-        # same should happen for the default OOV token itself.
+        # same should happen for the default OOV token itself, if not in namespace.
         with pytest.raises(KeyError, match=rf"'{vocab._oov_token}' not found .*"):
             vocab.get_token_index(vocab._oov_token, "labels")
 
-        # Now just make sure the token_to_index default dicts haven't been modified
+        # Now just make sure the token_to_index mappings haven't been modified
         # (since we're defaultdicts we need to be a little careful here).
         assert vocab._token_to_index["tokens"] == expected_token_to_index_dicts["tokens"]
         assert vocab._token_to_index["labels"] == expected_token_to_index_dicts["labels"]
