@@ -24,17 +24,14 @@
 
 ## Quick Links
 
-* [Website](https://allennlp.org/)
-* [Tutorial](https://allennlp.org/tutorials)
-* [Forum](https://discourse.allennlp.org)
-* Documentation
-  * [Master](https://docs.allennlp.org/master/)
-  * [Latest](https://docs.allennlp.org/latest/)
-  * [Stable](https://docs.allennlp.org/stable/)
-* [Contributing Guidelines](CONTRIBUTING.md)
-* [Pretrained Models](https://github.com/allenai/allennlp-hub/blob/master/allennlp_hub/pretrained/allennlp_pretrained.py)
-* [Continuous Build](https://github.com/allenai/allennlp/actions)
-* [Nightly Releases](https://pypi.org/project/allennlp/#history)
+- [Website](https://allennlp.org/)
+- [Tutorial](https://allennlp.org/tutorials)
+- [Forum](https://discourse.allennlp.org)
+- Documentation ( [latest](https://docs.allennlp.org/latest/) | [stable](https://docs.allennlp.org/stable/) | [master](https://docs.allennlp.org/master/) )
+- [Contributing Guidelines](CONTRIBUTING.md)
+- [Pretrained Models](https://github.com/allenai/allennlp-hub/blob/master/allennlp_hub/pretrained/allennlp_pretrained.py)
+- [Continuous Build](https://github.com/allenai/allennlp/actions)
+- [Nightly Releases](https://pypi.org/project/allennlp/#history)
 
 ## Package Overview
 
