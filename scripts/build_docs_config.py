@@ -24,7 +24,7 @@ def parse_args():
     parser.add_argument(
         "api_docs_path", help="The root of the API docs within the markdown docs root folder."
     )
-    parser.add_argument("--version-override", type=str, default=None)
+    parser.add_argument("--docs-version", type=str, default=f"v{VERSION}")
     return parser.parse_args()
 
 
@@ -51,8 +51,7 @@ def main():
     nav_entries = build_api_toc(Path(opts.api_docs_path), Path(opts.docs_root))
 
     # Add version to name.
-    version = opts.version_override or f"v{VERSION}"
-    source_yaml["site_name"] = f"AllenNLP {version}"
+    source_yaml["site_name"] = f"AllenNLP {opts.docs_version}"
 
     # Find the yaml sub-object corresponding to the API table of contents.
     site_nav = source_yaml["nav"]
