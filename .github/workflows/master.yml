@@ -18,13 +18,21 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
+    - name: Set Docker label
+      run: |
+        if [[ $GITHUB_EVENT_NAME == 'release' ]]; then
+            echo "::set-env name=DOCKER_LABEL::${GITHUB_REF#refs/tags/}";
+        else
+            echo "::set-env name=DOCKER_LABEL::$GITHUB_SHA";
+        fi
+
     - name: Build test image
       run: |
-        make docker-test-image
+        make docker-test-image DOCKER_LABEL="$DOCKER_LABEL"
 
     - name: Run GPU tests
       run: |
-        docker run --rm --gpus 2 allennlp/test 'gpu-test'
+        make docker-test-run DOCKER_LABEL="$DOCKER_LABEL" ARGS='gpu-test'
 
   check_core:
     name: Check Core
@@ -233,7 +241,6 @@ jobs:
   # Builds Docker image from the core distribution files and uploads to Docker Hub.
   docker:
     name: Docker
-    if: github.repository == 'allenai/allennlp'  # self-hosted runner only available on main repo
     needs: [build_package]  # needs the package artifact created from 'build_package' job.
     runs-on: [self-hosted]
 
@@ -246,41 +253,35 @@ jobs:
         name: core-package
         path: dist
 
+    - name: Set Docker label
+      run: |
+        if [[ $GITHUB_EVENT_NAME == 'release' ]]; then
+            echo "::set-env name=DOCKER_TAG::allennlp/allennlp:${GITHUB_REF#refs/tags/}";
+        else
+            echo "::set-env name=DOCKER_TAG::allennlp/commit:${GITHUB_SHA}";
+        fi
+
     - name: Build image
       run: |
-        make docker-image DOCKER_TAG=allennlp
+        make docker-image DOCKER_TAG="$DOCKER_TAG"
 
     - name: Test image
       run: |
-        docker run --rm allennlp test-install
+        make docker-run DOCKER_TAG="$DOCKER_TAG" ARGS='test-install'
 
-    - name: Upload master image
-      # Only run this for pushes to master on the main repo, not forks.
-      if: github.repository == 'allenai/allennlp' && github.event_name == 'push'
+    - name: Upload image
+      # Only run this for pushes and releases to master on the main repo.
+      if: github.repository == 'allenai/allennlp' && github.event_name != 'schedule'
       run: |
         docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
+        echo "Uploading $DOCKER_TAG"
+        docker push "$DOCKER_TAG"
 
-        # Tag with current commit and 'latest'.
-        docker tag allennlp allennlp/commit:$GITHUB_SHA
-        docker tag allennlp allennlp/commit:latest
-
-        # Push both tags.
-        docker push allennlp/commit:$GITHUB_SHA
-        docker push allennlp/commit:latest
-
-    - name: Upload release image
-      # Only run this for releases on the main repo, not forks.
+    - name: Add 'latest' label
+      # Also push a 'latest' label if this is a release.
       if: github.repository == 'allenai/allennlp' && github.event_name == 'release'
       run: |
-        docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
-        TAG=${GITHUB_REF#refs/tags/};
-
-        # Tag with release version and 'latest'.
-        docker tag allennlp allennlp/allennlp:$TAG
-        docker tag allennlp allennlp/allennlp:latest
-
-        # Push both tags.
-        docker push allennlp/allennlp:$TAG
+        docker tag "$DOCKER_TAG" allennlp/allennlp:latest
         docker push allennlp/allennlp:latest
 
   # Builds the API documentation and pushes it to the appropriate folder in the
@@ -332,7 +333,7 @@ jobs:
     - name: Set target folders
       run: |
         if [[ $GITHUB_EVENT_NAME == 'release' ]]; then
-            echo "::set-env name=DOCS_FOLDER::${GITHUB_REF#refs/tags/}"
+            echo "::set-env name=DOCS_FOLDER::${GITHUB_REF#refs/tags/}";
         else
             echo "::set-env name=DOCS_FOLDER::master";
         fi

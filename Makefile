@@ -10,7 +10,9 @@ MD_DOCS_CONF_SRC = mkdocs-skeleton.yml
 MD_DOCS_TGT = site/
 MD_DOCS_EXTRAS = $(addprefix $(MD_DOCS_ROOT),README.md LICENSE.md ROADMAP.md CONTRIBUTING.md)
 
-DOCKER_TAG = allennlp/allennlp
+DOCKER_LABEL    = latest
+DOCKER_TAG      = allennlp/allennlp:$(DOCKER_LABEL)
+DOCKER_TEST_TAG = allennlp/test:$(DOCKER_LABEL)
 
 ifeq ($(shell uname),Darwin)
 	ifeq ($(shell which gsed),)
@@ -125,16 +127,19 @@ clean :
 
 .PHONY : docker-image
 docker-image :
-	# Create a small context for the Docker image with only the files that we need.
-	tar -czvf context.tar.gz \
-			Dockerfile \
-			scripts/ai2_internal/resumable_train.sh \
-			dist/*.whl
 	docker build \
 			--pull \
 			-f Dockerfile \
-			-t $(DOCKER_TAG) - < context.tar.gz
+			-t $(DOCKER_TAG) .
+
+.PHONY : docker-run
+docker-run :
+	docker run --rm $(DOCKER_TAG) $(ARGS)
 
 .PHONY : docker-test-image
 docker-test-image :
-	docker build --pull -f Dockerfile.test -t allennlp/test .
+	docker build --pull -f Dockerfile.test -t $(DOCKER_TEST_TAG) .
+
+.PHONY : docker-test-run
+docker-test-run :
+	docker run --rm --gpus 2 $(DOCKER_TEST_TAG) $(ARGS)

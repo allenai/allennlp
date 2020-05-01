@@ -33,6 +33,7 @@ COPY dev-requirements.txt dev-requirements.txt
 # re-install the full package below.
 RUN pip install --no-cache-dir -e . && \
     pip install --no-cache-dir -r dev-requirements.txt && \
+    pip uninstall -y typing && \
     pip uninstall -y allennlp && \
     rm -rf allennlp/
 
