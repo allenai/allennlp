@@ -660,8 +660,8 @@ class Vocabulary(Registrable):
                 logger.error("Namespace: %s", namespace)
                 logger.error("Token: %s", token)
                 raise KeyError(
-                    f"'{token}' not found in vocab namespace '{namespace}', "
-                    f"and namespace does not contain an OOV token to replace it with"
+                    f"'{token}' not found in vocab namespace '{namespace}', and namespace "
+                    f"does not contain the default OOV token ('{self._oov_token}')"
                 )
 
     def get_token_from_index(self, index: int, namespace: str = "tokens") -> str:

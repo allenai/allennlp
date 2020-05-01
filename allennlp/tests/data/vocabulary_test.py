@@ -205,7 +205,8 @@ class TestVocabulary(AllenNlpTestCase):
         # get_token_index should raise helpful error message when token is OOV and there
         # is no default OOV token in the namespace.
         with pytest.raises(
-            KeyError, match=r"'baz' not found .* and namespace does not contain an OOV token .*"
+            KeyError,
+            match=r"'baz' not found .* and namespace does not contain the default OOV token .*",
         ):
             vocab.get_token_index("baz", "labels")
 
