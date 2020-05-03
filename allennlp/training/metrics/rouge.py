@@ -1,4 +1,4 @@
-from collections import Counter
+from collections import defaultdict
 from typing import Tuple, Dict, Set
 
 from overrides import overrides
@@ -32,43 +32,131 @@ class ROUGE(Metric):
     def __init__(self, ngram_size: int = 2, exclude_indices: Set[int] = None,) -> None:
         self._ngram_size = ngram_size
         self._exclude_indices = exclude_indices or set()
-        self._recall_matches: Dict[int, int] = Counter()
-        self._recall_totals: Dict[int, int] = Counter()
+
+        self._total_rouge_n_recalls: Dict[int, float] = defaultdict(float)
+        self._total_rouge_n_precisions: Dict[int, float] = defaultdict(float)
+        self._total_rouge_n_f1s: Dict[int, float] = defaultdict(float)
+
+        self._total_rouge_l_f1 = 0.0
+
+        self._total_sequence_count = 0
 
     @overrides
     def reset(self) -> None:
-        self._recall_matches = Counter()
-        self._recall_totals = Counter()
+        self._total_rouge_n_recalls = defaultdict(float)
+        self._total_rouge_n_precisions = defaultdict(float)
+        self._total_rouge_n_f1s = defaultdict(float)
 
-    def _get_recall_counts(
+        self._total_rouge_l_f1 = 0.0
+
+        self._total_sequence_count = 0
+
+    def _longest_common_subsequence(self, seq_1: torch.LongTensor, seq_2: torch.LongTensor):
+        """
+        Computes the longest common subsequences between `seq_1` and `seq_2`, ignoring `self._exclude_indices`.
+        """
+        m = len(seq_1)
+        n = len(seq_2)
+
+        # Slightly lower memory usage by iterating over the longer sequence in outer loop
+        # and storing previous lcs for the shorter sequence
+        if m < n:
+            seq_1, seq_2 = seq_2, seq_1
+            m, n = n, m
+
+        prev_lcs = torch.zeros(n + 1, dtype=torch.long)
+
+        for i in range(m - 1, -1, -1):
+            # Make sure we don't count special tokens as part of the subsequences
+            if seq_1[i].item() in self._exclude_indices:
+                continue
+
+            cur_lcs = torch.zeros_like(prev_lcs)
+            for j in range(n - 1, -1, -1):
+                if seq_1[i] == seq_2[j]:
+                    cur_lcs[j] = 1 + prev_lcs[j + 1]
+                else:
+                    cur_lcs[j] = max(cur_lcs[j + 1], prev_lcs[j])
+            prev_lcs = cur_lcs
+
+        return prev_lcs[0].item()
+
+    def _get_valid_tokens_mask(self, tensor: torch.LongTensor) -> torch.ByteTensor:
+        valid_tokens_mask = torch.ones_like(tensor, dtype=torch.bool)
+        for index in self._exclude_indices:
+            valid_tokens_mask = valid_tokens_mask & (tensor != index)
+        return valid_tokens_mask
+
+    def _get_rouge_l_score(
+        self, predicted_tokens: torch.LongTensor, reference_tokens: torch.LongTensor
+    ) -> float:
+        """
+        Compute sum of F1 scores given batch of predictions and references.
+        """
+        total_f1 = 0.0
+
+        for predicted_seq, reference_seq in zip(predicted_tokens, reference_tokens):
+            m = self._get_valid_tokens_mask(reference_seq).sum().item()
+            n = self._get_valid_tokens_mask(predicted_seq).sum().item()
+
+            lcs = self._longest_common_subsequence(reference_seq, predicted_seq)
+
+            # This also rules out the case that m or n are 0, so we don't worry about it later
+            if lcs == 0:
+                continue
+
+            recall_lcs = lcs / m
+            precision_lcs = lcs / n
+
+            f1 = 2 * recall_lcs * precision_lcs / (recall_lcs + precision_lcs)
+
+            total_f1 += f1
+
+        return total_f1
+
+    def _get_rouge_n_stats(
         self,
         predicted_tokens: torch.LongTensor,
         reference_tokens: torch.LongTensor,
         ngram_size: int,
-    ) -> Tuple[int, int]:
+    ) -> Tuple[float, float, float]:
         """
         Compare the predicted tokens to the reference (gold) tokens at the desired
-        ngram size and calculate the numerator and denominator for recall.
-
-        The numerator is the number of ngrams in the predicted sentences that match
-        with an ngram in the corresponding reference sentence, clipped by the total
-        count of that ngram in the reference sentence. The denominator is
-        the total count of reference ngrams.
+        ngram size and compute recall, precision and f1 sums
         """
         # TODO: fix not being able to import this normally
         from allennlp.training.util import ngrams
 
-        matches = 0
-        total_reference = 0
-        for batch_num in range(predicted_tokens.size(0)):
-            predicted_row = predicted_tokens[batch_num, :]
-            reference_row = reference_tokens[batch_num, :]
-            predicted_ngram_counts = ngrams(predicted_row, ngram_size, self._exclude_indices)
-            reference_ngram_counts = ngrams(reference_row, ngram_size, self._exclude_indices)
+        total_recall = 0.0
+        total_precision = 0.0
+        total_f1 = 0.0
+
+        for predicted_seq, reference_seq in zip(predicted_tokens, reference_tokens):
+            predicted_ngram_counts = ngrams(predicted_seq, ngram_size, self._exclude_indices)
+            reference_ngram_counts = ngrams(reference_seq, ngram_size, self._exclude_indices)
+
+            matches = 0
+            total_reference_ngrams = 0
             for ngram, count in reference_ngram_counts.items():
                 matches += min(predicted_ngram_counts[ngram], count)
-                total_reference += count
-        return matches, total_reference
+                total_reference_ngrams += count
+
+            total_predicted_ngrams = sum(predicted_ngram_counts.values())
+
+            if total_reference_ngrams == 0 or total_predicted_ngrams == 0 or matches == 0:
+                continue
+
+            recall = matches / total_reference_ngrams
+            precision = matches / total_predicted_ngrams
+
+            f1 = 2.0 * recall * precision / (recall + precision)
+
+            # Accumulate stats
+            total_recall += recall
+            total_precision += precision
+            total_f1 += f1
+
+        return total_recall, total_precision, total_f1
 
     @overrides
     def __call__(
@@ -90,11 +178,24 @@ class ROUGE(Metric):
 
         None
         """
+        # ROUGE-N
         predictions, gold_targets = self.detach_tensors(predictions, gold_targets)
         for n in range(1, self._ngram_size + 1):
-            recall_matches, recall_totals = self._get_recall_counts(predictions, gold_targets, n)
-            self._recall_matches[n] += recall_matches
-            self._recall_totals[n] += recall_totals
+
+            recall, precision, f1 = self._get_rouge_n_stats(predictions, gold_targets, n)
+            self._total_rouge_n_recalls[n] += recall
+            self._total_rouge_n_precisions[n] += precision
+            self._total_rouge_n_f1s[n] += f1
+
+        # ROUGE-L
+        self._total_rouge_l_f1 += self._get_rouge_l_score(predictions, gold_targets)
+
+        self._total_sequence_count += len(predictions)
+
+    def _metric_mean(self, metric_sum):
+        if self._total_sequence_count == 0:
+            return 0.0
+        return metric_sum / self._total_sequence_count
 
     @overrides
     def get_metric(self, reset: bool = False) -> Dict[str, float]:
@@ -109,10 +210,37 @@ class ROUGE(Metric):
         Dict[str, float]:
             A dictionary containing `ROUGE-1` .. `ROUGE-ngram_size` scores.
         """
-        metrics = {
-            f"ROUGE{i}": self._recall_matches[i] / self._recall_totals[i]
-            for i in range(1, self._ngram_size + 1)
-        }
+
+        metrics = {}
+
+        # ROUGE-N
+        # Recall
+        metrics.update(
+            {
+                f"ROUGE-{i}_R": self._metric_mean(self._total_rouge_n_recalls[i])
+                for i in range(1, self._ngram_size + 1)
+            }
+        )
+
+        # Precision
+        metrics.update(
+            {
+                f"ROUGE-{i}_P": self._metric_mean(self._total_rouge_n_precisions[i])
+                for i in range(1, self._ngram_size + 1)
+            }
+        )
+
+        # F1
+        metrics.update(
+            {
+                f"ROUGE-{i}_F1": self._metric_mean(self._total_rouge_n_f1s[i])
+                for i in range(1, self._ngram_size + 1)
+            }
+        )
+
+        # ROUGE-L
+        # F1
+        metrics[f"ROUGE-L"] = self._metric_mean(self._total_rouge_l_f1)
 
         if reset:
             self.reset()

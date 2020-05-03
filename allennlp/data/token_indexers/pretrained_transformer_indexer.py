@@ -106,9 +106,9 @@ class PretrainedTransformerIndexer(TokenIndexer):
         self, indexed_tokens: IndexedTokenList, vocabulary: Vocabulary
     ) -> List[Token]:
         token_ids = indexed_tokens["token_ids"]
-        type_ids = indexed_tokens["type_ids"] if "type_ids" in indexed_tokens else None
+        type_ids = indexed_tokens.get("type_ids")
 
-        token_ids = self._preprocess_segmented_tokens(token_ids)
+        token_ids = self._preprocess_segmented_token_ids(token_ids)
 
         return [
             Token(
@@ -119,24 +119,15 @@ class PretrainedTransformerIndexer(TokenIndexer):
             for i in range(len(token_ids))
         ]
 
-    def _preprocess_segmented_tokens(self, tokens: List[Token]):
+    def _preprocess_segmented_token_ids(self, token_ids: List[int]):
         if self._max_length is None:
-            return tokens
+            return token_ids
 
-        segments_no_special_tokens = [
-            segment[self._num_added_start_tokens : -self._num_added_end_tokens]
-            for segment in [
-                tokens[i : i + self._max_length] for i in range(0, len(tokens), self._max_length)
-            ]
+        tokens_no_special_tokens = [
+            t for t in token_ids if t not in self._tokenizer.all_special_ids
         ]
 
-        flattened_tokens = [t for segment in segments_no_special_tokens for t in segment]
-        special_tokens = self._tokenizer.build_inputs_with_special_tokens([])
-        start, end = (
-            special_tokens[: self._num_added_start_tokens],
-            special_tokens[-self._num_added_end_tokens :],
-        )
-        return start + flattened_tokens + end
+        return self._tokenizer.build_inputs_with_special_tokens(tokens_no_special_tokens)
 
     def _extract_token_and_type_ids(
         self, tokens: List[Token]

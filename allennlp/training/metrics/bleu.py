@@ -79,9 +79,7 @@ class BLEU(Metric):
 
         clipped_matches = 0
         total_predicted = 0
-        for batch_num in range(predicted_tokens.size(0)):
-            predicted_row = predicted_tokens[batch_num, :]
-            reference_row = reference_tokens[batch_num, :]
+        for predicted_row, reference_row in zip(predicted_tokens, reference_tokens):
             predicted_ngram_counts = ngrams(predicted_row, ngram_size, self._exclude_indices)
             reference_ngram_counts = ngrams(reference_row, ngram_size, self._exclude_indices)
             for ngram, count in predicted_ngram_counts.items():
