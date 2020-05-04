@@ -15,6 +15,7 @@ except ImportError:
     amp = None
 import torch
 from torch.utils.data import DataLoader
+from torch.nn.utils import clip_grad_norm_
 from allennlp.data.dataloader import DataLoader as AllennlpDataLoader
 
 from allennlp.common.checks import ConfigurationError
@@ -36,7 +37,6 @@ from allennlp.training.learning_rate_schedulers import CosineWithRestarts
 from allennlp.training.learning_rate_schedulers import ExponentialLearningRateScheduler
 from allennlp.training.momentum_schedulers import MomentumScheduler
 from allennlp.training.moving_average import ExponentialMovingAverage
-from allennlp.training.util import sparse_clip_norm
 from allennlp.data import allennlp_collate
 
 
@@ -125,6 +125,7 @@ class TestTrainer(TrainerTestBase):
         )
         trainer.train()
 
+    @pytest.mark.gpu
     @pytest.mark.skipif(not torch.cuda.is_available(), reason="No CUDA device registered.")
     def test_trainer_can_run_cuda(self):
         self.model.cuda()
@@ -138,6 +139,7 @@ class TestTrainer(TrainerTestBase):
         assert "peak_gpu_0_memory_MB" in metrics
         assert isinstance(metrics["peak_gpu_0_memory_MB"], int)
 
+    @pytest.mark.gpu
     @pytest.mark.skipif(torch.cuda.device_count() < 2, reason="2 or more GPUs required.")
     def test_passing_trainer_multiple_gpus_raises_error(self):
         self.model.cuda()
@@ -1017,7 +1019,7 @@ class TestSparseClipGrad(AllenNlpTestCase):
         assert embedding.weight.grad.is_sparse
 
         # Now try to clip the gradients.
-        _ = sparse_clip_norm([embedding.weight], 1.5)
+        _ = clip_grad_norm_([embedding.weight], 1.5)
         # Final norm should be 1.5
         grad = embedding.weight.grad.coalesce()
         self.assertAlmostEqual(grad._values().norm(2.0).item(), 1.5, places=5)

@@ -10,6 +10,30 @@ on:
   - cron: '37 11 * * 1,2,3,4,5'  # early morning (11:37 UTC / 4:37 AM PDT) Monday - Friday
 
 jobs:
+  gpu_checks:
+    name: GPU Checks
+    if: github.repository == 'allenai/allennlp'  # self-hosted runner only available on main repo
+    runs-on: [self-hosted, GPU]
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set Docker label
+      run: |
+        if [[ $GITHUB_EVENT_NAME == 'release' ]]; then
+            echo "::set-env name=DOCKER_LABEL::${GITHUB_REF#refs/tags/}";
+        else
+            echo "::set-env name=DOCKER_LABEL::$GITHUB_SHA";
+        fi
+
+    - name: Build test image
+      run: |
+        make docker-test-image DOCKER_LABEL="$DOCKER_LABEL"
+
+    - name: Run GPU tests
+      run: |
+        make docker-test-run DOCKER_LABEL="$DOCKER_LABEL" ARGS='gpu-test'
+
   check_core:
     name: Check Core
     runs-on: ubuntu-latest
@@ -100,7 +124,7 @@ jobs:
 
     - name: Pull and install models repo
       env:
-        EXCLUDE_ALLENNLP_IN_SETUP: "true"
+        ALLENNLP_VERSION_OVERRIDE: ""  # Don't replace the core library.
       run: |
         git clone https://github.com/allenai/allennlp-models.git
         cd allennlp-models && pip install --upgrade --upgrade-strategy eager -e . -r dev-requirements.txt
@@ -231,11 +255,11 @@ jobs:
 
     - name: Build image
       run: |
-        make docker-image DOCKER_TAG=allennlp
+        make docker-image
 
     - name: Test image
       run: |
-        docker run --rm allennlp test-install
+        make docker-run ARGS='test-install'
 
     - name: Upload master image
       # Only run this for pushes to master on the main repo, not forks.
@@ -244,8 +268,8 @@ jobs:
         docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
 
         # Tag with current commit and 'latest'.
-        docker tag allennlp allennlp/commit:$GITHUB_SHA
-        docker tag allennlp allennlp/commit:latest
+        docker tag allennlp/allennlp:latest allennlp/commit:$GITHUB_SHA
+        docker tag allennlp/allennlp:latest allennlp/commit:latest
 
         # Push both tags.
         docker push allennlp/commit:$GITHUB_SHA
@@ -258,9 +282,8 @@ jobs:
         docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
         TAG=${GITHUB_REF#refs/tags/};
 
-        # Tag with release version and 'latest'.
-        docker tag allennlp allennlp/allennlp:$TAG
-        docker tag allennlp allennlp/allennlp:latest
+        # Tag with release version.
+        docker tag allennlp/allennlp:latest allennlp/allennlp:$TAG
 
         # Push both tags.
         docker push allennlp/allennlp:$TAG
@@ -315,7 +338,7 @@ jobs:
     - name: Set target folders
       run: |
         if [[ $GITHUB_EVENT_NAME == 'release' ]]; then
-            echo "::set-env name=DOCS_FOLDER::${GITHUB_REF#refs/tags/}"
+            echo "::set-env name=DOCS_FOLDER::${GITHUB_REF#refs/tags/}";
         else
             echo "::set-env name=DOCS_FOLDER::master";
         fi
@@ -395,7 +418,7 @@ jobs:
   # Publish the core distribution files to PyPI.
   publish:
     name: PyPI
-    needs: [check_core, check_models, build_package, test_package, docker, docs]
+    needs: [check_core, check_models, gpu_checks, build_package, test_package, docker, docs]
     # Only publish to PyPI on releases and nightly builds to "allenai/allennlp" (not forks).
     if: github.repository == 'allenai/allennlp' && github.event_name != 'push'
     runs-on: ubuntu-latest

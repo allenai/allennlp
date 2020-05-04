@@ -16,7 +16,7 @@ import torch
 import torch.distributed as dist
 import torch.optim.lr_scheduler
 from torch.nn.parallel import DistributedDataParallel
-
+from torch.nn.utils import clip_grad_norm_
 
 from allennlp.common import Lazy, Registrable, Tqdm
 from allennlp.common import util as common_util
@@ -393,7 +393,7 @@ class GradientDescentTrainer(Trainer):
                 ]
             else:
                 parameters_to_clip = [p for p in self.model.parameters() if p.grad is not None]
-            return training_util.sparse_clip_norm(parameters_to_clip, self._grad_norm)
+            return clip_grad_norm_(parameters_to_clip, self._grad_norm)
         else:
             return None
 

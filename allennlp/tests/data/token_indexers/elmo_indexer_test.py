@@ -64,7 +64,7 @@ class TestELMoTokenCharactersIndexer(AllenNlpTestCase):
             261,
             261,
         ]
-        assert indices == {"tokens": [expected_indices]}
+        assert indices == {"elmo_tokens": [expected_indices]}
 
     def test_eos_to_char_ids(self):
         indexer = ELMoTokenCharactersIndexer()
@@ -121,7 +121,7 @@ class TestELMoTokenCharactersIndexer(AllenNlpTestCase):
             261,
             261,
         ]
-        assert indices == {"tokens": [expected_indices]}
+        assert indices == {"elmo_tokens": [expected_indices]}
 
     def test_unicode_to_char_ids(self):
         indexer = ELMoTokenCharactersIndexer()
@@ -178,13 +178,13 @@ class TestELMoTokenCharactersIndexer(AllenNlpTestCase):
             261,
             261,
         ]
-        assert indices == {"tokens": [expected_indices]}
+        assert indices == {"elmo_tokens": [expected_indices]}
 
     def test_elmo_as_array_produces_token_sequence(self):
         indexer = ELMoTokenCharactersIndexer()
         tokens = [Token("Second"), Token(".")]
         indices = indexer.tokens_to_indices(tokens, Vocabulary())
-        padded_tokens = indexer.as_padded_tensor_dict(indices, padding_lengths={"tokens": 3})
+        padded_tokens = indexer.as_padded_tensor_dict(indices, padding_lengths={"elmo_tokens": 3})
         expected_padded_tokens = [
             [
                 259,
@@ -344,7 +344,7 @@ class TestELMoTokenCharactersIndexer(AllenNlpTestCase):
             ],
         ]
 
-        assert padded_tokens["tokens"].tolist() == expected_padded_tokens
+        assert padded_tokens["elmo_tokens"].tolist() == expected_padded_tokens
 
     def test_elmo_indexer_with_additional_tokens(self):
         indexer = ELMoTokenCharactersIndexer(tokens_to_add={"<first>": 1})
@@ -404,12 +404,12 @@ class TestELMoTokenCharactersIndexer(AllenNlpTestCase):
                 261,
             ]
         ]
-        assert indices["tokens"] == expected_indices
+        assert indices["elmo_tokens"] == expected_indices
 
     def test_elmo_empty_token_list(self):
         # Basic test
         indexer = ELMoTokenCharactersIndexer()
-        assert {"tokens": []} == indexer.get_empty_token_list()
+        assert {"elmo_tokens": []} == indexer.get_empty_token_list()
         # Real world test
         indexer = {"elmo": indexer}
         tokens_1 = TextField([Token("Apple")], indexer)
@@ -423,7 +423,7 @@ class TestELMoTokenCharactersIndexer(AllenNlpTestCase):
         a_batch = Batch([instance_1, instance_2])
         a_batch.index_instances(Vocabulary())
         batch_tensor = a_batch.as_tensor_dict()
-        elmo_target_token_indices = batch_tensor["targets"]["elmo"]["tokens"]
+        elmo_target_token_indices = batch_tensor["targets"]["elmo"]["elmo_tokens"]
         # The TextField that is empty should have been created using the
         # `get_empty_token_list` and then padded with zeros.
         empty_target = elmo_target_token_indices[0][1].numpy()
