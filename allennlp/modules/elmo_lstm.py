@@ -121,8 +121,9 @@ class ElmoLstm(_EncoderBase):
 
         # Returns
 
-        A `torch.Tensor` of shape (num_layers, batch_size, sequence_length, hidden_size),
-        where the num_layers dimension represents the LSTM output from that layer.
+        `torch.Tensor`
+            A `torch.Tensor` of shape (num_layers, batch_size, sequence_length, hidden_size),
+            where the num_layers dimension represents the LSTM output from that layer.
         """
         batch_size, total_sequence_length = mask.size()
         stacked_sequence_output, final_states, restoration_indices = self.sort_and_run_forward(

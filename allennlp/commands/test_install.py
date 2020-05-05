@@ -1,5 +1,5 @@
 """
-The ``test-install`` subcommand verifies
+The `test-install` subcommand verifies
 an installation by running the unit tests.
 
     $ allennlp test-install --help
@@ -29,6 +29,7 @@ from overrides import overrides
 import allennlp
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common.util import pushd
+
 
 logger = logging.getLogger(__name__)
 

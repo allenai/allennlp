@@ -150,12 +150,13 @@ class Elmo(torch.nn.Module, FromParams):
 
         # Returns
 
-        Dict with keys:
-        `'elmo_representations'` : `List[torch.Tensor]`
-            A `num_output_representations` list of ELMo representations for the input sequence.
-            Each representation is shape `(batch_size, timesteps, embedding_dim)`
-        `'mask'`:  `torch.BoolTensor`
-            Shape `(batch_size, timesteps)` long tensor with sequence mask.
+        `Dict[str, Union[torch.Tensor, List[torch.Tensor]]]`
+            A dict with the following keys:
+            - `'elmo_representations'` (`List[torch.Tensor]`) :
+              A `num_output_representations` list of ELMo representations for the input sequence.
+              Each representation is shape `(batch_size, timesteps, embedding_dim)`
+            - `'mask'` (`torch.BoolTensor`) :
+              Shape `(batch_size, timesteps)` long tensor with sequence mask.
         """
         # reshape the input if needed
         original_shape = inputs.size()
@@ -245,7 +246,7 @@ def batch_to_ids(batch: List[List[str]]) -> torch.Tensor:
     dataset = Batch(instances)
     vocab = Vocabulary()
     dataset.index_instances(vocab)
-    return dataset.as_tensor_dict()["elmo"]["character_ids"]["tokens"]
+    return dataset.as_tensor_dict()["elmo"]["character_ids"]["elmo_tokens"]
 
 
 class _ElmoCharacterEncoder(torch.nn.Module):
@@ -581,7 +582,7 @@ class _ElmoBiLm(torch.nn.Module):
                 type_representation, mask = add_sentence_boundary_token_ids(
                     embedded_inputs, mask_without_bos_eos, self._bos_embedding, self._eos_embedding
                 )
-            except RuntimeError:
+            except (RuntimeError, IndexError):
                 # Back off to running the character convolutions,
                 # as we might not have the words in the cache.
                 token_embedding = self._token_embedder(inputs)

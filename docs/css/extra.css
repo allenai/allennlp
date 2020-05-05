@@ -1,0 +1,9 @@
+h4 {
+    font-size: 0.9rem !important;
+    font-weight: 400 !important;
+    margin-top: 1.2em !important;
+}
+
+h2, h3, h4 {
+    color: #213744;
+}

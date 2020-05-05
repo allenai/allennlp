@@ -67,6 +67,7 @@ class Model(torch.nn.Module, Registrable):
     """
 
     _warn_for_unseparable_batches: Set[str] = set()
+    default_predictor: Optional[str] = None
 
     def __init__(self, vocab: Vocabulary, regularizer: RegularizerApplicator = None) -> None:
         super().__init__()
@@ -116,7 +117,7 @@ class Model(torch.nn.Module, Registrable):
 
         # Parameters
 
-        inputs:
+        *inputs :
             Tensors comprising everything needed to perform a training update, `including` labels,
             which should be optional (i.e have a default value of `None`).  At inference time,
             simply pass the relevant inputs, not including the labels.
@@ -151,7 +152,7 @@ class Model(torch.nn.Module, Registrable):
 
         # Parameters
 
-        instances : List[Instance], required
+        instances : `List[Instance]`, required
             The instances to run the model on.
 
         # Returns
@@ -348,20 +349,20 @@ class Model(torch.nn.Module, Registrable):
 
         # Parameters
 
-        config: Params
+        config : `Params`
             The configuration that was used to train the model. It should definitely
             have a `model` section, and should probably have a `trainer` section
             as well.
-        serialization_dir: str = None
+        serialization_dir: `str = None`
             The directory containing the serialized weights, parameters, and vocabulary
             of the model.
-        weights_file: str = None
+        weights_file: `str = None`
             By default we load the weights from `best.th` in the serialization
             directory, but you can override that value here.
-        cuda_device: int = -1
+        cuda_device: `int = -1`
             By default we load the model on the CPU, but if you want to load it
             for GPU usage you can specify the id of your GPU here
-        opt_level : `str`, optional, (default = `None`)
+        opt_level : `str`, optional (default = `None`)
             Each `opt_level` establishes a set of properties that govern Amp’s implementation of pure or mixed
             precision training. Must be a choice of `"O0"`, `"O1"`, `"O2"`, or `"O3"`.
             See the Apex [documentation](https://nvidia.github.io/apex/amp.html#opt-levels-and-properties) for
@@ -370,7 +371,7 @@ class Model(torch.nn.Module, Registrable):
 
         # Returns
 
-        model: Model
+        model : `Model`
             The model specified in the configuration, loaded with the serialized
             vocabulary and the trained weights.
         """
@@ -384,6 +385,12 @@ class Model(torch.nn.Module, Registrable):
         # This allows subclasses of Model to override _load.
 
         model_class: Type[Model] = cls.by_name(model_type)  # type: ignore
+        if not isinstance(model_class, type):
+            # If you're using from_archive to specify your model (e.g., for fine tuning), then you
+            # can't currently override the behavior of _load; we just use the default Model._load.
+            # If we really need to change this, we would need to implement a recursive
+            # get_model_class method, that recurses whenever it finds a from_archive model type.
+            model_class = Model
         return model_class._load(config, serialization_dir, weights_file, cuda_device, opt_level)
 
     def extend_embedder_vocab(self, embedding_sources_mapping: Dict[str, str] = None) -> None:
@@ -396,7 +403,7 @@ class Model(torch.nn.Module, Registrable):
 
         # Parameters
 
-        embedding_sources_mapping : Dict[str, str], (optional, default=None)
+        embedding_sources_mapping : `Dict[str, str]`, optional (default = `None`)
             Mapping from model_path to pretrained-file path of the embedding
             modules. If pretrained-file used at time of embedding initialization
             isn't available now, user should pass this mapping. Model path is
@@ -410,7 +417,7 @@ class Model(torch.nn.Module, Registrable):
             if hasattr(module, "extend_vocab"):
                 pretrained_file = embedding_sources_mapping.get(model_path)
                 module.extend_vocab(
-                    self.vocab, extension_pretrained_file=pretrained_file, model_path=model_path
+                    self.vocab, extension_pretrained_file=pretrained_file, model_path=model_path,
                 )
 
     @classmethod

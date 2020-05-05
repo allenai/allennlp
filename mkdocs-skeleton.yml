@@ -2,6 +2,9 @@ site_name: AllenNLP
 site_description: AllenNLP is a ..
 site_url: https://allennlp.org/
 
+extra_css:
+  - "css/extra.css"
+
 theme:
   name: material
   palette:
@@ -20,7 +23,11 @@ repo_name: allenai/allennlp
 # TODO(markn): Consider adding GA here, if we care about it.
 
 nav:
-- AllenNLP: README.md
+- Home: README.md
+- Versions:
+  - Latest: /latest/
+  - Stable: /stable/
+  - Master: /master/
 - Tutorials:
   - Predicting Paper Venues (pt1): tutorials/getting_started/predicting_paper_venues/predicting_paper_venues_pt1.md
   - Predicting Paper Venues (pt2): tutorials/getting_started/predicting_paper_venues/predicting_paper_venues_pt2.md

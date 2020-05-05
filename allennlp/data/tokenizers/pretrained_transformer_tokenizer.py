@@ -52,24 +52,34 @@ class PretrainedTransformerTokenizer(Tokenizer):
         - 'do_not_truncate': Do not truncate (raise an error if the input sequence is longer than max_length)
     calculate_character_offsets : `bool`, optional (default=False)
         Attempts to reconstruct character offsets for the instances of Token that this tokenizer produces.
-    tokenizer_kwargs: 'Dict[str, Any]'
-        Dictionary with additional arguments for `AutoTokenizer.from_pretrained`.
+    tokenizer_kwargs: `Dict[str, Any]`
+        Dictionary with
+        [additional arguments](https://github.com/huggingface/transformers/blob/155c782a2ccd103cf63ad48a2becd7c76a7d2115/transformers/tokenization_utils.py#L691)
+        for `AutoTokenizer.from_pretrained`.
 
-    [0]: https://github.com/huggingface/transformers/blob/155c782a2ccd103cf63ad48a2becd7c76a7d2115/transformers/tokenization_utils.py#L691
-
-    Argument descriptions are from [0].
     """  # noqa: E501
 
     def __init__(
         self,
         model_name: str,
         add_special_tokens: bool = True,
-        max_length: int = None,
+        max_length: Optional[int] = None,
         stride: int = 0,
         truncation_strategy: str = "longest_first",
-        tokenizer_kwargs: Dict[str, Any] = None,
+        tokenizer_kwargs: Optional[Dict[str, Any]] = None,
     ) -> None:
-        tokenizer_kwargs = tokenizer_kwargs or {}
+        if tokenizer_kwargs is None:
+            tokenizer_kwargs = {}
+        else:
+            tokenizer_kwargs = tokenizer_kwargs.copy()
+        if "use_fast" in tokenizer_kwargs:
+            if tokenizer_kwargs["use_fast"]:
+                logger.warning(
+                    "Fast huggingface tokenizers are known to break in certain scenarios."
+                )
+        else:
+            tokenizer_kwargs["use_fast"] = False
+        # As of transformers==2.8.0, fast tokenizers are broken.
         # Some tokenizers need to know during initialization whether they are going to produce special tokens or
         # not.
         self.tokenizer_with_special_tokens = AutoTokenizer.from_pretrained(
