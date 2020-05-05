@@ -989,9 +989,9 @@ class TestTrainer(TrainerTestBase):
 
 
 class TestApexTrainer(TrainerTestBase):
+    @pytest.mark.gpu
     @pytest.mark.skipif(not torch.cuda.is_available(), reason="No CUDA device registered.")
     @pytest.mark.skipif(amp is None, reason="Apex is not installed.")
-    @pytest.mark.spawn
     def test_trainer_can_run_amp(self):
         self.model.cuda()
         trainer = GradientDescentTrainer(

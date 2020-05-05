@@ -38,7 +38,7 @@ git+https://github.com/NiklasRosenstein/pydoc-markdown.git@b469839ceb598df3d7e71
 
 markdown-include==0.5.1
 # Package for the material theme for mkdocs
-mkdocs-material==5.1.4
+mkdocs-material==5.1.5
 
 #### PACKAGE-UPLOAD PACKAGES ####
 
