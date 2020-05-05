@@ -13,6 +13,7 @@ MD_DOCS_EXTRAS = $(addprefix $(MD_DOCS_ROOT),README.md LICENSE.md ROADMAP.md CON
 DOCKER_LABEL    = latest
 DOCKER_TAG      = allennlp/allennlp:$(DOCKER_LABEL)
 DOCKER_TEST_TAG = allennlp/test:$(DOCKER_LABEL)
+DOCKER_RUN_CMD  = docker run --rm -v $$HOME/.allennlp:/root/.allennlp
 
 ifeq ($(shell uname),Darwin)
 	ifeq ($(shell which gsed),)
@@ -134,7 +135,7 @@ docker-image :
 
 .PHONY : docker-run
 docker-run :
-	docker run --rm $(DOCKER_TAG) $(ARGS)
+	$(DOCKER_RUN_CMD) $(DOCKER_TAG) $(ARGS)
 
 .PHONY : docker-test-image
 docker-test-image :
@@ -142,4 +143,4 @@ docker-test-image :
 
 .PHONY : docker-test-run
 docker-test-run :
-	docker run --rm --gpus 2 $(DOCKER_TEST_TAG) $(ARGS)
+	$(DOCKER_RUN_CMD) --gpus 2 $(DOCKER_TEST_TAG) $(ARGS)
