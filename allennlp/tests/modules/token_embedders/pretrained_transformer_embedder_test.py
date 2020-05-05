@@ -31,12 +31,12 @@ class TestPretrainedTransformerEmbedder(AllenNlpTestCase):
 
         sentence1 = "A, AllenNLP sentence."
         tokens1 = tokenizer.tokenize(sentence1)
-        expected_tokens1 = ["[CLS]", "a", ",", "allen", "##nl", "##p", "sentence", ".", "[SEP]"]
+        expected_tokens1 = ["[CLS]", "A", ",", "Allen", "NL", "P", "sentence", ".", "[SEP]"]
         assert [t.text for t in tokens1] == expected_tokens1
 
         sentence2 = "AllenNLP is great"
         tokens2 = tokenizer.tokenize(sentence2)
-        expected_tokens2 = ["[CLS]", "allen", "##nl", "##p", "is", "great", "[SEP]"]
+        expected_tokens2 = ["[CLS]", "Allen", "NL", "P", "is", "great", "[SEP]"]
         assert [t.text for t in tokens2] == expected_tokens2
 
         vocab = Vocabulary()

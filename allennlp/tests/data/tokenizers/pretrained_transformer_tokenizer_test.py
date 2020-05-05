@@ -8,7 +8,7 @@ class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
         tokenizer = PretrainedTransformerTokenizer("roberta-base")
 
         sentence = "A, <mask> AllenNLP sentence."
-        expected_tokens = ["<s>", " A", ",", "<mask>", " Allen", "N", "LP", " sentence", ".", "</s>"]
+        expected_tokens = ["<s>", "A", ",", "<mask>", "Allen", "N", "LP", "sentence", ".", "</s>"]
         tokens = [t.text for t in tokenizer.tokenize(sentence)]
         assert tokens == expected_tokens
 
@@ -64,19 +64,7 @@ class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
             ".",
             "[SEP]",
         ]
-        expected_idxs = [
-            None,
-            0,
-            1,
-            None,  # TODO
-            9,
-            16,
-            21,
-            23,
-            25,
-            33,
-            None,
-        ]
+        expected_idxs = [None, 0, 1, 3, 9, 16, 21, 23, 25, 33, None]
         tokenizer = PretrainedTransformerTokenizer("bert-base-uncased")
         tokenized = tokenizer.tokenize(sentence)
         tokens = [t.text for t in tokenized]
@@ -99,7 +87,7 @@ class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
             ".",
             "[SEP]",
         ]
-        expected_idxs = [None, 0, 1, 3, 5, 6, 9, 16, 21, 23, 25, 33, None]
+        expected_idxs = [None, 0, 1, 3, 9, 16, 21, 23, 25, 33, None]
         tokenizer = PretrainedTransformerTokenizer("bert-base-cased")
         tokenized = tokenizer.tokenize(sentence)
         tokens = [t.text for t in tokenized]
@@ -111,18 +99,18 @@ class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
         sentence = "A, naïve <mask> AllenNLP sentence."
         expected_tokens = [
             "<s>",
-            " A",
+            "A",
             ",",
-            " naïve",
+            "naïve",
             "<mask>",
-            " Allen",
+            "Allen",
             "N",
             "LP",
-            " sentence",
+            "sentence",
             ".",
             "</s>",
         ]
-        expected_idxs = [None, 0, 1, None, 9, 16, 21, 22, 25, 33, None]
+        expected_idxs = [None, 0, 1, 3, 9, 16, 21, 22, 25, 33, None]
         tokenizer = PretrainedTransformerTokenizer("roberta-base")
         tokenized = tokenizer.tokenize(sentence)
         tokens = [t.text for t in tokenized]
@@ -140,79 +128,6 @@ class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
             tokenized = tokenizer.tokenize(sentence)
             assert tokenized[-2].text == "."
             assert tokenized[-2].idx == len(sentence) - 1
-
-    def test_token_idx_sentence_pairs(self):
-        first_sentence = "I went to the zoo yesterday, but they had only one animal."
-        second_sentence = "It was a shitzu."
-        expected_tokens = [
-            "<s>",
-            " I",
-            " went",
-            " to",
-            " the",
-            " zoo",
-            " yesterday",
-            ",",
-            " but",
-            " they",
-            " had",
-            " only",
-            " one",
-            " animal",
-            ".",
-            "</s>",
-            "</s>",
-            " It",
-            " was",
-            " a",
-            " sh",
-            "itz",
-            "u",
-            ".",
-            "</s>",
-        ]
-        expected_idxs = [
-            None,
-            0,
-            2,
-            7,
-            10,
-            14,
-            18,
-            27,
-            29,
-            33,
-            38,
-            42,
-            47,
-            51,
-            57,
-            None,
-            None,
-            58,
-            61,
-            65,
-            67,
-            69,
-            72,
-            73,
-            None,
-        ]
-
-        tokenizer = PretrainedTransformerTokenizer("roberta-base")
-        tokenized = tokenizer.tokenize_sentence_pair(first_sentence, second_sentence)
-        tokens = [t.text for t in tokenized]
-        assert tokens == expected_tokens
-        idxs = [t.idx for t in tokenized]
-        assert idxs == expected_idxs
-
-        # Assert that the first and the second sentence are run together with no space in between.
-        first_sentence_end_index = tokens.index("</s>") - 1
-        second_sentence_start_index = first_sentence_end_index + 3
-        assert (
-            idxs[first_sentence_end_index] + len(tokens[first_sentence_end_index])
-            == idxs[second_sentence_start_index]
-        )
 
     def test_intra_word_tokenize(self):
         tokenizer = PretrainedTransformerTokenizer("bert-base-cased")
@@ -273,17 +188,15 @@ class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
             "[CLS]",
             "A",
             ",",
-            "[UNK]",
             "[MASK]",
             "Allen",
             "NL",
             "P",
-            "[UNK]",
             "sentence",
             ".",
             "[SEP]",
         ]
-        expected_offsets = [(1, 2), (3, 3), (4, 4), (5, 7), (8, 8), (9, 10)]
+        expected_offsets = [(1, 2), None, (3, 3), (4, 6), None, (7, 8)]
         tokens, offsets = tokenizer.intra_word_tokenize(sentence)
         tokens = [t.text for t in tokens]
         assert tokens == expected_tokens

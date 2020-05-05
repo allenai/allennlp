@@ -72,21 +72,16 @@ class PretrainedTransformerTokenizer(Tokenizer):
             tokenizer_kwargs = {}
         else:
             tokenizer_kwargs = tokenizer_kwargs.copy()
-        if "use_fast" in tokenizer_kwargs:
-            if tokenizer_kwargs["use_fast"]:
-                logger.warning(
-                    "Fast huggingface tokenizers are known to break in certain scenarios."
-                )
-        else:
-            tokenizer_kwargs["use_fast"] = False
-        # As of transformers==2.8.0, fast tokenizers are broken.
+        if "use_fast" not in tokenizer_kwargs:
+            tokenizer_kwargs["use_fast"] = True
+
         # Some tokenizers need to know during initialization whether they are going to produce special tokens or
         # not.
         self.tokenizer_with_special_tokens = AutoTokenizer.from_pretrained(
-            model_name, use_fast=True, add_special_tokens=True, **tokenizer_kwargs
+            model_name, add_special_tokens=True, **tokenizer_kwargs
         )
         self.tokenizer_without_special_tokens = AutoTokenizer.from_pretrained(
-            model_name, use_fast=True, add_special_tokens=False, **tokenizer_kwargs
+            model_name, add_special_tokens=False, **tokenizer_kwargs
         )
 
         self._add_special_tokens = add_special_tokens
@@ -109,7 +104,6 @@ class PretrainedTransformerTokenizer(Tokenizer):
     def tokenize(self, text: str) -> List[Token]:
         """
         This method only handles a single sentence (or sequence) of text.
-        Refer to the `tokenize_sentence_pair` method if you have a sentence pair.
         """
         encoded_tokens = self.tokenizer.encode_plus(
             text=text,
@@ -175,7 +169,6 @@ class PretrainedTransformerTokenizer(Tokenizer):
             tokens = []
             offsets = []
             for token_string in string_tokens:
-                print(token_string)
                 wordpieces = self.tokenizer_without_special_tokens.encode_plus(
                     token_string,
                     add_special_tokens=False,
@@ -185,11 +178,14 @@ class PretrainedTransformerTokenizer(Tokenizer):
                     return_token_type_ids=False,
                 )
                 wp_ids, wp_offsets = wordpieces["input_ids"], wordpieces["offset_mapping"]
-                offsets.append((len(tokens), len(tokens) + len(wp_ids) - 1))
-                tokens.extend(
-                    Token(text=token_string[wp_start:wp_end], text_id=wp_id)
-                    for wp_id, (wp_start, wp_end) in zip(wp_ids, wp_offsets)
-                )
+                if len(wp_ids) > 0:
+                    offsets.append((len(tokens), len(tokens) + len(wp_ids) - 1))
+                    tokens.extend(
+                        Token(text=token_string[wp_start:wp_end], text_id=wp_id)
+                        for wp_id, (wp_start, wp_end) in zip(wp_ids, wp_offsets)
+                    )
+                else:
+                    offsets.append(None)
             return tokens, offsets
 
         dummy_a = 2000
@@ -220,8 +216,11 @@ class PretrainedTransformerTokenizer(Tokenizer):
             if token_id in dummy_map:
                 tokens, offsets = dummy_map[token_id]
                 offsets_with_special_tokens.extend(
-                    (start + len(tokens_with_special_tokens), end + len(tokens_with_special_tokens))
-                    for start, end in offsets
+                    (
+                        offset[0] + len(tokens_with_special_tokens),
+                        offset[1] + len(tokens_with_special_tokens)
+                    ) if offset is not None else None
+                    for offset in offsets
                 )
                 tokens_with_special_tokens.extend(
                     dataclasses.replace(t, type_id=type_id) for t in tokens
