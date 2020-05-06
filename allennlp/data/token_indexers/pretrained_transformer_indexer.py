@@ -1,7 +1,7 @@
 from typing import Dict, List, Optional, Tuple
 import logging
 import torch
-from allennlp.common.util import pad_sequence_to_length, sanitize_wordpiece
+from allennlp.common.util import pad_sequence_to_length
 
 from overrides import overrides
 

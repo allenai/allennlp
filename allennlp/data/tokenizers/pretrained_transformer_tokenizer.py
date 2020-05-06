@@ -165,9 +165,9 @@ class PretrainedTransformerTokenizer(Tokenizer):
 
         def tokens_from_string_tokens(
             string_tokens: List[str],
-        ) -> Tuple[List[Token], List[Tuple[int, int]]]:
-            tokens = []
-            offsets = []
+        ) -> Tuple[List[Token], List[Optional[Tuple[int, int]]]]:
+            tokens: List[Token] = []
+            offsets: List[Optional[Tuple[int, int]]] = []
             for token_string in string_tokens:
                 wordpieces = self.tokenizer_without_special_tokens.encode_plus(
                     token_string,
@@ -210,16 +210,18 @@ class PretrainedTransformerTokenizer(Tokenizer):
         dummy_type_ids = dummy_token_ids["token_type_ids"]
         dummy_token_ids = dummy_token_ids["input_ids"]
 
-        tokens_with_special_tokens = []
-        offsets_with_special_tokens = []
+        tokens_with_special_tokens: List[Token] = []
+        offsets_with_special_tokens: List[Optional[Tuple[int, int]]] = []
         for token_id, type_id in zip(dummy_token_ids, dummy_type_ids):
             if token_id in dummy_map:
                 tokens, offsets = dummy_map[token_id]
                 offsets_with_special_tokens.extend(
                     (
                         offset[0] + len(tokens_with_special_tokens),
-                        offset[1] + len(tokens_with_special_tokens)
-                    ) if offset is not None else None
+                        offset[1] + len(tokens_with_special_tokens),
+                    )
+                    if offset is not None
+                    else None
                     for offset in offsets
                 )
                 tokens_with_special_tokens.extend(
@@ -285,6 +287,8 @@ class PretrainedTransformerTokenizer(Tokenizer):
             else:
                 num_end += 1
 
-        assert num_start + num_middle + num_end == self.tokenizer.num_special_tokens_to_add(pair=True)
+        assert num_start + num_middle + num_end == self.tokenizer.num_special_tokens_to_add(
+            pair=True
+        )
         assert num_start + num_end == self.tokenizer.num_special_tokens_to_add(pair=False)
         return num_start, num_middle, num_end
