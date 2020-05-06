@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from overrides import overrides
 from transformers.tokenization_auto import AutoTokenizer
 
+from allennlp.common.util import sanitize_wordpiece
 from allennlp.data.tokenizers.token import Token
 from allennlp.data.tokenizers.tokenizer import Tokenizer
 
@@ -74,6 +75,7 @@ class PretrainedTransformerTokenizer(Tokenizer):
             tokenizer_kwargs = tokenizer_kwargs.copy()
         if "use_fast" not in tokenizer_kwargs:
             tokenizer_kwargs["use_fast"] = True
+            # Note: Just because we request a fast tokenizer doesn't mean we get one.
 
         # Some tokenizers need to know during initialization whether they are going to produce special tokens or
         # not.
@@ -173,16 +175,28 @@ class PretrainedTransformerTokenizer(Tokenizer):
                     token_string,
                     add_special_tokens=False,
                     return_tensors=None,
-                    return_offsets_mapping=True,
+                    return_offsets_mapping=self.tokenizer_without_special_tokens.is_fast,
                     return_attention_mask=False,
                     return_token_type_ids=False,
                 )
-                wp_ids, wp_offsets = wordpieces["input_ids"], wordpieces["offset_mapping"]
+                wp_ids, wp_offsets = wordpieces["input_ids"], wordpieces.get("offset_mapping")
+                if wp_offsets is None:
+                    from allennlp.common.util import sanitize_wordpiece
+
+                    wp_texts = [
+                        sanitize_wordpiece(wp)
+                        for wp in self.tokenizer_without_special_tokens.convert_ids_to_tokens(
+                            wp_ids
+                        )
+                    ]
+                else:
+                    wp_texts = [token_string[start:end] for start, end in wp_offsets]
+
                 if len(wp_ids) > 0:
                     offsets.append((len(tokens), len(tokens) + len(wp_ids) - 1))
                     tokens.extend(
-                        Token(text=token_string[wp_start:wp_end], text_id=wp_id)
-                        for wp_id, (wp_start, wp_end) in zip(wp_ids, wp_offsets)
+                        Token(text=wp_text, text_id=wp_id)
+                        for wp_id, wp_text in zip(wp_ids, wp_texts)
                     )
                 else:
                     offsets.append(None)
