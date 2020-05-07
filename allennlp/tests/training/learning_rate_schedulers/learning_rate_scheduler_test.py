@@ -21,7 +21,7 @@ class LearningRateSchedulersTest(AllenNlpTestCase):
                 ),
                 params=Params({"type": "reduce_on_plateau"}),
             ).step(None)
-        assert "learning rate scheduler requires a validation metric" in str(context.exception)
+            assert "learning rate scheduler requires a validation metric" in str(context.value)
 
     def test_reduce_on_plateau_works_when_metrics_exist(self):
         LearningRateScheduler.from_params(
