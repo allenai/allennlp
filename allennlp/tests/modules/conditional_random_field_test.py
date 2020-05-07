@@ -12,8 +12,8 @@ from allennlp.common.testing import AllenNlpTestCase
 
 
 class TestConditionalRandomField(AllenNlpTestCase):
-    def setUp(self):
-        super().setUp()
+    def setup_method(self):
+        super().setup_method()
         self.logits = torch.Tensor(
             [
                 [[0, 0, 0.5, 0.5, 0.2], [0, 0, 0.3, 0.3, 0.1], [0, 0, 0.9, 10, 1]],

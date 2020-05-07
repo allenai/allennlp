@@ -23,10 +23,10 @@ class TestMain(AllenNlpTestCase):
             "--silent",
         ]
 
-        with self.assertRaises(SystemExit) as cm:
+        with pytest.raises(SystemExit) as cm:
             main()
 
-        assert cm.exception.code == 2  # argparse code for incorrect usage
+        assert cm.value.code == 2  # argparse code for incorrect usage
 
     def test_subcommand_overrides(self):
         called = False
@@ -134,9 +134,9 @@ class TestMain(AllenNlpTestCase):
         sys.argv = ["allennlp"]
 
         available_plugins = set(discover_plugins())
-        self.assertSetEqual(set(), available_plugins)
+        assert available_plugins == set()
 
         with pushd(plugins_root):
             main()
             subcommands_available = Subcommand.list_available()
-            self.assertIn("d", subcommands_available)
+            assert "d" in subcommands_available

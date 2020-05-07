@@ -14,8 +14,8 @@ from allennlp.nn.util import sort_batch_by_length
 
 
 class TestAugmentedLSTM(AllenNlpTestCase):
-    def setUp(self):
-        super().setUp()
+    def setup_method(self):
+        super().setup_method()
         tensor = torch.rand([5, 7, 10])
         tensor[0, 3:, :] = 0
         tensor[1, 4:, :] = 0

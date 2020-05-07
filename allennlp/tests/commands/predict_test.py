@@ -21,8 +21,8 @@ from allennlp.predictors import Predictor, TextClassifierPredictor
 
 
 class TestPredict(AllenNlpTestCase):
-    def setUp(self):
-        super().setUp()
+    def setup_method(self):
+        super().setup_method()
         self.classifier_model_path = (
             self.FIXTURES_ROOT / "basic_classifier" / "serialization" / "model.tar.gz"
         )
@@ -215,7 +215,7 @@ class TestPredict(AllenNlpTestCase):
             "--predictor",
             "test-predictor",
         ]
-        with self.assertRaises(NotImplementedError):
+        with pytest.raises(NotImplementedError):
             main()
 
     def test_base_predictor(self):
@@ -296,10 +296,10 @@ class TestPredict(AllenNlpTestCase):
             "/path/to/archive",
         ]  # executable  # command  # archive, but no input file
 
-        with self.assertRaises(SystemExit) as cm:
+        with pytest.raises(SystemExit) as cm:
             main()
 
-        assert cm.exception.code == 2  # argparse code for incorrect usage
+        assert cm.value.code == 2  # argparse code for incorrect usage
 
     def test_can_specify_predictor(self):
         @Predictor.register("classification-explicit")

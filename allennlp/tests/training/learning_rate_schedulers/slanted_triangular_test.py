@@ -3,6 +3,7 @@ from copy import deepcopy
 from typing import Any, Dict, List, Tuple
 
 import torch
+import pytest
 
 from allennlp.data.dataset_readers.dataset_reader import AllennlpDataset
 from allennlp.common import Lazy, Params
@@ -45,8 +46,8 @@ def is_hat_shaped(learning_rates: List[float]):
 
 
 class SlantedTriangularTest(AllenNlpTestCase):
-    def setUp(self):
-        super().setUp()
+    def setup_method(self):
+        super().setup_method()
         self.model = torch.nn.Sequential(
             OrderedDict([("lin1", torch.nn.Linear(10, 10)), ("lin2", torch.nn.Linear(10, 10))])
         )
@@ -181,7 +182,7 @@ class SlantedTriangularTest(AllenNlpTestCase):
         assert optim.param_groups[-2]["lr"] == 1.0 / sched.ratio
         assert optim.param_groups[-3]["lr"] == 0.5 / sched.ratio
 
-        with self.assertRaises(ConfigurationError):
+        with pytest.raises(ConfigurationError):
             # num_epochs and num_steps_per_epoch are required
             LearningRateScheduler.from_params(
                 optimizer=optim, params=Params({"type": "slanted_triangular", "num_epochs": 5})
