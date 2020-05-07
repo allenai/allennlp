@@ -9,8 +9,8 @@ from allennlp.nn.util import sort_batch_by_length, get_lengths_from_binary_seque
 
 
 class TestEncoderBase(AllenNlpTestCase):
-    def setUp(self):
-        super().setUp()
+    def setup_method(self):
+        super().setup_method()
         self.lstm = LSTM(
             bidirectional=True, num_layers=3, input_size=3, hidden_size=7, batch_first=True
         )
@@ -267,7 +267,7 @@ class TestEncoderBase(AllenNlpTestCase):
 
         # Check that error is raised if mask has wrong batch size.
         bad_mask = torch.tensor([True, True, False])
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             self.encoder_base.reset_states(bad_mask)
 
         # Check that states are reset to None if no mask is provided.

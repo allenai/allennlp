@@ -15,8 +15,8 @@ from allennlp.common.params import Params
 
 
 class TestInitializers(AllenNlpTestCase):
-    def setUp(self):
-        super().setUp()
+    def setup_method(self):
+        super().setup_method()
         logging.getLogger("allennlp.nn.initializers").disabled = False
 
     def tearDown(self):

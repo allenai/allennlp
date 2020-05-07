@@ -3,6 +3,7 @@ from typing import List
 import torch
 from sklearn.metrics import precision_recall_fscore_support
 from torch.testing import assert_allclose
+import pytest
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase, multi_device
@@ -10,8 +11,8 @@ from allennlp.training.metrics import FBetaMeasure
 
 
 class FBetaMeasureTest(AllenNlpTestCase):
-    def setUp(self):
-        super().setUp()
+    def setup_method(self):
+        super().setup_method()
         # [0, 1, 1, 1, 3, 1]
         self.predictions = torch.tensor(
             [
@@ -45,19 +46,19 @@ class FBetaMeasureTest(AllenNlpTestCase):
     @multi_device
     def test_config_errors(self, device: str):
         # Bad beta
-        self.assertRaises(ConfigurationError, FBetaMeasure, beta=0.0)
+        pytest.raises(ConfigurationError, FBetaMeasure, beta=0.0)
 
         # Bad average option
-        self.assertRaises(ConfigurationError, FBetaMeasure, average="mega")
+        pytest.raises(ConfigurationError, FBetaMeasure, average="mega")
 
         # Empty input labels
-        self.assertRaises(ConfigurationError, FBetaMeasure, labels=[])
+        pytest.raises(ConfigurationError, FBetaMeasure, labels=[])
 
     @multi_device
     def test_runtime_errors(self, device: str):
         fbeta = FBetaMeasure()
         # Metric was never called.
-        self.assertRaises(RuntimeError, fbeta.get_metric)
+        pytest.raises(RuntimeError, fbeta.get_metric)
 
     @multi_device
     def test_fbeta_multiclass_state(self, device: str):

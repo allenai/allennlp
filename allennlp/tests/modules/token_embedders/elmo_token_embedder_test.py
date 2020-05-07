@@ -7,8 +7,8 @@ from allennlp.modules.token_embedders import ElmoTokenEmbedder
 
 
 class TestElmoTokenEmbedder(ModelTestCase):
-    def setUp(self):
-        super().setUp()
+    def setup_method(self):
+        super().setup_method()
         self.set_up_model(
             self.FIXTURES_ROOT / "elmo" / "config" / "characters_token_embedder.json",
             self.FIXTURES_ROOT / "data" / "conll2003.txt",

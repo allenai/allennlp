@@ -41,8 +41,8 @@ from allennlp.data import allennlp_collate
 
 
 class TrainerTestBase(AllenNlpTestCase):
-    def setUp(self):
-        super().setUp()
+    def setup_method(self):
+        super().setup_method()
         self.instances = SequenceTaggingDatasetReader().read(
             self.FIXTURES_ROOT / "data" / "sequence_tagging.tsv"
         )
@@ -1022,4 +1022,4 @@ class TestSparseClipGrad(AllenNlpTestCase):
         _ = clip_grad_norm_([embedding.weight], 1.5)
         # Final norm should be 1.5
         grad = embedding.weight.grad.coalesce()
-        self.assertAlmostEqual(grad._values().norm(2.0).item(), 1.5, places=5)
+        assert grad._values().norm(2.0).item() == pytest.approx(1.5, rel=1e-4)

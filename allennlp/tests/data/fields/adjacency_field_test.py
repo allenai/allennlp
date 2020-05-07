@@ -8,8 +8,8 @@ from allennlp.data import Vocabulary, Token
 
 
 class TestAdjacencyField(AllenNlpTestCase):
-    def setUp(self):
-        super().setUp()
+    def setup_method(self):
+        super().setup_method()
         self.text = TextField(
             [Token(t) for t in ["here", "is", "a", "sentence", "."]],
             {"words": SingleIdTokenIndexer("words")},

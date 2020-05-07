@@ -11,8 +11,8 @@ from allennlp.common.testing import AllenNlpTestCase
 
 
 class TestPrintResults(AllenNlpTestCase):
-    def setUp(self):
-        super().setUp()
+    def setup_method(self):
+        super().setup_method()
 
         self.out_dir1 = pathlib.Path(tempfile.mkdtemp(prefix="hi"))
         self.out_dir2 = pathlib.Path(tempfile.mkdtemp(prefix="hi"))

@@ -7,12 +7,13 @@ from allennlp.data.dataset_readers import TextClassificationJsonReader
 from allennlp.data.dataset_readers.dataset_reader import _LazyInstances
 
 
-class TestDatasetReader:
-    cache_directory = str(AllenNlpTestCase.FIXTURES_ROOT / "data_cache" / "with_prefix")
+class TestDatasetReader(AllenNlpTestCase):
+    def setup_method(self):
+        super().setup_method()
+        self.cache_directory = str(AllenNlpTestCase.FIXTURES_ROOT / "data_cache" / "with_prefix")
 
-    @pytest.fixture(autouse=True)
-    def cache_directory_fixture(self):
-        yield self.cache_directory
+    def teardown_method(self):
+        super().teardown_method()
         if os.path.exists(self.cache_directory):
             shutil.rmtree(self.cache_directory)
 
