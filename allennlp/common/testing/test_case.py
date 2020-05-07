@@ -61,7 +61,9 @@ class AllenNlpTestCase:
 
 _available_devices = ["cpu"] + (["cuda"] if torch.cuda.is_available() else [])
 
-multi_device = lambda f: pytest.mark.parametrize("device", _available_devices)(pytest.mark.gpu(f))
-"""
-Decorator that provides an argument `device` of type `str` for each available PyTorch device.
-"""
+
+def multi_device(test_method):
+    """
+    Decorator that provides an argument `device` of type `str` for each available PyTorch device.
+    """
+    return pytest.mark.parametrize("device", _available_devices)(pytest.mark.gpu(test_method))
