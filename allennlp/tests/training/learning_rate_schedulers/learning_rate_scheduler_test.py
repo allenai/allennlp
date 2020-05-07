@@ -16,7 +16,7 @@ class LearningRateSchedulersTest(AllenNlpTestCase):
     def test_reduce_on_plateau_error_throw_when_no_metrics_exist(self):
         with pytest.raises(
             ConfigurationError, match="learning rate scheduler requires a validation metric"
-        ) as context:
+        ):
             LearningRateScheduler.from_params(
                 optimizer=Optimizer.from_params(
                     model_parameters=self.model.named_parameters(), params=Params({"type": "adam"})
