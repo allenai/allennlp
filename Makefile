@@ -36,6 +36,9 @@ version :
 .PHONY : lint
 lint :
 	flake8 ./scripts $(SRC)
+
+.PHONY : format
+format :
 	black --check ./scripts $(SRC)
 
 .PHONY : typecheck
