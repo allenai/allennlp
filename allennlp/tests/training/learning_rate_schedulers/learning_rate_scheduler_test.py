@@ -14,14 +14,15 @@ class LearningRateSchedulersTest(AllenNlpTestCase):
         self.model = torch.nn.Sequential(torch.nn.Linear(10, 10))
 
     def test_reduce_on_plateau_error_throw_when_no_metrics_exist(self):
-        with pytest.raises(ConfigurationError) as context:
+        with pytest.raises(
+            ConfigurationError, match="learning rate scheduler requires a validation metric"
+        ) as context:
             LearningRateScheduler.from_params(
                 optimizer=Optimizer.from_params(
                     model_parameters=self.model.named_parameters(), params=Params({"type": "adam"})
                 ),
                 params=Params({"type": "reduce_on_plateau"}),
             ).step(None)
-            assert "learning rate scheduler requires a validation metric" in str(context.value)
 
     def test_reduce_on_plateau_works_when_metrics_exist(self):
         LearningRateScheduler.from_params(
