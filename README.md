@@ -32,6 +32,7 @@
 - [Pretrained Models](https://github.com/allenai/allennlp-hub/blob/master/allennlp_hub/pretrained/allennlp_pretrained.py)
 - [Continuous Build](https://github.com/allenai/allennlp/actions)
 - [Nightly Releases](https://pypi.org/project/allennlp/#history)
+- [Officially Supported Models](https://github.com/allenai/allennlp-models)
 
 ## Package Overview
 
