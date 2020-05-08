@@ -29,10 +29,6 @@ endif
 version :
 	@python -c 'from allennlp.version import VERSION; print(f"AllenNLP v{VERSION}")'
 
-.PHONY : foo
-foo :
-	@echo $(FOO)
-
 #
 # Testing helpers.
 #

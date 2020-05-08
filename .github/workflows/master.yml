@@ -18,7 +18,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    - name: Set Docker label
+    - name: Set Docker tag
       run: |
         if [[ $GITHUB_EVENT_NAME == 'release' ]]; then
             echo "::set-env name=DOCKER_TAG::${GITHUB_REF#refs/tags/}";
@@ -259,7 +259,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    - name: Set Docker label
+    - name: Set Docker image name
       run: |
         if [[ $GITHUB_EVENT_NAME == 'release' ]]; then
             echo "::set-env name=DOCKER_IMAGE_NAME::allennlp/allennlp:${GITHUB_REF#refs/tags/}";
