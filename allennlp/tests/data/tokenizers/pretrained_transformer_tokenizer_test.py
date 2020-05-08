@@ -208,6 +208,7 @@ class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
     def test_special_tokens_added(self):
         def get_token_ids(tokens: Iterable[Token]) -> List[int]:
             return [t.text_id for t in tokens]
+
         def get_type_ids(tokens: Iterable[Token]) -> List[int]:
             return [t.type_id for t in tokens]
 

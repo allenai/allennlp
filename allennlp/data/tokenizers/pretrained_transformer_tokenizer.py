@@ -1,4 +1,3 @@
-import dataclasses
 import logging
 from typing import Any, Dict, List, Optional, Tuple, Iterable
 
@@ -77,14 +76,16 @@ class PretrainedTransformerTokenizer(Tokenizer):
             tokenizer_kwargs["use_fast"] = True
             # Note: Just because we request a fast tokenizer doesn't mean we get one.
 
-        self.tokenizer = AutoTokenizer.from_pretrained(model_name, add_special_tokens=False, **tokenizer_kwargs)
+        self.tokenizer = AutoTokenizer.from_pretrained(
+            model_name, add_special_tokens=False, **tokenizer_kwargs
+        )
 
         self._add_special_tokens = add_special_tokens
         self._max_length = max_length
         self._stride = stride
         self._truncation_strategy = truncation_strategy
 
-        # Huggingface tokenizers have different ways of remembering whether they lowercase or not. Detecting it		             model_name, add_special_tokens=False, **tokenizer_kwargs
+        # Huggingface tokenizers have different ways of remembering whether they lowercase or not. Detecting it
         # this way seems like the least brittle way to do it.		         )
         tokenized = self.tokenizer.tokenize(
             "A"
@@ -94,14 +95,15 @@ class PretrainedTransformerTokenizer(Tokenizer):
 
         # Reverse-engineer the tokenizer for two sequences
         tokenizer_with_special_tokens = AutoTokenizer.from_pretrained(
-            model_name,
-            add_special_tokens=True,
-            **tokenizer_kwargs)
+            model_name, add_special_tokens=True, **tokenizer_kwargs
+        )
         dummy_output = tokenizer_with_special_tokens.encode_plus(
-            "1", "2",
+            "1",
+            "2",
             add_special_tokens=True,
             return_token_type_ids=True,
-            return_attention_mask=False)
+            return_attention_mask=False,
+        )
         dummy_a = self.tokenizer.encode("1", add_special_tokens=False)[0]
         assert dummy_a in dummy_output["input_ids"]
         dummy_b = self.tokenizer.encode("2", add_special_tokens=False)[0]
@@ -117,12 +119,17 @@ class PretrainedTransformerTokenizer(Tokenizer):
 
         seen_dummy_a = False
         seen_dummy_b = False
-        for token_id, token_type_id in zip(dummy_output["input_ids"], dummy_output["token_type_ids"]):
+        for token_id, token_type_id in zip(
+            dummy_output["input_ids"], dummy_output["token_type_ids"]
+        ):
             if token_id == dummy_a:
                 if seen_dummy_a or seen_dummy_b:  # seeing a twice or b before a
                     raise ValueError("Cannot auto-determine the number of special tokens added.")
                 seen_dummy_a = True
-                assert self.sequence_pair_first_token_type_id is None or self.sequence_pair_first_token_type_id == token_type_id, "multiple different token type ids found for the first sequence"
+                assert (
+                    self.sequence_pair_first_token_type_id is None
+                    or self.sequence_pair_first_token_type_id == token_type_id
+                ), "multiple different token type ids found for the first sequence"
                 self.sequence_pair_first_token_type_id = token_type_id
                 continue
 
@@ -130,14 +137,18 @@ class PretrainedTransformerTokenizer(Tokenizer):
                 if seen_dummy_b:  # seeing b twice
                     raise ValueError("Cannot auto-determine the number of special tokens added.")
                 seen_dummy_b = True
-                assert self.sequence_pair_second_token_type_id is None or self.sequence_pair_second_token_type_id == token_type_id, "multiple different token type ids found for the second sequence"
+                assert (
+                    self.sequence_pair_second_token_type_id is None
+                    or self.sequence_pair_second_token_type_id == token_type_id
+                ), "multiple different token type ids found for the second sequence"
                 self.sequence_pair_second_token_type_id = token_type_id
                 continue
 
             token = Token(
                 tokenizer_with_special_tokens.convert_ids_to_tokens(token_id),
                 text_id=token_id,
-                type_id=token_type_id)
+                type_id=token_type_id,
+            )
             if not seen_dummy_a:
                 self.sequence_pair_start_tokens.append(token)
             elif not seen_dummy_b:
@@ -153,10 +164,8 @@ class PretrainedTransformerTokenizer(Tokenizer):
 
         # Reverse-engineer the tokenizer for one sequence
         dummy_output = tokenizer_with_special_tokens.encode_plus(
-            "1",
-            add_special_tokens=True,
-            return_token_type_ids=True,
-            return_attention_mask=False)
+            "1", add_special_tokens=True, return_token_type_ids=True, return_attention_mask=False
+        )
 
         # storing the special tokens
         self.single_sequence_start_tokens = []
@@ -165,19 +174,25 @@ class PretrainedTransformerTokenizer(Tokenizer):
         self.single_sequence_token_type_id = None
 
         seen_dummy_a = False
-        for token_id, token_type_id in zip(dummy_output["input_ids"], dummy_output["token_type_ids"]):
+        for token_id, token_type_id in zip(
+            dummy_output["input_ids"], dummy_output["token_type_ids"]
+        ):
             if token_id == dummy_a:
                 if seen_dummy_a:
                     raise ValueError("Cannot auto-determine the number of special tokens added.")
                 seen_dummy_a = True
-                assert self.single_sequence_token_type_id is None or self.single_sequence_token_type_id == token_type_id, "multiple different token type ids found for the sequence"
+                assert (
+                    self.single_sequence_token_type_id is None
+                    or self.single_sequence_token_type_id == token_type_id
+                ), "multiple different token type ids found for the sequence"
                 self.single_sequence_token_type_id = token_type_id
                 continue
 
             token = Token(
                 tokenizer_with_special_tokens.convert_ids_to_tokens(token_id),
                 text_id=token_id,
-                type_id=token_type_id)
+                type_id=token_type_id,
+            )
             if not seen_dummy_a:
                 self.single_sequence_start_tokens.append(token)
             else:
@@ -330,9 +345,7 @@ class PretrainedTransformerTokenizer(Tokenizer):
 
                     wp_texts = [
                         sanitize_wordpiece(wp)
-                        for wp in self.tokenizer.convert_ids_to_tokens(
-                            wp_ids
-                        )
+                        for wp in self.tokenizer.convert_ids_to_tokens(wp_ids)
                     ]
                 else:
                     wp_texts = [token_string[start:end] for start, end in wp_offsets]
@@ -347,7 +360,9 @@ class PretrainedTransformerTokenizer(Tokenizer):
                     offsets.append(None)
             return tokens, offsets
 
-        def increment_offsets(offsets: Iterable[Optional[Tuple[int, int]]], increment: int) -> List[Optional[Tuple[int, int]]]:
+        def increment_offsets(
+            offsets: Iterable[Optional[Tuple[int, int]]], increment: int
+        ) -> List[Optional[Tuple[int, int]]]:
             return [
                 None if offset is None else (offset[0] + increment, offset[1] + increment)
                 for offset in offsets
@@ -363,10 +378,10 @@ class PretrainedTransformerTokenizer(Tokenizer):
             offsets_b = increment_offsets(
                 offsets_b,
                 (
-                        len(self.sequence_pair_start_tokens) +
-                        len(tokens) +
-                        len(self.sequence_pair_mid_tokens)
-                )
+                    len(self.sequence_pair_start_tokens)
+                    + len(tokens)
+                    + len(self.sequence_pair_mid_tokens)
+                ),
             )
             tokens = self.add_special_tokens(tokens, tokens_b)
             offsets_a = increment_offsets(offsets_a, len(self.sequence_pair_start_tokens))
@@ -378,12 +393,14 @@ class PretrainedTransformerTokenizer(Tokenizer):
     ) -> List[Token]:
         # Make sure we don't change the input parameters
         import copy
+
         tokens1 = copy.deepcopy(tokens1)
         tokens2 = copy.deepcopy(tokens2)
 
         # We add special tokens and also set token type ids.
         if tokens2 is None:
             import copy
+
             tokens1 = copy.deepcopy(tokens1)
             for token in tokens1:
                 token.type_id = self.single_sequence_token_type_id
@@ -393,7 +410,13 @@ class PretrainedTransformerTokenizer(Tokenizer):
                 token.type_id = self.sequence_pair_first_token_type_id
             for token in tokens2:
                 token.type_id = self.sequence_pair_second_token_type_id
-            return self.sequence_pair_start_tokens + tokens1 + self.sequence_pair_mid_tokens + tokens2 + self.sequence_pair_end_tokens
+            return (
+                self.sequence_pair_start_tokens
+                + tokens1
+                + self.sequence_pair_mid_tokens
+                + tokens2
+                + self.sequence_pair_end_tokens
+            )
 
     def special_tokens_for_sequence(self) -> int:
         return len(self.single_sequence_start_tokens) + len(self.single_sequence_end_tokens)
