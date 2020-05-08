@@ -5,9 +5,6 @@ import shutil
 import tempfile
 from unittest import mock
 
-import torch
-import pytest
-
 from allennlp.common.checks import log_pytorch_version_info
 
 TEST_DIR = tempfile.mkdtemp(prefix="allennlp_tests")
@@ -57,13 +54,3 @@ class AllenNlpTestCase:
     def teardown_method(self):
         shutil.rmtree(self.TEST_DIR)
         self.patcher.stop()
-
-
-_available_devices = ["cpu"] + (["cuda"] if torch.cuda.is_available() else [])
-
-
-def multi_device(test_method):
-    """
-    Decorator that provides an argument `device` of type `str` for each available PyTorch device.
-    """
-    return pytest.mark.parametrize("device", _available_devices)(pytest.mark.gpu(test_method))
