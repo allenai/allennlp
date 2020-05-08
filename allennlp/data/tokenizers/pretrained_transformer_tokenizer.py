@@ -86,7 +86,7 @@ class PretrainedTransformerTokenizer(Tokenizer):
         self._truncation_strategy = truncation_strategy
 
         # Huggingface tokenizers have different ways of remembering whether they lowercase or not. Detecting it
-        # this way seems like the least brittle way to do it.		         )
+        # this way seems like the least brittle way to do it.
         tokenized = self.tokenizer.tokenize(
             "A"
         )  # Use a single character that won't be cut into word pieces.
