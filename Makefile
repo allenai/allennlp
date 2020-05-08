@@ -10,10 +10,10 @@ MD_DOCS_CONF_SRC = mkdocs-skeleton.yml
 MD_DOCS_TGT = site/
 MD_DOCS_EXTRAS = $(addprefix $(MD_DOCS_ROOT),README.md LICENSE.md ROADMAP.md CONTRIBUTING.md)
 
-DOCKER_LABEL    = latest
-DOCKER_TAG      = allennlp/allennlp:$(DOCKER_LABEL)
-DOCKER_TEST_TAG = allennlp/test:$(DOCKER_LABEL)
-DOCKER_RUN_CMD  = docker run --rm -v $$HOME/.allennlp:/root/.allennlp
+DOCKER_TAG = latest
+DOCKER_IMAGE_NAME = allennlp/allennlp:$(DOCKER_TAG)
+DOCKER_TEST_IMAGE_NAME = allennlp/test:$(DOCKER_TAG)
+DOCKER_RUN_CMD = docker run --rm -v $$HOME/.allennlp:/root/.allennlp
 
 ifeq ($(shell uname),Darwin)
 	ifeq ($(shell which gsed),)
@@ -28,6 +28,10 @@ endif
 .PHONY : version
 version :
 	@python -c 'from allennlp.version import VERSION; print(f"AllenNLP v{VERSION}")'
+
+.PHONY : foo
+foo :
+	@echo $(FOO)
 
 #
 # Testing helpers.
@@ -134,16 +138,16 @@ docker-image :
 	docker build \
 			--pull \
 			-f Dockerfile \
-			-t $(DOCKER_TAG) .
+			-t $(DOCKER_IMAGE_NAME) .
 
 .PHONY : docker-run
 docker-run :
-	$(DOCKER_RUN_CMD) $(DOCKER_TAG) $(ARGS)
+	$(DOCKER_RUN_CMD) $(DOCKER_IMAGE_NAME) $(ARGS)
 
 .PHONY : docker-test-image
 docker-test-image :
-	docker build --pull -f Dockerfile.test -t $(DOCKER_TEST_TAG) .
+	docker build --pull -f Dockerfile.test -t $(DOCKER_TEST_IMAGE_NAME) .
 
 .PHONY : docker-test-run
 docker-test-run :
-	$(DOCKER_RUN_CMD) --gpus 2 $(DOCKER_TEST_TAG) $(ARGS)
+	$(DOCKER_RUN_CMD) --gpus 2 $(DOCKER_TEST_IMAGE_NAME) $(ARGS)

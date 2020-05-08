@@ -15,11 +15,11 @@ jobs:
 
     - name: Build test image
       run: |
-        make docker-test-image DOCKER_LABEL="$GITHUB_SHA"
+        make docker-test-image DOCKER_TAG="$GITHUB_SHA"
 
     - name: Run GPU tests
       run: |
-        make docker-test-run DOCKER_LABEL="$GITHUB_SHA" ARGS='gpu-test'
+        make docker-test-run DOCKER_TAG="$GITHUB_SHA" ARGS='gpu-test'
 
   check_core:
     name: Check Core
