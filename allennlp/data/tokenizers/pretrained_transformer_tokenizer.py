@@ -73,7 +73,7 @@ class PretrainedTransformerTokenizer(Tokenizer):
         else:
             tokenizer_kwargs = tokenizer_kwargs.copy()
         tokenizer_kwargs.setdefault("use_fast", True)
-            # Note: Just because we request a fast tokenizer doesn't mean we get one.
+        # Note: Just because we request a fast tokenizer doesn't mean we get one.
 
         self.tokenizer = AutoTokenizer.from_pretrained(
             model_name, add_special_tokens=False, **tokenizer_kwargs
