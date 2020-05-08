@@ -13,8 +13,8 @@ from allennlp.training import GradientDescentTrainer, Trainer
 
 
 class SimpleTaggerTest(ModelTestCase):
-    def setUp(self):
-        super().setUp()
+    def setup_method(self):
+        super().setup_method()
         self.set_up_model(
             self.FIXTURES_ROOT / "simple_tagger" / "experiment.json",
             self.FIXTURES_ROOT / "data" / "sequence_tagging.tsv",
@@ -71,8 +71,8 @@ class SimpleTaggerTest(ModelTestCase):
 
 
 class SimpleTaggerSpanF1Test(ModelTestCase):
-    def setUp(self):
-        super().setUp()
+    def setup_method(self):
+        super().setup_method()
         self.set_up_model(
             self.FIXTURES_ROOT / "simple_tagger_with_span_f1" / "experiment.json",
             self.FIXTURES_ROOT / "data" / "conll2003.txt",
@@ -87,8 +87,8 @@ class SimpleTaggerSpanF1Test(ModelTestCase):
 
 
 class SimpleTaggerRegularizationTest(ModelTestCase):
-    def setUp(self):
-        super().setUp()
+    def setup_method(self):
+        super().setup_method()
         param_file = self.FIXTURES_ROOT / "simple_tagger" / "experiment_with_regularization.json"
         self.set_up_model(param_file, self.FIXTURES_ROOT / "data" / "sequence_tagging.tsv")
         params = Params.from_file(param_file)

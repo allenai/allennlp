@@ -8,8 +8,8 @@ from allennlp.data.token_indexers import SingleIdTokenIndexer
 
 
 class TestSpanField(AllenNlpTestCase):
-    def setUp(self):
-        super().setUp()
+    def setup_method(self):
+        super().setup_method()
         self.indexers = {"words": SingleIdTokenIndexer("words")}
         self.text = TextField(
             [Token(t) for t in ["here", "is", "a", "sentence", "for", "spans", "."]], self.indexers

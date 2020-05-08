@@ -4,6 +4,7 @@ from typing import Iterator, List, Dict
 
 import torch
 from flaky import flaky
+import pytest
 
 from allennlp.commands.evaluate import evaluate_from_args, Evaluate, evaluate
 from allennlp.common.testing import AllenNlpTestCase
@@ -32,8 +33,8 @@ class DummyModel(Model):
 
 
 class TestEvaluate(AllenNlpTestCase):
-    def setUp(self):
-        super().setUp()
+    def setup_method(self):
+        super().setup_method()
 
         self.parser = argparse.ArgumentParser(description="Testing")
         subparsers = self.parser.add_subparsers(title="Commands", metavar="")
@@ -44,7 +45,7 @@ class TestEvaluate(AllenNlpTestCase):
         outputs = [{"loss": torch.Tensor([loss])} for loss in losses]
         data_loader = DummyDataLoader(outputs)
         metrics = evaluate(DummyModel(), data_loader, -1, "")
-        self.assertAlmostEqual(metrics["loss"], 8.0)
+        assert metrics["loss"] == pytest.approx(8.0)
 
     def test_evaluate_calculates_average_loss_with_weights(self):
         losses = [7.0, 9.0, 8.0]
@@ -56,7 +57,7 @@ class TestEvaluate(AllenNlpTestCase):
         ]
         data_loader = DummyDataLoader(outputs)
         metrics = evaluate(DummyModel(), data_loader, -1, "batch_weight")
-        self.assertAlmostEqual(metrics["loss"], (70 + 18 + 12) / 13.5)
+        assert metrics["loss"] == pytest.approx((70 + 18 + 12) / 13.5)
 
     @flaky
     def test_evaluate_from_args(self):

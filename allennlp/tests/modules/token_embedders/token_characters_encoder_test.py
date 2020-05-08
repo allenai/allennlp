@@ -13,8 +13,8 @@ from allennlp.common.testing import AllenNlpTestCase
 
 
 class TestTokenCharactersEncoder(AllenNlpTestCase):
-    def setUp(self):
-        super().setUp()
+    def setup_method(self):
+        super().setup_method()
         self.vocab = Vocabulary()
         self.vocab.add_token_to_namespace("1", "token_characters")
         self.vocab.add_token_to_namespace("2", "token_characters")

@@ -1,4 +1,5 @@
 import json
+import pytest
 
 from allennlp.common.testing import ModelTestCase
 
@@ -9,8 +10,8 @@ class ModelWithIncorrectValidationMetricTest(ModelTestCase):
     in `ensure_model_can_train_save_and_load`
     """
 
-    def setUp(self):
-        super().setUp()
+    def setup_method(self):
+        super().setup_method()
         self.set_up_model(
             self.FIXTURES_ROOT / "simple_tagger" / "model_test_case.jsonnet",
             self.FIXTURES_ROOT / "data" / "sequence_tagging.tsv",
@@ -18,7 +19,7 @@ class ModelWithIncorrectValidationMetricTest(ModelTestCase):
 
     def test_01_test_validation_metric_does_not_exist(self):
         overrides = {"trainer.num_epochs": 2}
-        self.assertRaises(
+        pytest.raises(
             AssertionError,
             self.ensure_model_can_train_save_and_load,
             self.param_file,
@@ -28,7 +29,7 @@ class ModelWithIncorrectValidationMetricTest(ModelTestCase):
         )
 
     def test_02a_test_validation_metric_terminal_value_not_set(self):
-        self.assertRaises(
+        pytest.raises(
             AssertionError,
             self.ensure_model_can_train_save_and_load,
             self.param_file,
@@ -37,7 +38,7 @@ class ModelWithIncorrectValidationMetricTest(ModelTestCase):
         )
 
     def test_02b_test_validation_metric_terminal_value_not_met(self):
-        self.assertRaises(
+        pytest.raises(
             AssertionError,
             self.ensure_model_can_train_save_and_load,
             self.param_file,

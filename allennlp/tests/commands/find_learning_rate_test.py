@@ -29,8 +29,8 @@ def is_matplotlib_installed():
 
 
 class TestFindLearningRate(AllenNlpTestCase):
-    def setUp(self):
-        super().setUp()
+    def setup_method(self):
+        super().setup_method()
         self.params = lambda: Params(
             {
                 "model": {
@@ -122,12 +122,12 @@ class TestFindLearningRate(AllenNlpTestCase):
             assert args.serialization_dir == "serialization_dir"
 
         # config is required
-        with self.assertRaises(SystemExit) as cm:
+        with pytest.raises(SystemExit) as cm:
             parser.parse_args(["find-lr", "-s", "serialization_dir"])
             assert cm.exception.code == 2  # argparse code for incorrect usage
 
         # serialization dir is required
-        with self.assertRaises(SystemExit) as cm:
+        with pytest.raises(SystemExit) as cm:
             parser.parse_args(["find-lr", "path/to/params"])
             assert cm.exception.code == 2  # argparse code for incorrect usage
 
@@ -154,8 +154,8 @@ class TestFindLearningRate(AllenNlpTestCase):
 
 
 class TestSearchLearningRate(AllenNlpTestCase):
-    def setUp(self):
-        super().setUp()
+    def setup_method(self):
+        super().setup_method()
         params = Params(
             {
                 "model": {

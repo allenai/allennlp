@@ -25,7 +25,7 @@ from allennlp.modules.token_embedders.embedding import format_embeddings_file_ur
 
 
 class TestVocabulary(AllenNlpTestCase):
-    def setUp(self):
+    def setup_method(self):
         token_indexer = SingleIdTokenIndexer("tokens")
         text_field = TextField(
             [Token(t) for t in ["a", "a", "a", "a", "b", "b", "c", "c", "c"]],
@@ -33,7 +33,7 @@ class TestVocabulary(AllenNlpTestCase):
         )
         self.instance = Instance({"text": text_field})
         self.dataset = Batch([self.instance])
-        super().setUp()
+        super().setup_method()
 
     def test_pickling(self):
         vocab = Vocabulary.from_instances(self.dataset)

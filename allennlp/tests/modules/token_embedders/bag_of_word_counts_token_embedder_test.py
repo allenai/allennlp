@@ -10,8 +10,8 @@ from allennlp.modules.token_embedders import BagOfWordCountsTokenEmbedder
 
 
 class TestBagOfWordCountsTokenEmbedder(AllenNlpTestCase):
-    def setUp(self):
-        super().setUp()
+    def setup_method(self):
+        super().setup_method()
         self.vocab = Vocabulary()
         self.vocab.add_token_to_namespace("1")
         self.vocab.add_token_to_namespace("2")

@@ -5,8 +5,8 @@ from allennlp.training.metrics import AttachmentScores
 
 
 class AttachmentScoresTest(AllenNlpTestCase):
-    def setUp(self):
-        super().setUp()
+    def setup_method(self):
+        super().setup_method()
         self.scorer = AttachmentScores()
 
         self.predictions = torch.Tensor([[0, 1, 3, 5, 2, 4], [0, 3, 2, 1, 0, 0]])

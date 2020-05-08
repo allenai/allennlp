@@ -62,15 +62,23 @@ jobs:
       run: |
         pip freeze
 
+    - name: Format
+      if: always()
+      run: |
+        make format
+
     - name: Lint
+      if: always()
       run: |
         make lint
 
     - name: Type check
+      if: always()
       run: |
         make typecheck
 
     - name: Run tests
+      if: always()
       run: |
         make test-with-cov
 
@@ -233,6 +241,10 @@ jobs:
     - name: Install core package
       run: |
         pip install $(ls dist/*.whl)
+
+    - name: Pip freeze
+      run: |
+        pip freeze
 
     - name: Test install
       run: |
