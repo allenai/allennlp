@@ -28,11 +28,11 @@ jobs:
 
     - name: Build test image
       run: |
-        make docker-test-image
+        make docker-test-image DOCKER_TAG=$DOCKER_TAG
 
     - name: Run GPU tests
       run: |
-        make docker-test-run ARGS='gpu-test'
+        make docker-test-run DOCKER_TAG=$DOCKER_TAG ARGS='gpu-test'
 
   check_core:
     name: Check Core
@@ -275,11 +275,11 @@ jobs:
 
     - name: Build image
       run: |
-        make docker-image
+        make docker-image DOCKER_IMAGE_NAME=$DOCKER_IMAGE_NAME
 
     - name: Test image
       run: |
-        make docker-run ARGS='test-install'
+        make docker-run DOCKER_IMAGE_NAME=$DOCKER_IMAGE_NAME ARGS='test-install'
 
     - name: Upload master image
       # Only run this for pushes to master on the main repo, not forks.
