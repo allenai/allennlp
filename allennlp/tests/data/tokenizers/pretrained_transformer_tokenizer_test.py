@@ -1,5 +1,8 @@
+from typing import Iterable, List
+
 from allennlp.common import Params
 from allennlp.common.testing import AllenNlpTestCase
+from allennlp.data import Token
 from allennlp.data.tokenizers import PretrainedTransformerTokenizer
 
 
@@ -165,7 +168,7 @@ class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
             "sentence",
             ".",
             "[SEP]",
-            "A",
+            "A",  # 10
             "sentence",
             ".",
             "[SEP]",
@@ -202,11 +205,45 @@ class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
         assert tokens == expected_tokens
         assert offsets == expected_offsets
 
-    def test_determine_num_special_tokens_added(self):
+    def test_special_tokens_added(self):
+        def get_token_ids(tokens: Iterable[Token]) -> List[int]:
+            return [t.text_id for t in tokens]
+        def get_type_ids(tokens: Iterable[Token]) -> List[int]:
+            return [t.type_id for t in tokens]
+
         tokenizer = PretrainedTransformerTokenizer("bert-base-cased")
-        assert tokenizer._determine_num_special_tokens_added() == (1, 1, 1)
+        assert get_token_ids(tokenizer.sequence_pair_start_tokens) == [101]
+        assert get_token_ids(tokenizer.sequence_pair_mid_tokens) == [102]
+        assert get_token_ids(tokenizer.sequence_pair_end_tokens) == [102]
+        assert get_token_ids(tokenizer.single_sequence_start_tokens) == [101]
+        assert get_token_ids(tokenizer.single_sequence_end_tokens) == [102]
+
+        assert get_type_ids(tokenizer.sequence_pair_start_tokens) == [0]
+        assert tokenizer.sequence_pair_first_token_type_id == 0
+        assert get_type_ids(tokenizer.sequence_pair_mid_tokens) == [0]
+        assert tokenizer.sequence_pair_second_token_type_id == 1
+        assert get_type_ids(tokenizer.sequence_pair_end_tokens) == [1]
+
+        assert get_type_ids(tokenizer.single_sequence_start_tokens) == [0]
+        assert tokenizer.single_sequence_token_type_id == 0
+        assert get_type_ids(tokenizer.single_sequence_end_tokens) == [0]
+
         tokenizer = PretrainedTransformerTokenizer("xlnet-base-cased")
-        assert tokenizer._determine_num_special_tokens_added() == (0, 1, 2)
+        assert get_token_ids(tokenizer.sequence_pair_start_tokens) == []
+        assert get_token_ids(tokenizer.sequence_pair_mid_tokens) == [4]
+        assert get_token_ids(tokenizer.sequence_pair_end_tokens) == [4, 3]
+        assert get_token_ids(tokenizer.single_sequence_start_tokens) == []
+        assert get_token_ids(tokenizer.single_sequence_end_tokens) == [4, 3]
+
+        assert get_type_ids(tokenizer.sequence_pair_start_tokens) == []
+        assert tokenizer.sequence_pair_first_token_type_id == 0
+        assert get_type_ids(tokenizer.sequence_pair_mid_tokens) == [0]
+        assert tokenizer.sequence_pair_second_token_type_id == 1
+        assert get_type_ids(tokenizer.sequence_pair_end_tokens) == [1, 2]
+
+        assert get_type_ids(tokenizer.single_sequence_start_tokens) == []
+        assert tokenizer.single_sequence_token_type_id == 0
+        assert get_type_ids(tokenizer.single_sequence_end_tokens) == [0, 2]
 
     def test_tokenizer_kwargs_default(self):
         text = "Hello there! General Kenobi."

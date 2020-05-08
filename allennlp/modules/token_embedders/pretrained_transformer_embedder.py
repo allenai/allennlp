@@ -41,8 +41,8 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         self.output_dim = self.transformer_model.config.hidden_size
 
         tokenizer = PretrainedTransformerTokenizer(model_name)
-        self._num_added_start_tokens = tokenizer.num_added_start_tokens
-        self._num_added_end_tokens = tokenizer.num_added_end_tokens
+        self._num_added_start_tokens = len(tokenizer.single_sequence_start_tokens)
+        self._num_added_end_tokens = len(tokenizer.single_sequence_end_tokens)
         self._num_added_tokens = self._num_added_start_tokens + self._num_added_end_tokens
 
     @overrides

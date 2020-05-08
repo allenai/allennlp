@@ -1,6 +1,6 @@
 import dataclasses
 import logging
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Iterable
 
 from overrides import overrides
 from transformers.tokenization_auto import AutoTokenizer
@@ -77,30 +77,115 @@ class PretrainedTransformerTokenizer(Tokenizer):
             tokenizer_kwargs["use_fast"] = True
             # Note: Just because we request a fast tokenizer doesn't mean we get one.
 
-        # Some tokenizers need to know during initialization whether they are going to produce special tokens or
-        # not.
-        self.tokenizer_with_special_tokens = AutoTokenizer.from_pretrained(
-            model_name, add_special_tokens=True, **tokenizer_kwargs
-        )
-        self.tokenizer_without_special_tokens = AutoTokenizer.from_pretrained(
-            model_name, add_special_tokens=False, **tokenizer_kwargs
-        )
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name, add_special_tokens=False, **tokenizer_kwargs)
 
         self._add_special_tokens = add_special_tokens
-        if self._add_special_tokens:
-            self.tokenizer = self.tokenizer_with_special_tokens
-        else:
-            self.tokenizer = self.tokenizer_without_special_tokens
-
         self._max_length = max_length
         self._stride = stride
         self._truncation_strategy = truncation_strategy
 
-        (
-            self.num_added_start_tokens,
-            self.num_added_middle_tokens,
-            self.num_added_end_tokens,
-        ) = self._determine_num_special_tokens_added()
+        # Huggingface tokenizers have different ways of remembering whether they lowercase or not. Detecting it		             model_name, add_special_tokens=False, **tokenizer_kwargs
+        # this way seems like the least brittle way to do it.		         )
+        tokenized = self.tokenizer.tokenize(
+            "A"
+        )  # Use a single character that won't be cut into word pieces.
+        detokenized = " ".join(tokenized)
+        self._tokenizer_lowercases = "a" in detokenized
+
+        # Reverse-engineer the tokenizer for two sequences
+        tokenizer_with_special_tokens = AutoTokenizer.from_pretrained(
+            model_name,
+            add_special_tokens=True,
+            **tokenizer_kwargs)
+        dummy_output = tokenizer_with_special_tokens.encode_plus(
+            "1", "2",
+            add_special_tokens=True,
+            return_token_type_ids=True,
+            return_attention_mask=False)
+        dummy_a = self.tokenizer.encode("1", add_special_tokens=False)[0]
+        assert dummy_a in dummy_output["input_ids"]
+        dummy_b = self.tokenizer.encode("2", add_special_tokens=False)[0]
+        assert dummy_b in dummy_output["input_ids"]
+
+        # storing the special tokens
+        self.sequence_pair_start_tokens = []
+        self.sequence_pair_mid_tokens = []
+        self.sequence_pair_end_tokens = []
+        # storing token type ids for the sequences
+        self.sequence_pair_first_token_type_id = None
+        self.sequence_pair_second_token_type_id = None
+
+        seen_dummy_a = False
+        seen_dummy_b = False
+        for token_id, token_type_id in zip(dummy_output["input_ids"], dummy_output["token_type_ids"]):
+            if token_id == dummy_a:
+                if seen_dummy_a or seen_dummy_b:  # seeing a twice or b before a
+                    raise ValueError("Cannot auto-determine the number of special tokens added.")
+                seen_dummy_a = True
+                assert self.sequence_pair_first_token_type_id is None or self.sequence_pair_first_token_type_id == token_type_id, "multiple different token type ids found for the first sequence"
+                self.sequence_pair_first_token_type_id = token_type_id
+                continue
+
+            if token_id == dummy_b:
+                if seen_dummy_b:  # seeing b twice
+                    raise ValueError("Cannot auto-determine the number of special tokens added.")
+                seen_dummy_b = True
+                assert self.sequence_pair_second_token_type_id is None or self.sequence_pair_second_token_type_id == token_type_id, "multiple different token type ids found for the second sequence"
+                self.sequence_pair_second_token_type_id = token_type_id
+                continue
+
+            token = Token(
+                tokenizer_with_special_tokens.convert_ids_to_tokens(token_id),
+                text_id=token_id,
+                type_id=token_type_id)
+            if not seen_dummy_a:
+                self.sequence_pair_start_tokens.append(token)
+            elif not seen_dummy_b:
+                self.sequence_pair_mid_tokens.append(token)
+            else:
+                self.sequence_pair_end_tokens.append(token)
+
+        assert (
+            len(self.sequence_pair_start_tokens)
+            + len(self.sequence_pair_mid_tokens)
+            + len(self.sequence_pair_end_tokens)
+        ) == self.tokenizer.num_special_tokens_to_add(pair=True)
+
+        # Reverse-engineer the tokenizer for one sequence
+        dummy_output = tokenizer_with_special_tokens.encode_plus(
+            "1",
+            add_special_tokens=True,
+            return_token_type_ids=True,
+            return_attention_mask=False)
+
+        # storing the special tokens
+        self.single_sequence_start_tokens = []
+        self.single_sequence_end_tokens = []
+        # storing token type id for the sequence
+        self.single_sequence_token_type_id = None
+
+        seen_dummy_a = False
+        for token_id, token_type_id in zip(dummy_output["input_ids"], dummy_output["token_type_ids"]):
+            if token_id == dummy_a:
+                if seen_dummy_a:
+                    raise ValueError("Cannot auto-determine the number of special tokens added.")
+                seen_dummy_a = True
+                assert self.single_sequence_token_type_id is None or self.single_sequence_token_type_id == token_type_id, "multiple different token type ids found for the sequence"
+                self.single_sequence_token_type_id = token_type_id
+                continue
+
+            token = Token(
+                tokenizer_with_special_tokens.convert_ids_to_tokens(token_id),
+                text_id=token_id,
+                type_id=token_type_id)
+            if not seen_dummy_a:
+                self.single_sequence_start_tokens.append(token)
+            else:
+                self.single_sequence_end_tokens.append(token)
+
+        assert (
+            len(self.single_sequence_start_tokens) + len(self.single_sequence_end_tokens)
+        ) == self.tokenizer.num_special_tokens_to_add(pair=False)
 
     @overrides
     def tokenize(self, text: str) -> List[Token]:
@@ -109,7 +194,7 @@ class PretrainedTransformerTokenizer(Tokenizer):
         """
         encoded_tokens = self.tokenizer.encode_plus(
             text=text,
-            add_special_tokens=self._add_special_tokens,
+            add_special_tokens=False,
             max_length=self._max_length,
             stride=self._stride,
             truncation_strategy=self._truncation_strategy,
@@ -145,7 +230,7 @@ class PretrainedTransformerTokenizer(Tokenizer):
                 sanitize_wordpiece(t) for t in self.tokenizer.convert_ids_to_tokens(token_ids)
             ]
             token_offsets = [None] * len(token_ids)
-            if self.tokenizer.do_lower_case:
+            if self._tokenizer_lowercases:
                 match_text = match_text.lower()
                 token_texts = [t.lower() for t in token_texts]
 
@@ -196,6 +281,10 @@ class PretrainedTransformerTokenizer(Tokenizer):
                 token_str = text[start:end]
 
             tokens.append(Token(text=token_str, text_id=token_id, type_id=token_type_id, idx=start))
+
+        if self._add_special_tokens:
+            tokens = self.add_special_tokens(tokens)
+
         return tokens
 
     def intra_word_tokenize(
@@ -213,7 +302,6 @@ class PretrainedTransformerTokenizer(Tokenizer):
     def intra_word_tokenize_sentence_pair(
         self, string_tokens_a: List[str], string_tokens_b: Optional[List[str]]
     ) -> Tuple[List[Token], List[Tuple[int, int]], Optional[List[Tuple[int, int]]]]:
-
         """
         Tokenizes each word into wordpieces separately and returns the wordpiece IDs.
         Also calculates offsets such that wordpieces[offsets[i][0]:offsets[i][1] + 1]
@@ -228,11 +316,11 @@ class PretrainedTransformerTokenizer(Tokenizer):
             tokens: List[Token] = []
             offsets: List[Optional[Tuple[int, int]]] = []
             for token_string in string_tokens:
-                wordpieces = self.tokenizer_without_special_tokens.encode_plus(
+                wordpieces = self.tokenizer.encode_plus(
                     token_string,
                     add_special_tokens=False,
                     return_tensors=None,
-                    return_offsets_mapping=self.tokenizer_without_special_tokens.is_fast,
+                    return_offsets_mapping=self.tokenizer.is_fast,
                     return_attention_mask=False,
                     return_token_type_ids=False,
                 )
@@ -242,7 +330,7 @@ class PretrainedTransformerTokenizer(Tokenizer):
 
                     wp_texts = [
                         sanitize_wordpiece(wp)
-                        for wp in self.tokenizer_without_special_tokens.convert_ids_to_tokens(
+                        for wp in self.tokenizer.convert_ids_to_tokens(
                             wp_ids
                         )
                     ]
@@ -259,107 +347,60 @@ class PretrainedTransformerTokenizer(Tokenizer):
                     offsets.append(None)
             return tokens, offsets
 
-        dummy_a = 2000
-        dummy_b = 3000
-        dummy_map: Dict[int, Tuple] = {dummy_a: tokens_from_string_tokens(string_tokens_a)}
-        if string_tokens_b is not None:
-            dummy_map[dummy_b] = tokens_from_string_tokens(string_tokens_b)
+        def increment_offsets(offsets: Iterable[Optional[Tuple[int, int]]], increment: int) -> List[Optional[Tuple[int, int]]]:
+            return [
+                None if offset is None else (offset[0] + increment, offset[1] + increment)
+                for offset in offsets
+            ]
 
+        tokens, offsets_a = tokens_from_string_tokens(string_tokens_a)
         if string_tokens_b is None:
-            dummy_token_ids = self.tokenizer_with_special_tokens.encode_plus(
-                [self.tokenizer_with_special_tokens.convert_ids_to_tokens(dummy_a)],
-                return_attention_mask=False,
-                add_special_tokens=True,
-            )
+            tokens = self.add_special_tokens(tokens)
+            offsets_a = increment_offsets(offsets_a, len(self.single_sequence_start_tokens))
+            offsets_b = None
         else:
-            dummy_token_ids = self.tokenizer_with_special_tokens.encode_plus(
-                self.tokenizer_with_special_tokens.convert_ids_to_tokens(dummy_a),
-                self.tokenizer_with_special_tokens.convert_ids_to_tokens(dummy_b),
-                return_attention_mask=False,
-                add_special_tokens=True,
+            tokens_b, offsets_b = tokens_from_string_tokens(string_tokens_b)
+            offsets_b = increment_offsets(
+                offsets_b,
+                (
+                        len(self.sequence_pair_start_tokens) +
+                        len(tokens) +
+                        len(self.sequence_pair_mid_tokens)
+                )
             )
-        dummy_type_ids = dummy_token_ids["token_type_ids"]
-        dummy_token_ids = dummy_token_ids["input_ids"]
+            tokens = self.add_special_tokens(tokens, tokens_b)
+            offsets_a = increment_offsets(offsets_a, len(self.sequence_pair_start_tokens))
 
-        tokens_with_special_tokens: List[Token] = []
-        offsets_with_special_tokens: List[Optional[Tuple[int, int]]] = []
-        for token_id, type_id in zip(dummy_token_ids, dummy_type_ids):
-            if token_id in dummy_map:
-                tokens, offsets = dummy_map[token_id]
-                offsets_with_special_tokens.extend(
-                    (
-                        offset[0] + len(tokens_with_special_tokens),
-                        offset[1] + len(tokens_with_special_tokens),
-                    )
-                    if offset is not None
-                    else None
-                    for offset in offsets
-                )
-                tokens_with_special_tokens.extend(
-                    dataclasses.replace(t, type_id=type_id) for t in tokens
-                )
-                del dummy_map[
-                    token_id
-                ]  # We can't output the same tokens twice, so we prevent it this way.
-            else:
-                tokens_with_special_tokens.append(
-                    Token(
-                        text_id=token_id,
-                        text=self.tokenizer.convert_ids_to_tokens(token_id),
-                        type_id=type_id,
-                    )
-                )
-        assert len(dummy_map) <= 0
+        return tokens, offsets_a, offsets_b
 
-        if string_tokens_b is None:
-            return tokens_with_special_tokens, offsets_with_special_tokens, None
+    def add_special_tokens(
+        self, tokens1: List[Token], tokens2: Optional[List[Token]] = None
+    ) -> List[Token]:
+        # Make sure we don't change the input parameters
+        import copy
+        tokens1 = copy.deepcopy(tokens1)
+        tokens2 = copy.deepcopy(tokens2)
+
+        # We add special tokens and also set token type ids.
+        if tokens2 is None:
+            import copy
+            tokens1 = copy.deepcopy(tokens1)
+            for token in tokens1:
+                token.type_id = self.single_sequence_token_type_id
+            return self.single_sequence_start_tokens + tokens1 + self.single_sequence_end_tokens
         else:
-            return (
-                tokens_with_special_tokens,
-                offsets_with_special_tokens[: len(string_tokens_a)],
-                offsets_with_special_tokens[len(string_tokens_a) :],
-            )
+            for token in tokens1:
+                token.type_id = self.sequence_pair_first_token_type_id
+            for token in tokens2:
+                token.type_id = self.sequence_pair_second_token_type_id
+            return self.sequence_pair_start_tokens + tokens1 + self.sequence_pair_mid_tokens + tokens2 + self.sequence_pair_end_tokens
 
-    def _determine_num_special_tokens_added(self) -> Tuple[int, int, int]:
-        """
-        Determines the number of tokens `tokenizer` adds to a sequence or sequence pair
-        in the start, middle, and end.
+    def special_tokens_for_sequence(self) -> int:
+        return len(self.single_sequence_start_tokens) + len(self.single_sequence_end_tokens)
 
-        # Returns
-
-        The number of tokens (`int`) that are inserted in the start, middle, and end of a sequence.
-        """
-        # Uses a slightly higher index to avoid tokenizer doing special things to lower-indexed
-        # tokens which might be special.
-        dummy_a = [1000]
-        dummy_b = [2000]
-        inserted = self.tokenizer.build_inputs_with_special_tokens(dummy_a, dummy_b)
-
-        num_start = num_middle = num_end = 0
-        seen_dummy_a = False
-        seen_dummy_b = False
-        for idx in inserted:
-            if idx == dummy_a[0]:
-                if seen_dummy_a or seen_dummy_b:  # seeing a twice or b before a
-                    raise ValueError("Cannot auto-determine the number of special tokens added.")
-                seen_dummy_a = True
-                continue
-
-            if idx == dummy_b[0]:
-                if seen_dummy_b:  # seeing b twice
-                    raise ValueError("Cannot auto-determine the number of special tokens added.")
-                seen_dummy_b = True
-                continue
-
-            if not seen_dummy_a:
-                num_start += 1
-            elif not seen_dummy_b:
-                num_middle += 1
-            else:
-                num_end += 1
-
-        assert num_start + num_middle + num_end == self.tokenizer.num_special_tokens_to_add(
-            pair=True
+    def special_tokens_for_pair(self) -> int:
+        return (
+            len(self.sequence_pair_start_tokens)
+            + len(self.sequence_pair_mid_tokens)
+            + len(self.sequence_pair_end_tokens)
         )
-        assert num_start + num_end == self.tokenizer.num_special_tokens_to_add(pair=False)
-        return num_start, num_middle, num_end
