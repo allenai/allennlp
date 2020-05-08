@@ -1,15 +1,14 @@
 import argparse
 import os
-import pytest
 
-import torch
+import pytest
 
 from allennlp.common import Params
 from allennlp.data import Vocabulary
 from allennlp.data import DataLoader
 from allennlp.models import Model
 from allennlp.common.checks import ConfigurationError
-from allennlp.common.testing import AllenNlpTestCase
+from allennlp.common.testing import AllenNlpTestCase, requires_multi_gpu
 from allennlp.commands.find_learning_rate import (
     search_learning_rate,
     find_learning_rate_from_args,
@@ -131,8 +130,7 @@ class TestFindLearningRate(AllenNlpTestCase):
             parser.parse_args(["find-lr", "path/to/params"])
             assert cm.exception.code == 2  # argparse code for incorrect usage
 
-    @pytest.mark.gpu
-    @pytest.mark.skipif(torch.cuda.device_count() < 2, reason="Need multiple GPUs.")
+    @requires_multi_gpu
     def test_find_learning_rate_multi_gpu(self):
         params = self.params()
         del params["trainer"]["cuda_device"]

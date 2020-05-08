@@ -13,7 +13,7 @@ import torch
 from allennlp.commands.train import Train, train_model, train_model_from_args, TrainModel
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
-from allennlp.common.testing import AllenNlpTestCase
+from allennlp.common.testing import AllenNlpTestCase, requires_gpu, requires_multi_gpu
 from allennlp.data import DatasetReader, Instance, Vocabulary
 from allennlp.data.dataloader import TensorDict
 from allennlp.models import load_archive, Model
@@ -90,8 +90,7 @@ class TestTrain(AllenNlpTestCase):
                 recover=True,
             )
 
-    @pytest.mark.gpu
-    @pytest.mark.skipif(torch.cuda.device_count() < 2, reason="Need multiple GPUs.")
+    @requires_gpu
     def test_train_model_distributed(self):
         params = lambda: Params(
             {
@@ -126,8 +125,7 @@ class TestTrain(AllenNlpTestCase):
         # Check we can load the serialized model
         assert load_archive(out_dir).model
 
-    @pytest.mark.gpu
-    @pytest.mark.skipif(torch.cuda.device_count() < 2, reason="Need multiple GPUs.")
+    @requires_multi_gpu
     def test_train_model_distributed_with_sharded_reader(self):
         params = lambda: Params(
             {
