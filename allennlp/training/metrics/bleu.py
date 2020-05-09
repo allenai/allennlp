@@ -94,12 +94,6 @@ class BLEU(Metric):
             return 0.0
         return math.exp(1.0 - self._reference_lengths / self._prediction_lengths)
 
-    def _get_valid_tokens_mask(self, tensor: torch.LongTensor) -> torch.ByteTensor:
-        valid_tokens_mask = torch.ones_like(tensor, dtype=torch.bool)
-        for index in self._exclude_indices:
-            valid_tokens_mask = valid_tokens_mask & (tensor != index)
-        return valid_tokens_mask
-
     @overrides
     def __call__(
         self,  # type: ignore
@@ -120,6 +114,9 @@ class BLEU(Metric):
 
         None
         """
+        # TODO: fix not being able to import this normally
+        from allennlp.training.util import get_valid_tokens_mask
+
         predictions, gold_targets = self.detach_tensors(predictions, gold_targets)
         for ngram_size, _ in enumerate(self._ngram_weights, start=1):
             precision_matches, precision_totals = self._get_modified_precision_counts(
@@ -131,9 +128,9 @@ class BLEU(Metric):
             self._prediction_lengths += predictions.size(0) * predictions.size(1)
             self._reference_lengths += gold_targets.size(0) * gold_targets.size(1)
         else:
-            valid_predictions_mask = self._get_valid_tokens_mask(predictions)
+            valid_predictions_mask = get_valid_tokens_mask(predictions, self._exclude_indices)
             self._prediction_lengths += valid_predictions_mask.sum().item()
-            valid_gold_targets_mask = self._get_valid_tokens_mask(gold_targets)
+            valid_gold_targets_mask = get_valid_tokens_mask(gold_targets, self._exclude_indices)
             self._reference_lengths += valid_gold_targets_mask.sum().item()
 
     @overrides

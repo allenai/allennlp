@@ -33,9 +33,9 @@ class ROUGE(Metric):
         self._ngram_size = ngram_size
         self._exclude_indices = exclude_indices or set()
 
-        self._total_rouge_n_recalls: Dict[int, float] = defaultdict(float)
-        self._total_rouge_n_precisions: Dict[int, float] = defaultdict(float)
-        self._total_rouge_n_f1s: Dict[int, float] = defaultdict(float)
+        self._total_rouge_n_recalls: Dict[int, float] = defaultdict(lambda: 0.0)
+        self._total_rouge_n_precisions: Dict[int, float] = defaultdict(lambda: 0.0)
+        self._total_rouge_n_f1s: Dict[int, float] = defaultdict(lambda: 0.0)
 
         self._total_rouge_l_f1 = 0.0
 
@@ -43,9 +43,9 @@ class ROUGE(Metric):
 
     @overrides
     def reset(self) -> None:
-        self._total_rouge_n_recalls = defaultdict(float)
-        self._total_rouge_n_precisions = defaultdict(float)
-        self._total_rouge_n_f1s = defaultdict(float)
+        self._total_rouge_n_recalls = defaultdict(lambda: 0.0)
+        self._total_rouge_n_precisions = defaultdict(lambda: 0.0)
+        self._total_rouge_n_f1s = defaultdict(lambda: 0.0)
 
         self._total_rouge_l_f1 = 0.0
 
@@ -81,23 +81,20 @@ class ROUGE(Metric):
 
         return prev_lcs[0].item()
 
-    def _get_valid_tokens_mask(self, tensor: torch.LongTensor) -> torch.ByteTensor:
-        valid_tokens_mask = torch.ones_like(tensor, dtype=torch.bool)
-        for index in self._exclude_indices:
-            valid_tokens_mask = valid_tokens_mask & (tensor != index)
-        return valid_tokens_mask
-
     def _get_rouge_l_score(
         self, predicted_tokens: torch.LongTensor, reference_tokens: torch.LongTensor
     ) -> float:
         """
         Compute sum of F1 scores given batch of predictions and references.
         """
+        # TODO: fix not being able to import this normally
+        from allennlp.training.util import get_valid_tokens_mask
+
         total_f1 = 0.0
 
         for predicted_seq, reference_seq in zip(predicted_tokens, reference_tokens):
-            m = self._get_valid_tokens_mask(reference_seq).sum().item()
-            n = self._get_valid_tokens_mask(predicted_seq).sum().item()
+            m = get_valid_tokens_mask(reference_seq, self._exclude_indices).sum().item()
+            n = get_valid_tokens_mask(predicted_seq, self._exclude_indices).sum().item()
 
             lcs = self._longest_common_subsequence(reference_seq, predicted_seq)
 

@@ -6,7 +6,7 @@ from torch.testing import assert_allclose
 
 from allennlp.common.testing import AllenNlpTestCase, multi_device
 from allennlp.training.metrics import BLEU
-from allennlp.training.util import ngrams
+from allennlp.training.util import ngrams, get_valid_tokens_mask
 
 
 class BleuTest(AllenNlpTestCase):
@@ -17,7 +17,7 @@ class BleuTest(AllenNlpTestCase):
     @multi_device
     def test_get_valid_tokens_mask(self, device: str):
         tensor = torch.tensor([[1, 2, 3, 0], [0, 1, 1, 0]], device=device)
-        result = self.metric._get_valid_tokens_mask(tensor).long()
+        result = get_valid_tokens_mask(tensor, self.metric._exclude_indices).long()
         check = torch.tensor([[1, 1, 1, 0], [0, 1, 1, 0]], device=device)
         assert_allclose(result, check)
 

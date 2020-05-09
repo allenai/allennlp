@@ -468,3 +468,10 @@ def ngrams(
                 continue
             ngram_counts[ngram] += 1
     return ngram_counts
+
+
+def get_valid_tokens_mask(tensor: torch.LongTensor, exclude_indices: Set[int]) -> torch.ByteTensor:
+    valid_tokens_mask = torch.ones_like(tensor, dtype=torch.bool)
+    for index in exclude_indices:
+        valid_tokens_mask &= tensor != index
+    return valid_tokens_mask
