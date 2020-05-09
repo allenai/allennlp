@@ -108,8 +108,6 @@ class PretrainedTransformerIndexer(TokenIndexer):
         token_ids = indexed_tokens["token_ids"]
         type_ids = indexed_tokens.get("type_ids")
 
-        token_ids = self._preprocess_segmented_token_ids(token_ids)
-
         return [
             Token(
                 text=vocabulary.get_token_from_index(token_ids[i], self._namespace),
@@ -118,16 +116,6 @@ class PretrainedTransformerIndexer(TokenIndexer):
             )
             for i in range(len(token_ids))
         ]
-
-    def _preprocess_segmented_token_ids(self, token_ids: List[int]):
-        if self._max_length is None:
-            return token_ids
-
-        tokens_no_special_tokens = [
-            t for t in token_ids if t not in self._tokenizer.all_special_ids
-        ]
-
-        return self._tokenizer.build_inputs_with_special_tokens(tokens_no_special_tokens)
 
     def _extract_token_and_type_ids(
         self, tokens: List[Token]

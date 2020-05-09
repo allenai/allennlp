@@ -1,12 +1,12 @@
 import logging
-from typing import List, Iterable
+from typing import List, Iterable, Optional, Tuple
 import random
 import math
 
 from torch.utils import data
 
 from allennlp.common.checks import ConfigurationError
-from allennlp.common.util import lazy_groups_of
+from allennlp.common.util import lazy_groups_of, lazy_groups_of_max_size
 from allennlp.data.instance import Instance
 from allennlp.data.samplers import BatchSampler
 
@@ -33,8 +33,12 @@ class BucketBatchSampler(BatchSampler):
     data_source: `data.Dataset`, required,
         The pytorch `Dataset` of allennlp Instances to bucket.
 
-    batch_size : `int`, required.
-        The size of each batch of instances yielded when calling the dataloader.
+    batch_size : `int`, optional (default = None)
+        The size of each batch of instances yielded when calling the dataloader. Cannot be used with
+        `max_tokens`.
+
+    max_tokens : `int`, optional (default = None)
+        The maximum number of tokens to include in a batch. Cannot be used with `batch_size`.
 
     sorting_keys : `List[str]`, optional
         To bucket inputs into batches, we want to group the instances by padding length, so that we
@@ -66,20 +70,24 @@ class BucketBatchSampler(BatchSampler):
     def __init__(
         self,
         data_source: data.Dataset,
-        batch_size: int,
+        batch_size: Optional[int] = None,
+        max_tokens: Optional[int] = None,
         sorting_keys: List[str] = None,
         padding_noise: float = 0.1,
         drop_last: bool = False,
     ):
-
+        assert (batch_size is None) != (max_tokens is None), (
+            "Need to provide exactly one of" "batch_size or max_tokens"
+        )
         self.vocab = data_source.vocab
         self.sorting_keys = sorting_keys
         self.padding_noise = padding_noise
         self.batch_size = batch_size
+        self.max_tokens = max_tokens
         self.data_source = data_source
         self.drop_last = drop_last
 
-    def _argsort_by_padding(self, instances: Iterable[Instance]) -> List[int]:
+    def _argsort_by_padding(self, instances: Iterable[Instance]) -> Tuple[List[int], List[int]]:
         """
         Argsorts the instances by their padding lengths, using the keys in
         `sorting_keys` (in the order in which they are provided). `sorting_keys`
@@ -92,6 +100,7 @@ class BucketBatchSampler(BatchSampler):
         instances_with_lengths = []
         for instance in instances:
             # Make sure instance is indexed before calling .get_padding
+            true_lengths = []
             lengths = []
             for field_name in self.sorting_keys:
                 if field_name not in instance.fields:
@@ -99,21 +108,33 @@ class BucketBatchSampler(BatchSampler):
                         f'Sorting key "{field_name}" is not a field in instance. '
                         f"Available fields/keys are {list(instance.fields.keys())}."
                     )
-                lengths.append(
-                    add_noise_to_value(len(instance.fields[field_name]), self.padding_noise)
-                )
-            instances_with_lengths.append((lengths, instance))
+                true_lengths.append(len(instance.fields[field_name]))
+
+                lengths.append(add_noise_to_value(true_lengths[-1], self.padding_noise))
+            instances_with_lengths.append((lengths, true_lengths, instance))
         with_indices = [(x, i) for i, x in enumerate(instances_with_lengths)]
         with_indices.sort(key=lambda x: x[0][0])
-        return [instance_with_index[-1] for instance_with_index in with_indices]
+        return (
+            [instance_with_index[-1] for instance_with_index in with_indices],
+            [instance_with_index[0][1][0] for instance_with_index in with_indices],
+        )
 
     def __iter__(self) -> Iterable[List[int]]:
-
-        indices = self._argsort_by_padding(self.data_source)
+        indices, lengths = self._argsort_by_padding(self.data_source)
         batches = []
-        for group in lazy_groups_of(indices, self.batch_size):
+
+        if self.batch_size is not None:
+            group_iterator = lazy_groups_of(indices, self.batch_size)
+        else:
+            group_iterator = lazy_groups_of_max_size(indices, lengths, self.max_tokens)
+
+        for group in group_iterator:
             batch_indices = list(group)
-            if self.drop_last and len(batch_indices) < self.batch_size:
+            if (
+                self.drop_last
+                and self.batch_size is not None
+                and len(batch_indices) < self.batch_size
+            ):
                 continue
             batches.append(batch_indices)
         random.shuffle(batches)
@@ -157,8 +178,13 @@ class BucketBatchSampler(BatchSampler):
         self.sorting_keys = [longest_field]
 
     def __len__(self):
-        batch_count_float = len(self.data_source) / self.batch_size
-        if self.drop_last:
-            return math.floor(batch_count_float)
+        if self.batch_size is not None:
+            batch_count_float = len(self.data_source) / self.batch_size
+            if self.drop_last:
+                return math.floor(batch_count_float)
+            else:
+                return math.ceil(batch_count_float)
         else:
-            return math.ceil(batch_count_float)
+            # There is no easy way to count the number of batches in the case we use max_tokens,
+            # so we need to iterate and count.
+            return sum(1 for _ in self)

@@ -139,6 +139,32 @@ def lazy_groups_of(iterable: Iterable[A], group_size: int) -> Iterator[List[A]]:
             break
 
 
+def lazy_groups_of_max_size(
+    iterable: Iterable[A], sizes: Iterable[int], max_size: int
+) -> Iterator[List[A]]:
+    cur_size = 0
+    group: List[A] = []
+
+    iterator = iter(iterable)
+    size_iter = iter(sizes)
+
+    while True:
+        item, size = next(iterator, None), next(size_iter, None)
+
+        if item is None or size is None:
+            if len(group) != 0:
+                yield group
+            break
+
+        if cur_size + size > max_size:
+            yield group
+            cur_size = 0
+            group = []
+
+        group.append(item)
+        cur_size += size
+
+
 def pad_sequence_to_length(
     sequence: List,
     desired_length: int,

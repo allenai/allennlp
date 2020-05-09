@@ -162,12 +162,25 @@ class TestPretrainedTransformerIndexer(AllenNlpTestCase):
 
     def test_indices_to_tokens(self):
         allennlp_tokenizer = PretrainedTransformerTokenizer("bert-base-uncased")
-        indexer = PretrainedTransformerIndexer(model_name="bert-base-uncased", max_length=4)
+        indexer_max_length = PretrainedTransformerIndexer(
+            model_name="bert-base-uncased", max_length=4
+        )
+        indexer_no_max_length = PretrainedTransformerIndexer(model_name="bert-base-uncased")
         string_no_specials = "AllenNLP is great"
 
         allennlp_tokens = allennlp_tokenizer.tokenize(string_no_specials)
         vocab = Vocabulary()
-        indexed = indexer.tokens_to_indices(allennlp_tokens, vocab)
-        tokens_from_indices = indexer.indices_to_tokens(indexed, vocab)
+        indexed = indexer_no_max_length.tokens_to_indices(allennlp_tokens, vocab)
+        tokens_from_indices = indexer_no_max_length.indices_to_tokens(indexed, vocab)
 
         assert allennlp_tokens == tokens_from_indices
+
+        indexed = indexer_max_length.tokens_to_indices(allennlp_tokens, vocab)
+        tokens_from_indices = indexer_max_length.indices_to_tokens(indexed, vocab)
+
+        # For now we are not removing special tokens introduced from max_length
+        sep_cls = [allennlp_tokens[-1], allennlp_tokens[0]]
+        expected = (
+            allennlp_tokens[:3] + sep_cls + allennlp_tokens[3:5] + sep_cls + allennlp_tokens[5:]
+        )
+        assert expected == tokens_from_indices

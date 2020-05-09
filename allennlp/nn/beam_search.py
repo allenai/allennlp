@@ -45,6 +45,30 @@ class BeamSearch:
         self.beam_size = beam_size
         self.per_node_beam_size = per_node_beam_size or beam_size
 
+    def reconstruct_sequences(self, predictions, backpointers):
+        # Reconstruct the sequences.
+        # shape: [(batch_size, beam_size, 1)]
+        reconstructed_predictions = [predictions[-1].unsqueeze(2)]
+
+        # shape: (batch_size, beam_size)
+        cur_backpointers = backpointers[-1]
+
+        for timestep in range(len(predictions) - 2, 0, -1):
+            # shape: (batch_size, beam_size, 1)
+            cur_preds = predictions[timestep].gather(1, cur_backpointers).unsqueeze(2)
+
+            reconstructed_predictions.append(cur_preds)
+
+            # shape: (batch_size, beam_size)
+            cur_backpointers = backpointers[timestep - 1].gather(1, cur_backpointers)
+
+        # shape: (batch_size, beam_size, 1)
+        final_preds = predictions[0].gather(1, cur_backpointers).unsqueeze(2)
+
+        reconstructed_predictions.append(final_preds)
+
+        return reconstructed_predictions
+
     def search(
         self, start_predictions: torch.Tensor, start_state: StateType, step: StepFunctionType
     ) -> Tuple[torch.Tensor, torch.Tensor]:
@@ -111,7 +135,8 @@ class BeamSearch:
         # beam to `beam_size`^2 candidates from which we will select the top
         # `beam_size` elements for the next iteration.
         # shape: (batch_size, num_classes)
-        start_class_log_probabilities, state = step(start_predictions, start_state, 0)
+        with torch.no_grad():
+            start_class_log_probabilities, state = step(start_predictions, start_state, 0)
 
         num_classes = start_class_log_probabilities.size()[1]
 
@@ -173,7 +198,8 @@ class BeamSearch:
             # Take a step. This get the predicted log probs of the next classes
             # and updates the state.
             # shape: (batch_size * beam_size, num_classes)
-            class_log_probabilities, state = step(last_predictions, state, timestep + 1)
+            with torch.no_grad():
+                class_log_probabilities, state = step(last_predictions, state, timestep + 1)
 
             # shape: (batch_size * beam_size, num_classes)
             last_predictions_expanded = last_predictions.unsqueeze(-1).expand(
@@ -271,26 +297,7 @@ class BeamSearch:
                 RuntimeWarning,
             )
 
-        # Reconstruct the sequences.
-        # shape: [(batch_size, beam_size, 1)]
-        reconstructed_predictions = [predictions[-1].unsqueeze(2)]
-
-        # shape: (batch_size, beam_size)
-        cur_backpointers = backpointers[-1]
-
-        for timestep in range(len(predictions) - 2, 0, -1):
-            # shape: (batch_size, beam_size, 1)
-            cur_preds = predictions[timestep].gather(1, cur_backpointers).unsqueeze(2)
-
-            reconstructed_predictions.append(cur_preds)
-
-            # shape: (batch_size, beam_size)
-            cur_backpointers = backpointers[timestep - 1].gather(1, cur_backpointers)
-
-        # shape: (batch_size, beam_size, 1)
-        final_preds = predictions[0].gather(1, cur_backpointers).unsqueeze(2)
-
-        reconstructed_predictions.append(final_preds)
+        reconstructed_predictions = self.reconstruct_sequences(predictions, backpointers)
 
         # shape: (batch_size, beam_size, max_steps)
         all_predictions = torch.cat(list(reversed(reconstructed_predictions)), 2)
