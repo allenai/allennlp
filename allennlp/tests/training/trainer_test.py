@@ -20,7 +20,7 @@ from allennlp.data.dataloader import DataLoader as AllennlpDataLoader
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import Params
-from allennlp.common.testing import AllenNlpTestCase
+from allennlp.common.testing import AllenNlpTestCase, requires_gpu, requires_multi_gpu
 from allennlp.data import Vocabulary
 from allennlp.data.dataloader import TensorDict
 from allennlp.data.dataset_readers import SequenceTaggingDatasetReader
@@ -125,8 +125,7 @@ class TestTrainer(TrainerTestBase):
         )
         trainer.train()
 
-    @pytest.mark.gpu
-    @pytest.mark.skipif(not torch.cuda.is_available(), reason="No CUDA device registered.")
+    @requires_gpu
     def test_trainer_can_run_cuda(self):
         self.model.cuda()
         trainer = GradientDescentTrainer(
@@ -139,8 +138,7 @@ class TestTrainer(TrainerTestBase):
         assert "peak_gpu_0_memory_MB" in metrics
         assert isinstance(metrics["peak_gpu_0_memory_MB"], int)
 
-    @pytest.mark.gpu
-    @pytest.mark.skipif(torch.cuda.device_count() < 2, reason="2 or more GPUs required.")
+    @requires_multi_gpu
     def test_passing_trainer_multiple_gpus_raises_error(self):
         self.model.cuda()
 
@@ -989,8 +987,7 @@ class TestTrainer(TrainerTestBase):
 
 
 class TestApexTrainer(TrainerTestBase):
-    @pytest.mark.gpu
-    @pytest.mark.skipif(not torch.cuda.is_available(), reason="No CUDA device registered.")
+    @requires_gpu
     @pytest.mark.skipif(amp is None, reason="Apex is not installed.")
     def test_trainer_can_run_amp(self):
         self.model.cuda()
