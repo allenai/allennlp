@@ -11,7 +11,18 @@ class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
         tokenizer = PretrainedTransformerTokenizer("roberta-base")
 
         sentence = "A, <mask> AllenNLP sentence."
-        expected_tokens = ["<s>", "A", ",", "<mask>", "Allen", "N", "LP", "sentence", ".", "</s>"]
+        expected_tokens = [
+            "<s>",
+            "ĠA",
+            ",",
+            "<mask>",
+            "ĠAllen",
+            "N",
+            "LP",
+            "Ġsentence",
+            ".",
+            "</s>",
+        ]
         tokens = [t.text for t in tokenizer.tokenize(sentence)]
         assert tokens == expected_tokens
 
@@ -25,8 +36,8 @@ class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
             ",",
             "[MASK]",
             "Allen",
-            "NL",
-            "P",
+            "##NL",
+            "##P",
             "sentence",
             ".",
             "[SEP]",
@@ -38,12 +49,12 @@ class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
         sentence = "A, [MASK] AllenNLP sentence."
         expected_tokens = [
             "[CLS]",
-            "A",
+            "a",
             ",",
             "[MASK]",
-            "Allen",
-            "NL",
-            "P",
+            "allen",
+            "##nl",
+            "##p",
             "sentence",
             ".",
             "[SEP]",
@@ -56,13 +67,13 @@ class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
         sentence = "A, naïve [MASK] AllenNLP sentence."
         expected_tokens = [
             "[CLS]",
-            "A",
+            "a",
             ",",
-            "naïve",
+            "naive",  # BERT normalizes this away
             "[MASK]",
-            "Allen",
-            "NL",
-            "P",
+            "allen",
+            "##nl",
+            "##p",
             "sentence",
             ".",
             "[SEP]",
@@ -81,11 +92,11 @@ class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
             "[CLS]",
             "A",
             ",",
-            "naïve",
+            "naive",  # BERT normalizes this away
             "[MASK]",
             "Allen",
-            "NL",
-            "P",
+            "##NL",
+            "##P",
             "sentence",
             ".",
             "[SEP]",
@@ -102,14 +113,14 @@ class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
         sentence = "A, naïve <mask> AllenNLP sentence."
         expected_tokens = [
             "<s>",
-            "A",
+            "ĠA",
             ",",
-            "naïve",
+            "ĠnaÃ¯ve",  # RoBERTa mangles this. Or maybe it "encodes"?
             "<mask>",
-            "Allen",
+            "ĠAllen",
             "N",
             "LP",
-            "sentence",
+            "Ġsentence",
             ".",
             "</s>",
         ]
@@ -142,8 +153,8 @@ class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
             ",",
             "[MASK]",
             "Allen",
-            "NL",
-            "P",
+            "##NL",
+            "##P",
             "sentence",
             ".",
             "[SEP]",
@@ -163,8 +174,8 @@ class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
             ",",
             "[MASK]",
             "Allen",
-            "NL",
-            "P",
+            "##NL",
+            "##P",
             "sentence",
             ".",
             "[SEP]",
@@ -193,8 +204,8 @@ class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
             ",",
             "[MASK]",
             "Allen",
-            "NL",
-            "P",
+            "##NL",
+            "##P",
             "sentence",
             ".",
             "[SEP]",
@@ -256,8 +267,8 @@ class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
             "!",
             "General",
             "Ken",
-            "ob",
-            "i",
+            "##ob",
+            "##i",
             ".",
             "[SEP]",
         ]

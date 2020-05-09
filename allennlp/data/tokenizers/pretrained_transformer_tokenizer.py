@@ -50,8 +50,6 @@ class PretrainedTransformerTokenizer(Tokenizer):
         - 'only_first': Only truncate the first sequence
         - 'only_second': Only truncate the second sequence
         - 'do_not_truncate': Do not truncate (raise an error if the input sequence is longer than max_length)
-    calculate_character_offsets : `bool`, optional (default=False)
-        Attempts to reconstruct character offsets for the instances of Token that this tokenizer produces.
     tokenizer_kwargs: `Dict[str, Any]`
         Dictionary with
         [additional arguments](https://github.com/huggingface/transformers/blob/155c782a2ccd103cf63ad48a2becd7c76a7d2115/transformers/tokenization_utils.py#L691)
@@ -97,7 +95,7 @@ class PretrainedTransformerTokenizer(Tokenizer):
             model_name, add_special_tokens=True, **tokenizer_kwargs
         )
         dummy_output = tokenizer_with_special_tokens.encode_plus(
-            "1",
+            "1",  # "a" and "b" get tokenized into multiple word pieces, but for now, "1" and "2" do not.
             "2",
             add_special_tokens=True,
             return_token_type_ids=True,
@@ -286,24 +284,64 @@ class PretrainedTransformerTokenizer(Tokenizer):
         tokens = []
         for token_id, token_type_id, offsets in zip(token_ids, token_type_ids, token_offsets):
             if offsets is None or offsets[0] >= offsets[1]:
-                token_str = self.tokenizer.convert_ids_to_tokens(
-                    token_id, skip_special_tokens=False
-                )
                 start = None
+                end = None
             else:
                 start, end = offsets
-                token_str = text[start:end]
 
-            tokens.append(Token(text=token_str, text_id=token_id, type_id=token_type_id, idx=start))
+            tokens.append(
+                Token(
+                    text=self.tokenizer.convert_ids_to_tokens(token_id, skip_special_tokens=False),
+                    text_id=token_id,
+                    type_id=token_type_id,
+                    idx=start,
+                    idx_end=end,
+                )
+            )
 
         if self._add_special_tokens:
             tokens = self.add_special_tokens(tokens)
 
         return tokens
 
+    def _intra_word_tokenize(
+        self, string_tokens: List[str]
+    ) -> Tuple[List[Token], List[Optional[Tuple[int, int]]]]:
+        tokens: List[Token] = []
+        offsets: List[Optional[Tuple[int, int]]] = []
+        for token_string in string_tokens:
+            wordpieces = self.tokenizer.encode_plus(
+                token_string,
+                add_special_tokens=False,
+                return_tensors=None,
+                return_offsets_mapping=False,
+                return_attention_mask=False,
+                return_token_type_ids=False,
+            )
+            wp_ids = wordpieces["input_ids"]
+
+            if len(wp_ids) > 0:
+                offsets.append((len(tokens), len(tokens) + len(wp_ids) - 1))
+                tokens.extend(
+                    Token(text=wp_text, text_id=wp_id)
+                    for wp_id, wp_text in zip(wp_ids, self.tokenizer.convert_ids_to_tokens(wp_ids))
+                )
+            else:
+                offsets.append(None)
+        return tokens, offsets
+
+    @staticmethod
+    def _increment_offsets(
+        offsets: Iterable[Optional[Tuple[int, int]]], increment: int
+    ) -> List[Optional[Tuple[int, int]]]:
+        return [
+            None if offset is None else (offset[0] + increment, offset[1] + increment)
+            for offset in offsets
+        ]
+
     def intra_word_tokenize(
         self, string_tokens: List[str]
-    ) -> Tuple[List[Token], List[Tuple[int, int]]]:
+    ) -> Tuple[List[Token], List[Optional[Tuple[int, int]]]]:
         """
         Tokenizes each word into wordpieces separately and returns the wordpiece IDs.
         Also calculates offsets such that tokens[offsets[i][0]:offsets[i][1] + 1]
@@ -311,11 +349,14 @@ class PretrainedTransformerTokenizer(Tokenizer):
 
         This function inserts special tokens.
         """
-        return self.intra_word_tokenize_sentence_pair(string_tokens, None)[:2]
+        tokens, offsets = self._intra_word_tokenize(string_tokens)
+        tokens = self.add_special_tokens(tokens)
+        offsets = self._increment_offsets(offsets, len(self.single_sequence_start_tokens))
+        return tokens, offsets
 
     def intra_word_tokenize_sentence_pair(
-        self, string_tokens_a: List[str], string_tokens_b: Optional[List[str]]
-    ) -> Tuple[List[Token], List[Tuple[int, int]], Optional[List[Tuple[int, int]]]]:
+        self, string_tokens_a: List[str], string_tokens_b: List[str]
+    ) -> Tuple[List[Token], List[Tuple[int, int]], List[Tuple[int, int]]]:
         """
         Tokenizes each word into wordpieces separately and returns the wordpiece IDs.
         Also calculates offsets such that wordpieces[offsets[i][0]:offsets[i][1] + 1]
@@ -323,69 +364,20 @@ class PretrainedTransformerTokenizer(Tokenizer):
 
         This function inserts special tokens.
         """
+        tokens_a, offsets_a = self._intra_word_tokenize(string_tokens_a)
+        tokens_b, offsets_b = self._intra_word_tokenize(string_tokens_b)
+        offsets_b = self._increment_offsets(
+            offsets_b,
+            (
+                len(self.sequence_pair_start_tokens)
+                + len(tokens_a)
+                + len(self.sequence_pair_mid_tokens)
+            ),
+        )
+        tokens_a = self.add_special_tokens(tokens_a, tokens_b)
+        offsets_a = self._increment_offsets(offsets_a, len(self.sequence_pair_start_tokens))
 
-        def tokens_from_string_tokens(
-            string_tokens: List[str],
-        ) -> Tuple[List[Token], List[Optional[Tuple[int, int]]]]:
-            tokens: List[Token] = []
-            offsets: List[Optional[Tuple[int, int]]] = []
-            for token_string in string_tokens:
-                wordpieces = self.tokenizer.encode_plus(
-                    token_string,
-                    add_special_tokens=False,
-                    return_tensors=None,
-                    return_offsets_mapping=self.tokenizer.is_fast,
-                    return_attention_mask=False,
-                    return_token_type_ids=False,
-                )
-                wp_ids, wp_offsets = wordpieces["input_ids"], wordpieces.get("offset_mapping")
-                if wp_offsets is None:
-                    from allennlp.common.util import sanitize_wordpiece
-
-                    wp_texts = [
-                        sanitize_wordpiece(wp)
-                        for wp in self.tokenizer.convert_ids_to_tokens(wp_ids)
-                    ]
-                else:
-                    wp_texts = [token_string[start:end] for start, end in wp_offsets]
-
-                if len(wp_ids) > 0:
-                    offsets.append((len(tokens), len(tokens) + len(wp_ids) - 1))
-                    tokens.extend(
-                        Token(text=wp_text, text_id=wp_id)
-                        for wp_id, wp_text in zip(wp_ids, wp_texts)
-                    )
-                else:
-                    offsets.append(None)
-            return tokens, offsets
-
-        def increment_offsets(
-            offsets: Iterable[Optional[Tuple[int, int]]], increment: int
-        ) -> List[Optional[Tuple[int, int]]]:
-            return [
-                None if offset is None else (offset[0] + increment, offset[1] + increment)
-                for offset in offsets
-            ]
-
-        tokens, offsets_a = tokens_from_string_tokens(string_tokens_a)
-        if string_tokens_b is None:
-            tokens = self.add_special_tokens(tokens)
-            offsets_a = increment_offsets(offsets_a, len(self.single_sequence_start_tokens))
-            offsets_b = None
-        else:
-            tokens_b, offsets_b = tokens_from_string_tokens(string_tokens_b)
-            offsets_b = increment_offsets(
-                offsets_b,
-                (
-                    len(self.sequence_pair_start_tokens)
-                    + len(tokens)
-                    + len(self.sequence_pair_mid_tokens)
-                ),
-            )
-            tokens = self.add_special_tokens(tokens, tokens_b)
-            offsets_a = increment_offsets(offsets_a, len(self.sequence_pair_start_tokens))
-
-        return tokens, offsets_a, offsets_b
+        return tokens_a, offsets_a, offsets_b
 
     def add_special_tokens(
         self, tokens1: List[Token], tokens2: Optional[List[Token]] = None
@@ -417,10 +409,10 @@ class PretrainedTransformerTokenizer(Tokenizer):
                 + self.sequence_pair_end_tokens
             )
 
-    def special_tokens_for_sequence(self) -> int:
+    def num_special_tokens_for_sequence(self) -> int:
         return len(self.single_sequence_start_tokens) + len(self.single_sequence_end_tokens)
 
-    def special_tokens_for_pair(self) -> int:
+    def num_special_tokens_for_pair(self) -> int:
         return (
             len(self.sequence_pair_start_tokens)
             + len(self.sequence_pair_mid_tokens)

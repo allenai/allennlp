@@ -68,13 +68,13 @@ class Tokenizer(Registrable):
         """
         return tokens1 + (tokens2 or [])
 
-    def special_tokens_for_sequence(self) -> int:
+    def num_special_tokens_for_sequence(self) -> int:
         """
         Returns the number of special tokens added for a single sequence.
         """
         return 0
 
-    def special_tokens_for_pair(self) -> int:
+    def num_special_tokens_for_pair(self) -> int:
         """
         Returns the number of special tokens added for a pair of sequences.
         """
