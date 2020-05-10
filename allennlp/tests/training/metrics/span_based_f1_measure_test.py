@@ -1,5 +1,6 @@
 import torch
 from torch.testing import assert_allclose
+import pytest
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import Params
@@ -9,8 +10,8 @@ from allennlp.training.metrics import SpanBasedF1Measure, Metric
 
 
 class SpanBasedF1Test(AllenNlpTestCase):
-    def setUp(self):
-        super().setUp()
+    def setup_method(self):
+        super().setup_method()
         vocab = Vocabulary()
         vocab.add_token_to_namespace("O", "tags")
         vocab.add_token_to_namespace("B-ARG1", "tags")
@@ -241,9 +242,9 @@ class SpanBasedF1Test(AllenNlpTestCase):
         assert_allclose(metric_dict["precision-overall"], 1.0)
         assert_allclose(metric_dict["f1-measure-overall"], 1.0)
 
-        with self.assertRaises(ConfigurationError):
+        with pytest.raises(ConfigurationError):
             SpanBasedF1Measure(self.vocab, label_encoding="INVALID")
-        with self.assertRaises(ConfigurationError):
+        with pytest.raises(ConfigurationError):
             SpanBasedF1Measure(self.vocab, tags_to_spans_function=mock_tags_to_spans_function)
-        with self.assertRaises(ConfigurationError):
+        with pytest.raises(ConfigurationError):
             SpanBasedF1Measure(self.vocab, label_encoding=None, tags_to_spans_function=None)

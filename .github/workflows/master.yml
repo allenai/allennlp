@@ -18,21 +18,21 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    - name: Set Docker label
+    - name: Set Docker tag
       run: |
         if [[ $GITHUB_EVENT_NAME == 'release' ]]; then
-            echo "::set-env name=DOCKER_LABEL::${GITHUB_REF#refs/tags/}";
+            echo "::set-env name=DOCKER_TAG::${GITHUB_REF#refs/tags/}";
         else
-            echo "::set-env name=DOCKER_LABEL::$GITHUB_SHA";
+            echo "::set-env name=DOCKER_TAG::$GITHUB_SHA";
         fi
 
     - name: Build test image
       run: |
-        make docker-test-image DOCKER_LABEL="$DOCKER_LABEL"
+        make docker-test-image DOCKER_TAG=$DOCKER_TAG
 
     - name: Run GPU tests
       run: |
-        make docker-test-run DOCKER_LABEL="$DOCKER_LABEL" ARGS='gpu-test'
+        make docker-test-run DOCKER_TAG=$DOCKER_TAG ARGS='gpu-test'
 
   check_core:
     name: Check Core
@@ -62,15 +62,23 @@ jobs:
       run: |
         pip freeze
 
+    - name: Format
+      if: always()
+      run: |
+        make format
+
     - name: Lint
+      if: always()
       run: |
         make lint
 
     - name: Type check
+      if: always()
       run: |
         make typecheck
 
     - name: Run tests
+      if: always()
       run: |
         make test-with-cov
 
@@ -234,6 +242,10 @@ jobs:
       run: |
         pip install $(ls dist/*.whl)
 
+    - name: Pip freeze
+      run: |
+        pip freeze
+
     - name: Test install
       run: |
         allennlp test-install
@@ -247,6 +259,14 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
+    - name: Set Docker image name
+      run: |
+        if [[ $GITHUB_EVENT_NAME == 'release' ]]; then
+            echo "::set-env name=DOCKER_IMAGE_NAME::allennlp/allennlp:${GITHUB_REF#refs/tags/}";
+        else
+            echo "::set-env name=DOCKER_IMAGE_NAME::allennlp/commit:$GITHUB_SHA";
+        fi
+
     - name: Download core package
       uses: actions/download-artifact@v1
       with:
@@ -255,38 +275,30 @@ jobs:
 
     - name: Build image
       run: |
-        make docker-image
+        make docker-image DOCKER_IMAGE_NAME=$DOCKER_IMAGE_NAME
 
     - name: Test image
       run: |
-        make docker-run ARGS='test-install'
+        make docker-run DOCKER_IMAGE_NAME=$DOCKER_IMAGE_NAME ARGS='test-install'
 
     - name: Upload master image
       # Only run this for pushes to master on the main repo, not forks.
       if: github.repository == 'allenai/allennlp' && github.event_name == 'push'
       run: |
         docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
-
-        # Tag with current commit and 'latest'.
-        docker tag allennlp/allennlp:latest allennlp/commit:$GITHUB_SHA
-        docker tag allennlp/allennlp:latest allennlp/commit:latest
-
-        # Push both tags.
-        docker push allennlp/commit:$GITHUB_SHA
-        docker push allennlp/commit:latest
+        docker push $DOCKER_IMAGE_NAME
 
     - name: Upload release image
       # Only run this for releases on the main repo, not forks.
       if: github.repository == 'allenai/allennlp' && github.event_name == 'release'
       run: |
         docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
-        TAG=${GITHUB_REF#refs/tags/};
 
-        # Tag with release version.
-        docker tag allennlp/allennlp:latest allennlp/allennlp:$TAG
+        # Tag with latest.
+        docker tag $DOCKER_IMAGE_NAME allennlp/allennlp:latest
 
         # Push both tags.
-        docker push allennlp/allennlp:$TAG
+        docker push $DOCKER_IMAGE_NAME
         docker push allennlp/allennlp:latest
 
   # Builds the API documentation and pushes it to the appropriate folder in the

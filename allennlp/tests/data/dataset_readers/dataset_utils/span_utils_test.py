@@ -1,4 +1,5 @@
 from typing import List
+import pytest
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.dataset_readers.dataset_utils import span_utils
@@ -19,7 +20,7 @@ class SpanUtilsTest(AllenNlpTestCase):
 
         # Check that it raises when we use U- tags for single tokens.
         tag_sequence = ["O", "B-ARG1", "I-ARG1", "O", "B-ARG2", "I-ARG2", "U-ARG1", "U-ARG2"]
-        with self.assertRaises(span_utils.InvalidTagSequence):
+        with pytest.raises(span_utils.InvalidTagSequence):
             spans = span_utils.bio_tags_to_spans(tag_sequence)
 
         # Check that invalid BIO sequences are also handled as spans.
@@ -51,7 +52,7 @@ class SpanUtilsTest(AllenNlpTestCase):
 
         # Check that it raises when we use U- tags for single tokens.
         tag_sequence = ["O", "B", "I", "O", "B", "I", "U", "U"]
-        with self.assertRaises(span_utils.InvalidTagSequence):
+        with pytest.raises(span_utils.InvalidTagSequence):
             spans = span_utils.bio_tags_to_spans(tag_sequence)
 
         # Check that invalid BIO sequences are also handled as spans.
@@ -82,7 +83,7 @@ class SpanUtilsTest(AllenNlpTestCase):
 
         # Check that it raises when we use U- tags for single tokens.
         tag_sequence = ["O", "B", "I", "O", "B", "I", "U", "U"]
-        with self.assertRaises(span_utils.InvalidTagSequence):
+        with pytest.raises(span_utils.InvalidTagSequence):
             spans = span_utils.iob1_tags_to_spans(tag_sequence)
 
         # Check that invalid IOB1 sequences are also handled as spans.
@@ -103,7 +104,7 @@ class SpanUtilsTest(AllenNlpTestCase):
 
         # Check that it raises when we use U- tags for single tokens.
         tag_sequence = ["O", "B-ARG1", "I-ARG1", "O", "B-ARG2", "I-ARG2", "U-ARG1", "U-ARG2"]
-        with self.assertRaises(span_utils.InvalidTagSequence):
+        with pytest.raises(span_utils.InvalidTagSequence):
             spans = span_utils.iob1_tags_to_spans(tag_sequence)
 
         # Check that invalid IOB1 sequences are also handled as spans.
@@ -175,7 +176,7 @@ class SpanUtilsTest(AllenNlpTestCase):
         assert spans == [("PER", (0, 2)), ("PER", (3, 3)), ("LOC", (4, 4))]
 
         tag_sequence = ["B-PER", "I-PER", "O"]
-        with self.assertRaises(span_utils.InvalidTagSequence):
+        with pytest.raises(span_utils.InvalidTagSequence):
             spans = span_utils.bioul_tags_to_spans(tag_sequence)
 
     def test_bioul_tags_to_spans_without_labels(self):
@@ -184,7 +185,7 @@ class SpanUtilsTest(AllenNlpTestCase):
         assert spans == [("", (0, 2)), ("", (3, 3)), ("", (4, 4))]
 
         tag_sequence = ["B", "I", "O"]
-        with self.assertRaises(span_utils.InvalidTagSequence):
+        with pytest.raises(span_utils.InvalidTagSequence):
             spans = span_utils.bioul_tags_to_spans(tag_sequence)
 
     def test_iob1_to_bioul(self):
@@ -202,7 +203,7 @@ class SpanUtilsTest(AllenNlpTestCase):
         assert bioul_sequence == ["U-ORG", "O", "U-MISC", "O", "B-MISC", "I-MISC", "L-MISC"]
 
         # Encoding in IOB format should throw error with incorrect encoding.
-        with self.assertRaises(span_utils.InvalidTagSequence):
+        with pytest.raises(span_utils.InvalidTagSequence):
             tag_sequence = ["O", "I-PER", "B-PER", "I-PER", "I-PER", "B-PER"]
             bioul_sequence = span_utils.to_bioul(tag_sequence, encoding="BIO")
 

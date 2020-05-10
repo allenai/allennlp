@@ -17,8 +17,8 @@ def fingerprint(instance: Instance) -> Tuple[str, ...]:
 
 
 class TestShardedDatasetReader(AllenNlpTestCase):
-    def setUp(self) -> None:
-        super().setUp()
+    def setup_method(self) -> None:
+        super().setup_method()
 
         # use SequenceTaggingDatasetReader as the base reader
         self.base_reader = SequenceTaggingDatasetReader(lazy=True)

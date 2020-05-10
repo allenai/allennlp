@@ -5,8 +5,8 @@ from allennlp.training.metrics import EvalbBracketingScorer
 
 
 class EvalbBracketingScorerTest(AllenNlpTestCase):
-    def setUp(self):
-        super().setUp()
+    def setup_method(self):
+        super().setup_method()
         EvalbBracketingScorer.compile_evalb()
 
     def tearDown(self):

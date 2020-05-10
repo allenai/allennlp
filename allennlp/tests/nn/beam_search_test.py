@@ -44,8 +44,8 @@ def take_step(
 
 
 class BeamSearchTest(AllenNlpTestCase):
-    def setUp(self):
-        super().setUp()
+    def setup_method(self):
+        super().setup_method()
         self.end_index = transition_probabilities.size()[0] - 1
         self.beam_search = BeamSearch(self.end_index, max_steps=10, beam_size=3)
 

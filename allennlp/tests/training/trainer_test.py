@@ -20,7 +20,7 @@ from allennlp.data.dataloader import DataLoader as AllennlpDataLoader
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import Params
-from allennlp.common.testing import AllenNlpTestCase
+from allennlp.common.testing import AllenNlpTestCase, requires_gpu, requires_multi_gpu
 from allennlp.data import Vocabulary
 from allennlp.data.dataloader import TensorDict
 from allennlp.data.dataset_readers import SequenceTaggingDatasetReader
@@ -41,8 +41,8 @@ from allennlp.data import allennlp_collate
 
 
 class TrainerTestBase(AllenNlpTestCase):
-    def setUp(self):
-        super().setUp()
+    def setup_method(self):
+        super().setup_method()
         self.instances = SequenceTaggingDatasetReader().read(
             self.FIXTURES_ROOT / "data" / "sequence_tagging.tsv"
         )
@@ -125,8 +125,7 @@ class TestTrainer(TrainerTestBase):
         )
         trainer.train()
 
-    @pytest.mark.gpu
-    @pytest.mark.skipif(not torch.cuda.is_available(), reason="No CUDA device registered.")
+    @requires_gpu
     def test_trainer_can_run_cuda(self):
         self.model.cuda()
         trainer = GradientDescentTrainer(
@@ -139,8 +138,7 @@ class TestTrainer(TrainerTestBase):
         assert "peak_gpu_0_memory_MB" in metrics
         assert isinstance(metrics["peak_gpu_0_memory_MB"], int)
 
-    @pytest.mark.gpu
-    @pytest.mark.skipif(torch.cuda.device_count() < 2, reason="2 or more GPUs required.")
+    @requires_multi_gpu
     def test_passing_trainer_multiple_gpus_raises_error(self):
         self.model.cuda()
 
@@ -989,9 +987,8 @@ class TestTrainer(TrainerTestBase):
 
 
 class TestApexTrainer(TrainerTestBase):
-    @pytest.mark.skipif(not torch.cuda.is_available(), reason="No CUDA device registered.")
+    @requires_gpu
     @pytest.mark.skipif(amp is None, reason="Apex is not installed.")
-    @pytest.mark.spawn
     def test_trainer_can_run_amp(self):
         self.model.cuda()
         trainer = GradientDescentTrainer(
@@ -1022,4 +1019,4 @@ class TestSparseClipGrad(AllenNlpTestCase):
         _ = clip_grad_norm_([embedding.weight], 1.5)
         # Final norm should be 1.5
         grad = embedding.weight.grad.coalesce()
-        self.assertAlmostEqual(grad._values().norm(2.0).item(), 1.5, places=5)
+        assert grad._values().norm(2.0).item() == pytest.approx(1.5, rel=1e-4)

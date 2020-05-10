@@ -8,8 +8,8 @@ from allennlp.training.optimizers import Optimizer
 
 
 class InvertedTriangularTest(AllenNlpTestCase):
-    def setUp(self):
-        super().setUp()
+    def setup_method(self):
+        super().setup_method()
         self.model = torch.nn.Sequential(torch.nn.Linear(10, 10))
         self.base_momentum = 0.9
 

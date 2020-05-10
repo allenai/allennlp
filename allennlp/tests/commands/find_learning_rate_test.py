@@ -1,15 +1,14 @@
 import argparse
 import os
-import pytest
 
-import torch
+import pytest
 
 from allennlp.common import Params
 from allennlp.data import Vocabulary
 from allennlp.data import DataLoader
 from allennlp.models import Model
 from allennlp.common.checks import ConfigurationError
-from allennlp.common.testing import AllenNlpTestCase
+from allennlp.common.testing import AllenNlpTestCase, requires_multi_gpu
 from allennlp.commands.find_learning_rate import (
     search_learning_rate,
     find_learning_rate_from_args,
@@ -29,8 +28,8 @@ def is_matplotlib_installed():
 
 
 class TestFindLearningRate(AllenNlpTestCase):
-    def setUp(self):
-        super().setUp()
+    def setup_method(self):
+        super().setup_method()
         self.params = lambda: Params(
             {
                 "model": {
@@ -122,17 +121,16 @@ class TestFindLearningRate(AllenNlpTestCase):
             assert args.serialization_dir == "serialization_dir"
 
         # config is required
-        with self.assertRaises(SystemExit) as cm:
+        with pytest.raises(SystemExit) as cm:
             parser.parse_args(["find-lr", "-s", "serialization_dir"])
             assert cm.exception.code == 2  # argparse code for incorrect usage
 
         # serialization dir is required
-        with self.assertRaises(SystemExit) as cm:
+        with pytest.raises(SystemExit) as cm:
             parser.parse_args(["find-lr", "path/to/params"])
             assert cm.exception.code == 2  # argparse code for incorrect usage
 
-    @pytest.mark.gpu
-    @pytest.mark.skipif(torch.cuda.device_count() < 2, reason="Need multiple GPUs.")
+    @requires_multi_gpu
     def test_find_learning_rate_multi_gpu(self):
         params = self.params()
         del params["trainer"]["cuda_device"]
@@ -154,8 +152,8 @@ class TestFindLearningRate(AllenNlpTestCase):
 
 
 class TestSearchLearningRate(AllenNlpTestCase):
-    def setUp(self):
-        super().setUp()
+    def setup_method(self):
+        super().setup_method()
         params = Params(
             {
                 "model": {

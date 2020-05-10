@@ -24,8 +24,8 @@ with warnings.catch_warnings():
 
 
 class ElmoTestCase(AllenNlpTestCase):
-    def setUp(self):
-        super().setUp()
+    def setup_method(self):
+        super().setup_method()
         self.elmo_fixtures_path = self.FIXTURES_ROOT / "elmo"
         self.options_file = str(self.elmo_fixtures_path / "options.json")
         self.weight_file = str(self.elmo_fixtures_path / "lm_weights.hdf5")
@@ -113,17 +113,15 @@ class TestElmoBiLm(ElmoTestCase):
             lengths = mask.data.numpy().sum(axis=1)
             batch_sentences = [sentences[k][i] for k in range(3)]
             expected_lengths = [len(sentence.split()) for sentence in batch_sentences]
-            self.assertEqual(lengths.tolist(), expected_lengths)
+            assert lengths.tolist() == expected_lengths
 
             # get the expected embeddings and compare!
             expected_top_layer = [expected_lm_embeddings[k][i] for k in range(3)]
             for k in range(3):
-                self.assertTrue(
-                    numpy.allclose(
-                        top_layer_embeddings[k, : lengths[k], :].data.numpy(),
-                        expected_top_layer[k],
-                        atol=1.0e-6,
-                    )
+                assert numpy.allclose(
+                    top_layer_embeddings[k, : lengths[k], :].data.numpy(),
+                    expected_top_layer[k],
+                    atol=1.0e-6,
                 )
 
     def test_elmo_char_cnn_cache_does_not_raise_error_for_uncached_words(self):
@@ -164,8 +162,8 @@ class TestElmoBiLm(ElmoTestCase):
 
 
 class TestElmo(ElmoTestCase):
-    def setUp(self):
-        super().setUp()
+    def setup_method(self):
+        super().setup_method()
 
         self.elmo = Elmo(self.options_file, self.weight_file, 2, dropout=0.0)
 

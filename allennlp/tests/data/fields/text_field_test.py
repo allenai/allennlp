@@ -33,7 +33,7 @@ class DictReturningTokenIndexer(TokenIndexer):
 
 
 class TestTextField(AllenNlpTestCase):
-    def setUp(self):
+    def setup_method(self):
         self.vocab = Vocabulary()
         self.vocab.add_token_to_namespace("sentence", namespace="words")
         self.vocab.add_token_to_namespace("A", namespace="words")
@@ -43,7 +43,7 @@ class TestTextField(AllenNlpTestCase):
         self.vocab.add_token_to_namespace("n", namespace="characters")
         self.vocab.add_token_to_namespace("t", namespace="characters")
         self.vocab.add_token_to_namespace("c", namespace="characters")
-        super().setUp()
+        super().setup_method()
 
     def test_field_counts_vocab_items_correctly(self):
         field = TextField(
