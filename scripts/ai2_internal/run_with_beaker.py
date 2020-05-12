@@ -60,7 +60,7 @@ def main(param_file: str, args: argparse.Namespace):
         print(f"Building the Docker image ({docker_image})...")
         subprocess.run(f"docker build -t {docker_image} .", shell=True, check=True)
 
-        print(f"Create a Beaker image...")
+        print("Create a Beaker image...")
         image = subprocess.check_output(
             f"beaker image create --quiet {docker_image}", shell=True, universal_newlines=True
         ).strip()

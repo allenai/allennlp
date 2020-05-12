@@ -17,7 +17,7 @@ class TestFeedForward(AllenNlpTestCase):
         assert len(feedforward._activations) == 2
         assert [isinstance(a, torch.nn.ReLU) for a in feedforward._activations]
         assert len(feedforward._linear_layers) == 2
-        assert [l.weight.size(-1) == 3 for l in feedforward._linear_layers]
+        assert [layer.weight.size(-1) == 3 for layer in feedforward._linear_layers]
 
         params = Params(
             {
