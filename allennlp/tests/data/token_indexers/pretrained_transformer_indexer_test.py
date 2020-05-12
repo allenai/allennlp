@@ -37,13 +37,16 @@ class TestPretrainedTransformerIndexer(AllenNlpTestCase):
 
     def test_as_array_produces_token_sequence_bert_cased_sentence_pair(self):
         tokenizer = AutoTokenizer.from_pretrained("bert-base-cased")
-        allennlp_tokenizer = PretrainedTransformerTokenizer("bert-base-cased")
+        allennlp_tokenizer = PretrainedTransformerTokenizer(
+            "bert-base-cased", add_special_tokens=False
+        )
         indexer = PretrainedTransformerIndexer(model_name="bert-base-cased")
         default_format = "[CLS] AllenNLP is great! [SEP] Really it is! [SEP]"
         tokens = tokenizer.tokenize(default_format)
         expected_ids = tokenizer.convert_tokens_to_ids(tokens)
-        allennlp_tokens = allennlp_tokenizer.tokenize_sentence_pair(
-            "AllenNLP is great!", "Really it is!"
+        allennlp_tokens = allennlp_tokenizer.add_special_tokens(
+            allennlp_tokenizer.tokenize("AllenNLP is great!"),
+            allennlp_tokenizer.tokenize("Really it is!"),
         )
         vocab = Vocabulary()
         indexed = indexer.tokens_to_indices(allennlp_tokens, vocab)
@@ -65,13 +68,16 @@ class TestPretrainedTransformerIndexer(AllenNlpTestCase):
 
     def test_as_array_produces_token_sequence_roberta_sentence_pair(self):
         tokenizer = AutoTokenizer.from_pretrained("roberta-base")
-        allennlp_tokenizer = PretrainedTransformerTokenizer("roberta-base")
+        allennlp_tokenizer = PretrainedTransformerTokenizer(
+            "roberta-base", add_special_tokens=False
+        )
         indexer = PretrainedTransformerIndexer(model_name="roberta-base")
         default_format = "<s> AllenNLP is great! </s> </s> Really it is! </s>"
         tokens = tokenizer.tokenize(default_format)
         expected_ids = tokenizer.convert_tokens_to_ids(tokens)
-        allennlp_tokens = allennlp_tokenizer.tokenize_sentence_pair(
-            "AllenNLP is great!", "Really it is!"
+        allennlp_tokens = allennlp_tokenizer.add_special_tokens(
+            allennlp_tokenizer.tokenize("AllenNLP is great!"),
+            allennlp_tokenizer.tokenize("Really it is!"),
         )
         vocab = Vocabulary()
         indexed = indexer.tokens_to_indices(allennlp_tokens, vocab)
