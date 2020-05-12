@@ -31,7 +31,7 @@ class AllenNlpDocstringProcessor(Struct):
     Use to turn our docstrings into Markdown.
     """
 
-    CROSS_REF_RE = re.compile(f"(:(class|func|mod):`~?([a-zA-Z0-9_.]+)`)")
+    CROSS_REF_RE = re.compile("(:(class|func|mod):`~?([a-zA-Z0-9_.]+)`)")
 
     @override
     def process(self, graph, resolver):
@@ -168,7 +168,7 @@ class AllenNlpRenderer(MarkdownRenderer):
             parts.append(" -> {}".format(func.return_))
         result = "".join(parts)
         if add_method_bar and func.is_method():
-            result = "\n".join(" | " + l for l in result.split("\n"))
+            result = "\n".join(" | " + line for line in result.split("\n"))
         return result
 
     def _format_classdef_signature(self, cls: Class) -> str:
