@@ -115,7 +115,7 @@ def _read_pretrained_tokens(embeddings_file_uri: str) -> List[str]:
                 tokens.append(token)
             else:
                 line_begin = line[:20] + "..." if len(line) > 20 else line
-                logger.warning(f"Skipping line number %d: %s", line_number, line_begin)
+                logger.warning("Skipping line number %d: %s", line_number, line_begin)
     return tokens
 
 
@@ -651,15 +651,18 @@ class Vocabulary(Registrable):
         return self._token_to_index[namespace]
 
     def get_token_index(self, token: str, namespace: str = "tokens") -> int:
-        if token in self._token_to_index[namespace]:
+        try:
             return self._token_to_index[namespace][token]
-        else:
+        except KeyError:
             try:
                 return self._token_to_index[namespace][self._oov_token]
             except KeyError:
                 logger.error("Namespace: %s", namespace)
                 logger.error("Token: %s", token)
-                raise
+                raise KeyError(
+                    f"'{token}' not found in vocab namespace '{namespace}', and namespace "
+                    f"does not contain the default OOV token ('{self._oov_token}')"
+                )
 
     def get_token_from_index(self, index: int, namespace: str = "tokens") -> str:
         return self._index_to_token[namespace][index]
@@ -676,7 +679,7 @@ class Vocabulary(Registrable):
         return False
 
     def __str__(self) -> str:
-        base_string = f"Vocabulary with namespaces:\n"
+        base_string = "Vocabulary with namespaces:\n"
         non_padded_namespaces = f"\tNon Padded Namespaces: {self._non_padded_namespaces}\n"
         namespaces = [
             f"\tNamespace: {name}, Size: {self.get_vocab_size(name)} \n"
@@ -686,7 +689,7 @@ class Vocabulary(Registrable):
 
     def __repr__(self) -> str:
         # This is essentially the same as __str__, but with no newlines
-        base_string = f"Vocabulary with namespaces: "
+        base_string = "Vocabulary with namespaces: "
         namespaces = [
             f"{name}, Size: {self.get_vocab_size(name)} ||" for name in self._index_to_token
         ]

@@ -2,6 +2,7 @@ from copy import deepcopy
 from typing import Dict, Any
 
 import torch
+import pytest
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
@@ -11,8 +12,8 @@ from allennlp.training.optimizers import Optimizer
 
 
 class CosineWithRestartsTest(AllenNlpTestCase):
-    def setUp(self):
-        super().setUp()
+    def setup_method(self):
+        super().setup_method()
         self.model = torch.nn.Sequential(torch.nn.Linear(10, 10))
 
         # We use these cases to verify that the scheduler works as expected.
@@ -111,7 +112,7 @@ class CosineWithRestartsTest(AllenNlpTestCase):
         # Learning should be unchanged after initializing scheduler.
         assert optim.param_groups[0]["lr"] == 1.0
 
-        with self.assertRaises(ConfigurationError):
+        with pytest.raises(ConfigurationError):
             # t_initial is required.
             LearningRateScheduler.from_params(optimizer=optim, params=Params({"type": "cosine"}))
 

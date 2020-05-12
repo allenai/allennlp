@@ -1,3 +1,5 @@
+import logging
+
 import numpy
 import pytest
 
@@ -65,22 +67,23 @@ class TestMultiLabelField(AllenNlpTestCase):
         tensor = h.empty_field().as_tensor(None).detach().cpu().numpy()
         numpy.testing.assert_array_almost_equal(tensor, numpy.array([0, 0, 0]))
 
-    def test_class_variables_for_namespace_warnings_work_correctly(self):
-
-        assert "text" not in MultiLabelField._already_warned_namespaces
-        with self.assertLogs(logger="allennlp.data.fields.multilabel_field", level="WARNING"):
+    def test_class_variables_for_namespace_warnings_work_correctly(self, caplog):
+        with caplog.at_level(logging.WARNING, logger="allennlp.data.fields.multilabel_field"):
+            assert "text" not in MultiLabelField._already_warned_namespaces
             _ = MultiLabelField(["test"], label_namespace="text")
+            assert caplog.records
 
-        # We've warned once, so we should have set the class variable to False.
-        assert "text" in MultiLabelField._already_warned_namespaces
-        with pytest.raises(AssertionError):
-            with self.assertLogs(logger="allennlp.data.fields.multilabel_field", level="WARNING"):
-                _ = MultiLabelField(["test2"], label_namespace="text")
+            # We've warned once, so we should have set the class variable to False.
+            assert "text" in MultiLabelField._already_warned_namespaces
+            caplog.clear()
+            _ = MultiLabelField(["test2"], label_namespace="text")
+            assert not caplog.records
 
-        # ... but a new namespace should still log a warning.
-        assert "text2" not in MultiLabelField._already_warned_namespaces
-        with self.assertLogs(logger="allennlp.data.fields.multilabel_field", level="WARNING"):
+            # ... but a new namespace should still log a warning.
+            assert "text2" not in MultiLabelField._already_warned_namespaces
+            caplog.clear()
             _ = MultiLabelField(["test"], label_namespace="text2")
+            assert caplog
 
     def test_printing_doesnt_crash(self):
         field = MultiLabelField(["label"], label_namespace="namespace")

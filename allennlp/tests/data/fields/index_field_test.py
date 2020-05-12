@@ -9,8 +9,8 @@ from allennlp.data.token_indexers import SingleIdTokenIndexer
 
 
 class TestIndexField(AllenNlpTestCase):
-    def setUp(self):
-        super().setUp()
+    def setup_method(self):
+        super().setup_method()
         self.text = TextField(
             [Token(t) for t in ["here", "is", "a", "sentence", "."]],
             {"words": SingleIdTokenIndexer("words")},

@@ -5,7 +5,6 @@ from typing import Any, Optional
 from overrides import overrides
 
 from allennlp import __version__
-from allennlp.commands.elmo import Elmo
 from allennlp.commands.evaluate import Evaluate
 from allennlp.commands.find_learning_rate import FindLearningRate
 from allennlp.commands.predict import Predict
@@ -73,10 +72,10 @@ def create_parser(prog: Optional[str] = None) -> argparse.ArgumentParser:
 
 def main(prog: Optional[str] = None) -> None:
     """
-    The :mod:`~allennlp.run` command only knows about the registered classes in the ``allennlp``
-    codebase. In particular, once you start creating your own ``Model`` s and so forth, it won't
+    The [`run`](./train.md#run) command only knows about the registered classes in the ``allennlp``
+    codebase. In particular, once you start creating your own `Model` s and so forth, it won't
     work for them, unless you use the ``--include-package`` flag or you make your code available
-    as a plugin (see :mod:`~allennlp.common.plugins`).
+    as a plugin (see [`plugins`](./plugins.md)).
     """
     import_plugins()
 

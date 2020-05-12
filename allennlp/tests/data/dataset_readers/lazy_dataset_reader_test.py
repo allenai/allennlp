@@ -22,8 +22,8 @@ class LazyDatasetReader(DatasetReader):
 
 
 class TestLazyDatasetReader(AllenNlpTestCase):
-    def setUp(self):
-        super().setUp()
+    def setup_method(self):
+        super().setup_method()
         token_indexer = {"tokens": SingleIdTokenIndexer()}
 
         field1 = TextField([Token(t) for t in ["this", "is", "a", "sentence", "."]], token_indexer)

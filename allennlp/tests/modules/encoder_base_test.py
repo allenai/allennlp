@@ -4,13 +4,13 @@ import torch
 from torch.nn import LSTM, RNN
 
 from allennlp.modules.encoder_base import _EncoderBase
-from allennlp.common.testing import AllenNlpTestCase
+from allennlp.common.testing import AllenNlpTestCase, requires_gpu
 from allennlp.nn.util import sort_batch_by_length, get_lengths_from_binary_sequence_mask
 
 
 class TestEncoderBase(AllenNlpTestCase):
-    def setUp(self):
-        super().setUp()
+    def setup_method(self):
+        super().setup_method()
         self.lstm = LSTM(
             bidirectional=True, num_layers=3, input_size=3, hidden_size=7, batch_first=True
         )
@@ -267,7 +267,7 @@ class TestEncoderBase(AllenNlpTestCase):
 
         # Check that error is raised if mask has wrong batch size.
         bad_mask = torch.tensor([True, True, False])
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             self.encoder_base.reset_states(bad_mask)
 
         # Check that states are reset to None if no mask is provided.
@@ -310,7 +310,7 @@ class TestEncoderBase(AllenNlpTestCase):
         encoder_base._update_states([final_states[0]], self.restoration_indices)
         encoder_base.sort_and_run_forward(self.rnn, self.tensor, self.mask)
 
-    @pytest.mark.skipif(not torch.cuda.is_available(), reason="requires cuda")
+    @requires_gpu
     def test_non_contiguous_initial_states_handled_on_gpu(self):
         # Some PyTorch operations which produce contiguous tensors on the CPU produce
         # non-contiguous tensors on the GPU (e.g. forward pass of an RNN when batch_first=True).

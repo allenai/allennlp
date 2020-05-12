@@ -1,6 +1,7 @@
 import torch
 import numpy
 from overrides import overrides
+import pytest
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.modules.seq2seq_encoders import ComposeEncoder, FeedForwardEncoder, Seq2SeqEncoder
@@ -34,14 +35,14 @@ class MockSeq2SeqEncoder(Seq2SeqEncoder):
 def _make_feedforward(input_dim, output_dim):
     return FeedForwardEncoder(
         FeedForward(
-            input_dim=input_dim, num_layers=1, activations=torch.relu, hidden_dims=output_dim
+            input_dim=input_dim, num_layers=1, activations=torch.nn.ReLU(), hidden_dims=output_dim
         )
     )
 
 
 class TestPassThroughEncoder(AllenNlpTestCase):
-    def setUp(self):
-        super().setUp()
+    def setup_method(self):
+        super().setup_method()
         self.encoder = ComposeEncoder(
             [_make_feedforward(9, 5), _make_feedforward(5, 10), _make_feedforward(10, 3)]
         )
@@ -74,11 +75,11 @@ class TestPassThroughEncoder(AllenNlpTestCase):
         )
 
     def test_empty(self):
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             ComposeEncoder([])
 
     def test_mismatched_size(self):
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             ComposeEncoder(
                 [
                     MockSeq2SeqEncoder(input_dim=9, output_dim=5),
@@ -87,7 +88,7 @@ class TestPassThroughEncoder(AllenNlpTestCase):
             )
 
     def test_mismatched_bidirectionality(self):
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             ComposeEncoder(
                 [
                     MockSeq2SeqEncoder(input_dim=9, output_dim=5),

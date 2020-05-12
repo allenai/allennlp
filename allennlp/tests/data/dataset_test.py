@@ -10,7 +10,7 @@ from allennlp.data.token_indexers import SingleIdTokenIndexer
 
 
 class TestDataset(AllenNlpTestCase):
-    def setUp(self):
+    def setup_method(self):
         self.vocab = Vocabulary()
         self.vocab.add_token_to_namespace("this")
         self.vocab.add_token_to_namespace("is")
@@ -19,7 +19,7 @@ class TestDataset(AllenNlpTestCase):
         self.vocab.add_token_to_namespace(".")
         self.token_indexer = {"tokens": SingleIdTokenIndexer()}
         self.instances = self.get_instances()
-        super().setUp()
+        super().setup_method()
 
     def test_instances_must_have_homogeneous_fields(self):
         instance1 = Instance({"tag": (LabelField(1, skip_indexing=True))})

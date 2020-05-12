@@ -1,4 +1,5 @@
 from collections import defaultdict
+import logging
 
 import pytest
 import numpy
@@ -11,8 +12,8 @@ from allennlp.data.token_indexers import SingleIdTokenIndexer
 
 
 class TestSequenceLabelField(AllenNlpTestCase):
-    def setUp(self):
-        super().setUp()
+    def setup_method(self):
+        super().setup_method()
         self.text = TextField(
             [Token(t) for t in ["here", "are", "some", "words", "."]],
             {"words": SingleIdTokenIndexer("words")},
@@ -65,25 +66,25 @@ class TestSequenceLabelField(AllenNlpTestCase):
         with pytest.raises(ConfigurationError):
             _ = SequenceLabelField([[], [], [], [], []], self.text)
 
-    def test_class_variables_for_namespace_warnings_work_correctly(self):
+    def test_class_variables_for_namespace_warnings_work_correctly(self, caplog):
+        with caplog.at_level(logging.WARNING, logger="allennlp.data.fields.sequence_label_field"):
+            tags = ["B", "I", "O", "O", "O"]
+            assert "text" not in SequenceLabelField._already_warned_namespaces
 
-        tags = ["B", "I", "O", "O", "O"]
-        assert "text" not in SequenceLabelField._already_warned_namespaces
-        with self.assertLogs(logger="allennlp.data.fields.sequence_label_field", level="WARNING"):
             _ = SequenceLabelField(tags, self.text, label_namespace="text")
+            assert caplog.records
 
-        # We've warned once, so we should have set the class variable to False.
-        assert "text" in SequenceLabelField._already_warned_namespaces
-        with pytest.raises(AssertionError):
-            with self.assertLogs(
-                logger="allennlp.data.fields.sequence_label_field", level="WARNING"
-            ):
-                _ = SequenceLabelField(tags, self.text, label_namespace="text")
+            # We've warned once, so we should have set the class variable to False.
+            assert "text" in SequenceLabelField._already_warned_namespaces
+            caplog.clear()
+            _ = SequenceLabelField(tags, self.text, label_namespace="text")
+            assert not caplog.records
 
-        # ... but a new namespace should still log a warning.
-        assert "text2" not in SequenceLabelField._already_warned_namespaces
-        with self.assertLogs(logger="allennlp.data.fields.sequence_label_field", level="WARNING"):
+            # ... but a new namespace should still log a warning.
+            assert "text2" not in SequenceLabelField._already_warned_namespaces
+            caplog.clear()
             _ = SequenceLabelField(tags, self.text, label_namespace="text2")
+            assert caplog.records
 
     def test_printing_doesnt_crash(self):
         tags = ["B", "I", "O", "O", "O"]

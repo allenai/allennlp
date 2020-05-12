@@ -1,7 +1,5 @@
-import io
 import shutil
 import sys
-from contextlib import redirect_stdout
 
 import pytest
 from overrides import overrides
@@ -12,7 +10,6 @@ from allennlp.common.checks import ConfigurationError
 from allennlp.common.plugins import discover_plugins
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.common.util import push_python_path, pushd
-from allennlp.tests.common.plugins_util import pip_install
 
 
 class TestMain(AllenNlpTestCase):
@@ -26,10 +23,10 @@ class TestMain(AllenNlpTestCase):
             "--silent",
         ]
 
-        with self.assertRaises(SystemExit) as cm:
+        with pytest.raises(SystemExit) as cm:
             main()
 
-        assert cm.exception.code == 2  # argparse code for incorrect usage
+        assert cm.value.code == 2  # argparse code for incorrect usage
 
     def test_subcommand_overrides(self):
         called = False
@@ -133,46 +130,13 @@ class TestMain(AllenNlpTestCase):
 
     def test_file_plugin_loaded(self):
         plugins_root = self.FIXTURES_ROOT / "plugins"
-        # "d" sets a "local" file plugin, because it's supposed to be run from that directory
-        # and has a ".allennlp_plugins" file in it.
-        project_d_fixtures_root = plugins_root / "project_d"
 
         sys.argv = ["allennlp"]
 
         available_plugins = set(discover_plugins())
-        self.assertSetEqual(set(), available_plugins)
+        assert available_plugins == set()
 
-        with pushd(project_d_fixtures_root):
+        with pushd(plugins_root):
             main()
             subcommands_available = Subcommand.list_available()
-            self.assertIn("d", subcommands_available)
-
-    def test_namespace_plugin_loaded(self):
-        plugins_root = self.FIXTURES_ROOT / "plugins"
-        # "a" sets a "global" namespace plugin, because it's gonna be installed with pip.
-        project_a_fixtures_root = plugins_root / "project_a"
-
-        sys.argv = ["allennlp"]
-
-        available_plugins = set(discover_plugins())
-        self.assertSetEqual(set(), available_plugins)
-
-        with pip_install(project_a_fixtures_root, "a"):
-            main()
-
-        subcommands_available = Subcommand.list_available()
-        self.assertIn("a", subcommands_available)
-
-    def test_subcommand_plugin_is_available(self):
-        plugins_root = self.FIXTURES_ROOT / "plugins"
-        allennlp_server_fixtures_root = plugins_root / "allennlp_server"
-
-        sys.argv = ["allennlp"]
-
-        with pip_install(
-            allennlp_server_fixtures_root, "allennlp_server"
-        ), io.StringIO() as buf, redirect_stdout(buf):
-            main()
-            output = buf.getvalue()
-
-        self.assertIn("    serve", output)
+            assert "d" in subcommands_available

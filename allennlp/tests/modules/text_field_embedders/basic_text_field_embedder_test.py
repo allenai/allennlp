@@ -9,8 +9,8 @@ from allennlp.common.testing import AllenNlpTestCase
 
 
 class TestBasicTextFieldEmbedder(AllenNlpTestCase):
-    def setUp(self):
-        super().setUp()
+    def setup_method(self):
+        super().setup_method()
         self.vocab = Vocabulary()
         self.vocab.add_token_to_namespace("1")
         self.vocab.add_token_to_namespace("2")
@@ -91,7 +91,7 @@ class TestBasicTextFieldEmbedder(AllenNlpTestCase):
                 return tokens
 
         token_embedder = BasicTextFieldEmbedder({"elmo": FakeEmbedder()})
-        inputs = {"elmo": {"tokens": (torch.rand(3, 6, 5) * 2).long()}}
+        inputs = {"elmo": {"elmo_tokens": (torch.rand(3, 6, 5) * 2).long()}}
         kwargs = {"extra_arg": 1}
         token_embedder(inputs, **kwargs)
 
@@ -114,7 +114,7 @@ class TestBasicTextFieldEmbedder(AllenNlpTestCase):
         token_embedder = BasicTextFieldEmbedder.from_params(vocab=self.vocab, params=params)
         inputs = {
             "words": {"tokens": (torch.rand(3, 6) * 20).long()},
-            "elmo": {"tokens": (torch.rand(3, 6, 50) * 15).long()},
+            "elmo": {"elmo_tokens": (torch.rand(3, 6, 50) * 15).long()},
         }
         token_embedder(inputs)
 
@@ -134,7 +134,7 @@ class TestBasicTextFieldEmbedder(AllenNlpTestCase):
             }
         )
         token_embedder = BasicTextFieldEmbedder.from_params(vocab=self.vocab, params=params)
-        inputs = {"elmo": {"tokens": (torch.rand(3, 6, 50) * 15).long()}}
+        inputs = {"elmo": {"elmo_tokens": (torch.rand(3, 6, 50) * 15).long()}}
         token_embedder(inputs)
 
     def test_forward_runs_with_non_bijective_mapping_with_dict(self):
@@ -156,7 +156,7 @@ class TestBasicTextFieldEmbedder(AllenNlpTestCase):
         token_embedder = BasicTextFieldEmbedder.from_params(vocab=self.vocab, params=params)
         inputs = {
             "words": {"tokens": (torch.rand(3, 6) * 20).long()},
-            "elmo": {"tokens": (torch.rand(3, 6, 50) * 15).long()},
+            "elmo": {"elmo_tokens": (torch.rand(3, 6, 50) * 15).long()},
         }
         token_embedder(inputs)
 

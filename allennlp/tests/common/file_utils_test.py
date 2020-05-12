@@ -51,8 +51,8 @@ def set_up_glove(url: str, byt: bytes, change_etag_every: int = 1000):
 
 
 class TestFileUtils(AllenNlpTestCase):
-    def setUp(self):
-        super().setUp()
+    def setup_method(self):
+        super().setup_method()
         self.glove_file = self.FIXTURES_ROOT / "embeddings/glove.6B.100d.sample.txt.gz"
         with open(self.glove_file, "rb") as glove:
             self.glove_bytes = glove.read()

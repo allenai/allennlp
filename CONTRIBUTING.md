@@ -18,23 +18,22 @@ code sample or an executable test case demonstrating the expected behavior.
 ### Did you write a fix for a bug?
 
 Please be sure to run the `black` application to first format your contribution.
-Next open [a new GitHub pull request](https://github.com/allenai/allennlp/pulls) with the fix.
+
+Once you open a pull request, our [continuous build system](https://github.com/allenai/allennlp/actions) will run a series of checks.
+You can run all of these checks locally using the following `make` commands:
+
+* `make test`: Runs [`pytest`](https://docs.pytest.org/en/latest/) on all unit tests.
+* `make format`: Runs [`black`](https://black.readthedocs.io) to check code formatting.
+* `make lint`: Runs [`flake8`](http://flake8.pycqa.org/) to lint the code.
+* `make typecheck`: Runs [`mypy`](http://mypy-lang.org/) to typecheck the code.
+* `make build-docs`: Ensures the docs can be generated successfully.
+
+Please run all of these commands before opening your pull request. If your code fails any of the checks, you will be expected to fix your pull request before it is considered.
+
+When these checks all pass locally, open [a new GitHub pull request](https://github.com/allenai/allennlp/pulls) with the fix.
 Make sure you have a clear description of the problem and the solution, and include a link to relevant issues.
 
-Once your pull request is created, our continuous build system will check your pull request.  Continuous
-build will test that:
-
-* [`pytest`](https://docs.pytest.org/en/latest/) All tests pass
-* [`flake8`](http://flake8.pycqa.org/) accepts the code style (our guidelines are based on PEP8)
-* [`black`](https://black.readthedocs.io) accepts the code formatting
-* [`mypy`](http://mypy-lang.org/) typechecks the Python code
-* The docs can be generated successfully
-* Test coverage remains high.  Please add unit tests so we maintain our code coverage.
-
-If your code fails one of these checks, you will be expected to fix your pull request before it is considered.
-
-You can run most of these tests locally with `./scripts/verify.py`, which will be faster than waiting for
-cloud systems to run tests.
+Our build system also calculates test coverage on every master commit.  Please add unit tests so we maintain our high coverage.
 
 In addition, the `requirements.txt` includes the Python `pre-commit` library,
 and we provide a suggested configuration at `.pre-commit-config.yaml`.

@@ -24,14 +24,15 @@
 
 ## Quick Links
 
-* [Website](https://allennlp.org/)
-* [Tutorial](https://allennlp.org/tutorials)
-* [Forum](https://discourse.allennlp.org)
-* [Documentation](https://docs.allennlp.org/master/)
-* [Contributing Guidelines](CONTRIBUTING.md)
-* [Pretrained Models](https://github.com/allenai/allennlp-hub/blob/master/allennlp_hub/pretrained/allennlp_pretrained.py)
-* [Continuous Build](https:/github.com/allenai/allennlp/actions)
-* [Nightly Releases](https://pypi.org/project/allennlp/#history)
+- [Website](https://allennlp.org/)
+- [Tutorial](https://allennlp.org/tutorials)
+- [Forum](https://discourse.allennlp.org)
+- Documentation ( [latest](https://docs.allennlp.org/latest/) | [stable](https://docs.allennlp.org/stable/) | [master](https://docs.allennlp.org/master/) )
+- [Contributing Guidelines](CONTRIBUTING.md)
+- [Pretrained Models](https://github.com/allenai/allennlp-hub/blob/master/allennlp_hub/pretrained/allennlp_pretrained.py)
+- [Continuous Build](https://github.com/allenai/allennlp/actions)
+- [Nightly Releases](https://pypi.org/project/allennlp/#history)
+- [Officially Supported Models](https://github.com/allenai/allennlp-models)
 
 ## Package Overview
 
@@ -145,7 +146,6 @@ This will make `allennlp` available on your system but it will use the sources f
 you made of the source repository.
 
 You can test your installation with `allennlp test-install`.
-`./scripts/verify.py` will run the full suite of tests used by our continuous build environment.
 
 ## Running AllenNLP
 

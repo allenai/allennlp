@@ -10,7 +10,10 @@ MD_DOCS_CONF_SRC = mkdocs-skeleton.yml
 MD_DOCS_TGT = site/
 MD_DOCS_EXTRAS = $(addprefix $(MD_DOCS_ROOT),README.md LICENSE.md ROADMAP.md CONTRIBUTING.md)
 
-DOCKER_TAG = allennlp/allennlp
+DOCKER_TAG = latest
+DOCKER_IMAGE_NAME = allennlp/allennlp:$(DOCKER_TAG)
+DOCKER_TEST_IMAGE_NAME = allennlp/test:$(DOCKER_TAG)
+DOCKER_RUN_CMD = docker run --rm -v $$HOME/.allennlp:/root/.allennlp
 
 ifeq ($(shell uname),Darwin)
 	ifeq ($(shell which gsed),)
@@ -32,8 +35,11 @@ version :
 
 .PHONY : lint
 lint :
-	flake8 -v ./scripts $(SRC)
-	black -v --check ./scripts $(SRC)
+	flake8 ./scripts $(SRC)
+
+.PHONY : format
+format :
+	black --check ./scripts $(SRC)
 
 .PHONY : typecheck
 typecheck :
@@ -51,12 +57,18 @@ test :
 test-with-cov :
 	pytest --color=yes -rf --cov-config=.coveragerc --cov=$(SRC) --durations=40 -k "not sniff_test" $(SRC)
 
+.PHONY : gpu-test
+gpu-test :
+	pytest --color=yes -v -rf -m gpu $(SRC)
+
 #
 # Setup helpers
 #
 
 .PHONY : install
 install :
+	# Making sure the typing backport isn't installed.
+	pip uninstall -y typing
 	# Ensure pip, setuptools, and wheel are up-to-date.
 	pip install --upgrade pip setuptools wheel
 	# Due to a weird thing with pip, we may need egg-info before running `pip install -e`.
@@ -64,6 +76,9 @@ install :
 	python setup.py install_egg_info
 	# Install allennlp as editable and all dependencies except apex since that requires torch to already be installed.
 	grep -Ev 'NVIDIA/apex\.git' dev-requirements.txt | pip install --upgrade --upgrade-strategy eager -e . -r /dev/stdin
+	# The above command will probably install the typing backport because of pydoc-markdown,
+	# so we have to uninstall it again.
+	pip uninstall -y typing
 	# Now install apex.
 	grep -E 'NVIDIA/apex\.git' dev-requirements.txt | pip install --upgrade -r /dev/stdin
 
@@ -116,12 +131,19 @@ clean :
 
 .PHONY : docker-image
 docker-image :
-	# Create a small context for the Docker image with only the files that we need.
-	tar -czvf context.tar.gz \
-			Dockerfile \
-			scripts/ai2_internal/resumable_train.sh \
-			dist/*.whl
 	docker build \
 			--pull \
 			-f Dockerfile \
-			-t $(DOCKER_TAG) - < context.tar.gz
+			-t $(DOCKER_IMAGE_NAME) .
+
+.PHONY : docker-run
+docker-run :
+	$(DOCKER_RUN_CMD) $(DOCKER_IMAGE_NAME) $(ARGS)
+
+.PHONY : docker-test-image
+docker-test-image :
+	docker build --pull -f Dockerfile.test -t $(DOCKER_TEST_IMAGE_NAME) .
+
+.PHONY : docker-test-run
+docker-test-run :
+	$(DOCKER_RUN_CMD) --gpus 2 $(DOCKER_TEST_IMAGE_NAME) $(ARGS)

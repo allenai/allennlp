@@ -11,7 +11,6 @@ import subprocess
 import sys
 from contextlib import contextmanager
 from itertools import islice, zip_longest
-from logging import Filter
 from pathlib import Path
 from typing import (
     Any,
@@ -36,7 +35,6 @@ from spacy.language import Language as SpacyModelType
 
 from allennlp.common.checks import log_pytorch_version_info
 from allennlp.common.params import Params
-from allennlp.common.tqdm import Tqdm
 
 try:
     import resource
@@ -121,7 +119,7 @@ def group_by_count(iterable: List[Any], count: int, default_value: Any) -> List[
     This is a short method, but it's complicated and hard to remember as a one-liner, so we just
     make a function out of it.
     """
-    return [list(l) for l in zip_longest(*[iter(iterable)] * count, fillvalue=default_value)]
+    return [list(x) for x in zip_longest(*[iter(iterable)] * count, fillvalue=default_value)]
 
 
 A = TypeVar("A")
@@ -247,122 +245,6 @@ def prepare_environment(params: Params):
             torch.cuda.manual_seed_all(torch_seed)
 
     log_pytorch_version_info()
-
-
-class FileFriendlyLogFilter(Filter):
-    """
-    TQDM and requests use carriage returns to get the training line to update for each batch
-    without adding more lines to the terminal output.  Displaying those in a file won't work
-    correctly, so we'll just make sure that each batch shows up on its one line.
-    """
-
-    def filter(self, record):
-        if "\r" in record.msg:
-            record.msg = record.msg.replace("\r", "")
-            if not record.msg or record.msg[-1] != "\n":
-                record.msg += "\n"
-        return True
-
-
-class WorkerLogFilter(Filter):
-    def __init__(self, rank=-1):
-        super().__init__()
-        self._rank = rank
-
-    def filter(self, record):
-        if self._rank != -1:
-            record.msg = f"Rank {self._rank} | {record.msg}"
-        return True
-
-
-def prepare_global_logging(
-    serialization_dir: str, file_friendly_logging: bool, rank: int = 0, world_size: int = 1
-) -> None:
-    # If we don't have a terminal as stdout,
-    # force tqdm to be nicer.
-    if not sys.stdout.isatty():
-        file_friendly_logging = True
-
-    Tqdm.set_slower_interval(file_friendly_logging)
-
-    # Handlers for stdout/err logging
-    output_stream_log_handler = logging.StreamHandler(sys.stdout)
-    error_stream_log_handler = logging.StreamHandler(sys.stderr)
-
-    if world_size == 1:
-        # This case is not distributed training and hence will stick to the older
-        # log file names
-        output_file_log_handler = logging.FileHandler(
-            filename=os.path.join(serialization_dir, "stdout.log")
-        )
-        error_file_log_handler = logging.FileHandler(
-            filename=os.path.join(serialization_dir, "stderr.log")
-        )
-    else:
-        # Create log files with worker ids
-        output_file_log_handler = logging.FileHandler(
-            filename=os.path.join(serialization_dir, f"stdout_worker{rank}.log")
-        )
-        error_file_log_handler = logging.FileHandler(
-            filename=os.path.join(serialization_dir, f"stderr_worker{rank}.log")
-        )
-
-        # This adds the worker's rank to messages being logged to files.
-        # This will help when combining multiple worker log files using `less` command.
-        worker_filter = WorkerLogFilter(rank)
-        output_file_log_handler.addFilter(worker_filter)
-        error_file_log_handler.addFilter(worker_filter)
-
-    formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(name)s - %(message)s")
-
-    root_logger = logging.getLogger()
-
-    # Remove the already set stream handler in root logger.
-    # Not doing this will result in duplicate log messages
-    # printed in the console
-    if len(root_logger.handlers) > 0:
-        for handler in root_logger.handlers:
-            root_logger.removeHandler(handler)
-
-    # file handlers need to be handled for tqdm's \r char
-    file_friendly_log_filter = FileFriendlyLogFilter()
-
-    if os.environ.get("ALLENNLP_DEBUG"):
-        LEVEL = logging.DEBUG
-    else:
-        level_name = os.environ.get("ALLENNLP_LOG_LEVEL")
-        LEVEL = logging._nameToLevel.get(level_name, logging.INFO)
-
-    if rank == 0:
-        # stdout/stderr handlers are added only for the
-        # master worker. This is to avoid cluttering the console
-        # screen with too many log messages from all workers.
-        output_stream_log_handler.setFormatter(formatter)
-        error_stream_log_handler.setFormatter(formatter)
-
-        output_stream_log_handler.setLevel(LEVEL)
-        error_stream_log_handler.setLevel(logging.ERROR)
-
-        if file_friendly_logging:
-            output_stream_log_handler.addFilter(file_friendly_log_filter)
-            error_stream_log_handler.addFilter(file_friendly_log_filter)
-
-        root_logger.addHandler(output_stream_log_handler)
-        root_logger.addHandler(error_stream_log_handler)
-
-    output_file_log_handler.addFilter(file_friendly_log_filter)
-    error_file_log_handler.addFilter(file_friendly_log_filter)
-
-    output_file_log_handler.setFormatter(formatter)
-    error_file_log_handler.setFormatter(formatter)
-
-    output_file_log_handler.setLevel(LEVEL)
-    error_file_log_handler.setLevel(logging.ERROR)
-
-    root_logger.addHandler(output_file_log_handler)
-    root_logger.addHandler(error_file_log_handler)
-
-    root_logger.setLevel(LEVEL)
 
 
 LOADED_SPACY_MODELS: Dict[Tuple[str, bool, bool, bool], SpacyModelType] = {}

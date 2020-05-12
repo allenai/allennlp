@@ -7,8 +7,8 @@ from allennlp.common.testing import AllenNlpTestCase
 
 
 class TestLogging(AllenNlpTestCase):
-    def setUp(self):
-        super().setUp()
+    def setup_method(self):
+        super().setup_method()
         logger = logging.getLogger(str(random.random()))
         self.test_log_file = os.path.join(self.TEST_DIR, "test.log")
         logger.addHandler(logging.FileHandler(self.test_log_file))
