@@ -107,10 +107,22 @@ def check_for_gpu(device_id: Union[int, List[int]]):
     elif device_id is not None and device_id >= 0:
         num_devices_available = cuda.device_count()
         if num_devices_available == 0:
+            # Torch will give a more informative exception than ours, so we want to include
+            # that context as well if it's available.  For example, if you try to run torch 1.5
+            # on a machine with CUDA10.1 you'll get the following:
+            #
+            #     The NVIDIA driver on your system is too old (found version 10010).
+            #
+            torch_gpu_error = ""
+            try:
+                cuda.current_device()
+            except Exception as e:
+                torch_gpu_error = "\n{0}".format(e)
+
             raise ConfigurationError(
                 "Experiment specified a GPU but none is available;"
                 " if you want to run on CPU use the override"
-                " 'trainer.cuda_device=-1' in the json config file."
+                " 'trainer.cuda_device=-1' in the json config file." + torch_gpu_error
             )
         elif device_id >= num_devices_available:
             raise ConfigurationError(
