@@ -229,62 +229,7 @@ class PretrainedTransformerTokenizer(Tokenizer):
 
         # If we don't have token offsets, try to calculate them ourselves.
         if token_offsets is None:
-            # The huggingface tokenizers produce tokens that may or may not be slices from the
-            # original text.  Differences arise from lowercasing, Unicode normalization, and other
-            # kinds of normalization, as well as special characters that are included to denote
-            # various situations, such as "##" in BERT for word pieces from the middle of a word, or
-            # "Ġ" in RoBERTa for the beginning of words not at the start of a sentence.
-
-            # This code attempts to calculate character offsets while being tolerant to these
-            # differences. It scans through the text and the tokens in parallel, trying to match up
-            # positions in both. If it gets out of sync, it backs off to not adding any token
-            # indices, and attempts to catch back up afterwards. This procedure is approximate.
-            # Don't rely on precise results, especially in non-English languages that are far more
-            # affected by Unicode normalization.
-
-            match_text = text
-            token_texts = [
-                sanitize_wordpiece(t) for t in self.tokenizer.convert_ids_to_tokens(token_ids)
-            ]
-            token_offsets = [None] * len(token_ids)
-            if self._tokenizer_lowercases:
-                match_text = match_text.lower()
-                token_texts = [t.lower() for t in token_texts]
-
-            min_allowed_skipped_whitespace = 3
-            allowed_skipped_whitespace = min_allowed_skipped_whitespace
-
-            text_index = 0
-            token_index = 0
-            while text_index < len(match_text) and token_index < len(token_ids):
-                token_text = token_texts[token_index]
-                token_start_index = match_text.find(token_text, text_index)
-
-                # Did we not find it at all?
-                if token_start_index < 0:
-                    token_index += 1
-                    # When we skip a token, we increase our tolerance, so we have a chance of catching back up.
-                    allowed_skipped_whitespace += 1 + min_allowed_skipped_whitespace
-                    continue
-
-                # Did we jump too far?
-                non_whitespace_chars_skipped = sum(
-                    1 for c in match_text[text_index:token_start_index] if not c.isspace()
-                )
-                if non_whitespace_chars_skipped > allowed_skipped_whitespace:
-                    # Too many skipped characters. Something is wrong. Ignore this token.
-                    token_index += 1
-                    # When we skip a token, we increase our tolerance, so we have a chance of catching back up.
-                    allowed_skipped_whitespace += 1 + min_allowed_skipped_whitespace
-                    continue
-                allowed_skipped_whitespace = min_allowed_skipped_whitespace
-
-                token_offsets[token_index] = (
-                    token_start_index,
-                    token_start_index + len(token_text),
-                )
-                text_index = token_start_index + len(token_text)
-                token_index += 1
+            token_offsets = self._estimate_character_indices(text, token_ids)
 
         tokens = []
         for token_id, token_type_id, offsets in zip(token_ids, token_type_ids, token_offsets):
@@ -308,6 +253,66 @@ class PretrainedTransformerTokenizer(Tokenizer):
             tokens = self.add_special_tokens(tokens)
 
         return tokens
+
+    def _estimate_character_indices(self, text: str, token_ids: List[int]) -> List[Optional[Tuple[int, int]]]:
+        """
+        The huggingface tokenizers produce tokens that may or may not be slices from the
+        original text.  Differences arise from lowercasing, Unicode normalization, and other
+        kinds of normalization, as well as special characters that are included to denote
+        various situations, such as "##" in BERT for word pieces from the middle of a word, or
+        "Ġ" in RoBERTa for the beginning of words not at the start of a sentence.
+
+        This code attempts to calculate character offsets while being tolerant to these
+        differences. It scans through the text and the tokens in parallel, trying to match up
+        positions in both. If it gets out of sync, it backs off to not adding any token
+        indices, and attempts to catch back up afterwards. This procedure is approximate.
+        Don't rely on precise results, especially in non-English languages that are far more
+        affected by Unicode normalization.
+        """
+
+        token_texts = [
+            sanitize_wordpiece(t) for t in self.tokenizer.convert_ids_to_tokens(token_ids)
+        ]
+        token_offsets = [None] * len(token_ids)
+        if self._tokenizer_lowercases:
+            text = text.lower()
+            token_texts = [t.lower() for t in token_texts]
+
+        min_allowed_skipped_whitespace = 3
+        allowed_skipped_whitespace = min_allowed_skipped_whitespace
+
+        text_index = 0
+        token_index = 0
+        while text_index < len(text) and token_index < len(token_ids):
+            token_text = token_texts[token_index]
+            token_start_index = text.find(token_text, text_index)
+
+            # Did we not find it at all?
+            if token_start_index < 0:
+                token_index += 1
+                # When we skip a token, we increase our tolerance, so we have a chance of catching back up.
+                allowed_skipped_whitespace += 1 + min_allowed_skipped_whitespace
+                continue
+
+            # Did we jump too far?
+            non_whitespace_chars_skipped = sum(
+                1 for c in text[text_index:token_start_index] if not c.isspace()
+            )
+            if non_whitespace_chars_skipped > allowed_skipped_whitespace:
+                # Too many skipped characters. Something is wrong. Ignore this token.
+                token_index += 1
+                # When we skip a token, we increase our tolerance, so we have a chance of catching back up.
+                allowed_skipped_whitespace += 1 + min_allowed_skipped_whitespace
+                continue
+            allowed_skipped_whitespace = min_allowed_skipped_whitespace
+
+            token_offsets[token_index] = (
+                token_start_index,
+                token_start_index + len(token_text),
+            )
+            text_index = token_start_index + len(token_text)
+            token_index += 1
+        return token_offsets
 
     def _intra_word_tokenize(
         self, string_tokens: List[str]
