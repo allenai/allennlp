@@ -115,7 +115,7 @@ def check_for_gpu(device_id: Union[int, List[int]]):
             #
             torch_gpu_error = ""
             try:
-                cuda.current_device()
+                cuda._check_driver()
             except Exception as e:
                 torch_gpu_error = "\n{0}".format(e)
 
