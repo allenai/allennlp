@@ -63,4 +63,4 @@ class MetadataField(Field[DataArray], Mapping[str, Any]):
         return tensor_list
 
     def __str__(self) -> str:
-        return f"MetadataField (print field.metadata to see specific information)."
+        return "MetadataField (print field.metadata to see specific information)."

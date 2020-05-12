@@ -5,7 +5,7 @@ global defaults for certain tqdm parameters.
 
 try:
     SHELL = str(type(get_ipython()))  # type:ignore # noqa: F821
-except:  # noqa: E261
+except:  # noqa: E722
     SHELL = ""
 
 if "zmqshell.ZMQInteractiveShell" in SHELL:

@@ -23,7 +23,7 @@ except ImportError:
 
     def evaluate_snippet(_filename: str, expr: str, **_kwargs) -> str:
         logger.warning(
-            f"error loading _jsonnet (this is expected on Windows), treating snippet as plain json"
+            "error loading _jsonnet (this is expected on Windows), treating snippet as plain json"
         )
         return expr
 
