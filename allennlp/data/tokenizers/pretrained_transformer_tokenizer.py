@@ -2,6 +2,7 @@ import logging
 from typing import Any, Dict, List, Optional, Tuple, Iterable
 
 from overrides import overrides
+from transformers import PreTrainedTokenizer
 from transformers.tokenization_auto import AutoTokenizer
 
 from allennlp.common.util import sanitize_wordpiece
@@ -82,13 +83,7 @@ class PretrainedTransformerTokenizer(Tokenizer):
         self._stride = stride
         self._truncation_strategy = truncation_strategy
 
-        # Huggingface tokenizers have different ways of remembering whether they lowercase or not. Detecting it
-        # this way seems like the least brittle way to do it.
-        tokenized = self.tokenizer.tokenize(
-            "A"
-        )  # Use a single character that won't be cut into word pieces.
-        detokenized = " ".join(tokenized)
-        self._tokenizer_lowercases = "a" in detokenized
+        self._tokenizer_lowercases = self.tokenizer_lowercases(self.tokenizer)
 
         # Reverse-engineer the tokenizer for two sequences
         tokenizer_with_special_tokens = AutoTokenizer.from_pretrained(
@@ -198,6 +193,16 @@ class PretrainedTransformerTokenizer(Tokenizer):
         assert (
             len(self.single_sequence_start_tokens) + len(self.single_sequence_end_tokens)
         ) == self.tokenizer.num_special_tokens_to_add(pair=False)
+
+    @staticmethod
+    def tokenizer_lowercases(tokenizer: PreTrainedTokenizer) -> bool:
+        # Huggingface tokenizers have different ways of remembering whether they lowercase or not. Detecting it
+        # this way seems like the least brittle way to do it.
+        tokenized = tokenizer.tokenize(
+            "A"
+        )  # Use a single character that won't be cut into word pieces.
+        detokenized = " ".join(tokenized)
+        return "a" in detokenized
 
     @overrides
     def tokenize(self, text: str) -> List[Token]:
