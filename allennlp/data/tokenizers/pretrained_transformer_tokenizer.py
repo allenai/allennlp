@@ -254,7 +254,9 @@ class PretrainedTransformerTokenizer(Tokenizer):
 
         return tokens
 
-    def _estimate_character_indices(self, text: str, token_ids: List[int]) -> List[Optional[Tuple[int, int]]]:
+    def _estimate_character_indices(
+        self, text: str, token_ids: List[int]
+    ) -> List[Optional[Tuple[int, int]]]:
         """
         The huggingface tokenizers produce tokens that may or may not be slices from the
         original text.  Differences arise from lowercasing, Unicode normalization, and other
@@ -273,7 +275,7 @@ class PretrainedTransformerTokenizer(Tokenizer):
         token_texts = [
             sanitize_wordpiece(t) for t in self.tokenizer.convert_ids_to_tokens(token_ids)
         ]
-        token_offsets = [None] * len(token_ids)
+        token_offsets: List[Optional[Tuple[int, int]]] = [None] * len(token_ids)
         if self._tokenizer_lowercases:
             text = text.lower()
             token_texts = [t.lower() for t in token_texts]
