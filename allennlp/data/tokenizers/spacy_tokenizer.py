@@ -81,6 +81,7 @@ class SpacyTokenizer(Tokenizer):
                 Token(
                     token.text,
                     token.idx,
+                    token.idx + len(token.text),
                     token.lemma_,
                     token.pos_,
                     token.tag_,
