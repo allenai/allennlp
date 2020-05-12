@@ -246,7 +246,7 @@ def find_learning_rate_model(
         linear_steps=linear_steps,
         stopping_factor=stopping_factor,
     )
-    logger.info(f"Finished learning rate search.")
+    logger.info("Finished learning rate search.")
     losses = _smooth(losses, 0.98)
 
     _save_plot(learning_rates, losses, os.path.join(serialization_dir, "lr-losses.png"))
