@@ -6,6 +6,7 @@ from overrides import overrides
 import torch
 
 from allennlp.training.metrics.metric import Metric
+import allennlp.training.util as training_util
 
 
 @Metric.register("bleu")
@@ -74,14 +75,15 @@ class BLEU(Metric):
         count of that ngram in the reference sentence. The denominator is just
         the total count of predicted ngrams.
         """
-        # TODO: fix not being able to import this normally
-        from allennlp.training.util import ngrams
-
         clipped_matches = 0
         total_predicted = 0
         for predicted_row, reference_row in zip(predicted_tokens, reference_tokens):
-            predicted_ngram_counts = ngrams(predicted_row, ngram_size, self._exclude_indices)
-            reference_ngram_counts = ngrams(reference_row, ngram_size, self._exclude_indices)
+            predicted_ngram_counts = training_util.ngrams(
+                predicted_row, ngram_size, self._exclude_indices
+            )
+            reference_ngram_counts = training_util.ngrams(
+                reference_row, ngram_size, self._exclude_indices
+            )
             for ngram, count in predicted_ngram_counts.items():
                 clipped_matches += min(count, reference_ngram_counts[ngram])
                 total_predicted += count
@@ -114,9 +116,6 @@ class BLEU(Metric):
 
         None
         """
-        # TODO: fix not being able to import this normally
-        from allennlp.training.util import get_valid_tokens_mask
-
         predictions, gold_targets = self.detach_tensors(predictions, gold_targets)
         for ngram_size, _ in enumerate(self._ngram_weights, start=1):
             precision_matches, precision_totals = self._get_modified_precision_counts(
@@ -128,9 +127,13 @@ class BLEU(Metric):
             self._prediction_lengths += predictions.size(0) * predictions.size(1)
             self._reference_lengths += gold_targets.size(0) * gold_targets.size(1)
         else:
-            valid_predictions_mask = get_valid_tokens_mask(predictions, self._exclude_indices)
+            valid_predictions_mask = training_util.get_valid_tokens_mask(
+                predictions, self._exclude_indices
+            )
             self._prediction_lengths += valid_predictions_mask.sum().item()
-            valid_gold_targets_mask = get_valid_tokens_mask(gold_targets, self._exclude_indices)
+            valid_gold_targets_mask = training_util.get_valid_tokens_mask(
+                gold_targets, self._exclude_indices
+            )
             self._reference_lengths += valid_gold_targets_mask.sum().item()
 
     @overrides

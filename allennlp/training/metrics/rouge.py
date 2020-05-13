@@ -5,9 +5,7 @@ from overrides import overrides
 import torch
 
 from allennlp.training.metrics.metric import Metric
-
-
-# TODO: implement ROUGE-L
+import allennlp.training.util as training_util
 
 
 @Metric.register("rogue")
@@ -87,14 +85,11 @@ class ROUGE(Metric):
         """
         Compute sum of F1 scores given batch of predictions and references.
         """
-        # TODO: fix not being able to import this normally
-        from allennlp.training.util import get_valid_tokens_mask
-
         total_f1 = 0.0
 
         for predicted_seq, reference_seq in zip(predicted_tokens, reference_tokens):
-            m = get_valid_tokens_mask(reference_seq, self._exclude_indices).sum().item()
-            n = get_valid_tokens_mask(predicted_seq, self._exclude_indices).sum().item()
+            m = training_util.get_valid_tokens_mask(reference_seq, self._exclude_indices).sum().item()
+            n = training_util.get_valid_tokens_mask(predicted_seq, self._exclude_indices).sum().item()
 
             lcs = self._longest_common_subsequence(reference_seq, predicted_seq)
 
@@ -121,16 +116,17 @@ class ROUGE(Metric):
         Compare the predicted tokens to the reference (gold) tokens at the desired
         ngram size and compute recall, precision and f1 sums
         """
-        # TODO: fix not being able to import this normally
-        from allennlp.training.util import ngrams
-
         total_recall = 0.0
         total_precision = 0.0
         total_f1 = 0.0
 
         for predicted_seq, reference_seq in zip(predicted_tokens, reference_tokens):
-            predicted_ngram_counts = ngrams(predicted_seq, ngram_size, self._exclude_indices)
-            reference_ngram_counts = ngrams(reference_seq, ngram_size, self._exclude_indices)
+            predicted_ngram_counts = training_util.ngrams(
+                predicted_seq, ngram_size, self._exclude_indices
+            )
+            reference_ngram_counts = training_util.ngrams(
+                reference_seq, ngram_size, self._exclude_indices
+            )
 
             matches = 0
             total_reference_ngrams = 0
