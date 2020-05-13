@@ -35,12 +35,6 @@ Make sure you have a clear description of the problem and the solution, and incl
 
 Our build system also calculates test coverage on every master commit.  Please add unit tests so we maintain our high coverage.
 
-In addition, the `requirements.txt` includes the Python `pre-commit` library,
-and we provide a suggested configuration at `.pre-commit-config.yaml`.
-If you run `pre-commit install` at the root of your fork,
-it will create [git precommit hooks](https://git-scm.com/book/en/v2/Customizing-Git-Git-Hooks)
-that run `black` and `flake8` over the files in every commit.
-
 ### Do you have a suggestion for an enhancement?
 
 We use GitHub issues to track enhancement requests.  Before you create an enhancement request:
