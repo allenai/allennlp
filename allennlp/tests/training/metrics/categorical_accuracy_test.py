@@ -142,4 +142,4 @@ class CategoricalAccuracyTest(AllenNlpTestCase):
     @multi_device
     def test_does_not_divide_by_zero_with_no_count(self, device: str):
         accuracy = CategoricalAccuracy()
-        self.assertAlmostEqual(accuracy.get_metric(), 0.0)
+        assert accuracy.get_metric() == pytest.approx(0.0)

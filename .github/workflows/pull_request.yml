@@ -13,13 +13,17 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
+    - name: Set Docker tag
+      run: |
+        echo "::set-env name=DOCKER_TAG::$GITHUB_SHA";
+
     - name: Build test image
       run: |
-        make docker-test-image DOCKER_LABEL="$GITHUB_SHA"
+        make docker-test-image DOCKER_TAG=$DOCKER_TAG
 
     - name: Run GPU tests
       run: |
-        make docker-test-run DOCKER_LABEL="$GITHUB_SHA" ARGS='gpu-test'
+        make docker-test-run DOCKER_TAG=$DOCKER_TAG ARGS='gpu-test'
 
   check_core:
     name: Check Core
@@ -49,19 +53,28 @@ jobs:
       run: |
         pip freeze
 
+    - name: Format
+      if: always()
+      run: |
+        make format
+
     - name: Lint
+      if: always()
       run: |
         make lint
 
     - name: Type check
+      if: always()
       run: |
         make typecheck
 
     - name: Run tests
+      if: always()
       run: |
         make test-with-cov
 
     - name: Ensure docs can build
+      if: always()
       run: |
         make build-docs
 
@@ -116,7 +129,8 @@ jobs:
         ALLENNLP_VERSION_OVERRIDE: ""  # Don't replace the core library.
       run: |
         git clone https://github.com/allenai/allennlp-models.git
-        cd allennlp-models && pip install --upgrade --upgrade-strategy eager -e . -r dev-requirements.txt
+        cd allennlp-models
+        pip install --upgrade --upgrade-strategy eager -e . -r dev-requirements.txt
 
     - name: Run models tests
       run: |

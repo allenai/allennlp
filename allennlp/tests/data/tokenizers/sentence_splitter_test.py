@@ -3,8 +3,8 @@ from allennlp.data.tokenizers.sentence_splitter import SpacySentenceSplitter
 
 
 class TestSentenceSplitter(AllenNlpTestCase):
-    def setUp(self):
-        super().setUp()
+    def setup_method(self):
+        super().setup_method()
         self.dep_parse_splitter = SpacySentenceSplitter(rule_based=False)
         self.rule_based_splitter = SpacySentenceSplitter(rule_based=True)
 

@@ -6,8 +6,8 @@ from allennlp.data.tokenizers.spacy_tokenizer import SpacyTokenizer
 
 
 class TestSpacyTokenizer(AllenNlpTestCase):
-    def setUp(self):
-        super().setUp()
+    def setup_method(self):
+        super().setup_method()
         self.word_tokenizer = SpacyTokenizer()
 
     def test_tokenize_handles_complex_punctuation(self):

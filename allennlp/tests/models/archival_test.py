@@ -27,8 +27,8 @@ def assert_models_equal(model, model2):
 
 
 class ArchivalTest(AllenNlpTestCase):
-    def setUp(self):
-        super().setUp()
+    def setup_method(self):
+        super().setup_method()
 
         self.params = Params(
             {

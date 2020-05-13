@@ -100,4 +100,4 @@ class TestFeedForward(AllenNlpTestCase):
         )
         actual_text_representation = str(feedforward)
 
-        self.assertEqual(actual_text_representation, expected_text_representation)
+        assert actual_text_representation == expected_text_representation

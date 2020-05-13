@@ -23,7 +23,8 @@ Once you open a pull request, our [continuous build system](https://github.com/a
 You can run all of these checks locally using the following `make` commands:
 
 * `make test`: Runs [`pytest`](https://docs.pytest.org/en/latest/) on all unit tests.
-* `make lint`: Runs [`flake8`](http://flake8.pycqa.org/) to check code style and [`black`](https://black.readthedocs.io) to check code formatting.
+* `make format`: Runs [`black`](https://black.readthedocs.io) to check code formatting.
+* `make lint`: Runs [`flake8`](http://flake8.pycqa.org/) to lint the code.
 * `make typecheck`: Runs [`mypy`](http://mypy-lang.org/) to typecheck the code.
 * `make build-docs`: Ensures the docs can be generated successfully.
 

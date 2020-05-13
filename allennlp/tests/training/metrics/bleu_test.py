@@ -10,8 +10,8 @@ from allennlp.training.util import ngrams, get_valid_tokens_mask
 
 
 class BleuTest(AllenNlpTestCase):
-    def setUp(self):
-        super().setUp()
+    def setup_method(self):
+        super().setup_method()
         self.metric = BLEU(ngram_weights=(0.5, 0.5), exclude_indices={0})
 
     @multi_device

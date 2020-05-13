@@ -31,8 +31,8 @@ class _Net2(torch.nn.Module):
 
 
 class TestPretrainedModelInitializer(AllenNlpTestCase):
-    def setUp(self):
-        super().setUp()
+    def setup_method(self):
+        super().setup_method()
         self.net1 = _Net1()
         self.net2 = _Net2()
         self.temp_file = self.TEST_DIR / "weights.th"
@@ -116,7 +116,7 @@ class TestPretrainedModelInitializer(AllenNlpTestCase):
         assert self.net2.linear_1.weight.is_cuda is True
         assert self.net2.linear_1.bias.is_cuda is True
 
-        # We need to manually save the parameters to a file because setUp()
+        # We need to manually save the parameters to a file because setup_method()
         # only does it for the CPU
         temp_file = self.TEST_DIR / "gpu_weights.th"
         torch.save(self.net2.state_dict(), temp_file)
@@ -166,7 +166,7 @@ class TestPretrainedModelInitializer(AllenNlpTestCase):
         assert self.net1.linear_1.weight.is_cuda is True
         assert self.net1.linear_1.bias.is_cuda is True
 
-        # net2's parameters are already saved to CPU from setUp()
+        # net2's parameters are already saved to CPU from setup_method()
         applicator = self._get_applicator("linear_1.*", self.temp_file)
         applicator(self.net1)
 

@@ -4,8 +4,8 @@ from allennlp.data.tokenizers.token import Token
 
 
 class TestLettersDigitsTokenizer(AllenNlpTestCase):
-    def setUp(self):
-        super().setUp()
+    def setup_method(self):
+        super().setup_method()
         self.word_tokenizer = LettersDigitsTokenizer()
 
     def test_tokenize_handles_complex_punctuation(self):
