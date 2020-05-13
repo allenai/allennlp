@@ -11,12 +11,12 @@ os.environ['ARCHIVE_PATH'] = "/tmp/taskA"
 class TransferLearningTest(ModelTestCase):
     def setUp(self):
         super().setUp()
-        self.set_up_model('tests/fixtures/esnli.jsonnet',
-                          'tests/fixtures/esnli_train.jsonl')
+        self.set_up_model('allennlp/tests/fixtures/esnli.jsonnet',
+                          'allennlp/tests/fixtures/esnli_train.jsonl')
 
     def test_taskA_end_to_end(self):
-        train_model_from_file("tests/transfer_learning/fixtures/esnli.jsonnet", serialization_dir="/tmp/taskA", force=True)
+        train_model_from_file("allennlp/tests/transfer_learning/fixtures/esnli.jsonnet", serialization_dir="/tmp/taskA", force=True)
         
     def test_taskB_end_to_end(self):
-        train_model_from_file("tests/transfer_learning/fixtures/movies.jsonnet", serialization_dir="/tmp/taskB", force=True)
+        train_model_from_file("allennlp/tests/transfer_learning/fixtures/movies.jsonnet", serialization_dir="/tmp/taskB", force=True)
         

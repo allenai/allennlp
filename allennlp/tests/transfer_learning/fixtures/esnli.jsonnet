@@ -17,15 +17,15 @@ local seq_encoder = {
         }
     }
   },
-  "train_data_path": "tests/fixtures/data/esnli_train.jsonl",
-  "validation_data_path": "tests/fixtures/data/esnli_train.jsonl",
+  "train_data_path": "allennlp/tests/fixtures/data/esnli_train.jsonl",
+  "validation_data_path": "allennlp/tests/fixtures/data/esnli_train.jsonl",
   "model": {
     "type": "esim",
     "text_field_embedder": {
         "token_embedders": {
             "tokens": {
                 "type": "embedding",
-                "pretrained_file": "tests/fixtures/embeddings/glove.6B.100d.sample.txt.gz", //"https://s3-us-west-2.amazonaws.com/allennlp/datasets/glove/glove.6B.100d.txt.gz",
+                "pretrained_file": "allennlp/tests/fixtures/embeddings/glove.6B.100d.sample.txt.gz", //"https://s3-us-west-2.amazonaws.com/allennlp/datasets/glove/glove.6B.100d.txt.gz",
                 "embedding_dim": embedding_dim,
                 "trainable": true
             }

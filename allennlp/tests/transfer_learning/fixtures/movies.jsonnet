@@ -12,9 +12,12 @@ local pretrained = function(module_path, frozen=false) {"_pretrained": {
     }
   },
   
-  "train_data_path": "tests/fixtures/data/movies_train.jsonl",
-  "validation_data_path": "tests/fixtures/data/movies_train.jsonl",
-  
+  "train_data_path": "allennlp/tests/fixtures/data/movies_train.jsonl",
+  "validation_data_path": "allennlp/tests/fixtures/data/movies_train.jsonl",
+  "vocabulary": {
+    "type": "extend",
+    "directory": "/tmp/taskA/vocabulary"
+  },
   "model": {
     "type": "basic_classifier",
     "text_field_embedder": pretrained("_text_field_embedder"),
