@@ -49,13 +49,14 @@ class PretrainedTransformerIndexer(TokenIndexer):
         self._tokenizer = self._allennlp_tokenizer.tokenizer
         self._added_to_vocabulary = False
 
-        self._num_added_start_tokens = self._allennlp_tokenizer.num_added_start_tokens
-        self._num_added_end_tokens = self._allennlp_tokenizer.num_added_end_tokens
+        self._num_added_start_tokens = len(self._allennlp_tokenizer.single_sequence_start_tokens)
+        self._num_added_end_tokens = len(self._allennlp_tokenizer.single_sequence_end_tokens)
 
         self._max_length = max_length
         if self._max_length is not None:
+            num_added_tokens = len(self._allennlp_tokenizer.tokenize("a")) - 1
             self._effective_max_length = (  # we need to take into account special tokens
-                self._max_length - self._tokenizer.num_added_tokens()
+                self._max_length - num_added_tokens
             )
             if self._effective_max_length <= 0:
                 raise ValueError(

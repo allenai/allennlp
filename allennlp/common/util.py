@@ -119,7 +119,7 @@ def group_by_count(iterable: List[Any], count: int, default_value: Any) -> List[
     This is a short method, but it's complicated and hard to remember as a one-liner, so we just
     make a function out of it.
     """
-    return [list(l) for l in zip_longest(*[iter(iterable)] * count, fillvalue=default_value)]
+    return [list(x) for x in zip_longest(*[iter(iterable)] * count, fillvalue=default_value)]
 
 
 A = TypeVar("A")

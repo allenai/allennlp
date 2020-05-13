@@ -15,6 +15,8 @@ class Token:
         The original text represented by this token.
     idx : `int`, optional
         The character offset of this token into the tokenized passage.
+    idx_end : `int`, optional
+        The character offset one past the last character in the tokenized passage.
     lemma_ : `str`, optional
         The lemma of this token.
     pos_ : `str`, optional
@@ -34,13 +36,13 @@ class Token:
     type_id : `int`, optional
         Token type id used by some pretrained language models like original BERT
 
-
         The other fields on `Token` follow the fields on spacy's `Token` object; this is one we
         added, similar to spacy's `lex_id`.
     """
 
     text: Optional[str] = None
     idx: Optional[int] = None
+    idx_end: Optional[int] = None
     lemma_: Optional[str] = None
     pos_: Optional[str] = None
     tag_: Optional[str] = None
@@ -60,6 +62,7 @@ def show_token(token: Token) -> str:
     return (
         f"{token.text} "
         f"(idx: {token.idx}) "
+        f"(idx_end: {token.idx_end}) "
         f"(lemma: {token.lemma_}) "
         f"(pos: {token.pos_}) "
         f"(tag: {token.tag_}) "
