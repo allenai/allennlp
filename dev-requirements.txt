@@ -9,9 +9,6 @@ mypy==0.770
 # Automatic code formatting
 black
 
-# For creating git precommit hooks
-pre-commit==2.3.0
-
 # Allows generation of coverage reports with pytest.
 pytest-cov
 
