@@ -312,8 +312,23 @@ def get_metrics(
 
 
 def evaluate(
-    model: Model, data_loader: DataLoader, cuda_device: int, batch_weight_key: str,
+    model: Model, data_loader: DataLoader, cuda_device: int = -1, batch_weight_key: str = None,
 ) -> Dict[str, Any]:
+    """
+    # Parameters
+
+    model : `Model`
+        The model to evaluate
+    data_loader : `DataLoader`
+        The `DataLoader` that will iterate over the evaluation data (data loaders already contain
+        their data).
+    cuda_device : `int`, optional (default=-1)
+        The cuda device to use for this evaluation.  The model is assumed to already be using this
+        device; this parameter is only used for moving the input data to the correct device.
+    batch_weight_key : `str`, optional (default=None)
+        If given, this is a key in the output dictionary for each batch that specifies how to weight
+        the loss for that batch.  If this is not given, we use a weight of 1 for every batch.
+    """
     check_for_gpu(cuda_device)
     with torch.no_grad():
         model.eval()
