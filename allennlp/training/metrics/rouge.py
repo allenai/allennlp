@@ -88,8 +88,16 @@ class ROUGE(Metric):
         total_f1 = 0.0
 
         for predicted_seq, reference_seq in zip(predicted_tokens, reference_tokens):
-            m = training_util.get_valid_tokens_mask(reference_seq, self._exclude_indices).sum().item()
-            n = training_util.get_valid_tokens_mask(predicted_seq, self._exclude_indices).sum().item()
+            m = (
+                training_util.get_valid_tokens_mask(reference_seq, self._exclude_indices)
+                .sum()
+                .item()
+            )
+            n = (
+                training_util.get_valid_tokens_mask(predicted_seq, self._exclude_indices)
+                .sum()
+                .item()
+            )
 
             lcs = self._longest_common_subsequence(reference_seq, predicted_seq)
 
@@ -233,7 +241,7 @@ class ROUGE(Metric):
 
         # ROUGE-L
         # F1
-        metrics[f"ROUGE-L"] = self._metric_mean(self._total_rouge_l_f1)
+        metrics["ROUGE-L"] = self._metric_mean(self._total_rouge_l_f1)
 
         if reset:
             self.reset()

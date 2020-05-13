@@ -5,8 +5,8 @@ from allennlp.training.metrics import ROUGE
 
 
 class RougeTest(AllenNlpTestCase):
-    def setUp(self):
-        super().setUp()
+    def setup_method(self):
+        super().setup_method()
         self.metric = ROUGE(exclude_indices={0})
 
     def f1(self, r, p):
