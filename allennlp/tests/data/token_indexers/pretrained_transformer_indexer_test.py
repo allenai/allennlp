@@ -166,6 +166,13 @@ class TestPretrainedTransformerIndexer(AllenNlpTestCase):
         assert indexed["segment_concat_mask"] == [True] * len(expected_ids)
         assert indexed["mask"] == [True] * 7  # original length
 
+    @staticmethod
+    def _assert_tokens_equal(expected_tokens, actual_tokens):
+        for expected, actual in zip(expected_tokens, actual_tokens):
+            assert expected.text == actual.text
+            assert expected.text_id == actual.text_id
+            assert expected.type_id == actual.type_id
+
     def test_indices_to_tokens(self):
         allennlp_tokenizer = PretrainedTransformerTokenizer("bert-base-uncased")
         indexer_max_length = PretrainedTransformerIndexer(
@@ -179,7 +186,7 @@ class TestPretrainedTransformerIndexer(AllenNlpTestCase):
         indexed = indexer_no_max_length.tokens_to_indices(allennlp_tokens, vocab)
         tokens_from_indices = indexer_no_max_length.indices_to_tokens(indexed, vocab)
 
-        assert allennlp_tokens == tokens_from_indices
+        self._assert_tokens_equal(allennlp_tokens, tokens_from_indices)
 
         indexed = indexer_max_length.tokens_to_indices(allennlp_tokens, vocab)
         tokens_from_indices = indexer_max_length.indices_to_tokens(indexed, vocab)
@@ -189,4 +196,5 @@ class TestPretrainedTransformerIndexer(AllenNlpTestCase):
         expected = (
             allennlp_tokens[:3] + sep_cls + allennlp_tokens[3:5] + sep_cls + allennlp_tokens[5:]
         )
-        assert expected == tokens_from_indices
+
+        self._assert_tokens_equal(expected, tokens_from_indices)

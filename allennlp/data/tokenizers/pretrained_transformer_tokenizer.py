@@ -90,15 +90,15 @@ class PretrainedTransformerTokenizer(Tokenizer):
             model_name, add_special_tokens=True, **tokenizer_kwargs
         )
         dummy_output = tokenizer_with_special_tokens.encode_plus(
-            "1",  # "a" and "b" get tokenized into multiple word pieces, but for now, "1" and "2" do not.
-            "2",
+            " 1",  # "a" and "b" get tokenized into multiple word pieces, but for now, "1" and "2" do not.
+            " 2",
             add_special_tokens=True,
             return_token_type_ids=True,
             return_attention_mask=False,
         )
-        dummy_a = self.tokenizer.encode("1", add_special_tokens=False)[0]
+        dummy_a = self.tokenizer.encode(" 1", add_special_tokens=False)[0]
         assert dummy_a in dummy_output["input_ids"]
-        dummy_b = self.tokenizer.encode("2", add_special_tokens=False)[0]
+        dummy_b = self.tokenizer.encode(" 2", add_special_tokens=False)[0]
         assert dummy_b in dummy_output["input_ids"]
 
         # storing the special tokens
@@ -156,7 +156,7 @@ class PretrainedTransformerTokenizer(Tokenizer):
 
         # Reverse-engineer the tokenizer for one sequence
         dummy_output = tokenizer_with_special_tokens.encode_plus(
-            "1", add_special_tokens=True, return_token_type_ids=True, return_attention_mask=False
+            " 1", add_special_tokens=True, return_token_type_ids=True, return_attention_mask=False
         )
 
         # storing the special tokens
