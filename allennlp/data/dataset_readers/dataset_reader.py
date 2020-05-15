@@ -190,16 +190,17 @@ class DatasetReader(Registrable):
         if lazy:
             read_fn = self._read
             if self.max_instances is not None:
-                # Double lambda ensures that read_fn doesn't call itself recursively.
-                read_fn = lambda f: (
-                    lambda file_path: itertools.islice(f(file_path), self.max_instances)
-                )(read_fn)
+                def get_max_instances(file_path: str):
+                    return itertools.islice(read_fn(file_path), self.max_instances)
+                read_fn = get_max_instances
             if not self.manual_distributed_sharding and util.is_distributed():
-                read_fn = lambda f: (
-                    lambda file_path: itertools.islice(
-                        f(file_path), distributed.get_rank(), None, distributed.get_world_size()
-                    )
-                )(read_fn)
+                def get_distributed_shards(file_path: str):
+                    return itertools.islice(
+                        read_fn(file_path),
+                        distributed.get_rank(),
+                        None,
+                        distributed.get_world_size())
+                read_fn = get_distributed_shards
 
             instances: Iterable[Instance] = _LazyInstances(
                 read_fn, file_path, cache_file, self.deserialize_instance, self.serialize_instance,
