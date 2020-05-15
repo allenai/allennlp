@@ -482,12 +482,11 @@ def is_master(
     num_procs_per_node: int ( default = None ),
         Number of GPU processes running per node
     """
-    distributed = dist.is_available() and dist.is_initialized()
 
     # In non-distributed case, a "master" process doesn't make any
     # sense. So instead of raising an error, returning True would
     # make things less painful
-    if not distributed:
+    if not is_distributed():
         return True
 
     if global_rank is None:
