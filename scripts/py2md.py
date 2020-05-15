@@ -65,26 +65,29 @@ class Param:
         ty = None
         required = True
         default = None
-        if "," in description:
-            ty, extras = description.split(",", 1)
+        if "`, " in description:
+            ty, extras = description.split("`, ", 1)
+            ty = ty + "`"
             required = "optional" not in extras
-            default_match = re.match(r".*default = `?([^\s`\)]+)`?.*", extras)
+            default_match = re.match(r".*default = (`?[^\s`\)]+`?).*", extras)
             if default_match:
                 default = default_match.group(1)
+                if not default.startswith("`"):
+                    logging.warning("Default should be enclosed in backticks: '%s'", line)
         else:
             ty = description
-        if ty.startswith("`"):
-            ty = ty[1:-1]
+        if not ty.startswith("`"):
+            logging.warning("Type should be enclosed in backticks: '%s'", line)
         return cls(ident=ident, ty=ty, required=required, default=default)
 
     def to_line(self) -> str:
         line: str = f"- __{self.ident}__ :"
         if self.ty:
-            line += f" `{self.ty}`"
+            line += f" {self.ty}"
         if not self.required:
             line += ", optional"
             if self.default:
-                line += f" (default = `{self.default}`)"
+                line += f" (default = {self.default})"
         line += "<br>"
         return line
 
@@ -104,6 +107,10 @@ class RetVal:
         if ":" not in line:
             return cls(description=line)
         ident, ty = line.split(":", 1)
+        ident = ident.strip()
+        ty = ty.strip()
+        if ty and not ty.startswith("`"):
+            logging.warning("Type should be enclosed in backticks: '%s'", line)
         return cls(ident=ident, ty=ty)
 
     def to_line(self) -> str:
@@ -216,8 +223,6 @@ class AllenNlpFilterProcessor(Struct):
     Used to filter out nodes that we don't want to document.
     """
 
-    SPECIAL_MEMBERS = ("__path__", "__annotations__", "__name__", "__all__", "__init__")
-
     def process(self, graph, _resolver):
         graph.visit(self._process_node)
 
@@ -225,9 +230,7 @@ class AllenNlpFilterProcessor(Struct):
         def _check(node):
             if node.parent and node.parent.name.startswith("_"):
                 return False
-            if node.name.startswith("_") and not node.name.endswith("_"):
-                return False
-            if node.name in self.SPECIAL_MEMBERS:
+            if node.name.startswith("_"):
                 return False
             if node.name == "logger" and isinstance(node.parent, Module):
                 return False
