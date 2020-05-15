@@ -129,6 +129,12 @@ class DatasetReader(Registrable):
         unique for any combination of code and parameters that you use.  That is, if you pass a
         directory here, we will use any existing cache files in that directory _regardless of the
         parameters you set for this DatasetReader!_
+    manual_distributed_sharding: `bool`, optional (default=False)
+        By default, when used in a distributed setting, `DatasetReader` makes sure that each
+        worker process only receives a subset of the data. It does this by reading the whole
+        dataset in each worker, but filtering out the instances that are not needed. If you
+        can implement a faster mechanism that only reads part of the data, set this to True,
+        and do the sharding yourself.
     """
 
     def __init__(
@@ -136,6 +142,7 @@ class DatasetReader(Registrable):
         lazy: bool = False,
         cache_directory: Optional[str] = None,
         max_instances: Optional[int] = None,
+        manual_distributed_sharding: bool = False
     ) -> None:
         self.lazy = lazy
         self.max_instances = max_instances
@@ -144,6 +151,7 @@ class DatasetReader(Registrable):
             os.makedirs(self._cache_directory, exist_ok=True)
         else:
             self._cache_directory = None
+        self.manual_distributed_sharding = manual_distributed_sharding
 
     def read(self, file_path: str) -> Dataset:
         """
@@ -176,16 +184,30 @@ class DatasetReader(Registrable):
         else:
             cache_file = None
 
+        from torch import distributed
         if lazy:
+            read_fn = self._read
+            if self.max_instances is not None:
+                # Double lambda ensures that read_fn doesn't call itself recursively.
+                read_fn = lambda f: (
+                    lambda file_path: itertools.islice(f(file_path), self.max_instances)
+                )(read_fn)
+            if not self.manual_distributed_sharding and util.is_distributed():
+                read_fn = lambda f: (
+                    lambda file_path: itertools.islice(
+                        f(file_path),
+                        distributed.get_rank(),
+                        None,
+                        distributed.get_world_size())
+                )(read_fn)
+
             instances: Iterable[Instance] = _LazyInstances(
-                self._read,
+                read_fn,
                 file_path,
                 cache_file,
                 self.deserialize_instance,
                 self.serialize_instance,
             )
-            if self.max_instances is not None:
-                instances = itertools.islice(instances, 0, self.max_instances)
         else:
             # First we read the instances, either from a cache or from the original file.
             if cache_file and os.path.exists(cache_file):
@@ -198,6 +220,12 @@ class DatasetReader(Registrable):
                     instances = instances[: self.max_instances]
                 else:
                     instances = itertools.islice(instances, 0, self.max_instances)
+            if not self.manual_distributed_sharding and util.is_distributed():
+                instances = itertools.islice(
+                    instances,
+                    distributed.get_rank(),
+                    None,
+                    distributed.get_world_size())
 
             # Then some validation.
             if not isinstance(instances, list):
@@ -209,7 +237,12 @@ class DatasetReader(Registrable):
                 )
 
             # And finally we write to the cache if we need to.
-            if cache_file and not os.path.exists(cache_file):
+            if (
+                self.max_instances is None and
+                not util.is_distributed() and
+                cache_file is not None and
+                not os.path.exists(cache_file)
+            ):
                 logger.info(f"Caching instances to {cache_file}")
                 self._instances_to_cache_file(cache_file, instances)
 
