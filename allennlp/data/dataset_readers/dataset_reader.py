@@ -142,7 +142,7 @@ class DatasetReader(Registrable):
         lazy: bool = False,
         cache_directory: Optional[str] = None,
         max_instances: Optional[int] = None,
-        manual_distributed_sharding: bool = False
+        manual_distributed_sharding: bool = False,
     ) -> None:
         self.lazy = lazy
         self.max_instances = max_instances
@@ -185,6 +185,7 @@ class DatasetReader(Registrable):
             cache_file = None
 
         from torch import distributed
+
         if lazy:
             read_fn = self._read
             if self.max_instances is not None:
@@ -195,18 +196,12 @@ class DatasetReader(Registrable):
             if not self.manual_distributed_sharding and util.is_distributed():
                 read_fn = lambda f: (
                     lambda file_path: itertools.islice(
-                        f(file_path),
-                        distributed.get_rank(),
-                        None,
-                        distributed.get_world_size())
+                        f(file_path), distributed.get_rank(), None, distributed.get_world_size()
+                    )
                 )(read_fn)
 
             instances: Iterable[Instance] = _LazyInstances(
-                read_fn,
-                file_path,
-                cache_file,
-                self.deserialize_instance,
-                self.serialize_instance,
+                read_fn, file_path, cache_file, self.deserialize_instance, self.serialize_instance,
             )
         else:
             # First we read the instances, either from a cache or from the original file.
@@ -222,10 +217,8 @@ class DatasetReader(Registrable):
                     instances = itertools.islice(instances, 0, self.max_instances)
             if not self.manual_distributed_sharding and util.is_distributed():
                 instances = itertools.islice(
-                    instances,
-                    distributed.get_rank(),
-                    None,
-                    distributed.get_world_size())
+                    instances, distributed.get_rank(), None, distributed.get_world_size()
+                )
 
             # Then some validation.
             if not isinstance(instances, list):
@@ -238,10 +231,10 @@ class DatasetReader(Registrable):
 
             # And finally we write to the cache if we need to.
             if (
-                self.max_instances is None and
-                not util.is_distributed() and
-                cache_file is not None and
-                not os.path.exists(cache_file)
+                self.max_instances is None
+                and not util.is_distributed()
+                and cache_file is not None
+                and not os.path.exists(cache_file)
             ):
                 logger.info(f"Caching instances to {cache_file}")
                 self._instances_to_cache_file(cache_file, instances)
