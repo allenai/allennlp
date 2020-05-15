@@ -1,17 +1,21 @@
 #!/usr/bin/env python
 
 """
-Turn docstring from a single module into a markdown file.
+Turn docstrings from a single module into a markdown file.
+
+We do this with PydocMarkdown, using custom processors and renderers defined here.
 """
 
 import argparse
-from collections import deque
+from collections import deque, OrderedDict
+from dataclasses import dataclass
+from enum import Enum
 import logging
 from multiprocessing import Pool, cpu_count
 import os
 from pathlib import Path
 import re
-from typing import Optional, Tuple
+from typing import Optional, Tuple, List
 
 from nr.databind.core import Struct
 from nr.interface import implements, override
@@ -23,6 +27,105 @@ from pydoc_markdown.reflection import Argument, Module, Function, Class
 
 
 logging.basicConfig(level=logging.INFO)
+
+
+class Section(Enum):
+    ARGUMENTS = "ARGUMENTS"
+    PARAMETERS = "PARAMETERS"
+    ATTRIBUTES = "ATTRIBUTES"
+    MEMBERS = "MEMBERS"
+    RETURNS = "RETURNS"
+    RAISES = "RAISES"
+    EXAMPLES = "EXAMPLES"
+    OTHER = "OTHER"
+
+    @classmethod
+    def from_str(cls, section: str) -> "Section":
+        section = section.upper()
+        for member in cls:
+            if section == member.value:
+                return member
+        return cls.OTHER
+
+
+@dataclass
+class Param:
+    ident: str
+    ty: Optional[str] = None
+    required: bool = False
+    default: Optional[str] = None
+
+    @classmethod
+    def from_line(cls, line: str) -> Optional["Param"]:
+        if ":" not in line:
+            return None
+        ident, description = line.split(":", 1)
+        ident = ident.strip()
+        description = description.strip()
+        ty = None
+        required = True
+        default = None
+        if "," in description:
+            ty, extras = description.split(",", 1)
+            required = "optional" not in extras
+            default_match = re.match(r".*default = `?([^\s`\)]+)`?.*", extras)
+            if default_match:
+                default = default_match.group(1)
+        else:
+            ty = description
+        if ty.startswith("`"):
+            ty = ty[1:-1]
+        return cls(ident=ident, ty=ty, required=required, default=default)
+
+    def to_line(self) -> str:
+        line: str = f"- __{self.ident}__ :"
+        if self.ty:
+            line += f" `{self.ty}`"
+        if not self.required:
+            line += ", optional"
+            if self.default:
+                line += f" (default = `{self.default}`)"
+        line += "<br>"
+        return line
+
+
+# For now we handle attributes / members in the same way as parameters / arguments.
+Attrib = Param
+
+
+@dataclass
+class RetVal:
+    description: Optional[str] = None
+    ident: Optional[str] = None
+    ty: Optional[str] = None
+
+    @classmethod
+    def from_line(cls, line: str) -> "RetVal":
+        if ":" not in line:
+            return cls(description=line)
+        ident, ty = line.split(":", 1)
+        return cls(ident=ident, ty=ty)
+
+    def to_line(self) -> str:
+        if self.description:
+            line = f"- {self.description} <br>"
+        elif self.ident:
+            line = f"- __{self.ident}__"
+            if self.ty:
+                line += f" : {self.ty}<br>"
+            else:
+                line += "<br>"
+        else:
+            raise TypeError("RetVal must have either description or ident")
+        return line
+
+
+@dataclass
+class ProcessorState:
+    parameters: "OrderedDict[str, Param]"
+    current_section: Optional[Section] = None
+    codeblock_opened: bool = False
+    consecutive_blank_line_count: int = 0
 
 
 @implements(Processor)
@@ -40,48 +143,52 @@ class AllenNlpDocstringProcessor(Struct):
     def process_node(self, node):
         if not getattr(node, "docstring", None):
             return
-        lines = []
-        codeblock_opened = False
-        current_section = None
-        consecutive_blank_line_count = 0
+
+        lines: List[str] = []
+        state: ProcessorState = ProcessorState(parameters=OrderedDict())
+
         for line in node.docstring.split("\n"):
+            # Check if we're starting or ending a codeblock.
             if line.startswith("```"):
-                codeblock_opened = not codeblock_opened
-            if not codeblock_opened:
+                state.codeblock_opened = not state.codeblock_opened
+
+            if not state.codeblock_opened:
+                # If we're not in a codeblock, we'll do some pre-processing.
                 if not line.strip():
-                    consecutive_blank_line_count += 1
-                    # Two blank lines ends a section.
-                    if consecutive_blank_line_count >= 2:
-                        current_section = None
+                    state.consecutive_blank_line_count += 1
+                    if state.consecutive_blank_line_count >= 2:
+                        state.current_section = None
                 else:
-                    consecutive_blank_line_count = 0
-                line, current_section = self._preprocess_line(line, current_section)
+                    state.consecutive_blank_line_count = 0
+                line = self._preprocess_line(line, state)
+
             lines.append(line)
+
+        # Now set the docstring to our preprocessed version of it.
         node.docstring = "\n".join(lines)
 
-    def _preprocess_line(self, line, current_section):
+    def _preprocess_line(self, line, state: ProcessorState) -> str:
         match = re.match(r"#+ (.*)$", line)
         if match:
-            current_section = match.group(1).strip().lower()
+            state.current_section = Section.from_str(match.group(1).strip())
             line = re.sub(r"#+ (.*)$", r"__\1__\n", line)
         else:
             if line and not line.startswith(" ") and not line.startswith("!!! "):
-                if (
-                    current_section
-                    in ("arguments", "parameters", "attributes", "members", "returns")
-                    and ":" in line
-                ):
-                    ident, ty = line.split(":", 1)
-                    if ty:
-                        line = f"- __{ident}__ : {ty}<br>"
-                    else:
-                        line = f"- __{ident}__ :<br>"
-                elif current_section in ("returns", "raises"):
-                    line = f"- {line} <br>"
+                if state.current_section in (Section.ARGUMENTS, Section.PARAMETERS,):
+                    param = Param.from_line(line)
+                    if param:
+                        line = param.to_line()
+                elif state.current_section in (Section.ATTRIBUTES, Section.MEMBERS):
+                    attrib = Attrib.from_line(line)
+                    if attrib:
+                        line = attrib.to_line()
+                elif state.current_section in (Section.RETURNS, Section.RAISES):
+                    retval = RetVal.from_line(line)
+                    line = retval.to_line()
 
             line = self._transform_cross_references(line)
 
-        return line, current_section
+        return line
 
     def _transform_cross_references(self, line: str) -> str:
         """
