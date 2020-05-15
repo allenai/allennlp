@@ -8,6 +8,7 @@ import torch
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.util import pad_sequence_to_length
 from allennlp.data.token_indexers.token_indexer import TokenIndexer, IndexedTokenList
+from allennlp.data.tokenizers import Tokenizer
 from allennlp.data.tokenizers.character_tokenizer import CharacterTokenizer
 from allennlp.data.tokenizers.token import Token
 from allennlp.data.vocabulary import Vocabulary
@@ -44,7 +45,7 @@ class TokenCharactersIndexer(TokenIndexer):
     def __init__(
         self,
         namespace: str = "token_characters",
-        character_tokenizer: CharacterTokenizer = CharacterTokenizer(),
+        character_tokenizer: Tokenizer = CharacterTokenizer(),
         start_tokens: List[str] = None,
         end_tokens: List[str] = None,
         min_padding_length: int = 0,
