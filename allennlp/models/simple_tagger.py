@@ -45,7 +45,7 @@ class SimpleTagger(Model):
     label_namespace : `str`, optional (default=`labels`)
         This is needed to compute the SpanBasedF1Measure metric, if desired.
         Unless you did something unusual, the default value should be what you want.
-    verbose_metrics : `bool`, optional (default = False)
+    verbose_metrics : `bool`, optional (default = `False`)
         If true, metrics will be returned per label class in addition
         to the overall statistics.
     initializer : `InitializerApplicator`, optional (default=`InitializerApplicator()`)
@@ -115,7 +115,7 @@ class SimpleTagger(Model):
         """
         # Parameters
 
-        tokens : TextFieldTensors, required
+        tokens : `TextFieldTensors`, required
             The output of `TextField.as_array()`, which should typically be passed directly to a
             `TextFieldEmbedder`. This output is a dictionary mapping keys to `TokenIndexer`
             tensors.  At its most basic, using a `SingleIdTokenIndexer` this is : `{"tokens":
@@ -124,12 +124,12 @@ class SimpleTagger(Model):
             sequence.  The dictionary is designed to be passed directly to a `TextFieldEmbedder`,
             which knows how to combine different word representations into a single vector per
             token in your input.
-        tags : torch.LongTensor, optional (default = None)
+        tags : `torch.LongTensor`, optional (default = `None`)
             A torch tensor representing the sequence of integer gold class labels of shape
             `(batch_size, num_tokens)`.
-        metadata : `List[Dict[str, Any]]`, optional, (default = None)
+        metadata : `List[Dict[str, Any]]`, optional, (default = `None`)
             metadata containing the original words in the sentence to be tagged under a 'words' key.
-        ignore_loss_on_o_tags : `bool`, optional (default = False)
+        ignore_loss_on_o_tags : `bool`, optional (default = `False`)
             If True, we compute the loss only for actual spans in `tags`, and not on `O` tokens.
             This is useful for computing gradients of the loss on a _single span_, for
             interpretation / attacking.

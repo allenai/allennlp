@@ -17,7 +17,7 @@ class AttachmentScores(Metric):
 
     # Parameters
 
-    ignore_classes : `List[int]`, optional (default = None)
+    ignore_classes : `List[int]`, optional (default = `None`)
         A list of label ids to ignore when computing metrics.
     """
 
@@ -50,7 +50,7 @@ class AttachmentScores(Metric):
             A tensor of the same shape as `predicted_indices`.
         gold_labels : `torch.Tensor`, required.
             A tensor of the same shape as `predicted_labels`.
-        mask : `torch.BoolTensor`, optional (default = None).
+        mask : `torch.BoolTensor`, optional (default = `None`).
             A tensor of the same shape as `predicted_indices`.
         """
         detached = self.detach_tensors(

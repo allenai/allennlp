@@ -60,7 +60,7 @@ class RandomSampler(data.RandomSampler, Sampler):
     # Parameters
     data_source: `Dataset`, reqired
         The dataset to sample from.
-    replacement : `bool`, optional(default = False)
+    replacement : `bool`, optional(default = `False`)
         Samples are drawn with replacement if `True`.
     num_samples: `int` (default = `len(dataset)`)
         The number of samples to draw. This argument

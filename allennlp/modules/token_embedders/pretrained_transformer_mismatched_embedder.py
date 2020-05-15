@@ -20,7 +20,7 @@ class PretrainedTransformerMismatchedEmbedder(TokenEmbedder):
     model_name : `str`
         The name of the `transformers` model to use. Should be the same as the corresponding
         `PretrainedTransformerMismatchedIndexer`.
-    max_length : `int`, optional (default = None)
+    max_length : `int`, optional (default = `None`)
         If positive, folds input token IDs into multiple segments of this length, pass them
         through the transformer model independently, and concatenate the final representations.
         Should be set to the same value as the `max_length` option on the
@@ -49,20 +49,20 @@ class PretrainedTransformerMismatchedEmbedder(TokenEmbedder):
         """
         # Parameters
 
-        token_ids: torch.LongTensor
+        token_ids: `torch.LongTensor`
             Shape: [batch_size, num_wordpieces] (for exception see `PretrainedTransformerEmbedder`).
-        mask: torch.BoolTensor
+        mask: `torch.BoolTensor`
             Shape: [batch_size, num_orig_tokens].
-        offsets: torch.LongTensor
+        offsets: `torch.LongTensor`
             Shape: [batch_size, num_orig_tokens, 2].
             Maps indices for the original tokens, i.e. those given as input to the indexer,
             to a span in token_ids. `token_ids[i][offsets[i][j][0]:offsets[i][j][1] + 1]`
             corresponds to the original j-th token from the i-th batch.
-        wordpiece_mask: torch.BoolTensor
+        wordpiece_mask: `torch.BoolTensor`
             Shape: [batch_size, num_wordpieces].
-        type_ids: Optional[torch.LongTensor]
+        type_ids: `Optional[torch.LongTensor]`
             Shape: [batch_size, num_wordpieces].
-        segment_concat_mask: Optional[torch.BoolTensor]
+        segment_concat_mask: `Optional[torch.BoolTensor]`
             See `PretrainedTransformerEmbedder`.
 
         # Returns

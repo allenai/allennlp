@@ -20,9 +20,9 @@ class BLEU(Metric):
 
     # Parameters
 
-    ngram_weights : `Iterable[float]`, optional (default = (0.25, 0.25, 0.25, 0.25))
+    ngram_weights : `Iterable[float]`, optional (default = `(0.25, 0.25, 0.25, 0.25)`)
         Weights to assign to scores for each ngram size.
-    exclude_indices : `Set[int]`, optional (default = None)
+    exclude_indices : `Set[int]`, optional (default = `None`)
         Indices to exclude when calculating ngrams. This should usually include
         the indices of the start, end, and pad tokens.
 

@@ -112,17 +112,17 @@ class DatasetReader(Registrable):
 
     # Parameters
 
-    lazy : `bool`, optional (default=False)
+    lazy : `bool`, optional (default=`False`)
         If this is true, `instances()` will return an object whose `__iter__` method
         reloads the dataset each time it's called. Otherwise, `instances()` returns a list.
-    cache_directory : `str`, optional (default=None)
+    cache_directory : `str`, optional (default=`None`)
         If given, we will use this directory to store a cache of already-processed `Instances` in
         every file passed to :func:`read`, serialized (by default, though you can override this) as
         one string-formatted `Instance` per line.  If the cache file for a given `file_path` exists,
         we read the `Instances` from the cache instead of re-processing the data (using
         :func:`_instances_from_cache_file`).  If the cache file does _not_ exist, we will _create_
         it on our first pass through the data (using :func:`_instances_to_cache_file`).
-    max_instances : `int`, optional (default=None)
+    max_instances : `int`, optional (default=`None`)
         If given, will stop reading after this many instances. This is a useful setting for debugging.
 
         IMPORTANT CAVEAT: It is the _caller's_ responsibility to make sure that this directory is

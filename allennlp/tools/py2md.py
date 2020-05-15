@@ -7,7 +7,7 @@ We do this with PydocMarkdown, using custom processors and renderers defined her
 """
 
 import argparse
-from collections import deque, OrderedDict
+from collections import OrderedDict
 from dataclasses import dataclass
 from enum import Enum
 import logging
@@ -15,6 +15,7 @@ from multiprocessing import Pool, cpu_count
 import os
 from pathlib import Path
 import re
+import sys
 from typing import Optional, Tuple, List
 
 from nr.databind.core import Struct
@@ -27,6 +28,19 @@ from pydoc_markdown.reflection import Argument, Module, Function, Class
 
 
 logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("py2md")
+
+
+class DocstringError(Exception):
+    pass
+
+
+def emphasize(s: str) -> str:
+    # It's generally more robust to use enclose `s` in double underscores (`__`)
+    # to make it bold font in markdown, unless `s` starts or ends with `_`.
+    if s.startswith("_") or s.endswith("_"):
+        return f"**{s}**"
+    return f"__{s}__"
 
 
 class Section(Enum):
@@ -62,6 +76,10 @@ class Param:
         ident, description = line.split(":", 1)
         ident = ident.strip()
         description = description.strip()
+
+        if " " in ident:
+            return None
+
         ty = None
         required = True
         default = None
@@ -69,26 +87,26 @@ class Param:
             ty, extras = description.split("`, ", 1)
             ty = ty + "`"
             required = "optional" not in extras
-            default_match = re.match(r".*default = (`?[^\s`\)]+`?).*", extras)
+            default_match = re.match(r".*\(default\s?=\s?(`?[^`]+`?)\).*", extras)
             if default_match:
                 default = default_match.group(1)
                 if not default.startswith("`"):
-                    logging.warning("Default should be enclosed in backticks: '%s'", line)
+                    raise DocstringError(f"Default value should be enclosed in backticks: '{line}'")
         else:
             ty = description
         if not ty.startswith("`"):
-            logging.warning("Type should be enclosed in backticks: '%s'", line)
+            raise DocstringError(f"Type should be enclosed in backticks: '{line}'")
         return cls(ident=ident, ty=ty, required=required, default=default)
 
     def to_line(self) -> str:
-        line: str = f"- __{self.ident}__ :"
+        line: str = f"- {emphasize(self.ident)} :"
         if self.ty:
             line += f" {self.ty}"
         if not self.required:
             line += ", optional"
             if self.default:
                 line += f" (default = {self.default})"
-        line += "<br>"
+        line += " <br>"
         return line
 
 
@@ -104,26 +122,26 @@ class RetVal:
 
     @classmethod
     def from_line(cls, line: str) -> "RetVal":
-        if ":" not in line:
+        if ": " not in line:
             return cls(description=line)
         ident, ty = line.split(":", 1)
         ident = ident.strip()
         ty = ty.strip()
         if ty and not ty.startswith("`"):
-            logging.warning("Type should be enclosed in backticks: '%s'", line)
+            raise DocstringError(f"Type should be enclosed in backticks: '{line}'")
         return cls(ident=ident, ty=ty)
 
     def to_line(self) -> str:
         if self.description:
             line = f"- {self.description} <br>"
         elif self.ident:
-            line = f"- __{self.ident}__"
+            line = f"- {emphasize(self.ident)}"
             if self.ty:
-                line += f" : {self.ty}<br>"
+                line += f" : {self.ty} <br>"
             else:
-                line += "<br>"
+                line += " <br>"
         else:
-            raise TypeError("RetVal must have either description or ident")
+            raise DocstringError("RetVal must have either description or ident")
         return line
 
 
@@ -178,7 +196,7 @@ class AllenNlpDocstringProcessor(Struct):
         match = re.match(r"#+ (.*)$", line)
         if match:
             state.current_section = Section.from_str(match.group(1).strip())
-            line = re.sub(r"#+ (.*)$", r"__\1__\n", line)
+            line = re.sub(r"#+ (.*)$", r"<strong>\1</strong>\n", line)
         else:
             if line and not line.startswith(" ") and not line.startswith("!!! "):
                 if state.current_section in (Section.ARGUMENTS, Section.PARAMETERS,):
@@ -327,7 +345,11 @@ class AllenNlpRenderer(MarkdownRenderer):
             fp.write("\n\n")
 
 
-def py2md(module: str, out: Optional[str] = None) -> None:
+def py2md(module: str, out: Optional[str] = None) -> bool:
+    """
+    Returns `True` if module successfully processed, otherwise `False`.
+    """
+    logger.debug("Processing %s", module)
     pydocmd = PydocMarkdown(
         loaders=[PythonLoader(modules=[module])],
         processors=[AllenNlpFilterProcessor(), AllenNlpDocstringProcessor()],
@@ -346,12 +368,16 @@ def py2md(module: str, out: Optional[str] = None) -> None:
         os.makedirs(out_path.parent, exist_ok=True)
 
     pydocmd.load_modules()
-    pydocmd.process()
+    try:
+        pydocmd.process()
+    except DocstringError as err:
+        logger.exception("Failed to process %s.\n%s", module, err)
+        return False
     pydocmd.render()
-    logging.info("Processed %s", module)
+    return True
 
 
-def _py2md_wrapper(x: Tuple[str, str]):
+def _py2md_wrapper(x: Tuple[str, str]) -> bool:
     """
     Used to wrap py2md since we can't pickle a lambda (needed for multiprocessing).
     """
@@ -379,18 +405,26 @@ def main():
     if len(outputs) != len(opts.modules):
         raise ValueError("Number inputs and outputs should be the same.")
     n_threads = cpu_count()
+    errors: int = 0
     if len(opts.modules) > n_threads and opts.out:
         # If writing to files, can process in parallel.
         chunk_size = max([1, int(len(outputs) / n_threads)])
-        logging.info("Using %d threads", n_threads)
+        logger.info("Using %d threads", n_threads)
         with Pool(n_threads) as p:
-            deque(p.imap(_py2md_wrapper, zip(opts.modules, outputs), chunk_size), maxlen=0)
+            for result in p.imap(_py2md_wrapper, zip(opts.modules, outputs), chunk_size):
+                if not result:
+                    errors += 1
     else:
         # If writing to stdout, need to process sequentially. Otherwise the output
         # could get intertwined.
         for module, out in zip(opts.modules, outputs):
-            py2md(module, out)
-    logging.info("Processed %d modules", len(opts.modules))
+            result = py2md(module, out)
+            if not result:
+                errors += 1
+    logger.info("Processed %d modules", len(opts.modules))
+    if errors:
+        logger.error("Found %d errors", errors)
+        sys.exit(1)
 
 
 if __name__ == "__main__":

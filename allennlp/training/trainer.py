@@ -175,38 +175,38 @@ class GradientDescentTrainer(Trainer):
     data_loader : `DataLoader`, required.
         A pytorch `DataLoader` containing your `Dataset`, yielding padded indexed batches.
 
-    patience : `Optional[int] > 0`, optional (default=None)
+    patience : `Optional[int] > 0`, optional (default=`None`)
         Number of epochs to be patient before early stopping: the training is stopped
         after `patience` epochs with no improvement. If given, it must be `> 0`.
         If None, early stopping is disabled.
 
-    validation_metric : `str`, optional (default="loss")
+    validation_metric : `str`, optional (default=`"loss"`)
         Validation metric to measure for whether to stop training using patience
         and whether to serialize an `is_best` model each epoch. The metric name
         must be prepended with either "+" or "-", which specifies whether the metric
         is an increasing or decreasing function.
 
-    validation_data_loader : `DataLoader`, optional (default=None)
+    validation_data_loader : `DataLoader`, optional (default=`None`)
         A `DataLoader` to use for the validation set.  If `None`, then
         use the training `DataLoader` with the validation data.
 
-    num_epochs : `int`, optional (default = 20)
+    num_epochs : `int`, optional (default = `20`)
         Number of training epochs.
 
-    serialization_dir : str, optional (default=None)
+    serialization_dir : `str`, optional (default=`None`)
         Path to directory for saving and loading model files. Models will not be saved if
         this parameter is not passed.
 
-    checkpointer : `Checkpointer`, optional (default=None)
+    checkpointer : `Checkpointer`, optional (default=`None`)
         A `Checkpointer` is responsible for periodically saving model weights.  If none is given
         here, we will construct one with default parameters.
 
-    cuda_device : `int`, optional (default = -1)
+    cuda_device : `int`, optional (default = `-1`)
         An integer specifying the CUDA device(s) to use for this process. If -1, the CPU is used.
         Data parallelism is controlled at the allennlp train level, so each trainer will have a single
         GPU.
 
-    grad_norm : `float`, optional, (default = None).
+    grad_norm : `float`, optional, (default = `None`).
         If provided, gradient norms will be rescaled to have a maximum of this value.
 
     grad_clipping : `float`, optional (default = `None`).
@@ -214,7 +214,7 @@ class GradientDescentTrainer(Trainer):
         maximum of this value.  If you are getting `NaNs` in your gradients during training
         that are not solved by using `grad_norm`, you may need this.
 
-    learning_rate_scheduler : `LearningRateScheduler`, optional (default = None)
+    learning_rate_scheduler : `LearningRateScheduler`, optional (default = `None`)
         If specified, the learning rate will be decayed with respect to
         this schedule at the end of each epoch (or batch, if the scheduler implements
         the `step_batch` method). If you use `torch.optim.lr_scheduler.ReduceLROnPlateau`,
@@ -222,7 +222,7 @@ class GradientDescentTrainer(Trainer):
         To support updating the learning rate on every batch, this can optionally implement
         `step_batch(batch_num_total)` which updates the learning rate given the batch number.
 
-    momentum_scheduler : `MomentumScheduler`, optional (default = None)
+    momentum_scheduler : `MomentumScheduler`, optional (default = `None`)
         If specified, the momentum will be updated at the end of each batch or epoch
         according to the schedule.
 
@@ -230,7 +230,7 @@ class GradientDescentTrainer(Trainer):
         If this is not provided, we will construct a `TensorboardWriter` with default
         parameters and use that.
 
-    moving_average : `MovingAverage`, optional, (default = None)
+    moving_average : `MovingAverage`, optional, (default = `None`)
         If provided, we will maintain moving averages for all parameters. During training, we
         employ a shadow variable for each parameter, which maintains the moving average. During
         evaluation, we backup the original parameters and assign the moving averages to corresponding
@@ -238,26 +238,26 @@ class GradientDescentTrainer(Trainer):
         parameters. This is necessary because we want the saved model to perform as well as the validated
         model if we load it later. But this may cause problems if you restart the training from checkpoint.
 
-    batch_callbacks : `List[BatchCallback]`, optional (default = None)
+    batch_callbacks : `List[BatchCallback]`, optional (default = `None`)
         A list of callbacks that will be called at the end of every batch, during both train and
         validation.
 
-    epoch_callbacks : `List[EpochCallback]`, optional (default = None)
+    epoch_callbacks : `List[EpochCallback]`, optional (default = `None`)
         A list of callbacks that will be called at the end of every epoch, and at the start of
         training (with epoch = -1).
 
-    distributed : `bool`, optional, (default = False)
+    distributed : `bool`, optional, (default = `False`)
         If set, PyTorch's `DistributedDataParallel` is used to train the model in multiple GPUs. This also
         requires `world_size` to be greater than 1.
 
-    local_rank : `int`, optional, (default = 0)
+    local_rank : `int`, optional, (default = `0`)
         This is the unique identifier of the `Trainer` in a distributed process group. The GPU device id is
         used as the rank.
 
-    world_size : `int`, (default = 1)
+    world_size : `int`, (default = `1`)
         The number of `Trainer` workers participating in the distributed training.
 
-    num_gradient_accumulation_steps : `int`, optional, (default = 1)
+    num_gradient_accumulation_steps : `int`, optional, (default = `1`)
         Gradients are accumulated for the given number of steps before doing an optimizer step. This can
         be useful to accommodate batches that are larger than the RAM size. Refer [Thomas Wolf's
         post][0] for details on Gradient Accumulation.

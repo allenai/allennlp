@@ -23,7 +23,7 @@ class LabelField(Field[torch.Tensor]):
     # Parameters
 
     label : `Union[str, int]`
-    label_namespace : `str`, optional (default="labels")
+    label_namespace : `str`, optional (default=`"labels"`)
         The namespace to use for converting label strings into integers.  We map label strings to
         integers for you (e.g., "entailment" and "contradiction" get converted to 0, 1, ...),
         and this namespace tells the `Vocabulary` object which mapping from strings to integers
@@ -31,7 +31,7 @@ class LabelField(Field[torch.Tensor]):
         word).  If you have multiple different label fields in your data, you should make sure you
         use different namespaces for each one, always using the suffix "labels" (e.g.,
         "passage_labels" and "question_labels").
-    skip_indexing : `bool`, optional (default=False)
+    skip_indexing : `bool`, optional (default=`False`)
         If your labels are 0-indexed integers, you can pass in this flag, and we'll skip the indexing
         step.  If this is `False` and your labels are not strings, this throws a `ConfigurationError`.
     """

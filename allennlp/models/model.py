@@ -117,7 +117,7 @@ class Model(torch.nn.Module, Registrable):
 
         # Parameters
 
-        *inputs :
+        *inputs : `Any`
             Tensors comprising everything needed to perform a training update, `including` labels,
             which should be optional (i.e have a default value of `None`).  At inference time,
             simply pass the relevant inputs, not including the labels.

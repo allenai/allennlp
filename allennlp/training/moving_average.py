@@ -53,12 +53,12 @@ class ExponentialMovingAverage(MovingAverage):
 
     parameters : `Iterable[Tuple[str, Parameter]]`, required
         The parameters whose averages we'll be tracking.
-    decay : `float`, optional (default = 0.9999)
+    decay : `float`, optional (default = `0.9999`)
         The decay rate that will be used if `num_updates` is not passed
         (and that will be used as an upper bound if `num_updates` is passed).
-    numerator : `float`, optional (default = 1.0)
+    numerator : `float`, optional (default = `1.0`)
         The numerator used to compute the decay rate if `num_updates` is passed.
-    denominator : `float`, optional (default = 10.0)
+    denominator : `float`, optional (default = `10.0`)
         The denominator used to compute the decay rate if `num_updates` is passed.
     """
 

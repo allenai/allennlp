@@ -26,26 +26,26 @@ class SpacyTokenizer(Tokenizer):
 
     # Parameters
 
-    language : `str`, optional, (default="en_core_web_sm")
+    language : `str`, optional, (default=`"en_core_web_sm"`)
         Spacy model name.
-    pos_tags : `bool`, optional, (default=False)
+    pos_tags : `bool`, optional, (default=`False`)
         If `True`, performs POS tagging with spacy model on the tokens.
         Generally used in conjunction with :class:`~allennlp.data.token_indexers.pos_tag_indexer.PosTagIndexer`.
-    parse : `bool`, optional, (default=False)
+    parse : `bool`, optional, (default=`False`)
         If `True`, performs dependency parsing with spacy model on the tokens.
         Generally used in conjunction with :class:`~allennlp.data.token_indexers.pos_tag_indexer.DepLabelIndexer`.
-    ner : `bool`, optional, (default=False)
+    ner : `bool`, optional, (default=`False`)
         If `True`, performs dependency parsing with spacy model on the tokens.
         Generally used in conjunction with :class:`~allennlp.data.token_indexers.ner_tag_indexer.NerTagIndexer`.
-    keep_spacy_tokens : `bool`, optional, (default=False)
+    keep_spacy_tokens : `bool`, optional, (default=`False`)
         If `True`, will preserve spacy token objects, We copy spacy tokens into our own class by default instead
         because spacy Cython Tokens can't be pickled.
-    split_on_spaces : `bool`, optional, (default=False)
+    split_on_spaces : `bool`, optional, (default=`False`)
         If `True`, will split by spaces without performing tokenization.
         Used when your data is already tokenized, but you want to perform pos, ner or parsing on the tokens.
-    start_tokens : `Optional[List[str]]`, optional, (default=None)
+    start_tokens : `Optional[List[str]]`, optional, (default=`None`)
         If given, these tokens will be added to the beginning of every string we tokenize.
-    end_tokens : `Optional[List[str]]`, optional, (default=None)
+    end_tokens : `Optional[List[str]]`, optional, (default=`None`)
         If given, these tokens will be added to the end of every string we tokenize.
     """
 

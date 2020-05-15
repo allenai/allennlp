@@ -35,16 +35,16 @@ class PretrainedTransformerTokenizer(Tokenizer):
 
     model_name : `str`
         The name of the pretrained wordpiece tokenizer to use.
-    add_special_tokens : `bool`, optional, (default=True)
+    add_special_tokens : `bool`, optional, (default=`True`)
         If set to `True`, the sequences will be encoded with the special tokens relative
         to their model.
-    max_length : `int`, optional (default=None)
+    max_length : `int`, optional (default=`None`)
         If set to a number, will limit the total sequence returned so that it has a maximum length.
         If there are overflowing tokens, those will be added to the returned dictionary
-    stride : `int`, optional (default=0)
+    stride : `int`, optional (default=`0`)
         If set to a number along with max_length, the overflowing tokens returned will contain some tokens
         from the main sequence returned. The value of this argument defines the number of additional tokens.
-    truncation_strategy : `str`, optional (default='longest_first')
+    truncation_strategy : `str`, optional (default=`'longest_first'`)
         String selected in the following options:
         - 'longest_first' (default) Iteratively reduce the inputs sequence until the input is under max_length
         starting from the longest one at each token (when there is a pair of input sequences)

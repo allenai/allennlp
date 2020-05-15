@@ -27,7 +27,7 @@ class Maxout(torch.nn.Module, FromParams):
         The size of max-pools.  If this is a single `int`, we use
         it for all maxout layers.  If it is a `Sequence[int]`, `len(pool_sizes)` must be
         `num_layers`.
-    dropout : `Union[float, Sequence[float]]`, optional (default = 0.0)
+    dropout : `Union[float, Sequence[float]]`, optional (default = `0.0`)
         If given, we will apply this amount of dropout after each layer.  Semantics of `float`
         versus `Sequence[float]` is the same as with other parameters.
     """

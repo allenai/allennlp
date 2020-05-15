@@ -1,6 +1,7 @@
 """
 Base class for subcommands under `allennlp.run`.
 """
+
 import argparse
 from typing import Callable, Dict, Optional, Type, TypeVar
 

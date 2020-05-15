@@ -25,10 +25,10 @@ class BertPooler(Seq2VecEncoder):
         The pretrained BERT model to use. If this is a string,
         we will call `BertModel.from_pretrained(pretrained_model)`
         and use that.
-    requires_grad : `bool`, optional, (default = True)
+    requires_grad : `bool`, optional, (default = `True`)
         If True, the weights of the pooler will be updated during training.
         Otherwise they will not.
-    dropout : `float`, optional, (default = 0.0)
+    dropout : `float`, optional, (default = `0.0`)
         Amount of dropout to apply after pooling
     """
 

@@ -30,13 +30,13 @@ class AdjacencyField(Field[torch.Tensor]):
     sequence_field : `SequenceField`
         A field containing the sequence that this `AdjacencyField` is labeling.  Most often,
         this is a `TextField`, for tagging edge relations between tokens in a sentence.
-    labels : `List[str]`, optional, default = None
+    labels : `List[str]`, optional, (default = `None`)
         Optional labels for the edges of the adjacency matrix.
-    label_namespace : `str`, optional (default='labels')
+    label_namespace : `str`, optional (default=`'labels'`)
         The namespace to use for converting tag strings into integers.  We convert tag strings to
         integers for you, and this parameter tells the `Vocabulary` object which mapping from
         strings to integers to use (so that "O" as a tag doesn't get the same id as "O" as a word).
-    padding_value : `int`, (optional, default = -1)
+    padding_value : `int`, optional (default = `-1`)
         The value to use as padding.
     """
 

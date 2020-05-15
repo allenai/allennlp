@@ -66,7 +66,7 @@ class _EncoderBase(torch.nn.Module):
         mask : `torch.BoolTensor`, required.
             A tensor of shape `(batch_size, sequence_length)`, representing masked and
             non-masked elements of the sequence for each element in the batch.
-        hidden_state : `Optional[RnnState]`, (default = None).
+        hidden_state : `Optional[RnnState]`, (default = `None`).
             A single tensor of shape (num_layers, batch_size, hidden_size) representing the
             state of an RNN with or a tuple of
             tensors of shapes (num_layers, batch_size, hidden_size) and

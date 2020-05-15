@@ -25,7 +25,7 @@ class ElmoTokenEmbedder(TokenEmbedder):
         An ELMo hdf5 weight file.
     do_layer_norm : `bool`, optional.
         Should we apply layer normalization (passed to `ScalarMix`)?
-    dropout : `float`, optional, (default = 0.5).
+    dropout : `float`, optional, (default = `0.5`).
         The dropout value to be applied to the ELMo representations.
     requires_grad : `bool`, optional
         If True, compute gradient of ELMo parameters for fine tuning.
@@ -39,7 +39,7 @@ class ElmoTokenEmbedder(TokenEmbedder):
         indices of shape (batch_size, timesteps) to forward, instead
         of character indices. If you use this option and pass a word which
         wasn't pre-cached, this will break.
-    scalar_mix_parameters : `List[int]`, optional, (default=None)
+    scalar_mix_parameters : `List[int]`, optional, (default=`None`)
         If not `None`, use these scalar mix parameters to weight the representations
         produced by different layers. These mixing weights are not updated during
         training. The mixing weights here should be the unnormalized (i.e., pre-softmax)
