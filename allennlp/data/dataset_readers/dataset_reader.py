@@ -33,7 +33,32 @@ class AllennlpDataset(Dataset):
         self.vocab = vocab
 
 
-class _LazyInstances(IterableDataset):
+class AllennlpLazyDataset(IterableDataset):
+    def __init__(
+        self,
+        deserialize: Callable[[str], Instance] = None,
+        serialize: Callable[[Instance], str] = None,
+        vocab: Vocabulary = None,
+    ) -> None:
+        super().__init__()
+        self.deserialize = deserialize
+        self.serialize = serialize
+        self.vocab = vocab
+
+    def index_with(self, vocab: Vocabulary):
+        self.vocab = vocab
+
+    def __len__(self):
+        """
+        We rely in a couple of places that calling len on the dataloader
+        (which in turn calls len on the dataset) doesn't raise an error.
+        In the case that you have an IterableDataset and you call len, the pytorch dataloader
+        actually spits out a warning - but we need actually calling it to not crash.
+        """
+        return 1
+
+
+class _LazyInstances(AllennlpLazyDataset):
     """
     An `Iterable` that just wraps a thunk for generating instances and calls it for
     each call to `__iter__`.
@@ -48,13 +73,10 @@ class _LazyInstances(IterableDataset):
         serialize: Callable[[Instance], str] = None,
         vocab: Vocabulary = None,
     ) -> None:
-        super().__init__()
+        super().__init__(deserialize, serialize, vocab)
         self.instance_generator = instance_generator
         self.file_path = file_path
         self.cache_file = cache_file
-        self.deserialize = deserialize
-        self.serialize = serialize
-        self.vocab = vocab
 
     def __iter__(self) -> Iterator[Instance]:
         # Case 1: Use cached instances
@@ -87,17 +109,41 @@ class _LazyInstances(IterableDataset):
                     instance.index_fields(self.vocab)
                 yield instance
 
+
+class _MaxLazyInstances(AllennlpLazyDataset):
+    def __init__(self, inner: AllennlpLazyDataset, max_instances: int) -> None:
+        super().__init__()
+        self.inner = inner
+        self.max_instances = max_instances
+
+    def __iter__(self) -> Iterator[Instance]:
+        return itertools.islice(iter(self.inner), self.max_instances)
+
     def index_with(self, vocab: Vocabulary):
-        self.vocab = vocab
+        self.inner.index_with(vocab)
 
     def __len__(self):
-        """
-        We rely in a couple of places that calling len on the dataloader
-        (which in turn calls len on the dataset) doesn't raise an error.
-        In the case that you have an IterableDataset and you call len, the pytorch dataloader
-        actually spits out a warning - but we need actually calling it to not crash.
-        """
-        return 1
+        return len(self.inner)
+
+
+class _DistributedLazyInstances(AllennlpLazyDataset):
+    def __init__(self, inner: AllennlpLazyDataset) -> None:
+        super().__init__()
+        self.inner = inner
+
+    def __iter__(self) -> Iterator[Instance]:
+        from torch import distributed
+        return itertools.islice(
+            iter(self.inner),
+            distributed.get_rank(),
+            None,
+            distributed.get_world_size())
+
+    def index_with(self, vocab: Vocabulary):
+        self.inner.index_with(vocab)
+
+    def __len__(self):
+        return len(self.inner)
 
 
 class DatasetReader(Registrable):
@@ -185,26 +231,18 @@ class DatasetReader(Registrable):
         else:
             cache_file = None
 
-        from torch import distributed
-
         if lazy:
-            read_fn = self._read
-            if self.max_instances is not None:
-                def get_max_instances(file_path: str):
-                    return itertools.islice(read_fn(file_path), self.max_instances)
-                read_fn = get_max_instances
-            if not self.manual_distributed_sharding and util.is_distributed():
-                def get_distributed_shards(file_path: str):
-                    return itertools.islice(
-                        read_fn(file_path),
-                        distributed.get_rank(),
-                        None,
-                        distributed.get_world_size())
-                read_fn = get_distributed_shards
-
-            instances: Iterable[Instance] = _LazyInstances(
-                read_fn, file_path, cache_file, self.deserialize_instance, self.serialize_instance,
+            instances = _LazyInstances(
+                self._read,
+                file_path,
+                cache_file,
+                self.deserialize_instance,
+                self.serialize_instance,
             )
+            if self.max_instances is not None:
+                instances = _MaxLazyInstances(instances, self.max_instances)
+            if not self.manual_distributed_sharding and util.is_distributed():
+                instances = _DistributedLazyInstances(instances)
         else:
             # First we read the instances, either from a cache or from the original file.
             if cache_file and os.path.exists(cache_file):
@@ -218,6 +256,7 @@ class DatasetReader(Registrable):
                 else:
                     instances = itertools.islice(instances, 0, self.max_instances)
             if not self.manual_distributed_sharding and util.is_distributed():
+                from torch import distributed
                 instances = itertools.islice(
                     instances, distributed.get_rank(), None, distributed.get_world_size()
                 )
