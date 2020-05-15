@@ -133,11 +133,10 @@ class _DistributedLazyInstances(AllennlpLazyDataset):
 
     def __iter__(self) -> Iterator[Instance]:
         from torch import distributed
+
         return itertools.islice(
-            iter(self.inner),
-            distributed.get_rank(),
-            None,
-            distributed.get_world_size())
+            iter(self.inner), distributed.get_rank(), None, distributed.get_world_size()
+        )
 
     def index_with(self, vocab: Vocabulary):
         self.inner.index_with(vocab)
@@ -232,7 +231,7 @@ class DatasetReader(Registrable):
             cache_file = None
 
         if lazy:
-            instances = _LazyInstances(
+            lazy_instances: AllennlpLazyDataset = _LazyInstances(
                 self._read,
                 file_path,
                 cache_file,
@@ -240,9 +239,10 @@ class DatasetReader(Registrable):
                 self.serialize_instance,
             )
             if self.max_instances is not None:
-                instances = _MaxLazyInstances(instances, self.max_instances)
+                lazy_instances = _MaxLazyInstances(lazy_instances, self.max_instances)
             if not self.manual_distributed_sharding and util.is_distributed():
-                instances = _DistributedLazyInstances(instances)
+                lazy_instances = _DistributedLazyInstances(lazy_instances)
+            return lazy_instances
         else:
             # First we read the instances, either from a cache or from the original file.
             if cache_file and os.path.exists(cache_file):
@@ -257,6 +257,7 @@ class DatasetReader(Registrable):
                     instances = itertools.islice(instances, 0, self.max_instances)
             if not self.manual_distributed_sharding and util.is_distributed():
                 from torch import distributed
+
                 instances = itertools.islice(
                     instances, distributed.get_rank(), None, distributed.get_world_size()
                 )
@@ -280,9 +281,7 @@ class DatasetReader(Registrable):
                 logger.info(f"Caching instances to {cache_file}")
                 self._instances_to_cache_file(cache_file, instances)
 
-            instances = AllennlpDataset(instances)
-
-        return instances
+            return AllennlpDataset(instances)
 
     def _get_cache_location_for_file_path(self, file_path: str) -> str:
         return str(self._cache_directory / util.flatten_filename(str(file_path)))
