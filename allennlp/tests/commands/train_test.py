@@ -4,7 +4,7 @@ import math
 import os
 import re
 import shutil
-from collections import OrderedDict
+from collections import OrderedDict, Counter
 from typing import Iterable, Optional, List, Dict, Any
 
 import pytest
@@ -161,7 +161,7 @@ class TestTrain(AllenNlpTestCase):
         assert "stdout_worker1.log" in serialized_files
         assert "model.tar.gz" in serialized_files
 
-        # Check we can load the seralized model
+        # Check we can load the serialized model
         archive = load_archive(out_dir)
         assert archive.model
 
@@ -209,6 +209,116 @@ class TestTrain(AllenNlpTestCase):
             assert validation_early not in worker1_log
             assert train_complete in worker1_log
             assert validation_complete in worker1_log
+
+    @requires_multi_gpu
+    def test_train_model_distributed_without_sharded_reader(self):
+        @BatchCallback.register("training_data_logger")
+        class TrainingDataLogger(BatchCallback):
+            def __call__(
+                self,
+                trainer: "GradientDescentTrainer",
+                batch_inputs: List[List[TensorDict]],
+                batch_outputs: List[Dict[str, Any]],
+                epoch: int,
+                batch_number: int,
+                is_training: bool,
+            ) -> None:
+                if is_training:
+                    for batch_group in batch_inputs:
+                        for batch in batch_group:
+                            for metadata in batch["metadata"]:
+                                print(f"First word from training data: '{metadata['words'][0]}'")
+
+        num_epochs = 2
+        params = lambda: Params(
+            {
+                "model": {
+                    "type": "simple_tagger",
+                    "text_field_embedder": {
+                        "token_embedders": {"tokens": {"type": "embedding", "embedding_dim": 5}}
+                    },
+                    "encoder": {"type": "lstm", "input_size": 5, "hidden_size": 7, "num_layers": 2},
+                },
+                "dataset_reader": {"type": "sequence_tagging", "lazy": True},
+                "train_data_path": SEQUENCE_TAGGING_DATA_PATH,
+                "validation_data_path": SEQUENCE_TAGGING_DATA_PATH,
+                "data_loader": {"batch_size": 1},
+                "trainer": {
+                    "num_epochs": num_epochs,
+                    "optimizer": "adam",
+                    "batch_callbacks": ["training_data_logger"],
+                },
+                "distributed": {"cuda_devices": [0, 1]},
+            }
+        )
+
+        out_dir = os.path.join(self.TEST_DIR, "test_distributed_train")
+        train_model(params(), serialization_dir=out_dir)
+
+        # Check that some logs specific to distributed
+        # training are where we expect.
+        serialized_files = os.listdir(out_dir)
+        assert "stderr_worker0.log" in serialized_files
+        assert "stdout_worker0.log" in serialized_files
+        assert "stderr_worker1.log" in serialized_files
+        assert "stdout_worker1.log" in serialized_files
+        assert "model.tar.gz" in serialized_files
+
+        # Check we can load the serialized model
+        archive = load_archive(out_dir)
+        assert archive.model
+
+        # Check that we created a vocab from all the shards.
+        tokens = archive.model.vocab._token_to_index["tokens"].keys()
+        assert tokens == {
+            "@@PADDING@@",
+            "@@UNKNOWN@@",
+            "are",
+            ".",
+            "animals",
+            "plants",
+            "vehicles",
+            "cats",
+            "dogs",
+            "snakes",
+            "birds",
+            "ferns",
+            "trees",
+            "flowers",
+            "vegetables",
+            "cars",
+            "buses",
+            "planes",
+            "rockets",
+        }
+
+        train_complete = "completed its entire epoch (training)."
+        validation_complete = "completed its entire epoch (validation)."
+
+        import re
+
+        pattern = re.compile(r"First word from training data: '([^']*)'")
+        first_word_counts = Counter()
+        with open(os.path.join(out_dir, "stdout_worker0.log")) as f:
+            worker0_log = f.read()
+            assert train_complete not in worker0_log
+            assert validation_complete not in worker0_log
+            for first_word in pattern.findall(worker0_log):
+                first_word_counts[first_word] += 1
+
+        with open(os.path.join(out_dir, "stdout_worker1.log")) as f:
+            worker1_log = f.read()
+            assert train_complete in worker1_log
+            assert validation_complete in worker1_log
+            for first_word in pattern.findall(worker1_log):
+                first_word_counts[first_word] += 1
+
+        assert first_word_counts == {
+            "cats": num_epochs,
+            "dogs": num_epochs,
+            "snakes": num_epochs,
+            "birds": num_epochs,
+        }
 
     def test_distributed_raises_error_with_no_gpus(self):
         params = Params(
