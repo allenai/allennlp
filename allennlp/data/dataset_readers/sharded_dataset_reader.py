@@ -41,6 +41,7 @@ class ShardedDatasetReader(DatasetReader):
             self._world_size = 1
 
         self.reader = base_reader
+        self.reader.manual_distributed_sharding = True
 
     def text_to_instance(self, *args, **kwargs) -> Instance:
         """
