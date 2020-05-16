@@ -138,7 +138,10 @@ class TestTrain(AllenNlpTestCase):
                 },
                 "dataset_reader": {
                     "type": "sharded",
-                    "base_reader": {"type": "sequence_tagging"},
+                    "base_reader": {
+                        "type": "sequence_tagging",
+                        "manual_distributed_sharding": True,
+                    },
                     "lazy": True,
                 },
                 "train_data_path": SEQUENCE_TAGGING_SHARDS_PATH,
