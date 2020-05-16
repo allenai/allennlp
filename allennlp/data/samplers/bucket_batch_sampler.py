@@ -30,10 +30,10 @@ class BucketBatchSampler(BatchSampler):
 
     # Parameters
 
-    data_source: `data.Dataset`, required,
+    data_source: `data.Dataset`, required
         The pytorch `Dataset` of allennlp Instances to bucket.
 
-    batch_size : `int`, required.
+    batch_size : `int`, required
         The size of each batch of instances yielded when calling the dataloader.
 
     sorting_keys : `List[str]`, optional

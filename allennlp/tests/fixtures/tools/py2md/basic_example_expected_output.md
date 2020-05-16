@@ -48,7 +48,7 @@ This function has some args.
     The result of `a + b * c`.
 
 <a name=".allennlp.tests.fixtures.tools.py2md.basic_example.SomeClass"></a>
-## SomeClass
+## SomeClass Objects
 
 ```python
 class SomeClass():
@@ -57,11 +57,20 @@ class SomeClass():
 
 I'm a class!
 
-<strong>Attributes</strong>
+<strong>Paramaters</strong>
 
 
-- __x__ : `float` <br>
+x : `float`
     This attribute is called `x`.
+
+<a name=".allennlp.tests.fixtures.tools.py2md.basic_example.SomeClass.some_class_level_variable"></a>
+### some\_class\_level\_variable
+
+```python
+some_class_level_variable = 1
+```
+
+This is how you document a class-level variable.
 
 <a name=".allennlp.tests.fixtures.tools.py2md.basic_example.SomeClass.some_method"></a>
 ### some\_method
@@ -93,11 +102,11 @@ Another method.
 
 - A completely arbitrary number. <br>
 
-<a name=".allennlp.tests.fixtures.tools.py2md.basic_example.SomeClass.method_with_alternative_return_section2"></a>
-### method\_with\_alternative\_return\_section2
+<a name=".allennlp.tests.fixtures.tools.py2md.basic_example.SomeClass.method_with_alternative_return_section3"></a>
+### method\_with\_alternative\_return\_section3
 
 ```python
- | def method_with_alternative_return_section2(self) -> int
+ | def method_with_alternative_return_section3(self) -> int
 ```
 
 Another method.
@@ -109,7 +118,7 @@ Another method.
     A completely arbitrary number.
 
 <a name=".allennlp.tests.fixtures.tools.py2md.basic_example.AnotherClassWithReallyLongConstructor"></a>
-## AnotherClassWithReallyLongConstructor
+## AnotherClassWithReallyLongConstructor Objects
 
 ```python
 class AnotherClassWithReallyLongConstructor():

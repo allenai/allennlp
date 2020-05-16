@@ -25,7 +25,7 @@ class BilinearMatrixAttention(MatrixAttention):
         The dimension of the matrix `Y`, described above.  This is `Y.size()[-1]` - the length
         of the vector that will go into the similarity computation.  We need this so we can build
         the weight matrix correctly.
-    activation : `Activation`, optional (default=`linear)
+    activation : `Activation`, optional (default=`linear`)
         An activation function applied after the `X W Y^T + b` calculation.  Default is
         linear, i.e. no activation.
     use_input_biases : `bool`, optional (default = `False`)

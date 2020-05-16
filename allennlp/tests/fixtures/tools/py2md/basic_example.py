@@ -40,10 +40,15 @@ class SomeClass:
     """
     I'm a class!
 
-    # Attributes
+    # Paramaters
 
     x : `float`
         This attribute is called `x`.
+    """
+
+    some_class_level_variable = 1
+    """
+    This is how you document a class-level variable.
     """
 
     def __init__(self) -> None:
@@ -77,7 +82,7 @@ class SomeClass:
         """
         return 3
 
-    def method_with_alternative_return_section2(self) -> int:
+    def method_with_alternative_return_section3(self) -> int:
         """
         Another method.
 
@@ -95,7 +100,7 @@ class AnotherClassWithReallyLongConstructor:
         a_really_long_argument_name: int = 0,
         another_long_name: float = 2,
         these_variable_names_are_terrible: str = "yea I know",
-        **kwargs
+        **kwargs,
     ) -> None:
         self.a = a_really_long_argument_name
         self.b = another_long_name

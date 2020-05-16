@@ -62,6 +62,15 @@ class Section(Enum):
         return cls.OTHER
 
 
+REQUIRED_PARAM_RE = re.compile(r"^`([^`]+)`(, required\.?)?$")
+
+OPTIONAL_PARAM_RE = re.compile(
+    r"^`([^`]+)`,?\s+(optional,?\s)?\(\s?(optional,\s)?default\s?=\s?`([^`]+)`\s?\)\.?$"
+)
+
+OPTIONAL_PARAM_NO_DEFAULT_RE = re.compile(r"^`([^`]+)`,?\s+optional\.?$")
+
+
 @dataclass
 class Param:
     ident: str
@@ -73,6 +82,7 @@ class Param:
     def from_line(cls, line: str) -> Optional["Param"]:
         if ":" not in line:
             return None
+
         ident, description = line.split(":", 1)
         ident = ident.strip()
         description = description.strip()
@@ -80,32 +90,37 @@ class Param:
         if " " in ident:
             return None
 
-        ty = None
-        required = True
-        default = None
-        if "`, " in description:
-            ty, extras = description.split("`, ", 1)
-            ty = ty + "`"
-            required = "optional" not in extras
-            default_match = re.match(r".*\(default\s?=\s?(`?[^`]+`?)\).*", extras)
-            if default_match:
-                default = default_match.group(1)
-                if not default.startswith("`"):
-                    raise DocstringError(f"Default value should be enclosed in backticks: '{line}'")
-        else:
-            ty = description
-        if not ty.startswith("`"):
-            raise DocstringError(f"Type should be enclosed in backticks: '{line}'")
-        return cls(ident=ident, ty=ty, required=required, default=default)
+        maybe_match = REQUIRED_PARAM_RE.match(description)
+        if maybe_match:
+            ty = maybe_match.group(1)
+            return cls(ident=ident, ty=ty, required=True)
+
+        maybe_match = OPTIONAL_PARAM_RE.match(description)
+        if maybe_match:
+            ty = maybe_match.group(1)
+            default = maybe_match.group(4)
+            return cls(ident=ident, ty=ty, required=False, default=default)
+
+        maybe_match = OPTIONAL_PARAM_NO_DEFAULT_RE.match(description)
+        if maybe_match:
+            ty = maybe_match.group(1)
+            return cls(ident=ident, ty=ty, required=False)
+
+        raise DocstringError(
+            f"Invalid parameter / attribute description: '{line}'\n"
+            "Make sure types are enclosed in backticks.\n"
+            "Required parameters should be documented like: '{ident} : `{type}`'\n"
+            "Optional parameters should be documented like: '{ident} : `{type}`, optional (default = `{expr}`)'\n"
+        )
 
     def to_line(self) -> str:
         line: str = f"- {emphasize(self.ident)} :"
         if self.ty:
-            line += f" {self.ty}"
-        if not self.required:
-            line += ", optional"
-            if self.default:
-                line += f" (default = {self.default})"
+            line += f" `{self.ty}`"
+            if not self.required:
+                line += ", optional"
+                if self.default:
+                    line += f" (default = `{self.default}`)"
         line += " <br>"
         return line
 

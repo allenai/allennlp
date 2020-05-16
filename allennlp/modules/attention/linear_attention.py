@@ -40,7 +40,7 @@ class LinearAttention(Attention):
         build weight vectors correctly.
     combination : `str`, optional (default=`"x,y"`)
         Described above.
-    activation : `Activation`, optional (default=`linear)
+    activation : `Activation`, optional (default=`linear`)
         An activation function applied after the `w^T * [x;y] + b` calculation.  Default is
         linear, i.e. no activation.
     normalize : `bool`, optional (default=`True`)

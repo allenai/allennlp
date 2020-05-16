@@ -40,7 +40,17 @@ def test_param_from_and_to_line(line_in: str, line_out: Optional[str]):
     assert param.to_line() == line_out
 
 
-@pytest.mark.parametrize("line", ["a : `int`, optional (default = None)", "a : int"])
+@pytest.mark.parametrize(
+    "line",
+    [
+        "a : `int`, optional (default = None)",
+        "a : `int`, optional (default = `None)",
+        "a : `int`, optional (default = None`)",
+        "a : int",
+        "a : `int",
+        "a : int`",
+    ],
+)
 def test_param_from_bad_line_raises(line: str):
     with pytest.raises(DocstringError):
         Param.from_line(line)

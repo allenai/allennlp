@@ -57,9 +57,11 @@ class _EncoderBase(torch.nn.Module):
 
         # Parameters
 
-        module : `Callable[[PackedSequence, Optional[RnnState]],
-                            Tuple[Union[PackedSequence, torch.Tensor], RnnState]]`, required.
-            A function to run on the inputs. In most cases, this is a `torch.nn.Module`.
+        module : `Callable[RnnInputs, RnnOutputs]`
+            A function to run on the inputs, where
+            `RnnInputs: [PackedSequence, Optional[RnnState]]` and
+            `RnnOutputs: Tuple[Union[PackedSequence, torch.Tensor], RnnState]`.
+            In most cases, this is a `torch.nn.Module`.
         inputs : `torch.Tensor`, required.
             A tensor of shape `(batch_size, sequence_length, embedding_size)` representing
             the inputs to the Encoder.

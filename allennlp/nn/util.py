@@ -729,7 +729,7 @@ def sequence_cross_entropy_with_logits(
         Focal loss[*] focusing parameter `gamma` to reduces the relative loss for
         well-classified examples and put more focus on hard. The greater value
         `gamma` is, the more focus on hard examples.
-    alpha : `float` or `List[float]`, optional (default = `None`)
+    alpha : `Union[float, List[float]]`, optional (default = `None`)
         Focal loss[*] weighting factor `alpha` to balance between classes. Can be
         used independently with `gamma`. If a single `float` is provided, it
         is assumed binary case using `alpha` and `1 - alpha` for positive and

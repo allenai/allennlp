@@ -227,7 +227,7 @@ def prepare_environment(params: Params):
 
     # Parameters
 
-    params: `Params` object or dict, required.
+    params: `Params`
         A `Params` object or dict holding the json parameters.
     """
     seed = params.pop_int("random_seed", 13370)
@@ -479,7 +479,7 @@ def is_master(
     world_size : `int` ( default = `None` )
         Number of processes in the distributed group. If not
         given, this is obtained using `torch.distributed.get_world_size()`
-    num_procs_per_node: `int` ( default = `None` ),
+    num_procs_per_node: `int` ( default = `None` )
         Number of GPU processes running per node
     """
     distributed = dist.is_available() and dist.is_initialized()
