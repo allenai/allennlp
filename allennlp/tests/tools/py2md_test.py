@@ -14,7 +14,7 @@ class TestPy2md(AllenNlpTestCase):
         with open(self.FIXTURES_ROOT / "tools" / "py2md" / "basic_example_expected_output.md") as f:
             expected = f.read()
 
-        assert captured.out == expected
+        assert captured.out.split("\n") == expected.split("\n")
 
 
 @pytest.mark.parametrize(
@@ -30,8 +30,8 @@ class TestPy2md(AllenNlpTestCase):
         ),
         ("a : `int`, required", "- __a__ : `int` <br>"),
         ("a : `int`", "- __a__ : `int` <br>"),
-        ("_a : `int`", "- **_a** : `int` <br>"),
-        ("a_ : `int`", "- **a_** : `int` <br>"),
+        ("_a : `int`", "- __\\_a__ : `int` <br>"),
+        ("a_ : `int`", "- __a\\___ : `int` <br>"),
     ],
 )
 def test_param_from_and_to_line(line_in: str, line_out: Optional[str]):

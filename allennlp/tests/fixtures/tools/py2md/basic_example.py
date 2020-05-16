@@ -51,6 +51,8 @@ class SomeClass:
     This is how you document a class-level variable.
     """
 
+    some_class_level_var_with_type: int = 1
+
     def __init__(self) -> None:
         self.x = 1.0
 

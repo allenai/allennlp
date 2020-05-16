@@ -36,10 +36,8 @@ class DocstringError(Exception):
 
 
 def emphasize(s: str) -> str:
-    # It's generally more robust to use enclose `s` in double underscores (`__`)
-    # to make it bold font in markdown, unless `s` starts or ends with `_`.
-    if s.startswith("_") or s.endswith("_"):
-        return f"**{s}**"
+    # Need to escape underscores.
+    s = s.replace("_", "\\_")
     return f"__{s}__"
 
 
