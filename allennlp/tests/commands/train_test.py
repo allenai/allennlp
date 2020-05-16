@@ -28,6 +28,24 @@ SEQUENCE_TAGGING_DATA_PATH = str(AllenNlpTestCase.FIXTURES_ROOT / "data" / "sequ
 SEQUENCE_TAGGING_SHARDS_PATH = str(AllenNlpTestCase.FIXTURES_ROOT / "data" / "shards" / "*")
 
 
+@BatchCallback.register("training_data_logger")
+class TrainingDataLoggerBatchCallback(BatchCallback):
+    def __call__(
+            self,
+            trainer: "GradientDescentTrainer",
+            batch_inputs: List[List[TensorDict]],
+            batch_outputs: List[Dict[str, Any]],
+            epoch: int,
+            batch_number: int,
+            is_training: bool,
+    ) -> None:
+        if is_training:
+            for batch_group in batch_inputs:
+                for batch in batch_group:
+                    for metadata in batch["metadata"]:
+                        print(f"First word from training data: '{metadata['words'][0]}'")
+
+
 class TestTrain(AllenNlpTestCase):
     def test_train_model(self):
         params = lambda: Params(
@@ -212,23 +230,6 @@ class TestTrain(AllenNlpTestCase):
 
     @requires_multi_gpu
     def test_train_model_distributed_without_sharded_reader(self):
-        @BatchCallback.register("training_data_logger")
-        class TrainingDataLogger(BatchCallback):
-            def __call__(
-                self,
-                trainer: "GradientDescentTrainer",
-                batch_inputs: List[List[TensorDict]],
-                batch_outputs: List[Dict[str, Any]],
-                epoch: int,
-                batch_number: int,
-                is_training: bool,
-            ) -> None:
-                if is_training:
-                    for batch_group in batch_inputs:
-                        for batch in batch_group:
-                            for metadata in batch["metadata"]:
-                                print(f"First word from training data: '{metadata['words'][0]}'")
-
         num_epochs = 2
         params = lambda: Params(
             {
@@ -246,7 +247,7 @@ class TestTrain(AllenNlpTestCase):
                 "trainer": {
                     "num_epochs": num_epochs,
                     "optimizer": "adam",
-                    "batch_callbacks": ["training_data_logger"],
+                    "batch_callbacks": ["allennlp.tests.commands.train_test.TrainingDataLoggerBatchCallback"],
                 },
                 "distributed": {"cuda_devices": [0, 1]},
             }
