@@ -16,7 +16,7 @@ class SpearmanCorrelation(Metric):
     implicitly flattened into vectors and the correlation is calculated
     between the vectors).
 
-    https://en.wikipedia.org/wiki/Spearman%27s_rank_correlation_coefficient
+    <https://en.wikipedia.org/wiki/Spearman%27s_rank_correlation_coefficient>
     """
 
     def __init__(self) -> None:

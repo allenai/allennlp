@@ -14,9 +14,8 @@ class BLEU(Metric):
     Bilingual Evaluation Understudy (BLEU).
 
     BLEU is a common metric used for evaluating the quality of machine translations
-    against a set of reference translations. See [Papineni et. al.,
-    "BLEU: a method for automatic evaluation of machine translation", 2002]
-    (https://www.semanticscholar.org/paper/8ff93cfd37dced279134c9d642337a2085b31f59/).
+    against a set of reference translations. See
+    [Papineni et. al., "BLEU: a method for automatic evaluation of machine translation", 2002][1].
 
     # Parameters
 
@@ -26,8 +25,8 @@ class BLEU(Metric):
         Indices to exclude when calculating ngrams. This should usually include
         the indices of the start, end, and pad tokens.
 
-    Notes
-    -----
+    # Notes
+
     We chose to implement this from scratch instead of wrapping an existing implementation
     (such as `nltk.translate.bleu_score`) for a two reasons. First, so that we could
     pass tensors directly to this metric instead of first converting the tensors to lists of strings.
@@ -37,6 +36,9 @@ class BLEU(Metric):
 
     This implementation only considers a reference set of size 1, i.e. a single
     gold target sequence for each predicted sequence.
+
+
+    [1]: https://www.semanticscholar.org/paper/8ff93cfd37dced279134c9d642337a2085b31f59/
     """
 
     def __init__(

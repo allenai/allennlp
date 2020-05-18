@@ -19,7 +19,7 @@ class PearsonCorrelation(Metric):
     between the vectors).
 
     This implementation is mostly modeled after the streaming_pearson_correlation function in Tensorflow. See
-    https://github.com/tensorflow/tensorflow/blob/v1.10.1/tensorflow/contrib/metrics/python/ops/metric_ops.py#L3267
+    <https://github.com/tensorflow/tensorflow/blob/v1.10.1/tensorflow/contrib/metrics/python/ops/metric_ops.py#L3267>.
 
     This metric delegates to the Covariance metric the tracking of three [co]variances:
 

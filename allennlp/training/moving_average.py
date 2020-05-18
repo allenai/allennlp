@@ -85,7 +85,7 @@ class ExponentialMovingAverage(MovingAverage):
             `min(decay, (numerator + num_updates) / (denominator + num_updates))`
 
         (This logic is based on the Tensorflow exponential moving average
-         https://www.tensorflow.org/api_docs/python/tf/train/ExponentialMovingAverage)
+         <https://www.tensorflow.org/api_docs/python/tf/train/ExponentialMovingAverage>)
         """
         if num_updates is not None:
             decay = min(
