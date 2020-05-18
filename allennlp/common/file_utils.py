@@ -235,7 +235,7 @@ def _find_latest_cached(url: str, cache_dir: str) -> Optional[str]:
             continue
         mtime = os.path.getmtime(path)
         candidates.append((path, mtime))
-    # Sort candidates by modification time, newest first.
+    # Sort candidates by modification time, neweste first.
     candidates.sort(key=lambda x: x[1], reverse=True)
     if candidates:
         return candidates[0][0]
@@ -278,12 +278,13 @@ def get_from_cache(url: str, cache_dir: str = None) -> str:
                 latest_cached,
             )
             return latest_cached
-        logger.error(
-            "Connection failed while trying to fetch ETag, "
-            "and no cached version of %s could be found",
-            url,
-        )
-        raise
+        else:
+            logger.error(
+                "Connection failed while trying to fetch ETag, "
+                "and no cached version of %s could be found",
+                url,
+            )
+            raise
 
     filename = url_to_filename(url, etag)
 
