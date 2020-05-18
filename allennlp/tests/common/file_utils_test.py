@@ -11,7 +11,7 @@ from allennlp.common.file_utils import (
     filename_to_url,
     get_from_cache,
     cached_path,
-    split_s3_path,
+    _split_s3_path,
     open_compressed,
 )
 from allennlp.common.testing import AllenNlpTestCase
@@ -120,14 +120,14 @@ class TestFileUtils(AllenNlpTestCase):
 
     def test_split_s3_path(self):
         # Test splitting good urls.
-        assert split_s3_path("s3://my-bucket/subdir/file.txt") == ("my-bucket", "subdir/file.txt")
-        assert split_s3_path("s3://my-bucket/file.txt") == ("my-bucket", "file.txt")
+        assert _split_s3_path("s3://my-bucket/subdir/file.txt") == ("my-bucket", "subdir/file.txt")
+        assert _split_s3_path("s3://my-bucket/file.txt") == ("my-bucket", "file.txt")
 
         # Test splitting bad urls.
         with pytest.raises(ValueError):
-            split_s3_path("s3://")
-            split_s3_path("s3://myfile.txt")
-            split_s3_path("myfile.txt")
+            _split_s3_path("s3://")
+            _split_s3_path("s3://myfile.txt")
+            _split_s3_path("myfile.txt")
 
     @responses.activate
     def test_get_from_cache(self):
