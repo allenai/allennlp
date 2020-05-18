@@ -4,7 +4,7 @@ MD_DOCS_ROOT = docs/
 MD_DOCS_API_ROOT = $(MD_DOCS_ROOT)api/
 MD_DOCS_SRC = $(filter-out $(SRC)/__main__.py %/__init__.py $(SRC)/version.py,$(shell find $(SRC) -type f -name '*.py' | grep -v -E 'tests/'))
 MD_DOCS = $(subst .py,.md,$(subst $(SRC)/,$(MD_DOCS_API_ROOT),$(MD_DOCS_SRC)))
-MD_DOCS_CMD = python allennlp/tools/py2md.py
+MD_DOCS_CMD = python scripts/py2md.py
 MD_DOCS_CONF = mkdocs.yml
 MD_DOCS_CONF_SRC = mkdocs-skeleton.yml
 MD_DOCS_TGT = site/
@@ -54,11 +54,11 @@ typecheck :
 
 .PHONY : test
 test :
-	pytest --color=yes -rf --durations=40 -k "not sniff_test" $(SRC)
+	pytest --color=yes -rf --durations=40 -k "not sniff_test" $(SRC) scripts/
 
 .PHONY : test-with-cov
 test-with-cov :
-	pytest --color=yes -rf --cov-config=.coveragerc --cov=$(SRC) --durations=40 -k "not sniff_test" $(SRC)
+	pytest --color=yes -rf --cov-config=.coveragerc --cov=$(SRC) --durations=40 -k "not sniff_test" $(SRC) scripts/
 
 .PHONY : gpu-test
 gpu-test :
@@ -118,7 +118,7 @@ $(MD_DOCS_ROOT)%.md : %.md
 $(MD_DOCS_CONF) : $(MD_DOCS_CONF_SRC) $(MD_DOCS)
 	python scripts/build_docs_config.py $@ $(MD_DOCS_CONF_SRC) $(MD_DOCS_ROOT) $(MD_DOCS_API_ROOT)
 
-$(MD_DOCS_API_ROOT)%.md : $(SRC)/%.py allennlp/tools/py2md.py
+$(MD_DOCS_API_ROOT)%.md : $(SRC)/%.py scripts/py2md.py
 	mkdir -p $(shell dirname $@)
 	$(MD_DOCS_CMD) $(subst /,.,$(subst .py,,$<)) --out $@
 
