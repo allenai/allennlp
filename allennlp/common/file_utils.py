@@ -265,15 +265,21 @@ def get_from_cache(url: str, cache_dir: str = None) -> str:
         # target resource, if it exists. We'll only throw an exception if we
         # haven't cached the resource at all yet.
         logger.warning(
-            "Connection error occured while trying to fetch etag for %s. "
+            "Connection error occured while trying to fetch ETag for %s. "
             "Will attempt to use latest cached version of resource",
             url,
         )
         latest_cached = _find_latest_cached(url, cache_dir)
         if latest_cached:
+            logger.info(
+                "ETag request failed with connection error, using latest cached "
+                "version of %s: %s",
+                url,
+                latest_cached,
+            )
             return latest_cached
         logger.error(
-            "Connection failed while trying to fetch etag, "
+            "Connection failed while trying to fetch ETag, "
             "and no cached version of %s could be found",
             url,
         )
