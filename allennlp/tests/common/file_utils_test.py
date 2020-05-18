@@ -5,7 +5,9 @@ import json
 
 import pytest
 import responses
+from requests.exceptions import ConnectionError
 
+from allennlp.common import file_utils
 from allennlp.common.file_utils import (
     url_to_filename,
     filename_to_url,
@@ -56,6 +58,44 @@ class TestFileUtils(AllenNlpTestCase):
         self.glove_file = self.FIXTURES_ROOT / "embeddings/glove.6B.100d.sample.txt.gz"
         with open(self.glove_file, "rb") as glove:
             self.glove_bytes = glove.read()
+
+    def test_cached_path_offline(self, monkeypatch):
+        # Ensures `cached_path` just returns the path to the latest cached version
+        # of the resource when there's no internet connection.
+
+        # First we mock the `_http_etag` method so that it raises a `ConnectionError`,
+        # like it would if there was no internet connection.
+        def mocked_http_etag(url: str):
+            raise ConnectionError
+
+        monkeypatch.setattr(file_utils, "_http_etag", mocked_http_etag)
+
+        url = "https://github.com/allenai/allennlp/blob/master/some-fake-resource"
+
+        # We'll create two cached versions of this fake resource using two different etags.
+        etags = ['W/"3e5885bfcbf4c47bc4ee9e2f6e5ea916"', 'W/"3e5885bfcbf4c47bc4ee9e2f6e5ea918"']
+        filenames = [os.path.join(self.TEST_DIR, url_to_filename(url, etag)) for etag in etags]
+        for filename, etag in zip(filenames, etags):
+            meta_filename = filename + ".json"
+            with open(filename, "w") as f:
+                f.write("some random data")
+            with open(meta_filename, "w") as meta_f:
+                json.dump({"url": url, "etag": etag}, meta_f)
+
+        # The version corresponding to the last etag should be returned, since
+        # that one has the latest "last modified" time.
+        assert get_from_cache(url, cache_dir=self.TEST_DIR) == filenames[-1]
+
+        # We also want to make sure this works when the latest cached version doesn't
+        # have a corresponding etag.
+        filename = os.path.join(self.TEST_DIR, url_to_filename(url))
+        meta_filename = filename + ".json"
+        with open(filename, "w") as f:
+            f.write("some random data")
+        with open(meta_filename, "w") as meta_f:
+            json.dump({"url": url, "etag": etag}, meta_f)
+
+        assert get_from_cache(url, cache_dir=self.TEST_DIR) == filename
 
     def test_url_to_filename(self):
         for url in [
