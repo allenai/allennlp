@@ -235,7 +235,7 @@ def _find_latest_cached(url: str, cache_dir: str) -> Optional[str]:
             continue
         mtime = os.path.getmtime(path)
         candidates.append((path, mtime))
-    # Sort candidates by modification time, neweste first.
+    # Sort candidates by modification time, newest first.
     candidates.sort(key=lambda x: x[1], reverse=True)
     if candidates:
         return candidates[0][0]
