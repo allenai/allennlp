@@ -76,7 +76,7 @@ This is how you document a class-level variable.
 ### some\_class\_level\_var\_with\_type
 
 ```python
-some_class_level_var_with_type: int = 1
+some_class_level_var_with_type = 1
 ```
 
 <a name=".allennlp.tests.fixtures.tools.py2md.basic_example.SomeClass.some_method"></a>
