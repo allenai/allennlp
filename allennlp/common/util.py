@@ -151,25 +151,25 @@ def pad_sequence_to_length(
 
     # Parameters
 
-    sequence : List
+    sequence : `List`
         A list of objects to be padded.
 
-    desired_length : int
+    desired_length : `int`
         Maximum length of each sequence. Longer sequences are truncated to this length, and
         shorter ones are padded to it.
 
-    default_value: Callable, default=lambda: 0
+    default_value: `Callable`, optional (default=`lambda: 0`)
         Callable that outputs a default value (of any type) to use as padding values.  This is
         a lambda to avoid using the same object when the default value is more complex, like a
         list.
 
-    padding_on_right : bool, default=True
+    padding_on_right : `bool`, optional (default=`True`)
         When we add padding tokens (or truncate the sequence), should we do it on the right or
         the left?
 
     # Returns
 
-    padded_sequence : List
+    padded_sequence : `List`
     """
     # Truncates the sequence to the desired length.
     if padding_on_right:
@@ -227,7 +227,7 @@ def prepare_environment(params: Params):
 
     # Parameters
 
-    params: Params object or dict, required.
+    params: `Params`
         A `Params` object or dict holding the json parameters.
     """
     seed = params.pop_int("random_seed", 13370)
@@ -473,13 +473,13 @@ def is_master(
 
     # Parameters
 
-    global_rank : int ( default = None )
+    global_rank : `int` ( default = `None` )
         Global rank of the process if in a distributed process group. If not
         given, rank is obtained using `torch.distributed.get_rank()`
-    world_size : int ( default = None )
+    world_size : `int` ( default = `None` )
         Number of processes in the distributed group. If not
         given, this is obtained using `torch.distributed.get_world_size()`
-    num_procs_per_node: int ( default = None ),
+    num_procs_per_node: `int` ( default = `None` )
         Number of GPU processes running per node
     """
     distributed = dist.is_available() and dist.is_initialized()

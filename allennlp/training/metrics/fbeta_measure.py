@@ -34,10 +34,10 @@ class FBetaMeasure(Metric):
 
     # Parameters
 
-    beta : `float`, optional (default = 1.0)
+    beta : `float`, optional (default = `1.0`)
         The strength of recall versus precision in the F-score.
 
-    average : string, [None (default), 'micro', 'macro', 'weighted']
+    average : `str`, optional (default = `None`)
         If `None`, the scores for each class are returned. Otherwise, this
         determines the type of averaging performed on the data:
 
@@ -104,7 +104,7 @@ class FBetaMeasure(Metric):
         gold_labels : `torch.Tensor`, required.
             A tensor of integer class label of shape (batch_size, ...). It must be the same
             shape as the `predictions` tensor without the `num_classes` dimension.
-        mask : `torch.BoolTensor`, optional (default = None).
+        mask : `torch.BoolTensor`, optional (default = `None`).
             A masking tensor the same size as `gold_labels`.
         """
         predictions, gold_labels, mask = self.detach_tensors(predictions, gold_labels, mask)

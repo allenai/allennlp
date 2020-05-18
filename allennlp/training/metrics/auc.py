@@ -36,7 +36,7 @@ class Auc(Metric):
             A one-dimensional label tensor of shape (batch_size), with {1, 0}
             entries for positive and negative class. If it's not binary,
             `positive_label` should be passed in the initialization.
-        mask : `torch.BoolTensor`, optional (default = None).
+        mask : `torch.BoolTensor`, optional (default = `None`).
             A one-dimensional label tensor of shape (batch_size).
         """
 

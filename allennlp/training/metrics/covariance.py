@@ -15,12 +15,12 @@ class Covariance(Metric):
     covariance is calculated between the vectors).
 
     This implementation is mostly modeled after the streaming_covariance function in Tensorflow. See:
-    https://github.com/tensorflow/tensorflow/blob/v1.10.1/tensorflow/contrib/metrics/python/ops/metric_ops.py#L3127
+    <https://github.com/tensorflow/tensorflow/blob/v1.10.1/tensorflow/contrib/metrics/python/ops/metric_ops.py#L3127>
 
     The following is copied from the Tensorflow documentation:
 
     The algorithm used for this online computation is described in
-    https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Online .
+    <https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Online>.
     Specifically, the formula used to combine two sample comoments is
     `C_AB = C_A + C_B + (E[x_A] - E[x_B]) * (E[y_A] - E[y_B]) * n_A * n_B / n_AB`
     The comoment for a single batch of data is simply `sum((x - E[x]) * (y - E[y]))`, optionally masked.
@@ -45,7 +45,7 @@ class Covariance(Metric):
             A tensor of predictions of shape (batch_size, ...).
         gold_labels : `torch.Tensor`, required.
             A tensor of the same shape as `predictions`.
-        mask : `torch.BoolTensor`, optional (default = None).
+        mask : `torch.BoolTensor`, optional (default = `None`).
             A tensor of the same shape as `predictions`.
         """
         predictions, gold_labels, mask = self.detach_tensors(predictions, gold_labels, mask)

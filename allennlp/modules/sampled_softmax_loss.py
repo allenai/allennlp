@@ -64,13 +64,13 @@ class SampledSoftmaxLoss(torch.nn.Module):
         The dimension to softmax over
     num_samples, `int`, required
         During training take this many samples. Must be less than num_words.
-    sparse, `bool`, optional (default = False)
+    sparse, `bool`, optional (default = `False`)
         If this is true, we use a sparse embedding matrix.
-    unk_id, `int`, optional (default = None)
+    unk_id, `int`, optional (default = `None`)
         If provided, the id that represents unknown characters.
-    use_character_inputs, `bool`, optional (default = True)
+    use_character_inputs, `bool`, optional (default = `True`)
         Whether to use character inputs
-    use_fast_sampler, `bool`, optional (default = False)
+    use_fast_sampler, `bool`, optional (default = `False`)
         Whether to use the fast cython sampler.
     """
 

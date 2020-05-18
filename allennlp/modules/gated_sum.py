@@ -15,7 +15,7 @@ class GatedSum(torch.nn.Module):
 
     input_dim : `int`, required
         The dimensionality of the input. We assume the input have shape `(..., input_dim)`.
-    activation : `Activation`, optional (default = torch.nn.Sigmoid())
+    activation : `Activation`, optional (default = `torch.nn.Sigmoid()`)
         The activation function to use.
     """
 

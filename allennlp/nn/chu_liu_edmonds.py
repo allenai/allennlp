@@ -23,7 +23,7 @@ def decode_mst(
     length : `int`, required.
         The length of this sequence, as the energy may have come
         from a padded batch.
-    has_labels : `bool`, optional, (default = True)
+    has_labels : `bool`, optional, (default = `True`)
         Whether the graph has labels or not.
     """
     if has_labels and energy.ndim != 3:

@@ -25,7 +25,7 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
     model_name : `str`
         The name of the `transformers` model to use. Should be the same as the corresponding
         `PretrainedTransformerIndexer`.
-    max_length : `int`, optional (default = None)
+    max_length : `int`, optional (default = `None`)
         If positive, folds input token IDs into multiple segments of this length, pass them
         through the transformer model independently, and concatenate the final representations.
         Should be set to the same value as the `max_length` option on the
@@ -69,25 +69,21 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         """
         # Parameters
 
-        token_ids: torch.LongTensor
-            Shape: [
-                batch_size, num_wordpieces if max_length is None else num_segment_concat_wordpieces
-            ].
+        token_ids: `torch.LongTensor`
+            Shape: `[batch_size, num_wordpieces if max_length is None else num_segment_concat_wordpieces]`.
             num_segment_concat_wordpieces is num_wordpieces plus special tokens inserted in the
             middle, e.g. the length of: "[CLS] A B C [SEP] [CLS] D E F [SEP]" (see indexer logic).
-        mask: torch.BoolTensor
+        mask: `torch.BoolTensor`
             Shape: [batch_size, num_wordpieces].
-        type_ids: Optional[torch.LongTensor]
-            Shape: [
-                batch_size, num_wordpieces if max_length is None else num_segment_concat_wordpieces
-            ].
-        segment_concat_mask: Optional[torch.BoolTensor]
-            Shape: [batch_size, num_segment_concat_wordpieces].
+        type_ids: `Optional[torch.LongTensor]`
+            Shape: `[batch_size, num_wordpieces if max_length is None else num_segment_concat_wordpieces]`.
+        segment_concat_mask: `Optional[torch.BoolTensor]`
+            Shape: `[batch_size, num_segment_concat_wordpieces]`.
 
         # Returns
 
         `torch.Tensor`
-            Shape: [batch_size, num_wordpieces, embedding_size].
+            Shape: `[batch_size, num_wordpieces, embedding_size]`.
 
         """
 
@@ -147,14 +143,14 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         # Parameters
 
         token_ids: `torch.LongTensor`
-            Shape: [batch_size, num_segment_concat_wordpieces].
+            Shape: `[batch_size, num_segment_concat_wordpieces]`.
             num_segment_concat_wordpieces is num_wordpieces plus special tokens inserted in the
             middle, i.e. the length of: "[CLS] A B C [SEP] [CLS] D E F [SEP]" (see indexer logic).
         mask: `torch.BoolTensor`
-            Shape: [batch_size, num_segment_concat_wordpieces].
+            Shape: `[batch_size, num_segment_concat_wordpieces]`.
             The mask for the concatenated segments of wordpieces. The same as `segment_concat_mask`
             in `forward()`.
-        type_ids: Optional[torch.LongTensor]
+        type_ids: `Optional[torch.LongTensor]`
             Shape: [batch_size, num_segment_concat_wordpieces].
 
         # Returns:

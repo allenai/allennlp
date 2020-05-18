@@ -145,9 +145,9 @@ def sort_batch_by_length(tensor: torch.Tensor, sequence_lengths: torch.Tensor):
 
     # Parameters
 
-    tensor : torch.FloatTensor, required.
+    tensor : `torch.FloatTensor`, required.
         A batch first Pytorch tensor.
-    sequence_lengths : torch.LongTensor, required.
+    sequence_lengths : `torch.LongTensor`, required.
         A tensor representing the lengths of some dimension of the tensor which
         we want to sort by.
 
@@ -221,9 +221,9 @@ def get_dropout_mask(dropout_probability: float, tensor_for_masking: torch.Tenso
 
     # Parameters
 
-    dropout_probability : float, required.
+    dropout_probability : `float`, required.
         Probability of dropping a dimension of the input.
-    tensor_for_masking : torch.Tensor, required.
+    tensor_for_masking : `torch.Tensor`, required.
 
 
     # Returns
@@ -413,13 +413,13 @@ def viterbi_decode(
 
     # Parameters
 
-    tag_sequence : torch.Tensor, required.
+    tag_sequence : `torch.Tensor`, required.
         A tensor of shape (sequence_length, num_tags) representing scores for
         a set of tags over a given sequence.
-    transition_matrix : torch.Tensor, required.
+    transition_matrix : `torch.Tensor`, required.
         A tensor of shape (num_tags, num_tags) representing the binary potentials
         for transitioning between a given pair of tags.
-    tag_observations : Optional[List[int]], optional, (default = None)
+    tag_observations : `Optional[List[int]]`, optional, (default = `None`)
         A list of length `sequence_length` containing the class ids of observed
         elements in the sequence, with unobserved elements being set to -1. Note that
         it is possible to provide evidence which results in degenerate labelings if
@@ -427,15 +427,15 @@ def viterbi_decode(
         other, or those transitions are extremely unlikely. In this situation we log a
         warning, but the responsibility for providing self-consistent evidence ultimately
         lies with the user.
-    allowed_start_transitions : torch.Tensor, optional, (default = None)
+    allowed_start_transitions : `torch.Tensor`, optional, (default = `None`)
         An optional tensor of shape (num_tags,) describing which tags the START token
         may transition *to*. If provided, additional transition constraints will be used for
         determining the start element of the sequence.
-    allowed_end_transitions : torch.Tensor, optional, (default = None)
+    allowed_end_transitions : `torch.Tensor`, optional, (default = `None`)
         An optional tensor of shape (num_tags,) describing which tags may transition *to* the
         end tag. If provided, additional transition constraints will be used for determining
         the end element of the sequence.
-    top_k : int, optional, (default = None)
+    top_k : `int`, optional, (default = `None`)
         Optional integer specifying how many of the top paths to return. For top_k>=1, returns
         a tuple of two lists: top_k_paths, top_k_scores, For top_k==None, returns a flattened
         tuple with just the top path and its score (not in lists, for backwards compatibility).
@@ -716,20 +716,20 @@ def sequence_cross_entropy_with_logits(
         index of the true class for each corresponding step.
     weights : `Union[torch.FloatTensor, torch.BoolTensor]`, required.
         A `torch.FloatTensor` of size (batch, sequence_length)
-    average: str, optional (default = "batch")
+    average: `str`, optional (default = `"batch"`)
         If "batch", average the loss across the batches. If "token", average
         the loss across each item in the input. If `None`, return a vector
         of losses per batch element.
-    label_smoothing : `float`, optional (default = None)
+    label_smoothing : `float`, optional (default = `None`)
         Whether or not to apply label smoothing to the cross-entropy loss.
         For example, with a label smoothing value of 0.2, a 4 class classification
         target would look like `[0.05, 0.05, 0.85, 0.05]` if the 3rd class was
         the correct label.
-    gamma : `float`, optional (default = None)
+    gamma : `float`, optional (default = `None`)
         Focal loss[*] focusing parameter `gamma` to reduces the relative loss for
         well-classified examples and put more focus on hard. The greater value
         `gamma` is, the more focus on hard examples.
-    alpha : `float` or `List[float]`, optional (default = None)
+    alpha : `Union[float, List[float]]`, optional (default = `None`)
         Focal loss[*] weighting factor `alpha` to balance between classes. Can be
         used independently with `gamma`. If a single `float` is provided, it
         is assumed binary case using `alpha` and `1 - alpha` for positive and
@@ -1131,11 +1131,11 @@ def logsumexp(tensor: torch.Tensor, dim: int = -1, keepdim: bool = False) -> tor
 
     # Parameters
 
-    tensor : torch.FloatTensor, required.
+    tensor : `torch.FloatTensor`, required.
         A tensor of arbitrary size.
-    dim : int, optional (default = -1)
+    dim : `int`, optional (default = `-1`)
         The dimension of the tensor to apply the logsumexp to.
-    keepdim: bool, optional (default = False)
+    keepdim: `bool`, optional (default = `False`)
         Whether to retain a dimension of size one at the dimension we reduce over.
     """
     max_score, _ = tensor.max(dim, keepdim=keepdim)
@@ -1233,7 +1233,7 @@ def batched_index_select(
     indices : `torch.LongTensor`
         A tensor of shape (batch_size, ...), where each element is an index into the
         `sequence_length` dimension of the `target` tensor.
-    flattened_indices : Optional[torch.Tensor], optional (default = None)
+    flattened_indices : `Optional[torch.Tensor]`, optional (default = `None`)
         An optional tensor representing the result of calling `flatten_and_batch_shift_indices`
         on `indices`. This is helpful in the case that the indices can be flattened once and
         cached for many batch lookups.
@@ -1384,9 +1384,9 @@ def bucket_values(
 
     distances : `torch.Tensor`, required.
         A Tensor of any size, to be bucketed.
-    num_identity_buckets: int, optional (default = 4).
+    num_identity_buckets: `int`, optional (default = `4`).
         The number of identity buckets (those only holding a single value).
-    num_total_buckets : int, (default = 10)
+    num_total_buckets : `int`, (default = `10`)
         The total number of buckets to bucket values into.
 
     # Returns
@@ -1430,9 +1430,11 @@ def add_sentence_boundary_token_ids(
         A tensor of shape `(batch_size, timesteps)` or `(batch_size, timesteps, dim)`
     mask : `torch.BoolTensor`
          A tensor of shape `(batch_size, timesteps)`
-    sentence_begin_token: Any (anything that can be broadcast in torch for assignment)
+    sentence_begin_token: `Any`
+        Can be anything that can be broadcast in torch for assignment.
         For 2D input, a scalar with the `<S>` id. For 3D input, a tensor with length dim.
-    sentence_end_token: Any (anything that can be broadcast in torch for assignment)
+    sentence_end_token: `Any`
+        Can be anything that can be broadcast in torch for assignment.
         For 2D input, a scalar with the `</S>` id. For 3D input, a tensor with length dim.
 
     # Returns
@@ -1536,9 +1538,9 @@ def add_positional_features(
 
     tensor : `torch.Tensor`
         a Tensor with shape (batch_size, timesteps, hidden_dim).
-    min_timescale : `float`, optional (default = 1.0)
+    min_timescale : `float`, optional (default = `1.0`)
         The smallest timescale to use.
-    max_timescale : `float`, optional (default = 1.0e4)
+    max_timescale : `float`, optional (default = `1.0e4`)
         The largest timescale to use.
 
     # Returns

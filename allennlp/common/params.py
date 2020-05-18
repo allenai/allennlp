@@ -321,7 +321,7 @@ class Params(MutableMapping):
             the param dictionary is not in `choices`, we raise a `ConfigurationError`, because
             the user specified an invalid value in their parameter file.
 
-        default_to_first_choice: `bool`, optional (default=False)
+        default_to_first_choice: `bool`, optional (default = `False`)
 
             If this is `True`, we allow the `key` to not be present in the parameter
             dictionary.  If the key is not present, we will use the return as the value the first
@@ -330,7 +330,7 @@ class Params(MutableMapping):
             specify your model class when running an experiment, but you can feel free to use
             default settings for encoders if you want).
 
-        allow_class_names: `bool`, optional (default = True)
+        allow_class_names: `bool`, optional (default = `True`)
 
             If this is `True`, then we allow unknown choices that look like fully-qualified class names.
             This is to allow e.g. specifying a model type as my_library.my_model.MyModel
@@ -358,11 +358,11 @@ class Params(MutableMapping):
 
         # Parameters
 
-        quiet: `bool`, optional (default = False)
+        quiet: `bool`, optional (default = `False`)
 
             Whether to log the parameters before returning them as a dict.
 
-        infer_type_and_cast: `bool`, optional (default = False)
+        infer_type_and_cast: `bool`, optional (default = `False`)
 
             If True, we infer types and cast (e.g. things that look like floats to floats).
         """

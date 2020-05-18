@@ -322,10 +322,10 @@ def evaluate(
     data_loader : `DataLoader`
         The `DataLoader` that will iterate over the evaluation data (data loaders already contain
         their data).
-    cuda_device : `int`, optional (default=-1)
+    cuda_device : `int`, optional (default=`-1`)
         The cuda device to use for this evaluation.  The model is assumed to already be using this
         device; this parameter is only used for moving the input data to the correct device.
-    batch_weight_key : `str`, optional (default=None)
+    batch_weight_key : `str`, optional (default=`None`)
         If given, this is a key in the output dictionary for each batch that specifies how to weight
         the loss for that batch.  If this is not given, we use a weight of 1 for every batch.
     """

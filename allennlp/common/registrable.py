@@ -50,11 +50,11 @@ class Registrable(FromParams):
 
         name : `str`
             The name to register the class under.
-        constructor : `str`, optional (default=None)
+        constructor : `str`, optional (default=`None`)
             The name of the method to use on the class to construct the object.  If this is given,
             we will use this method (which must be a `@classmethod`) instead of the default
             constructor.
-        exist_ok : `bool`, optional (default=False)
+        exist_ok : `bool`, optional (default=`False`)
             If True, overwrites any existing models registered under `name`. Else,
             throws an error if a model is already registered under `name`.
 

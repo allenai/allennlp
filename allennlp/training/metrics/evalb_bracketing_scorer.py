@@ -43,11 +43,11 @@ class EvalbBracketingScorer(Metric):
 
     evalb_directory_path : `str`, required.
         The directory containing the EVALB executable.
-    evalb_param_filename : `str`, optional (default = "COLLINS.prm")
+    evalb_param_filename : `str`, optional (default = `"COLLINS.prm"`)
         The relative name of the EVALB configuration file used when scoring the trees.
         By default, this uses the COLLINS.prm configuration file which comes with EVALB.
         This configuration ignores POS tags and some punctuation labels.
-    evalb_num_errors_to_kill : `int`, optional (default = "10")
+    evalb_num_errors_to_kill : `int`, optional (default = `"10"`)
         The number of errors to tolerate from EVALB before terminating evaluation.
     """
 

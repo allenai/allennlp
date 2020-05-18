@@ -1,17 +1,22 @@
 #!/usr/bin/env python
 
 """
-Turn docstring from a single module into a markdown file.
+Turn docstrings from a single module into a markdown file.
+
+We do this with PydocMarkdown, using custom processors and renderers defined here.
 """
 
 import argparse
-from collections import deque
+from collections import OrderedDict
+from dataclasses import dataclass
+from enum import Enum
 import logging
 from multiprocessing import Pool, cpu_count
 import os
 from pathlib import Path
 import re
-from typing import Optional, Tuple
+import sys
+from typing import Optional, Tuple, List
 
 from nr.databind.core import Struct
 from nr.interface import implements, override
@@ -23,6 +28,142 @@ from pydoc_markdown.reflection import Argument, Module, Function, Class
 
 
 logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("py2md")
+
+
+class DocstringError(Exception):
+    pass
+
+
+def emphasize(s: str) -> str:
+    # Need to escape underscores.
+    s = s.replace("_", "\\_")
+    return f"__{s}__"
+
+
+class Section(Enum):
+    ARGUMENTS = "ARGUMENTS"
+    PARAMETERS = "PARAMETERS"
+    ATTRIBUTES = "ATTRIBUTES"
+    MEMBERS = "MEMBERS"
+    RETURNS = "RETURNS"
+    RAISES = "RAISES"
+    EXAMPLES = "EXAMPLES"
+    OTHER = "OTHER"
+
+    @classmethod
+    def from_str(cls, section: str) -> "Section":
+        section = section.upper()
+        for member in cls:
+            if section == member.value:
+                return member
+        return cls.OTHER
+
+
+REQUIRED_PARAM_RE = re.compile(r"^`([^`]+)`(, required\.?)?$")
+
+OPTIONAL_PARAM_RE = re.compile(
+    r"^`([^`]+)`,?\s+(optional,?\s)?\(\s?(optional,\s)?default\s?=\s?`([^`]+)`\s?\)\.?$"
+)
+
+OPTIONAL_PARAM_NO_DEFAULT_RE = re.compile(r"^`([^`]+)`,?\s+optional\.?$")
+
+
+@dataclass
+class Param:
+    ident: str
+    ty: Optional[str] = None
+    required: bool = False
+    default: Optional[str] = None
+
+    @classmethod
+    def from_line(cls, line: str) -> Optional["Param"]:
+        if ":" not in line:
+            return None
+
+        ident, description = line.split(":", 1)
+        ident = ident.strip()
+        description = description.strip()
+
+        if " " in ident:
+            return None
+
+        maybe_match = REQUIRED_PARAM_RE.match(description)
+        if maybe_match:
+            ty = maybe_match.group(1)
+            return cls(ident=ident, ty=ty, required=True)
+
+        maybe_match = OPTIONAL_PARAM_RE.match(description)
+        if maybe_match:
+            ty = maybe_match.group(1)
+            default = maybe_match.group(4)
+            return cls(ident=ident, ty=ty, required=False, default=default)
+
+        maybe_match = OPTIONAL_PARAM_NO_DEFAULT_RE.match(description)
+        if maybe_match:
+            ty = maybe_match.group(1)
+            return cls(ident=ident, ty=ty, required=False)
+
+        raise DocstringError(
+            f"Invalid parameter / attribute description: '{line}'\n"
+            "Make sure types are enclosed in backticks.\n"
+            "Required parameters should be documented like: '{ident} : `{type}`'\n"
+            "Optional parameters should be documented like: '{ident} : `{type}`, optional (default = `{expr}`)'\n"
+        )
+
+    def to_line(self) -> str:
+        line: str = f"- {emphasize(self.ident)} :"
+        if self.ty:
+            line += f" `{self.ty}`"
+            if not self.required:
+                line += ", optional"
+                if self.default:
+                    line += f" (default = `{self.default}`)"
+        line += " <br>"
+        return line
+
+
+# For now we handle attributes / members in the same way as parameters / arguments.
+Attrib = Param
+
+
+@dataclass
+class RetVal:
+    description: Optional[str] = None
+    ident: Optional[str] = None
+    ty: Optional[str] = None
+
+    @classmethod
+    def from_line(cls, line: str) -> "RetVal":
+        if ": " not in line:
+            return cls(description=line)
+        ident, ty = line.split(":", 1)
+        ident = ident.strip()
+        ty = ty.strip()
+        if ty and not ty.startswith("`"):
+            raise DocstringError(f"Type should be enclosed in backticks: '{line}'")
+        return cls(ident=ident, ty=ty)
+
+    def to_line(self) -> str:
+        if self.description:
+            line = f"- {self.description} <br>"
+        elif self.ident:
+            line = f"- {emphasize(self.ident)}"
+            if self.ty:
+                line += f" : {self.ty} <br>"
+            else:
+                line += " <br>"
+        else:
+            raise DocstringError("RetVal must have either description or ident")
+        return line
+
+
+@dataclass
+class ProcessorState:
+    parameters: "OrderedDict[str, Param]"
+    current_section: Optional[Section] = None
+    codeblock_opened: bool = False
+    consecutive_blank_line_count: int = 0
 
 
 @implements(Processor)
@@ -40,48 +181,52 @@ class AllenNlpDocstringProcessor(Struct):
     def process_node(self, node):
         if not getattr(node, "docstring", None):
             return
-        lines = []
-        codeblock_opened = False
-        current_section = None
-        consecutive_blank_line_count = 0
+
+        lines: List[str] = []
+        state: ProcessorState = ProcessorState(parameters=OrderedDict())
+
         for line in node.docstring.split("\n"):
+            # Check if we're starting or ending a codeblock.
             if line.startswith("```"):
-                codeblock_opened = not codeblock_opened
-            if not codeblock_opened:
+                state.codeblock_opened = not state.codeblock_opened
+
+            if not state.codeblock_opened:
+                # If we're not in a codeblock, we'll do some pre-processing.
                 if not line.strip():
-                    consecutive_blank_line_count += 1
-                    # Two blank lines ends a section.
-                    if consecutive_blank_line_count >= 2:
-                        current_section = None
+                    state.consecutive_blank_line_count += 1
+                    if state.consecutive_blank_line_count >= 2:
+                        state.current_section = None
                 else:
-                    consecutive_blank_line_count = 0
-                line, current_section = self._preprocess_line(line, current_section)
+                    state.consecutive_blank_line_count = 0
+                line = self._preprocess_line(line, state)
+
             lines.append(line)
+
+        # Now set the docstring to our preprocessed version of it.
         node.docstring = "\n".join(lines)
 
-    def _preprocess_line(self, line, current_section):
+    def _preprocess_line(self, line, state: ProcessorState) -> str:
         match = re.match(r"#+ (.*)$", line)
         if match:
-            current_section = match.group(1).strip().lower()
-            line = re.sub(r"#+ (.*)$", r"__\1__\n", line)
+            state.current_section = Section.from_str(match.group(1).strip())
+            line = re.sub(r"#+ (.*)$", r"<strong>\1</strong>\n", line)
         else:
             if line and not line.startswith(" ") and not line.startswith("!!! "):
-                if (
-                    current_section
-                    in ("arguments", "parameters", "attributes", "members", "returns")
-                    and ":" in line
-                ):
-                    ident, ty = line.split(":", 1)
-                    if ty:
-                        line = f"- __{ident}__ : {ty}<br>"
-                    else:
-                        line = f"- __{ident}__ :<br>"
-                elif current_section in ("returns", "raises"):
-                    line = f"- {line} <br>"
+                if state.current_section in (Section.ARGUMENTS, Section.PARAMETERS,):
+                    param = Param.from_line(line)
+                    if param:
+                        line = param.to_line()
+                elif state.current_section in (Section.ATTRIBUTES, Section.MEMBERS):
+                    attrib = Attrib.from_line(line)
+                    if attrib:
+                        line = attrib.to_line()
+                elif state.current_section in (Section.RETURNS, Section.RAISES):
+                    retval = RetVal.from_line(line)
+                    line = retval.to_line()
 
             line = self._transform_cross_references(line)
 
-        return line, current_section
+        return line
 
     def _transform_cross_references(self, line: str) -> str:
         """
@@ -109,8 +254,6 @@ class AllenNlpFilterProcessor(Struct):
     Used to filter out nodes that we don't want to document.
     """
 
-    SPECIAL_MEMBERS = ("__path__", "__annotations__", "__name__", "__all__", "__init__")
-
     def process(self, graph, _resolver):
         graph.visit(self._process_node)
 
@@ -118,9 +261,7 @@ class AllenNlpFilterProcessor(Struct):
         def _check(node):
             if node.parent and node.parent.name.startswith("_"):
                 return False
-            if node.name.startswith("_") and not node.name.endswith("_"):
-                return False
-            if node.name in self.SPECIAL_MEMBERS:
+            if node.name.startswith("_"):
                 return False
             if node.name == "logger" and isinstance(node.parent, Module):
                 return False
@@ -217,7 +358,11 @@ class AllenNlpRenderer(MarkdownRenderer):
             fp.write("\n\n")
 
 
-def py2md(module: str, out: Optional[str] = None) -> None:
+def py2md(module: str, out: Optional[str] = None) -> bool:
+    """
+    Returns `True` if module successfully processed, otherwise `False`.
+    """
+    logger.debug("Processing %s", module)
     pydocmd = PydocMarkdown(
         loaders=[PythonLoader(modules=[module])],
         processors=[AllenNlpFilterProcessor(), AllenNlpDocstringProcessor()],
@@ -236,12 +381,16 @@ def py2md(module: str, out: Optional[str] = None) -> None:
         os.makedirs(out_path.parent, exist_ok=True)
 
     pydocmd.load_modules()
-    pydocmd.process()
+    try:
+        pydocmd.process()
+    except DocstringError as err:
+        logger.exception("Failed to process %s.\n%s", module, err)
+        return False
     pydocmd.render()
-    logging.info("Processed %s", module)
+    return True
 
 
-def _py2md_wrapper(x: Tuple[str, str]):
+def _py2md_wrapper(x: Tuple[str, str]) -> bool:
     """
     Used to wrap py2md since we can't pickle a lambda (needed for multiprocessing).
     """
@@ -269,18 +418,26 @@ def main():
     if len(outputs) != len(opts.modules):
         raise ValueError("Number inputs and outputs should be the same.")
     n_threads = cpu_count()
+    errors: int = 0
     if len(opts.modules) > n_threads and opts.out:
         # If writing to files, can process in parallel.
         chunk_size = max([1, int(len(outputs) / n_threads)])
-        logging.info("Using %d threads", n_threads)
+        logger.info("Using %d threads", n_threads)
         with Pool(n_threads) as p:
-            deque(p.imap(_py2md_wrapper, zip(opts.modules, outputs), chunk_size), maxlen=0)
+            for result in p.imap(_py2md_wrapper, zip(opts.modules, outputs), chunk_size):
+                if not result:
+                    errors += 1
     else:
         # If writing to stdout, need to process sequentially. Otherwise the output
         # could get intertwined.
         for module, out in zip(opts.modules, outputs):
-            py2md(module, out)
-    logging.info("Processed %d modules", len(opts.modules))
+            result = py2md(module, out)
+            if not result:
+                errors += 1
+    logger.info("Processed %d modules", len(opts.modules))
+    if errors:
+        logger.error("Found %d errors", errors)
+        sys.exit(1)
 
 
 if __name__ == "__main__":

@@ -42,7 +42,7 @@ class CategoricalAccuracy(Metric):
         gold_labels : `torch.Tensor`, required.
             A tensor of integer class label of shape (batch_size, ...). It must be the same
             shape as the `predictions` tensor without the `num_classes` dimension.
-        mask : `torch.BoolTensor`, optional (default = None).
+        mask : `torch.BoolTensor`, optional (default = `None`).
             A masking tensor the same size as `gold_labels`.
         """
         predictions, gold_labels, mask = self.detach_tensors(predictions, gold_labels, mask)
