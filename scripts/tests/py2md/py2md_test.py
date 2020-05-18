@@ -2,16 +2,18 @@ from typing import Optional
 
 import pytest
 
-from allennlp.tools.py2md import py2md, Param, DocstringError
 from allennlp.common.testing import AllenNlpTestCase
+from scripts.py2md import py2md, Param, DocstringError
 
 
 class TestPy2md(AllenNlpTestCase):
     def test_basic_example(self, capsys):
-        py2md("allennlp.tests.fixtures.tools.py2md.basic_example")
+        py2md("scripts.tests.py2md.basic_example")
         captured = capsys.readouterr()
 
-        with open(self.FIXTURES_ROOT / "tools" / "py2md" / "basic_example_expected_output.md") as f:
+        with open(
+            self.PROJECT_ROOT / "scripts" / "tests" / "py2md" / "basic_example_expected_output.md"
+        ) as f:
             expected = f.read()
 
         assert captured.out.split("\n") == expected.split("\n")

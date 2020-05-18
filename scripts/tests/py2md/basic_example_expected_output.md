@@ -1,10 +1,6 @@
-[ *allennlp**.tests**.fixtures**.tools**.py2md***.basic_example** ]
-
----
-
 This is a docstring.
 
-<a name=".allennlp.tests.fixtures.tools.py2md.basic_example.SOME_GLOBAL_VAR"></a>
+<a name=".scripts.tests.py2md.basic_example.SOME_GLOBAL_VAR"></a>
 ## SOME\_GLOBAL\_VAR
 
 ```python
@@ -13,7 +9,7 @@ SOME_GLOBAL_VAR = "Ahhhh I'm a global var!!"
 
 This is a global var.
 
-<a name=".allennlp.tests.fixtures.tools.py2md.basic_example.func_with_no_args"></a>
+<a name=".scripts.tests.py2md.basic_example.func_with_no_args"></a>
 ## func\_with\_no\_args
 
 ```python
@@ -22,7 +18,7 @@ def func_with_no_args()
 
 This function has no args.
 
-<a name=".allennlp.tests.fixtures.tools.py2md.basic_example.func_with_args"></a>
+<a name=".scripts.tests.py2md.basic_example.func_with_args"></a>
 ## func\_with\_args
 
 ```python
@@ -47,7 +43,7 @@ This function has some args.
 - `int` <br>
     The result of `a + b * c`.
 
-<a name=".allennlp.tests.fixtures.tools.py2md.basic_example.SomeClass"></a>
+<a name=".scripts.tests.py2md.basic_example.SomeClass"></a>
 ## SomeClass Objects
 
 ```python
@@ -63,7 +59,7 @@ I'm a class!
 x : `float`
     This attribute is called `x`.
 
-<a name=".allennlp.tests.fixtures.tools.py2md.basic_example.SomeClass.some_class_level_variable"></a>
+<a name=".scripts.tests.py2md.basic_example.SomeClass.some_class_level_variable"></a>
 ### some\_class\_level\_variable
 
 ```python
@@ -72,14 +68,14 @@ some_class_level_variable = 1
 
 This is how you document a class-level variable.
 
-<a name=".allennlp.tests.fixtures.tools.py2md.basic_example.SomeClass.some_class_level_var_with_type"></a>
+<a name=".scripts.tests.py2md.basic_example.SomeClass.some_class_level_var_with_type"></a>
 ### some\_class\_level\_var\_with\_type
 
 ```python
 some_class_level_var_with_type = 1
 ```
 
-<a name=".allennlp.tests.fixtures.tools.py2md.basic_example.SomeClass.some_method"></a>
+<a name=".scripts.tests.py2md.basic_example.SomeClass.some_method"></a>
 ### some\_method
 
 ```python
@@ -95,7 +91,7 @@ But I don't do anything.
 
 - `None` <br>
 
-<a name=".allennlp.tests.fixtures.tools.py2md.basic_example.SomeClass.method_with_alternative_return_section"></a>
+<a name=".scripts.tests.py2md.basic_example.SomeClass.method_with_alternative_return_section"></a>
 ### method\_with\_alternative\_return\_section
 
 ```python
@@ -109,7 +105,7 @@ Another method.
 
 - A completely arbitrary number. <br>
 
-<a name=".allennlp.tests.fixtures.tools.py2md.basic_example.SomeClass.method_with_alternative_return_section3"></a>
+<a name=".scripts.tests.py2md.basic_example.SomeClass.method_with_alternative_return_section3"></a>
 ### method\_with\_alternative\_return\_section3
 
 ```python
@@ -124,7 +120,7 @@ Another method.
 - __number__ : `int` <br>
     A completely arbitrary number.
 
-<a name=".allennlp.tests.fixtures.tools.py2md.basic_example.AnotherClassWithReallyLongConstructor"></a>
+<a name=".scripts.tests.py2md.basic_example.AnotherClassWithReallyLongConstructor"></a>
 ## AnotherClassWithReallyLongConstructor Objects
 
 ```python
