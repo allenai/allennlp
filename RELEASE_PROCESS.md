@@ -44,6 +44,11 @@ click edit. Now copy over the latest section from the `CHANGELOG.md`. And finall
     OLD_TAG=$(git describe --always --tags --abbrev=0 $TAG^)
     git log $OLD_TAG..$TAG --oneline
     ```
+    
+    ```fish
+    set -x OLD_TAG $(git describe --always --tags --abbrev=0 $TAG^)
+    git log $OLD_TAG..$TAG --oneline
+    ```
 
     On a Mac, for example, you can just pipe the above command into `pbcopy`.
 
