@@ -150,3 +150,8 @@ docker-test-image :
 .PHONY : docker-test-run
 docker-test-run :
 	$(DOCKER_RUN_CMD) --gpus 2 $(DOCKER_TEST_IMAGE_NAME) $(ARGS)
+
+.PHONY : dist-test
+dist-test :
+	docker build --pull -f Dockerfile.test -t $(DOCKER_TEST_IMAGE_NAME) .
+	$(DOCKER_RUN_CMD) --entrypoint pytest --gpus 2 $(DOCKER_TEST_IMAGE_NAME) allennlp/tests/commands/train_test.py

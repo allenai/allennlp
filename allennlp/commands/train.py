@@ -620,7 +620,7 @@ class TrainModel(Registrable):
         if not common_util.is_master():
             import time
 
-            time.sleep(2)
+            time.sleep(1)
 
         vocabulary_ = vocabulary.construct(instances=instance_generator)
         if not vocabulary_:
