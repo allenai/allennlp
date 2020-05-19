@@ -58,7 +58,10 @@ test :
 
 .PHONY : test-with-cov
 test-with-cov :
-	pytest --color=yes -rf --cov-config=.coveragerc --cov=$(SRC) --durations=40 -k "not sniff_test" $(SRC) scripts/
+	pytest --color=yes -rf --durations=40 -k "not sniff_test" \
+			--cov-config=.coveragerc \
+			--cov=$(SRC) \
+			--cov-report=xml $(SRC) scripts/
 
 .PHONY : gpu-test
 gpu-test :
