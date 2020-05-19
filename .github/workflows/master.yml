@@ -85,7 +85,7 @@ jobs:
         make test-with-cov
 
     - name: Upload coverage to Codecov
-      if: matrix.python == '3.7' && github.repository == 'allenai/allennlp'
+      if: matrix.python == '3.7' && github.repository == 'allenai/allennlp' && github.event_name == 'push'
       uses: codecov/codecov-action@v1
       with:
         file: ./coverage.xml
