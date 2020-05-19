@@ -441,8 +441,8 @@ class Vocabulary(Registrable):
                     token = self._oov_token
                 self._token_to_index[namespace][token] = index
                 self._index_to_token[namespace][index] = token
-        #  if is_padded:
-        assert self._oov_token in self._token_to_index[namespace], "OOV token not found!"
+        if is_padded:
+            assert self._oov_token in self._token_to_index[namespace], "OOV token not found!"
 
     def extend_from_instances(self, instances: Iterable["adi.Instance"]) -> None:
         logger.info("Fitting token dictionary from dataset.")
@@ -600,8 +600,9 @@ class Vocabulary(Registrable):
         with codecs.open(
             os.path.join(directory, NAMESPACE_PADDING_FILE), "w", "utf-8"
         ) as namespace_file:
-            for namespace_str in self._non_padded_namespaces:
-                print(namespace_str, file=namespace_file)
+            print("", file=namespace_match)
+            #  for namespace_str in self._non_padded_namespaces:
+            #      print(namespace_str, file=namespace_file)
 
         for namespace, mapping in self._index_to_token.items():
             # Each namespace gets written to its own file, in index order.

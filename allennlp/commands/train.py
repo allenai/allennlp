@@ -596,6 +596,10 @@ class TrainModel(Registrable):
             that we do not recommend using this for actual test data in every-day experimentation;
             you should only very rarely evaluate your model on actual test data.
         """
+        if local_rank != 0:
+            import time
+
+            time.sleep(5)
 
         datasets = training_util.read_all_datasets(
             train_data_path=train_data_path,
