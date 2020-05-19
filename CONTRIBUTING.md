@@ -35,6 +35,8 @@ Make sure you have a clear description of the problem and the solution, and incl
 
 Our build system also calculates test coverage on every master commit.  Please add unit tests so we maintain our high coverage.
 
+Finally, please update the [CHANGELOG](./CHANGELOG.md) with notes on your fix in the "Unreleased" section.
+
 ### Do you have a suggestion for an enhancement?
 
 We use GitHub issues to track enhancement requests.  Before you create an enhancement request:
