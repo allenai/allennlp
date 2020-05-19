@@ -617,6 +617,11 @@ class TrainModel(Registrable):
             for instance in dataset
         )
 
+        if not common_util.is_master():
+            import time
+
+            time.sleep(2)
+
         vocabulary_ = vocabulary.construct(instances=instance_generator)
         if not vocabulary_:
             vocabulary_ = Vocabulary.from_instances(instance_generator)

@@ -600,6 +600,9 @@ class Vocabulary(Registrable):
         with codecs.open(
             os.path.join(directory, NAMESPACE_PADDING_FILE), "w", "utf-8"
         ) as namespace_file:
+            import time
+
+            time.sleep(5)
             for namespace_str in self._non_padded_namespaces:
                 print(namespace_str, file=namespace_file)
 
