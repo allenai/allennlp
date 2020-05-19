@@ -20,8 +20,7 @@ jobs:
 
     - name: Check that CHANGELOG has been updated
       run: |
-        git 
-
+        git diff --name-only $(git merge-base upstream/master HEAD) | grep '^CHANGELOG.md$'
 
   gpu_checks:
     name: GPU Checks
