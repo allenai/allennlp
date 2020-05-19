@@ -46,7 +46,7 @@ click edit. Now copy over the latest section from the `CHANGELOG.md`. And finall
     ```
     
     ```fish
-    set -x OLD_TAG $(git describe --always --tags --abbrev=0 $TAG^)
+    set -x OLD_TAG (git describe --always --tags --abbrev=0 $TAG^)
     git log $OLD_TAG..$TAG --oneline
     ```
 
