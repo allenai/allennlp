@@ -38,16 +38,16 @@ Then you can copy and paste the commands below without worrying about mistyping 
     ```
 
 4. Find the tag you just pushed [on GitHub](https://github.com/allenai/allennlp/tags) and
-click edit. Now copy over the latest section from the `CHANGELOG.md`. And finally, add a section called "Commits" with the output from this:
+click edit. Now copy over the latest section from the `CHANGELOG.md`. And finally, add a section called "Commits" with the output of a command like the following:
 
     ```bash
-    git log `git describe --always --tags --abbrev=0 HEAD^^`..HEAD^ --oneline
+    OLD_TAG=$(git describe --always --tags --abbrev=0 $TAG^)
+    git log $OLD_TAG..$TAG --oneline
     ```
-
-    Or, if you're using fish,
-
+    
     ```fish
-    git log (git describe --always --tags --abbrev=0 HEAD^^)..HEAD^ --oneline
+    set -x OLD_TAG (git describe --always --tags --abbrev=0 $TAG^)
+    git log $OLD_TAG..$TAG --oneline
     ```
 
     On a Mac, for example, you can just pipe the above command into `pbcopy`.
