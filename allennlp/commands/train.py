@@ -617,22 +617,17 @@ class TrainModel(Registrable):
             for instance in dataset
         )
 
-        if not common_util.is_master():
-            import time
-
-            time.sleep(1)
-
         vocabulary_ = vocabulary.construct(instances=instance_generator)
         if not vocabulary_:
             vocabulary_ = Vocabulary.from_instances(instance_generator)
-        model_ = model.construct(vocab=vocabulary_)
 
-        # Initializing the model can have side effect of expanding the vocabulary.
-        # Save the vocab only in the master. In the degenerate non-distributed
-        # case, we're trivially the master.
-        if common_util.is_master():
+        distributed = dist.is_available() and dist.is_initialized()
+        if not distributed:
+            # In the non-distributed case, we won't have serialized the vocabulary yet.
             vocabulary_path = os.path.join(serialization_dir, "vocabulary")
             vocabulary_.save_to_files(vocabulary_path)
+
+        model_ = model.construct(vocab=vocabulary_)
 
         for dataset in datasets.values():
             dataset.index_with(model_.vocab)
