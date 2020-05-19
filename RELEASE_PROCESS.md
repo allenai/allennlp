@@ -41,7 +41,8 @@ Then you can copy and paste the commands below without worrying about mistyping 
 click edit. Now copy over the latest section from the `CHANGELOG.md`. And finally, add a section called "Commits" with the output a command like the following:
 
     ```bash
-    git log v0.9.0..v1.0.0rc4 --oneline
+    OLD_TAG=$(git describe --always --tags --abbrev=0 $TAG^)
+    git log $OLD_TAG..$TAG --oneline
     ```
 
     On a Mac, for example, you can just pipe the above command into `pbcopy`.
