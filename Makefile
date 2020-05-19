@@ -150,3 +150,13 @@ docker-test-image :
 .PHONY : docker-test-run
 docker-test-run :
 	$(DOCKER_RUN_CMD) --gpus 2 $(DOCKER_TEST_IMAGE_NAME) $(ARGS)
+
+.PHONY : dist-test
+dist-test :
+	docker build --pull -f Dockerfile.test -t $(DOCKER_TEST_IMAGE_NAME) .
+	docker run --rm \
+			-v $HOME/.allennlp:/root/.allennlp \
+			-v $HOME/.cache/torch:/root/.cache/torch \
+			-v $HOME/nltk_data:/root/nltk_data \
+			--entrypoint=pytest \
+			--gpus 2 allennlp/test:latest --color=yes -v -rf -m gpu allennlp/tests/commands
