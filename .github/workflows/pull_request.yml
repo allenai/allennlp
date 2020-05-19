@@ -13,16 +13,15 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    - name: Add upstream remote
+    - name: Debugging info
       run: |
-        git remote add upstream https://github.com/allenai/allennlp.git
         git remote -v
 
     - name: Check that CHANGELOG has been updated
       run: |
         # If this step fails, this means you haven't updated the CHANGELOG.md file with
         # notes on your contribution.
-        git diff --name-only $(git merge-base upstream/master HEAD) | grep '^CHANGELOG.md$'
+        git diff --name-only $(git merge-base origin/master HEAD) | grep '^CHANGELOG.md$'
 
   gpu_checks:
     name: GPU Checks
