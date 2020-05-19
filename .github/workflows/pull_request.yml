@@ -11,6 +11,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+    # Note that checkout@v2 will not work with the git command below!
     - uses: actions/checkout@v1
 
     - name: Debugging info
