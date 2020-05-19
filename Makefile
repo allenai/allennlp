@@ -154,4 +154,4 @@ docker-test-run :
 .PHONY : dist-test
 dist-test :
 	docker build --pull -f Dockerfile.test -t $(DOCKER_TEST_IMAGE_NAME) .
-	$(DOCKER_RUN_CMD) --entrypoint pytest --gpus 2 $(DOCKER_TEST_IMAGE_NAME) -v allennlp/tests/commands/train_test.py
+	$(DOCKER_RUN_CMD) --entrypoint pytest --gpus 2 $(DOCKER_TEST_IMAGE_NAME) --color=yes -v -rf -m gpu allennlp/tests/commands/train_test.py
