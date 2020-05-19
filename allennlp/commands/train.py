@@ -372,6 +372,11 @@ def _train_worker(
     # not using `allennlp.common.util.is_master` as the process group is yet to be initialized
     master = process_rank == 0
 
+    if not master:
+        import time
+
+        time.sleep(5)
+
     include_package = include_package or []
 
     if distributed:
