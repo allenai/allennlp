@@ -441,8 +441,8 @@ class Vocabulary(Registrable):
                     token = self._oov_token
                 self._token_to_index[namespace][token] = index
                 self._index_to_token[namespace][index] = token
-        if is_padded:
-            assert self._oov_token in self._token_to_index[namespace], "OOV token not found!"
+        #  if is_padded:
+        assert self._oov_token in self._token_to_index[namespace], "OOV token not found!"
 
     def extend_from_instances(self, instances: Iterable["adi.Instance"]) -> None:
         logger.info("Fitting token dictionary from dataset.")
