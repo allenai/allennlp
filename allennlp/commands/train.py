@@ -596,10 +596,6 @@ class TrainModel(Registrable):
             that we do not recommend using this for actual test data in every-day experimentation;
             you should only very rarely evaluate your model on actual test data.
         """
-        if local_rank != 0:
-            import time
-
-            time.sleep(5)
 
         datasets = training_util.read_all_datasets(
             train_data_path=train_data_path,
@@ -625,13 +621,6 @@ class TrainModel(Registrable):
         if not vocabulary_:
             vocabulary_ = Vocabulary.from_instances(instance_generator)
         model_ = model.construct(vocab=vocabulary_)
-
-        # Initializing the model can have side effect of expanding the vocabulary.
-        # Save the vocab only in the master. In the degenerate non-distributed
-        # case, we're trivially the master.
-        if common_util.is_master():
-            vocabulary_path = os.path.join(serialization_dir, "vocabulary")
-            vocabulary_.save_to_files(vocabulary_path)
 
         for dataset in datasets.values():
             dataset.index_with(model_.vocab)

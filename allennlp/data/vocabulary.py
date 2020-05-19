@@ -600,9 +600,8 @@ class Vocabulary(Registrable):
         with codecs.open(
             os.path.join(directory, NAMESPACE_PADDING_FILE), "w", "utf-8"
         ) as namespace_file:
-            pass
-            #  for namespace_str in self._non_padded_namespaces:
-            #      print(namespace_str, file=namespace_file)
+            for namespace_str in self._non_padded_namespaces:
+                print(namespace_str, file=namespace_file)
 
         for namespace, mapping in self._index_to_token.items():
             # Each namespace gets written to its own file, in index order.
