@@ -6,6 +6,23 @@ on:
     - master
 
 jobs:
+  changelog:
+    name: CHANGELOG
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Add upstream remote
+      run: |
+        git remote add-url upstream https://github.com/allenai/allennlp
+        git remote -v
+
+    - name: Check that CHANGELOG has been updated
+      run: |
+        git 
+
+
   gpu_checks:
     name: GPU Checks
     runs-on: [self-hosted, GPU]
