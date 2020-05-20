@@ -131,14 +131,15 @@ class NullBatchCallback(BatchCallback):
     """
     A do-nothing batch callback
     """
+
     def __call__(
-            self,
-            trainer: "GradientDescentTrainer",
-            batch_inputs: List[List[TensorDict]],
-            batch_outputs: List[Dict[str, Any]],
-            epoch: int,
-            batch_number: int,
-            is_training: bool,
+        self,
+        trainer: "GradientDescentTrainer",
+        batch_inputs: List[List[TensorDict]],
+        batch_outputs: List[Dict[str, Any]],
+        epoch: int,
+        batch_number: int,
+        is_training: bool,
     ) -> None:
         pass
 
@@ -162,8 +163,9 @@ class NullEpochCallback(Registrable):
     """
     A do-nothing epoch callback
     """
+
     def __call__(
-            self, trainer: "GradientDescentTrainer", metrics: Dict[str, Any], epoch: int
+        self, trainer: "GradientDescentTrainer", metrics: Dict[str, Any], epoch: int
     ) -> None:
         pass
 
