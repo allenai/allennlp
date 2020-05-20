@@ -1,5 +1,7 @@
 import argparse
 import json
+
+import logging
 import math
 import os
 import re
@@ -40,9 +42,13 @@ class TrainingDataLoggerBatchCallback(BatchCallback):
         is_training: bool,
     ) -> None:
         if is_training:
+            logger = logging.getLogger(__name__)
             for batch in batch_inputs:
                 for metadata in batch["metadata"]:
-                    print(f"First word from training data: '{metadata['words'][0]}'")
+                    logger.info(f"First word from training data: '{metadata['words'][0]}'")
+
+    def in_worker(self, *args, **kwargs) -> None:
+        self(*args, **kwargs)
 
 
 class TestTrain(AllenNlpTestCase):
