@@ -253,7 +253,7 @@ class TestTrain(AllenNlpTestCase):
                     "num_epochs": num_epochs,
                     "optimizer": "adam",
                     "batch_callbacks": [
-                        "allennlp.tests.commands.train_test.TrainingDataLoggerBatchCallback"
+                        "tests.commands.train_test.TrainingDataLoggerBatchCallback"
                     ],
                 },
                 "distributed": {"cuda_devices": [0, 1]},
