@@ -126,6 +126,23 @@ class BatchCallback(Registrable):
         raise NotImplementedError
 
 
+@BatchCallback.register("null")
+class NullBatchCallback(BatchCallback):
+    """
+    A do-nothing batch callback
+    """
+    def __call__(
+            self,
+            trainer: "GradientDescentTrainer",
+            batch_inputs: List[List[TensorDict]],
+            batch_outputs: List[Dict[str, Any]],
+            epoch: int,
+            batch_number: int,
+            is_training: bool,
+    ) -> None:
+        pass
+
+
 class EpochCallback(Registrable):
     """
     An optional callback that you can pass to the `GradientDescentTrainer` that will be called at
@@ -138,6 +155,17 @@ class EpochCallback(Registrable):
         self, trainer: "GradientDescentTrainer", metrics: Dict[str, Any], epoch: int
     ) -> None:
         raise NotImplementedError
+
+
+@EpochCallback.register("null")
+class NullEpochCallback(Registrable):
+    """
+    A do-nothing epoch callback
+    """
+    def __call__(
+            self, trainer: "GradientDescentTrainer", metrics: Dict[str, Any], epoch: int
+    ) -> None:
+        pass
 
 
 @Trainer.register("gradient_descent", constructor="from_partial_objects")
