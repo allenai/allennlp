@@ -274,8 +274,8 @@ class TestTrain(AllenNlpTestCase):
                     "encoder": {"type": "lstm", "input_size": 5, "hidden_size": 7, "num_layers": 2},
                 },
                 "dataset_reader": {"type": "sequence_tagging"},
-                "train_data_path": "allennlp/tests/fixtures/data/sequence_tagging.tsv",
-                "validation_data_path": "allennlp/tests/fixtures/data/sequence_tagging.tsv",
+                "train_data_path": "test_fixtures/data/sequence_tagging.tsv",
+                "validation_data_path": "test_fixtures/data/sequence_tagging.tsv",
                 "data_loader": {"batch_size": 2},
                 "trainer": {
                     "num_epochs": 2,
