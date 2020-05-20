@@ -22,6 +22,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The `allennlp test-install` command now just ensures the core submodules can
 be imported successfully, and prints out some other useful information such as the version, PyTorch version,
 and the number of GPU devices available.
+- All of the tests moved from `allennlp/tests` to `tests` at the root level, and
+`allennlp/tests/fixtures` moved to `test_fixtures` at the root level. The PyPI source and wheel distributions will no longer include tests and fixtures.
 
 ## [v1.0.0rc4](https://github.com/allenai/allennlp/releases/tag/v1.0.0rc4) - 2019-05-14
 
