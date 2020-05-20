@@ -132,9 +132,6 @@ class PretrainedTransformerTokenizer(Tokenizer):
 
         seen_dummy_a = False
         seen_dummy_b = False
-        print(dummy_output)
-        print(dummy_a)
-        print(dummy_b)
         for token_id, token_type_id in zip(
             dummy_output["input_ids"], dummy_output["token_type_ids"]
         ):
