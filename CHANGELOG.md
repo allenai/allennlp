@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Make `cached_path` work offline.
 - Tons of docstring inconsistencies resolved.
 - Nightly builds no longer run on forks.
+- Distributed training now automatically figures out which worker should see which instances
 
 ### Added
 
