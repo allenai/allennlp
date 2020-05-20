@@ -178,7 +178,7 @@ class DatasetReader(Registrable):
     max_instances : `int`, optional (default=`None`)
         If given, will stop reading after this many instances. This is a useful setting for debugging.
         Setting this disables caching.
-    manual_distributed_sharding: `bool`, optional (default=False)
+    manual_distributed_sharding: `bool`, optional (default=`False`)
         By default, when used in a distributed setting, `DatasetReader` makes sure that each
         worker process only receives a subset of the data. It does this by reading the whole
         dataset in each worker, but filtering out the instances that are not needed. If you
