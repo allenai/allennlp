@@ -319,7 +319,7 @@ def _train_worker(
     master_addr: str = "127.0.0.1",
     master_port: int = 29500,
     world_size: int = 1,
-    distributed_device_ids: List[str] = None,
+    distributed_device_ids: List[int] = None,
 ) -> Optional[Model]:
     """
     Helper to train the configured model/experiment. In distributed mode, this is spawned as a
