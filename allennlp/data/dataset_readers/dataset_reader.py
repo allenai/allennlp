@@ -134,6 +134,9 @@ class _DistributedLazyInstances(AllennlpLazyDataset):
     def __iter__(self) -> Iterator[Instance]:
         from torch import distributed
 
+        logger.info(
+            "Returning instances i%%%d==%d", distributed.get_world_size(), distributed.get_rank()
+        )
         return itertools.islice(
             iter(self.inner), distributed.get_rank(), None, distributed.get_world_size()
         )
@@ -258,6 +261,11 @@ class DatasetReader(Registrable):
             if not self.manual_distributed_sharding and util.is_distributed():
                 from torch import distributed
 
+                logger.info(
+                    "Returning instances i%%%d==%d",
+                    distributed.get_world_size(),
+                    distributed.get_rank(),
+                )
                 instances = itertools.islice(
                     instances, distributed.get_rank(), None, distributed.get_world_size()
                 )
