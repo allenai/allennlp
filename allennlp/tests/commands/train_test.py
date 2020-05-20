@@ -40,10 +40,9 @@ class TrainingDataLoggerBatchCallback(BatchCallback):
         is_training: bool,
     ) -> None:
         if is_training:
-            for batch_group in batch_inputs:
-                for batch in batch_group:
-                    for metadata in batch["metadata"]:
-                        print(f"First word from training data: '{metadata['words'][0]}'")
+            for batch in batch_inputs:
+                for metadata in batch["metadata"]:
+                    print(f"First word from training data: '{metadata['words'][0]}'")
 
 
 class TestTrain(AllenNlpTestCase):
