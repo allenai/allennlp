@@ -147,20 +147,22 @@ def lazy_groups_of_max_size(
     corresponding item in `iterable`. The instances from `iterable` are batched such that the total size
     of the batch as computed from `sizes` does not exceed `max_size`.
     """
-    cur_size = 0
+    cur_max_size = 0
     group: List[A] = []
 
     iterator = iter(iterable)
     size_iter = iter(sizes)
 
     for item, size in zip(iterator, size_iter):
-        if cur_size + size > max_size:
+        group_size = max(size, cur_max_size) * (len(group) + 1)
+
+        if group_size > max_size:
             yield group
-            cur_size = 0
+            cur_max_size = 0
             group = []
 
         group.append(item)
-        cur_size += size
+        cur_max_size = max(cur_max_size, size)
 
     if len(group) != 0:
         yield group
