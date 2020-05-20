@@ -55,10 +55,15 @@ class SentenceTaggerPredictor(Predictor):
         We then return a list of those Instances.
 
         For example:
+
+        ```text
         Mary  went to Seattle to visit Microsoft Research
         U-Per  O    O   U-Loc  O   O     B-Org     L-Org
+        ```
 
         We create three instances.
+
+        ```text
         Mary  went to Seattle to visit Microsoft Research
         U-Per  O    O    O     O   O       O         O
 
@@ -67,6 +72,7 @@ class SentenceTaggerPredictor(Predictor):
 
         Mary  went to Seattle to visit Microsoft Research
         O      O    O    O     O   O     B-Org     L-Org
+        ```
 
         We additionally add a flag to these instances to tell the model to only compute loss on
         non-O tags, so that we get gradients that are specific to the particular span prediction

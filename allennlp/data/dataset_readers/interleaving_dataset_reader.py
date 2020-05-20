@@ -27,9 +27,9 @@ class InterleavingDatasetReader(DatasetReader):
     readers : `Dict[str, DatasetReader]`
         The dataset readers to wrap. The keys of this dictionary will be used
         as the values in the MetadataField indicating provenance.
-    dataset_field_name : str, optional (default = "dataset")
+    dataset_field_name : `str`, optional (default = `"dataset"`)
         The name of the MetadataField indicating which dataset an instance came from.
-    scheme : str, optional (default = "round_robin")
+    scheme : `str`, optional (default = `"round_robin"`)
         Indicates how to interleave instances. Currently the two options are "round_robin",
         which repeatedly cycles through the datasets grabbing one instance from each;
         and "all_at_once", which yields all the instances from the first dataset,

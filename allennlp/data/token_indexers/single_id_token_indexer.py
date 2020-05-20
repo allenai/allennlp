@@ -20,7 +20,7 @@ class SingleIdTokenIndexer(TokenIndexer):
 
     # Parameters
 
-    namespace : `Optional[str]`, optional (default=`tokens`)
+    namespace : `Optional[str]`, optional (default=`"tokens"`)
         We will use this namespace in the :class:`Vocabulary` to map strings to indices.  If you
         explicitly pass in `None` here, we will skip indexing and vocabulary lookups.  This means
         that the `feature_name` you use must correspond to an integer value (like `text_id`, for
@@ -32,7 +32,7 @@ class SingleIdTokenIndexer(TokenIndexer):
         These are prepended to the tokens provided to `tokens_to_indices`.
     end_tokens : `List[str]`, optional (default=`None`)
         These are appended to the tokens provided to `tokens_to_indices`.
-    feature_name : `str`, optional (default=`text`)
+    feature_name : `str`, optional (default=`"text"`)
         We will use the :class:`Token` attribute with this name as input.  This is potentially
         useful, e.g., for using NER tags instead of (or in addition to) surface forms as your inputs
         (passing `ent_type_` here would do that).  If you use a non-default value here, you almost

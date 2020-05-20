@@ -22,7 +22,7 @@ class BagOfWordCountsTokenEmbedder(TokenEmbedder):
     # Parameters
 
     vocab : `Vocabulary`
-    vocab_namespace : `str`, optional (default = "tokens")
+    vocab_namespace : `str`, optional (default = `"tokens"`)
         namespace of vocabulary to embed
     projection_dim : `int`, optional (default = `None`)
         if specified, will project the resulting bag of words representation

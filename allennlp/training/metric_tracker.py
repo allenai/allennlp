@@ -16,15 +16,15 @@ class MetricTracker:
 
     # Parameters
 
-    patience : int, optional (default = None)
+    patience : `int`, optional (default = `None`)
         If provided, then `should_stop_early()` returns True if we go this
         many epochs without seeing a new best value.
-    metric_name : str, optional (default = None)
+    metric_name : `str`, optional (default = `None`)
         If provided, it's used to infer whether we expect the metric values to
         increase (if it starts with "+") or decrease (if it starts with "-").
         It's an error if it doesn't start with one of those. If it's not provided,
         you should specify `should_decrease` instead.
-    should_decrease : str, optional (default = None)
+    should_decrease : `str`, optional (default = `None`)
         If `metric_name` isn't provided (in which case we can't infer `should_decrease`),
         then you have to specify it here.
     """

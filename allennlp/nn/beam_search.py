@@ -20,12 +20,12 @@ class BeamSearch:
 
     end_index : `int`
         The index of the "stop" or "end" token in the target vocabulary.
-    max_steps : `int`, optional (default = 50)
+    max_steps : `int`, optional (default = `50`)
         The maximum number of decoding steps to take, i.e. the maximum length
         of the predicted sequences.
-    beam_size : `int`, optional (default = 10)
+    beam_size : `int`, optional (default = `10`)
         The width of the beam used.
-    per_node_beam_size : `int`, optional (default = beam_size)
+    per_node_beam_size : `int`, optional (default = `beam_size`)
         The maximum number of candidates to consider per node, at each step in the search.
         If not given, this just defaults to `beam_size`. Setting this parameter
         to a number smaller than `beam_size` may give better results, as it can introduce

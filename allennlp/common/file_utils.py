@@ -2,6 +2,7 @@
 Utilities for working with the local dataset cache.
 """
 
+import glob
 import os
 import logging
 import shutil
@@ -9,15 +10,16 @@ import tempfile
 import json
 from urllib.parse import urlparse
 from pathlib import Path
-from typing import Optional, Tuple, Union, IO, Callable, Set
+from typing import Optional, Tuple, Union, IO, Callable, Set, List
 from hashlib import sha256
 from functools import wraps
 
 import boto3
 import botocore
-from botocore.exceptions import ClientError
+from botocore.exceptions import ClientError, EndpointConnectionError
 import requests
 from requests.adapters import HTTPAdapter
+from requests.exceptions import ConnectionError
 from requests.packages.urllib3.util.retry import Retry
 
 from allennlp.common.tqdm import Tqdm
@@ -124,7 +126,7 @@ def is_url_or_existing_file(url_or_filename: Union[str, Path, None]) -> bool:
     return parsed.scheme in ("http", "https", "s3") or os.path.exists(url_or_filename)
 
 
-def split_s3_path(url: str) -> Tuple[str, str]:
+def _split_s3_path(url: str) -> Tuple[str, str]:
     """Split a full s3 path into the bucket name and path."""
     parsed = urlparse(url)
     if not parsed.netloc or not parsed.path:
@@ -137,7 +139,7 @@ def split_s3_path(url: str) -> Tuple[str, str]:
     return bucket_name, s3_path
 
 
-def s3_request(func: Callable):
+def _s3_request(func: Callable):
     """
     Wrapper function for s3 requests in order to create more helpful error
     messages.
@@ -156,7 +158,7 @@ def s3_request(func: Callable):
     return wrapper
 
 
-def get_s3_resource():
+def _get_s3_resource():
     session = boto3.session.Session()
     if session.get_credentials() is None:
         # Use unsigned requests.
@@ -168,30 +170,30 @@ def get_s3_resource():
     return s3_resource
 
 
-@s3_request
-def s3_etag(url: str) -> Optional[str]:
+@_s3_request
+def _s3_etag(url: str) -> Optional[str]:
     """Check ETag on S3 object."""
-    s3_resource = get_s3_resource()
-    bucket_name, s3_path = split_s3_path(url)
+    s3_resource = _get_s3_resource()
+    bucket_name, s3_path = _split_s3_path(url)
     s3_object = s3_resource.Object(bucket_name, s3_path)
     return s3_object.e_tag
 
 
-@s3_request
-def s3_get(url: str, temp_file: IO) -> None:
+@_s3_request
+def _s3_get(url: str, temp_file: IO) -> None:
     """Pull a file directly from S3."""
-    s3_resource = get_s3_resource()
-    bucket_name, s3_path = split_s3_path(url)
+    s3_resource = _get_s3_resource()
+    bucket_name, s3_path = _split_s3_path(url)
     s3_resource.Bucket(bucket_name).download_fileobj(s3_path, temp_file)
 
 
-def session_with_backoff() -> requests.Session:
+def _session_with_backoff() -> requests.Session:
     """
     We ran into an issue where http requests to s3 were timing out,
     possibly because we were making too many requests too quickly.
     This helper function returns a requests session that has retry-with-backoff
-    built in.
-    see stackoverflow.com/questions/23267409/how-to-implement-retry-mechanism-into-python-requests-library
+    built in. See
+    <https://stackoverflow.com/questions/23267409/how-to-implement-retry-mechanism-into-python-requests-library>.
     """
     session = requests.Session()
     retries = Retry(total=5, backoff_factor=1, status_forcelist=[502, 503, 504])
@@ -201,8 +203,18 @@ def session_with_backoff() -> requests.Session:
     return session
 
 
-def http_get(url: str, temp_file: IO) -> None:
-    with session_with_backoff() as session:
+def _http_etag(url: str) -> Optional[str]:
+    with _session_with_backoff() as session:
+        response = session.head(url, allow_redirects=True)
+    if response.status_code != 200:
+        raise IOError(
+            "HEAD request failed for url {} with status code {}".format(url, response.status_code)
+        )
+    return response.headers.get("ETag")
+
+
+def _http_get(url: str, temp_file: IO) -> None:
+    with _session_with_backoff() as session:
         req = session.get(url, stream=True)
         content_length = req.headers.get("Content-Length")
         total = int(content_length) if content_length is not None else None
@@ -212,6 +224,22 @@ def http_get(url: str, temp_file: IO) -> None:
                 progress.update(len(chunk))
                 temp_file.write(chunk)
         progress.close()
+
+
+def _find_latest_cached(url: str, cache_dir: str) -> Optional[str]:
+    filename = url_to_filename(url)
+    cache_path = os.path.join(cache_dir, filename)
+    candidates: List[Tuple[str, float]] = []
+    for path in glob.glob(cache_path + "*"):
+        if path.endswith(".json"):
+            continue
+        mtime = os.path.getmtime(path)
+        candidates.append((path, mtime))
+    # Sort candidates by modification time, neweste first.
+    candidates.sort(key=lambda x: x[1], reverse=True)
+    if candidates:
+        return candidates[0][0]
+    return None
 
 
 # TODO(joelgrus): do we want to do checksums or anything like that?
@@ -226,18 +254,37 @@ def get_from_cache(url: str, cache_dir: str = None) -> str:
     os.makedirs(cache_dir, exist_ok=True)
 
     # Get eTag to add to filename, if it exists.
-    if url.startswith("s3://"):
-        etag = s3_etag(url)
-    else:
-        with session_with_backoff() as session:
-            response = session.head(url, allow_redirects=True)
-        if response.status_code != 200:
-            raise IOError(
-                "HEAD request failed for url {} with status code {}".format(
-                    url, response.status_code
-                )
+    try:
+        if url.startswith("s3://"):
+            etag = _s3_etag(url)
+        else:
+            etag = _http_etag(url)
+    except (ConnectionError, EndpointConnectionError):
+        # We might be offline, in which case we don't want to throw an error
+        # just yet. Instead, we'll try to use the latest cached version of the
+        # target resource, if it exists. We'll only throw an exception if we
+        # haven't cached the resource at all yet.
+        logger.warning(
+            "Connection error occured while trying to fetch ETag for %s. "
+            "Will attempt to use latest cached version of resource",
+            url,
+        )
+        latest_cached = _find_latest_cached(url, cache_dir)
+        if latest_cached:
+            logger.info(
+                "ETag request failed with connection error, using latest cached "
+                "version of %s: %s",
+                url,
+                latest_cached,
             )
-        etag = response.headers.get("ETag")
+            return latest_cached
+        else:
+            logger.error(
+                "Connection failed while trying to fetch ETag, "
+                "and no cached version of %s could be found",
+                url,
+            )
+            raise
 
     filename = url_to_filename(url, etag)
 
@@ -252,9 +299,9 @@ def get_from_cache(url: str, cache_dir: str = None) -> str:
 
             # GET file object
             if url.startswith("s3://"):
-                s3_get(url, temp_file)
+                _s3_get(url, temp_file)
             else:
-                http_get(url, temp_file)
+                _http_get(url, temp_file)
 
             # we are copying the file before closing it, so flush to avoid truncation
             temp_file.flush()

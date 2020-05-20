@@ -30,15 +30,15 @@ class EndpointSpanExtractor(SpanExtractor):
 
     input_dim : `int`, required.
         The final dimension of the `sequence_tensor`.
-    combination : `str`, optional (default = "x,y").
+    combination : `str`, optional (default = `"x,y"`).
         The method used to combine the `start_embedding` and `end_embedding`
         representations. See above for a full description.
-    num_width_embeddings : `int`, optional (default = None).
+    num_width_embeddings : `int`, optional (default = `None`).
         Specifies the number of buckets to use when representing
         span width features.
-    span_width_embedding_dim : `int`, optional (default = None).
+    span_width_embedding_dim : `int`, optional (default = `None`).
         The embedding size for the span_width features.
-    bucket_widths : `bool`, optional (default = False).
+    bucket_widths : `bool`, optional (default = `False`).
         Whether to bucket the span widths into log-space buckets. If `False`,
         the raw span widths are used.
     use_exclusive_start_indices : `bool`, optional (default = `False`).

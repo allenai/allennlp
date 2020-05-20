@@ -58,7 +58,7 @@ class Archive(NamedTuple):
         path : `str`, required
             Path of target module to be loaded from the model.
             Eg. "_textfield_embedder.token_embedder_tokens"
-        freeze : `bool`, optional (default=True)
+        freeze : `bool`, optional (default=`True`)
             Whether to freeze the module parameters or not.
 
         """
@@ -98,9 +98,9 @@ def archive_model(
 
     serialization_dir : `str`
         The directory where the weights and vocabulary are written out.
-    weights : `str`, optional (default=_DEFAULT_WEIGHTS)
+    weights : `str`, optional (default=`_DEFAULT_WEIGHTS`)
         Which weights file to include in the archive. The default is `best.th`.
-    archive_path : `str`, optional, (default = None)
+    archive_path : `str`, optional, (default = `None`)
         A full path to serialize the model to. The default is "model.tar.gz" inside the
         serialization_dir. If you pass a directory here, we'll serialize the model
         to "model.tar.gz" inside the directory.
@@ -141,7 +141,7 @@ def load_archive(
 
     archive_file : `str`
         The archive file to load the model from.
-    cuda_device : `int`, optional (default = -1)
+    cuda_device : `int`, optional (default = `-1`)
         If `cuda_device` is >= 0, the model will be loaded onto the
         corresponding GPU. Otherwise it will be loaded onto the CPU.
     opt_level : `str`, optional, (default = `None`)
@@ -150,9 +150,9 @@ def load_archive(
         See the Apex [documentation](https://nvidia.github.io/apex/amp.html#opt-levels-and-properties) for
         more details. If `None`, defaults to the `opt_level` found in the model params. If `cuda_device==-1`,
         Amp is not used and this argument is ignored.
-    overrides : `str`, optional (default = "")
+    overrides : `str`, optional (default = `""`)
         JSON overrides to apply to the unarchived `Params` object.
-    weights_file : `str`, optional (default = None)
+    weights_file : `str`, optional (default = `None`)
         The weights file to use.  If unspecified, weights.th in the archive_file will be used.
     """
     # redirect to the cache, if necessary

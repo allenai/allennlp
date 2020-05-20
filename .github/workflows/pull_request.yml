@@ -6,6 +6,24 @@ on:
     - master
 
 jobs:
+  changelog:
+    name: CHANGELOG
+    runs-on: ubuntu-latest
+
+    steps:
+    # Note that checkout@v2 will not work with the git command below!
+    - uses: actions/checkout@v1
+
+    - name: Debugging info
+      run: |
+        git remote -v
+
+    - name: Check that CHANGELOG has been updated
+      run: |
+        # If this step fails, this means you haven't updated the CHANGELOG.md
+        # file with notes on your contribution.
+        git diff --name-only $(git merge-base origin/master HEAD) | grep '^CHANGELOG.md$' && echo "Thanks for helping keep our CHANGELOG up-to-date!"
+
   gpu_checks:
     name: GPU Checks
     runs-on: [self-hosted, GPU]
@@ -79,17 +97,15 @@ jobs:
         make build-docs
 
     - name: Upload coverage to Codecov
-      if: matrix.python == '3.7'
-      env:
-        CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-      run: |
+      if: matrix.python == '3.7' && github.repository == 'allenai/allennlp'
+      uses: codecov/codecov-action@v1
+      with:
+        file: ./coverage.xml
         # Ignore codecov failures as the codecov server is not
         # very reliable but we don't want to report a failure
         # in the github UI just because the coverage report failed to
         # be published.
-        # This will also fail for forked repositories since the secret token won't
-        # be available.
-        codecov -t $CODECOV_TOKEN || echo "codecov upload failed"
+        fail_ci_if_error: false
 
     - name: Clean up
       if: always()

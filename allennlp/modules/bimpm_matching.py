@@ -115,23 +115,23 @@ class BiMpmMatching(nn.Module, FromParams):
 
     # Parameters
 
-    hidden_dim : `int`, optional (default = 100)
+    hidden_dim : `int`, optional (default = `100`)
         The hidden dimension of the representations
-    num_perspectives : `int`, optional (default = 20)
+    num_perspectives : `int`, optional (default = `20`)
         The number of perspectives for matching
-    share_weights_between_directions : `bool`, optional (default = True)
+    share_weights_between_directions : `bool`, optional (default = `True`)
         If True, share weight between matching from sentence1 to sentence2 and from sentence2
         to sentence1, useful for non-symmetric tasks
-    is_forward : `bool`, optional (default = None)
+    is_forward : `bool`, optional (default = `None`)
         Whether the matching is for forward sequence or backward sequence, useful in finding last
         token in full matching. It can not be None if with_full_match is True.
-    with_full_match : `bool`, optional (default = True)
+    with_full_match : `bool`, optional (default = `True`)
         If True, include full match
-    with_maxpool_match : `bool`, optional (default = True)
+    with_maxpool_match : `bool`, optional (default = `True`)
         If True, include max pool match
-    with_attentive_match : `bool`, optional (default = True)
+    with_attentive_match : `bool`, optional (default = `True`)
         If True, include attentive match
-    with_max_attentive_match : `bool`, optional (default = True)
+    with_max_attentive_match : `bool`, optional (default = `True`)
         If True, include max attentive match
     """
 

@@ -20,7 +20,7 @@ class NoamLR(LearningRateScheduler):
         The hidden size parameter which dominates the number of parameters in your model.
     warmup_steps : `int`, required.
         The number of steps to linearly increase the learning rate.
-    factor : `float`, optional (default = 1.0).
+    factor : `float`, optional (default = `1.0`).
         The overall scale factor for the learning rate decay.
     """
 

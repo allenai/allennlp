@@ -70,17 +70,17 @@ class Predictor(Registrable):
 
         # Parameters
 
-        instances: List[Instance]
+        instances : `List[Instance]`
 
         # Returns
 
-        Tuple[Dict[str, Any], Dict[str, Any]]
-        The first item is a Dict of gradient entries for each input.
-        The keys have the form  `{grad_input_1: ..., grad_input_2: ... }`
-        up to the number of inputs given. The second item is the model's output.
+        `Tuple[Dict[str, Any], Dict[str, Any]]`
+            The first item is a Dict of gradient entries for each input.
+            The keys have the form  `{grad_input_1: ..., grad_input_2: ... }`
+            up to the number of inputs given. The second item is the model's output.
 
-        Notes
-        -----
+        # Notes
+
         Takes a `JsonDict` representing the inputs of the model and converts
         them to [`Instances`](../data/instance.md)), sends these through
         the model [`forward`](../models/model.md#forward) function after registering hooks on the embedding
@@ -235,16 +235,16 @@ class Predictor(Registrable):
 
         archive_path : `str`
             The path to the archive.
-        predictor_name : `str`, optional (default=None)
+        predictor_name : `str`, optional (default=`None`)
             Name that the predictor is registered as, or None to use the
             predictor associated with the model.
-        cuda_device : `int`, optional (default=-1)
+        cuda_device : `int`, optional (default=`-1`)
             If `cuda_device` is >= 0, the model will be loaded onto the
             corresponding GPU. Otherwise it will be loaded onto the CPU.
-        dataset_reader_to_load : `str`, optional (default="validation")
+        dataset_reader_to_load : `str`, optional (default=`"validation"`)
             Which dataset reader to load from the archive, either "train" or
             "validation".
-        frozen : `bool`, optional (default=True)
+        frozen : `bool`, optional (default=`True`)
             If we should call `model.eval()` when building the predictor.
 
         # Returns

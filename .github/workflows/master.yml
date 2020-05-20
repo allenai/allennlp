@@ -85,17 +85,15 @@ jobs:
         make test-with-cov
 
     - name: Upload coverage to Codecov
-      if: matrix.python == '3.7'
-      env:
-        CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-      run: |
+      if: matrix.python == '3.7' && github.repository == 'allenai/allennlp' && github.event_name == 'push'
+      uses: codecov/codecov-action@v1
+      with:
+        file: ./coverage.xml
         # Ignore codecov failures as the codecov server is not
         # very reliable but we don't want to report a failure
         # in the github UI just because the coverage report failed to
         # be published.
-        # This will also fail for forked repositories since the secret token won't
-        # be available.
-        codecov -t $CODECOV_TOKEN || echo "codecov upload failed"
+        fail_ci_if_error: false
 
     - name: Clean up
       if: always()

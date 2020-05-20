@@ -16,7 +16,7 @@ class SpearmanCorrelation(Metric):
     implicitly flattened into vectors and the correlation is calculated
     between the vectors).
 
-    https://en.wikipedia.org/wiki/Spearman%27s_rank_correlation_coefficient
+    <https://en.wikipedia.org/wiki/Spearman%27s_rank_correlation_coefficient>
     """
 
     def __init__(self) -> None:
@@ -37,7 +37,7 @@ class SpearmanCorrelation(Metric):
             A tensor of predictions of shape (batch_size, ...).
         gold_labels : `torch.Tensor`, required.
             A tensor of the same shape as `predictions`.
-        mask : `torch.BoolTensor`, optional (default = None).
+        mask : `torch.BoolTensor`, optional (default = `None`).
             A tensor of the same shape as `predictions`.
         """
         predictions, gold_labels, mask = self.detach_tensors(predictions, gold_labels, mask)
