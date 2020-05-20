@@ -721,23 +721,25 @@ class GradientDescentTrainer(Trainer):
             description = training_util.description_from_metrics(val_metrics)
             val_generator_tqdm.set_description(description, refresh=False)
 
-            if self._master:
-                for callback in self._batch_callbacks:
-                    callback(
-                        self,
-                        [batch],
-                        [batch_outputs],
-                        epoch,
-                        batches_this_epoch,
-                        is_training=False,
-                    )
+            for callback in self._batch_callbacks:
+                if not self._master:
+                    callback = callback.in_worker
+                callback(
+                    self,
+                    [batch],
+                    [batch_outputs],
+                    epoch,
+                    batches_this_epoch,
+                    is_training=False,
+                )
+
 
         if self._distributed and not done_early:
             logger.warning(
                 f"Worker {torch.distributed.get_rank()} completed its entire epoch (validation)."
             )
             # Indicate that we're done so that any workers that have remaining data stop validation early.
-            done = torch.tensor(1, device=self.cuda_device)
+            done = torch.tensor(1, device=self.cuda_device if self.cuda_device >= 0 else None)
             torch.distributed.all_reduce(done, torch.distributed.ReduceOp.SUM)
             assert done.item()
 
