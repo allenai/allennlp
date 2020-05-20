@@ -134,7 +134,8 @@ class BatchCallback(Registrable):
         batch_number: int,
         is_training: bool,
     ) -> None:
-        """In a distributed training setup, this is called in the workers, whereas the main __call__ method is called in the master."""
+        """In a distributed training setup, this is called in the workers, whereas the main
+        __call__ method is called in the master."""
         pass
 
 
