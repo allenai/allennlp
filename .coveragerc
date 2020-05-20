@@ -1,2 +1,2 @@
 [run]
-omit = allennlp/tests/*
+omit = tests/*

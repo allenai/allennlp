@@ -17,5 +17,4 @@ class TestTestInstall(AllenNlpTestCase):
         `os.chdir` to.
         """
         project_root = _get_module_root()
-        assert os.path.exists(os.path.join(project_root, "tests"))
         assert os.path.exists(os.path.join(project_root, "__main__.py"))
