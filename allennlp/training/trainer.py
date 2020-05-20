@@ -725,14 +725,8 @@ class GradientDescentTrainer(Trainer):
                 if not self._master:
                     callback = callback.in_worker
                 callback(
-                    self,
-                    [batch],
-                    [batch_outputs],
-                    epoch,
-                    batches_this_epoch,
-                    is_training=False,
+                    self, [batch], [batch_outputs], epoch, batches_this_epoch, is_training=False,
                 )
-
 
         if self._distributed and not done_early:
             logger.warning(
