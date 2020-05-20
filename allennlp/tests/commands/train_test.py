@@ -31,13 +31,13 @@ SEQUENCE_TAGGING_SHARDS_PATH = str(AllenNlpTestCase.FIXTURES_ROOT / "data" / "sh
 @BatchCallback.register("training_data_logger")
 class TrainingDataLoggerBatchCallback(BatchCallback):
     def __call__(
-            self,
-            trainer: "GradientDescentTrainer",
-            batch_inputs: List[List[TensorDict]],
-            batch_outputs: List[Dict[str, Any]],
-            epoch: int,
-            batch_number: int,
-            is_training: bool,
+        self,
+        trainer: "GradientDescentTrainer",
+        batch_inputs: List[List[TensorDict]],
+        batch_outputs: List[Dict[str, Any]],
+        epoch: int,
+        batch_number: int,
+        is_training: bool,
     ) -> None:
         if is_training:
             for batch_group in batch_inputs:
@@ -247,7 +247,9 @@ class TestTrain(AllenNlpTestCase):
                 "trainer": {
                     "num_epochs": num_epochs,
                     "optimizer": "adam",
-                    "batch_callbacks": ["allennlp.tests.commands.train_test.TrainingDataLoggerBatchCallback"],
+                    "batch_callbacks": [
+                        "allennlp.tests.commands.train_test.TrainingDataLoggerBatchCallback"
+                    ],
                 },
                 "distributed": {"cuda_devices": [0, 1]},
             }
