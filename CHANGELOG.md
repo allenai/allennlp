@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Fix bug where `PretrainedTransformerTokenizer` crashed with some transformers (#4267)
 - Make `cached_path` work offline.
 - Tons of docstring inconsistencies resolved.
 - Nightly builds no longer run on forks.
