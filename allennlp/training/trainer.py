@@ -125,6 +125,18 @@ class BatchCallback(Registrable):
     ) -> None:
         raise NotImplementedError
 
+    def in_worker(
+        self,
+        trainer: "GradientDescentTrainer",
+        batch_inputs: List[List[TensorDict]],
+        batch_outputs: List[Dict[str, Any]],
+        epoch: int,
+        batch_number: int,
+        is_training: bool,
+    ) -> None:
+        """In a distributed training setup, this is called in the workers, whereas the main __call__ method is called in the master."""
+        pass
+
 
 @BatchCallback.register("null")
 class NullBatchCallback(BatchCallback):
@@ -582,18 +594,27 @@ class GradientDescentTrainer(Trainer):
                 cuda_device=[self.cuda_device],
             )
 
-            # Updating tqdm only for the master as the trainers wouldn't have one
             if self._master:
+                # Updating tqdm only for the master as the trainers wouldn't have one
                 description = training_util.description_from_metrics(metrics)
                 batch_group_generator_tqdm.set_description(description, refresh=False)
                 self._tensorboard.log_batch(
                     self.model, self.optimizer, batch_grad_norm, metrics, batch_group, param_updates
                 )
 
-            if self._master:
                 self._checkpointer.maybe_save_checkpoint(self, epoch, batches_this_epoch)
                 for callback in self._batch_callbacks:
                     callback(
+                        self,
+                        batch_group,
+                        batch_group_outputs,
+                        epoch,
+                        batches_this_epoch,
+                        is_training=True,
+                    )
+            else:
+                for callback in self._batch_callbacks:
+                    callback.in_worker(
                         self,
                         batch_group,
                         batch_group_outputs,
