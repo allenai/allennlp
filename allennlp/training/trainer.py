@@ -724,7 +724,7 @@ class GradientDescentTrainer(Trainer):
 
             for callback in self._batch_callbacks:
                 if not self._master:
-                    callback = callback.in_worker
+                    callback = callback.in_worker  # type: ignore
                 callback(
                     self, [batch], [batch_outputs], epoch, batches_this_epoch, is_training=False,
                 )
