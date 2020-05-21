@@ -34,13 +34,16 @@ def has_tensor(obj) -> bool:
         return False
 
 
-def move_to_device(obj, cuda_device: int):
+def move_to_device(obj, cuda_device: Union[torch.device, int]):
     """
     Given a structure (possibly) containing Tensors on the CPU,
     move all the Tensors to the specified GPU (or do nothing, if they should be on the CPU).
     """
+    from allennlp.common.util import int_to_device
 
-    if cuda_device < 0 or not has_tensor(obj):
+    cuda_device = int_to_device(cuda_device)
+
+    if cuda_device == torch.device("cpu") or not has_tensor(obj):
         return obj
     elif isinstance(obj, torch.Tensor):
         return obj.cuda(cuda_device)

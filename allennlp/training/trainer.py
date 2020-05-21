@@ -6,7 +6,9 @@ import re
 import time
 import traceback
 from contextlib import contextmanager
-from typing import Any, Dict, Iterator, List, Optional, Tuple
+from typing import Any, Dict, Iterator, List, Optional, Tuple, Union
+
+from allennlp.common.util import int_to_device
 
 try:
     from apex import amp
@@ -49,7 +51,7 @@ class Trainer(Registrable):
     def __init__(
         self,
         serialization_dir: str,
-        cuda_device: int = -1,
+        cuda_device: Union[int, torch.device] = -1,
         distributed: bool = False,
         local_rank: int = 0,
         world_size: int = 1,
@@ -65,27 +67,18 @@ class Trainer(Registrable):
                 "our Trainer always uses a single GPU per process."
             )
 
-        if not isinstance(cuda_device, int):
-            raise ConfigurationError("Expected an int for cuda_device, got {}".format(cuda_device))
-
         if distributed and world_size <= 1:
             raise ConfigurationError(
-                "Distributed training can be performed only with more than 1 GPU device. Check "
+                "Distributed training can be performed only with more than 1 device. Check "
                 "`cuda_device` key in the experiment configuration."
             )
 
-        self.cuda_device = cuda_device
+        self.cuda_device = int_to_device(cuda_device)
 
         self._distributed = distributed
         self._rank = local_rank
         self._master = self._rank == 0
         self._world_size = world_size
-
-    def _move_to_gpu(self, model: Model) -> Model:
-        if self.cuda_device != -1:
-            return model.cuda(self.cuda_device)
-        else:
-            return model
 
     def train(self) -> Dict[str, Any]:
         """
@@ -383,7 +376,7 @@ class GradientDescentTrainer(Trainer):
         # these places: `model.__call__`, `model.train` and `model.eval`.
         if self._distributed:
             self._pytorch_model = DistributedDataParallel(
-                self.model, device_ids=[self.cuda_device], find_unused_parameters=True
+                self.model, device_ids=[self.cuda_device], find_unused_parameters=True,
             )
         else:
             self._pytorch_model = self.model
@@ -556,7 +549,7 @@ class GradientDescentTrainer(Trainer):
                 train_reg_loss,
                 batches_this_epoch,
                 world_size=self._world_size,
-                cuda_device=[self.cuda_device],
+                cuda_device=self.cuda_device,
             )
 
             if self._master:
@@ -600,7 +593,7 @@ class GradientDescentTrainer(Trainer):
             batches_this_epoch,
             reset=True,
             world_size=self._world_size,
-            cuda_device=[self.cuda_device],
+            cuda_device=self.cuda_device,
         )
         metrics["cpu_memory_MB"] = peak_cpu_usage
         for (gpu_num, memory) in gpu_usage:
@@ -672,7 +665,7 @@ class GradientDescentTrainer(Trainer):
                 val_reg_loss,
                 batches_this_epoch,
                 world_size=self._world_size,
-                cuda_device=[self.cuda_device],
+                cuda_device=self.cuda_device,
             )
             description = training_util.description_from_metrics(val_metrics)
             val_generator_tqdm.set_description(description, refresh=False)
@@ -693,7 +686,7 @@ class GradientDescentTrainer(Trainer):
                 f"Worker {torch.distributed.get_rank()} completed its entire epoch (validation)."
             )
             # Indicate that we're done so that any workers that have remaining data stop validation early.
-            done = torch.tensor(1, device=self.cuda_device if self.cuda_device >= 0 else None)
+            done = torch.tensor(1, device=self.cuda_device)
             torch.distributed.all_reduce(done, torch.distributed.ReduceOp.SUM)
             assert done.item()
 
@@ -764,7 +757,7 @@ class GradientDescentTrainer(Trainer):
                         num_batches,
                         reset=True,
                         world_size=self._world_size,
-                        cuda_device=[self.cuda_device],
+                        cuda_device=self.cuda_device,
                     )
 
                     # Check validation metric for early stopping
