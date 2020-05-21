@@ -48,43 +48,31 @@ When you're ready to contribute code to address an open issue, please follow the
     
     Then clone your fork locally with
     
-    ```bash
-    git clone https://github.com/USERNAME/allennlp.git
-    ```
+        git clone https://github.com/USERNAME/allennlp.git
     
     or 
     
-    ```bash
-    git clone git@github.com:USERNAME/allennlp.git
-    ```
+        git clone git@github.com:USERNAME/allennlp.git
     
     At this point the local clone of your fork only knows that it came from *your* repo, github.com/USERNAME/allennlp.git, but doesn't know anything the *main* repo, [https://github.com/allenai/allennlp.git](https://github.com/allenai/allennlp). You can see this by running
     
-    ```bash
-    git remote -v
-    ```
+        git remote -v
     
     which will output something like this:
     
-    ```
-    origin https://github.com/USERNAME/allennlp.git (fetch)
-    origin https://github.com/USERNAME/allennlp.git (push)
-    ```
+        origin https://github.com/USERNAME/allennlp.git (fetch)
+        origin https://github.com/USERNAME/allennlp.git (push)
     
     This means that your local clone can only track changes from your fork, but not from the main repo, and so you won't be able to keep your fork up-to-date with the main repo over time. Therefor you'll need to add another "remote" to your clone that points to [https://github.com/allenai/allennlp.git](https://github.com/allenai/allennlp). To do this, run the following:
     
-    ```bash
-    git remote add upstream https://github.com/allenai/allennlp.git
-    ```
+        git remote add upstream https://github.com/allenai/allennlp.git
     
     Now if you do `git remote -v` again, you'll see
     
-    ```
-    origin https://github.com/USERNAME/allennlp.git (fetch)
-    origin https://github.com/USERNAME/allennlp.git (push)
-    upstream https://github.com/allenai/allennlp.git (fetch)
-    upstream https://github.com/allenai/allennlp.git (push)
-    ```
+        origin https://github.com/USERNAME/allennlp.git (fetch)
+        origin https://github.com/USERNAME/allennlp.git (push)
+        upstream https://github.com/allenai/allennlp.git (fetch)
+        upstream https://github.com/allenai/allennlp.git (push)
 
     Finally, you'll need to create a Python 3.6 or 3.7 virtual environment suitable for working on AllenNLP. There a number of tools that provide 
 
@@ -96,11 +84,9 @@ When you're ready to contribute code to address an open issue, please follow the
 
     Once you've added an "upstream" remote pointing to [https://github.com/allenai/allennlp.git](https://github.com/allenai/allennlp), keeping your fork up-to-date is easy:
     
-    ```bash
-    git checkout master  # if not already on master
-    git pull --rebase upstream master
-    git push
-    ```
+        git checkout master  # if not already on master
+        git pull --rebase upstream master
+        git push
 
     </details>
 
@@ -112,11 +98,9 @@ When you're ready to contribute code to address an open issue, please follow the
     
     You can create a new branch with
     
-    ```bash
-    # replace BRANCH with whatever name you want to give it
-    git checkout -b BRANCH
-    git push --set-upstream origin BRANCH
-    ```
+        # replace BRANCH with whatever name you want to give it
+        git checkout -b BRANCH
+        git push --set-upstream origin BRANCH
 
     </details>
 
@@ -128,49 +112,35 @@ When you're ready to contribute code to address an open issue, please follow the
     
     First, you should run [`black`](https://github.com/psf/black) to make sure you code is formatted consistently. Many IDEs support code formatters as plugins, so you may be able to setup black to run automatically everytime you save. [`black.vim`](https://github.com/psf/black/tree/master/plugin) will give you this functionality in Vim, for example. But `black` is also easy to run directly from the command line. Just run this from the root of your clone:
     
-    ```bash
-    black .
-    ```
+        black .
 
     Our CI also uses [`flake8`](https://github.com/allenai/allennlp/tree/master/tests) to lint the code base and [`mypy`](http://mypy-lang.org/) for type-checking. You should run both of these next with
 
-    ```bash
-    make lint
-    ```
+        make lint
 
     and
 
-    ```bash
-    make typecheck
-    ```
+        make typecheck
 
     We also strive to maintain high test coverage, so most contributions should include additions to [the unit tests](https://github.com/allenai/allennlp/tree/master/tests). These tests are ran with [`pytest`](https://docs.pytest.org/en/latest/), which you can use to locally run any test modules that you've added or changed.
 
     For example, if you've fixed a bug in `allennlp/nn/util.py`, you can run the tests specific to that module with
     
-    ```bash
-    pytest -v tests/nn/util_test.py
-    ```
+        pytest -v tests/nn/util_test.py
     
     Our CI will automatically check that test coverage stays above a certain threshold (around 90%). To check the coverage locally in this example, you could run
     
-    ```bash
-    pytest -v --cov allennlp.nn.util tests/nn/util_test.py
-    ```
+        pytest -v --cov allennlp.nn.util tests/nn/util_test.py
 
     You should also make sure that the API documentation can build without errors. For that, just run
 
-    ```bash
-    make build-docs
-    ```
+        make build-docs
 
     You can even serve and view the docs locally with
     
-    ```bash
-    make serve-docs
-    ```
+        make serve-docs
 
-    And finally, please update the [CHANGELOG](./CHANGELOG.md) with notes on your contribution in the "Unreleased" section at the top.
+    And finally, please update the [CHANGELOG](https://github.com/allenai/allennlp/blob/master/CHANGELOG.md) with notes on your contribution in the "Unreleased" section at the top.
 
     After all of the above checks have passed, you can now open [a new GitHub pull request](https://github.com/allenai/allennlp/pulls).
     Make sure you have a clear description of the problem and the solution, and include a link to relevant issues.
