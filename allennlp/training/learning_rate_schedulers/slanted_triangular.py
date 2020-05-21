@@ -29,6 +29,8 @@ class SlantedTriangular(LearningRateScheduler):
 
     # Parameters
 
+    optimizer : `torch.optim.Optimizer`
+        This argument does not get an entry in a configuration file for the object.
     num_epochs : `int`, required.
         The total number of epochs for which the model should be trained.
     num_steps_per_epoch : `int`, required.

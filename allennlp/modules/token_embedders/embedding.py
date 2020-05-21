@@ -82,6 +82,10 @@ class Embedding(TokenEmbedder):
     vocab : `Vocabulary`, optional (default = `None`)
         Used to construct an embedding from a pretrained file.
 
+        In a typical AllenNLP configuration file, this parameter does not get an entry under the
+        "embedding", it gets specified as a top-level parameter, then is passed in to this module
+        separately.
+
     # Returns
 
     An Embedding module.

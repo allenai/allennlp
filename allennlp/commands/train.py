@@ -180,7 +180,6 @@ def train_model(
     force: bool = False,
     node_rank: int = 0,
     include_package: List[str] = None,
-    batch_weight_key: str = "",
     dry_run: bool = False,
 ) -> Optional[Model]:
     """
@@ -206,8 +205,6 @@ def train_model(
         Rank of the current node in distributed training
     include_package : `List[str]`, optional
         In distributed mode, extra packages mentioned will be imported in trainer workers.
-    batch_weight_key : `str`, optional (default=`""`)
-        If non-empty, name of metric used to weight the loss on a per-batch basis.
     dry_run : `bool`, optional (default=`False`)
         Do not train a model, but create a vocabulary, show dataset statistics and other training
         information.
@@ -230,7 +227,6 @@ def train_model(
             serialization_dir=serialization_dir,
             file_friendly_logging=file_friendly_logging,
             include_package=include_package,
-            batch_weight_key=batch_weight_key,
             dry_run=dry_run,
         )
         if not dry_run:
@@ -289,7 +285,6 @@ def train_model(
                 serialization_dir,
                 file_friendly_logging,
                 include_package,
-                batch_weight_key,
                 dry_run,
                 node_rank,
                 master_addr,
@@ -313,7 +308,6 @@ def _train_worker(
     serialization_dir: str,
     file_friendly_logging: bool = False,
     include_package: List[str] = None,
-    batch_weight_key: str = "",
     dry_run: bool = False,
     node_rank: int = 0,
     master_addr: str = "127.0.0.1",
@@ -341,8 +335,6 @@ def _train_worker(
         In distributed mode, since this function would have been spawned as a separate process,
         the extra imports need to be done again. NOTE: This does not have any effect in single
         GPU training.
-    batch_weight_key : `str`, optional (default=`""`)
-        If non-empty, name of metric used to weight the loss on a per-batch basis.
     dry_run : `bool`, optional (default=`False`)
         Do not train a model, but create a vocabulary, show dataset statistics and other training
         information.
@@ -423,10 +415,7 @@ def _train_worker(
         )
 
     train_loop = TrainModel.from_params(
-        params=params,
-        serialization_dir=serialization_dir,
-        local_rank=process_rank,
-        batch_weight_key=batch_weight_key,
+        params=params, serialization_dir=serialization_dir, local_rank=process_rank,
     )
 
     if dry_run:
@@ -526,7 +515,6 @@ class TrainModel(Registrable):
         cls,
         serialization_dir: str,
         local_rank: int,
-        batch_weight_key: str,
         dataset_reader: DatasetReader,
         train_data_path: str,
         model: Lazy[Model],
@@ -539,6 +527,7 @@ class TrainModel(Registrable):
         validation_data_loader: Lazy[DataLoader] = None,
         test_data_path: str = None,
         evaluate_on_test: bool = False,
+        batch_weight_key: str = "",
     ) -> "TrainModel":
         """
         This method is intended for use with our `FromParams` logic, to construct a `TrainModel`
@@ -562,10 +551,14 @@ class TrainModel(Registrable):
         # Parameters
         serialization_dir: `str`
             The directory where logs and model archives will be saved.
+
+            In a typical AllenNLP configuration file, this parameter does not get an entry as a
+            top-level key, it gets passed in separately.
         local_rank: `int`
             The process index that is initialized using the GPU device id.
-        batch_weight_key: `str`
-            The name of metric used to weight the loss on a per-batch basis.
+
+            In a typical AllenNLP configuration file, this parameter does not get an entry as a
+            top-level key, it gets passed in separately.
         dataset_reader: `DatasetReader`
             The `DatasetReader` that will be used for training and (by default) for validation.
         train_data_path: `str`
@@ -603,6 +596,9 @@ class TrainModel(Registrable):
             If given, we will evaluate the final model on this data at the end of training.  Note
             that we do not recommend using this for actual test data in every-day experimentation;
             you should only very rarely evaluate your model on actual test data.
+        batch_weight_key: `str`, optional (default=`""`)
+            The name of metric used to weight the loss on a per-batch basis.  This is only used
+            during evaluation on final test data, if you've specified `evaluate_on_test=True`.
         """
 
         datasets = training_util.read_all_datasets(

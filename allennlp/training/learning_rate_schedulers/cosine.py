@@ -23,6 +23,7 @@ class CosineWithRestarts(LearningRateScheduler):
     # Parameters
 
     optimizer : `torch.optim.Optimizer`
+        This argument does not get an entry in a configuration file for the object.
     t_initial : `int`
         The number of iterations (epochs) within the first cycle.
     t_mul : `float`, optional (default=`1`)
