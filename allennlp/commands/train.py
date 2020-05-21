@@ -415,9 +415,7 @@ def _train_worker(
         )
 
     train_loop = TrainModel.from_params(
-        params=params,
-        serialization_dir=serialization_dir,
-        local_rank=process_rank,
+        params=params, serialization_dir=serialization_dir, local_rank=process_rank,
     )
 
     if dry_run:
@@ -517,7 +515,6 @@ class TrainModel(Registrable):
         cls,
         serialization_dir: str,
         local_rank: int,
-        batch_weight_key: str,
         dataset_reader: DatasetReader,
         train_data_path: str,
         model: Lazy[Model],
@@ -530,6 +527,7 @@ class TrainModel(Registrable):
         validation_data_loader: Lazy[DataLoader] = None,
         test_data_path: str = None,
         evaluate_on_test: bool = False,
+        batch_weight_key: str = "",
     ) -> "TrainModel":
         """
         This method is intended for use with our `FromParams` logic, to construct a `TrainModel`
