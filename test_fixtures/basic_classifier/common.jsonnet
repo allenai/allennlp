@@ -14,8 +14,8 @@
         },
         "max_sequence_length": 400
     },
-    "train_data_path": "allennlp/tests/fixtures/data/text_classification_json/imdb_corpus.jsonl",
-    "validation_data_path": "allennlp/tests/fixtures/data/text_classification_json/imdb_corpus.jsonl",
+    "train_data_path": "test_fixtures/data/text_classification_json/imdb_corpus.jsonl",
+    "validation_data_path": "test_fixtures/data/text_classification_json/imdb_corpus.jsonl",
     "data_loader": {
 
         "batch_sampler": {

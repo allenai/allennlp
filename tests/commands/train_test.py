@@ -1,10 +1,12 @@
 import argparse
 import json
+
+import logging
 import math
 import os
 import re
 import shutil
-from collections import OrderedDict
+from collections import OrderedDict, Counter
 from typing import Iterable, Optional, List, Dict, Any
 
 import pytest
@@ -26,6 +28,25 @@ from allennlp.training.learning_rate_schedulers import (
 
 SEQUENCE_TAGGING_DATA_PATH = str(AllenNlpTestCase.FIXTURES_ROOT / "data" / "sequence_tagging.tsv")
 SEQUENCE_TAGGING_SHARDS_PATH = str(AllenNlpTestCase.FIXTURES_ROOT / "data" / "shards" / "*")
+
+
+@BatchCallback.register("training_data_logger")
+class TrainingDataLoggerBatchCallback(BatchCallback):
+    def __call__(
+        self,
+        trainer: "GradientDescentTrainer",
+        batch_inputs: List[List[TensorDict]],
+        batch_outputs: List[Dict[str, Any]],
+        epoch: int,
+        batch_number: int,
+        is_training: bool,
+        is_master: bool,
+    ) -> None:
+        if is_training:
+            logger = logging.getLogger(__name__)
+            for batch in batch_inputs:
+                for metadata in batch["metadata"]:
+                    logger.info(f"First word from training data: '{metadata['words'][0]}'")
 
 
 class TestTrain(AllenNlpTestCase):
@@ -126,7 +147,8 @@ class TestTrain(AllenNlpTestCase):
         assert load_archive(out_dir).model
 
     @requires_multi_gpu
-    def test_train_model_distributed_with_sharded_reader(self):
+    @pytest.mark.parametrize("lazy", [True, False])
+    def test_train_model_distributed_with_sharded_reader(self, lazy):
         params = lambda: Params(
             {
                 "model": {
@@ -139,7 +161,7 @@ class TestTrain(AllenNlpTestCase):
                 "dataset_reader": {
                     "type": "sharded",
                     "base_reader": {"type": "sequence_tagging"},
-                    "lazy": True,
+                    "lazy": lazy,
                 },
                 "train_data_path": SEQUENCE_TAGGING_SHARDS_PATH,
                 "validation_data_path": SEQUENCE_TAGGING_SHARDS_PATH,
@@ -161,7 +183,7 @@ class TestTrain(AllenNlpTestCase):
         assert "stdout_worker1.log" in serialized_files
         assert "model.tar.gz" in serialized_files
 
-        # Check we can load the seralized model
+        # Check we can load the serialized model
         archive = load_archive(out_dir)
         assert archive.model
 
@@ -209,6 +231,92 @@ class TestTrain(AllenNlpTestCase):
             assert validation_early not in worker1_log
             assert train_complete in worker1_log
             assert validation_complete in worker1_log
+
+    @requires_multi_gpu
+    @pytest.mark.parametrize("lazy", [True, False])
+    def test_train_model_distributed_without_sharded_reader(self, lazy: bool):
+        num_epochs = 2
+        params = lambda: Params(
+            {
+                "model": {
+                    "type": "simple_tagger",
+                    "text_field_embedder": {
+                        "token_embedders": {"tokens": {"type": "embedding", "embedding_dim": 5}}
+                    },
+                    "encoder": {"type": "lstm", "input_size": 5, "hidden_size": 7, "num_layers": 2},
+                },
+                "dataset_reader": {"type": "sequence_tagging", "lazy": lazy},
+                "train_data_path": SEQUENCE_TAGGING_DATA_PATH,
+                "validation_data_path": SEQUENCE_TAGGING_DATA_PATH,
+                "data_loader": {"batch_size": 1},
+                "trainer": {
+                    "num_epochs": num_epochs,
+                    "optimizer": "adam",
+                    "batch_callbacks": [
+                        "tests.commands.train_test.TrainingDataLoggerBatchCallback"
+                    ],
+                },
+                "distributed": {"cuda_devices": [0, 1]},
+            }
+        )
+
+        out_dir = os.path.join(self.TEST_DIR, "test_distributed_train")
+        train_model(params(), serialization_dir=out_dir)
+
+        # Check that some logs specific to distributed
+        # training are where we expect.
+        serialized_files = os.listdir(out_dir)
+        assert "stderr_worker0.log" in serialized_files
+        assert "stdout_worker0.log" in serialized_files
+        assert "stderr_worker1.log" in serialized_files
+        assert "stdout_worker1.log" in serialized_files
+        assert "model.tar.gz" in serialized_files
+
+        # Check we can load the serialized model
+        archive = load_archive(out_dir)
+        assert archive.model
+
+        # Check that we created a vocab from all the shards.
+        tokens = set(archive.model.vocab._token_to_index["tokens"].keys())
+        assert tokens == {
+            "@@PADDING@@",
+            "@@UNKNOWN@@",
+            "are",
+            ".",
+            "animals",
+            "cats",
+            "dogs",
+            "snakes",
+            "birds",
+        }
+
+        train_complete = "completed its entire epoch (training)."
+        validation_complete = "completed its entire epoch (validation)."
+
+        import re
+
+        pattern = re.compile(r"First word from training data: '([^']*)'")
+        first_word_counts = Counter()
+        with open(os.path.join(out_dir, "stdout_worker0.log")) as f:
+            worker0_log = f.read()
+            assert train_complete in worker0_log
+            assert validation_complete in worker0_log
+            for first_word in pattern.findall(worker0_log):
+                first_word_counts[first_word] += 1
+
+        with open(os.path.join(out_dir, "stdout_worker1.log")) as f:
+            worker1_log = f.read()
+            assert train_complete in worker1_log
+            assert validation_complete in worker1_log
+            for first_word in pattern.findall(worker1_log):
+                first_word_counts[first_word] += 1
+
+        assert first_word_counts == {
+            "cats": num_epochs,
+            "dogs": num_epochs,
+            "snakes": num_epochs,
+            "birds": num_epochs,
+        }
 
     def test_distributed_raises_error_with_no_gpus(self):
         params = Params(
@@ -274,8 +382,8 @@ class TestTrain(AllenNlpTestCase):
                     "encoder": {"type": "lstm", "input_size": 5, "hidden_size": 7, "num_layers": 2},
                 },
                 "dataset_reader": {"type": "sequence_tagging"},
-                "train_data_path": "allennlp/tests/fixtures/data/sequence_tagging.tsv",
-                "validation_data_path": "allennlp/tests/fixtures/data/sequence_tagging.tsv",
+                "train_data_path": "test_fixtures/data/sequence_tagging.tsv",
+                "validation_data_path": "test_fixtures/data/sequence_tagging.tsv",
                 "data_loader": {"batch_size": 2},
                 "trainer": {
                     "num_epochs": 2,
@@ -334,6 +442,7 @@ class TestTrain(AllenNlpTestCase):
                 epoch: int,
                 batch_number: int,
                 is_training: bool,
+                is_master: bool,
             ) -> None:
                 nonlocal batch_callback_counter
                 if is_training:

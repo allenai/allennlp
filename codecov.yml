@@ -11,4 +11,4 @@ coverage:
     changes: false
 comment: false
 ignore:
-  - "allennlp/tests/"
+  - "tests/"
