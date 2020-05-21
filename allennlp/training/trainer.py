@@ -376,7 +376,9 @@ class GradientDescentTrainer(Trainer):
         # these places: `model.__call__`, `model.train` and `model.eval`.
         if self._distributed:
             self._pytorch_model = DistributedDataParallel(
-                self.model, device_ids=[self.cuda_device], find_unused_parameters=True,
+                self.model,
+                device_ids=None if self.cuda_device == torch.device("cpu") else [self.cuda_device],
+                find_unused_parameters=True,
             )
         else:
             self._pytorch_model = self.model
