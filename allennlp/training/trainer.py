@@ -109,8 +109,8 @@ class Trainer(Registrable):
 class BatchCallback(Registrable):
     """
     An optional callback that you can pass to the `GradientDescentTrainer` that will be called at
-    the end of every batch, during both training and validation.  We have no default implementation
-    of this, but you can implement your own callback and do whatever you want, such as saving
+    the end of every batch, during both training and validation.  The default implementation
+    does nothing. You can implement your own callback and do whatever you want, such as saving
     predictions to disk or extra logging.
     """
 
@@ -122,22 +122,29 @@ class BatchCallback(Registrable):
         epoch: int,
         batch_number: int,
         is_training: bool,
+        is_master: bool,
     ) -> None:
-        raise NotImplementedError
+        pass
+
+
+BatchCallback.register("null")(BatchCallback)
 
 
 class EpochCallback(Registrable):
     """
     An optional callback that you can pass to the `GradientDescentTrainer` that will be called at
-    the end of every epoch (and before the start of training, with `epoch=-1`). We have no default
-    implementation of this, but you can implement your own callback and do whatever you want, such
+    the end of every epoch (and before the start of training, with `epoch=-1`). The default
+    implementation does nothing. You can implement your own callback and do whatever you want, such
     as additional modifications of the trainer's state in between epochs.
     """
 
     def __call__(
         self, trainer: "GradientDescentTrainer", metrics: Dict[str, Any], epoch: int
     ) -> None:
-        raise NotImplementedError
+        pass
+
+
+EpochCallback.register("null")(EpochCallback)
 
 
 @Trainer.register("gradient_descent", constructor="from_partial_objects")
@@ -552,25 +559,25 @@ class GradientDescentTrainer(Trainer):
                 cuda_device=[self.cuda_device],
             )
 
-            # Updating tqdm only for the master as the trainers wouldn't have one
             if self._master:
+                # Updating tqdm only for the master as the trainers wouldn't have one
                 description = training_util.description_from_metrics(metrics)
                 batch_group_generator_tqdm.set_description(description, refresh=False)
                 self._tensorboard.log_batch(
                     self.model, self.optimizer, batch_grad_norm, metrics, batch_group, param_updates
                 )
 
-            if self._master:
                 self._checkpointer.maybe_save_checkpoint(self, epoch, batches_this_epoch)
-                for callback in self._batch_callbacks:
-                    callback(
-                        self,
-                        batch_group,
-                        batch_group_outputs,
-                        epoch,
-                        batches_this_epoch,
-                        is_training=True,
-                    )
+            for callback in self._batch_callbacks:
+                callback(
+                    self,
+                    batch_group,
+                    batch_group_outputs,
+                    epoch,
+                    batches_this_epoch,
+                    is_training=True,
+                    is_master=self._master,
+                )
 
         if self._distributed and not done_early:
             logger.warning(
@@ -670,23 +677,23 @@ class GradientDescentTrainer(Trainer):
             description = training_util.description_from_metrics(val_metrics)
             val_generator_tqdm.set_description(description, refresh=False)
 
-            if self._master:
-                for callback in self._batch_callbacks:
-                    callback(
-                        self,
-                        [batch],
-                        [batch_outputs],
-                        epoch,
-                        batches_this_epoch,
-                        is_training=False,
-                    )
+            for callback in self._batch_callbacks:
+                callback(
+                    self,
+                    [batch],
+                    [batch_outputs],
+                    epoch,
+                    batches_this_epoch,
+                    is_training=False,
+                    is_master=self._master,
+                )
 
         if self._distributed and not done_early:
             logger.warning(
                 f"Worker {torch.distributed.get_rank()} completed its entire epoch (validation)."
             )
             # Indicate that we're done so that any workers that have remaining data stop validation early.
-            done = torch.tensor(1, device=self.cuda_device)
+            done = torch.tensor(1, device=self.cuda_device if self.cuda_device >= 0 else None)
             torch.distributed.all_reduce(done, torch.distributed.ReduceOp.SUM)
             assert done.item()
 

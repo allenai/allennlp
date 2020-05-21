@@ -942,6 +942,7 @@ class TestTrainer(TrainerTestBase):
                 epoch: int,
                 batch_number: int,
                 is_training: bool,
+                is_master: bool,
             ) -> None:
                 if not hasattr(trainer, "batch_callback_calls"):
                     trainer.batch_callback_calls = []  # type: ignore
