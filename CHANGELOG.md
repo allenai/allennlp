@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Additional CI checks to ensure docstrings are consistently formatted.
+- Ability to train on CPU with multiple processes
 
 ### Changed
 
