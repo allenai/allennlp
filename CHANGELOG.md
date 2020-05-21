@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Tons of docstring inconsistencies resolved.
 - Nightly builds no longer run on forks.
 - Distributed training now automatically figures out which worker should see which instances
+- A bug in distributed training from a race condition introduced by serializing the vocab more than once.
 
 ### Added
 
@@ -25,6 +26,7 @@ be imported successfully, and prints out some other useful information such as t
 and the number of GPU devices available.
 - All of the tests moved from `allennlp/tests` to `tests` at the root level, and
 `allennlp/tests/fixtures` moved to `test_fixtures` at the root level. The PyPI source and wheel distributions will no longer include tests and fixtures.
+- Vocab is serialized before the model is initialized, instead of after.
 
 ## [v1.0.0rc4](https://github.com/allenai/allennlp/releases/tag/v1.0.0rc4) - 2019-05-14
 
