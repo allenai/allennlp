@@ -150,7 +150,8 @@ class TestTrain(AllenNlpTestCase):
         assert load_archive(out_dir).model
 
     @requires_multi_gpu
-    def test_train_model_distributed_with_sharded_reader(self):
+    @pytest.mark.parametrize("lazy", [True, False])
+    def test_train_model_distributed_with_sharded_reader(self, lazy):
         params = lambda: Params(
             {
                 "model": {
@@ -163,7 +164,7 @@ class TestTrain(AllenNlpTestCase):
                 "dataset_reader": {
                     "type": "sharded",
                     "base_reader": {"type": "sequence_tagging"},
-                    "lazy": True,
+                    "lazy": lazy,
                 },
                 "train_data_path": SEQUENCE_TAGGING_SHARDS_PATH,
                 "validation_data_path": SEQUENCE_TAGGING_SHARDS_PATH,
@@ -235,7 +236,8 @@ class TestTrain(AllenNlpTestCase):
             assert validation_complete in worker1_log
 
     @requires_multi_gpu
-    def test_train_model_distributed_without_sharded_reader(self):
+    @pytest.mark.parametrize("lazy", [True, False])
+    def test_train_model_distributed_without_sharded_reader(self, lazy: bool):
         num_epochs = 2
         params = lambda: Params(
             {
@@ -246,7 +248,7 @@ class TestTrain(AllenNlpTestCase):
                     },
                     "encoder": {"type": "lstm", "input_size": 5, "hidden_size": 7, "num_layers": 2},
                 },
-                "dataset_reader": {"type": "sequence_tagging", "lazy": True},
+                "dataset_reader": {"type": "sequence_tagging", "lazy": lazy},
                 "train_data_path": SEQUENCE_TAGGING_DATA_PATH,
                 "validation_data_path": SEQUENCE_TAGGING_DATA_PATH,
                 "data_loader": {"batch_size": 1},
