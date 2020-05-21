@@ -40,6 +40,7 @@ class TrainingDataLoggerBatchCallback(BatchCallback):
         epoch: int,
         batch_number: int,
         is_training: bool,
+        is_master: bool,
     ) -> None:
         if is_training:
             logger = logging.getLogger(__name__)
@@ -442,6 +443,7 @@ class TestTrain(AllenNlpTestCase):
                 epoch: int,
                 batch_number: int,
                 is_training: bool,
+                is_master: bool,
             ) -> None:
                 nonlocal batch_callback_counter
                 if is_training:

@@ -109,8 +109,8 @@ class Trainer(Registrable):
 class BatchCallback(Registrable):
     """
     An optional callback that you can pass to the `GradientDescentTrainer` that will be called at
-    the end of every batch, during both training and validation.  We have no default implementation
-    of this, but you can implement your own callback and do whatever you want, such as saving
+    the end of every batch, during both training and validation.  The default implementation
+    does nothing. You can implement your own callback and do whatever you want, such as saving
     predictions to disk or extra logging.
     """
 
@@ -122,65 +122,29 @@ class BatchCallback(Registrable):
         epoch: int,
         batch_number: int,
         is_training: bool,
-    ) -> None:
-        raise NotImplementedError
-
-    def in_worker(
-        self,
-        trainer: "GradientDescentTrainer",
-        batch_inputs: List[List[TensorDict]],
-        batch_outputs: List[Dict[str, Any]],
-        epoch: int,
-        batch_number: int,
-        is_training: bool,
-    ) -> None:
-        """In a distributed training setup, this is called in the workers, whereas the main
-        __call__ method is called in the master."""
-        pass
-
-
-@BatchCallback.register("null")
-class NullBatchCallback(BatchCallback):
-    """
-    A do-nothing batch callback
-    """
-
-    def __call__(
-        self,
-        trainer: "GradientDescentTrainer",
-        batch_inputs: List[List[TensorDict]],
-        batch_outputs: List[Dict[str, Any]],
-        epoch: int,
-        batch_number: int,
-        is_training: bool,
+        is_master: bool,
     ) -> None:
         pass
+
+
+BatchCallback.register("null")(BatchCallback)
 
 
 class EpochCallback(Registrable):
     """
     An optional callback that you can pass to the `GradientDescentTrainer` that will be called at
-    the end of every epoch (and before the start of training, with `epoch=-1`). We have no default
-    implementation of this, but you can implement your own callback and do whatever you want, such
+    the end of every epoch (and before the start of training, with `epoch=-1`). The default
+    implementation does nothing. You can implement your own callback and do whatever you want, such
     as additional modifications of the trainer's state in between epochs.
     """
 
     def __call__(
         self, trainer: "GradientDescentTrainer", metrics: Dict[str, Any], epoch: int
     ) -> None:
-        raise NotImplementedError
-
-
-@EpochCallback.register("null")
-class NullEpochCallback(Registrable):
-    """
-    A do-nothing epoch callback
-    """
-
-    def __call__(
-        self, trainer: "GradientDescentTrainer", metrics: Dict[str, Any], epoch: int
-    ) -> None:
         pass
+
+
+EpochCallback.register("null")(EpochCallback)
 
 
 @Trainer.register("gradient_descent", constructor="from_partial_objects")
@@ -604,25 +568,16 @@ class GradientDescentTrainer(Trainer):
                 )
 
                 self._checkpointer.maybe_save_checkpoint(self, epoch, batches_this_epoch)
-                for callback in self._batch_callbacks:
-                    callback(
-                        self,
-                        batch_group,
-                        batch_group_outputs,
-                        epoch,
-                        batches_this_epoch,
-                        is_training=True,
-                    )
-            else:
-                for callback in self._batch_callbacks:
-                    callback.in_worker(
-                        self,
-                        batch_group,
-                        batch_group_outputs,
-                        epoch,
-                        batches_this_epoch,
-                        is_training=True,
-                    )
+            for callback in self._batch_callbacks:
+                callback(
+                    self,
+                    batch_group,
+                    batch_group_outputs,
+                    epoch,
+                    batches_this_epoch,
+                    is_training=True,
+                    is_master=self._master,
+                )
 
         if self._distributed and not done_early:
             logger.warning(
@@ -723,10 +678,14 @@ class GradientDescentTrainer(Trainer):
             val_generator_tqdm.set_description(description, refresh=False)
 
             for callback in self._batch_callbacks:
-                if not self._master:
-                    callback = callback.in_worker  # type: ignore
                 callback(
-                    self, [batch], [batch_outputs], epoch, batches_this_epoch, is_training=False,
+                    self,
+                    [batch],
+                    [batch_outputs],
+                    epoch,
+                    batches_this_epoch,
+                    is_training=False,
+                    is_master=self._master,
                 )
 
         if self._distributed and not done_early:
