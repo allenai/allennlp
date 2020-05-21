@@ -48,9 +48,6 @@ class TrainingDataLoggerBatchCallback(BatchCallback):
                 for metadata in batch["metadata"]:
                     logger.info(f"First word from training data: '{metadata['words'][0]}'")
 
-    def in_worker(self, *args, **kwargs) -> None:
-        self(*args, **kwargs)
-
 
 class TestTrain(AllenNlpTestCase):
     def test_train_model(self):
