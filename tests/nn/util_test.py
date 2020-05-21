@@ -1422,7 +1422,7 @@ class TestNnUtil(AllenNlpTestCase):
             "b": FakeTensor(),
             "c": (1, FakeTensor()),
         }
-        new_device = 4
+        new_device = torch.device(4)
         moved_obj = util.move_to_device(structured_obj, new_device)
         assert moved_obj["a"][0].a == 1
         assert moved_obj["a"][0].b._device == new_device

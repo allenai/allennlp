@@ -15,7 +15,7 @@ import torch
 from allennlp.commands.train import Train, train_model, train_model_from_args, TrainModel
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
-from allennlp.common.testing import AllenNlpTestCase, requires_gpu, requires_multi_gpu
+from allennlp.common.testing import AllenNlpTestCase, cpu_or_gpu
 from allennlp.data import DatasetReader, Instance, Vocabulary
 from allennlp.data.dataloader import TensorDict
 from allennlp.models import load_archive, Model
@@ -111,8 +111,13 @@ class TestTrain(AllenNlpTestCase):
                 recover=True,
             )
 
-    @requires_gpu
+    @cpu_or_gpu
     def test_train_model_distributed(self):
+        if torch.cuda.device_count() >= 2:
+            devices = [0, 1]
+        else:
+            devices = [-1, -1]
+
         params = lambda: Params(
             {
                 "model": {
@@ -127,7 +132,7 @@ class TestTrain(AllenNlpTestCase):
                 "validation_data_path": SEQUENCE_TAGGING_DATA_PATH,
                 "data_loader": {"batch_size": 2},
                 "trainer": {"num_epochs": 2, "optimizer": "adam"},
-                "distributed": {"cuda_devices": [0, 1]},
+                "distributed": {"cuda_devices": devices},
             }
         )
 
@@ -146,9 +151,14 @@ class TestTrain(AllenNlpTestCase):
         # Check we can load the serialized model
         assert load_archive(out_dir).model
 
-    @requires_multi_gpu
+    @cpu_or_gpu
     @pytest.mark.parametrize("lazy", [True, False])
     def test_train_model_distributed_with_sharded_reader(self, lazy):
+        if torch.cuda.device_count() >= 2:
+            devices = [0, 1]
+        else:
+            devices = [-1, -1]
+
         params = lambda: Params(
             {
                 "model": {
@@ -167,7 +177,7 @@ class TestTrain(AllenNlpTestCase):
                 "validation_data_path": SEQUENCE_TAGGING_SHARDS_PATH,
                 "data_loader": {"batch_size": 2},
                 "trainer": {"num_epochs": 2, "optimizer": "adam"},
-                "distributed": {"cuda_devices": [0, 1]},
+                "distributed": {"cuda_devices": devices},
             }
         )
 
@@ -232,9 +242,14 @@ class TestTrain(AllenNlpTestCase):
             assert train_complete in worker1_log
             assert validation_complete in worker1_log
 
-    @requires_multi_gpu
+    @cpu_or_gpu
     @pytest.mark.parametrize("lazy", [True, False])
     def test_train_model_distributed_without_sharded_reader(self, lazy: bool):
+        if torch.cuda.device_count() >= 2:
+            devices = [0, 1]
+        else:
+            devices = [-1, -1]
+
         num_epochs = 2
         params = lambda: Params(
             {
@@ -256,7 +271,7 @@ class TestTrain(AllenNlpTestCase):
                         "tests.commands.train_test.TrainingDataLoggerBatchCallback"
                     ],
                 },
-                "distributed": {"cuda_devices": [0, 1]},
+                "distributed": {"cuda_devices": devices},
             }
         )
 

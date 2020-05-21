@@ -427,6 +427,14 @@ def is_lazy(iterable: Iterable[A]) -> bool:
     return not isinstance(iterable, list)
 
 
+def int_to_device(device: Union[int, torch.device]) -> torch.device:
+    if isinstance(device, torch.device):
+        return device
+    if device < 0:
+        return torch.device("cpu")
+    return torch.device(device)
+
+
 def log_frozen_and_tunable_parameter_names(model: torch.nn.Module) -> None:
     frozen_parameter_names, tunable_parameter_names = get_frozen_and_tunable_parameter_names(model)
 

@@ -38,3 +38,10 @@ def requires_multi_gpu(test_method):
             test_method
         )
     )
+
+
+def cpu_or_gpu(test_method):
+    """
+    Decorator to indicate that a test should run on both CPU and GPU
+    """
+    return pytest.mark.gpu(test_method)

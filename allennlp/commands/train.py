@@ -402,13 +402,21 @@ def _train_worker(
         params["trainer"]["world_size"] = world_size
         params["trainer"]["distributed"] = True
 
-        torch.cuda.set_device(int(gpu_id))
-        dist.init_process_group(
-            backend="nccl",
-            init_method=f"tcp://{master_addr}:{master_port}",
-            world_size=world_size,
-            rank=global_rank,
-        )
+        if gpu_id >= 0:
+            torch.cuda.set_device(int(gpu_id))
+            dist.init_process_group(
+                backend="nccl",
+                init_method=f"tcp://{master_addr}:{master_port}",
+                world_size=world_size,
+                rank=global_rank,
+            )
+        else:
+            dist.init_process_group(
+                backend="gloo",
+                init_method=f"tcp://{master_addr}:{master_port}",
+                world_size=world_size,
+                rank=global_rank,
+            )
         logging.info(
             f"Process group of world size {world_size} initialized "
             f"for distributed training in worker {global_rank}"
