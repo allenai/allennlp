@@ -74,7 +74,13 @@ When you're ready to contribute code to address an open issue, please follow the
         upstream https://github.com/allenai/allennlp.git (fetch)
         upstream https://github.com/allenai/allennlp.git (push)
 
-    Finally, you'll need to create a Python 3.6 or 3.7 virtual environment suitable for working on AllenNLP. There a number of tools that provide 
+    Finally, you'll need to create a Python 3.6 or 3.7 virtual environment suitable for working on AllenNLP. There a number of tools out there that making working with virtual environments easier, but the most direct way is with the [`venv` module](https://docs.python.org/3.7/library/venv.html) in the standard library.
+
+    Once your virtual environment is activated, you can install your local clone in "editable mode" with
+
+        pip install -e . -r dev-requirements.txt
+
+    The "editable mode" comes from the `-e` argument to `pip`, and essential just creates a symbolic link from the site-packages directory of your virtual environment to the source code in your local clone. That way any changes you make will be immediately reflected in your virtual environment.
 
     </details>
 
@@ -100,7 +106,7 @@ When you're ready to contribute code to address an open issue, please follow the
     
         # replace BRANCH with whatever name you want to give it
         git checkout -b BRANCH
-        git push --set-upstream origin BRANCH
+        git push -u origin BRANCH
 
     </details>
 
@@ -122,7 +128,7 @@ When you're ready to contribute code to address an open issue, please follow the
 
         make typecheck
 
-    We also strive to maintain high test coverage, so most contributions should include additions to [the unit tests](https://github.com/allenai/allennlp/tree/master/tests). These tests are ran with [`pytest`](https://docs.pytest.org/en/latest/), which you can use to locally run any test modules that you've added or changed.
+    We also strive to maintain high test coverage, so most contributions should include additions to [the unit tests](https://github.com/allenai/allennlp/tree/master/tests). These tests are run with [`pytest`](https://docs.pytest.org/en/latest/), which you can use to locally run any test modules that you've added or changed.
 
     For example, if you've fixed a bug in `allennlp/nn/util.py`, you can run the tests specific to that module with
     
@@ -132,11 +138,13 @@ When you're ready to contribute code to address an open issue, please follow the
     
         pytest -v --cov allennlp.nn.util tests/nn/util_test.py
 
-    You should also make sure that the API documentation can build without errors. For that, just run
+     If your contribution involves changes to any docstrings, you should make sure the API documentation can build without errors. For that, just run
 
         make build-docs
 
-    You can even serve and view the docs locally with
+    If the build fails, it's most likely due to small formatting issues. If the error message isn't clear, feel free to comment on this in your pull request.
+
+    You can also serve and view the docs locally with
     
         make serve-docs
 
@@ -153,8 +161,9 @@ When you're ready to contribute code to address an open issue, please follow the
 
 **Do you have a new state-of-the-art model?**
 
-We are always looking for new models to add to our collection.  If you have trained a model and would like to include it with 
-the other officially supported [AllenNLP Models](https://github.com/allenai/allennlp-models), please [create a pull request](https://github.com/allenai/allennlp-models/pulls) in the models repo that includes:
+We are always looking for new models to add to our collection. The most popular models are usually added to the official [AllenNLP Models](https://github.com/allenai/allennlp-models) repository, and in some cases to the [AllenNLP Demo](https://demo.allennlp.org/).
+
+If you think your model should be part of AllenNLP Models, please [create a pull request](https://github.com/allenai/allennlp-models/pulls) in the models repo that includes:
 
 * Any code changes needed to support your new model.
 
