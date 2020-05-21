@@ -53,7 +53,8 @@ class _PyTorchLearningRateSchedulerWithMetricsWrapper(_PyTorchLearningRateSchedu
 @LearningRateScheduler.register("step")
 class StepLearningRateScheduler(_PyTorchLearningRateSchedulerWrapper):
     """
-    Registered as a `LearningRateScheduler` with name "step".
+    Registered as a `LearningRateScheduler` with name "step".  The "optimizer" argument does not get
+    an entry in a configuration file for the object.
     """
 
     def __init__(
@@ -68,7 +69,8 @@ class StepLearningRateScheduler(_PyTorchLearningRateSchedulerWrapper):
 @LearningRateScheduler.register("multi_step")
 class MultiStepLearningRateScheduler(_PyTorchLearningRateSchedulerWrapper):
     """
-    Registered as a `LearningRateScheduler` with name "multi_step".
+    Registered as a `LearningRateScheduler` with name "multi_step".  The "optimizer" argument does
+    not get an entry in a configuration file for the object.
     """
 
     def __init__(
@@ -83,7 +85,8 @@ class MultiStepLearningRateScheduler(_PyTorchLearningRateSchedulerWrapper):
 @LearningRateScheduler.register("exponential")
 class ExponentialLearningRateScheduler(_PyTorchLearningRateSchedulerWrapper):
     """
-    Registered as a `LearningRateScheduler` with name "exponential".
+    Registered as a `LearningRateScheduler` with name "exponential".  The "optimizer" argument does
+    not get an entry in a configuration file for the object.
     """
 
     def __init__(self, optimizer: Optimizer, gamma: float = 0.1, last_epoch: int = -1) -> None:
@@ -96,7 +99,8 @@ class ExponentialLearningRateScheduler(_PyTorchLearningRateSchedulerWrapper):
 @LearningRateScheduler.register("reduce_on_plateau")
 class ReduceOnPlateauLearningRateScheduler(_PyTorchLearningRateSchedulerWithMetricsWrapper):
     """
-    Registered as a `LearningRateScheduler` with name "reduce_on_plateau".
+    Registered as a `LearningRateScheduler` with name "reduce_on_plateau".  The "optimizer" argument
+    does not get an entry in a configuration file for the object.
     """
 
     def __init__(

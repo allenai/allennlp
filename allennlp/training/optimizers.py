@@ -142,6 +142,12 @@ class Optimizer(Registrable):
     you use a different name, your code will crash.  Nothing will technically crash if you use a
     name other than `parameter_groups` for your second argument, it will just be annoyingly
     inconsistent.
+
+    Most subclasses of `Optimizer` take both a `model_parameters` and a `parameter_groups`
+    constructor argument.  The `model_parameters` argument does not get an entry in a typical
+    AllenNLP configuration file, but the `parameter_groups` argument does (if you want a non-default
+    value).  See the documentation for the `make_parameter_groups` function for more information on
+    how the `parameter_groups` argument should be specified.
     """
 
     default_implementation = "adam"

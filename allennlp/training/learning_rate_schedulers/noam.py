@@ -16,6 +16,8 @@ class NoamLR(LearningRateScheduler):
 
     # Parameters
 
+    optimizer : `torch.optim.Optimizer`
+        This argument does not get an entry in a configuration file for the object.
     model_size : `int`, required.
         The hidden size parameter which dominates the number of parameters in your model.
     warmup_steps : `int`, required.

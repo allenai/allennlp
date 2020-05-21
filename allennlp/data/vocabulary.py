@@ -275,6 +275,9 @@ class Vocabulary(Registrable):
         We count all of the vocabulary items in the instances, then pass those counts
         and the other parameters, to :func:`__init__`.  See that method for a description
         of what the other parameters do.
+
+        The `instances` parameter does not get an entry in a typical AllenNLP configuration file,
+        but the other parameters do (if you want non-default parameters).
         """
         logger.info("Fitting token dictionary from dataset.")
         padding_token = padding_token if padding_token is not None else DEFAULT_PADDING_TOKEN
@@ -358,6 +361,10 @@ class Vocabulary(Registrable):
     ) -> "Vocabulary":
         """
         Extends an already generated vocabulary using a collection of instances.
+
+        The `instances` parameter does not get an entry in a typical AllenNLP configuration file,
+        but the other parameters do (if you want non-default parameters).  See `__init__` for a
+        description of what the other parameters mean.
         """
         vocab = cls.from_files(directory, padding_token, oov_token)
         logger.info("Fitting token dictionary from dataset.")

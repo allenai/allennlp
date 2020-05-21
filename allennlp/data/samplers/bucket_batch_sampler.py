@@ -33,6 +33,8 @@ class BucketBatchSampler(BatchSampler):
     data_source: `data.Dataset`, required
         The pytorch `Dataset` of allennlp Instances to bucket.
 
+        In a typical AllenNLP configuration file, this parameter does not get an entry under the
+        "batch_sampler", it gets constructed separately.
     batch_size : `int`, required
         The size of each batch of instances yielded when calling the dataloader.
 

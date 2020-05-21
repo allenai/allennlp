@@ -41,6 +41,9 @@ class DataLoader(Registrable, data.DataLoader):
     of batches after which an epoch ends.  If this is `None`, then an epoch is set to be one full pass
     through your data.  You might use this if you have a very large dataset and want more frequent
     checkpoints and evaluations on validation data, for instance.
+
+    In a typical AllenNLP configuration file, the `dataset` parameter does not get an entry under
+    the "data_loader", it gets constructed separately.
     """
 
     def __init__(

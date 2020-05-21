@@ -23,6 +23,9 @@ class TensorboardWriter(FromParams):
 
     serialization_dir : `str`, optional (default = `None`)
         If provided, this is where the Tensorboard logs will be written.
+
+        In a typical AllenNLP configuration file, this parameter does not get an entry under the
+        "tensorboard_writer", it gets passed in separately.
     summary_interval : `int`, optional (default = `100`)
         Most statistics will be written out only every this many batches.
     histogram_interval : `int`, optional (default = `None`)

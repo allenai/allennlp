@@ -168,12 +168,18 @@ class GradientDescentTrainer(Trainer):
         on the correct device. (If you are using our `train` command this will be
         handled for you.)
 
+        In a typical AllenNLP configuration file, this parameter does not get an entry under the
+        "trainer", it gets constructed separately.
+
     optimizer : `torch.nn.Optimizer`, required.
         An instance of a Pytorch Optimizer, instantiated with the parameters of the
         model to be optimized.
 
     data_loader : `DataLoader`, required.
         A pytorch `DataLoader` containing your `Dataset`, yielding padded indexed batches.
+
+        In a typical AllenNLP configuration file, this parameter does not get an entry under the
+        "trainer", it gets constructed separately.
 
     patience : `Optional[int] > 0`, optional (default=`None`)
         Number of epochs to be patient before early stopping: the training is stopped
@@ -190,12 +196,18 @@ class GradientDescentTrainer(Trainer):
         A `DataLoader` to use for the validation set.  If `None`, then
         use the training `DataLoader` with the validation data.
 
+        In a typical AllenNLP configuration file, this parameter does not get an entry under the
+        "trainer", it gets constructed separately.
+
     num_epochs : `int`, optional (default = `20`)
         Number of training epochs.
 
     serialization_dir : `str`, optional (default=`None`)
         Path to directory for saving and loading model files. Models will not be saved if
         this parameter is not passed.
+
+        In a typical AllenNLP configuration file, this parameter does not get an entry under the
+        "trainer", it gets constructed separately.
 
     checkpointer : `Checkpointer`, optional (default=`None`)
         A `Checkpointer` is responsible for periodically saving model weights.  If none is given
@@ -250,12 +262,22 @@ class GradientDescentTrainer(Trainer):
         If set, PyTorch's `DistributedDataParallel` is used to train the model in multiple GPUs. This also
         requires `world_size` to be greater than 1.
 
+        In a typical AllenNLP configuration file, this parameter does not get an entry under the
+        "trainer", it gets constructed separately (you need a top-level "distributed" key, next to
+        the "trainer" entry, that specifies a list of "cuda_devices").
+
     local_rank : `int`, optional, (default = `0`)
         This is the unique identifier of the `Trainer` in a distributed process group. The GPU device id is
         used as the rank.
 
+        In a typical AllenNLP configuration file, this parameter does not get an entry under the
+        "trainer", it gets constructed separately.
+
     world_size : `int`, (default = `1`)
         The number of `Trainer` workers participating in the distributed training.
+
+        In a typical AllenNLP configuration file, this parameter does not get an entry under the
+        "trainer", it gets constructed separately.
 
     num_gradient_accumulation_steps : `int`, optional, (default = `1`)
         Gradients are accumulated for the given number of steps before doing an optimizer step. This can

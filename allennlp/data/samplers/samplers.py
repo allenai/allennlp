@@ -41,6 +41,9 @@ class SequentialSampler(data.SequentialSampler, Sampler):
     [SequentialSampler](https://pytorch.org/docs/stable/data.html#torch.utils.data.SequentialSampler).
 
     Registered as a `Sampler` with name "sequential".
+
+    In a typical AllenNLP configuration file, `data_source` parameter does not get an entry under
+    the "sampler", it gets constructed separately.
     """
 
     def __init__(self, data_source: data.Dataset):
@@ -60,6 +63,9 @@ class RandomSampler(data.RandomSampler, Sampler):
     # Parameters
     data_source: `Dataset`, required
         The dataset to sample from.
+
+        In a typical AllenNLP configuration file, this parameter does not get an entry under the
+        "sampler", it gets constructed separately.
     replacement : `bool`, optional (default = `False`)
         Samples are drawn with replacement if `True`.
     num_samples: `int` (default = `len(dataset)`)
