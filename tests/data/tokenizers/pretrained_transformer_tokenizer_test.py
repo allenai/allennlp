@@ -63,6 +63,34 @@ class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
         tokens = [t.text for t in tokenizer.tokenize(sentence)]
         assert tokens == expected_tokens
 
+    def test_splits_reformer_small(self):
+        sentence = "A, [MASK] AllenNLP sentence."
+        expected_tokens = [
+            "▁A",
+            ",",
+            "▁",
+            "<unk>",
+            "M",
+            "A",
+            "S",
+            "K",
+            "<unk>",
+            "▁A",
+            "ll",
+            "en",
+            "N",
+            "L",
+            "P",
+            "▁s",
+            "ent",
+            "en",
+            "ce",
+            ".",
+        ]
+        tokenizer = PretrainedTransformerTokenizer("google/reformer-crime-and-punishment")
+        tokens = [t.text for t in tokenizer.tokenize(sentence)]
+        assert tokens == expected_tokens
+
     def test_token_idx_bert_uncased(self):
         sentence = "A, naïve [MASK] AllenNLP sentence."
         expected_tokens = [
