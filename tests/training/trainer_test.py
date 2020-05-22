@@ -968,7 +968,11 @@ class TestTrainer(TrainerTestBase):
     def test_epoch_callback_is_called_at_every_epoch(self):
         class FakeEpochCallback(EpochCallback):
             def __call__(
-                self, trainer: "GradientDescentTrainer", metrics: Dict[str, Any], epoch: int
+                self,
+                trainer: "GradientDescentTrainer",
+                metrics: Dict[str, Any],
+                epoch: int,
+                is_master: bool,
             ) -> None:
                 if not hasattr(trainer, "epoch_callback_calls"):
                     trainer.epoch_callback_calls = []  # type: ignore

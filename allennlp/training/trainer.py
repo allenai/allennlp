@@ -132,7 +132,11 @@ class EpochCallback(Registrable):
     """
 
     def __call__(
-        self, trainer: "GradientDescentTrainer", metrics: Dict[str, Any], epoch: int
+        self,
+        trainer: "GradientDescentTrainer",
+        metrics: Dict[str, Any],
+        epoch: int,
+        is_master: bool,
     ) -> None:
         pass
 
@@ -749,7 +753,7 @@ class GradientDescentTrainer(Trainer):
             metrics["best_validation_" + key] = value
 
         for callback in self._epoch_callbacks:
-            callback(self, metrics={}, epoch=-1)
+            callback(self, metrics={}, epoch=-1, is_master=self._master)
 
         for epoch in range(epoch_counter, self._num_epochs):
             epoch_start_time = time.time()
@@ -840,7 +844,7 @@ class GradientDescentTrainer(Trainer):
                 dist.barrier()
 
             for callback in self._epoch_callbacks:
-                callback(self, metrics=metrics, epoch=epoch)
+                callback(self, metrics=metrics, epoch=epoch, is_master=self._master)
 
             epoch_elapsed_time = time.time() - epoch_start_time
             logger.info("Epoch duration: %s", datetime.timedelta(seconds=epoch_elapsed_time))
