@@ -86,13 +86,13 @@ class PretrainedTransformerTokenizer(Tokenizer):
         self._tokenizer_lowercases = self.tokenizer_lowercases(self.tokenizer)
 
         try:
-            self._reverse_engineer_speical_tokens("a", "b", model_name, tokenizer_kwargs)
+            self._reverse_engineer_special_tokens("a", "b", model_name, tokenizer_kwargs)
         except AssertionError:
             # For most transformer models, "a" and "b" work just fine as dummy tokens.  For a few,
             # they don't, and so we use "1" and "2" instead.
-            self._reverse_engineer_speical_tokens("1", "2", model_name, tokenizer_kwargs)
+            self._reverse_engineer_special_tokens("1", "2", model_name, tokenizer_kwargs)
 
-    def _reverse_engineer_speical_tokens(
+    def _reverse_engineer_special_tokens(
         self,
         token_a: str,
         token_b: str,
