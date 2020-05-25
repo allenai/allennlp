@@ -69,7 +69,7 @@ setup(
         "flaky",
         "responses>=0.7",
         "conllu==2.3.2",
-        "transformers>=2.9,<2.10",
+        "transformers>=2.9,<2.11",
         "jsonpickle",
         "semantic_version",
         "dataclasses;python_version<'3.7'",
