@@ -30,6 +30,7 @@ be imported successfully, and prints out some other useful information such as t
 and the number of GPU devices available.
 - All of the tests moved from `allennlp/tests` to `tests` at the root level, and
 `allennlp/tests/fixtures` moved to `test_fixtures` at the root level. The PyPI source and wheel distributions will no longer include tests and fixtures.
+- `PretrainedTransformerTokenizer.intra_word_tokenize` will raise an exception by default when a token can't be split into any wordpieces. If `allow_dirty=True` is used, the behavior is the same as before, i.e. a `None` offset will be used instead of raising an exception.
 
 ## [v1.0.0rc4](https://github.com/allenai/allennlp/releases/tag/v1.0.0rc4) - 2019-05-14
 

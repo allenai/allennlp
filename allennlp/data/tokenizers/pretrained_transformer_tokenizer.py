@@ -335,7 +335,7 @@ class PretrainedTransformerTokenizer(Tokenizer):
         return token_offsets
 
     def _intra_word_tokenize(
-        self, string_tokens: List[str]
+        self, string_tokens: List[str], allow_dirty: bool = False,
     ) -> Tuple[List[Token], List[Optional[Tuple[int, int]]]]:
         tokens: List[Token] = []
         offsets: List[Optional[Tuple[int, int]]] = []
@@ -356,8 +356,10 @@ class PretrainedTransformerTokenizer(Tokenizer):
                     Token(text=wp_text, text_id=wp_id)
                     for wp_id, wp_text in zip(wp_ids, self.tokenizer.convert_ids_to_tokens(wp_ids))
                 )
-            else:
+            elif allow_dirty:
                 offsets.append(None)
+            else:
+                raise ValueError(f"token '{token_string}' could not be split into wordpieces")
         return tokens, offsets
 
     @staticmethod
@@ -370,16 +372,19 @@ class PretrainedTransformerTokenizer(Tokenizer):
         ]
 
     def intra_word_tokenize(
-        self, string_tokens: List[str]
+        self, string_tokens: List[str], allow_dirty: bool = False,
     ) -> Tuple[List[Token], List[Optional[Tuple[int, int]]]]:
         """
         Tokenizes each word into wordpieces separately and returns the wordpiece IDs.
         Also calculates offsets such that tokens[offsets[i][0]:offsets[i][1] + 1]
         corresponds to the original i-th token.
 
+        If `allow_dirty` is `True`, offsets may be `None` when the corresponding token doesn't
+        produce any wordpieces. Otherwise an exception is raised when this happens.
+
         This function inserts special tokens.
         """
-        tokens, offsets = self._intra_word_tokenize(string_tokens)
+        tokens, offsets = self._intra_word_tokenize(string_tokens, allow_dirty=allow_dirty)
         tokens = self.add_special_tokens(tokens)
         offsets = self._increment_offsets(offsets, len(self.single_sequence_start_tokens))
         return tokens, offsets

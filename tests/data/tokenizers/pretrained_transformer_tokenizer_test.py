@@ -1,5 +1,7 @@
 from typing import Iterable, List
 
+import pytest
+
 from allennlp.common import Params
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Token
@@ -239,10 +241,13 @@ class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
             "[SEP]",
         ]
         expected_offsets = [(1, 2), None, (3, 3), (4, 6), None, (7, 8)]
-        tokens, offsets = tokenizer.intra_word_tokenize(sentence)
+        tokens, offsets = tokenizer.intra_word_tokenize(sentence, allow_dirty=True)
         tokens = [t.text for t in tokens]
         assert tokens == expected_tokens
         assert offsets == expected_offsets
+
+        with pytest.raises(ValueError):
+            tokenizer.intra_word_tokenize(sentence)
 
     def test_special_tokens_added(self):
         def get_token_ids(tokens: Iterable[Token]) -> List[int]:
