@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Nightly builds no longer run on forks.
 - Distributed training now automatically figures out which worker should see which instances
 - A race condition bug in distributed training caused from saving the vocab to file from the master process while other processing might be reading those files.
+- Unused dependencies in `setup.py` removed.
 
 ### Added
 

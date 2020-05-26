@@ -21,15 +21,6 @@ VERSION = {}
 with open("allennlp/version.py", "r") as version_file:
     exec(version_file.read(), VERSION)
 
-# make pytest-runner a conditional requirement,
-# per: https://github.com/pytest-dev/pytest-runner#considerations
-needs_pytest = {"pytest", "test", "ptr"}.intersection(sys.argv)
-pytest_runner = ["pytest-runner"] if needs_pytest else []
-
-setup_requirements = [
-    # add other setup requirements as necessary
-] + pytest_runner
-
 setup(
     name="allennlp",
     version=VERSION["VERSION"],
@@ -66,18 +57,11 @@ setup(
         "scikit-learn",
         "scipy",
         "pytest",
-        "flaky",
-        "responses>=0.7",
-        "conllu==2.3.2",
         "transformers>=2.9,<2.11",
         "jsonpickle",
-        "semantic_version",
         "dataclasses;python_version<'3.7'",
     ],
     entry_points={"console_scripts": ["allennlp=allennlp.__main__:run"]},
-    setup_requires=setup_requirements,
-    # For running via `python setup.py test`.
-    tests_require=["pytest", "flaky", "responses>=0.7", "semantic_version"],
     include_package_data=True,
     python_requires=">=3.6.1",
     zip_safe=False,
