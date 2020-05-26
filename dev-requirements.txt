@@ -19,11 +19,14 @@ codecov
 # Optional dependencies, which we install for testing purposes.
 matplotlib>=2.2.3
 
-# Required to run sanic tests
-aiohttp
-
 # Required for automatic mixed precision (AMP) training
 git+https://github.com/NVIDIA/apex.git@master
+
+# For mocking HTTP requests/responses.
+responses>=0.7
+
+# For running tests that aren't 100% reliable.
+flaky
 
 #### DOC-RELATED PACKAGES ####
 
