@@ -336,7 +336,7 @@ class PretrainedTransformerTokenizer(Tokenizer):
 
     def _intra_word_tokenize(
         self, string_tokens: List[str]
-    ) -> Tuple[List[Token], List[Optional[Tuple[int, int]]]]:
+    ) -> Tuple[List[Token], List[Tuple[int, int]]]:
         tokens: List[Token] = []
         offsets: List[Optional[Tuple[int, int]]] = []
         for token_string in string_tokens:
@@ -357,21 +357,18 @@ class PretrainedTransformerTokenizer(Tokenizer):
                     for wp_id, wp_text in zip(wp_ids, self.tokenizer.convert_ids_to_tokens(wp_ids))
                 )
             else:
-                offsets.append(None)
+                raise ValueError(f"token '{token_string}' cannot be split into wordpieces")
         return tokens, offsets
 
     @staticmethod
     def _increment_offsets(
         offsets: Iterable[Optional[Tuple[int, int]]], increment: int
-    ) -> List[Optional[Tuple[int, int]]]:
-        return [
-            None if offset is None else (offset[0] + increment, offset[1] + increment)
-            for offset in offsets
-        ]
+    ) -> List[Tuple[int, int]]:
+        return [(offset[0] + increment, offset[1] + increment) for offset in offsets]
 
     def intra_word_tokenize(
         self, string_tokens: List[str]
-    ) -> Tuple[List[Token], List[Optional[Tuple[int, int]]]]:
+    ) -> Tuple[List[Token], List[Tuple[int, int]]]:
         """
         Tokenizes each word into wordpieces separately and returns the wordpiece IDs.
         Also calculates offsets such that tokens[offsets[i][0]:offsets[i][1] + 1]
