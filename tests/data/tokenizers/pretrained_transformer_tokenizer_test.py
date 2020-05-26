@@ -1,5 +1,7 @@
 from typing import Iterable, List
 
+import pytest
+
 from allennlp.common import Params
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Token
@@ -222,27 +224,12 @@ class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
         assert offsets_a == expected_offsets_a
         assert offsets_b == expected_offsets_b
 
-    def test_intra_word_tokenize_whitespaces(self):
+    def test_intra_word_tokenize_whitespaces_raises(self):
         tokenizer = PretrainedTransformerTokenizer("bert-base-cased")
 
         sentence = ["A,", " ", "[MASK]", "AllenNLP", "\u007f", "sentence."]
-        expected_tokens = [
-            "[CLS]",
-            "A",
-            ",",
-            "[MASK]",
-            "Allen",
-            "##NL",
-            "##P",
-            "sentence",
-            ".",
-            "[SEP]",
-        ]
-        expected_offsets = [(1, 2), None, (3, 3), (4, 6), None, (7, 8)]
-        tokens, offsets = tokenizer.intra_word_tokenize(sentence)
-        tokens = [t.text for t in tokens]
-        assert tokens == expected_tokens
-        assert offsets == expected_offsets
+        with pytest.raises(ValueError):
+            tokenizer.intra_word_tokenize(sentence)
 
     def test_special_tokens_added(self):
         def get_token_ids(tokens: Iterable[Token]) -> List[int]:
