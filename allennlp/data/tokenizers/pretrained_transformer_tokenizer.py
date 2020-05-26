@@ -338,7 +338,7 @@ class PretrainedTransformerTokenizer(Tokenizer):
         self, string_tokens: List[str]
     ) -> Tuple[List[Token], List[Tuple[int, int]]]:
         tokens: List[Token] = []
-        offsets: List[Optional[Tuple[int, int]]] = []
+        offsets: List[Tuple[int, int]] = []
         for token_string in string_tokens:
             wordpieces = self.tokenizer.encode_plus(
                 token_string,
@@ -362,7 +362,7 @@ class PretrainedTransformerTokenizer(Tokenizer):
 
     @staticmethod
     def _increment_offsets(
-        offsets: Iterable[Optional[Tuple[int, int]]], increment: int
+        offsets: Iterable[Tuple[int, int]], increment: int
     ) -> List[Tuple[int, int]]:
         return [(offset[0] + increment, offset[1] + increment) for offset in offsets]
 
