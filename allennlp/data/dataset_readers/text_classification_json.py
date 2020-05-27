@@ -104,16 +104,16 @@ class TextClassificationJsonReader(DatasetReader):
 
         text : `str`, required.
             The text to classify
-        label : `str`, optional, (default = None).
+        label : `str`, optional, (default = `None`).
             The label for this text.
 
         # Returns
 
         An `Instance` containing the following fields:
-            tokens : `TextField`
-                The tokens in the sentence or phrase.
-            label : `LabelField`
-                The label label of the sentence or phrase.
+            - tokens (`TextField`) :
+              The tokens in the sentence or phrase.
+            - label (`LabelField`) :
+              The label label of the sentence or phrase.
         """
 
         fields: Dict[str, Field] = {}

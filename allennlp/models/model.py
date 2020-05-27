@@ -62,6 +62,10 @@ class Model(torch.nn.Module, Registrable):
         when constructing embedding matrices or output classifiers (as the vocabulary holds the
         number of classes in your output, also), and translating model output into human-readable
         form.
+
+        In a typical AllenNLP configuration file, this parameter does not get an entry under the
+        "model", it gets specified as a top-level parameter, then is passed in to the model
+        separately.
     regularizer: `RegularizerApplicator`, optional
         If given, the `Trainer` will use this to regularize model parameters.
     """
@@ -117,7 +121,7 @@ class Model(torch.nn.Module, Registrable):
 
         # Parameters
 
-        *inputs :
+        *inputs : `Any`
             Tensors comprising everything needed to perform a training update, `including` labels,
             which should be optional (i.e have a default value of `None`).  At inference time,
             simply pass the relevant inputs, not including the labels.

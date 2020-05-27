@@ -42,20 +42,20 @@ class BidirectionalEndpointSpanExtractor(SpanExtractor):
 
     input_dim : `int`, required
         The final dimension of the `sequence_tensor`.
-    forward_combination : `str`, optional (default = "y-x").
+    forward_combination : `str`, optional (default = `"y-x"`).
         The method used to combine the `forward_start_embeddings` and `forward_end_embeddings`
         for the forward direction of the bidirectional representation.
         See above for a full description.
-    backward_combination : `str`, optional (default = "x-y").
+    backward_combination : `str`, optional (default = `"x-y"`).
         The method used to combine the `backward_start_embeddings` and `backward_end_embeddings`
         for the backward direction of the bidirectional representation.
         See above for a full description.
-    num_width_embeddings : `int`, optional (default = None).
+    num_width_embeddings : `int`, optional (default = `None`).
         Specifies the number of buckets to use when representing
         span width features.
-    span_width_embedding_dim : `int`, optional (default = None).
+    span_width_embedding_dim : `int`, optional (default = `None`).
         The embedding size for the span_width features.
-    bucket_widths : `bool`, optional (default = False).
+    bucket_widths : `bool`, optional (default = `False`).
         Whether to bucket the span widths into log-space buckets. If `False`,
         the raw span widths are used.
     use_sentinels : `bool`, optional (default = `True`).

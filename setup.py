@@ -1,5 +1,3 @@
-import sys
-
 from setuptools import find_packages, setup
 
 # PEP0440 compatible formatted version, see:
@@ -21,15 +19,6 @@ VERSION = {}
 with open("allennlp/version.py", "r") as version_file:
     exec(version_file.read(), VERSION)
 
-# make pytest-runner a conditional requirement,
-# per: https://github.com/pytest-dev/pytest-runner#considerations
-needs_pytest = {"pytest", "test", "ptr"}.intersection(sys.argv)
-pytest_runner = ["pytest-runner"] if needs_pytest else []
-
-setup_requirements = [
-    # add other setup requirements as necessary
-] + pytest_runner
-
 setup(
     name="allennlp",
     version=VERSION["VERSION"],
@@ -48,11 +37,13 @@ setup(
     author="Allen Institute for Artificial Intelligence",
     author_email="allennlp@allenai.org",
     license="Apache",
-    packages=find_packages(exclude=["*.tests", "*.tests.*", "tests.*", "tests"]),
+    packages=find_packages(
+        exclude=["*.tests", "*.tests.*", "tests.*", "tests", "test_fixtures", "test_fixtures.*"]
+    ),
     install_requires=[
         "torch>=1.5.0,<1.6.0",
         "jsonnet>=0.10.0 ; sys.platform != 'win32'",
-        "overrides==2.8.0",
+        "overrides==3.0.0",
         "nltk",
         "spacy>=2.1.0,<2.3",
         "numpy",
@@ -64,18 +55,11 @@ setup(
         "scikit-learn",
         "scipy",
         "pytest",
-        "flaky",
-        "responses>=0.7",
-        "conllu==2.3.2",
         "transformers>=2.9,<2.10",
         "jsonpickle",
-        "semantic_version",
         "dataclasses;python_version<'3.7'",
     ],
     entry_points={"console_scripts": ["allennlp=allennlp.__main__:run"]},
-    setup_requires=setup_requirements,
-    # For running via `python setup.py test`.
-    tests_require=["pytest", "flaky", "responses>=0.7", "semantic_version"],
     include_package_data=True,
     python_requires=">=3.6.1",
     zip_safe=False,

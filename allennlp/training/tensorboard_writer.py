@@ -21,11 +21,14 @@ class TensorboardWriter(FromParams):
 
     # Parameters
 
-    serialization_dir : str, optional (default = None)
+    serialization_dir : `str`, optional (default = `None`)
         If provided, this is where the Tensorboard logs will be written.
-    summary_interval : int, optional (default = 100)
+
+        In a typical AllenNLP configuration file, this parameter does not get an entry under the
+        "tensorboard_writer", it gets passed in separately.
+    summary_interval : `int`, optional (default = `100`)
         Most statistics will be written out only every this many batches.
-    histogram_interval : int, optional (default = None)
+    histogram_interval : `int`, optional (default = `None`)
         If provided, activation histograms will be written out every this many batches.
         If None, activation histograms will not be written out.
         When this parameter is specified, the following additional logging is enabled:
@@ -42,12 +45,12 @@ class TensorboardWriter(FromParams):
         with tensors as values currently support activation logging.
     batch_size_interval : `int`, optional, (default = `None`)
         If defined, how often to log the average batch size.
-    should_log_parameter_statistics : bool, optional (default = True)
+    should_log_parameter_statistics : `bool`, optional (default = `True`)
         Whether to log parameter statistics (mean and standard deviation of parameters and
         gradients).
-    should_log_learning_rate : bool, optional (default = False)
+    should_log_learning_rate : `bool`, optional (default = `False`)
         Whether to log (parameter-specific) learning rate.
-    get_batch_num_total : Callable[[], int], optional (default = None)
+    get_batch_num_total : `Callable[[], int]`, optional (default = `None`)
         A thunk that returns the number of batches so far. Most likely this will
         be a closure around an instance variable in your `Trainer` class.  Because of circular
         dependencies in constructing this object and the `Trainer`, this is typically `None` when

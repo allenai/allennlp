@@ -33,7 +33,7 @@ class TextFieldEmbedder(torch.nn.Module, Registrable):
             A dictionary that was the output of a call to `TextField.as_tensor`.  Each tensor in
             here is assumed to have a shape roughly similar to `(batch_size, sequence_length)`
             (perhaps with an extra trailing dimension for the characters in each token).
-        num_wrapping_dims : `int`, optional (default=0)
+        num_wrapping_dims : `int`, optional (default=`0`)
             If you have a `ListField[TextField]` that created the `text_field_input`, you'll
             end up with tensors of shape `(batch_size, wrapping_dim1, wrapping_dim2, ...,
             sequence_length)`.  This parameter tells us how many wrapping dimensions there are, so

@@ -152,7 +152,7 @@ class Vocabulary(Registrable):
         words are in-vocabulary.  If this is `None`, we just won't initialize the vocabulary with
         anything.
 
-    min_count : `Dict[str, int]`, optional (default=None)
+    min_count : `Dict[str, int]`, optional (default=`None`)
         When initializing the vocab from a counter, you can specify a minimum count, and every
         token with a count less than this will not be added to the dictionary.  These minimum
         counts are `namespace-specific`, so you can specify different minimums for labels versus
@@ -194,7 +194,7 @@ class Vocabulary(Registrable):
         most common words) to keep from pretrained embedding files, even for words not
         appearing in the data.
 
-    only_include_pretrained_words : `bool`, optional (default=False)
+    only_include_pretrained_words : `bool`, optional (default=`False`)
         This defines the strategy for using any pretrained embedding files which may have been
         specified in `pretrained_files`. If False, an inclusive strategy is used: and words
         which are in the `counter` and in the pretrained file are added to the `Vocabulary`,
@@ -202,15 +202,15 @@ class Vocabulary(Registrable):
         exclusive strategy: words are only included in the Vocabulary if they are in the pretrained
         embedding file (their count must still be at least `min_count`).
 
-    tokens_to_add : `Dict[str, List[str]]`, optional (default=None)
+    tokens_to_add : `Dict[str, List[str]]`, optional (default=`None`)
         If given, this is a list of tokens to add to the vocabulary, keyed by the namespace to add
         the tokens to.  This is a way to be sure that certain items appear in your vocabulary,
         regardless of any other vocabulary computation.
 
-    padding_token : `str`,  optional (default=DEFAULT_PADDING_TOKEN)
+    padding_token : `str`,  optional (default=`DEFAULT_PADDING_TOKEN`)
         If given, this the string used for padding.
 
-    oov_token : `str`,  optional (default=DEFAULT_OOV_TOKEN)
+    oov_token : `str`,  optional (default=`DEFAULT_OOV_TOKEN`)
         If given, this the string used for the out of vocabulary (OOVs) tokens.
 
     """
@@ -275,6 +275,9 @@ class Vocabulary(Registrable):
         We count all of the vocabulary items in the instances, then pass those counts
         and the other parameters, to :func:`__init__`.  See that method for a description
         of what the other parameters do.
+
+        The `instances` parameter does not get an entry in a typical AllenNLP configuration file,
+        but the other parameters do (if you want non-default parameters).
         """
         logger.info("Fitting token dictionary from dataset.")
         padding_token = padding_token if padding_token is not None else DEFAULT_PADDING_TOKEN
@@ -358,6 +361,10 @@ class Vocabulary(Registrable):
     ) -> "Vocabulary":
         """
         Extends an already generated vocabulary using a collection of instances.
+
+        The `instances` parameter does not get an entry in a typical AllenNLP configuration file,
+        but the other parameters do (if you want non-default parameters).  See `__init__` for a
+        description of what the other parameters mean.
         """
         vocab = cls.from_files(directory, padding_token, oov_token)
         logger.info("Fitting token dictionary from dataset.")
@@ -410,17 +417,17 @@ class Vocabulary(Registrable):
             line, with nothing else in the line.  The index we assign to the token is the line
             number in the file (1-indexed if `is_padded`, 0-indexed otherwise).  Note that this
             file should contain the OOV token string!
-        is_padded : `bool`, optional (default=True)
+        is_padded : `bool`, optional (default=`True`)
             Is this vocabulary padded?  For token / word / character vocabularies, this should be
             `True`; while for tag or label vocabularies, this should typically be `False`.  If
             `True`, we add a padding token with index 0, and we enforce that the `oov_token` is
             present in the file.
-        oov_token : `str`, optional (default=DEFAULT_OOV_TOKEN)
+        oov_token : `str`, optional (default=`DEFAULT_OOV_TOKEN`)
             What token does this vocabulary use to represent out-of-vocabulary characters?  This
             must show up as a line in the vocabulary file.  When we find it, we replace
             `oov_token` with `self._oov_token`, because we only use one OOV token across
             namespaces.
-        namespace : `str`, optional (default="tokens")
+        namespace : `str`, optional (default=`"tokens"`)
             What namespace should we overwrite with this vocab file?
         """
         if is_padded:

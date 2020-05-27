@@ -5,7 +5,7 @@ import datetime
 import logging
 import os
 import shutil
-from typing import Any, Dict, Iterable, List, Optional, Union, Tuple, Set
+from typing import Any, Dict, Iterable, Optional, Union, Tuple, Set
 from collections import Counter
 
 import torch
@@ -285,7 +285,7 @@ def get_metrics(
     num_batches: int,
     reset: bool = False,
     world_size: int = 1,
-    cuda_device: Union[int, List] = 0,
+    cuda_device: Union[int, torch.device] = torch.device("cpu"),
 ) -> Dict[str, float]:
     """
     Gets the metrics but sets `"loss"` to
@@ -300,10 +300,7 @@ def get_metrics(
         # In distributed mode, average out all metrics across GPUs
         aggregated_metrics = {}
         for metric_name, metric_val in metrics.items():
-            if isinstance(cuda_device, list):
-                metric_tensor = torch.tensor(metric_val).to(torch.device(cuda_device[0]))
-            else:
-                metric_tensor = torch.tensor(metric_val).to(torch.device(cuda_device))
+            metric_tensor = torch.tensor(metric_val).to(cuda_device)
             dist.all_reduce(metric_tensor, op=dist.ReduceOp.SUM)
             reduced_metric = metric_tensor.item() / world_size
             aggregated_metrics[metric_name] = reduced_metric
@@ -323,10 +320,10 @@ def evaluate(
     data_loader : `DataLoader`
         The `DataLoader` that will iterate over the evaluation data (data loaders already contain
         their data).
-    cuda_device : `int`, optional (default=-1)
+    cuda_device : `int`, optional (default=`-1`)
         The cuda device to use for this evaluation.  The model is assumed to already be using this
         device; this parameter is only used for moving the input data to the correct device.
-    batch_weight_key : `str`, optional (default=None)
+    batch_weight_key : `str`, optional (default=`None`)
         If given, this is a key in the output dictionary for each batch that specifies how to weight
         the loss for that batch.  If this is not given, we use a weight of 1 for every batch.
     """

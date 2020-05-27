@@ -17,6 +17,9 @@ class NoOpTrainer(Trainer):
         """
         A trivial trainer to assist in making model archives for models that do not actually
         require training. For instance, a majority class baseline.
+
+        In a typical AllenNLP configuration file, neither the `serialization_dir` nor the `model`
+        arguments would need an entry.
         """
 
         super().__init__(serialization_dir, cuda_device=-1)

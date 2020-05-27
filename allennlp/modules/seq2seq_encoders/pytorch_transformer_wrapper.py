@@ -30,12 +30,12 @@ class PytorchTransformer(Seq2SeqEncoder):
         The number of stacked self attention -> feedforward -> layer normalisation blocks.
     num_attention_heads : `int`, required.
         The number of attention heads to use per layer.
-    use_positional_encoding : `bool`, optional, (default = True)
+    use_positional_encoding : `bool`, optional, (default = `True`)
         Whether to add sinusoidal frequencies to the input tensor. This is strongly recommended,
         as without this feature, the self attention layers have no idea of absolute or relative
         position (as they are just computing pairwise similarity between vectors of elements),
         which can be important features for many tasks.
-    dropout_prob : `float`, optional, (default = 0.1)
+    dropout_prob : `float`, optional, (default = `0.1`)
         The dropout probability for the feedforward network.
     """  # noqa
 

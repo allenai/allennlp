@@ -16,7 +16,7 @@ Then you can copy and paste the commands below without worrying about mistyping 
 
 ## Steps
 
-1. Update `allennlp/version.py` (if needed) with the correct version and then commit and push the changes with:
+1. Update `allennlp/version.py` (if needed) with the correct version and the `CHANGELOG.md` so that everything under the "Unreleased" section is now under a section corresponding to this release. Then commit and push these changes with:
 
     ```
     git commit -a -m "Update version for release $TAG"
@@ -38,17 +38,19 @@ Then you can copy and paste the commands below without worrying about mistyping 
     ```
 
 4. Find the tag you just pushed [on GitHub](https://github.com/allenai/allennlp/tags) and
-click edit. Then add some release notes including the commit history since the last release which you can get with
+click edit. Now copy over the latest section from the `CHANGELOG.md`. And finally, add a section called "Commits" with the output of a command like the following:
 
     ```bash
-    git log `git describe --always --tags --abbrev=0 HEAD^^`..HEAD^ --oneline
+    OLD_TAG=$(git describe --always --tags --abbrev=0 $TAG^)
+    git log $OLD_TAG..$TAG --oneline
+    ```
+    
+    ```fish
+    set -x OLD_TAG (git describe --always --tags --abbrev=0 $TAG^)
+    git log $OLD_TAG..$TAG --oneline
     ```
 
-    Or, if you're using fish,
-
-    ```fish
-   git log (git describe --always --tags --abbrev=0 HEAD^^)..HEAD^ --oneline
-   ```
+    On a Mac, for example, you can just pipe the above command into `pbcopy`.
 
 5. Click "Publish Release", and if this is a pre-release make sure you check that box.
 

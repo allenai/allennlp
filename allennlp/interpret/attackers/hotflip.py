@@ -45,12 +45,12 @@ class Hotflip(Attacker):
     predictor : `Predictor`
         The model (inside a Predictor) that we're attacking.  We use this to get gradients and
         predictions.
-    vocab_namespace : `str`, optional (default='tokens')
+    vocab_namespace : `str`, optional (default=`'tokens'`)
         We use this to know three things: (1) which tokens we should ignore when producing flips
         (we don't consider non-alphanumeric tokens); (2) what the string value is of the token that
         we produced, so we can show something human-readable to the user; and (3) if we need to
         construct a fake embedding matrix, we use the tokens in the vocabulary as flip candidates.
-    max_tokens : `int`, optional (default=5000)
+    max_tokens : `int`, optional (default=`5000`)
         This is only used when we need to construct a fake embedding matrix.  That matrix can take
         a lot of memory when the vocab size is large.  This parameter puts a cap on the number of
         tokens to use, so the fake embedding matrix doesn't take as much memory.
@@ -174,17 +174,17 @@ class Hotflip(Attacker):
 
         inputs : `JsonDict`
             The model inputs, the same as what is passed to a `Predictor`.
-        input_field_to_attack : `str`, optional (default='tokens')
+        input_field_to_attack : `str`, optional (default=`'tokens'`)
             The field that has the tokens that we're going to be flipping.  This must be a
             `TextField`.
-        grad_input_field : `str`, optional (default='grad_input_1')
+        grad_input_field : `str`, optional (default=`'grad_input_1'`)
             If there is more than one field that gets embedded in your model (e.g., a question and
             a passage, or a premise and a hypothesis), this tells us the key to use to get the
             correct gradients.  This selects from the output of :func:`Predictor.get_gradients`.
-        ignore_tokens : `List[str]`, optional (default=DEFAULT_IGNORE_TOKENS)
+        ignore_tokens : `List[str]`, optional (default=`DEFAULT_IGNORE_TOKENS`)
             These tokens will not be flipped.  The default list includes some simple punctuation,
             OOV and padding tokens, and common control tokens for BERT, etc.
-        target : `JsonDict`, optional (default=None)
+        target : `JsonDict`, optional (default=`None`)
             If given, this will be a `targeted` hotflip attack, where instead of just trying to
             change a model's prediction from what it current is predicting, we try to change it to
             a `specific` target value.  This is a `JsonDict` because it needs to specify the

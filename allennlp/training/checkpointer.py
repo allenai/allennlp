@@ -26,16 +26,19 @@ class Checkpointer(Registrable):
 
     # Parameters
 
-    num_serialized_models_to_keep : `int`, optional (default=2)
+    num_serialized_models_to_keep : `int`, optional (default=`2`)
         Number of previous model checkpoints to retain.  Default is to keep 2 checkpoints.
         A value of None or -1 means all checkpoints will be kept.
-    keep_serialized_model_every_num_seconds : `int`, optional (default=None)
+
+        In a typical AllenNLP configuration file, this argument does not get an entry under the
+        "checkpointer", it gets passed in separately.
+    keep_serialized_model_every_num_seconds : `int`, optional (default=`None`)
         If num_serialized_models_to_keep is not None, then occasionally it's useful to
         save models at a given interval in addition to the last num_serialized_models_to_keep.
         To do so, specify keep_serialized_model_every_num_seconds as the number of seconds
         between permanently saved checkpoints.  Note that this option is only used if
         num_serialized_models_to_keep is not None, otherwise all checkpoints are kept.
-    model_save_interval : `float`, optional (default=None)
+    model_save_interval : `float`, optional (default=`None`)
         If provided, then serialize models every `model_save_interval`
         seconds within single epochs.  In all cases, models are also saved
         at the end of every epoch if `serialization_dir` is provided.

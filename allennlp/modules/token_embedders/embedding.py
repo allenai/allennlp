@@ -50,37 +50,41 @@ class Embedding(TokenEmbedder):
         Size of the dictionary of embeddings (vocabulary size).
     embedding_dim : `int`
         The size of each embedding vector.
-    projection_dim : `int`, (optional, default=None)
+    projection_dim : `int`, optional (default=`None`)
         If given, we add a projection layer after the embedding layer.  This really only makes
         sense if `trainable` is `False`.
-    weight : `torch.FloatTensor`, (optional, default=None)
+    weight : `torch.FloatTensor`, optional (default=`None`)
         A pre-initialised weight matrix for the embedding lookup, allowing the use of
         pretrained vectors.
-    padding_index : `int`, (optional, default=None)
+    padding_index : `int`, optional (default=`None`)
         If given, pads the output with zeros whenever it encounters the index.
-    trainable : `bool`, (optional, default=True)
+    trainable : `bool`, optional (default=`True`)
         Whether or not to optimize the embedding parameters.
-    max_norm : `float`, (optional, default=None)
+    max_norm : `float`, optional (default=`None`)
         If given, will renormalize the embeddings to always have a norm lesser than this
-    norm_type : `float`, (optional, default=2)
+    norm_type : `float`, optional (default=`2`)
         The p of the p-norm to compute for the max_norm option
-    scale_grad_by_freq : `bool`, (optional, default=False)
+    scale_grad_by_freq : `bool`, optional (default=`False`)
         If given, this will scale gradients by the frequency of the words in the mini-batch.
-    sparse : `bool`, (optional, default=False)
+    sparse : `bool`, optional (default=`False`)
         Whether or not the Pytorch backend should use a sparse representation of the embedding weight.
-    vocab_namespace : `str`, (optional, default=None)
+    vocab_namespace : `str`, optional (default=`None`)
         In case of fine-tuning/transfer learning, the model's embedding matrix needs to be
         extended according to the size of extended-vocabulary. To be able to know how much to
         extend the embedding-matrix, it's necessary to know which vocab_namspace was used to
         construct it in the original training. We store vocab_namespace used during the original
         training as an attribute, so that it can be retrieved during fine-tuning.
-    pretrained_file : `str`, (optional, default=None)
+    pretrained_file : `str`, optional (default=`None`)
         Path to a file of word vectors to initialize the embedding matrix. It can be the
         path to a local file or a URL of a (cached) remote file. Two formats are supported:
             * hdf5 file - containing an embedding matrix in the form of a torch.Tensor;
             * text file - an utf-8 encoded text file with space separated fields.
-    vocab : `Vocabulary` (optional, default = None)
+    vocab : `Vocabulary`, optional (default = `None`)
         Used to construct an embedding from a pretrained file.
+
+        In a typical AllenNLP configuration file, this parameter does not get an entry under the
+        "embedding", it gets specified as a top-level parameter, then is passed in to this module
+        separately.
 
     # Returns
 
@@ -226,16 +230,16 @@ class Embedding(TokenEmbedder):
         extended_vocab : `Vocabulary`
             Vocabulary extended from original vocabulary used to construct
             this `Embedding`.
-        vocab_namespace : `str`, (optional, default=None)
+        vocab_namespace : `str`, (optional, default=`None`)
             In case you know what vocab_namespace should be used for extension, you
             can pass it. If not passed, it will check if vocab_namespace used at the
             time of `Embedding` construction is available. If so, this namespace
             will be used or else extend_vocab will be a no-op.
-        extension_pretrained_file : `str`, (optional, default=None)
+        extension_pretrained_file : `str`, (optional, default=`None`)
             A file containing pretrained embeddings can be specified here. It can be
             the path to a local file or an URL of a (cached) remote file. Check format
             details in `from_params` of `Embedding` class.
-        model_path : `str`, (optional, default=None)
+        model_path : `str`, (optional, default=`None`)
             Path traversing the model attributes upto this embedding module.
             Eg. "_text_field_embedder.token_embedder_tokens". This is only useful
             to give a helpful error message when extend_vocab is implicitly called
@@ -348,9 +352,9 @@ def _read_pretrained_embeddings_file(
 
     vocab : `Vocabulary`, required.
         A Vocabulary object.
-    namespace : `str`, (optional, default=tokens)
+    namespace : `str`, (optional, default=`"tokens"`)
         The namespace of the vocabulary to find pretrained embeddings for.
-    trainable : `bool`, (optional, default=True)
+    trainable : `bool`, (optional, default=`True`)
         Whether or not the embedding parameters should be optimized.
 
     # Returns

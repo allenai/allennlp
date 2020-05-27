@@ -1,21 +1,20 @@
 """
 AllenNLP just uses
-`PyTorch optimizers <https://pytorch.org/docs/master/optim.html>`_ ,
+[PyTorch optimizers](https://pytorch.org/docs/master/optim.html),
 with a thin wrapper to allow registering them and instantiating them `from_params`.
 
 The available optimizers are
 
-* `"adadelta" <https://pytorch.org/docs/master/optim.html#torch.optim.Adadelta>`_
-* `"adagrad" <https://pytorch.org/docs/master/optim.html#torch.optim.Adagrad>`_
-* `"adam" <https://pytorch.org/docs/master/optim.html#torch.optim.Adam>`_
-* `"adamw" <https://pytorch.org/docs/master/optim.html#torch.optim.AdamW>`_
-* `"huggingface_adamw"
-  <https://huggingface.co/transformers/main_classes/optimizer_schedules.html#transformers.AdamW>`_
-* `"sparse_adam" <https://pytorch.org/docs/master/optim.html#torch.optim.SparseAdam>`_
-* `"sgd" <https://pytorch.org/docs/master/optim.html#torch.optim.SGD>`_
-* `"rmsprop <https://pytorch.org/docs/master/optim.html#torch.optim.RMSprop>`_
-* `"adamax <https://pytorch.org/docs/master/optim.html#torch.optim.Adamax>`_
-* `"averaged_sgd <https://pytorch.org/docs/master/optim.html#torch.optim.ASGD>`_
+* [adadelta](https://pytorch.org/docs/master/optim.html#torch.optim.Adadelta)
+* [adagrad](https://pytorch.org/docs/master/optim.html#torch.optim.Adagrad)
+* [adam](https://pytorch.org/docs/master/optim.html#torch.optim.Adam)
+* [adamw](https://pytorch.org/docs/master/optim.html#torch.optim.AdamW)
+* [huggingface_adamw](https://huggingface.co/transformers/main_classes/optimizer_schedules.html#transformers.AdamW)
+* [sparse_adam](https://pytorch.org/docs/master/optim.html#torch.optim.SparseAdam)
+* [sgd](https://pytorch.org/docs/master/optim.html#torch.optim.SGD)
+* [rmsprop](https://pytorch.org/docs/master/optim.html#torch.optim.RMSprop)
+* [adamax](https://pytorch.org/docs/master/optim.html#torch.optim.Adamax)
+* [averaged_sgd](https://pytorch.org/docs/master/optim.html#torch.optim.ASGD)
 """
 
 import logging
@@ -56,7 +55,7 @@ def make_parameter_groups(
     dict contains a "parameter group" and groups specific options, e.g., {'params': [list of
     parameters], 'lr': 1e-3, ...}.  Any config option not specified in the additional options (e.g.
     for the default group) is inherited from the top level arguments given in the constructor.  See:
-    https://pytorch.org/docs/0.3.0/optim.html?#per-parameter-options.  See also our
+    <https://pytorch.org/docs/0.3.0/optim.html?#per-parameter-options>.  See also our
     `test_optimizer_parameter_groups` test for an example of how this works in this code.
 
     The dictionary's return type is labeled as `Any`, because it can be a `List[torch.nn.Parameter]`
@@ -143,6 +142,12 @@ class Optimizer(Registrable):
     you use a different name, your code will crash.  Nothing will technically crash if you use a
     name other than `parameter_groups` for your second argument, it will just be annoyingly
     inconsistent.
+
+    Most subclasses of `Optimizer` take both a `model_parameters` and a `parameter_groups`
+    constructor argument.  The `model_parameters` argument does not get an entry in a typical
+    AllenNLP configuration file, but the `parameter_groups` argument does (if you want a non-default
+    value).  See the documentation for the `make_parameter_groups` function for more information on
+    how the `parameter_groups` argument should be specified.
     """
 
     default_implementation = "adam"
@@ -421,12 +426,12 @@ class DenseSparseAdam(Optimizer, torch.optim.Optimizer):
 
     params : `iterable`
         iterable of parameters to optimize or dicts defining parameter groups
-    lr : `float`, optional (default: 1e-3)
+    lr : `float`, optional (default = `1e-3`)
         The learning rate.
-    betas : `Tuple[float, float]`, optional (default: (0.9, 0.999))
+    betas : `Tuple[float, float]`, optional (default = `(0.9, 0.999)`)
         coefficients used for computing running averages of gradient
         and its square.
-    eps : `float`, optional, (default: 1e-8)
+    eps : `float`, optional, (default = `1e-8`)
         A term added to the denominator to improve numerical stability.
     """
 

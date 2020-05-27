@@ -33,7 +33,32 @@ class AllennlpDataset(Dataset):
         self.vocab = vocab
 
 
-class _LazyInstances(IterableDataset):
+class AllennlpLazyDataset(IterableDataset):
+    def __init__(
+        self,
+        deserialize: Callable[[str], Instance] = None,
+        serialize: Callable[[Instance], str] = None,
+        vocab: Vocabulary = None,
+    ) -> None:
+        super().__init__()
+        self.deserialize = deserialize
+        self.serialize = serialize
+        self.vocab = vocab
+
+    def index_with(self, vocab: Vocabulary):
+        self.vocab = vocab
+
+    def __len__(self):
+        """
+        We rely in a couple of places that calling len on the dataloader
+        (which in turn calls len on the dataset) doesn't raise an error.
+        In the case that you have an IterableDataset and you call len, the pytorch dataloader
+        actually spits out a warning - but we need actually calling it to not crash.
+        """
+        return 1
+
+
+class _LazyInstances(AllennlpLazyDataset):
     """
     An `Iterable` that just wraps a thunk for generating instances and calls it for
     each call to `__iter__`.
@@ -48,13 +73,10 @@ class _LazyInstances(IterableDataset):
         serialize: Callable[[Instance], str] = None,
         vocab: Vocabulary = None,
     ) -> None:
-        super().__init__()
+        super().__init__(deserialize, serialize, vocab)
         self.instance_generator = instance_generator
         self.file_path = file_path
         self.cache_file = cache_file
-        self.deserialize = deserialize
-        self.serialize = serialize
-        self.vocab = vocab
 
     def __iter__(self) -> Iterator[Instance]:
         # Case 1: Use cached instances
@@ -87,17 +109,43 @@ class _LazyInstances(IterableDataset):
                     instance.index_fields(self.vocab)
                 yield instance
 
+
+class _MaxLazyInstances(AllennlpLazyDataset):
+    def __init__(self, inner: AllennlpLazyDataset, max_instances: int) -> None:
+        super().__init__()
+        self.inner = inner
+        self.max_instances = max_instances
+
+    def __iter__(self) -> Iterator[Instance]:
+        return itertools.islice(iter(self.inner), self.max_instances)
+
     def index_with(self, vocab: Vocabulary):
-        self.vocab = vocab
+        self.inner.index_with(vocab)
 
     def __len__(self):
-        """
-        We rely in a couple of places that calling len on the dataloader
-        (which in turn calls len on the dataset) doesn't raise an error.
-        In the case that you have an IterableDataset and you call len, the pytorch dataloader
-        actually spits out a warning - but we need actually calling it to not crash.
-        """
-        return 1
+        return len(self.inner)
+
+
+class _DistributedLazyInstances(AllennlpLazyDataset):
+    def __init__(self, inner: AllennlpLazyDataset) -> None:
+        super().__init__()
+        self.inner = inner
+
+    def __iter__(self) -> Iterator[Instance]:
+        from torch import distributed
+
+        logger.info(
+            "Returning instances i%%%d==%d", distributed.get_world_size(), distributed.get_rank()
+        )
+        return itertools.islice(
+            iter(self.inner), distributed.get_rank(), None, distributed.get_world_size()
+        )
+
+    def index_with(self, vocab: Vocabulary):
+        self.inner.index_with(vocab)
+
+    def __len__(self):
+        return len(self.inner)
 
 
 class DatasetReader(Registrable):
@@ -112,23 +160,30 @@ class DatasetReader(Registrable):
 
     # Parameters
 
-    lazy : `bool`, optional (default=False)
+    lazy : `bool`, optional (default=`False`)
         If this is true, `instances()` will return an object whose `__iter__` method
         reloads the dataset each time it's called. Otherwise, `instances()` returns a list.
-    cache_directory : `str`, optional (default=None)
+    cache_directory : `str`, optional (default=`None`)
         If given, we will use this directory to store a cache of already-processed `Instances` in
         every file passed to :func:`read`, serialized (by default, though you can override this) as
         one string-formatted `Instance` per line.  If the cache file for a given `file_path` exists,
         we read the `Instances` from the cache instead of re-processing the data (using
         :func:`_instances_from_cache_file`).  If the cache file does _not_ exist, we will _create_
         it on our first pass through the data (using :func:`_instances_to_cache_file`).
-    max_instances : `int`, optional (default=None)
-        If given, will stop reading after this many instances. This is a useful setting for debugging.
 
         IMPORTANT CAVEAT: It is the _caller's_ responsibility to make sure that this directory is
         unique for any combination of code and parameters that you use.  That is, if you pass a
         directory here, we will use any existing cache files in that directory _regardless of the
         parameters you set for this DatasetReader!_
+    max_instances : `int`, optional (default=`None`)
+        If given, will stop reading after this many instances. This is a useful setting for debugging.
+        Setting this disables caching.
+    manual_distributed_sharding: `bool`, optional (default=`False`)
+        By default, when used in a distributed setting, `DatasetReader` makes sure that each
+        worker process only receives a subset of the data. It does this by reading the whole
+        dataset in each worker, but filtering out the instances that are not needed. If you
+        can implement a faster mechanism that only reads part of the data, set this to True,
+        and do the sharding yourself.
     """
 
     def __init__(
@@ -136,6 +191,7 @@ class DatasetReader(Registrable):
         lazy: bool = False,
         cache_directory: Optional[str] = None,
         max_instances: Optional[int] = None,
+        manual_distributed_sharding: bool = False,
     ) -> None:
         self.lazy = lazy
         self.max_instances = max_instances
@@ -144,6 +200,7 @@ class DatasetReader(Registrable):
             os.makedirs(self._cache_directory, exist_ok=True)
         else:
             self._cache_directory = None
+        self.manual_distributed_sharding = manual_distributed_sharding
 
     def read(self, file_path: str) -> Dataset:
         """
@@ -177,7 +234,7 @@ class DatasetReader(Registrable):
             cache_file = None
 
         if lazy:
-            instances: Iterable[Instance] = _LazyInstances(
+            lazy_instances: AllennlpLazyDataset = _LazyInstances(
                 self._read,
                 file_path,
                 cache_file,
@@ -185,7 +242,10 @@ class DatasetReader(Registrable):
                 self.serialize_instance,
             )
             if self.max_instances is not None:
-                instances = itertools.islice(instances, 0, self.max_instances)
+                lazy_instances = _MaxLazyInstances(lazy_instances, self.max_instances)
+            if not self.manual_distributed_sharding and util.is_distributed():
+                lazy_instances = _DistributedLazyInstances(lazy_instances)
+            return lazy_instances
         else:
             # First we read the instances, either from a cache or from the original file.
             if cache_file and os.path.exists(cache_file):
@@ -198,6 +258,17 @@ class DatasetReader(Registrable):
                     instances = instances[: self.max_instances]
                 else:
                     instances = itertools.islice(instances, 0, self.max_instances)
+            if not self.manual_distributed_sharding and util.is_distributed():
+                from torch import distributed
+
+                logger.info(
+                    "Returning instances i%%%d==%d",
+                    distributed.get_world_size(),
+                    distributed.get_rank(),
+                )
+                instances = itertools.islice(
+                    instances, distributed.get_rank(), None, distributed.get_world_size()
+                )
 
             # Then some validation.
             if not isinstance(instances, list):
@@ -209,13 +280,16 @@ class DatasetReader(Registrable):
                 )
 
             # And finally we write to the cache if we need to.
-            if cache_file and not os.path.exists(cache_file):
+            if (
+                self.max_instances is None
+                and not util.is_distributed()
+                and cache_file is not None
+                and not os.path.exists(cache_file)
+            ):
                 logger.info(f"Caching instances to {cache_file}")
                 self._instances_to_cache_file(cache_file, instances)
 
-            instances = AllennlpDataset(instances)
-
-        return instances
+            return AllennlpDataset(instances)
 
     def _get_cache_location_for_file_path(self, file_path: str) -> str:
         return str(self._cache_directory / util.flatten_filename(str(file_path)))

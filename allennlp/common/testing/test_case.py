@@ -19,8 +19,8 @@ class AllenNlpTestCase:
     PROJECT_ROOT = (pathlib.Path(__file__).parent / ".." / ".." / "..").resolve()
     MODULE_ROOT = PROJECT_ROOT / "allennlp"
     TOOLS_ROOT = MODULE_ROOT / "tools"
-    TESTS_ROOT = MODULE_ROOT / "tests"
-    FIXTURES_ROOT = TESTS_ROOT / "fixtures"
+    TESTS_ROOT = PROJECT_ROOT / "tests"
+    FIXTURES_ROOT = PROJECT_ROOT / "test_fixtures"
 
     def setup_method(self):
         logging.basicConfig(

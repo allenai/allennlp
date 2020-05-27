@@ -38,11 +38,11 @@ version :
 
 .PHONY : lint
 lint :
-	flake8 ./scripts $(SRC)
+	flake8 ./scripts ./tests $(SRC)
 
 .PHONY : format
 format :
-	black --check ./scripts $(SRC)
+	black --check ./scripts ./tests $(SRC)
 
 .PHONY : typecheck
 typecheck :
@@ -54,15 +54,18 @@ typecheck :
 
 .PHONY : test
 test :
-	pytest --color=yes -rf --durations=40 -k "not sniff_test" $(SRC)
+	pytest --color=yes -rf --durations=40
 
 .PHONY : test-with-cov
 test-with-cov :
-	pytest --color=yes -rf --cov-config=.coveragerc --cov=$(SRC) --durations=40 -k "not sniff_test" $(SRC)
+	pytest --color=yes -rf --durations=40 \
+			--cov-config=.coveragerc \
+			--cov=$(SRC) \
+			--cov-report=xml
 
 .PHONY : gpu-test
 gpu-test :
-	pytest --color=yes -v -rf -m gpu $(SRC)
+	pytest --color=yes -v -rf -m gpu
 
 #
 # Setup helpers
@@ -127,6 +130,11 @@ clean :
 	rm -rf $(MD_DOCS_TGT)
 	rm -rf $(MD_DOCS_API_ROOT)
 	rm -f $(MD_DOCS_ROOT)*.md
+	rm -rf .pytest_cache/
+	rm -rf allennlp.egg-info/
+	rm -rf dist/
+	rm -rf build/
+	find . | grep -E '(\.mypy_cache|__pycache__|\.pyc|\.pyo$$)' | xargs rm -rf
 
 #
 # Docker helpers.

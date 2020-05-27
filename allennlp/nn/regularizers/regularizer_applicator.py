@@ -16,7 +16,7 @@ class RegularizerApplicator(FromParams):
         """
         # Parameters
 
-        regexes : List[Tuple[str, Regularizer]], optional (default = None)
+        regexes : `List[Tuple[str, Regularizer]]`, optional (default = `None`)
             A sequence of pairs (regex, Regularizer), where each Regularizer
             applies to the parameters its regex matches (and that haven't previously
             been matched).
@@ -27,7 +27,7 @@ class RegularizerApplicator(FromParams):
         """
         # Parameters
 
-        module : torch.nn.Module, required
+        module : `torch.nn.Module`, required
             The module to regularize.
         """
         accumulator = 0.0

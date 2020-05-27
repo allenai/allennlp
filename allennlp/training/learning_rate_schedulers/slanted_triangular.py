@@ -29,20 +29,22 @@ class SlantedTriangular(LearningRateScheduler):
 
     # Parameters
 
+    optimizer : `torch.optim.Optimizer`
+        This argument does not get an entry in a configuration file for the object.
     num_epochs : `int`, required.
         The total number of epochs for which the model should be trained.
     num_steps_per_epoch : `int`, required.
         The number of steps (updates, batches) per training epoch.
-    cut_frac : `float`, optional (default = 0.1).
+    cut_frac : `float`, optional (default = `0.1`).
         The fraction of the steps to increase the learning rate.
-    ratio : `float`, optional (default = 32).
+    ratio : `float`, optional (default = `32`).
         The ratio of the smallest to the (largest) base learning rate.
-    gradual_unfreezing : `bool`, optional (default = False).
+    gradual_unfreezing : `bool`, optional (default = `False`).
         Whether gradual unfreezing should be used.
-    discriminative_fine_tuning : `bool`, optional (default = False).
+    discriminative_fine_tuning : `bool`, optional (default = `False`).
         Whether discriminative fine-tuning (different learning rates per layer)
         are used.
-    decay_factor : `float`, optional (default = 0.38).
+    decay_factor : `float`, optional (default = `0.38`).
         The decay factor by which the learning rate is reduced with
         discriminative fine-tuning when going a layer deeper.
     """

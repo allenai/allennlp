@@ -23,17 +23,18 @@ class CosineWithRestarts(LearningRateScheduler):
     # Parameters
 
     optimizer : `torch.optim.Optimizer`
+        This argument does not get an entry in a configuration file for the object.
     t_initial : `int`
         The number of iterations (epochs) within the first cycle.
-    t_mul : `float`, optional (default=1)
+    t_mul : `float`, optional (default=`1`)
         Determines the number of iterations (epochs) in the i-th decay cycle,
         which is the length of the last cycle multiplied by `t_mul`.
-    eta_min : `float`, optional (default=0)
+    eta_min : `float`, optional (default=`0`)
         The minimum learning rate.
-    eta_mul : `float`, optional (default=1)
+    eta_mul : `float`, optional (default=`1`)
         Determines the initial learning rate for the i-th decay cycle, which is the
         last initial learning rate multiplied by `m_mul`.
-    last_epoch : `int`, optional (default=-1)
+    last_epoch : `int`, optional (default=`-1`)
         The index of the last epoch. This is used when restarting.
     """
 

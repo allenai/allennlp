@@ -30,10 +30,12 @@ class BucketBatchSampler(BatchSampler):
 
     # Parameters
 
-    data_source: `data.Dataset`, required,
+    data_source: `data.Dataset`, required
         The pytorch `Dataset` of allennlp Instances to bucket.
 
-    batch_size : `int`, required.
+        In a typical AllenNLP configuration file, this parameter does not get an entry under the
+        "batch_sampler", it gets constructed separately.
+    batch_size : `int`, required
         The size of each batch of instances yielded when calling the dataloader.
 
     sorting_keys : `List[str]`, optional
@@ -52,12 +54,12 @@ class BucketBatchSampler(BatchSampler):
         call `Instance.get_padding_lengths()` to see a list of all keys used in your data.  You
         should give one or more of those as the sorting keys here.
 
-    padding_noise : `float`, optional (default=.1)
+    padding_noise : `float`, optional (default=`.1`)
         When sorting by padding length, we add a bit of noise to the lengths, so that the sorting
         isn't deterministic.  This parameter determines how much noise we add, as a percentage of
         the actual padding value for each instance.
 
-    drop_last : `bool`, (default = False)
+    drop_last : `bool`, (default = `False`)
         If `True`, the sampler will drop the last batch if
         its size would be less than batch_size`.
 
@@ -134,7 +136,7 @@ class BucketBatchSampler(BatchSampler):
 
         instances : `Iterable[Instance]`, required.
             The dataset to guess sorting keys for.
-        num_instances : `int`, optional (default = 10)
+        num_instances : `int`, optional (default = `10`)
             The number of instances to use to guess sorting keys. Typically
             the default value is completely sufficient, but if your instances
             are not homogeneous, you might need more.

@@ -19,11 +19,14 @@ codecov
 # Optional dependencies, which we install for testing purposes.
 matplotlib>=2.2.3
 
-# Required to run sanic tests
-aiohttp
-
 # Required for automatic mixed precision (AMP) training
 git+https://github.com/NVIDIA/apex.git@master
+
+# For mocking HTTP requests/responses.
+responses>=0.7
+
+# For running tests that aren't 100% reliable.
+flaky
 
 #### DOC-RELATED PACKAGES ####
 
@@ -31,11 +34,11 @@ git+https://github.com/NVIDIA/apex.git@master
 ruamel.yaml
 
 # Generating markdown files from Python modules.
-git+https://github.com/NiklasRosenstein/pydoc-markdown.git@b469839ceb598df3d7e7126b81bff88dfd1343e3
+git+https://github.com/NiklasRosenstein/pydoc-markdown.git@f0bf8af1db4f11581c19d206d4ed1ab34b4854c1
 
 markdown-include==0.5.1
 # Package for the material theme for mkdocs
-mkdocs-material==5.1.6
+mkdocs-material==5.2.2
 
 #### PACKAGE-UPLOAD PACKAGES ####
 

@@ -35,16 +35,16 @@ class PretrainedTransformerTokenizer(Tokenizer):
 
     model_name : `str`
         The name of the pretrained wordpiece tokenizer to use.
-    add_special_tokens : `bool`, optional, (default=True)
+    add_special_tokens : `bool`, optional, (default=`True`)
         If set to `True`, the sequences will be encoded with the special tokens relative
         to their model.
-    max_length : `int`, optional (default=None)
+    max_length : `int`, optional (default=`None`)
         If set to a number, will limit the total sequence returned so that it has a maximum length.
         If there are overflowing tokens, those will be added to the returned dictionary
-    stride : `int`, optional (default=0)
+    stride : `int`, optional (default=`0`)
         If set to a number along with max_length, the overflowing tokens returned will contain some tokens
         from the main sequence returned. The value of this argument defines the number of additional tokens.
-    truncation_strategy : `str`, optional (default='longest_first')
+    truncation_strategy : `str`, optional (default=`'longest_first'`)
         String selected in the following options:
         - 'longest_first' (default) Iteratively reduce the inputs sequence until the input is under max_length
         starting from the longest one at each token (when there is a pair of input sequences)
@@ -85,22 +85,20 @@ class PretrainedTransformerTokenizer(Tokenizer):
 
         self._tokenizer_lowercases = self.tokenizer_lowercases(self.tokenizer)
 
-        # Reverse-engineer the tokenizer for two sequences
-        tokenizer_with_special_tokens = AutoTokenizer.from_pretrained(
-            model_name, add_special_tokens=True, **tokenizer_kwargs
-        )
-        dummy_output = tokenizer_with_special_tokens.encode_plus(
-            " 1",  # "a" and "b" get tokenized into multiple word pieces, but for now, "1" and "2" do not.
-            " 2",
-            add_special_tokens=True,
-            return_token_type_ids=True,
-            return_attention_mask=False,
-        )
-        dummy_a = self.tokenizer.encode(" 1", add_special_tokens=False)[0]
-        assert dummy_a in dummy_output["input_ids"]
-        dummy_b = self.tokenizer.encode(" 2", add_special_tokens=False)[0]
-        assert dummy_b in dummy_output["input_ids"]
+        try:
+            self._reverse_engineer_special_tokens("a", "b", model_name, tokenizer_kwargs)
+        except AssertionError:
+            # For most transformer models, "a" and "b" work just fine as dummy tokens.  For a few,
+            # they don't, and so we use "1" and "2" instead.
+            self._reverse_engineer_special_tokens("1", "2", model_name, tokenizer_kwargs)
 
+    def _reverse_engineer_special_tokens(
+        self,
+        token_a: str,
+        token_b: str,
+        model_name: str,
+        tokenizer_kwargs: Optional[Dict[str, Any]],
+    ):
         # storing the special tokens
         self.sequence_pair_start_tokens = []
         self.sequence_pair_mid_tokens = []
@@ -108,6 +106,29 @@ class PretrainedTransformerTokenizer(Tokenizer):
         # storing token type ids for the sequences
         self.sequence_pair_first_token_type_id = None
         self.sequence_pair_second_token_type_id = None
+
+        # storing the special tokens
+        self.single_sequence_start_tokens = []
+        self.single_sequence_end_tokens = []
+        # storing token type id for the sequence
+        self.single_sequence_token_type_id = None
+
+        # Reverse-engineer the tokenizer for two sequences
+        tokenizer_with_special_tokens = AutoTokenizer.from_pretrained(
+            model_name, add_special_tokens=True, **tokenizer_kwargs
+        )
+        dummy_output = tokenizer_with_special_tokens.encode_plus(
+            token_a,
+            token_b,
+            add_special_tokens=True,
+            return_token_type_ids=True,
+            return_attention_mask=False,
+        )
+        dummy_a = self.tokenizer.encode(token_a, add_special_tokens=False, add_prefix_space=True)[0]
+        assert dummy_a in dummy_output["input_ids"]
+        dummy_b = self.tokenizer.encode(token_b, add_special_tokens=False, add_prefix_space=True)[0]
+        assert dummy_b in dummy_output["input_ids"]
+        assert dummy_a != dummy_b
 
         seen_dummy_a = False
         seen_dummy_b = False
@@ -156,14 +177,12 @@ class PretrainedTransformerTokenizer(Tokenizer):
 
         # Reverse-engineer the tokenizer for one sequence
         dummy_output = tokenizer_with_special_tokens.encode_plus(
-            " 1", add_special_tokens=True, return_token_type_ids=True, return_attention_mask=False
+            token_a,
+            add_special_tokens=True,
+            return_token_type_ids=True,
+            return_attention_mask=False,
+            add_prefix_space=True
         )
-
-        # storing the special tokens
-        self.single_sequence_start_tokens = []
-        self.single_sequence_end_tokens = []
-        # storing token type id for the sequence
-        self.single_sequence_token_type_id = None
 
         seen_dummy_a = False
         for token_id, token_type_id in zip(

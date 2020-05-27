@@ -53,12 +53,15 @@ class ExponentialMovingAverage(MovingAverage):
 
     parameters : `Iterable[Tuple[str, Parameter]]`, required
         The parameters whose averages we'll be tracking.
-    decay : `float`, optional (default = 0.9999)
+
+        In a typical AllenNLP configuration file, this argument does not get an entry under the
+        "moving_average", it gets passed in separately.
+    decay : `float`, optional (default = `0.9999`)
         The decay rate that will be used if `num_updates` is not passed
         (and that will be used as an upper bound if `num_updates` is passed).
-    numerator : `float`, optional (default = 1.0)
+    numerator : `float`, optional (default = `1.0`)
         The numerator used to compute the decay rate if `num_updates` is passed.
-    denominator : `float`, optional (default = 10.0)
+    denominator : `float`, optional (default = `10.0`)
         The denominator used to compute the decay rate if `num_updates` is passed.
     """
 
@@ -85,7 +88,7 @@ class ExponentialMovingAverage(MovingAverage):
             `min(decay, (numerator + num_updates) / (denominator + num_updates))`
 
         (This logic is based on the Tensorflow exponential moving average
-         https://www.tensorflow.org/api_docs/python/tf/train/ExponentialMovingAverage)
+         <https://www.tensorflow.org/api_docs/python/tf/train/ExponentialMovingAverage>)
         """
         if num_updates is not None:
             decay = min(

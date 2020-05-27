@@ -6,7 +6,9 @@ import re
 import time
 import traceback
 from contextlib import contextmanager
-from typing import Any, Dict, Iterator, List, Optional, Tuple
+from typing import Any, Dict, Iterator, List, Optional, Tuple, Union
+
+from allennlp.common.util import int_to_device
 
 try:
     from apex import amp
@@ -49,7 +51,7 @@ class Trainer(Registrable):
     def __init__(
         self,
         serialization_dir: str,
-        cuda_device: int = -1,
+        cuda_device: Union[int, torch.device] = -1,
         distributed: bool = False,
         local_rank: int = 0,
         world_size: int = 1,
@@ -65,27 +67,18 @@ class Trainer(Registrable):
                 "our Trainer always uses a single GPU per process."
             )
 
-        if not isinstance(cuda_device, int):
-            raise ConfigurationError("Expected an int for cuda_device, got {}".format(cuda_device))
-
         if distributed and world_size <= 1:
             raise ConfigurationError(
-                "Distributed training can be performed only with more than 1 GPU device. Check "
+                "Distributed training can be performed only with more than 1 device. Check "
                 "`cuda_device` key in the experiment configuration."
             )
 
-        self.cuda_device = cuda_device
+        self.cuda_device = int_to_device(cuda_device)
 
         self._distributed = distributed
         self._rank = local_rank
         self._master = self._rank == 0
         self._world_size = world_size
-
-    def _move_to_gpu(self, model: Model) -> Model:
-        if self.cuda_device != -1:
-            return model.cuda(self.cuda_device)
-        else:
-            return model
 
     def train(self) -> Dict[str, Any]:
         """
@@ -109,8 +102,8 @@ class Trainer(Registrable):
 class BatchCallback(Registrable):
     """
     An optional callback that you can pass to the `GradientDescentTrainer` that will be called at
-    the end of every batch, during both training and validation.  We have no default implementation
-    of this, but you can implement your own callback and do whatever you want, such as saving
+    the end of every batch, during both training and validation.  The default implementation
+    does nothing. You can implement your own callback and do whatever you want, such as saving
     predictions to disk or extra logging.
     """
 
@@ -122,22 +115,33 @@ class BatchCallback(Registrable):
         epoch: int,
         batch_number: int,
         is_training: bool,
+        is_master: bool,
     ) -> None:
-        raise NotImplementedError
+        pass
+
+
+BatchCallback.register("null")(BatchCallback)
 
 
 class EpochCallback(Registrable):
     """
     An optional callback that you can pass to the `GradientDescentTrainer` that will be called at
-    the end of every epoch (and before the start of training, with `epoch=-1`). We have no default
-    implementation of this, but you can implement your own callback and do whatever you want, such
+    the end of every epoch (and before the start of training, with `epoch=-1`). The default
+    implementation does nothing. You can implement your own callback and do whatever you want, such
     as additional modifications of the trainer's state in between epochs.
     """
 
     def __call__(
-        self, trainer: "GradientDescentTrainer", metrics: Dict[str, Any], epoch: int
+        self,
+        trainer: "GradientDescentTrainer",
+        metrics: Dict[str, Any],
+        epoch: int,
+        is_master: bool,
     ) -> None:
-        raise NotImplementedError
+        pass
+
+
+EpochCallback.register("null")(EpochCallback)
 
 
 @Trainer.register("gradient_descent", constructor="from_partial_objects")
@@ -168,6 +172,9 @@ class GradientDescentTrainer(Trainer):
         on the correct device. (If you are using our `train` command this will be
         handled for you.)
 
+        In a typical AllenNLP configuration file, this parameter does not get an entry under the
+        "trainer", it gets constructed separately.
+
     optimizer : `torch.nn.Optimizer`, required.
         An instance of a Pytorch Optimizer, instantiated with the parameters of the
         model to be optimized.
@@ -175,38 +182,47 @@ class GradientDescentTrainer(Trainer):
     data_loader : `DataLoader`, required.
         A pytorch `DataLoader` containing your `Dataset`, yielding padded indexed batches.
 
-    patience : `Optional[int] > 0`, optional (default=None)
+        In a typical AllenNLP configuration file, this parameter does not get an entry under the
+        "trainer", it gets constructed separately.
+
+    patience : `Optional[int] > 0`, optional (default=`None`)
         Number of epochs to be patient before early stopping: the training is stopped
         after `patience` epochs with no improvement. If given, it must be `> 0`.
         If None, early stopping is disabled.
 
-    validation_metric : `str`, optional (default="loss")
+    validation_metric : `str`, optional (default=`"loss"`)
         Validation metric to measure for whether to stop training using patience
         and whether to serialize an `is_best` model each epoch. The metric name
         must be prepended with either "+" or "-", which specifies whether the metric
         is an increasing or decreasing function.
 
-    validation_data_loader : `DataLoader`, optional (default=None)
+    validation_data_loader : `DataLoader`, optional (default=`None`)
         A `DataLoader` to use for the validation set.  If `None`, then
         use the training `DataLoader` with the validation data.
 
-    num_epochs : `int`, optional (default = 20)
+        In a typical AllenNLP configuration file, this parameter does not get an entry under the
+        "trainer", it gets constructed separately.
+
+    num_epochs : `int`, optional (default = `20`)
         Number of training epochs.
 
-    serialization_dir : str, optional (default=None)
+    serialization_dir : `str`, optional (default=`None`)
         Path to directory for saving and loading model files. Models will not be saved if
         this parameter is not passed.
 
-    checkpointer : `Checkpointer`, optional (default=None)
+        In a typical AllenNLP configuration file, this parameter does not get an entry under the
+        "trainer", it gets constructed separately.
+
+    checkpointer : `Checkpointer`, optional (default=`None`)
         A `Checkpointer` is responsible for periodically saving model weights.  If none is given
         here, we will construct one with default parameters.
 
-    cuda_device : `int`, optional (default = -1)
+    cuda_device : `int`, optional (default = `-1`)
         An integer specifying the CUDA device(s) to use for this process. If -1, the CPU is used.
         Data parallelism is controlled at the allennlp train level, so each trainer will have a single
         GPU.
 
-    grad_norm : `float`, optional, (default = None).
+    grad_norm : `float`, optional, (default = `None`).
         If provided, gradient norms will be rescaled to have a maximum of this value.
 
     grad_clipping : `float`, optional (default = `None`).
@@ -214,7 +230,7 @@ class GradientDescentTrainer(Trainer):
         maximum of this value.  If you are getting `NaNs` in your gradients during training
         that are not solved by using `grad_norm`, you may need this.
 
-    learning_rate_scheduler : `LearningRateScheduler`, optional (default = None)
+    learning_rate_scheduler : `LearningRateScheduler`, optional (default = `None`)
         If specified, the learning rate will be decayed with respect to
         this schedule at the end of each epoch (or batch, if the scheduler implements
         the `step_batch` method). If you use `torch.optim.lr_scheduler.ReduceLROnPlateau`,
@@ -222,7 +238,7 @@ class GradientDescentTrainer(Trainer):
         To support updating the learning rate on every batch, this can optionally implement
         `step_batch(batch_num_total)` which updates the learning rate given the batch number.
 
-    momentum_scheduler : `MomentumScheduler`, optional (default = None)
+    momentum_scheduler : `MomentumScheduler`, optional (default = `None`)
         If specified, the momentum will be updated at the end of each batch or epoch
         according to the schedule.
 
@@ -230,7 +246,7 @@ class GradientDescentTrainer(Trainer):
         If this is not provided, we will construct a `TensorboardWriter` with default
         parameters and use that.
 
-    moving_average : `MovingAverage`, optional, (default = None)
+    moving_average : `MovingAverage`, optional, (default = `None`)
         If provided, we will maintain moving averages for all parameters. During training, we
         employ a shadow variable for each parameter, which maintains the moving average. During
         evaluation, we backup the original parameters and assign the moving averages to corresponding
@@ -238,26 +254,36 @@ class GradientDescentTrainer(Trainer):
         parameters. This is necessary because we want the saved model to perform as well as the validated
         model if we load it later. But this may cause problems if you restart the training from checkpoint.
 
-    batch_callbacks : `List[BatchCallback]`, optional (default = None)
+    batch_callbacks : `List[BatchCallback]`, optional (default = `None`)
         A list of callbacks that will be called at the end of every batch, during both train and
         validation.
 
-    epoch_callbacks : `List[EpochCallback]`, optional (default = None)
+    epoch_callbacks : `List[EpochCallback]`, optional (default = `None`)
         A list of callbacks that will be called at the end of every epoch, and at the start of
         training (with epoch = -1).
 
-    distributed : `bool`, optional, (default = False)
+    distributed : `bool`, optional, (default = `False`)
         If set, PyTorch's `DistributedDataParallel` is used to train the model in multiple GPUs. This also
         requires `world_size` to be greater than 1.
 
-    local_rank : `int`, optional, (default = 0)
+        In a typical AllenNLP configuration file, this parameter does not get an entry under the
+        "trainer", it gets constructed separately (you need a top-level "distributed" key, next to
+        the "trainer" entry, that specifies a list of "cuda_devices").
+
+    local_rank : `int`, optional, (default = `0`)
         This is the unique identifier of the `Trainer` in a distributed process group. The GPU device id is
         used as the rank.
 
-    world_size : `int`, (default = 1)
+        In a typical AllenNLP configuration file, this parameter does not get an entry under the
+        "trainer", it gets constructed separately.
+
+    world_size : `int`, (default = `1`)
         The number of `Trainer` workers participating in the distributed training.
 
-    num_gradient_accumulation_steps : `int`, optional, (default = 1)
+        In a typical AllenNLP configuration file, this parameter does not get an entry under the
+        "trainer", it gets constructed separately.
+
+    num_gradient_accumulation_steps : `int`, optional, (default = `1`)
         Gradients are accumulated for the given number of steps before doing an optimizer step. This can
         be useful to accommodate batches that are larger than the RAM size. Refer [Thomas Wolf's
         post][0] for details on Gradient Accumulation.
@@ -376,7 +402,9 @@ class GradientDescentTrainer(Trainer):
         # these places: `model.__call__`, `model.train` and `model.eval`.
         if self._distributed:
             self._pytorch_model = DistributedDataParallel(
-                self.model, device_ids=[self.cuda_device], find_unused_parameters=True
+                self.model,
+                device_ids=None if self.cuda_device == torch.device("cpu") else [self.cuda_device],
+                find_unused_parameters=True,
             )
         else:
             self._pytorch_model = self.model
@@ -549,7 +577,7 @@ class GradientDescentTrainer(Trainer):
                 train_reg_loss,
                 batches_this_epoch,
                 world_size=self._world_size,
-                cuda_device=[self.cuda_device],
+                cuda_device=self.cuda_device,
             )
 
             # Update memory usage
@@ -558,8 +586,8 @@ class GradientDescentTrainer(Trainer):
             for gpu, memory in common_util.gpu_memory_mb().items():
                 current_gpu_usages[gpu] = memory
 
-            # Updating tqdm only for the master as the trainers wouldn't have one
             if self._master:
+                # Updating tqdm only for the master as the trainers wouldn't have one
                 description = training_util.description_from_metrics(metrics)
                 batch_group_generator_tqdm.set_description(description, refresh=False)
                 self._tensorboard.log_batch(
@@ -573,17 +601,17 @@ class GradientDescentTrainer(Trainer):
                     current_gpu_usages,
                 )
 
-            if self._master:
                 self._checkpointer.maybe_save_checkpoint(self, epoch, batches_this_epoch)
-                for callback in self._batch_callbacks:
-                    callback(
-                        self,
-                        batch_group,
-                        batch_group_outputs,
-                        epoch,
-                        batches_this_epoch,
-                        is_training=True,
-                    )
+            for callback in self._batch_callbacks:
+                callback(
+                    self,
+                    batch_group,
+                    batch_group_outputs,
+                    epoch,
+                    batches_this_epoch,
+                    is_training=True,
+                    is_master=self._master,
+                )
 
         if self._distributed and not done_early:
             logger.warning(
@@ -606,7 +634,7 @@ class GradientDescentTrainer(Trainer):
             batches_this_epoch,
             reset=True,
             world_size=self._world_size,
-            cuda_device=[self.cuda_device],
+            cuda_device=self.cuda_device,
         )
         metrics["cpu_memory_MB"] = peak_cpu_usage
         for (gpu_num, memory) in gpu_usage:
@@ -678,21 +706,21 @@ class GradientDescentTrainer(Trainer):
                 val_reg_loss,
                 batches_this_epoch,
                 world_size=self._world_size,
-                cuda_device=[self.cuda_device],
+                cuda_device=self.cuda_device,
             )
             description = training_util.description_from_metrics(val_metrics)
             val_generator_tqdm.set_description(description, refresh=False)
 
-            if self._master:
-                for callback in self._batch_callbacks:
-                    callback(
-                        self,
-                        [batch],
-                        [batch_outputs],
-                        epoch,
-                        batches_this_epoch,
-                        is_training=False,
-                    )
+            for callback in self._batch_callbacks:
+                callback(
+                    self,
+                    [batch],
+                    [batch_outputs],
+                    epoch,
+                    batches_this_epoch,
+                    is_training=False,
+                    is_master=self._master,
+                )
 
         if self._distributed and not done_early:
             logger.warning(
@@ -738,7 +766,7 @@ class GradientDescentTrainer(Trainer):
             metrics["best_validation_" + key] = value
 
         for callback in self._epoch_callbacks:
-            callback(self, metrics={}, epoch=-1)
+            callback(self, metrics={}, epoch=-1, is_master=self._master)
 
         for epoch in range(epoch_counter, self._num_epochs):
             epoch_start_time = time.time()
@@ -770,7 +798,7 @@ class GradientDescentTrainer(Trainer):
                         num_batches,
                         reset=True,
                         world_size=self._world_size,
-                        cuda_device=[self.cuda_device],
+                        cuda_device=self.cuda_device,
                     )
 
                     # Check validation metric for early stopping
@@ -829,7 +857,7 @@ class GradientDescentTrainer(Trainer):
                 dist.barrier()
 
             for callback in self._epoch_callbacks:
-                callback(self, metrics=metrics, epoch=epoch)
+                callback(self, metrics=metrics, epoch=epoch, is_master=self._master)
 
             epoch_elapsed_time = time.time() - epoch_start_time
             logger.info("Epoch duration: %s", datetime.timedelta(seconds=epoch_elapsed_time))

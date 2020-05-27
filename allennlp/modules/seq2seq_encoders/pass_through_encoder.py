@@ -37,7 +37,7 @@ class PassThroughEncoder(Seq2SeqEncoder):
 
         inputs : `torch.Tensor`, required.
             A tensor of shape (batch_size, timesteps, input_dim)
-        mask : `torch.BoolTensor`, optional (default = None).
+        mask : `torch.BoolTensor`, optional (default = `None`).
             A tensor of shape (batch_size, timesteps).
 
         # Returns

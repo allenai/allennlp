@@ -43,15 +43,15 @@ def enumerate_spans(
     sentence : `List[T]`, required.
         The sentence to generate spans for. The type is generic, as this function
         can be used with strings, or Spacy `Tokens` or other sequences.
-    offset : `int`, optional (default = 0)
+    offset : `int`, optional (default = `0`)
         A numeric offset to add to all span start and end indices. This is helpful
         if the sentence is part of a larger structure, such as a document, which
         the indices need to respect.
-    max_span_width : `int`, optional (default = None)
+    max_span_width : `int`, optional (default = `None`)
         The maximum length of spans which should be included. Defaults to len(sentence).
-    min_span_width : `int`, optional (default = 1)
+    min_span_width : `int`, optional (default = `1`)
         The minimum length of spans which should be included. Defaults to 1.
-    filter_function : `Callable[[List[T]], bool]`, optional (default = None)
+    filter_function : `Callable[[List[T]], bool]`, optional (default = `None`)
         A function mapping sequences of the passed type T to a boolean value.
         If `True`, the span is included in the returned spans from the
         sentence, otherwise it is excluded..
@@ -85,15 +85,15 @@ def bio_tags_to_spans(
 
     # Parameters
 
-    tag_sequence : List[str], required.
+    tag_sequence : `List[str]`, required.
         The integer class labels for a sequence.
-    classes_to_ignore : List[str], optional (default = None).
+    classes_to_ignore : `List[str]`, optional (default = `None`).
         A list of string class labels `excluding` the bio tag
         which should be ignored when extracting spans.
 
     # Returns
 
-    spans : List[TypedStringSpan]
+    spans : `List[TypedStringSpan]`
         The typed, extracted spans from the sequence, in the format (label, (span_start, span_end)).
         Note that the label `does not` contain any BIO tag prefixes.
     """
@@ -157,15 +157,15 @@ def iob1_tags_to_spans(
 
     # Parameters
 
-    tag_sequence : List[str], required.
+    tag_sequence : `List[str]`, required.
         The integer class labels for a sequence.
-    classes_to_ignore : List[str], optional (default = None).
+    classes_to_ignore : `List[str]`, optional (default = `None`).
         A list of string class labels `excluding` the bio tag
         which should be ignored when extracting spans.
 
     # Returns
 
-    spans : List[TypedStringSpan]
+    spans : `List[TypedStringSpan]`
         The typed, extracted spans from the sequence, in the format (label, (span_start, span_end)).
         Note that the label `does not` contain any BIO tag prefixes.
     """
@@ -237,7 +237,7 @@ def bioul_tags_to_spans(
 
     tag_sequence : `List[str]`, required.
         The tag sequence encoded in BIOUL, e.g. ["B-PER", "L-PER", "O"].
-    classes_to_ignore : `List[str]`, optional (default = None).
+    classes_to_ignore : `List[str]`, optional (default = `None`).
         A list of string class labels `excluding` the bio tag
         which should be ignored when extracting spans.
 
@@ -293,7 +293,7 @@ def to_bioul(tag_sequence: List[str], encoding: str = "IOB1") -> List[str]:
 
     tag_sequence : `List[str]`, required.
         The tag sequence encoded in IOB1, e.g. ["I-PER", "I-PER", "O"].
-    encoding : `str`, optional, (default = `IOB1`).
+    encoding : `str`, optional, (default = `"IOB1"`).
         The encoding type to convert from. Must be either "IOB1" or "BIO".
 
     # Returns
@@ -398,15 +398,15 @@ def bmes_tags_to_spans(
 
     # Parameters
 
-    tag_sequence : List[str], required.
+    tag_sequence : `List[str]`, required.
         The integer class labels for a sequence.
-    classes_to_ignore : List[str], optional (default = None).
+    classes_to_ignore : `List[str]`, optional (default = `None`).
         A list of string class labels `excluding` the bio tag
         which should be ignored when extracting spans.
 
     # Returns
 
-    spans : List[TypedStringSpan]
+    spans : `List[TypedStringSpan]`
         The typed, extracted spans from the sequence, in the format (label, (span_start, span_end)).
         Note that the label `does not` contain any BIO tag prefixes.
     """

@@ -47,12 +47,12 @@ class ElmoLstm(_EncoderBase):
         The number of bidirectional LSTMs to use.
     requires_grad : `bool`, optional
         If True, compute gradient of ELMo parameters for fine tuning.
-    recurrent_dropout_probability : `float`, optional (default = 0.0)
+    recurrent_dropout_probability : `float`, optional (default = `0.0`)
         The dropout probability to be used in a dropout scheme as stated in
         [A Theoretically Grounded Application of Dropout in Recurrent Neural Networks][0].
-    state_projection_clip_value : `float`, optional, (default = None)
+    state_projection_clip_value : `float`, optional, (default = `None`)
         The magnitude with which to clip the hidden_state after projecting it.
-    memory_cell_clip_value : `float`, optional, (default = None)
+    memory_cell_clip_value : `float`, optional, (default = `None`)
         The magnitude with which to clip the memory cell.
     """
 
@@ -176,7 +176,7 @@ class ElmoLstm(_EncoderBase):
 
         inputs : `PackedSequence`, required.
             A batch first `PackedSequence` to run the stacked LSTM over.
-        initial_state : `Tuple[torch.Tensor, torch.Tensor]`, optional, (default = None)
+        initial_state : `Tuple[torch.Tensor, torch.Tensor]`, optional, (default = `None`)
             A tuple (state, memory) representing the initial hidden state and memory
             of the LSTM, with shape (num_layers, batch_size, 2 * hidden_size) and
             (num_layers, batch_size, 2 * cell_size) respectively.
