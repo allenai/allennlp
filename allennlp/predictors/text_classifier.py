@@ -1,4 +1,3 @@
-from copy import deepcopy
 from typing import List, Dict
 
 from overrides import overrides
@@ -42,7 +41,7 @@ class TextClassifierPredictor(Predictor):
     def predictions_to_labeled_instances(
         self, instance: Instance, outputs: Dict[str, numpy.ndarray]
     ) -> List[Instance]:
-        new_instance = deepcopy(instance)
+        new_instance = instance.duplicate()
         label = numpy.argmax(outputs["probs"])
         new_instance.add_field("label", LabelField(int(label), skip_indexing=True))
         return [new_instance]

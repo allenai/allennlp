@@ -1,3 +1,4 @@
+from copy import deepcopy
 from typing import Dict, Generic, List, TypeVar
 
 import torch
@@ -120,3 +121,6 @@ class Field(Generic[DataArray]):
 
     def __len__(self):
         raise NotImplementedError
+
+    def duplicate(self):
+        return deepcopy(self)
