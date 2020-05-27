@@ -12,7 +12,9 @@ from .sampler_test import SamplerTest
 class TestMaxTokensSampler(SamplerTest):
     def test_create_batches_groups_correctly(self):
         dataset = AllennlpDataset(self.instances, vocab=self.vocab)
-        sampler = MaxTokensBatchSampler(dataset, max_tokens=8, padding_noise=0, sorting_keys=["text"])
+        sampler = MaxTokensBatchSampler(
+            dataset, max_tokens=8, padding_noise=0, sorting_keys=["text"]
+        )
 
         grouped_instances = []
         for indices in sampler:
@@ -74,13 +76,7 @@ class TestMaxTokensSampler(SamplerTest):
         assert sampler.padding_noise == 0.1
         assert sampler.max_tokens == 32
 
-        params = Params(
-            {
-                "sorting_keys": sorting_keys,
-                "padding_noise": 0.5,
-                "max_tokens": 100,
-            }
-        )
+        params = Params({"sorting_keys": sorting_keys, "padding_noise": 0.5, "max_tokens": 100,})
 
         sampler = MaxTokensBatchSampler.from_params(params=params, data_source=dataset)
         assert sampler.sorting_keys == sorting_keys
@@ -89,7 +85,9 @@ class TestMaxTokensSampler(SamplerTest):
 
     def test_batch_count(self):
         dataset = AllennlpDataset(self.instances, vocab=self.vocab)
-        sampler = MaxTokensBatchSampler(dataset, max_tokens=8, padding_noise=0, sorting_keys=["text"])
+        sampler = MaxTokensBatchSampler(
+            dataset, max_tokens=8, padding_noise=0, sorting_keys=["text"]
+        )
         # We use a custom collate_fn for testing, which doesn't actually create tensors,
         # just the allennlp Batches.
         dataloader = DataLoader(dataset, batch_sampler=sampler, collate_fn=lambda x: Batch(x))

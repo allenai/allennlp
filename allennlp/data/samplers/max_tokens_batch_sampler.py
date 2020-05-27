@@ -1,12 +1,14 @@
 import logging
 import random
-from typing import List, Iterable, Optional
+from typing import List, Iterable, Optional, Iterator, TypeVar
 
-from allennlp.common.util import lazy_groups_of_max_size
 from allennlp.data.samplers import BatchSampler, BucketBatchSampler
 from torch.utils import data
 
 logger = logging.getLogger(__name__)
+
+
+A = TypeVar("A")
 
 
 @BatchSampler.register("max_tokens_sampler")
@@ -60,11 +62,45 @@ class MaxTokensBatchSampler(BucketBatchSampler):
 
         self.max_tokens = max_tokens
 
+    def _lazy_groups_of_max_size(
+        self, iterable: Iterable[A], sizes: Iterable[int],
+    ) -> Iterator[List[A]]:
+        """
+        Takes an `iterable` of data and an iterable `sizes` of the same length which represents the sizes of each
+        corresponding item in `iterable`. The instances from `iterable` are batched such that the total size
+        of the batch as computed from `sizes` does not exceed `max_size`.
+        """
+        cur_max_size = 0
+        group: List[A] = []
+
+        iterator = iter(iterable)
+        size_iter = iter(sizes)
+
+        for item, size in zip(iterator, size_iter):
+            if size > self.max_tokens:
+                logger.warning(
+                    "Found instance of size %d, which is bigger than the expected size for a batch (%d)",
+                    size,
+                    self.max_tokens,
+                )
+            group_size = max(size, cur_max_size) * (len(group) + 1)
+
+            if group_size > self.max_tokens:
+                yield group
+                cur_max_size = 0
+                group = []
+
+            group.append(item)
+            cur_max_size = max(cur_max_size, size)
+
+        if len(group) != 0:
+            yield group
+
     def __iter__(self) -> Iterable[List[int]]:
         indices, lengths = self._argsort_by_padding(self.data_source)
 
         max_lengths = [max(length) for length in lengths]
-        group_iterator = lazy_groups_of_max_size(indices, max_lengths, self.max_tokens)
+        group_iterator = self._lazy_groups_of_max_size(indices, max_lengths)
 
         batches = [list(group) for group in group_iterator]
         random.shuffle(batches)
