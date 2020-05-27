@@ -8,12 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Unreleased
 
 ### Fixed
-- Nothing yet
+
+- A bug where `TextField`s could not be deep-copied since some tokenizers cannot be deep-copied.
+  See https://github.com/allenai/allennlp/issues/4270.
 
 ### Added
+
 - Nothing yet
 
 ### Changed
+
 - Nothing yet
 
 ## [v1.0.0rc5](https://github.com/allenai/allennlp/releases/tag/v1.0.0rc5) - 2020-05-26
