@@ -1,5 +1,4 @@
 from typing import List, Dict
-from copy import deepcopy
 
 from overrides import overrides
 import numpy
@@ -105,7 +104,7 @@ class SentenceTaggerPredictor(Predictor):
         # Creates a new instance for each contiguous tag
         instances = []
         for labels in predicted_spans:
-            new_instance = deepcopy(instance)
+            new_instance = instance.duplicate()
             text_field: TextField = instance["tokens"]  # type: ignore
             new_instance.add_field(
                 "tags", SequenceLabelField(labels, text_field), self._model.vocab
