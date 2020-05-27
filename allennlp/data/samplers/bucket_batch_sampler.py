@@ -79,7 +79,9 @@ class BucketBatchSampler(BatchSampler):
         self.data_source = data_source
         self.drop_last = drop_last
 
-    def _argsort_by_padding(self, instances: Iterable[Instance]) -> Tuple[List[int], List[int]]:
+    def _argsort_by_padding(
+        self, instances: Iterable[Instance]
+    ) -> Tuple[List[int], List[List[int]]]:
         """
         Argsorts the instances by their padding lengths, using the keys in
         `sorting_keys` (in the order in which they are provided). `sorting_keys`
@@ -108,11 +110,10 @@ class BucketBatchSampler(BatchSampler):
         with_indices.sort(key=lambda x: x[0][0])
         return (
             [instance_with_index[-1] for instance_with_index in with_indices],
-            [instance_with_index[0][1][0] for instance_with_index in with_indices],
+            [instance_with_index[0][1] for instance_with_index in with_indices],
         )
 
     def __iter__(self) -> Iterable[List[int]]:
-
         indices, _ = self._argsort_by_padding(self.data_source)
         batches = []
         for group in lazy_groups_of(indices, self.batch_size):

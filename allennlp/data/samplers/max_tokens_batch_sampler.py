@@ -63,7 +63,8 @@ class MaxTokensBatchSampler(BucketBatchSampler):
     def __iter__(self) -> Iterable[List[int]]:
         indices, lengths = self._argsort_by_padding(self.data_source)
 
-        group_iterator = lazy_groups_of_max_size(indices, lengths, self.max_tokens)
+        max_lengths = [max(length) for length in lengths]
+        group_iterator = lazy_groups_of_max_size(indices, max_lengths, self.max_tokens)
 
         batches = [list(group) for group in group_iterator]
         random.shuffle(batches)
