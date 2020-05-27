@@ -33,7 +33,7 @@ We reserve the right to close without a response bug reports which are incomplet
 <!-- Please provide a clear and concise description of what the bug is here. -->
 
 <details>
-<summary><b><code>Python traceback</code> Output:</b></summary>
+<summary><b>Python traceback:</b></summary>
 <p>
 
 <!-- Paste the traceback from any exception (if there was one) in between the next two lines below -->
@@ -58,7 +58,7 @@ OS:
 Python version:
 
 <details>
-<summary><b><code>pip freeze</code> Output:</b></summary>
+<summary><b>Output of <code>pip freeze</code>:</b></summary>
 <p>
 
 <!-- Paste the output of `pip freeze` in between the next two lines below -->
@@ -73,7 +73,7 @@ Python version:
 
 
 <details>
-<summary><b><code>Example</code> Source:</b></summary>
+<summary><b>Example source:</b></summary>
 <p>
 
 <!-- Add a fully runnable example in between the next two lines below that will reproduce the bug -->
