@@ -20,7 +20,9 @@ jobs:
 
     - name: Set environment variables
       run: |
-        ALLENNLP_COMMIT=$GITHUB_SHA
+        # ALLENNLP_COMMIT=$GITHUB_SHA
+        # TODO: uncomment line above, remove line below.
+        ALLENNLP_COMMIT=$(git ls-remote https://github.com/allenai/allennlp.git | head -1 | sed 's/HEAD//')
         ALLENNLP_MODELS_COMMIT=$(git ls-remote https://github.com/allenai/allennlp-models.git | head -1 | sed 's/HEAD//')
         IMAGE_NAME="allennlp-with-models-$ALLENNLP_COMMIT"
 
