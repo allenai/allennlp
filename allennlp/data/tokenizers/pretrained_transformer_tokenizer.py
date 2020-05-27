@@ -181,7 +181,7 @@ class PretrainedTransformerTokenizer(Tokenizer):
             add_special_tokens=True,
             return_token_type_ids=True,
             return_attention_mask=False,
-            add_prefix_space=True
+            add_prefix_space=True,
         )
 
         seen_dummy_a = False
