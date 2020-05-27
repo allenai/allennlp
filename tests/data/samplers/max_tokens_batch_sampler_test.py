@@ -76,7 +76,7 @@ class TestMaxTokensSampler(SamplerTest):
         assert sampler.padding_noise == 0.1
         assert sampler.max_tokens == 32
 
-        params = Params({"sorting_keys": sorting_keys, "padding_noise": 0.5, "max_tokens": 100,})
+        params = Params({"sorting_keys": sorting_keys, "padding_noise": 0.5, "max_tokens": 100})
 
         sampler = MaxTokensBatchSampler.from_params(params=params, data_source=dataset)
         assert sampler.sorting_keys == sorting_keys
