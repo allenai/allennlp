@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- A bug where `TextField`s could not be duplicated since some tokenizers cannot be deep-copied.
+  See https://github.com/allenai/allennlp/issues/4270.
+
+### Added
+
+- A `duplicate()` method on `Instance`s and `Field`s, to be used instead of `copy.deepcopy()`.
+
+### Changed
+
+- Nothing yet
+
+## [v1.0.0rc5](https://github.com/allenai/allennlp/releases/tag/v1.0.0rc5) - 2020-05-26
+
+### Fixed
+
 - Fix bug where `PretrainedTransformerTokenizer` crashed with some transformers (#4267)
 - Make `cached_path` work offline.
 - Tons of docstring inconsistencies resolved.
@@ -31,7 +46,7 @@ and the number of GPU devices available.
 - All of the tests moved from `allennlp/tests` to `tests` at the root level, and
 `allennlp/tests/fixtures` moved to `test_fixtures` at the root level. The PyPI source and wheel distributions will no longer include tests and fixtures.
 
-## [v1.0.0rc4](https://github.com/allenai/allennlp/releases/tag/v1.0.0rc4) - 2019-05-14
+## [v1.0.0rc4](https://github.com/allenai/allennlp/releases/tag/v1.0.0rc4) - 2020-05-14
 
 We first introduced this `CHANGELOG` after release `v1.0.0rc4`, so please refer to the GitHub release
 notes for this and earlier releases.
