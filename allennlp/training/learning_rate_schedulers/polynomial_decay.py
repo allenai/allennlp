@@ -23,9 +23,9 @@ class PolynomialDecay(LearningRateScheduler):
         The total number of steps to adjust the learning rate for.
     warmup_steps : `int`, required
         The number of steps to linearly increase the learning rate.
-    power : `float`, optional (default = 1.0)
+    power : `float`, optional (default = `1.0`)
         The power of the polynomial used for decaying.
-    end_learning_rate : `float`, optional (default = 0.0)
+    end_learning_rate : `float`, optional (default = `0.0`)
         Final learning rate to decay towards.
     """
 
