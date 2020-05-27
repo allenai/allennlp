@@ -3,10 +3,6 @@ name: Benchmarks
 on:
   schedule:
   - cron: '37 11 * * 1,2,3,4,5'  # early morning (11:37 UTC / 4:37 AM PDT) Monday - Friday
-  # TODO: delete PR trigger.
-  pull_request:
-    branches:
-    - master
 
 jobs:
   beaker:
@@ -18,11 +14,19 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
+    - name: Install beaker
+      run: |
+        wget https://github.com/allenai/beaker/releases/download/v20200430/beaker_linux.tar.gz
+        sudo tar -xvzf beaker_linux.tar.gz -C /usr/local/bin
+
+    - name: Configure beaker
+      run: |
+        beaker config set user_token ${{ secrets.BEAKER_TOKEN }}
+        beaker config test
+
     - name: Set environment variables
       run: |
-        # ALLENNLP_COMMIT=$GITHUB_SHA
-        # TODO: uncomment line above, remove line below.
-        ALLENNLP_COMMIT=$(git ls-remote https://github.com/allenai/allennlp.git | head -1 | sed 's/HEAD//')
+        ALLENNLP_COMMIT=$GITHUB_SHA
         ALLENNLP_MODELS_COMMIT=$(git ls-remote https://github.com/allenai/allennlp-models.git | head -1 | sed 's/HEAD//')
         IMAGE_NAME="allennlp-with-models-$ALLENNLP_COMMIT"
 
@@ -44,8 +48,10 @@ jobs:
       run: |
         echo "AllenNLP commit: $ALLENNLP_COMMIT"
         echo "AllenNLP Models commit: $ALLENNLP_MODELS_COMMIT"
+
         echo "Beaker config:"
         cat config.yml
+
         echo "Dockerfile:"
         cat Dockerfile.commit
 
@@ -56,18 +62,10 @@ jobs:
             --build-arg ALLENNLP_MODELS_COMMIT=$ALLENNLP_MODELS_COMMIT \
             -t $IMAGE_NAME - < Dockerfile.commit
 
-    - name: Install beaker
-      run: |
-        wget https://github.com/allenai/beaker/releases/download/v20200430/beaker_linux.tar.gz
-        sudo tar -xvzf beaker_linux.tar.gz -C /usr/local/bin
-        # beaker config set user_token ${{ secrets.BEAKER_TOKEN }}
-        beaker config set user_token j47JduCcR/NW5qRQ
-        beaker config test
-
     - name: Upload image to beaker
       run: |
-        # beaker image create -n $IMAGE_NAME $IMAGE_NAME
+        beaker image create -n $IMAGE_NAME $IMAGE_NAME
 
     - name: Submit beaker experiment
       run: |
-        # beaker experiment create --name bidaf_$(date -u +%Y%m%d) -f config.yml --workspace ai2/AllenNLPPerf
+        beaker experiment create --name bidaf_$(date -u +%Y%m%d) -f config.yml --workspace ai2/AllenNLPPerf
