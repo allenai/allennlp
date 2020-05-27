@@ -23,10 +23,10 @@ class MaxTokensBatchSampler(BucketBatchSampler):
 
     # Parameters
 
-    data_source: `data.Dataset`, required,
+    data_source: `data.Dataset`
         The pytorch `Dataset` of allennlp Instances to bucket.
 
-    max_tokens : `int`, required
+    max_tokens : `int`
         The maximum number of tokens to include in a batch.
 
     sorting_keys : `List[str]`, optional
@@ -45,7 +45,7 @@ class MaxTokensBatchSampler(BucketBatchSampler):
         call `Instance.get_padding_lengths()` to see a list of all keys used in your data.  You
         should give one or more of those as the sorting keys here.
 
-    padding_noise : `float`, optional (default=.1)
+    padding_noise : `float`, optional (default = `0.1`)
         When sorting by padding length, we add a bit of noise to the lengths, so that the sorting
         isn't deterministic.  This parameter determines how much noise we add, as a percentage of
         the actual padding value for each instance.

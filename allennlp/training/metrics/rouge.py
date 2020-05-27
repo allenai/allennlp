@@ -20,9 +20,9 @@ class ROUGE(Metric):
 
     # Parameters
 
-    ngram_size : `int`, optional (default = 2)
+    ngram_size : `int`, optional (default = `2`)
         ROUGE scores are calculate for ROUGE-1 .. ROUGE-`ngram_size`
-    exclude_indices : `Set[int]`, optional (default = None)
+    exclude_indices : `Set[int]`, optional (default = `None`)
         Indices to exclude when calculating ngrams. This should usually include
         the indices of the start, end, and pad tokens.
     """
@@ -170,9 +170,9 @@ class ROUGE(Metric):
 
         # Parameters
 
-        predictions : `torch.LongTensor`, required
+        predictions : `torch.LongTensor`
             Batched predicted tokens of shape `(batch_size, max_sequence_length)`.
-        references : `torch.LongTensor`, required
+        references : `torch.LongTensor`
             Batched reference (gold) sequences with shape `(batch_size, max_gold_sequence_length)`.
 
         # Returns
@@ -203,7 +203,7 @@ class ROUGE(Metric):
         """
         # Parameters
 
-        reset : `bool`, optional (default = False)
+        reset : `bool`, optional (default = `False`)
             Reset any accumulators or internal state.
 
         # Returns
