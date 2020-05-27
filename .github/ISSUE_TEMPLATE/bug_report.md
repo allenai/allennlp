@@ -71,6 +71,14 @@ Python version:
 
 ## Steps to reproduce
 
-<!-- Paste the output of `pip freeze` in between the next two lines below -->
-```python
+
+<details>
+<summary><b><code>Example</code> Source:</b></summary>
+<p>
+
+<!-- Add a fully runnable example in between the next two lines below that will reproduce the bug -->
 ```
+```
+
+</p>
+</details>
