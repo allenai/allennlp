@@ -104,3 +104,8 @@ class Instance(Mapping[str, Field]):
         return " ".join(
             [base_string] + [f"\t {name}: {field} \n" for name, field in self.fields.items()]
         )
+
+    def duplicate(self) -> "Instance":
+        new = Instance({k: field.duplicate() for k, field in self.fields.items()})
+        new.indexed = self.indexed
+        return new
