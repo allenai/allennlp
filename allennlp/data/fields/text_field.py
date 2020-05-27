@@ -164,6 +164,6 @@ class TextField(SequenceField[TextFieldTensors]):
         but it also fails in many cases since some tokenizers (like those used in
         the 'transformers' lib) cannot actually be deep-copied.
         """
-        new = TextField(deepcopy(self.tokens, memo), self._token_indexers)
+        new = TextField(deepcopy(self.tokens, memo), {k: v for k, v in self._token_indexers})
         new._indexed_tokens = deepcopy(self._indexed_tokens, memo)
         return new
