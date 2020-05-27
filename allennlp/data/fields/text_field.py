@@ -3,6 +3,7 @@ A `TextField` represents a string of text, the kind that you might want to repre
 standard word vectors, or pass through an LSTM.
 """
 from collections import defaultdict
+from copy import deepcopy
 from typing import Dict, List, Optional, Iterator
 import textwrap
 
@@ -153,3 +154,16 @@ class TextField(SequenceField[TextFieldTensors]):
 
     def __len__(self) -> int:
         return len(self.tokens)
+
+    def __deepcopy__(self, memo):
+        """
+        Overrides the behavior of `deepcopy` so that `self._token_indexers` won't
+        actually be deep-copied.
+
+        Not only would it be extremely inefficient to deep-copy the token indexers,
+        but it also fails in many cases since some tokenizers (like those used in
+        the 'transformers' lib) cannot actually be deep-copied.
+        """
+        new = TextField(deepcopy(self.tokens, memo), self._token_indexers)
+        new._indexed_tokens = deepcopy(self._indexed_tokens, memo)
+        return new
