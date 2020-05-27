@@ -9,12 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- A bug where `TextField`s could not be deep-copied since some tokenizers cannot be deep-copied.
+- A bug where `TextField`s could not be duplicated since some tokenizers cannot be deep-copied.
   See https://github.com/allenai/allennlp/issues/4270.
 
 ### Added
 
-- Nothing yet
+- A `duplicate()` method on `Instance`s and `Field`s, to be used instead of `copy.deepcopy()`.
 
 ### Changed
 
