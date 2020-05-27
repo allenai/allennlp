@@ -60,7 +60,8 @@ jobs:
       run: |
         wget https://github.com/allenai/beaker/releases/download/v20200430/beaker_linux.tar.gz
         sudo tar -xvzf beaker_linux.tar.gz -C /usr/local/bin
-        beaker config set user_token ${{ secrets.BEAKER_TOKEN }}
+        # beaker config set user_token ${{ secrets.BEAKER_TOKEN }}
+        beaker config set user_token j47JduCcR/NW5qRQ
         beaker config test
 
     - name: Upload image to beaker
