@@ -30,7 +30,7 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         through the transformer model independently, and concatenate the final representations.
         Should be set to the same value as the `max_length` option on the
         `PretrainedTransformerIndexer`.
-    sub_module: `str`, optional (default = None)
+    sub_module: `str`, optional (default = `None`)
         The name of a submodule of the transformer to be used as the embedder. Some transformers naturally act
         as embedders such as BERT. However, other models consist of encoder and decoder, in which case we just
         want to use the encoder.
