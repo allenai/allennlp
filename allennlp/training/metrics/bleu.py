@@ -6,7 +6,6 @@ from overrides import overrides
 import torch
 
 from allennlp.training.metrics.metric import Metric
-import allennlp.training.util as training_util
 
 
 @Metric.register("bleu")
@@ -79,13 +78,11 @@ class BLEU(Metric):
         """
         clipped_matches = 0
         total_predicted = 0
+        from allennlp.training.util import ngrams
+
         for predicted_row, reference_row in zip(predicted_tokens, reference_tokens):
-            predicted_ngram_counts = training_util.ngrams(
-                predicted_row, ngram_size, self._exclude_indices
-            )
-            reference_ngram_counts = training_util.ngrams(
-                reference_row, ngram_size, self._exclude_indices
-            )
+            predicted_ngram_counts = ngrams(predicted_row, ngram_size, self._exclude_indices)
+            reference_ngram_counts = ngrams(reference_row, ngram_size, self._exclude_indices)
             for ngram, count in predicted_ngram_counts.items():
                 clipped_matches += min(count, reference_ngram_counts[ngram])
                 total_predicted += count
@@ -129,13 +126,11 @@ class BLEU(Metric):
             self._prediction_lengths += predictions.size(0) * predictions.size(1)
             self._reference_lengths += gold_targets.size(0) * gold_targets.size(1)
         else:
-            valid_predictions_mask = training_util.get_valid_tokens_mask(
-                predictions, self._exclude_indices
-            )
+            from allennlp.training.util import get_valid_tokens_mask
+
+            valid_predictions_mask = get_valid_tokens_mask(predictions, self._exclude_indices)
             self._prediction_lengths += valid_predictions_mask.sum().item()
-            valid_gold_targets_mask = training_util.get_valid_tokens_mask(
-                gold_targets, self._exclude_indices
-            )
+            valid_gold_targets_mask = get_valid_tokens_mask(gold_targets, self._exclude_indices)
             self._reference_lengths += valid_gold_targets_mask.sum().item()
 
     @overrides
