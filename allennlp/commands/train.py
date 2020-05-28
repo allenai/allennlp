@@ -28,6 +28,7 @@ from allennlp.training.trainer import Trainer
 from allennlp.training import util as training_util
 
 logger = logging.getLogger(__name__)
+lock = mp.Lock()
 
 
 @Subcommand.register("train")
@@ -415,7 +416,7 @@ def _train_worker(
         )
 
     train_loop = TrainModel.from_params(
-        params=params, serialization_dir=serialization_dir, local_rank=process_rank,
+        params=params, serialization_dir=serialization_dir, local_rank=process_rank
     )
 
     if dry_run:
@@ -624,7 +625,17 @@ class TrainModel(Registrable):
         vocabulary_ = vocabulary.construct(instances=instance_generator)
         if not vocabulary_:
             vocabulary_ = Vocabulary.from_instances(instance_generator)
-        model_ = model.construct(vocab=vocabulary_)
+
+        if common_util.is_distributed():
+            # In the distributed scenario we have to be careful to avoid potential
+            # that could occur when initializing the model if the model relies
+            # on any files that need to be downloaded. Therefor we ensure
+            # only one process is initializing its model at a time using the lock.
+            lock.acquire()
+            model_ = model.construct(vocab=vocabulary_)
+            lock.release()
+        else:
+            model_ = model.construct(vocab=vocabulary_)
 
         # Initializing the model can have side effect of expanding the vocabulary.
         # Save the vocab only in the master. In the degenerate non-distributed
