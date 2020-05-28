@@ -5,7 +5,6 @@ from overrides import overrides
 import torch
 
 from allennlp.training.metrics.metric import Metric
-import allennlp.training.util as training_util
 
 
 @Metric.register("rogue")
@@ -88,16 +87,10 @@ class ROUGE(Metric):
         total_f1 = 0.0
 
         for predicted_seq, reference_seq in zip(predicted_tokens, reference_tokens):
-            m = (
-                training_util.get_valid_tokens_mask(reference_seq, self._exclude_indices)
-                .sum()
-                .item()
-            )
-            n = (
-                training_util.get_valid_tokens_mask(predicted_seq, self._exclude_indices)
-                .sum()
-                .item()
-            )
+            from allennlp.training.util import get_valid_tokens_mask
+
+            m = get_valid_tokens_mask(reference_seq, self._exclude_indices).sum().item()
+            n = get_valid_tokens_mask(predicted_seq, self._exclude_indices).sum().item()
 
             lcs = self._longest_common_subsequence(reference_seq, predicted_seq)
 
@@ -129,12 +122,10 @@ class ROUGE(Metric):
         total_f1 = 0.0
 
         for predicted_seq, reference_seq in zip(predicted_tokens, reference_tokens):
-            predicted_ngram_counts = training_util.ngrams(
-                predicted_seq, ngram_size, self._exclude_indices
-            )
-            reference_ngram_counts = training_util.ngrams(
-                reference_seq, ngram_size, self._exclude_indices
-            )
+            from allennlp.training.util import ngrams
+
+            predicted_ngram_counts = ngrams(predicted_seq, ngram_size, self._exclude_indices)
+            reference_ngram_counts = ngrams(reference_seq, ngram_size, self._exclude_indices)
 
             matches = 0
             total_reference_ngrams = 0
