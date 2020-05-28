@@ -1,0 +1,16 @@
+# Beaker configuration file for training the BiDAF model on 2 GPUs.
+description: https://github.com/allenai/allennlp/commit/ALLENNLP_COMMIT
+tasks:
+  - name: bidaf-training-2x-gpu
+    spec:
+      image: IMAGE_NAME
+      resultPath: /output
+      args:
+        - train
+        - https://raw.githubusercontent.com/allenai/allennlp/master/scripts/benchmarks/configs/bidaf_2x_gpu.jsonnet
+        - -s
+        - /output
+        - --file-friendly-logging
+      requirements:
+        gpuCount: 1
+    cluster: ai2/on-prem-ai2-server1
