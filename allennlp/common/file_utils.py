@@ -297,9 +297,12 @@ def get_from_cache(url: str, cache_dir: str = None) -> str:
     # Only one process can own this lock file at a time, and a process will block
     # on the call to `lock.acquire()` until the process currently holding the lock
     # releases it.
+    logger.info("checking cache for %s at %s", url, cache_path)
     lock = FileLock(cache_path + ".lock")
     with lock.acquire():
-        if not os.path.exists(cache_path):
+        if os.path.exists(cache_path):
+            logger.info("cache of %s is up-to-date", url)
+        else:
             # Download to temporary file, then copy to cache dir once finished.
             # Otherwise you get corrupt cache entries if the download gets interrupted.
             with tempfile.NamedTemporaryFile() as temp_file:
