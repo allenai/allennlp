@@ -11,6 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - A bug where `TextField`s could not be duplicated since some tokenizers cannot be deep-copied.
   See https://github.com/allenai/allennlp/issues/4270.
+- Our caching mechanism had the potential to introduce race conditions if multiple processes
+  were attempting to cache the same file at once. This was fixed by using a lock file tied to each
+  cached file.
 
 ### Added
 
@@ -18,7 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Nothing yet
+- Similar to our caching mechanism, we introduced a lock file to the vocab to avoid race
+  conditions when saving/loading the vocab from/to the same serialization directory in different processes.
 
 ## [v1.0.0rc5](https://github.com/allenai/allennlp/releases/tag/v1.0.0rc5) - 2020-05-26
 

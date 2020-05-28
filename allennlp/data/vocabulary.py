@@ -10,6 +10,8 @@ import os
 from collections import defaultdict
 from typing import Any, Callable, Dict, Iterable, List, Optional, Set, Union, TYPE_CHECKING
 
+from filelock import FileLock
+
 from allennlp.common.util import namespace_match
 from allennlp.common import Registrable
 from allennlp.common.checks import ConfigurationError
@@ -317,30 +319,34 @@ class Vocabulary(Registrable):
         logger.info("Loading token dictionary from %s.", directory)
         padding_token = padding_token if padding_token is not None else DEFAULT_PADDING_TOKEN
         oov_token = oov_token if oov_token is not None else DEFAULT_OOV_TOKEN
-        with codecs.open(
-            os.path.join(directory, NAMESPACE_PADDING_FILE), "r", "utf-8"
-        ) as namespace_file:
-            non_padded_namespaces = [namespace_str.strip() for namespace_str in namespace_file]
 
-        vocab = cls(
-            non_padded_namespaces=non_padded_namespaces,
-            padding_token=padding_token,
-            oov_token=oov_token,
-        )
+        # We use a lock file to avoid race conditions where multiple processes
+        # might be reading/writing from/to the same vocab files at once.
+        with FileLock(os.path.join(directory, ".lock")):
+            with codecs.open(
+                os.path.join(directory, NAMESPACE_PADDING_FILE), "r", "utf-8"
+            ) as namespace_file:
+                non_padded_namespaces = [namespace_str.strip() for namespace_str in namespace_file]
 
-        # Check every file in the directory.
-        for namespace_filename in os.listdir(directory):
-            if namespace_filename == NAMESPACE_PADDING_FILE:
-                continue
-            if namespace_filename.startswith("."):
-                continue
-            namespace = namespace_filename.replace(".txt", "")
-            if any(namespace_match(pattern, namespace) for pattern in non_padded_namespaces):
-                is_padded = False
-            else:
-                is_padded = True
-            filename = os.path.join(directory, namespace_filename)
-            vocab.set_from_file(filename, is_padded, namespace=namespace, oov_token=oov_token)
+            vocab = cls(
+                non_padded_namespaces=non_padded_namespaces,
+                padding_token=padding_token,
+                oov_token=oov_token,
+            )
+
+            # Check every file in the directory.
+            for namespace_filename in os.listdir(directory):
+                if namespace_filename == NAMESPACE_PADDING_FILE:
+                    continue
+                if namespace_filename.startswith("."):
+                    continue
+                namespace = namespace_filename.replace(".txt", "")
+                if any(namespace_match(pattern, namespace) for pattern in non_padded_namespaces):
+                    is_padded = False
+                else:
+                    is_padded = True
+                filename = os.path.join(directory, namespace_filename)
+                vocab.set_from_file(filename, is_padded, namespace=namespace, oov_token=oov_token)
 
         return vocab
 
@@ -604,21 +610,24 @@ class Vocabulary(Registrable):
         if os.listdir(directory):
             logging.warning("vocabulary serialization directory %s is not empty", directory)
 
-        with codecs.open(
-            os.path.join(directory, NAMESPACE_PADDING_FILE), "w", "utf-8"
-        ) as namespace_file:
-            for namespace_str in self._non_padded_namespaces:
-                print(namespace_str, file=namespace_file)
-
-        for namespace, mapping in self._index_to_token.items():
-            # Each namespace gets written to its own file, in index order.
+        # We use a lock file to avoid race conditions where multiple processes
+        # might be reading/writing from/to the same vocab files at once.
+        with FileLock(os.path.join(directory, ".lock")):
             with codecs.open(
-                os.path.join(directory, namespace + ".txt"), "w", "utf-8"
-            ) as token_file:
-                num_tokens = len(mapping)
-                start_index = 1 if mapping[0] == self._padding_token else 0
-                for i in range(start_index, num_tokens):
-                    print(mapping[i].replace("\n", "@@NEWLINE@@"), file=token_file)
+                os.path.join(directory, NAMESPACE_PADDING_FILE), "w", "utf-8"
+            ) as namespace_file:
+                for namespace_str in self._non_padded_namespaces:
+                    print(namespace_str, file=namespace_file)
+
+            for namespace, mapping in self._index_to_token.items():
+                # Each namespace gets written to its own file, in index order.
+                with codecs.open(
+                    os.path.join(directory, namespace + ".txt"), "w", "utf-8"
+                ) as token_file:
+                    num_tokens = len(mapping)
+                    start_index = 1 if mapping[0] == self._padding_token else 0
+                    for i in range(start_index, num_tokens):
+                        print(mapping[i].replace("\n", "@@NEWLINE@@"), file=token_file)
 
     def is_padded(self, namespace: str) -> bool:
         """
