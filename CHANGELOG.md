@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - A bug where `TextField`s could not be duplicated since some tokenizers cannot be deep-copied.
   See https://github.com/allenai/allennlp/issues/4270.
+- A race condition that could occur in the distributed training scenario when the model
+  relies on files that need to be downloaded.
 
 ### Added
 
