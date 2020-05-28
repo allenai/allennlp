@@ -1,4 +1,4 @@
-from typing import List, Callable, Tuple, Dict
+from typing import List, Callable, Tuple, Dict, cast
 import warnings
 
 import torch
@@ -8,6 +8,7 @@ from allennlp.common.checks import ConfigurationError
 
 StateType = Dict[str, torch.Tensor]
 StepFunctionType = Callable[[torch.Tensor, StateType, int], Tuple[torch.Tensor, StateType]]
+StepFunctionTypeNoTimestep = Callable[[torch.Tensor, StateType], Tuple[torch.Tensor, StateType]]
 
 
 class BeamSearch:
@@ -123,11 +124,16 @@ class BeamSearch:
         # If the step function we're given does not take the time step argument, wrap it
         # in one that does.
         from inspect import signature
+
         step_signature = signature(step)
         if len(step_signature.parameters) < 3:
-            old_step = step
-            def new_step(last_predictions: torch.Tensor, state: Dict[str, torch.Tensor], time_step: int):
+            old_step = cast(StepFunctionTypeNoTimestep, step)
+
+            def new_step(
+                last_predictions: torch.Tensor, state: Dict[str, torch.Tensor], time_step: int
+            ):
                 return old_step(last_predictions, state)
+
             step = new_step
 
         batch_size = start_predictions.size()[0]
