@@ -83,7 +83,7 @@
     "batch_size": 40,
   },
   "trainer": {
-    "num_epochs": 20, // on 2 GPUs, this gives us an effective batch size of 40.
+    "num_epochs": 40, // on 2 GPUs, this gives us an effective batch size of 80.
     "grad_norm": 5.0,
     "patience": 10,
     "validation_metric": "+em",
