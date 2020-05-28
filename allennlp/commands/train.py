@@ -628,8 +628,8 @@ class TrainModel(Registrable):
 
         if common_util.is_distributed():
             # In the distributed scenario we have to be careful to avoid potential
-            # that could occur when initializing the model if the model relies
-            # on any files that need to be downloaded. Therefor we ensure
+            # race conditions that could occur when initializing the model if the model
+            # relies on any files that need to be downloaded. Therefor we ensure
             # only one process is initializing its model at a time using the lock.
             lock.acquire()
             model_ = model.construct(vocab=vocabulary_)
