@@ -80,10 +80,10 @@
     "dropout": 0.2,
   },
   "data_loader": {
-    "batch_size": 40,
+    "batch_size": 40, // on 2 GPUs, this gives us an effective batch size of 80.
   },
   "trainer": {
-    "num_epochs": 40, // on 2 GPUs, this gives us an effective batch size of 80.
+    "num_epochs": 20,
     "grad_norm": 5.0,
     "patience": 10,
     "validation_metric": "+em",
