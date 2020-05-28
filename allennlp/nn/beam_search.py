@@ -119,6 +119,17 @@ class BeamSearch:
             has shape `(batch_size, beam_size, max_steps)` and `log_probabilities`
             has shape `(batch_size, beam_size)`.
         """
+
+        # If the step function we're given does not take the time step argument, wrap it
+        # in one that does.
+        from inspect import signature
+        step_signature = signature(step)
+        if len(step_signature.parameters) < 3:
+            old_step = step
+            def new_step(last_predictions: torch.Tensor, state: Dict[str, torch.Tensor], time_step: int):
+                return old_step(last_predictions, state)
+            step = new_step
+
         batch_size = start_predictions.size()[0]
 
         # List of (batch_size, beam_size) tensors. One for each time step. Does not
