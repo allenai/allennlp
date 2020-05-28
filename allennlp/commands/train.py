@@ -628,12 +628,9 @@ class TrainModel(Registrable):
 
         # Initializing the model can have side effect of expanding the vocabulary.
         # Save the vocab only in the master. In the degenerate non-distributed
-        # case, we're trivially the master. But in the distributed case we need to be careful
-        # to avoid a race condition where we might be writing the vocab from the master
-        # process while another process is reading it. So we use a barrier here
-        # to wait for the other processes to finish reading.
-        if common_util.is_distributed():
-            dist.barrier()
+        # case, we're trivially the master. In the distributed case this is safe
+        # to do without worrying about race conditions since saving and loading
+        # the vocab involves acquiring a file lock.
         if common_util.is_master():
             vocabulary_path = os.path.join(serialization_dir, "vocabulary")
             vocabulary_.save_to_files(vocabulary_path)
