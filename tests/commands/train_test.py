@@ -695,7 +695,12 @@ class TestDryRun(AllenNlpTestCase):
         train_model(self.params, self.TEST_DIR, dry_run=True)
 
         vocab_files = os.listdir(vocab_path)
-        assert set(vocab_files) == {"labels.txt", "non_padded_namespaces.txt", "tokens.txt"}
+        assert set(vocab_files) == {
+            ".lock",
+            "labels.txt",
+            "non_padded_namespaces.txt",
+            "tokens.txt",
+        }
 
         with open(vocab_path / "tokens.txt") as f:
             tokens = [line.strip() for line in f]
@@ -728,7 +733,12 @@ class TestDryRun(AllenNlpTestCase):
         train_model(self.params, extended_serialization_dir, dry_run=True)
 
         vocab_files = os.listdir(extended_vocab_path)
-        assert set(vocab_files) == {"labels.txt", "non_padded_namespaces.txt", "tokens.txt"}
+        assert set(vocab_files) == {
+            ".lock",
+            "labels.txt",
+            "non_padded_namespaces.txt",
+            "tokens.txt",
+        }
 
         with open(extended_vocab_path / "tokens.txt") as f:
             tokens = [line.strip() for line in f]
