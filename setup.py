@@ -60,6 +60,7 @@ setup(
         "transformers>=2.9,<2.10",
         "jsonpickle",
         "dataclasses;python_version<'3.7'",
+        "filelock",
     ],
     entry_points={"console_scripts": ["allennlp=allennlp.__main__:run"]},
     include_package_data=True,
