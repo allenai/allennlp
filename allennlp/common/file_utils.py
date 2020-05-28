@@ -298,8 +298,8 @@ def get_from_cache(url: str, cache_dir: str = None) -> str:
     # on the call to `lock.acquire()` until the process currently holding the lock
     # releases it.
     logger.info("checking cache for %s at %s", url, cache_path)
-    lock = FileLock(cache_path + ".lock")
-    with lock.acquire():
+    logger.info("waiting to acquire lock on %s", cache_path)
+    with FileLock(cache_path + ".lock"):
         if os.path.exists(cache_path):
             logger.info("cache of %s is up-to-date", url)
         else:
