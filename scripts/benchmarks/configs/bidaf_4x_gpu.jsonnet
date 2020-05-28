@@ -80,7 +80,10 @@
     "dropout": 0.2,
   },
   "data_loader": {
-    "batch_size": 40, // on 4 GPUs, this gives us an effective batch size of 160.
+    "batch_sampler": {
+      "type": "bucket",
+      "batch_size": 40 // on 4 GPUs, this gives us an effective batch size of 160.
+    }
   },
   "trainer": {
     "num_epochs": 20,

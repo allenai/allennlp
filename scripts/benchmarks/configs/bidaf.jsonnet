@@ -85,7 +85,6 @@
       "batch_size": 40
     }
   },
-
   "trainer": {
     "num_epochs": 20,
     "grad_norm": 5.0,
