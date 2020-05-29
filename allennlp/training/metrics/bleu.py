@@ -60,20 +60,6 @@ class BLEU(Metric):
         self._prediction_lengths = 0
         self._reference_lengths = 0
 
-    def _ngrams(self, tensor: torch.LongTensor, ngram_size: int) -> Dict[Tuple[int, ...], int]:
-        ngram_counts: Dict[Tuple[int, ...], int] = Counter()
-        if ngram_size > tensor.size(-1):
-            return ngram_counts
-        for start_position in range(ngram_size):
-            for tensor_slice in tensor[start_position:].split(ngram_size, dim=-1):
-                if tensor_slice.size(-1) < ngram_size:
-                    break
-                ngram = tuple(x.item() for x in tensor_slice)
-                if any(x in self._exclude_indices for x in ngram):
-                    continue
-                ngram_counts[ngram] += 1
-        return ngram_counts
-
     def _get_modified_precision_counts(
         self,
         predicted_tokens: torch.LongTensor,
@@ -92,11 +78,11 @@ class BLEU(Metric):
         """
         clipped_matches = 0
         total_predicted = 0
-        for batch_num in range(predicted_tokens.size(0)):
-            predicted_row = predicted_tokens[batch_num, :]
-            reference_row = reference_tokens[batch_num, :]
-            predicted_ngram_counts = self._ngrams(predicted_row, ngram_size)
-            reference_ngram_counts = self._ngrams(reference_row, ngram_size)
+        from allennlp.training.util import ngrams
+
+        for predicted_row, reference_row in zip(predicted_tokens, reference_tokens):
+            predicted_ngram_counts = ngrams(predicted_row, ngram_size, self._exclude_indices)
+            reference_ngram_counts = ngrams(reference_row, ngram_size, self._exclude_indices)
             for ngram, count in predicted_ngram_counts.items():
                 clipped_matches += min(count, reference_ngram_counts[ngram])
                 total_predicted += count
@@ -108,12 +94,6 @@ class BLEU(Metric):
         if self._reference_lengths == 0 or self._prediction_lengths == 0:
             return 0.0
         return math.exp(1.0 - self._reference_lengths / self._prediction_lengths)
-
-    def _get_valid_tokens_mask(self, tensor: torch.LongTensor) -> torch.ByteTensor:
-        valid_tokens_mask = torch.ones_like(tensor, dtype=torch.bool)
-        for index in self._exclude_indices:
-            valid_tokens_mask = valid_tokens_mask & (tensor != index)
-        return valid_tokens_mask
 
     @overrides
     def __call__(
@@ -146,9 +126,11 @@ class BLEU(Metric):
             self._prediction_lengths += predictions.size(0) * predictions.size(1)
             self._reference_lengths += gold_targets.size(0) * gold_targets.size(1)
         else:
-            valid_predictions_mask = self._get_valid_tokens_mask(predictions)
+            from allennlp.training.util import get_valid_tokens_mask
+
+            valid_predictions_mask = get_valid_tokens_mask(predictions, self._exclude_indices)
             self._prediction_lengths += valid_predictions_mask.sum().item()
-            valid_gold_targets_mask = self._get_valid_tokens_mask(gold_targets)
+            valid_gold_targets_mask = get_valid_tokens_mask(gold_targets, self._exclude_indices)
             self._reference_lengths += valid_gold_targets_mask.sum().item()
 
     @overrides

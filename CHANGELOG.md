@@ -14,15 +14,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Our caching mechanism had the potential to introduce race conditions if multiple processes
   were attempting to cache the same file at once. This was fixed by using a lock file tied to each
   cached file.
+- `get_text_field_mask()` now supports padding indices that are not `0`.
 
 ### Added
 
-- A `duplicate()` method on `Instance`s and `Field`s, to be used instead of `copy.deepcopy()`.
+- A `duplicate()` method on `Instance`s and `Field`s, to be used instead of `copy.deepcopy()`
+- A batch sampler that makes sure each batch contains approximately the same number of tokens (`MaxTokensBatchSampler`)
+- Functions to turn a sequence of token indices back into tokens
+- The ability to use Huggingface encoder/decoder models as token embedders
+- Improvements to beam search
+- ROUGE metric
+- Polynomial decay learning rate scheduler
 
 ### Changed
 
 - Similar to our caching mechanism, we introduced a lock file to the vocab to avoid race
   conditions when saving/loading the vocab from/to the same serialization directory in different processes.
+- The trainer now logs CPU and GPU memory usage to tensorboard.
 
 ## [v1.0.0rc5](https://github.com/allenai/allennlp/releases/tag/v1.0.0rc5) - 2020-05-26
 

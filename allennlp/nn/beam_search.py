@@ -1,4 +1,4 @@
-from typing import List, Callable, Tuple, Dict
+from typing import List, Callable, Tuple, Dict, cast
 import warnings
 
 import torch
@@ -7,7 +7,8 @@ from allennlp.common.checks import ConfigurationError
 
 
 StateType = Dict[str, torch.Tensor]
-StepFunctionType = Callable[[torch.Tensor, StateType], Tuple[torch.Tensor, StateType]]
+StepFunctionType = Callable[[torch.Tensor, StateType, int], Tuple[torch.Tensor, StateType]]
+StepFunctionTypeNoTimestep = Callable[[torch.Tensor, StateType], Tuple[torch.Tensor, StateType]]
 
 
 class BeamSearch:
@@ -45,6 +46,32 @@ class BeamSearch:
         self.beam_size = beam_size
         self.per_node_beam_size = per_node_beam_size or beam_size
 
+    @staticmethod
+    def reconstruct_sequences(predictions, backpointers):
+        # Reconstruct the sequences.
+        # shape: [(batch_size, beam_size, 1)]
+        reconstructed_predictions = [predictions[-1].unsqueeze(2)]
+
+        # shape: (batch_size, beam_size)
+        cur_backpointers = backpointers[-1]
+
+        for timestep in range(len(predictions) - 2, 0, -1):
+            # shape: (batch_size, beam_size, 1)
+            cur_preds = predictions[timestep].gather(1, cur_backpointers).unsqueeze(2)
+
+            reconstructed_predictions.append(cur_preds)
+
+            # shape: (batch_size, beam_size)
+            cur_backpointers = backpointers[timestep - 1].gather(1, cur_backpointers)
+
+        # shape: (batch_size, beam_size, 1)
+        final_preds = predictions[0].gather(1, cur_backpointers).unsqueeze(2)
+
+        reconstructed_predictions.append(final_preds)
+
+        return reconstructed_predictions
+
+    @torch.no_grad()
     def search(
         self, start_predictions: torch.Tensor, start_state: StateType, step: StepFunctionType
     ) -> Tuple[torch.Tensor, torch.Tensor]:
@@ -93,6 +120,22 @@ class BeamSearch:
             has shape `(batch_size, beam_size, max_steps)` and `log_probabilities`
             has shape `(batch_size, beam_size)`.
         """
+
+        # If the step function we're given does not take the time step argument, wrap it
+        # in one that does.
+        from inspect import signature
+
+        step_signature = signature(step)
+        if len(step_signature.parameters) < 3:
+            old_step = cast(StepFunctionTypeNoTimestep, step)
+
+            def new_step(
+                last_predictions: torch.Tensor, state: Dict[str, torch.Tensor], time_step: int
+            ):
+                return old_step(last_predictions, state)
+
+            step = new_step
+
         batch_size = start_predictions.size()[0]
 
         # List of (batch_size, beam_size) tensors. One for each time step. Does not
@@ -111,7 +154,7 @@ class BeamSearch:
         # beam to `beam_size`^2 candidates from which we will select the top
         # `beam_size` elements for the next iteration.
         # shape: (batch_size, num_classes)
-        start_class_log_probabilities, state = step(start_predictions, start_state)
+        start_class_log_probabilities, state = step(start_predictions, start_state, 0)
 
         num_classes = start_class_log_probabilities.size()[1]
 
@@ -151,6 +194,8 @@ class BeamSearch:
 
         # Set the same state for each element in the beam.
         for key, state_tensor in state.items():
+            if state_tensor is None:
+                continue
             _, *last_dims = state_tensor.size()
             # shape: (batch_size * beam_size, *)
             state[key] = (
@@ -171,7 +216,7 @@ class BeamSearch:
             # Take a step. This get the predicted log probs of the next classes
             # and updates the state.
             # shape: (batch_size * beam_size, num_classes)
-            class_log_probabilities, state = step(last_predictions, state)
+            class_log_probabilities, state = step(last_predictions, state, timestep + 1)
 
             # shape: (batch_size * beam_size, num_classes)
             last_predictions_expanded = last_predictions.unsqueeze(-1).expand(
@@ -246,6 +291,8 @@ class BeamSearch:
             # Keep only the pieces of the state tensors corresponding to the
             # ancestors created this iteration.
             for key, state_tensor in state.items():
+                if state_tensor is None:
+                    continue
                 _, *last_dims = state_tensor.size()
                 # shape: (batch_size, beam_size, *)
                 expanded_backpointer = backpointer.view(
@@ -267,26 +314,7 @@ class BeamSearch:
                 RuntimeWarning,
             )
 
-        # Reconstruct the sequences.
-        # shape: [(batch_size, beam_size, 1)]
-        reconstructed_predictions = [predictions[-1].unsqueeze(2)]
-
-        # shape: (batch_size, beam_size)
-        cur_backpointers = backpointers[-1]
-
-        for timestep in range(len(predictions) - 2, 0, -1):
-            # shape: (batch_size, beam_size, 1)
-            cur_preds = predictions[timestep].gather(1, cur_backpointers).unsqueeze(2)
-
-            reconstructed_predictions.append(cur_preds)
-
-            # shape: (batch_size, beam_size)
-            cur_backpointers = backpointers[timestep - 1].gather(1, cur_backpointers)
-
-        # shape: (batch_size, beam_size, 1)
-        final_preds = predictions[0].gather(1, cur_backpointers).unsqueeze(2)
-
-        reconstructed_predictions.append(final_preds)
+        reconstructed_predictions = self.reconstruct_sequences(predictions, backpointers)
 
         # shape: (batch_size, beam_size, max_steps)
         all_predictions = torch.cat(list(reversed(reconstructed_predictions)), 2)

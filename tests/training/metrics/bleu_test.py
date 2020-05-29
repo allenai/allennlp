@@ -6,6 +6,7 @@ from torch.testing import assert_allclose
 
 from allennlp.common.testing import AllenNlpTestCase, multi_device
 from allennlp.training.metrics import BLEU
+from allennlp.training.util import ngrams, get_valid_tokens_mask
 
 
 class BleuTest(AllenNlpTestCase):
@@ -16,7 +17,7 @@ class BleuTest(AllenNlpTestCase):
     @multi_device
     def test_get_valid_tokens_mask(self, device: str):
         tensor = torch.tensor([[1, 2, 3, 0], [0, 1, 1, 0]], device=device)
-        result = self.metric._get_valid_tokens_mask(tensor).long()
+        result = get_valid_tokens_mask(tensor, self.metric._exclude_indices).long()
         check = torch.tensor([[1, 1, 1, 0], [0, 1, 1, 0]], device=device)
         assert_allclose(result, check)
 
@@ -24,23 +25,25 @@ class BleuTest(AllenNlpTestCase):
     def test_ngrams(self, device: str):
         tensor = torch.tensor([1, 2, 3, 1, 2, 0], device=device)
 
+        exclude_indices = self.metric._exclude_indices
+
         # Unigrams.
-        counts: Counter = Counter(self.metric._ngrams(tensor, 1))
+        counts: Counter = Counter(ngrams(tensor, 1, exclude_indices))
         unigram_check = {(1,): 2, (2,): 2, (3,): 1}
         assert counts == unigram_check
 
         # Bigrams.
-        counts = Counter(self.metric._ngrams(tensor, 2))
+        counts = Counter(ngrams(tensor, 2, exclude_indices))
         bigram_check = {(1, 2): 2, (2, 3): 1, (3, 1): 1}
         assert counts == bigram_check
 
         # Trigrams.
-        counts = Counter(self.metric._ngrams(tensor, 3))
+        counts = Counter(ngrams(tensor, 3, exclude_indices))
         trigram_check = {(1, 2, 3): 1, (2, 3, 1): 1, (3, 1, 2): 1}
         assert counts == trigram_check
 
         # ngram size too big, no ngrams produced.
-        counts = Counter(self.metric._ngrams(tensor, 7))
+        counts = Counter(ngrams(tensor, 7, exclude_indices))
         assert counts == {}
 
     @multi_device
