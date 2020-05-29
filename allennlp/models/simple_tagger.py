@@ -94,7 +94,7 @@ class SimpleTagger(Model):
             "accuracy3": CategoricalAccuracy(top_k=3),
         }
 
-        if calculate_span_f1 or label_encoding:
+        if calculate_span_f1:
             self._f1_metric = SpanBasedF1Measure(
                 vocab, tag_namespace=label_namespace, label_encoding=label_encoding
             )
