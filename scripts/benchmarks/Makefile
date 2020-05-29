@@ -2,11 +2,11 @@ config = configs/bidaf.yml
 name = $(shell basename)
 
 ALLENNLP_REPO = allenai/allennlp
-ALLENNLP_REV = $(shell git ls-remote https://github.com/$(ALLENNLP_REPO).git | head -1 | sed 's/HEAD//')
+ALLENNLP_REV = $(shell git ls-remote https://github.com/$(ALLENNLP_REPO).git | head -1 | sed 's/[[:space:]]*HEAD//')
 ALLENNLP = git+https://github.com/$(ALLENNLP_REPO).git@$(ALLENNLP_REV)
 
 MODELS_REPO = allenai/allennlp-models
-MODELS_REV = $(shell git ls-remote https://github.com/$(MODELS_REPO).git | head -1 | sed 's/HEAD//')
+MODELS_REV = $(shell git ls-remote https://github.com/$(MODELS_REPO).git | head -1 | sed 's/[[:space:]]*HEAD//')
 MODELS = git+https://github.com/$(MODELS_REPO).git@$(MODELS_REV)
 
 DATE_ID := $(shell date -u +%Y-%m-%d-%H-%M-%S)
@@ -24,6 +24,7 @@ image :
 	@echo "Testing docker image..."
 	@docker run --rm allennlp-with-models test-install
 
+.SECONDARY :
 /tmp/beaker/configs/%.yml : image
 	@echo "Creating beaker config with:"
 	@echo "    image :           $(IMAGE_NAME)"
@@ -31,15 +32,15 @@ image :
 	@echo "    allennlp-models : $(ALLENNLP)"
 	@mkdir -p /tmp/beaker/configs
 	@cp configs/$*.yml $@
-	@sed -i '' 's/IMAGE_NAME/$(IMAGE_NAME)/g' $@
-	@sed -i '' 's|ALLENNLP_VERSION|$(ALLENNLP)|g' $@
-	@sed -i '' 's|ALLENNLP_MODELS_VERSION|$(MODELS)|g' $@
+	@sed -i'' 's/IMAGE_NAME/$(IMAGE_NAME)/g' $@
+	@sed -i'' 's|ALLENNLP_VERSION|$(ALLENNLP)|g' $@
+	@sed -i'' 's|ALLENNLP_MODELS_VERSION|$(MODELS)|g' $@
 	@echo "Beaker config created: $@"
 
 configs/%.yml : /tmp/beaker/configs/%.yml
 	@echo "Uploading image to beaker as $(IMAGE_NAME)"
-	@echo "beaker image create -n $(IMAGE_NAME) allennlp-with-models"
+	@beaker image create -n $(IMAGE_NAME) allennlp-with-models
 	@echo "Submitting experiment to beaker as $*_$(subst -,_,$(DATE_ID))"
-	@echo "beaker experiment create --name $*_$(subst -,_,$(DATE_ID)) -f $< --workspace ai2/AllenNLPPerf"
+	@beaker experiment create --name $*_$(subst -,_,$(DATE_ID)) -f $< --workspace ai2/AllenNLPPerf
 
 FORCE :
