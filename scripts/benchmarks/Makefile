@@ -15,7 +15,7 @@ IMAGE_NAME := allennlp-with-models-$(DATE_ID)
 ifeq ($(shell uname -s),Darwin)
 	SED_CMD = sed -i ''
 else
-	SED_CMD = sed
+	SED_CMD = sed -i
 endif
 
 .PHONY : image
@@ -45,8 +45,8 @@ image :
 
 configs/%.yml : /tmp/beaker/configs/%.yml
 	@echo "Uploading image to beaker as $(IMAGE_NAME)"
-	@beaker image create -n $(IMAGE_NAME) allennlp-with-models
+	# @beaker image create -n $(IMAGE_NAME) allennlp-with-models
 	@echo "Submitting experiment to beaker as $*_$(subst -,_,$(DATE_ID))"
-	@beaker experiment create --name $*_$(subst -,_,$(DATE_ID)) -f $< --workspace ai2/AllenNLPPerf
+	# @beaker experiment create --name $*_$(subst -,_,$(DATE_ID)) -f $< --workspace ai2/AllenNLPPerf
 
 FORCE :
