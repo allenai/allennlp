@@ -8,6 +8,7 @@ from allennlp.training.metrics.attachment_scores import AttachmentScores
 from allennlp.training.metrics.average import Average
 from allennlp.training.metrics.boolean_accuracy import BooleanAccuracy
 from allennlp.training.metrics.bleu import BLEU
+from allennlp.training.metrics.rouge import ROUGE
 from allennlp.training.metrics.categorical_accuracy import CategoricalAccuracy
 from allennlp.training.metrics.covariance import Covariance
 from allennlp.training.metrics.entropy import Entropy

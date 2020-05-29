@@ -30,15 +30,23 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         through the transformer model independently, and concatenate the final representations.
         Should be set to the same value as the `max_length` option on the
         `PretrainedTransformerIndexer`.
+    sub_module: `str`, optional (default = `None`)
+        The name of a submodule of the transformer to be used as the embedder. Some transformers naturally act
+        as embedders such as BERT. However, other models consist of encoder and decoder, in which case we just
+        want to use the encoder.
     """
 
-    def __init__(self, model_name: str, max_length: int = None) -> None:
+    def __init__(self, model_name: str, max_length: int = None, sub_module: str = None) -> None:
         super().__init__()
         self.transformer_model = AutoModel.from_pretrained(model_name)
+        self.config = self.transformer_model.config
+        if sub_module:
+            assert hasattr(self.transformer_model, sub_module)
+            self.transformer_model = getattr(self.transformer_model, sub_module)
         self._max_length = max_length
         # I'm not sure if this works for all models; open an issue on github if you find a case
         # where it doesn't work.
-        self.output_dim = self.transformer_model.config.hidden_size
+        self.output_dim = self.config.hidden_size
 
         tokenizer = PretrainedTransformerTokenizer(model_name)
         self._num_added_start_tokens = len(tokenizer.single_sequence_start_tokens)
@@ -50,11 +58,10 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         return self.output_dim
 
     def _number_of_token_type_embeddings(self):
-        config = self.transformer_model.config
-        if isinstance(config, XLNetConfig):
+        if isinstance(self.config, XLNetConfig):
             return 3  # XLNet has 3 type ids
-        elif hasattr(config, "type_vocab_size"):
-            return config.type_vocab_size
+        elif hasattr(self.config, "type_vocab_size"):
+            return self.config.type_vocab_size
         else:
             return 0
 

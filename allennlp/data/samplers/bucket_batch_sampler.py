@@ -1,5 +1,5 @@
 import logging
-from typing import List, Iterable
+from typing import List, Iterable, Tuple
 import random
 import math
 
@@ -81,7 +81,9 @@ class BucketBatchSampler(BatchSampler):
         self.data_source = data_source
         self.drop_last = drop_last
 
-    def _argsort_by_padding(self, instances: Iterable[Instance]) -> List[int]:
+    def _argsort_by_padding(
+        self, instances: Iterable[Instance]
+    ) -> Tuple[List[int], List[List[int]]]:
         """
         Argsorts the instances by their padding lengths, using the keys in
         `sorting_keys` (in the order in which they are provided). `sorting_keys`
@@ -95,23 +97,26 @@ class BucketBatchSampler(BatchSampler):
         for instance in instances:
             # Make sure instance is indexed before calling .get_padding
             lengths = []
+            noisy_lengths = []
             for field_name in self.sorting_keys:
                 if field_name not in instance.fields:
                     raise ConfigurationError(
                         f'Sorting key "{field_name}" is not a field in instance. '
                         f"Available fields/keys are {list(instance.fields.keys())}."
                     )
-                lengths.append(
-                    add_noise_to_value(len(instance.fields[field_name]), self.padding_noise)
-                )
-            instances_with_lengths.append((lengths, instance))
+                lengths.append(len(instance.fields[field_name]))
+
+                noisy_lengths.append(add_noise_to_value(lengths[-1], self.padding_noise))
+            instances_with_lengths.append((noisy_lengths, lengths, instance))
         with_indices = [(x, i) for i, x in enumerate(instances_with_lengths)]
         with_indices.sort(key=lambda x: x[0][0])
-        return [instance_with_index[-1] for instance_with_index in with_indices]
+        return (
+            [instance_with_index[-1] for instance_with_index in with_indices],
+            [instance_with_index[0][1] for instance_with_index in with_indices],
+        )
 
     def __iter__(self) -> Iterable[List[int]]:
-
-        indices = self._argsort_by_padding(self.data_source)
+        indices, _ = self._argsort_by_padding(self.data_source)
         batches = []
         for group in lazy_groups_of(indices, self.batch_size):
             batch_indices = list(group)

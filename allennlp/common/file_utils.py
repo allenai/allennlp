@@ -17,6 +17,7 @@ from functools import wraps
 import boto3
 import botocore
 from botocore.exceptions import ClientError, EndpointConnectionError
+from filelock import FileLock
 import requests
 from requests.adapters import HTTPAdapter
 from requests.exceptions import ConnectionError
@@ -288,37 +289,47 @@ def get_from_cache(url: str, cache_dir: str = None) -> str:
 
     filename = url_to_filename(url, etag)
 
-    # get cache path to put the file
+    # Get cache path to put the file.
     cache_path = os.path.join(cache_dir, filename)
 
-    if not os.path.exists(cache_path):
-        # Download to temporary file, then copy to cache dir once finished.
-        # Otherwise you get corrupt cache entries if the download gets interrupted.
-        with tempfile.NamedTemporaryFile() as temp_file:
-            logger.info("%s not found in cache, downloading to %s", url, temp_file.name)
+    # Multiple processes may be trying to cache the same file at once, so we need
+    # to be a little careful to avoid race conditions. We do this using a lock file.
+    # Only one process can own this lock file at a time, and a process will block
+    # on the call to `lock.acquire()` until the process currently holding the lock
+    # releases it.
+    logger.info("checking cache for %s at %s", url, cache_path)
+    logger.info("waiting to acquire lock on %s", cache_path)
+    with FileLock(cache_path + ".lock"):
+        if os.path.exists(cache_path):
+            logger.info("cache of %s is up-to-date", url)
+        else:
+            # Download to temporary file, then copy to cache dir once finished.
+            # Otherwise you get corrupt cache entries if the download gets interrupted.
+            with tempfile.NamedTemporaryFile() as temp_file:
+                logger.info("%s not found in cache, downloading to %s", url, temp_file.name)
 
-            # GET file object
-            if url.startswith("s3://"):
-                _s3_get(url, temp_file)
-            else:
-                _http_get(url, temp_file)
+                # GET file object
+                if url.startswith("s3://"):
+                    _s3_get(url, temp_file)
+                else:
+                    _http_get(url, temp_file)
 
-            # we are copying the file before closing it, so flush to avoid truncation
-            temp_file.flush()
-            # shutil.copyfileobj() starts at the current position, so go to the start
-            temp_file.seek(0)
+                # we are copying the file before closing it, so flush to avoid truncation
+                temp_file.flush()
+                # shutil.copyfileobj() starts at the current position, so go to the start
+                temp_file.seek(0)
 
-            logger.info("copying %s to cache at %s", temp_file.name, cache_path)
-            with open(cache_path, "wb") as cache_file:
-                shutil.copyfileobj(temp_file, cache_file)
+                logger.info("copying %s to cache at %s", temp_file.name, cache_path)
+                with open(cache_path, "wb") as cache_file:
+                    shutil.copyfileobj(temp_file, cache_file)
 
-            logger.info("creating metadata file for %s", cache_path)
-            meta = {"url": url, "etag": etag}
-            meta_path = cache_path + ".json"
-            with open(meta_path, "w") as meta_file:
-                json.dump(meta, meta_file)
+                logger.info("creating metadata file for %s", cache_path)
+                meta = {"url": url, "etag": etag}
+                meta_path = cache_path + ".json"
+                with open(meta_path, "w") as meta_file:
+                    json.dump(meta, meta_file)
 
-            logger.info("removing temp file %s", temp_file.name)
+                logger.info("removing temp file %s", temp_file.name)
 
     return cache_path
 

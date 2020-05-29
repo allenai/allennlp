@@ -479,6 +479,23 @@ class TestNnUtil(AllenNlpTestCase):
             [[1, 1, 1, 0, 0], [1, 1, 0, 0, 0]],
         )
 
+    def test_get_text_field_mask_returns_a_correct_mask_custom_padding_id(self):
+        text_field_tensors = {
+            "indexer_name": {
+                "tokens": torch.LongTensor([[3, 4, 5, 9, 9], [1, 2, 9, 9, 9]]),
+                "token_characters": torch.LongTensor(
+                    [
+                        [[1, 2], [3, 9], [2, 9], [9, 9], [9, 9]],
+                        [[5, 9], [4, 6], [9, 9], [9, 9], [9, 9]],
+                    ]
+                ),
+            }
+        }
+        assert_almost_equal(
+            util.get_text_field_mask(text_field_tensors, padding_id=9).long().numpy(),
+            [[1, 1, 1, 0, 0], [1, 1, 0, 0, 0]],
+        )
+
     def test_get_text_field_mask_returns_a_correct_mask_character_only_input(self):
         text_field_tensors = {
             "indexer_name": {
@@ -492,6 +509,24 @@ class TestNnUtil(AllenNlpTestCase):
         }
         assert_almost_equal(
             util.get_text_field_mask(text_field_tensors).long().numpy(),
+            [[1, 1, 1, 0], [1, 1, 0, 0]],
+        )
+
+    def test_get_text_field_mask_returns_a_correct_mask_character_only_input_custom_padding_id(
+        self,
+    ):
+        text_field_tensors = {
+            "indexer_name": {
+                "token_characters": torch.LongTensor(
+                    [
+                        [[1, 2, 3], [3, 9, 1], [2, 1, 9], [9, 9, 9]],
+                        [[5, 5, 5], [4, 6, 9], [9, 9, 9], [9, 9, 9]],
+                    ]
+                )
+            }
+        }
+        assert_almost_equal(
+            util.get_text_field_mask(text_field_tensors, padding_id=9).long().numpy(),
             [[1, 1, 1, 0], [1, 1, 0, 0]],
         )
 

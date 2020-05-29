@@ -52,6 +52,40 @@ class LearningRateSchedulersTest(AllenNlpTestCase):
         lrs.step(None)
         lrs.step_batch(None)
 
+    def test_polynomial_decay_works_properly(self):
+        scheduler = LearningRateScheduler.from_params(
+            optimizer=Optimizer.from_params(
+                model_parameters=self.model.named_parameters(),
+                params=Params({"type": "sgd", "lr": 1.0}),
+            ),
+            params=Params(
+                {
+                    "type": "polynomial_decay",
+                    "warmup_steps": 2,
+                    "total_steps": 6,
+                    "end_learning_rate": 0.1,
+                    "power": 2,
+                }
+            ),
+        )
+        optimizer = scheduler.optimizer
+
+        # Linear warmup for 2 steps.
+        scheduler.step_batch()
+        assert optimizer.param_groups[0]["lr"] == 0.5  # 1.0 * 1/2
+        scheduler.step_batch()
+        assert optimizer.param_groups[0]["lr"] == 1.0  # 1.0 * 2/2
+
+        # Polynomial decay for 4 steps.
+        scheduler.step_batch()
+        assert optimizer.param_groups[0]["lr"] == 0.60625  # (1.0 - 0.1) * (3/4) ** 2 + 0.1
+        scheduler.step_batch()
+        assert optimizer.param_groups[0]["lr"] == 0.325  # (1.0 - 0.1) * (2/4) ** 2 + 0.1
+        scheduler.step_batch()
+        assert optimizer.param_groups[0]["lr"] == 0.15625  # (1.0 - 0.1) * (1/4) ** 2 + 0.1
+        scheduler.step_batch()
+        assert optimizer.param_groups[0]["lr"] == 0.1  # (1.0 - 0.1) * (0/4) ** 2 + 0.1
+
     def test_exponential_works_properly(self):
         scheduler = LearningRateScheduler.from_params(
             optimizer=Optimizer.from_params(

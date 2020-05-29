@@ -1,5 +1,3 @@
-import sys
-
 from setuptools import find_packages, setup
 
 # PEP0440 compatible formatted version, see:
@@ -60,6 +58,7 @@ setup(
         "transformers>=2.9,<2.11",
         "jsonpickle",
         "dataclasses;python_version<'3.7'",
+        "filelock>=3.0,<3.1",
     ],
     entry_points={"console_scripts": ["allennlp=allennlp.__main__:run"]},
     include_package_data=True,

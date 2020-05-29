@@ -64,6 +64,15 @@ class TokenIndexer(Registrable):
         """
         raise NotImplementedError
 
+    def indices_to_tokens(
+        self, indexed_tokens: IndexedTokenList, vocabulary: Vocabulary
+    ) -> List[Token]:
+        """
+        Inverse operations of tokens_to_indices. Takes an `IndexedTokenList` and converts it back
+        into a list of tokens.
+        """
+        raise NotImplementedError
+
     def get_empty_token_list(self) -> IndexedTokenList:
         """
         Returns an `already indexed` version of an empty token list.  This is typically just an
