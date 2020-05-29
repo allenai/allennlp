@@ -1,5 +1,5 @@
 # Beaker configuration file for training the BiDAF model.
-description: https://github.com/allenai/allennlp/commit/ALLENNLP_COMMIT
+description: ALLENNLP_VERSION, ALLENNLP_MODELS_VERSION
 tasks:
   - name: bidaf-training
     spec:
