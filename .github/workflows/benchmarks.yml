@@ -2,7 +2,7 @@ name: Benchmarks
 
 on:
   schedule:
-  - cron: '37 11 * * 1,2,3,4,5'  # early morning (11:37 UTC / 4:37 AM PDT) Monday - Friday
+  - cron: '31 8 * * 1,2,3,4,5'  # early morning (8:31 UTC / 1:31 AM PDT) Monday - Friday
 
 jobs:
   beaker:
@@ -34,11 +34,13 @@ jobs:
         echo "::set-env name=ALLENNLP_MODELS_COMMIT::$ALLENNLP_MODELS_COMMIT";
         echo "::set-env name=IMAGE_NAME::$IMAGE_NAME";
 
-    - name: Create beaker config
+    - name: Update beaker configs for latest commit
       run: |
-        cp ./scripts/benchmarks/configs/bidaf.yml ./config.yml
-        sed -i "s/ALLENNLP_COMMIT/$ALLENNLP_COMMIT/g" config.yml
-        sed -i "s/IMAGE_NAME/$IMAGE_NAME/g" config.yml
+        for config in scripts/benchmarks/configs/*.yml; do
+            echo "Found config: $config";
+            sed -i "s/ALLENNLP_COMMIT/$ALLENNLP_COMMIT/g" $config;
+            sed -i "s/IMAGE_NAME/$IMAGE_NAME/g" $config;
+        done
 
     - name: Pull dockerfile
       run: |
@@ -48,9 +50,6 @@ jobs:
       run: |
         echo "AllenNLP commit: $ALLENNLP_COMMIT"
         echo "AllenNLP Models commit: $ALLENNLP_MODELS_COMMIT"
-
-        echo "Beaker config:"
-        cat config.yml
 
         echo "Dockerfile:"
         cat Dockerfile.commit
@@ -66,6 +65,10 @@ jobs:
       run: |
         beaker image create -n $IMAGE_NAME $IMAGE_NAME
 
-    - name: Submit beaker experiment
+    - name: Submit beaker experiments
       run: |
-        beaker experiment create --name bidaf_$(date -u +%Y%m%d) -f config.yml --workspace ai2/AllenNLPPerf
+        for config in scripts/benchmarks/configs/*.yml; do
+            experiment_name=${config//+(*\/|.yml)}_$(date -u +%Y%m%d);
+            echo "Submitting $experiment_name to beaker";
+            beaker experiment create --name $experiment_name -f $config --workspace ai2/AllenNLPPerf;
+        done
