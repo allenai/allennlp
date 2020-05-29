@@ -12,6 +12,12 @@ MODELS = git+https://github.com/$(MODELS_REPO).git@$(MODELS_REV)
 DATE_ID := $(shell date -u +%Y-%m-%d-%H-%M-%S)
 IMAGE_NAME := allennlp-with-models-$(DATE_ID)
 
+ifeq ($(shell uname -s),Darwin)
+	SED_CMD = sed -i ''
+else
+	SED_CMD = sed
+endif
+
 .PHONY : image
 image :
 	@echo "Building docker image..."
@@ -32,9 +38,9 @@ image :
 	@echo "    allennlp-models : $(ALLENNLP)"
 	@mkdir -p /tmp/beaker/configs
 	@cp configs/$*.yml $@
-	@sed -i'' 's/IMAGE_NAME/$(IMAGE_NAME)/g' $@
-	@sed -i'' 's|ALLENNLP_VERSION|$(ALLENNLP)|g' $@
-	@sed -i'' 's|ALLENNLP_MODELS_VERSION|$(MODELS)|g' $@
+	@$(SED_CMD) 's/IMAGE_NAME/$(IMAGE_NAME)/g' $@
+	@$(SED_CMD) 's|ALLENNLP_VERSION|$(ALLENNLP)|g' $@
+	@$(SED_CMD) 's|ALLENNLP_MODELS_VERSION|$(MODELS)|g' $@
 	@echo "Beaker config created: $@"
 
 configs/%.yml : /tmp/beaker/configs/%.yml
