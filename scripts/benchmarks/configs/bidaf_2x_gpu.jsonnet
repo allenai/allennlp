@@ -88,7 +88,7 @@
   "trainer": {
     "num_epochs": 20,
     "grad_norm": 5.0,
-    "patience": 10,
+    // "patience": 10,
     "validation_metric": "+em",
     "learning_rate_scheduler": {
       "type": "reduce_on_plateau",
