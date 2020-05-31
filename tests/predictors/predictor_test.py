@@ -66,13 +66,13 @@ class TestPredictor(AllenNlpTestCase):
         )
         predictor = Predictor.from_archive(archive)
 
-        # ensure that requires_grad is initially False
+        # ensure that requires_grad is initially False on the embedding layer
         embedding_layer = util.find_embedding_layer(predictor._model)
         assert not embedding_layer.weight.requires_grad
         instance = predictor._json_to_instance(inputs)
         outputs = predictor._model.forward_on_instance(instance)
         labeled_instances = predictor.predictions_to_labeled_instances(instance, outputs)
-        # ensure that gradients are always present, despite requires_grad being false
+        # ensure that gradients are always present, despite requires_grad being false on the embedding layer
         for instance in labeled_instances:
             grads = predictor.get_gradients([instance])[0]
             assert bool(grads)
