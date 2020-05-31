@@ -1,6 +1,7 @@
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.models.archival import load_archive
 from allennlp.predictors import Predictor
+from allennlp.nn import util
 
 
 class TestPredictor(AllenNlpTestCase):
@@ -51,3 +52,29 @@ class TestPredictor(AllenNlpTestCase):
             assert "grad_input_1" in grads
             assert grads["grad_input_1"] is not None
             assert len(grads["grad_input_1"][0]) == 5  # 9 words in hypothesis
+
+    def test_get_gradients_when_requires_grad_is_false(self):
+        inputs = {
+            "sentence": "I always write unit tests",
+        }
+
+        archive = load_archive(
+            self.FIXTURES_ROOT
+            / "basic_classifier"
+            / "embedding_with_trainable_is_false"
+            / "model.tar.gz"
+        )
+        predictor = Predictor.from_archive(archive)
+
+        # ensure that requires_grad is initially False
+        embedding_layer = util.find_embedding_layer(predictor._model)
+        assert not embedding_layer.weight.requires_grad
+        instance = predictor._json_to_instance(inputs)
+        outputs = predictor._model.forward_on_instance(instance)
+        labeled_instances = predictor.predictions_to_labeled_instances(instance, outputs)
+        # ensure that gradients are always present, despite requires_grad being false
+        for instance in labeled_instances:
+            grads = predictor.get_gradients([instance])[0]
+            assert bool(grads)
+        # ensure that no side effects remain
+        assert not embedding_layer.weight.requires_grad

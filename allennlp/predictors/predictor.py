@@ -87,6 +87,13 @@ class Predictor(Registrable):
         layer of the model. Calls `backward` on the loss and then removes the
         hooks.
         """
+        # set requires_grad to true for all parameters, but save original values to
+        # restore them later
+        original_param_name_to_requires_grad_dict = {}
+        for param_name, param in self._model.named_parameters():
+            original_param_name_to_requires_grad_dict[param_name] = param.requires_grad
+            param.requires_grad = True
+
         embedding_gradients: List[Tensor] = []
         hooks: List[RemovableHandle] = self._register_embedding_gradient_hooks(embedding_gradients)
 
@@ -110,6 +117,10 @@ class Predictor(Registrable):
         for idx, grad in enumerate(embedding_gradients):
             key = "grad_input_" + str(idx + 1)
             grad_dict[key] = grad.detach().cpu().numpy()
+
+        # restore the original requires_grad values of the parameters
+        for param_name, param in self._model.named_parameters():
+            param.requires_grad = original_param_name_to_requires_grad_dict[param_name]
 
         return grad_dict, outputs
 
