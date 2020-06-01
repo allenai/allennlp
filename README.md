@@ -73,7 +73,7 @@ AllenNLP requires Python 3.6.1 or later. The preferred way to install AllenNLP i
 
 If you need pointers on setting up an appropriate Python environment or would like to install AllenNLP using a different method, see below.
 
-We support AllenNLP on Mac and Linux environemnts.  We presently do not support Windows but are open to contributions.
+We support AllenNLP on Mac and Linux environments. We presently do not support Windows but are open to contributions.
 
 ### Installing via pip
 
