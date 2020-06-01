@@ -29,7 +29,7 @@
 - [Forum](https://discourse.allennlp.org)
 - Documentation ( [latest](https://docs.allennlp.org/latest/) | [stable](https://docs.allennlp.org/stable/) | [master](https://docs.allennlp.org/master/) )
 - [Contributing Guidelines](CONTRIBUTING.md)
-- [Pretrained Models](https://github.com/allenai/allennlp-hub/blob/master/allennlp_hub/pretrained/allennlp_pretrained.py)
+- [Pretrained Models](https://github.com/allenai/allennlp-models/blob/master/allennlp_models/pretrained.py)
 - [Continuous Build](https://github.com/allenai/allennlp/actions)
 - [Nightly Releases](https://pypi.org/project/allennlp/#history)
 - [Officially Supported Models](https://github.com/allenai/allennlp-models)
@@ -72,8 +72,6 @@
 AllenNLP requires Python 3.6.1 or later. The preferred way to install AllenNLP is via `pip`.  Just run `pip install allennlp` in your Python environment and you're good to go!
 
 If you need pointers on setting up an appropriate Python environment or would like to install AllenNLP using a different method, see below.
-
-Windows is currently not officially supported, although we try to fix issues when they are easily addressed.
 
 ### Installing via pip
 
@@ -150,29 +148,9 @@ You can test your installation with `allennlp test-install`.
 ## Running AllenNLP
 
 Once you've installed AllenNLP, you can run the command-line interface either
-with the `allennlp` command (if you installed via `pip`) or `allennlp` (if you installed via source).
-
-```
-$ allennlp
-Run AllenNLP
-
-optional arguments:
-  -h, --help     show this help message and exit
-  --version      show program's version number and exit
-
-Commands:
-  
-    elmo         Create word vectors using a pretrained ELMo model.
-    evaluate     Evaluate the specified model + dataset.
-    find-lr      Find a learning rate range.
-    predict      Use a trained model to make predictions.
-    print-results
-                 Print results from allennlp serialization directories to the
-                 console.
-    test-install
-                 Run the unit tests.
-    train        Train a model.
-```
+with the `allennlp` command (whether you installed from `pip` or from source).
+`allennlp` has various subcommands such as `train`, `evaluate`, and `predict`.
+To see the full usage information, run `allennlp --help`.
 
 ## Docker images
 
