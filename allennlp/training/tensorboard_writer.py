@@ -101,11 +101,8 @@ class TensorboardWriter(FromParams):
 
     def log_memory_usage(self):
         cpu_memory_usage = peak_memory_mb()
-        gpu_memory_usages = {}
-        for gpu, memory in gpu_memory_mb().items():
-            gpu_memory_usages[gpu] = memory
         self.add_train_scalar("memory_usage/cpu", cpu_memory_usage)
-        for gpu, memory in gpu_memory_usages.items():
+        for gpu, memory in gpu_memory_mb().items():
             self.add_train_scalar(f"memory_usage/gpu_{gpu}", memory)
 
     def log_batch(
