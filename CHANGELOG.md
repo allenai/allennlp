@@ -25,12 +25,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Improvements to beam search
 - ROUGE metric
 - Polynomial decay learning rate scheduler
+- A `BatchCallback` for logging CPU and GPU memory usage to tensorboard. This is mainly for debugging
+  because using it can cause a significant slowdown in training.
 
 ### Changed
 
 - Similar to our caching mechanism, we introduced a lock file to the vocab to avoid race
   conditions when saving/loading the vocab from/to the same serialization directory in different processes.
-- The trainer now logs CPU and GPU memory usage to tensorboard.
 
 ## [v1.0.0rc5](https://github.com/allenai/allennlp/releases/tag/v1.0.0rc5) - 2020-05-26
 
