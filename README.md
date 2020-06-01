@@ -104,11 +104,17 @@ Installing the library and dependencies is simple using `pip`.
    ```bash
    pip install allennlp
    ```
-*Looking for bleeding edge features? You can install nightly releases directly from [pypi](https://pypi.org/project/allennlp/#history)*
-That's it! You're now ready to build and train AllenNLP models.
-AllenNLP installs a script when you install the python package, meaning you can run allennlp commands just by typing `allennlp` into a terminal.
 
-You can now test your installation with `allennlp test-install`.
+*Looking for bleeding edge features? You can install nightly releases directly from [pypi](https://pypi.org/project/allennlp/#history)*
+
+AllenNLP installs a script when you install the python package, so you can run allennlp commands just by typing `allennlp` into a terminal.  For example, you can now test your installation with `allennlp test-install`.
+
+You may also want to install `allennlp-models`, which contains the NLP constructs to train and run our officially
+supported models, many of which are hosted at http://demo.allennlp.org.
+
+   ```bash
+   pip install allennlp-models
+   ```
 
 ### Installing using Docker
 
@@ -146,6 +152,7 @@ This will make `allennlp` available on your system but it will use the sources f
 you made of the source repository.
 
 You can test your installation with `allennlp test-install`.
+See https://github.com/allenai/allennlp-models for instructions on installing `allennlp-models` from source.
 
 ## Running AllenNLP
 
