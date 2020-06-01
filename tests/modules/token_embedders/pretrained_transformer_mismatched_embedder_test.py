@@ -95,7 +95,48 @@ class TestPretrainedTransformerMismatchedEmbedder(AllenNlpTestCase):
             [[1, 3], [4, 4], [5, 5], [0, 0], [0, 0]],
         ]
 
-        # Attention mask
         bert_vectors = token_embedder(tokens)
         assert bert_vectors.size() == (2, max(len(sentence1), len(sentence2)), 768)
         assert not torch.isnan(bert_vectors).any()
+
+    def test_token_without_wordpieces(self):
+        token_indexer = PretrainedTransformerMismatchedIndexer("bert-base-uncased")
+
+        sentence1 = ["A", "", "AllenNLP", "sentence", "."]
+        sentence2 = ["AllenNLP", "", "great"]
+        tokens1 = [Token(word) for word in sentence1]
+        tokens2 = [Token(word) for word in sentence2]
+        vocab = Vocabulary()
+        params = Params(
+            {
+                "token_embedders": {
+                    "bert": {
+                        "type": "pretrained_transformer_mismatched",
+                        "model_name": "bert-base-uncased",
+                    }
+                }
+            }
+        )
+        token_embedder = BasicTextFieldEmbedder.from_params(vocab=vocab, params=params)
+
+        instance1 = Instance({"tokens": TextField(tokens1, {"bert": token_indexer})})
+        instance2 = Instance({"tokens": TextField(tokens2, {"bert": token_indexer})})
+
+        batch = Batch([instance1, instance2])
+        batch.index_instances(vocab)
+
+        padding_lengths = batch.get_padding_lengths()
+        tensor_dict = batch.as_tensor_dict(padding_lengths)
+        tokens = tensor_dict["tokens"]
+
+        assert tokens["bert"]["offsets"].tolist() == [
+            [[1, 1], [-1, -1], [2, 4], [5, 5], [6, 6]],
+            [[1, 3], [-1, -1], [4, 4], [0, 0], [0, 0]],
+        ]
+
+        bert_vectors = token_embedder(tokens)
+        assert bert_vectors.size() == (2, max(len(sentence1), len(sentence2)), 768)
+        assert not torch.isnan(bert_vectors).any()
+        assert all(bert_vectors[0, 1] == 0)
+        assert all(bert_vectors[1, 1] == 0)
+
