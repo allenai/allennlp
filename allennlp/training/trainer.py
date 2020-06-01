@@ -120,6 +120,28 @@ class BatchCallback(Registrable):
         pass
 
 
+@BatchCallback.register("tensorboard-memory-usage")
+class TensoboardBatchMemoryUsage(BatchCallback):
+    """
+    Logs the CPU and GPU memory usage to tensorboard on every batch.
+
+    This is mainly used for debugging as it can cause a significant slowdown in training.
+    """
+
+    def __call__(
+        self,
+        trainer: "GradientDescentTrainer",
+        batch_inputs: List[List[TensorDict]],
+        batch_outputs: List[Dict[str, Any]],
+        epoch: int,
+        batch_number: int,
+        is_training: bool,
+        is_master: bool,
+    ) -> None:
+        if is_master:
+            trainer._tensorboard.log_memory_usage()
+
+
 BatchCallback.register("null")(BatchCallback)
 
 
@@ -580,12 +602,6 @@ class GradientDescentTrainer(Trainer):
                 cuda_device=self.cuda_device,
             )
 
-            # Update memory usage
-            current_cpu_usage = common_util.peak_memory_mb()
-            current_gpu_usages = {}
-            for gpu, memory in common_util.gpu_memory_mb().items():
-                current_gpu_usages[gpu] = memory
-
             if self._master:
                 # Updating tqdm only for the master as the trainers wouldn't have one
                 description = training_util.description_from_metrics(metrics)
@@ -597,8 +613,6 @@ class GradientDescentTrainer(Trainer):
                     metrics,
                     batch_group,
                     param_updates,
-                    current_cpu_usage,
-                    current_gpu_usages,
                 )
 
                 self._checkpointer.maybe_save_checkpoint(self, epoch, batches_this_epoch)
