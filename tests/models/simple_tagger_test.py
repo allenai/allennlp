@@ -86,7 +86,7 @@ class SimpleTaggerSpanF1Test(ModelTestCase):
         self.ensure_batch_predictions_are_consistent()
 
 
-class SimpleTaggerSpanF1Test(ModelTestCase):
+class SimpleTaggerWithoutSpanF1Test(ModelTestCase):
     def setup_method(self):
         super().setup_method()
         self.set_up_model(
