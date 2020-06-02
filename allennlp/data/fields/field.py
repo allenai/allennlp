@@ -123,11 +123,9 @@ class Field(Generic[DataArray]):
             # check for equality we have to check through all of the slots in all of the
             # base classes as well.
             for class_ in (self.__class__,) + self.__class__.__bases__:
-                slots = getattr(class_, "__slots__")
-                if slots:
-                    for attr in slots:
-                        if getattr(self, attr) != getattr(other, attr):
-                            return False
+                for attr in getattr(class_, "__slots__", []):
+                    if getattr(self, attr) != getattr(other, attr):
+                        return False
             # It's possible that a subclass was not defined as a slots class, in which
             # case we'll need to check __dict__.
             if hasattr(self, "__dict__"):
