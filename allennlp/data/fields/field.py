@@ -118,6 +118,10 @@ class Field(Generic[DataArray]):
 
     def __eq__(self, other) -> bool:
         if isinstance(self, other.__class__):
+            # With the way "slots" classes work, self.__slots__ only gives the slots defined
+            # by the current class, but not any of its base classes. Therefore to truly
+            # check for equality we have to check through all of the slots in all of the
+            # base classes as well.
             for class_ in (self.__class__,) + self.__class__.__bases__:
                 for attr in class_.__slots__:
                     if getattr(self, attr) != getattr(other, attr):
