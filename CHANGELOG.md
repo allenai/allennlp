@@ -33,7 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Similar to our caching mechanism, we introduced a lock file to the vocab to avoid race
   conditions when saving/loading the vocab from/to the same serialization directory in different processes.
-- Changed the `Token` class to a "slots" class, which dramatically reduces the size in memory of `Token` instances.
+- Changed the `Token` class and all `Field` classes to "slots" classes, which dramatically reduces the size in memory of instances.
 
 ## [v1.0.0rc5](https://github.com/allenai/allennlp/releases/tag/v1.0.0rc5) - 2020-05-26
 
