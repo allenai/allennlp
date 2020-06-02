@@ -123,7 +123,6 @@ class Field(Generic[DataArray]):
             # check for equality we have to check through all of the slots in all of the
             # base classes as well.
             for class_ in (self.__class__,) + self.__class__.__bases__:
-                # This might not actually be a "slots" class, so check for __dict__ first.
                 for attr in class_.__slots__:
                     if getattr(self, attr) != getattr(other, attr):
                         return False
