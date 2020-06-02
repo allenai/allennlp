@@ -1,4 +1,5 @@
 from collections import defaultdict
+from dataclasses import dataclass
 
 import pytest
 
@@ -6,6 +7,17 @@ from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Token, Vocabulary
 from allennlp.data.token_indexers import SingleIdTokenIndexer
 from allennlp.data.tokenizers import SpacyTokenizer
+
+
+@dataclass(init=False)
+class TokenWithStyle(Token):
+    __slots__ = ["is_bold"]
+
+    is_bold: bool
+
+    def __init__(self, text: str = None, is_bold: bool = False):
+        super().__init__(text=text)
+        self.is_bold = is_bold
 
 
 class TestSingleIdTokenIndexer(AllenNlpTestCase):
@@ -30,7 +42,7 @@ class TestSingleIdTokenIndexer(AllenNlpTestCase):
     def test_count_other_features(self):
         indexer = SingleIdTokenIndexer("other_features", feature_name="is_bold")
         counter = defaultdict(lambda: defaultdict(int))
-        token = Token("Header")
+        token = TokenWithStyle("Header")
         token.is_bold = "True"
         indexer.count_vocab_items(token, counter)
         assert counter["other_features"] == {"True": 1}

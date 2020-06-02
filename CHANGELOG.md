@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   were attempting to cache the same file at once. This was fixed by using a lock file tied to each
   cached file.
 - `get_text_field_mask()` now supports padding indices that are not `0`.
+- A bug where `predictor.get_gradients()` would return an empty dictionary if an embedding layer had trainable set to false
 - Fixes `PretrainedTransformerMismatchedIndexer` in the case where a token consists of zero word pieces.
 
 ### Added
@@ -26,12 +27,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Improvements to beam search
 - ROUGE metric
 - Polynomial decay learning rate scheduler
+- A `BatchCallback` for logging CPU and GPU memory usage to tensorboard. This is mainly for debugging
+  because using it can cause a significant slowdown in training.
 
 ### Changed
 
 - Similar to our caching mechanism, we introduced a lock file to the vocab to avoid race
   conditions when saving/loading the vocab from/to the same serialization directory in different processes.
-- The trainer now logs CPU and GPU memory usage to tensorboard.
+- Changed the `Token` class to a "slots" class, which dramatically reduces the size in memory of `Token` instances.
 
 ## [v1.0.0rc5](https://github.com/allenai/allennlp/releases/tag/v1.0.0rc5) - 2020-05-26
 
