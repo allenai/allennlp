@@ -52,6 +52,10 @@ class Token:
         "text_id",
         "type_id",
     ]
+    # Defining the `__slots__` of this class is an optimization that dramatically reduces
+    # the size in memory of a `Token` instance. The downside of using `__slots__`
+    # with a dataclass is that you can assign default values at the class level,
+    # which is why we need a custom `__init__` function that provides the default values.
 
     text: Optional[str]
     idx: Optional[int]
