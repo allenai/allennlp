@@ -19,18 +19,22 @@ DOCKER_RUN_CMD = docker run --rm \
 		-v $$HOME/nltk_data:/root/nltk_data
 
 ifeq ($(shell uname),Darwin)
-	ifeq ($(shell which gsed),)
-		$(error Please install GNU sed with 'brew install gnu-sed')
-	else
-		SED = gsed
-	endif
+ifeq ($(shell which gsed),)
+$(error Please install GNU sed with 'brew install gnu-sed')
 else
-	SED = sed
+SED = gsed
+endif
+else
+SED = sed
 endif
 
 .PHONY : version
 version :
 	@python -c 'from allennlp.version import VERSION; print(f"AllenNLP v{VERSION}")'
+
+.PHONY : check-for-cuda
+check-for-cuda :
+	@python -c 'import torch; assert torch.cuda.is_available(); print("Cuda is available")'
 
 #
 # Testing helpers.

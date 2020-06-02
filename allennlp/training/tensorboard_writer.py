@@ -5,6 +5,7 @@ import os
 from tensorboardX import SummaryWriter
 import torch
 
+from allennlp.common.util import peak_memory_mb, gpu_memory_mb
 from allennlp.common.from_params import FromParams
 from allennlp.data.dataloader import TensorDict
 from allennlp.nn import util as nn_util
@@ -98,10 +99,10 @@ class TensorboardWriter(FromParams):
             val = value
         return val
 
-    def log_memory_usage(self, cpu_memory_usage, gpu_memory_usages):
+    def log_memory_usage(self):
+        cpu_memory_usage = peak_memory_mb()
         self.add_train_scalar("memory_usage/cpu", cpu_memory_usage)
-
-        for gpu, memory in gpu_memory_usages.items():
+        for gpu, memory in gpu_memory_mb().items():
             self.add_train_scalar(f"memory_usage/gpu_{gpu}", memory)
 
     def log_batch(
@@ -112,13 +113,10 @@ class TensorboardWriter(FromParams):
         metrics: Dict[str, float],
         batch_group: List[List[TensorDict]],
         param_updates: Optional[Dict[str, torch.Tensor]],
-        cpu_memoy_usage: float,
-        gpu_memory_usages: Dict[int, int],
     ) -> None:
         if self.should_log_this_batch():
             self.log_parameter_and_gradient_statistics(model, batch_grad_norm)
             self.log_learning_rates(model, optimizer)
-            self.log_memory_usage(cpu_memoy_usage, gpu_memory_usages)
 
             self.add_train_scalar("loss/loss_train", metrics["loss"])
             self.log_metrics({"epoch_metrics/" + k: v for k, v in metrics.items()})
