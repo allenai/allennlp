@@ -122,7 +122,7 @@ class Field(Generic[DataArray]):
             # by the current class, but not any of its base classes. Therefore to truly
             # check for equality we have to check through all of the slots in all of the
             # base classes as well.
-            for class_ in (self.__class__,) + self.__class__.__bases__:
+            for class_ in self.__class__.mro():
                 for attr in getattr(class_, "__slots__", []):
                     if getattr(self, attr) != getattr(other, attr):
                         return False
