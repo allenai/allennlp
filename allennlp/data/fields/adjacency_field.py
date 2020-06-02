@@ -40,6 +40,15 @@ class AdjacencyField(Field[torch.Tensor]):
         The value to use as padding.
     """
 
+    __slots__ = [
+        "indices",
+        "labels",
+        "sequence_field",
+        "_label_namespace",
+        "_padding_value",
+        "_indexed_labels",
+    ]
+
     # It is possible that users want to use this field with a namespace which uses OOV/PAD tokens.
     # This warning will be repeated for every instantiation of this class (i.e for every data
     # instance), spewing a lot of warnings so this class variable is used to only log a single

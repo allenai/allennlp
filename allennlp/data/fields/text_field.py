@@ -42,6 +42,8 @@ class TextField(SequenceField[TextFieldTensors]):
     `TokenCharactersIndexer` produces an array of shape (num_tokens, num_characters).
     """
 
+    __slots__ = ["tokens", "_token_indexers", "_indexed_tokens"]
+
     def __init__(self, tokens: List[Token], token_indexers: Dict[str, TokenIndexer]) -> None:
         self.tokens = tokens
         self._token_indexers = token_indexers

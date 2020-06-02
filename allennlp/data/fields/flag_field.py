@@ -11,6 +11,8 @@ class FlagField(Field[Any]):
     This will be passed to a `forward` method as a single value of whatever type you pass in.
     """
 
+    __slots__ = ["flag_value"]
+
     def __init__(self, flag_value: Any) -> None:
         self.flag_value = flag_value
 

@@ -39,6 +39,14 @@ class SequenceLabelField(Field[torch.Tensor]):
         strings to integers to use (so that "O" as a tag doesn't get the same id as "O" as a word).
     """
 
+    __slots__ = [
+        "labels",
+        "sequence_field",
+        "_label_namespace",
+        "_indexed_labels",
+        "_skip_indexing",
+    ]
+
     # It is possible that users want to use this field with a namespace which uses OOV/PAD tokens.
     # This warning will be repeated for every instantiation of this class (i.e for every data
     # instance), spewing a lot of warnings so this class variable is used to only log a single

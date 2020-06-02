@@ -24,6 +24,8 @@ class MetadataField(Field[DataArray], Mapping[str, Any]):
         this to be a dictionary, but it could be anything you want.
     """
 
+    __slots__ = ["metadata"]
+
     def __init__(self, metadata: Any) -> None:
         self.metadata = metadata
 

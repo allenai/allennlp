@@ -36,6 +36,8 @@ class LabelField(Field[torch.Tensor]):
         step.  If this is `False` and your labels are not strings, this throws a `ConfigurationError`.
     """
 
+    __slots__ = ["label", "_label_namespace", "_label_id", "_skip_indexing"]
+
     # Most often, you probably don't want to have OOV/PAD tokens with a LabelField, so we warn you
     # about it when you pick a namespace that will getting these tokens by default.  It is
     # possible, however, that you _do_ actually want OOV/PAD tokens with this Field.  This class

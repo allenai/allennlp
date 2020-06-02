@@ -26,6 +26,8 @@ class Field(Generic[DataArray]):
     then intelligently batch together instances and pad them into actual tensors.
     """
 
+    __slots__ = []  # type: ignore
+
     def count_vocab_items(self, counter: Dict[str, Dict[str, int]]):
         """
         If there are strings in this field that need to be converted into integers through a
@@ -116,7 +118,10 @@ class Field(Generic[DataArray]):
 
     def __eq__(self, other) -> bool:
         if isinstance(self, other.__class__):
-            return self.__dict__ == other.__dict__
+            for attr in self.__slots__:
+                if getattr(self, attr) != getattr(other, attr):
+                    return False
+            return True
         return NotImplemented
 
     def __len__(self):
