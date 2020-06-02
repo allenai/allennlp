@@ -102,6 +102,8 @@ class SimpleTagger(Model):
             self._f1_metric = SpanBasedF1Measure(
                 vocab, tag_namespace=label_namespace, label_encoding=label_encoding
             )
+        else:
+            self._f1_metric = None
 
         initializer(self)
 
