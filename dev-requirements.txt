@@ -28,6 +28,9 @@ responses>=0.7
 # For running tests that aren't 100% reliable.
 flaky
 
+# For running benchmarks.
+pytest-benchmark
+
 #### DOC-RELATED PACKAGES ####
 
 # YAML manipulation

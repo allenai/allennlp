@@ -42,15 +42,15 @@ check-for-cuda :
 
 .PHONY : lint
 lint :
-	flake8 ./scripts ./tests $(SRC)
+	flake8 .
 
 .PHONY : format
 format :
-	black --check ./scripts ./tests $(SRC)
+	black --check .
 
 .PHONY : typecheck
 typecheck :
-	mypy $(SRC) \
+	mypy . \
 		--ignore-missing-imports \
 		--no-strict-optional \
 		--no-site-packages \
@@ -70,6 +70,10 @@ test-with-cov :
 .PHONY : gpu-test
 gpu-test :
 	pytest --color=yes -v -rf -m gpu
+
+.PHONY : benchmarks
+benchmarks :
+	pytest -c benchmarks/pytest.ini benchmarks/
 
 #
 # Setup helpers

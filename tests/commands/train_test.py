@@ -32,10 +32,10 @@ SEQUENCE_TAGGING_SHARDS_PATH = str(AllenNlpTestCase.FIXTURES_ROOT / "data" / "sh
 
 @BatchCallback.register("training_data_logger")
 class TrainingDataLoggerBatchCallback(BatchCallback):
-    def __call__(
+    def __call__(  # type: ignore
         self,
         trainer: "GradientDescentTrainer",
-        batch_inputs: List[List[TensorDict]],
+        batch_inputs: List[TensorDict],
         batch_outputs: List[Dict[str, Any]],
         epoch: int,
         batch_number: int,
@@ -46,7 +46,7 @@ class TrainingDataLoggerBatchCallback(BatchCallback):
             logger = logging.getLogger(__name__)
             for batch in batch_inputs:
                 for metadata in batch["metadata"]:
-                    logger.info(f"First word from training data: '{metadata['words'][0]}'")
+                    logger.info(f"First word from training data: '{metadata['words'][0]}'")  # type: ignore
 
 
 class TestTrain(AllenNlpTestCase):
@@ -311,7 +311,7 @@ class TestTrain(AllenNlpTestCase):
         import re
 
         pattern = re.compile(r"First word from training data: '([^']*)'")
-        first_word_counts = Counter()
+        first_word_counts = Counter()  # type: ignore
         with open(os.path.join(out_dir, "stdout_worker0.log")) as f:
             worker0_log = f.read()
             assert train_complete in worker0_log
