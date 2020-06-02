@@ -23,6 +23,8 @@ class Instance(Mapping[str, Field]):
         The `Field` objects that will be used to produce data arrays for this instance.
     """
 
+    __slots__ = ["fields", "indexed"]
+
     def __init__(self, fields: MutableMapping[str, Field]) -> None:
         self.fields = fields
         self.indexed = False
