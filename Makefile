@@ -32,6 +32,10 @@ endif
 version :
 	@python -c 'from allennlp.version import VERSION; print(f"AllenNLP v{VERSION}")'
 
+.PHONY : check-for-cuda
+check-for-cuda :
+	@python -c 'import torch; assert torch.cuda.is_available(); print("Cuda is available")'
+
 #
 # Testing helpers.
 #
