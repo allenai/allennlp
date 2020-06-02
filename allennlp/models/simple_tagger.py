@@ -82,24 +82,26 @@ class SimpleTagger(Model):
             "encoder input dim",
         )
 
-        # We keep calculate_span_f1 as a constructor argument for API consistency with
-        # the CrfTagger, even it is redundant in this class
-        # (label_encoding serves the same purpose).
-        if calculate_span_f1 and not label_encoding:
-            raise ConfigurationError(
-                "calculate_span_f1 is True, but no label_encoding was specified."
-            )
         self.metrics = {
             "accuracy": CategoricalAccuracy(),
             "accuracy3": CategoricalAccuracy(top_k=3),
         }
 
+        # We keep calculate_span_f1 as a constructor argument for API consistency with
+        # the CrfTagger, even it is redundant in this class
+        # (label_encoding serves the same purpose).
+        if calculate_span_f1 is None:
+            calculate_span_f1 = label_encoding is not None
+
+        self.calculate_span_f1 = calculate_span_f1
         if calculate_span_f1:
+            if not label_encoding:
+                raise ConfigurationError(
+                    "calculate_span_f1 is True, but no label_encoding was specified."
+                )
             self._f1_metric = SpanBasedF1Measure(
                 vocab, tag_namespace=label_namespace, label_encoding=label_encoding
             )
-        else:
-            self._f1_metric = None
 
         initializer(self)
 
@@ -169,7 +171,7 @@ class SimpleTagger(Model):
             loss = sequence_cross_entropy_with_logits(logits, tags, tag_mask)
             for metric in self.metrics.values():
                 metric(logits, tags, mask)
-            if self._f1_metric is not None:
+            if self.calculate_span_f1:
                 self._f1_metric(logits, tags, mask)
             output_dict["loss"] = loss
 
@@ -208,7 +210,7 @@ class SimpleTagger(Model):
             metric_name: metric.get_metric(reset) for metric_name, metric in self.metrics.items()
         }
 
-        if self._f1_metric is not None:
+        if self.calculate_span_f1:
             f1_dict = self._f1_metric.get_metric(reset=reset)
             if self._verbose_metrics:
                 metrics_to_return.update(f1_dict)
