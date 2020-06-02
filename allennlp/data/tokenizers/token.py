@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 
-@dataclass
+@dataclass(init=False, repr=False)
 class Token:
     """
     A simple token representation, keeping track of the token's text, offset in the passage it was
@@ -40,16 +40,53 @@ class Token:
         added, similar to spacy's `lex_id`.
     """
 
-    text: Optional[str] = None
-    idx: Optional[int] = None
-    idx_end: Optional[int] = None
-    lemma_: Optional[str] = None
-    pos_: Optional[str] = None
-    tag_: Optional[str] = None
-    dep_: Optional[str] = None
-    ent_type_: Optional[str] = None
-    text_id: Optional[int] = None
-    type_id: Optional[int] = None
+    __slots__ = [
+        "text",
+        "idx",
+        "idx_end",
+        "lemma_",
+        "pos_",
+        "tag_",
+        "dep_",
+        "ent_type_",
+        "text_id",
+        "type_id",
+    ]
+
+    text: Optional[str]
+    idx: Optional[int]
+    idx_end: Optional[int]
+    lemma_: Optional[str]
+    pos_: Optional[str]
+    tag_: Optional[str]
+    dep_: Optional[str]
+    ent_type_: Optional[str]
+    text_id: Optional[int]
+    type_id: Optional[int]
+
+    def __init__(
+        self,
+        text: str = None,
+        idx: int = None,
+        idx_end: int = None,
+        lemma_: str = None,
+        pos_: str = None,
+        tag_: str = None,
+        dep_: str = None,
+        ent_type_: str = None,
+        text_id: int = None,
+        type_id: int = None,
+    ) -> None:
+        self.text = text
+        self.idx = idx
+        self.idx_end = idx_end
+        self.lemma_ = lemma_
+        self.pos_ = pos_
+        self.tag_ = tag_
+        self.dep_ = dep_
+        self.ent_type_ = ent_type_
+        self.text_id = text_id
+        self.type_id = type_id
 
     def __str__(self):
         return self.text

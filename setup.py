@@ -15,7 +15,7 @@ from setuptools import find_packages, setup
 
 # version.py defines the VERSION and VERSION_SHORT variables.
 # We use exec here so we don't import allennlp whilst setting up.
-VERSION = {}
+VERSION = {}  # type: ignore
 with open("allennlp/version.py", "r") as version_file:
     exec(version_file.read(), VERSION)
 

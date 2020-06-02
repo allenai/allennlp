@@ -42,15 +42,15 @@ check-for-cuda :
 
 .PHONY : lint
 lint :
-	flake8 ./scripts ./tests $(SRC)
+	flake8 .
 
 .PHONY : format
 format :
-	black --check ./scripts ./tests $(SRC)
+	black --check .
 
 .PHONY : typecheck
 typecheck :
-	mypy $(SRC) \
+	mypy . \
 		--ignore-missing-imports \
 		--no-strict-optional \
 		--no-site-packages \
