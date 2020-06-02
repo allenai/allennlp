@@ -86,6 +86,18 @@ class SimpleTaggerSpanF1Test(ModelTestCase):
         self.ensure_batch_predictions_are_consistent()
 
 
+class SimpleTaggerSpanF1Test(ModelTestCase):
+    def setup_method(self):
+        super().setup_method()
+        self.set_up_model(
+            self.FIXTURES_ROOT / "simple_tagger_without_span_f1" / "experiment.json",
+            self.FIXTURES_ROOT / "data" / "conll2003.txt",
+        )
+
+    def test_simple_tagger_can_disable_span_f1(self):
+        assert not self.model.calculate_span_f1
+
+
 class SimpleTaggerRegularizationTest(ModelTestCase):
     def setup_method(self):
         super().setup_method()
