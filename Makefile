@@ -71,6 +71,10 @@ test-with-cov :
 gpu-test :
 	pytest --color=yes -v -rf -m gpu
 
+.PHONY : benchmarks
+benchmarks :
+	pytest -c benchmarks/pytest.ini benchmarks/
+
 #
 # Setup helpers
 #

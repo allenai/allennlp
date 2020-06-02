@@ -38,7 +38,16 @@ setup(
     author_email="allennlp@allenai.org",
     license="Apache",
     packages=find_packages(
-        exclude=["*.tests", "*.tests.*", "tests.*", "tests", "test_fixtures", "test_fixtures.*"]
+        exclude=[
+            "*.tests",
+            "*.tests.*",
+            "tests.*",
+            "tests",
+            "test_fixtures",
+            "test_fixtures.*",
+            "benchmarks",
+            "benchmarks.*",
+        ]
     ),
     install_requires=[
         "torch>=1.5.0,<1.6.0",
