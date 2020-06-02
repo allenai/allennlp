@@ -139,4 +139,3 @@ class TestPretrainedTransformerMismatchedEmbedder(AllenNlpTestCase):
         assert not torch.isnan(bert_vectors).any()
         assert all(bert_vectors[0, 1] == 0)
         assert all(bert_vectors[1, 1] == 0)
-
