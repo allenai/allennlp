@@ -27,6 +27,8 @@ class Batch(Iterable):
     in a list.
     """
 
+    __slots__ = ["instances"]
+
     def __init__(self, instances: Iterable[Instance]) -> None:
         super().__init__()
 
