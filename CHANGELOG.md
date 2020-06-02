@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   were attempting to cache the same file at once. This was fixed by using a lock file tied to each
   cached file.
 - `get_text_field_mask()` now supports padding indices that are not `0`.
+- Fixes `PretrainedTransformerMismatchedIndexer` in the case where a token consists of zero word pieces.
 
 ### Added
 
