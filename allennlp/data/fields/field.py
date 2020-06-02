@@ -118,9 +118,10 @@ class Field(Generic[DataArray]):
 
     def __eq__(self, other) -> bool:
         if isinstance(self, other.__class__):
-            for attr in self.__slots__:
-                if getattr(self, attr) != getattr(other, attr):
-                    return False
+            for class_ in (self.__class__,) + self.__class__.__bases__:
+                for attr in class_.__slots__:
+                    if getattr(self, attr) != getattr(other, attr):
+                        return False
             return True
         return NotImplemented
 
