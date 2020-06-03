@@ -321,7 +321,7 @@ def get_from_cache(url: str, cache_dir: str = None) -> str:
 
                 logger.info("copying %s to cache at %s", temp_file.name, cache_path)
                 with open(cache_path, "wb") as cache_file:
-                    shutil.copyfileobj(temp_file, cache_file)
+                    shutil.copyfileobj(temp_file, cache_file)  # type: ignore
 
                 logger.info("creating metadata file for %s", cache_path)
                 meta = {"url": url, "etag": etag}
