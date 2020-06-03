@@ -85,6 +85,9 @@ class SimpleTaggerSpanF1Test(ModelTestCase):
     def test_batch_predictions_are_consistent(self):
         self.ensure_batch_predictions_are_consistent()
 
+    def test_simple_tagger_can_enable_span_f1(self):
+        assert self.model.calculate_span_f1 and self.model._f1_metric is not None
+
 
 class SimpleTaggerRegularizationTest(ModelTestCase):
     def setup_method(self):

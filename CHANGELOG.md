@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   cached file.
 - `get_text_field_mask()` now supports padding indices that are not `0`.
 - A bug where `predictor.get_gradients()` would return an empty dictionary if an embedding layer had trainable set to false
+- Fixes `PretrainedTransformerMismatchedIndexer` in the case where a token consists of zero word pieces.
 
 ### Added
 
@@ -34,6 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Similar to our caching mechanism, we introduced a lock file to the vocab to avoid race
   conditions when saving/loading the vocab from/to the same serialization directory in different processes.
 - Changed the `Token`, `Instance`, and `Batch` classes along with all `Field` classes to "slots" classes. This dramatically reduces the size in memory of instances.
+- SimpleTagger will no longer calculate span-based F1 metric when `calculate_span_f1` is `False`.
 
 ## [v1.0.0rc5](https://github.com/allenai/allennlp/releases/tag/v1.0.0rc5) - 2020-05-26
 
