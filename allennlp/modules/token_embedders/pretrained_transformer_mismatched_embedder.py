@@ -86,4 +86,7 @@ class PretrainedTransformerMismatchedEmbedder(TokenEmbedder):
         # Shape: (batch_size, num_orig_tokens, embedding_size)
         orig_embeddings = span_embeddings_sum / span_embeddings_len
 
+        # All the places where the span length is zero, write in zeros.
+        orig_embeddings[(span_embeddings_len == 0).expand(orig_embeddings.shape)] = 0
+
         return orig_embeddings
