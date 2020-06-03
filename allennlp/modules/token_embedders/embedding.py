@@ -5,7 +5,7 @@ import re
 import tarfile
 import warnings
 import zipfile
-from typing import Any, cast, IO, Iterator, NamedTuple, Optional, Sequence, Tuple
+from typing import Any, cast, Iterator, NamedTuple, Optional, Sequence, Tuple, BinaryIO
 
 import numpy
 import torch
@@ -590,7 +590,7 @@ class EmbeddingsTextFile(Iterator[str]):
             members_list = archive.namelist()
             member_path = self._get_the_only_file_in_the_archive(members_list, archive_path)
         member_path = cast(str, member_path)
-        member_file = archive.open(member_path, "r")
+        member_file = cast(BinaryIO, archive.open(member_path, "r"))
         self._handle = io.TextIOWrapper(member_file, encoding=self._encoding)
         self._archive_handle = archive
 
@@ -602,7 +602,7 @@ class EmbeddingsTextFile(Iterator[str]):
             member_path = self._get_the_only_file_in_the_archive(members_list, archive_path)
         member_path = cast(str, member_path)
         member = archive.getmember(member_path)  # raises exception if not present
-        member_file = cast(IO[bytes], archive.extractfile(member))
+        member_file = cast(BinaryIO, archive.extractfile(member))
         self._handle = io.TextIOWrapper(member_file, encoding=self._encoding)
         self._archive_handle = archive
 
