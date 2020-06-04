@@ -353,12 +353,11 @@ def import_module_and_submodules(package_name: str) -> None:
 
 def peak_memory_mb() -> Dict[int, float]:
     """
-    Get peak memory usage for this process, as measured by
-    max-resident-set size:
+    Get peak memory usage for each worker, as measured by max-resident-set size:
 
     https://unix.stackexchange.com/questions/30940/getrusage-system-call-what-is-maximum-resident-set-size
 
-    Only works on OSX and Linux, returns 0.0 otherwise.
+    Only works on OSX and Linux, otherwise the result will be 0.0 for every worker.
     """
     if resource is None or sys.platform not in ("linux", "darwin"):
         peak_mb = 0.0
