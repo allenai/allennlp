@@ -14,6 +14,8 @@ class ArrayField(Field[numpy.ndarray]):
     for each dimension.
     """
 
+    __slots__ = ["array", "padding_value", "dtype"]
+
     def __init__(
         self, array: numpy.ndarray, padding_value: int = 0, dtype: numpy.dtype = numpy.float32
     ) -> None:

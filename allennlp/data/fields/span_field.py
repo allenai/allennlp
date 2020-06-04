@@ -24,6 +24,8 @@ class SpanField(Field[torch.Tensor]):
         A field containing the sequence that this `SpanField` is a span inside.
     """
 
+    __slots__ = ["span_start", "span_end", "sequence_field"]
+
     def __init__(self, span_start: int, span_end: int, sequence_field: SequenceField) -> None:
         self.span_start = span_start
         self.span_end = span_end

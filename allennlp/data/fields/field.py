@@ -26,6 +26,8 @@ class Field(Generic[DataArray]):
     then intelligently batch together instances and pad them into actual tensors.
     """
 
+    __slots__ = []  # type: ignore
+
     def count_vocab_items(self, counter: Dict[str, Dict[str, int]]):
         """
         If there are strings in this field that need to be converted into integers through a
@@ -116,7 +118,19 @@ class Field(Generic[DataArray]):
 
     def __eq__(self, other) -> bool:
         if isinstance(self, other.__class__):
-            return self.__dict__ == other.__dict__
+            # With the way "slots" classes work, self.__slots__ only gives the slots defined
+            # by the current class, but not any of its base classes. Therefore to truly
+            # check for equality we have to check through all of the slots in all of the
+            # base classes as well.
+            for class_ in self.__class__.mro():
+                for attr in getattr(class_, "__slots__", []):
+                    if getattr(self, attr) != getattr(other, attr):
+                        return False
+            # It's possible that a subclass was not defined as a slots class, in which
+            # case we'll need to check __dict__.
+            if hasattr(self, "__dict__"):
+                return self.__dict__ == other.__dict__
+            return True
         return NotImplemented
 
     def __len__(self):
