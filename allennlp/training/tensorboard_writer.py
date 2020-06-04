@@ -5,7 +5,6 @@ import os
 from tensorboardX import SummaryWriter
 import torch
 
-from allennlp.common.util import peak_memory_mb, gpu_memory_mb
 from allennlp.common.from_params import FromParams
 from allennlp.data.dataloader import TensorDict
 from allennlp.nn import util as nn_util
@@ -99,10 +98,15 @@ class TensorboardWriter(FromParams):
             val = value
         return val
 
-    def log_memory_usage(self):
-        cpu_memory_usage = peak_memory_mb()
-        self.add_train_scalar("memory_usage/cpu", cpu_memory_usage)
-        for gpu, memory in gpu_memory_mb().items():
+    def log_memory_usage(
+        self, cpu_memory_usage: Dict[int, float], gpu_memory_usage: Dict[int, int]
+    ):
+        cpu_memory_usage_total = 0.0
+        for worker, memory in cpu_memory_usage.items():
+            self.add_train_scalar(f"memory_usage/worker_{worker}_cpu", memory)
+            cpu_memory_usage_total += memory
+        self.add_train_scalar("memory_usage/cpu", cpu_memory_usage_total)
+        for gpu, memory in gpu_memory_usage.items():
             self.add_train_scalar(f"memory_usage/gpu_{gpu}", memory)
 
     def log_batch(
