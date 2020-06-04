@@ -376,9 +376,10 @@ def peak_memory_mb() -> Dict[int, float]:
         world_size = dist.get_world_size()
 
         # Tensor containing the process rank and the peak memory MB.
-        peak_mb_tensor = torch.FloatTensor([global_rank, peak_mb])
+        device = torch.device("cuda") if dist.get_backend() == "nccl" else torch.device("cpu")
+        peak_mb_tensor = torch.FloatTensor([global_rank, peak_mb], device=device)
         # All of these tensors will be gathered into this list.
-        gather_results = [torch.FloatTensor([0, 0]) for _ in range(world_size)]
+        gather_results = [torch.FloatTensor([0, 0], device=device) for _ in range(world_size)]
 
         dist.all_gather(gather_results, peak_mb_tensor)
 
