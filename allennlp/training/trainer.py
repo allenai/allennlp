@@ -138,8 +138,14 @@ class TensoboardBatchMemoryUsage(BatchCallback):
         is_training: bool,
         is_master: bool,
     ) -> None:
+        # In the distributed case we need to call this from every worker, since every
+        # worker reports its own memory usage.
+        cpu_memory_usage = common_util.peak_memory_mb()
+        # But we only want to call `gpu_memory_mb` and `log_memory_usage` from the
+        # master process.
         if is_master:
-            trainer._tensorboard.log_memory_usage()
+            gpu_memory_usage = common_util.gpu_memory_mb()
+            trainer._tensorboard.log_memory_usage(cpu_memory_usage, gpu_memory_usage)
 
 
 BatchCallback.register("null")(BatchCallback)
@@ -480,11 +486,13 @@ class GradientDescentTrainer(Trainer):
         Trains one epoch and returns metrics.
         """
         logger.info("Epoch %d/%d", epoch, self._num_epochs - 1)
-        peak_cpu_usage = common_util.peak_memory_mb()
-        logger.info(f"Peak CPU memory usage MB: {peak_cpu_usage}")
-        gpu_usage = []
+        cpu_memory_usage = []
+        for worker, memory in common_util.peak_memory_mb().items():
+            cpu_memory_usage.append((worker, memory))
+            logger.info(f"Worker {worker} memory usage MB: {memory}")
+        gpu_memory_usage = []
         for gpu, memory in common_util.gpu_memory_mb().items():
-            gpu_usage.append((gpu, memory))
+            gpu_memory_usage.append((gpu, memory))
             logger.info(f"GPU {gpu} memory usage MB: {memory}")
 
         train_loss = 0.0
@@ -650,8 +658,9 @@ class GradientDescentTrainer(Trainer):
             world_size=self._world_size,
             cuda_device=self.cuda_device,
         )
-        metrics["cpu_memory_MB"] = peak_cpu_usage
-        for (gpu_num, memory) in gpu_usage:
+        for (worker, memory) in cpu_memory_usage:
+            metrics["worker_" + str(worker) + "_memory_MB"] = memory
+        for (gpu_num, memory) in gpu_memory_usage:
             metrics["gpu_" + str(gpu_num) + "_memory_MB"] = memory
         return metrics
 
@@ -787,12 +796,10 @@ class GradientDescentTrainer(Trainer):
             train_metrics = self._train_epoch(epoch)
 
             # get peak of memory usage
-            if "cpu_memory_MB" in train_metrics:
-                metrics["peak_cpu_memory_MB"] = max(
-                    metrics.get("peak_cpu_memory_MB", 0), train_metrics["cpu_memory_MB"]
-                )
             for key, value in train_metrics.items():
-                if key.startswith("gpu_"):
+                if key.startswith("gpu_") and key.endswith("_memory_MB"):
+                    metrics["peak_" + key] = max(metrics.get("peak_" + key, 0), value)
+                elif key.startswith("worker_") and key.endswith("_memory_MB"):
                     metrics["peak_" + key] = max(metrics.get("peak_" + key, 0), value)
 
             if self._validation_data_loader is not None:

@@ -351,30 +351,50 @@ def import_module_and_submodules(package_name: str) -> None:
             import_module_and_submodules(subpackage)
 
 
-def peak_memory_mb() -> float:
+def peak_memory_mb() -> Dict[int, float]:
     """
-    Get peak memory usage for this process, as measured by
-    max-resident-set size:
+    Get peak memory usage for each worker, as measured by max-resident-set size:
 
     https://unix.stackexchange.com/questions/30940/getrusage-system-call-what-is-maximum-resident-set-size
 
-    Only works on OSX and Linux, returns 0.0 otherwise.
+    Only works on OSX and Linux, otherwise the result will be 0.0 for every worker.
     """
     if resource is None or sys.platform not in ("linux", "darwin"):
-        return 0.0
-
-    # TODO(joelgrus): For whatever, our pinned version 0.521 of mypy does not like
-    # next line, but later versions (e.g. 0.530) are fine with it. Once we get that
-    # figured out, remove the type: ignore.
-    peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss  # type: ignore
-
-    if sys.platform == "darwin":
-        # On OSX the result is in bytes.
-        return peak / 1_000_000
-
+        peak_mb = 0.0
     else:
-        # On Linux the result is in kilobytes.
-        return peak / 1_000
+        peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+        if sys.platform == "darwin":
+            # On OSX the result is in bytes.
+            peak_mb = peak / 1_000_000
+        else:
+            # On Linux the result is in kilobytes.
+            peak_mb = peak / 1_000
+
+    if is_distributed():
+        global_rank = dist.get_rank()
+        world_size = dist.get_world_size()
+
+        peak_mb_tensor = torch.tensor([float(global_rank), peak_mb])
+        # All of these tensors will be gathered into this list.
+        gather_results = [torch.tensor([0.0, 0.0]) for _ in range(world_size)]
+
+        # If the backend is 'nccl', this means we're training on GPUs, so these tensors
+        # need to be on GPU.
+        if dist.get_backend() == "nccl":
+            peak_mb_tensor = peak_mb_tensor.cuda()
+            gather_results = [x.cuda() for x in gather_results]
+
+        dist.all_gather(gather_results, peak_mb_tensor)
+
+        results_dict: Dict[int, float] = {}
+        for peak_mb_tensor in gather_results:
+            worker = int(peak_mb_tensor[0])
+            peak_mb = round(float(peak_mb_tensor[1]), 3)
+            results_dict[worker] = peak_mb
+
+        return results_dict
+    else:
+        return {0: peak_mb}
 
 
 def gpu_memory_mb() -> Dict[int, int]:

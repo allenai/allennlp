@@ -109,9 +109,9 @@ class TestTrainer(TrainerTestBase):
         assert isinstance(metrics["best_validation_accuracy3"], float)
         assert "best_epoch" in metrics
         assert isinstance(metrics["best_epoch"], int)
-        assert "peak_cpu_memory_MB" in metrics
-        assert isinstance(metrics["peak_cpu_memory_MB"], float)
-        assert metrics["peak_cpu_memory_MB"] > 0
+        assert "peak_worker_0_memory_MB" in metrics
+        assert isinstance(metrics["peak_worker_0_memory_MB"], float)
+        assert metrics["peak_worker_0_memory_MB"] > 0
 
     def test_trainer_can_run_exponential_moving_average(self):
         moving_average = ExponentialMovingAverage(self.model.named_parameters(), decay=0.9999)
@@ -132,9 +132,9 @@ class TestTrainer(TrainerTestBase):
             self.model, self.optimizer, self.data_loader, num_epochs=2, cuda_device=0
         )
         metrics = trainer.train()
-        assert "peak_cpu_memory_MB" in metrics
-        assert isinstance(metrics["peak_cpu_memory_MB"], float)
-        assert metrics["peak_cpu_memory_MB"] > 0
+        assert "peak_worker_0_memory_MB" in metrics
+        assert isinstance(metrics["peak_worker_0_memory_MB"], float)
+        assert metrics["peak_worker_0_memory_MB"] > 0
         assert "peak_gpu_0_memory_MB" in metrics
         assert isinstance(metrics["peak_gpu_0_memory_MB"], int)
 
