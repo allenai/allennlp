@@ -514,7 +514,7 @@ class GradientDescentTrainer(Trainer):
             num_training_batches = math.ceil(
                 len_data_loader / self._num_gradient_accumulation_steps
             )
-        except NotImplementedError:
+        except TypeError:
             num_training_batches = float("inf")
 
         # Having multiple tqdm bars in case of distributed training will be a mess. Hence only the master's
@@ -1069,7 +1069,7 @@ class GradientDescentTrainer(Trainer):
 
         try:
             batches_per_epoch = len(data_loader)
-        except NotImplementedError:
+        except TypeError:
             batches_per_epoch = 1
         batches_per_epoch = math.ceil(batches_per_epoch / num_gradient_accumulation_steps)
 

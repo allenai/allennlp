@@ -48,9 +48,6 @@ class AllennlpLazyDataset(IterableDataset):
     def index_with(self, vocab: Vocabulary):
         self.vocab = vocab
 
-    def __len__(self):
-        raise NotImplementedError
-
 
 class _LazyInstances(AllennlpLazyDataset):
     """
@@ -116,9 +113,6 @@ class _MaxLazyInstances(AllennlpLazyDataset):
     def index_with(self, vocab: Vocabulary):
         self.inner.index_with(vocab)
 
-    def __len__(self):
-        return len(self.inner)
-
 
 class _DistributedLazyInstances(AllennlpLazyDataset):
     def __init__(self, inner: AllennlpLazyDataset) -> None:
@@ -137,9 +131,6 @@ class _DistributedLazyInstances(AllennlpLazyDataset):
 
     def index_with(self, vocab: Vocabulary):
         self.inner.index_with(vocab)
-
-    def __len__(self):
-        return len(self.inner)
 
 
 class DatasetReader(Registrable):
