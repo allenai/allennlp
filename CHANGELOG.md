@@ -19,6 +19,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixes `PretrainedTransformerMismatchedIndexer` in the case where a token consists of zero word pieces.
 - Fixes a bug when using a lazy dataset reader that results in a `UserWarning` from PyTorch being printed at
   every iteration during training.
+- `Predictor.from_path` now automatically loads plugins (unless you specify `load_plugins=False`) so
+  that you don't have to manually import a bunch of modules when instantiating predictors from
+  an archive path.
 
 ### Added
 
