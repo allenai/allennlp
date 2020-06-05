@@ -268,7 +268,7 @@ class TensorboardWriter(FromParams):
             name_length = max(len(x) for x in metric_names)
             logger.info(header_template, "Training".rjust(name_length + 13), "Validation")
 
-        for name in metric_names:
+        for name in sorted(metric_names):
             # Log to tensorboard
             train_metric = train_metrics.get(name)
             if train_metric is not None:
