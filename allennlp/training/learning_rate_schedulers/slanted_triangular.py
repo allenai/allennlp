@@ -1,5 +1,5 @@
 import logging
-from typing import List
+from typing import List, Optional
 
 from overrides import overrides
 import torch
@@ -33,7 +33,7 @@ class SlantedTriangular(LearningRateScheduler):
         This argument does not get an entry in a configuration file for the object.
     num_epochs : `int`, required.
         The total number of epochs for which the model should be trained.
-    num_steps_per_epoch : `int`, required.
+    num_steps_per_epoch : `Optional[int]`, optional (default = `None`)
         The number of steps (updates, batches) per training epoch.
     cut_frac : `float`, optional (default = `0.1`).
         The fraction of the steps to increase the learning rate.
@@ -53,7 +53,7 @@ class SlantedTriangular(LearningRateScheduler):
         self,
         optimizer: torch.optim.Optimizer,
         num_epochs: int,
-        num_steps_per_epoch: int,
+        num_steps_per_epoch: Optional[int] = None,
         cut_frac: float = 0.1,
         ratio: int = 32,
         last_epoch: int = -1,
@@ -138,7 +138,9 @@ class SlantedTriangular(LearningRateScheduler):
                 self.batch_num_total_epoch_end[-1] / (len(self.batch_num_total_epoch_end) - 1)
             )
         else:
-            actual_num_steps_per_epoch = max(self.num_steps_per_epoch, self.last_batch_num_total)
+            actual_num_steps_per_epoch = max(
+                self.num_steps_per_epoch or 1, self.last_batch_num_total
+            )
 
         if self.freezing_current:
             # if we still freeze, we restrict the schedule to the current epoch

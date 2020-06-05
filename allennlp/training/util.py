@@ -333,7 +333,7 @@ def evaluate(
 
         iterator = iter(data_loader)
         logger.info("Iterating over dataset")
-        generator_tqdm = Tqdm.tqdm(iterator, total=len(data_loader))
+        generator_tqdm = Tqdm.tqdm(iterator)
 
         # Number of batches in instances.
         batch_count = 0

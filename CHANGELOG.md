@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `get_text_field_mask()` now supports padding indices that are not `0`.
 - A bug where `predictor.get_gradients()` would return an empty dictionary if an embedding layer had trainable set to false
 - Fixes `PretrainedTransformerMismatchedIndexer` in the case where a token consists of zero word pieces.
+- Fixes a bug when using a lazy dataset reader that results in a `UserWarning` from PyTorch being printed at
+  every iteration during training.
 
 ### Added
 
@@ -38,6 +40,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SimpleTagger will no longer calculate span-based F1 metric when `calculate_span_f1` is `False`.
 - CPU memory for every worker is now reported in the logs and the metrics. Previously this was only reporting the CPU memory of the master process, and so it was only
   correct in the non-distributed setting.
+- To be consistent with PyTorch `IterableDataset`, `AllennlpLazyDataset` no longer implements `__len__()`.
+  Previously it would always return 1.
 
 ## [v1.0.0rc5](https://github.com/allenai/allennlp/releases/tag/v1.0.0rc5) - 2020-05-26
 
