@@ -361,7 +361,7 @@ class GradientDescentTrainer(Trainer):
         self.optimizer = optimizer
 
         if patience is None:  # no early stopping
-            if validation_data_loader:
+            if validation_data_loader is not None:
                 logger.warning(
                     "You provided a validation dataset but patience was set to None, "
                     "meaning that early stopping is disabled"
@@ -508,9 +508,15 @@ class GradientDescentTrainer(Trainer):
 
         logger.info("Training")
 
-        num_training_batches = math.ceil(
-            len(self.data_loader) / self._num_gradient_accumulation_steps
-        )
+        num_training_batches: Union[int, float]
+        try:
+            len_data_loader = len(self.data_loader)
+            num_training_batches = math.ceil(
+                len_data_loader / self._num_gradient_accumulation_steps
+            )
+        except NotImplementedError:
+            num_training_batches = float("inf")
+
         # Having multiple tqdm bars in case of distributed training will be a mess. Hence only the master's
         # progress is shown
         if self._master:
@@ -1061,7 +1067,10 @@ class GradientDescentTrainer(Trainer):
         if not optimizer_:
             optimizer_ = Optimizer.default(parameters)
 
-        batches_per_epoch = len(data_loader)  # returns "1" instead of TypeError for _LazyInstances
+        try:
+            batches_per_epoch = len(data_loader)
+        except NotImplementedError:
+            batches_per_epoch = 1
         batches_per_epoch = math.ceil(batches_per_epoch / num_gradient_accumulation_steps)
 
         moving_average_ = moving_average.construct(parameters=parameters)

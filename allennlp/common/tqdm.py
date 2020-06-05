@@ -46,5 +46,17 @@ class Tqdm:
     @staticmethod
     def tqdm(*args, **kwargs):
         new_kwargs = {"mininterval": Tqdm.default_mininterval, **kwargs}
+        # TODO(epwalsh): check up on these issues later to see if we can remove this logic.
+        # Due to some bugs in Tqdm, we need to make sure to set `total` when were working
+        # with iterators/generators that don't implement `__len__()`.
+        # See
+        # - https://github.com/tqdm/tqdm/issues/624
+        # - https://github.com/tqdm/tqdm/issues/457
+        if "total" not in new_kwargs:
+            try:
+                len(args[0])
+            except (TypeError, NotImplementedError):
+                total = float("inf")
+                new_kwargs["total"] = total
 
         return _tqdm(*args, **new_kwargs)
