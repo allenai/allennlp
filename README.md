@@ -25,7 +25,7 @@
 ## Quick Links
 
 - [Website](https://allennlp.org/)
-- [Tutorial](https://allennlp.org/tutorials)
+- [Guide](https://guide.allennlp.org/)
 - [Forum](https://discourse.allennlp.org)
 - Documentation ( [latest](https://docs.allennlp.org/latest/) | [stable](https://docs.allennlp.org/stable/) | [master](https://docs.allennlp.org/master/) )
 - [Contributing Guidelines](CONTRIBUTING.md)
