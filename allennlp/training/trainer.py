@@ -1067,11 +1067,12 @@ class GradientDescentTrainer(Trainer):
         if not optimizer_:
             optimizer_ = Optimizer.default(parameters)
 
+        batches_per_epoch: Optional[int]
         try:
             batches_per_epoch = len(data_loader)
+            batches_per_epoch = math.ceil(batches_per_epoch / num_gradient_accumulation_steps)
         except TypeError:
-            batches_per_epoch = 1
-        batches_per_epoch = math.ceil(batches_per_epoch / num_gradient_accumulation_steps)
+            batches_per_epoch = None
 
         moving_average_ = moving_average.construct(parameters=parameters)
         learning_rate_scheduler_ = learning_rate_scheduler.construct(
