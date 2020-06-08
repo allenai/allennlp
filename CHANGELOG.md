@@ -49,6 +49,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Previously it would always return 1.
 - Removed old tutorials, in favor of [the new AllenNLP Guide](https://guide.allennlp.org)
 
+### Removed
+
+- Removed the `num_workers` parameter from the `allennlp.data.DataLoader` since PyTorch's multi-process data loading doesn't play well with lazy dataset readers, and provides very little, if any, speed up with non-lazy readers.
+
 ## [v1.0.0rc5](https://github.com/allenai/allennlp/releases/tag/v1.0.0rc5) - 2020-05-26
 
 ### Fixed
