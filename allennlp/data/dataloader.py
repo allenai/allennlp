@@ -69,8 +69,8 @@ class DataLoader(Registrable, data.DataLoader):
         if num_workers and isinstance(dataset, AllennlpLazyDataset):
             warnings.warn(
                 "You specified 'num_workers' in your DataLoader while using a lazy dataset.\n\n"
-                "This could lead to duplicated if your dataset reader wasn't implemented to handle "
-                "multi-process data loading. See:\n"
+                "This could lead to duplicate data if your dataset reader wasn't implemented to "
+                "handle multi-process data loading. See:\n"
                 "  https://pytorch.org/docs/stable/data.html#multi-process-data-loading\n\n"
                 "This could also lead to deadlocks when using certain tokenizers. See:\n"
                 "  https://github.com/allenai/allennlp/issues/4330\n",
