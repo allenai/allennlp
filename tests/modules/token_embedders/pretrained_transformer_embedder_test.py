@@ -25,7 +25,8 @@ class TestPretrainedTransformerEmbedder(AllenNlpTestCase):
         output = embedder(token_ids=token_ids, mask=mask)
         assert tuple(output.size()) == (1, 4, 768)
 
-    def test_end_to_end(self):
+    @pytest.mark.parametrize("train_parameters", [True, False])
+    def test_end_to_end(self, train_parameters: bool):
         tokenizer = PretrainedTransformerTokenizer(model_name="bert-base-uncased")
         token_indexer = PretrainedTransformerIndexer(model_name="bert-base-uncased")
 
@@ -44,7 +45,11 @@ class TestPretrainedTransformerEmbedder(AllenNlpTestCase):
         params = Params(
             {
                 "token_embedders": {
-                    "bert": {"type": "pretrained_transformer", "model_name": "bert-base-uncased"}
+                    "bert": {
+                        "type": "pretrained_transformer",
+                        "model_name": "bert-base-uncased",
+                        "train_parameters": train_parameters,
+                    }
                 }
             }
         )
@@ -71,6 +76,7 @@ class TestPretrainedTransformerEmbedder(AllenNlpTestCase):
         # Attention mask
         bert_vectors = token_embedder(tokens)
         assert bert_vectors.size() == (2, 9, 768)
+        assert bert_vectors.requires_grad == train_parameters
 
     def test_big_token_type_ids(self):
         token_embedder = PretrainedTransformerEmbedder("roberta-base")

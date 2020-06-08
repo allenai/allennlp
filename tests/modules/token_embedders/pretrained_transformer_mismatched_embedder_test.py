@@ -1,3 +1,4 @@
+import pytest
 import torch
 
 from allennlp.common import Params
@@ -11,7 +12,8 @@ from allennlp.common.testing import AllenNlpTestCase
 
 
 class TestPretrainedTransformerMismatchedEmbedder(AllenNlpTestCase):
-    def test_end_to_end(self):
+    @pytest.mark.parametrize("train_parameters", [True, False])
+    def test_end_to_end(self, train_parameters: bool):
         token_indexer = PretrainedTransformerMismatchedIndexer("bert-base-uncased")
 
         sentence1 = ["A", ",", "AllenNLP", "sentence", "."]
@@ -27,6 +29,7 @@ class TestPretrainedTransformerMismatchedEmbedder(AllenNlpTestCase):
                     "bert": {
                         "type": "pretrained_transformer_mismatched",
                         "model_name": "bert-base-uncased",
+                        "train_parameters": train_parameters,
                     }
                 }
             }
@@ -52,6 +55,7 @@ class TestPretrainedTransformerMismatchedEmbedder(AllenNlpTestCase):
         bert_vectors = token_embedder(tokens)
         assert bert_vectors.size() == (2, max(len(sentence1), len(sentence2)), 768)
         assert not torch.isnan(bert_vectors).any()
+        assert bert_vectors.requires_grad == train_parameters
 
     def test_long_sequence_splitting_end_to_end(self):
         token_indexer = PretrainedTransformerMismatchedIndexer("bert-base-uncased", max_length=4)
