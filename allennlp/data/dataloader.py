@@ -3,11 +3,12 @@ from typing import List, Dict, Union
 import torch
 from torch.utils import data
 
+from allennlp.common.checks import ConfigurationError
+from allennlp.common.lazy import Lazy
 from allennlp.common.registrable import Registrable
 from allennlp.data.instance import Instance
-
-from allennlp.common.lazy import Lazy
 from allennlp.data.batch import Batch
+from allennlp.data.dataset_readers.dataset_reader import AllennlpLazyDataset
 from allennlp.data.samplers import Sampler, BatchSampler
 
 
@@ -53,6 +54,7 @@ class DataLoader(Registrable, data.DataLoader):
         shuffle: bool = False,
         sampler: Sampler = None,
         batch_sampler: BatchSampler = None,
+        num_workers: int = 0,
         # NOTE: The default for collate_fn is different from the normal `None`.
         # We assume that if you are using this class you are using an
         # allennlp dataset of instances, which would require this.
@@ -64,12 +66,19 @@ class DataLoader(Registrable, data.DataLoader):
         multiprocessing_context: str = None,
         batches_per_epoch: int = None,
     ):
+        if num_workers and isinstance(dataset, AllennlpLazyDataset):
+            raise ConfigurationError(
+                "You specified the 'num_workers' parameter, but multi-process data loading is "
+                "currently incompatible with lazy datasets. You should either use a non-lazy "
+                "dataset reader or set 'num_workers' to 'None'."
+            )
         super().__init__(
             dataset=dataset,
             batch_size=batch_size,
             shuffle=shuffle,
             sampler=sampler,
             batch_sampler=batch_sampler,
+            num_workers=num_workers,
             collate_fn=collate_fn,
             pin_memory=pin_memory,
             drop_last=drop_last,
@@ -104,6 +113,7 @@ class DataLoader(Registrable, data.DataLoader):
         shuffle: bool = False,
         sampler: Lazy[Sampler] = None,
         batch_sampler: Lazy[BatchSampler] = None,
+        num_workers: int = 0,
         pin_memory: bool = False,
         drop_last: bool = False,
         timeout: int = 0,
@@ -127,6 +137,7 @@ class DataLoader(Registrable, data.DataLoader):
             shuffle=shuffle,
             sampler=sampler_,
             batch_sampler=batch_sampler_,
+            num_workers=num_workers,
             # NOTE: The default for collate_fn is different from the normal `None`.
             # We assume that if you are using this class you are using an
             # allennlp dataset of instances, which would require this.
