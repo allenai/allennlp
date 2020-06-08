@@ -9,10 +9,10 @@ class TestPredictor(AllenNlpTestCase):
         archive = load_archive(
             self.FIXTURES_ROOT / "simple_tagger" / "serialization" / "model.tar.gz"
         )
-        Predictor.from_archive(archive, "sentence-tagger")
+        Predictor.from_archive(archive, "sentence_tagger")
 
         # If it consumes the params, this will raise an exception
-        Predictor.from_archive(archive, "sentence-tagger")
+        Predictor.from_archive(archive, "sentence_tagger")
 
     def test_loads_correct_dataset_reader(self):
         # This model has a different dataset reader configuration for train and validation. The
@@ -21,16 +21,16 @@ class TestPredictor(AllenNlpTestCase):
             self.FIXTURES_ROOT / "simple_tagger_with_span_f1" / "serialization" / "model.tar.gz"
         )
 
-        predictor = Predictor.from_archive(archive, "sentence-tagger")
+        predictor = Predictor.from_archive(archive, "sentence_tagger")
         assert predictor._dataset_reader._token_indexers["tokens"].namespace == "test_tokens"
 
         predictor = Predictor.from_archive(
-            archive, "sentence-tagger", dataset_reader_to_load="train"
+            archive, "sentence_tagger", dataset_reader_to_load="train"
         )
         assert predictor._dataset_reader._token_indexers["tokens"].namespace == "tokens"
 
         predictor = Predictor.from_archive(
-            archive, "sentence-tagger", dataset_reader_to_load="validation"
+            archive, "sentence_tagger", dataset_reader_to_load="validation"
         )
         assert predictor._dataset_reader._token_indexers["tokens"].namespace == "test_tokens"
 

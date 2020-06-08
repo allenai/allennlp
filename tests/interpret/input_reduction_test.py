@@ -32,7 +32,7 @@ class TestInputReduction(AllenNlpTestCase):
         archive = load_archive(
             self.FIXTURES_ROOT / "simple_tagger" / "serialization" / "model.tar.gz"
         )
-        predictor = Predictor.from_archive(archive, "sentence-tagger")
+        predictor = Predictor.from_archive(archive, "sentence_tagger")
 
         reducer = InputReduction(predictor)
         reduced = reducer.attack_from_json(inputs, "tokens", "grad_input_1")
