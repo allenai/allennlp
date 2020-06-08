@@ -11,7 +11,7 @@ from allennlp.models import Model
 from allennlp.predictors.predictor import Predictor
 
 
-@Predictor.register("sentence-tagger")
+@Predictor.register("sentence_tagger")
 class SentenceTaggerPredictor(Predictor):
     """
     Predictor for any model that takes in a sentence and returns
@@ -19,7 +19,7 @@ class SentenceTaggerPredictor(Predictor):
     the [`CrfTagger`](../models/crf_tagger.md) model
     and also the [`SimpleTagger`](../models/simple_tagger.md) model.
 
-    Registered as a `Predictor` with name "sentence-tagger".
+    Registered as a `Predictor` with name "sentence_tagger".
     """
 
     def __init__(

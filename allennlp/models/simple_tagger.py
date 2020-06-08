@@ -220,4 +220,4 @@ class SimpleTagger(Model):
                 metrics_to_return.update({x: y for x, y in f1_dict.items() if "overall" in x})
         return metrics_to_return
 
-    default_predictor = "sentence-tagger"
+    default_predictor = "sentence_tagger"

@@ -10,7 +10,7 @@ class TestSentenceTaggerPredictor(AllenNlpTestCase):
         archive = load_archive(
             self.FIXTURES_ROOT / "simple_tagger" / "serialization" / "model.tar.gz"
         )
-        predictor = Predictor.from_archive(archive, "sentence-tagger")
+        predictor = Predictor.from_archive(archive, "sentence_tagger")
 
         instance = predictor._json_to_instance(inputs)
         outputs = predictor._model.forward_on_instance(instance)
