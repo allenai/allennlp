@@ -1,9 +1,9 @@
 from typing import List, Dict, Union
+import warnings
 
 import torch
 from torch.utils import data
 
-from allennlp.common.checks import ConfigurationError
 from allennlp.common.lazy import Lazy
 from allennlp.common.registrable import Registrable
 from allennlp.data.instance import Instance
@@ -67,10 +67,14 @@ class DataLoader(Registrable, data.DataLoader):
         batches_per_epoch: int = None,
     ):
         if num_workers and isinstance(dataset, AllennlpLazyDataset):
-            raise ConfigurationError(
-                "You specified the 'num_workers' parameter, but multi-process data loading is "
-                "currently incompatible with lazy datasets. You should either use a non-lazy "
-                "dataset reader or set 'num_workers' to 'None'."
+            warnings.warn(
+                "You specified 'num_workers' in your DataLoader while using a lazy dataset.\n\n"
+                "This could lead to duplicated if your dataset reader wasn't implemented to handle "
+                "multi-process data loading. See:\n"
+                "  https://pytorch.org/docs/stable/data.html#multi-process-data-loading\n\n"
+                "This could also lead to deadlocks when using certain tokenizers. See:\n"
+                "  https://github.com/allenai/allennlp/issues/4330\n",
+                UserWarning,
             )
         super().__init__(
             dataset=dataset,
