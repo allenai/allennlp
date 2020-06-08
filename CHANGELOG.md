@@ -31,6 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Polynomial decay learning rate scheduler
 - A `BatchCallback` for logging CPU and GPU memory usage to tensorboard. This is mainly for debugging
   because using it can cause a significant slowdown in training.
+- Ability to run pretrained transformers as an embedder without training the weights
 
 ### Changed
 
