@@ -7,6 +7,7 @@ import codecs
 import copy
 import logging
 import os
+import re
 from collections import defaultdict
 from typing import Any, Callable, Dict, Iterable, List, Optional, Set, Union, TYPE_CHECKING
 
@@ -443,7 +444,7 @@ class Vocabulary(Registrable):
             self._token_to_index[namespace] = {}
             self._index_to_token[namespace] = {}
         with codecs.open(filename, "r", "utf-8") as input_file:
-            lines = input_file.read().splitlines()
+            lines = re.split(r'\n|\r\n?', input_file.read())
             # Be flexible about having final newline or not
             if lines and lines[-1] == "":
                 lines = lines[:-1]
