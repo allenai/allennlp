@@ -444,7 +444,7 @@ class Vocabulary(Registrable):
             self._token_to_index[namespace] = {}
             self._index_to_token[namespace] = {}
         with codecs.open(filename, "r", "utf-8") as input_file:
-            lines = re.split(r'\n|\r\n?', input_file.read())
+            lines = re.split(r"\n|\r\n?", input_file.read())
             # Be flexible about having final newline or not
             if lines and lines[-1] == "":
                 lines = lines[:-1]
