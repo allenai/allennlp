@@ -53,7 +53,6 @@ class DataLoader(Registrable, data.DataLoader):
         shuffle: bool = False,
         sampler: Sampler = None,
         batch_sampler: BatchSampler = None,
-        num_workers: int = 0,
         # NOTE: The default for collate_fn is different from the normal `None`.
         # We assume that if you are using this class you are using an
         # allennlp dataset of instances, which would require this.
@@ -71,7 +70,6 @@ class DataLoader(Registrable, data.DataLoader):
             shuffle=shuffle,
             sampler=sampler,
             batch_sampler=batch_sampler,
-            num_workers=num_workers,
             collate_fn=collate_fn,
             pin_memory=pin_memory,
             drop_last=drop_last,
@@ -106,7 +104,6 @@ class DataLoader(Registrable, data.DataLoader):
         shuffle: bool = False,
         sampler: Lazy[Sampler] = None,
         batch_sampler: Lazy[BatchSampler] = None,
-        num_workers: int = 0,
         pin_memory: bool = False,
         drop_last: bool = False,
         timeout: int = 0,
@@ -130,7 +127,6 @@ class DataLoader(Registrable, data.DataLoader):
             shuffle=shuffle,
             sampler=sampler_,
             batch_sampler=batch_sampler_,
-            num_workers=num_workers,
             # NOTE: The default for collate_fn is different from the normal `None`.
             # We assume that if you are using this class you are using an
             # allennlp dataset of instances, which would require this.
