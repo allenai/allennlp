@@ -34,9 +34,17 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         The name of a submodule of the transformer to be used as the embedder. Some transformers naturally act
         as embedders such as BERT. However, other models consist of encoder and decoder, in which case we just
         want to use the encoder.
+    train_parameters: `bool`, optional (default = `True`)
+        If this is `True`, the transformer weights get updated during training.
     """
 
-    def __init__(self, model_name: str, max_length: int = None, sub_module: str = None) -> None:
+    def __init__(
+        self,
+        model_name: str,
+        max_length: int = None,
+        sub_module: str = None,
+        train_parameters: bool = True,
+    ) -> None:
         super().__init__()
         self.transformer_model = AutoModel.from_pretrained(model_name)
         self.config = self.transformer_model.config
@@ -47,6 +55,7 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         # I'm not sure if this works for all models; open an issue on github if you find a case
         # where it doesn't work.
         self.output_dim = self.config.hidden_size
+        self._train_parameters = train_parameters
 
         tokenizer = PretrainedTransformerTokenizer(model_name)
         self._num_added_start_tokens = len(tokenizer.single_sequence_start_tokens)
@@ -94,44 +103,50 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
 
         """
 
-        # Some of the huggingface transformers don't support type ids at all and crash when you supply them. For
-        # others, you can supply a tensor of zeros, and if you don't, they act as if you did. There is no practical
-        # difference to the caller, so here we pretend that one case is the same as another case.
-        if type_ids is not None:
-            max_type_id = type_ids.max()
-            if max_type_id == 0:
-                type_ids = None
-            else:
-                if max_type_id >= self._number_of_token_type_embeddings():
-                    raise ValueError("Found type ids too large for the chosen transformer model.")
-                assert token_ids.shape == type_ids.shape
+        with torch.set_grad_enabled(self._train_parameters):
+            # Some of the huggingface transformers don't support type ids at all and crash when you supply
+            # them. For others, you can supply a tensor of zeros, and if you don't, they act as if you did.
+            # There is no practical difference to the caller, so here we pretend that one case is the same
+            # as another case.
+            if type_ids is not None:
+                max_type_id = type_ids.max()
+                if max_type_id == 0:
+                    type_ids = None
+                else:
+                    if max_type_id >= self._number_of_token_type_embeddings():
+                        raise ValueError(
+                            "Found type ids too large for the chosen transformer model."
+                        )
+                    assert token_ids.shape == type_ids.shape
 
-        fold_long_sequences = self._max_length is not None and token_ids.size(1) > self._max_length
-        if fold_long_sequences:
-            batch_size, num_segment_concat_wordpieces = token_ids.size()
-            token_ids, segment_concat_mask, type_ids = self._fold_long_sequences(
-                token_ids, segment_concat_mask, type_ids
+            fold_long_sequences = (
+                self._max_length is not None and token_ids.size(1) > self._max_length
             )
+            if fold_long_sequences:
+                batch_size, num_segment_concat_wordpieces = token_ids.size()
+                token_ids, segment_concat_mask, type_ids = self._fold_long_sequences(
+                    token_ids, segment_concat_mask, type_ids
+                )
 
-        transformer_mask = segment_concat_mask if self._max_length is not None else mask
-        # Shape: [batch_size, num_wordpieces, embedding_size],
-        # or if self._max_length is not None:
-        # [batch_size * num_segments, self._max_length, embedding_size]
+            transformer_mask = segment_concat_mask if self._max_length is not None else mask
+            # Shape: [batch_size, num_wordpieces, embedding_size],
+            # or if self._max_length is not None:
+            # [batch_size * num_segments, self._max_length, embedding_size]
 
-        # We call this with kwargs because some of the huggingface models don't have the token_type_ids parameter
-        # and fail even when it's given as None.
-        # Also, as of transformers v2.5.1, they are taking FloatTensor masks.
-        parameters = {"input_ids": token_ids, "attention_mask": transformer_mask.float()}
-        if type_ids is not None:
-            parameters["token_type_ids"] = type_ids
-        embeddings = self.transformer_model(**parameters)[0]
+            # We call this with kwargs because some of the huggingface models don't have the
+            # token_type_ids parameter and fail even when it's given as None.
+            # Also, as of transformers v2.5.1, they are taking FloatTensor masks.
+            parameters = {"input_ids": token_ids, "attention_mask": transformer_mask.float()}
+            if type_ids is not None:
+                parameters["token_type_ids"] = type_ids
+            embeddings = self.transformer_model(**parameters)[0]
 
-        if fold_long_sequences:
-            embeddings = self._unfold_long_sequences(
-                embeddings, segment_concat_mask, batch_size, num_segment_concat_wordpieces
-            )
+            if fold_long_sequences:
+                embeddings = self._unfold_long_sequences(
+                    embeddings, segment_concat_mask, batch_size, num_segment_concat_wordpieces
+                )
 
-        return embeddings
+            return embeddings
 
     def _fold_long_sequences(
         self,

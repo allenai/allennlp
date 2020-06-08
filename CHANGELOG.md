@@ -20,6 +20,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixes a bug when using a lazy dataset reader that results in a `UserWarning` from PyTorch being printed at
   every iteration during training.
 - Predictors names were inconsistently switching between dashes and underscores. Now they all use underscores.
+- `Predictor.from_path` now automatically loads plugins (unless you specify `load_plugins=False`) so
+  that you don't have to manually import a bunch of modules when instantiating predictors from
+  an archive path.
 
 ### Added
 
@@ -32,6 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Polynomial decay learning rate scheduler
 - A `BatchCallback` for logging CPU and GPU memory usage to tensorboard. This is mainly for debugging
   because using it can cause a significant slowdown in training.
+- Ability to run pretrained transformers as an embedder without training the weights
 
 ### Changed
 

@@ -25,12 +25,18 @@ class PretrainedTransformerMismatchedEmbedder(TokenEmbedder):
         through the transformer model independently, and concatenate the final representations.
         Should be set to the same value as the `max_length` option on the
         `PretrainedTransformerMismatchedIndexer`.
+    train_parameters: `bool`, optional (default = `True`)
+        If this is `True`, the transformer weights get updated during training.
     """
 
-    def __init__(self, model_name: str, max_length: int = None) -> None:
+    def __init__(
+        self, model_name: str, max_length: int = None, train_parameters: bool = True
+    ) -> None:
         super().__init__()
         # The matched version v.s. mismatched
-        self._matched_embedder = PretrainedTransformerEmbedder(model_name, max_length)
+        self._matched_embedder = PretrainedTransformerEmbedder(
+            model_name, max_length, train_parameters=train_parameters
+        )
 
     @overrides
     def get_output_dim(self):

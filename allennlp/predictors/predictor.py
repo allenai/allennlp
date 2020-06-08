@@ -7,7 +7,7 @@ from torch.utils.hooks import RemovableHandle
 from torch import Tensor
 from torch import backends
 
-from allennlp.common import Registrable
+from allennlp.common import Registrable, plugins
 from allennlp.common.util import JsonDict, sanitize
 from allennlp.data import DatasetReader, Instance
 from allennlp.data.batch import Batch
@@ -235,6 +235,7 @@ class Predictor(Registrable):
         cuda_device: int = -1,
         dataset_reader_to_load: str = "validation",
         frozen: bool = True,
+        import_plugins: bool = True,
     ) -> "Predictor":
         """
         Instantiate a `Predictor` from an archive path.
@@ -257,12 +258,19 @@ class Predictor(Registrable):
             "validation".
         frozen : `bool`, optional (default=`True`)
             If we should call `model.eval()` when building the predictor.
+        import_plugins : `bool`, optional (default=`True`)
+            If `True`, we attempt to import plugins before loading the predictor.
+            This comes with additional overhead, but means you don't need to explicitly
+            import the modules that your predictor depends on as long as those modules
+            can be found by `allennlp.common.plugins.import_plugins()`.
 
         # Returns
 
         `Predictor`
             A Predictor instance.
         """
+        if import_plugins:
+            plugins.import_plugins()
         return Predictor.from_archive(
             load_archive(archive_path, cuda_device=cuda_device),
             predictor_name,
