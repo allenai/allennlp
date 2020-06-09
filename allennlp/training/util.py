@@ -133,24 +133,16 @@ def datasets_from_params(params: Params) -> Dict[str, Dataset]:
         )
 
     train_data_path = params.pop("train_data_path")
-    logger.info("Reading training data from %s", train_data_path)
-    train_data = dataset_reader.read(train_data_path)
-
-    datasets: Dict[str, Iterable[Instance]] = {"train": train_data}
-
     validation_data_path = params.pop("validation_data_path", None)
-    if validation_data_path is not None:
-        logger.info("Reading validation data from %s", validation_data_path)
-        validation_data = validation_and_test_dataset_reader.read(validation_data_path)
-        datasets["validation"] = validation_data
-
     test_data_path = params.pop("test_data_path", None)
-    if test_data_path is not None:
-        logger.info("Reading test data from %s", test_data_path)
-        test_data = validation_and_test_dataset_reader.read(test_data_path)
-        datasets["test"] = test_data
 
-    return datasets
+    return read_all_datasets(
+        train_data_path,
+        dataset_reader,
+        validation_dataset_reader=validation_and_test_dataset_reader,
+        validation_data_path=validation_data_path,
+        test_data_path=test_data_path,
+    )
 
 
 def create_serialization_dir(
