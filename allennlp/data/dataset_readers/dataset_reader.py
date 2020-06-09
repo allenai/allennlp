@@ -273,7 +273,7 @@ class DatasetReader(Registrable):
 
     def _auto_islice(
         self, iterable: Iterable[Union[Instance, Dict[str, Any]]]
-    ) -> Iterable[Union[Instance, Dict[str, Any]]]:
+    ) -> Iterable[Instance]:
         """
         Helper method that determines which raw instances to skip based on the current
         node rank (for distributed training) and worker ID (for multi-process data loading).
