@@ -1,7 +1,6 @@
 import glob
 import logging
 import torch
-from typing import Iterable
 
 from allennlp.common import util
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
@@ -47,9 +46,9 @@ class ShardedDatasetReader(DatasetReader):
         """
         Just delegate to the base reader text_to_instance.
         """
-        return self.reader.text_to_instance(*args, **kwargs)  # type: ignore
+        return self.reader.text_to_instance(*args, **kwargs)
 
-    def _read(self, file_path: str) -> Iterable[Instance]:
+    def _read(self, file_path: str):
         shards = glob.glob(file_path)
         # Ensure a consistent order.
         shards.sort()
@@ -57,5 +56,5 @@ class ShardedDatasetReader(DatasetReader):
         for i, shard in enumerate(shards):
             if i % self._world_size == self._rank:
                 logger.info(f"reading instances from {shard}")
-                for instance in self.reader.read(shard):
-                    yield instance
+                for raw in self.reader._read(shard):
+                    yield raw

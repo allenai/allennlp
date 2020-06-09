@@ -1,15 +1,16 @@
 import itertools
-from typing import Iterable, Iterator, Callable, Optional, List
+from typing import Iterable, Iterator, Optional, List, Dict, Any, Union, Callable
 import logging
 import os
 import pathlib
 
 import jsonpickle
-from torch.utils.data import Dataset, IterableDataset
+import torch.distributed as dist
+from torch.utils.data import Dataset, IterableDataset, get_worker_info
 
 from allennlp.data.instance import Instance
 from allennlp.data.vocabulary import Vocabulary
-from allennlp.common import Tqdm, util
+from allennlp.common import util
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.registrable import Registrable
 
@@ -36,101 +37,23 @@ class AllennlpDataset(Dataset):
 class AllennlpLazyDataset(IterableDataset):
     def __init__(
         self,
-        deserialize: Callable[[str], Instance] = None,
-        serialize: Callable[[Instance], str] = None,
-        vocab: Vocabulary = None,
-    ) -> None:
-        super().__init__()
-        self.deserialize = deserialize
-        self.serialize = serialize
-        self.vocab = vocab
-
-    def index_with(self, vocab: Vocabulary):
-        self.vocab = vocab
-
-
-class _LazyInstances(AllennlpLazyDataset):
-    """
-    An `Iterable` that just wraps a thunk for generating instances and calls it for
-    each call to `__iter__`.
-    """
-
-    def __init__(
-        self,
-        instance_generator: Callable[[str], Iterable[Instance]],
+        instance_iterator_factory: Callable[[str], Iterable[Instance]],
         file_path: str,
-        cache_file: str = None,
-        deserialize: Callable[[str], Instance] = None,
-        serialize: Callable[[Instance], str] = None,
         vocab: Vocabulary = None,
     ) -> None:
-        super().__init__(deserialize, serialize, vocab)
-        self.instance_generator = instance_generator
-        self.file_path = file_path
-        self.cache_file = cache_file
-
-    def __iter__(self) -> Iterator[Instance]:
-        # Case 1: Use cached instances
-        if self.cache_file is not None and os.path.exists(self.cache_file):
-            with open(self.cache_file) as data_file:
-                for line in data_file:
-                    instance = self.deserialize(line)
-                    if self.vocab is not None:
-                        instance.index_fields(self.vocab)
-                    yield instance
-
-        # Case 2: Need to cache instances
-        elif self.cache_file is not None:
-            with open(self.cache_file, "w") as data_file:
-                for instance in self.instance_generator(self.file_path):
-                    data_file.write(self.serialize(instance))
-                    data_file.write("\n")
-                    if self.vocab is not None:
-                        instance.index_fields(self.vocab)
-                    yield instance
-        # Case 3: No cache
-        else:
-            instances = self.instance_generator(self.file_path)
-            if isinstance(instances, list):
-                raise ConfigurationError(
-                    "For a lazy dataset reader, _read() must return a generator"
-                )
-            for instance in instances:
-                if self.vocab is not None:
-                    instance.index_fields(self.vocab)
-                yield instance
-
-
-class _MaxLazyInstances(AllennlpLazyDataset):
-    def __init__(self, inner: AllennlpLazyDataset, max_instances: int) -> None:
         super().__init__()
-        self.inner = inner
-        self.max_instances = max_instances
+        self._instance_iterator_factory = instance_iterator_factory
+        self._file_path = file_path
+        self.vocab = vocab
 
     def __iter__(self) -> Iterator[Instance]:
-        return itertools.islice(iter(self.inner), self.max_instances)
+        for instance in self._instance_iterator_factory(self._file_path):
+            if self.vocab is not None:
+                instance.index_fields(self.vocab)
+            yield instance
 
     def index_with(self, vocab: Vocabulary):
-        self.inner.index_with(vocab)
-
-
-class _DistributedLazyInstances(AllennlpLazyDataset):
-    def __init__(self, inner: AllennlpLazyDataset) -> None:
-        super().__init__()
-        self.inner = inner
-
-    def __iter__(self) -> Iterator[Instance]:
-        from torch import distributed
-
-        logger.info(
-            "Returning instances i%%%d==%d", distributed.get_world_size(), distributed.get_rank()
-        )
-        return itertools.islice(
-            iter(self.inner), distributed.get_rank(), None, distributed.get_world_size()
-        )
-
-    def index_with(self, vocab: Vocabulary):
-        self.inner.index_with(vocab)
+        self.vocab = vocab
 
 
 class DatasetReader(Registrable):
@@ -180,11 +103,10 @@ class DatasetReader(Registrable):
     ) -> None:
         self.lazy = lazy
         self.max_instances = max_instances
+        self._cache_directory: Optional[pathlib.Path] = None
         if cache_directory:
             self._cache_directory = pathlib.Path(cache_directory)
             os.makedirs(self._cache_directory, exist_ok=True)
-        else:
-            self._cache_directory = None
         self.manual_distributed_sharding = manual_distributed_sharding
 
     def read(self, file_path: str) -> Dataset:
@@ -213,92 +135,78 @@ class DatasetReader(Registrable):
                 "did you forget to call the superclass constructor?"
             )
 
+        if lazy:
+            return AllennlpLazyDataset(self.instance_iterator, file_path)
+
+        instances = list(self.instance_iterator(file_path))
+        if not instances:
+            raise ConfigurationError(
+                "No instances were read from the given filepath {}. "
+                "Is the path correct?".format(file_path)
+            )
+
+        return AllennlpDataset(instances)
+
+    def instance_iterator(self, file_path: str) -> Iterable[Instance]:
+        cache_file: Optional[str] = None
         if self._cache_directory:
             cache_file = self._get_cache_location_for_file_path(file_path)
-        else:
-            cache_file = None
 
-        if lazy:
-            lazy_instances: AllennlpLazyDataset = _LazyInstances(
-                self._read,
-                file_path,
-                cache_file,
-                self.deserialize_instance,
-                self.serialize_instance,
-            )
-            if self.max_instances is not None:
-                lazy_instances = _MaxLazyInstances(lazy_instances, self.max_instances)
-            if not self.manual_distributed_sharding and util.is_distributed():
-                lazy_instances = _DistributedLazyInstances(lazy_instances)
-            return lazy_instances
+        # Case 1: Use cached instances
+        if cache_file is not None and os.path.exists(cache_file):
+            with open(cache_file) as data_file:
+                for line in itertools.islice(data_file, self.max_instances):
+                    instance = self.deserialize_instance(line)
+                    yield instance
+        # Case 2: Need to cache instances
+        elif cache_file is not None:
+            with open(cache_file, "w") as data_file:
+                for raw_instance in self._auto_islice(self._read(file_path)):
+                    if isinstance(raw_instance, Instance):
+                        instance = raw_instance
+                    else:
+                        instance = self.text_to_instance(**raw_instance)
+                    data_file.write(self.serialize_instance(instance))
+                    data_file.write("\n")
+                    yield instance
+        # Case 3: No cache
         else:
-            # First we read the instances, either from a cache or from the original file.
-            if cache_file and os.path.exists(cache_file):
-                instances = self._instances_from_cache_file(cache_file)
-            else:
-                instances = self._read(file_path)
-
-            if self.max_instances is not None:
-                if isinstance(instances, list):
-                    instances = instances[: self.max_instances]
+            for raw_instance in self._auto_islice(self._read(file_path)):
+                if isinstance(raw_instance, Instance):
+                    instance = raw_instance
                 else:
-                    instances = itertools.islice(instances, 0, self.max_instances)
-            if not self.manual_distributed_sharding and util.is_distributed():
-                from torch import distributed
-
-                logger.info(
-                    "Returning instances i%%%d==%d",
-                    distributed.get_world_size(),
-                    distributed.get_rank(),
-                )
-                instances = itertools.islice(
-                    instances, distributed.get_rank(), None, distributed.get_world_size()
-                )
-
-            # Then some validation.
-            if not isinstance(instances, list):
-                instances = [instance for instance in Tqdm.tqdm(instances)]
-            if not instances:
-                raise ConfigurationError(
-                    "No instances were read from the given filepath {}. "
-                    "Is the path correct?".format(file_path)
-                )
-
-            # And finally we write to the cache if we need to.
-            if (
-                self.max_instances is None
-                and not util.is_distributed()
-                and cache_file is not None
-                and not os.path.exists(cache_file)
-            ):
-                logger.info(f"Caching instances to {cache_file}")
-                self._instances_to_cache_file(cache_file, instances)
-
-            return AllennlpDataset(instances)
+                    instance = self.text_to_instance(**raw_instance)
+                yield instance
 
     def _get_cache_location_for_file_path(self, file_path: str) -> str:
-        return str(self._cache_directory / util.flatten_filename(str(file_path)))
+        node_rank: int = 0
+        worker_id: int = 0
+        if util.is_distributed():
+            node_rank = dist.get_rank()
+        worker_info = get_worker_info()
+        if worker_info:
+            worker_id = worker_info.id
+        node_worker_id_string = f"_node_{node_rank}_{worker_id}"
+        return str(
+            self._cache_directory / (util.flatten_filename(str(file_path)) + node_worker_id_string)
+        )
 
-    def _read(self, file_path: str) -> Iterable[Instance]:
+    def _read(self, file_path: str) -> Iterable[Union[Instance, Dict[str, Any]]]:
         """
-        Reads the instances from the given file_path and returns them as an
-        `Iterable` (which could be a list or could be a generator).
-        You are strongly encouraged to use a generator, so that users can
-        read a dataset in a lazy way, if they so choose.
+        Reads the instances (or the data that can be turned into any instance) from the
+        given file_path and returns them as an `Iterable`.
+
+        The objects in the iterable should ideally just be dictionaries that hold the
+        arguments to `self.text_to_instance`, but for backwards compatability with older
+        versions of `AllenNLP`, the objects can also be `Instance`s. This will usually be
+        less efficient though.
+
+        You are strongly encouraged to use a generator as opposed to a "greedy" iterable
+        type like a list.
         """
         raise NotImplementedError
 
-    def _instances_from_cache_file(self, cache_filename: str) -> Iterable[Instance]:
-        with open(cache_filename, "r") as cache_file:
-            for line in cache_file:
-                yield self.deserialize_instance(line.strip())
-
-    def _instances_to_cache_file(self, cache_filename, instances) -> None:
-        with open(cache_filename, "w") as cache:
-            for instance in Tqdm.tqdm(instances):
-                cache.write(self.serialize_instance(instance) + "\n")
-
-    def text_to_instance(self, *inputs) -> Instance:
+    def text_to_instance(self, *args, **kwargs) -> Instance:
         """
         Does whatever tokenization or processing is necessary to go from textual input to an
         `Instance`.  The primary intended use for this is with a
@@ -324,7 +232,6 @@ class DatasetReader(Registrable):
         The default implementation is to use `jsonpickle`.  If you would like some other format
         for your pre-processed data, override this method.
         """
-
         return jsonpickle.dumps(instance)
 
     def deserialize_instance(self, string: str) -> Instance:
@@ -335,5 +242,22 @@ class DatasetReader(Registrable):
         The default implementation is to use `jsonpickle`.  If you would like some other format
         for your pre-processed data, override this method.
         """
-
         return jsonpickle.loads(string)  # type: ignore
+
+    def _auto_islice(
+        self, iterable: Iterable[Union[Instance, Dict[str, Any]]]
+    ) -> Iterable[Union[Instance, Dict[str, Any]]]:
+        """
+        Helper method that determines which raw instances to skip based on the current
+        node rank (for distributed training) and worker ID (for multi-process data loading).
+        """
+        start_index = 0
+        step_size = 1
+        if not self.manual_distributed_sharding and util.is_distributed():
+            start_index = dist.get_rank()
+            step_size = dist.get_world_size()
+        worker_info = get_worker_info()
+        if worker_info:
+            start_index += step_size * worker_info.id
+            step_size *= worker_info.num_workers
+        return itertools.islice(iterable, start_index, self.max_instances, step_size)

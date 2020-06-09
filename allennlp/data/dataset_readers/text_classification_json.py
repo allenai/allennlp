@@ -85,7 +85,7 @@ class TextClassificationJsonReader(DatasetReader):
                         label = str(label)
                 instance = self.text_to_instance(text=text, label=label)
                 if instance is not None:
-                    yield instance
+                    yield {"text": text, "label": label}
 
     def _truncate(self, tokens):
         """

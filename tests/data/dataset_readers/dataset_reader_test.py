@@ -4,7 +4,7 @@ import shutil
 import pytest
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.dataset_readers import TextClassificationJsonReader
-from allennlp.data.dataset_readers.dataset_reader import _LazyInstances
+from allennlp.data.dataset_readers.dataset_reader import AllennlpLazyDataset
 
 
 class TestDatasetReader(AllenNlpTestCase):
@@ -92,7 +92,7 @@ class TestDatasetReader(AllenNlpTestCase):
         # The call to read() will give us an _iterator_.  We'll iterate over it multiple times,
         # and the caching behavior should change as we go.
         instances = reader.read(snli_copy_file)
-        assert isinstance(instances, _LazyInstances)
+        assert isinstance(instances, AllennlpLazyDataset)
 
         # The first iteration will create the cache
         assert not os.path.exists(cache_file)

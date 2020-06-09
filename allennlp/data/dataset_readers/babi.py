@@ -44,7 +44,6 @@ class BabiReader(DatasetReader):
         self._keep_sentences = keep_sentences
         self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
 
-    @overrides
     def _read(self, file_path: str):
         # if `file_path` is a URL, redirect to the cache
         file_path = cached_path(file_path)
@@ -63,7 +62,12 @@ class BabiReader(DatasetReader):
                 question = question_str.split()[1:]
                 supports = [int(support) - 1 for support in supports_str.split()]
 
-                yield self.text_to_instance(context, question, answer, supports)
+                yield {
+                    "context": context,
+                    "question": question,
+                    "answer": answer,
+                    "supports": supports,
+                }
             else:
                 new_entry = line.replace(".", " .").split()[1:]
 
