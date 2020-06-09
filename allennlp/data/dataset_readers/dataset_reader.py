@@ -180,30 +180,38 @@ class DatasetReader(Registrable):
             with open(cache_file) as data_file:
                 for instance in self._auto_islice(data_file, transform=self.deserialize_instance):
                     yield instance
-        elif (
-            cache_file is not None
-            and not util.is_distributed()
-            and not (get_worker_info() and get_worker_info().num_workers)
-        ):
-            # If the cache doesn't exist yet and this is the only process reading data,
-            # we can safely write to the cache.
-            try:
-                with open(cache_file, "w") as data_file:
-                    for instance in self._auto_islice(self._read(file_path)):
-                        data_file.write(self.serialize_instance(instance))
-                        data_file.write("\n")
-                        yield instance
-            except:  # noqa: E722
-                # If anything went wrong, the cache file will be corrupted, so we should
-                # remove it.
-                logger.warning("Removing dataset cache file '%s' due to exception", cache_file)
-                os.remove(cache_file)
-                raise
-            finally:
-                # Release the lock no matter what.
+        elif cache_file is not None:
+            if util.is_distributed() or (get_worker_info() and get_worker_info().num_workers):
+                # We can't write to the cache if there's more than one process loading
+                # instances since each worker only receives its share of the instances,
+                # and so the cache would be incomplete if only one worker were to write
+                # to it.
+                logger.warning(
+                    "Can't cache data instances where there are multiple processes loading data"
+                )
+                # Release the lock.
                 cache_file_lock.release()
+                for instance in self._auto_islice(self._read(file_path)):
+                    yield instance
+            else:
+                # If the cache doesn't exist yet we can safely write to it.
+                try:
+                    with open(cache_file, "w") as data_file:
+                        for instance in self._auto_islice(self._read(file_path)):
+                            data_file.write(self.serialize_instance(instance))
+                            data_file.write("\n")
+                            yield instance
+                except:  # noqa: E722
+                    # If anything went wrong, the cache file will be corrupted, so we should
+                    # remove it.
+                    logger.warning("Removing dataset cache file '%s' due to exception", cache_file)
+                    os.remove(cache_file)
+                    raise
+                finally:
+                    # Release the lock no matter what.
+                    cache_file_lock.release()
         else:
-            # No cache or we can't safely write to the cache.
+            # No cache.
             for instance in self._auto_islice(self._read(file_path)):
                 yield instance
 
