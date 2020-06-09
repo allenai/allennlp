@@ -1,7 +1,6 @@
 import logging
 
 from typing import Dict, List
-from overrides import overrides
 
 from allennlp.common.file_utils import cached_path
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
@@ -76,13 +75,8 @@ class BabiReader(DatasetReader):
                 else:
                     context.append(new_entry)
 
-    @overrides
-    def text_to_instance(
-        self,  # type: ignore
-        context: List[List[str]],
-        question: List[str],
-        answer: str,
-        supports: List[int],
+    def text_to_instance(  # type: ignore
+        self, context: List[List[str]], question: List[str], answer: str, supports: List[int],
     ) -> Instance:
 
         fields: Dict[str, Field] = {}

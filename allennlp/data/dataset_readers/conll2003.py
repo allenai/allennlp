@@ -2,8 +2,6 @@ from typing import Dict, List, Sequence
 import itertools
 import logging
 
-from overrides import overrides
-
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.file_utils import cached_path
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
@@ -104,7 +102,6 @@ class Conll2003DatasetReader(DatasetReader):
         self.label_namespace = label_namespace
         self._original_coding_scheme = "IOB1"
 
-    @overrides
     def _read(self, file_path: str):
         # if `file_path` is a URL, redirect to the cache
         file_path = cached_path(file_path)
