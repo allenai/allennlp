@@ -25,7 +25,7 @@ class TestDatasetReader(AllenNlpTestCase):
             / "imdb_corpus.jsonl"
         )
         reader = TextClassificationJsonReader(cache_directory=self.cache_directory)
-        cache_file = reader._check_for_cache(data_file)
+        cache_file = reader._get_cache_location_for_file_path(data_file)
         assert not os.path.exists(cache_file)
         reader.read(data_file)
         assert os.path.exists(cache_file)
@@ -59,7 +59,7 @@ class TestDatasetReader(AllenNlpTestCase):
             / "imdb_corpus.jsonl"
         )
         reader = TextClassificationJsonReader(cache_directory=self.cache_directory)
-        cache_file = reader._check_for_cache(data_file)
+        cache_file = reader._get_cache_location_for_file_path(data_file)
 
         # The first read will create the cache.
         reader.read(data_file)
@@ -87,7 +87,7 @@ class TestDatasetReader(AllenNlpTestCase):
         snli_copy_file = str(data_file) + ".copy"
         shutil.copyfile(data_file, snli_copy_file)
         reader = TextClassificationJsonReader(lazy=True, cache_directory=self.cache_directory)
-        cache_file = reader._check_for_cache(snli_copy_file)
+        cache_file = reader._get_cache_location_for_file_path(snli_copy_file)
 
         # The call to read() will give us an _iterator_.  We'll iterate over it multiple times,
         # and the caching behavior should change as we go.
