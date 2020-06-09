@@ -1,4 +1,4 @@
-from typing import Dict, Iterable, NamedTuple, Any, Union
+from typing import Dict, Iterable, Any, Union
 import json
 
 from allennlp.common.checks import ConfigurationError
@@ -7,11 +7,6 @@ from allennlp.data.fields import MetadataField
 from allennlp.data.instance import Instance
 
 _VALID_SCHEMES = {"round_robin", "all_at_once"}
-
-
-class RawInstance(NamedTuple):
-    original_raw: Any
-    dataset: str
 
 
 @DatasetReader.register("interleaving")
