@@ -28,6 +28,7 @@ DEFAULT_NON_PADDED_NAMESPACES = ("*tags", "*labels")
 DEFAULT_PADDING_TOKEN = "@@PADDING@@"
 DEFAULT_OOV_TOKEN = "@@UNKNOWN@@"
 NAMESPACE_PADDING_FILE = "non_padded_namespaces.txt"
+_NEW_LINE_REGEX = re.compile(r"\n|\r\n")
 
 
 class _NamespaceDependentDefaultDict(defaultdict):
@@ -444,7 +445,7 @@ class Vocabulary(Registrable):
             self._token_to_index[namespace] = {}
             self._index_to_token[namespace] = {}
         with codecs.open(filename, "r", "utf-8") as input_file:
-            lines = re.split(r"\n|\r\n?", input_file.read())
+            lines = _NEW_LINE_REGEX.split(input_file.read())
             # Be flexible about having final newline or not
             if lines and lines[-1] == "":
                 lines = lines[:-1]
