@@ -50,12 +50,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - To be consistent with PyTorch `IterableDataset`, `AllennlpLazyDataset` no longer implements `__len__()`.
   Previously it would always return 1.
 - Removed old tutorials, in favor of [the new AllenNLP Guide](https://guide.allennlp.org)
-- When implementing the `DatasetReader._read` method, you should now return a `dict` of arguments
-  that will be passed to `DatasetReader.text_to_instance`, instead of an actual `Instance`.
-  For each `result` dictionary generated from `DatasetReader._read`, an actual `Instance`
-  will be created by calling `DatasetReader.text_to_instance(**result)`.
-  However, for backwards compatability you can still generate actual `Instance`s directly
-  from `_read`, but this probably be less efficient when using a multi-process data loader.
+- When implementing the `DatasetReader._read` method, you should now return an iterable of the
+  rawest form of the data, i.e. with the least amount of preprocessing possible.
+  This could either be:
+
+  - a`tuple` or positional arguments to pass to `DatasetReader.text_to_instance` by `*`- expansion,
+  - a `dict` or keyword arguments to pass to `DatasetReader.text_to_instance` by `**`-expansion,
+  - or any custom type as long as you override `DatasetReader.parse_raw_data`.
+
+  However, for backwards compatability, `Instance`s will still be accepted from the `_read`
+  method. But this is less efficient when using multi-process data loaders.
 
 ## [v1.0.0rc5](https://github.com/allenai/allennlp/releases/tag/v1.0.0rc5) - 2020-05-26
 
