@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   that you don't have to manually import a bunch of modules when instantiating predictors from
   an archive path.
 - Lazy dataset readers now work correctly with multi-process data loading.
+- Fixed race conditions that could occur when using a dataset cache.
 
 ### Added
 

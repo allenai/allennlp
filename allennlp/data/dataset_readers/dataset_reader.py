@@ -4,6 +4,7 @@ import logging
 import os
 import pathlib
 
+from filelock import FileLock, Timeout
 import jsonpickle
 import torch.distributed as dist
 from torch.utils.data import Dataset, IterableDataset, get_worker_info
@@ -94,6 +95,11 @@ class DatasetReader(Registrable):
         and do the sharding yourself.
     """
 
+    CACHE_FILE_LOCK_TIMEOUT: int = 10
+    """
+    The number of seconds to wait for the lock on a cache file to become available.
+    """
+
     def __init__(
         self,
         lazy: bool = False,
@@ -150,46 +156,67 @@ class DatasetReader(Registrable):
     def instance_iterator(self, file_path: str) -> Iterable[Instance]:
         cache_file: Optional[str] = None
         if self._cache_directory:
-            cache_file = self._get_cache_location_for_file_path(file_path)
+            cache_file = self._check_for_cache(file_path)
 
-        # Case 1: Use cached instances
-        if cache_file is not None and os.path.exists(cache_file):
-            with open(cache_file) as data_file:
-                for line in itertools.islice(data_file, self.max_instances):
-                    instance = self.deserialize_instance(line)
-                    yield instance
-        # Case 2: Need to cache instances
-        elif cache_file is not None:
-            with open(cache_file, "w") as data_file:
-                for raw_instance in self._auto_islice(self._read(file_path)):
-                    if isinstance(raw_instance, Instance):
-                        instance = raw_instance
-                    else:
-                        instance = self.text_to_instance(**raw_instance)
-                    data_file.write(self.serialize_instance(instance))
-                    data_file.write("\n")
-                    yield instance
-        # Case 3: No cache
+        if cache_file is not None:
+            # Try to acquire lock on cache file.
+            cache_file_lock = FileLock(cache_file + ".lock", timeout=self.CACHE_FILE_LOCK_TIMEOUT)
+            try:
+                cache_file_lock.acquire()
+            except Timeout:
+                logger.error(
+                    "Failed to acquire lock on dataset cache file within {}s",
+                    self.CACHE_FILE_LOCK_TIMEOUT,
+                )
+                raise
+
+            if os.path.exists(cache_file):
+                # If the file already exists and we've acquired the lock then it must
+                # be up-to-date. Therefore we can release the lock and start reading from it.
+                cache_file_lock.release()
+                with open(cache_file) as data_file:
+                    for line in itertools.islice(data_file, self.max_instances):
+                        instance = self.deserialize_instance(line)
+                        yield instance
+            else:
+                try:
+                    with open(cache_file, "w") as data_file:
+                        for instance in self._auto_islice(self._read(file_path)):
+                            data_file.write(self.serialize_instance(instance))
+                            data_file.write("\n")
+                            yield instance
+                except:  # noqa: E722
+                    # If anything went wrong, the cache file will be corrupted, so we should
+                    # remove it.
+                    logger.warning("Removing dataset cache file '%s' due to exception", cache_file)
+                    os.remove(cache_file)
+                    raise
+                finally:
+                    # Release the lock no matter what.
+                    cache_file_lock.release()
         else:
-            for raw_instance in self._auto_islice(self._read(file_path)):
-                if isinstance(raw_instance, Instance):
-                    instance = raw_instance
-                else:
-                    instance = self.text_to_instance(**raw_instance)
+            # No cache, just start reading right away.
+            for instance in self._auto_islice(self._read(file_path)):
                 yield instance
 
-    def _get_cache_location_for_file_path(self, file_path: str) -> str:
+    def _check_for_cache(self, file_path: str) -> str:
         node_rank: int = 0
         worker_id: int = 0
+        world_size: int = 1
+        num_workers: int = 1
         if util.is_distributed():
             node_rank = dist.get_rank()
+            world_size = dist.get_world_size()
         worker_info = get_worker_info()
         if worker_info:
             worker_id = worker_info.id
-        node_worker_id_string = f"_node_{node_rank}_{worker_id}"
-        return str(
-            self._cache_directory / (util.flatten_filename(str(file_path)) + node_worker_id_string)
+            num_workers = worker_info.num_workers
+        # The cache file has to be unique for each data loader worker and each training node.
+        node_worker_id_suffix = (
+            f"_node_{node_rank}_of_{world_size}_worker_{worker_id}_of_{num_workers}"
         )
+        cache_file_name = util.flatten_filename(str(file_path)) + node_worker_id_suffix
+        return str(self._cache_directory / cache_file_name)
 
     def _read(self, file_path: str) -> Iterable[Union[Instance, Dict[str, Any]]]:
         """
@@ -260,4 +287,12 @@ class DatasetReader(Registrable):
         if worker_info:
             start_index += step_size * worker_info.id
             step_size *= worker_info.num_workers
-        return itertools.islice(iterable, start_index, self.max_instances, step_size)
+
+        def ensure_instance(raw_instance: Union[Instance, Dict[str, Any]]):
+            if isinstance(raw_instance, Instance):
+                return raw_instance
+            return self.text_to_instance(**raw_instance)
+
+        return map(
+            ensure_instance, itertools.islice(iterable, start_index, self.max_instances, step_size)
+        )
