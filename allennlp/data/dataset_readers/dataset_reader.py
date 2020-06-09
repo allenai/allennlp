@@ -1,5 +1,5 @@
 import itertools
-from typing import Iterable, Iterator, Optional, List, Dict, Any, Union, Callable
+from typing import Iterable, Iterator, Optional, List, Any, Callable, Generic, TypeVar
 import logging
 import os
 import pathlib
@@ -19,6 +19,11 @@ logger = logging.getLogger(__name__)
 
 
 class AllennlpDataset(Dataset):
+    """
+    An `AllennlpDataset` is created by calling `.read()` on a non-lazy `DatasetReader`.
+    It's essentially just a thin wrapper around a list of instances.
+    """
+
     def __init__(self, instances: List[Instance], vocab: Vocabulary = None):
         self.instances = instances
         self.vocab = vocab
@@ -36,6 +41,20 @@ class AllennlpDataset(Dataset):
 
 
 class AllennlpLazyDataset(IterableDataset):
+    """
+    An `AllennlpLazyDataset` is created by calling `.read()` on a lazy `DatasetReader`.
+
+    # Parameters
+
+    instance_iterator_factory : `Callable[[str], Iterable[Instance]]`
+        A factory function that creates an iterable of `Instance`s from a file path.
+        This is usually just `DatasetReader.instance_iterator`.
+    file_path : `str`
+        The path to pass to the `instance_iterator_factory` function.
+    vocab : `Vocab`, optional (default = `None`)
+        An optional vocab. This can also be set later with the `.index_with` method.
+    """
+
     def __init__(
         self,
         instance_iterator_factory: Callable[[str], Iterable[Instance]],
@@ -57,7 +76,10 @@ class AllennlpLazyDataset(IterableDataset):
         self.vocab = vocab
 
 
-class DatasetReader(Registrable):
+RawData = TypeVar("RawData")
+
+
+class DatasetReader(Generic[RawData], Registrable):
     """
     A `DatasetReader` knows how to turn a file containing a dataset into a collection
     of `Instances`.  To implement your own, just override the `_read(file_path)` method
@@ -178,7 +200,9 @@ class DatasetReader(Registrable):
             cache_file_lock.release()
             logger.info("Reading instances from cache %s", cache_file)
             with open(cache_file) as data_file:
-                for instance in self._auto_islice(data_file, transform=self.deserialize_instance):
+                for instance in self.multi_worker_islice(
+                    data_file, transform=self.deserialize_instance
+                ):
                     yield instance
         elif cache_file is not None:
             if util.is_distributed() or (get_worker_info() and get_worker_info().num_workers):
@@ -191,13 +215,13 @@ class DatasetReader(Registrable):
                 )
                 # Release the lock.
                 cache_file_lock.release()
-                for instance in self._auto_islice(self._read(file_path)):
+                for instance in self.multi_worker_islice(self._read(file_path)):
                     yield instance
             else:
                 # If the cache doesn't exist yet we can safely write to it.
                 try:
                     with open(cache_file, "w") as data_file:
-                        for instance in self._auto_islice(self._read(file_path)):
+                        for instance in self.multi_worker_islice(self._read(file_path)):
                             data_file.write(self.serialize_instance(instance))
                             data_file.write("\n")
                             yield instance
@@ -212,13 +236,13 @@ class DatasetReader(Registrable):
                     cache_file_lock.release()
         else:
             # No cache.
-            for instance in self._auto_islice(self._read(file_path)):
+            for instance in self.multi_worker_islice(self._read(file_path)):
                 yield instance
 
     def _get_cache_location_for_file_path(self, file_path: str) -> str:
         return str(self._cache_directory / util.flatten_filename(str(file_path)) or "cache")
 
-    def _read(self, file_path: str) -> Iterable[Union[Instance, Dict[str, Any]]]:
+    def _read(self, file_path: str) -> Iterable[RawData]:
         """
         Reads the instances (or the data that can be turned into any instance) from the
         given file_path and returns them as an `Iterable`.
@@ -271,17 +295,50 @@ class DatasetReader(Registrable):
         """
         return jsonpickle.loads(string)  # type: ignore
 
-    def ensure_instance(self, raw_instance) -> Instance:
-        if isinstance(raw_instance, Instance):
-            return raw_instance
-        return self.text_to_instance(**raw_instance)
+    def parse_raw_data(self, raw_data: RawData) -> Instance:
+        """
+        This method is used to transform the raw data generated from the `_read` method
+        into `Instance`s.
 
-    def _auto_islice(
-        self, iterable: Iterable[Any], transform: Optional[Callable[[Any], Any]] = None,
+        It does so by inspecting the type of the raw data:
+
+        - If the raw data is an actual `Instance`, it's returned as is.
+        - If it's a tuple or list, it's treated as the positional arguments to
+          `self.text_to_instance`.
+        - If it's a dict, it's treated as keyword arguments to `self.text_to_instance`.
+
+        Override this method if your `_read` generates something other than these types.
+        """
+        if isinstance(raw_data, Instance):
+            return raw_data
+        elif isinstance(raw_data, (tuple, list)):
+            return self.text_to_instance(*raw_data)
+        elif isinstance(raw_data, dict):
+            return self.text_to_instance(**raw_data)
+        raise TypeError(
+            f"Unexpected type: {type(raw_data)}. You may need to override 'DatasetReader.parse_raw_data'"
+        )
+
+    def multi_worker_islice(
+        self, iterable: Iterable[Any], transform: Optional[Callable[[Any], Instance]] = None,
     ) -> Iterable[Instance]:
         """
         Helper method that determines which raw instances to skip based on the current
         node rank (for distributed training) and worker ID (for multi-process data loading).
+
+        # Parameters
+
+        iterable : `Iterable[Any]`
+            An iterable that yields raw data that can be transformed into `Instance`s
+            through the `transform` function.
+        transform : `Optional[Callable[[Any], Instance]]`, optional (default = `None`)
+            An optional function that will be applied to the raw data generated
+            by `iterable` to create `Instance`s. If not specified, this class's
+            `parse_raw_data` method is used.
+
+        # Returns
+
+        `Iterable[Instance]`
         """
         start_index = 0
         step_size = 1
@@ -307,16 +364,6 @@ class DatasetReader(Registrable):
             if remainder < start_index:
                 per_process_max_instances += 1
 
-        if transform:
-            return map(
-                self.ensure_instance,
-                map(
-                    transform,
-                    itertools.islice(iterable, start_index, per_process_max_instances, step_size),
-                ),
-            )
-
-        return map(
-            self.ensure_instance,
-            itertools.islice(iterable, start_index, per_process_max_instances, step_size),
-        )
+        map_to_instance_fn = transform if transform is not None else self.parse_raw_data
+        islice = itertools.islice(iterable, start_index, per_process_max_instances, step_size)
+        return (map_to_instance_fn(x) for x in islice)

@@ -115,7 +115,7 @@ class ModelTestCase(AllenNlpTestCase):
                 err_msg=key,
             )
         params = Params.from_file(param_file, params_overrides=overrides)
-        reader = DatasetReader.from_params(params["dataset_reader"])
+        reader = DatasetReader.from_params(params["dataset_reader"])  # type: ignore
 
         print("Reading with original model")
         model_dataset = reader.read(params["validation_data_path"])

@@ -1,4 +1,4 @@
-from typing import Dict, Iterable, Any, Union
+from typing import Dict, Iterable, Any, Tuple
 import json
 
 from allennlp.common.checks import ConfigurationError
@@ -10,7 +10,7 @@ _VALID_SCHEMES = {"round_robin", "all_at_once"}
 
 
 @DatasetReader.register("interleaving")
-class InterleavingDatasetReader(DatasetReader):
+class InterleavingDatasetReader(DatasetReader[Tuple[Any, str]]):
     """
     A `DatasetReader` that wraps multiple other dataset readers,
     and interleaves their instances, adding a `MetadataField` to
@@ -52,7 +52,7 @@ class InterleavingDatasetReader(DatasetReader):
             raise ConfigurationError(f"invalid scheme: {scheme}")
         self._scheme = scheme
 
-    def _read_round_robin(self, datasets: Dict[str, Iterable[Union[Instance, Dict[str, Any]]]]):
+    def _read_round_robin(self, datasets: Dict[str, Iterable[Any]]) -> Iterable[Tuple[Any, str]]:
         remaining = set(datasets)
         dataset_iterators = {key: iter(dataset) for key, dataset in datasets.items()}
 
@@ -60,17 +60,17 @@ class InterleavingDatasetReader(DatasetReader):
             for key, dataset in dataset_iterators.items():
                 if key in remaining:
                     try:
-                        raw_instance = next(dataset)
-                        yield {"raw_instance": raw_instance, "dataset": key}
+                        raw_data = next(dataset)
+                        yield raw_data, key
                     except StopIteration:
                         remaining.remove(key)
 
-    def _read_all_at_once(self, datasets: Dict[str, Iterable[Union[Instance, Dict[str, Any]]]]):
+    def _read_all_at_once(self, datasets: Dict[str, Iterable[Any]]) -> Iterable[Tuple[Any, str]]:
         for key, dataset in datasets.items():
-            for raw_instance in dataset:
-                yield {"raw_instance": raw_instance, "dataset": key}
+            for raw_data in dataset:
+                yield raw_data, key
 
-    def _read(self, file_path: str):
+    def _read(self, file_path: str) -> Iterable[Tuple[Any, str]]:
         try:
             file_paths = json.loads(file_path)
         except json.JSONDecodeError:
@@ -93,11 +93,8 @@ class InterleavingDatasetReader(DatasetReader):
             raise RuntimeError("impossible to get here")
 
     def text_to_instance(  # type: ignore
-        self, raw_instance: Union[Instance, Dict[str, Any]], dataset: str,
+        self, raw_data: Any, dataset: str,
     ) -> Instance:
-        if isinstance(raw_instance, Instance):
-            instance = raw_instance
-        else:
-            instance = self._readers[dataset].text_to_instance(**raw_instance)
+        instance = self._readers[dataset].parse_raw_data(raw_data)
         instance.fields[self._dataset_field_name] = MetadataField(dataset)
         return instance

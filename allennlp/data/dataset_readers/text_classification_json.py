@@ -1,4 +1,4 @@
-from typing import Dict, List, Union
+from typing import Dict, List, Union, Iterable
 import logging
 import json
 
@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 @DatasetReader.register("text_classification_json")
-class TextClassificationJsonReader(DatasetReader):
+class TextClassificationJsonReader(DatasetReader[str]):
     """
     Reads tokens and their labels from a labeled text classification dataset.
     Expects a "text" field and a "label" field in JSON format.
@@ -64,33 +64,32 @@ class TextClassificationJsonReader(DatasetReader):
         if self._segment_sentences:
             self._sentence_segmenter = SpacySentenceSplitter()
 
-    def _read(self, file_path):
+    def _read(self, file_path) -> Iterable[str]:
         with open(cached_path(file_path), "r") as data_file:
             for line in data_file.readlines():
                 if not line:
                     continue
-                items = json.loads(line)
-                text = items["text"]
-                label = items.get("label")
-                if label is not None:
-                    if self._skip_label_indexing:
-                        try:
-                            label = int(label)
-                        except ValueError:
-                            raise ValueError(
-                                "Labels must be integers if skip_label_indexing is True."
-                            )
-                    else:
-                        label = str(label)
-                instance = self.text_to_instance(text=text, label=label)
-                if instance is not None:
-                    yield {"text": text, "label": label}
+                yield line
+
+    def parse_raw_data(self, line: str) -> Instance:
+        items = json.loads(line)
+        text = items["text"]
+        label = items.get("label")
+        if label is not None:
+            if self._skip_label_indexing:
+                try:
+                    label = int(label)
+                except ValueError:
+                    raise ValueError("Labels must be integers if skip_label_indexing is True.")
+            else:
+                label = str(label)
+        return self.text_to_instance(text=text, label=label)
 
     def _truncate(self, tokens):
         """
         truncate a set of tokens using the provided sequence length
         """
-        if len(tokens) > self._max_sequence_length:
+        if len(tokens) > self._max_sequence_length:  # type: ignore
             tokens = tokens[: self._max_sequence_length]
         return tokens
 

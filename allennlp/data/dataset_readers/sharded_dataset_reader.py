@@ -1,6 +1,9 @@
 import glob
 import logging
 import torch
+from typing import TypeVar, Iterable
+
+from overrides import overrides
 
 from allennlp.common import util
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
@@ -10,8 +13,11 @@ from allennlp.data.instance import Instance
 logger = logging.getLogger(__name__)
 
 
+RawData = TypeVar("RawData")
+
+
 @DatasetReader.register("sharded")
-class ShardedDatasetReader(DatasetReader):
+class ShardedDatasetReader(DatasetReader[RawData]):
     """
     Wraps another dataset reader and uses it to read from multiple input files.
     Note that in this case the `file_path` passed to `read()` should be a glob,
@@ -29,7 +35,7 @@ class ShardedDatasetReader(DatasetReader):
         Reader with a read method that accepts a single file.
     """
 
-    def __init__(self, base_reader: DatasetReader, **kwargs,) -> None:
+    def __init__(self, base_reader: DatasetReader[RawData], **kwargs,) -> None:
         super().__init__(**kwargs)
 
         if util.is_distributed():
@@ -48,7 +54,11 @@ class ShardedDatasetReader(DatasetReader):
         """
         return self.reader.text_to_instance(*args, **kwargs)
 
-    def _read(self, file_path: str):
+    @overrides
+    def parse_raw_data(self, raw_data: RawData) -> Instance:
+        return self.reader.parse_raw_data(raw_data)
+
+    def _read(self, file_path: str) -> Iterable[RawData]:
         shards = glob.glob(file_path)
         # Ensure a consistent order.
         shards.sort()

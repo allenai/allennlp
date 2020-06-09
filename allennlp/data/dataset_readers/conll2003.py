@@ -1,6 +1,8 @@
-from typing import Dict, List, Sequence
+from typing import Dict, List, Sequence, Iterable, Iterator
 import itertools
 import logging
+
+from overrides import overrides
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.file_utils import cached_path
@@ -27,7 +29,7 @@ def _is_divider(line: str) -> bool:
 
 
 @DatasetReader.register("conll2003")
-class Conll2003DatasetReader(DatasetReader):
+class Conll2003DatasetReader(DatasetReader[Iterator[str]]):
     """
     Reads instances from a pretokenised file where each line is in the following format:
 
@@ -102,7 +104,7 @@ class Conll2003DatasetReader(DatasetReader):
         self.label_namespace = label_namespace
         self._original_coding_scheme = "IOB1"
 
-    def _read(self, file_path: str):
+    def _read(self, file_path: str) -> Iterable[Iterator[str]]:
         # if `file_path` is a URL, redirect to the cache
         file_path = cached_path(file_path)
 
@@ -114,19 +116,17 @@ class Conll2003DatasetReader(DatasetReader):
                 # Ignore the divider chunks, so that `lines` corresponds to the words
                 # of a single sentence.
                 if not is_divider:
-                    fields = [line.strip().split() for line in lines]
-                    # unzipping trick returns tuples, but our Fields need lists
-                    fields = [list(field) for field in zip(*fields)]
-                    tokens_, pos_tags, chunk_tags, ner_tags = fields
-                    # TextField requires `Token` objects
-                    tokens = [Token(token) for token in tokens_]
+                    yield lines
 
-                    yield {
-                        "tokens": tokens,
-                        "pos_tags": pos_tags,
-                        "chunk_tags": chunk_tags,
-                        "ner_tags": ner_tags,
-                    }
+    @overrides
+    def parse_raw_data(self, lines: Iterator[str]) -> Instance:
+        fields = [line.strip().split() for line in lines]
+        # unzipping trick returns tuples, but our Fields need lists
+        fields = [list(field) for field in zip(*fields)]
+        tokens_, pos_tags, chunk_tags, ner_tags = fields
+        # TextField requires `Token` objects
+        tokens = [Token(token) for token in tokens_]
+        return self.text_to_instance(tokens, pos_tags, chunk_tags, ner_tags)
 
     def text_to_instance(  # type: ignore
         self,
