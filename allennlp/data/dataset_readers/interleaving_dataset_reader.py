@@ -10,7 +10,7 @@ _VALID_SCHEMES = {"round_robin", "all_at_once"}
 
 
 @DatasetReader.register("interleaving")
-class InterleavingDatasetReader(DatasetReader[Tuple[Any, str]]):
+class InterleavingDatasetReader(DatasetReader):
     """
     A `DatasetReader` that wraps multiple other dataset readers,
     and interleaves their instances, adding a `MetadataField` to
@@ -95,6 +95,6 @@ class InterleavingDatasetReader(DatasetReader[Tuple[Any, str]]):
     def text_to_instance(  # type: ignore
         self, raw_data: Any, dataset: str,
     ) -> Instance:
-        instance = self._readers[dataset].parse_raw_data(raw_data)
+        instance = self._readers[dataset].ensure_instance(raw_data)
         instance.fields[self._dataset_field_name] = MetadataField(dataset)
         return instance

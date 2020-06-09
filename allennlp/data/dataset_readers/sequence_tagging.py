@@ -1,7 +1,5 @@
-from typing import Dict, List, Iterable
+from typing import Dict, List
 import logging
-
-from overrides import overrides
 
 from allennlp.common.file_utils import cached_path
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
@@ -16,7 +14,7 @@ DEFAULT_WORD_TAG_DELIMITER = "###"
 
 
 @DatasetReader.register("sequence_tagging")
-class SequenceTaggingDatasetReader(DatasetReader[str]):
+class SequenceTaggingDatasetReader(DatasetReader):
     """
     Reads instances from a pretokenised file where each line is in the following format:
 
@@ -54,7 +52,7 @@ class SequenceTaggingDatasetReader(DatasetReader[str]):
         self._word_tag_delimiter = word_tag_delimiter
         self._token_delimiter = token_delimiter
 
-    def _read(self, file_path) -> Iterable[str]:
+    def _read(self, file_path):
         # if `file_path` is a URL, redirect to the cache
         file_path = cached_path(file_path)
 
@@ -68,16 +66,13 @@ class SequenceTaggingDatasetReader(DatasetReader[str]):
                 if not line:
                     continue
 
-                yield line
-
-    @overrides
-    def parse_raw_data(self, line: str) -> Instance:
-        tokens_and_tags = [
-            pair.rsplit(self._word_tag_delimiter, 1) for pair in line.split(self._token_delimiter)
-        ]
-        tokens = [Token(token) for token, tag in tokens_and_tags]
-        tags = [tag for token, tag in tokens_and_tags]
-        return self.text_to_instance(tokens, tags)
+                tokens_and_tags = [
+                    pair.rsplit(self._word_tag_delimiter, 1)
+                    for pair in line.split(self._token_delimiter)
+                ]
+                tokens = [Token(token) for token, tag in tokens_and_tags]
+                tags = [tag for token, tag in tokens_and_tags]
+                yield tokens, tags
 
     def text_to_instance(  # type: ignore
         self, tokens: List[Token], tags: List[str] = None

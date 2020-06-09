@@ -1,4 +1,4 @@
-from typing import Dict, List, Union, Iterable
+from typing import Dict, List, Union
 import logging
 import json
 
@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 @DatasetReader.register("text_classification_json")
-class TextClassificationJsonReader(DatasetReader[str]):
+class TextClassificationJsonReader(DatasetReader):
     """
     Reads tokens and their labels from a labeled text classification dataset.
     Expects a "text" field and a "label" field in JSON format.
@@ -64,26 +64,25 @@ class TextClassificationJsonReader(DatasetReader[str]):
         if self._segment_sentences:
             self._sentence_segmenter = SpacySentenceSplitter()
 
-    def _read(self, file_path) -> Iterable[str]:
+    def _read(self, file_path):
         with open(cached_path(file_path), "r") as data_file:
             for line in data_file.readlines():
                 if not line:
                     continue
-                yield line
-
-    def parse_raw_data(self, line: str) -> Instance:
-        items = json.loads(line)
-        text = items["text"]
-        label = items.get("label")
-        if label is not None:
-            if self._skip_label_indexing:
-                try:
-                    label = int(label)
-                except ValueError:
-                    raise ValueError("Labels must be integers if skip_label_indexing is True.")
-            else:
-                label = str(label)
-        return self.text_to_instance(text=text, label=label)
+                items = json.loads(line)
+                text = items["text"]
+                label = items.get("label")
+                if label is not None:
+                    if self._skip_label_indexing:
+                        try:
+                            label = int(label)
+                        except ValueError:
+                            raise ValueError(
+                                "Labels must be integers if skip_label_indexing is True."
+                            )
+                    else:
+                        label = str(label)
+                yield text, label
 
     def _truncate(self, tokens):
         """
