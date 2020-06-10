@@ -72,7 +72,7 @@ class SequenceTaggingDatasetReader(DatasetReader):
                 ]
                 tokens = [Token(token) for token, tag in tokens_and_tags]
                 tags = [tag for token, tag in tokens_and_tags]
-                yield tokens, tags
+                yield {"tokens": tokens, "tags": tags}
 
     def text_to_instance(  # type: ignore
         self, tokens: List[Token], tags: List[str] = None

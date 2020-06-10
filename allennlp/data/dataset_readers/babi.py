@@ -61,7 +61,12 @@ class BabiReader(DatasetReader):
                 question = question_str.split()[1:]
                 supports = [int(support) - 1 for support in supports_str.split()]
 
-                yield context, question, answer, supports
+                yield {
+                    "context": context,
+                    "question": question,
+                    "answer": answer,
+                    "supports": supports,
+                }
             else:
                 new_entry = line.replace(".", " .").split()[1:]
 

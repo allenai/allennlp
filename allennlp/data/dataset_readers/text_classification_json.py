@@ -82,7 +82,7 @@ class TextClassificationJsonReader(DatasetReader):
                             )
                     else:
                         label = str(label)
-                yield text, label
+                yield {"text": text, "label": label}
 
     def _truncate(self, tokens):
         """

@@ -1,4 +1,4 @@
-from typing import Dict, Iterable, Any, Tuple
+from typing import Dict, Iterable, Any
 import json
 
 from allennlp.common.checks import ConfigurationError
@@ -52,7 +52,7 @@ class InterleavingDatasetReader(DatasetReader):
             raise ConfigurationError(f"invalid scheme: {scheme}")
         self._scheme = scheme
 
-    def _read_round_robin(self, datasets: Dict[str, Iterable[Any]]) -> Iterable[Tuple[Any, str]]:
+    def _read_round_robin(self, datasets: Dict[str, Iterable[Any]]) -> Iterable[Dict[str, Any]]:
         remaining = set(datasets)
         dataset_iterators = {key: iter(dataset) for key, dataset in datasets.items()}
 
@@ -61,16 +61,16 @@ class InterleavingDatasetReader(DatasetReader):
                 if key in remaining:
                     try:
                         raw_data = next(dataset)
-                        yield raw_data, key
+                        yield {"raw_data": raw_data, "dataset": key}
                     except StopIteration:
                         remaining.remove(key)
 
-    def _read_all_at_once(self, datasets: Dict[str, Iterable[Any]]) -> Iterable[Tuple[Any, str]]:
+    def _read_all_at_once(self, datasets: Dict[str, Iterable[Any]]) -> Iterable[Dict[str, Any]]:
         for key, dataset in datasets.items():
             for raw_data in dataset:
-                yield raw_data, key
+                yield {"raw_data": raw_data, "dataset": key}
 
-    def _read(self, file_path: str) -> Iterable[Tuple[Any, str]]:
+    def _read(self, file_path: str):
         try:
             file_paths = json.loads(file_path)
         except json.JSONDecodeError:

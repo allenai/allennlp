@@ -120,7 +120,12 @@ class Conll2003DatasetReader(DatasetReader):
                     tokens_, pos_tags, chunk_tags, ner_tags = fields
                     # TextField requires `Token` objects
                     tokens = [Token(token) for token in tokens_]
-                    yield tokens, pos_tags, chunk_tags, ner_tags
+                    yield {
+                        "tokens": tokens,
+                        "pos_tags": pos_tags,
+                        "chunk_tags": chunk_tags,
+                        "ner_tags": ner_tags,
+                    }
 
     def text_to_instance(  # type: ignore
         self,
