@@ -2,6 +2,7 @@ from collections import Counter
 import os
 import pathlib
 import json
+import time
 
 import pytest
 import responses
@@ -81,6 +82,8 @@ class TestFileUtils(AllenNlpTestCase):
                 f.write("some random data")
             with open(meta_filename, "w") as meta_f:
                 json.dump({"url": url, "etag": etag}, meta_f)
+            # os.path.getmtime is only accurate to the second.
+            time.sleep(1.1)
 
         # The version corresponding to the last etag should be returned, since
         # that one has the latest "last modified" time.
