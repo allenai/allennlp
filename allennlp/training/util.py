@@ -17,7 +17,6 @@ from allennlp.common.checks import check_for_gpu, ConfigurationError
 from allennlp.common.params import Params
 from allennlp.common.tqdm import Tqdm
 from allennlp.data import Instance, Vocabulary
-from allennlp.data.batch import Batch
 from allennlp.data.dataset_readers import DatasetReader
 from allennlp.models.archival import CONFIG_NAME
 from allennlp.models.model import Model
@@ -428,10 +427,14 @@ def make_vocab_from_params(
             "The 'vocabulary' directory in the provided serialization directory is non-empty"
         )
 
-    all_datasets = datasets_from_params(params)
-    datasets_for_vocab_creation = set(params.pop("datasets_for_vocab_creation", all_datasets))
+    datasets_for_vocab_creation = set(
+        params.pop("datasets_for_vocab_creation", {"train", "test", "validation"})
+    )
 
+    instances: Iterable[Instance]
     if datasets_for_vocab_creation:
+        all_datasets = datasets_from_params(params)
+
         for dataset in datasets_for_vocab_creation:
             if dataset not in all_datasets:
                 raise ConfigurationError(f"invalid 'dataset_for_vocab_creation' {dataset}")
@@ -441,15 +444,14 @@ def make_vocab_from_params(
             ", ".join(datasets_for_vocab_creation),
         )
 
-    instances: Iterable[Instance] = (
-        instance
-        for key, dataset in all_datasets.items()
-        if key in datasets_for_vocab_creation
-        for instance in dataset
-    )
-
-    if print_statistics:
-        instances = list(instances)
+        instances = (
+            instance
+            for key, dataset in all_datasets.items()
+            if key in datasets_for_vocab_creation
+            for instance in dataset
+        )
+    else:
+        instances = []
 
     vocab = Vocabulary.from_params(vocab_params, instances=instances)
 
@@ -458,7 +460,6 @@ def make_vocab_from_params(
     logger.info("done creating vocab")
 
     if print_statistics:
-        dataset = Batch(instances)
         dataset.index_instances(vocab)
         dataset.print_statistics()
         vocab.print_statistics()
