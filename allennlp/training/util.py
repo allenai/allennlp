@@ -123,7 +123,7 @@ def datasets_from_params(params: Params) -> Dict[str, Dataset]:
     dataset_reader_params = params.pop("dataset_reader")
     validation_dataset_reader_params = params.pop("validation_dataset_reader", None)
 
-    dataset_reader = DatasetReader.from_params(dataset_reader_params)  # type: ignore
+    dataset_reader = DatasetReader.from_params(dataset_reader_params)
 
     validation_and_test_dataset_reader: DatasetReader = dataset_reader
     if validation_dataset_reader_params is not None:
