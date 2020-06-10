@@ -425,7 +425,8 @@ def make_vocab_from_params(
         datasets = datasets_from_params(params)
     else:
         for dataset in datasets_for_vocab_creation:
-            if dataset not in {"train", "test", "validation"}:
+            data_path = f"{dataset}_data_path"
+            if data_path not in params:
                 raise ConfigurationError(f"invalid 'dataset_for_vocab_creation' {dataset}")
         datasets = datasets_from_params(
             params,
