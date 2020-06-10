@@ -23,8 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Predictor.from_path` now automatically loads plugins (unless you specify `load_plugins=False`) so
   that you don't have to manually import a bunch of modules when instantiating predictors from
   an archive path.
-- A bug where where all datasets would be loaded for vocab creation if `datasets_for_vocab_creation`
-  was set to `[]` in the config.
+- A bug where where all datasets would be loaded for vocab creation even if not needed.
 
 ### Added
 
