@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Predictor.from_path` now automatically loads plugins (unless you specify `load_plugins=False`) so
   that you don't have to manually import a bunch of modules when instantiating predictors from
   an archive path.
+- `allennlp-server` automatically found as a plugin once again.
 
 ### Added
 
