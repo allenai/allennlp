@@ -19,7 +19,9 @@
     <a href="https://codecov.io/gh/allenai/allennlp">
         <img alt="Codecov" src="https://codecov.io/gh/allenai/allennlp/branch/master/graph/badge.svg">
     </a>
-</p>
+    <a href="https://optuna.org">
+        <img alt="Optuna" src="https://img.shields.io/badge/Optuna-integrated-blue">
+    </a>
 <br/>
 
 ## Quick Links
