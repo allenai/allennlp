@@ -431,14 +431,15 @@ def make_vocab_from_params(
     all_datasets = datasets_from_params(params)
     datasets_for_vocab_creation = set(params.pop("datasets_for_vocab_creation", all_datasets))
 
-    for dataset in datasets_for_vocab_creation:
-        if dataset not in all_datasets:
-            raise ConfigurationError(f"invalid 'dataset_for_vocab_creation' {dataset}")
+    if datasets_for_vocab_creation:
+        for dataset in datasets_for_vocab_creation:
+            if dataset not in all_datasets:
+                raise ConfigurationError(f"invalid 'dataset_for_vocab_creation' {dataset}")
 
-    logger.info(
-        "From dataset instances, %s will be considered for vocabulary creation.",
-        ", ".join(datasets_for_vocab_creation),
-    )
+        logger.info(
+            "From dataset instances, %s will be considered for vocabulary creation.",
+            ", ".join(datasets_for_vocab_creation),
+        )
 
     instances: Iterable[Instance] = (
         instance
