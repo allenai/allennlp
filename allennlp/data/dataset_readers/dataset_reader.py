@@ -347,23 +347,12 @@ class DatasetReader(Registrable):
             step_size = dist.get_world_size()
         worker_info = get_worker_info()
         if worker_info:
-            start_index += step_size * worker_info.id
+            # Scale `start_index` by `num_workers`, then shift by worker `id`.
+            start_index *= worker_info.num_workers
+            start_index += worker_info.id
+            # Scale `step_size` by `num_workers`.
             step_size *= worker_info.num_workers
-        # We have to be careful to get max_instances right in the distributed and
-        # multi-process loader setting, since `self.max_instances` is interpreted
-        # as the overall total number of instances we should load, not the number
-        # to load per worker.
-        per_process_max_instances: Optional[int] = None
-        if self.max_instances:
-            # Note that step size gives us the total number of processes reading data.
-            # So dividing self.max_instances by step_size is a good starting point,
-            # but we still might have a remainder.
-            per_process_max_instances = self.max_instances // step_size
-            remainder = self.max_instances % step_size
-            # Divide the remainder among the first `remainder` processes.
-            if remainder < start_index:
-                per_process_max_instances += 1
 
         map_to_instance_fn = transform if transform is not None else self.ensure_instance
-        islice = itertools.islice(iterable, start_index, per_process_max_instances, step_size)
+        islice = itertools.islice(iterable, start_index, self.max_instances, step_size)
         return (map_to_instance_fn(x) for x in islice)
