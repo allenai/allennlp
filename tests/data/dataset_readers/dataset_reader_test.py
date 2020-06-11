@@ -144,10 +144,10 @@ class TestDatasetReader(AllenNlpTestCase):
         )
         reader = TextClassificationJsonReader(lazy=lazy, cache_directory=self.cache_directory)
         reader.CACHE_FILE_LOCK_TIMEOUT = 1
-        cache_file = reader._get_cache_location_for_file_path(data_file)
+        cache_file = reader._get_cache_location_for_file_path(str(data_file))
 
         with FileLock(cache_file + ".lock"):
-            deque(reader.read(data_file), maxlen=1)
+            deque(reader.read(str(data_file)), maxlen=1)
 
         # We didn't write to the cache because we couldn't acquire the file lock.
         assert not os.path.exists(cache_file)
