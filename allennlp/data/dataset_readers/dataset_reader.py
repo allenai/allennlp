@@ -221,7 +221,7 @@ class DatasetReader(Registrable):
             return AllennlpDataset(instances)
 
     def _get_cache_location_for_file_path(self, file_path: str) -> str:
-        return str(self._cache_directory / util.flatten_filename(str(file_path)) or "cache")
+        return str(self._cache_directory / util.flatten_filename(str(file_path)))
 
     def _read(self, file_path: str) -> Iterable[Instance]:
         """
