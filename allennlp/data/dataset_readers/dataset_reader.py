@@ -1,8 +1,10 @@
 import itertools
-from typing import Iterable, Iterator, Optional, List, Any, Callable
+from typing import Iterable, Iterator, Optional, List, Any, Callable, Union
 import logging
 import os
 import pathlib
+import shutil
+import tempfile
 
 from filelock import FileLock, Timeout
 import jsonpickle
@@ -28,13 +30,21 @@ class AllennlpDataset(Dataset):
         self.instances = instances
         self.vocab = vocab
 
-    def __getitem__(self, idx):
+    def __getitem__(self, idx) -> Instance:
         if self.vocab is not None:
             self.instances[idx].index_fields(self.vocab)
         return self.instances[idx]
 
     def __len__(self):
         return len(self.instances)
+
+    def __iter__(self) -> Iterator[Instance]:
+        """
+        Even though it's not necessary to implement this because Python can infer
+        this method from `__len__` and `__getitem__`, this helps with type-checking
+        since `AllennlpDataset` can be considered an `Iterable[Instance]`.
+        """
+        yield from self.instances
 
     def index_with(self, vocab: Vocabulary):
         self.vocab = vocab
@@ -113,7 +123,7 @@ class DatasetReader(Registrable):
         can implement a faster mechanism that only reads part of the data, set this to True,
         and do the sharding yourself.
     manual_multi_process_sharding : `bool`, optional (default=`False`)
-        The is similar to the `manual_distributed_sharding` parameter, but applies to
+        This is similar to the `manual_distributed_sharding` parameter, but applies to
         multi-process data loading. By default, when this reader is used by a multi-process
         data loader, each worker will filter out all but a subset of the instances
         that are needed so that you don't end up with duplicates. If you
@@ -136,24 +146,24 @@ class DatasetReader(Registrable):
     ) -> None:
         self.lazy = lazy
         self.max_instances = max_instances
+        self._cache_directory: Optional[pathlib.Path] = None
         if cache_directory:
             self._cache_directory = pathlib.Path(cache_directory)
             os.makedirs(self._cache_directory, exist_ok=True)
-        else:
-            self._cache_directory = None
         self.manual_distributed_sharding = manual_distributed_sharding
         self.manual_multi_process_sharding = manual_multi_process_sharding
 
-    def read(self, file_path: str) -> Dataset:
+    def read(
+        self, file_path: Union[pathlib.Path, str]
+    ) -> Union[AllennlpDataset, AllennlpLazyDataset]:
         """
-        Returns an `Iterable` containing all the instances
-        in the specified dataset.
+        Returns an dataset containing all the instances that can be read from the file path.
 
-        If `self.lazy` is False, this calls `self._read()`,
-        ensures that the result is a list, then returns the resulting list.
+        If `self.lazy` is `False`, this eagerly reads all instances from `self._read()`
+        and returns an `AllennlpDataset`.
 
-        If `self.lazy` is True, this returns an object whose
-        `__iter__` method calls `self._read()` each iteration.
+        If `self.lazy` is `True`, this returns an `AllennlpLazyDataset`, which internally
+        relies on the generator created from `self._read()` to lazily produce `Instance`s.
         In this case your implementation of `_read()` must also be lazy
         (that is, not load all instances into memory at once), otherwise
         you will get a `ConfigurationError`.
@@ -162,6 +172,9 @@ class DatasetReader(Registrable):
         over multiple times. It's unlikely you want to override this function,
         but if you do your result should likewise be repeatedly iterable.
         """
+        if not isinstance(file_path, str):
+            file_path = str(file_path)
+
         lazy = getattr(self, "lazy", None)
 
         if lazy is None:
@@ -177,12 +190,23 @@ class DatasetReader(Registrable):
             if self._cache_directory:
                 cache_file = self._get_cache_location_for_file_path(file_path)
 
-            if cache_file and os.path.exists(cache_file):
+            if cache_file is not None and os.path.exists(cache_file):
                 try:
+                    # Try to acquire a lock just to make sure another process isn't in the middle
+                    # of writing to the cache.
+                    cache_file_lock = FileLock(
+                        cache_file + ".lock", timeout=self.CACHE_FILE_LOCK_TIMEOUT
+                    )
+                    cache_file_lock.acquire()
+                    # We make an assumption here that if we can obtain the lock, no one will
+                    # be trying to write to the file anymore, so it should be safe to release the lock
+                    # before reading so that other processes can also read from it.
+                    cache_file_lock.release()
+                    logger.info("Reading instances from cache %s", cache_file)
                     instances = self._instances_from_cache_file(cache_file)
                 except Timeout:
                     logger.warning(
-                        "Failed to acquire lock on dataset cache file within {}s. "
+                        "Failed to acquire lock on dataset cache file within %d seconds. "
                         "Cannot use cache to read instances.",
                         self.CACHE_FILE_LOCK_TIMEOUT,
                     )
@@ -192,7 +216,7 @@ class DatasetReader(Registrable):
 
             # Then some validation.
             if not isinstance(instances, list):
-                instances = [instance for instance in Tqdm.tqdm(instances)]
+                instances = list(instances)
 
             if not instances:
                 raise ConfigurationError(
@@ -200,23 +224,29 @@ class DatasetReader(Registrable):
                     "Is the path correct?".format(file_path)
                 )
 
-            # And finally we write to the cache if we need to.
-            if (
-                self.max_instances is None
-                and not util.is_distributed()
-                and not (get_worker_info() and get_worker_info().num_workers)
-                and cache_file is not None
-                and not os.path.exists(cache_file)
-            ):
-                logger.info(f"Caching instances to {cache_file}")
-                try:
-                    self._instances_to_cache_file(cache_file, instances)
-                except Timeout:
+            # And finally we try writing to the cache.
+            if cache_file is not None and not os.path.exists(cache_file):
+                if self.max_instances is not None:
+                    # But we don't write to the cache when max_instances is specified.
                     logger.warning(
-                        "Failed to acquire lock on dataset cache file within {}s. "
-                        "Cannot write to cache.",
-                        self.CACHE_FILE_LOCK_TIMEOUT,
+                        "Skipping writing to data cache since max_instances was specified."
                     )
+                elif util.is_distributed() or (get_worker_info() and get_worker_info().num_workers):
+                    # We also shouldn't write to the cache if there's more than one process loading
+                    # instances since each worker only receives a partial share of the instances.
+                    logger.warning(
+                        "Can't cache data instances when there are multiple processes loading data"
+                    )
+                else:
+                    try:
+                        with FileLock(cache_file + ".lock", timeout=self.CACHE_FILE_LOCK_TIMEOUT):
+                            self._instances_to_cache_file(cache_file, instances)
+                    except Timeout:
+                        logger.warning(
+                            "Failed to acquire lock on dataset cache file within %d seconds. "
+                            "Cannot write to cache.",
+                            self.CACHE_FILE_LOCK_TIMEOUT,
+                        )
 
             return AllennlpDataset(instances)
 
@@ -233,25 +263,28 @@ class DatasetReader(Registrable):
         raise NotImplementedError
 
     def _instances_from_cache_file(self, cache_filename: str) -> Iterable[Instance]:
-        # Try to acquire a lock just to make sure another process isn't in the middle
-        # of writing to the cache.
-        cache_file_lock = FileLock(cache_filename + ".lock", timeout=self.CACHE_FILE_LOCK_TIMEOUT)
-        try:
-            cache_file_lock.acquire()
-        finally:
-            # We make an assumption here that if we can obtain the lock, no one will
-            # be trying to write to the file anymore, so it should be safe to release the lock
-            # before reading.
-            cache_file_lock.release()
         with open(cache_filename, "r") as cache_file:
-            for instance in self._multi_worker_islice(cache_file, self.deserialize_instance):
-                yield instance
+            yield from self._multi_worker_islice(cache_file, self.deserialize_instance)
 
     def _instances_to_cache_file(self, cache_filename, instances) -> None:
-        with FileLock(cache_filename + ".lock", timeout=self.CACHE_FILE_LOCK_TIMEOUT):
+        # We serialize to a temp file first in case anything goes wrong while
+        # writing to cache (e.g., the computer shuts down unexpectedly).
+        # Then we just copy the file over to `cache_filename`.
+        with tempfile.NamedTemporaryFile("w+") as temp_file:
+            logger.info("Caching instances to temp file %s", temp_file.name)
+            for instance in Tqdm.tqdm(instances):
+                temp_file.write(self.serialize_instance(instance) + "\n")
+
+            # we are copying the file before closing it, so flush to avoid truncation
+            temp_file.flush()
+            # shutil.copyfileobj() starts at the current position, so go to the start
+            temp_file.seek(0)
+
+            logger.info("copying %s to cache at %s", temp_file.name, cache_filename)
             with open(cache_filename, "w") as cache:
-                for instance in Tqdm.tqdm(instances):
-                    cache.write(self.serialize_instance(instance) + "\n")
+                shutil.copyfileobj(temp_file, cache)
+
+            logger.info("removing temp file %s", temp_file.name)
 
     def text_to_instance(self, *inputs) -> Instance:
         """
@@ -292,7 +325,10 @@ class DatasetReader(Registrable):
         return jsonpickle.loads(string.strip())  # type: ignore
 
     def _multi_worker_islice(
-        self, iterable: Iterable[Any], transform: Optional[Callable[[Any], Instance]] = None,
+        self,
+        iterable: Iterable[Any],
+        transform: Optional[Callable[[Any], Instance]] = None,
+        ensure_lazy: bool = False,
     ) -> Iterable[Instance]:
         """
         Helper method that determines which raw instances to skip based on the current
@@ -306,11 +342,19 @@ class DatasetReader(Registrable):
         transform : `Optional[Callable[[Any], Instance]]`, optional (default = `None`)
             An optional function that will be applied to the raw data generated
             by `iterable` to create `Instance`s.
+        ensure_lazy : `bool`, otpional (default = `False`)
+            If `True`, a `ConfigurationError` error will be raised if `iterable`
+            is a list instead of a lazy generator type. This is used, e.g., when reading
+            cached data.
 
         # Returns
 
         `Iterable[Instance]`
         """
+        if ensure_lazy and isinstance(iterable, (list, tuple)):
+            raise ConfigurationError("For a lazy dataset reader, _read() must return a generator")
+
+        wrap_with_tqdm = True
         start_index = 0
         step_size = 1
         if not self.manual_distributed_sharding and util.is_distributed():
@@ -323,8 +367,14 @@ class DatasetReader(Registrable):
             start_index += worker_info.id
             # Scale `step_size` by `num_workers`.
             step_size *= worker_info.num_workers
+            if worker_info.id > 0:
+                # We only want to log with tqdm from the main loader process.
+                wrap_with_tqdm = False
 
         islice = itertools.islice(iterable, start_index, self.max_instances, step_size)
+        if wrap_with_tqdm:
+            islice = Tqdm.tqdm(islice)
+
         if transform is not None:
             return (transform(x) for x in islice)
         return islice
@@ -334,77 +384,66 @@ class DatasetReader(Registrable):
         if self._cache_directory:
             cache_file = self._get_cache_location_for_file_path(file_path)
 
-        if cache_file is not None:
-            # Try to acquire lock on cache file.
-            cache_file_lock = FileLock(cache_file + ".lock", timeout=self.CACHE_FILE_LOCK_TIMEOUT)
-            try:
-                cache_file_lock.acquire()
-            except Timeout:
-                # Couldn't acquire the lock within the timeout specified, so we'll
-                # just log a warning and ignore the cache.
-                logger.warning(
-                    "Failed to acquire lock on dataset cache file within {}s",
-                    self.CACHE_FILE_LOCK_TIMEOUT,
-                )
-                cache_file = None
-
-        if cache_file is not None:
-            # Try to acquire lock on cache file.
-            cache_file_lock = FileLock(cache_file + ".lock", timeout=self.CACHE_FILE_LOCK_TIMEOUT)
-            try:
-                cache_file_lock.acquire()
-            except Timeout:
-                # Couldn't acquire the lock within the timeout specified, so we'll
-                # just log a warning and ignore the cache.
-                logger.warning(
-                    "Failed to acquire lock on dataset cache file within {}s",
-                    self.CACHE_FILE_LOCK_TIMEOUT,
-                )
-                cache_file = None
-
         if cache_file is not None and os.path.exists(cache_file):
-            # If the file already exists and we've acquired the lock then it must
-            # be up-to-date. Therefore we can release the lock and start reading from it.
-            cache_file_lock.release()
-            logger.info("Reading instances from cache %s", cache_file)
-            with open(cache_file) as data_file:
-                for instance in self._multi_worker_islice(
-                    data_file, transform=self.deserialize_instance
-                ):
-                    yield instance
-        elif cache_file is not None:
-            # We've acquired the lock but the cache file doesn't exist. So we'll try
-            # writing to it.
-            if util.is_distributed() or (get_worker_info() and get_worker_info().num_workers):
-                # But we can't write to the cache if there's more than one process loading
+            cache_file_lock = FileLock(cache_file + ".lock", timeout=self.CACHE_FILE_LOCK_TIMEOUT)
+            try:
+                cache_file_lock.acquire()
+                # We make an assumption here that if we can obtain the lock, no one will
+                # be trying to write to the file anymore, so it should be safe to release the lock
+                # before reading so that other processes can also read from it.
+                cache_file_lock.release()
+                logger.info("Reading instances from cache %s", cache_file)
+                with open(cache_file) as data_file:
+                    yield from self._multi_worker_islice(
+                        data_file, transform=self.deserialize_instance
+                    )
+            except Timeout:
+                logger.warning(
+                    "Failed to acquire lock on dataset cache file within %d seconds. "
+                    "Cannot use cache to read instances.",
+                    self.CACHE_FILE_LOCK_TIMEOUT,
+                )
+                yield from self._multi_worker_islice(self._read(file_path), ensure_lazy=True)
+        elif cache_file is not None and not os.path.exists(cache_file):
+            instances = self._multi_worker_islice(self._read(file_path), ensure_lazy=True)
+            # The cache file doesn't exist so we'll try writing to it.
+            if self.max_instances is not None:
+                # But we don't write to the cache when max_instances is specified.
+                logger.warning("Skipping writing to data cache since max_instances was specified.")
+                yield from instances
+            elif util.is_distributed() or (get_worker_info() and get_worker_info().num_workers):
+                # We also shouldn't write to the cache if there's more than one process loading
                 # instances since each worker only receives a partial share of the instances.
                 logger.warning(
                     "Can't cache data instances when there are multiple processes loading data"
                 )
-                # Release the lock, then just read the instances as normal.
-                cache_file_lock.release()
-                for instance in self._multi_worker_islice(self._read(file_path)):
-                    yield instance
+                yield from instances
             else:
-                # Otherwise we can safely write to it.
                 try:
-                    with open(cache_file, "w") as data_file:
-                        for instance in self._multi_worker_islice(self._read(file_path)):
-                            data_file.write(self.serialize_instance(instance) + "\n")
-                            yield instance
-                except:  # noqa: E722
-                    # If anything went wrong, the cache file will be corrupted, so we should
-                    # remove it.
-                    if os.path.exists(cache_file):
-                        logger.warning(
-                            "Removing dataset cache file '%s' due to exception", cache_file
-                        )
-                        os.remove(cache_file)
-                    raise
-                finally:
-                    # Release the lock no matter what.
-                    cache_file_lock.release()
+                    with FileLock(cache_file + ".lock", timeout=self.CACHE_FILE_LOCK_TIMEOUT):
+                        with tempfile.NamedTemporaryFile("w+") as temp_file:
+                            logger.info("Caching instances to temp file %s", temp_file.name)
+                            for instance in instances:
+                                temp_file.write(self.serialize_instance(instance) + "\n")
+                                yield instance
+
+                            # we are copying the file before closing it, so flush to avoid truncation
+                            temp_file.flush()
+                            # shutil.copyfileobj() starts at the current position, so go to the start
+                            temp_file.seek(0)
+
+                            logger.info("copying %s to cache at %s", temp_file.name, cache_file)
+                            with open(cache_file, "w") as cache:
+                                shutil.copyfileobj(temp_file, cache)
+
+                            logger.info("removing temp file %s", temp_file.name)
+                except Timeout:
+                    logger.warning(
+                        "Failed to acquire lock on dataset cache file within %d seconds. "
+                        "Cannot write to cache.",
+                        self.CACHE_FILE_LOCK_TIMEOUT,
+                    )
+                    yield from instances
         else:
             # No cache.
-            for instance in self._multi_worker_islice(self._read(file_path)):
-                yield instance
+            yield from self._multi_worker_islice(self._read(file_path), ensure_lazy=True)

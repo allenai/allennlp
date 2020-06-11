@@ -1,4 +1,4 @@
-from typing import Dict, Iterable
+from typing import Dict, Mapping, Iterable
 import json
 
 from allennlp.common.checks import ConfigurationError
@@ -52,7 +52,7 @@ class InterleavingDatasetReader(DatasetReader):
             raise ConfigurationError(f"invalid scheme: {scheme}")
         self._scheme = scheme
 
-    def _read_round_robin(self, datasets: Dict[str, Iterable[Instance]]) -> Iterable[Instance]:
+    def _read_round_robin(self, datasets: Mapping[str, Iterable[Instance]]) -> Iterable[Instance]:
         remaining = set(datasets)
         dataset_iterators = {key: iter(dataset) for key, dataset in datasets.items()}
 
@@ -66,7 +66,7 @@ class InterleavingDatasetReader(DatasetReader):
                     except StopIteration:
                         remaining.remove(key)
 
-    def _read_all_at_once(self, datasets: Dict[str, Iterable[Instance]]) -> Iterable[Instance]:
+    def _read_all_at_once(self, datasets: Mapping[str, Iterable[Instance]]) -> Iterable[Instance]:
         for key, dataset in datasets.items():
             for instance in dataset:
                 instance.fields[self._dataset_field_name] = MetadataField(key)
