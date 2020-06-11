@@ -123,6 +123,9 @@ def datasets_from_params(
     """
     datasets: Dict[str, Dataset] = {}
 
+    train = train and ("train_data_path" in params)
+    validation = validation and ("validation_data_path" in params)
+    test = test and ("test_data_path" in params)
     if not any((train, validation, test)):
         # Return early so don't unnecessarily initialize the train data reader.
         return datasets
@@ -149,14 +152,14 @@ def datasets_from_params(
             validation_dataset_reader_params
         )
 
-    validation_data_path = params.pop("validation_data_path", None)
-    if validation and validation_data_path:
+    if validation:
+        validation_data_path = params.pop("validation_data_path")
         logger.info("Reading validation data from %s", validation_data_path)
         validation_data = validation_and_test_dataset_reader.read(validation_data_path)
         datasets["validation"] = validation_data
 
-    test_data_path = params.pop("test_data_path", None)
-    if test and test_data_path is not None:
+    if test:
+        test_data_path = params.pop("test_data_path")
         logger.info("Reading test data from %s", test_data_path)
         test_data = validation_and_test_dataset_reader.read(test_data_path)
         datasets["test"] = test_data
@@ -418,16 +421,21 @@ def make_vocab_from_params(
     datasets_for_vocab_creation: Optional[List[str]] = params.pop(
         "datasets_for_vocab_creation", None
     )
+    # Do a quick sanity check here. There's no need to load any datasets if the vocab
+    # type is "empty".
+    if datasets_for_vocab_creation is None and vocab_params.get("type") == "empty":
+        datasets_for_vocab_creation = []
+
     datasets: Dict[str, Dataset]
     if datasets_for_vocab_creation is None:
         # If `datasets_for_vocab_creation` was not specified, we'll use all datasets
         # from the config.
         datasets = datasets_from_params(params)
     else:
-        for dataset in datasets_for_vocab_creation:
-            data_path = f"{dataset}_data_path"
+        for dataset_name in datasets_for_vocab_creation:
+            data_path = f"{dataset_name}_data_path"
             if data_path not in params:
-                raise ConfigurationError(f"invalid 'dataset_for_vocab_creation' {dataset}")
+                raise ConfigurationError(f"invalid 'datasets_for_vocab_creation' {dataset_name}")
         datasets = datasets_from_params(
             params,
             train=("train" in datasets_for_vocab_creation),
@@ -449,9 +457,9 @@ def make_vocab_from_params(
     logger.info("done creating vocab")
 
     if print_statistics:
-        all_data = Batch(instances)
-        all_data.index_instances(vocab)
-        all_data.print_statistics()
+        dataset = Batch(instances)
+        dataset.index_instances(vocab)
+        dataset.print_statistics()
         vocab.print_statistics()
 
     return vocab
