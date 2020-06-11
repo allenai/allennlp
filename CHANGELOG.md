@@ -50,6 +50,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - To be consistent with PyTorch `IterableDataset`, `AllennlpLazyDataset` no longer implements `__len__()`.
   Previously it would always return 1.
 - Removed old tutorials, in favor of [the new AllenNLP Guide](https://guide.allennlp.org)
+- Changed the vocabulary loading to consider new lines for Windows/Linux and Mac.
 
 ## [v1.0.0rc5](https://github.com/allenai/allennlp/releases/tag/v1.0.0rc5) - 2020-05-26
 
