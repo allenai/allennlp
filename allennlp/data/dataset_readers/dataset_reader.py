@@ -1,5 +1,5 @@
 import itertools
-from typing import Iterable, Iterator, Optional, List, Any, Callable, Union, Dict
+from typing import Iterable, Iterator, Optional, List, Any, Callable
 import logging
 import os
 import pathlib
@@ -136,10 +136,11 @@ class DatasetReader(Registrable):
     ) -> None:
         self.lazy = lazy
         self.max_instances = max_instances
-        self._cache_directory: Optional[pathlib.Path] = None
         if cache_directory:
             self._cache_directory = pathlib.Path(cache_directory)
             os.makedirs(self._cache_directory, exist_ok=True)
+        else:
+            self._cache_directory = None
         self.manual_distributed_sharding = manual_distributed_sharding
         self.manual_multi_process_sharding = manual_multi_process_sharding
 
@@ -181,6 +182,7 @@ class DatasetReader(Registrable):
             else:
                 instances = self._multi_worker_islice(self._read(file_path))
 
+            # Then some validation.
             if not isinstance(instances, list):
                 instances = [instance for instance in Tqdm.tqdm(instances)]
 
@@ -201,27 +203,17 @@ class DatasetReader(Registrable):
                 logger.info(f"Caching instances to {cache_file}")
                 self._instances_to_cache_file(cache_file, instances)
 
-        return AllennlpDataset(instances)
+            return AllennlpDataset(instances)
 
     def _get_cache_location_for_file_path(self, file_path: str) -> str:
         return str(self._cache_directory / util.flatten_filename(str(file_path)) or "cache")
 
-    def _read(self, file_path: str) -> Iterable[Union[Instance, Dict[str, Any]]]:
+    def _read(self, file_path: str) -> Iterable[Instance]:
         """
-        Generates objects that can be turned into `Instance`s from the given `file_path`.
-
-        The objects generated can either be actual `Instance`s, or a dictionary of
-        key word arguments that will be passed to `DatasetReader.text_to_instance`
-        in order to create an `Instance`.
-
-        It is strongly recommended that your `_read` method be a generator function
-        instead of eagerly returning a list.
-
-        In practice, this just means that you should use `yield` statements.
-
-        All of the default dataset readers provided by AllenNLP use this convention,
-        so if you're not sure how to do this just look at how one of those implements
-        `_read`.
+        Reads the instances from the given file_path and returns them as an
+        `Iterable` (which could be a list or could be a generator).
+        You are strongly encouraged to use a generator, so that users can
+        read a dataset in a lazy way, if they so choose.
         """
         raise NotImplementedError
 
@@ -235,7 +227,7 @@ class DatasetReader(Registrable):
             for instance in Tqdm.tqdm(instances):
                 cache.write(self.serialize_instance(instance) + "\n")
 
-    def text_to_instance(self, *args, **kwargs) -> Instance:
+    def text_to_instance(self, *inputs) -> Instance:
         """
         Does whatever tokenization or processing is necessary to go from textual input to an
         `Instance`.  The primary intended use for this is with a
