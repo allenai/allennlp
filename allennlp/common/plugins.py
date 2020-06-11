@@ -17,7 +17,7 @@ from allennlp.common.util import push_python_path, import_module_and_submodules
 logger = logging.getLogger(__name__)
 
 
-DEFAULT_PLUGINS = ("allennlp_models",)
+DEFAULT_PLUGINS = ("allennlp_models", "allennlp_server")
 
 
 def discover_file_plugins(plugins_filename: str = ".allennlp_plugins") -> Iterable[str]:
