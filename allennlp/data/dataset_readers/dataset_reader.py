@@ -178,7 +178,15 @@ class DatasetReader(Registrable):
                 cache_file = self._get_cache_location_for_file_path(file_path)
 
             if cache_file and os.path.exists(cache_file):
-                instances = self._instances_from_cache_file(cache_file)
+                try:
+                    instances = self._instances_from_cache_file(cache_file)
+                except Timeout:
+                    logger.warning(
+                        "Failed to acquire lock on dataset cache file within {}s. "
+                        "Cannot use cache to read instances.",
+                        self.CACHE_FILE_LOCK_TIMEOUT,
+                    )
+                    instances = self._multi_worker_islice(self._read(file_path))
             else:
                 instances = self._multi_worker_islice(self._read(file_path))
 
@@ -201,7 +209,14 @@ class DatasetReader(Registrable):
                 and not os.path.exists(cache_file)
             ):
                 logger.info(f"Caching instances to {cache_file}")
-                self._instances_to_cache_file(cache_file, instances)
+                try:
+                    self._instances_to_cache_file(cache_file, instances)
+                except Timeout:
+                    logger.warning(
+                        "Failed to acquire lock on dataset cache file within {}s. "
+                        "Cannot write to cache.",
+                        self.CACHE_FILE_LOCK_TIMEOUT,
+                    )
 
             return AllennlpDataset(instances)
 
@@ -218,14 +233,25 @@ class DatasetReader(Registrable):
         raise NotImplementedError
 
     def _instances_from_cache_file(self, cache_filename: str) -> Iterable[Instance]:
+        # Try to acquire a lock just to make sure another process isn't in the middle
+        # of writing to the cache.
+        cache_file_lock = FileLock(cache_filename + ".lock", timeout=self.CACHE_FILE_LOCK_TIMEOUT)
+        try:
+            cache_file_lock.acquire()
+        finally:
+            # We make an assumption here that if we can obtain the lock, no one will
+            # be trying to write to the file anymore, so it should be safe to release the lock
+            # before reading.
+            cache_file_lock.release()
         with open(cache_filename, "r") as cache_file:
             for instance in self._multi_worker_islice(cache_file, self.deserialize_instance):
                 yield instance
 
     def _instances_to_cache_file(self, cache_filename, instances) -> None:
-        with open(cache_filename, "w") as cache:
-            for instance in Tqdm.tqdm(instances):
-                cache.write(self.serialize_instance(instance) + "\n")
+        with FileLock(cache_filename + ".lock", timeout=self.CACHE_FILE_LOCK_TIMEOUT):
+            with open(cache_filename, "w") as cache:
+                for instance in Tqdm.tqdm(instances):
+                    cache.write(self.serialize_instance(instance) + "\n")
 
     def text_to_instance(self, *inputs) -> Instance:
         """
