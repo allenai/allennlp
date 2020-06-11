@@ -93,7 +93,7 @@ class DatasetReader(Registrable):
     to return an `Iterable` of the instances. This could be a list containing the instances
     or a lazy generator that returns them one at a time.
 
-    All parameters necessary to _read the data apart from the filepath should be passed
+    All parameters necessary to `_read` the data apart from the filepath should be passed
     to the constructor of the `DatasetReader`.
 
     # Parameters
@@ -101,6 +101,7 @@ class DatasetReader(Registrable):
     lazy : `bool`, optional (default=`False`)
         If this is true, `instances()` will return an object whose `__iter__` method
         reloads the dataset each time it's called. Otherwise, `instances()` returns a list.
+
     cache_directory : `str`, optional (default=`None`)
         If given, we will use this directory to store a cache of already-processed `Instances` in
         every file passed to :func:`read`, serialized (by default, though you can override this) as
@@ -113,15 +114,18 @@ class DatasetReader(Registrable):
         unique for any combination of code and parameters that you use.  That is, if you pass a
         directory here, we will use any existing cache files in that directory _regardless of the
         parameters you set for this DatasetReader!_
+
     max_instances : `int`, optional (default=`None`)
         If given, will stop reading after this many instances. This is a useful setting for debugging.
         Setting this disables caching.
+
     manual_distributed_sharding: `bool`, optional (default=`False`)
         By default, when used in a distributed setting, `DatasetReader` makes sure that each
         worker process only receives a subset of the data. It does this by reading the whole
         dataset in each worker, but filtering out the instances that are not needed. If you
         can implement a faster mechanism that only reads part of the data, set this to True,
         and do the sharding yourself.
+
     manual_multi_process_sharding : `bool`, optional (default=`False`)
         This is similar to the `manual_distributed_sharding` parameter, but applies to
         multi-process data loading. By default, when this reader is used by a multi-process
@@ -343,7 +347,7 @@ class DatasetReader(Registrable):
             An optional function that will be applied to the raw data generated
             by `iterable` to create `Instance`s. This is used, e.g., when reading
             cached data.
-        ensure_lazy : `bool`, otpional (default = `False`)
+        ensure_lazy : `bool`, optional (default = `False`)
             If `True`, a `ConfigurationError` error will be raised if `iterable`
             is a list instead of a lazy generator type.
 

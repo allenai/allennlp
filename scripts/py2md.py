@@ -254,14 +254,21 @@ class AllenNlpFilterProcessor(Struct):
     Used to filter out nodes that we don't want to document.
     """
 
+    PRIVATE_METHODS_TO_KEEP = {"DatasetReader._read"}
+
     def process(self, graph, _resolver):
         graph.visit(self._process_node)
 
     def _process_node(self, node):
         def _check(node):
-            if node.parent and node.parent.name.startswith("_"):
-                return False
             if node.name.startswith("_"):
+                if (
+                    node.parent
+                    and f"{node.parent.name}.{node.name}" in self.PRIVATE_METHODS_TO_KEEP
+                ):
+                    return True
+                return False
+            if node.parent and node.parent.name.startswith("_"):
                 return False
             if node.name == "logger" and isinstance(node.parent, Module):
                 return False
