@@ -126,7 +126,7 @@ class TestDatasetReader(AllenNlpTestCase):
             assert instance.fields == cached_instance.fields
 
         # And just to be super paranoid, in case the second pass somehow bypassed the cache
-        # because of a bug in that's hard to detect, we'll read the
+        # because of a bug that's hard to detect, we'll read the
         # instances from the cache with a non-lazy iterator and make sure they're the same.
         reader = TextClassificationJsonReader(lazy=False, cache_directory=self.cache_directory)
         cached_instances = reader.read(snli_copy_file)
@@ -134,14 +134,14 @@ class TestDatasetReader(AllenNlpTestCase):
         for instance, cached_instance in zip(first_pass_instances, cached_instances):
             assert instance.fields == cached_instance.fields
 
-    def test_caching_with_file_lock_timeout(self):
+    def test_lazy_caching_with_file_lock_timeout(self):
         data_file = (
             AllenNlpTestCase.FIXTURES_ROOT
             / "data"
             / "text_classification_json"
             / "imdb_corpus.jsonl"
         )
-        reader = TextClassificationJsonReader(cache_directory=self.cache_directory)
+        reader = TextClassificationJsonReader(lazy=True, cache_directory=self.cache_directory)
         reader.CACHE_FILE_LOCK_TIMEOUT = 1
         cache_file = reader._get_cache_location_for_file_path(data_file)
 
@@ -287,6 +287,11 @@ def test_multi_worker_islice_helper_method(
 
     reader = MockDatasetReader(max_instances=max_instances)
     iterable = [{"index": i} for i in range(10)]
-    result = list((x["index"].label for x in reader.multi_worker_islice(iterable)))  # type: ignore
+    result = list(
+        (
+            x["index"].label  # type: ignore
+            for x in reader._multi_worker_islice(iterable, lambda x: reader.text_to_instance(**x))
+        )
+    )
 
     assert result == expected_result

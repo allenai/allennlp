@@ -1,6 +1,8 @@
-from typing import Dict, List, Sequence
+from typing import Dict, List, Sequence, Iterable
 import itertools
 import logging
+
+from overrides import overrides
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.file_utils import cached_path
@@ -102,7 +104,8 @@ class Conll2003DatasetReader(DatasetReader):
         self.label_namespace = label_namespace
         self._original_coding_scheme = "IOB1"
 
-    def _read(self, file_path: str):
+    @overrides
+    def _read(self, file_path: str) -> Iterable[Instance]:
         # if `file_path` is a URL, redirect to the cache
         file_path = cached_path(file_path)
 
@@ -120,12 +123,8 @@ class Conll2003DatasetReader(DatasetReader):
                     tokens_, pos_tags, chunk_tags, ner_tags = fields
                     # TextField requires `Token` objects
                     tokens = [Token(token) for token in tokens_]
-                    yield {
-                        "tokens": tokens,
-                        "pos_tags": pos_tags,
-                        "chunk_tags": chunk_tags,
-                        "ner_tags": ner_tags,
-                    }
+
+                    yield self.text_to_instance(tokens, pos_tags, chunk_tags, ner_tags)
 
     def text_to_instance(  # type: ignore
         self,

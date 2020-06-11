@@ -1,4 +1,4 @@
-from typing import Dict, Iterable, Any
+from typing import Dict, Iterable
 import json
 
 from allennlp.common.checks import ConfigurationError
@@ -52,7 +52,7 @@ class InterleavingDatasetReader(DatasetReader):
             raise ConfigurationError(f"invalid scheme: {scheme}")
         self._scheme = scheme
 
-    def _read_round_robin(self, datasets: Dict[str, Iterable[Any]]) -> Iterable[Dict[str, Any]]:
+    def _read_round_robin(self, datasets: Dict[str, Iterable[Instance]]) -> Iterable[Instance]:
         remaining = set(datasets)
         dataset_iterators = {key: iter(dataset) for key, dataset in datasets.items()}
 
@@ -60,17 +60,19 @@ class InterleavingDatasetReader(DatasetReader):
             for key, dataset in dataset_iterators.items():
                 if key in remaining:
                     try:
-                        raw_data = next(dataset)
-                        yield {"raw_data": raw_data, "dataset": key}
+                        instance = next(dataset)
+                        instance.fields[self._dataset_field_name] = MetadataField(key)
+                        yield instance
                     except StopIteration:
                         remaining.remove(key)
 
-    def _read_all_at_once(self, datasets: Dict[str, Iterable[Any]]) -> Iterable[Dict[str, Any]]:
+    def _read_all_at_once(self, datasets: Dict[str, Iterable[Instance]]) -> Iterable[Instance]:
         for key, dataset in datasets.items():
-            for raw_data in dataset:
-                yield {"raw_data": raw_data, "dataset": key}
+            for instance in dataset:
+                instance.fields[self._dataset_field_name] = MetadataField(key)
+                yield instance
 
-    def _read(self, file_path: str):
+    def _read(self, file_path: str) -> Iterable[Instance]:
         try:
             file_paths = json.loads(file_path)
         except json.JSONDecodeError:
@@ -83,7 +85,7 @@ class InterleavingDatasetReader(DatasetReader):
             raise ConfigurationError("mismatched keys")
 
         # Load datasets
-        datasets = {key: reader._read(file_paths[key]) for key, reader in self._readers.items()}
+        datasets = {key: reader.read(file_paths[key]) for key, reader in self._readers.items()}
 
         if self._scheme == "round_robin":
             yield from self._read_round_robin(datasets)
@@ -92,9 +94,6 @@ class InterleavingDatasetReader(DatasetReader):
         else:
             raise RuntimeError("impossible to get here")
 
-    def text_to_instance(  # type: ignore
-        self, raw_data: Any, dataset: str,
-    ) -> Instance:
-        instance = self._readers[dataset].ensure_instance(raw_data)
-        instance.fields[self._dataset_field_name] = MetadataField(dataset)
-        return instance
+    def text_to_instance(self) -> Instance:  # type: ignore
+
+        raise RuntimeError("text_to_instance doesn't make sense here")

@@ -1,7 +1,7 @@
 from typing import Dict, List, Union
 import logging
 import json
-
+from overrides import overrides
 from allennlp.common.file_utils import cached_path
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.fields import LabelField, TextField, Field, ListField
@@ -64,6 +64,7 @@ class TextClassificationJsonReader(DatasetReader):
         if self._segment_sentences:
             self._sentence_segmenter = SpacySentenceSplitter()
 
+    @overrides
     def _read(self, file_path):
         with open(cached_path(file_path), "r") as data_file:
             for line in data_file.readlines():
@@ -82,19 +83,22 @@ class TextClassificationJsonReader(DatasetReader):
                             )
                     else:
                         label = str(label)
-                yield {"text": text, "label": label}
+                instance = self.text_to_instance(text=text, label=label)
+                if instance is not None:
+                    yield instance
 
     def _truncate(self, tokens):
         """
         truncate a set of tokens using the provided sequence length
         """
-        if len(tokens) > self._max_sequence_length:  # type: ignore
+        if len(tokens) > self._max_sequence_length:
             tokens = tokens[: self._max_sequence_length]
         return tokens
 
-    def text_to_instance(  # type: ignore
+    @overrides
+    def text_to_instance(
         self, text: str, label: Union[str, int] = None
-    ) -> Instance:
+    ) -> Instance:  # type: ignore
         """
         # Parameters
 
