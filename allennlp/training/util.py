@@ -119,6 +119,30 @@ def read_all_datasets(
 def datasets_from_params(params: Params) -> Dict[str, Dataset]:
     """
     Load all the datasets specified by the config.
+
+    # Parameters
+
+    params : `Params`
+    cache_directory : `str`, optional
+        If given, we will instruct the `DatasetReaders` that we construct to cache their
+        instances in this location (or read their instances from caches in this location, if a
+        suitable cache already exists).  This is essentially a `base` directory for the cache, as
+        we will additionally add the `cache_prefix` to this directory, giving an actual cache
+        location of `cache_directory + cache_prefix`.
+    cache_prefix : `str`, optional
+        This works in conjunction with the `cache_directory`.  The idea is that the
+        `cache_directory` contains caches for all different parameter settings, while the
+        `cache_prefix` captures a specific set of parameters that led to a particular cache file.
+        That is, if you change the tokenization settings inside your `DatasetReader`, you don't
+        want to read cached data that used the old settings.  In order to avoid this, we compute a
+        hash of the parameters used to construct each `DatasetReader` and use that as a "prefix"
+        to the cache files inside the base `cache_directory`.  So, a given `input_file` would
+        be cached essentially as `cache_directory + cache_prefix + input_file`, where you specify
+        a `cache_directory`, the `cache_prefix` is based on the dataset reader parameters, and
+        the `input_file` is whatever path you provided to `DatasetReader.read()`.  In order to
+        allow you to give recognizable names to these prefixes if you want them, you can manually
+        specify the `cache_prefix`.  Note that in some rare cases this can be dangerous, as we'll
+        use the `same` prefix for both train and validation dataset readers.
     """
     dataset_reader_params = params.pop("dataset_reader")
     validation_dataset_reader_params = params.pop("validation_dataset_reader", None)
@@ -133,16 +157,24 @@ def datasets_from_params(params: Params) -> Dict[str, Dataset]:
         )
 
     train_data_path = params.pop("train_data_path")
-    validation_data_path = params.pop("validation_data_path", None)
-    test_data_path = params.pop("test_data_path", None)
+    logger.info("Reading training data from %s", train_data_path)
+    train_data = dataset_reader.read(train_data_path)
 
-    return read_all_datasets(
-        train_data_path,
-        dataset_reader,
-        validation_dataset_reader=validation_and_test_dataset_reader,
-        validation_data_path=validation_data_path,
-        test_data_path=test_data_path,
-    )
+    datasets: Dict[str, Iterable[Instance]] = {"train": train_data}
+
+    validation_data_path = params.pop("validation_data_path", None)
+    if validation_data_path is not None:
+        logger.info("Reading validation data from %s", validation_data_path)
+        validation_data = validation_and_test_dataset_reader.read(validation_data_path)
+        datasets["validation"] = validation_data
+
+    test_data_path = params.pop("test_data_path", None)
+    if test_data_path is not None:
+        logger.info("Reading test data from %s", test_data_path)
+        test_data = validation_and_test_dataset_reader.read(test_data_path)
+        datasets["test"] = test_data
+
+    return datasets
 
 
 def create_serialization_dir(
