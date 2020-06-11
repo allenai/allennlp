@@ -341,11 +341,11 @@ class DatasetReader(Registrable):
             through the `transform` function.
         transform : `Optional[Callable[[Any], Instance]]`, optional (default = `None`)
             An optional function that will be applied to the raw data generated
-            by `iterable` to create `Instance`s.
+            by `iterable` to create `Instance`s. This is used, e.g., when reading
+            cached data.
         ensure_lazy : `bool`, otpional (default = `False`)
             If `True`, a `ConfigurationError` error will be raised if `iterable`
-            is a list instead of a lazy generator type. This is used, e.g., when reading
-            cached data.
+            is a list instead of a lazy generator type.
 
         # Returns
 
