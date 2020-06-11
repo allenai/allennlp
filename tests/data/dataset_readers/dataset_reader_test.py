@@ -134,14 +134,15 @@ class TestDatasetReader(AllenNlpTestCase):
         for instance, cached_instance in zip(first_pass_instances, cached_instances):
             assert instance.fields == cached_instance.fields
 
-    def test_lazy_caching_with_file_lock_timeout(self):
+    @pytest.mark.parametrize("lazy", (True, False))
+    def test_caching_with_file_lock_timeout(self, lazy: bool):
         data_file = (
             AllenNlpTestCase.FIXTURES_ROOT
             / "data"
             / "text_classification_json"
             / "imdb_corpus.jsonl"
         )
-        reader = TextClassificationJsonReader(lazy=True, cache_directory=self.cache_directory)
+        reader = TextClassificationJsonReader(lazy=lazy, cache_directory=self.cache_directory)
         reader.CACHE_FILE_LOCK_TIMEOUT = 1
         cache_file = reader._get_cache_location_for_file_path(data_file)
 
