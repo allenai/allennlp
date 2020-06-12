@@ -110,10 +110,11 @@ class DatasetReader(Registrable):
         :func:`_instances_from_cache_file`).  If the cache file does _not_ exist, we will _create_
         it on our first pass through the data (using :func:`_instances_to_cache_file`).
 
-        IMPORTANT CAVEAT: It is the _caller's_ responsibility to make sure that this directory is
-        unique for any combination of code and parameters that you use.  That is, if you pass a
-        directory here, we will use any existing cache files in that directory _regardless of the
-        parameters you set for this DatasetReader!_
+        !!! NOTE
+            It is the _caller's_ responsibility to make sure that this directory is
+            unique for any combination of code and parameters that you use.  That is, if you pass a
+            directory here, we will use any existing cache files in that directory _regardless of the
+            parameters you set for this DatasetReader!_
 
     max_instances : `int`, optional (default=`None`)
         If given, will stop reading after this many instances. This is a useful setting for debugging.
@@ -129,10 +130,16 @@ class DatasetReader(Registrable):
     manual_multi_process_sharding : `bool`, optional (default=`False`)
         This is similar to the `manual_distributed_sharding` parameter, but applies to
         multi-process data loading. By default, when this reader is used by a multi-process
-        data loader, each worker will filter out all but a subset of the instances
-        that are needed so that you don't end up with duplicates. If you
-        can implement a faster mechanism that only reads part of the data, set this to True,
-        and do the sharding yourself.
+        data loader (i.e. a `DataLoader` with `num_workers > 1`), each worker will
+        filter out all but a subset of the instances that are needed so that you
+        don't end up with duplicates.
+
+        !!! NOTE
+            **There is really no benefit of using a multi-process
+            `DataLoader` unless you can specifically implement a faster sharding mechanism
+            within `_read()`**. In that case you should set `manual_multi_process_sharding`
+            to `True`.
+
     """
 
     CACHE_FILE_LOCK_TIMEOUT: int = 10
