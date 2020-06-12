@@ -3,7 +3,6 @@ from typing import Iterable, Iterator, Optional, List, Any, Callable, Union
 import logging
 import os
 from pathlib import Path
-import tempfile
 
 from filelock import FileLock, Timeout
 import jsonpickle
@@ -14,6 +13,7 @@ from allennlp.data.instance import Instance
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.common import Tqdm, util
 from allennlp.common.checks import ConfigurationError
+from allennlp.common.file_utils import CacheFile
 from allennlp.common.registrable import Registrable
 
 logger = logging.getLogger(__name__)
@@ -278,15 +278,10 @@ class DatasetReader(Registrable):
         # We serialize to a temp file first in case anything goes wrong while
         # writing to cache (e.g., the computer shuts down unexpectedly).
         # Then we just copy the file over to `cache_filename`.
-        with tempfile.NamedTemporaryFile(
-            "w+", dir=self._cache_directory, delete=False
-        ) as temp_file:
-            logger.info("Caching instances to temp file %s", temp_file.name)
+        with CacheFile(cache_filename, mode="w+") as cache_handle:
+            logger.info("Caching instances to temp file %s", cache_handle.name)
             for instance in Tqdm.tqdm(instances):
-                temp_file.write(self.serialize_instance(instance) + "\n")
-
-        logger.info("Renaming temp file %s to cache at %s", temp_file.name, cache_filename)
-        os.replace(temp_file.name, cache_filename)
+                cache_handle.write(self.serialize_instance(instance) + "\n")
 
     def text_to_instance(self, *inputs) -> Instance:
         """
@@ -423,18 +418,11 @@ class DatasetReader(Registrable):
             else:
                 try:
                     with FileLock(cache_file + ".lock", timeout=self.CACHE_FILE_LOCK_TIMEOUT):
-                        with tempfile.NamedTemporaryFile(
-                            "w+", dir=self._cache_directory, delete=False
-                        ) as temp_file:
-                            logger.info("Caching instances to temp file %s", temp_file.name)
+                        with CacheFile(cache_file, mode="w+") as cache_handle:
+                            logger.info("Caching instances to temp file %s", cache_handle.name)
                             for instance in instances:
-                                temp_file.write(self.serialize_instance(instance) + "\n")
+                                cache_handle.write(self.serialize_instance(instance) + "\n")
                                 yield instance
-
-                        logger.info(
-                            "Renaming temp file %s to cache at %s", temp_file.name, cache_file
-                        )
-                        os.replace(temp_file.name, cache_file)
                 except Timeout:
                     logger.warning(
                         "Failed to acquire lock on dataset cache file within %d seconds. "
