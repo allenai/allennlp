@@ -277,6 +277,7 @@ class CacheFile:
             os.replace(self.temp_file.name, self.cache_filename)
             return True
         # Something went wrong, remove the temp file.
+        logger.info("removing temp file %s", self.temp_file.name)
         os.remove(self.temp_file.name)
         return False
 
