@@ -450,6 +450,9 @@ def make_vocab_from_params(
         for instance in dataset
     )
 
+    if print_statistics:
+        instances = list(instances)
+
     vocab = Vocabulary.from_params(vocab_params, instances=instances)
 
     logger.info(f"writing the vocabulary to {vocab_dir}.")
