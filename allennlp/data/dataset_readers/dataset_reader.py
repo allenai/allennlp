@@ -2,8 +2,7 @@ import itertools
 from typing import Iterable, Iterator, Optional, List, Any, Callable, Union
 import logging
 import os
-import pathlib
-import shutil
+from pathlib import Path
 import tempfile
 
 from filelock import FileLock, Timeout
@@ -157,16 +156,14 @@ class DatasetReader(Registrable):
     ) -> None:
         self.lazy = lazy
         self.max_instances = max_instances
-        self._cache_directory: Optional[pathlib.Path] = None
+        self._cache_directory: Optional[Path] = None
         if cache_directory:
-            self._cache_directory = pathlib.Path(cache_directory)
+            self._cache_directory = Path(cache_directory)
             os.makedirs(self._cache_directory, exist_ok=True)
         self.manual_distributed_sharding = manual_distributed_sharding
         self.manual_multi_process_sharding = manual_multi_process_sharding
 
-    def read(
-        self, file_path: Union[pathlib.Path, str]
-    ) -> Union[AllennlpDataset, AllennlpLazyDataset]:
+    def read(self, file_path: Union[Path, str]) -> Union[AllennlpDataset, AllennlpLazyDataset]:
         """
         Returns an dataset containing all the instances that can be read from the file path.
 
@@ -281,21 +278,15 @@ class DatasetReader(Registrable):
         # We serialize to a temp file first in case anything goes wrong while
         # writing to cache (e.g., the computer shuts down unexpectedly).
         # Then we just copy the file over to `cache_filename`.
-        with tempfile.NamedTemporaryFile("w+") as temp_file:
+        with tempfile.NamedTemporaryFile(
+            "w+", dir=self._cache_directory, delete=False
+        ) as temp_file:
             logger.info("Caching instances to temp file %s", temp_file.name)
             for instance in Tqdm.tqdm(instances):
                 temp_file.write(self.serialize_instance(instance) + "\n")
 
-            # we are copying the file before closing it, so flush to avoid truncation
-            temp_file.flush()
-            # shutil.copyfileobj() starts at the current position, so go to the start
-            temp_file.seek(0)
-
-            logger.info("copying %s to cache at %s", temp_file.name, cache_filename)
-            with open(cache_filename, "w") as cache:
-                shutil.copyfileobj(temp_file, cache)
-
-            logger.info("removing temp file %s", temp_file.name)
+        logger.info("Renaming temp file %s to cache at %s", temp_file.name, cache_filename)
+        os.replace(temp_file.name, cache_filename)
 
     def text_to_instance(self, *inputs) -> Instance:
         """
@@ -432,22 +423,18 @@ class DatasetReader(Registrable):
             else:
                 try:
                     with FileLock(cache_file + ".lock", timeout=self.CACHE_FILE_LOCK_TIMEOUT):
-                        with tempfile.NamedTemporaryFile("w+") as temp_file:
+                        with tempfile.NamedTemporaryFile(
+                            "w+", dir=self._cache_directory, delete=False
+                        ) as temp_file:
                             logger.info("Caching instances to temp file %s", temp_file.name)
                             for instance in instances:
                                 temp_file.write(self.serialize_instance(instance) + "\n")
                                 yield instance
 
-                            # we are copying the file before closing it, so flush to avoid truncation
-                            temp_file.flush()
-                            # shutil.copyfileobj() starts at the current position, so go to the start
-                            temp_file.seek(0)
-
-                            logger.info("copying %s to cache at %s", temp_file.name, cache_file)
-                            with open(cache_file, "w") as cache:
-                                shutil.copyfileobj(temp_file, cache)
-
-                            logger.info("removing temp file %s", temp_file.name)
+                        logger.info(
+                            "Renaming temp file %s to cache at %s", temp_file.name, cache_file
+                        )
+                        os.replace(temp_file.name, cache_file)
                 except Timeout:
                     logger.warning(
                         "Failed to acquire lock on dataset cache file within %d seconds. "

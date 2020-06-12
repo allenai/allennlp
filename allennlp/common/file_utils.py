@@ -5,7 +5,6 @@ Utilities for working with the local dataset cache.
 import glob
 import os
 import logging
-import shutil
 import tempfile
 import json
 from urllib.parse import urlparse
@@ -305,7 +304,7 @@ def get_from_cache(url: str, cache_dir: str = None) -> str:
         else:
             # Download to temporary file, then copy to cache dir once finished.
             # Otherwise you get corrupt cache entries if the download gets interrupted.
-            with tempfile.NamedTemporaryFile() as temp_file:
+            with tempfile.NamedTemporaryFile(dir=cache_dir, delete=False) as temp_file:
                 logger.info("%s not found in cache, downloading to %s", url, temp_file.name)
 
                 # GET file object
@@ -314,22 +313,14 @@ def get_from_cache(url: str, cache_dir: str = None) -> str:
                 else:
                     _http_get(url, temp_file)
 
-                # we are copying the file before closing it, so flush to avoid truncation
-                temp_file.flush()
-                # shutil.copyfileobj() starts at the current position, so go to the start
-                temp_file.seek(0)
+            logger.info("renaming %s to cache at %s", temp_file.name, cache_path)
+            os.replace(temp_file.name, cache_path)
 
-                logger.info("copying %s to cache at %s", temp_file.name, cache_path)
-                with open(cache_path, "wb") as cache_file:
-                    shutil.copyfileobj(temp_file, cache_file)  # type: ignore
-
-                logger.info("creating metadata file for %s", cache_path)
-                meta = {"url": url, "etag": etag}
-                meta_path = cache_path + ".json"
-                with open(meta_path, "w") as meta_file:
-                    json.dump(meta, meta_file)
-
-                logger.info("removing temp file %s", temp_file.name)
+            logger.info("creating metadata file for %s", cache_path)
+            meta = {"url": url, "etag": etag}
+            meta_path = cache_path + ".json"
+            with open(meta_path, "w") as meta_file:
+                json.dump(meta, meta_file)
 
     return cache_path
 
