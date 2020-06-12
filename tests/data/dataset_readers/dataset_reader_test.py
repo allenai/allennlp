@@ -1,6 +1,5 @@
 from collections import deque
 import os
-import logging
 import shutil
 from typing import Optional, NamedTuple, List
 
@@ -375,8 +374,7 @@ class BadReaderForgetsToSetLazy(DatasetReader):
         return Instance({"index": LabelField(index, skip_indexing=True)})
 
 
-def warning_when_reader_has_no_lazy_set(caplog):
-    caplog.set_level(logging.WARNING)
-    reader = BadReaderForgetsToSetLazy()
-    reader.read("path")
-    assert "DatasetReader.lazy is not set" in " ".join([rec.message for rec in caplog.records])
+def warning_when_reader_has_no_lazy_set():
+    with pytest.warns(UserWarning, match="DatasetReader.lazy is not set"):
+        reader = BadReaderForgetsToSetLazy()
+        reader.read("path")

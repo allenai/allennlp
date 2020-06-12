@@ -3,6 +3,7 @@ from typing import Iterable, Iterator, Optional, List, Any, Callable, Union
 import logging
 import os
 from pathlib import Path
+import warnings
 
 from filelock import FileLock, Timeout
 import jsonpickle
@@ -186,9 +187,10 @@ class DatasetReader(Registrable):
         lazy = getattr(self, "lazy", None)
 
         if lazy is None:
-            logger.warning(
+            warnings.warn(
                 "DatasetReader.lazy is not set, "
-                "did you forget to call the superclass constructor?"
+                "did you forget to call the superclass constructor?",
+                UserWarning,
             )
 
         if lazy:
