@@ -7,13 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-## Fixed
+### Fixed
 
 - Lazy dataset readers now work correctly with multi-process data loading.
 - Fixed race conditions that could occur when using a dataset cache.
 
-## Added
+### Added
 
+- A bug where where all datasets would be loaded for vocab creation even if not needed.
 - A parameter to the `DatasetReader` class: `manual_multi_process_sharding`. This is similar
   to the `manual_distributed_sharding` parameter, but applies when using a multi-process
   `DataLoader`.
