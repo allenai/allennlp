@@ -614,10 +614,15 @@ class TrainModel(Registrable):
                 if key not in datasets:
                     raise ConfigurationError(f"invalid 'dataset_for_vocab_creation' {key}")
 
+            logger.info(
+                "From dataset instances, %s will be considered for vocabulary creation.",
+                ", ".join(datasets_for_vocab_creation),
+            )
+
         instance_generator = (
             instance
             for key, dataset in datasets.items()
-            if not datasets_for_vocab_creation or key in datasets_for_vocab_creation
+            if datasets_for_vocab_creation is None or key in datasets_for_vocab_creation
             for instance in dataset
         )
 
