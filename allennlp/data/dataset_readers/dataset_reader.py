@@ -361,6 +361,15 @@ class DatasetReader(Registrable):
             step_size = dist.get_world_size()
         worker_info = None if self.manual_multi_process_sharding else get_worker_info()
         if worker_info:
+            warnings.warn(
+                "Using multi-process data loading without setting "
+                "DatasetReader.manual_multi_process_sharding to True.\n"
+                "Did you forget to set this?\n"
+                "If you're not handling the multi-process sharding logic within your "
+                "_read() method, there is probably no benefit to using more than one "
+                "worker.",
+                UserWarning,
+            )
             # Scale `start_index` by `num_workers`, then shift by worker `id`.
             start_index *= worker_info.num_workers
             start_index += worker_info.id
