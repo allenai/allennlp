@@ -54,10 +54,13 @@ class BertPooler(Seq2VecEncoder):
     def get_output_dim(self) -> int:
         return self._embedding_dim
 
-    def forward(self, tokens: torch.Tensor, mask: torch.BoolTensor = None, num_wrapping_dims: int = 0):
+    def forward(
+        self, tokens: torch.Tensor, mask: torch.BoolTensor = None, num_wrapping_dims: int = 0
+    ):
         pooler = self.pooler
         for _ in range(num_wrapping_dims):
             from allennlp.modules import TimeDistributed
+
             pooler = TimeDistributed(pooler)
         pooled = pooler(tokens)
         pooled = self._dropout(pooled)

@@ -370,10 +370,7 @@ def open_compressed(
     return open_fn(filename, mode=mode, encoding=encoding, **kwargs)
 
 
-def text_lines_from_file(
-    filename: Union[str, Path],
-    strip_lines: bool = True
-) -> Iterator[str]:
+def text_lines_from_file(filename: Union[str, Path], strip_lines: bool = True) -> Iterator[str]:
     with open_compressed(filename, "rt", encoding="UTF-8", errors="replace") as p:
         if strip_lines:
             for line in p:
