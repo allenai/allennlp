@@ -423,7 +423,9 @@ def make_vocab_from_params(
     )
     # Do a quick sanity check here. There's no need to load any datasets if the vocab
     # type is "empty".
-    if datasets_for_vocab_creation is None and vocab_params.get("type") == "empty":
+    if datasets_for_vocab_creation is None and (
+        vocab_params.get("type") == "empty" or vocab_params.get("type") == "from_files"
+    ):
         datasets_for_vocab_creation = []
 
     datasets: Dict[str, Dataset]
