@@ -68,7 +68,7 @@ test-with-cov :
 			--cov-report=xml
 
 .PHONY : gpu-test
-gpu-test :
+gpu-test : check-for-cuda
 	pytest --color=yes -v -rf -m gpu
 
 .PHONY : benchmarks
