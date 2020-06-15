@@ -5,7 +5,6 @@ Utilities for working with the local dataset cache.
 import glob
 import os
 import logging
-import shutil
 import tempfile
 import json
 from urllib.parse import urlparse
@@ -243,6 +242,46 @@ def _find_latest_cached(url: str, cache_dir: str) -> Optional[str]:
     return None
 
 
+class CacheFile:
+    """
+    This is a context manager that makes robust caching easier.
+
+    On `__enter__`, an IO handle to a temporarily file is returned, which can
+    be treated as if it's the actual cache file.
+
+    On `__exit__`, the temporarily file is renamed to the cache file. If anything
+    goes wrong while writing to the temporary file, it will be removed.
+    """
+
+    def __init__(self, cache_filename: Union[Path, str], mode="w+b") -> None:
+        self.cache_filename = (
+            cache_filename if isinstance(cache_filename, Path) else Path(cache_filename)
+        )
+        self.cache_directory = os.path.dirname(self.cache_filename)
+        self.mode = mode
+        self.temp_file = tempfile.NamedTemporaryFile(
+            self.mode, dir=self.cache_directory, delete=False, suffix=".tmp"
+        )
+
+    def __enter__(self):
+        return self.temp_file
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.temp_file.close()
+        if exc_value is None:
+            # Success.
+            logger.info(
+                "Renaming temp file %s to cache at %s", self.temp_file.name, self.cache_filename
+            )
+            # Rename the temp file to the actual cache filename.
+            os.replace(self.temp_file.name, self.cache_filename)
+            return True
+        # Something went wrong, remove the temp file.
+        logger.info("removing temp file %s", self.temp_file.name)
+        os.remove(self.temp_file.name)
+        return False
+
+
 # TODO(joelgrus): do we want to do checksums or anything like that?
 def get_from_cache(url: str, cache_dir: str = None) -> str:
     """
@@ -303,33 +342,20 @@ def get_from_cache(url: str, cache_dir: str = None) -> str:
         if os.path.exists(cache_path):
             logger.info("cache of %s is up-to-date", url)
         else:
-            # Download to temporary file, then copy to cache dir once finished.
-            # Otherwise you get corrupt cache entries if the download gets interrupted.
-            with tempfile.NamedTemporaryFile() as temp_file:
-                logger.info("%s not found in cache, downloading to %s", url, temp_file.name)
+            with CacheFile(cache_path) as cache_file:
+                logger.info("%s not found in cache, downloading to %s", url, cache_file.name)
 
                 # GET file object
                 if url.startswith("s3://"):
-                    _s3_get(url, temp_file)
+                    _s3_get(url, cache_file)
                 else:
-                    _http_get(url, temp_file)
+                    _http_get(url, cache_file)
 
-                # we are copying the file before closing it, so flush to avoid truncation
-                temp_file.flush()
-                # shutil.copyfileobj() starts at the current position, so go to the start
-                temp_file.seek(0)
-
-                logger.info("copying %s to cache at %s", temp_file.name, cache_path)
-                with open(cache_path, "wb") as cache_file:
-                    shutil.copyfileobj(temp_file, cache_file)  # type: ignore
-
-                logger.info("creating metadata file for %s", cache_path)
-                meta = {"url": url, "etag": etag}
-                meta_path = cache_path + ".json"
-                with open(meta_path, "w") as meta_file:
-                    json.dump(meta, meta_file)
-
-                logger.info("removing temp file %s", temp_file.name)
+            logger.info("creating metadata file for %s", cache_path)
+            meta = {"url": url, "etag": etag}
+            meta_path = cache_path + ".json"
+            with open(meta_path, "w") as meta_file:
+                json.dump(meta, meta_file)
 
     return cache_path
 

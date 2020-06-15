@@ -1,5 +1,9 @@
 from allennlp.data.dataloader import DataLoader, allennlp_collate
-from allennlp.data.dataset_readers.dataset_reader import DatasetReader
+from allennlp.data.dataset_readers.dataset_reader import (
+    DatasetReader,
+    AllennlpDataset,
+    AllennlpLazyDataset,
+)
 from allennlp.data.fields.field import DataArray, Field
 from allennlp.data.fields.text_field import TextFieldTensors
 from allennlp.data.instance import Instance
