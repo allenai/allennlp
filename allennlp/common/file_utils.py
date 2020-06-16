@@ -270,14 +270,14 @@ class CacheFile:
         self.temp_file.close()
         if exc_value is None:
             # Success.
-            logger.info(
+            logger.debug(
                 "Renaming temp file %s to cache at %s", self.temp_file.name, self.cache_filename
             )
             # Rename the temp file to the actual cache filename.
             os.replace(self.temp_file.name, self.cache_filename)
             return True
         # Something went wrong, remove the temp file.
-        logger.info("removing temp file %s", self.temp_file.name)
+        logger.debug("removing temp file %s", self.temp_file.name)
         os.remove(self.temp_file.name)
         return False
 
@@ -336,14 +336,13 @@ def get_from_cache(url: str, cache_dir: str = None) -> str:
     # Only one process can own this lock file at a time, and a process will block
     # on the call to `lock.acquire()` until the process currently holding the lock
     # releases it.
-    logger.info("checking cache for %s at %s", url, cache_path)
-    logger.info("waiting to acquire lock on %s", cache_path)
+    logger.debug("waiting to acquire lock on %s", cache_path)
     with FileLock(cache_path + ".lock"):
         if os.path.exists(cache_path):
             logger.info("cache of %s is up-to-date", url)
         else:
             with CacheFile(cache_path) as cache_file:
-                logger.info("%s not found in cache, downloading to %s", url, cache_file.name)
+                logger.info("%s not found in cache, downloading to %s", url, cache_path)
 
                 # GET file object
                 if url.startswith("s3://"):
@@ -351,7 +350,7 @@ def get_from_cache(url: str, cache_dir: str = None) -> str:
                 else:
                     _http_get(url, cache_file)
 
-            logger.info("creating metadata file for %s", cache_path)
+            logger.debug("creating metadata file for %s", cache_path)
             meta = {"url": url, "etag": etag}
             meta_path = cache_path + ".json"
             with open(meta_path, "w") as meta_file:
