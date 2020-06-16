@@ -24,6 +24,7 @@ repo_name: allenai/allennlp
 
 nav:
 - Home: README.md
+- Repository: https://github.com/allenai/allennlp
 - Versions:
   - Latest: /latest/
   - Stable: /stable/

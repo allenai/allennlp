@@ -87,13 +87,13 @@ environment you want to use, you can skip to the 'installing via pip' section.
 
 2.  Create a Conda environment with Python 3.7:
 
-    ```bash
+    ```
     conda create -n allennlp python=3.7
     ```
 
 3.  Activate the Conda environment. You will need to activate the Conda environment in each terminal in which you want to use AllenNLP:
 
-    ```bash
+    ```
     conda activate allennlp
     ```
 
