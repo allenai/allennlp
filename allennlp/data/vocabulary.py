@@ -330,8 +330,10 @@ class Vocabulary(Registrable):
             vocab_subdir = os.path.join(base_directory, "vocabulary")
             if os.path.isdir(vocab_subdir):
                 directory = vocab_subdir
-            else:
+            elif os.path.isdir(base_directory):
                 directory = base_directory
+            else:
+                raise ConfigurationError(f"{directory} is neither a directory nor an archive")
 
         # We use a lock file to avoid race conditions where multiple processes
         # might be reading/writing from/to the same vocab files at once.
