@@ -12,6 +12,11 @@ else:
 sys.path.insert(0, os.path.dirname(os.path.abspath(os.path.join(__file__, os.pardir))))
 logging.basicConfig(format="%(asctime)s - %(levelname)s - %(name)s - %(message)s", level=LEVEL)
 
+# filelock emits too many messages, so tell it to be quiet unless it has something
+# important to say.
+_filelock_logger = logging.getLogger("filelock")
+_filelock_logger.setLevel(logging.WARNING)
+
 from allennlp.commands import main  # noqa
 
 
