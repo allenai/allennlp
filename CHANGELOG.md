@@ -11,6 +11,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Reduced the amount of log messages produced by `allennlp.common.file_utils`.
 
+### Added
+
+- Added an option to `file_utils.cached_path` to automatically extract archives.
+- Added the ability to pass an archive file instead of a local directory to `Vocab.from_files`.
+
 ## [v1.0.0](https://github.com/allenai/allennlp/releases/tag/v1.0.0) - 2020-06-16
 
 ### Fixed
