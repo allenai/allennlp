@@ -312,7 +312,8 @@ class Vocabulary(Registrable):
         oov_token: Optional[str] = DEFAULT_OOV_TOKEN,
     ) -> "Vocabulary":
         """
-        Loads a `Vocabulary` that was serialized using `save_to_files`.
+        Loads a `Vocabulary` that was serialized either using `save_to_files` or inside
+        a model archive file.
 
         # Parameters
 
