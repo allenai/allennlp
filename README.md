@@ -34,6 +34,13 @@
 - [Nightly Releases](https://pypi.org/project/allennlp/#history)
 - [Officially Supported Models](https://github.com/allenai/allennlp-models)
 
+## Getting Started Using the Library
+
+If you're interested in using AllenNLP for model development, we recommend you check out the
+[AllenNLP Guide](https://guide.allennlp.org).  When you're ready to start your project, we've
+created a template repository that you can use as a starting place:
+https://github.com/allenai/allennlp-template-config-files.
+
 ## Package Overview
 
 <table>
