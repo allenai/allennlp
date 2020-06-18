@@ -49,7 +49,7 @@ jobs:
       run: |
         make docker-test-image DOCKER_TAG=$DOCKER_TAG
 
-    - name: Run GPU tests
+    - name: Run transformer tests
       run: |
         make docker-test-run DOCKER_TAG=$DOCKER_TAG ARGS='transformer-test'
 

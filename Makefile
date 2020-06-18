@@ -69,11 +69,11 @@ test-with-cov :
 
 .PHONY : gpu-test
 gpu-test : check-for-cuda
-	pytest --color=yes -v -rf -m gpu
+	pytest --color=yes -v -rf --durations=10 -m gpu
 
 .PHONY : transformer-test
 transformer-test :
-	pytest --color=yes -v -rf -m transformer
+	pytest --color=yes -v -rf --durations=5 -m transformer
 
 .PHONY : benchmarks
 benchmarks :
