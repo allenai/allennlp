@@ -55,14 +55,13 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         # I'm not sure if this works for all models; open an issue on github if you find a case
         # where it doesn't work.
         self.output_dim = self.config.hidden_size
-        self._train_parameters = train_parameters
 
         tokenizer = PretrainedTransformerTokenizer(model_name)
         self._num_added_start_tokens = len(tokenizer.single_sequence_start_tokens)
         self._num_added_end_tokens = len(tokenizer.single_sequence_end_tokens)
         self._num_added_tokens = self._num_added_start_tokens + self._num_added_end_tokens
 
-        if not self._train_parameters:
+        if not train_parameters:
             for param in self.transformer_model.parameters():
                 param.requires_grad = False
 
