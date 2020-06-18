@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Reduced the amount of log messages produced by `allennlp.common.file_utils`.
-- Put more snesible default on the `huggingface_adamw` optimizer.
+- Put more sensible defaults on the `huggingface_adamw` optimizer.
 
 ## [v1.0.0](https://github.com/allenai/allennlp/releases/tag/v1.0.0) - 2020-06-16
 
