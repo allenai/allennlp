@@ -160,6 +160,7 @@ class TestBasicTextFieldEmbedder(AllenNlpTestCase):
         }
         token_embedder(inputs)
 
+    @pytest.mark.transformer
     def test_forward_runs_with_bijective_and_non_bijective_mapping(self):
         params = Params(
             {

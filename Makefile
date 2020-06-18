@@ -10,6 +10,8 @@ MD_DOCS_CONF_SRC = mkdocs-skeleton.yml
 MD_DOCS_TGT = site/
 MD_DOCS_EXTRAS = $(addprefix $(MD_DOCS_ROOT),README.md LICENSE.md CONTRIBUTING.md)
 
+PYTEST_CMD = pytest --color=yes -rf --durations=40 -m 'not gpu' -m 'not transformer'
+
 DOCKER_TAG = latest
 DOCKER_IMAGE_NAME = allennlp/allennlp:$(DOCKER_TAG)
 DOCKER_TEST_IMAGE_NAME = allennlp/test:$(DOCKER_TAG)
@@ -27,6 +29,7 @@ endif
 else
 SED = sed
 endif
+
 
 .PHONY : version
 version :
@@ -58,18 +61,19 @@ typecheck :
 
 .PHONY : test
 test :
-	pytest --color=yes -rf --durations=40
+	$(PYTEST_CMD)
 
 .PHONY : test-with-cov
 test-with-cov :
-	pytest --color=yes -rf --durations=40 \
-			--cov-config=.coveragerc \
-			--cov=$(SRC) \
-			--cov-report=xml
+	$(PYTEST_CMD) --cov-config=.coveragerc --cov=$(SRC) --cov-report=xml
 
 .PHONY : gpu-test
 gpu-test : check-for-cuda
 	pytest --color=yes -v -rf -m gpu
+
+.PHONY : transformer-test
+transformer-test :
+	pytest --color=yes -v -rf -m transformer
 
 .PHONY : benchmarks
 benchmarks :
@@ -165,4 +169,8 @@ docker-test-image :
 
 .PHONY : docker-test-run
 docker-test-run :
-	$(DOCKER_RUN_CMD) --gpus 2 $(DOCKER_TEST_IMAGE_NAME) $(ARGS)
+	$(DOCKER_RUN_CMD) $(DOCKER_TEST_IMAGE_NAME) $(ARGS)
+
+.PHONY : docker-test-run-with-gpus
+docker-test-run-with-gpus :
+	$(DOCKER_RUN_CMD) --gpus all $(DOCKER_TEST_IMAGE_NAME) $(ARGS)

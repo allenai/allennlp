@@ -1,10 +1,12 @@
 from transformers.tokenization_auto import AutoTokenizer
+import pytest
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Token, Vocabulary
 from allennlp.data.token_indexers import PretrainedTransformerMismatchedIndexer
 
 
+@pytest.mark.transformer
 class TestPretrainedTransformerMismatchedIndexer(AllenNlpTestCase):
     def test_bert(self):
         tokenizer = AutoTokenizer.from_pretrained("bert-base-cased")

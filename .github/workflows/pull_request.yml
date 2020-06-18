@@ -41,7 +41,26 @@ jobs:
 
     - name: Run GPU tests
       run: |
-        make docker-test-run DOCKER_TAG=$DOCKER_TAG ARGS='gpu-test'
+        make docker-test-run-with-gpus DOCKER_TAG=$DOCKER_TAG ARGS='gpu-test'
+
+  transformer_checks:
+    name: Transformer Checks
+    runs-on: [self-hosted]
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set Docker tag
+      run: |
+        echo "::set-env name=DOCKER_TAG::$GITHUB_SHA";
+
+    - name: Build test image
+      run: |
+        make docker-test-image DOCKER_TAG=$DOCKER_TAG
+
+    - name: Run GPU tests
+      run: |
+        make docker-test-run DOCKER_TAG=$DOCKER_TAG ARGS='transformer-test'
 
   check_core:
     name: Check Core

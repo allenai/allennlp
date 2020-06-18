@@ -1,4 +1,5 @@
 from transformers.tokenization_auto import AutoTokenizer
+import pytest
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Vocabulary
@@ -6,6 +7,7 @@ from allennlp.data.token_indexers import PretrainedTransformerIndexer
 from allennlp.data.tokenizers import PretrainedTransformerTokenizer
 
 
+@pytest.mark.transformer
 class TestPretrainedTransformerIndexer(AllenNlpTestCase):
     def test_as_array_produces_token_sequence_bert_uncased(self):
         tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")

@@ -32,7 +32,26 @@ jobs:
 
     - name: Run GPU tests
       run: |
-        make docker-test-run DOCKER_TAG=$DOCKER_TAG ARGS='gpu-test'
+        make docker-test-run-with-gpus DOCKER_TAG=$DOCKER_TAG ARGS='gpu-test'
+
+  transformer_checks:
+    name: Transformer Checks
+    runs-on: [self-hosted]
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set Docker tag
+      run: |
+        echo "::set-env name=DOCKER_TAG::$GITHUB_SHA";
+
+    - name: Build test image
+      run: |
+        make docker-test-image DOCKER_TAG=$DOCKER_TAG
+
+    - name: Run GPU tests
+      run: |
+        make docker-test-run DOCKER_TAG=$DOCKER_TAG ARGS='transformer-test'
 
   check_core:
     name: Check Core
@@ -440,7 +459,7 @@ jobs:
   # Publish the core distribution files to PyPI.
   publish:
     name: PyPI
-    needs: [check_core, check_models, gpu_checks, build_package, test_package, docker, docs]
+    needs: [check_core, check_models, gpu_checks, transformer_checks, build_package, test_package, docker, docs]
     # Only publish to PyPI on releases and nightly builds to "allenai/allennlp" (not forks).
     if: github.repository == 'allenai/allennlp' && github.event_name != 'push'
     runs-on: ubuntu-latest

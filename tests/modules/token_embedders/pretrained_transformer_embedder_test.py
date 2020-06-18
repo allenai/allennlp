@@ -14,6 +14,9 @@ from allennlp.modules.text_field_embedders import BasicTextFieldEmbedder
 from allennlp.modules.token_embedders import PretrainedTransformerEmbedder
 
 
+# Only run this on the self-hosted runner since it involves big downloads which
+# can be cached on the runner.
+@pytest.mark.transformer
 class TestPretrainedTransformerEmbedder(AllenNlpTestCase):
     def test_forward_runs_when_initialized_from_params(self):
         # This code just passes things off to `transformers`, so we only have a very simple

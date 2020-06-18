@@ -11,6 +11,9 @@ from allennlp.modules.text_field_embedders import BasicTextFieldEmbedder
 from allennlp.common.testing import AllenNlpTestCase
 
 
+# Only run this on the self-hosted runner since it involves big downloads which
+# can be cached on the runner.
+@pytest.mark.transformer
 class TestPretrainedTransformerMismatchedEmbedder(AllenNlpTestCase):
     @pytest.mark.parametrize("train_parameters", [True, False])
     def test_end_to_end(self, train_parameters: bool):

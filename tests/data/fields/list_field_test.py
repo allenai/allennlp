@@ -2,6 +2,7 @@ from typing import Dict
 
 import numpy
 import torch
+import pytest
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Token, Vocabulary, Instance
@@ -320,6 +321,7 @@ class TestListField(AllenNlpTestCase):
         batch = next(iter(loader))
         model.forward(**batch)
 
+    @pytest.mark.transformer
     def test_list_of_text_padding(self):
         from allennlp.data.token_indexers import PretrainedTransformerIndexer
         from allennlp.data.tokenizers import Token

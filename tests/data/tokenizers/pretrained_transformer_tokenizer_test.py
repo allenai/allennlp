@@ -1,4 +1,5 @@
 from typing import Iterable, List
+import pytest
 
 from allennlp.common import Params
 from allennlp.common.testing import AllenNlpTestCase
@@ -6,6 +7,7 @@ from allennlp.data import Token
 from allennlp.data.tokenizers import PretrainedTransformerTokenizer
 
 
+@pytest.mark.transformer
 class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
     def test_splits_roberta(self):
         tokenizer = PretrainedTransformerTokenizer("roberta-base")

@@ -1,3 +1,5 @@
+import pytest
+
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Instance
 from allennlp.data.fields import TextField, LabelField
@@ -22,6 +24,7 @@ class TestInstance(AllenNlpTestCase):
         assert words_field in values
         assert label_field in values
 
+    @pytest.mark.transformer
     def test_duplicate(self):
         # Verify the `duplicate()` method works with a `PretrainedTransformerIndexer` in
         # a `TextField`. See https://github.com/allenai/allennlp/issues/4270.
