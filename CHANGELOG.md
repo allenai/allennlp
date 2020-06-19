@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Reduced the amount of log messages produced by `allennlp.common.file_utils`.
 
+### Added
+
+- A method to ModelTestCase for running basic model tests when you aren't using config files.
+
 ## [v1.0.0](https://github.com/allenai/allennlp/releases/tag/v1.0.0) - 2020-06-16
 
 ### Fixed
