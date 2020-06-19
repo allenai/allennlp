@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Added
+
+- Added a way to turn of redirecting output to stderr and stdout
+
 ### Fixed
 
 - Reduced the amount of log messages produced by `allennlp.common.file_utils`.
