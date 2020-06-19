@@ -2,6 +2,7 @@ from collections import Counter
 import os
 import pathlib
 import json
+import time
 
 import pytest
 import responses
@@ -15,6 +16,7 @@ from allennlp.common.file_utils import (
     cached_path,
     _split_s3_path,
     open_compressed,
+    CacheFile,
 )
 from allennlp.common.testing import AllenNlpTestCase
 
@@ -81,6 +83,8 @@ class TestFileUtils(AllenNlpTestCase):
                 f.write("some random data")
             with open(meta_filename, "w") as meta_f:
                 json.dump({"url": url, "etag": etag}, meta_f)
+            # os.path.getmtime is only accurate to the second.
+            time.sleep(1.1)
 
         # The version corresponding to the last etag should be returned, since
         # that one has the latest "last modified" time.
@@ -248,3 +252,13 @@ class TestFileUtils(AllenNlpTestCase):
             with open_compressed(compressed_file) as f:
                 compressed_lines = [line.strip() for line in f]
             assert compressed_lines == uncompressed_lines
+
+
+class TestCacheFile(AllenNlpTestCase):
+    def test_temp_file_removed_on_error(self):
+        cache_filename = self.TEST_DIR / "cache_file"
+        with pytest.raises(IOError, match="I made this up"):
+            with CacheFile(cache_filename) as handle:
+                raise IOError("I made this up")
+        assert not os.path.exists(handle.name)
+        assert not os.path.exists(cache_filename)

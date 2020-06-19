@@ -36,6 +36,13 @@
 - [Nightly Releases](https://pypi.org/project/allennlp/#history)
 - [Officially Supported Models](https://github.com/allenai/allennlp-models)
 
+## Getting Started Using the Library
+
+If you're interested in using AllenNLP for model development, we recommend you check out the
+[AllenNLP Guide](https://guide.allennlp.org).  When you're ready to start your project, we've
+created a template repository that you can use as a starting place:
+https://github.com/allenai/allennlp-template-config-files.
+
 ## Package Overview
 
 <table>
@@ -87,15 +94,15 @@ environment you want to use, you can skip to the 'installing via pip' section.
 
 1.  [Download and install Conda](https://conda.io/projects/conda/en/latest/user-guide/install/index.html).
 
-2.  Create a Conda environment with Python 3.7
+2.  Create a Conda environment with Python 3.7:
 
-    ```bash
+    ```
     conda create -n allennlp python=3.7
     ```
 
-3.  Activate the Conda environment. You will need to activate the Conda environment in each terminal in which you want to use AllenNLP.
+3.  Activate the Conda environment. You will need to activate the Conda environment in each terminal in which you want to use AllenNLP:
 
-    ```bash
+    ```
     conda activate allennlp
     ```
 
@@ -103,20 +110,20 @@ environment you want to use, you can skip to the 'installing via pip' section.
 
 Installing the library and dependencies is simple using `pip`.
 
-   ```bash
-   pip install allennlp
-   ```
+```bash
+pip install allennlp
+```
 
 *Looking for bleeding edge features? You can install nightly releases directly from [pypi](https://pypi.org/project/allennlp/#history)*
 
 AllenNLP installs a script when you install the python package, so you can run allennlp commands just by typing `allennlp` into a terminal.  For example, you can now test your installation with `allennlp test-install`.
 
 You may also want to install `allennlp-models`, which contains the NLP constructs to train and run our officially
-supported models, many of which are hosted at http://demo.allennlp.org.
+supported models, many of which are hosted at [https://demo.allennlp.org](https://demo.allennlp.org).
 
-   ```bash
-   pip install allennlp-models
-   ```
+```bash
+pip install allennlp-models
+```
 
 ### Installing using Docker
 
@@ -128,33 +135,38 @@ environment to a compute cluster.
 Once you have [installed Docker](https://docs.docker.com/engine/installation/)
 just run the following command to get an environment that will run on either the cpu or gpu.
 
-   ```bash
-   mkdir -p $HOME/.allennlp/
-   docker run --rm -v $HOME/.allennlp:/root/.allennlp allennlp/allennlp:latest
-   ```
+```bash
+mkdir -p $HOME/.allennlp/
+docker run --rm -v $HOME/.allennlp:/root/.allennlp allennlp/allennlp:latest
+```
 
-You can test the Docker environment with `docker run --rm -v $HOME/.allennlp:/root/.allennlp allennlp/allennlp:latest test-install`.
+You can test the Docker environment with
+
+```bash
+docker run --rm -v $HOME/.allennlp:/root/.allennlp allennlp/allennlp:latest test-install 
+```
 
 ### Installing from source
 
 You can also install AllenNLP by cloning our git repository:
 
-  ```bash
-  git clone https://github.com/allenai/allennlp.git
-  ```
+```bash
+git clone https://github.com/allenai/allennlp.git
+```
 
 Create a Python 3.7 virtual environment, and install AllenNLP in `editable` mode by running:
 
-  ```bash
-  pip install --editable .
-  pip install -r dev-requirements.txt
-  ```
+```bash
+pip install --editable .
+pip install -r dev-requirements.txt
+```
 
 This will make `allennlp` available on your system but it will use the sources from the local clone
 you made of the source repository.
 
 You can test your installation with `allennlp test-install`.
-See https://github.com/allenai/allennlp-models for instructions on installing `allennlp-models` from source.
+See [https://github.com/allenai/allennlp-models](https://github.com/allenai/allennlp-models)
+for instructions on installing `allennlp-models` from source.
 
 ## Running AllenNLP
 

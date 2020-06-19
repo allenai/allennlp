@@ -1,12 +1,13 @@
 from typing import List, Dict, Union
+import warnings
 
 import torch
 from torch.utils import data
 
 from allennlp.common.registrable import Registrable
-from allennlp.data.instance import Instance
-
 from allennlp.common.lazy import Lazy
+from allennlp.data.instance import Instance
+from allennlp.data.dataset_readers.dataset_reader import AllennlpLazyDataset
 from allennlp.data.batch import Batch
 from allennlp.data.samplers import Sampler, BatchSampler
 
@@ -65,6 +66,13 @@ class DataLoader(Registrable, data.DataLoader):
         multiprocessing_context: str = None,
         batches_per_epoch: int = None,
     ):
+        if num_workers and isinstance(dataset, AllennlpLazyDataset):
+            warnings.warn(
+                "Using multi-process data loading with a lazy dataset could lead to "
+                "deadlocks with certain tokenizers. See:\n"
+                "  https://github.com/allenai/allennlp/issues/4330\n",
+                UserWarning,
+            )
         super().__init__(
             dataset=dataset,
             batch_size=batch_size,

@@ -5,7 +5,7 @@ import datetime
 import logging
 import os
 import shutil
-from typing import Any, Dict, Iterable, Optional, Union, Tuple, Set
+from typing import Any, Dict, Iterable, Optional, Union, Tuple, Set, List
 from collections import Counter
 
 import torch
@@ -16,8 +16,7 @@ from torch.nn.utils import clip_grad_norm_
 from allennlp.common.checks import check_for_gpu, ConfigurationError
 from allennlp.common.params import Params
 from allennlp.common.tqdm import Tqdm
-from allennlp.data import Instance, Vocabulary
-from allennlp.data.batch import Batch
+from allennlp.data import Instance, Vocabulary, Batch
 from allennlp.data.dataset_readers import DatasetReader
 from allennlp.models.archival import CONFIG_NAME
 from allennlp.models.model import Model
@@ -116,60 +115,51 @@ def read_all_datasets(
     return datasets
 
 
-def datasets_from_params(params: Params) -> Dict[str, Dataset]:
+def datasets_from_params(
+    params: Params, train: bool = True, validation: bool = True, test: bool = True
+) -> Dict[str, Dataset]:
     """
-    Load all the datasets specified by the config.
-
-    # Parameters
-
-    params : `Params`
-    cache_directory : `str`, optional
-        If given, we will instruct the `DatasetReaders` that we construct to cache their
-        instances in this location (or read their instances from caches in this location, if a
-        suitable cache already exists).  This is essentially a `base` directory for the cache, as
-        we will additionally add the `cache_prefix` to this directory, giving an actual cache
-        location of `cache_directory + cache_prefix`.
-    cache_prefix : `str`, optional
-        This works in conjunction with the `cache_directory`.  The idea is that the
-        `cache_directory` contains caches for all different parameter settings, while the
-        `cache_prefix` captures a specific set of parameters that led to a particular cache file.
-        That is, if you change the tokenization settings inside your `DatasetReader`, you don't
-        want to read cached data that used the old settings.  In order to avoid this, we compute a
-        hash of the parameters used to construct each `DatasetReader` and use that as a "prefix"
-        to the cache files inside the base `cache_directory`.  So, a given `input_file` would
-        be cached essentially as `cache_directory + cache_prefix + input_file`, where you specify
-        a `cache_directory`, the `cache_prefix` is based on the dataset reader parameters, and
-        the `input_file` is whatever path you provided to `DatasetReader.read()`.  In order to
-        allow you to give recognizable names to these prefixes if you want them, you can manually
-        specify the `cache_prefix`.  Note that in some rare cases this can be dangerous, as we'll
-        use the `same` prefix for both train and validation dataset readers.
+    Load datasets specified by the config.
     """
+    datasets: Dict[str, Dataset] = {}
+
+    train = train and ("train_data_path" in params)
+    validation = validation and ("validation_data_path" in params)
+    test = test and ("test_data_path" in params)
+    if not any((train, validation, test)):
+        # Return early so don't unnecessarily initialize the train data reader.
+        return datasets
+
     dataset_reader_params = params.pop("dataset_reader")
-    validation_dataset_reader_params = params.pop("validation_dataset_reader", None)
-
     dataset_reader = DatasetReader.from_params(dataset_reader_params)
 
+    if train:
+        train_data_path = params.pop("train_data_path")
+        logger.info("Reading training data from %s", train_data_path)
+        train_data = dataset_reader.read(train_data_path)
+        datasets["train"] = train_data
+
+    if not validation and not test:
+        # Return early so we don't unnecessarily initialize the validation/test data
+        # reader.
+        return datasets
+
     validation_and_test_dataset_reader: DatasetReader = dataset_reader
+    validation_dataset_reader_params = params.pop("validation_dataset_reader", None)
     if validation_dataset_reader_params is not None:
         logger.info("Using a separate dataset reader to load validation and test data.")
         validation_and_test_dataset_reader = DatasetReader.from_params(
             validation_dataset_reader_params
         )
 
-    train_data_path = params.pop("train_data_path")
-    logger.info("Reading training data from %s", train_data_path)
-    train_data = dataset_reader.read(train_data_path)
-
-    datasets: Dict[str, Iterable[Instance]] = {"train": train_data}
-
-    validation_data_path = params.pop("validation_data_path", None)
-    if validation_data_path is not None:
+    if validation:
+        validation_data_path = params.pop("validation_data_path")
         logger.info("Reading validation data from %s", validation_data_path)
         validation_data = validation_and_test_dataset_reader.read(validation_data_path)
         datasets["validation"] = validation_data
 
-    test_data_path = params.pop("test_data_path", None)
-    if test_data_path is not None:
+    if test:
+        test_data_path = params.pop("test_data_path")
         logger.info("Reading test data from %s", test_data_path)
         test_data = validation_and_test_dataset_reader.read(test_data_path)
         datasets["test"] = test_data
@@ -428,22 +418,35 @@ def make_vocab_from_params(
             "The 'vocabulary' directory in the provided serialization directory is non-empty"
         )
 
-    all_datasets = datasets_from_params(params)
-    datasets_for_vocab_creation = set(params.pop("datasets_for_vocab_creation", all_datasets))
-
-    for dataset in datasets_for_vocab_creation:
-        if dataset not in all_datasets:
-            raise ConfigurationError(f"invalid 'dataset_for_vocab_creation' {dataset}")
-
-    logger.info(
-        "From dataset instances, %s will be considered for vocabulary creation.",
-        ", ".join(datasets_for_vocab_creation),
+    datasets_for_vocab_creation: Optional[List[str]] = params.pop(
+        "datasets_for_vocab_creation", None
     )
+    # Do a quick sanity check here. There's no need to load any datasets if the vocab
+    # type is "empty".
+    if datasets_for_vocab_creation is None and vocab_params.get("type") in ("empty", "from_files"):
+        datasets_for_vocab_creation = []
+
+    datasets: Dict[str, Dataset]
+    if datasets_for_vocab_creation is None:
+        # If `datasets_for_vocab_creation` was not specified, we'll use all datasets
+        # from the config.
+        datasets = datasets_from_params(params)
+    else:
+        for dataset_name in datasets_for_vocab_creation:
+            data_path = f"{dataset_name}_data_path"
+            if data_path not in params:
+                raise ConfigurationError(f"invalid 'datasets_for_vocab_creation' {dataset_name}")
+        datasets = datasets_from_params(
+            params,
+            train=("train" in datasets_for_vocab_creation),
+            validation=("validation" in datasets_for_vocab_creation),
+            test=("test" in datasets_for_vocab_creation),
+        )
 
     instances: Iterable[Instance] = (
         instance
-        for key, dataset in all_datasets.items()
-        if key in datasets_for_vocab_creation
+        for key, dataset in datasets.items()
+        if datasets_for_vocab_creation is None or key in datasets_for_vocab_creation
         for instance in dataset
     )
 
