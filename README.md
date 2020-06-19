@@ -41,6 +41,10 @@ If you're interested in using AllenNLP for model development, we recommend you c
 created a template repository that you can use as a starting place:
 https://github.com/allenai/allennlp-template-config-files.
 
+In addition, there are external tutorials:
+
+* [Hyperparameter optimization for AllenNLP using Optuna](https://medium.com/optuna/hyperparameter-optimization-for-allennlp-using-optuna-54b4bfecd78b)
+
 ## Package Overview
 
 <table>
