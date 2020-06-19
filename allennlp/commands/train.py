@@ -91,6 +91,14 @@ class Train(Subcommand):
             "other training information",
         )
 
+        subparser.add_argument(
+            "--no-redirect-std",
+            action="store_false",
+            dest="redirect_std",
+            default=True,  # This is confusing. `True` gets stored into the `redirect_std` variable.
+            help="do not redirect stdout and stderr to the log files. This can be helpful for debugging.",
+        )
+
         subparser.set_defaults(func=train_model_from_args)
 
         return subparser
@@ -110,6 +118,7 @@ def train_model_from_args(args: argparse.Namespace):
         node_rank=args.node_rank,
         include_package=args.include_package,
         dry_run=args.dry_run,
+        redirect_std=args.redirect_std,
     )
 
 
@@ -123,6 +132,7 @@ def train_model_from_file(
     node_rank: int = 0,
     include_package: List[str] = None,
     dry_run: bool = False,
+    redirect_std: bool = True,
 ) -> Optional[Model]:
     """
     A wrapper around [`train_model`](#train_model) which loads the params from a file.
@@ -152,6 +162,8 @@ def train_model_from_file(
     dry_run : `bool`, optional (default=`False`)
         Do not train a model, but create a vocabulary, show dataset statistics and other training
         information.
+    redirect_std : `bool`, optional (default=`True`)
+        Whether stderr and stdout should be redirected to the log files.
 
     # Returns
 
@@ -169,6 +181,7 @@ def train_model_from_file(
         node_rank=node_rank,
         include_package=include_package,
         dry_run=dry_run,
+        redirect_std=redirect_std,
     )
 
 
@@ -181,6 +194,7 @@ def train_model(
     node_rank: int = 0,
     include_package: List[str] = None,
     dry_run: bool = False,
+    redirect_std: bool = True,
 ) -> Optional[Model]:
     """
     Trains the model specified in the given [`Params`](../common/params.md#params) object, using the data
@@ -208,6 +222,8 @@ def train_model(
     dry_run : `bool`, optional (default=`False`)
         Do not train a model, but create a vocabulary, show dataset statistics and other training
         information.
+    redirect_std : `bool`, optional (default=`True`)
+        Whether stderr and stdout should be redirected to the log files.
 
     # Returns
 
@@ -228,7 +244,9 @@ def train_model(
             file_friendly_logging=file_friendly_logging,
             include_package=include_package,
             dry_run=dry_run,
+            redirect_std=redirect_std,
         )
+
         if not dry_run:
             archive_model(serialization_dir)
         return model
@@ -291,6 +309,7 @@ def train_model(
                 master_port,
                 world_size,
                 device_ids,
+                redirect_std,
             ),
             nprocs=num_procs,
         )
@@ -314,6 +333,7 @@ def _train_worker(
     master_port: int = 29500,
     world_size: int = 1,
     distributed_device_ids: List[int] = None,
+    redirect_std: bool = True,
 ) -> Optional[Model]:
     """
     Helper to train the configured model/experiment. In distributed mode, this is spawned as a
@@ -348,6 +368,8 @@ def _train_worker(
         The number of processes involved in distributed training.
     distributed_device_ids: `List[str]`, optional
         IDs of the devices used involved in distributed training.
+    redirect_std : `bool`, optional (default=`True`)
+        Whether stderr and stdout should be redirected through to the log files.
 
     # Returns
 
@@ -355,7 +377,11 @@ def _train_worker(
         The model with the best epoch weights or `None` if in distributed training or in dry run.
     """
     prepare_global_logging(
-        serialization_dir, file_friendly_logging, rank=process_rank, world_size=world_size
+        serialization_dir,
+        file_friendly_logging,
+        rank=process_rank,
+        world_size=world_size,
+        redirect_std=redirect_std,
     )
     common_util.prepare_environment(params)
 

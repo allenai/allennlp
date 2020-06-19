@@ -2,7 +2,7 @@ import logging
 from logging import Filter
 import os
 import sys
-from typing import Optional
+from typing import Optional, List
 
 from allennlp.common.tee import TeeHandler
 from allennlp.common.tqdm import Tqdm
@@ -70,7 +70,11 @@ class WorkerLogFilter(Filter):
 
 
 def prepare_global_logging(
-    serialization_dir: str, file_friendly_logging: bool, rank: int = 0, world_size: int = 1
+    serialization_dir: str,
+    file_friendly_logging: bool,
+    rank: int = 0,
+    world_size: int = 1,
+    redirect_std: bool = True,
 ) -> None:
     # If we don't have a terminal as stdout,
     # force tqdm to be nicer.
@@ -96,29 +100,34 @@ def prepare_global_logging(
         # This will help when combining multiple worker log files using `less` command.
         worker_filter = WorkerLogFilter(rank)
 
-    # Patch stdout/err.
-    stdout_patch = TeeHandler(
-        stdout_file,
-        sys.stdout,
-        file_friendly_terminal_output=file_friendly_logging,
-        silent=rank != 0,  # don't print to terminal from non-master workers.
-    )
-    sys.stdout = stdout_patch  # type: ignore
-    stderr_patch = TeeHandler(
-        stderr_file,
-        sys.stderr,
-        file_friendly_terminal_output=file_friendly_logging,
-        silent=rank != 0,  # don't print to terminal from non-master workers.
-    )
-    sys.stderr = stderr_patch  # type: ignore
+    output_handlers: List[logging.Handler] = []
+    error_handlers: List[logging.Handler] = []
+    if redirect_std:
+        # Patch stdout/err.
+        stdout_patch = TeeHandler(
+            stdout_file,
+            sys.stdout,
+            file_friendly_terminal_output=file_friendly_logging,
+            silent=rank != 0,  # don't print to terminal from non-master workers.
+        )
+        sys.stdout = stdout_patch  # type: ignore
+        stderr_patch = TeeHandler(
+            stderr_file,
+            sys.stderr,
+            file_friendly_terminal_output=file_friendly_logging,
+            silent=rank != 0,  # don't print to terminal from non-master workers.
+        )
+        sys.stderr = stderr_patch  # type: ignore
+    else:
+        output_handlers.append(logging.FileHandler(stdout_file))
+        error_handlers.append(logging.FileHandler(stderr_file))
 
-    # Handlers for stdout/err logging
-    output_handler = logging.StreamHandler(sys.stdout)
-    error_handler = logging.StreamHandler(sys.stderr)
+    output_handlers.append(logging.StreamHandler(sys.stdout))
+    error_handlers.append(logging.StreamHandler(sys.stderr))
 
     if worker_filter is not None:
-        output_handler.addFilter(worker_filter)
-        error_handler.addFilter(worker_filter)
+        for handler in output_handlers + error_handlers:
+            handler.addFilter(worker_filter)
 
     root_logger = logging.getLogger()
 
@@ -130,8 +139,8 @@ def prepare_global_logging(
             root_logger.removeHandler(handler)
 
     formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(name)s - %(message)s")
-    output_handler.setFormatter(formatter)
-    error_handler.setFormatter(formatter)
+    for handler in output_handlers + error_handlers:
+        handler.setFormatter(formatter)
 
     if os.environ.get("ALLENNLP_DEBUG"):
         LEVEL = logging.DEBUG
@@ -139,14 +148,17 @@ def prepare_global_logging(
         level_name = os.environ.get("ALLENNLP_LOG_LEVEL")
         LEVEL = logging._nameToLevel.get(level_name, logging.INFO)
 
-    output_handler.setLevel(LEVEL)
-    error_handler.setLevel(logging.ERROR)
+    for handler in output_handlers:
+        handler.setLevel(LEVEL)
+    for handler in error_handlers:
+        handler.setLevel(logging.ERROR)
 
     # filter out everything at the ERROR or higher level for output stream
     # so that error messages don't appear twice in the logs.
-    output_handler.addFilter(ErrorFilter())
+    for handler in output_handlers:
+        handler.addFilter(ErrorFilter())
 
-    root_logger.addHandler(output_handler)
-    root_logger.addHandler(error_handler)
+    for handler in output_handlers + error_handlers:
+        root_logger.addHandler(handler)
 
     root_logger.setLevel(LEVEL)
