@@ -198,6 +198,9 @@ class ModelTestCase(AllenNlpTestCase):
 
         # Parameters
 
+        trainer: `GradientDescentTrainer`
+            The `Trainer` to use for the test, which already has references to a `Model` and a
+            `DataLoader`, which we will use in the test.
         gradients_to_ignore : `Set[str]`, optional (default=`None`)
             This test runs a gradient check to make sure that we're actually computing gradients
             for all of the parameters in the model.  If you really want to ignore certain
