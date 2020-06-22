@@ -17,6 +17,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed a bug where `PretrainedTransformerEmbedder` parameters appeared to be trainable
   in the log output even when `train_parameters` was set to `False`.
 
+### Added
+
+- A method to ModelTestCase for running basic model tests when you aren't using config files.
+
 ## [v1.0.0](https://github.com/allenai/allennlp/releases/tag/v1.0.0) - 2020-06-16
 
 ### Fixed
@@ -63,6 +67,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A `BatchCallback` for logging CPU and GPU memory usage to tensorboard. This is mainly for debugging
   because using it can cause a significant slowdown in training.
 - Ability to run pretrained transformers as an embedder without training the weights
+- Add Optuna Integrated badge to README.md
 
 ### Changed
 
