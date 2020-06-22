@@ -218,7 +218,7 @@ class GradientDescentTrainer(Trainer):
         after `patience` epochs with no improvement. If given, it must be `> 0`.
         If None, early stopping is disabled.
 
-    validation_metric : `str`, optional (default=`"loss"`)
+    validation_metric : `str`, optional (default=`"-loss"`)
         Validation metric to measure for whether to stop training using patience
         and whether to serialize an `is_best` model each epoch. The metric name
         must be prepended with either "+" or "-", which specifies whether the metric
