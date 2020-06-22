@@ -838,3 +838,36 @@ class TestVocabulary(AllenNlpTestCase):
         }
         assert vocab1.get_token_to_index_vocabulary("2") == {"d": 0, "e": 1, "f": 2}
         assert vocab1.get_token_to_index_vocabulary("3") == {"g": 0, "h": 1, "i": 2}
+
+
+class TestVocabularyFromFilesWithArchive(AllenNlpTestCase):
+    def setup_method(self):
+        super().setup_method()
+        self.tar_archive = self.TEST_DIR / "vocab.tar.gz"
+        self.zip_archive = self.TEST_DIR / "vocab.zip"
+        self.model_archive = self.TEST_DIR / "model.tar.gz"
+        shutil.copyfile(
+            self.FIXTURES_ROOT / "data" / "vocab.tar.gz", self.tar_archive,
+        )
+        shutil.copyfile(
+            self.FIXTURES_ROOT / "data" / "vocab.zip", self.zip_archive,
+        )
+        shutil.copyfile(
+            self.FIXTURES_ROOT / "simple_tagger" / "serialization" / "model.tar.gz",
+            self.model_archive,
+        )
+
+    def test_from_files_with_zip_archive(self):
+        vocab = Vocabulary.from_files(str(self.zip_archive))
+        vocab.get_namespaces() == {"tokens"}
+        assert vocab.get_token_from_index(3, namespace="tokens") == ","
+
+    def test_from_files_with_tar_archive(self):
+        vocab = Vocabulary.from_files(str(self.tar_archive))
+        vocab.get_namespaces() == {"tokens"}
+        assert vocab.get_token_from_index(3, namespace="tokens") == ","
+
+    def test_from_files_with_model_archive(self):
+        vocab = Vocabulary.from_files(str(self.model_archive))
+        vocab.get_namespaces() == {"tokens", "labels"}
+        assert vocab.get_token_from_index(3, namespace="tokens") == "u.n."
