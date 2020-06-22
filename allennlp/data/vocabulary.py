@@ -13,10 +13,11 @@ from typing import Any, Callable, Dict, Iterable, List, Optional, Set, Union, TY
 
 from filelock import FileLock
 
-from allennlp.common.util import namespace_match
 from allennlp.common import Registrable
+from allennlp.common.file_utils import cached_path
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.tqdm import Tqdm
+from allennlp.common.util import namespace_match
 
 if TYPE_CHECKING:
     from allennlp.data import instance as adi  # noqa
@@ -311,16 +312,29 @@ class Vocabulary(Registrable):
         oov_token: Optional[str] = DEFAULT_OOV_TOKEN,
     ) -> "Vocabulary":
         """
-        Loads a `Vocabulary` that was serialized using `save_to_files`.
+        Loads a `Vocabulary` that was serialized either using `save_to_files` or inside
+        a model archive file.
 
         # Parameters
 
         directory : `str`
-            The directory containing the serialized vocabulary.
+            The directory or archive file containing the serialized vocabulary.
         """
         logger.info("Loading token dictionary from %s.", directory)
         padding_token = padding_token if padding_token is not None else DEFAULT_PADDING_TOKEN
         oov_token = oov_token if oov_token is not None else DEFAULT_OOV_TOKEN
+
+        if not os.path.isdir(directory):
+            base_directory = cached_path(directory, extract_archive=True)
+            # For convenience we'll check for a 'vocabulary' subdirectory of the archive.
+            # That way you can use model archives directly.
+            vocab_subdir = os.path.join(base_directory, "vocabulary")
+            if os.path.isdir(vocab_subdir):
+                directory = vocab_subdir
+            elif os.path.isdir(base_directory):
+                directory = base_directory
+            else:
+                raise ConfigurationError(f"{directory} is neither a directory nor an archive")
 
         # We use a lock file to avoid race conditions where multiple processes
         # might be reading/writing from/to the same vocab files at once.
