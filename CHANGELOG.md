@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Reduced the amount of log messages produced by `allennlp.common.file_utils`.
 - Fixed a bug where `PretrainedTransformerEmbedder` parameters appeared to be trainable
   in the log output even when `train_parameters` was set to `False`.
+- Fixed a bug with the sharded dataset reader where it would only read a fraction of the instances
+  in distributed training.
 
 ### Added
 
