@@ -6,7 +6,6 @@ from overrides import overrides
 import torch
 import torch.nn.functional as F
 from transformers import XLNetConfig
-from transformers.modeling_auto import AutoModel
 
 from allennlp.data.tokenizers import PretrainedTransformerTokenizer
 from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
@@ -41,19 +40,19 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
     def __init__(
         self,
         model_name: str,
+        *,
         max_length: int = None,
         sub_module: str = None,
         train_parameters: bool = True,
-        override_weights_file: Optional[str] = None
+        override_weights_file: Optional[str] = None,
+        override_weights_strip_prefix: Optional[str] = None
     ) -> None:
         super().__init__()
-        if override_weights_file is not None:
-            from allennlp.common.file_utils import cached_path
-            override_weights_file = cached_path(override_weights_file)
-            override_weights = torch.load(override_weights_file)
-            self.transformer_model = AutoModel.from_pretrained(model_name, state_dict=override_weights)
-        else:
-            self.transformer_model = AutoModel.from_pretrained(model_name)
+        from allennlp.common import cached_transformers
+
+        self.transformer_model = cached_transformers.get(
+            model_name, override_weights_file, override_weights_strip_prefix
+        )
         self.config = self.transformer_model.config
         if sub_module:
             assert hasattr(self.transformer_model, sub_module)

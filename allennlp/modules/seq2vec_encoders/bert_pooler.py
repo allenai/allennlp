@@ -1,8 +1,9 @@
+from typing import Optional
+
 from overrides import overrides
 
 import torch
 import torch.nn
-from transformers.modeling_auto import AutoModel
 
 from allennlp.modules.seq2vec_encoders.seq2vec_encoder import Seq2VecEncoder
 
@@ -33,11 +34,21 @@ class BertPooler(Seq2VecEncoder):
     """
 
     def __init__(
-        self, pretrained_model: str, requires_grad: bool = True, dropout: float = 0.0
+        self,
+        pretrained_model: str,
+        *,
+        override_weights_file: Optional[str] = None,
+        override_weights_strip_prefix: Optional[str] = None,
+        requires_grad: bool = True,
+        dropout: float = 0.0
     ) -> None:
         super().__init__()
 
-        model = AutoModel.from_pretrained(pretrained_model)
+        from allennlp.common import cached_transformers
+
+        model = cached_transformers.get(
+            pretrained_model, override_weights_file, override_weights_strip_prefix
+        )
 
         self._dropout = torch.nn.Dropout(p=dropout)
 
