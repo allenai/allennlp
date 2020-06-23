@@ -44,9 +44,16 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         max_length: int = None,
         sub_module: str = None,
         train_parameters: bool = True,
+        override_weights_file: Optional[str] = None
     ) -> None:
         super().__init__()
-        self.transformer_model = AutoModel.from_pretrained(model_name)
+        if override_weights_file is not None:
+            from allennlp.common.file_utils import cached_path
+            override_weights_file = cached_path(override_weights_file)
+            override_weights = torch.load(override_weights_file)
+            self.transformer_model = AutoModel.from_pretrained(model_name, state_dict=override_weights)
+        else:
+            self.transformer_model = AutoModel.from_pretrained(model_name)
         self.config = self.transformer_model.config
         if sub_module:
             assert hasattr(self.transformer_model, sub_module)
