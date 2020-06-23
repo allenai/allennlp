@@ -36,8 +36,8 @@ class ShardedDatasetReader(DatasetReader):
         Reader with a read method that accepts a single file.
     """
 
-    def __init__(self, base_reader: DatasetReader, **kwargs,) -> None:
-        super().__init__(**kwargs)
+    def __init__(self, base_reader: DatasetReader, **kwargs) -> None:
+        super().__init__(manual_distributed_sharding=True, **kwargs)
 
         if util.is_distributed():
             self._rank = torch.distributed.get_rank()
