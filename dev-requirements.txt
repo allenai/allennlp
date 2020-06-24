@@ -4,7 +4,7 @@
 flake8
 
 # Static type checking
-mypy==0.781
+mypy==0.782
 
 # Automatic code formatting
 black
@@ -43,7 +43,7 @@ nr.interface<0.0.4
 
 markdown-include==0.5.1
 # Package for the material theme for mkdocs
-mkdocs-material==5.3.0
+mkdocs-material==5.3.2
 
 #### PACKAGE-UPLOAD PACKAGES ####
 
