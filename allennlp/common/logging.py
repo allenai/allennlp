@@ -76,6 +76,8 @@ def prepare_global_logging(
     world_size: int = 1,
     redirect_std: bool = True,
 ) -> None:
+    root_logger = logging.getLogger()
+
     # If we don't have a terminal as stdout,
     # force tqdm to be nicer.
     if not sys.stdout.isatty():
@@ -122,14 +124,21 @@ def prepare_global_logging(
         output_handlers.append(logging.FileHandler(stdout_file))
         error_handlers.append(logging.FileHandler(stderr_file))
 
+        def excepthook(exctype, value, traceback):
+            # For a KeyboardInterrupt, call the original exception handler.
+            if issubclass(exctype, KeyboardInterrupt):
+                sys.__excepthook__(exctype, value, traceback)
+                return
+            root_logger.critical("Uncaught exception", exc_info=(exctype, value, traceback))
+
+        sys.excepthook = excepthook
+
     output_handlers.append(logging.StreamHandler(sys.stdout))
     error_handlers.append(logging.StreamHandler(sys.stderr))
 
     if worker_filter is not None:
         for handler in output_handlers + error_handlers:
             handler.addFilter(worker_filter)
-
-    root_logger = logging.getLogger()
 
     # Remove the already set stream handler in root logger.
     # Not doing this will result in duplicate log messages
