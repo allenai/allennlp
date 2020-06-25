@@ -50,6 +50,7 @@ class TrainingDataLoggerBatchCallback(BatchCallback):
 
 
 class TestTrain(AllenNlpTestCase):
+    @cpu_or_gpu
     def test_train_model(self):
         params = lambda: Params(
             {
@@ -64,7 +65,7 @@ class TestTrain(AllenNlpTestCase):
                 "train_data_path": SEQUENCE_TAGGING_DATA_PATH,
                 "validation_data_path": SEQUENCE_TAGGING_DATA_PATH,
                 "data_loader": {"batch_size": 2},
-                "trainer": {"num_epochs": 2, "optimizer": "adam"},
+                "trainer": {"num_epochs": 2, "optimizer": "adam", "cuda_device": -2},
             }
         )
 

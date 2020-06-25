@@ -56,6 +56,12 @@ class Trainer(Registrable):
         local_rank: int = 0,
         world_size: int = 1,
     ) -> None:
+        if cuda_device == -2:
+            from torch import cuda
+            if cuda.device_count() > 0:
+                cuda_device = 0
+            else:
+                cuda_device = -1
 
         check_for_gpu(cuda_device)
         self._serialization_dir = serialization_dir
