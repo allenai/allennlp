@@ -24,7 +24,7 @@ class BertPooler(Seq2VecEncoder):
 
     pretrained_model : `Union[str, BertModel]`, required
         The pretrained BERT model to use. If this is a string,
-        we will call `BertModel.from_pretrained(pretrained_model)`
+        we will call `transformers.AutoModel.from_pretrained(pretrained_model)`
         and use that.
     requires_grad : `bool`, optional, (default = `True`)
         If True, the weights of the pooler will be updated during training.
@@ -47,12 +47,14 @@ class BertPooler(Seq2VecEncoder):
         from allennlp.common import cached_transformers
 
         model = cached_transformers.get(
-            pretrained_model, override_weights_file, override_weights_strip_prefix
+            pretrained_model, False, override_weights_file, override_weights_strip_prefix
         )
 
         self._dropout = torch.nn.Dropout(p=dropout)
 
-        self.pooler = model.pooler
+        import copy
+
+        self.pooler = copy.deepcopy(model.pooler)
         for param in self.pooler.parameters():
             param.requires_grad = requires_grad
         self._embedding_dim = model.config.hidden_size

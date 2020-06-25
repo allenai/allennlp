@@ -51,7 +51,7 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         from allennlp.common import cached_transformers
 
         self.transformer_model = cached_transformers.get(
-            model_name, override_weights_file, override_weights_strip_prefix
+            model_name, True, override_weights_file, override_weights_strip_prefix
         )
         self.config = self.transformer_model.config
         if sub_module:
