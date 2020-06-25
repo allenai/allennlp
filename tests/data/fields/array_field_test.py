@@ -104,3 +104,12 @@ class TestArrayField(AllenNlpTestCase):
     def test_len_works_with_scalar(self):
         array = ArrayField(numpy.asarray(42))
         assert len(array) == 1
+
+    def test_eq(self):
+        array1 = ArrayField(numpy.asarray([1, 1, 1]))
+        array2 = ArrayField(numpy.asarray([[1, 1, 1], [1, 1, 1]]))
+        array3 = ArrayField(numpy.asarray([1, 1, 2]))
+        array4 = ArrayField(numpy.asarray([1, 1, 1]))
+        assert array1 != array2
+        assert array1 != array3
+        assert array1 == array4
