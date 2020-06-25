@@ -3,6 +3,7 @@ import os
 import pathlib
 import json
 import time
+import shutil
 
 import pytest
 import responses
@@ -252,6 +253,79 @@ class TestFileUtils(AllenNlpTestCase):
             with open_compressed(compressed_file) as f:
                 compressed_lines = [line.strip() for line in f]
             assert compressed_lines == uncompressed_lines
+
+
+class TestCachedPathWithArchive(AllenNlpTestCase):
+    def setup_method(self):
+        super().setup_method()
+        self.tar_file = self.TEST_DIR / "utf-8.tar.gz"
+        shutil.copyfile(
+            self.FIXTURES_ROOT / "utf-8_sample" / "archives" / "utf-8.tar.gz", self.tar_file
+        )
+        self.zip_file = self.TEST_DIR / "utf-8.zip"
+        shutil.copyfile(
+            self.FIXTURES_ROOT / "utf-8_sample" / "archives" / "utf-8.zip", self.zip_file
+        )
+
+    @staticmethod
+    def check_extracted(extracted: str):
+        assert os.path.isdir(extracted)
+        assert os.path.exists(os.path.join(extracted, "dummy.txt"))
+        assert os.path.exists(os.path.join(extracted, "folder/utf-8_sample.txt"))
+
+    def test_cached_path_extract_local_tar(self):
+        extracted = cached_path(self.tar_file, cache_dir=self.TEST_DIR, extract_archive=True)
+        assert os.path.basename(extracted) == "utf-8-tar-gz-extracted"
+        self.check_extracted(extracted)
+
+    def test_cached_path_extract_local_zip(self):
+        extracted = cached_path(self.zip_file, cache_dir=self.TEST_DIR, extract_archive=True)
+        assert os.path.basename(extracted) == "utf-8-zip-extracted"
+        self.check_extracted(extracted)
+
+    @responses.activate
+    def test_cached_path_extract_remote_tar(self):
+        url = "http://fake.datastore.com/utf-8.tar.gz"
+        byt = open(self.tar_file, "rb").read()
+
+        responses.add(
+            responses.GET,
+            url,
+            body=byt,
+            status=200,
+            content_type="application/tar+gzip",
+            stream=True,
+            headers={"Content-Length": str(len(byt))},
+        )
+        responses.add(
+            responses.HEAD, url, status=200, headers={"ETag": "fake-etag"},
+        )
+
+        extracted = cached_path(url, cache_dir=self.TEST_DIR, extract_archive=True)
+        assert extracted.endswith("-extracted")
+        self.check_extracted(extracted)
+
+    @responses.activate
+    def test_cached_path_extract_remote_zip(self):
+        url = "http://fake.datastore.com/utf-8.zip"
+        byt = open(self.zip_file, "rb").read()
+
+        responses.add(
+            responses.GET,
+            url,
+            body=byt,
+            status=200,
+            content_type="application/zip",
+            stream=True,
+            headers={"Content-Length": str(len(byt))},
+        )
+        responses.add(
+            responses.HEAD, url, status=200, headers={"ETag": "fake-etag"},
+        )
+
+        extracted = cached_path(url, cache_dir=self.TEST_DIR, extract_archive=True)
+        assert extracted.endswith("-extracted")
+        self.check_extracted(extracted)
 
 
 class TestCacheFile(AllenNlpTestCase):

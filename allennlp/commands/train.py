@@ -549,6 +549,7 @@ class TrainModel(Registrable):
         dependencies when we call their `construct()` method, which you can see in the code below.
 
         # Parameters
+
         serialization_dir: `str`
             The directory where logs and model archives will be saved.
 

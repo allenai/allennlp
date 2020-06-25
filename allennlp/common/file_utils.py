@@ -12,6 +12,9 @@ from pathlib import Path
 from typing import Optional, Tuple, Union, IO, Callable, Set, List, Iterator, Iterable
 from hashlib import sha256
 from functools import wraps
+from zipfile import ZipFile, is_zipfile
+import tarfile
+import shutil
 
 import boto3
 import botocore
@@ -61,7 +64,7 @@ def url_to_filename(url: str, etag: str = None) -> str:
     return filename
 
 
-def filename_to_url(filename: str, cache_dir: str = None) -> Tuple[str, str]:
+def filename_to_url(filename: str, cache_dir: Union[str, Path] = None) -> Tuple[str, str]:
     """
     Return the url and etag (which may be `None`) stored for `filename`.
     Raise `FileNotFoundError` if `filename` or its stored metadata do not exist.
@@ -85,33 +88,95 @@ def filename_to_url(filename: str, cache_dir: str = None) -> Tuple[str, str]:
     return url, etag
 
 
-def cached_path(url_or_filename: Union[str, Path], cache_dir: str = None) -> str:
+def cached_path(
+    url_or_filename: Union[str, Path],
+    cache_dir: Union[str, Path] = None,
+    extract_archive: bool = False,
+    force_extract: bool = False,
+) -> str:
     """
     Given something that might be a URL (or might be a local path),
     determine which. If it's a URL, download the file and cache it, and
     return the path to the cached file. If it's already a local path,
     make sure the file exists and then return the path.
+
+    # Parameters
+
+    url_or_filename : `Union[str, Path]`
+        A URL or local file to parse and possibly download.
+
+    cache_dir : `Union[str, Path]`, optional (default = `None`)
+        The directory to cache downloads.
+
+    extract_archive : `bool`, optional (default = `False`)
+        If `True`, then zip or tar.gz archives will be automatically extracted.
+        In which case the directory is returned.
+
+    force_extract : `bool`, optional (default = `False`)
+        If `True` and the file is an archive file, it will be extracted regardless
+        of whether or not the extracted directory already exists.
     """
     if cache_dir is None:
         cache_dir = CACHE_DIRECTORY
+
     if isinstance(url_or_filename, Path):
         url_or_filename = str(url_or_filename)
 
     url_or_filename = os.path.expanduser(url_or_filename)
     parsed = urlparse(url_or_filename)
 
+    file_path: str
+    extraction_path: Optional[str] = None
+
     if parsed.scheme in ("http", "https", "s3"):
         # URL, so get it from the cache (downloading if necessary)
-        return get_from_cache(url_or_filename, cache_dir)
+        file_path = get_from_cache(url_or_filename, cache_dir)
+
+        if extract_archive and (is_zipfile(file_path) or tarfile.is_tarfile(file_path)):
+            # This is the path the file should be extracted to.
+            # For example ~/.allennlp/cache/234234.21341 -> ~/.allennlp/cache/234234.21341-extracted
+            extraction_path = file_path + "-extracted"
+
     elif os.path.exists(url_or_filename):
         # File, and it exists.
-        return url_or_filename
+        file_path = url_or_filename
+
+        if extract_archive and (is_zipfile(file_path) or tarfile.is_tarfile(file_path)):
+            # This is the path the file should be extracted to.
+            # For example model.tar.gz -> model-tar-gz-extracted
+            extraction_dir, extraction_name = os.path.split(file_path)
+            extraction_name = extraction_name.replace(".", "-") + "-extracted"
+            extraction_path = os.path.join(extraction_dir, extraction_name)
+
     elif parsed.scheme == "":
         # File, but it doesn't exist.
         raise FileNotFoundError("file {} not found".format(url_or_filename))
+
     else:
         # Something unknown
         raise ValueError("unable to parse {} as a URL or as a local path".format(url_or_filename))
+
+    if extraction_path is not None:
+        # No need to extract again.
+        if os.path.isdir(extraction_path) and os.listdir(extraction_path) and not force_extract:
+            return extraction_path
+
+        # Extract it.
+        with FileLock(file_path + ".lock"):
+            shutil.rmtree(extraction_path, ignore_errors=True)
+            os.makedirs(extraction_path)
+            if is_zipfile(file_path):
+                with ZipFile(file_path, "r") as zip_file:
+                    zip_file.extractall(extraction_path)
+                    zip_file.close()
+            else:
+                tar_file = tarfile.open(file_path)
+                tar_file.extractall(extraction_path)
+                tar_file.close()
+
+        return extraction_path
+
+    return file_path
 
 
 def is_url_or_existing_file(url_or_filename: Union[str, Path, None]) -> bool:
@@ -226,7 +291,7 @@ def _http_get(url: str, temp_file: IO) -> None:
         progress.close()
 
 
-def _find_latest_cached(url: str, cache_dir: str) -> Optional[str]:
+def _find_latest_cached(url: str, cache_dir: Union[str, Path]) -> Optional[str]:
     filename = url_to_filename(url)
     cache_path = os.path.join(cache_dir, filename)
     candidates: List[Tuple[str, float]] = []
@@ -283,7 +348,7 @@ class CacheFile:
 
 
 # TODO(joelgrus): do we want to do checksums or anything like that?
-def get_from_cache(url: str, cache_dir: str = None) -> str:
+def get_from_cache(url: str, cache_dir: Union[str, Path] = None) -> str:
     """
     Given a URL, look for the corresponding dataset in the local cache.
     If it's not there, download it. Then return the path to the cached file.

@@ -7,15 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-### Added
-
-- `BertPooler` can now unwrap and re-wrap extra dimensions if necessary.
-- Added some convenience methods for reading files.
-
 ### Fixed
 
 - Reduced the amount of log messages produced by `allennlp.common.file_utils`.
+- Fixed a bug where `PretrainedTransformerEmbedder` parameters appeared to be trainable
+  in the log output even when `train_parameters` was set to `False`.
+- Fixed a bug with the sharded dataset reader where it would only read a fraction of the instances
+  in distributed training.
 - Put more sensible defaults on the `huggingface_adamw` optimizer.
+
+### Added
+
+- A method to ModelTestCase for running basic model tests when you aren't using config files.
+- `BertPooler` can now unwrap and re-wrap extra dimensions if necessary.
+- Added some convenience methods for reading files.
+- Added an option to `file_utils.cached_path` to automatically extract archives.
+- Added the ability to pass an archive file instead of a local directory to `Vocab.from_files`.
+- Added the ability to pass an archive file instead of a glob to `ShardedDatasetReader`.
+
 
 ## [v1.0.0](https://github.com/allenai/allennlp/releases/tag/v1.0.0) - 2020-06-16
 
@@ -63,6 +72,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A `BatchCallback` for logging CPU and GPU memory usage to tensorboard. This is mainly for debugging
   because using it can cause a significant slowdown in training.
 - Ability to run pretrained transformers as an embedder without training the weights
+- Add Optuna Integrated badge to README.md
 
 ### Changed
 
