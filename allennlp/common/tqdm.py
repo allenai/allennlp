@@ -7,8 +7,6 @@ from time import time
 
 import sys
 
-from allennlp.common import tee
-
 try:
     SHELL = str(type(get_ipython()))  # type:ignore # noqa: F821
 except:  # noqa: E722
@@ -32,6 +30,19 @@ logger = logging.getLogger("tqdm")
 logger.propagate = False
 
 
+def replace_cr_with_newline(message: str) -> str:
+    """
+    TQDM and requests use carriage returns to get the training line to update for each batch
+    without adding more lines to the terminal output. Displaying those in a file won't work
+    correctly, so we'll just make sure that each batch shows up on its one line.
+    """
+    if "\r" in message:
+        message = message.replace("\r", "")
+        if not message or message[-1] != "\n":
+            message += "\n"
+    return message
+
+
 class TqdmToLogsWriter(object):
     def __init__(self):
         self.last_message_written_time = 0
@@ -40,7 +51,7 @@ class TqdmToLogsWriter(object):
         sys.stderr.write(message)
         now = time()
         if now - self.last_message_written_time >= 10 or "100%" in message:
-            message = tee.replace_cr_with_newline(message)
+            message = replace_cr_with_newline(message)
             for message in message.split("\n"):
                 message = message.strip()
                 if len(message) > 0:
