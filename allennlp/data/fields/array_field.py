@@ -63,3 +63,6 @@ class ArrayField(Field[numpy.ndarray]):
 
     def __len__(self):
         return 1 if self.array.ndim == 0 else self.array.shape[0]
+
+    def __eq__(self, other) -> bool:
+        return numpy.array_equal(self.array, other.array)

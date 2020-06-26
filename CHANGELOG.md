@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   in the log output even when `train_parameters` was set to `False`.
 - Fixed a bug with the sharded dataset reader where it would only read a fraction of the instances
   in distributed training.
+- Fixed checking equality of `ArrayField`s.
 
 ### Added
 
