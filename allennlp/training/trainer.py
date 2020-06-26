@@ -51,13 +51,14 @@ class Trainer(Registrable):
     def __init__(
         self,
         serialization_dir: str,
-        cuda_device: Union[int, torch.device] = -1,
+        cuda_device: Union[None, int, torch.device] = None,
         distributed: bool = False,
         local_rank: int = 0,
         world_size: int = 1,
     ) -> None:
-        if cuda_device == -2:
+        if cuda_device is None:
             from torch import cuda
+
             if cuda.device_count() > 0:
                 cuda_device = 0
             else:
