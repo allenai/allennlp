@@ -74,13 +74,6 @@ class Train(Subcommand):
         )
 
         subparser.add_argument(
-            "--file-friendly-logging",
-            action="store_true",
-            default=False,
-            help="outputs tqdm status on separate lines and slows tqdm refresh rate",
-        )
-
-        subparser.add_argument(
             "--node-rank", type=int, default=0, help="rank of this node in the distributed setup"
         )
 
@@ -89,14 +82,6 @@ class Train(Subcommand):
             action="store_true",
             help="do not train a model, but create a vocabulary, show dataset statistics and "
             "other training information",
-        )
-
-        subparser.add_argument(
-            "--no-redirect-std",
-            action="store_false",
-            dest="redirect_std",
-            default=True,  # This is confusing. `True` gets stored into the `redirect_std` variable.
-            help="do not redirect stdout and stderr to the log files. This can be helpful for debugging.",
         )
 
         subparser.set_defaults(func=train_model_from_args)
@@ -112,13 +97,11 @@ def train_model_from_args(args: argparse.Namespace):
         parameter_filename=args.param_path,
         serialization_dir=args.serialization_dir,
         overrides=args.overrides,
-        file_friendly_logging=args.file_friendly_logging,
         recover=args.recover,
         force=args.force,
         node_rank=args.node_rank,
         include_package=args.include_package,
         dry_run=args.dry_run,
-        redirect_std=args.redirect_std,
     )
 
 
@@ -126,13 +109,11 @@ def train_model_from_file(
     parameter_filename: str,
     serialization_dir: str,
     overrides: str = "",
-    file_friendly_logging: bool = False,
     recover: bool = False,
     force: bool = False,
     node_rank: int = 0,
     include_package: List[str] = None,
     dry_run: bool = False,
-    redirect_std: bool = True,
 ) -> Optional[Model]:
     """
     A wrapper around [`train_model`](#train_model) which loads the params from a file.
@@ -146,9 +127,6 @@ def train_model_from_file(
         [`train_model`](#train_model).
     overrides : `str`
         A JSON string that we will use to override values in the input parameter file.
-    file_friendly_logging : `bool`, optional (default=`False`)
-        If `True`, we make our output more friendly to saved model files.  We just pass this
-        along to [`train_model`](#train_model).
     recover : `bool`, optional (default=`False`)
         If `True`, we will try to recover a training run from an existing serialization
         directory.  This is only intended for use when something actually crashed during the middle
@@ -162,8 +140,6 @@ def train_model_from_file(
     dry_run : `bool`, optional (default=`False`)
         Do not train a model, but create a vocabulary, show dataset statistics and other training
         information.
-    redirect_std : `bool`, optional (default=`True`)
-        Whether stderr and stdout should be redirected to the log files.
 
     # Returns
 
@@ -175,26 +151,22 @@ def train_model_from_file(
     return train_model(
         params=params,
         serialization_dir=serialization_dir,
-        file_friendly_logging=file_friendly_logging,
         recover=recover,
         force=force,
         node_rank=node_rank,
         include_package=include_package,
         dry_run=dry_run,
-        redirect_std=redirect_std,
     )
 
 
 def train_model(
     params: Params,
     serialization_dir: str,
-    file_friendly_logging: bool = False,
     recover: bool = False,
     force: bool = False,
     node_rank: int = 0,
     include_package: List[str] = None,
     dry_run: bool = False,
-    redirect_std: bool = True,
 ) -> Optional[Model]:
     """
     Trains the model specified in the given [`Params`](../common/params.md#params) object, using the data
@@ -206,9 +178,6 @@ def train_model(
         A parameter object specifying an AllenNLP Experiment.
     serialization_dir : `str`
         The directory in which to save results and logs.
-    file_friendly_logging : `bool`, optional (default=`False`)
-        If `True`, we add newlines to tqdm output, even on an interactive terminal, and we slow
-        down tqdm's output to only once every 10 seconds.
     recover : `bool`, optional (default=`False`)
         If `True`, we will try to recover a training run from an existing serialization
         directory.  This is only intended for use when something actually crashed during the middle
@@ -222,8 +191,6 @@ def train_model(
     dry_run : `bool`, optional (default=`False`)
         Do not train a model, but create a vocabulary, show dataset statistics and other training
         information.
-    redirect_std : `bool`, optional (default=`True`)
-        Whether stderr and stdout should be redirected to the log files.
 
     # Returns
 
@@ -241,10 +208,8 @@ def train_model(
             process_rank=0,
             params=params,
             serialization_dir=serialization_dir,
-            file_friendly_logging=file_friendly_logging,
             include_package=include_package,
             dry_run=dry_run,
-            redirect_std=redirect_std,
         )
 
         if not dry_run:
@@ -301,7 +266,6 @@ def train_model(
             args=(
                 params.duplicate(),
                 serialization_dir,
-                file_friendly_logging,
                 include_package,
                 dry_run,
                 node_rank,
@@ -309,7 +273,6 @@ def train_model(
                 master_port,
                 world_size,
                 device_ids,
-                redirect_std,
             ),
             nprocs=num_procs,
         )
@@ -325,7 +288,6 @@ def _train_worker(
     process_rank: int,
     params: Params,
     serialization_dir: str,
-    file_friendly_logging: bool = False,
     include_package: List[str] = None,
     dry_run: bool = False,
     node_rank: int = 0,
@@ -333,7 +295,6 @@ def _train_worker(
     master_port: int = 29500,
     world_size: int = 1,
     distributed_device_ids: List[int] = None,
-    redirect_std: bool = True,
 ) -> Optional[Model]:
     """
     Helper to train the configured model/experiment. In distributed mode, this is spawned as a
@@ -348,9 +309,6 @@ def _train_worker(
         A parameter object specifying an AllenNLP Experiment.
     serialization_dir : `str`
         The directory in which to save results and logs.
-    file_friendly_logging : `bool`, optional (default=`False`)
-        If `True`, we add newlines to tqdm output, even on an interactive terminal, and we slow
-        down tqdm's output to only once every 10 seconds.
     include_package : `List[str]`, optional
         In distributed mode, since this function would have been spawned as a separate process,
         the extra imports need to be done again. NOTE: This does not have any effect in single
@@ -368,8 +326,6 @@ def _train_worker(
         The number of processes involved in distributed training.
     distributed_device_ids: `List[str]`, optional
         IDs of the devices used involved in distributed training.
-    redirect_std : `bool`, optional (default=`True`)
-        Whether stderr and stdout should be redirected through to the log files.
 
     # Returns
 
@@ -377,11 +333,7 @@ def _train_worker(
         The model with the best epoch weights or `None` if in distributed training or in dry run.
     """
     prepare_global_logging(
-        serialization_dir,
-        file_friendly_logging,
-        rank=process_rank,
-        world_size=world_size,
-        redirect_std=redirect_std,
+        serialization_dir, rank=process_rank, world_size=world_size,
     )
     common_util.prepare_environment(params)
 

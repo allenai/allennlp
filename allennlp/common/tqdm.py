@@ -2,6 +2,12 @@
 `allennlp.common.tqdm.Tqdm` wraps tqdm so we can add configurable
 global defaults for certain tqdm parameters.
 """
+import logging
+from time import time
+
+import sys
+
+from allennlp.common import tee
 
 try:
     SHELL = str(type(get_ipython()))  # type:ignore # noqa: F821
@@ -13,7 +19,7 @@ if "zmqshell.ZMQInteractiveShell" in SHELL:
 else:
     from tqdm import tqdm as _tqdm
 
-# This is neccesary to stop tqdm from hanging
+# This is necessary to stop tqdm from hanging
 # when exceptions are raised inside iterators.
 # It should have been fixed in 4.2.1, but it still
 # occurs.
@@ -22,29 +28,32 @@ else:
 _tqdm.monitor_interval = 0
 
 
+logger = logging.getLogger("tqdm")
+logger.propagate = False
+
+
+class TqdmToLogsWriter(object):
+    def __init__(self):
+        self.last_message_written_time = 0
+
+    def write(self, message):
+        sys.stderr.write(message)
+        now = time()
+        if now - self.last_message_written_time >= 10 or "100%" in message:
+            message = tee.replace_cr_with_newline(message)
+            for message in message.split("\n"):
+                message = message.strip()
+                if len(message) > 0:
+                    logger.info(message)
+                    self.last_message_written_time = now
+
+    def flush(self):
+        sys.stderr.flush()
+
+
 class Tqdm:
-    # These defaults are the same as the argument defaults in tqdm.
-    default_mininterval: float = 0.1
-
-    @staticmethod
-    def set_default_mininterval(value: float) -> None:
-        Tqdm.default_mininterval = value
-
-    @staticmethod
-    def set_slower_interval(use_slower_interval: bool) -> None:
-        """
-        If `use_slower_interval` is `True`, we will dramatically slow down `tqdm's` default
-        output rate.  `tqdm's` default output rate is great for interactively watching progress,
-        but it is not great for log files.  You might want to set this if you are primarily going
-        to be looking at output through log files, not the terminal.
-        """
-        if use_slower_interval:
-            Tqdm.default_mininterval = 10.0
-        else:
-            Tqdm.default_mininterval = 0.1
-
     @staticmethod
     def tqdm(*args, **kwargs):
-        new_kwargs = {"mininterval": Tqdm.default_mininterval, **kwargs}
+        new_kwargs = {"file": TqdmToLogsWriter(), **kwargs}
 
         return _tqdm(*args, **new_kwargs)

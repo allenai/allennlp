@@ -2,10 +2,6 @@ import logging
 from logging import Filter
 import os
 import sys
-from typing import Optional, List
-
-from allennlp.common.tee import TeeHandler
-from allennlp.common.tqdm import Tqdm
 
 
 class AllenNlpLogger(logging.Logger):
@@ -58,98 +54,30 @@ class ErrorFilter(Filter):
         return record.levelno < logging.ERROR
 
 
-class WorkerLogFilter(Filter):
-    def __init__(self, rank=-1):
-        super().__init__()
-        self._rank = rank
-
-    def filter(self, record):
-        if self._rank != -1:
-            record.msg = f"Rank {self._rank} | {record.msg}"
-        return True
-
-
-def prepare_global_logging(
-    serialization_dir: str,
-    file_friendly_logging: bool,
-    rank: int = 0,
-    world_size: int = 1,
-    redirect_std: bool = True,
-) -> None:
+def prepare_global_logging(serialization_dir: str, rank: int = 0, world_size: int = 1,) -> None:
     root_logger = logging.getLogger()
 
-    # If we don't have a terminal as stdout,
-    # force tqdm to be nicer.
-    if not sys.stdout.isatty():
-        file_friendly_logging = True
-
-    Tqdm.set_slower_interval(file_friendly_logging)
-
-    stdout_file: str
-    stderr_file: str
-    worker_filter: Optional[WorkerLogFilter] = None
+    # create handlers
     if world_size == 1:
-        # This case is not distributed training and hence will stick to the older
-        # log file names
-        stdout_file = os.path.join(serialization_dir, "stdout.log")
-        stderr_file = os.path.join(serialization_dir, "stderr.log")
+        log_file = os.path.join(serialization_dir, "out.log")
+        formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(name)s - %(message)s")
     else:
-        # Create log files with worker ids
-        stdout_file = os.path.join(serialization_dir, f"stdout_worker{rank}.log")
-        stderr_file = os.path.join(serialization_dir, f"stderr_worker{rank}.log")
-
-        # This adds the worker's rank to messages being logged to files.
-        # This will help when combining multiple worker log files using `less` command.
-        worker_filter = WorkerLogFilter(rank)
-
-    output_handlers: List[logging.Handler] = []
-    error_handlers: List[logging.Handler] = []
-    if redirect_std:
-        # Patch stdout/err.
-        stdout_patch = TeeHandler(
-            stdout_file,
-            sys.stdout,
-            file_friendly_terminal_output=file_friendly_logging,
-            silent=rank != 0,  # don't print to terminal from non-master workers.
+        log_file = os.path.join(serialization_dir, f"out_worker{rank}.log")
+        formatter = logging.Formatter(
+            f"{rank} | %(asctime)s - %(levelname)s - %(name)s - %(message)s"
         )
-        sys.stdout = stdout_patch  # type: ignore
-        stderr_patch = TeeHandler(
-            stderr_file,
-            sys.stderr,
-            file_friendly_terminal_output=file_friendly_logging,
-            silent=rank != 0,  # don't print to terminal from non-master workers.
-        )
-        sys.stderr = stderr_patch  # type: ignore
-    else:
-        output_handlers.append(logging.FileHandler(stdout_file))
-        error_handlers.append(logging.FileHandler(stderr_file))
+    file_handler = logging.FileHandler(log_file)
+    stdout_handler = logging.StreamHandler(sys.stdout)
+    stderr_handler = logging.StreamHandler(sys.stderr)
 
-        def excepthook(exctype, value, traceback):
-            # For a KeyboardInterrupt, call the original exception handler.
-            if issubclass(exctype, KeyboardInterrupt):
-                sys.__excepthook__(exctype, value, traceback)
-                return
-            root_logger.critical("Uncaught exception", exc_info=(exctype, value, traceback))
-
-        sys.excepthook = excepthook
-
-    output_handlers.append(logging.StreamHandler(sys.stdout))
-    error_handlers.append(logging.StreamHandler(sys.stderr))
-
-    if worker_filter is not None:
-        for handler in output_handlers + error_handlers:
-            handler.addFilter(worker_filter)
-
-    # Remove the already set stream handler in root logger.
-    # Not doing this will result in duplicate log messages
-    # printed in the console
-    if len(root_logger.handlers) > 0:
-        for handler in root_logger.handlers:
-            root_logger.removeHandler(handler)
-
-    formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(name)s - %(message)s")
-    for handler in output_handlers + error_handlers:
+    handler: logging.Handler
+    for handler in [file_handler, stdout_handler, stderr_handler]:
         handler.setFormatter(formatter)
+
+    # Remove the already set handlers in root logger.
+    # Not doing this will result in duplicate log messages
+    for handler in root_logger.handlers:
+        root_logger.removeHandler(handler)
 
     if os.environ.get("ALLENNLP_DEBUG"):
         LEVEL = logging.DEBUG
@@ -157,17 +85,27 @@ def prepare_global_logging(
         level_name = os.environ.get("ALLENNLP_LOG_LEVEL")
         LEVEL = logging._nameToLevel.get(level_name, logging.INFO)
 
-    for handler in output_handlers:
-        handler.setLevel(LEVEL)
-    for handler in error_handlers:
-        handler.setLevel(logging.ERROR)
+    file_handler.setLevel(LEVEL)
+    stdout_handler.setLevel(LEVEL)
+    stdout_handler.addFilter(ErrorFilter())  # Make sure errors only go to stderr
+    stderr_handler.setLevel(logging.ERROR)
+    root_logger.setLevel(LEVEL)
 
-    # filter out everything at the ERROR or higher level for output stream
-    # so that error messages don't appear twice in the logs.
-    for handler in output_handlers:
-        handler.addFilter(ErrorFilter())
-
-    for handler in output_handlers + error_handlers:
+    # put all the handlers on the root logger
+    for handler in [file_handler, stdout_handler, stderr_handler]:
         root_logger.addHandler(handler)
 
-    root_logger.setLevel(LEVEL)
+    # write uncaught exceptions to the logs
+    def excepthook(exctype, value, traceback):
+        # For a KeyboardInterrupt, call the original exception handler.
+        if issubclass(exctype, KeyboardInterrupt):
+            sys.__excepthook__(exctype, value, traceback)
+            return
+        root_logger.critical("Uncaught exception", exc_info=(exctype, value, traceback))
+
+    sys.excepthook = excepthook
+
+    # also log tqdm
+    from allennlp.common.tqdm import logger as tqdm_logger
+
+    tqdm_logger.addHandler(file_handler)
