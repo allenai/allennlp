@@ -19,7 +19,9 @@
     <a href="https://codecov.io/gh/allenai/allennlp">
         <img alt="Codecov" src="https://codecov.io/gh/allenai/allennlp/branch/master/graph/badge.svg">
     </a>
-</p>
+    <a href="https://optuna.org">
+        <img alt="Optuna" src="https://img.shields.io/badge/Optuna-integrated-blue">
+    </a>
 <br/>
 
 ## Quick Links
@@ -47,6 +49,10 @@ created a couple of template repositories that you can use as a starting place:
   things that are currently a little harder in this setup (loading a saved model, and using
   distributed training), but except for those its functionality is equivalent to the config files
   setup.
+
+In addition, there are external tutorials:
+
+* [Hyperparameter optimization for AllenNLP using Optuna](https://medium.com/optuna/hyperparameter-optimization-for-allennlp-using-optuna-54b4bfecd78b)
 
 ## Package Overview
 

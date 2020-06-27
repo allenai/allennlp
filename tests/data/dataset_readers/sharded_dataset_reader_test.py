@@ -1,4 +1,7 @@
 from collections import Counter
+import glob
+import os
+import tarfile
 from typing import Tuple
 
 from allennlp.common.testing import AllenNlpTestCase
@@ -33,12 +36,21 @@ class TestShardedDatasetReader(AllenNlpTestCase):
 
         self.identical_files_glob = str(self.TEST_DIR / "identical_*.tsv")
 
-    def test_sharded_read(self):
-        reader = ShardedDatasetReader(base_reader=self.base_reader)
+        # Also create an archive with all of these files to ensure that we can
+        # pass the archive directory.
+        current_dir = os.getcwd()
+        os.chdir(self.TEST_DIR)
+        self.archive_filename = self.TEST_DIR / "all_data.tar.gz"
+        with tarfile.open(self.archive_filename, "w:gz") as archive:
+            for file_path in glob.glob("identical_*.tsv"):
+                archive.add(file_path)
+        os.chdir(current_dir)
 
+        self.reader = ShardedDatasetReader(base_reader=self.base_reader)
+
+    def read_and_check_instances(self, filepath: str):
         all_instances = []
-
-        for instance in reader.read(self.identical_files_glob):
+        for instance in self.reader.read(filepath):
             all_instances.append(instance)
 
         # 100 files * 4 sentences / file
@@ -52,3 +64,9 @@ class TestShardedDatasetReader(AllenNlpTestCase):
         assert counts[("dogs", "are", "animals", ".", "N", "V", "N", "N")] == 100
         assert counts[("snakes", "are", "animals", ".", "N", "V", "N", "N")] == 100
         assert counts[("birds", "are", "animals", ".", "N", "V", "N", "N")] == 100
+
+    def test_sharded_read_glob(self):
+        self.read_and_check_instances(self.identical_files_glob)
+
+    def test_sharded_read_archive(self):
+        self.read_and_check_instances(str(self.archive_filename))
