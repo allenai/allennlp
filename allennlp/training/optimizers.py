@@ -265,11 +265,11 @@ class HuggingfaceAdamWOptimizer(Optimizer, transformers.AdamW):
         self,
         model_parameters: List[Tuple[str, torch.nn.Parameter]],
         parameter_groups: List[Tuple[List[str], Dict[str, Any]]] = None,
-        lr: float = 0.001,
+        lr: float = 1e-5,
         betas: Tuple[float, float] = (0.9, 0.999),
-        eps: float = 1e-06,
+        eps: float = 1e-08,
         weight_decay: float = 0.0,
-        correct_bias: bool = False,
+        correct_bias: bool = True,
     ):
         super().__init__(
             params=make_parameter_groups(model_parameters, parameter_groups),

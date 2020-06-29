@@ -220,7 +220,7 @@ class TestPretrainedTransformerEmbedder(AllenNlpTestCase):
         assert (unfolded_embeddings_out == unfolded_embeddings).all()
 
     def test_encoder_decoder_model(self):
-        token_embedder = PretrainedTransformerEmbedder("facebook/bart-large", sub_module="encoder")
+        token_embedder = PretrainedTransformerEmbedder("bart-large", sub_module="encoder")
         token_ids = torch.LongTensor([[1, 2, 3], [2, 3, 4]])
         mask = torch.ones_like(token_ids).bool()
         token_embedder(token_ids, mask)

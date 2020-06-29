@@ -1,5 +1,4 @@
-from transformers.tokenization_auto import AutoTokenizer
-
+from allennlp.common import cached_transformers
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Token, Vocabulary
 from allennlp.data.token_indexers import PretrainedTransformerMismatchedIndexer
@@ -7,7 +6,7 @@ from allennlp.data.token_indexers import PretrainedTransformerMismatchedIndexer
 
 class TestPretrainedTransformerMismatchedIndexer(AllenNlpTestCase):
     def test_bert(self):
-        tokenizer = AutoTokenizer.from_pretrained("bert-base-cased")
+        tokenizer = cached_transformers.get_tokenizer("bert-base-cased")
         indexer = PretrainedTransformerMismatchedIndexer("bert-base-cased")
         text = ["AllenNLP", "is", "great"]
         tokens = tokenizer.tokenize(" ".join(["[CLS]"] + text + ["[SEP]"]))
@@ -41,7 +40,7 @@ class TestPretrainedTransformerMismatchedIndexer(AllenNlpTestCase):
             assert padded_tokens[key].tolist() == expected_value
 
     def test_long_sequence_splitting(self):
-        tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
+        tokenizer = cached_transformers.get_tokenizer("bert-base-uncased")
         indexer = PretrainedTransformerMismatchedIndexer("bert-base-uncased", max_length=4)
         text = ["AllenNLP", "is", "great"]
         tokens = tokenizer.tokenize(" ".join(["[CLS]"] + text + ["[SEP]"]))
