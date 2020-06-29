@@ -16,16 +16,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   in distributed training.
 - Fixed checking equality of `ArrayField`s.
 - Fixed a bug where `NamespaceSwappingField` did not work correctly with `.empty_field()`.
+- Put more sensible defaults on the `huggingface_adamw` optimizer.
 
 ### Added
 
 - A method to ModelTestCase for running basic model tests when you aren't using config files.
-
-### Added
-
+- `BertPooler` can now unwrap and re-wrap extra dimensions if necessary.
+- Added some convenience methods for reading files.
 - Added an option to `file_utils.cached_path` to automatically extract archives.
 - Added the ability to pass an archive file instead of a local directory to `Vocab.from_files`.
 - Added the ability to pass an archive file instead of a glob to `ShardedDatasetReader`.
+
 
 ## [v1.0.0](https://github.com/allenai/allennlp/releases/tag/v1.0.0) - 2020-06-16
 

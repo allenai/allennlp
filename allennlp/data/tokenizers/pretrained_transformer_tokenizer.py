@@ -3,7 +3,6 @@ from typing import Any, Dict, List, Optional, Tuple, Iterable
 
 from overrides import overrides
 from transformers import PreTrainedTokenizer
-from transformers.tokenization_auto import AutoTokenizer
 
 from allennlp.common.util import sanitize_wordpiece
 from allennlp.data.tokenizers.token import Token
@@ -74,7 +73,9 @@ class PretrainedTransformerTokenizer(Tokenizer):
         tokenizer_kwargs.setdefault("use_fast", True)
         # Note: Just because we request a fast tokenizer doesn't mean we get one.
 
-        self.tokenizer = AutoTokenizer.from_pretrained(
+        from allennlp.common import cached_transformers
+
+        self.tokenizer = cached_transformers.get_tokenizer(
             model_name, add_special_tokens=False, **tokenizer_kwargs
         )
 
@@ -114,7 +115,9 @@ class PretrainedTransformerTokenizer(Tokenizer):
         self.single_sequence_token_type_id = None
 
         # Reverse-engineer the tokenizer for two sequences
-        tokenizer_with_special_tokens = AutoTokenizer.from_pretrained(
+        from allennlp.common import cached_transformers
+
+        tokenizer_with_special_tokens = cached_transformers.get_tokenizer(
             model_name, add_special_tokens=True, **tokenizer_kwargs
         )
         dummy_output = tokenizer_with_special_tokens.encode_plus(

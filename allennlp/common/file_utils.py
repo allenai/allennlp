@@ -9,7 +9,7 @@ import tempfile
 import json
 from urllib.parse import urlparse
 from pathlib import Path
-from typing import Optional, Tuple, Union, IO, Callable, Set, List
+from typing import Optional, Tuple, Union, IO, Callable, Set, List, Iterator, Iterable
 from hashlib import sha256
 from functools import wraps
 from zipfile import ZipFile, is_zipfile
@@ -458,3 +458,16 @@ def open_compressed(
 
         open_fn = bz2.open
     return open_fn(filename, mode=mode, encoding=encoding, **kwargs)
+
+
+def text_lines_from_file(filename: Union[str, Path], strip_lines: bool = True) -> Iterator[str]:
+    with open_compressed(filename, "rt", encoding="UTF-8", errors="replace") as p:
+        if strip_lines:
+            for line in p:
+                yield line.strip()
+        else:
+            yield from p
+
+
+def json_lines_from_file(filename: Union[str, Path]) -> Iterable[Union[list, dict]]:
+    return (json.loads(line) for line in text_lines_from_file(filename))

@@ -1,5 +1,4 @@
-from transformers.tokenization_auto import AutoTokenizer
-
+from allennlp.common import cached_transformers
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Vocabulary
 from allennlp.data.token_indexers import PretrainedTransformerIndexer
@@ -8,7 +7,7 @@ from allennlp.data.tokenizers import PretrainedTransformerTokenizer
 
 class TestPretrainedTransformerIndexer(AllenNlpTestCase):
     def test_as_array_produces_token_sequence_bert_uncased(self):
-        tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
+        tokenizer = cached_transformers.get_tokenizer("bert-base-uncased")
         allennlp_tokenizer = PretrainedTransformerTokenizer("bert-base-uncased")
         indexer = PretrainedTransformerIndexer(model_name="bert-base-uncased")
         string_specials = "[CLS] AllenNLP is great [SEP]"
@@ -22,7 +21,7 @@ class TestPretrainedTransformerIndexer(AllenNlpTestCase):
         assert indexed["token_ids"] == expected_ids
 
     def test_as_array_produces_token_sequence_bert_cased(self):
-        tokenizer = AutoTokenizer.from_pretrained("bert-base-cased")
+        tokenizer = cached_transformers.get_tokenizer("bert-base-cased")
         allennlp_tokenizer = PretrainedTransformerTokenizer("bert-base-cased")
         indexer = PretrainedTransformerIndexer(model_name="bert-base-cased")
         string_specials = "[CLS] AllenNLP is great [SEP]"
@@ -36,7 +35,7 @@ class TestPretrainedTransformerIndexer(AllenNlpTestCase):
         assert indexed["token_ids"] == expected_ids
 
     def test_as_array_produces_token_sequence_bert_cased_sentence_pair(self):
-        tokenizer = AutoTokenizer.from_pretrained("bert-base-cased")
+        tokenizer = cached_transformers.get_tokenizer("bert-base-cased")
         allennlp_tokenizer = PretrainedTransformerTokenizer(
             "bert-base-cased", add_special_tokens=False
         )
@@ -53,7 +52,7 @@ class TestPretrainedTransformerIndexer(AllenNlpTestCase):
         assert indexed["token_ids"] == expected_ids
 
     def test_as_array_produces_token_sequence_roberta(self):
-        tokenizer = AutoTokenizer.from_pretrained("roberta-base")
+        tokenizer = cached_transformers.get_tokenizer("roberta-base")
         allennlp_tokenizer = PretrainedTransformerTokenizer("roberta-base")
         indexer = PretrainedTransformerIndexer(model_name="roberta-base")
         string_specials = "<s> AllenNLP is great </s>"
@@ -67,7 +66,7 @@ class TestPretrainedTransformerIndexer(AllenNlpTestCase):
         assert indexed["token_ids"] == expected_ids
 
     def test_as_array_produces_token_sequence_roberta_sentence_pair(self):
-        tokenizer = AutoTokenizer.from_pretrained("roberta-base")
+        tokenizer = cached_transformers.get_tokenizer("roberta-base")
         allennlp_tokenizer = PretrainedTransformerTokenizer(
             "roberta-base", add_special_tokens=False
         )
@@ -86,7 +85,7 @@ class TestPretrainedTransformerIndexer(AllenNlpTestCase):
     def test_transformers_vocab_sizes(self):
         def check_vocab_size(model_name: str):
             namespace = "tags"
-            tokenizer = AutoTokenizer.from_pretrained(model_name)
+            tokenizer = cached_transformers.get_tokenizer(model_name)
             allennlp_tokenizer = PretrainedTransformerTokenizer(model_name)
             indexer = PretrainedTransformerIndexer(model_name=model_name, namespace=namespace)
             allennlp_tokens = allennlp_tokenizer.tokenize("AllenNLP is great!")
@@ -102,7 +101,7 @@ class TestPretrainedTransformerIndexer(AllenNlpTestCase):
 
     def test_transformers_vocabs_added_correctly(self):
         namespace, model_name = "tags", "roberta-base"
-        tokenizer = AutoTokenizer.from_pretrained(model_name)
+        tokenizer = cached_transformers.get_tokenizer(model_name)
         allennlp_tokenizer = PretrainedTransformerTokenizer(model_name)
         indexer = PretrainedTransformerIndexer(model_name=model_name, namespace=namespace)
         allennlp_tokens = allennlp_tokenizer.tokenize("AllenNLP is great!")
@@ -142,7 +141,7 @@ class TestPretrainedTransformerIndexer(AllenNlpTestCase):
             assert padded_tokens["token_ids"][-padding_length:].tolist() == padding_suffix
 
     def test_long_sequence_splitting(self):
-        tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
+        tokenizer = cached_transformers.get_tokenizer("bert-base-uncased")
         allennlp_tokenizer = PretrainedTransformerTokenizer("bert-base-uncased")
         indexer = PretrainedTransformerIndexer(model_name="bert-base-uncased", max_length=4)
         string_specials = "[CLS] AllenNLP is great [SEP]"

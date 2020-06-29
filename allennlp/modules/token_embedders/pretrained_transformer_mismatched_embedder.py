@@ -35,7 +35,7 @@ class PretrainedTransformerMismatchedEmbedder(TokenEmbedder):
         super().__init__()
         # The matched version v.s. mismatched
         self._matched_embedder = PretrainedTransformerEmbedder(
-            model_name, max_length, train_parameters=train_parameters
+            model_name, max_length=max_length, train_parameters=train_parameters
         )
 
     @overrides
