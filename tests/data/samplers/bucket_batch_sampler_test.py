@@ -4,7 +4,7 @@ from allennlp.data.batch import Batch
 from allennlp.data.fields import TextField
 from allennlp.data.samplers import BucketBatchSampler
 from allennlp.data.dataset_readers.dataset_reader import AllennlpDataset
-from allennlp.data.dataloader import DataLoader
+from allennlp.data.dataloader import PyTorchDataLoader
 
 from .sampler_test import SamplerTest
 
@@ -96,7 +96,9 @@ class TestBucketSampler(SamplerTest):
         )
         # We use a custom collate_fn for testing, which doesn't actually create tensors,
         # just the allennlp Batches.
-        dataloader = DataLoader(dataset, batch_sampler=sampler, collate_fn=lambda x: Batch(x))
+        dataloader = PyTorchDataLoader(
+            dataset, batch_sampler=sampler, collate_fn=lambda x: Batch(x)
+        )
         batches = [batch for batch in iter(dataloader)]
         stats = self.get_batches_stats(batches)
 
@@ -111,7 +113,9 @@ class TestBucketSampler(SamplerTest):
         sampler = BucketBatchSampler(dataset, batch_size=2, padding_noise=0, sorting_keys=["text"])
         # We use a custom collate_fn for testing, which doesn't actually create tensors,
         # just the allennlp Batches.
-        dataloader = DataLoader(dataset, batch_sampler=sampler, collate_fn=lambda x: Batch(x))
+        dataloader = PyTorchDataLoader(
+            dataset, batch_sampler=sampler, collate_fn=lambda x: Batch(x)
+        )
 
         assert len(dataloader) == 3
 
@@ -122,6 +126,8 @@ class TestBucketSampler(SamplerTest):
         )
         # We use a custom collate_fn for testing, which doesn't actually create tensors,
         # just the allennlp Batches.
-        dataloader = DataLoader(dataset, batch_sampler=sampler, collate_fn=lambda x: Batch(x))
+        dataloader = PyTorchDataLoader(
+            dataset, batch_sampler=sampler, collate_fn=lambda x: Batch(x)
+        )
 
         assert len(dataloader) == 2

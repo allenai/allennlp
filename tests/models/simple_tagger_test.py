@@ -7,7 +7,7 @@ from allennlp.common.testing import ModelTestCase
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import Params
 from allennlp.data.dataset_readers import DatasetReader
-from allennlp.data import DataLoader
+from allennlp.data import PyTorchDataLoader
 from allennlp.models import Model
 from allennlp.training import GradientDescentTrainer, Trainer
 
@@ -55,7 +55,7 @@ class SimpleTaggerTest(ModelTestCase):
         penalty = self.model.get_regularization_penalty()
         assert penalty == 0
 
-        data_loader = DataLoader(self.instances, batch_size=32)
+        data_loader = PyTorchDataLoader(self.instances, batch_size=32)
         trainer = GradientDescentTrainer(self.model, None, data_loader)  # optimizer,
 
         # You get a RuntimeError if you call `model.forward` twice on the same inputs.
@@ -96,7 +96,7 @@ class SimpleTaggerRegularizationTest(ModelTestCase):
         self.set_up_model(param_file, self.FIXTURES_ROOT / "data" / "sequence_tagging.tsv")
         params = Params.from_file(param_file)
         self.reader = DatasetReader.from_params(params["dataset_reader"])
-        self.data_loader = DataLoader.from_params(
+        self.data_loader = PyTorchDataLoader.from_params(
             dataset=self.instances, params=params["data_loader"]
         )
         self.trainer = Trainer.from_params(

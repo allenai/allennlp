@@ -1,4 +1,4 @@
-from allennlp.data.dataloader import DataLoader, allennlp_collate
+from allennlp.data.dataloader import DataLoader, PyTorchDataLoader, allennlp_collate
 from allennlp.data.dataset_readers.dataset_reader import (
     DatasetReader,
     AllennlpDataset,
