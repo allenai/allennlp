@@ -43,7 +43,7 @@ nr.interface<0.0.4
 
 markdown-include==0.5.1
 # Package for the material theme for mkdocs
-mkdocs-material==5.3.3
+mkdocs-material==5.4.0
 
 #### PACKAGE-UPLOAD PACKAGES ####
 
