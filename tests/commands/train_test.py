@@ -66,10 +66,8 @@ class TrainingDeviceLoggerBatchCallback(BatchCallback):
         is_master: bool,
     ) -> None:
         global _seen_training_devices
-        for batches in batch_inputs:
-            for tensor in batches.values():
-                if hasattr(tensor, "device"):
-                    _seen_training_devices.add(tensor.device)
+        for tensor in trainer.model.parameters():
+            _seen_training_devices.add(tensor.device)
 
 
 class TestTrain(AllenNlpTestCase):
