@@ -17,7 +17,7 @@ class LinearWithWarmup(LearningRateScheduler):
         num_epochs: int,
         num_steps_per_epoch: int = None,
         warmup_steps: int = 100,
-        last_epoch: int = -1
+        last_epoch: int = -1,
     ) -> None:
         self.warmup_steps = warmup_steps
         self.num_steps = num_epochs * num_steps_per_epoch
@@ -38,7 +38,7 @@ class LinearWithWarmup(LearningRateScheduler):
     def get_values(self):
         step = max(self.last_epoch, 0)
         if step < self.warmup_steps:
-            scale = (step / self.warmup_steps)
+            scale = step / self.warmup_steps
         else:
             fraction_complete = (step - self.warmup_steps) / (self.num_steps - self.warmup_steps)
             scale = 1 - fraction_complete
