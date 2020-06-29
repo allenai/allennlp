@@ -25,15 +25,14 @@ def get(
     """
     Returns a transformer model from the cache.
 
-    Note: If you want to re-train the weights you get from here, you should
-
     # Parameters
 
     model_name : `str`
         The name of the transformer, for example `"bert-base-cased"`
     make_copy : `bool`
         If this is `True`, return a copy of the model instead of the cached model itself. If you want to modify the
-        parameters of the model, set this to `True`.
+        parameters of the model, set this to `True`. If you want only part of the model, set this to `False`, but
+        make sure to `copy.deepcopy()` the bits you are keeping.
     override_weights_file : `str`, optional
         If set, this specifies a file from which to load alternate weights that override the
         weights from huggingface. The file is expected to contain a PyTorch `state_dict`, created
