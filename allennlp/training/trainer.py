@@ -1023,7 +1023,7 @@ class GradientDescentTrainer(Trainer):
         patience: int = None,
         validation_metric: str = "-loss",
         num_epochs: int = 20,
-        cuda_device: int = -1,
+        cuda_device: Optional[Union[int, torch.device]] = None,
         grad_norm: float = None,
         grad_clipping: float = None,
         distributed: bool = None,
@@ -1055,6 +1055,13 @@ class GradientDescentTrainer(Trainer):
         If you're not using `FromParams`, you can just construct these arguments in the right order
         yourself in your code and call the constructor directly.
         """
+        if cuda_device is None:
+            from torch import cuda
+
+            if cuda.device_count() > 0:
+                cuda_device = 0
+            else:
+                cuda_device = -1
 
         check_for_gpu(cuda_device)
         if cuda_device >= 0:
