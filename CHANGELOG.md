@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed a bug with the sharded dataset reader where it would only read a fraction of the instances
   in distributed training.
 - Fixed checking equality of `ArrayField`s.
+- Fixed a bug where `NamespaceSwappingField` did not work correctly with `.empty_field()`.
 
 ### Added
 
