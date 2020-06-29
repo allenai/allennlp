@@ -51,7 +51,7 @@ class Trainer(Registrable):
     def __init__(
         self,
         serialization_dir: str,
-        cuda_device: Union[None, int, torch.device] = None,
+        cuda_device: Optional[Union[int, torch.device]] = None,
         distributed: bool = False,
         local_rank: int = 0,
         world_size: int = 1,
@@ -342,7 +342,7 @@ class GradientDescentTrainer(Trainer):
         num_epochs: int = 20,
         serialization_dir: Optional[str] = None,
         checkpointer: Checkpointer = None,
-        cuda_device: int = -1,
+        cuda_device: Optional[Union[int, torch.device]] = None,
         grad_norm: Optional[float] = None,
         grad_clipping: Optional[float] = None,
         learning_rate_scheduler: Optional[LearningRateScheduler] = None,
