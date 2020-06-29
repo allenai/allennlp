@@ -92,11 +92,16 @@ class TestTrain(AllenNlpTestCase):
             train_model(params(), serialization_dir=os.path.join(self.TEST_DIR, "test_train_model"))
 
         # But it's OK if serialization dir exists and --recover is specified:
-        train_model(
+        model = train_model(
             params(),
             serialization_dir=os.path.join(self.TEST_DIR, "test_train_model"),
             recover=True,
         )
+        model_device = next(model.parameters()).device
+        if torch.cuda.device_count() == 0:
+            assert model_device.type == "cpu"
+        else:
+            assert model_device.type == "cuda"
 
         # It's ok serialization dir exists and --force is specified (it will be deleted):
         train_model(
