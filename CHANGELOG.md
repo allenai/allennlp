@@ -27,6 +27,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added the ability to pass an archive file instead of a local directory to `Vocab.from_files`.
 - Added the ability to pass an archive file instead of a glob to `ShardedDatasetReader`.
 
+### Changed
+
+- `allennlp.data.DataLoader` is now an abstract registrable class. The default implementation
+remains the same, but was renamed to is `allennlp.data.PyTorchDataLoader`.
+
 
 ## [v1.0.0](https://github.com/allenai/allennlp/releases/tag/v1.0.0) - 2020-06-16
 
