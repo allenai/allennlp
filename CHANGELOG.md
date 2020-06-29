@@ -30,7 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - `allennlp.data.DataLoader` is now an abstract registrable class. The default implementation
-remains the same, but was renamed to is `allennlp.data.PyTorchDataLoader`.
+remains the same, but was renamed to `allennlp.data.PyTorchDataLoader`.
 
 
 ## [v1.0.0](https://github.com/allenai/allennlp/releases/tag/v1.0.0) - 2020-06-16
