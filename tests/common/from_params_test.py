@@ -6,7 +6,7 @@ import torch
 from allennlp.common import Lazy, Params, Registrable
 from allennlp.common.from_params import FromParams, takes_arg, remove_optional, create_kwargs
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.data import PyTorchDataLoader, DatasetReader, Tokenizer
+from allennlp.data import DataLoader, DatasetReader, Tokenizer
 from allennlp.models import Model
 from allennlp.models.archival import load_archive
 from allennlp.common.checks import ConfigurationError
@@ -598,9 +598,7 @@ class TestFromParams(AllenNlpTestCase):
 
         class TestLoader(Registrable):
             @classmethod
-            def from_partial_objects(
-                cls, data_loader: Lazy[PyTorchDataLoader]
-            ) -> PyTorchDataLoader:
+            def from_partial_objects(cls, data_loader: Lazy[DataLoader]) -> DataLoader:
                 return data_loader.construct(dataset=dataset)
 
         TestLoader.register("test", constructor="from_partial_objects")(TestLoader)

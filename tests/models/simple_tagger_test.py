@@ -7,7 +7,7 @@ from allennlp.common.testing import ModelTestCase
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import Params
 from allennlp.data.dataset_readers import DatasetReader
-from allennlp.data import PyTorchDataLoader
+from allennlp.data import DataLoader, PyTorchDataLoader
 from allennlp.models import Model
 from allennlp.training import GradientDescentTrainer, Trainer
 
@@ -96,7 +96,7 @@ class SimpleTaggerRegularizationTest(ModelTestCase):
         self.set_up_model(param_file, self.FIXTURES_ROOT / "data" / "sequence_tagging.tsv")
         params = Params.from_file(param_file)
         self.reader = DatasetReader.from_params(params["dataset_reader"])
-        self.data_loader = PyTorchDataLoader.from_params(
+        self.data_loader = DataLoader.from_params(
             dataset=self.instances, params=params["data_loader"]
         )
         self.trainer = Trainer.from_params(
