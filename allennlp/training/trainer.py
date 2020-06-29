@@ -208,7 +208,7 @@ class GradientDescentTrainer(Trainer):
         model to be optimized.
 
     data_loader : `DataLoader`, required.
-        A pytorch `DataLoader` containing your `Dataset`, yielding padded indexed batches.
+        A `DataLoader` containing your `Dataset`, yielding padded indexed batches.
 
         In a typical AllenNLP configuration file, this parameter does not get an entry under the
         "trainer", it gets constructed separately.
@@ -328,10 +328,10 @@ class GradientDescentTrainer(Trainer):
         self,
         model: Model,
         optimizer: torch.optim.Optimizer,
-        data_loader: torch.utils.data.DataLoader,
+        data_loader: DataLoader,
         patience: Optional[int] = None,
         validation_metric: str = "-loss",
-        validation_data_loader: torch.utils.data.DataLoader = None,
+        validation_data_loader: DataLoader = None,
         num_epochs: int = 20,
         serialization_dir: Optional[str] = None,
         checkpointer: Checkpointer = None,
