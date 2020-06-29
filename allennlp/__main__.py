@@ -16,6 +16,7 @@ logging.basicConfig(format="%(asctime)s - %(levelname)s - %(name)s - %(message)s
 # important to say.
 logging.getLogger("filelock").setLevel(logging.WARNING)
 
+
 # transformers emits an annoying log message everytime it's imported, so we filter that
 # one message out specifically.
 def _transformers_log_filter(record):
