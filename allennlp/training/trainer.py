@@ -51,11 +51,18 @@ class Trainer(Registrable):
     def __init__(
         self,
         serialization_dir: str,
-        cuda_device: Union[int, torch.device] = -1,
+        cuda_device: Optional[Union[int, torch.device]] = None,
         distributed: bool = False,
         local_rank: int = 0,
         world_size: int = 1,
     ) -> None:
+        if cuda_device is None:
+            from torch import cuda
+
+            if cuda.device_count() > 0:
+                cuda_device = 0
+            else:
+                cuda_device = -1
 
         check_for_gpu(cuda_device)
         self._serialization_dir = serialization_dir
@@ -335,7 +342,7 @@ class GradientDescentTrainer(Trainer):
         num_epochs: int = 20,
         serialization_dir: Optional[str] = None,
         checkpointer: Checkpointer = None,
-        cuda_device: int = -1,
+        cuda_device: Optional[Union[int, torch.device]] = None,
         grad_norm: Optional[float] = None,
         grad_clipping: Optional[float] = None,
         learning_rate_scheduler: Optional[LearningRateScheduler] = None,
@@ -1016,7 +1023,7 @@ class GradientDescentTrainer(Trainer):
         patience: int = None,
         validation_metric: str = "-loss",
         num_epochs: int = 20,
-        cuda_device: int = -1,
+        cuda_device: Optional[Union[int, torch.device]] = None,
         grad_norm: float = None,
         grad_clipping: float = None,
         distributed: bool = None,
@@ -1048,6 +1055,13 @@ class GradientDescentTrainer(Trainer):
         If you're not using `FromParams`, you can just construct these arguments in the right order
         yourself in your code and call the constructor directly.
         """
+        if cuda_device is None:
+            from torch import cuda
+
+            if cuda.device_count() > 0:
+                cuda_device = 0
+            else:
+                cuda_device = -1
 
         check_for_gpu(cuda_device)
         if cuda_device >= 0:
