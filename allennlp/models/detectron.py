@@ -14,10 +14,17 @@ class Detectron(Model):
         **kwargs,
     ) -> None:
         super().__init__(vocab, **kwargs)
-        from torch.nn import Embedding
-        self.embedding = Embedding(10, 10)  # dummy
+        from detectron2.model_zoo import model_zoo
+        self.detectron_model = model_zoo.get("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_1x.yaml")
+        from detectron2.utils.events import EventStorage
+        self.detectron_event_storage = EventStorage()
 
     def forward(  # type: ignore
         self, image: Any
     ) -> Dict[str, torch.Tensor]:
+        with torch.no_grad():
+            self.detectron_event_storage.step()
+            self.detectron_model.eval()
+            with self.detectron_event_storage:
+                r = self.detectron_model.inference(image)
         return {"loss": torch.tensor(0.0)}
