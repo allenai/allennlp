@@ -1,4 +1,5 @@
 import argparse
+import copy
 import json
 
 import logging
@@ -49,24 +50,46 @@ class TrainingDataLoggerBatchCallback(BatchCallback):
                     logger.info(f"First word from training data: '{metadata['words'][0]}'")  # type: ignore
 
 
+_seen_training_devices = set()
+
+
+@BatchCallback.register("training_device_logger")
+class TrainingDeviceLoggerBatchCallback(BatchCallback):
+    def __call__(  # type: ignore
+        self,
+        trainer: "GradientDescentTrainer",
+        batch_inputs: List[TensorDict],
+        batch_outputs: List[Dict[str, Any]],
+        epoch: int,
+        batch_number: int,
+        is_training: bool,
+        is_master: bool,
+    ) -> None:
+        global _seen_training_devices
+        for tensor in trainer.model.parameters():
+            _seen_training_devices.add(tensor.device)
+
+
 class TestTrain(AllenNlpTestCase):
-    def test_train_model(self):
-        params = lambda: Params(
-            {
-                "model": {
-                    "type": "simple_tagger",
-                    "text_field_embedder": {
-                        "token_embedders": {"tokens": {"type": "embedding", "embedding_dim": 5}}
-                    },
-                    "encoder": {"type": "lstm", "input_size": 5, "hidden_size": 7, "num_layers": 2},
+    DEFAULT_PARAMS = Params(
+        {
+            "model": {
+                "type": "simple_tagger",
+                "text_field_embedder": {
+                    "token_embedders": {"tokens": {"type": "embedding", "embedding_dim": 5}}
                 },
-                "dataset_reader": {"type": "sequence_tagging"},
-                "train_data_path": SEQUENCE_TAGGING_DATA_PATH,
-                "validation_data_path": SEQUENCE_TAGGING_DATA_PATH,
-                "data_loader": {"batch_size": 2},
-                "trainer": {"num_epochs": 2, "optimizer": "adam"},
-            }
-        )
+                "encoder": {"type": "lstm", "input_size": 5, "hidden_size": 7, "num_layers": 2},
+            },
+            "dataset_reader": {"type": "sequence_tagging"},
+            "train_data_path": SEQUENCE_TAGGING_DATA_PATH,
+            "validation_data_path": SEQUENCE_TAGGING_DATA_PATH,
+            "data_loader": {"batch_size": 2},
+            "trainer": {"num_epochs": 2, "optimizer": "adam"},
+        }
+    )
+
+    def test_train_model(self):
+        params = lambda: copy.deepcopy(self.DEFAULT_PARAMS)
 
         train_model(params(), serialization_dir=os.path.join(self.TEST_DIR, "test_train_model"))
 
@@ -110,6 +133,57 @@ class TestTrain(AllenNlpTestCase):
                 force=True,
                 recover=True,
             )
+
+    @cpu_or_gpu
+    def test_detect_gpu(self):
+        import copy
+
+        params = copy.deepcopy(self.DEFAULT_PARAMS)
+        params["trainer"]["batch_callbacks"] = ["training_device_logger"]
+
+        global _seen_training_devices
+        _seen_training_devices.clear()
+        train_model(params, serialization_dir=os.path.join(self.TEST_DIR, "test_detect_gpu"))
+        assert len(_seen_training_devices) == 1
+        seen_training_device = next(iter(_seen_training_devices))
+        if torch.cuda.device_count() == 0:
+            assert seen_training_device.type == "cpu"
+        else:
+            assert seen_training_device.type == "cuda"
+
+    @cpu_or_gpu
+    def test_force_gpu(self):
+        import copy
+
+        params = copy.deepcopy(self.DEFAULT_PARAMS)
+        params["trainer"]["batch_callbacks"] = ["training_device_logger"]
+        params["trainer"]["cuda_device"] = 0
+
+        global _seen_training_devices
+        _seen_training_devices.clear()
+        if torch.cuda.device_count() == 0:
+            with pytest.raises(ConfigurationError):
+                train_model(params, serialization_dir=os.path.join(self.TEST_DIR, "test_force_gpu"))
+        else:
+            train_model(params, serialization_dir=os.path.join(self.TEST_DIR, "test_force_gpu"))
+            assert len(_seen_training_devices) == 1
+            seen_training_device = next(iter(_seen_training_devices))
+            assert seen_training_device.type == "cuda"
+
+    @cpu_or_gpu
+    def test_force_cpu(self):
+        import copy
+
+        params = copy.deepcopy(self.DEFAULT_PARAMS)
+        params["trainer"]["batch_callbacks"] = ["training_device_logger"]
+        params["trainer"]["cuda_device"] = -1
+
+        global _seen_training_devices
+        _seen_training_devices.clear()
+        train_model(params, serialization_dir=os.path.join(self.TEST_DIR, "test_force_cpu"))
+        assert len(_seen_training_devices) == 1
+        seen_training_device = next(iter(_seen_training_devices))
+        assert seen_training_device.type == "cpu"
 
     @cpu_or_gpu
     def test_train_model_distributed(self):

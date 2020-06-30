@@ -14,8 +14,18 @@ logging.basicConfig(format="%(asctime)s - %(levelname)s - %(name)s - %(message)s
 
 # filelock emits too many messages, so tell it to be quiet unless it has something
 # important to say.
-_filelock_logger = logging.getLogger("filelock")
-_filelock_logger.setLevel(logging.WARNING)
+logging.getLogger("filelock").setLevel(logging.WARNING)
+
+
+# transformers emits an annoying log message everytime it's imported, so we filter that
+# one message out specifically.
+def _transformers_log_filter(record):
+    if record.msg.startswith("PyTorch version"):
+        return False
+    return True
+
+
+logging.getLogger("transformers.file_utils").addFilter(_transformers_log_filter)
 
 from allennlp.commands import main  # noqa
 
