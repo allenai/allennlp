@@ -7,10 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-### Added
-
-- Added a way to turn of redirecting output to stderr and stdout
-
 ### Fixed
 
 - Reduced the amount of log messages produced by `allennlp.common.file_utils`.
@@ -21,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed checking equality of `ArrayField`s.
 - Fixed a bug where `NamespaceSwappingField` did not work correctly with `.empty_field()`.
 - Put more sensible defaults on the `huggingface_adamw` optimizer.
+- Simplified logging so that all logging output always goes to one file.
+- Fixed interaction with the python command line debugger.
 
 ### Added
 
@@ -32,6 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added the ability to pass an archive file instead of a glob to `ShardedDatasetReader`.
 - Not specifying a `cuda_device` now automatically determines whether to use a GPU or not.
 - Discovered plugins are logged so you can see what was loaded.
+
 
 ## [v1.0.0](https://github.com/allenai/allennlp/releases/tag/v1.0.0) - 2020-06-16
 
