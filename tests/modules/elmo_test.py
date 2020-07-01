@@ -13,7 +13,7 @@ from allennlp.data.fields import TextField
 from allennlp.data.token_indexers.elmo_indexer import ELMoTokenCharactersIndexer
 from allennlp.data.token_indexers.single_id_token_indexer import SingleIdTokenIndexer
 from allennlp.data.dataset_readers.dataset_reader import AllennlpDataset
-from allennlp.data.dataloader import DataLoader
+from allennlp.data.dataloader import PyTorchDataLoader
 from allennlp.modules.elmo import _ElmoBiLm, _ElmoCharacterEncoder, Elmo
 from allennlp.modules.token_embedders import ElmoTokenEmbedder
 from allennlp.nn.util import remove_sentence_boundaries
@@ -102,7 +102,7 @@ class TestElmoBiLm(ElmoTestCase):
         vocab = Vocabulary()
         dataset = AllennlpDataset(instances, vocab)
         # Now finally we can iterate through batches.
-        loader = DataLoader(dataset, 3)
+        loader = PyTorchDataLoader(dataset, 3)
         for i, batch in enumerate(loader):
             lm_embeddings = elmo_bilm(batch["elmo"]["character_ids"]["elmo_tokens"])
             top_layer_embeddings, mask = remove_sentence_boundaries(
