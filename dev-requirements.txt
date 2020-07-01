@@ -41,9 +41,9 @@ git+https://github.com/NiklasRosenstein/pydoc-markdown.git@f0bf8af1db4f11581c19d
 nr.databind.core<0.0.17
 nr.interface<0.0.4
 
+mkdocs==1.1.2
+mkdocs-material==5.4.0
 markdown-include==0.5.1
-# Package for the material theme for mkdocs
-mkdocs-material==5.3.3
 
 #### PACKAGE-UPLOAD PACKAGES ####
 

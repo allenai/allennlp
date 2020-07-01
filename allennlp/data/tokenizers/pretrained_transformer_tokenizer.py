@@ -1,3 +1,4 @@
+import copy
 import logging
 from typing import Any, Dict, List, Optional, Tuple, Iterable
 
@@ -417,16 +418,11 @@ class PretrainedTransformerTokenizer(Tokenizer):
         self, tokens1: List[Token], tokens2: Optional[List[Token]] = None
     ) -> List[Token]:
         # Make sure we don't change the input parameters
-        import copy
-
         tokens1 = copy.deepcopy(tokens1)
         tokens2 = copy.deepcopy(tokens2)
 
         # We add special tokens and also set token type ids.
         if tokens2 is None:
-            import copy
-
-            tokens1 = copy.deepcopy(tokens1)
             for token in tokens1:
                 token.type_id = self.single_sequence_token_type_id
             return self.single_sequence_start_tokens + tokens1 + self.single_sequence_end_tokens
