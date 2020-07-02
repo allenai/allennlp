@@ -6,44 +6,85 @@ from typing import Dict, List
 from overrides import overrides
 import torch
 
+from allennlp.common import FromParams
 from allennlp.data import TextFieldTensors, Vocabulary
 from allennlp.models.model import Model
 from allennlp.modules import TimeDistributed
 from allennlp.nn import util
 from allennlp.training.metrics import CategoricalAccuracy
 
-from transformers import AutoConfig
 from transformers.modeling_bert import (
     ACT2FN,
-    BertEmbeddings,
-    BertIntermediate,
-    BertLayerNorm,
-    BertOutput,
-    BertSelfOutput,
 )
 
 logger = logging.getLogger(__name__)
 
 
-class BertSelfAttention(torch.nn.Module):
-    def __init__(self, config):
+class BertEmbeddings(torch.nn.Module, FromParams):
+    """Construct the embeddings from word, position and token_type embeddings.
+    """
+
+    def __init__(
+        self,
+        vocab_size: int,
+        hidden_size: int,
+        pad_token_id: int,
+        max_position_embeddings: int,
+        type_vocab_size: int,
+        dropout: float,
+    ):
         super().__init__()
-        if config.hidden_size % config.num_attention_heads != 0:
+        self.word_embeddings = torch.nn.Embedding(vocab_size, hidden_size, padding_idx=pad_token_id)
+        self.position_embeddings = torch.nn.Embedding(max_position_embeddings, hidden_size)
+        self.token_type_embeddings = torch.nn.Embedding(type_vocab_size, hidden_size)
+
+        self.layer_norm = torch.nn.LayerNorm(hidden_size, eps=1e-12)
+        self.dropout = torch.nn.Dropout(dropout)
+
+    def forward(self, input_ids=None, token_type_ids=None, position_ids=None, inputs_embeds=None):
+        if input_ids is not None:
+            input_shape = input_ids.size()
+        else:
+            input_shape = inputs_embeds.size()[:-1]
+
+        seq_length = input_shape[1]
+        device = input_ids.device if input_ids is not None else inputs_embeds.device
+        if position_ids is None:
+            position_ids = torch.arange(seq_length, dtype=torch.long, device=device)
+            position_ids = position_ids.unsqueeze(0).expand(input_shape)
+        if token_type_ids is None:
+            token_type_ids = torch.zeros(input_shape, dtype=torch.long, device=device)
+
+        if inputs_embeds is None:
+            inputs_embeds = self.word_embeddings(input_ids)
+        position_embeddings = self.position_embeddings(position_ids)
+        token_type_embeddings = self.token_type_embeddings(token_type_ids)
+
+        embeddings = inputs_embeds + position_embeddings + token_type_embeddings
+        embeddings = self.layer_norm(embeddings)
+        embeddings = self.dropout(embeddings)
+        return embeddings
+
+
+class BertSelfAttention(torch.nn.Module):
+    def __init__(
+        self, hidden_size: int, num_attention_heads: int, dropout: float = 0.0,
+    ):
+        super().__init__()
+        if hidden_size % num_attention_heads != 0:
             raise ValueError(
                 "The hidden size (%d) is not a multiple of the number of attention "
-                "heads (%d)" % (config.hidden_size, config.num_attention_heads)
+                "heads (%d)" % (hidden_size, num_attention_heads)
             )
-        self.num_attention_heads = config.num_attention_heads
-        self.attention_head_size = int(config.hidden_size / config.num_attention_heads)
+        self.num_attention_heads = num_attention_heads
+        self.attention_head_size = int(hidden_size / num_attention_heads)
         self.all_head_size = self.num_attention_heads * self.attention_head_size
 
-        self.visualization = config.visualization
+        self.query = torch.nn.Linear(hidden_size, self.all_head_size)
+        self.key = torch.nn.Linear(hidden_size, self.all_head_size)
+        self.value = torch.nn.Linear(hidden_size, self.all_head_size)
 
-        self.query = torch.nn.Linear(config.hidden_size, self.all_head_size)
-        self.key = torch.nn.Linear(config.hidden_size, self.all_head_size)
-        self.value = torch.nn.Linear(config.hidden_size, self.all_head_size)
-
-        self.dropout = torch.nn.Dropout(config.attention_probs_dropout_prob)
+        self.dropout = torch.nn.Dropout(dropout)
 
     def transpose_for_scores(self, x):
         new_x_shape = x.size()[:-1] + (self.num_attention_heads, self.attention_head_size,)
@@ -79,163 +120,49 @@ class BertSelfAttention(torch.nn.Module):
         new_context_layer_shape = context_layer.size()[:-2] + (self.all_head_size,)
         context_layer = context_layer.view(*new_context_layer_shape)
 
-        if self.visualization:
-            attn_data = {
-                "attn": attention_probs,
-                "queries": query_layer,
-                "keys": key_layer,
-            }
-        else:
-            attn_data = None
-
-        return context_layer, attn_data
+        return context_layer
 
 
-class BertAttention(torch.nn.Module):
-    def __init__(self, config):
+class BertSelfOutput(torch.nn.Module):
+    def __init__(self, hidden_size: int, dropout: float):
         super().__init__()
-        self.self = BertSelfAttention(config)
-        self.output = BertSelfOutput(config)
-
-    def forward(self, input_tensor, attention_mask):
-        self_output, attention_probs = self.self(input_tensor, attention_mask)
-        attention_output = self.output(self_output, input_tensor)
-        return attention_output, attention_probs
-
-
-class BertLayer(torch.nn.Module):
-    def __init__(self, config):
-        super().__init__()
-        self.attention = BertAttention(config)
-        self.intermediate = BertIntermediate(config)
-        self.output = BertOutput(config)
-
-    def forward(self, hidden_states, attention_mask):
-        attention_output, attention_probs = self.attention(hidden_states, attention_mask)
-        intermediate_output = self.intermediate(attention_output)
-        layer_output = self.output(intermediate_output, attention_output)
-        return layer_output, attention_probs
-
-
-class BertImageSelfAttention(torch.nn.Module):
-    def __init__(self, config):
-        super().__init__()
-        if config.v_hidden_size % config.v_num_attention_heads != 0:
-            raise ValueError(
-                "The hidden size (%d) is not a multiple of the number of attention "
-                "heads (%d)" % (config.v_hidden_size, config.v_num_attention_heads)
-            )
-        self.dynamic_attention = config.dynamic_attention
-        self.num_attention_heads = config.v_num_attention_heads
-        self.attention_head_size = int(config.v_hidden_size / config.v_num_attention_heads)
-
-        self.visualization = config.visualization
-
-        self.all_head_size = self.num_attention_heads * self.attention_head_size
-        self.query = torch.nn.Linear(config.v_hidden_size, self.all_head_size)
-        self.key = torch.nn.Linear(config.v_hidden_size, self.all_head_size)
-        self.value = torch.nn.Linear(config.v_hidden_size, self.all_head_size)
-
-        if self.dynamic_attention:
-            self.dyLinear_q = torch.nn.Linear(config.hidden_size, self.all_head_size)
-            self.dyLinear_k = torch.nn.Linear(config.hidden_size, self.all_head_size)
-
-        self.dropout = torch.nn.Dropout(config.v_attention_probs_dropout_prob)
-
-    def transpose_for_scores(self, x):
-        new_x_shape = x.size()[:-1] + (self.num_attention_heads, self.attention_head_size,)
-        x = x.view(*new_x_shape)
-        return x.permute(0, 2, 1, 3)
-
-    def forward(self, hidden_states, attention_mask, txt_embedding, txt_attention_mask):
-
-        mixed_query_layer = self.query(hidden_states)
-        mixed_key_layer = self.key(hidden_states)
-        mixed_value_layer = self.value(hidden_states)
-
-        if self.dynamic_attention:
-            pool_embedding = (txt_embedding * txt_attention_mask).sum(1)
-            pool_embedding = pool_embedding / txt_attention_mask.sum(1)
-
-            # given pool embedding, Linear and Sigmoid layer.
-            gate_q = 1 + torch.sigmoid(self.dyLinear_q(pool_embedding))
-            gate_k = 1 + torch.sigmoid(self.dyLinear_k(pool_embedding))
-
-            mixed_query_layer = mixed_query_layer * gate_q.unsqueeze(1)
-            mixed_key_layer = mixed_key_layer * gate_k.unsqueeze(1)
-
-        query_layer = self.transpose_for_scores(mixed_query_layer)
-        key_layer = self.transpose_for_scores(mixed_key_layer)
-        value_layer = self.transpose_for_scores(mixed_value_layer)
-
-        # Take the dot product between "query" and "key" to get the
-        # raw attention scores.
-        attention_scores = torch.matmul(query_layer, key_layer.transpose(-1, -2))
-        attention_scores = attention_scores / math.sqrt(self.attention_head_size)
-        # Apply the attention mask is (precomputed for all layers in BertModel
-        # forward() function)
-        attention_scores = attention_scores + attention_mask
-
-        # Normalize the attention scores to probabilities.
-        attention_probs = torch.nn.Softmax(dim=-1)(attention_scores)
-
-        # This is actually dropping out entire tokens to attend to, which might
-        # seem a bit unusual, but is taken from the original Transformer paper.
-        attention_probs = self.dropout(attention_probs)
-
-        context_layer = torch.matmul(attention_probs, value_layer)
-        context_layer = context_layer.permute(0, 2, 1, 3).contiguous()
-        new_context_layer_shape = context_layer.size()[:-2] + (self.all_head_size,)
-        context_layer = context_layer.view(*new_context_layer_shape)
-
-        if self.visualization:
-            attn_data = {
-                "attn": attention_probs,
-                "queries": query_layer,
-                "keys": key_layer,
-            }
-        else:
-            attn_data = None
-
-        return context_layer, attn_data
-
-
-class BertImageSelfOutput(torch.nn.Module):
-    def __init__(self, config):
-        super().__init__()
-        self.dense = torch.nn.Linear(config.v_hidden_size, config.v_hidden_size)
-        self.LayerNorm = BertLayerNorm(config.v_hidden_size, eps=1e-12)
-        self.dropout = torch.nn.Dropout(config.v_hidden_dropout_prob)
+        self.dense = torch.nn.Linear(hidden_size, hidden_size)
+        self.layer_norm = torch.nn.LayerNorm(hidden_size, eps=1e-12)
+        self.dropout = torch.nn.Dropout(dropout)
 
     def forward(self, hidden_states, input_tensor):
         hidden_states = self.dense(hidden_states)
         hidden_states = self.dropout(hidden_states)
-        hidden_states = self.LayerNorm(hidden_states + input_tensor)
+        hidden_states = self.layer_norm(hidden_states + input_tensor)
         return hidden_states
 
 
-class BertImageAttention(torch.nn.Module):
-    def __init__(self, config):
+class BertAttention(torch.nn.Module):
+    def __init__(
+        self,
+        hidden_size: int,
+        num_attention_heads: int,
+        attention_dropout: float = 0.0,
+        hidden_dropout: float = 0.0,
+    ):
         super().__init__()
-        self.self = BertImageSelfAttention(config)
-        self.output = BertImageSelfOutput(config)
+        self.self = BertSelfAttention(hidden_size, num_attention_heads, attention_dropout)
+        self.output = BertSelfOutput(hidden_size, hidden_dropout)
 
-    def forward(self, input_tensor, attention_mask, txt_embedding, txt_attention_mask):
-        self_output, attention_probs = self.self(
-            input_tensor, attention_mask, txt_embedding, txt_attention_mask
-        )
+    def forward(self, input_tensor, attention_mask):
+        self_output = self.self(input_tensor, attention_mask)
         attention_output = self.output(self_output, input_tensor)
-        return attention_output, attention_probs
+        return attention_output
 
 
-class BertImageIntermediate(torch.nn.Module):
-    def __init__(self, config):
+class BertIntermediate(torch.nn.Module):
+    def __init__(self, hidden_size: int, intermediate_size: int, activation: str):
         super().__init__()
-        self.dense = torch.nn.Linear(config.v_hidden_size, config.v_intermediate_size)
-        if isinstance(config.v_hidden_act, str):
-            self.intermediate_act_fn = ACT2FN[config.v_hidden_act]
+        self.dense = torch.nn.Linear(hidden_size, intermediate_size)
+        if isinstance(activation, str):
+            self.intermediate_act_fn = ACT2FN[activation]
         else:
-            self.intermediate_act_fn = config.v_hidden_act
+            self.intermediate_act_fn = activation
 
     def forward(self, hidden_states):
         hidden_states = self.dense(hidden_states)
@@ -243,66 +170,83 @@ class BertImageIntermediate(torch.nn.Module):
         return hidden_states
 
 
-class BertImageOutput(torch.nn.Module):
-    def __init__(self, config):
+class BertOutput(torch.nn.Module):
+    def __init__(self, hidden_size: int, intermediate_size: int, dropout: float):
         super().__init__()
-        self.dense = torch.nn.Linear(config.v_intermediate_size, config.v_hidden_size)
-        self.LayerNorm = BertLayerNorm(config.v_hidden_size, eps=1e-12)
-        self.dropout = torch.nn.Dropout(config.v_hidden_dropout_prob)
+        self.dense = torch.nn.Linear(intermediate_size, hidden_size)
+        self.layer_norm = torch.nn.LayerNorm(hidden_size, eps=1e-12)
+        self.dropout = torch.nn.Dropout(dropout)
 
     def forward(self, hidden_states, input_tensor):
         hidden_states = self.dense(hidden_states)
         hidden_states = self.dropout(hidden_states)
-        hidden_states = self.LayerNorm(hidden_states + input_tensor)
+        hidden_states = self.layer_norm(hidden_states + input_tensor)
         return hidden_states
 
 
-class BertImageLayer(torch.nn.Module):
-    def __init__(self, config):
+class BertLayer(torch.nn.Module):
+    def __init__(
+        self,
+        hidden_size: int,
+        intermediate_size: int,
+        num_attention_heads: int,
+        attention_dropout: float,
+        hidden_dropout: float,
+        activation: str,
+    ):
         super().__init__()
-        self.attention = BertImageAttention(config)
-        self.intermediate = BertImageIntermediate(config)
-        self.output = BertImageOutput(config)
-
-    def forward(self, hidden_states, attention_mask, txt_embedding, txt_attention_mask):
-        attention_output, attention_probs = self.attention(
-            hidden_states, attention_mask, txt_embedding, txt_attention_mask
+        self.attention = BertAttention(
+            hidden_size=hidden_size,
+            num_attention_heads=num_attention_heads,
+            attention_dropout=attention_dropout,
+            hidden_dropout=hidden_dropout,
         )
+        self.intermediate = BertIntermediate(
+            hidden_size=hidden_size, intermediate_size=intermediate_size, activation=activation
+        )
+        self.output = BertOutput(
+            hidden_size=hidden_size, intermediate_size=intermediate_size, dropout=hidden_dropout
+        )
+
+    def forward(self, hidden_states, attention_mask):
+        attention_output = self.attention(hidden_states, attention_mask)
         intermediate_output = self.intermediate(attention_output)
         layer_output = self.output(intermediate_output, attention_output)
-        return layer_output, attention_probs
+        return layer_output
 
 
 class BertBiAttention(torch.nn.Module):
-    def __init__(self, config):
+    def __init__(
+        self,
+        hidden_size1: int,
+        hidden_size2: int,
+        combined_hidden_size: int,
+        num_attention_heads: int,
+        dropout1: float,
+        dropout2: float,
+    ):
         super().__init__()
-        if config.bi_hidden_size % config.bi_num_attention_heads != 0:
+        if combined_hidden_size % num_attention_heads != 0:
             raise ValueError(
                 "The hidden size (%d) is not a multiple of the number of attention "
-                "heads (%d)" % (config.bi_hidden_size, config.bi_num_attention_heads)
+                "heads (%d)" % (combined_hidden_size, num_attention_heads)
             )
 
-        self.visualization = config.visualization
-        self.num_attention_heads = config.bi_num_attention_heads
-        self.attention_head_size = int(config.bi_hidden_size / config.bi_num_attention_heads)
+        self.num_attention_heads = num_attention_heads
+        self.attention_head_size = int(combined_hidden_size / num_attention_heads)
         self.all_head_size = self.num_attention_heads * self.attention_head_size
 
-        # self.scale = torch.nn.Linear(1, self.num_attention_heads, bias=False)
-        # self.scale_act_fn = ACT2FN['relu']
+        self.query1 = torch.nn.Linear(hidden_size1, self.all_head_size)
+        self.key1 = torch.nn.Linear(hidden_size1, self.all_head_size)
+        self.value1 = torch.nn.Linear(hidden_size1, self.all_head_size)
 
-        self.query1 = torch.nn.Linear(config.v_hidden_size, self.all_head_size)
-        self.key1 = torch.nn.Linear(config.v_hidden_size, self.all_head_size)
-        self.value1 = torch.nn.Linear(config.v_hidden_size, self.all_head_size)
-        # self.logit1 = torch.nn.Linear(config.hidden_size, self.num_attention_heads)
+        self.dropout1 = torch.nn.Dropout(dropout1)
 
-        self.dropout1 = torch.nn.Dropout(config.v_attention_probs_dropout_prob)
+        self.query2 = torch.nn.Linear(hidden_size2, self.all_head_size)
+        self.key2 = torch.nn.Linear(hidden_size2, self.all_head_size)
+        self.value2 = torch.nn.Linear(hidden_size2, self.all_head_size)
 
-        self.query2 = torch.nn.Linear(config.hidden_size, self.all_head_size)
-        self.key2 = torch.nn.Linear(config.hidden_size, self.all_head_size)
-        self.value2 = torch.nn.Linear(config.hidden_size, self.all_head_size)
-        # self.logit2 = torch.nn.Linear(config.hidden_size, self.num_attention_heads)
-
-        self.dropout2 = torch.nn.Dropout(config.attention_probs_dropout_prob)
+        self.dropout2 = torch.nn.Dropout(dropout2)
 
     def transpose_for_scores(self, x):
         new_x_shape = x.size()[:-1] + (self.num_attention_heads, self.attention_head_size,)
@@ -385,38 +329,27 @@ class BertBiAttention(torch.nn.Module):
         new_context_layer_shape2 = context_layer2.size()[:-2] + (self.all_head_size,)
         context_layer2 = context_layer2.view(*new_context_layer_shape2)
 
-        attn_data = None
-
-        if self.visualization:
-            attn_data = {
-                "attn1": attention_probs1,
-                "queries1": query_layer2,
-                "keys1": key_layer1,
-                "attn2": attention_probs2,
-                "querues2": query_layer1,
-                "keys2": key_layer2,
-            }
-
-        return context_layer1, context_layer2, attn_data
+        return context_layer1, context_layer2
 
 
 class BertBiOutput(torch.nn.Module):
-    def __init__(self, config):
+    def __init__(
+        self,
+        hidden_size1: int,
+        hidden_size2: int,
+        combined_hidden_size: int,
+        dropout1: float,
+        dropout2: float,
+    ):
         super().__init__()
 
-        self.dense1 = torch.nn.Linear(config.bi_hidden_size, config.v_hidden_size)
-        self.LayerNorm1 = BertLayerNorm(config.v_hidden_size, eps=1e-12)
-        self.dropout1 = torch.nn.Dropout(config.v_hidden_dropout_prob)
+        self.dense1 = torch.nn.Linear(combined_hidden_size, hidden_size1)
+        self.LayerNorm1 = torch.nn.LayerNorm(hidden_size1, eps=1e-12)
+        self.dropout1 = torch.nn.Dropout(dropout1)
 
-        self.q_dense1 = torch.nn.Linear(config.bi_hidden_size, config.v_hidden_size)
-        self.q_dropout1 = torch.nn.Dropout(config.v_hidden_dropout_prob)
-
-        self.dense2 = torch.nn.Linear(config.bi_hidden_size, config.hidden_size)
-        self.LayerNorm2 = BertLayerNorm(config.hidden_size, eps=1e-12)
-        self.dropout2 = torch.nn.Dropout(config.hidden_dropout_prob)
-
-        self.q_dense2 = torch.nn.Linear(config.bi_hidden_size, config.hidden_size)
-        self.q_dropout2 = torch.nn.Dropout(config.hidden_dropout_prob)
+        self.dense2 = torch.nn.Linear(combined_hidden_size, hidden_size2)
+        self.LayerNorm2 = torch.nn.LayerNorm(hidden_size2, eps=1e-12)
+        self.dropout2 = torch.nn.Dropout(dropout2)
 
     def forward(self, hidden_states1, input_tensor1, hidden_states2, input_tensor2):
 
@@ -433,17 +366,49 @@ class BertBiOutput(torch.nn.Module):
 
 
 class BertConnectionLayer(torch.nn.Module):
-    def __init__(self, config):
+    def __init__(
+        self,
+        hidden_size1: int,
+        hidden_size2: int,
+        combined_hidden_size: int,
+        intermediate_size1: int,
+        intermediate_size2: int,
+        num_attention_heads: int,
+        dropout1: float,
+        dropout2: float,
+        activation: str,
+    ):
         super().__init__()
-        self.biattention = BertBiAttention(config)
+        self.biattention = BertBiAttention(
+            hidden_size1=hidden_size1,
+            hidden_size2=hidden_size2,
+            combined_hidden_size=combined_hidden_size,
+            num_attention_heads=num_attention_heads,
+            dropout1=dropout1,
+            dropout2=dropout2,
+        )
 
-        self.biOutput = BertBiOutput(config)
+        self.biOutput = BertBiOutput(
+            hidden_size1=hidden_size1,
+            hidden_size2=hidden_size2,
+            combined_hidden_size=combined_hidden_size,
+            dropout1=dropout1,
+            dropout2=dropout2,
+        )
 
-        self.v_intermediate = BertImageIntermediate(config)
-        self.v_output = BertImageOutput(config)
+        self.v_intermediate = BertIntermediate(
+            hidden_size=hidden_size1, intermediate_size=intermediate_size1, activation=activation,
+        )
+        self.v_output = BertOutput(
+            hidden_size=hidden_size1, intermediate_size=intermediate_size1, dropout=dropout1,
+        )
 
-        self.t_intermediate = BertIntermediate(config)
-        self.t_output = BertOutput(config)
+        self.t_intermediate = BertIntermediate(
+            hidden_size=hidden_size2, intermediate_size=intermediate_size2, activation=activation,
+        )
+        self.t_output = BertOutput(
+            hidden_size=hidden_size2, intermediate_size=intermediate_size2, dropout=dropout2,
+        )
 
     def forward(
         self,
@@ -455,7 +420,7 @@ class BertConnectionLayer(torch.nn.Module):
         use_co_attention_mask=False,
     ):
 
-        bi_output1, bi_output2, co_attention_probs = self.biattention(
+        bi_output1, bi_output2 = self.biattention(
             input_tensor1,
             attention_mask1,
             input_tensor2,
@@ -474,11 +439,33 @@ class BertConnectionLayer(torch.nn.Module):
         intermediate_output2 = self.t_intermediate(attention_output2)
         layer_output2 = self.t_output(intermediate_output2, attention_output2)
 
-        return layer_output1, layer_output2, co_attention_probs
+        return layer_output1, layer_output2
 
 
-class BertEncoder(torch.nn.Module):
-    def __init__(self, config):
+class BertEncoder(torch.nn.Module, FromParams):
+    def __init__(
+        self,
+        text_num_hidden_layers: int,
+        image_num_hidden_layers: int,
+        text_hidden_size: int,
+        image_hidden_size: int,
+        combined_hidden_size: int,
+        text_intermediate_size: int,
+        image_intermediate_size: int,
+        num_attention_heads: int,
+        text_attention_dropout: float,
+        text_hidden_dropout: float,
+        image_attention_dropout: float,
+        image_hidden_dropout: float,
+        activation: str,
+        v_biattention_id: List[int],
+        t_biattention_id: List[int],
+        fixed_t_layer: int,
+        fixed_v_layer: int,
+        fast_mode: bool = False,
+        with_coattention: bool = True,
+        in_batch_pairs: bool = False,
+    ):
         super().__init__()
 
         # in the bert encoder, we need to extract three things here.
@@ -487,23 +474,51 @@ class BertEncoder(torch.nn.Module):
         # Bi-Attention: Given the output of two bertlayer, perform bi-directional
         # attention and add on two layers.
 
-        self.FAST_MODE = config.fast_mode
-        self.with_coattention = config.with_coattention
-        self.v_biattention_id = config.v_biattention_id
-        self.t_biattention_id = config.t_biattention_id
-        self.in_batch_pairs = config.in_batch_pairs
-        self.fixed_t_layer = config.fixed_t_layer
-        self.fixed_v_layer = config.fixed_v_layer
-        layer = BertLayer(config)
-        v_layer = BertImageLayer(config)
-        connect_layer = BertConnectionLayer(config)
+        self.FAST_MODE = fast_mode
+        self.with_coattention = with_coattention
+        self.v_biattention_id = v_biattention_id
+        self.t_biattention_id = t_biattention_id
+        self.in_batch_pairs = in_batch_pairs
+        self.fixed_t_layer = fixed_t_layer
+        self.fixed_v_layer = fixed_v_layer
+        self.combined_size = combined_hidden_size
+        self.text_hidden_size = text_hidden_size
+        self.image_hidden_size = image_hidden_size
 
-        self.layer = torch.nn.ModuleList([deepcopy(layer) for _ in range(config.num_hidden_layers)])
+        layer = BertLayer(
+            hidden_size=text_hidden_size,
+            intermediate_size=text_intermediate_size,
+            num_attention_heads=num_attention_heads,
+            attention_dropout=text_attention_dropout,
+            hidden_dropout=text_hidden_dropout,
+            activation=activation,
+        )
+        v_layer = BertLayer(
+            hidden_size=image_hidden_size,
+            intermediate_size=image_intermediate_size,
+            num_attention_heads=num_attention_heads,
+            attention_dropout=image_attention_dropout,
+            hidden_dropout=image_hidden_dropout,
+            activation=activation,
+        )
+        connect_layer = BertConnectionLayer(
+            hidden_size1=text_hidden_size,
+            hidden_size2=image_hidden_size,
+            combined_hidden_size=combined_hidden_size,
+            intermediate_size1=text_intermediate_size,
+            intermediate_size2=image_intermediate_size,
+            num_attention_heads=num_attention_heads,
+            dropout1=text_hidden_dropout,
+            dropout2=image_hidden_dropout,
+            activation=activation,
+        )
+
+        self.layer = torch.nn.ModuleList([deepcopy(layer) for _ in range(text_num_hidden_layers)])
         self.v_layer = torch.nn.ModuleList(
-            [deepcopy(v_layer) for _ in range(config.v_num_hidden_layers)]
+            [deepcopy(v_layer) for _ in range(image_num_hidden_layers)]
         )
         self.c_layer = torch.nn.ModuleList(
-            [deepcopy(connect_layer) for _ in range(len(config.v_biattention_id))]
+            [deepcopy(connect_layer) for _ in range(len(v_biattention_id))]
         )
 
     def forward(
@@ -515,7 +530,6 @@ class BertEncoder(torch.nn.Module):
         image_attention_mask,
         co_attention_mask=None,
         output_all_encoded_layers=True,
-        output_all_attention_masks=False,
     ):
 
         v_start = 0
@@ -524,15 +538,12 @@ class BertEncoder(torch.nn.Module):
         all_encoder_layers_t = []
         all_encoder_layers_v = []
 
-        all_attention_mask_t = []
-        all_attention_mask_v = []
-        all_attention_mask_c = []
-
         batch_size, num_words, t_hidden_size = txt_embedding.size()
         _, num_regions, v_hidden_size = image_embedding.size()
 
         use_co_attention_mask = False
         for v_layer_id, t_layer_id in zip(self.v_biattention_id, self.t_biattention_id):
+            print("LAYER")
 
             v_end = v_layer_id
             t_end = t_layer_id
@@ -542,37 +553,27 @@ class BertEncoder(torch.nn.Module):
 
             for idx in range(t_start, self.fixed_t_layer):
                 with torch.no_grad():
-                    txt_embedding, txt_attention_probs = self.layer[idx](
+                    txt_embedding = self.layer[idx](
                         txt_embedding, txt_attention_mask
                     )
                     t_start = self.fixed_t_layer
-                    if output_all_attention_masks:
-                        all_attention_mask_t.append(txt_attention_probs)
 
             for idx in range(t_start, t_end):
-                txt_embedding, txt_attention_probs = self.layer[idx](
+                txt_embedding = self.layer[idx](
                     txt_embedding, txt_attention_mask
                 )
-                if output_all_attention_masks:
-                    all_attention_mask_t.append(txt_attention_probs)
 
             for idx in range(v_start, self.fixed_v_layer):
                 with torch.no_grad():
-                    image_embedding, image_attention_probs = self.v_layer[idx](
-                        image_embedding, image_attention_mask, txt_embedding, txt_attention_mask2,
+                    image_embedding = self.v_layer[idx](
+                        image_embedding, image_attention_mask
                     )
                     v_start = self.fixed_v_layer
 
-                    if output_all_attention_masks:
-                        all_attention_mask_v.append(image_attention_probs)
-
             for idx in range(v_start, v_end):
-                image_embedding, image_attention_probs = self.v_layer[idx](
-                    image_embedding, image_attention_mask, txt_embedding, txt_attention_mask2,
+                image_embedding = self.v_layer[idx](
+                    image_embedding, image_attention_mask
                 )
-
-                if output_all_attention_masks:
-                    all_attention_mask_v.append(image_attention_probs)
 
             if count == 0 and self.in_batch_pairs:
                 # new batch size is the batch_size ^2
@@ -621,17 +622,14 @@ class BertEncoder(torch.nn.Module):
 
             if self.with_coattention:
                 # do the bi attention.
-                image_embedding, txt_embedding, co_attention_probs = self.c_layer[count](
-                    image_embedding,
-                    image_attention_mask,
+                txt_embedding, image_embedding = self.c_layer[count](
                     txt_embedding,
                     txt_attention_mask,
+                    image_embedding,
+                    image_attention_mask,
                     co_attention_mask,
                     use_co_attention_mask,
                 )
-
-                if output_all_attention_masks:
-                    all_attention_mask_c.append(co_attention_probs)
 
             v_start = v_end
             t_start = t_end
@@ -642,18 +640,12 @@ class BertEncoder(torch.nn.Module):
                 all_encoder_layers_v.append(image_embedding)
 
         for idx in range(v_start, len(self.v_layer)):
-            image_embedding, image_attention_probs = self.v_layer[idx](
-                image_embedding, image_attention_mask, txt_embedding, txt_attention_mask2,
+            image_embedding = self.v_layer[idx](
+                image_embedding, image_attention_mask
             )
 
-            if output_all_attention_masks:
-                all_attention_mask_v.append(image_attention_probs)
-
         for idx in range(t_start, len(self.layer)):
-            txt_embedding, txt_attention_probs = self.layer[idx](txt_embedding, txt_attention_mask)
-
-            if output_all_attention_masks:
-                all_attention_mask_t.append(txt_attention_probs)
+            txt_embedding = self.layer[idx](txt_embedding, txt_attention_mask)
 
         # add the end part to finish.
         if not output_all_encoded_layers:
@@ -666,25 +658,10 @@ class BertEncoder(torch.nn.Module):
         )
 
 
-class BertTextPooler(torch.nn.Module):
-    def __init__(self, config):
+class BertPooler(torch.nn.Module, FromParams):
+    def __init__(self, hidden_size: int, output_size: int):
         super().__init__()
-        self.dense = torch.nn.Linear(config.hidden_size, config.bi_hidden_size)
-        self.activation = torch.nn.ReLU()
-
-    def forward(self, hidden_states):
-        # We "pool" the model by simply taking the hidden state corresponding
-        # to the first token.
-        first_token_tensor = hidden_states[:, 0, :]
-        pooled_output = self.dense(first_token_tensor)
-        pooled_output = self.activation(pooled_output)
-        return pooled_output
-
-
-class BertImagePooler(torch.nn.Module):
-    def __init__(self, config):
-        super().__init__()
-        self.dense = torch.nn.Linear(config.v_hidden_size, config.bi_hidden_size)
+        self.dense = torch.nn.Linear(hidden_size, output_size)
         self.activation = torch.nn.ReLU()
 
     def forward(self, hidden_states):
@@ -696,7 +673,7 @@ class BertImagePooler(torch.nn.Module):
         return pooled_output
 
 
-class BertImageFeatureEmbeddings(torch.nn.Module):
+class BertImageFeatureEmbeddings(torch.nn.Module, FromParams):
     """Construct the embeddings from image, spatial location (omit now) and
     token_type embeddings.
     """
@@ -706,7 +683,7 @@ class BertImageFeatureEmbeddings(torch.nn.Module):
 
         self.image_embeddings = torch.nn.Linear(feature_dim, hidden_dim)
         self.image_location_embeddings = torch.nn.Linear(4, hidden_dim)
-        self.layer_norm = BertLayerNorm(hidden_dim, eps=1e-12)
+        self.layer_norm = torch.nn.LayerNorm(hidden_dim, eps=1e-12)
         self.dropout = torch.nn.Dropout(dropout)
 
     def forward(self, image_feature: torch.Tensor, image_location: torch.Tensor):
@@ -728,48 +705,29 @@ class Nlvr2Vilbert(Model):
     """
 
     def __init__(
-        self, vocab: Vocabulary, image_feature_dim: int, image_hidden_dim: int, fusion_method: str
+        self,
+        vocab: Vocabulary,
+        text_embeddings: BertEmbeddings,
+        image_embeddings: BertImageFeatureEmbeddings,
+        encoder: BertEncoder,
+        pooled_output_dim: int,
+        fusion_method: str = "sum",
+        dropout: float = 0.1
     ) -> None:
         super().__init__(vocab)
         self.loss = torch.nn.CrossEntropyLoss()
         self.consistency_wrong_map = {}
         self._denotation_accuracy = CategoricalAccuracy()
         self.fusion_method = fusion_method
-        bert_config = AutoConfig.from_pretrained("bert-base-uncased")
 
-        # initilize word embedding
-        self.embeddings = BertEmbeddings(bert_config)
+        self.embeddings = text_embeddings
+        self.image_embeddings = image_embeddings
+        self.encoder = TimeDistributed(encoder)
 
-        # initlize the vision embedding
-        self.image_embeddings = BertImageFeatureEmbeddings(
-            image_feature_dim, image_hidden_dim, bert_config.hidden_dropout_prob
-        )
-
-        bert_config.fast_mode = False
-        bert_config.with_coattention = True
-        bert_config.v_biattention_id = [0, 1, 2, 3, 4, 5]
-        bert_config.t_biattention_id = [6, 7, 8, 9, 10, 11]
-        bert_config.in_batch_pairs = False
-        bert_config.fixed_t_layer = 0
-        bert_config.fixed_v_layer = 0
-        bert_config.num_hidden_layers = 12
-        bert_config.v_num_hidden_layers = 6
-        bert_config.visualization = False
-        bert_config.v_hidden_size = 1024
-        bert_config.v_num_attention_heads = 8
-        bert_config.v_intermediate_size = 1024
-        bert_config.v_attention_probs_dropout_prob = 0.1
-        bert_config.v_hidden_dropout_prob = 0.1
-        bert_config.bi_hidden_size = 1024
-        bert_config.bi_num_attention_heads = 8
-        bert_config.bi_intermediate_size = 1024
-        bert_config.dynamic_attention = False
-        bert_config.v_hidden_act = "gelu"
-        self.encoder = TimeDistributed(BertEncoder(bert_config))
-        self.t_pooler = TimeDistributed(BertTextPooler(bert_config))
-        self.v_pooler = TimeDistributed(BertImagePooler(bert_config))
-        self.dropout = torch.nn.Dropout(bert_config.hidden_dropout_prob)
-        self.classifier = torch.nn.Linear(bert_config.bi_hidden_size * 2, 2)
+        self.t_pooler = TimeDistributed(BertPooler(encoder.text_hidden_size, pooled_output_dim))
+        self.v_pooler = TimeDistributed(BertPooler(encoder.image_hidden_size, pooled_output_dim))
+        self.classifier = torch.nn.Linear(pooled_output_dim * 2, 2)
+        self.dropout = torch.nn.Dropout(dropout)
 
     def consistency(self, reset: bool) -> float:
         num_consistent_groups = 0
@@ -794,7 +752,6 @@ class Nlvr2Vilbert(Model):
 
         batch_size, num_images, num_objects, feature_size = visual_features.size()
         assert num_objects == 36 and feature_size == 2048
-        sentence_mask = util.get_text_field_mask(sentence_field).float()
         assert num_images == 2
 
         input_ids = sentence_field["tokens"]["token_ids"]
@@ -841,9 +798,9 @@ class Nlvr2Vilbert(Model):
         )  # fp16 compatibility
         extended_image_attention_mask = (1.0 - extended_image_attention_mask) * -10000.0
 
-        co_attention_mask = torch.zeros(
-            batch_size, num_images, feature_size, num_tokens
-        ).type_as(extended_image_attention_mask)
+        co_attention_mask = torch.zeros(batch_size, num_images, feature_size, num_tokens).type_as(
+            extended_image_attention_mask
+        )
 
         extended_co_attention_mask = co_attention_mask.unsqueeze(2)
 
