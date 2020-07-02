@@ -18,3 +18,4 @@ from allennlp.data.dataset_readers.sequence_tagging import SequenceTaggingDatase
 from allennlp.data.dataset_readers.sharded_dataset_reader import ShardedDatasetReader
 from allennlp.data.dataset_readers.babi import BabiReader
 from allennlp.data.dataset_readers.text_classification_json import TextClassificationJsonReader
+from allennlp.data.dataset_readers.nlvr2_reader import Nlvr2LxmertReader

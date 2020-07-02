@@ -1,0 +1,30 @@
+{
+  "dataset_reader": {
+    "type": "nlvr2_lxmert",
+    "text_path_prefix": "test_fixtures/data/nlvr2/instances",
+    "visual_path_prefix": "test_fixtures/data/nlvr2/object_features",
+    "topk_images": -1,
+    "mask_prepositions_verbs": false,
+    "drop_prepositions_verbs": false
+  },
+  "train_data_path": "train",
+  "validation_data_path": "train",
+  "model": {
+    "type": "nlvr2_vilbert",
+    "image_feature_dim": 2048,
+    "image_hidden_dim": 1024,
+    "fusion_method": "sum"
+  },
+  "data_loader": {
+    "batch_size": 32
+  },
+  "trainer": {
+    "optimizer": {
+        "type": "huggingface_adamw",
+        "lr": 0.00005
+    },
+    "grad_norm": 5.0,
+    "validation_metric": "+denotation_acc",
+    "num_epochs": 1
+  }
+}
