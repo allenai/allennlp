@@ -91,7 +91,7 @@ class TextField(SequenceField[TextFieldTensors]):
         return len(self.tokens)
 
     @overrides
-    def as_tensor(self, padding_lengths: Dict[str, int]) -> Dict[str, torch.Tensor]:
+    def as_tensor(self, padding_lengths: Dict[str, int]) -> TextFieldTensors:
         tensors = {}
 
         indexer_lengths: Dict[str, Dict[str, int]] = defaultdict(dict)
