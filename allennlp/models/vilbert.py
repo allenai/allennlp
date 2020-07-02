@@ -543,8 +543,6 @@ class BertEncoder(torch.nn.Module, FromParams):
 
         use_co_attention_mask = False
         for v_layer_id, t_layer_id in zip(self.v_biattention_id, self.t_biattention_id):
-            print("LAYER")
-
             v_end = v_layer_id
             t_end = t_layer_id
 
@@ -806,13 +804,6 @@ class Nlvr2Vilbert(Model):
 
         # (batch_size, num_images, num_boxes, image_embedding_dim)
         v_embedding_output = self.image_embeddings(visual_features, box_coordinates)
-        print(embedding_output.size())
-        print(v_embedding_output.size())
-        print(extended_attention_mask.size())
-        print(extended_attention_mask2.size())
-        print(extended_image_attention_mask.size())
-        print(extended_co_attention_mask.size())
-        print("ENCODER")
         encoded_layers_t, encoded_layers_v = self.encoder(
             embedding_output,
             v_embedding_output,
@@ -822,12 +813,9 @@ class Nlvr2Vilbert(Model):
             extended_co_attention_mask,
         )
 
-        print(encoded_layers_t.size())
-        print(encoded_layers_v.size())
         sequence_output_t = encoded_layers_t[:, :, :, :, -1]
         sequence_output_v = encoded_layers_v[:, :, :, :, -1]
 
-        print("POOLER")
         pooled_output_t = self.t_pooler(sequence_output_t)
         pooled_output_v = self.v_pooler(sequence_output_v)
 
@@ -836,12 +824,8 @@ class Nlvr2Vilbert(Model):
         elif self.fusion_method == "mul":
             pooled_output = self.dropout(pooled_output_t * pooled_output_v)
 
-        print("CLASSIFER")
-        print(pooled_output.size())
         hidden_dim = pooled_output.size(-1)
         logits = self.classifier(pooled_output.view(batch_size, num_images * hidden_dim))
-        print(logits.size())
-        print(denotation.size())
 
         outputs = {}
         outputs["logits"] = logits
