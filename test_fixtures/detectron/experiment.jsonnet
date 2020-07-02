@@ -1,7 +1,15 @@
 {
-    "dataset_reader": "detectron",
-    "train_data_path": "/Users/dirkg/Documents/detectron_datasets/coco_tiny/annotations/instances_minival2014_100.json",
-    "validation_data_path": "/Users/dirkg/Documents/detectron_datasets/coco_tiny/annotations/instances_minival2014_100.json",
+    "dataset_reader": {
+        "type": "detectron",
+        "builtin_config_file": "COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_1x.yaml",
+        "overrides": {
+            "dataloader": {
+                "num_workers": 2
+            }
+        }
+    },
+    "train_data_path": "/Users/dirkg/Documents/data/vision/coco_tiny/annotations/instances_minival2014_100.json",
+    "validation_data_path": "/Users/dirkg/Documents/data/vision/coco_tiny/annotations/instances_minival2014_100.json",
     "model": {
         "type": "detectron",
     },
