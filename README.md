@@ -22,7 +22,8 @@
     <a href="https://optuna.org">
         <img alt="Optuna" src="https://img.shields.io/badge/Optuna-integrated-blue">
     </a>
-<br/>
+    <br/>
+</p>
 
 ## Quick Links
 

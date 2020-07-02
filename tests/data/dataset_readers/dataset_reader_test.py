@@ -11,7 +11,7 @@ from allennlp.common.testing import AllenNlpTestCase
 from allennlp.common import util as common_util
 from allennlp.common.checks import ConfigurationError
 from allennlp.data import Instance
-from allennlp.data.dataloader import DataLoader
+from allennlp.data.dataloader import PyTorchDataLoader
 from allennlp.data.dataset_readers import (
     dataset_reader,
     DatasetReader,
@@ -188,7 +188,8 @@ class TestDatasetReader(AllenNlpTestCase):
         )
         reader = TextClassificationJsonReader(lazy=True, cache_directory=self.cache_directory)
         deque(
-            DataLoader(reader.read(data_file), collate_fn=lambda b: b[0], num_workers=2), maxlen=0
+            PyTorchDataLoader(reader.read(data_file), collate_fn=lambda b: b[0], num_workers=2),
+            maxlen=0,
         )
 
         # We shouldn't write to the cache when the data is being loaded from multiple
@@ -203,7 +204,7 @@ class TestDatasetReader(AllenNlpTestCase):
 
         # Reading again from a multi-process loader should read from the cache.
         new_instances = list(
-            DataLoader(reader.read(data_file), collate_fn=lambda b: b[0], num_workers=2)
+            PyTorchDataLoader(reader.read(data_file), collate_fn=lambda b: b[0], num_workers=2)
         )
         assert len(instances) == len(new_instances)
 
@@ -230,7 +231,9 @@ class TestDatasetReader(AllenNlpTestCase):
         )
         reader = TextClassificationJsonReader(max_instances=2, lazy=True)
         instances = list(
-            DataLoader(reader.read(data_file), collate_fn=lambda b: b[0], num_workers=num_workers)
+            PyTorchDataLoader(
+                reader.read(data_file), collate_fn=lambda b: b[0], num_workers=num_workers
+            )
         )
         assert len(instances) == 2
 

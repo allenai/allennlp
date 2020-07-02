@@ -4,7 +4,7 @@ from allennlp.data.batch import Batch
 from allennlp.data.fields import TextField
 from allennlp.data.samplers import MaxTokensBatchSampler
 from allennlp.data.dataset_readers.dataset_reader import AllennlpDataset
-from allennlp.data.dataloader import DataLoader
+from allennlp.data.dataloader import PyTorchDataLoader
 
 from .sampler_test import SamplerTest
 
@@ -90,6 +90,8 @@ class TestMaxTokensSampler(SamplerTest):
         )
         # We use a custom collate_fn for testing, which doesn't actually create tensors,
         # just the allennlp Batches.
-        dataloader = DataLoader(dataset, batch_sampler=sampler, collate_fn=lambda x: Batch(x))
+        dataloader = PyTorchDataLoader(
+            dataset, batch_sampler=sampler, collate_fn=lambda x: Batch(x)
+        )
 
         assert len(dataloader) == 3

@@ -7,7 +7,7 @@ from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Token, Vocabulary, Instance
 from allennlp.data.fields import TextField, LabelField, ListField, IndexField, SequenceLabelField
 from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenCharactersIndexer
-from allennlp.data.dataloader import DataLoader
+from allennlp.data.dataloader import PyTorchDataLoader
 from allennlp.data.dataset_readers.dataset_reader import AllennlpDataset
 from allennlp.data.tokenizers import SpacyTokenizer
 from allennlp.models import Model
@@ -301,7 +301,7 @@ class TestListField(AllenNlpTestCase):
 
         model = DummyModel(self.vocab)
         model.eval()
-        loader = DataLoader(dataset, batch_size=2)
+        loader = PyTorchDataLoader(dataset, batch_size=2)
         batch = next(iter(loader))
         model.forward(**batch)
 
@@ -316,7 +316,7 @@ class TestListField(AllenNlpTestCase):
 
         model = DummyModel(self.vocab)
         model.eval()
-        loader = DataLoader(dataset, batch_size=2)
+        loader = PyTorchDataLoader(dataset, batch_size=2)
         batch = next(iter(loader))
         model.forward(**batch)
 

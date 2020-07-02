@@ -16,7 +16,7 @@ except ImportError:
 import torch
 from torch.utils.data import DataLoader
 from torch.nn.utils import clip_grad_norm_
-from allennlp.data.dataloader import DataLoader as AllennlpDataLoader
+from allennlp.data.dataloader import PyTorchDataLoader
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import Params
@@ -166,7 +166,7 @@ class TestTrainer(TrainerTestBase):
     def test_data_loader_lazy_epoch_size_correct_custom_epoch_size(self):
         batches_per_epoch = 3
         num_epochs = 3
-        data_loader_custom_epoch_lazy = AllennlpDataLoader(
+        data_loader_custom_epoch_lazy = PyTorchDataLoader(
             self.instances_lazy,
             batch_size=2,
             collate_fn=allennlp_collate,
@@ -189,7 +189,7 @@ class TestTrainer(TrainerTestBase):
     def test_trainer_respects_epoch_size_equals_total(self):
         batches_per_epoch = 4
         num_epochs = 3
-        data_loader_equal_epoch = AllennlpDataLoader(
+        data_loader_equal_epoch = PyTorchDataLoader(
             self.instances,
             batch_size=2,
             collate_fn=allennlp_collate,
@@ -212,7 +212,7 @@ class TestTrainer(TrainerTestBase):
     def test_trainer_respects_epoch_size_larger_tnan_total(self):
         batches_per_epoch = 7
         num_epochs = 3
-        data_loader_larger_epoch = AllennlpDataLoader(
+        data_loader_larger_epoch = PyTorchDataLoader(
             self.instances,
             batch_size=2,
             collate_fn=allennlp_collate,
@@ -235,7 +235,7 @@ class TestTrainer(TrainerTestBase):
     def test_trainer_respects_epoch_size_smaller_tnan_total(self):
         batches_per_epoch = 1
         num_epochs = 2
-        data_loader_smaller_epoch = AllennlpDataLoader(
+        data_loader_smaller_epoch = PyTorchDataLoader(
             self.instances,
             batch_size=2,
             collate_fn=allennlp_collate,

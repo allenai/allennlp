@@ -17,17 +17,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed checking equality of `ArrayField`s.
 - Fixed a bug where `NamespaceSwappingField` did not work correctly with `.empty_field()`.
 - Put more sensible defaults on the `huggingface_adamw` optimizer.
+- Simplified logging so that all logging output always goes to one file.
+- Fixed interaction with the python command line debugger.
+- Log the grad norm properly even when we're not clipping it.
 
 ### Added
 
 - A method to ModelTestCase for running basic model tests when you aren't using config files.
-- `BertPooler` can now unwrap and re-wrap extra dimensions if necessary.
 - Added some convenience methods for reading files.
 - Added an option to `file_utils.cached_path` to automatically extract archives.
 - Added the ability to pass an archive file instead of a local directory to `Vocab.from_files`.
 - Added the ability to pass an archive file instead of a glob to `ShardedDatasetReader`.
+- Added a new `"linear_with_warmup"` learning rate scheduler.
+
+### Changed
+
 - Not specifying a `cuda_device` now automatically determines whether to use a GPU or not.
 - Discovered plugins are logged so you can see what was loaded.
+- `allennlp.data.DataLoader` is now an abstract registrable class. The default implementation
+remains the same, but was renamed to `allennlp.data.PyTorchDataLoader`.
+- `BertPooler` can now unwrap and re-wrap extra dimensions if necessary.
+
 
 ## [v1.0.0](https://github.com/allenai/allennlp/releases/tag/v1.0.0) - 2020-06-16
 
