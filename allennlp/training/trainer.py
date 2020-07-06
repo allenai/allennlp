@@ -215,7 +215,7 @@ class GradientDescentTrainer(Trainer):
         model to be optimized.
 
     data_loader : `DataLoader`, required.
-        A pytorch `DataLoader` containing your `Dataset`, yielding padded indexed batches.
+        A `DataLoader` containing your `Dataset`, yielding padded indexed batches.
 
         In a typical AllenNLP configuration file, this parameter does not get an entry under the
         "trainer", it gets constructed separately.
@@ -335,10 +335,10 @@ class GradientDescentTrainer(Trainer):
         self,
         model: Model,
         optimizer: torch.optim.Optimizer,
-        data_loader: torch.utils.data.DataLoader,
+        data_loader: DataLoader,
         patience: Optional[int] = None,
         validation_metric: str = "-loss",
-        validation_data_loader: torch.utils.data.DataLoader = None,
+        validation_data_loader: DataLoader = None,
         num_epochs: int = 20,
         serialization_dir: Optional[str] = None,
         checkpointer: Checkpointer = None,
@@ -444,21 +444,25 @@ class GradientDescentTrainer(Trainer):
         else:
             self._pytorch_model = self.model
 
-    def rescale_gradients(self) -> Optional[float]:
+    def rescale_gradients(self) -> float:
         """
         Performs gradient rescaling. Is a no-op if gradient rescaling is not enabled.
+
+        Returns the norm of the gradients.
         """
+        if self._opt_level is not None:
+            # See: https://nvidia.github.io/apex/advanced.html#gradient-clipping
+            parameters_to_clip = [
+                p for p in amp.master_params(self.optimizer) if p.grad is not None
+            ]
+        else:
+            parameters_to_clip = [p for p in self.model.parameters() if p.grad is not None]
         if self._grad_norm:
-            if self._opt_level is not None:
-                # See: https://nvidia.github.io/apex/advanced.html#gradient-clipping
-                parameters_to_clip = [
-                    p for p in amp.master_params(self.optimizer) if p.grad is not None
-                ]
-            else:
-                parameters_to_clip = [p for p in self.model.parameters() if p.grad is not None]
             return clip_grad_norm_(parameters_to_clip, self._grad_norm)
         else:
-            return None
+            return torch.norm(
+                torch.stack([torch.norm(p.grad.detach()) for p in parameters_to_clip])
+            )
 
     def batch_outputs(self, batch: TensorDict, for_training: bool) -> Dict[str, torch.Tensor]:
         """

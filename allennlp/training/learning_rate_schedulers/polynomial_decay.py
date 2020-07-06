@@ -32,7 +32,8 @@ class PolynomialDecay(LearningRateScheduler):
     def __init__(
         self,
         optimizer: torch.optim.Optimizer,
-        total_steps,
+        num_epochs: int,
+        num_steps_per_epoch: int,
         power=1.0,
         warmup_steps=0,
         end_learning_rate=0.0,
@@ -42,7 +43,7 @@ class PolynomialDecay(LearningRateScheduler):
 
         self.power = power
         self.warmup_steps = warmup_steps
-        self.total_steps = total_steps
+        self.total_steps = num_epochs * num_steps_per_epoch
         self.end_learning_rate = end_learning_rate
 
         self.steps = 0
