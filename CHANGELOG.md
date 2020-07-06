@@ -22,6 +22,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Log the grad norm properly even when we're not clipping it.
 - Fixed a bug where `PretrainedModelInitializer` fails to initialize a model with a 0-dim tensor
 - Fixed a bug with the layer unfreezing schedule of the `SlantedTriangular` learning rate scheduler.
+- Ensure current working directory is added to Python path when `.allennlp_plugins` file is found.
+  This fixes the bug from [issue #4428](https://github.com/allenai/allennlp/issues/4428).
 
 ### Added
 

@@ -10,9 +10,11 @@ one per line.
 import importlib
 import logging
 import os
+from pathlib import Path
+import sys
 from typing import Iterable
 
-from allennlp.common.util import push_python_path, import_module_and_submodules
+from allennlp.common.util import import_module_and_submodules
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +27,9 @@ def discover_file_plugins(plugins_filename: str = ".allennlp_plugins") -> Iterab
     Returns an iterable of the plugins found, declared within a file whose path is `plugins_filename`.
     """
     if os.path.isfile(plugins_filename):
+        wkdir_path = str(Path(".").resolve())
+        if wkdir_path not in sys.path:
+            sys.path.append(wkdir_path)
         with open(plugins_filename) as file_:
             for module_name in file_.readlines():
                 module_name = module_name.strip()
@@ -38,8 +43,7 @@ def discover_plugins() -> Iterable[str]:
     """
     Returns an iterable of the plugins found.
     """
-    with push_python_path("."):
-        yield from discover_file_plugins()
+    yield from discover_file_plugins()
 
 
 def import_plugins() -> None:
