@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Log the grad norm properly even when we're not clipping it.
 - Fixed a bug where `PretrainedModelInitializer` fails to initialize a model with a 0-dim tensor
 - Fixed a bug with the layer unfreezing schedule of the `SlantedTriangular` learning rate scheduler.
+- Fixed a regression with logging in the distributed setting. Only the main worker should write log output to the terminal.
 
 ### Added
 
