@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Simplified logging so that all logging output always goes to one file.
 - Fixed interaction with the python command line debugger.
 - Log the grad norm properly even when we're not clipping it.
+- Fixed a bug where `PretrainedModelInitializer` fails to initialize a model with a 0-dim tensor
 
 ### Added
 

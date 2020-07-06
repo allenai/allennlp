@@ -403,7 +403,7 @@ class PretrainedModelInitializer(Initializer):
             )
 
         # Copy the parameters from the source to the destination
-        tensor.data[:] = source_weights[:]
+        tensor.data.copy_(source_weights.data)
 
 
 class InitializerApplicator(FromParams):
