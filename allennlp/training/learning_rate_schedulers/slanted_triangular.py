@@ -14,8 +14,9 @@ logger = logging.getLogger(__name__)
 class SlantedTriangular(LearningRateScheduler):
     """
     Implements the Slanted Triangular Learning Rate schedule with optional gradual
-    unfreezing. The schedule corresponds to first linearly increasing the learning
-    rate and annealing the learning based on a fixed ratio.
+    unfreezing and discriminative fine-tuning. The schedule corresponds to first
+    linearly increasing the learning rate over some number of epochs, and then linearly
+    decreasing it over the remaining epochs.
 
     If we gradually unfreeze, then in the first epoch of training, only the top
     layer is trained; in the second epoch, the top two layers are trained, etc.
@@ -110,7 +111,11 @@ class SlantedTriangular(LearningRateScheduler):
                 num_layers_to_unfreeze = 1
                 self.is_first_epoch = False
             else:
-                num_layers_to_unfreeze = self.last_epoch + 2
+                # `last_epoch` has now been incremented, so it's set to the index of
+                # the current epoch. So, if we're now on epoch index 1 (the 2nd epoch),
+                # and we want unfreeze the top 2 layers, we set
+                # `num_layers_to_unfreeze = 2 = last_epoch + 1`.
+                num_layers_to_unfreeze = self.last_epoch + 1
             if num_layers_to_unfreeze >= len(self.optimizer.param_groups) - 1:
                 logger.info("Gradual unfreezing finished. Training all layers.")
                 self.freezing_current = False
@@ -143,7 +148,7 @@ class SlantedTriangular(LearningRateScheduler):
             )
 
         if self.freezing_current:
-            # if we still freeze, we restrict the schedule to the current epoch
+            # if we are still freezing layers, we restrict the schedule to the current epoch
             num_steps = actual_num_steps_per_epoch
             step = min(self.last_batch_num_total - self.batch_num_total_epoch_end[-1], num_steps)
         else:
