@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed interaction with the python command line debugger.
 - Log the grad norm properly even when we're not clipping it.
 - Fixed a bug where `PretrainedModelInitializer` fails to initialize a model with a 0-dim tensor
+- Fixed a bug with the layer unfreezing schedule of the `SlantedTriangular` learning rate scheduler.
 
 ### Added
 
