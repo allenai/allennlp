@@ -22,6 +22,7 @@ class DetectronDatasetReader(DatasetReader):
         *,
         builtin_config_file: Optional[str] = None,
         yaml_config_file: Optional[str] = None,
+        image_root: Optional[str] = None,
         overrides: Optional[Dict[str, Any]] = None,
         **kwargs,
     ) -> None:
@@ -38,11 +39,12 @@ class DetectronDatasetReader(DatasetReader):
         cfg.freeze()
         from detectron2.data import DatasetMapper
         self.dataset_mapper = DatasetMapper(cfg)
+        self.image_root = image_root
 
     @overrides
     def _read(self, file_path):
         from detectron2.data.datasets import load_coco_json
-        instances = load_coco_json(file_path, "/Users/dirkg/Documents/data/vision/coco_tiny/images")
+        instances = load_coco_json(file_path, self.image_root)
         for instance in instances:
             instance = self.text_to_instance(instance)
             if instance is not None:
@@ -59,5 +61,5 @@ class DetectronDatasetReader(DatasetReader):
             return None
         from allennlp.data.fields.detectron_field import DetectronField
         return Instance({
-            "image": DetectronField(model_input)
+            "images": DetectronField(model_input)
         })
