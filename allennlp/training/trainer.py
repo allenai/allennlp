@@ -409,6 +409,11 @@ class GradientDescentTrainer(Trainer):
         self._tensorboard.get_batch_num_total = lambda: self._batch_num_total
         self._tensorboard.enable_activation_logging(self.model)
 
+        # Only display reg_loss if the model's configuration has regularization.
+        self._show_metrics = ["loss", "reg_loss"]
+        if self.model.get_regularization_penalty() == 0.0:
+            self._show_metrics = ["loss"]
+
         self._last_log = 0.0  # time of last logging
 
         self._num_gradient_accumulation_steps = num_gradient_accumulation_steps
@@ -629,7 +634,9 @@ class GradientDescentTrainer(Trainer):
 
             if self._master:
                 # Updating tqdm only for the master as the trainers wouldn't have one
-                description = training_util.description_from_metrics(metrics)
+
+                log_metrics = {key: metrics[key] for key in self._show_metrics}
+                description = training_util.description_from_metrics(log_metrics)
                 batch_group_generator_tqdm.set_description(description, refresh=False)
                 self._tensorboard.log_batch(
                     self.model,
@@ -675,6 +682,7 @@ class GradientDescentTrainer(Trainer):
             world_size=self._world_size,
             cuda_device=self.cuda_device,
         )
+
         for (worker, memory) in cpu_memory_usage:
             metrics["worker_" + str(worker) + "_memory_MB"] = memory
         for (gpu_num, memory) in gpu_memory_usage:
@@ -748,7 +756,9 @@ class GradientDescentTrainer(Trainer):
                 world_size=self._world_size,
                 cuda_device=self.cuda_device,
             )
-            description = training_util.description_from_metrics(val_metrics)
+
+            log_val_metrics = {key: val_metrics[key] for key in self._show_metrics}
+            description = training_util.description_from_metrics(log_val_metrics)
             val_generator_tqdm.set_description(description, refresh=False)
 
             for callback in self._batch_callbacks:
