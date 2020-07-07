@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Training now only displays reg_loss for models that have some regularization penalty configured.
 - Reduced the amount of log messages produced by `allennlp.common.file_utils`.
 - Fixed a bug where `PretrainedTransformerEmbedder` parameters appeared to be trainable
   in the log output even when `train_parameters` was set to `False`.
