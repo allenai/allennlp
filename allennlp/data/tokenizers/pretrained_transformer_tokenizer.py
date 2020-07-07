@@ -128,9 +128,9 @@ class PretrainedTransformerTokenizer(Tokenizer):
             return_token_type_ids=True,
             return_attention_mask=False,
         )
-        dummy_a = self.tokenizer.encode(token_a, add_special_tokens=False, add_prefix_space=True)[0]
+        dummy_a = self.tokenizer.encode(token_a, add_special_tokens=False)[0]
         assert dummy_a in dummy_output["input_ids"]
-        dummy_b = self.tokenizer.encode(token_b, add_special_tokens=False, add_prefix_space=True)[0]
+        dummy_b = self.tokenizer.encode(token_b, add_special_tokens=False)[0]
         assert dummy_b in dummy_output["input_ids"]
         assert dummy_a != dummy_b
 
@@ -185,7 +185,6 @@ class PretrainedTransformerTokenizer(Tokenizer):
             add_special_tokens=True,
             return_token_type_ids=True,
             return_attention_mask=False,
-            add_prefix_space=True,
         )
 
         seen_dummy_a = False
