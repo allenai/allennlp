@@ -47,6 +47,11 @@ class ShardedDatasetReader(DatasetReader):
             self._world_size = 1
 
         self.reader = base_reader
+        if getattr(self.reader, "manual_distributed_sharding", False):
+            raise ValueError(
+                "The base reader of a sharded dataset reader should not implement "
+                "manual distributed sharding itself."
+            )
         self.reader.manual_distributed_sharding = True
 
     def text_to_instance(self, *args, **kwargs) -> Instance:

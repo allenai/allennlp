@@ -4,8 +4,14 @@ import os
 import tarfile
 from typing import Tuple
 
+import pytest
+
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.data.dataset_readers import SequenceTaggingDatasetReader, ShardedDatasetReader
+from allennlp.data.dataset_readers import (
+    SequenceTaggingDatasetReader,
+    ShardedDatasetReader,
+    DatasetReader,
+)
 from allennlp.data.instance import Instance
 
 
@@ -17,6 +23,21 @@ def fingerprint(instance: Instance) -> Tuple[str, ...]:
     text_tuple = tuple(t.text for t in instance.fields["tokens"].tokens)  # type: ignore
     labels_tuple = tuple(instance.fields["tags"].labels)  # type: ignore
     return text_tuple + labels_tuple
+
+
+def ensure_exception_raised_when_base_reader_implements_sharding():
+    class ManuallyShardedBaseReader(DatasetReader):
+        def __init__(self, **kwargs):
+            super().__init__(manual_distributed_sharding=True, **kwargs)
+
+        def _read(self, file_path: str):
+            pass
+
+        def text_to_instance(self, text: str):
+            pass
+
+    with pytest.raises(ValueError, match="should not implement manual distributed sharding"):
+        reader = ShardedDatasetReader(ManuallyShardedBaseReader())
 
 
 class TestShardedDatasetReader(AllenNlpTestCase):
