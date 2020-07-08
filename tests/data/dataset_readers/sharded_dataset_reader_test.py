@@ -25,7 +25,7 @@ def fingerprint(instance: Instance) -> Tuple[str, ...]:
     return text_tuple + labels_tuple
 
 
-def ensure_exception_raised_when_base_reader_implements_sharding():
+def test_exception_raised_when_base_reader_implements_sharding():
     class ManuallyShardedBaseReader(DatasetReader):
         def __init__(self, **kwargs):
             super().__init__(manual_distributed_sharding=True, **kwargs)
