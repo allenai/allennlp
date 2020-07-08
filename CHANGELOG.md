@@ -32,7 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added the ability to pass an archive file instead of a local directory to `Vocab.from_files`.
 - Added the ability to pass an archive file instead of a glob to `ShardedDatasetReader`.
 - Added a new `"linear_with_warmup"` learning rate scheduler.
-- Added a check `ShardedDatasetReader` that ensures the base reader doesn't implement manual
+- Added a check in `ShardedDatasetReader` that ensures the base reader doesn't implement manual
   distributed sharding itself.
 
 ### Changed

@@ -47,11 +47,16 @@ class ShardedDatasetReader(DatasetReader):
             self._world_size = 1
 
         self.reader = base_reader
+        # We have to check that the base reader doesn't implement manual distributed
+        # sharding itself, because if it does, then only a fraction of the instances
+        # will be read.
         if getattr(self.reader, "manual_distributed_sharding", False):
             raise ValueError(
                 "The base reader of a sharded dataset reader should not implement "
                 "manual distributed sharding itself."
             )
+        # However we still need to set this flag to `True` after the fact so that
+        # all of the instances within each shard are used.
         self.reader.manual_distributed_sharding = True
 
     def text_to_instance(self, *args, **kwargs) -> Instance:
