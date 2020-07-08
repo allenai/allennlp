@@ -409,11 +409,6 @@ class GradientDescentTrainer(Trainer):
         self._tensorboard.get_batch_num_total = lambda: self._batch_num_total
         self._tensorboard.enable_activation_logging(self.model)
 
-        # Only display reg_loss if the model's configuration has regularization.
-        self._show_metrics = ["loss", "reg_loss"]
-        if self.model.get_regularization_penalty() == 0.0:
-            self._show_metrics = ["loss"]
-
         self._last_log = 0.0  # time of last logging
 
         self._num_gradient_accumulation_steps = num_gradient_accumulation_steps
@@ -634,8 +629,10 @@ class GradientDescentTrainer(Trainer):
 
             if self._master:
                 # Updating tqdm only for the master as the trainers wouldn't have one
-
-                log_metrics = {key: metrics[key] for key in self._show_metrics}
+                if hasattr(self.model, "_regularizer") and self.model._regularizer is None:
+                    log_metrics = {key: val for key, val in metrics.items() if key != "reg_loss"}
+                else:
+                    log_metrics = {key: val for key, val in metrics.items()}
                 description = training_util.description_from_metrics(log_metrics)
                 batch_group_generator_tqdm.set_description(description, refresh=False)
                 self._tensorboard.log_batch(
@@ -757,7 +754,12 @@ class GradientDescentTrainer(Trainer):
                 cuda_device=self.cuda_device,
             )
 
-            log_val_metrics = {key: val_metrics[key] for key in self._show_metrics}
+            if hasattr(self.model, "_regularizer") and self.model._regularizer is None:
+                log_val_metrics = {
+                    key: val for key, val in val_metrics.items() if key != "reg_loss"
+                }
+            else:
+                log_val_metrics = {key: val for key, val in val_metrics.items()}
             description = training_util.description_from_metrics(log_val_metrics)
             val_generator_tqdm.set_description(description, refresh=False)
 
