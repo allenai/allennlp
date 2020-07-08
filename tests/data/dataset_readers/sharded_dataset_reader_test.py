@@ -33,11 +33,11 @@ def ensure_exception_raised_when_base_reader_implements_sharding():
         def _read(self, file_path: str):
             pass
 
-        def text_to_instance(self, text: str):
+        def text_to_instance(self, text: str):  # type: ignore
             pass
 
     with pytest.raises(ValueError, match="should not implement manual distributed sharding"):
-        reader = ShardedDatasetReader(ManuallyShardedBaseReader())
+        ShardedDatasetReader(ManuallyShardedBaseReader())
 
 
 class TestShardedDatasetReader(AllenNlpTestCase):
