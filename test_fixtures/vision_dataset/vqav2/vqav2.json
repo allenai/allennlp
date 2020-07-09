@@ -1,0 +1,21 @@
+{
+    "dataset_reader": {
+      "type": "vqav2",
+      "image_root": "/net/nfs2.corp/prior/jiasen/coco/train/",
+      "annotation_root": "test_fixtures/vision_dataset/vqav2/"
+    },
+    "train_data_path": "trainval",
+    "validation_data_path": "minival",
+    "model":{},
+    "data_loader": {
+      "batch_size": 32
+    },
+    "trainer": {
+      "optimizer": {
+          "type": "huggingface_adamw",
+          "lr": 0.00005
+      },
+      "validation_metric": "+denotation_acc",
+      "num_epochs": 1
+    }    
+  }
