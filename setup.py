@@ -57,7 +57,7 @@ setup(
         "spacy>=2.1.0,<2.4",
         "numpy",
         "tensorboardX>=1.2",
-        "boto3",
+        "boto3>=1.14,<2.0",
         "requests>=2.18",
         "tqdm>=4.19",
         "h5py",
