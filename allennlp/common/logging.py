@@ -92,8 +92,10 @@ def prepare_global_logging(serialization_dir: str, rank: int = 0, world_size: in
     root_logger.setLevel(LEVEL)
 
     # put all the handlers on the root logger
-    for handler in [file_handler, stdout_handler, stderr_handler]:
-        root_logger.addHandler(handler)
+    root_logger.addHandler(file_handler)
+    if rank == 0:
+        root_logger.addHandler(stdout_handler)
+        root_logger.addHandler(stderr_handler)
 
     # write uncaught exceptions to the logs
     def excepthook(exctype, value, traceback):
