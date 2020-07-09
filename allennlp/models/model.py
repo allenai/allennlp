@@ -5,7 +5,7 @@ an AllenNLP model.
 
 import logging
 import os
-from typing import Dict, Union, List, Set, Type, Optional
+from typing import Dict, List, Set, Type, Optional
 
 try:
     from apex import amp
@@ -78,15 +78,18 @@ class Model(torch.nn.Module, Registrable):
         self.vocab = vocab
         self._regularizer = regularizer
 
-    def get_regularization_penalty(self) -> Optional[Union[float, torch.Tensor]]:
+    def get_regularization_penalty(self) -> Optional[torch.Tensor]:
         """
         Computes the regularization penalty for the model.
         Returns None if the model was not configured to use regularization.
         """
         if self._regularizer is None:
-            return None
+            regularization_penalty = None
         else:
-            return self._regularizer(self)
+            regularization_penalty = self._regularizer(self)
+            if isinstance(regularization_penalty, float):
+                regularization_penalty = torch.tensor(regularization_penalty)
+        return regularization_penalty
 
     def get_parameters_for_histogram_tensorboard_logging(self) -> List[str]:
         """
