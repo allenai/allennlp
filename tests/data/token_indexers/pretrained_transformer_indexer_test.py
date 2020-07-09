@@ -55,7 +55,7 @@ class TestPretrainedTransformerIndexer(AllenNlpTestCase):
         tokenizer = cached_transformers.get_tokenizer("roberta-base")
         allennlp_tokenizer = PretrainedTransformerTokenizer("roberta-base")
         indexer = PretrainedTransformerIndexer(model_name="roberta-base")
-        string_specials = "<s> AllenNLP is great </s>"
+        string_specials = "<s>AllenNLP is great</s>"
         string_no_specials = "AllenNLP is great"
         tokens = tokenizer.tokenize(string_specials)
         expected_ids = tokenizer.convert_tokens_to_ids(tokens)
@@ -71,7 +71,7 @@ class TestPretrainedTransformerIndexer(AllenNlpTestCase):
             "roberta-base", add_special_tokens=False
         )
         indexer = PretrainedTransformerIndexer(model_name="roberta-base")
-        default_format = "<s> AllenNLP is great! </s> </s> Really it is! </s>"
+        default_format = "<s>AllenNLP is great!</s></s>Really it is!</s>"
         tokens = tokenizer.tokenize(default_format)
         expected_ids = tokenizer.convert_tokens_to_ids(tokens)
         allennlp_tokens = allennlp_tokenizer.add_special_tokens(
@@ -80,7 +80,7 @@ class TestPretrainedTransformerIndexer(AllenNlpTestCase):
         )
         vocab = Vocabulary()
         indexed = indexer.tokens_to_indices(allennlp_tokens, vocab)
-        assert indexed["token_ids"] == expected_ids
+        assert indexed["token_ids"] == expected_ids, f"{allennlp_tokens}\n{tokens}"
 
     def test_transformers_vocab_sizes(self):
         def check_vocab_size(model_name: str):
