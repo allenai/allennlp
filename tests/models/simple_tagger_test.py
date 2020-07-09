@@ -53,7 +53,7 @@ class SimpleTaggerTest(ModelTestCase):
 
     def test_regularization(self):
         penalty = self.model.get_regularization_penalty()
-        assert penalty == 0
+        assert penalty is None
 
         data_loader = PyTorchDataLoader(self.instances, batch_size=32)
         trainer = GradientDescentTrainer(self.model, None, data_loader)  # optimizer,

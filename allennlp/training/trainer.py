@@ -474,16 +474,14 @@ class GradientDescentTrainer(Trainer):
 
         if for_training:
             try:
+                assert "loss" in output_dict
                 regularization_penalty = self.model.get_regularization_penalty()
-                loss = output_dict["loss"]
 
-                # Handle model without regularization
-                if regularization_penalty == 0.0:
-                    regularization_penalty = loss.new_full(size=[], fill_value=0.0)
+                if regularization_penalty is not None:
+                    output_dict["reg_loss"] = regularization_penalty
+                    output_dict["loss"] += regularization_penalty
 
-                output_dict["reg_loss"] = regularization_penalty
-                output_dict["loss"] += regularization_penalty
-            except KeyError:
+            except AssertionError:
                 if for_training:
                     raise RuntimeError(
                         "The model you are trying to optimize does not contain a"
@@ -506,8 +504,14 @@ class GradientDescentTrainer(Trainer):
             gpu_memory_usage.append((gpu, memory))
             logger.info(f"GPU {gpu} memory usage MB: {memory}")
 
+        regularization_penalty = self.model.get_regularization_penalty()
+
         train_loss = 0.0
-        train_reg_loss = 0.0
+
+        if regularization_penalty is not None:
+            train_reg_loss = 0.0
+        else:
+            train_reg_loss = None
         # Set the model to "train" mode.
         self._pytorch_model.train()
 
@@ -574,19 +578,20 @@ class GradientDescentTrainer(Trainer):
             for batch in batch_group:
                 batch_outputs = self.batch_outputs(batch, for_training=True)
                 batch_group_outputs.append(batch_outputs)
-                loss = batch_outputs["loss"]
-                reg_loss = batch_outputs["reg_loss"]
+                loss = batch_outputs.get("loss")
+                reg_loss = batch_outputs.get("reg_loss")
                 if torch.isnan(loss):
                     raise ValueError("nan loss encountered")
                 loss = loss / len(batch_group)
-                reg_loss = reg_loss / len(batch_group)
                 if self._opt_level is not None:
                     with amp.scale_loss(loss, self.optimizer) as scaled_loss:
                         scaled_loss.backward()
                 else:
                     loss.backward()
                 train_loss += loss.item()
-                train_reg_loss += reg_loss.item()
+                if reg_loss is not None:
+                    reg_loss = reg_loss / len(batch_group)
+                    train_reg_loss += reg_loss.item()
 
             batch_grad_norm = self.rescale_gradients()
 
@@ -629,11 +634,7 @@ class GradientDescentTrainer(Trainer):
 
             if self._master:
                 # Updating tqdm only for the master as the trainers wouldn't have one
-                if hasattr(self.model, "_regularizer") and self.model._regularizer is None:
-                    log_metrics = {key: val for key, val in metrics.items() if key != "reg_loss"}
-                else:
-                    log_metrics = {key: val for key, val in metrics.items()}
-                description = training_util.description_from_metrics(log_metrics)
+                description = training_util.description_from_metrics(metrics)
                 batch_group_generator_tqdm.set_description(description, refresh=False)
                 self._tensorboard.log_batch(
                     self.model,
@@ -705,10 +706,14 @@ class GradientDescentTrainer(Trainer):
                 "Validation results cannot be calculated without a validation_data_loader"
             )
 
+        regularization_penalty = self.model.get_regularization_penalty()
         val_generator_tqdm = Tqdm.tqdm(validation_data_loader)
         batches_this_epoch = 0
         val_loss = 0
-        val_reg_loss = 0
+        if regularization_penalty is not None:
+            val_reg_loss = 0
+        else:
+            val_reg_loss = None
         done_early = False
         for batch in val_generator_tqdm:
             if self._distributed:
@@ -754,13 +759,7 @@ class GradientDescentTrainer(Trainer):
                 cuda_device=self.cuda_device,
             )
 
-            if hasattr(self.model, "_regularizer") and self.model._regularizer is None:
-                log_val_metrics = {
-                    key: val for key, val in val_metrics.items() if key != "reg_loss"
-                }
-            else:
-                log_val_metrics = {key: val for key, val in val_metrics.items()}
-            description = training_util.description_from_metrics(log_val_metrics)
+            description = training_util.description_from_metrics(val_metrics)
             val_generator_tqdm.set_description(description, refresh=False)
 
             for callback in self._batch_callbacks:

@@ -78,13 +78,13 @@ class Model(torch.nn.Module, Registrable):
         self.vocab = vocab
         self._regularizer = regularizer
 
-    def get_regularization_penalty(self) -> Union[float, torch.Tensor]:
+    def get_regularization_penalty(self) -> Optional[Union[float, torch.Tensor]]:
         """
         Computes the regularization penalty for the model.
-        Returns 0 if the model was not configured to use regularization.
+        Returns None if the model was not configured to use regularization.
         """
         if self._regularizer is None:
-            return 0.0
+            return None
         else:
             return self._regularizer(self)
 
