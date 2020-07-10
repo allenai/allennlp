@@ -23,6 +23,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed a bug where `PretrainedModelInitializer` fails to initialize a model with a 0-dim tensor
 - Fixed a bug with the layer unfreezing schedule of the `SlantedTriangular` learning rate scheduler.
 - Fixed a regression with logging in the distributed setting. Only the main worker should write log output to the terminal.
+- Pinned the version of boto3 for package managers (e.g. poetry).
+- Fixed issue #4330 by updating the `tokenizers` dependency.
 
 ### Added
 
@@ -32,6 +34,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added the ability to pass an archive file instead of a local directory to `Vocab.from_files`.
 - Added the ability to pass an archive file instead of a glob to `ShardedDatasetReader`.
 - Added a new `"linear_with_warmup"` learning rate scheduler.
+- Added a check in `ShardedDatasetReader` that ensures the base reader doesn't implement manual
+  distributed sharding itself.
 
 ### Changed
 
@@ -40,6 +44,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `allennlp.data.DataLoader` is now an abstract registrable class. The default implementation
 remains the same, but was renamed to `allennlp.data.PyTorchDataLoader`.
 - `BertPooler` can now unwrap and re-wrap extra dimensions if necessary.
+- New `transformers` dependency. Only version >=3.0 now supported.
 
 
 ## [v1.0.0](https://github.com/allenai/allennlp/releases/tag/v1.0.0) - 2020-06-16
