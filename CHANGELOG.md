@@ -36,6 +36,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added a new `"linear_with_warmup"` learning rate scheduler.
 - Added a check in `ShardedDatasetReader` that ensures the base reader doesn't implement manual
   distributed sharding itself.
+- Added an option to `PretrainedTransformerEmbedder` and `PretrainedTransformerMismatchedEmbedder` to use a
+  scalar mix of all hidden layers from the transformer model instead of just the last layer. To utilize
+  this, just set `last_layer_only` to `False`.
 
 ### Changed
 
