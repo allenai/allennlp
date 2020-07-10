@@ -5,15 +5,6 @@ import torch
 from allennlp.data import Vocabulary
 from allennlp.models.model import Model
 
-from detectron2.config import CfgNode
-
-def apply_dict_to_cfg(d: Dict[str, Any], c: CfgNode) -> None:
-    for key, value in d.items():
-        key = key.upper()
-        if isinstance(value, dict):
-            apply_dict_to_cfg(value, c[key])
-        else:
-            c[key] = value
 
 @Model.register("detectron")
 class Detectron(Model):
@@ -28,22 +19,19 @@ class Detectron(Model):
     ) -> None:
         super().__init__(vocab, **kwargs)
 
-        from detectron2 import model_zoo
-        from detectron2.config import get_cfg
-        cfg = get_cfg()
-        from detectron2.model_zoo import get_config_file
-        if builtin_config_file is not None:
-            cfg.merge_from_file(get_config_file(builtin_config_file))
-        if yaml_config_file is not None:
-            cfg.merge_from_file(yaml_config_file)
+        from allennlp.common.detectron import get_detectron_cfg
+
+        cfg = get_detectron_cfg(builtin_config_file, yaml_config_file, overrides=None, freeze=False)
         if train:
+            from detectron2.model_zoo import model_zoo
+
             cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url(builtin_config_file)
-        if not torch.cuda.is_available():
-            cfg.MODEL.DEVICE = "cpu"
         if overrides is not None:
+            from allennlp.common.detectron import apply_dict_to_cfg
+
             apply_dict_to_cfg(overrides, cfg)
         cfg.freeze()
-        
+
         from detectron2.modeling import build_model
         from detectron2.checkpoint import DetectionCheckpointer
 
@@ -51,6 +39,7 @@ class Detectron(Model):
         DetectionCheckpointer(self.detectron_model).load(cfg.MODEL.WEIGHTS)
 
         from detectron2.utils.events import EventStorage
+
         self.detectron_event_storage = EventStorage()
 
     def forward(  # type: ignore
@@ -62,7 +51,7 @@ class Detectron(Model):
         with self.detectron_event_storage:
             images = self.detectron_model.preprocess_image(images)
             features = self.detectron_model.backbone(images.tensor)
-            
+
             if proposals is None:
                 proposals, _ = self.detectron_model.proposal_generator(images, features, None)
 
