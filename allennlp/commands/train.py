@@ -236,7 +236,7 @@ def train_model(
         world_size = num_nodes * num_procs
 
         logging.info(
-            f"Switching to distributed training mode since multiple GPUs are configured"
+            f"Switching to distributed training mode since multiple GPUs are configured | "
             f"Master is at: {master_addr}:{master_port} | Rank of this node: {node_rank} | "
             f"Number of workers in this node: {num_procs} | Number of nodes: {num_nodes} | "
             f"World size: {world_size}"

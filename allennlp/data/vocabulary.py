@@ -288,7 +288,7 @@ class Vocabulary(Registrable):
         padding_token = padding_token if padding_token is not None else DEFAULT_PADDING_TOKEN
         oov_token = oov_token if oov_token is not None else DEFAULT_OOV_TOKEN
         namespace_token_counts: Dict[str, Dict[str, int]] = defaultdict(lambda: defaultdict(int))
-        for instance in Tqdm.tqdm(instances):
+        for instance in Tqdm.tqdm(instances, desc="building vocab"):
             instance.count_vocab_items(namespace_token_counts)
 
         return cls(
