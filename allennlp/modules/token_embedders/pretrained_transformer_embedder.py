@@ -8,6 +8,7 @@ import torch.nn.functional as F
 from transformers import XLNetConfig
 
 from allennlp.data.tokenizers import PretrainedTransformerTokenizer
+from allennlp.modules.scalar_mix import ScalarMix
 from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
 from allennlp.nn.util import batched_index_select
 
@@ -35,6 +36,10 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         want to use the encoder.
     train_parameters: `bool`, optional (default = `True`)
         If this is `True`, the transformer weights get updated during training.
+    last_layer_only: `bool`, optional (default = `True`)
+        When `True` (the default), only the final layer of the pretrained transformer is taken
+        for the embeddings. But if set to `False`, a scalar mix of all of the layers
+        is used.
     """
 
     def __init__(
@@ -44,6 +49,7 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         max_length: int = None,
         sub_module: str = None,
         train_parameters: bool = True,
+        last_layer_only: bool = True,
         override_weights_file: Optional[str] = None,
         override_weights_strip_prefix: Optional[str] = None
     ) -> None:
@@ -58,9 +64,15 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
             assert hasattr(self.transformer_model, sub_module)
             self.transformer_model = getattr(self.transformer_model, sub_module)
         self._max_length = max_length
+
         # I'm not sure if this works for all models; open an issue on github if you find a case
         # where it doesn't work.
         self.output_dim = self.config.hidden_size
+
+        self._scalar_mix: Optional[ScalarMix] = None
+        if not last_layer_only:
+            self._scalar_mix = ScalarMix(self.config.num_hidden_layers)
+            self.config.output_hidden_states = True
 
         tokenizer = PretrainedTransformerTokenizer(model_name)
         self._num_added_start_tokens = len(tokenizer.single_sequence_start_tokens)
@@ -142,7 +154,20 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         parameters = {"input_ids": token_ids, "attention_mask": transformer_mask.float()}
         if type_ids is not None:
             parameters["token_type_ids"] = type_ids
-        embeddings = self.transformer_model(**parameters)[0]
+
+        transformer_output = self.transformer_model(**parameters)
+        if self._scalar_mix is not None:
+            # As far as I can tell, the hidden states will always be the last element
+            # in the output tuple as long as the model is not also configured to return
+            # attention scores.
+            # See, for example, the return value description for BERT:
+            # https://huggingface.co/transformers/model_doc/bert.html#transformers.BertModel.forward
+            # These hidden states will also include the embedding layer, which we don't
+            # include in the scalar mix. Hence the `[1:]` slicing.
+            hidden_states = transformer_output[-1][1:]
+            embeddings = self._scalar_mix(hidden_states)
+        else:
+            embeddings = transformer_output[0]
 
         if fold_long_sequences:
             embeddings = self._unfold_long_sequences(
