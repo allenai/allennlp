@@ -86,9 +86,13 @@ class Model(torch.nn.Module, Registrable):
         if self._regularizer is None:
             regularization_penalty = None
         else:
-            regularization_penalty = self._regularizer(self)
-            if isinstance(regularization_penalty, float):
-                regularization_penalty = torch.tensor(regularization_penalty)
+            try:
+                regularization_penalty = self._regularizer(self)
+                if isinstance(regularization_penalty, float):
+                    assert regularization_penalty == 0.0
+                    regularization_penalty = torch.tensor(regularization_penalty)
+            except AssertionError:
+                raise RuntimeError("The regularizer cannot be a non-zero float.")
         return regularization_penalty
 
     def get_parameters_for_histogram_tensorboard_logging(self) -> List[str]:
