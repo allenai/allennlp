@@ -25,6 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed a regression with logging in the distributed setting. Only the main worker should write log output to the terminal.
 - Pinned the version of boto3 for package managers (e.g. poetry).
 - Fixed issue #4330 by updating the `tokenizers` dependency.
+- Fixed a bug in `TextClassificationPredictor` so that it passes tokenized inputs to the `DatasetReader`
+  in case it does not have a tokenizer.
 
 ### Added
 
