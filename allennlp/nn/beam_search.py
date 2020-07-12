@@ -1,10 +1,8 @@
 from typing import List, Callable, Tuple, Dict, cast
 import warnings
-
 import torch
 
 from allennlp.common.checks import ConfigurationError
-
 
 StateType = Dict[str, torch.Tensor]
 StepFunctionType = Callable[[torch.Tensor, StateType, int], Tuple[torch.Tensor, StateType]]
@@ -14,11 +12,8 @@ StepFunctionTypeNoTimestep = Callable[[torch.Tensor, StateType], Tuple[torch.Ten
 class BeamSearch:
     """
     Implements the beam search algorithm for decoding the most likely sequences.
-
     [0]: https://arxiv.org/abs/1702.01806
-
     # Parameters
-
     end_index : `int`
         The index of the "stop" or "end" token in the target vocabulary.
     max_steps : `int`, optional (default = `50`)
@@ -35,11 +30,11 @@ class BeamSearch:
     """
 
     def __init__(
-        self,
-        end_index: int,
-        max_steps: int = 50,
-        beam_size: int = 10,
-        per_node_beam_size: int = None,
+            self,
+            end_index: int,
+            max_steps: int = 50,
+            beam_size: int = 10,
+            per_node_beam_size: int = None,
     ) -> None:
         self._end_index = end_index
         self.max_steps = max_steps
@@ -73,12 +68,11 @@ class BeamSearch:
 
     @torch.no_grad()
     def search(
-        self, start_predictions: torch.Tensor, start_state: StateType, step: StepFunctionType
+            self, start_predictions: torch.Tensor, start_state: StateType, step: StepFunctionType
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Given a starting state and a step function, apply beam search to find the
         most likely target sequences.
-
         Notes
         -----
         If your step function returns `-inf` for some log probabilities
@@ -88,9 +82,7 @@ class BeamSearch:
         with finite log probability (non-zero probability) returned by the step function.
         Therefore if you're using a mask you may want to check the results from `search`
         and potentially discard sequences with non-finite log probability.
-
         # Parameters
-
         start_predictions : `torch.Tensor`
             A tensor containing the initial predictions with shape `(batch_size,)`.
             Usually the initial predictions are just the index of the "start" token
@@ -112,9 +104,7 @@ class BeamSearch:
             the log probabilities of the tokens for the next step, and the second
             element is the updated state. The tensor in the state should have shape
             `(group_size, *)`, where `*` means any other number of dimensions.
-
         # Returns
-
         `Tuple[torch.Tensor, torch.Tensor]`
             Tuple of `(predictions, log_probabilities)`, where `predictions`
             has shape `(batch_size, beam_size, max_steps)` and `log_probabilities`
@@ -130,7 +120,7 @@ class BeamSearch:
             old_step = cast(StepFunctionTypeNoTimestep, step)
 
             def new_step(
-                last_predictions: torch.Tensor, state: Dict[str, torch.Tensor], time_step: int
+                    last_predictions: torch.Tensor, state: Dict[str, torch.Tensor], time_step: int
             ):
                 return old_step(last_predictions, state)
 
@@ -191,18 +181,29 @@ class BeamSearch:
             (batch_size * self.beam_size, num_classes), float("-inf")
         )
         log_probs_after_end[:, self._end_index] = 0.0
-
         # Set the same state for each element in the beam.
         for key, state_tensor in state.items():
             if state_tensor is None:
                 continue
-            _, *last_dims = state_tensor.size()
+
             # shape: (batch_size * beam_size, *)
-            state[key] = (
-                state_tensor.unsqueeze(1)
-                .expand(batch_size, self.beam_size, *last_dims)
-                .reshape(batch_size * self.beam_size, *last_dims)
-            )
+            if state_tensor.size()[0] == batch_size:
+                _, *last_dims = state_tensor.size()
+                state[key] = (
+                    state_tensor.unsqueeze(1)
+                        .expand(batch_size, self.beam_size, *last_dims)
+                        .reshape(batch_size * self.beam_size, *last_dims)
+                )
+            else:
+                # For multi-layer decoder, we got the hidden and context
+                # shape like (num_layers, batch_size, *)
+                # need special operations
+                num_layers, _, *last_dims = state_tensor.size()
+                state[key] = (
+                    state_tensor.unsqueeze(2)
+                        .expand(num_layers, batch_size, self.beam_size, *last_dims)
+                        .reshape(num_layers, batch_size * self.beam_size, *last_dims)
+                )
 
         for timestep in range(self.max_steps - 1):
             # shape: (batch_size * beam_size,)
@@ -245,8 +246,8 @@ class BeamSearch:
             # shape: (batch_size * beam_size, per_node_beam_size)
             expanded_last_log_probabilities = (
                 last_log_probabilities.unsqueeze(2)
-                .expand(batch_size, self.beam_size, self.per_node_beam_size)
-                .reshape(batch_size * self.beam_size, self.per_node_beam_size)
+                    .expand(batch_size, self.beam_size, self.per_node_beam_size)
+                    .reshape(batch_size * self.beam_size, self.per_node_beam_size)
             )
 
             # shape: (batch_size * beam_size, per_node_beam_size)
@@ -284,7 +285,7 @@ class BeamSearch:
             # dividing by per_node_beam_size gives the ancestor. (Note that this is integer
             # division as the tensor is a LongTensor.)
             # shape: (batch_size, beam_size)
-            backpointer = restricted_beam_indices / self.per_node_beam_size
+            backpointer = restricted_beam_indices // self.per_node_beam_size
 
             backpointers.append(backpointer)
 
@@ -293,19 +294,33 @@ class BeamSearch:
             for key, state_tensor in state.items():
                 if state_tensor is None:
                     continue
-                _, *last_dims = state_tensor.size()
-                # shape: (batch_size, beam_size, *)
-                expanded_backpointer = backpointer.view(
-                    batch_size, self.beam_size, *([1] * len(last_dims))
-                ).expand(batch_size, self.beam_size, *last_dims)
 
-                # shape: (batch_size * beam_size, *)
-                state[key] = (
-                    state_tensor.reshape(batch_size, self.beam_size, *last_dims)
-                    .gather(1, expanded_backpointer)
-                    .reshape(batch_size * self.beam_size, *last_dims)
-                )
+                if state_tensor.size()[0] == batch_size * self.beam_size:
+                    _, *last_dims = state_tensor.size()
+                    # shape: (batch_size, beam_size, *)
 
+                    expanded_backpointer = backpointer.view(
+                        batch_size, self.beam_size, *([1] * len(last_dims))
+                    ).expand(batch_size, self.beam_size, *last_dims)
+
+                    # shape: (batch_size * beam_size, *)
+                    state[key] = (
+                        state_tensor.reshape(batch_size, self.beam_size, *last_dims)
+                            .gather(1, expanded_backpointer)
+                            .reshape(batch_size * self.beam_size, *last_dims)
+                    )
+                else:
+                    num_layers, _, *last_dims = state_tensor.size()
+                    expanded_backpointer = backpointer.view(batch_size, self.beam_size, *([1] * len(last_dims))).expand(
+                        batch_size, self.beam_size, *last_dims)
+                    expanded_backpointer = expanded_backpointer.unsqueeze(0).expand(num_layers, batch_size,
+                                                                                    self.beam_size, *last_dims)
+                    # shape: (batch_size * beam_size, *)
+                    state[key] = (
+                        state_tensor.reshape(num_layers, batch_size, self.beam_size, *last_dims)
+                            .gather(1, expanded_backpointer)
+                            .reshape(num_layers, batch_size * self.beam_size, *last_dims)
+                    )
         if not torch.isfinite(last_log_probabilities).all():
             warnings.warn(
                 "Infinite log probabilities encountered. Some final sequences may not make sense. "
