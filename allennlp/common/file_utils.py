@@ -390,6 +390,10 @@ def get_from_cache(url: str, cache_dir: Union[str, Path] = None) -> str:
                 url,
             )
             raise
+    except OSError:
+        # OSError may be triggered if we were unable to fetch the eTag.
+        # If this is the case, try to proceed without eTag check.
+        etag = None
 
     filename = url_to_filename(url, etag)
 
