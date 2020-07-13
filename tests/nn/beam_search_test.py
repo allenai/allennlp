@@ -8,7 +8,6 @@ from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.nn.beam_search import BeamSearch
 
-
 transition_probabilities = torch.tensor(
     [
         [0.0, 0.4, 0.3, 0.2, 0.1, 0.0],  # start token -> jth token
@@ -112,6 +111,40 @@ class BeamSearchTest(AllenNlpTestCase):
             ]
         )
         # shape: (batch_size x beam_size, 3)
+
+        self._check_results(state=state)
+
+        # check finished state.
+        for key, array in expected_finished_state.items():
+            np.testing.assert_allclose(state[key].numpy(), array)
+
+    def test_diff_shape_state(self):
+        state = {}
+        state["foo"] = torch.tensor([[1, 0, 1], [2, 0, 1], [0, 0, 1], [1, 1, 1], [0, 0, 0]])
+        state["foo"] = state["foo"].unsqueeze(0).repeat(2, 1, 1)
+        # shape: (2, batch_size, 3)
+
+        seq = [
+            [1, 0, 1],
+            [1, 0, 1],
+            [1, 0, 1],
+            [2, 0, 1],
+            [2, 0, 1],
+            [2, 0, 1],
+            [0, 0, 1],
+            [0, 0, 1],
+            [0, 0, 1],
+            [1, 1, 1],
+            [1, 1, 1],
+            [1, 1, 1],
+            [0, 0, 0],
+            [0, 0, 0],
+            [0, 0, 0],
+        ]
+        seq = [seq] * 2
+        expected_finished_state = {}
+        expected_finished_state["foo"] = np.array(seq)
+        # shape: (2, batch_size x beam_size, 3)
 
         self._check_results(state=state)
 
