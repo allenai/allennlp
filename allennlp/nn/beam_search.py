@@ -188,7 +188,7 @@ class BeamSearch:
                 continue
 
             # shape: (batch_size * beam_size, *)
-            if state_tensor.dim() < 4:
+            if state_tensor.dim() < 3:
                 _, *last_dims = state_tensor.size()
                 state[key] = (
                     state_tensor.unsqueeze(1)
@@ -294,7 +294,7 @@ class BeamSearch:
                 if state_tensor is None:
                     continue
 
-                if state_tensor.dim() < 4:
+                if state_tensor.dim() < 3:
                     _, *last_dims = state_tensor.size()
                     # shape: (batch_size, beam_size, *)
                     expanded_backpointer = backpointer.view(
