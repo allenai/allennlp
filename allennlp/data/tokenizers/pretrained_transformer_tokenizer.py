@@ -424,11 +424,12 @@ class PretrainedTransformerTokenizer(Tokenizer):
 
         # We add special tokens and also set token type ids.
         import dataclasses
+
         if tokens2 is None:
             return (
-                self.single_sequence_start_tokens +
-                with_new_type_id(tokens1, self.single_sequence_token_type_id) +
-                self.single_sequence_end_tokens
+                self.single_sequence_start_tokens
+                + with_new_type_id(tokens1, self.single_sequence_token_type_id)
+                + self.single_sequence_end_tokens
             )
         else:
             return (

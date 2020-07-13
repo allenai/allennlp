@@ -128,8 +128,10 @@ def cached_path(
         archive_path = url_or_filename[:exclamation_index]
         archive_path = cached_path(archive_path, cache_dir, True, force_extract)
         if not os.path.isdir(archive_path):
-            raise ValueError(f"{url_or_filename} uses the ! syntax, but does not specify an archive file.")
-        return os.path.join(archive_path, url_or_filename[exclamation_index+1:])
+            raise ValueError(
+                f"{url_or_filename} uses the ! syntax, but does not specify an archive file."
+            )
+        return os.path.join(archive_path, url_or_filename[exclamation_index + 1 :])
 
     url_or_filename = os.path.expanduser(url_or_filename)
     parsed = urlparse(url_or_filename)
