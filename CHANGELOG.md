@@ -28,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed a bug in `TextClassificationPredictor` so that it passes tokenized inputs to the `DatasetReader`
   in case it does not have a tokenizer.
 - reg_loss is only now returned for models that have some regularization penalty configured.
+- Fixed a bug that prevented `cached_path` from downloading assets from GitHub releases.
 
 ### Added
 
@@ -42,6 +43,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added an option to `PretrainedTransformerEmbedder` and `PretrainedTransformerMismatchedEmbedder` to use a
   scalar mix of all hidden layers from the transformer model instead of just the last layer. To utilize
   this, just set `last_layer_only` to `False`.
+- `cached_path()` can now read files inside of archives.
 
 ### Changed
 
