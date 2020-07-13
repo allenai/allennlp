@@ -381,6 +381,7 @@ def py2md(module: str, out: Optional[str] = None) -> bool:
             signature_with_def=True,
             use_fixed_header_levels=False,
             render_module_header=False,
+            descriptive_class_title=False,
         ),
     )
     if out:
