@@ -73,7 +73,6 @@ class BeamSearchTest(AllenNlpTestCase):
 
         initial_predictions = torch.tensor([0] * batch_size)
         top_k, log_probs = beam_search.search(initial_predictions, state, take_step)  # type: ignore
-
         # top_k should be shape `(batch_size, beam_size, max_predicted_length)`.
         assert list(top_k.size())[:-1] == [batch_size, beam_size]
         np.testing.assert_array_equal(top_k[0].numpy(), expected_top_k)

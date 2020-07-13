@@ -1,8 +1,10 @@
 from typing import List, Callable, Tuple, Dict, cast
 import warnings
+
 import torch
 
 from allennlp.common.checks import ConfigurationError
+
 
 StateType = Dict[str, torch.Tensor]
 StepFunctionType = Callable[[torch.Tensor, StateType, int], Tuple[torch.Tensor, StateType]]
@@ -12,13 +14,17 @@ StepFunctionTypeNoTimestep = Callable[[torch.Tensor, StateType], Tuple[torch.Ten
 class BeamSearch:
     """
     Implements the beam search algorithm for decoding the most likely sequences.
+
     [0]: https://arxiv.org/abs/1702.01806
+
     # Parameters
+
     end_index : `int`
         The index of the "stop" or "end" token in the target vocabulary.
     max_steps : `int`, optional (default = `50`)
         The maximum number of decoding steps to take, i.e. the maximum length
         of the predicted sequences.
+
     beam_size : `int`, optional (default = `10`)
         The width of the beam used.
     per_node_beam_size : `int`, optional (default = `beam_size`)
@@ -82,7 +88,9 @@ class BeamSearch:
         with finite log probability (non-zero probability) returned by the step function.
         Therefore if you're using a mask you may want to check the results from `search`
         and potentially discard sequences with non-finite log probability.
+
         # Parameters
+
         start_predictions : `torch.Tensor`
             A tensor containing the initial predictions with shape `(batch_size,)`.
             Usually the initial predictions are just the index of the "start" token
@@ -105,6 +113,7 @@ class BeamSearch:
             element is the updated state. The tensor in the state should have shape
             `(batch_size, *)`, where `*` means any other number of dimensions.
         # Returns
+
         `Tuple[torch.Tensor, torch.Tensor]`
             Tuple of `(predictions, log_probabilities)`, where `predictions`
             has shape `(batch_size, beam_size, max_steps)` and `log_probabilities`
@@ -313,13 +322,13 @@ class BeamSearch:
                     expanded_backpointer = backpointer.view(
                         batch_size, self.beam_size, *([1] * len(last_dims))
                     ).expand(batch_size, self.beam_size, *last_dims)
-                    expanded_backpointer = expanded_backpointer.unsqueeze(0).expand(
-                        num_layers, batch_size, self.beam_size, *last_dims
+                    expanded_backpointer = expanded_backpointer.unsqueeze(0).repeat(
+                        num_layers, 1, 1, 1
                     )
                     # shape: (num_layers, batch_size * beam_size, *)
                     state[key] = (
                         state_tensor.reshape(num_layers, batch_size, self.beam_size, *last_dims)
-                        .gather(1, expanded_backpointer)
+                        .gather(2, expanded_backpointer)
                         .reshape(num_layers, batch_size * self.beam_size, *last_dims)
                     )
         if not torch.isfinite(last_log_probabilities).all():
