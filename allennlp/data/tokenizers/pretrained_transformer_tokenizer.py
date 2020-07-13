@@ -416,25 +416,26 @@ class PretrainedTransformerTokenizer(Tokenizer):
     def add_special_tokens(
         self, tokens1: List[Token], tokens2: Optional[List[Token]] = None
     ) -> List[Token]:
+        def with_new_type_id(tokens: List[Token], type_id: int) -> List[Token]:
+            return [dataclasses.replace(t, type_id=type_id) for t in tokens]
+
         # Make sure we don't change the input parameters
-        tokens1 = copy.deepcopy(tokens1)
         tokens2 = copy.deepcopy(tokens2)
 
         # We add special tokens and also set token type ids.
+        import dataclasses
         if tokens2 is None:
-            for token in tokens1:
-                token.type_id = self.single_sequence_token_type_id
-            return self.single_sequence_start_tokens + tokens1 + self.single_sequence_end_tokens
+            return (
+                self.single_sequence_start_tokens +
+                with_new_type_id(tokens1, self.single_sequence_token_type_id) +
+                self.single_sequence_end_tokens
+            )
         else:
-            for token in tokens1:
-                token.type_id = self.sequence_pair_first_token_type_id
-            for token in tokens2:
-                token.type_id = self.sequence_pair_second_token_type_id
             return (
                 self.sequence_pair_start_tokens
-                + tokens1
+                + with_new_type_id(tokens1, self.sequence_pair_first_token_type_id)
                 + self.sequence_pair_mid_tokens
-                + tokens2
+                + with_new_type_id(tokens2, self.sequence_pair_second_token_type_id)
                 + self.sequence_pair_end_tokens
             )
 
