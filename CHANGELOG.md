@@ -28,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed a bug in `TextClassificationPredictor` so that it passes tokenized inputs to the `DatasetReader`
   in case it does not have a tokenizer.
 - reg_loss is only now returned for models that have some regularization penalty configured.
+- Fixed a bug that prevented `cached_path` from downloading assets from GitHub releases.
 
 ### Added
 
