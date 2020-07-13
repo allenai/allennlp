@@ -182,22 +182,13 @@ class BeamSearch:
         )
         log_probs_after_end[:, self._end_index] = 0.0
 
-        # Check whether tensor in state has the same dimension
-        # For multi-layer decoder, we got the hidden and context
-        # Shape like (num_layers, batch_size, *), diffrent with other tensors
-        dim_nums = set([state_tensor.dim() for state_tensor in state.values()])
-        if len(dim_nums) > 1:
-            has_same_dim = False
-        else:
-            has_same_dim = True
-
         # Set the same state for each element in the beam.
         for key, state_tensor in state.items():
             if state_tensor is None:
                 continue
 
             # shape: (batch_size * beam_size, *)
-            if has_same_dim:
+            if state_tensor.dim() < 4:
                 _, *last_dims = state_tensor.size()
                 state[key] = (
                     state_tensor.unsqueeze(1)
@@ -303,7 +294,7 @@ class BeamSearch:
                 if state_tensor is None:
                     continue
 
-                if has_same_dim:
+                if state_tensor.dim() < 4:
                     _, *last_dims = state_tensor.size()
                     # shape: (batch_size, beam_size, *)
                     expanded_backpointer = backpointer.view(
