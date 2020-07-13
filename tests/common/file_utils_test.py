@@ -243,6 +243,13 @@ class TestFileUtils(AllenNlpTestCase):
         with open(filename, "rb") as cached_file:
             assert cached_file.read() == self.glove_bytes
 
+        # archives
+        filename = cached_path(
+            self.FIXTURES_ROOT / "common" / "quote.tar.gz!quote.txt", extract_archive=True
+        )
+        with open(filename, "r") as f:
+            assert f.read().startswith("I mean, ")
+
     def test_open_compressed(self):
         uncompressed_file = self.FIXTURES_ROOT / "embeddings/fake_embeddings.5d.txt"
         with open_compressed(uncompressed_file) as f:
