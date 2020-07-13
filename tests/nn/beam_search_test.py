@@ -119,8 +119,10 @@ class BeamSearchTest(AllenNlpTestCase):
 
     def test_diff_shape_state(self):
         state = {}
-        state["foo"] = torch.tensor([[1, 0, 1], [2, 0, 1], [0, 0, 1], [1, 1, 1], [0, 0, 0]])
-        state["foo"] = state["foo"].unsqueeze(0).repeat(2, 1, 1)
+        state["decoder_hidden"] = torch.tensor(
+            [[1, 0, 1], [2, 0, 1], [0, 0, 1], [1, 1, 1], [0, 0, 0]]
+        )
+        state["decoder_hidden"] = state["decoder_hidden"].unsqueeze(0).repeat(2, 1, 1)
         # shape: (2, batch_size, 3)
 
         seq = [
@@ -142,7 +144,7 @@ class BeamSearchTest(AllenNlpTestCase):
         ]
         seq = [seq] * 2
         expected_finished_state = {}
-        expected_finished_state["foo"] = np.array(seq)
+        expected_finished_state["decoder_hidden"] = np.array(seq)
         # shape: (2, batch_size x beam_size, 3)
 
         self._check_results(state=state)
