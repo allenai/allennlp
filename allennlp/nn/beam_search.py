@@ -196,21 +196,21 @@ class BeamSearch:
             if state_tensor is None:
                 continue
 
-            # shape: (batch_size * beam_size, *)
-            if state_tensor.dim() < 3:
-                _, *last_dims = state_tensor.size()
-                state[key] = (
-                    state_tensor.unsqueeze(1)
-                    .expand(batch_size, self.beam_size, *last_dims)
-                    .reshape(batch_size * self.beam_size, *last_dims)
-                )
-            else:
+            if state_tensor.dim() == 3 and key in ["decoder_hidden", "decoder_context"]:
                 # shape: (num_layers, batch_size * beam_size, *)
                 num_layers, _, *last_dims = state_tensor.size()
                 state[key] = (
                     state_tensor.unsqueeze(2)
                     .expand(num_layers, batch_size, self.beam_size, *last_dims)
                     .reshape(num_layers, batch_size * self.beam_size, *last_dims)
+                )
+            else:
+                # shape: (batch_size * beam_size, *)
+                _, *last_dims = state_tensor.size()
+                state[key] = (
+                    state_tensor.unsqueeze(1)
+                    .expand(batch_size, self.beam_size, *last_dims)
+                    .reshape(batch_size * self.beam_size, *last_dims)
                 )
 
         for timestep in range(self.max_steps - 1):
@@ -302,21 +302,7 @@ class BeamSearch:
             for key, state_tensor in state.items():
                 if state_tensor is None:
                     continue
-
-                if state_tensor.dim() < 3:
-                    _, *last_dims = state_tensor.size()
-                    # shape: (batch_size, beam_size, *)
-                    expanded_backpointer = backpointer.view(
-                        batch_size, self.beam_size, *([1] * len(last_dims))
-                    ).expand(batch_size, self.beam_size, *last_dims)
-
-                    # shape: (batch_size * beam_size, *)
-                    state[key] = (
-                        state_tensor.reshape(batch_size, self.beam_size, *last_dims)
-                        .gather(1, expanded_backpointer)
-                        .reshape(batch_size * self.beam_size, *last_dims)
-                    )
-                else:
+                if state_tensor.dim() == 3 and key in ["decoder_hidden", "decoder_context"]:
                     # shape: (num_layers, batch_size * beam_size, *)
                     num_layers, _, *last_dims = state_tensor.size()
                     expanded_backpointer = backpointer.view(
@@ -331,6 +317,20 @@ class BeamSearch:
                         .gather(2, expanded_backpointer)
                         .reshape(num_layers, batch_size * self.beam_size, *last_dims)
                     )
+                else:
+                    _, *last_dims = state_tensor.size()
+                    # shape: (batch_size, beam_size, *)
+                    expanded_backpointer = backpointer.view(
+                        batch_size, self.beam_size, *([1] * len(last_dims))
+                    ).expand(batch_size, self.beam_size, *last_dims)
+
+                    # shape: (batch_size * beam_size, *)
+                    state[key] = (
+                        state_tensor.reshape(batch_size, self.beam_size, *last_dims)
+                        .gather(1, expanded_backpointer)
+                        .reshape(batch_size * self.beam_size, *last_dims)
+                    )
+
         if not torch.isfinite(last_log_probabilities).all():
             warnings.warn(
                 "Infinite log probabilities encountered. Some final sequences may not make sense. "
