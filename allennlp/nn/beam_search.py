@@ -79,6 +79,7 @@ class BeamSearch:
         """
         Given a starting state and a step function, apply beam search to find the
         most likely target sequences.
+
         Notes
         -----
         If your step function returns `-inf` for some log probabilities
@@ -103,15 +104,15 @@ class BeamSearch:
             A function that is responsible for computing the next most likely tokens,
             given the current state and the predictions from the last time step.
             The function should accept two arguments. The first being a tensor
-            of shape `(batch_size,)`, representing the index of the predicted
+            of shape `(group_size,)`, representing the index of the predicted
             tokens from the last time step, and the second being the current state.
-            The `batch_size` will be `batch_size * beam_size`, except in the initial
+            The `group_size` will be `batch_size * beam_size`, except in the initial
             step, for which it will just be `batch_size`.
             The function is expected to return a tuple, where the first element
-            is a tensor of shape `(batch_size, target_vocab_size)` containing
+            is a tensor of shape `(group_size, target_vocab_size)` containing
             the log probabilities of the tokens for the next step, and the second
             element is the updated state. The tensor in the state should have shape
-            `(batch_size, *)`, where `*` means any other number of dimensions.
+            `(group_size, *)`, where `*` means any other number of dimensions.
         # Returns
 
         `Tuple[torch.Tensor, torch.Tensor]`
