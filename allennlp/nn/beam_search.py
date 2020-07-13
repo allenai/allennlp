@@ -30,11 +30,11 @@ class BeamSearch:
     """
 
     def __init__(
-            self,
-            end_index: int,
-            max_steps: int = 50,
-            beam_size: int = 10,
-            per_node_beam_size: int = None,
+        self,
+        end_index: int,
+        max_steps: int = 50,
+        beam_size: int = 10,
+        per_node_beam_size: int = None,
     ) -> None:
         self._end_index = end_index
         self.max_steps = max_steps
@@ -68,7 +68,7 @@ class BeamSearch:
 
     @torch.no_grad()
     def search(
-            self, start_predictions: torch.Tensor, start_state: StateType, step: StepFunctionType
+        self, start_predictions: torch.Tensor, start_state: StateType, step: StepFunctionType
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Given a starting state and a step function, apply beam search to find the
@@ -95,15 +95,15 @@ class BeamSearch:
             A function that is responsible for computing the next most likely tokens,
             given the current state and the predictions from the last time step.
             The function should accept two arguments. The first being a tensor
-            of shape `(group_size,)`, representing the index of the predicted
+            of shape `(batch_size,)`, representing the index of the predicted
             tokens from the last time step, and the second being the current state.
-            The `group_size` will be `batch_size * beam_size`, except in the initial
+            The `batch_size` will be `batch_size * beam_size`, except in the initial
             step, for which it will just be `batch_size`.
             The function is expected to return a tuple, where the first element
-            is a tensor of shape `(group_size, target_vocab_size)` containing
+            is a tensor of shape `(batch_size, target_vocab_size)` containing
             the log probabilities of the tokens for the next step, and the second
             element is the updated state. The tensor in the state should have shape
-            `(group_size, *)`, where `*` means any other number of dimensions.
+            `(batch_size, *)`, where `*` means any other number of dimensions.
         # Returns
         `Tuple[torch.Tensor, torch.Tensor]`
             Tuple of `(predictions, log_probabilities)`, where `predictions`
@@ -120,7 +120,7 @@ class BeamSearch:
             old_step = cast(StepFunctionTypeNoTimestep, step)
 
             def new_step(
-                    last_predictions: torch.Tensor, state: Dict[str, torch.Tensor], time_step: int
+                last_predictions: torch.Tensor, state: Dict[str, torch.Tensor], time_step: int
             ):
                 return old_step(last_predictions, state)
 
@@ -181,28 +181,36 @@ class BeamSearch:
             (batch_size * self.beam_size, num_classes), float("-inf")
         )
         log_probs_after_end[:, self._end_index] = 0.0
+
+        # Check whether tensor in state has the same dimension
+        # For multi-layer decoder, we got the hidden and context
+        # Shape like (num_layers, batch_size, *), diffrent with other tensors
+        dim_nums = set([state_tensor.dim() for state_tensor in state.values()])
+        if len(dim_nums) > 1:
+            has_same_dim = False
+        else:
+            has_same_dim = True
+
         # Set the same state for each element in the beam.
         for key, state_tensor in state.items():
             if state_tensor is None:
                 continue
 
             # shape: (batch_size * beam_size, *)
-            if state_tensor.size()[0] == batch_size:
+            if has_same_dim:
                 _, *last_dims = state_tensor.size()
                 state[key] = (
                     state_tensor.unsqueeze(1)
-                        .expand(batch_size, self.beam_size, *last_dims)
-                        .reshape(batch_size * self.beam_size, *last_dims)
+                    .expand(batch_size, self.beam_size, *last_dims)
+                    .reshape(batch_size * self.beam_size, *last_dims)
                 )
             else:
-                # For multi-layer decoder, we got the hidden and context
-                # shape like (num_layers, batch_size, *)
-                # need special operations
+                # shape: (num_layers, batch_size * beam_size, *)
                 num_layers, _, *last_dims = state_tensor.size()
                 state[key] = (
                     state_tensor.unsqueeze(2)
-                        .expand(num_layers, batch_size, self.beam_size, *last_dims)
-                        .reshape(num_layers, batch_size * self.beam_size, *last_dims)
+                    .expand(num_layers, batch_size, self.beam_size, *last_dims)
+                    .reshape(num_layers, batch_size * self.beam_size, *last_dims)
                 )
 
         for timestep in range(self.max_steps - 1):
@@ -246,8 +254,8 @@ class BeamSearch:
             # shape: (batch_size * beam_size, per_node_beam_size)
             expanded_last_log_probabilities = (
                 last_log_probabilities.unsqueeze(2)
-                    .expand(batch_size, self.beam_size, self.per_node_beam_size)
-                    .reshape(batch_size * self.beam_size, self.per_node_beam_size)
+                .expand(batch_size, self.beam_size, self.per_node_beam_size)
+                .reshape(batch_size * self.beam_size, self.per_node_beam_size)
             )
 
             # shape: (batch_size * beam_size, per_node_beam_size)
@@ -295,10 +303,9 @@ class BeamSearch:
                 if state_tensor is None:
                     continue
 
-                if state_tensor.size()[0] == batch_size * self.beam_size:
+                if has_same_dim:
                     _, *last_dims = state_tensor.size()
                     # shape: (batch_size, beam_size, *)
-
                     expanded_backpointer = backpointer.view(
                         batch_size, self.beam_size, *([1] * len(last_dims))
                     ).expand(batch_size, self.beam_size, *last_dims)
@@ -306,20 +313,23 @@ class BeamSearch:
                     # shape: (batch_size * beam_size, *)
                     state[key] = (
                         state_tensor.reshape(batch_size, self.beam_size, *last_dims)
-                            .gather(1, expanded_backpointer)
-                            .reshape(batch_size * self.beam_size, *last_dims)
+                        .gather(1, expanded_backpointer)
+                        .reshape(batch_size * self.beam_size, *last_dims)
                     )
                 else:
+                    # shape: (num_layers, batch_size * beam_size, *)
                     num_layers, _, *last_dims = state_tensor.size()
-                    expanded_backpointer = backpointer.view(batch_size, self.beam_size, *([1] * len(last_dims))).expand(
-                        batch_size, self.beam_size, *last_dims)
-                    expanded_backpointer = expanded_backpointer.unsqueeze(0).expand(num_layers, batch_size,
-                                                                                    self.beam_size, *last_dims)
-                    # shape: (batch_size * beam_size, *)
+                    expanded_backpointer = backpointer.view(
+                        batch_size, self.beam_size, *([1] * len(last_dims))
+                    ).expand(batch_size, self.beam_size, *last_dims)
+                    expanded_backpointer = expanded_backpointer.unsqueeze(0).expand(
+                        num_layers, batch_size, self.beam_size, *last_dims
+                    )
+                    # shape: (num_layers, batch_size * beam_size, *)
                     state[key] = (
                         state_tensor.reshape(num_layers, batch_size, self.beam_size, *last_dims)
-                            .gather(1, expanded_backpointer)
-                            .reshape(num_layers, batch_size * self.beam_size, *last_dims)
+                        .gather(1, expanded_backpointer)
+                        .reshape(num_layers, batch_size * self.beam_size, *last_dims)
                     )
         if not torch.isfinite(last_log_probabilities).all():
             warnings.warn(
