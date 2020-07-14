@@ -27,9 +27,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed issue #4330 by updating the `tokenizers` dependency.
 - Fixed a bug in `TextClassificationPredictor` so that it passes tokenized inputs to the `DatasetReader`
   in case it does not have a tokenizer.
-- reg_loss is only now returned for models that have some regularization penalty configured.
+- `reg_loss` is only now returned for models that have some regularization penalty configured.
 - Fixed a bug that prevented `cached_path` from downloading assets from GitHub releases.
 - Fixed a bug that erronously increased last label's false positive count in calculating fbeta metrics.
+- `Tqdm` output now looks much better when the output is being piped or redirected.
 - Small improvements to how the API documentation is rendered.
 
 ### Added
