@@ -8,6 +8,7 @@ from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.nn.beam_search import BeamSearch
 
+
 transition_probabilities = torch.tensor(
     [
         [0.0, 0.4, 0.3, 0.2, 0.1, 0.0],  # start token -> jth token
@@ -73,6 +74,7 @@ class BeamSearchTest(AllenNlpTestCase):
 
         initial_predictions = torch.tensor([0] * batch_size)
         top_k, log_probs = beam_search.search(initial_predictions, state, take_step)  # type: ignore
+
         # top_k should be shape `(batch_size, beam_size, max_predicted_length)`.
         assert list(top_k.size())[:-1] == [batch_size, beam_size]
         np.testing.assert_array_equal(top_k[0].numpy(), expected_top_k)

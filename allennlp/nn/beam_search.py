@@ -113,6 +113,7 @@ class BeamSearch:
             the log probabilities of the tokens for the next step, and the second
             element is the updated state. The tensor in the state should have shape
             `(group_size, *)`, where `*` means any other number of dimensions.
+
         # Returns
 
         `Tuple[torch.Tensor, torch.Tensor]`
