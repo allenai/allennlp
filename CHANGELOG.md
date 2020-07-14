@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [v1.1.0rc1](https://github.com/allenai/allennlp/releases/tag/v1.0.0rc1) - 2020-07-14
+
 ### Fixed
 
 - Reduced the amount of log messages produced by `allennlp.common.file_utils`.
@@ -56,7 +58,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 remains the same, but was renamed to `allennlp.data.PyTorchDataLoader`.
 - `BertPooler` can now unwrap and re-wrap extra dimensions if necessary.
 - New `transformers` dependency. Only version >=3.0 now supported.
-
 
 ## [v1.0.0](https://github.com/allenai/allennlp/releases/tag/v1.0.0) - 2020-06-16
 
