@@ -37,6 +37,10 @@ This function has some args.
 - __c__ : `int`, optional (default = `3`) <br>
     Yet another number.
 
+<strong>Notes</strong>
+
+These are some notes.
+
 <strong>Returns</strong>
 
 
@@ -47,23 +51,25 @@ This function has some args.
 ## SomeClass
 
 ```python
-class SomeClass():
+class SomeClass:
  | def __init__(self) -> None
 ```
 
 I'm a class!
 
-<strong>Paramaters</strong>
+<strong>Parameters</strong>
 
 
-x : `float`
+- __x__ : `float` <br>
     This attribute is called `x`.
 
 <a name=".scripts.tests.py2md.basic_example.SomeClass.some_class_level_variable"></a>
 ### some\_class\_level\_variable
 
 ```python
-some_class_level_variable = 1
+class SomeClass:
+ | ...
+ | some_class_level_variable = 1
 ```
 
 This is how you document a class-level variable.
@@ -72,13 +78,17 @@ This is how you document a class-level variable.
 ### some\_class\_level\_var\_with\_type
 
 ```python
-some_class_level_var_with_type = 1
+class SomeClass:
+ | ...
+ | some_class_level_var_with_type: int = 1
 ```
 
 <a name=".scripts.tests.py2md.basic_example.SomeClass.some_method"></a>
 ### some\_method
 
 ```python
+class SomeClass:
+ | ...
  | def some_method(self) -> None
 ```
 
@@ -95,6 +105,8 @@ But I don't do anything.
 ### method\_with\_alternative\_return\_section
 
 ```python
+class SomeClass:
+ | ...
  | def method_with_alternative_return_section(self) -> int
 ```
 
@@ -109,6 +121,8 @@ Another method.
 ### method\_with\_alternative\_return\_section3
 
 ```python
+class SomeClass:
+ | ...
  | def method_with_alternative_return_section3(self) -> int
 ```
 
@@ -124,7 +138,7 @@ Another method.
 ## AnotherClassWithReallyLongConstructor
 
 ```python
-class AnotherClassWithReallyLongConstructor():
+class AnotherClassWithReallyLongConstructor:
  | def __init__(
  |     self,
  |     a_really_long_argument_name: int = 0,
