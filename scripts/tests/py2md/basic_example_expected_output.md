@@ -44,7 +44,7 @@ This function has some args.
     The result of `a + b * c`.
 
 <a name=".scripts.tests.py2md.basic_example.SomeClass"></a>
-## SomeClass Objects
+## SomeClass
 
 ```python
 class SomeClass():
@@ -121,7 +121,7 @@ Another method.
     A completely arbitrary number.
 
 <a name=".scripts.tests.py2md.basic_example.AnotherClassWithReallyLongConstructor"></a>
-## AnotherClassWithReallyLongConstructor Objects
+## AnotherClassWithReallyLongConstructor
 
 ```python
 class AnotherClassWithReallyLongConstructor():
