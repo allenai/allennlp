@@ -291,3 +291,75 @@ class FBetaMeasureTest(AllenNlpTestCase):
 
         assert_allclose(precisions, [0.0, 1.0, 0.0, 0.0])
         assert_allclose(recalls, [0.0, 1.0, 0.0, 0.0])
+
+    @multi_device
+    def test_fbeta_handles_no_prediction_false_last_class(self, device: str):
+
+        predictions = torch.tensor([[0.65, 0.35], [0.0, 0.0]], device=device)
+        # preds = [0, NA]
+        targets = torch.tensor([0, 0], device=device)
+
+        fbeta = FBetaMeasure()
+        fbeta(predictions, targets)
+        metric = fbeta.get_metric()
+        precisions = metric["precision"]
+        recalls = metric["recall"]
+        fscores = metric["fscore"]
+
+        assert_allclose(precisions, [1.0, 0.0])
+        assert_allclose(recalls, [0.5, 0.0])
+        assert_allclose(fscores, [0.6667, 0.0])
+
+    @multi_device
+    def test_fbeta_handles_no_prediction_true_last_class(self, device: str):
+
+        predictions = torch.tensor([[0.65, 0.35], [0.0, 0.0]], device=device)
+        # preds = [0, NA]
+        targets = torch.tensor([0, 1], device=device)
+
+        fbeta = FBetaMeasure()
+        fbeta(predictions, targets)
+        metric = fbeta.get_metric()
+        precisions = metric["precision"]
+        recalls = metric["recall"]
+        fscores = metric["fscore"]
+
+        assert_allclose(precisions, [1.0, 0.0])
+        assert_allclose(recalls, [1.0, 0.0])
+        assert_allclose(fscores, [1.0, 0.0])
+
+    @multi_device
+    def test_fbeta_handles_no_prediction_true_other_class(self, device: str):
+
+        predictions = torch.tensor([[0.65, 0.35], [0.0, 0.0]], device=device)
+        # preds = [0, NA]
+        targets = torch.tensor([1, 0], device=device)
+
+        fbeta = FBetaMeasure()
+        fbeta(predictions, targets)
+        metric = fbeta.get_metric()
+        precisions = metric["precision"]
+        recalls = metric["recall"]
+        fscores = metric["fscore"]
+
+        assert_allclose(precisions, [0.0, 0.0])
+        assert_allclose(recalls, [0.0, 0.0])
+        assert_allclose(fscores, [0.0, 0.0])
+
+    @multi_device
+    def test_fbeta_handles_no_prediction_true_all_class(self, device: str):
+
+        predictions = torch.tensor([[0.65, 0.35], [0.0, 0.0]], device=device)
+        # preds = [0, NA]
+        targets = torch.tensor([1, 1], device=device)
+
+        fbeta = FBetaMeasure()
+        fbeta(predictions, targets)
+        metric = fbeta.get_metric()
+        precisions = metric["precision"]
+        recalls = metric["recall"]
+        fscores = metric["fscore"]
+
+        assert_allclose(precisions, [0.0, 0.0])
+        assert_allclose(recalls, [0.0, 0.0])
+        assert_allclose(fscores, [0.0, 0.0])
