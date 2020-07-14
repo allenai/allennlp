@@ -8,7 +8,7 @@ MD_DOCS_CMD = python scripts/py2md.py
 MD_DOCS_CONF = mkdocs.yml
 MD_DOCS_CONF_SRC = mkdocs-skeleton.yml
 MD_DOCS_TGT = site/
-MD_DOCS_EXTRAS = $(addprefix $(MD_DOCS_ROOT),README.md LICENSE.md CONTRIBUTING.md)
+MD_DOCS_EXTRAS = $(addprefix $(MD_DOCS_ROOT),README.md CHANGELOG.md CONTRIBUTING.md)
 
 DOCKER_TAG = latest
 DOCKER_IMAGE_NAME = allennlp/allennlp:$(DOCKER_TAG)
@@ -119,9 +119,6 @@ $(MD_DOCS_ROOT)README.md : README.md
 	cp $< $@
 	# Alter the relative path of the README image for the docs.
 	$(SED) -i '1s/docs/./' $@
-
-$(MD_DOCS_ROOT)LICENSE.md : LICENSE
-	cp $< $@
 
 $(MD_DOCS_ROOT)%.md : %.md
 	cp $< $@

@@ -31,6 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed a bug that prevented `cached_path` from downloading assets from GitHub releases.
 - Fixed a bug that erronously increased last label's false positive count in calculating fbeta metrics.
 - `Tqdm` output now looks much better when the output is being piped or redirected.
+- Small improvements to how the API documentation is rendered.
 
 ### Added
 
