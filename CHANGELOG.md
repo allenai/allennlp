@@ -45,6 +45,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   scalar mix of all hidden layers from the transformer model instead of just the last layer. To utilize
   this, just set `last_layer_only` to `False`.
 - `cached_path()` can now read files inside of archives.
+- Training metrics now include per-batch loss in addition to aggregate loss across number of batches.
 
 ### Changed
 
