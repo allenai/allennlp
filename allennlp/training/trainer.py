@@ -767,7 +767,8 @@ class GradientDescentTrainer(Trainer):
             )
 
             description = training_util.description_from_metrics(val_metrics)
-            val_generator_tqdm.set_description(description, refresh=False)
+            if self._master:
+                val_generator_tqdm.set_description(description, refresh=False)
 
             for callback in self._batch_callbacks:
                 callback(
