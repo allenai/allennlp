@@ -707,7 +707,14 @@ class GradientDescentTrainer(Trainer):
             )
 
         regularization_penalty = self.model.get_regularization_penalty()
-        val_generator_tqdm = Tqdm.tqdm(validation_data_loader)
+
+        # Having multiple tqdm bars in case of distributed training will be a mess. Hence only the master's
+        # progress is shown
+        if self._master:
+            val_generator_tqdm = Tqdm.tqdm(validation_data_loader)
+        else:
+            val_generator_tqdm = validation_data_loader
+
         batches_this_epoch = 0
         val_loss = 0
         if regularization_penalty is not None:
@@ -760,7 +767,8 @@ class GradientDescentTrainer(Trainer):
             )
 
             description = training_util.description_from_metrics(val_metrics)
-            val_generator_tqdm.set_description(description, refresh=False)
+            if self._master:
+                val_generator_tqdm.set_description(description, refresh=False)
 
             for callback in self._batch_callbacks:
                 callback(
