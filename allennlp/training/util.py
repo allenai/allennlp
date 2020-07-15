@@ -282,10 +282,15 @@ def get_metrics(
     Gets the metrics but sets `"loss"` to
     the total loss divided by the `num_batches` so that
     the `"loss"` metric is "average loss per batch".
+    Returns the `"batch_loss"` separately.
     """
     metrics = model.get_metrics(reset=reset)
+    if not reset:
+        metrics["batch_loss"] = total_loss
     metrics["loss"] = float(total_loss / num_batches) if num_batches > 0 else 0.0
     if total_reg_loss is not None:
+        if not reset:
+            metrics["batch_reg_loss"] = total_reg_loss
         metrics["reg_loss"] = float(total_reg_loss / num_batches) if num_batches > 0 else 0.0
 
     if world_size > 1:
