@@ -519,6 +519,9 @@ class BertEncoder(torch.nn.Module, FromParams):
             [deepcopy(connect_layer) for _ in range(len(v_biattention_id))]
         )
 
+    def from_huggingface(cls, bert_model: BertModel):
+        pass
+
     def forward(
         self,
         txt_embedding,
@@ -681,6 +684,7 @@ class BertImageFeatureEmbeddings(torch.nn.Module, FromParams):
 
 
 @Model.register("nlvr2_vilbert")
+@Model.register("nlvr2_vilbert_from_huggingface", constructor="from_huggingface")
 class Nlvr2Vilbert(Model):
     """
     Model for the NLVR2 task based on the LXMERT paper (Tan et al. 2019).
@@ -713,6 +717,9 @@ class Nlvr2Vilbert(Model):
         self.v_pooler = TimeDistributed(BertPooler(encoder.image_hidden_size, pooled_output_dim))
         self.classifier = torch.nn.Linear(pooled_output_dim * 2, 2)
         self.dropout = torch.nn.Dropout(dropout)
+
+    @classmethod
+    def from_huggingface(cls, model_name: str):
 
     def consistency(self, reset: bool) -> float:
         num_consistent_groups = sum(1 for c in self.consistency_wrong_map.values() if c == 0)
