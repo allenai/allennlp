@@ -51,6 +51,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   this, just set `last_layer_only` to `False`.
 - `cached_path()` can now read files inside of archives.
 - Training metrics now include per-batch loss in addition to aggregate loss across number of batches.
+- Allow pretrained models in `PretrainedTransformerEmbedder` and `PretrainedTransformerMismatchedEmbedder` 
+  to set requires_grad on parameters that match a regex. To use this, just specify a list of 
+  strings in `train_parameters`
 
 ### Changed
 

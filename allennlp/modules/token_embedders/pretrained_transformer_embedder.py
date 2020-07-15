@@ -1,5 +1,6 @@
 import math
-from typing import Optional, Tuple
+import re
+from typing import Optional, Tuple, Union, List
 
 from overrides import overrides
 
@@ -34,8 +35,10 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         The name of a submodule of the transformer to be used as the embedder. Some transformers naturally act
         as embedders such as BERT. However, other models consist of encoder and decoder, in which case we just
         want to use the encoder.
-    train_parameters: `bool`, optional (default = `True`)
-        If this is `True`, the transformer weights get updated during training.
+    train_parameters: `Union[bool, List[str]]`, optional (default = `True`)
+        If this is `True`, all transformer weights get updated during training.
+        If this is `False`, none of the transformer weights get updated during training.
+        If this is a List of Regex strings, a parameter is updated only if it matches atleast one of the regexes.
     last_layer_only: `bool`, optional (default = `True`)
         When `True` (the default), only the final layer of the pretrained transformer is taken
         for the embeddings. But if set to `False`, a scalar mix of all of the layers
@@ -48,7 +51,7 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         *,
         max_length: int = None,
         sub_module: str = None,
-        train_parameters: bool = True,
+        train_parameters: Union[bool, List[str]] = True,
         last_layer_only: bool = True,
         override_weights_file: Optional[str] = None,
         override_weights_strip_prefix: Optional[str] = None
@@ -79,9 +82,14 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         self._num_added_end_tokens = len(tokenizer.single_sequence_end_tokens)
         self._num_added_tokens = self._num_added_start_tokens + self._num_added_end_tokens
 
-        if not train_parameters:
+        if isinstance(train_parameters, bool):
             for param in self.transformer_model.parameters():
-                param.requires_grad = False
+                param.requires_grad = train_parameters
+        elif isinstance(train_parameters, list):
+            for name, param in self.transformer_model.named_parameters():
+                # If the parameter name do not match any regex
+                if all(re.search(regex, name) is None for regex in train_parameters):
+                    param.requires_grad = False
 
     @overrides
     def get_output_dim(self):

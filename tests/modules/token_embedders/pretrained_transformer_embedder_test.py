@@ -2,6 +2,8 @@ import math
 import pytest
 import torch
 
+from typing import List, Union
+
 from allennlp.common import Params
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Vocabulary
@@ -81,6 +83,74 @@ class TestPretrainedTransformerEmbedder(AllenNlpTestCase):
         bert_vectors = token_embedder(tokens)
         assert bert_vectors.size() == (2, 9, 768)
         assert bert_vectors.requires_grad == (train_parameters or not last_layer_only)
+
+    @pytest.mark.parametrize(
+        "train_parameters,bert_vectors_require_grad",
+        [(True, True), ([".*embedding.*"], True), ([".*PLACEHOLDER.*"], False), (False, False)],
+    )
+    def test_regex_for_train_parameters(
+        self, train_parameters: Union[bool, List[str]], bert_vectors_require_grad: bool
+    ):
+        tokenizer = PretrainedTransformerTokenizer(model_name="bert-base-uncased")
+        token_indexer = PretrainedTransformerIndexer(model_name="bert-base-uncased")
+
+        sentence1 = "A, AllenNLP sentence."
+        tokens1 = tokenizer.tokenize(sentence1)
+        expected_tokens1 = ["[CLS]", "a", ",", "allen", "##nl", "##p", "sentence", ".", "[SEP]"]
+        assert [t.text for t in tokens1] == expected_tokens1
+
+        sentence2 = "AllenNLP is great"
+        tokens2 = tokenizer.tokenize(sentence2)
+        expected_tokens2 = ["[CLS]", "allen", "##nl", "##p", "is", "great", "[SEP]"]
+        assert [t.text for t in tokens2] == expected_tokens2
+
+        vocab = Vocabulary()
+
+        params = Params(
+            {
+                "token_embedders": {
+                    "bert": {
+                        "type": "pretrained_transformer",
+                        "model_name": "bert-base-uncased",
+                        "train_parameters": train_parameters,
+                        "last_layer_only": True,
+                    }
+                }
+            }
+        )
+        token_embedder = BasicTextFieldEmbedder.from_params(vocab=vocab, params=params)
+
+        instance1 = Instance({"tokens": TextField(tokens1, {"bert": token_indexer})})
+        instance2 = Instance({"tokens": TextField(tokens2, {"bert": token_indexer})})
+
+        batch = Batch([instance1, instance2])
+        batch.index_instances(vocab)
+
+        padding_lengths = batch.get_padding_lengths()
+        tensor_dict = batch.as_tensor_dict(padding_lengths)
+        tokens = tensor_dict["tokens"]
+        max_length = max(len(tokens1), len(tokens2))
+
+        assert tokens["bert"]["token_ids"].shape == (2, max_length)
+
+        assert tokens["bert"]["mask"].tolist() == [
+            [True, True, True, True, True, True, True, True, True],
+            [True, True, True, True, True, True, True, False, False],
+        ]
+
+        # Attention mask
+        bert_vectors = token_embedder(tokens)
+        assert bert_vectors.size() == (2, 9, 768)
+        assert bert_vectors.requires_grad == bert_vectors_require_grad
+
+        if type(train_parameters) is not bool :
+            if "embeddings" in train_parameters:
+                for name, param in token_embedder.named_parameters():
+                    assert param.requires_grad or ("embedding" not in name)
+
+            if "PLACEHOLDER" in train_parameters:
+                for name, param in token_embedder.named_parameters():
+                    assert not param.requires_grad
 
     def test_big_token_type_ids(self):
         token_embedder = PretrainedTransformerEmbedder("roberta-base")

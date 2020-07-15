@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Union, List
 
 from overrides import overrides
 import torch
@@ -37,7 +37,7 @@ class PretrainedTransformerMismatchedEmbedder(TokenEmbedder):
         self,
         model_name: str,
         max_length: int = None,
-        train_parameters: bool = True,
+        train_parameters: Union[bool, List[str]] = True,
         last_layer_only: bool = True,
     ) -> None:
         super().__init__()
