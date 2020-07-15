@@ -143,7 +143,7 @@ class TestPretrainedTransformerEmbedder(AllenNlpTestCase):
         assert bert_vectors.size() == (2, 9, 768)
         assert bert_vectors.requires_grad == bert_vectors_require_grad
 
-        if type(train_parameters) is not bool :
+        if type(train_parameters) is not bool:
             if "embeddings" in train_parameters:
                 for name, param in token_embedder.named_parameters():
                     assert param.requires_grad or ("embedding" not in name)

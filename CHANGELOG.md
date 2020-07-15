@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Added
+
+- Allow pretrained models in `PretrainedTransformerEmbedder` and `PretrainedTransformerMismatchedEmbedder` 
+  to set requires_grad on parameters that match a regex. To use this, just specify a list of 
+  strings in `train_parameters`
+
 ## [v1.1.0rc1](https://github.com/allenai/allennlp/releases/tag/v1.1.0rc1) - 2020-07-14
 
 ### Fixed
@@ -51,9 +57,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   this, just set `last_layer_only` to `False`.
 - `cached_path()` can now read files inside of archives.
 - Training metrics now include per-batch loss in addition to aggregate loss across number of batches.
-- Allow pretrained models in `PretrainedTransformerEmbedder` and `PretrainedTransformerMismatchedEmbedder` 
-  to set requires_grad on parameters that match a regex. To use this, just specify a list of 
-  strings in `train_parameters`
 
 ### Changed
 
