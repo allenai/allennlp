@@ -1,7 +1,9 @@
 import torch
+import pytest
 
 from allennlp.common.testing.test_case import AllenNlpTestCase
-from allennlp.models import load_archive
+from allennlp.models import load_archive, Model
+from allennlp.nn.regularizers import RegularizerApplicator
 
 
 class TestModel(AllenNlpTestCase):
@@ -22,3 +24,17 @@ class TestModel(AllenNlpTestCase):
         assert tuple(extended_weight.shape) == (214, 10)
 
         assert torch.all(original_weight == extended_weight[:213, :])
+
+    def test_get_regularization_penalty(self):
+        class FakeModel(Model):
+            def forward(self, **kwargs):
+                return {}
+
+        class FakeRegularizerApplicator(RegularizerApplicator):
+            def __call__(self, module):
+                return 2.0
+
+        with pytest.raises(RuntimeError):
+            regularizer = FakeRegularizerApplicator()
+            model = FakeModel(None, regularizer)
+            model.get_regularization_penalty()

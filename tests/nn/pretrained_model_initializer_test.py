@@ -15,6 +15,7 @@ class _Net1(torch.nn.Module):
         super().__init__()
         self.linear_1 = torch.nn.Linear(5, 10)
         self.linear_2 = torch.nn.Linear(10, 5)
+        self.scalar = torch.nn.Parameter(torch.rand(()))
 
     def forward(self, inputs):
         pass
@@ -25,6 +26,7 @@ class _Net2(torch.nn.Module):
         super().__init__()
         self.linear_1 = torch.nn.Linear(5, 10)
         self.linear_3 = torch.nn.Linear(10, 5)
+        self.scalar = torch.nn.Parameter(torch.rand(()))
 
     def forward(self, inputs):
         pass
@@ -103,6 +105,13 @@ class TestPretrainedModelInitializer(AllenNlpTestCase):
         applicator = self._get_applicator("linear_1.*", self.temp_file, name_overrides)
         with pytest.raises(ConfigurationError):
             applicator(self.net1)
+
+    def test_zero_dim_tensor(self):
+        # This test will verify that a 0-dim tensor can be initialized.
+        # It raises IndexError if slicing a tensor to copy the parameter.
+        applicator = self._get_applicator("scalar", self.temp_file)
+        applicator(self.net1)
+        assert torch.equal(self.net1.scalar, self.net2.scalar)
 
     @pytest.mark.skipif(not torch.cuda.is_available(), reason="No CUDA device registered.")
     def test_load_to_gpu_from_gpu(self):

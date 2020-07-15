@@ -1,3 +1,4 @@
+import collections
 import logging
 import math
 from copy import deepcopy
@@ -10,7 +11,6 @@ from allennlp.common import FromParams
 from allennlp.data import TextFieldTensors, Vocabulary
 from allennlp.models.model import Model
 from allennlp.modules import TimeDistributed
-from allennlp.nn import util
 from allennlp.training.metrics import CategoricalAccuracy
 
 from transformers.modeling_bert import ACT2FN
@@ -701,7 +701,7 @@ class Nlvr2Vilbert(Model):
     ) -> None:
         super().__init__(vocab)
         self.loss = torch.nn.CrossEntropyLoss()
-        self.consistency_wrong_map = {}
+        self.consistency_wrong_map: Dict[str, int] = collections.Counter()
         self._denotation_accuracy = CategoricalAccuracy()
         self.fusion_method = fusion_method
 
@@ -715,17 +715,15 @@ class Nlvr2Vilbert(Model):
         self.dropout = torch.nn.Dropout(dropout)
 
     def consistency(self, reset: bool) -> float:
-        num_consistent_groups = 0
-        for key in self.consistency_wrong_map:
-            if self.consistency_wrong_map[key] == 0:
-                num_consistent_groups += 1
+        num_consistent_groups = sum(1 for c in self.consistency_wrong_map.values() if c == 0)
         value = float(num_consistent_groups) / len(self.consistency_wrong_map)
         if reset:
-            self.consistency_wrong_map = {}
+            self.consistency_wrong_map.clear()
         return value
 
+    @overrides
     def forward(
-        self,
+        self,  # type: ignore
         sentence: List[str],
         visual_features: torch.Tensor,
         box_coordinates: torch.Tensor,
@@ -808,8 +806,7 @@ class Nlvr2Vilbert(Model):
             for i in range(len(identifier)):
                 ident_parts = identifier[i].split("-")
                 group_id = "-".join([ident_parts[0], ident_parts[1], ident_parts[-1]])
-                if group_id not in self.consistency_wrong_map:
-                    self.consistency_wrong_map[group_id] = 0
+                self.consistency_wrong_map.setdefault(group_id, 0)
                 if predicted_binary[i].item() != denotation[i].item():
                     self.consistency_wrong_map[group_id] += 1
         return outputs

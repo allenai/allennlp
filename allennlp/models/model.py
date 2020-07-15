@@ -5,7 +5,8 @@ an AllenNLP model.
 
 import logging
 import os
-from typing import Dict, Union, List, Set, Type, Optional
+from os import PathLike
+from typing import Dict, List, Set, Type, Optional, Union
 
 try:
     from apex import amp
@@ -78,15 +79,22 @@ class Model(torch.nn.Module, Registrable):
         self.vocab = vocab
         self._regularizer = regularizer
 
-    def get_regularization_penalty(self) -> Union[float, torch.Tensor]:
+    def get_regularization_penalty(self) -> Optional[torch.Tensor]:
         """
         Computes the regularization penalty for the model.
-        Returns 0 if the model was not configured to use regularization.
+        Returns None if the model was not configured to use regularization.
         """
         if self._regularizer is None:
-            return 0.0
+            regularization_penalty = None
         else:
-            return self._regularizer(self)
+            try:
+                regularization_penalty = self._regularizer(self)
+                if isinstance(regularization_penalty, float):
+                    assert regularization_penalty == 0.0
+                    regularization_penalty = torch.tensor(regularization_penalty)
+            except AssertionError:
+                raise RuntimeError("The regularizer cannot be a non-zero float.")
+        return regularization_penalty
 
     def get_parameters_for_histogram_tensorboard_logging(self) -> List[str]:
         """
@@ -261,8 +269,8 @@ class Model(torch.nn.Module, Registrable):
     def _load(
         cls,
         config: Params,
-        serialization_dir: str,
-        weights_file: Optional[str] = None,
+        serialization_dir: Union[str, PathLike],
+        weights_file: Optional[Union[str, PathLike]] = None,
         cuda_device: int = -1,
         opt_level: Optional[str] = None,
     ) -> "Model":
@@ -342,8 +350,8 @@ class Model(torch.nn.Module, Registrable):
     def load(
         cls,
         config: Params,
-        serialization_dir: str,
-        weights_file: Optional[str] = None,
+        serialization_dir: Union[str, PathLike],
+        weights_file: Optional[Union[str, PathLike]] = None,
         cuda_device: int = -1,
         opt_level: Optional[str] = None,
     ) -> "Model":

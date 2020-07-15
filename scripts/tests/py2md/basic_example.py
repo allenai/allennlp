@@ -28,6 +28,11 @@ def func_with_args(a: int, b: int, c: int = 3) -> int:
     c : `int`, optional (default = `3`)
         Yet another number.
 
+    Notes
+    -----
+
+    These are some notes.
+
     # Returns
 
     `int`
@@ -40,7 +45,7 @@ class SomeClass:
     """
     I'm a class!
 
-    # Paramaters
+    # Parameters
 
     x : `float`
         This attribute is called `x`.

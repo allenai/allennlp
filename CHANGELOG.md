@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [v1.1.0rc1](https://github.com/allenai/allennlp/releases/tag/v1.1.0rc1) - 2020-07-14
+
 ### Fixed
 
 - Reduced the amount of log messages produced by `allennlp.common.file_utils`.
@@ -17,17 +19,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed checking equality of `ArrayField`s.
 - Fixed a bug where `NamespaceSwappingField` did not work correctly with `.empty_field()`.
 - Put more sensible defaults on the `huggingface_adamw` optimizer.
+- Simplified logging so that all logging output always goes to one file.
+- Fixed interaction with the python command line debugger.
+- Log the grad norm properly even when we're not clipping it.
+- Fixed a bug where `PretrainedModelInitializer` fails to initialize a model with a 0-dim tensor
+- Fixed a bug with the layer unfreezing schedule of the `SlantedTriangular` learning rate scheduler.
+- Fixed a regression with logging in the distributed setting. Only the main worker should write log output to the terminal.
+- Pinned the version of boto3 for package managers (e.g. poetry).
+- Fixed issue #4330 by updating the `tokenizers` dependency.
+- Fixed a bug in `TextClassificationPredictor` so that it passes tokenized inputs to the `DatasetReader`
+  in case it does not have a tokenizer.
+- `reg_loss` is only now returned for models that have some regularization penalty configured.
+- Fixed a bug that prevented `cached_path` from downloading assets from GitHub releases.
+- Fixed a bug that erronously increased last label's false positive count in calculating fbeta metrics.
+- `Tqdm` output now looks much better when the output is being piped or redirected.
+- Small improvements to how the API documentation is rendered.
 
 ### Added
 
 - A method to ModelTestCase for running basic model tests when you aren't using config files.
-- `BertPooler` can now unwrap and re-wrap extra dimensions if necessary.
 - Added some convenience methods for reading files.
 - Added an option to `file_utils.cached_path` to automatically extract archives.
 - Added the ability to pass an archive file instead of a local directory to `Vocab.from_files`.
 - Added the ability to pass an archive file instead of a glob to `ShardedDatasetReader`.
+- Added a new `"linear_with_warmup"` learning rate scheduler.
+- Added a check in `ShardedDatasetReader` that ensures the base reader doesn't implement manual
+  distributed sharding itself.
+- Added an option to `PretrainedTransformerEmbedder` and `PretrainedTransformerMismatchedEmbedder` to use a
+  scalar mix of all hidden layers from the transformer model instead of just the last layer. To utilize
+  this, just set `last_layer_only` to `False`.
+- `cached_path()` can now read files inside of archives.
+
+### Changed
+
 - Not specifying a `cuda_device` now automatically determines whether to use a GPU or not.
 - Discovered plugins are logged so you can see what was loaded.
+- `allennlp.data.DataLoader` is now an abstract registrable class. The default implementation
+remains the same, but was renamed to `allennlp.data.PyTorchDataLoader`.
+- `BertPooler` can now unwrap and re-wrap extra dimensions if necessary.
+- New `transformers` dependency. Only version >=3.0 now supported.
 
 ## [v1.0.0](https://github.com/allenai/allennlp/releases/tag/v1.0.0) - 2020-06-16
 

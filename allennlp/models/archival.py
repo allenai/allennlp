@@ -1,8 +1,8 @@
 """
 Helper functions for archiving models and restoring archived models.
 """
-
-from typing import NamedTuple
+from os import PathLike
+from typing import NamedTuple, Union
 import atexit
 import logging
 import os
@@ -89,7 +89,9 @@ _WEIGHTS_NAME = "weights.th"
 
 
 def archive_model(
-    serialization_dir: str, weights: str = _DEFAULT_WEIGHTS, archive_path: str = None
+    serialization_dir: Union[str, PathLike],
+    weights: str = _DEFAULT_WEIGHTS,
+    archive_path: Union[str, PathLike] = None,
 ) -> None:
     """
     Archive the model weights, its training configuration, and its vocabulary to `model.tar.gz`.

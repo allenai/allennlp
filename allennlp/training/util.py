@@ -5,6 +5,7 @@ import datetime
 import logging
 import os
 import shutil
+from os import PathLike
 from typing import Any, Dict, Iterable, Optional, Union, Tuple, Set, List
 from collections import Counter
 
@@ -168,7 +169,7 @@ def datasets_from_params(
 
 
 def create_serialization_dir(
-    params: Params, serialization_dir: str, recover: bool, force: bool
+    params: Params, serialization_dir: Union[str, PathLike], recover: bool, force: bool
 ) -> None:
     """
     This function creates the serialization directory if it doesn't exist.  If it already exists
@@ -271,7 +272,7 @@ def rescale_gradients(model: Model, grad_norm: Optional[float] = None) -> Option
 def get_metrics(
     model: Model,
     total_loss: float,
-    total_reg_loss: float,
+    total_reg_loss: Optional[float],
     num_batches: int,
     reset: bool = False,
     world_size: int = 1,
@@ -284,7 +285,8 @@ def get_metrics(
     """
     metrics = model.get_metrics(reset=reset)
     metrics["loss"] = float(total_loss / num_batches) if num_batches > 0 else 0.0
-    metrics["reg_loss"] = float(total_reg_loss / num_batches) if num_batches > 0 else 0.0
+    if total_reg_loss is not None:
+        metrics["reg_loss"] = float(total_reg_loss / num_batches) if num_batches > 0 else 0.0
 
     if world_size > 1:
         # In distributed mode, average out all metrics across GPUs
@@ -407,7 +409,7 @@ def description_from_metrics(metrics: Dict[str, float]) -> str:
 
 
 def make_vocab_from_params(
-    params: Params, serialization_dir: str, print_statistics: bool = False
+    params: Params, serialization_dir: Union[str, PathLike], print_statistics: bool = False
 ) -> Vocabulary:
     vocab_params = params.pop("vocabulary", {})
     os.makedirs(serialization_dir, exist_ok=True)

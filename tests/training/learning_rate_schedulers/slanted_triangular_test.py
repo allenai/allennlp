@@ -9,7 +9,7 @@ from allennlp.data.dataset_readers.dataset_reader import AllennlpDataset
 from allennlp.common import Lazy, Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.data import DataLoader
+from allennlp.data import PyTorchDataLoader
 from allennlp.training import Trainer
 from allennlp.training.learning_rate_schedulers import LearningRateScheduler, SlantedTriangular
 from allennlp.training.optimizers import Optimizer
@@ -121,7 +121,7 @@ class SlantedTriangularTest(AllenNlpTestCase):
             optimizer=Lazy(lambda **kwargs: optim),
             serialization_dir=self.TEST_DIR,
             params=params,
-            data_loader=DataLoader(instances, batch_size=10),
+            data_loader=PyTorchDataLoader(instances, batch_size=10),
         )
         assert isinstance(trainer._learning_rate_scheduler, SlantedTriangular)
 
@@ -151,7 +151,7 @@ class SlantedTriangularTest(AllenNlpTestCase):
             optimizer=Lazy(lambda **kwargs: optim),
             serialization_dir=self.TEST_DIR,
             params=params,
-            data_loader=DataLoader(instances, batch_size=10),
+            data_loader=PyTorchDataLoader(instances, batch_size=10),
         )
         assert trainer._learning_rate_scheduler.num_epochs == 3
 

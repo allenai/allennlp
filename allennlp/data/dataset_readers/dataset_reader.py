@@ -282,7 +282,7 @@ class DatasetReader(Registrable):
         # Then we just copy the file over to `cache_filename`.
         with CacheFile(cache_filename, mode="w+") as cache_handle:
             logger.info("Caching instances to temp file %s", cache_handle.name)
-            for instance in Tqdm.tqdm(instances):
+            for instance in Tqdm.tqdm(instances, desc="caching instances"):
                 cache_handle.write(self.serialize_instance(instance) + "\n")
 
     def text_to_instance(self, *inputs) -> Instance:
@@ -381,7 +381,7 @@ class DatasetReader(Registrable):
 
         islice = itertools.islice(iterable, start_index, self.max_instances, step_size)
         if wrap_with_tqdm:
-            islice = Tqdm.tqdm(islice)
+            islice = Tqdm.tqdm(islice, desc="reading instances")
 
         if transform is not None:
             return (transform(x) for x in islice)

@@ -7,7 +7,8 @@ which to write the results.
 import argparse
 import logging
 import os
-from typing import Any, Dict, List, Optional
+from os import PathLike
+from typing import Any, Dict, List, Optional, Union
 
 import torch
 import torch.distributed as dist
@@ -74,13 +75,6 @@ class Train(Subcommand):
         )
 
         subparser.add_argument(
-            "--file-friendly-logging",
-            action="store_true",
-            default=False,
-            help="outputs tqdm status on separate lines and slows tqdm refresh rate",
-        )
-
-        subparser.add_argument(
             "--node-rank", type=int, default=0, help="rank of this node in the distributed setup"
         )
 
@@ -104,7 +98,6 @@ def train_model_from_args(args: argparse.Namespace):
         parameter_filename=args.param_path,
         serialization_dir=args.serialization_dir,
         overrides=args.overrides,
-        file_friendly_logging=args.file_friendly_logging,
         recover=args.recover,
         force=args.force,
         node_rank=args.node_rank,
@@ -114,10 +107,9 @@ def train_model_from_args(args: argparse.Namespace):
 
 
 def train_model_from_file(
-    parameter_filename: str,
-    serialization_dir: str,
+    parameter_filename: Union[str, PathLike],
+    serialization_dir: Union[str, PathLike],
     overrides: str = "",
-    file_friendly_logging: bool = False,
     recover: bool = False,
     force: bool = False,
     node_rank: int = 0,
@@ -136,9 +128,6 @@ def train_model_from_file(
         [`train_model`](#train_model).
     overrides : `str`
         A JSON string that we will use to override values in the input parameter file.
-    file_friendly_logging : `bool`, optional (default=`False`)
-        If `True`, we make our output more friendly to saved model files.  We just pass this
-        along to [`train_model`](#train_model).
     recover : `bool`, optional (default=`False`)
         If `True`, we will try to recover a training run from an existing serialization
         directory.  This is only intended for use when something actually crashed during the middle
@@ -163,7 +152,6 @@ def train_model_from_file(
     return train_model(
         params=params,
         serialization_dir=serialization_dir,
-        file_friendly_logging=file_friendly_logging,
         recover=recover,
         force=force,
         node_rank=node_rank,
@@ -174,8 +162,7 @@ def train_model_from_file(
 
 def train_model(
     params: Params,
-    serialization_dir: str,
-    file_friendly_logging: bool = False,
+    serialization_dir: Union[str, PathLike],
     recover: bool = False,
     force: bool = False,
     node_rank: int = 0,
@@ -192,9 +179,6 @@ def train_model(
         A parameter object specifying an AllenNLP Experiment.
     serialization_dir : `str`
         The directory in which to save results and logs.
-    file_friendly_logging : `bool`, optional (default=`False`)
-        If `True`, we add newlines to tqdm output, even on an interactive terminal, and we slow
-        down tqdm's output to only once every 10 seconds.
     recover : `bool`, optional (default=`False`)
         If `True`, we will try to recover a training run from an existing serialization
         directory.  This is only intended for use when something actually crashed during the middle
@@ -225,10 +209,10 @@ def train_model(
             process_rank=0,
             params=params,
             serialization_dir=serialization_dir,
-            file_friendly_logging=file_friendly_logging,
             include_package=include_package,
             dry_run=dry_run,
         )
+
         if not dry_run:
             archive_model(serialization_dir)
         return model
@@ -253,7 +237,7 @@ def train_model(
         world_size = num_nodes * num_procs
 
         logging.info(
-            f"Switching to distributed training mode since multiple GPUs are configured"
+            f"Switching to distributed training mode since multiple GPUs are configured | "
             f"Master is at: {master_addr}:{master_port} | Rank of this node: {node_rank} | "
             f"Number of workers in this node: {num_procs} | Number of nodes: {num_nodes} | "
             f"World size: {world_size}"
@@ -283,7 +267,6 @@ def train_model(
             args=(
                 params.duplicate(),
                 serialization_dir,
-                file_friendly_logging,
                 include_package,
                 dry_run,
                 node_rank,
@@ -305,8 +288,7 @@ def train_model(
 def _train_worker(
     process_rank: int,
     params: Params,
-    serialization_dir: str,
-    file_friendly_logging: bool = False,
+    serialization_dir: Union[str, PathLike],
     include_package: List[str] = None,
     dry_run: bool = False,
     node_rank: int = 0,
@@ -328,9 +310,6 @@ def _train_worker(
         A parameter object specifying an AllenNLP Experiment.
     serialization_dir : `str`
         The directory in which to save results and logs.
-    file_friendly_logging : `bool`, optional (default=`False`)
-        If `True`, we add newlines to tqdm output, even on an interactive terminal, and we slow
-        down tqdm's output to only once every 10 seconds.
     include_package : `List[str]`, optional
         In distributed mode, since this function would have been spawned as a separate process,
         the extra imports need to be done again. NOTE: This does not have any effect in single
@@ -355,7 +334,7 @@ def _train_worker(
         The model with the best epoch weights or `None` if in distributed training or in dry run.
     """
     prepare_global_logging(
-        serialization_dir, file_friendly_logging, rank=process_rank, world_size=world_size
+        serialization_dir, rank=process_rank, world_size=world_size,
     )
     common_util.prepare_environment(params)
 
