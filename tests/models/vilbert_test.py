@@ -13,6 +13,10 @@ class TestVilbert(ModelTestCase):
             for dpv in ["true", "false"]
         ],
     )
-    def test_simple_tagger_can_train_save_and_load(self, overrides: str):
+    def test_model_can_train_save_and_load(self, overrides: str):
         param_file = self.FIXTURES_ROOT / "vilbert" / "experiment.json"
         self.ensure_model_can_train_save_and_load(param_file, overrides=overrides)
+
+    def test_model_can_train_save_and_load_from_huggingface(self):
+        param_file = self.FIXTURES_ROOT / "vilbert" / "experiment_from_huggingface_model_name.json"
+        self.ensure_model_can_train_save_and_load(param_file)

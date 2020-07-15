@@ -13,6 +13,8 @@ from allennlp.models.model import Model
 from allennlp.modules import TimeDistributed
 from allennlp.training.metrics import CategoricalAccuracy
 
+from transformers.modeling_auto import AutoModel
+from transformers.modeling_utils import PreTrainedModel
 from transformers.modeling_bert import ACT2FN
 
 logger = logging.getLogger(__name__)
@@ -519,8 +521,59 @@ class BertEncoder(torch.nn.Module, FromParams):
             [deepcopy(connect_layer) for _ in range(len(v_biattention_id))]
         )
 
-    def from_huggingface(cls, bert_model: BertModel):
-        pass
+    @classmethod
+    def from_huggingface_model(
+        cls,
+        model: PreTrainedModel,
+        image_num_hidden_layers: int,
+        image_hidden_size: int,
+        combined_hidden_size: int,
+        image_intermediate_size: int,
+        image_attention_dropout: float,
+        image_hidden_dropout: float,
+        v_biattention_id: List[int],
+        t_biattention_id: List[int],
+        fixed_t_layer: int,
+        fixed_v_layer: int,
+        fast_mode: bool = False,
+        with_coattention: bool = True,
+        in_batch_pairs: bool = False,
+    ):
+        config = model.config
+
+        # TODO(mattg): this is brittle and will only work for particular transformer models.  But,
+        # it's the best we can do for now, I think.
+        num_attention_heads = config.num_attention_heads
+        text_num_hidden_layers = config.num_hidden_layers
+        text_hidden_size = config.hidden_size
+        text_intermediate_size = config.intermediate_size
+        text_attention_dropout = config.attention_probs_dropout_prob
+        text_hidden_dropout = config.hidden_dropout_prob
+        activation = config.hidden_act
+        encoder = cls(
+            text_num_hidden_layers=text_num_hidden_layers,
+            image_num_hidden_layers=image_num_hidden_layers,
+            text_hidden_size=text_hidden_size,
+            image_hidden_size=image_hidden_size,
+            combined_hidden_size=combined_hidden_size,
+            text_intermediate_size=text_intermediate_size,
+            image_intermediate_size=image_intermediate_size,
+            num_attention_heads=num_attention_heads,
+            text_attention_dropout=text_attention_dropout,
+            text_hidden_dropout=text_hidden_dropout,
+            image_attention_dropout=image_attention_dropout,
+            image_hidden_dropout=image_hidden_dropout,
+            activation=activation,
+            v_biattention_id=v_biattention_id,
+            t_biattention_id=t_biattention_id,
+            fixed_t_layer=fixed_t_layer,
+            fixed_v_layer=fixed_v_layer,
+            fast_mode=fast_mode,
+            with_coattention=with_coattention,
+            in_batch_pairs=in_batch_pairs,
+        )
+        # TODO(mattg): initialize weights in encoder
+        return encoder
 
     def forward(
         self,
@@ -684,7 +737,7 @@ class BertImageFeatureEmbeddings(torch.nn.Module, FromParams):
 
 
 @Model.register("nlvr2_vilbert")
-@Model.register("nlvr2_vilbert_from_huggingface", constructor="from_huggingface")
+@Model.register("nlvr2_vilbert_from_huggingface", constructor="from_huggingface_model_name")
 class Nlvr2Vilbert(Model):
     """
     Model for the NLVR2 task based on the LXMERT paper (Tan et al. 2019).
@@ -719,7 +772,64 @@ class Nlvr2Vilbert(Model):
         self.dropout = torch.nn.Dropout(dropout)
 
     @classmethod
-    def from_huggingface(cls, model_name: str):
+    def from_huggingface_model_name(
+        cls,
+        vocab: Vocabulary,
+        model_name: str,
+        image_feature_dim: int,
+        image_num_hidden_layers: int,
+        image_hidden_size: int,
+        combined_hidden_size: int,
+        pooled_output_dim: int,
+        image_intermediate_size: int,
+        image_attention_dropout: float,
+        image_hidden_dropout: float,
+        v_biattention_id: List[int],
+        t_biattention_id: List[int],
+        fixed_t_layer: int,
+        fixed_v_layer: int,
+        pooled_dropout: float = 0.1,
+        fusion_method: str = "sum",
+        fast_mode: bool = False,
+        with_coattention: bool = True,
+        in_batch_pairs: bool = False,
+    ):
+        transformer = AutoModel.from_pretrained(model_name)
+
+        # TODO(mattg): this is hard-coded for BERT; not sure it works for all transformers, or what
+        # to do if it fails.
+        text_embeddings = transformer.embeddings
+        image_embeddings = BertImageFeatureEmbeddings(
+            feature_dim=image_feature_dim,
+            hidden_dim=image_hidden_size,
+            dropout=image_hidden_dropout,
+        )
+        encoder = BertEncoder.from_huggingface_model(
+            model=transformer,
+            image_num_hidden_layers=image_num_hidden_layers,
+            image_hidden_size=image_hidden_size,
+            combined_hidden_size=combined_hidden_size,
+            image_intermediate_size=image_intermediate_size,
+            image_attention_dropout=image_attention_dropout,
+            image_hidden_dropout=image_hidden_dropout,
+            v_biattention_id=v_biattention_id,
+            t_biattention_id=t_biattention_id,
+            fixed_t_layer=fixed_t_layer,
+            fixed_v_layer=fixed_v_layer,
+            fast_mode=fast_mode,
+            with_coattention=with_coattention,
+            in_batch_pairs=in_batch_pairs,
+        )
+        return cls(
+            vocab=vocab,
+            text_embeddings=text_embeddings,
+            image_embeddings=image_embeddings,
+            encoder=encoder,
+            pooled_output_dim=pooled_output_dim,
+            fusion_method=fusion_method,
+            dropout=pooled_dropout,
+        )
+
 
     def consistency(self, reset: bool) -> float:
         num_consistent_groups = sum(1 for c in self.consistency_wrong_map.values() if c == 0)
