@@ -7,7 +7,8 @@ which to write the results.
 import argparse
 import logging
 import os
-from typing import Any, Dict, List, Optional
+from os import PathLike
+from typing import Any, Dict, List, Optional, Union
 
 import torch
 import torch.distributed as dist
@@ -106,8 +107,8 @@ def train_model_from_args(args: argparse.Namespace):
 
 
 def train_model_from_file(
-    parameter_filename: str,
-    serialization_dir: str,
+    parameter_filename: Union[str, PathLike],
+    serialization_dir: Union[str, PathLike],
     overrides: str = "",
     recover: bool = False,
     force: bool = False,
@@ -161,7 +162,7 @@ def train_model_from_file(
 
 def train_model(
     params: Params,
-    serialization_dir: str,
+    serialization_dir: Union[str, PathLike],
     recover: bool = False,
     force: bool = False,
     node_rank: int = 0,
@@ -287,7 +288,7 @@ def train_model(
 def _train_worker(
     process_rank: int,
     params: Params,
-    serialization_dir: str,
+    serialization_dir: Union[str, PathLike],
     include_package: List[str] = None,
     dry_run: bool = False,
     node_rank: int = 0,

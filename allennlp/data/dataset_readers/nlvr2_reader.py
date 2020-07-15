@@ -1,19 +1,16 @@
-from glob import glob
-from typing import Dict, List
+from typing import List, Dict, Any
 import base64
 import csv
 import json
 import os
-import pickle
 import sys
 import time
-import unicodedata
 
 from overrides import overrides
 import numpy as np
 import spacy
 
-from allennlp.common.checks import ConfigurationError
+from allennlp.data.token_indexers.token_indexer import TokenIndexer
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.fields import (
     ArrayField,
@@ -26,8 +23,19 @@ from allennlp.data.tokenizers import PretrainedTransformerTokenizer
 from allennlp.data.token_indexers import PretrainedTransformerIndexer
 
 
-FIELDNAMES = ["img_id", "img_h", "img_w", "objects_id", "objects_conf",
-              "attrs_id", "attrs_conf", "num_boxes", "boxes", "features"]
+FIELDNAMES = [
+    "img_id",
+    "img_h",
+    "img_w",
+    "objects_id",
+    "objects_conf",
+    "attrs_id",
+    "attrs_conf",
+    "num_boxes",
+    "boxes",
+    "features",
+]
+
 
 def load_obj_tsv(fname, topk=None):
     """Load object features from tsv file.
@@ -46,17 +54,17 @@ def load_obj_tsv(fname, topk=None):
         reader = csv.DictReader(f, FIELDNAMES, delimiter="\t")
         for i, item in enumerate(reader):
 
-            for key in ['img_h', 'img_w', 'num_boxes']:
+            for key in ["img_h", "img_w", "num_boxes"]:
                 item[key] = int(item[key])
 
-            boxes = item['num_boxes']
+            boxes = item["num_boxes"]
             decode_config = [
-                ('objects_id', (boxes, ), np.int64),
-                ('objects_conf', (boxes, ), np.float32),
-                ('attrs_id', (boxes, ), np.int64),
-                ('attrs_conf', (boxes, ), np.float32),
-                ('boxes', (boxes, 4), np.float32),
-                ('features', (boxes, -1), np.float32),
+                ("objects_id", (boxes,), np.int64),
+                ("objects_conf", (boxes,), np.float32),
+                ("attrs_id", (boxes,), np.int64),
+                ("attrs_conf", (boxes,), np.float32),
+                ("boxes", (boxes, 4), np.float32),
+                ("features", (boxes, -1), np.float32),
             ]
             for key, shape, dtype in decode_config:
                 item[key] = np.frombuffer(base64.b64decode(item[key]), dtype=dtype)
@@ -106,11 +114,13 @@ class Nlvr2LxmertReader(DatasetReader):
         self.text_path_prefix = text_path_prefix
         self.visual_path_prefix = visual_path_prefix
         self._tokenizer = PretrainedTransformerTokenizer("bert-base-uncased")
-        self._token_indexers = {"tokens": PretrainedTransformerIndexer("bert-base-uncased")}
+        self._token_indexers: Dict[str, TokenIndexer] = {
+            "tokens": PretrainedTransformerIndexer("bert-base-uncased")
+        }
         self.topk_images = topk_images
         self.mask_prepositions_verbs = mask_prepositions_verbs
         self.drop_prepositions_verbs = drop_prepositions_verbs
-        self.image_data = {}
+        self.image_data: Dict[str, Dict[str, Any]] = {}
         # Loading Spacy to find prepositions and verbs
         self.spacy = spacy.load("en_core_web_sm")
 
@@ -125,10 +135,7 @@ class Nlvr2LxmertReader(DatasetReader):
             examples = json.load(f)
             examples_dict = {}
             for example in examples:
-                if (
-                    example["img0"] not in self.image_data
-                    or example["img1"] not in self.image_data
-                ):
+                if example["img0"] not in self.image_data or example["img1"] not in self.image_data:
                     continue
                 identifier = example["identifier"].split("-")
                 identifier = identifier[0] + "-" + identifier[1] + "-" + identifier[-1]
@@ -165,10 +172,7 @@ class Nlvr2LxmertReader(DatasetReader):
         with open(text_file_path) as f:
             examples = json.load(f)
             for example in examples:
-                if (
-                    example["img0"] not in self.image_data
-                    or example["img1"] not in self.image_data
-                ):
+                if example["img0"] not in self.image_data or example["img1"] not in self.image_data:
                     continue
                 yield self.text_to_instance(
                     example["sent"],
@@ -196,7 +200,7 @@ class Nlvr2LxmertReader(DatasetReader):
             new_question = ""
             prev_end = 0
             for (idx, length) in prep_verb_starts:
-                new_question += question[prev_end:idx] + self._tokenizer.mask_token
+                new_question += question[prev_end:idx] + self._tokenizer.tokenizer.mask_token
                 prev_end = idx + length
             new_question += question[prev_end:]
             question = new_question

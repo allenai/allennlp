@@ -1,5 +1,6 @@
 import copy
 import json
+from os import PathLike
 from typing import Any, Dict, Iterable, Set, Union
 
 import torch
@@ -48,7 +49,7 @@ class ModelTestCase(AllenNlpTestCase):
 
     def ensure_model_can_train_save_and_load(
         self,
-        param_file: str,
+        param_file: Union[PathLike, str],
         tolerance: float = 1e-4,
         cuda_device: int = -1,
         gradients_to_ignore: Set[str] = None,

@@ -7,6 +7,7 @@ import os
 import logging
 import tempfile
 import json
+from os import PathLike
 from urllib.parse import urlparse
 from pathlib import Path
 from typing import Optional, Tuple, Union, IO, Callable, Set, List, Iterator, Iterable
@@ -89,7 +90,7 @@ def filename_to_url(filename: str, cache_dir: Union[str, Path] = None) -> Tuple[
 
 
 def cached_path(
-    url_or_filename: Union[str, Path],
+    url_or_filename: Union[str, PathLike],
     cache_dir: Union[str, Path] = None,
     extract_archive: bool = False,
     force_extract: bool = False,
@@ -119,7 +120,7 @@ def cached_path(
     if cache_dir is None:
         cache_dir = CACHE_DIRECTORY
 
-    if isinstance(url_or_filename, Path):
+    if isinstance(url_or_filename, PathLike):
         url_or_filename = str(url_or_filename)
 
     # If we're using the /a/b/foo.zip!c/d/file.txt syntax, handle it here.
