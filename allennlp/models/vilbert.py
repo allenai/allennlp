@@ -756,8 +756,8 @@ class Nlvr2Vilbert(Model):
         # this attention mask is more simple than the triangular masking of
         # causal attention used in OpenAI GPT, we just need to prepare the
         # broadcast dimension here.
-        extended_attention_mask = attention_mask.unsqueeze(2).unsqueeze(3).log()
-        extended_image_attention_mask = image_attention_mask.unsqueeze(2).unsqueeze(3).log()
+        extended_attention_mask = attention_mask.unsqueeze(2).unsqueeze(3).float().log()
+        extended_image_attention_mask = image_attention_mask.unsqueeze(2).unsqueeze(3).float().log()
 
         # TODO(matt): it looks like the co-attention logic is all currently commented out; not sure
         # that this is necessary.
