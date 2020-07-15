@@ -459,9 +459,9 @@ def get_file_extension(path: str, dot=True, lower: bool = True):
 
 
 def open_compressed(
-    filename: Union[str, Path], mode: str = "rt", encoding: Optional[str] = "UTF-8", **kwargs
+    filename: Union[str, PathLike], mode: str = "rt", encoding: Optional[str] = "UTF-8", **kwargs
 ):
-    if isinstance(filename, Path):
+    if isinstance(filename, PathLike):
         filename = str(filename)
     open_fn: Callable = open
 
@@ -476,7 +476,7 @@ def open_compressed(
     return open_fn(filename, mode=mode, encoding=encoding, **kwargs)
 
 
-def text_lines_from_file(filename: Union[str, Path], strip_lines: bool = True) -> Iterator[str]:
+def text_lines_from_file(filename: Union[str, PathLike], strip_lines: bool = True) -> Iterator[str]:
     with open_compressed(filename, "rt", encoding="UTF-8", errors="replace") as p:
         if strip_lines:
             for line in p:
@@ -485,5 +485,5 @@ def text_lines_from_file(filename: Union[str, Path], strip_lines: bool = True) -
             yield from p
 
 
-def json_lines_from_file(filename: Union[str, Path]) -> Iterable[Union[list, dict]]:
+def json_lines_from_file(filename: Union[str, PathLike]) -> Iterable[Union[list, dict]]:
     return (json.loads(line) for line in text_lines_from_file(filename))
