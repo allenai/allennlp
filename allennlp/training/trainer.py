@@ -215,7 +215,7 @@ class GradientDescentTrainer(Trainer):
         model to be optimized.
 
     data_loader : `DataLoader`, required.
-        A pytorch `DataLoader` containing your `Dataset`, yielding padded indexed batches.
+        A `DataLoader` containing your `Dataset`, yielding padded indexed batches.
 
         In a typical AllenNLP configuration file, this parameter does not get an entry under the
         "trainer", it gets constructed separately.
@@ -335,10 +335,10 @@ class GradientDescentTrainer(Trainer):
         self,
         model: Model,
         optimizer: torch.optim.Optimizer,
-        data_loader: torch.utils.data.DataLoader,
+        data_loader: DataLoader,
         patience: Optional[int] = None,
         validation_metric: str = "-loss",
-        validation_data_loader: torch.utils.data.DataLoader = None,
+        validation_data_loader: DataLoader = None,
         num_epochs: int = 20,
         serialization_dir: Optional[str] = None,
         checkpointer: Checkpointer = None,
@@ -444,21 +444,25 @@ class GradientDescentTrainer(Trainer):
         else:
             self._pytorch_model = self.model
 
-    def rescale_gradients(self) -> Optional[float]:
+    def rescale_gradients(self) -> float:
         """
         Performs gradient rescaling. Is a no-op if gradient rescaling is not enabled.
+
+        Returns the norm of the gradients.
         """
+        if self._opt_level is not None:
+            # See: https://nvidia.github.io/apex/advanced.html#gradient-clipping
+            parameters_to_clip = [
+                p for p in amp.master_params(self.optimizer) if p.grad is not None
+            ]
+        else:
+            parameters_to_clip = [p for p in self.model.parameters() if p.grad is not None]
         if self._grad_norm:
-            if self._opt_level is not None:
-                # See: https://nvidia.github.io/apex/advanced.html#gradient-clipping
-                parameters_to_clip = [
-                    p for p in amp.master_params(self.optimizer) if p.grad is not None
-                ]
-            else:
-                parameters_to_clip = [p for p in self.model.parameters() if p.grad is not None]
             return clip_grad_norm_(parameters_to_clip, self._grad_norm)
         else:
-            return None
+            return torch.norm(
+                torch.stack([torch.norm(p.grad.detach()) for p in parameters_to_clip])
+            )
 
     def batch_outputs(self, batch: TensorDict, for_training: bool) -> Dict[str, torch.Tensor]:
         """
@@ -470,16 +474,14 @@ class GradientDescentTrainer(Trainer):
 
         if for_training:
             try:
+                assert "loss" in output_dict
                 regularization_penalty = self.model.get_regularization_penalty()
-                loss = output_dict["loss"]
 
-                # Handle model without regularization
-                if regularization_penalty == 0.0:
-                    regularization_penalty = loss.new_full(size=[], fill_value=0.0)
+                if regularization_penalty is not None:
+                    output_dict["reg_loss"] = regularization_penalty
+                    output_dict["loss"] += regularization_penalty
 
-                output_dict["reg_loss"] = regularization_penalty
-                output_dict["loss"] += regularization_penalty
-            except KeyError:
+            except AssertionError:
                 if for_training:
                     raise RuntimeError(
                         "The model you are trying to optimize does not contain a"
@@ -502,8 +504,14 @@ class GradientDescentTrainer(Trainer):
             gpu_memory_usage.append((gpu, memory))
             logger.info(f"GPU {gpu} memory usage MB: {memory}")
 
+        regularization_penalty = self.model.get_regularization_penalty()
+
         train_loss = 0.0
-        train_reg_loss = 0.0
+
+        if regularization_penalty is not None:
+            train_reg_loss = 0.0
+        else:
+            train_reg_loss = None
         # Set the model to "train" mode.
         self._pytorch_model.train()
 
@@ -570,19 +578,20 @@ class GradientDescentTrainer(Trainer):
             for batch in batch_group:
                 batch_outputs = self.batch_outputs(batch, for_training=True)
                 batch_group_outputs.append(batch_outputs)
-                loss = batch_outputs["loss"]
-                reg_loss = batch_outputs["reg_loss"]
+                loss = batch_outputs.get("loss")
+                reg_loss = batch_outputs.get("reg_loss")
                 if torch.isnan(loss):
                     raise ValueError("nan loss encountered")
                 loss = loss / len(batch_group)
-                reg_loss = reg_loss / len(batch_group)
                 if self._opt_level is not None:
                     with amp.scale_loss(loss, self.optimizer) as scaled_loss:
                         scaled_loss.backward()
                 else:
                     loss.backward()
                 train_loss += loss.item()
-                train_reg_loss += reg_loss.item()
+                if reg_loss is not None:
+                    reg_loss = reg_loss / len(batch_group)
+                    train_reg_loss += reg_loss.item()
 
             batch_grad_norm = self.rescale_gradients()
 
@@ -671,6 +680,7 @@ class GradientDescentTrainer(Trainer):
             world_size=self._world_size,
             cuda_device=self.cuda_device,
         )
+
         for (worker, memory) in cpu_memory_usage:
             metrics["worker_" + str(worker) + "_memory_MB"] = memory
         for (gpu_num, memory) in gpu_memory_usage:
@@ -696,10 +706,14 @@ class GradientDescentTrainer(Trainer):
                 "Validation results cannot be calculated without a validation_data_loader"
             )
 
+        regularization_penalty = self.model.get_regularization_penalty()
         val_generator_tqdm = Tqdm.tqdm(validation_data_loader)
         batches_this_epoch = 0
         val_loss = 0
-        val_reg_loss = 0
+        if regularization_penalty is not None:
+            val_reg_loss = 0
+        else:
+            val_reg_loss = None
         done_early = False
         for batch in val_generator_tqdm:
             if self._distributed:
@@ -744,6 +758,7 @@ class GradientDescentTrainer(Trainer):
                 world_size=self._world_size,
                 cuda_device=self.cuda_device,
             )
+
             description = training_util.description_from_metrics(val_metrics)
             val_generator_tqdm.set_description(description, refresh=False)
 

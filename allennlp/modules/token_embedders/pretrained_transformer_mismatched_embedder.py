@@ -27,15 +27,26 @@ class PretrainedTransformerMismatchedEmbedder(TokenEmbedder):
         `PretrainedTransformerMismatchedIndexer`.
     train_parameters: `bool`, optional (default = `True`)
         If this is `True`, the transformer weights get updated during training.
+    last_layer_only: `bool`, optional (default = `True`)
+        When `True` (the default), only the final layer of the pretrained transformer is taken
+        for the embeddings. But if set to `False`, a scalar mix of all of the layers
+        is used.
     """
 
     def __init__(
-        self, model_name: str, max_length: int = None, train_parameters: bool = True
+        self,
+        model_name: str,
+        max_length: int = None,
+        train_parameters: bool = True,
+        last_layer_only: bool = True,
     ) -> None:
         super().__init__()
         # The matched version v.s. mismatched
         self._matched_embedder = PretrainedTransformerEmbedder(
-            model_name, max_length=max_length, train_parameters=train_parameters
+            model_name,
+            max_length=max_length,
+            train_parameters=train_parameters,
+            last_layer_only=last_layer_only,
         )
 
     @overrides

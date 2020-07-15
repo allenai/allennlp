@@ -122,6 +122,17 @@ def cached_path(
     if isinstance(url_or_filename, Path):
         url_or_filename = str(url_or_filename)
 
+    # If we're using the /a/b/foo.zip!c/d/file.txt syntax, handle it here.
+    exclamation_index = url_or_filename.find("!")
+    if extract_archive and exclamation_index >= 0:
+        archive_path = url_or_filename[:exclamation_index]
+        archive_path = cached_path(archive_path, cache_dir, True, force_extract)
+        if not os.path.isdir(archive_path):
+            raise ValueError(
+                f"{url_or_filename} uses the ! syntax, but does not specify an archive file."
+            )
+        return os.path.join(archive_path, url_or_filename[exclamation_index + 1 :])
+
     url_or_filename = os.path.expanduser(url_or_filename)
     parsed = urlparse(url_or_filename)
 
@@ -283,7 +294,7 @@ def _http_get(url: str, temp_file: IO) -> None:
         req = session.get(url, stream=True)
         content_length = req.headers.get("Content-Length")
         total = int(content_length) if content_length is not None else None
-        progress = Tqdm.tqdm(unit="B", total=total)
+        progress = Tqdm.tqdm(unit="B", total=total, desc="downloading")
         for chunk in req.iter_content(chunk_size=1024):
             if chunk:  # filter out keep-alive new chunks
                 progress.update(len(chunk))
@@ -390,6 +401,10 @@ def get_from_cache(url: str, cache_dir: Union[str, Path] = None) -> str:
                 url,
             )
             raise
+    except OSError:
+        # OSError may be triggered if we were unable to fetch the eTag.
+        # If this is the case, try to proceed without eTag check.
+        etag = None
 
     filename = url_to_filename(url, etag)
 

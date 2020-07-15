@@ -24,7 +24,7 @@ from pydoc_markdown import PydocMarkdown
 from pydoc_markdown.contrib.loaders.python import PythonLoader
 from pydoc_markdown.contrib.renderers.markdown import MarkdownRenderer
 from pydoc_markdown.interfaces import Processor, Renderer
-from pydoc_markdown.reflection import Argument, Module, Function, Class
+from pydoc_markdown.reflection import Argument, Module, Function, Class, Data
 
 
 logging.basicConfig(level=logging.INFO)
@@ -173,6 +173,7 @@ class AllenNlpDocstringProcessor(Struct):
     """
 
     CROSS_REF_RE = re.compile("(:(class|func|mod):`~?([a-zA-Z0-9_.]+)`)")
+    UNDERSCORE_HEADER_RE = re.compile(r"(.*)\n-{3,}\n")
 
     @override
     def process(self, graph, resolver):
@@ -185,7 +186,12 @@ class AllenNlpDocstringProcessor(Struct):
         lines: List[str] = []
         state: ProcessorState = ProcessorState(parameters=OrderedDict())
 
-        for line in node.docstring.split("\n"):
+        docstring = node.docstring
+
+        # Standardize header syntax to use '#' instead of underscores.
+        docstring = self.UNDERSCORE_HEADER_RE.sub(r"# \g<1>", docstring)
+
+        for line in docstring.split("\n"):
             # Check if we're starting or ending a codeblock.
             if line.startswith("```"):
                 state.codeblock_opened = not state.codeblock_opened
@@ -281,7 +287,11 @@ class AllenNlpFilterProcessor(Struct):
 @implements(Renderer)
 class AllenNlpRenderer(MarkdownRenderer):
     def _format_function_signature(
-        self, func: Function, override_name: str = None, add_method_bar: bool = True
+        self,
+        func: Function,
+        override_name: str = None,
+        add_method_bar: bool = True,
+        include_parent_class: bool = True,
     ) -> str:
         parts = []
         for dec in func.decorators:
@@ -317,20 +327,54 @@ class AllenNlpRenderer(MarkdownRenderer):
         result = "".join(parts)
         if add_method_bar and func.is_method():
             result = "\n".join(" | " + line for line in result.split("\n"))
+            if include_parent_class:
+                bases = ", ".join(map(str, func.parent.bases))
+                if func.parent.metaclass:
+                    bases += ", metaclass=" + str(func.parent.metaclass)
+                if bases:
+                    class_signature = f"class {func.parent.name}({bases})"
+                else:
+                    class_signature = f"class {func.parent.name}"
+                result = f"{class_signature}:\n | ...\n{result}"
         return result
+
+    def _format_data_signature(self, data: Data) -> str:
+        expr = str(data.expr)
+        if len(expr) > self.data_expression_maxlength:
+            expr = expr[: self.data_expression_maxlength] + " ..."
+
+        if data.annotation:
+            signature = f"{data.name}: {data.annotation} = {expr}"
+        else:
+            signature = f"{data.name} = {expr}"
+
+        if data.parent and data.parent.is_class():
+            bases = ", ".join(map(str, data.parent.bases))
+            if data.parent.metaclass:
+                bases += ", metaclass=" + str(data.parent.metaclass)
+            if bases:
+                class_signature = f"class {data.parent.name}({bases})"
+            else:
+                class_signature = f"class {data.parent.name}"
+            return f"{class_signature}:\n | ...\n | {signature}"
+        else:
+            return signature
 
     def _format_classdef_signature(self, cls: Class) -> str:
         bases = ", ".join(map(str, cls.bases))
         if cls.metaclass:
             bases += ", metaclass=" + str(cls.metaclass)
-        code = "class {}({})".format(cls.name, bases)
+        if bases:
+            code = "class {}({})".format(cls.name, bases)
+        else:
+            code = "class {}".format(cls.name)
         if self.signature_python_help_style:
             code = cls.path() + " = " + code
         if self.classdef_render_init_signature_if_needed and (
             "__init__" in cls.members and not cls.members["__init__"].visible
         ):
             code += ":\n" + self._format_function_signature(
-                cls.members["__init__"], add_method_bar=True
+                cls.members["__init__"], add_method_bar=True, include_parent_class=False,
             )
         return code
 
@@ -381,6 +425,7 @@ def py2md(module: str, out: Optional[str] = None) -> bool:
             signature_with_def=True,
             use_fixed_header_levels=False,
             render_module_header=False,
+            descriptive_class_title=False,
         ),
     )
     if out:

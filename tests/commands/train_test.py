@@ -216,10 +216,8 @@ class TestTrain(AllenNlpTestCase):
         # Check that some logs specific to distributed
         # training are where we expect.
         serialized_files = os.listdir(out_dir)
-        assert "stderr_worker0.log" in serialized_files
-        assert "stdout_worker0.log" in serialized_files
-        assert "stderr_worker1.log" in serialized_files
-        assert "stdout_worker1.log" in serialized_files
+        assert "out_worker0.log" in serialized_files
+        assert "out_worker1.log" in serialized_files
         assert "model.tar.gz" in serialized_files
 
         # Check we can load the serialized model
@@ -261,10 +259,8 @@ class TestTrain(AllenNlpTestCase):
         # Check that some logs specific to distributed
         # training are where we expect.
         serialized_files = os.listdir(out_dir)
-        assert "stderr_worker0.log" in serialized_files
-        assert "stdout_worker0.log" in serialized_files
-        assert "stderr_worker1.log" in serialized_files
-        assert "stdout_worker1.log" in serialized_files
+        assert "out_worker0.log" in serialized_files
+        assert "out_worker1.log" in serialized_files
         assert "model.tar.gz" in serialized_files
 
         # Check we can load the serialized model
@@ -302,14 +298,14 @@ class TestTrain(AllenNlpTestCase):
         validation_complete = "completed its entire epoch (validation)."
 
         # There are three shards, but only two workers, so the first worker will have to discard some data.
-        with open(os.path.join(out_dir, "stdout_worker0.log")) as f:
+        with open(os.path.join(out_dir, "out_worker0.log")) as f:
             worker0_log = f.read()
             assert train_early in worker0_log
             assert validation_early in worker0_log
             assert train_complete not in worker0_log
             assert validation_complete not in worker0_log
 
-        with open(os.path.join(out_dir, "stdout_worker1.log")) as f:
+        with open(os.path.join(out_dir, "out_worker1.log")) as f:
             worker1_log = f.read()
             assert train_early not in worker1_log
             assert validation_early not in worker1_log
@@ -355,10 +351,8 @@ class TestTrain(AllenNlpTestCase):
         # Check that some logs specific to distributed
         # training are where we expect.
         serialized_files = os.listdir(out_dir)
-        assert "stderr_worker0.log" in serialized_files
-        assert "stdout_worker0.log" in serialized_files
-        assert "stderr_worker1.log" in serialized_files
-        assert "stdout_worker1.log" in serialized_files
+        assert "out_worker0.log" in serialized_files
+        assert "out_worker1.log" in serialized_files
         assert "model.tar.gz" in serialized_files
 
         # Check we can load the serialized model
@@ -386,14 +380,14 @@ class TestTrain(AllenNlpTestCase):
 
         pattern = re.compile(r"First word from training data: '([^']*)'")
         first_word_counts = Counter()  # type: ignore
-        with open(os.path.join(out_dir, "stdout_worker0.log")) as f:
+        with open(os.path.join(out_dir, "out_worker0.log")) as f:
             worker0_log = f.read()
             assert train_complete in worker0_log
             assert validation_complete in worker0_log
             for first_word in pattern.findall(worker0_log):
                 first_word_counts[first_word] += 1
 
-        with open(os.path.join(out_dir, "stdout_worker1.log")) as f:
+        with open(os.path.join(out_dir, "out_worker1.log")) as f:
             worker1_log = f.read()
             assert train_complete in worker1_log
             assert validation_complete in worker1_log
