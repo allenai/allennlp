@@ -63,8 +63,6 @@ class TimeDistributed(torch.nn.Module):
 
         outputs = []
         for reshaped_output in reshaped_outputs:
-            print(some_input.size())
-            print(reshaped_output.size())
             new_size = some_input.size()[:2] + reshaped_output.size()[1:]
             outputs.append(reshaped_output.contiguous().view(new_size))
 

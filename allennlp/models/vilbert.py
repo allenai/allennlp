@@ -13,9 +13,7 @@ from allennlp.modules import TimeDistributed
 from allennlp.nn import util
 from allennlp.training.metrics import CategoricalAccuracy
 
-from transformers.modeling_bert import (
-    ACT2FN,
-)
+from transformers.modeling_bert import ACT2FN
 
 logger = logging.getLogger(__name__)
 
@@ -526,7 +524,6 @@ class BertEncoder(torch.nn.Module, FromParams):
         txt_embedding,
         image_embedding,
         txt_attention_mask,
-        txt_attention_mask2,
         image_attention_mask,
         co_attention_mask=None,
         output_all_encoded_layers=True,
@@ -551,27 +548,19 @@ class BertEncoder(torch.nn.Module, FromParams):
 
             for idx in range(t_start, self.fixed_t_layer):
                 with torch.no_grad():
-                    txt_embedding = self.layer[idx](
-                        txt_embedding, txt_attention_mask
-                    )
+                    txt_embedding = self.layer[idx](txt_embedding, txt_attention_mask)
                     t_start = self.fixed_t_layer
 
             for idx in range(t_start, t_end):
-                txt_embedding = self.layer[idx](
-                    txt_embedding, txt_attention_mask
-                )
+                txt_embedding = self.layer[idx](txt_embedding, txt_attention_mask)
 
             for idx in range(v_start, self.fixed_v_layer):
                 with torch.no_grad():
-                    image_embedding = self.v_layer[idx](
-                        image_embedding, image_attention_mask
-                    )
+                    image_embedding = self.v_layer[idx](image_embedding, image_attention_mask)
                     v_start = self.fixed_v_layer
 
             for idx in range(v_start, v_end):
-                image_embedding = self.v_layer[idx](
-                    image_embedding, image_attention_mask
-                )
+                image_embedding = self.v_layer[idx](image_embedding, image_attention_mask)
 
             if count == 0 and self.in_batch_pairs:
                 # new batch size is the batch_size ^2
@@ -638,9 +627,7 @@ class BertEncoder(torch.nn.Module, FromParams):
                 all_encoder_layers_v.append(image_embedding)
 
         for idx in range(v_start, len(self.v_layer)):
-            image_embedding = self.v_layer[idx](
-                image_embedding, image_attention_mask
-            )
+            image_embedding = self.v_layer[idx](image_embedding, image_attention_mask)
 
         for idx in range(t_start, len(self.layer)):
             txt_embedding = self.layer[idx](txt_embedding, txt_attention_mask)
@@ -710,7 +697,7 @@ class Nlvr2Vilbert(Model):
         encoder: BertEncoder,
         pooled_output_dim: int,
         fusion_method: str = "sum",
-        dropout: float = 0.1
+        dropout: float = 0.1,
     ) -> None:
         super().__init__(vocab)
         self.loss = torch.nn.CrossEntropyLoss()
@@ -748,15 +735,14 @@ class Nlvr2Vilbert(Model):
         denotation: torch.Tensor = None,
     ) -> Dict[str, torch.Tensor]:
 
-        batch_size, num_images, num_objects, feature_size = visual_features.size()
-        assert num_objects == 36 and feature_size == 2048
-        assert num_images == 2
+        batch_size, num_images, _, feature_size = visual_features.size()
 
         input_ids = sentence_field["tokens"]["token_ids"]
         token_type_ids = sentence_field["tokens"]["type_ids"]
         attention_mask = sentence_field["tokens"]["mask"]
-        # We will always have an equal number of images and boxes, so no masking necessary.
-        image_attention_mask = torch.ones_like(box_coordinates)[:, :, :, 0]
+        # All batch instances will always have the same number of images and boxes, so no masking
+        # is necessary, and this is just a tensor of ones.
+        image_attention_mask = torch.ones_like(box_coordinates[:, :, :, 0])
 
         # (batch_size, num_tokens, embedding_dim)
         embedding_output = self.embeddings(input_ids, token_type_ids)
@@ -772,35 +758,19 @@ class Nlvr2Vilbert(Model):
         # this attention mask is more simple than the triangular masking of
         # causal attention used in OpenAI GPT, we just need to prepare the
         # broadcast dimension here.
-        extended_attention_mask = attention_mask.unsqueeze(2).unsqueeze(3)
-        extended_image_attention_mask = image_attention_mask.unsqueeze(2).unsqueeze(3)
+        extended_attention_mask = attention_mask.unsqueeze(2).unsqueeze(3).log()
+        extended_image_attention_mask = image_attention_mask.unsqueeze(2).unsqueeze(3).log()
 
-        extended_attention_mask2 = attention_mask.unsqueeze(3)
-
-        # Since attention_mask is 1.0 for positions we want to attend and 0.0 for
-        # masked positions, this operation will create a tensor which is 0.0 for
-        # positions we want to attend and -10000.0 for masked positions.
-        # Since we are adding it to the raw scores before the softmax, this is
-        # effectively the same as removing these entirely.
-        extended_attention_mask = extended_attention_mask.to(
-            dtype=next(self.parameters()).dtype
-        )  # fp16 compatibility
-        extended_attention_mask = (1.0 - extended_attention_mask) * -10000.0
-
-        extended_attention_mask2 = extended_attention_mask2.to(
-            dtype=next(self.parameters()).dtype
-        )  # fp16 compatibility
-
-        extended_image_attention_mask = extended_image_attention_mask.to(
-            dtype=next(self.parameters()).dtype
-        )  # fp16 compatibility
-        extended_image_attention_mask = (1.0 - extended_image_attention_mask) * -10000.0
-
-        co_attention_mask = torch.zeros(batch_size, num_images, feature_size, num_tokens).type_as(
-            extended_image_attention_mask
+        # TODO(matt): it looks like the co-attention logic is all currently commented out; not sure
+        # that this is necessary.
+        extended_co_attention_mask = torch.zeros(
+            batch_size,
+            num_images,
+            1,
+            feature_size,
+            num_tokens,
+            dtype=extended_image_attention_mask.dtype,
         )
-
-        extended_co_attention_mask = co_attention_mask.unsqueeze(2)
 
         # (batch_size, num_images, num_boxes, image_embedding_dim)
         v_embedding_output = self.image_embeddings(visual_features, box_coordinates)
@@ -808,7 +778,6 @@ class Nlvr2Vilbert(Model):
             embedding_output,
             v_embedding_output,
             extended_attention_mask,
-            extended_attention_mask2,
             extended_image_attention_mask,
             extended_co_attention_mask,
         )
@@ -823,6 +792,8 @@ class Nlvr2Vilbert(Model):
             pooled_output = self.dropout(pooled_output_t + pooled_output_v)
         elif self.fusion_method == "mul":
             pooled_output = self.dropout(pooled_output_t * pooled_output_v)
+        else:
+            raise ValueError(f"Fusion method '{self.fusion_method}' not supported")
 
         hidden_dim = pooled_output.size(-1)
         logits = self.classifier(pooled_output.view(batch_size, num_images * hidden_dim))
