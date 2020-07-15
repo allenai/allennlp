@@ -1,4 +1,5 @@
-from typing import Any, Dict, List
+from os import PathLike
+from typing import Any, Dict, List, Union
 from collections.abc import MutableMapping
 from collections import OrderedDict
 import copy
@@ -456,7 +457,7 @@ class Params(MutableMapping):
 
     @classmethod
     def from_file(
-        cls, params_file: str, params_overrides: str = "", ext_vars: dict = None
+        cls, params_file: Union[str, PathLike], params_overrides: str = "", ext_vars: dict = None
     ) -> "Params":
         """
         Load a `Params` object from a configuration file.

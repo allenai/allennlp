@@ -1,6 +1,9 @@
 import logging
 from logging import Filter
 import os
+from os import PathLike
+from typing import Union
+
 import sys
 
 
@@ -54,7 +57,9 @@ class ErrorFilter(Filter):
         return record.levelno < logging.ERROR
 
 
-def prepare_global_logging(serialization_dir: str, rank: int = 0, world_size: int = 1,) -> None:
+def prepare_global_logging(
+    serialization_dir: Union[str, PathLike], rank: int = 0, world_size: int = 1,
+) -> None:
     root_logger = logging.getLogger()
 
     # create handlers
