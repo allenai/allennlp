@@ -35,6 +35,7 @@ class Nlvr2Reader(DatasetReader):
 
         # find images
         import glob
+
         self.images = {
             os.path.basename(filename): filename
             for filename in glob.iglob(os.path.join(image_dir, "**", "*.png"), recursive=True)
@@ -42,9 +43,11 @@ class Nlvr2Reader(DatasetReader):
 
         # tokenizers and indexers
         from allennlp.data.tokenizers import PretrainedTransformerTokenizer
+
         self._tokenizer = PretrainedTransformerTokenizer(transformer_model)
         from allennlp.data.token_indexers import PretrainedTransformerIndexer
         from allennlp.data import TokenIndexer
+
         self._token_indexers: Dict[str, TokenIndexer] = {
             "tokens": PretrainedTransformerIndexer(transformer_model)
         }
@@ -55,6 +58,7 @@ class Nlvr2Reader(DatasetReader):
         if mask_prepositions_verbs or drop_prepositions_verbs:
             # Loading Spacy to find prepositions and verbs
             import spacy
+
             self.spacy = spacy.load("en_core_web_sm")
         else:
             self.spacy = None
@@ -64,26 +68,30 @@ class Nlvr2Reader(DatasetReader):
             detectron_config = detectron_config._asdict()
         cfg = get_detectron_cfg(**detectron_config)
         from allennlp.data.dataset_readers.dataset_utils.detectron_utils import DetectronProcessor
+
         self.detectron_processor = DetectronProcessor(cfg)
 
     @overrides
     def _read(self, split_or_filename: str):
+        github_url = "https://raw.githubusercontent.com/lil-lab/nlvr/"
         nlvr_commit = "68a11a766624a5b665ec7594982b8ecbedc728c7"
         splits = {
-            "dev": f"https://raw.githubusercontent.com/lil-lab/nlvr/{nlvr_commit}/nlvr2/data/dev.json",
-            "test": f"https://raw.githubusercontent.com/lil-lab/nlvr/{nlvr_commit}/nlvr2/data/test1.json",
-            "train": f"https://raw.githubusercontent.com/lil-lab/nlvr/{nlvr_commit}/nlvr2/data/train.json",
-            "balanced_dev": f"https://raw.githubusercontent.com/lil-lab/nlvr/{nlvr_commit}/nlvr2/data/blanced/balanced_dev.json",
-            "balanced_test": f"https://raw.githubusercontent.com/lil-lab/nlvr/{nlvr_commit}/nlvr2/data/blanced/balanced_test1.json",
-            "unbalanced_dev": f"https://raw.githubusercontent.com/lil-lab/nlvr/{nlvr_commit}/nlvr2/data/blanced/unbalanced_dev.json",
-            "unbalanced_test": f"https://raw.githubusercontent.com/lil-lab/nlvr/{nlvr_commit}/nlvr2/data/blanced/unbalanced_test1.json",
+            "dev": f"{github_url}{nlvr_commit}/nlvr2/data/dev.json",
+            "test": f"{github_url}{nlvr_commit}/nlvr2/data/test1.json",
+            "train": f"{github_url}{nlvr_commit}/nlvr2/data/train.json",
+            "balanced_dev": f"{github_url}{nlvr_commit}/nlvr2/data/blanced/balanced_dev.json",
+            "balanced_test": f"{github_url}{nlvr_commit}/nlvr2/data/blanced/balanced_test1.json",
+            "unbalanced_dev": f"{github_url}{nlvr_commit}/nlvr2/data/blanced/unbalanced_dev.json",
+            "unbalanced_test": f"{github_url}{nlvr_commit}/nlvr2/data/blanced/unbalanced_test1.json",
         }
         filename = splits.get(split_or_filename, split_or_filename)
 
         from allennlp.common.file_utils import cached_path
+
         json_file_path = cached_path(filename)
 
         from allennlp.common.file_utils import json_lines_from_file
+
         for json in json_lines_from_file(json_file_path):
             identifier = json["identifier"]
             sentence = json["sentence"]
@@ -129,6 +137,7 @@ class Nlvr2Reader(DatasetReader):
             sentence = new_sentence
         tokenized_sentence = self._tokenizer.tokenize(sentence)
         from allennlp.data.fields import TextField
+
         sentence_field = TextField(tokenized_sentence, self._token_indexers)
 
         # Load images

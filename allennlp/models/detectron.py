@@ -19,6 +19,7 @@ from detectron2.modeling.roi_heads import (
 from detectron2.modeling.roi_heads.fast_rcnn import FastRCNNOutputLayers
 from detectron2.modeling.poolers import ROIPooler
 
+
 @Model.register("detectron")
 class Detectron(Model):
     def __init__(
@@ -41,6 +42,7 @@ class Detectron(Model):
             cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url(builtin_config_file)
         if overrides is not None:
             from allennlp.common.detectron import apply_dict_to_cfg
+
             apply_dict_to_cfg(overrides, cfg)
 
         cfg.freeze()
@@ -82,6 +84,7 @@ class AttributePredictor(nn.Module):
     Head for attribute prediction, including feature/score computation and
     loss computation.
     """
+
     def __init__(self, cfg, input_dim):
         super().__init__()
 
@@ -97,10 +100,7 @@ class AttributePredictor(nn.Module):
         # object class embedding, including the background class
         self.obj_embed = nn.Embedding(self.num_objs + 1, self.obj_embed_dim)
         input_dim += self.obj_embed_dim
-        self.fc = nn.Sequential(
-                nn.Linear(input_dim, self.fc_dim),
-                nn.ReLU()
-            )
+        self.fc = nn.Sequential(nn.Linear(input_dim, self.fc_dim), nn.ReLU())
         self.attr_score = nn.Linear(self.fc_dim, self.num_attributes)
         nn.init.normal_(self.attr_score.weight, std=0.01)
         nn.init.constant_(self.attr_score.bias, 0)
@@ -118,7 +118,7 @@ class AttributePredictor(nn.Module):
             (label >= 0).sum(dim=1).repeat(self.max_attr_per_ins, 1).transpose(0, 1).flatten()
         )
         weights = inv_weights.float().reciprocal()
-        weights[weights > 1] = 0.
+        weights[weights > 1] = 0.0
         n_valid = len((label >= 0).sum(dim=1).nonzero())
         label = label.view(-1)
         attr_loss = F.cross_entropy(score, label, reduction="none", ignore_index=-1)
@@ -127,13 +127,15 @@ class AttributePredictor(nn.Module):
         if n_valid > 0:
             attr_loss = attr_loss.sum() * self.loss_weight / n_valid
         else:
-            attr_loss = attr_loss.sum() * 0.
+            attr_loss = attr_loss.sum() * 0.0
         return {"loss_attr": attr_loss}
+
 
 class AttributeROIHeads(ROIHeads):
     """
     An extension of ROIHeads to include attribute prediction.
     """
+
     def forward_attribute_loss(self, proposals, box_features):
         proposals, fg_selection_attributes = select_foreground_proposals(
             proposals, self.num_classes
@@ -144,6 +146,7 @@ class AttributeROIHeads(ROIHeads):
         attribute_scores = self.attribute_predictor(attribute_features, obj_labels)
         return self.attribute_predictor.loss(attribute_scores, attribute_labels)
 
+
 @ROI_HEADS_REGISTRY.register()
 class AttributeRes5ROIHeads(AttributeROIHeads, Res5ROIHeads):
     """
@@ -151,10 +154,11 @@ class AttributeRes5ROIHeads(AttributeROIHeads, Res5ROIHeads):
     This code was modified based on the repo: 
     https://github.com/vedanuj/grid-feats-vqa/blob/master/grid_feats/roi_heads.py
     """
+
     def __init__(self, cfg, input_shape):
         super(Res5ROIHeads, self).__init__(cfg)
-        
-        self.in_features  = cfg.MODEL.ROI_HEADS.IN_FEATURES
+
+        self.in_features = cfg.MODEL.ROI_HEADS.IN_FEATURES
         assert len(self.in_features) == 1
         # fmt: off
         pooler_resolution = cfg.MODEL.ROI_BOX_HEAD.POOLER_RESOLUTION
@@ -228,9 +232,7 @@ class AttributeRes5ROIHeads(AttributeROIHeads, Res5ROIHeads):
         assert len(self.in_features) == 1
 
         features = [features[f] for f in self.in_features]
-        box_features = self._shared_roi_transform(
-            features, [x.proposal_boxes for x in proposals]
-        )
+        box_features = self._shared_roi_transform(features, [x.proposal_boxes for x in proposals])
         pooled_features = box_features.mean(dim=[2, 3])
         return box_features, pooled_features
 
@@ -240,6 +242,7 @@ class AttributeStandardROIHeads(AttributeROIHeads, StandardROIHeads):
     """
     An extension of StandardROIHeads to include attribute prediction.
     """
+
     def __init__(self, cfg, input_shape):
         super(StandardROIHeads, self).__init__(cfg, input_shape)
         self._init_box_head(cfg, input_shape)
@@ -303,5 +306,3 @@ class AttributeStandardROIHeads(AttributeROIHeads, StandardROIHeads):
 
         features = [features[f] for f in self.in_features]
         return features[0]
-
-

@@ -20,7 +20,7 @@ class ArrayField(Field[torch.Tensor]):
         self,
         tensor: Union[torch.Tensor, np.ndarray],
         padding_value: Any = 0.0,
-        dtype: Optional[Union[np.dtype, torch.dtype]] = None
+        dtype: Optional[Union[np.dtype, torch.dtype]] = None,
     ) -> None:
         if dtype is not None:
             if isinstance(tensor, np.ndarray):
@@ -52,7 +52,9 @@ class ArrayField(Field[torch.Tensor]):
     def empty_field(self):
         # Pass the padding_value, so that any outer field, e.g., `ListField[ArrayField]` uses the
         # same padding_value in the padded ArrayFields
-        return ArrayField(torch.tensor([], dtype=self.tensor.dtype), padding_value=self.padding_value)
+        return ArrayField(
+            torch.tensor([], dtype=self.tensor.dtype), padding_value=self.padding_value
+        )
 
     def __str__(self) -> str:
         return f"ArrayField with shape: {self.tensor.size()} and dtype: {self.tensor.dtype}."

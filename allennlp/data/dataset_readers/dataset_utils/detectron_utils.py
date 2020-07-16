@@ -43,7 +43,7 @@ class DetectronProcessor:
         features = self.model.backbone(images.tensor)
 
         # for region features
-        if self.cfg.MODEL.FEATURE_TYPE == 'region':
+        if self.cfg.MODEL.FEATURE_TYPE == "region":
 
             # assume we didn't provide the proposals for now
             proposals, _ = self.model.proposal_generator(images, features, None)
@@ -57,9 +57,11 @@ class DetectronProcessor:
             )
             # postprocess
             pooled_features = pooled_features[r_indices]
-        elif self.cfg.MODEL.FEATURE_TYPE == 'grid':
+        elif self.cfg.MODEL.FEATURE_TYPE == "grid":
             # for grid features
             pooled_features = self.model.roi_heads.get_conv5_features(features)
+        else:
+            raise ValueError("Unsupported MODEL.FEATURE_TYPE")
 
         image_fields = []
         from allennlp.data.fields.tensor_field import ArrayField

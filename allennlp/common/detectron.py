@@ -29,6 +29,7 @@ def get_detectron_cfg(
     cfg = get_cfg()
     add_attribute_config(cfg)
     from detectron2.model_zoo import get_config_file
+
     if builtin_config_file is not None:
         cfg.merge_from_file(get_config_file(builtin_config_file))
     if yaml_config_file is not None:
@@ -49,7 +50,7 @@ def add_attribute_config(cfg):
     Add config for attribute prediction.
     """
     # What feature type we want, region or grid:
-    cfg.MODEL.FEATURE_TYPE = 'region'
+    cfg.MODEL.FEATURE_TYPE = "region"
     # Whether to have attribute prediction
     cfg.MODEL.ATTRIBUTE_ON = False
     # Maximum number of attributes per foreground instance
@@ -58,7 +59,7 @@ def add_attribute_config(cfg):
     # Attribute Head
     # -----------------------------------------------------------------------  #
     cfg.MODEL.ROI_ATTRIBUTE_HEAD = CfgNode()
-    # Dimension for object class embedding, used in conjunction with 
+    # Dimension for object class embedding, used in conjunction with
     # visual features to predict attributes
     cfg.MODEL.ROI_ATTRIBUTE_HEAD.OBJ_EMBED_DIM = 256
     # Dimension of the hidden fc layer of the input visual features
