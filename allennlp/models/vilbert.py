@@ -727,7 +727,6 @@ class Nlvr2Vilbert(Model):
         sentence: List[str],
         visual_features: torch.Tensor,
         box_coordinates: torch.Tensor,
-        image_id: List[List[str]],
         identifier: List[str],
         sentence_field: TextFieldTensors,
         denotation: torch.Tensor = None,
