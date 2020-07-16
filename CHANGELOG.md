@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Fixed
+
+- Removed unnecessary warning about deadlocks in `DataLoader`.
+
 ## [v1.1.0rc1](https://github.com/allenai/allennlp/releases/tag/v1.1.0rc1) - 2020-07-14
 
 ### Fixed
@@ -35,7 +39,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Tqdm` output now looks much better when the output is being piped or redirected.
 - Small improvements to how the API documentation is rendered.
 - Only show validation progress bar from main process in distributed training.
-- Removed unnecessary warning about deadlocks in `DataLoader`.
 
 ### Added
 
