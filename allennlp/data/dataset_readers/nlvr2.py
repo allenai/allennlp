@@ -140,8 +140,9 @@ class Nlvr2Reader(DatasetReader):
         visual_features = self.detectron_processor(images)
         from allennlp.data.fields import MetadataField
         from allennlp.data.fields import ListField
+        from allennlp.data.fields.tensor_field import TensorField
         fields = {
-            "visual_features": ArrayField(visual_features),
+            "visual_features": TensorField(visual_features),
             # "box_coordinates": ListField([image["instances/pred_boxes"] for image in images]),
             "sentence": MetadataField(sentence),
             "identifier": MetadataField(identifier),
