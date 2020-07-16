@@ -27,7 +27,7 @@ class TensorField(Field[torch.Tensor]):
     def as_tensor(self, padding_lengths: Dict[str, int]) -> torch.Tensor:
         pad = [
             padding
-            for i, dimension_size in enumerate(padding_lengths.values())
+            for i, dimension_size in reversed(list(enumerate(padding_lengths.values())))
             for padding in [0, dimension_size - self.tensor.size(i)]
         ]
         return torch.nn.functional.pad(self.tensor, pad, value=self.padding_value)
@@ -36,10 +36,10 @@ class TensorField(Field[torch.Tensor]):
     def empty_field(self):
         # Pass the padding_value, so that any outer field, e.g., `ListField[TensorField]` uses the
         # same padding_value in the padded TensorFields
-        return TensorField(torch.tensor([], dtype=self.dtype), padding_value=self.padding_value)
+        return TensorField(torch.tensor([], dtype=self.tensor.dtype), padding_value=self.padding_value)
 
     def __str__(self) -> str:
-        return f"TensorField with shape: {self.tensor.size()} and dtype: {self.dtype}."
+        return f"TensorField with shape: {self.tensor.size()} and dtype: {self.tensor.dtype}."
 
     def __len__(self):
         return 1 if len(self.tensor.size()) <= 0 else self.tensor.size(0)
