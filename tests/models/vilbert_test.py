@@ -12,6 +12,17 @@ _test_override_matrix = [
 
 class TestVilbert(ModelTestCase):
     @pytest.mark.parametrize("overrides", _test_override_matrix)
+    @pytest.mark.skip()
     def test_vilbert_can_train_save_and_load(self, overrides: str):
         param_file = self.FIXTURES_ROOT / "vilbert" / "experiment.json"
+        self.ensure_model_can_train_save_and_load(param_file, overrides=overrides)
+
+    @pytest.mark.parametrize("overrides", _test_override_matrix)
+    def test_vilbert_grid_can_train_save_and_load(self, overrides: str):
+        param_file = self.FIXTURES_ROOT / "vilbert" / "experiment_detectron_grid.json"
+        self.ensure_model_can_train_save_and_load(param_file, overrides=overrides)
+
+    @pytest.mark.parametrize("overrides", _test_override_matrix)
+    def test_vilbert_detectron_region_can_train_save_and_load(self, overrides: str):
+        param_file = self.FIXTURES_ROOT / "vilbert" / "experiment_detectron_region.json"
         self.ensure_model_can_train_save_and_load(param_file, overrides=overrides)

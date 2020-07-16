@@ -1,7 +1,7 @@
 {
   "dataset_reader": {
     "type": "nlvr2",
-    "image_dir": "/net/nfs2.corp/prior/datasets/nlvr2/dev",
+    "image_dir": "test_fixtures/data/nlvr2",
     "detectron_config": {
       "overrides": {
         "MODEL": {
@@ -27,8 +27,8 @@
     "mask_prepositions_verbs": false,
     "drop_prepositions_verbs": false
   },
-  "train_data_path": "dev",
-  "validation_data_path": "dev",
+  "train_data_path": "test_fixtures/data/nlvr2/tiny-dev.json",
+  "validation_data_path": "test_fixtures/data/nlvr2/tiny-dev.json",
   "model": {
     "type": "nlvr2_vilbert",
     "text_embeddings": {
