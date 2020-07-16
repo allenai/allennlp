@@ -307,6 +307,10 @@ class BeamSearch:
             for key, state_tensor in state.items():
                 if state_tensor is None:
                     continue
+                multilayer_rnn_decoder = state_tensor.dim() == 3 and key in {
+                    "decoder_hidden",
+                    "decoder_context",
+                }
                 if multilayer_rnn_decoder:
                     # shape: (num_layers, batch_size * beam_size, *)
                     num_layers, _, *last_dims = state_tensor.size()
