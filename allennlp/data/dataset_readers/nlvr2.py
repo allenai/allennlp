@@ -141,17 +141,14 @@ class Nlvr2Reader(DatasetReader):
         sentence_field = TextField(tokenized_sentence, self._token_indexers)
 
         # Load images
-        image_name_base = identifier[:identifier.rindex("-")]
-        images = [
-            self.images[f"{image_name_base}-img{image_id}.png"]
-            for image_id in [0, 1]
-        ]
-        visual_features = self.detectron_processor(images)
+        image_name_base = identifier[: identifier.rindex("-")]
+        images = [self.images[f"{image_name_base}-img{image_id}.png"] for image_id in [0, 1]]
+        images = self.detectron_processor(images)
         from allennlp.data.fields import MetadataField
         from allennlp.data.fields import ListField
-        from allennlp.data.fields.array_field import ArrayField
+
         fields = {
-            "visual_features": ArrayField(visual_features),
+            "visual_features": ListField([i["visual_features"] for i in images]),
             # "box_coordinates": ListField([image["instances/pred_boxes"] for image in images]),
             "sentence": MetadataField(sentence),
             "identifier": MetadataField(identifier),

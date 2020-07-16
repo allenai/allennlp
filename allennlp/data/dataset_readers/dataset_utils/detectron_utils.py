@@ -33,7 +33,9 @@ class DetectronProcessor:
         self.model.eval()
 
     @torch.no_grad()
-    def __call__(self, images: Union[SupportedImageFormat, List[SupportedImageFormat]]) -> Union[Dict[str, Field], List[Dict[str, Field]]]:
+    def __call__(
+        self, images: Union[SupportedImageFormat, List[SupportedImageFormat]]
+    ) -> Union[Dict[str, Field], List[Dict[str, Field]]]:
         # handle the single-image case
         if not isinstance(images, list):
             return self.__call__([images])[0]
@@ -64,7 +66,7 @@ class DetectronProcessor:
             raise ValueError("Unsupported MODEL.FEATURE_TYPE")
 
         image_fields = []
-        from allennlp.data.fields.tensor_field import ArrayField
+        from allennlp.data.fields.array_field import ArrayField
 
         # comment this for now:
 
@@ -114,7 +116,10 @@ class DetectronProcessor:
         #         fields["panoptic_seg/category_ids"] = ArrayField(category_ids, padding_value=-1)
 
         #     image_fields.append(fields)
-        return pooled_features
+        return [
+            {"visual_features": ArrayField(f)}
+            for f in pooled_features
+        ]
         # return image_fields, pooled_features
 
     def _to_model_input(self, image: SupportedImageFormat) -> dict:
