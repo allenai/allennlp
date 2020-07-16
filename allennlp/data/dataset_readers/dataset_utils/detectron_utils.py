@@ -62,7 +62,7 @@ class DetectronProcessor:
             pooled_features = self.model.roi_heads.get_conv5_features(features)
 
         image_fields = []
-        from allennlp.data.fields.tensor_field import TensorField
+        from allennlp.data.fields.tensor_field import ArrayField
 
         # comment this for now:
 
@@ -71,45 +71,45 @@ class DetectronProcessor:
         #     if "instances" in image:
         #         instances = image["instances"]
         #         if instances.has("pred_boxes"):
-        #             fields["instances/pred_boxes"] = TensorField(
+        #             fields["instances/pred_boxes"] = ArrayField(
         #                 instances.get("pred_boxes").tensor, padding_value=-1
         #             )
         #         if instances.has("scores"):
-        #             fields["instances/scores"] = TensorField(instances.get("scores"))
+        #             fields["instances/scores"] = ArrayField(instances.get("scores"))
         #         if instances.has("pred_classes"):
-        #             fields["instances/pred_classes"] = TensorField(
+        #             fields["instances/pred_classes"] = ArrayField(
         #                 instances.get("pred_classes"), padding_value=-1
         #             )
         #         if instances.has("pred_masks"):
-        #             fields["instances/pred_masks"] = TensorField(
+        #             fields["instances/pred_masks"] = ArrayField(
         #                 instances.get("pred_masks"), padding_value=False
         #             )
         #         if instances.has("pred_keypoints"):
-        #             fields["instances/pred_keypoints"] = TensorField(
+        #             fields["instances/pred_keypoints"] = ArrayField(
         #                 instances.get("pred_keypoints"), padding_value=-1
         #             )
         #     if "sem_seg" in image:
-        #         fields["sem_seg"] = TensorField(image["sem_seg"], padding_value=0.0)
+        #         fields["sem_seg"] = ArrayField(image["sem_seg"], padding_value=0.0)
         #     if "proposals" in image:
         #         instances = image["proposals"]
         #         if instances.has("proposal_boxes"):
-        #             fields["proposals/proposal_boxes"] = TensorField(
+        #             fields["proposals/proposal_boxes"] = ArrayField(
         #                 instances.get("proposal_boxes").tensor, padding_value=-1
         #             )
         #         if instances.has("objectness_logits"):
-        #             fields["proposals/objectness_logits"] = TensorField(
+        #             fields["proposals/objectness_logits"] = ArrayField(
         #                 instances.get("objectness_logits")
         #             )
         #     if "panoptic_seg" in image:
         #         segment_ids, dicts = image["panoptic_seg"]
-        #         fields["panoptic_seg"] = TensorField(segment_ids, padding_value=-1)
+        #         fields["panoptic_seg"] = ArrayField(segment_ids, padding_value=-1)
 
         #         ids = torch.tensor([d["id"] for d in dicts], dtype=torch.int32)
         #         isthings = torch.tensor([d["isthing"] for d in dicts], dtype=torch.bool)
         #         category_ids = torch.tensor([d["category_id"] for d in dicts], dtype=torch.int32)
-        #         fields["panoptic_seg/ids"] = TensorField(ids, padding_value=-1)
-        #         fields["panoptic_seg/isthings"] = TensorField(isthings, padding_value=False)
-        #         fields["panoptic_seg/category_ids"] = TensorField(category_ids, padding_value=-1)
+        #         fields["panoptic_seg/ids"] = ArrayField(ids, padding_value=-1)
+        #         fields["panoptic_seg/isthings"] = ArrayField(isthings, padding_value=False)
+        #         fields["panoptic_seg/category_ids"] = ArrayField(category_ids, padding_value=-1)
 
         #     image_fields.append(fields)
         return pooled_features

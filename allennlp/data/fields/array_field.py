@@ -1,68 +1,64 @@
-from typing import Dict
+from typing import Dict, Any, Union, Optional
 
-import numpy
 import torch
+import numpy as np
 from overrides import overrides
 
 from allennlp.data.fields.field import Field
 
 
-class ArrayField(Field[numpy.ndarray]):
+class ArrayField(Field[torch.Tensor]):
     """
-    A class representing an array, which could have arbitrary dimensions.
-    A batch of these arrays are padded to the max dimension length in the batch
+    A class representing a tensor, which could have arbitrary dimensions.
+    A batch of these tensors are padded to the max dimension length in the batch
     for each dimension.
     """
 
-    __slots__ = ["array", "padding_value", "dtype"]
+    __slots__ = ["tensor", "padding_value"]
 
     def __init__(
-        self, array: numpy.ndarray, padding_value: int = 0, dtype: numpy.dtype = numpy.float32
+        self,
+        tensor: Union[torch.Tensor, np.ndarray],
+        padding_value: Any = 0.0,
+        dtype: Optional[Union[np.dtype, torch.dtype]] = None
     ) -> None:
-        self.array = array
+        if dtype is not None:
+            if isinstance(tensor, np.ndarray):
+                tensor = tensor.astype(dtype)
+            elif isinstance(tensor, torch.Tensor):
+                tensor = tensor.to(dtype)
+            else:
+                raise ValueError("Did not recognize the type of `tensor`.")
+        if isinstance(tensor, np.ndarray):
+            tensor = torch.from_numpy(tensor)
+
+        self.tensor = tensor
         self.padding_value = padding_value
-        self.dtype = dtype
 
     @overrides
     def get_padding_lengths(self) -> Dict[str, int]:
-        return {"dimension_" + str(i): shape for i, shape in enumerate(self.array.shape)}
+        return {"dimension_" + str(i): shape for i, shape in enumerate(self.tensor.size())}
 
     @overrides
     def as_tensor(self, padding_lengths: Dict[str, int]) -> torch.Tensor:
-        max_shape = [padding_lengths["dimension_{}".format(i)] for i in range(len(padding_lengths))]
-
-        # Convert explicitly to an ndarray just in case it's an scalar
-        # (it'd end up not being an ndarray otherwise).
-        # Also, the explicit dtype declaration for `asarray` is necessary for scalars.
-        return_array = numpy.asarray(
-            numpy.ones(max_shape, dtype=self.dtype) * self.padding_value, dtype=self.dtype
-        )
-
-        # If the tensor has a different shape from the largest tensor, pad dimensions with zeros to
-        # form the right shaped list of slices for insertion into the final tensor.
-        slicing_shape = list(self.array.shape)
-        if len(self.array.shape) < len(max_shape):
-            slicing_shape = slicing_shape + [
-                0 for _ in range(len(max_shape) - len(self.array.shape))
-            ]
-        slices = tuple([slice(0, x) for x in slicing_shape])
-        return_array[slices] = self.array
-        tensor = torch.from_numpy(return_array)
-        return tensor
+        pad = [
+            padding
+            for i, dimension_size in reversed(list(enumerate(padding_lengths.values())))
+            for padding in [0, dimension_size - self.tensor.size(i)]
+        ]
+        return torch.nn.functional.pad(self.tensor, pad, value=self.padding_value)
 
     @overrides
     def empty_field(self):
         # Pass the padding_value, so that any outer field, e.g., `ListField[ArrayField]` uses the
         # same padding_value in the padded ArrayFields
-        return ArrayField(
-            numpy.array([], dtype=self.dtype), padding_value=self.padding_value, dtype=self.dtype
-        )
+        return ArrayField(torch.tensor([], dtype=self.tensor.dtype), padding_value=self.padding_value)
 
     def __str__(self) -> str:
-        return f"ArrayField with shape: {self.array.shape} and dtype: {self.dtype}."
+        return f"ArrayField with shape: {self.tensor.size()} and dtype: {self.tensor.dtype}."
 
     def __len__(self):
-        return 1 if self.array.ndim == 0 else self.array.shape[0]
+        return 1 if len(self.tensor.size()) <= 0 else self.tensor.size(0)
 
-    def __eq__(self, other) -> bool:
-        return numpy.array_equal(self.array, other.array)
+    def __eq__(self, other: "ArrayField") -> bool:
+        return torch.equal(self.tensor, other.tensor)
