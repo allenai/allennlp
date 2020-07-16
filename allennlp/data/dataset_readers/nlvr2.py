@@ -137,13 +137,12 @@ class Nlvr2Reader(DatasetReader):
             self.images[f"{image_name_base}-img{image_id}.png"]
             for image_id in [0, 1]
         ]
-        images = self.detectron_processor(images)
-
+        visual_features = self.detectron_processor(images)
         from allennlp.data.fields import MetadataField
         from allennlp.data.fields import ListField
         fields = {
-            #"visual_features": ArrayField(features),
-            "box_coordinates": ListField([image["instances/pred_boxes"] for image in images]),
+            "visual_features": ArrayField(visual_features),
+            # "box_coordinates": ListField([image["instances/pred_boxes"] for image in images]),
             "sentence": MetadataField(sentence),
             "identifier": MetadataField(identifier),
             "sentence_field": sentence_field,
