@@ -67,7 +67,7 @@ class Nlvr2Reader(DatasetReader):
         self.detectron_processor = DetectronProcessor(cfg)
 
     @overrides
-    def _read(self, split: str):
+    def _read(self, split_or_filename: str):
         nlvr_commit = "68a11a766624a5b665ec7594982b8ecbedc728c7"
         splits = {
             "dev": f"https://raw.githubusercontent.com/lil-lab/nlvr/{nlvr_commit}/nlvr2/data/dev.json",
@@ -78,9 +78,10 @@ class Nlvr2Reader(DatasetReader):
             "unbalanced_dev": f"https://raw.githubusercontent.com/lil-lab/nlvr/{nlvr_commit}/nlvr2/data/blanced/unbalanced_dev.json",
             "unbalanced_test": f"https://raw.githubusercontent.com/lil-lab/nlvr/{nlvr_commit}/nlvr2/data/blanced/unbalanced_test1.json",
         }
+        filename = splits.get(split_or_filename, split_or_filename)
 
         from allennlp.common.file_utils import cached_path
-        json_file_path = cached_path(splits[split])
+        json_file_path = cached_path(filename)
 
         from allennlp.common.file_utils import json_lines_from_file
         for json in json_lines_from_file(json_file_path):
