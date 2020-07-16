@@ -1,9 +1,11 @@
 from os import PathLike
-from typing import NamedTuple, Tuple, Union, List
+from typing import NamedTuple, Tuple, Union, List, Dict
 
 import torch
 from detectron2.config import CfgNode
 from torch import Tensor
+
+from allennlp.data import Field
 
 
 class ImageWithSize(NamedTuple):
@@ -28,7 +30,7 @@ class DetectronProcessor:
         self.model.eval()
 
     @torch.no_grad()
-    def __call__(self, images: Union[SupportedImageFormat, List[SupportedImageFormat]]):
+    def __call__(self, images: Union[SupportedImageFormat, List[SupportedImageFormat]]) -> Union[Dict[str, Field], List[Dict[str, Field]]]:
         # handle the single-image case
         if not isinstance(images, list):
             return self.__call__([images])[0]
