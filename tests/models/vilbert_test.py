@@ -15,8 +15,3 @@ class TestVilbert(ModelTestCase):
     def test_vilbert_can_train_save_and_load(self, overrides: str):
         param_file = self.FIXTURES_ROOT / "vilbert" / "experiment.json"
         self.ensure_model_can_train_save_and_load(param_file, overrides=overrides)
-
-    @pytest.mark.parametrize("overrides", _test_override_matrix)
-    def test_vilbert_detectron_can_train_save_and_load(self, overrides: str):
-        param_file = self.FIXTURES_ROOT / "vilbert" / "experiment_detectron.json"
-        self.ensure_model_can_train_save_and_load(param_file, overrides=overrides)
