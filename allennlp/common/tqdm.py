@@ -36,10 +36,12 @@ def replace_cr_with_newline(message: str) -> str:
     without adding more lines to the terminal output. Displaying those in a file won't work
     correctly, so we'll just make sure that each batch shows up on its one line.
     """
-    if "\r" in message:
-        message = message.replace("\r", "")
-        if not message or message[-1] != "\n":
-            message += "\n"
+    # In addition to carriage returns, nested progress-bars will contain extra new-line
+    # characters and this special control sequence which tells the terminal to move the
+    # cursor one line up.
+    message = message.replace("\r", "").replace("\n", "").replace("[A", "")
+    if message and message[-1] != "\n":
+        message += "\n"
     return message
 
 
@@ -48,7 +50,13 @@ class TqdmToLogsWriter(object):
         self.last_message_written_time = 0
 
     def write(self, message):
-        sys.stderr.write(message)
+        if sys.stderr.isatty():
+            # We're running in a real terminal.
+            sys.stderr.write(message)
+        else:
+            # The output is being piped or redirected.
+            sys.stderr.write(replace_cr_with_newline(message))
+        # Every 10 seconds we also log the message.
         now = time()
         if now - self.last_message_written_time >= 10 or "100%" in message:
             message = replace_cr_with_newline(message)
@@ -65,6 +73,8 @@ class TqdmToLogsWriter(object):
 class Tqdm:
     @staticmethod
     def tqdm(*args, **kwargs):
-        new_kwargs = {"file": TqdmToLogsWriter(), **kwargs}
+        # Use a slow interval if the output is being piped or redirected.
+        default_mininterval = 0.1 if sys.stderr.isatty() else 10.0
+        new_kwargs = {"file": TqdmToLogsWriter(), "mininterval": default_mininterval, **kwargs}
 
         return _tqdm(*args, **new_kwargs)

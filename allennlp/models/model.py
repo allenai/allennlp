@@ -5,7 +5,8 @@ an AllenNLP model.
 
 import logging
 import os
-from typing import Dict, List, Set, Type, Optional
+from os import PathLike
+from typing import Dict, List, Set, Type, Optional, Union
 
 try:
     from apex import amp
@@ -268,8 +269,8 @@ class Model(torch.nn.Module, Registrable):
     def _load(
         cls,
         config: Params,
-        serialization_dir: str,
-        weights_file: Optional[str] = None,
+        serialization_dir: Union[str, PathLike],
+        weights_file: Optional[Union[str, PathLike]] = None,
         cuda_device: int = -1,
         opt_level: Optional[str] = None,
     ) -> "Model":
@@ -349,8 +350,8 @@ class Model(torch.nn.Module, Registrable):
     def load(
         cls,
         config: Params,
-        serialization_dir: str,
-        weights_file: Optional[str] = None,
+        serialization_dir: Union[str, PathLike],
+        weights_file: Optional[Union[str, PathLike]] = None,
         cuda_device: int = -1,
         opt_level: Optional[str] = None,
     ) -> "Model":

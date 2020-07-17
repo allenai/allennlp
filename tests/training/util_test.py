@@ -9,7 +9,8 @@ from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.instance import Instance
 from allennlp.data.dataset_readers import DatasetReader
 from allennlp.data.fields import LabelField
-from allennlp.training.util import make_vocab_from_params
+from allennlp.models import Model
+from allennlp.training.util import make_vocab_from_params, get_metrics
 
 
 logger = logging.getLogger(__name__)
@@ -162,3 +163,22 @@ class TestMakeVocabFromParams(AllenNlpTestCase):
             random_file.write("BLAH!")
         with pytest.raises(ConfigurationError, match="The 'vocabulary' directory in the provided"):
             make_vocab_from_params(params, str(self.TEST_DIR))
+
+    def test_get_metrics(self):
+        class FakeModel(Model):
+            def forward(self, **kwargs):
+                return {}
+
+        model = FakeModel(None)
+        total_loss = 100.0
+        batch_loss = 10.0
+        num_batches = 2
+        metrics = get_metrics(model, total_loss, None, batch_loss, None, num_batches)
+
+        assert metrics["loss"] == float(total_loss / num_batches)
+        assert metrics["batch_loss"] == batch_loss
+
+        metrics = get_metrics(model, total_loss, None, None, None, num_batches)
+
+        assert metrics["loss"] == float(total_loss / num_batches)
+        assert "batch_loss" not in metrics

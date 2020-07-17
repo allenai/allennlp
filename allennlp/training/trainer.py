@@ -507,11 +507,14 @@ class GradientDescentTrainer(Trainer):
         regularization_penalty = self.model.get_regularization_penalty()
 
         train_loss = 0.0
+        batch_loss = 0.0
 
         if regularization_penalty is not None:
             train_reg_loss = 0.0
+            batch_reg_loss = 0.0
         else:
             train_reg_loss = None
+            batch_reg_loss = None
         # Set the model to "train" mode.
         self._pytorch_model.train()
 
@@ -588,10 +591,12 @@ class GradientDescentTrainer(Trainer):
                         scaled_loss.backward()
                 else:
                     loss.backward()
-                train_loss += loss.item()
+                batch_loss = loss.item()
+                train_loss += batch_loss
                 if reg_loss is not None:
                     reg_loss = reg_loss / len(batch_group)
-                    train_reg_loss += reg_loss.item()
+                    batch_reg_loss = reg_loss.item()
+                    train_reg_loss += batch_reg_loss
 
             batch_grad_norm = self.rescale_gradients()
 
@@ -627,6 +632,8 @@ class GradientDescentTrainer(Trainer):
                 self.model,
                 train_loss,
                 train_reg_loss,
+                batch_loss,
+                batch_reg_loss,
                 batches_this_epoch,
                 world_size=self._world_size,
                 cuda_device=self.cuda_device,
@@ -675,7 +682,9 @@ class GradientDescentTrainer(Trainer):
             self.model,
             train_loss,
             train_reg_loss,
-            batches_this_epoch,
+            batch_loss=None,
+            batch_reg_loss=None,
+            num_batches=batches_this_epoch,
             reset=True,
             world_size=self._world_size,
             cuda_device=self.cuda_device,
@@ -707,13 +716,23 @@ class GradientDescentTrainer(Trainer):
             )
 
         regularization_penalty = self.model.get_regularization_penalty()
-        val_generator_tqdm = Tqdm.tqdm(validation_data_loader)
+
+        # Having multiple tqdm bars in case of distributed training will be a mess. Hence only the master's
+        # progress is shown
+        if self._master:
+            val_generator_tqdm = Tqdm.tqdm(validation_data_loader)
+        else:
+            val_generator_tqdm = validation_data_loader
+
         batches_this_epoch = 0
         val_loss = 0
+        val_batch_loss = 0
         if regularization_penalty is not None:
             val_reg_loss = 0
+            val_batch_reg_loss = 0
         else:
             val_reg_loss = None
+            val_batch_reg_loss = None
         done_early = False
         for batch in val_generator_tqdm:
             if self._distributed:
@@ -745,22 +764,27 @@ class GradientDescentTrainer(Trainer):
                 # count those batches for which we actually have a loss.  If this variable ever
                 # gets used for something else, we might need to change things around a bit.
                 batches_this_epoch += 1
-                val_loss += loss.detach().cpu().numpy()
+                val_batch_loss = loss.detach().cpu().numpy()
+                val_loss += val_batch_loss
                 if reg_loss is not None:
-                    val_reg_loss += reg_loss.detach().cpu().numpy()
+                    val_batch_reg_loss = reg_loss.detach().cpu().numpy()
+                    val_reg_loss += val_batch_reg_loss
 
             # Update the description with the latest metrics
             val_metrics = training_util.get_metrics(
                 self.model,
                 val_loss,
                 val_reg_loss,
+                val_batch_loss,
+                val_batch_reg_loss,
                 batches_this_epoch,
                 world_size=self._world_size,
                 cuda_device=self.cuda_device,
             )
 
             description = training_util.description_from_metrics(val_metrics)
-            val_generator_tqdm.set_description(description, refresh=False)
+            if self._master:
+                val_generator_tqdm.set_description(description, refresh=False)
 
             for callback in self._batch_callbacks:
                 callback(
@@ -844,7 +868,9 @@ class GradientDescentTrainer(Trainer):
                         self.model,
                         val_loss,
                         val_reg_loss,
-                        num_batches,
+                        batch_loss=None,
+                        batch_reg_loss=None,
+                        num_batches=num_batches,
                         reset=True,
                         world_size=self._world_size,
                         cuda_device=self.cuda_device,

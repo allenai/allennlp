@@ -129,8 +129,11 @@ class FBetaMeasure(Metric):
             mask = torch.ones_like(gold_labels).bool()
         gold_labels = gold_labels.float()
 
+        # If the prediction tensor is all zeros, the record is not classified to any of the labels.
+        pred_mask = predictions.sum(dim=-1) != 0
         argmax_predictions = predictions.max(dim=-1)[1].float()
-        true_positives = (gold_labels == argmax_predictions) & mask
+
+        true_positives = (gold_labels == argmax_predictions) & mask & pred_mask
         true_positives_bins = gold_labels[true_positives]
 
         # Watch it:
@@ -142,7 +145,7 @@ class FBetaMeasure(Metric):
                 true_positives_bins.long(), minlength=num_classes
             ).float()
 
-        pred_bins = argmax_predictions[mask].long()
+        pred_bins = argmax_predictions[mask & pred_mask].long()
         # Watch it:
         # When the `mask` is all 0, we will get an _empty_ tensor.
         if pred_bins.shape[0] != 0:

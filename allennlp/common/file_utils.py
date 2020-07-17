@@ -7,6 +7,7 @@ import os
 import logging
 import tempfile
 import json
+from os import PathLike
 from urllib.parse import urlparse
 from pathlib import Path
 from typing import Optional, Tuple, Union, IO, Callable, Set, List, Iterator, Iterable
@@ -89,7 +90,7 @@ def filename_to_url(filename: str, cache_dir: Union[str, Path] = None) -> Tuple[
 
 
 def cached_path(
-    url_or_filename: Union[str, Path],
+    url_or_filename: Union[str, PathLike],
     cache_dir: Union[str, Path] = None,
     extract_archive: bool = False,
     force_extract: bool = False,
@@ -119,8 +120,19 @@ def cached_path(
     if cache_dir is None:
         cache_dir = CACHE_DIRECTORY
 
-    if isinstance(url_or_filename, Path):
+    if isinstance(url_or_filename, PathLike):
         url_or_filename = str(url_or_filename)
+
+    # If we're using the /a/b/foo.zip!c/d/file.txt syntax, handle it here.
+    exclamation_index = url_or_filename.find("!")
+    if extract_archive and exclamation_index >= 0:
+        archive_path = url_or_filename[:exclamation_index]
+        archive_path = cached_path(archive_path, cache_dir, True, force_extract)
+        if not os.path.isdir(archive_path):
+            raise ValueError(
+                f"{url_or_filename} uses the ! syntax, but does not specify an archive file."
+            )
+        return os.path.join(archive_path, url_or_filename[exclamation_index + 1 :])
 
     url_or_filename = os.path.expanduser(url_or_filename)
     parsed = urlparse(url_or_filename)
@@ -390,6 +402,10 @@ def get_from_cache(url: str, cache_dir: Union[str, Path] = None) -> str:
                 url,
             )
             raise
+    except OSError:
+        # OSError may be triggered if we were unable to fetch the eTag.
+        # If this is the case, try to proceed without eTag check.
+        etag = None
 
     filename = url_to_filename(url, etag)
 

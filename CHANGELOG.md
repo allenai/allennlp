@@ -10,6 +10,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Use slower tqdm intervals when output is being piped or redirected.
+
+## [v1.1.0rc1](https://github.com/allenai/allennlp/releases/tag/v1.1.0rc1) - 2020-07-14
+
+### Fixed
+
 - Reduced the amount of log messages produced by `allennlp.common.file_utils`.
 - Fixed a bug where `PretrainedTransformerEmbedder` parameters appeared to be trainable
   in the log output even when `train_parameters` was set to `False`.
@@ -28,7 +34,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed issue #4330 by updating the `tokenizers` dependency.
 - Fixed a bug in `TextClassificationPredictor` so that it passes tokenized inputs to the `DatasetReader`
   in case it does not have a tokenizer.
-- reg_loss is only now returned for models that have some regularization penalty configured.
+- `reg_loss` is only now returned for models that have some regularization penalty configured.
+- Fixed a bug that prevented `cached_path` from downloading assets from GitHub releases.
+- Fixed a bug that erroneously increased last label's false positive count in calculating fbeta metrics.
+- `Tqdm` output now looks much better when the output is being piped or redirected.
+- Small improvements to how the API documentation is rendered.
+- Only show validation progress bar from main process in distributed training.
 
 ### Added
 
@@ -44,6 +55,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added an option to `PretrainedTransformerEmbedder` and `PretrainedTransformerMismatchedEmbedder` to use a
   scalar mix of all hidden layers from the transformer model instead of just the last layer. To utilize
   this, just set `last_layer_only` to `False`.
+- `cached_path()` can now read files inside of archives.
+- Training metrics now include `batch_loss` and `batch_reg_loss` in addition to aggregate loss across number of batches.
 
 ### Changed
 
@@ -53,7 +66,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 remains the same, but was renamed to `allennlp.data.PyTorchDataLoader`.
 - `BertPooler` can now unwrap and re-wrap extra dimensions if necessary.
 - New `transformers` dependency. Only version >=3.0 now supported.
-
 
 ## [v1.0.0](https://github.com/allenai/allennlp/releases/tag/v1.0.0) - 2020-06-16
 
