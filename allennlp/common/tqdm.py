@@ -73,6 +73,8 @@ class TqdmToLogsWriter(object):
 class Tqdm:
     @staticmethod
     def tqdm(*args, **kwargs):
-        new_kwargs = {"file": TqdmToLogsWriter(), **kwargs}
+        # Use a slow interval if the output is being piped or redirected.
+        default_mininterval = 0.1 if sys.stderr.isatty() else 10.0
+        new_kwargs = {"file": TqdmToLogsWriter(), "mininterval": default_mininterval, **kwargs}
 
         return _tqdm(*args, **new_kwargs)
