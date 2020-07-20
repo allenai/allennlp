@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Fixed
+
+- Removed unnecessary warning about deadlocks in `DataLoader`.
+- Use slower tqdm intervals when output is being piped or redirected.
+
+
 ## [v1.1.0rc1](https://github.com/allenai/allennlp/releases/tag/v1.1.0rc1) - 2020-07-14
 
 ### Fixed
@@ -31,7 +37,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   in case it does not have a tokenizer.
 - `reg_loss` is only now returned for models that have some regularization penalty configured.
 - Fixed a bug that prevented `cached_path` from downloading assets from GitHub releases.
-- Fixed a bug that erronously increased last label's false positive count in calculating fbeta metrics.
+- Fixed a bug that erroneously increased last label's false positive count in calculating fbeta metrics.
 - `Tqdm` output now looks much better when the output is being piped or redirected.
 - Small improvements to how the API documentation is rendered.
 - Only show validation progress bar from main process in distributed training.
@@ -50,7 +56,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   scalar mix of all hidden layers from the transformer model instead of just the last layer. To utilize
   this, just set `last_layer_only` to `False`.
 - `cached_path()` can now read files inside of archives.
-- Training metrics now include per-batch loss in addition to aggregate loss across number of batches.
+- Training metrics now include `batch_loss` and `batch_reg_loss` in addition to aggregate loss across number of batches.
 
 ### Changed
 
