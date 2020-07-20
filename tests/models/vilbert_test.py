@@ -18,5 +18,5 @@ class TestVilbert(ModelTestCase):
         self.ensure_model_can_train_save_and_load(param_file, overrides=overrides)
 
     def test_model_can_train_save_and_load_from_huggingface(self):
-        param_file = self.FIXTURES_ROOT / "vilbert" / "experiment_from_huggingface_model_name.json"
+        param_file = self.FIXTURES_ROOT / "vilbert" / "experiment_from_huggingface.jsonnet"
         self.ensure_model_can_train_save_and_load(param_file)

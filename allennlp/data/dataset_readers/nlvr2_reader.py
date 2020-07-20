@@ -19,7 +19,7 @@ from allennlp.data.fields import (
     MetadataField,
 )
 from allennlp.data.instance import Instance
-from allennlp.data.tokenizers import PretrainedTransformerTokenizer
+from allennlp.data.tokenizers import Tokenizer, PretrainedTransformerTokenizer
 from allennlp.data.token_indexers import PretrainedTransformerIndexer
 
 
@@ -106,6 +106,8 @@ class Nlvr2LxmertReader(DatasetReader):
         text_path_prefix: str,
         visual_path_prefix: str,
         topk_images: int = -1,
+        tokenizer: Tokenizer = None,
+        token_indexers: Dict[str, TokenIndexer] = None,
         mask_prepositions_verbs: bool = False,
         drop_prepositions_verbs: bool = False,
         lazy: bool = False,
@@ -113,10 +115,16 @@ class Nlvr2LxmertReader(DatasetReader):
         super().__init__(lazy)
         self.text_path_prefix = text_path_prefix
         self.visual_path_prefix = visual_path_prefix
-        self._tokenizer = PretrainedTransformerTokenizer("bert-base-uncased")
-        self._token_indexers: Dict[str, TokenIndexer] = {
-            "tokens": PretrainedTransformerIndexer("bert-base-uncased")
-        }
+        if not tokenizer:
+            tokenizer = PretrainedTransformerTokenizer("bert-base-uncased")
+        print("TOKENIZER: ", tokenizer.tokenizer)
+        self._tokenizer = tokenizer
+        if token_indexers is None:
+            token_indexers = {
+                "tokens": PretrainedTransformerIndexer("bert-base-uncased")
+            }
+        print("INDEXERS: ", token_indexers)
+        self._token_indexers = token_indexers
         self.topk_images = topk_images
         self.mask_prepositions_verbs = mask_prepositions_verbs
         self.drop_prepositions_verbs = drop_prepositions_verbs
