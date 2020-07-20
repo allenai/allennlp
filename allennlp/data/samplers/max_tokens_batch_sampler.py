@@ -1,9 +1,11 @@
 import logging
 import random
-from typing import List, Iterable, Optional, Iterator, TypeVar
+from typing import List, Iterable, Iterator, TypeVar, Sequence
 
-from allennlp.data.samplers import BatchSampler, BucketBatchSampler
-from torch.utils import data
+from allennlp.data.instance import Instance
+from allennlp.data.samplers.batch_sampler import BatchSampler
+from allennlp.data.samplers.bucket_batch_sampler import BucketBatchSampler
+
 
 logger = logging.getLogger(__name__)
 
@@ -22,9 +24,6 @@ class MaxTokensBatchSampler(BucketBatchSampler):
     wasted on padded elements of the batch).
 
     # Parameters
-
-    data_source: `data.Dataset`
-        The pytorch `Dataset` of allennlp Instances to bucket.
 
     max_tokens : `int`
         The maximum number of tokens to include in a batch.
@@ -52,14 +51,9 @@ class MaxTokensBatchSampler(BucketBatchSampler):
     """
 
     def __init__(
-        self,
-        data_source: data.Dataset,
-        max_tokens: Optional[int] = None,
-        sorting_keys: List[str] = None,
-        padding_noise: float = 0.1,
+        self, max_tokens: int, sorting_keys: List[str] = None, padding_noise: float = 0.1,
     ):
-        super().__init__(data_source, -1, sorting_keys, padding_noise, False)
-
+        super().__init__(-1, sorting_keys, padding_noise, False)
         self.max_tokens = max_tokens
 
     def _lazy_groups_of_max_size(
@@ -96,8 +90,8 @@ class MaxTokensBatchSampler(BucketBatchSampler):
         if len(group) != 0:
             yield group
 
-    def __iter__(self) -> Iterable[List[int]]:
-        indices, lengths = self._argsort_by_padding(self.data_source)
+    def get_batch_indices(self, instances: Sequence[Instance]) -> Iterable[List[int]]:
+        indices, lengths = self._argsort_by_padding(instances)
 
         max_lengths = [max(length) for length in lengths]
         group_iterator = self._lazy_groups_of_max_size(indices, max_lengths)
