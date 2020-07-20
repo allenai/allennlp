@@ -5,7 +5,6 @@ import pytest
 
 from allennlp.common import Params
 from allennlp.data import Vocabulary
-from allennlp.data import DataLoader
 from allennlp.models import Model
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase, requires_multi_gpu
@@ -16,7 +15,7 @@ from allennlp.commands.find_learning_rate import (
     FindLearningRate,
 )
 from allennlp.training import Trainer
-from allennlp.training.util import datasets_from_params
+from allennlp.training.util import data_loaders_from_params
 
 
 def is_matplotlib_installed():
@@ -170,16 +169,20 @@ class TestSearchLearningRate(AllenNlpTestCase):
                 "trainer": {"cuda_device": -1, "num_epochs": 2, "optimizer": "adam"},
             }
         )
-        all_datasets = datasets_from_params(params)
+        all_data_loaders = data_loaders_from_params(params)
         vocab = Vocabulary.from_params(
             params.pop("vocabulary", {}),
-            instances=(instance for dataset in all_datasets.values() for instance in dataset),
+            instances=(
+                instance
+                for data_loader in all_data_loaders.values()
+                for instance in data_loader.iter_instances()
+            ),
         )
         model = Model.from_params(vocab=vocab, params=params.pop("model"))
-        train_data = all_datasets["train"]
-        train_data.index_with(vocab)
 
-        data_loader = DataLoader.from_params(dataset=train_data, params=params.pop("data_loader"))
+        data_loader = all_data_loaders["train"]
+        data_loader.index_with(vocab)
+
         trainer_params = params.pop("trainer")
         serialization_dir = os.path.join(self.TEST_DIR, "test_search_learning_rate")
 
@@ -187,7 +190,6 @@ class TestSearchLearningRate(AllenNlpTestCase):
             model=model,
             serialization_dir=serialization_dir,
             data_loader=data_loader,
-            train_data=train_data,
             params=trainer_params,
             validation_data=None,
             validation_iterator=None,

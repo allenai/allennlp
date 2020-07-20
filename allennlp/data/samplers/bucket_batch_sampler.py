@@ -1,7 +1,6 @@
 import logging
 from typing import List, Iterable, Tuple, Sequence
 import random
-import math
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.util import lazy_groups_of

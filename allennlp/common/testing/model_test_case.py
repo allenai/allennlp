@@ -119,21 +119,22 @@ class ModelTestCase(AllenNlpTestCase):
         params = Params.from_file(param_file, params_overrides=overrides)
         reader = DatasetReader.from_params(params["dataset_reader"])
 
-        print("Reading with original model")
-        model_dataset = reader.read(params["validation_data_path"])
-        model_dataset.index_with(model.vocab)
-
-        print("Reading with loaded model")
-        loaded_dataset = reader.read(params["validation_data_path"])
-        loaded_dataset.index_with(loaded_model.vocab)
-
         # Need to duplicate params because DataLoader.from_params will consume.
         data_loader_params = params["data_loader"]
         data_loader_params["shuffle"] = False
         data_loader_params2 = Params(copy.deepcopy(data_loader_params.as_dict()))
 
-        data_loader = DataLoader.from_params(dataset=model_dataset, params=data_loader_params)
-        data_loader2 = DataLoader.from_params(dataset=loaded_dataset, params=data_loader_params2)
+        print("Reading with original model")
+        data_loader = DataLoader.from_params(
+            params=data_loader_params, reader=reader, data_path=params["validation_data_path"]
+        )
+        data_loader.index_with(model.vocab)
+
+        print("Reading with loaded model")
+        data_loader2 = DataLoader.from_params(
+            params=data_loader_params2, reader=reader, data_path=params["validation_data_path"]
+        )
+        data_loader2.index_with(loaded_model.vocab)
 
         # We'll check that even if we index the dataset with each model separately, we still get
         # the same result out.

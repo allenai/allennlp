@@ -23,8 +23,7 @@ from torch.nn.utils import clip_grad_norm_
 from allennlp.common import Lazy, Registrable, Tqdm
 from allennlp.common import util as common_util
 from allennlp.common.checks import ConfigurationError, check_for_gpu
-from allennlp.data import DataLoader
-from allennlp.data.dataloader import TensorDict
+from allennlp.data import DataLoader, TensorDict
 from allennlp.models.model import Model
 from allennlp.nn import util as nn_util
 from allennlp.training import util as training_util

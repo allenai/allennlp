@@ -19,10 +19,9 @@ from allennlp.common import Params, Tqdm
 from allennlp.common.checks import check_for_gpu, ConfigurationError
 from allennlp.common.util import prepare_environment
 from allennlp.data import Vocabulary
-from allennlp.data import DataLoader
 from allennlp.models import Model
 from allennlp.training import GradientDescentTrainer, Trainer
-from allennlp.training.util import create_serialization_dir, datasets_from_params
+from allennlp.training.util import create_serialization_dir, data_loaders_from_params
 
 logger = logging.getLogger(__name__)
 
@@ -153,11 +152,11 @@ def find_learning_rate_model(
     # See https://github.com/allenai/allennlp/issues/3658
     assert not distributed_params, "find-lr is not compatible with DistributedDataParallel."
 
-    all_datasets = datasets_from_params(params)
-    datasets_for_vocab_creation = set(params.pop("datasets_for_vocab_creation", all_datasets))
+    all_data_loaders = data_loaders_from_params(params)
+    datasets_for_vocab_creation = set(params.pop("datasets_for_vocab_creation", all_data_loaders))
 
     for dataset in datasets_for_vocab_creation:
-        if dataset not in all_datasets:
+        if dataset not in all_data_loaders:
             raise ConfigurationError(f"invalid 'dataset_for_vocab_creation' {dataset}")
 
     logger.info(
@@ -168,16 +167,15 @@ def find_learning_rate_model(
         params.pop("vocabulary", {}),
         instances=(
             instance
-            for key, dataset in all_datasets.items()
-            for instance in dataset
+            for key, data_loader in all_data_loaders.items()
             if key in datasets_for_vocab_creation
+            for instance in data_loader.iter_instances()
         ),
     )
 
-    train_data = all_datasets["train"]
-    train_data.index_with(vocab)
     model = Model.from_params(vocab=vocab, params=params.pop("model"))
-    data_loader = DataLoader.from_params(dataset=train_data, params=params.pop("data_loader"))
+
+    all_data_loaders["train"].index_with(vocab)
 
     trainer_params = params.pop("trainer")
 
@@ -194,7 +192,7 @@ def find_learning_rate_model(
     trainer: GradientDescentTrainer = Trainer.from_params(  # type: ignore
         model=model,
         serialization_dir=serialization_dir,
-        data_loader=data_loader,
+        data_loader=all_data_loaders["train"],
         params=trainer_params,
     )
 
