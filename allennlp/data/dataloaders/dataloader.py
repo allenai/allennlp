@@ -18,13 +18,17 @@ def allennlp_collate(instances: List[Instance]) -> TensorDict:
 
 class DataLoader(Registrable):
     """
-    A `DataLoader` is responsible for generating batches of instances from a `Dataset`,
+    A `DataLoader` is responsible for generating batches of instances from a `DatasetReader`,
     or another source of data.
 
-    This class only has one required method, `__iter__()`, that creates an iterable
-    of `TensorDict`s.
+    This class has three required methods:
+      - `__iter__()` that creates an iterable of `TensorDict`s,
+      - `iter_instances()` that creates an iterable of `Instance`s, and
+      - `index_with()` that should index the data with a vocabulary.
 
     Additionally, this class should also implement `__len__()` when possible.
+
+    The default implementation is `MultiProcessDataLoader`.
     """
 
     default_implementation = "multi_process_dataloader"

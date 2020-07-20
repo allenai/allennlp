@@ -59,11 +59,6 @@ class DatasetReader(Registrable):
 
     """
 
-    CACHE_FILE_LOCK_TIMEOUT: int = 10
-    """
-    The number of seconds to wait for the lock on a cache file to become available.
-    """
-
     def __init__(
         self,
         max_instances: Optional[int] = None,
@@ -93,7 +88,8 @@ class DatasetReader(Registrable):
         """
         Reads the instances from the given file_path and returns them as an
         `Iterable` (which could be a list or could be a generator).
-        You are strongly encouraged to use a generator, so that users can
+
+        You are strongly encouraged to use a generator so that users can
         read a dataset in a lazy way, if they so choose.
         """
         raise NotImplementedError

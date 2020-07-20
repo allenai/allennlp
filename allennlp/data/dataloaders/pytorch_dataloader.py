@@ -160,6 +160,9 @@ class PyTorchDataLoader(data.DataLoader, DataLoader):
                     self._data_generator = super().__iter__()  # so refresh it
                     yield next(self._data_generator)  # and yield required instance
 
+    def iter_instances(self) -> Iterator[Instance]:
+        yield from self.dataset
+
     def index_with(self, vocab: Vocabulary):
         self.dataset.index_with(vocab)  # type: ignore
 
