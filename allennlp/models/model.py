@@ -451,6 +451,13 @@ class Model(torch.nn.Module, Registrable):
             model.extend_embedder_vocab()
         return model
 
+    @classmethod
+    def get_description(cls) -> str:
+        """
+        Returns the model's description from the docstring.
+        """
+        return cls.__doc__.split("# Parameters")[0].strip()
+
 
 # We can't decorate `Model` with `Model.register()`, because `Model` hasn't been defined yet.  So we
 # put this down here.

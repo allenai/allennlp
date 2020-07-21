@@ -38,3 +38,19 @@ class TestModel(AllenNlpTestCase):
             regularizer = FakeRegularizerApplicator()
             model = FakeModel(None, regularizer)
             model.get_regularization_penalty()
+
+    def test_get_description(self):
+        class FakeModel(Model):
+            """
+            This is a fake model with a docstring.
+
+            # Parameters
+
+            fake_param1: str
+            fake_param2: int
+            """
+
+            def forward(self, **kwargs):
+                return {}
+
+        assert FakeModel.get_description() == "This is a fake model with a docstring."
