@@ -117,13 +117,11 @@ class Nlvr2LxmertReader(DatasetReader):
         self.visual_path_prefix = visual_path_prefix
         if not tokenizer:
             tokenizer = PretrainedTransformerTokenizer("bert-base-uncased")
-        print("TOKENIZER: ", tokenizer.tokenizer)
         self._tokenizer = tokenizer
         if token_indexers is None:
             token_indexers = {
                 "tokens": PretrainedTransformerIndexer("bert-base-uncased")
             }
-        print("INDEXERS: ", token_indexers)
         self._token_indexers = token_indexers
         self.topk_images = topk_images
         self.mask_prepositions_verbs = mask_prepositions_verbs

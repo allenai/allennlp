@@ -799,6 +799,34 @@ class Nlvr2Vilbert(Model):
         # TODO(mattg): this is hard-coded for BERT; not sure it works for all transformers, or what
         # to do if it fails.
         text_embeddings = transformer.embeddings
+        if hasattr(transformer.config, "embedding_size"):
+            config = transformer.config
+
+            # We can't just use torch.nn.Sequential here, even though that's basically all this is,
+            # because Sequential doesn't accept *inputs, only a single argument.
+            # TODO(mattg): if we want to support albert (and maybe also electra), we'll have to
+            # figure out how to initialize the linear layer inside this shim, too.  We'll need to
+            # clean this up somehow.  Could be as simple as copying weights inside the shim...
+            class EmbeddingsShim(torch.nn.Module):
+                def __init__(
+                    self,
+                    embeddings: torch.nn.Module,
+                    embedding_dim: int,
+                    hidden_dim: int
+                ):
+                    super().__init__()
+                    self.linear_transform = torch.nn.Linear(embedding_dim, hidden_dim)
+                    self.embeddings = embeddings
+
+                def forward(self, *inputs, **kwargs):
+                    return self.linear_transform(self.embeddings(*inputs, **kwargs))
+
+            text_embeddings = EmbeddingsShim(
+                text_embeddings,
+                config.embedding_size,
+                config.hidden_size
+            )
+
         image_embeddings = BertImageFeatureEmbeddings(
             feature_dim=image_feature_dim,
             hidden_dim=image_hidden_size,
