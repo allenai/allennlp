@@ -1,5 +1,3 @@
-import math
-
 from typing import List, Iterable
 from torch.utils import data
 
@@ -215,13 +213,6 @@ class PyTorchMaxTokensBatchSampler(PyTorchBatchSampler):
 
     def __iter__(self) -> Iterable[List[int]]:
         return self.base_sampler.get_batch_indices(self.data_source)
-
-    def __len__(self):
-        batch_count_float = len(self.data_source) / self.base_sampler.batch_size
-        if self.base_sampler.drop_last:
-            return math.floor(batch_count_float)
-        else:
-            return math.ceil(batch_count_float)
 
     def __len__(self):
         return self.base_sampler.get_num_batches(self.data_source)

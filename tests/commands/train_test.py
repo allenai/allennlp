@@ -18,7 +18,7 @@ from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase, cpu_or_gpu
 from allennlp.data import Vocabulary
-from allennlp.data.dataloader import TensorDict
+from allennlp.data.dataloaders import TensorDict
 from allennlp.models import load_archive, Model
 from allennlp.models.archival import CONFIG_NAME
 from allennlp.training import BatchCallback, GradientDescentTrainer
@@ -243,7 +243,11 @@ class TestTrain(AllenNlpTestCase):
                 "dataset_reader": {"type": "sharded", "base_reader": {"type": "sequence_tagging"}},
                 "train_data_path": SEQUENCE_TAGGING_SHARDS_PATH,
                 "validation_data_path": SEQUENCE_TAGGING_SHARDS_PATH,
-                "data_loader": {"batch_size": 2, "lazy": lazy},
+                "data_loader": {
+                    "batch_size": 2,
+                    "lazy": lazy,
+                    "max_batches_in_memory": 10 if lazy else None,
+                },
                 "trainer": {"num_epochs": 2, "optimizer": "adam"},
                 "distributed": {"cuda_devices": devices},
             }
@@ -329,7 +333,11 @@ class TestTrain(AllenNlpTestCase):
                 "dataset_reader": {"type": "sequence_tagging"},
                 "train_data_path": SEQUENCE_TAGGING_DATA_PATH,
                 "validation_data_path": SEQUENCE_TAGGING_DATA_PATH,
-                "data_loader": {"batch_size": 1, "lazy": lazy},
+                "data_loader": {
+                    "batch_size": 1,
+                    "lazy": lazy,
+                    "max_batches_in_memory": 10 if lazy else None,
+                },
                 "trainer": {
                     "num_epochs": num_epochs,
                     "optimizer": "adam",

@@ -35,6 +35,26 @@ class WorkerInfo:
     """
 
 
+@dataclass
+class DistributedInfo:
+    """
+    Contains information about the node rank and world size when the reader is being
+    used within distributed training.
+
+    From a `DatasetReader` this can be accessed with the [`get_dist_info()`](#get_dist_info) method.
+    """
+
+    world_size: int
+    """
+    The total number of distributed nodes.
+    """
+
+    node_rank: int
+    """
+    The 0-indexed ID of the current node.
+    """
+
+
 _T = TypeVar("_T")
 
 
@@ -131,6 +151,10 @@ class DatasetReader(Registrable):
         self.manual_distributed_sharding = manual_distributed_sharding
         self.manual_multi_process_sharding = manual_multi_process_sharding
         self.__worker_info: Optional[WorkerInfo] = None
+        self.__dist_info: Optional[DistributedInfo] = None
+        # If we're actually in the main process, we can find the info using torch utils.
+        if util.is_distributed():
+            self.__dist_info = DistributedInfo(dist.get_world_size(), dist.get_rank())
 
     def read(self, file_path: Union[PathLike, str]) -> Iterator[Instance]:
         """
@@ -183,14 +207,32 @@ class DatasetReader(Registrable):
             is being used within distributed training, `get_worker_info()` will only
             provide information on the `DataLoader` worker within its node.
 
+            Use [`get_dist_info`](#get_dist_info) to get information on distributed
+            training context.
+
         """
         return self.__worker_info
+
+    def get_dist_info(self) -> Optional[DistributedInfo]:
+        """
+        Provides a [`DistributedInfo`](#DistributedInfo) object when the reader is being
+        used within distributed training.
+
+        If not in distributed training, this is just `None`.
+        """
+        return self.__dist_info
 
     def _set_worker_info(self, info: Optional[WorkerInfo]) -> None:
         """
         Should only be used internally.
         """
         self.__worker_info = info
+
+    def _set_dist_info(self, info: Optional[DistributedInfo]) -> None:
+        """
+        Should only be used internally.
+        """
+        self.__dist_info = info
 
     def shard_iterable(self, iterable: Iterable[_T]) -> Iterator[_T]:
         """
@@ -238,20 +280,19 @@ class DatasetReader(Registrable):
         # all workers processes is equal to self.max_instances.
         max_instances = self.max_instances
 
-        if util.is_distributed():
-            rank = dist.get_rank()
-            world_size = dist.get_world_size()
-
+        if self.__dist_info is not None:
             if max_instances is not None:
                 # Need to scale down max_instances because otherwise each node would read self.max_instances,
                 # but we really want self.max_instances total across all nodes.
-                if rank < (max_instances % world_size):
-                    max_instances = max_instances // world_size + 1
+                if self.__dist_info.node_rank < (max_instances % self.__dist_info.world_size):
+                    max_instances = max_instances // self.__dist_info.world_size + 1
                 else:
-                    max_instances = max_instances // world_size
+                    max_instances = max_instances // self.__dist_info.world_size
 
             if not self.manual_distributed_sharding:
-                sharded_slice = itertools.islice(sharded_slice, rank, None, world_size)
+                sharded_slice = itertools.islice(
+                    sharded_slice, self.__dist_info.node_rank, None, self.__dist_info.world_size
+                )
 
         if self.__worker_info is not None:
             if max_instances is not None:

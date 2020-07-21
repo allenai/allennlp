@@ -1,6 +1,5 @@
 {
     "dataset_reader": {
-        "lazy": false,
         "type": "text_classification_json",
         "tokenizer": {
             "type": "spacy"

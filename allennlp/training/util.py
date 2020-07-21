@@ -105,7 +105,7 @@ def data_loaders_from_params(
         train_data_path = params.pop("train_data_path")
         logger.info("Reading training data from %s", train_data_path)
         data_loaders["train"] = DataLoader.from_params(
-            data_loader_params.duplicate(), reader=dataset_reader
+            data_loader_params.duplicate(), reader=dataset_reader, data_path=train_data_path
         )
 
     if not validation and not test:
