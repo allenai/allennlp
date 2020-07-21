@@ -148,7 +148,7 @@ class MultiProcessDataLoader(DataLoader):
                 instance.index_fields(vocab)
 
     def _instance_worker(self, worker_id: int, queue: mp.Queue) -> None:
-        self.reader.worker_info = WorkerInfo(self.num_workers, worker_id)
+        self.reader._set_worker_info(WorkerInfo(self.num_workers, worker_id))
 
         instances: Iterator[Instance]
         if self._vocab is not None:

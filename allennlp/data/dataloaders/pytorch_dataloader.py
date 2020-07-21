@@ -69,8 +69,8 @@ def allennlp_worker_init_fn(worker_id):
     worker_info = data.get_worker_info()
     dataset = worker_info.dataset
     if isinstance(dataset, AllennlpLazyDataset):
-        dataset.reader.worker_info = WorkerInfo(
-            num_workers=worker_info.num_workers, worker_id=worker_id
+        dataset.reader._set_worker_info(
+            WorkerInfo(num_workers=worker_info.num_workers, worker_id=worker_id)
         )
 
 

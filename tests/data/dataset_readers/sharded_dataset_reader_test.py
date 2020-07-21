@@ -45,7 +45,7 @@ class TestShardedDatasetReader(AllenNlpTestCase):
         super().setup_method()
 
         # use SequenceTaggingDatasetReader as the base reader
-        self.base_reader = SequenceTaggingDatasetReader(lazy=True)
+        self.base_reader = SequenceTaggingDatasetReader()
         base_file_path = AllenNlpTestCase.FIXTURES_ROOT / "data" / "sequence_tagging.tsv"
 
         # Make 100 copies of the data

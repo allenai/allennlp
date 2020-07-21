@@ -36,9 +36,10 @@ class MockMmpsDatasetReader(DatasetReader):
     def _read(self, file_path):
         start_index = 0
         step_size = 1
-        if self._worker_info is not None:
-            start_index += self._worker_info.id
-            step_size *= self._worker_info.num_workers
+        worker_info = self.get_worker_info()
+        if worker_info is not None:
+            start_index += worker_info.id
+            step_size *= worker_info.num_workers
         for i in islice(range(TOTAL_INSTANCES), start_index, None, step_size):
             yield self.text_to_instance(i)
 
@@ -78,16 +79,7 @@ class MockMmpdsDatasetReader(DatasetReader):
         )
 
     def _read(self, file_path):
-        start_index = 0
-        step_size = 1
-        if common_util.is_distributed():
-            start_index += dist.get_rank()
-            step_size *= dist.get_world_size()
-        if self._worker_info is not None:
-            start_index *= self._worker_info.num_workers
-            start_index += self._worker_info.id
-            step_size *= self._worker_info.num_workers
-        for i in islice(range(TOTAL_INSTANCES), start_index, None, step_size):
+        for i in self.shard_iterable(range(TOTAL_INSTANCES)):
             yield self.text_to_instance(i)
 
     def text_to_instance(self, index: int):  # type: ignore
@@ -95,45 +87,21 @@ class MockMmpdsDatasetReader(DatasetReader):
 
 
 @pytest.mark.parametrize(
-    "reader_class, world_size, num_workers, max_instances",
+    "world_size, num_workers, max_instances",
     [
-        # Basic mocked DatasetReader.
-        (MockDatasetReader, 4, 2, None),
-        (MockDatasetReader, 4, 2, 67),
-        (MockDatasetReader, 4, None, None),
-        (MockDatasetReader, 4, None, None),
-        (MockDatasetReader, None, 2, None),
-        (MockDatasetReader, None, 2, 67),
-        (MockDatasetReader, None, None, None),
-        (MockDatasetReader, None, None, 67),
-        # Mocked DatasetReader with manual multi-process sharding.
-        (MockMmpsDatasetReader, 4, 2, None),
-        (MockMmpsDatasetReader, 4, 2, 67),
-        (MockMmpsDatasetReader, 4, None, None),
-        (MockMmpsDatasetReader, 4, None, None),
-        (MockMmpsDatasetReader, None, 2, None),
-        (MockMmpsDatasetReader, None, 2, 67),
-        (MockMmpsDatasetReader, None, None, None),
-        (MockMmpsDatasetReader, None, None, 67),
-        # Mocked DatasetReader with manual distributed sharding.
-        (MockMdsDatasetReader, 4, 2, None),
-        (MockMdsDatasetReader, 4, 2, 67),
-        (MockMdsDatasetReader, 4, None, None),
-        (MockMdsDatasetReader, 4, None, None),
-        (MockMdsDatasetReader, None, 2, None),
-        (MockMdsDatasetReader, None, 2, 67),
-        (MockMdsDatasetReader, None, None, None),
-        (MockMdsDatasetReader, None, None, 67),
-        # Mocked DatasetReader with both manual multi-process and distributed sharding.
-        (MockMmpdsDatasetReader, 4, 2, None),
-        (MockMmpdsDatasetReader, 4, 2, 67),
-        (MockMmpdsDatasetReader, 4, None, None),
-        (MockMmpdsDatasetReader, 4, None, None),
-        (MockMmpdsDatasetReader, None, 2, None),
-        (MockMmpdsDatasetReader, None, 2, 67),
-        (MockMmpdsDatasetReader, None, None, None),
-        (MockMmpdsDatasetReader, None, None, 67),
+        (4, 2, None),
+        (4, 2, 67),
+        (4, None, None),
+        (4, None, None),
+        (None, 2, None),
+        (None, 2, 67),
+        (None, None, None),
+        (None, None, 67),
     ],
+)
+@pytest.mark.parametrize(
+    "reader_class",
+    [MockDatasetReader, MockMmpsDatasetReader, MockMdsDatasetReader, MockMmpdsDatasetReader],
 )
 def test_instance_slicing(
     monkeypatch,
@@ -161,7 +129,7 @@ def test_instance_slicing(
             monkeypatch.setattr(dist, "get_world_size", lambda: world_size)
             for worker_id in range(num_workers):
                 reader = reader_class(max_instances=max_instances)
-                reader.worker_info = WorkerInfo(num_workers, worker_id)
+                reader._set_worker_info(WorkerInfo(num_workers, worker_id))
                 result = set(
                     x["index"].label  # type: ignore
                     for x in reader.read("the-path-doesnt-matter")
@@ -185,7 +153,7 @@ def test_instance_slicing(
         maximum_expected_result_size = minimum_expected_result_size + 1
         for worker_id in range(num_workers):
             reader = reader_class(max_instances=max_instances)
-            reader.worker_info = WorkerInfo(num_workers, worker_id)
+            reader._set_worker_info(WorkerInfo(num_workers, worker_id))
             result = set(
                 x["index"].label  # type: ignore
                 for x in reader.read("the-path-doesnt-matter")
