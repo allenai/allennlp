@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+
 ### Fixed
 
 - Removed unnecessary warning about deadlocks in `DataLoader`.
@@ -44,6 +45,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Adjust beam search to support multi-layer decoder.
 - A method to ModelTestCase for running basic model tests when you aren't using config files.
 - Added some convenience methods for reading files.
 - Added an option to `file_utils.cached_path` to automatically extract archives.
