@@ -16,13 +16,12 @@ except ImportError:
 import torch
 from torch.utils.data import DataLoader
 from torch.nn.utils import clip_grad_norm_
-from allennlp.data.dataloader import PyTorchDataLoader
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import Params
 from allennlp.common.testing import AllenNlpTestCase, requires_gpu, requires_multi_gpu
 from allennlp.data import Vocabulary
-from allennlp.data.dataloader import TensorDict
+from allennlp.data.dataloaders import MultiProcessDataLoader, PyTorchDataLoader, TensorDict
 from allennlp.data.dataset_readers import SequenceTaggingDatasetReader
 from allennlp.models.model import Model
 from allennlp.models.simple_tagger import SimpleTagger
@@ -43,14 +42,16 @@ from allennlp.data import allennlp_collate
 class TrainerTestBase(AllenNlpTestCase):
     def setup_method(self):
         super().setup_method()
-        self.instances = SequenceTaggingDatasetReader().read(
-            self.FIXTURES_ROOT / "data" / "sequence_tagging.tsv"
+        self.data_path = str(self.FIXTURES_ROOT / "data" / "sequence_tagging.tsv")
+        self.reader = SequenceTaggingDatasetReader()
+        self.data_loader = MultiProcessDataLoader(self.reader, self.data_path, batch_size=2)
+        self.data_loader_lazy = MultiProcessDataLoader(
+            self.reader, self.data_path, batch_size=2, lazy=True, max_batches_in_memory=10
         )
-        self.instances_lazy = SequenceTaggingDatasetReader(lazy=True).read(
-            self.FIXTURES_ROOT / "data" / "sequence_tagging.tsv"
-        )
-        vocab = Vocabulary.from_instances(self.instances)
-        self.vocab = vocab
+        self.instances = list(self.data_loader.iter_instances())
+        self.vocab = Vocabulary.from_instances(self.instances)
+        self.data_loader.index_with(self.vocab)
+        self.data_loader_lazy.index_with(self.vocab)
         self.model_params = Params(
             {
                 "text_field_embedder": {
@@ -61,15 +62,10 @@ class TrainerTestBase(AllenNlpTestCase):
         )
         self.model = SimpleTagger.from_params(vocab=self.vocab, params=self.model_params)
         self.optimizer = torch.optim.SGD(self.model.parameters(), 0.01, momentum=0.9)
-        self.data_loader = DataLoader(self.instances, batch_size=2, collate_fn=allennlp_collate)
-        self.data_loader_lazy = DataLoader(
-            self.instances_lazy, batch_size=2, collate_fn=allennlp_collate
+        self.validation_data_loader = MultiProcessDataLoader(
+            self.reader, self.data_path, batch_size=2
         )
-        self.validation_data_loader = DataLoader(
-            self.instances, batch_size=2, collate_fn=allennlp_collate
-        )
-        self.instances.index_with(vocab)
-        self.instances_lazy.index_with(vocab)
+        self.validation_data_loader.index_with(self.vocab)
 
 
 class TestTrainer(TrainerTestBase):
@@ -164,18 +160,12 @@ class TestTrainer(TrainerTestBase):
         assert trainer._batch_num_total == num_epochs * 2
 
     def test_data_loader_lazy_epoch_size_correct_custom_epoch_size(self):
-        batches_per_epoch = 3
+        self.data_loader_lazy.batches_per_epoch = 3
         num_epochs = 3
-        data_loader_custom_epoch_lazy = PyTorchDataLoader(
-            self.instances_lazy,
-            batch_size=2,
-            collate_fn=allennlp_collate,
-            batches_per_epoch=batches_per_epoch,
-        )
         trainer = GradientDescentTrainer(
             self.model,
             self.optimizer,
-            data_loader_custom_epoch_lazy,
+            self.data_loader_lazy,
             validation_data_loader=self.validation_data_loader,
             num_epochs=num_epochs,
             serialization_dir=self.TEST_DIR,
@@ -184,7 +174,7 @@ class TestTrainer(TrainerTestBase):
         metrics = trainer.train()
         epoch = metrics["epoch"]
         assert epoch == num_epochs - 1
-        assert trainer._batch_num_total == num_epochs * batches_per_epoch
+        assert trainer._batch_num_total == num_epochs * 3
 
     def test_trainer_respects_epoch_size_equals_total(self):
         batches_per_epoch = 4
@@ -667,7 +657,9 @@ class TestTrainer(TrainerTestBase):
         #       2, 4, plus the last two at 5 and 6.
 
         class SlowDataLoader:
-            data_loader = DataLoader(self.instances, batch_size=2, collate_fn=allennlp_collate)
+            data_loader = PyTorchDataLoader(
+                self.instances, batch_size=2, collate_fn=allennlp_collate
+            )
 
             def __iter__(self):
                 time.sleep(2.5)
@@ -698,7 +690,7 @@ class TestTrainer(TrainerTestBase):
             assert sorted(epochs) == [1, 3, 4, 5]
 
     def test_trainer_can_log_learning_rates_tensorboard(self):
-        data_loader = DataLoader(self.instances, batch_size=4, collate_fn=allennlp_collate)
+        data_loader = PyTorchDataLoader(self.instances, batch_size=4, collate_fn=allennlp_collate)
         trainer = GradientDescentTrainer(
             self.model,
             self.optimizer,
@@ -713,7 +705,7 @@ class TestTrainer(TrainerTestBase):
         trainer.train()
 
     def test_trainer_saves_models_at_specified_interval(self):
-        data_loader = DataLoader(self.instances, batch_size=4, collate_fn=allennlp_collate)
+        data_loader = PyTorchDataLoader(self.instances, batch_size=4, collate_fn=allennlp_collate)
 
         trainer = GradientDescentTrainer(
             self.model,
@@ -991,15 +983,9 @@ class TestTrainer(TrainerTestBase):
         assert trainer.epoch_callback_calls == expected_calls
 
     def test_total_loss_is_average_of_batch_loss(self):
-
         batches_per_epoch = 3
 
-        data_loader_custom_epoch_lazy = PyTorchDataLoader(
-            self.instances_lazy,
-            batch_size=2,
-            collate_fn=allennlp_collate,
-            batches_per_epoch=batches_per_epoch,
-        )
+        self.data_loader_lazy.batches_per_epoch = 3
 
         class FakeBatchCallback(BatchCallback):
             def __call__(
@@ -1019,7 +1005,7 @@ class TestTrainer(TrainerTestBase):
         trainer = GradientDescentTrainer(
             self.model,
             self.optimizer,
-            data_loader_custom_epoch_lazy,
+            self.data_loader_lazy,
             num_epochs=1,
             batch_callbacks=[FakeBatchCallback()],
         )

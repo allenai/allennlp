@@ -116,6 +116,8 @@ class MultiProcessDataLoader(DataLoader):
             for instance in self.reader.read(self.data_path):
                 if not self.lazy:
                     self._instances.append(instance)  # type: ignore
+                if self._vocab is not None:
+                    instance.index_fields(self._vocab)
                 yield instance
         else:
             queue: mp.Queue = mp.Queue(self._INSTANCE_QUEUE_SIZE)
