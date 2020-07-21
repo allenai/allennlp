@@ -2,7 +2,7 @@ from allennlp.common import Params
 from allennlp.data import Instance, Token
 from allennlp.data.fields import TextField
 from allennlp.data.samplers import MaxTokensBatchSampler
-from allennlp.data.dataloader import MultiProcessDataLoader
+from allennlp.data.dataloaders import MultiProcessDataLoader
 
 from .sampler_test import SamplerTest
 
@@ -12,7 +12,7 @@ class TestMaxTokensSampler(SamplerTest):
         sampler = MaxTokensBatchSampler(max_tokens=8, padding_noise=0, sorting_keys=["text"])
 
         grouped_instances = []
-        for indices in sampler.get_batch_indices():
+        for indices in sampler.get_batch_indices(self.instances):
             grouped_instances.append([self.instances[idx] for idx in indices])
         expected_groups = [
             [self.instances[4], self.instances[2]],

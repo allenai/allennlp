@@ -1,4 +1,5 @@
 import logging
+import math
 from typing import List, Iterable, Tuple, Sequence
 import random
 
@@ -150,3 +151,10 @@ class BucketBatchSampler(BatchSampler):
                 "open an issue on github"
             )
         self.sorting_keys = [longest_field]
+
+    def get_num_batches(self, instances: Sequence[Instance]) -> int:
+        batch_count_float = len(instances) / self.batch_size
+        if self.drop_last:
+            return math.floor(batch_count_float)
+        else:
+            return math.ceil(batch_count_float)

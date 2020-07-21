@@ -101,6 +101,6 @@ class MaxTokensBatchSampler(BucketBatchSampler):
         for batch in batches:
             yield batch
 
-    def __len__(self):
+    def get_num_batches(self, instances: Sequence[Instance]) -> int:
         # There is no easy way to count the number of batches, so we need to iterate and count.
-        return sum(1 for _ in self)
+        return sum(1 for _ in self.get_batch_indices(instances))

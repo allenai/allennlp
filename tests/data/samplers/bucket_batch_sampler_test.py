@@ -1,8 +1,8 @@
 from allennlp.common import Params
-from allennlp.data import Instance, Token
+from allennlp.data import Instance, Token, Batch
 from allennlp.data.fields import TextField
 from allennlp.data.samplers import BucketBatchSampler
-from allennlp.data.dataloader import MultiProcessDataLoader
+from allennlp.data.dataloaders import MultiProcessDataLoader
 
 from .sampler_test import SamplerTest
 
@@ -12,7 +12,7 @@ class TestBucketSampler(SamplerTest):
         sampler = BucketBatchSampler(batch_size=2, padding_noise=0, sorting_keys=["text"])
 
         grouped_instances = []
-        for indices in sampler.get_batch_indices():
+        for indices in sampler.get_batch_indices(self.instances):
             grouped_instances.append([self.instances[idx] for idx in indices])
         expected_groups = [
             [self.instances[4], self.instances[2]],
@@ -91,7 +91,11 @@ class TestBucketSampler(SamplerTest):
         # We use a custom collate_fn for testing, which doesn't actually create tensors,
         # just the allennlp Batches.
         dataloader = MultiProcessDataLoader(
-            self.get_mock_reader(), "fake_path", batch_sampler=sampler
+            self.get_mock_reader(),
+            "fake_path",
+            batch_sampler=sampler,
+            batch_size=2,
+            collate_fn=lambda x: Batch(x),
         )
         dataloader.index_with(self.vocab)
         batches = [batch for batch in iter(dataloader)]
@@ -106,7 +110,7 @@ class TestBucketSampler(SamplerTest):
     def test_batch_count(self):
         sampler = BucketBatchSampler(batch_size=2, padding_noise=0, sorting_keys=["text"])
         dataloader = MultiProcessDataLoader(
-            self.get_mock_reader(), "fake_path", batch_sampler=sampler
+            self.get_mock_reader(), "fake_path", batch_sampler=sampler, batch_size=2,
         )
         dataloader.index_with(self.vocab)
         assert len(dataloader) == 3

@@ -1,7 +1,7 @@
 from collections import deque
 import logging
 import random
-from typing import List, Iterator, Optional
+from typing import List, Iterator, Optional, Callable
 
 import torch.multiprocessing as mp
 
@@ -34,6 +34,7 @@ class MultiProcessDataLoader(DataLoader):
         batch_sampler: BatchSampler = None,
         batches_per_epoch: int = None,
         num_workers: int = 0,
+        collate_fn: Callable[[List[Instance]], TensorDict] = allennlp_collate,
         lazy: bool = False,
         max_batches_in_memory: int = None,
     ) -> None:
@@ -58,6 +59,7 @@ class MultiProcessDataLoader(DataLoader):
         self.batch_sampler = batch_sampler
         self.batches_per_epoch = batches_per_epoch
         self.num_workers = num_workers
+        self.collate_fn = collate_fn
         self.lazy = lazy
         self.max_batches_in_memory = max_batches_in_memory
 
@@ -73,6 +75,9 @@ class MultiProcessDataLoader(DataLoader):
             # We haven't read the instances yet, so we do so now, caching them as we go.
             if not self._instances:
                 deque(self.iter_instances(), maxlen=0)
+
+            if self.batch_sampler is not None:
+                return self.batch_sampler.get_num_batches(self._instances)  # type: ignore
 
             num_instances = len(self._instances)  # type: ignore
             if self.drop_last or num_instances % self.batch_size == 0:
@@ -154,7 +159,7 @@ class MultiProcessDataLoader(DataLoader):
         if self._vocab is not None:
 
             def index_fields(instance: Instance) -> Instance:
-                instance.index_fields(self._vocab)
+                instance.index_fields(self._vocab)  # type: ignore
                 return instance
 
             instances = (index_fields(instance) for instance in self.reader.read(self.data_path))
@@ -188,7 +193,7 @@ class MultiProcessDataLoader(DataLoader):
                 batches = lazy_groups_of(self._instances, self.batch_size)
 
             for batch in batches:
-                yield allennlp_collate(batch)
+                yield self.collate_fn(batch)
         else:
             queue: mp.Queue = mp.Queue(self.max_batches_in_memory)  # type: ignore
             worker = mp.Process(target=self._batch_worker, args=(queue,))
