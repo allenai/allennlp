@@ -3,6 +3,8 @@ from allennlp.data.dataloaders import (
     PyTorchDataLoader,
     TensorDict,
     allennlp_collate,
+    AllennlpDataset,
+    AllennlpLazyDataset,
 )
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.fields.field import DataArray, Field

@@ -1,283 +1,93 @@
-from collections import deque
-import os
-import shutil
-from typing import Optional, NamedTuple, List
+from itertools import islice
+from typing import Optional, List, Set
 
-from filelock import FileLock
 import pytest
 import torch.distributed as dist
 
-from allennlp.common.testing import AllenNlpTestCase
 from allennlp.common import util as common_util
-from allennlp.common.checks import ConfigurationError
 from allennlp.data import Instance
-from allennlp.data.dataloader import PyTorchDataLoader
 from allennlp.data.dataset_readers import (
-    dataset_reader,
     DatasetReader,
-    TextClassificationJsonReader,
+    WorkerInfo,
 )
-from allennlp.data.dataset_readers.dataset_reader import AllennlpLazyDataset
 from allennlp.data.fields import LabelField
 
 
-class TestDatasetReader(AllenNlpTestCase):
-    def setup_method(self):
-        super().setup_method()
-        self.cache_directory = str(AllenNlpTestCase.FIXTURES_ROOT / "data_cache" / "with_prefix")
-
-    def teardown_method(self):
-        super().teardown_method()
-        if os.path.exists(self.cache_directory):
-            shutil.rmtree(self.cache_directory)
-
-    def test_lazy_dataset_can_be_iterated_through_multiple_times(self):
-        data_file = (
-            AllenNlpTestCase.FIXTURES_ROOT
-            / "data"
-            / "text_classification_json"
-            / "imdb_corpus.jsonl"
-        )
-        reader = TextClassificationJsonReader(lazy=True)
-        instances = reader.read(data_file)
-        assert isinstance(instances, AllennlpLazyDataset)
-
-        first_pass_instances = list(instances)
-        assert len(first_pass_instances) > 2
-        second_pass_instances = list(instances)
-        assert first_pass_instances == second_pass_instances
-
-    def test_read_only_creates_cache_file_once(self):
-        data_file = (
-            AllenNlpTestCase.FIXTURES_ROOT
-            / "data"
-            / "text_classification_json"
-            / "imdb_corpus.jsonl"
-        )
-        reader = TextClassificationJsonReader(cache_directory=self.cache_directory)
-        cache_file = reader._get_cache_location_for_file_path(str(data_file))
-
-        # The first read will create the cache.
-        reader.read(data_file)
-        assert os.path.exists(cache_file)
-        with open(cache_file, "r") as in_file:
-            cache_contents = in_file.read()
-        # The second and all subsequent reads should _use_ the cache, not modify it.  I looked
-        # into checking file modification times, but this test will probably be faster than the
-        # granularity of `os.path.getmtime()` (which only returns values in seconds).
-        reader.read(data_file)
-        reader.read(data_file)
-        reader.read(data_file)
-        reader.read(data_file)
-        with open(cache_file, "r") as in_file:
-            final_cache_contents = in_file.read()
-        assert cache_contents == final_cache_contents
-
-    @pytest.mark.parametrize("lazy", (True, False))
-    def test_caching_works_with_lazy_reading(self, caplog, lazy: bool):
-        data_file = (
-            AllenNlpTestCase.FIXTURES_ROOT
-            / "data"
-            / "text_classification_json"
-            / "imdb_corpus.jsonl"
-        )
-        snli_copy_file = str(data_file) + ".copy"
-        shutil.copyfile(data_file, snli_copy_file)
-        reader = TextClassificationJsonReader(lazy=lazy, cache_directory=self.cache_directory)
-        cache_file = reader._get_cache_location_for_file_path(snli_copy_file)
-
-        # The call to read() will give us an _iterator_.  We'll iterate over it multiple times,
-        # and the caching behavior should change as we go.
-        assert not os.path.exists(cache_file)
-        instances = reader.read(snli_copy_file)
-
-        # The first iteration will create the cache
-        first_pass_instances = []
-        for instance in instances:
-            first_pass_instances.append(instance)
-        assert "Caching instances to temp file" in " ".join([rec.message for rec in caplog.records])
-        assert os.path.exists(cache_file)
-
-        # Now we _remove_ the data file, to be sure we're reading from the cache.
-        os.remove(snli_copy_file)
-        caplog.clear()
-        instances = reader.read(snli_copy_file)
-        second_pass_instances = []
-        for instance in instances:
-            second_pass_instances.append(instance)
-        assert "Reading instances from cache" in " ".join([rec.message for rec in caplog.records])
-
-        # We should get the same instances both times.
-        assert len(first_pass_instances) == len(second_pass_instances)
-        for instance, cached_instance in zip(first_pass_instances, second_pass_instances):
-            assert instance.fields == cached_instance.fields
-
-        # And just to be super paranoid, in case the second pass somehow bypassed the cache
-        # because of a bug that's hard to detect, we'll read the
-        # instances from the cache with a non-lazy iterator and make sure they're the same.
-        reader = TextClassificationJsonReader(lazy=False, cache_directory=self.cache_directory)
-        cached_instances = reader.read(snli_copy_file)
-        assert len(first_pass_instances) == len(cached_instances)
-        for instance, cached_instance in zip(first_pass_instances, cached_instances):
-            assert instance.fields == cached_instance.fields
-
-    @pytest.mark.parametrize("lazy", (True, False))
-    def test_caching_skipped_when_lock_not_acquired(self, caplog, lazy: bool):
-        data_file = (
-            AllenNlpTestCase.FIXTURES_ROOT
-            / "data"
-            / "text_classification_json"
-            / "imdb_corpus.jsonl"
-        )
-        reader = TextClassificationJsonReader(lazy=lazy, cache_directory=self.cache_directory)
-        reader.CACHE_FILE_LOCK_TIMEOUT = 1
-        cache_file = reader._get_cache_location_for_file_path(str(data_file))
-
-        with FileLock(cache_file + ".lock"):
-            # Right now we hold the lock on the cache, so the reader shouldn't
-            # be able to write to it. It will wait for 1 second (because that's what
-            # we set the timeout to be), and then just read the instances as normal.
-            caplog.clear()
-            instances = list(reader.read(data_file))
-            assert "Failed to acquire lock" in caplog.text
-            assert instances
-
-        # We didn't write to the cache because we couldn't acquire the file lock.
-        assert not os.path.exists(cache_file)
-
-        # Now we'll write to the cache and then try the same thing again, this
-        # time making sure that we can still successfully read without the cache
-        # when the lock can't be acquired.
-        deque(reader.read(data_file), maxlen=1)
-        assert os.path.exists(cache_file)
-
-        with FileLock(cache_file + ".lock"):
-            # Right now we hold the lock on the cache, so the reader shouldn't
-            # be able to write to it. It will wait for 1 second (because that's what
-            # we set the timeout to be), and then just read the instances as normal.
-            caplog.clear()
-            instances = list(reader.read(data_file))
-            assert "Failed to acquire lock" in caplog.text
-            assert instances
-
-    @pytest.mark.parametrize("lazy", (True, False))
-    def test_caching_skipped_with_distributed_training(self, caplog, monkeypatch, lazy):
-        monkeypatch.setattr(common_util, "is_distributed", lambda: True)
-        monkeypatch.setattr(dist, "get_rank", lambda: 0)
-        monkeypatch.setattr(dist, "get_world_size", lambda: 1)
-
-        data_file = (
-            AllenNlpTestCase.FIXTURES_ROOT
-            / "data"
-            / "text_classification_json"
-            / "imdb_corpus.jsonl"
-        )
-        reader = TextClassificationJsonReader(lazy=lazy, cache_directory=self.cache_directory)
-        cache_file = reader._get_cache_location_for_file_path(str(data_file))
-
-        deque(reader.read(data_file), maxlen=1)
-        assert not os.path.exists(cache_file)
-        assert "Can't cache data instances when there are multiple processes" in caplog.text
-
-    def test_caching_with_lazy_reader_in_multi_process_loader(self):
-        data_file = (
-            AllenNlpTestCase.FIXTURES_ROOT
-            / "data"
-            / "text_classification_json"
-            / "imdb_corpus.jsonl"
-        )
-        reader = TextClassificationJsonReader(lazy=True, cache_directory=self.cache_directory)
-        deque(
-            PyTorchDataLoader(reader.read(data_file), collate_fn=lambda b: b[0], num_workers=2),
-            maxlen=0,
-        )
-
-        # We shouldn't write to the cache when the data is being loaded from multiple
-        # processes.
-        cache_file = reader._get_cache_location_for_file_path(str(data_file))
-        assert not os.path.exists(cache_file)
-
-        # But try again from the main process and we should see the cache file.
-        instances = list(reader.read(data_file))
-        assert instances
-        assert os.path.exists(cache_file)
-
-        # Reading again from a multi-process loader should read from the cache.
-        new_instances = list(
-            PyTorchDataLoader(reader.read(data_file), collate_fn=lambda b: b[0], num_workers=2)
-        )
-        assert len(instances) == len(new_instances)
-
-    @pytest.mark.parametrize("lazy", (True, False))
-    def test_max_instances(self, lazy):
-        data_file = (
-            AllenNlpTestCase.FIXTURES_ROOT
-            / "data"
-            / "text_classification_json"
-            / "imdb_corpus.jsonl"
-        )
-        reader = TextClassificationJsonReader(max_instances=2, lazy=lazy)
-        instances = reader.read(data_file)
-        instance_count = sum(1 for _ in instances)
-        assert instance_count == 2
-
-    @pytest.mark.parametrize("num_workers", (0, 1, 2))
-    def test_max_instances_with_multi_process_loader(self, num_workers):
-        data_file = (
-            AllenNlpTestCase.FIXTURES_ROOT
-            / "data"
-            / "text_classification_json"
-            / "imdb_corpus.jsonl"
-        )
-        reader = TextClassificationJsonReader(max_instances=2, lazy=True)
-        instances = list(
-            PyTorchDataLoader(
-                reader.read(data_file), collate_fn=lambda b: b[0], num_workers=num_workers
-            )
-        )
-        assert len(instances) == 2
-
-    @pytest.mark.parametrize("lazy", (True, False))
-    def test_cached_max_instances(self, lazy):
-        data_file = (
-            AllenNlpTestCase.FIXTURES_ROOT
-            / "data"
-            / "text_classification_json"
-            / "imdb_corpus.jsonl"
-        )
-
-        # If we try reading with max instances, it shouldn't write to the cache.
-        reader = TextClassificationJsonReader(
-            cache_directory=self.cache_directory, lazy=lazy, max_instances=2
-        )
-        instances = list(reader.read(data_file))
-        assert len(instances) == 2
-
-        cache_file = reader._get_cache_location_for_file_path(str(data_file))
-        assert not os.path.exists(cache_file)
-
-        # Now reading again with no max_instances specified should create the cache.
-        reader = TextClassificationJsonReader(cache_directory=self.cache_directory, lazy=lazy)
-        instances = list(reader.read(data_file))
-        assert len(instances) > 2
-        assert os.path.exists(cache_file)
-
-        # The second read should only return two instances, even though it's from the cache.
-        reader = TextClassificationJsonReader(
-            cache_directory=self.cache_directory, max_instances=2, lazy=lazy
-        )
-        instances = list(reader.read(data_file))
-        assert len(instances) == 2
-
-
-class MockWorkerInfo(NamedTuple):
-    id: int
-    num_workers: int
+TOTAL_INSTANCES = 100
 
 
 class MockDatasetReader(DatasetReader):
     def _read(self, file_path):
-        for i in range(10):
+        for i in range(TOTAL_INSTANCES):
+            yield self.text_to_instance(i)
+
+    def text_to_instance(self, index: int):  # type: ignore
+        return Instance({"index": LabelField(index, skip_indexing=True)})
+
+
+class MockMmpsDatasetReader(DatasetReader):
+    """
+    Implements manual multi-process sharding (MMPS).
+    """
+
+    def __init__(self, **kwargs) -> None:
+        super().__init__(manual_multi_process_sharding=True, **kwargs)
+
+    def _read(self, file_path):
+        start_index = 0
+        step_size = 1
+        if self._worker_info is not None:
+            start_index += self._worker_info.id
+            step_size *= self._worker_info.num_workers
+        for i in islice(range(TOTAL_INSTANCES), start_index, None, step_size):
+            yield self.text_to_instance(i)
+
+    def text_to_instance(self, index: int):  # type: ignore
+        return Instance({"index": LabelField(index, skip_indexing=True)})
+
+
+class MockMdsDatasetReader(DatasetReader):
+    """
+    Implements manual distributed sharding (MDS).
+    """
+
+    def __init__(self, **kwargs) -> None:
+        super().__init__(manual_distributed_sharding=True, **kwargs)
+
+    def _read(self, file_path):
+        start_index = 0
+        step_size = 1
+        if common_util.is_distributed():
+            start_index += dist.get_rank()
+            step_size *= dist.get_world_size()
+        for i in islice(range(TOTAL_INSTANCES), start_index, None, step_size):
+            yield self.text_to_instance(i)
+
+    def text_to_instance(self, index: int):  # type: ignore
+        return Instance({"index": LabelField(index, skip_indexing=True)})
+
+
+class MockMmpdsDatasetReader(DatasetReader):
+    """
+    Implements manual multi-process and distributed sharding (MMPDS).
+    """
+
+    def __init__(self, **kwargs) -> None:
+        super().__init__(
+            manual_distributed_sharding=True, manual_multi_process_sharding=True, **kwargs
+        )
+
+    def _read(self, file_path):
+        start_index = 0
+        step_size = 1
+        if common_util.is_distributed():
+            start_index += dist.get_rank()
+            step_size *= dist.get_world_size()
+        if self._worker_info is not None:
+            start_index *= self._worker_info.num_workers
+            start_index += self._worker_info.id
+            step_size *= self._worker_info.num_workers
+        for i in islice(range(TOTAL_INSTANCES), start_index, None, step_size):
             yield self.text_to_instance(i)
 
     def text_to_instance(self, index: int):  # type: ignore
@@ -285,99 +95,122 @@ class MockDatasetReader(DatasetReader):
 
 
 @pytest.mark.parametrize(
-    "node_rank, world_size, worker_id, num_workers, max_instances, expected_result",
+    "reader_class, world_size, num_workers, max_instances",
     [
-        (None, None, None, None, None, list(range(10))),
-        (None, None, None, None, 5, list(range(5))),
-        (None, None, None, None, 12, list(range(10))),
-        (None, None, 0, 1, None, list(range(10))),
-        (None, None, 0, 2, None, [0, 2, 4, 6, 8]),
-        (None, None, 1, 2, None, [1, 3, 5, 7, 9]),
-        (None, None, 0, 2, 5, [0, 2, 4]),
-        (None, None, 1, 2, 5, [1, 3]),
-        (0, 1, None, None, None, list(range(10))),
-        (0, 2, None, None, None, [0, 2, 4, 6, 8]),
-        (1, 2, None, None, None, [1, 3, 5, 7, 9]),
-        (0, 2, None, None, 5, [0, 2, 4]),
-        (1, 2, None, None, 5, [1, 3]),
-        (0, 2, 0, 2, None, [0, 4, 8]),
-        (0, 2, 1, 2, None, [1, 5, 9]),
-        (1, 2, 0, 2, None, [2, 6]),
-        (1, 2, 1, 2, None, [3, 7]),
-        (0, 2, 0, 2, 5, [0, 4]),
+        # Basic mocked DatasetReader.
+        (MockDatasetReader, 4, 2, None),
+        (MockDatasetReader, 4, 2, 67),
+        (MockDatasetReader, 4, None, None),
+        (MockDatasetReader, 4, None, None),
+        (MockDatasetReader, None, 2, None),
+        (MockDatasetReader, None, 2, 67),
+        (MockDatasetReader, None, None, None),
+        (MockDatasetReader, None, None, 67),
+        # Mocked DatasetReader with manual multi-process sharding.
+        (MockMmpsDatasetReader, 4, 2, None),
+        (MockMmpsDatasetReader, 4, 2, 67),
+        (MockMmpsDatasetReader, 4, None, None),
+        (MockMmpsDatasetReader, 4, None, None),
+        (MockMmpsDatasetReader, None, 2, None),
+        (MockMmpsDatasetReader, None, 2, 67),
+        (MockMmpsDatasetReader, None, None, None),
+        (MockMmpsDatasetReader, None, None, 67),
+        # Mocked DatasetReader with manual distributed sharding.
+        (MockMdsDatasetReader, 4, 2, None),
+        (MockMdsDatasetReader, 4, 2, 67),
+        (MockMdsDatasetReader, 4, None, None),
+        (MockMdsDatasetReader, 4, None, None),
+        (MockMdsDatasetReader, None, 2, None),
+        (MockMdsDatasetReader, None, 2, 67),
+        (MockMdsDatasetReader, None, None, None),
+        (MockMdsDatasetReader, None, None, 67),
+        # Mocked DatasetReader with both manual multi-process and distributed sharding.
+        (MockMmpdsDatasetReader, 4, 2, None),
+        (MockMmpdsDatasetReader, 4, 2, 67),
+        (MockMmpdsDatasetReader, 4, None, None),
+        (MockMmpdsDatasetReader, 4, None, None),
+        (MockMmpdsDatasetReader, None, 2, None),
+        (MockMmpdsDatasetReader, None, 2, 67),
+        (MockMmpdsDatasetReader, None, None, None),
+        (MockMmpdsDatasetReader, None, None, 67),
     ],
 )
 def test_instance_slicing(
     monkeypatch,
-    node_rank: Optional[int],
+    reader_class,
     world_size: Optional[int],
-    worker_id: Optional[int],
     num_workers: Optional[int],
     max_instances: Optional[int],
-    expected_result: List[int],
 ):
-    if node_rank is not None and world_size is not None:
-        monkeypatch.setattr(common_util, "is_distributed", lambda: True)
-        monkeypatch.setattr(dist, "get_rank", lambda: node_rank)
-        monkeypatch.setattr(dist, "get_world_size", lambda: world_size)
+    """
+    Ensure that the intances read by each worker are always unique and the total
+    adds up to `max_instances`.
+    """
+    results: List[Set[int]] = []
 
-    if worker_id is not None and num_workers is not None:
-        monkeypatch.setattr(
-            dataset_reader, "get_worker_info", lambda: MockWorkerInfo(worker_id, num_workers)
-        )
+    minimum_expected_result_size = max_instances or TOTAL_INSTANCES
+    maximum_expected_result_size = max_instances or TOTAL_INSTANCES
 
-    reader = MockDatasetReader(max_instances=max_instances)
-    result = list(
-        (
+    if world_size is not None and num_workers is not None:
+        minimum_expected_result_size //= world_size
+        minimum_expected_result_size //= num_workers
+        maximum_expected_result_size = minimum_expected_result_size + 1
+        for node_rank in range(world_size):
+            monkeypatch.setattr(common_util, "is_distributed", lambda: True)
+            monkeypatch.setattr(dist, "get_rank", lambda: node_rank)
+            monkeypatch.setattr(dist, "get_world_size", lambda: world_size)
+            for worker_id in range(num_workers):
+                reader = reader_class(max_instances=max_instances)
+                reader.worker_info = WorkerInfo(num_workers, worker_id)
+                result = set(
+                    x["index"].label  # type: ignore
+                    for x in reader.read("the-path-doesnt-matter")
+                )
+                results.append(result)
+    elif world_size is not None:
+        minimum_expected_result_size //= world_size
+        maximum_expected_result_size = minimum_expected_result_size + 1
+        for node_rank in range(world_size):
+            monkeypatch.setattr(common_util, "is_distributed", lambda: True)
+            monkeypatch.setattr(dist, "get_rank", lambda: node_rank)
+            monkeypatch.setattr(dist, "get_world_size", lambda: world_size)
+            reader = reader_class(max_instances=max_instances)
+            result = set(
+                x["index"].label  # type: ignore
+                for x in reader.read("the-path-doesnt-matter")
+            )
+            results.append(result)
+    elif num_workers is not None:
+        minimum_expected_result_size //= num_workers
+        maximum_expected_result_size = minimum_expected_result_size + 1
+        for worker_id in range(num_workers):
+            reader = reader_class(max_instances=max_instances)
+            reader.worker_info = WorkerInfo(num_workers, worker_id)
+            result = set(
+                x["index"].label  # type: ignore
+                for x in reader.read("the-path-doesnt-matter")
+            )
+            results.append(result)
+    else:
+        reader = reader_class(max_instances=max_instances)
+        result = set(
             x["index"].label  # type: ignore
             for x in reader.read("the-path-doesnt-matter")
         )
-    )
+        results.append(result)
 
-    assert result == expected_result
+    # We need to check that all of the result sets are mutually exclusive and that they're
+    # union has size `max_instances`.
+    # Checking that they're mutually exclusive is equivalent to checking that the sum
+    # of the size of each set is equal to the size of the union.
 
+    union: Set[int] = set()
+    total: int = 0
+    for result in results:
+        union |= result
+        total += len(result)
+        # Also make sure the size of the set is within the expected bounds.
+        assert minimum_expected_result_size <= len(result)
+        assert len(result) <= maximum_expected_result_size
 
-class BadLazyReader(DatasetReader):
-    def _read(self, file_path):
-        return [self.text_to_instance(i) for i in range(10)]
-
-    def text_to_instance(self, index: int):  # type: ignore
-        return Instance({"index": LabelField(index, skip_indexing=True)})
-
-
-def test_config_error_when_lazy_reader_returns_list():
-    reader = BadLazyReader(lazy=True)
-    with pytest.raises(ConfigurationError, match="must return a generator"):
-        deque(reader.read("path"), maxlen=0)
-
-
-class BadReaderReadsNothing(DatasetReader):
-    def _read(self, file_path):
-        return []
-
-    def text_to_instance(self, index: int):  # type: ignore
-        return Instance({"index": LabelField(index, skip_indexing=True)})
-
-
-def test_config_error_when_reader_returns_no_instances():
-    reader = BadReaderReadsNothing()
-    with pytest.raises(ConfigurationError, match="No instances were read"):
-        deque(reader.read("path"), maxlen=0)
-
-
-class BadReaderForgetsToSetLazy(DatasetReader):
-    def __init__(self):
-        pass
-
-    def _read(self, file_path):
-        for i in range(10):
-            yield self.text_to_instance(i)
-
-    def text_to_instance(self, index: int):  # type: ignore
-        return Instance({"index": LabelField(index, skip_indexing=True)})
-
-
-def warning_when_reader_has_no_lazy_set():
-    with pytest.warns(UserWarning, match="DatasetReader.lazy is not set"):
-        reader = BadReaderForgetsToSetLazy()
-        reader.read("path")
+    assert len(union) == total == (max_instances or TOTAL_INSTANCES)

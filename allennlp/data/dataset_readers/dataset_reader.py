@@ -152,29 +152,60 @@ class DatasetReader(Registrable):
 
         `Iterable[Instance]`
         """
-        start_index = 0
-        step_size = 1
-        if not self.manual_distributed_sharding and util.is_distributed():
-            start_index = dist.get_rank()
-            step_size = dist.get_world_size()
-        worker_info = None if self.manual_multi_process_sharding else self.worker_info
-        if worker_info is not None:
-            warnings.warn(
-                "Using multi-process data loading without setting "
-                "DatasetReader.manual_multi_process_sharding to True.\n"
-                "Did you forget to set this?\n"
-                "If you're not handling the multi-process sharding logic within your "
-                "_read() method, there is probably no benefit to using more than one "
-                "worker.",
-                UserWarning,
-            )
-            # Scale `start_index` by `num_workers`, then shift by worker `id`.
-            start_index *= worker_info.num_workers
-            start_index += worker_info.id
-            # Scale `step_size` by `num_workers`.
-            step_size *= worker_info.num_workers
+        # This has some complicated logic because any given reader may or may not
+        # implement manual multi-process and manual distributed sharding itself.
+        # We have to handle all possibilities.
 
-        islice = itertools.islice(iterable, start_index, self.max_instances, step_size)
+        sharded_slice: Iterable[Any] = iterable
+
+        # We'll adjust max_instances as we go, depending on what sort of sharding is done.
+        # At the end, we want to ensure the total number of instances collected across
+        # all workers processes is equal to self.max_instances.
+        max_instances = self.max_instances
+
+        if util.is_distributed():
+            rank = dist.get_rank()
+            world_size = dist.get_world_size()
+
+            if max_instances is not None:
+                # Need to scale down max_instances because otherwise each node would read self.max_instances,
+                # but we really want self.max_instances total across all nodes.
+                if rank < (max_instances % world_size):
+                    max_instances = max_instances // world_size + 1
+                else:
+                    max_instances = max_instances // world_size
+
+            if not self.manual_distributed_sharding:
+                start_index = rank
+                step_size = world_size
+                sharded_slice = itertools.islice(sharded_slice, rank, None, world_size)
+
+        if self.worker_info is not None:
+            if max_instances is not None:
+                # Like in the distributed case above, we need to adjust max_instances.
+                if self.worker_info.id < (max_instances % self.worker_info.num_workers):
+                    max_instances = max_instances // self.worker_info.num_workers + 1
+                else:
+                    max_instances = max_instances // self.worker_info.num_workers
+
+            if not self.manual_multi_process_sharding:
+                warnings.warn(
+                    "Using multi-process data loading without setting "
+                    "DatasetReader.manual_multi_process_sharding to True.\n"
+                    "Did you forget to set this?\n"
+                    "If you're not handling the multi-process sharding logic within your "
+                    "_read() method, there is probably no benefit to using more than one "
+                    "worker.",
+                    UserWarning,
+                )
+                sharded_slice = itertools.islice(
+                    sharded_slice, self.worker_info.id, None, self.worker_info.num_workers
+                )
+
+        if max_instances is not None:
+            sharded_slice = itertools.islice(sharded_slice, max_instances)
+
         if transform is not None:
-            return (transform(x) for x in islice)
-        return islice
+            sharded_slice = (transform(x) for x in sharded_slice)
+
+        return sharded_slice
