@@ -127,14 +127,16 @@ class MultiProcessDataLoader(DataLoader):
             queue: mp.JoinableQueue = mp.JoinableQueue(self._INSTANCE_QUEUE_SIZE)
             workers: List[mp.Process] = []
             for worker_id in range(self.num_workers):
-                worker = mp.Process(target=self._instance_worker, args=(worker_id, queue))
+                worker = mp.Process(
+                    target=self._instance_worker, args=(worker_id, queue), daemon=True
+                )
                 worker.start()
                 workers.append(worker)
 
             def instance_iterator():
                 done_count: int = 0
                 while done_count < self.num_workers:
-                    for instances_chunk in iter(queue.get, []):
+                    for instances_chunk in iter(queue.get, None):
                         yield from instances_chunk
                         queue.task_done()
                     queue.task_done()
@@ -178,7 +180,7 @@ class MultiProcessDataLoader(DataLoader):
             queue.put(instances_chunk)
 
         # Indicate to the consumer that this worker is finished.
-        queue.put([])
+        queue.put(None)
 
         # Wait for consumer to finish to avoid prematurely closing the queue.
         queue.join()
@@ -208,10 +210,10 @@ class MultiProcessDataLoader(DataLoader):
             # At this point self.max_batches_in_memory is not None since lazy must be False.
             queue: mp.JoinableQueue = mp.JoinableQueue(self.max_batches_in_memory)  # type: ignore
 
-            worker = mp.Process(target=self._batch_worker, args=(queue,))
+            worker = mp.Process(target=self._batch_worker, args=(queue,), daemon=True)
             worker.start()
 
-            for batch_group in iter(queue.get, []):
+            for batch_group in iter(queue.get, None):
                 yield from batch_group
                 queue.task_done()
 
@@ -242,9 +244,10 @@ class MultiProcessDataLoader(DataLoader):
                 queue.put(batch_group)
 
         # Indicate to the consumer (main thread) that this worker is finished.
-        queue.put([])
+        queue.put(None)
 
-        # Wait for the consumer (in the main process) to finish receiving all batch groups.
+        # Wait for the consumer (in the main process) to finish receiving all batch groups
+        # to avoid prematurely closing the queue.
         queue.join()
 
     @classmethod

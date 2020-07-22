@@ -244,7 +244,7 @@ class TestTrain(AllenNlpTestCase):
                 "train_data_path": SEQUENCE_TAGGING_SHARDS_PATH,
                 "validation_data_path": SEQUENCE_TAGGING_SHARDS_PATH,
                 "data_loader": {
-                    "batch_size": 2,
+                    "batch_size": 1,
                     "lazy": lazy,
                     "max_batches_in_memory": 10 if lazy else None,
                 },
