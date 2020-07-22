@@ -3,7 +3,9 @@
     "type": "nlvr2",
     "image_dir": "test_fixtures/data/nlvr2",
     "image_loader": {"type": "detectron"},
-    "proposal_generator": {"type": "null"},
+    "proposal_generator": {
+      "type": "faster_rcnn"
+    },
     "proposal_embedder": {
       "type": "null",
       "output_dim": 2048

@@ -37,11 +37,23 @@ class ImageLoader(Registrable, Callable[[Union[OnePath, ManyPaths]], FloatTensor
 class DetectronImageLoader(ImageLoader):
     def __init__(
         self,
-        builtin_config_file: Optional[str] = None,
-        yaml_config_file: Optional[str] = None,
-        overrides: Optional[Dict[str, Any]] = None,
+        min_size_train = (800,),
+        min_size_train_sampling = "choice",
+        max_size_train = 1333,
+        min_size_test = 800,
+        max_size_test = 1333,
+        crop = False, 
+        crop_type = "relative_range",
+        crop_size = [0.9, 0.9],
+        format = "BGR",
+        mask_format = "polygon",
     ):
+
+        import pdb
+        pdb.set_trace()
+
         from allennlp.common.detectron import get_detectron_cfg
+
 
         cfg = get_detectron_cfg(builtin_config_file, yaml_config_file, overrides)
 

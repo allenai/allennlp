@@ -17,9 +17,24 @@ class ProposalGenerator(nn.Module, Registrable):
         raise NotImplementedError()
 
 
-@ProposalGenerator.register("null")
-class NullProposalGenerator(ProposalGenerator):
+@ProposalGenerator.register("butd")
+class BottomUpTopDownProposalGenerator(ProposalGenerator):
+    def __init__(self)
     """A `ProposalGenerator` that never returns any proposals."""
+        from detectron2.data import DatasetMapper
+
+        self.cfg = cfg
+        self.mapper = DatasetMapper(cfg)
+        from detectron2.modeling import build_model
+
+        self.model = build_model(cfg)
+        from detectron2.checkpoint import DetectionCheckpointer
+
+        DetectionCheckpointer(self.model).load(cfg.MODEL.WEIGHTS)
+        self.model.eval()
 
     def forward(self, images: FloatTensor):
+        import pdb
+        pdb.set_trace()
+
         return torch.zeros(images.size(0), 0, 4, dtype=torch.float32, device=images.device)
