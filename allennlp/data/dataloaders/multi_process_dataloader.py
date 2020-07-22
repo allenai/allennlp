@@ -180,11 +180,11 @@ class MultiProcessDataLoader(DataLoader):
         queue.put([])
 
     def _iter_batches(self) -> Iterator[TensorDict]:
-        if not self.lazy and not self._instances:
+        if not self.lazy and self._instances is None:
             # Cache instances to `self._instances`.
             deque(self.iter_instances(), maxlen=0)
 
-        if self._instances:
+        if self._instances is not None:
             if not self.batch_sampler and self.shuffle:
                 logger.info("Shuffling instances")
                 random.shuffle(self._instances)
@@ -201,7 +201,9 @@ class MultiProcessDataLoader(DataLoader):
             for batch in batches:
                 yield self.collate_fn(batch)
         else:
+            # At this point self.max_batches_in_memory is not None since lazy must be False.
             queue: mp.Queue = mp.Queue(self.max_batches_in_memory)  # type: ignore
+
             worker = mp.Process(target=self._batch_worker, args=(queue,))
             worker.start()
 
