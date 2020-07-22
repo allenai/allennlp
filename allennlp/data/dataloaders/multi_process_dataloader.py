@@ -92,6 +92,10 @@ class MultiProcessDataLoader(DataLoader):
             raise TypeError
 
     def __iter__(self) -> Iterator[TensorDict]:
+        if self._vocab is None:
+            raise ValueError(
+                "You must index the data loader .index_with(vocab) before generating batches"
+            )
         if self.batches_per_epoch is None:
             yield from self._iter_batches()
         else:

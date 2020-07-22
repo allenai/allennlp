@@ -594,40 +594,32 @@ class TestFromParams(AllenNlpTestCase):
             Model.from_params(vocab=trained_model.vocab, params=Params(model_params))
 
     def test_bare_string_params(self):
-        dataset = [1]
+        reader = DatasetReader.from_params(Params({"type": "text_classification_json"}))
 
         class TestLoader(Registrable):
             @classmethod
             def from_partial_objects(cls, data_loader: Lazy[DataLoader]) -> DataLoader:
-                return data_loader.construct(dataset=dataset)
+                return data_loader.construct(
+                    reader=reader,
+                    data_path=str(
+                        self.FIXTURES_ROOT
+                        / "data"
+                        / "text_classification_json"
+                        / "imdb_corpus2.jsonl"
+                    ),
+                )
 
         TestLoader.register("test", constructor="from_partial_objects")(TestLoader)
 
         data_loader = TestLoader.from_params(
-            Params(
-                {
-                    "type": "test",
-                    "data_loader": {
-                        "batch_sampler": {
-                            "type": "basic",
-                            "batch_size": 2,
-                            "drop_last": True,
-                            "sampler": "random",
-                        }
-                    },
-                }
-            )
+            Params({"type": "test", "data_loader": {"batch_size": 2,},})
         )
-        assert data_loader.batch_sampler.sampler.__class__.__name__ == "RandomSampler"
-        assert data_loader.batch_sampler.sampler.data_source is dataset
+        assert data_loader.batch_size == 2
 
     def test_kwargs_are_passed_to_superclass(self):
-        params = Params(
-            {"type": "text_classification_json", "lazy": True, "cache_directory": "tmp"}
-        )
+        params = Params({"type": "text_classification_json", "max_instances": 50})
         reader = DatasetReader.from_params(params)
-        assert reader.lazy is True
-        assert str(reader._cache_directory) == "tmp"
+        assert reader.max_instances == 50
 
     def test_kwargs_with_multiple_inheritance(self):
         # Basic idea: have two identical classes, differing only in the order of their multiple
