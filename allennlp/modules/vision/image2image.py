@@ -1,4 +1,6 @@
+import torch
 from torch import nn, FloatTensor
+from typing import List
 
 from allennlp.common import Registrable
 
@@ -20,3 +22,26 @@ class NullImage2ImageModule(Image2ImageModule):
 
     def forward(self, images: FloatTensor):
         return images
+
+
+@Image2ImageModule.register("normalize")
+class NormalizeImage(Image2ImageModule):
+    """
+    Normalizes an image by subtracting the mean and dividing by the
+    standard deviation, separately for each channel.
+    """
+
+    def __init__(self, means: List[float], stds: List[float]):
+        super().__init__()
+        assert len(means) == len(stds)
+        self.means = torch.tensor(means, dtype=torch.float32)
+        self.stds = torch.tensor(stds, dtype=torch.float32)
+
+    def forward(self, images: FloatTensor):
+        assert images.size(1) == self.means.size(0)
+        self.means = self.means.to(images.device)
+        self.stds = self.stds.to(images.device)
+        images = images.transpose(1, -1)
+        images = images - self.means
+        images = images / self.stds
+        return images.transpose(-1, 1)
