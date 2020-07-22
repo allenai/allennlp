@@ -2,9 +2,14 @@
   "dataset_reader": {
     "type": "nlvr2",
     "image_dir": "test_fixtures/data/nlvr2",
-    "image_loader": {"type": "detectron"},
+    "image_loader": {
+      "type": "detectron"
+    },
     "proposal_generator": {
-      "type": "faster_rcnn"
+      "type": "RPN",
+      "pre_nms_topk_test": 6000,
+      "post_nms_topk_test": 1000, 
+      "smooth_l1_beta": 0.1111
     },
     "proposal_embedder": {
       "type": "null",

@@ -24,9 +24,7 @@ class ImageLoader(Registrable, Callable[[Union[OnePath, ManyPaths]], FloatTensor
             return self([filename_or_filenames])[0]
 
         from allennlp.common.file_utils import cached_path
-
         filenames = [cached_path(f) for f in filename_or_filenames]
-
         return self.load(filenames)
 
     def load(self, filenames: ManyPaths) -> List[FloatTensor]:
@@ -79,7 +77,9 @@ class DetectronImageLoader(ImageLoader):
 
     def load(self, filenames: ManyPaths) -> List[FloatTensor]:
         images = [{"file_name": str(f)} for f in filenames]
+        # TODO: is this efficient enough, the detectron2 impelemntation ? 
         images = [self.mapper(i) for i in images]
-        images = [i["image"] for i in images]
 
+        # TODO: for detectronImage loader, do we want to return image tensor or orginial detectron dict format?  
+        images = [i["image"] for i in images]
         return images
