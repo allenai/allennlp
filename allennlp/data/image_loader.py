@@ -81,5 +81,5 @@ class DetectronImageLoader(ImageLoader):
         images = [self.mapper(i) for i in images]
 
         # TODO: for detectronImage loader, do we want to return image tensor or orginial detectron dict format?  
-        images = [i["image"] for i in images]
+        # images = [i["image"] for i in images]
         return images

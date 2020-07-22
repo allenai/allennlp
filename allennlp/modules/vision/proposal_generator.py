@@ -1,9 +1,18 @@
-from typing import Union, List, Callable, Optional, Dict, Any, Tuple
+from os import PathLike
+from typing import NamedTuple, Tuple, Union, List, Dict
 
 import torch
+import torch.nn.functional as F
 from torch import nn, FloatTensor
+from torch import Tensor
 
 from allennlp.common.registrable import Registrable
+
+class ImageWithSize(NamedTuple):
+    image: Union[Tensor, str, PathLike]
+    size: Tuple[int, int]
+
+SupportedImageFormat = Union[ImageWithSize, Tensor, dict, str, PathLike]
 
 
 class ProposalGenerator(nn.Module, Registrable):
@@ -25,6 +34,7 @@ class RPNProposalGenerator(ProposalGenerator):
     def __init__(
         self, 
         meta_architecture = "GeneralizedRCNN",
+        device: str= "cpu",
         weights: str = "",
         head_name: str = "StandardRPNHead",
         in_features: List[str] = ["res4"],
@@ -48,6 +58,7 @@ class RPNProposalGenerator(ProposalGenerator):
         
         overrides = {
             "MODEL": {
+                "DEVICE": device,
                 "WEIGHTS": weights,
                 "META_ARCHITECTURE": meta_architecture, 
                 "PROPOSAL_GENERATOR": {
@@ -82,18 +93,46 @@ class RPNProposalGenerator(ProposalGenerator):
         # here still has ROI heads and other redunant parameters for RPN.  
         self.model = build_model(cfg)
         from detectron2.checkpoint import DetectionCheckpointer
-
         DetectionCheckpointer(self.model).load(cfg.MODEL.WEIGHTS)
         self.model.eval()
 
     def forward(self, images):
-        
-        import pdb
-        pdb.set_trace()
-        features = self.model.backbone(images)
+
+        # handle the single-image case
+        if not isinstance(images, list):
+            return self.__call__([images])[0]
+
+        images = [self._to_model_input(i) for i in images]
+        images = self.model.preprocess_image(images)
+
+        features = self.model.backbone(images.tensor)
         proposals, _ = self.model.proposal_generator(images, features, None)
 
         import pdb
         pdb.set_trace()
 
         return torch.zeros(images.size(0), 0, 4, dtype=torch.float32, device=images.device)
+
+
+    def _to_model_input(self, image: SupportedImageFormat) -> dict:
+        if isinstance(image, ImageWithSize):
+            if isinstance(image.image, PathLike):
+                image.image = str(image.image)
+            image_dict = {"height": image.size[0], "width": image.size[1]}
+            if isinstance(image.image, str):
+                image_dict["file_name"] = image.image
+            elif isinstance(image.image, Tensor):
+                image_dict["image"] = image.image
+            else:
+                raise ValueError("`image` is not in a recognized format.")
+            image = image_dict
+        else:
+            if isinstance(image, PathLike):
+                image = str(image)
+            if isinstance(image, str):
+                image = {"file_name": image}
+        assert isinstance(image, dict)
+        if "image" not in image:
+            image = self.mapper(image)
+        assert isinstance(image["image"], Tensor)
+        return image
