@@ -116,10 +116,7 @@ class DetectronProcessor:
         #         fields["panoptic_seg/category_ids"] = ArrayField(category_ids, padding_value=-1)
 
         #     image_fields.append(fields)
-        return [
-            {"visual_features": ArrayField(f)}
-            for f in pooled_features
-        ]
+        return [{"visual_features": ArrayField(f)} for f in pooled_features]
         # return image_fields, pooled_features
 
     def _to_model_input(self, image: SupportedImageFormat) -> dict:
