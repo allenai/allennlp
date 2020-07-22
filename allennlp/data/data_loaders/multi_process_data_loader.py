@@ -124,7 +124,7 @@ class MultiProcessDataLoader(DataLoader):
                     instance.index_fields(self._vocab)
                 yield instance
         else:
-            queue: mp.Queue = mp.Queue(self._INSTANCE_QUEUE_SIZE)
+            queue: mp.JoinableQueue = mp.JoinableQueue(self._INSTANCE_QUEUE_SIZE)
             workers: List[mp.Process] = []
             for worker_id in range(self.num_workers):
                 worker = mp.Process(target=self._instance_worker, args=(worker_id, queue))
@@ -135,8 +135,9 @@ class MultiProcessDataLoader(DataLoader):
                 done_count: int = 0
                 while done_count < self.num_workers:
                     for instances_chunk in iter(queue.get, []):
-                        for instance in instances_chunk:
-                            yield instance
+                        yield from instances_chunk
+                        queue.task_done()
+                    queue.task_done()
                     # Every time we encounter an empty list, thats means a worker has finished.
                     done_count += 1
 
@@ -158,7 +159,7 @@ class MultiProcessDataLoader(DataLoader):
             for instance in self._instances:
                 instance.index_fields(vocab)
 
-    def _instance_worker(self, worker_id: int, queue: mp.Queue) -> None:
+    def _instance_worker(self, worker_id: int, queue: mp.JoinableQueue) -> None:
         self.reader._set_worker_info(WorkerInfo(self.num_workers, worker_id))
 
         instances: Iterator[Instance]
@@ -178,6 +179,9 @@ class MultiProcessDataLoader(DataLoader):
 
         # Indicate to the consumer that this worker is finished.
         queue.put([])
+
+        # Wait for consumer to finish to avoid prematurely closing the queue.
+        queue.join()
 
     def _iter_batches(self) -> Iterator[TensorDict]:
         if not self.lazy and self._instances is None:
