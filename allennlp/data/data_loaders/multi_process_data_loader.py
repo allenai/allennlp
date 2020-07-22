@@ -127,7 +127,7 @@ class MultiProcessDataLoader(DataLoader):
                 queue: mp.JoinableQueue = mp.JoinableQueue(self._INSTANCE_QUEUE_SIZE)
                 workers = self._start_instance_workers(queue)
 
-                for instance in Tqdm.tqdm(self._gather_instances(queue)):
+                for instance in Tqdm.tqdm(self._gather_instances(queue), desc="loading instances"):
                     if not self.lazy:
                         self._instances.append(instance)  # type: ignore
                     yield instance
@@ -200,7 +200,6 @@ class MultiProcessDataLoader(DataLoader):
 
         for instances in instance_chunks:
             if not self.batch_sampler and self.shuffle:
-                logger.info("Shuffling instances")
                 random.shuffle(instances)
 
             batches: Iterator[List[Instance]]
@@ -217,7 +216,7 @@ class MultiProcessDataLoader(DataLoader):
             yield from batched_tensor_dicts
 
     def _iter_batches(self) -> Iterator[TensorDict]:
-        if self.num_workers <= 0:
+        if self._instances is not None or self.num_workers <= 0:
             for batch in self._instances_to_batches(self.iter_instances()):
                 yield batch
         else:
