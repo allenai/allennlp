@@ -612,7 +612,7 @@ class TestFromParams(AllenNlpTestCase):
         TestLoader.register("test", constructor="from_partial_objects")(TestLoader)
 
         data_loader = TestLoader.from_params(
-            Params({"type": "test", "data_loader": {"batch_size": 2,},})
+            Params({"type": "test", "data_loader": {"batch_size": 2}})
         )
         assert data_loader.batch_size == 2
 
