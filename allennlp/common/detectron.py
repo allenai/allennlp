@@ -27,7 +27,7 @@ def get_detectron_cfg(
     from detectron2.config import get_cfg
 
     cfg = get_cfg()
-    add_attribute_config(cfg)
+    add_attribute_config(cfg)  # TODO: What is this? It's not general, not configurable.
     from detectron2.model_zoo import get_config_file
 
     if builtin_config_file is not None:
