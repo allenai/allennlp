@@ -1,7 +1,7 @@
 import torch
 from torch import nn, FloatTensor
 
-from allennlp.common import Registrable
+from allennlp.common.registrable import Registrable
 
 
 class ProposalEmbedder(nn.Module, Registrable):
