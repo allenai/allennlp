@@ -110,29 +110,29 @@ class MultiProcessDataLoader(DataLoader):
 
     def iter_instances(self) -> Iterator[Instance]:
         if self._instances:
-            return iter(self._instances)
-
-        if not self.lazy:
-            self._instances = []
-
-        if self.num_workers <= 0:
-            # Just read all instances in main process.
-            for instance in self.reader.read(self.data_path):
-                if not self.lazy:
-                    self._instances.append(instance)  # type: ignore
-                if self._vocab is not None:
-                    instance.index_fields(self._vocab)
-                yield instance
+            yield from self._instances
         else:
-            queue: mp.JoinableQueue = mp.JoinableQueue(self._INSTANCE_QUEUE_SIZE)
-            workers = self._start_instance_workers(queue)
+            if not self.lazy:
+                self._instances = []
 
-            for instance in Tqdm.tqdm(self._gather_instances(queue)):
-                if not self.lazy:
-                    self._instances.append(instance)  # type: ignore
-                yield instance
+            if self.num_workers <= 0:
+                # Just read all instances in main process.
+                for instance in self.reader.read(self.data_path):
+                    if not self.lazy:
+                        self._instances.append(instance)  # type: ignore
+                    if self._vocab is not None:
+                        instance.index_fields(self._vocab)
+                    yield instance
+            else:
+                queue: mp.JoinableQueue = mp.JoinableQueue(self._INSTANCE_QUEUE_SIZE)
+                workers = self._start_instance_workers(queue)
 
-            self._join_workers(workers)
+                for instance in Tqdm.tqdm(self._gather_instances(queue)):
+                    if not self.lazy:
+                        self._instances.append(instance)  # type: ignore
+                    yield instance
+
+                self._join_workers(workers)
 
     def index_with(self, vocab: Vocabulary) -> None:
         self._vocab = vocab
@@ -227,7 +227,7 @@ class MultiProcessDataLoader(DataLoader):
             # First we start "instance workers", which are in charge generating raw
             # instances using self.reader. The generated instances are then put
             # into the `instance_queue` for the `batch_worker` to consume.
-            instance_queue: mp.JoinableQueue = mp.JoinableQueue()
+            instance_queue: mp.JoinableQueue = mp.JoinableQueue(self._INSTANCE_QUEUE_SIZE)
             instance_workers = self._start_instance_workers(instance_queue)
 
             # Now start the `batch_worker`. This worker consumes from the `instance_queue`
