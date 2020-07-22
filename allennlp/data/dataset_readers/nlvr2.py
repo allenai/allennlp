@@ -4,9 +4,11 @@ from typing import Dict, Union
 
 from overrides import overrides
 
-from allennlp.common.detectron import DetectronConfig, get_detectron_cfg
+from allennlp.data.image_loader import ImageLoader
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.instance import Instance
+from allennlp.modules.vision.proposal_generator import ProposalGenerator
+from allennlp.modules.vision.proposal_embedder import ProposalEmbedder
 
 
 @DatasetReader.register("nlvr2")
@@ -25,10 +27,12 @@ class Nlvr2Reader(DatasetReader):
     def __init__(
         self,
         image_dir: Union[str, PathLike],
+        image_loader: ImageLoader,
+        proposal_generator: ProposalGenerator,
+        proposal_embedder: ProposalEmbedder,
         mask_prepositions_verbs: bool = False,
         drop_prepositions_verbs: bool = False,
         transformer_model: str = "bert-base-uncased",
-        detectron_config: DetectronConfig = DetectronConfig(),
         lazy: bool = False,
     ) -> None:
         super().__init__(lazy)
@@ -63,13 +67,10 @@ class Nlvr2Reader(DatasetReader):
         else:
             self.spacy = None
 
-        # detectron
-        if isinstance(detectron_config, DetectronConfig):
-            detectron_config = detectron_config._asdict()
-        cfg = get_detectron_cfg(**detectron_config)
-        from allennlp.data.dataset_readers.dataset_utils.detectron_utils import DetectronProcessor
-
-        self.detectron_processor = DetectronProcessor(cfg)
+        # image loading
+        self.image_loader = image_loader
+        self.proposal_generator = proposal_generator
+        self.proposal_embedder = proposal_embedder
 
     @overrides
     def _read(self, split_or_filename: str):
@@ -143,13 +144,24 @@ class Nlvr2Reader(DatasetReader):
         # Load images
         image_name_base = identifier[: identifier.rindex("-")]
         images = [self.images[f"{image_name_base}-img{image_id}.png"] for image_id in [0, 1]]
-        images = self.detectron_processor(images)
+        images = self.image_loader(images)
+        import torch
+
+        with torch.no_grad():
+            # I'm not happy about the squeezing and unsqueezing here.
+            proposals = [self.proposal_generator(i.unsqueeze(0)).squeeze(0) for i in images]
+            visual_features = [
+                self.proposal_embedder(i.unsqueeze(0), p.unsqueeze(0)).squeeze(0)
+                for i, p in zip(images, proposals)
+            ]
         from allennlp.data.fields import MetadataField
+
+        from allennlp.data.fields import ArrayField
         from allennlp.data.fields import ListField
 
         fields = {
-            "visual_features": ListField([i["visual_features"] for i in images]),
-            # "box_coordinates": ListField([image["instances/pred_boxes"] for image in images]),
+            "visual_features": ListField([ArrayField(a) for a in visual_features]),
+            "box_coordinates": ListField([ArrayField(a) for a in proposals]),
             "sentence": MetadataField(sentence),
             "identifier": MetadataField(identifier),
             "sentence_field": sentence_field,

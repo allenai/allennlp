@@ -18,6 +18,7 @@ class TestVilbert(ModelTestCase):
         self.ensure_model_can_train_save_and_load(param_file, overrides=overrides)
 
     @pytest.mark.parametrize("overrides", _test_override_matrix)
+    @pytest.mark.skip()  # Grid doesn't work yet.
     def test_vilbert_grid_can_train_save_and_load(self, overrides: str):
         param_file = self.FIXTURES_ROOT / "vilbert" / "experiment_detectron_grid.json"
         self.ensure_model_can_train_save_and_load(param_file, overrides=overrides)

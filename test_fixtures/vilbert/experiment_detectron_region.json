@@ -2,26 +2,11 @@
   "dataset_reader": {
     "type": "nlvr2",
     "image_dir": "test_fixtures/data/nlvr2",
-    "detectron_config": {
-      "overrides": {
-        "MODEL": {
-          "META_ARCHITECTURE": "GeneralizedRCNN",
-          "ATTRIBUTE_ON": true,
-          "RPN": {
-            "PRE_NMS_TOPK_TEST": 6000,
-            "POST_NMS_TOPK_TEST": 1000,
-            "SMOOTH_L1_BETA": 0.1111
-          },
-          "ROI_HEADS": {
-            "NAME": "AttributeRes5ROIHeads",
-            "NUM_CLASSES": 1600
-          },
-          "ROI_BOX_HEAD": {
-            "POOLER_SAMPLING_RATIO": 2,
-            "SMOOTH_L1_BETA": 1
-          }          
-        }
-      }
+    "image_loader": {"type": "detectron"},
+    "proposal_generator": {"type": "null"},
+    "proposal_embedder": {
+      "type": "null",
+      "output_dim": 2048
     },
     "mask_prepositions_verbs": false,
     "drop_prepositions_verbs": false

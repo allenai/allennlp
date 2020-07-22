@@ -3,7 +3,7 @@ from typing import Union, List, Callable, Optional, Dict, Any
 
 from torch import FloatTensor
 
-from allennlp.common import Registrable
+from allennlp.common.registrable import Registrable
 
 OnePath = Union[str, PathLike]
 ManyPaths = List[OnePath]
@@ -51,6 +51,6 @@ class DetectronImageLoader(ImageLoader):
 
     def load(self, filenames: ManyPaths) -> List[FloatTensor]:
         images = [{"file_name": str(f)} for f in filenames]
-        images = self.mapper(images)
+        images = [self.mapper(i) for i in images]
         images = [i["image"] for i in images]
         return images
