@@ -7,7 +7,7 @@ from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Token, Vocabulary, Instance
 from allennlp.data.fields import TextField, LabelField, ListField, IndexField, SequenceLabelField
 from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenCharactersIndexer
-from allennlp.data.dataloaders import PyTorchDataLoader, AllennlpDataset
+from allennlp.data.data_loaders import PyTorchDataLoader, AllennlpDataset
 from allennlp.data.tokenizers import SpacyTokenizer
 from allennlp.models import Model
 from allennlp.modules import Embedding

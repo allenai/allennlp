@@ -20,7 +20,7 @@ from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import Params
 from allennlp.common.testing import AllenNlpTestCase, requires_gpu, requires_multi_gpu
 from allennlp.data import Vocabulary
-from allennlp.data.dataloaders import MultiProcessDataLoader, PyTorchDataLoader, TensorDict
+from allennlp.data.data_loaders import MultiProcessDataLoader, PyTorchDataLoader, TensorDict
 from allennlp.data.dataset_readers import SequenceTaggingDatasetReader
 from allennlp.models.model import Model
 from allennlp.models.simple_tagger import SimpleTagger

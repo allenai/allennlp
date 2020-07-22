@@ -12,7 +12,7 @@ from allennlp.data.batch import Batch
 from allennlp.data.fields import TextField
 from allennlp.data.token_indexers.elmo_indexer import ELMoTokenCharactersIndexer
 from allennlp.data.token_indexers.single_id_token_indexer import SingleIdTokenIndexer
-from allennlp.data.dataloaders import PyTorchDataLoader, AllennlpDataset
+from allennlp.data.data_loaders import PyTorchDataLoader, AllennlpDataset
 from allennlp.modules.elmo import _ElmoBiLm, _ElmoCharacterEncoder, Elmo
 from allennlp.modules.token_embedders import ElmoTokenEmbedder
 from allennlp.nn.util import remove_sentence_boundaries

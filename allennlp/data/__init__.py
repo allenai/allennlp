@@ -1,4 +1,4 @@
-from allennlp.data.dataloaders import (
+from allennlp.data.data_loaders import (
     DataLoader,
     PyTorchDataLoader,
     TensorDict,

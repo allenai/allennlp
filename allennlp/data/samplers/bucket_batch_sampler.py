@@ -30,7 +30,7 @@ class BucketBatchSampler(BatchSampler):
     # Parameters
 
     batch_size : `int`, required
-        The size of each batch of instances yielded when calling the dataloader.
+        The size of each batch of instances yielded when calling the data_loader.
 
     sorting_keys : `List[str]`, optional
         To bucket inputs into batches, we want to group the instances by padding length, so that we

@@ -183,7 +183,7 @@ class GradientDescentTrainer(Trainer):
     """
     A trainer for doing supervised learning with gradient descent. It just takes a labeled dataset
     and a `DataLoader`, and uses the supplied `Optimizer` to learn the weights for your model over
-    some fixed number of epochs. You can also pass in a validation dataloader and enable early
+    some fixed number of epochs. You can also pass in a validation data_loader and enable early
     stopping. There are many other bells and whistles as well.
 
     Registered as a `Trainer` with the name "gradient_descent" (and is also the default `Trainer`).

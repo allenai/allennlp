@@ -18,7 +18,7 @@ from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase, cpu_or_gpu
 from allennlp.data import Vocabulary
-from allennlp.data.dataloaders import TensorDict
+from allennlp.data.data_loaders import TensorDict
 from allennlp.models import load_archive, Model
 from allennlp.models.archival import CONFIG_NAME
 from allennlp.training import BatchCallback, GradientDescentTrainer

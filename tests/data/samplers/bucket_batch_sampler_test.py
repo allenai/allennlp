@@ -2,7 +2,7 @@ from allennlp.common import Params
 from allennlp.data import Instance, Token, Batch
 from allennlp.data.fields import TextField
 from allennlp.data.samplers import BucketBatchSampler
-from allennlp.data.dataloaders import MultiProcessDataLoader
+from allennlp.data.data_loaders import MultiProcessDataLoader
 
 from .sampler_test import SamplerTest
 
@@ -90,15 +90,15 @@ class TestBucketSampler(SamplerTest):
         )
         # We use a custom collate_fn for testing, which doesn't actually create tensors,
         # just the allennlp Batches.
-        dataloader = MultiProcessDataLoader(
+        data_loader = MultiProcessDataLoader(
             self.get_mock_reader(),
             "fake_path",
             batch_sampler=sampler,
             batch_size=2,
             collate_fn=lambda x: Batch(x),
         )
-        dataloader.index_with(self.vocab)
-        batches = [batch for batch in iter(dataloader)]
+        data_loader.index_with(self.vocab)
+        batches = [batch for batch in iter(data_loader)]
         stats = self.get_batches_stats(batches)
 
         # all batches have length batch_size
@@ -109,17 +109,17 @@ class TestBucketSampler(SamplerTest):
 
     def test_batch_count(self):
         sampler = BucketBatchSampler(batch_size=2, padding_noise=0, sorting_keys=["text"])
-        dataloader = MultiProcessDataLoader(
+        data_loader = MultiProcessDataLoader(
             self.get_mock_reader(), "fake_path", batch_sampler=sampler, batch_size=2,
         )
-        dataloader.index_with(self.vocab)
-        assert len(dataloader) == 3
+        data_loader.index_with(self.vocab)
+        assert len(data_loader) == 3
 
     def test_batch_count_with_drop_last(self):
         sampler = BucketBatchSampler(
             batch_size=2, padding_noise=0, sorting_keys=["text"], drop_last=True,
         )
-        dataloader = MultiProcessDataLoader(
+        data_loader = MultiProcessDataLoader(
             self.get_mock_reader(), "fake_path", batch_sampler=sampler
         )
-        assert len(dataloader) == 2
+        assert len(data_loader) == 2

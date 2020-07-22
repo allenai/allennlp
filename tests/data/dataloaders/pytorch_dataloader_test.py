@@ -4,7 +4,7 @@ import pytest
 
 from allennlp.data.fields import LabelField
 from allennlp.data.instance import Instance
-from allennlp.data.dataloaders import PyTorchDataLoader
+from allennlp.data.data_loaders import PyTorchDataLoader
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 
 

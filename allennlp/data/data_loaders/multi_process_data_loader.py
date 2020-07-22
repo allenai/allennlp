@@ -9,7 +9,7 @@ from allennlp.common.lazy import Lazy
 from allennlp.common.util import lazy_groups_of
 from allennlp.common.tqdm import Tqdm
 from allennlp.data.instance import Instance
-from allennlp.data.dataloaders.dataloader import DataLoader, TensorDict, allennlp_collate
+from allennlp.data.data_loaders.data_loader import DataLoader, TensorDict, allennlp_collate
 from allennlp.data.dataset_readers import DatasetReader, WorkerInfo
 from allennlp.data.samplers import BatchSampler
 from allennlp.data.vocabulary import Vocabulary
@@ -18,7 +18,7 @@ from allennlp.data.vocabulary import Vocabulary
 logger = logging.getLogger(__name__)
 
 
-@DataLoader.register("multi_process_dataloader", constructor="from_partial_objects")
+@DataLoader.register("multi_process_data_loader", constructor="from_partial_objects")
 class MultiProcessDataLoader(DataLoader):
     _INSTANCE_QUEUE_SIZE = 1000
     _INSTANCE_CHUNK_SIZE = 10

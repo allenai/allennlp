@@ -2,7 +2,7 @@ from allennlp.common import Params
 from allennlp.data import Instance, Token
 from allennlp.data.fields import TextField
 from allennlp.data.samplers import MaxTokensBatchSampler
-from allennlp.data.dataloaders import MultiProcessDataLoader
+from allennlp.data.data_loaders import MultiProcessDataLoader
 
 from .sampler_test import SamplerTest
 
@@ -78,7 +78,7 @@ class TestMaxTokensSampler(SamplerTest):
 
     def test_batch_count(self):
         sampler = MaxTokensBatchSampler(max_tokens=8, padding_noise=0, sorting_keys=["text"])
-        dataloader = MultiProcessDataLoader(
+        data_loader = MultiProcessDataLoader(
             self.get_mock_reader(), "fake_path", batch_sampler=sampler
         )
-        assert len(dataloader) == 3
+        assert len(data_loader) == 3
