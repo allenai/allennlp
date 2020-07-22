@@ -202,18 +202,22 @@ class MultiProcessDataLoader(DataLoader):
                 yield self.collate_fn(batch)
         else:
             # At this point self.max_batches_in_memory is not None since lazy must be False.
-            queue: mp.Queue = mp.Queue(self.max_batches_in_memory)  # type: ignore
+            queue: mp.JoinableQueue = mp.JoinableQueue(self.max_batches_in_memory)  # type: ignore
 
             worker = mp.Process(target=self._batch_worker, args=(queue,))
             worker.start()
 
             for batch_group in iter(queue.get, []):
                 yield from batch_group
+                queue.task_done()
 
-            # TODO: handle errors if the worker crashes.
+            # Indicate to the worker (producer of batch groups) that we've consumed
+            # everything.
+            queue.task_done()
+
             worker.join()
 
-    def _batch_worker(self, queue: mp.Queue) -> None:
+    def _batch_worker(self, queue: mp.JoinableQueue) -> None:
         chunk_size = self.batch_size * self.max_batches_in_memory  # type: ignore
         for instances in lazy_groups_of(self.iter_instances(), chunk_size):
             if not self.batch_sampler and self.shuffle:
@@ -235,6 +239,9 @@ class MultiProcessDataLoader(DataLoader):
 
         # Indicate to the consumer (main thread) that this worker is finished.
         queue.put([])
+
+        # Wait for the consumer (in the main process) to finish receiving all batch groups.
+        queue.join()
 
     @classmethod
     def from_partial_objects(
