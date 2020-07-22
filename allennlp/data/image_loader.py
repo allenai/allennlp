@@ -1,5 +1,5 @@
 from os import PathLike
-from typing import Union, List, Callable, Optional, Dict, Any
+from typing import Union, List, Callable, Optional, Dict, Any, Tuple
 
 from torch import FloatTensor
 
@@ -37,32 +37,49 @@ class ImageLoader(Registrable, Callable[[Union[OnePath, ManyPaths]], FloatTensor
 class DetectronImageLoader(ImageLoader):
     def __init__(
         self,
-        min_size_train = (800,),
-        min_size_train_sampling = "choice",
-        max_size_train = 1333,
-        min_size_test = 800,
-        max_size_test = 1333,
-        crop = False, 
-        crop_type = "relative_range",
-        crop_size = [0.9, 0.9],
-        format = "BGR",
-        mask_format = "polygon",
+        pixel_mean: List[float] = [103.530, 116.280, 123.675],
+        pixel_std: List[float] = [1.0, 1.0, 1.0],
+        min_size_train: Tuple[int] = (800,),
+        min_size_train_sampling: str = "choice",
+        max_size_train: int = 1333,
+        min_size_test: int = 800,
+        max_size_test: int = 1333,
+        crop_enabled: bool = False, 
+        crop_type: str = "relative_range",
+        crop_size: List[float] = [0.9, 0.9],
+        image_format: str = "BGR",
+        mask_format: str = "polygon",
     ):
 
-        import pdb
-        pdb.set_trace()
-
+        # constructing the overrides to the cfg file.
+        overrides = {
+            "MODEL": {
+                "PIXEL_MEAN": pixel_mean,
+                "PIXEL_STD": pixel_std,
+            },
+            "INPUT": {
+                "MIN_SIZE_TRAIN": min_size_train,
+                "MIN_SIZE_TRAIN_SAMPLING": min_size_train_sampling,
+                "MAX_SIZE_TRAIN": max_size_train,
+                "MIN_SIZE_TEST": min_size_test,
+                "MAX_SIZE_TEST": max_size_test,
+                "FORMAT": image_format,
+                "MASK_FORMAT": mask_format,
+                "CROP": {
+                    "ENABLED": crop_enabled,
+                    "TYPE": crop_type,
+                    "SIZE": crop_size,
+                },
+            },
+        }
         from allennlp.common.detectron import get_detectron_cfg
-
-
-        cfg = get_detectron_cfg(builtin_config_file, yaml_config_file, overrides)
-
+        cfg = get_detectron_cfg(None, None, overrides)
         from detectron2.data import DatasetMapper
-
         self.mapper = DatasetMapper(cfg)
 
     def load(self, filenames: ManyPaths) -> List[FloatTensor]:
         images = [{"file_name": str(f)} for f in filenames]
         images = [self.mapper(i) for i in images]
         images = [i["image"] for i in images]
+
         return images
