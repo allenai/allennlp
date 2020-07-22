@@ -14,7 +14,6 @@ try:
 except ImportError:
     amp = None
 import torch
-from torch.utils.data import DataLoader
 from torch.nn.utils import clip_grad_norm_
 
 from allennlp.common.checks import ConfigurationError
