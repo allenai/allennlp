@@ -1,7 +1,7 @@
 from collections import deque
 import logging
 import random
-from typing import List, Iterator, Optional, Callable
+from typing import List, Iterator, Optional, Callable, Iterable
 
 import torch.multiprocessing as mp
 
@@ -115,7 +115,7 @@ class MultiProcessDataLoader(DataLoader):
         if not self.lazy:
             self._instances = []
 
-        if not self.num_workers:
+        if self.num_workers <= 0:
             # Just read all instances in main process.
             for instance in self.reader.read(self.data_path):
                 if not self.lazy:
@@ -125,41 +125,46 @@ class MultiProcessDataLoader(DataLoader):
                 yield instance
         else:
             queue: mp.JoinableQueue = mp.JoinableQueue(self._INSTANCE_QUEUE_SIZE)
-            workers: List[mp.Process] = []
-            for worker_id in range(self.num_workers):
-                worker = mp.Process(
-                    target=self._instance_worker, args=(worker_id, queue), daemon=True
-                )
-                worker.start()
-                workers.append(worker)
+            workers = self._start_instance_workers(queue)
 
-            def instance_iterator():
-                done_count: int = 0
-                while done_count < self.num_workers:
-                    for instances_chunk in iter(queue.get, None):
-                        yield from instances_chunk
-                        queue.task_done()
-                    queue.task_done()
-                    # Every time we encounter an empty list, thats means a worker has finished.
-                    done_count += 1
-
-            for instance in Tqdm.tqdm(instance_iterator()):
+            for instance in Tqdm.tqdm(self._gather_instances(queue)):
                 if not self.lazy:
                     self._instances.append(instance)  # type: ignore
                 yield instance
 
-            # Clean up.
-            for worker_id, worker in enumerate(workers):
-                # TODO: handle errors if any of the workers crash.
-                worker.join(1)
-                if worker.is_alive():
-                    logger.info("Worker %d is still alive, killing now", worker_id)
+            self._join_workers(workers)
 
     def index_with(self, vocab: Vocabulary) -> None:
         self._vocab = vocab
         if self._instances:
             for instance in self._instances:
                 instance.index_fields(vocab)
+
+    def _start_instance_workers(self, queue: mp.JoinableQueue) -> List[mp.Process]:
+        workers: List[mp.Process] = []
+        for worker_id in range(self.num_workers):
+            worker = mp.Process(target=self._instance_worker, args=(worker_id, queue), daemon=True)
+            worker.start()
+            workers.append(worker)
+        return workers
+
+    def _join_workers(self, workers: List[mp.Process]) -> None:
+        for worker in workers:
+            # TODO: handle errors if any of the workers crash.
+            worker.join(1)
+            if worker.is_alive():
+                logger.info("Worker is still alive, killing now")
+
+    def _gather_instances(self, queue: mp.JoinableQueue) -> Iterable[Instance]:
+        done_count: int = 0
+        while done_count < self.num_workers:
+            instances_chunk: Optional[List[Instance]]
+            for instances_chunk in iter(queue.get, None):
+                yield from instances_chunk
+                queue.task_done()
+            queue.task_done()
+            # Every time we encounter an empty list, thats means a worker has finished.
+            done_count += 1
 
     def _instance_worker(self, worker_id: int, queue: mp.JoinableQueue) -> None:
         self.reader._set_worker_info(WorkerInfo(self.num_workers, worker_id))
@@ -185,48 +190,17 @@ class MultiProcessDataLoader(DataLoader):
         # Wait for consumer to finish to avoid prematurely closing the queue.
         queue.join()
 
-    def _iter_batches(self) -> Iterator[TensorDict]:
-        if not self.lazy and self._instances is None:
-            # Cache instances to `self._instances`.
-            deque(self.iter_instances(), maxlen=0)
+    def _instances_to_batches(self, instance_iterator: Iterable[Instance]) -> Iterator[TensorDict]:
+        instance_chunks: Iterable[List[Instance]]
+        if self.max_batches_in_memory is not None:
+            chunk_size = self.batch_size * self.max_batches_in_memory
+            instance_chunks = lazy_groups_of(instance_iterator, chunk_size)
+        else:
+            instance_chunks = [list(instance_iterator)]
 
-        if self._instances is not None:
+        for instances in instance_chunks:
             if not self.batch_sampler and self.shuffle:
                 logger.info("Shuffling instances")
-                random.shuffle(self._instances)
-
-            batches: Iterator[List[Instance]]
-            if self.batch_sampler:
-                batches = (
-                    [self._instances[i] for i in batch_indices]
-                    for batch_indices in self.batch_sampler.get_batch_indices(self._instances)
-                )
-            else:
-                batches = lazy_groups_of(self._instances, self.batch_size)
-
-            for batch in batches:
-                yield self.collate_fn(batch)
-        else:
-            # At this point self.max_batches_in_memory is not None since lazy must be False.
-            queue: mp.JoinableQueue = mp.JoinableQueue(self.max_batches_in_memory)  # type: ignore
-
-            worker = mp.Process(target=self._batch_worker, args=(queue,), daemon=True)
-            worker.start()
-
-            for batch_group in iter(queue.get, None):
-                yield from batch_group
-                queue.task_done()
-
-            # Indicate to the worker (producer of batch groups) that we've consumed
-            # everything.
-            queue.task_done()
-
-            worker.join()
-
-    def _batch_worker(self, queue: mp.JoinableQueue) -> None:
-        chunk_size = self.batch_size * self.max_batches_in_memory  # type: ignore
-        for instances in lazy_groups_of(self.iter_instances(), chunk_size):
-            if not self.batch_sampler and self.shuffle:
                 random.shuffle(instances)
 
             batches: Iterator[List[Instance]]
@@ -240,15 +214,59 @@ class MultiProcessDataLoader(DataLoader):
 
             batched_tensor_dicts = (allennlp_collate(batch) for batch in batches)
 
-            for batch_group in lazy_groups_of(batched_tensor_dicts, self._BATCH_CHUNK_SIZE):
-                queue.put(batch_group)
+            yield from batched_tensor_dicts
+
+    def _iter_batches(self) -> Iterator[TensorDict]:
+        if self.num_workers <= 0:
+            for batch in self._instances_to_batches(self.iter_instances()):
+                yield batch
+        else:
+            # At this point self.max_batches_in_memory is not None since lazy must be False.
+            assert self.max_batches_in_memory is not None
+
+            # First we start "instance workers", which are in charge generating raw
+            # instances using self.reader. The generated instances are then put
+            # into the `instance_queue` for the `batch_worker` to consume.
+            instance_queue: mp.JoinableQueue = mp.JoinableQueue()
+            instance_workers = self._start_instance_workers(instance_queue)
+
+            # Now start the `batch_worker`. This worker consumes from the `instance_queue`
+            # and puts the resulting batches into the `batch_queue`.
+            batch_queue: mp.JoinableQueue = mp.JoinableQueue(self.max_batches_in_memory)  # type: ignore
+            batch_worker = mp.Process(
+                target=self._batch_worker, args=(instance_queue, batch_queue,), daemon=True
+            )
+            batch_worker.start()
+
+            # We can now start consuming from the `batch_queue` as the `batch_worker`
+            # produces batches.
+            batch_group: Optional[List[TensorDict]]
+            for batch_group in iter(batch_queue.get, None):
+                yield from batch_group
+                batch_queue.task_done()
+
+            # Indicate to the worker (producer of batch groups) that we've consumed
+            # everything.
+            batch_queue.task_done()
+
+            # Join all of the workers.
+            self._join_workers(instance_workers + [batch_worker])
+
+    def _batch_worker(
+        self, instance_queue: mp.JoinableQueue, batch_queue: mp.JoinableQueue
+    ) -> None:
+        for batch_chunk in lazy_groups_of(
+            self._instances_to_batches(self._gather_instances(instance_queue)),
+            self._BATCH_CHUNK_SIZE,
+        ):
+            batch_queue.put(batch_chunk)
 
         # Indicate to the consumer (main thread) that this worker is finished.
-        queue.put(None)
+        batch_queue.put(None)
 
         # Wait for the consumer (in the main process) to finish receiving all batch groups
         # to avoid prematurely closing the queue.
-        queue.join()
+        batch_queue.join()
 
     @classmethod
     def from_partial_objects(
