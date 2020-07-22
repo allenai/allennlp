@@ -29,7 +29,7 @@ class ModelTestCase(AllenNlpTestCase):
 
         reader = DatasetReader.from_params(params["dataset_reader"])
         # The dataset reader might be lazy, but a lazy list here breaks some of our tests.
-        instances = reader.read(str(dataset_file))
+        instances = list(reader.read(str(dataset_file)))
         # Use parameters for vocabulary if they are present in the config file, so that choices like
         # "non_padded_namespaces", "min_count" etc. can be set if needed.
         if "vocabulary" in params:
@@ -39,7 +39,8 @@ class ModelTestCase(AllenNlpTestCase):
             vocab = Vocabulary.from_instances(instances)
         self.vocab = vocab
         self.instances = instances
-        self.instances.index_with(vocab)
+        for instance in self.instances:
+            instance.index_fields(vocab)
         self.model = Model.from_params(vocab=self.vocab, params=params["model"])
 
         # TODO(joelgrus) get rid of these
