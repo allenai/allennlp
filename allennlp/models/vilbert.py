@@ -823,6 +823,7 @@ class Nlvr2Vilbert(Model):
             config = transformer.config
 
             from transformers.modeling_albert import AlbertModel
+
             if isinstance(transformer, AlbertModel):
                 linear_transform = deepcopy(transformer.encoder.embedding_hidden_mapping_in)
             else:
@@ -831,14 +832,12 @@ class Nlvr2Vilbert(Model):
                     f"transform will not be initialized.  Model type is: {transformer.__class__}"
                 )
                 linear_transform = torch.nn.Linear(config.embedding_dim, config.hidden_dim)
+
             # We can't just use torch.nn.Sequential here, even though that's basically all this is,
             # because Sequential doesn't accept *inputs, only a single argument.
+
             class EmbeddingsShim(torch.nn.Module):
-                def __init__(
-                    self,
-                    embeddings: torch.nn.Module,
-                    linear_transform: torch.nn.Module
-                ):
+                def __init__(self, embeddings: torch.nn.Module, linear_transform: torch.nn.Module):
                     super().__init__()
                     self.linear_transform = linear_transform
                     self.embeddings = embeddings
@@ -878,7 +877,6 @@ class Nlvr2Vilbert(Model):
             fusion_method=fusion_method,
             dropout=pooled_dropout,
         )
-
 
     def consistency(self, reset: bool) -> float:
         num_consistent_groups = sum(1 for c in self.consistency_wrong_map.values() if c == 0)

@@ -119,9 +119,7 @@ class Nlvr2LxmertReader(DatasetReader):
             tokenizer = PretrainedTransformerTokenizer("bert-base-uncased")
         self._tokenizer = tokenizer
         if token_indexers is None:
-            token_indexers = {
-                "tokens": PretrainedTransformerIndexer("bert-base-uncased")
-            }
+            token_indexers = {"tokens": PretrainedTransformerIndexer("bert-base-uncased")}
         self._token_indexers = token_indexers
         self.topk_images = topk_images
         self.mask_prepositions_verbs = mask_prepositions_verbs
@@ -206,7 +204,8 @@ class Nlvr2LxmertReader(DatasetReader):
             new_question = ""
             prev_end = 0
             for (idx, length) in prep_verb_starts:
-                new_question += question[prev_end:idx] + self._tokenizer.tokenizer.mask_token
+                mask_token = self._tokenizer.tokenizer.mask_token  # type: ignore
+                new_question += question[prev_end:idx] + mask_token
                 prev_end = idx + length
             new_question += question[prev_end:]
             question = new_question

@@ -1,6 +1,5 @@
 import pytest
 
-import torch
 from transformers.modeling_auto import AutoModel
 
 from allennlp.common.testing import ModelTestCase
