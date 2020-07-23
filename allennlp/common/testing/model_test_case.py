@@ -166,16 +166,18 @@ class ModelTestCase(AllenNlpTestCase):
         print("Predicting with loaded model")
         loaded_model_predictions = loaded_model(**loaded_batch)
 
-        # Check loaded model's loss exists and we can compute gradients, for continuing training.
-        loaded_model_loss = loaded_model_predictions["loss"]
-        assert loaded_model_loss is not None
-        loaded_model_loss.backward()
-
         # Both outputs should have the same keys and the values for these keys should be close.
         for key in model_predictions.keys():
             self.assert_fields_equal(
                 model_predictions[key], loaded_model_predictions[key], name=key, tolerance=tolerance
             )
+
+        # Check loaded model's loss exists and we can compute gradients, for continuing training.
+        loaded_model.train()
+        loaded_model_predictions = loaded_model(**loaded_batch)
+        loaded_model_loss = loaded_model_predictions["loss"]
+        assert loaded_model_loss is not None
+        loaded_model_loss.backward()
 
         return model, loaded_model
 
@@ -276,6 +278,7 @@ class ModelTestCase(AllenNlpTestCase):
     ):
         print("Checking gradients")
         model.zero_grad()
+        model.train()
 
         original_dropouts: Dict[str, float] = {}
 
