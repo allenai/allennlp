@@ -211,7 +211,7 @@ class MultiProcessDataLoader(DataLoader):
             else:
                 batches = lazy_groups_of(instances, self.batch_size)
 
-            batched_tensor_dicts = (allennlp_collate(batch) for batch in batches)
+            batched_tensor_dicts = (self.collate_fn(batch) for batch in batches)
 
             yield from batched_tensor_dicts
 
