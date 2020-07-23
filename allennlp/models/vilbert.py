@@ -344,11 +344,11 @@ class BertBiOutput(torch.nn.Module):
         super().__init__()
 
         self.dense1 = torch.nn.Linear(combined_hidden_size, hidden_size1)
-        self.LayerNorm1 = torch.nn.LayerNorm(hidden_size1, eps=1e-12)
+        self.layer_norm1 = torch.nn.LayerNorm(hidden_size1, eps=1e-12)
         self.dropout1 = torch.nn.Dropout(dropout1)
 
         self.dense2 = torch.nn.Linear(combined_hidden_size, hidden_size2)
-        self.LayerNorm2 = torch.nn.LayerNorm(hidden_size2, eps=1e-12)
+        self.layer_norm2 = torch.nn.LayerNorm(hidden_size2, eps=1e-12)
         self.dropout2 = torch.nn.Dropout(dropout2)
 
     def forward(self, hidden_states1, input_tensor1, hidden_states2, input_tensor2):
@@ -359,8 +359,8 @@ class BertBiOutput(torch.nn.Module):
         context_state2 = self.dense2(hidden_states2)
         context_state2 = self.dropout2(context_state2)
 
-        hidden_states1 = self.LayerNorm1(context_state1 + input_tensor1)
-        hidden_states2 = self.LayerNorm2(context_state2 + input_tensor2)
+        hidden_states1 = self.layer_norm1(context_state1 + input_tensor1)
+        hidden_states2 = self.layer_norm2(context_state2 + input_tensor2)
 
         return hidden_states1, hidden_states2
 
@@ -572,7 +572,25 @@ class BertEncoder(torch.nn.Module, FromParams):
             with_coattention=with_coattention,
             in_batch_pairs=in_batch_pairs,
         )
-        # TODO(mattg): initialize weights in encoder
+
+        # After creating the encoder, we copy weights over from the transformer.  This currently
+        # requires that the internal structure of the text side of this encoder *exactly matches*
+        # the internal structure of whatever transformer you're using.  This could be made more
+        # general by having some weight name transforms, or a name mapping, or something.  If we do
+        # this, making it a class like NameMapper would probably be good, because specifying the
+        # options without having a class to do it seems like a mess.
+        encoder_parameters = dict(encoder.named_parameters())
+        for name, parameter in model.named_parameters():
+            if name.startswith("encoder."):
+                name = name[8:]
+                name = name.replace("LayerNorm", "layer_norm")
+                if name not in encoder_parameters:
+                    raise ValueError(
+                        f"Couldn't find a matching parameter for {name}. Is this transformer "
+                        "compatible with the joint encoder you're using?"
+                    )
+                encoder_parameters[name].data.copy_(parameter.data)
+
         return encoder
 
     def forward(
@@ -797,35 +815,38 @@ class Nlvr2Vilbert(Model):
         transformer = AutoModel.from_pretrained(model_name)
 
         # TODO(mattg): this is hard-coded for BERT; not sure it works for all transformers, or what
-        # to do if it fails.
-        text_embeddings = transformer.embeddings
+        # to do if it fails.  We should probably pull this out into a central "transformers_util"
+        # module, or something, and just have a method that pulls out an initialized embedding layer
+        # from a huggingface model.
+        text_embeddings = deepcopy(transformer.embeddings)
         if hasattr(transformer.config, "embedding_size"):
             config = transformer.config
 
+            from transformers.modeling_albert import AlbertModel
+            if isinstance(transformer, AlbertModel):
+                linear_transform = deepcopy(transformer.encoder.embedding_hidden_mapping_in)
+            else:
+                logger.warning(
+                    "Unknown model that uses separate embedding size; weights of the linear "
+                    f"transform will not be initialized.  Model type is: {transformer.__class__}"
+                )
+                linear_transform = torch.nn.Linear(config.embedding_dim, config.hidden_dim)
             # We can't just use torch.nn.Sequential here, even though that's basically all this is,
             # because Sequential doesn't accept *inputs, only a single argument.
-            # TODO(mattg): if we want to support albert (and maybe also electra), we'll have to
-            # figure out how to initialize the linear layer inside this shim, too.  We'll need to
-            # clean this up somehow.  Could be as simple as copying weights inside the shim...
             class EmbeddingsShim(torch.nn.Module):
                 def __init__(
                     self,
                     embeddings: torch.nn.Module,
-                    embedding_dim: int,
-                    hidden_dim: int
+                    linear_transform: torch.nn.Module
                 ):
                     super().__init__()
-                    self.linear_transform = torch.nn.Linear(embedding_dim, hidden_dim)
+                    self.linear_transform = linear_transform
                     self.embeddings = embeddings
 
                 def forward(self, *inputs, **kwargs):
                     return self.linear_transform(self.embeddings(*inputs, **kwargs))
 
-            text_embeddings = EmbeddingsShim(
-                text_embeddings,
-                config.embedding_size,
-                config.hidden_size
-            )
+            text_embeddings = EmbeddingsShim(text_embeddings, linear_transform)
 
         image_embeddings = BertImageFeatureEmbeddings(
             feature_dim=image_feature_dim,
