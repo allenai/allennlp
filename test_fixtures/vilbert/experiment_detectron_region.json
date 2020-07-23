@@ -6,10 +6,8 @@
       "type": "detectron"
     },
     "proposal_generator": {
-      "type": "RPN",
-      "pre_nms_topk_test": 6000,
-      "post_nms_topk_test": 1000, 
-      "smooth_l1_beta": 0.1111
+      "type": "Faster-RCNN",
+      "weights": "RCNN-X152-C4-2020-07-18"
     },
     "proposal_embedder": {
       "type": "null",
