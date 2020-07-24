@@ -51,7 +51,7 @@ class PyTorchDataLoader(data.DataLoader, DataLoader):
     ```
     from torch.utils.data import DataLoader
 
-    from allennlp.data.samplers import allennlp_collate
+    from allennlp.data import allennlp_collate
     # Construct a dataloader directly for a dataset which contains allennlp
     # Instances which have _already_ been indexed.
     my_loader = DataLoader(dataset, batch_size=32, collate_fn=allennlp_collate)
