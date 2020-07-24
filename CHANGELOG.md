@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Removed unnecessary warning about deadlocks in `DataLoader`.
 - Use slower tqdm intervals when output is being piped or redirected.
+- Fixed testing models that only return a loss when they are in training mode
 
 ### Added
 
