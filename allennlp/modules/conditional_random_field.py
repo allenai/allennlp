@@ -324,6 +324,9 @@ class ConditionalRandomField(torch.nn.Module):
 
         if mask is None:
             mask = torch.ones(*tags.size(), dtype=torch.bool)
+        else:
+            # The code below fails in weird ways if this isn't a bool tensor, so we make sure.
+            mask = mask.to(torch.bool)
 
         log_denominator = self._input_likelihood(inputs, mask)
         log_numerator = self._joint_likelihood(inputs, tags, mask)
