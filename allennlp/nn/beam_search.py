@@ -5,7 +5,6 @@ import torch
 
 from allennlp.common.checks import ConfigurationError
 
-
 StateType = Dict[str, torch.Tensor]
 StepFunctionType = Callable[[torch.Tensor, StateType, int], Tuple[torch.Tensor, StateType]]
 StepFunctionTypeNoTimestep = Callable[[torch.Tensor, StateType], Tuple[torch.Tensor, StateType]]
@@ -24,6 +23,7 @@ class BeamSearch:
     max_steps : `int`, optional (default = `50`)
         The maximum number of decoding steps to take, i.e. the maximum length
         of the predicted sequences.
+
     beam_size : `int`, optional (default = `10`)
         The width of the beam used.
     per_node_beam_size : `int`, optional (default = `beam_size`)
@@ -196,13 +196,27 @@ class BeamSearch:
         for key, state_tensor in state.items():
             if state_tensor is None:
                 continue
-            _, *last_dims = state_tensor.size()
-            # shape: (batch_size * beam_size, *)
-            state[key] = (
-                state_tensor.unsqueeze(1)
-                .expand(batch_size, self.beam_size, *last_dims)
-                .reshape(batch_size * self.beam_size, *last_dims)
-            )
+            multilayer_rnn_decoder = state_tensor.dim() == 3 and key in {
+                "decoder_hidden",
+                "decoder_context",
+            }
+
+            if multilayer_rnn_decoder:
+                # shape: (num_layers, batch_size * beam_size, *)
+                num_layers, _, *last_dims = state_tensor.size()
+                state[key] = (
+                    state_tensor.unsqueeze(2)
+                    .expand(num_layers, batch_size, self.beam_size, *last_dims)
+                    .reshape(num_layers, batch_size * self.beam_size, *last_dims)
+                )
+            else:
+                # shape: (batch_size * beam_size, *)
+                _, *last_dims = state_tensor.size()
+                state[key] = (
+                    state_tensor.unsqueeze(1)
+                    .expand(batch_size, self.beam_size, *last_dims)
+                    .reshape(batch_size * self.beam_size, *last_dims)
+                )
 
         for timestep in range(self.max_steps - 1):
             # shape: (batch_size * beam_size,)
@@ -284,7 +298,7 @@ class BeamSearch:
             # dividing by per_node_beam_size gives the ancestor. (Note that this is integer
             # division as the tensor is a LongTensor.)
             # shape: (batch_size, beam_size)
-            backpointer = restricted_beam_indices / self.per_node_beam_size
+            backpointer = restricted_beam_indices // self.per_node_beam_size
 
             backpointers.append(backpointer)
 
@@ -293,18 +307,38 @@ class BeamSearch:
             for key, state_tensor in state.items():
                 if state_tensor is None:
                     continue
-                _, *last_dims = state_tensor.size()
-                # shape: (batch_size, beam_size, *)
-                expanded_backpointer = backpointer.view(
-                    batch_size, self.beam_size, *([1] * len(last_dims))
-                ).expand(batch_size, self.beam_size, *last_dims)
+                multilayer_rnn_decoder = state_tensor.dim() == 3 and key in {
+                    "decoder_hidden",
+                    "decoder_context",
+                }
+                if multilayer_rnn_decoder:
+                    # shape: (num_layers, batch_size * beam_size, *)
+                    num_layers, _, *last_dims = state_tensor.size()
+                    expanded_backpointer = backpointer.view(
+                        batch_size, self.beam_size, *([1] * len(last_dims))
+                    ).expand(batch_size, self.beam_size, *last_dims)
+                    expanded_backpointer = expanded_backpointer.unsqueeze(0).repeat(
+                        num_layers, 1, 1, 1
+                    )
+                    # shape: (num_layers, batch_size * beam_size, *)
+                    state[key] = (
+                        state_tensor.reshape(num_layers, batch_size, self.beam_size, *last_dims)
+                        .gather(2, expanded_backpointer)
+                        .reshape(num_layers, batch_size * self.beam_size, *last_dims)
+                    )
+                else:
+                    _, *last_dims = state_tensor.size()
+                    # shape: (batch_size, beam_size, *)
+                    expanded_backpointer = backpointer.view(
+                        batch_size, self.beam_size, *([1] * len(last_dims))
+                    ).expand(batch_size, self.beam_size, *last_dims)
 
-                # shape: (batch_size * beam_size, *)
-                state[key] = (
-                    state_tensor.reshape(batch_size, self.beam_size, *last_dims)
-                    .gather(1, expanded_backpointer)
-                    .reshape(batch_size * self.beam_size, *last_dims)
-                )
+                    # shape: (batch_size * beam_size, *)
+                    state[key] = (
+                        state_tensor.reshape(batch_size, self.beam_size, *last_dims)
+                        .gather(1, expanded_backpointer)
+                        .reshape(batch_size * self.beam_size, *last_dims)
+                    )
 
         if not torch.isfinite(last_log_probabilities).all():
             warnings.warn(
