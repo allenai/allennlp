@@ -44,12 +44,22 @@ class TestOptimizer(AllenNlpTestCase):
                     # NOT_A_VARIABLE_NAME displays a warning but does not raise an exception
                     [["weight_i", "bias_", "bias_", "NOT_A_VARIABLE_NAME"], {"lr": 2}],
                     [["tag_projection_layer"], {"lr": 3}],
+                    [["^text_field_embedder.*$"], {"requires_grad": False}],
                 ],
             }
         )
+
+        # Before initializing the optimizer all params in this module will still require grad.
+        assert all([param.requires_grad for param in self.model.text_field_embedder.parameters()])
+
         parameters = [[n, p] for n, p in self.model.named_parameters() if p.requires_grad]
         optimizer = Optimizer.from_params(model_parameters=parameters, params=optimizer_params)
         param_groups = optimizer.param_groups
+
+        # After initializing the optimizer, requires_grad should be false for all params in this module.
+        assert not any(
+            [param.requires_grad for param in self.model.text_field_embedder.parameters()]
+        )
 
         assert len(param_groups) == 3
         assert param_groups[0]["lr"] == 2
@@ -63,8 +73,8 @@ class TestOptimizer(AllenNlpTestCase):
         assert len(param_groups[0]["params"]) == 6
         # just the projection weight and bias
         assert len(param_groups[1]["params"]) == 2
-        # the embedding + recurrent connections left in the default group
-        assert len(param_groups[2]["params"]) == 3
+        # the recurrent connections left in the default group
+        assert len(param_groups[2]["params"]) == 2
 
 
 class TestDenseSparseAdam(AllenNlpTestCase):
