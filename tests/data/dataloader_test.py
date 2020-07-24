@@ -5,20 +5,7 @@ import pytest
 from allennlp.data.fields import LabelField
 from allennlp.data.instance import Instance
 from allennlp.data.dataloader import PyTorchDataLoader
-from allennlp.data.dataset_readers.dataset_reader import (
-    DatasetReader,
-    AllennlpLazyDataset,
-)
-
-
-def test_multi_processing_with_lazy_dataset_warns():
-    def fake_instance_generator(file_name: str) -> Iterable[Instance]:
-        yield from []
-
-    with pytest.warns(UserWarning, match=r".*deadlocks.*"):
-        PyTorchDataLoader(
-            AllennlpLazyDataset(fake_instance_generator, "nonexistent_file"), num_workers=1
-        )
+from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 
 
 @pytest.mark.parametrize("lazy", (True, False))
