@@ -13,6 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Use slower tqdm intervals when output is being piped or redirected.
 - Fixed testing models that only return a loss when they are in training mode
 
+### Added
+
+- Added the option to specify `requires_grad: false` within an optimizers parameter groups.
+
 
 ## [v1.1.0rc1](https://github.com/allenai/allennlp/releases/tag/v1.1.0rc1) - 2020-07-14
 

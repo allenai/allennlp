@@ -50,8 +50,22 @@ def make_parameter_groups(
     ]
     ```
 
-    The return value in the right format to be passed directly as the `params` argument to a pytorch
-    `Optimizer`.  If there are multiple groups specified, this is list of dictionaries, where each
+    All of key-value pairs specified in each of these dictionaries will passed passed as-is
+    to the optimizer, with the exception of a dictionaries that specify `requires_grad` to be `False`:
+
+    ```
+    [
+        ...
+        (["regex"], {"requires_grad": False})
+    ]
+    ```
+
+    When a parameter group has `{"requires_grad": False}`, the gradient on all matching parameters
+    will be disabled and that group will be dropped so that it's not actually passed to the optimizer.
+
+    Ultimately, the return value of this function is in the right format to be passed directly
+    as the `params` argument to a pytorch `Optimizer`.
+    If there are multiple groups specified, this is list of dictionaries, where each
     dict contains a "parameter group" and groups specific options, e.g., {'params': [list of
     parameters], 'lr': 1e-3, ...}.  Any config option not specified in the additional options (e.g.
     for the default group) is inherited from the top level arguments given in the constructor.  See:
@@ -97,13 +111,38 @@ def make_parameter_groups(
                 parameter_groups[-1]["params"].append(param)
                 parameter_group_names[-1].add(name)
 
-        # log the parameter groups
+        # find and remove any groups with 'requires_grad = False'
+        no_grad_group_indices: List[int] = []
+        for k, (names, group) in enumerate(zip(parameter_group_names, parameter_groups)):
+            if group.get("requires_grad") is False:
+                no_grad_group_indices.append(k)
+                logging.info("Disabling gradient for the following parameters: %s", names)
+                for param in group["params"]:
+                    param.requires_grad_(False)
+
+                # warn about any other unused options in that group.
+                unused_options = {
+                    key: val for key, val in group.items() if key not in ("params", "requires_grad")
+                }
+                if unused_options:
+                    logger.warning("Ignoring unused options %s for %s", unused_options, names)
+        parameter_group_names = [
+            names
+            for (k, names) in enumerate(parameter_group_names)
+            if k not in no_grad_group_indices
+        ]
+        parameter_groups = [
+            group for (k, group) in enumerate(parameter_groups) if k not in no_grad_group_indices
+        ]
+
+        # log the remaining parameter groups
         logger.info("Done constructing parameter groups.")
-        for k in range(len(groups) + 1):
+        for k in range(len(parameter_groups)):
             group_options = {
                 key: val for key, val in parameter_groups[k].items() if key != "params"
             }
             logger.info("Group %s: %s, %s", k, list(parameter_group_names[k]), group_options)
+
         # check for unused regex
         for regex, count in regex_use_counts.items():
             if count == 0:
