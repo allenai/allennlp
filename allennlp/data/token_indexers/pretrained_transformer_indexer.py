@@ -106,6 +106,8 @@ class PretrainedTransformerIndexer(TokenIndexer):
     def indices_to_tokens(
         self, indexed_tokens: IndexedTokenList, vocabulary: Vocabulary
     ) -> List[Token]:
+        self._add_encoding_to_vocabulary_if_needed(vocabulary)
+
         token_ids = indexed_tokens["token_ids"]
         type_ids = indexed_tokens.get("type_ids")
 

@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Removed unnecessary warning about deadlocks in `DataLoader`.
 - Use slower tqdm intervals when output is being piped or redirected.
+- Fixed testing models that only return a loss when they are in training mode
 
 
 ## [v1.1.0rc1](https://github.com/allenai/allennlp/releases/tag/v1.1.0rc1) - 2020-07-14
@@ -44,6 +45,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Adjust beam search to support multi-layer decoder.
 - A method to ModelTestCase for running basic model tests when you aren't using config files.
 - Added some convenience methods for reading files.
 - Added an option to `file_utils.cached_path` to automatically extract archives.
