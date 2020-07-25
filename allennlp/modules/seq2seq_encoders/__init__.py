@@ -12,8 +12,6 @@ The available Seq2Seq encoders are
 - `"augmented_lstm"` : allennlp.modules.augmented_lstm.AugmentedLstm
 - `"alternating_lstm"` : allennlp.modules.stacked_alternating_lstm.StackedAlternatingLstm
 - `"alternating_highway_lstm"` : allennlp.modules.stacked_alternating_lstm.StackedAlternatingLstm (GPU only)
-- `"stacked_self_attention"` : allennlp.modules.stacked_self_attention.StackedSelfAttentionEncoder
-- `"multi_head_self_attention"` : allennlp.modules.multi_head_self_attention.MultiHeadSelfAttention
 - `"pass_through"` : allennlp.modules.pass_through_encoder.PassThroughEncoder
 - `"feedforward"` : allennlp.modules.feedforward_encoder.FeedforwardEncoder
 - `"pytorch_transformer"` : allennlp.modules.seq2seq_encoders.PytorchTransformer
