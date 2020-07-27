@@ -1114,12 +1114,12 @@ class GradientDescentTrainer(Trainer):
                 if any(re.search(regex, name) for regex in no_grad):
                     parameter.requires_grad_(False)
 
-        common_util.log_frozen_and_tunable_parameter_names(model)
-
         parameters = [[n, p] for n, p in model.named_parameters() if p.requires_grad]
         optimizer_ = optimizer.construct(model_parameters=parameters)
         if not optimizer_:
             optimizer_ = Optimizer.default(parameters)
+
+        common_util.log_frozen_and_tunable_parameter_names(model)
 
         batches_per_epoch: Optional[int]
         try:
