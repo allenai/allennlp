@@ -170,14 +170,15 @@ class TestMakeVocabFromParams(AllenNlpTestCase):
                 return {}
 
         model = FakeModel(None)
-        loss = 10.0
+        total_loss = 100.0
+        batch_loss = 10.0
         num_batches = 2
-        metrics = get_metrics(model, loss, None, num_batches)
+        metrics = get_metrics(model, total_loss, None, batch_loss, None, num_batches)
 
-        assert metrics["loss"] == float(loss / num_batches)
-        assert metrics["batch_loss"] == loss
+        assert metrics["loss"] == float(total_loss / num_batches)
+        assert metrics["batch_loss"] == batch_loss
 
-        metrics = get_metrics(model, loss, None, num_batches, reset=True)
+        metrics = get_metrics(model, total_loss, None, None, None, num_batches)
 
-        assert metrics["loss"] == float(loss / num_batches)
+        assert metrics["loss"] == float(total_loss / num_batches)
         assert "batch_loss" not in metrics

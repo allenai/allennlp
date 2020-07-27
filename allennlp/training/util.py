@@ -273,6 +273,8 @@ def get_metrics(
     model: Model,
     total_loss: float,
     total_reg_loss: Optional[float],
+    batch_loss: Optional[float],
+    batch_reg_loss: Optional[float],
     num_batches: int,
     reset: bool = False,
     world_size: int = 1,
@@ -285,12 +287,12 @@ def get_metrics(
     Returns the `"batch_loss"` separately.
     """
     metrics = model.get_metrics(reset=reset)
-    if not reset:
-        metrics["batch_loss"] = total_loss
+    if batch_loss is not None:
+        metrics["batch_loss"] = batch_loss
     metrics["loss"] = float(total_loss / num_batches) if num_batches > 0 else 0.0
     if total_reg_loss is not None:
-        if not reset:
-            metrics["batch_reg_loss"] = total_reg_loss
+        if batch_reg_loss is not None:
+            metrics["batch_reg_loss"] = batch_reg_loss
         metrics["reg_loss"] = float(total_reg_loss / num_batches) if num_batches > 0 else 0.0
 
     if world_size > 1:
