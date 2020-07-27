@@ -199,7 +199,7 @@ class MultiProcessDataLoader(DataLoader):
             instance_chunks = [list(instance_iterator)]
 
         for instances in instance_chunks:
-            if not self.batch_sampler and self.shuffle:
+            if self.shuffle:
                 random.shuffle(instances)
 
             batches: Iterator[List[Instance]]
