@@ -8,7 +8,6 @@ import time
 
 from overrides import overrides
 import numpy as np
-import spacy
 
 from allennlp.data.token_indexers.token_indexer import TokenIndexer
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
@@ -84,20 +83,18 @@ class Nlvr2LxmertReader(DatasetReader):
     """
     Parameters
     ----------
-    text_path_prefix: ``str``
+    text_path_prefix: `str`
         Path to folder containing text files for each dataset split. These files contain
         the sentences and metadata for each task instance.
-    visual_path_prefix: ``str``
+    visual_path_prefix: `str`
         Path to folder containing `tsv` files with the extracted objects and visual
         features
-    topk_images: ``int``, optional (default=-1)
+    topk_images: `int`, optional (default=-1)
         Number of images to load from each split's visual features file. If -1, all
         images are loaded
-    mask_prepositions_verbs: ``bool``, optional (default=False)
-        Whether to mask prepositions and verbs in each sentence
-    drop_prepositions_verbs: ``bool``, optional (default=False)
-        Whether to drop (remove without replacement) prepositions and verbs in each sentence
-    lazy : ``bool``, optional
+    tokenizer: `Tokenizer`, optional
+    token_indexers: `Dict[str, TokenIndexer]`
+    lazy : `bool`, optional
         Whether to load data lazily.  Passed to super class.
     """
 
@@ -108,8 +105,6 @@ class Nlvr2LxmertReader(DatasetReader):
         topk_images: int = -1,
         tokenizer: Tokenizer = None,
         token_indexers: Dict[str, TokenIndexer] = None,
-        mask_prepositions_verbs: bool = False,
-        drop_prepositions_verbs: bool = False,
         lazy: bool = False,
     ) -> None:
         super().__init__(lazy)
@@ -122,11 +117,7 @@ class Nlvr2LxmertReader(DatasetReader):
             token_indexers = {"tokens": PretrainedTransformerIndexer("bert-base-uncased")}
         self._token_indexers = token_indexers
         self.topk_images = topk_images
-        self.mask_prepositions_verbs = mask_prepositions_verbs
-        self.drop_prepositions_verbs = drop_prepositions_verbs
         self.image_data: Dict[str, Dict[str, Any]] = {}
-        # Loading Spacy to find prepositions and verbs
-        self.spacy = spacy.load("en_core_web_sm")
 
     def get_all_grouped_instances(self, split: str):
         text_file_path = os.path.join(self.text_path_prefix, split + ".json")
@@ -194,35 +185,6 @@ class Nlvr2LxmertReader(DatasetReader):
         denotation: str = None,
         only_predictions: bool = False,
     ) -> Instance:
-        if self.mask_prepositions_verbs:
-            doc = self.spacy(question)
-            prep_verb_starts = [
-                (token.idx, len(token))
-                for token in doc
-                if token.dep_ == "prep" or token.pos_ == "VERB"
-            ]
-            new_question = ""
-            prev_end = 0
-            for (idx, length) in prep_verb_starts:
-                mask_token = self._tokenizer.tokenizer.mask_token  # type: ignore
-                new_question += question[prev_end:idx] + mask_token
-                prev_end = idx + length
-            new_question += question[prev_end:]
-            question = new_question
-        elif self.drop_prepositions_verbs:
-            doc = self.spacy(question)
-            prep_verb_starts = [
-                (token.idx, len(token))
-                for token in doc
-                if token.dep_ == "prep" or token.pos_ == "VERB"
-            ]
-            new_question = ""
-            prev_end = 0
-            for (idx, length) in prep_verb_starts:
-                new_question += question[prev_end:idx]
-                prev_end = idx + length
-            new_question += question[prev_end:]
-            question = new_question
         tokenized_sentence = self._tokenizer.tokenize(question)
         sentence_field = TextField(tokenized_sentence, self._token_indexers)
 
