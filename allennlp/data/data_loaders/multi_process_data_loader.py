@@ -121,7 +121,9 @@ class MultiProcessDataLoader(DataLoader):
 
             if self.num_workers <= 0:
                 # Just read all instances in main process.
-                for instance in self.reader.read(self.data_path):
+                for instance in Tqdm.tqdm(
+                    self.reader.read(self.data_path), desc="loading instances"
+                ):
                     if not self.lazy:
                         self._instances.append(instance)  # type: ignore
                     if self._vocab is not None:
