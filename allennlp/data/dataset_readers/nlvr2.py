@@ -147,13 +147,13 @@ class Nlvr2Reader(DatasetReader):
         # Load images
         image_name_base = identifier[: identifier.rindex("-")]
         images = [self.images[f"{image_name_base}-img{image_id}.png"] for image_id in [0, 1]]
-        images = self.image_loader(images)
-        featurized_images = self.image_featurizer(images)
+        images, sizes = self.image_loader(images)
+        featurized_images = self.image_featurizer(images, sizes)
         
         import torch
         with torch.no_grad():
             # I'm not happy about the squeezing and unsqueezing here.
-            proposals = self.proposal_generator(images, featurized_images)
+            proposals = self.proposal_generator(images, sizes, featurized_images)
             # proposals = [self.proposal_generator(i.unsqueeze(0)).squeeze(0) for i in images]
             visual_features = [
                 self.proposal_embedder(i.unsqueeze(0), p.unsqueeze(0)).squeeze(0)

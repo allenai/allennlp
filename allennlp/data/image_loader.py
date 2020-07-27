@@ -1,7 +1,8 @@
 from os import PathLike
 from typing import Union, List, Callable, Optional, Dict, Any, Tuple
 
-from torch import FloatTensor
+import torch
+from torch import FloatTensor, IntTensor
 
 from allennlp.common.detectron import DetectronConfig, DetectronFlatParameters
 from allennlp.common.registrable import Registrable
@@ -9,26 +10,30 @@ from allennlp.common.registrable import Registrable
 OnePath = Union[str, PathLike]
 ManyPaths = List[OnePath]
 
+ImagesWithSize = Tuple[FloatTensor, IntTensor]
+
 
 class ImageLoader(Registrable, Callable[[Union[OnePath, ManyPaths]], FloatTensor]):
     """
-    An `ImageLoader` is a callable that takes as input one or more filenames, and outputs an image tensor of shape
-    (batch, color, height, width).
+    An `ImageLoader` is a callable that takes as input one or more filenames, and outputs an two tensors.
+    The first one contains the images and is of shape (batch, color, height, width).
+    The second one contains the image sizes and is of shape (batch, [height, width]).
     """
 
     default_implementation = "detectron"
 
     def __call__(
         self, filename_or_filenames: Union[OnePath, ManyPaths]
-    ) -> Union[FloatTensor, List[FloatTensor]]:
+    ) -> Tuple[FloatTensor, IntTensor]:
         if not isinstance(filename_or_filenames, list):
-            return self([filename_or_filenames])[0]
+            pixels, sizes = self([filename_or_filenames])
+            return pixels[0], sizes[0]
 
         from allennlp.common.file_utils import cached_path
         filenames = [cached_path(f) for f in filename_or_filenames]
         return self.load(filenames)
 
-    def load(self, filenames: ManyPaths) -> List[FloatTensor]:
+    def load(self, filenames: ManyPaths) -> ImagesWithSize:
         raise NotImplementedError()
 
 
@@ -51,8 +56,8 @@ class DetectronImageLoader(ImageLoader):
         self.mapper = pipeline.mapper
         self.model = pipeline.model
 
-    def load(self, filenames: ManyPaths) -> List[FloatTensor]:
+    def load(self, filenames: ManyPaths) -> ImagesWithSize:
         images = [{"file_name": str(f)} for f in filenames]
         images = [self.mapper(i) for i in images]
         images = self.model.preprocess_image(images)
-        return images.tensor
+        return images.tensor, torch.tensor(images.image_sizes, dtype=torch.int32)

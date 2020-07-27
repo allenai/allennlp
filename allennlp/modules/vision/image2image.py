@@ -1,5 +1,5 @@
 import torch
-from torch import nn, FloatTensor
+from torch import nn, FloatTensor, IntTensor
 from typing import List
 
 from allennlp.common.registrable import Registrable
@@ -12,7 +12,7 @@ class Image2ImageModule(nn.Module, Registrable):
     applying some transformation on the images.
     """
 
-    def forward(self, images: FloatTensor):
+    def forward(self, images: FloatTensor, sizes: IntTensor):
         raise NotImplementedError()
 
 
@@ -20,7 +20,7 @@ class Image2ImageModule(nn.Module, Registrable):
 class NullImage2ImageModule(Image2ImageModule):
     """An `Image2ImageModule` that returns the original image unchanged."""
 
-    def forward(self, images: FloatTensor):
+    def forward(self, images: FloatTensor, sizes: IntTensor):
         return images
 
 
@@ -37,7 +37,7 @@ class NormalizeImage(Image2ImageModule):
         self.means = torch.tensor(means, dtype=torch.float32)
         self.stds = torch.tensor(stds, dtype=torch.float32)
 
-    def forward(self, images: FloatTensor):
+    def forward(self, images: FloatTensor, sizes: IntTensor):
         assert images.size(1) == self.means.size(0)
         self.means = self.means.to(images.device)
         self.stds = self.stds.to(images.device)
@@ -81,7 +81,7 @@ class ResnetBackbone(Image2ImageModule):
         pipeline = detectron.get_pipeline_from_flat_parameters(flat_parameters, make_copy=False)
         self.backbone = pipeline.model.backbone
 
-    def forward(self, images: FloatTensor) -> FloatTensor:
+    def forward(self, images: FloatTensor, sizes: IntTensor) -> FloatTensor:
         result = self.backbone(images)
         assert len(result) == 1
         return next(iter(result.values()))

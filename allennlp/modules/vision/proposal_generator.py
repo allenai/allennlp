@@ -2,7 +2,7 @@ from typing import Tuple, List
 
 import torch
 import torch.nn.functional as F
-from torch import nn, FloatTensor
+from torch import nn, FloatTensor, IntTensor
 
 from allennlp.common.registrable import Registrable
 
@@ -16,15 +16,25 @@ class ProposalGenerator(nn.Module, Registrable):
     and 1. Negative coordinates are interpreted as padding.
     """
 
-    def forward(self, raw_images: FloatTensor, featurized_images: FloatTensor) -> FloatTensor:
+    def forward(
+        self,
+        raw_images: FloatTensor,
+        image_sizes: IntTensor,
+        featurized_images: FloatTensor
+    ) -> FloatTensor:
         raise NotImplementedError()
 
 
 @ProposalGenerator.register("null")
 class NullProposalGenerator(ProposalGenerator):
     """A `ProposalGenerator` that never returns any proposals."""
-    def forward(self, raw_images: FloatTensor, featurized_images: FloatTensor) -> FloatTensor:
-        assert(raw_images.size(0) == featurized_images.size(0))
+    def forward(
+        self,
+        raw_images: FloatTensor,
+        image_sizes: IntTensor,
+        featurized_images: FloatTensor
+    ) -> FloatTensor:
+        assert raw_images.size(0) == image_sizes.size(0) == featurized_images.size(0)
         return torch.zeros(raw_images.size(0), 0, 4, dtype=torch.float32, device=raw_images.device)
 
 
@@ -88,12 +98,22 @@ class FasterRCNNProposalGenerator(ProposalGenerator):
         pipeline = detectron.get_pipeline_from_flat_parameters(flat_parameters, make_copy=False)
         self.proposal_generator = pipeline.model.proposal_generator
 
-    def forward(self, raw_images: FloatTensor, featurized_images: FloatTensor) -> FloatTensor:
+    def forward(
+        self,
+        raw_images: FloatTensor,
+        image_sizes: IntTensor,
+        featurized_images: FloatTensor
+    ) -> FloatTensor:
         # RPN
+        from detectron2.structures import ImageList
+        image_list = ImageList(
+            raw_images,
+            [(h, w) for h, w in image_sizes]
+        )
         assert len(self.proposal_generator.in_features) == 1
         featurized_images_in_dict = {self.proposal_generator.in_features[0]: featurized_images}
         proposals, _ = self.proposal_generator(
-            raw_images,
+            image_list,
             featurized_images_in_dict,
             None)
 
