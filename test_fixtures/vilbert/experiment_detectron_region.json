@@ -5,6 +5,7 @@
     "image_loader": {
       "type": "detectron"
     },
+    "image_featurizer": "resnet_backbone",
     "proposal_generator": {
       "type": "Faster-RCNN",
       "weights": "RCNN-X152-C4-2020-07-18"

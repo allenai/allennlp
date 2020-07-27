@@ -7,6 +7,7 @@ from overrides import overrides
 from allennlp.data.image_loader import ImageLoader
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.instance import Instance
+from allennlp.modules.vision import Image2ImageModule
 from allennlp.modules.vision.proposal_generator import ProposalGenerator
 from allennlp.modules.vision.proposal_embedder import ProposalEmbedder
 
@@ -28,6 +29,7 @@ class Nlvr2Reader(DatasetReader):
         self,
         image_dir: Union[str, PathLike],
         image_loader: ImageLoader,
+        image_featurizer: Image2ImageModule,
         proposal_generator: ProposalGenerator,
         proposal_embedder: ProposalEmbedder,
         mask_prepositions_verbs: bool = False,
@@ -69,6 +71,7 @@ class Nlvr2Reader(DatasetReader):
 
         # image loading
         self.image_loader = image_loader
+        self.image_featurizer = image_featurizer
         self.proposal_generator = proposal_generator
         self.proposal_embedder = proposal_embedder
 
@@ -145,11 +148,12 @@ class Nlvr2Reader(DatasetReader):
         image_name_base = identifier[: identifier.rindex("-")]
         images = [self.images[f"{image_name_base}-img{image_id}.png"] for image_id in [0, 1]]
         images = self.image_loader(images)
+        featurized_images = self.image_featurizer(images)
         
         import torch
         with torch.no_grad():
             # I'm not happy about the squeezing and unsqueezing here.
-            proposals = self.proposal_generator(images)
+            proposals = self.proposal_generator(images, featurized_images)
             # proposals = [self.proposal_generator(i.unsqueeze(0)).squeeze(0) for i in images]
             visual_features = [
                 self.proposal_embedder(i.unsqueeze(0), p.unsqueeze(0)).squeeze(0)
