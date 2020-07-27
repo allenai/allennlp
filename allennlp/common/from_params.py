@@ -105,8 +105,9 @@ def remove_optional(annotation: type):
     """
     origin = getattr(annotation, "__origin__", None)
     args = getattr(annotation, "__args__", ())
-    if origin == Union and len(args) == 2 and args[1] == type(None):  # noqa
-        return args[0]
+
+    if origin == Union:
+        return Union[tuple([arg for arg in args if arg != type(None)])]  # noqa: E721
     else:
         return annotation
 

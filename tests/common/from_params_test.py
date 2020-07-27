@@ -845,3 +845,19 @@ class TestFromParams(AllenNlpTestCase):
 
         with pytest.raises(ConfigurationError, match="no registered concrete types"):
             B.from_params(Params({}))
+
+    def test_from_params_raises_error_on_wrong_parameter_name_in_optional_union(self):
+        class NestedClass(FromParams):
+            def __init__(self, varname: Optional[str] = None):
+                self.varname = varname
+
+        class WrapperClass(FromParams):
+            def __init__(self, nested_class: Optional[Union[str, NestedClass]] = None):
+                if isinstance(nested_class, str):
+                    nested_class = NestedClass(varname=nested_class)
+                self.nested_class = nested_class
+
+        with pytest.raises(ConfigurationError):
+            WrapperClass.from_params(
+                params=Params({"nested_class": {"wrong_varname": "varstring"}})
+            )
