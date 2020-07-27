@@ -90,7 +90,12 @@ class FasterRCNNProposalGenerator(ProposalGenerator):
 
     def forward(self, raw_images: FloatTensor, featurized_images: FloatTensor) -> FloatTensor:
         # RPN
-        proposals, _ = self.proposal_generator(raw_images, featurized_images, None)
+        assert len(self.proposal_generator.in_features) == 1
+        featurized_images_in_dict = {self.proposal_generator.in_features[0]: featurized_images}
+        proposals, _ = self.proposal_generator(
+            raw_images,
+            featurized_images_in_dict,
+            None)
 
         # TODO: The stuff below is placeholder code and should probably be moved out of this proposal generator.
 

@@ -82,4 +82,6 @@ class ResnetBackbone(Image2ImageModule):
         self.backbone = pipeline.model.backbone
 
     def forward(self, images: FloatTensor) -> FloatTensor:
-        return self.backbone(images)
+        result = self.backbone(images)
+        assert len(result) == 1
+        return next(iter(result.values()))
