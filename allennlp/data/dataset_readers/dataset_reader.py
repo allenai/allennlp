@@ -195,6 +195,13 @@ class DatasetReader(Registrable):
         """
         raise NotImplementedError
 
+    def apply_token_indexers(self, instance: Instance) -> None:
+        """
+        If `Instance`s created by this reader contain `TextField`s without `token_indexers`,
+        this method can be overriden to set the `token_indexers` of those fields.
+        """
+        pass
+
     def get_worker_info(self) -> Optional[WorkerInfo]:
         """
         Provides a [`WorkerInfo`](#WorkerInfo) object when the reader is being used within a
