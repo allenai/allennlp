@@ -814,11 +814,17 @@ class Nlvr2Vilbert(Model):
     ):
         transformer = AutoModel.from_pretrained(model_name)
 
-        # TODO(mattg): this is hard-coded for BERT; not sure it works for all transformers, or what
-        # to do if it fails.  We should probably pull this out into a central "transformers_util"
-        # module, or something, and just have a method that pulls out an initialized embedding layer
-        # from a huggingface model.
+        # TODO(mattg): This call to `transformer.embeddings` works with some transformers, but I'm
+        # not sure it works for all of them, or what to do if it fails.
+        # We should probably pull everything up until the instantiation of the image feature
+        # embedding out into a central "transformers_util" module, or something, and just have a
+        # method that pulls an initialized embedding layer out of a huggingface model.  One place
+        # for this somewhat hacky code to live, instead of having to duplicate it in various models.
         text_embeddings = deepcopy(transformer.embeddings)
+
+        # Albert (and maybe others?) has this "embedding_size", that's different from "hidden_size".
+        # To get them to the same dimensionality, it uses a linear transform after the embedding
+        # layer, which we need to pull out and copy here.
         if hasattr(transformer.config, "embedding_size"):
             config = transformer.config
 
