@@ -70,6 +70,10 @@ class MultiProcessDataLoader(DataLoader):
         # For indexing instances.
         self._vocab: Optional[Vocabulary] = None
 
+        if not self.lazy:
+            # Load instances right away.
+            deque(self.iter_instances(), maxlen=0)
+
     def __len__(self) -> int:
         if not self.lazy:
             # We haven't read the instances yet, so we do so now, caching them as we go.
@@ -153,7 +157,8 @@ class MultiProcessDataLoader(DataLoader):
             # TODO: handle errors if any of the workers crash.
             worker.join(1)
             if worker.is_alive():
-                logger.info("Worker is still alive, killing now")
+                logger.warning("Worker is still alive, killing now")
+                worker.terminate()
 
     def _gather_instances(self, queue: mp.JoinableQueue) -> Iterable[Instance]:
         done_count: int = 0
