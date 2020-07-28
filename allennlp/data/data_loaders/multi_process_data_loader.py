@@ -176,7 +176,7 @@ class MultiProcessDataLoader(DataLoader):
                     self.reader.apply_token_indexers(instance)
                     if self._vocab is not None:
                         instance.index_fields(self._vocab)
-                    yield instance, None
+                    yield instance
                 queue.task_done()
             queue.task_done()
             done_count += 1
