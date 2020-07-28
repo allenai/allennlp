@@ -1,11 +1,10 @@
-from typing import Tuple, List
+from typing import Tuple, List, Any
 
 import torch
 import torch.nn.functional as F
 from torch import nn, FloatTensor, IntTensor
 
 from allennlp.common.registrable import Registrable
-
 
 class ProposalGenerator(nn.Module, Registrable):
     """
@@ -33,7 +32,7 @@ class NullProposalGenerator(ProposalGenerator):
         raw_images: FloatTensor,
         image_sizes: IntTensor,
         featurized_images: FloatTensor
-    ) -> FloatTensor:
+    ) -> (List[FloatTensor], List[FloatTensor]):
         assert raw_images.size(0) == image_sizes.size(0) == featurized_images.size(0)
         return torch.zeros(raw_images.size(0), 0, 4, dtype=torch.float32, device=raw_images.device)
 
@@ -96,79 +95,44 @@ class FasterRCNNProposalGenerator(ProposalGenerator):
             rpn_nms_thresh=rpn_nms_thresh,
             rpn_bbox_loss_weight=rpn_bbox_loss_weight)
         pipeline = detectron.get_pipeline_from_flat_parameters(flat_parameters, make_copy=False)
-        self.proposal_generator = pipeline.model.proposal_generator
+        self.model = pipeline.model
 
     def forward(
         self,
         raw_images: FloatTensor,
         image_sizes: IntTensor,
         featurized_images: FloatTensor
-    ) -> FloatTensor:
+    ) -> (List[FloatTensor], List[FloatTensor], List[Any]):
         # RPN
         from detectron2.structures import ImageList
         image_list = ImageList(
             raw_images,
             [(h, w) for h, w in image_sizes]
         )
-        assert len(self.proposal_generator.in_features) == 1
-        featurized_images_in_dict = {self.proposal_generator.in_features[0]: featurized_images}
-        proposals, _ = self.proposal_generator(
+        assert len(self.model.proposal_generator.in_features) == 1
+        featurized_images_in_dict = {self.model.proposal_generator.in_features[0]: featurized_images}
+        proposals, _ = self.model.proposal_generator(
             image_list,
             featurized_images_in_dict,
             None)
-
-        # TODO: The stuff below is placeholder code and should probably be moved out of this proposal generator.
-
-        # pooled features and box predictions
-        _, pooled_features, pooled_features_fc6 = self.model.roi_heads.get_roi_features(
-            features, proposals
+        _, pooled_features = self.model.roi_heads.get_roi_features(
+            featurized_images_in_dict, proposals
         )
         predictions = self.model.roi_heads.box_predictor(pooled_features)
-
-        # TODO: current implementation below assumes batch_size=1. Make it handle arbitrary batch size inputs
+        # class probablity
         cls_probs = F.softmax(predictions[0], dim=-1)
         cls_probs = cls_probs[:, :-1]  # background is last
+
         predictions, r_indices = self.model.roi_heads.box_predictor.inference(
             predictions, proposals
         )
-        # Create Boxes objects from proposals. Since features are extrracted from
-        # the proposal boxes we use them instead of predicted boxes.
+
         box_type = type(proposals[0].proposal_boxes)
         proposal_bboxes = box_type.cat([p.proposal_boxes for p in proposals])
         proposal_bboxes.tensor = proposal_bboxes.tensor[r_indices]
-        predictions[0].set("proposal_boxes", proposal_bboxes)
-        predictions[0].remove("pred_boxes")
 
-        # postprocess
-        height = inputs[0].get("height")
-        width = inputs[0].get("width")
-        r = postprocessing.detector_postprocess(predictions[0], height, width)
-
-        bboxes = r.get("proposal_boxes").tensor
-        classes = r.get("pred_classes")
+        bboxes = proposal_bboxes.tensor
+        pooled_features = pooled_features[r_indices]
         cls_probs = cls_probs[r_indices]
-        feature_name == 'fc7'
-        if feature_name == "fc6" and pooled_features_fc6 is not None:
-            pooled_features = pooled_features_fc6[r_indices]
-        else:
-            pooled_features = pooled_features[r_indices]
-
-        assert (
-            bboxes.size(0)
-            == classes.size(0)
-            == cls_probs.size(0)
-            == pooled_features.size(0)
-        )
-
-        # save info and features
-        info = {
-            "bbox": bboxes.cpu().numpy(),
-            "num_boxes": bboxes.size(0),
-            "objects": classes.cpu().numpy(),
-            "image_height": r.image_size[0],
-            "image_width": r.image_size[1],
-            "cls_prob": cls_probs.cpu().numpy(),
-            "features": pooled_features.cpu().numpy()
-        }
-
-        return torch.zeros(images.size(0), 0, 4, dtype=torch.float32, device=images.device)
+        
+        return pooled_features, bboxes, cls_probs

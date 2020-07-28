@@ -10,10 +10,6 @@
       "type": "Faster-RCNN",
       "weights": "RCNN-X152-C4-2020-07-18"
     },
-    "proposal_embedder": {
-      "type": "null",
-      "output_dim": 2048
-    },
     "mask_prepositions_verbs": false,
     "drop_prepositions_verbs": false
   },

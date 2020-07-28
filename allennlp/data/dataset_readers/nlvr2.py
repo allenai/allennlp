@@ -9,7 +9,6 @@ from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.instance import Instance
 from allennlp.modules.vision import Image2ImageModule
 from allennlp.modules.vision.proposal_generator import ProposalGenerator
-from allennlp.modules.vision.proposal_embedder import ProposalEmbedder
 
 
 @DatasetReader.register("nlvr2")
@@ -31,7 +30,6 @@ class Nlvr2Reader(DatasetReader):
         image_loader: ImageLoader,
         image_featurizer: Image2ImageModule,
         proposal_generator: ProposalGenerator,
-        proposal_embedder: ProposalEmbedder,
         mask_prepositions_verbs: bool = False,
         drop_prepositions_verbs: bool = False,
         transformer_model: str = "bert-base-uncased",
@@ -73,7 +71,6 @@ class Nlvr2Reader(DatasetReader):
         self.image_loader = image_loader
         self.image_featurizer = image_featurizer
         self.proposal_generator = proposal_generator
-        self.proposal_embedder = proposal_embedder
 
     @overrides
     def _read(self, split_or_filename: str):
@@ -146,21 +143,17 @@ class Nlvr2Reader(DatasetReader):
 
         # Load images
         image_name_base = identifier[: identifier.rindex("-")]
-        images = [self.images[f"{image_name_base}-img{image_id}.png"] for image_id in [0, 1]]
-        images, sizes = self.image_loader(images)
-        featurized_images = self.image_featurizer(images, sizes)
+        images_path = [self.images[f"{image_name_base}-img{image_id}.png"] for image_id in [0, 1]]
         
+        # TODO: we need a image_reader method that can cache and return feature given a single image path.   
+        images, sizes = self.image_loader([images_path[0]])
         import torch
         with torch.no_grad():
-            # I'm not happy about the squeezing and unsqueezing here.
-            proposals = self.proposal_generator(images, sizes, featurized_images)
-            # proposals = [self.proposal_generator(i.unsqueeze(0)).squeeze(0) for i in images]
-            visual_features = [
-                self.proposal_embedder(i.unsqueeze(0), p.unsqueeze(0)).squeeze(0)
-                for i, p in zip(images, proposals)
-            ]
+            featurized_images = self.image_featurizer(images, sizes)
+            pooled_features, bboxes, cls_probs = \
+                self.proposal_generator(images, sizes, featurized_images)
+        
         from allennlp.data.fields import MetadataField
-
         from allennlp.data.fields import ArrayField
         from allennlp.data.fields import ListField
 
