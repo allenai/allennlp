@@ -6,9 +6,9 @@ others are AllenNLP modules.
 
 The available Seq2Seq encoders are
 
-- `"gru"` : https://pytorch.org/docs/master/nn.html#torch.nn.GRU
-- `"lstm"` : https://pytorch.org/docs/master/nn.html#torch.nn.LSTM
-- `"rnn"` : https://pytorch.org/docs/master/nn.html#torch.nn.RNN
+- `"gru"` : https://pytorch.org/docs/master/generated/torch.nn.GRU.html#torch.nn.GRU
+- `"lstm"` : https://pytorch.org/docs/master/generated/torch.nn.LSTM.html#torch.nn.LSTM
+- `"rnn"` : https://pytorch.org/docs/master/generated/torch.nn.RNN.html#torch.nn.RNN
 - `"augmented_lstm"` : allennlp.modules.augmented_lstm.AugmentedLstm
 - `"alternating_lstm"` : allennlp.modules.stacked_alternating_lstm.StackedAlternatingLstm
 - `"alternating_highway_lstm"` : allennlp.modules.stacked_alternating_lstm.StackedAlternatingLstm (GPU only)
