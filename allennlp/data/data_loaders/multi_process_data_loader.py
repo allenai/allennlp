@@ -36,7 +36,7 @@ class MultiProcessDataLoader(DataLoader):
         num_workers: int = 0,
         collate_fn: Callable[[List[Instance]], TensorDict] = allennlp_collate,
         lazy: bool = False,
-        max_batches_in_memory: int = None,
+        max_batches_in_memory: int = 100,
     ) -> None:
         # Do some parameter validation.
         if num_workers is not None and num_workers < 0:
@@ -46,8 +46,6 @@ class MultiProcessDataLoader(DataLoader):
         if batches_per_epoch is not None and batches_per_epoch < 1:
             raise ValueError("batches_per_epoch must be at least 1")
         if lazy:
-            if max_batches_in_memory is None:
-                raise ValueError("max_batches_in_memory must be specified for a lazy loader")
             if max_batches_in_memory < 1:
                 raise ValueError("max_batches_in_memory must be at least 1")
 
@@ -193,7 +191,7 @@ class MultiProcessDataLoader(DataLoader):
 
     def _instances_to_batches(self, instance_iterator: Iterable[Instance]) -> Iterator[TensorDict]:
         instance_chunks: Iterable[List[Instance]]
-        if self.max_batches_in_memory is not None:
+        if self.lazy:
             chunk_size = self.batch_size * self.max_batches_in_memory
             instance_chunks = lazy_groups_of(instance_iterator, chunk_size)
         else:
@@ -221,9 +219,6 @@ class MultiProcessDataLoader(DataLoader):
             for batch in self._instances_to_batches(self.iter_instances()):
                 yield batch
         else:
-            # At this point self.max_batches_in_memory is not None since lazy must be False.
-            assert self.max_batches_in_memory is not None
-
             # First we start "instance workers", which are in charge of generating raw
             # instances using self.reader. The generated instances are then put
             # into the `instance_queue` for the `batch_worker` to consume.
@@ -280,7 +275,7 @@ class MultiProcessDataLoader(DataLoader):
         batches_per_epoch: int = None,
         num_workers: int = 0,
         lazy: bool = False,
-        max_batches_in_memory: int = None,
+        max_batches_in_memory: int = 100,
     ) -> "MultiProcessDataLoader":
         if batch_sampler is not None:
             batch_sampler_ = batch_sampler.construct(batch_size=batch_size)
