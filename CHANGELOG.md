@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Use slower tqdm intervals when output is being piped or redirected.
 - Fixed testing models that only return a loss when they are in training mode.
 - Fixed a bug in `FromParams` that causes silent failure in case of the parameter type being Optional[Union[...]].
-- Cleanup/fix to encoder modules in `allennlp/models/seq2seq_encoders/__init__.py`.
+- Cleanup/fix to module docstring in `allennlp/models/seq2seq_encoders/__init__.py`.
 
 ### Added
 
