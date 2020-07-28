@@ -15,7 +15,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed a bug in `FromParams` that causes silent failure in case of the parameter type being Optional[Union[...]].
 - Cleanup/fix to encoder modules in `allennlp/models/seq2seq_encoders/__init__.py`.
 
-
 ### Added
 
 - Added the option to specify `requires_grad: false` within an optimizers parameter groups.
