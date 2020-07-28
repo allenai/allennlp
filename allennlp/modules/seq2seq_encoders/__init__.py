@@ -15,6 +15,8 @@ The available Seq2Seq encoders are
 - `"pass_through"` : allennlp.modules.pass_through_encoder.PassThroughEncoder
 - `"feedforward"` : allennlp.modules.feedforward_encoder.FeedForwardEncoder
 - `"pytorch_transformer"` : allennlp.modules.seq2seq_encoders.PytorchTransformer
+- `"compose"` : allennlp.modules.seq2seq_encoders.ComposeEncoder
+- `"gated-cnn-encoder"` : allennlp.momdules.seq2seq_encoders.GatedCnnEncoder
 """
 
 from allennlp.modules.seq2seq_encoders.compose_encoder import ComposeEncoder
