@@ -16,6 +16,7 @@ The available Seq2Seq encoders are
 - `"pytorch_transformer"` : allennlp.modules.seq2seq_encoders.PytorchTransformer
 - `"compose"` : allennlp.modules.seq2seq_encoders.ComposeEncoder
 - `"gated-cnn-encoder"` : allennlp.momdules.seq2seq_encoders.GatedCnnEncoder
+- `"stacked_bidirectional_lstm"`: allennlp.modules.seq2seq_encoders.StackedBidirectionalLstmSeq2SeqEncoder
 """
 
 from allennlp.modules.seq2seq_encoders.compose_encoder import ComposeEncoder
