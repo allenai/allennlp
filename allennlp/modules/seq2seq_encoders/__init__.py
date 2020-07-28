@@ -11,7 +11,6 @@ The available Seq2Seq encoders are
 - `"rnn"` : https://pytorch.org/docs/master/generated/torch.nn.RNN.html#torch.nn.RNN
 - `"augmented_lstm"` : allennlp.modules.seq2seq_encoders.AugmentedLstmSeq2SeqEncoder
 - `"alternating_lstm"` : allennlp.modules.seq2seq_encoders.StackedAlternatingLstmSeq2SeqEncoder
-- `"alternating_highway_lstm"` : allennlp.modules.stacked_alternating_lstm.StackedAlternatingLstm (GPU only)
 - `"pass_through"` : allennlp.modules.seq2seq_encoders.PassThroughEncoder
 - `"feedforward"` : allennlp.modules.seq2seq_encoders.FeedForwardEncoder
 - `"pytorch_transformer"` : allennlp.modules.seq2seq_encoders.PytorchTransformer
