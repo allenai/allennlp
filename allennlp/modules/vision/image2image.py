@@ -16,14 +16,6 @@ class Image2ImageModule(nn.Module, Registrable):
         raise NotImplementedError()
 
 
-@Image2ImageModule.register("null")
-class NullImage2ImageModule(Image2ImageModule):
-    """An `Image2ImageModule` that returns the original image unchanged."""
-
-    def forward(self, images: FloatTensor, sizes: IntTensor):
-        return images
-
-
 @Image2ImageModule.register("normalize")
 class NormalizeImage(Image2ImageModule):
     """

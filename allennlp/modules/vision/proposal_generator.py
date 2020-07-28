@@ -6,6 +6,7 @@ from torch import nn, FloatTensor, IntTensor
 
 from allennlp.common.registrable import Registrable
 
+
 class ProposalGenerator(nn.Module, Registrable):
     """
     A `ProposalGenerator` takes a batch of images as a tensor with the dimensions
@@ -16,25 +17,9 @@ class ProposalGenerator(nn.Module, Registrable):
     """
 
     def forward(
-        self,
-        raw_images: FloatTensor,
-        image_sizes: IntTensor,
-        featurized_images: FloatTensor
+        self, raw_images: FloatTensor, image_sizes: IntTensor, featurized_images: FloatTensor
     ) -> FloatTensor:
         raise NotImplementedError()
-
-
-@ProposalGenerator.register("null")
-class NullProposalGenerator(ProposalGenerator):
-    """A `ProposalGenerator` that never returns any proposals."""
-    def forward(
-        self,
-        raw_images: FloatTensor,
-        image_sizes: IntTensor,
-        featurized_images: FloatTensor
-    ) -> (List[FloatTensor], List[FloatTensor]):
-        assert raw_images.size(0) == image_sizes.size(0) == featurized_images.size(0)
-        return torch.zeros(raw_images.size(0), 0, 4, dtype=torch.float32, device=raw_images.device)
 
 
 @ProposalGenerator.register("Faster-RCNN")
@@ -43,12 +28,12 @@ class FasterRCNNProposalGenerator(ProposalGenerator):
     Faster R-CNN (https://arxiv.org/abs/1506.01497) with ResNet backbone.
     Based on detectron2 v0.2
     """
+
     def __init__(
         self,
         meta_architecture: str = "GeneralizedRCNN",
         device: str = "cpu",
         weights: str = "RCNN-X152-C4-2020-07-18",
-
         # RPN
         rpn_head_name: str = "StandardRPNHead",
         rpn_in_features: List[str] = ["res4"],
@@ -57,7 +42,7 @@ class FasterRCNNProposalGenerator(ProposalGenerator):
         rpn_iou_labels: List[int] = [0, -1, 1],
         rpn_batch_size_per_image: int = 256,
         rpn_positive_fraction: float = 0.5,
-        rpn_bbox_reg_loss_type: str = 'smooth_l1',
+        rpn_bbox_reg_loss_type: str = "smooth_l1",
         rpn_bbox_reg_loss_weight: float = 1.0,  # different from default (-1)
         rpn_bbox_reg_weights: Tuple[float, ...] = (1.0, 1.0, 1.0, 1.0),
         rpn_smooth_l1_beta: float = 0.1111,  # different from default (0.0)
@@ -72,6 +57,7 @@ class FasterRCNNProposalGenerator(ProposalGenerator):
         super().__init__()
 
         from allennlp.common import detectron
+
         flat_parameters = detectron.DetectronFlatParameters(
             meta_architecture=meta_architecture,
             weights=weights,
@@ -93,28 +79,23 @@ class FasterRCNNProposalGenerator(ProposalGenerator):
             rpn_post_nms_topk_train=rpn_post_nms_topk_train,
             rpn_post_nms_topk_test=rpn_post_nms_topk_test,
             rpn_nms_thresh=rpn_nms_thresh,
-            rpn_bbox_loss_weight=rpn_bbox_loss_weight)
+            rpn_bbox_loss_weight=rpn_bbox_loss_weight,
+        )
         pipeline = detectron.get_pipeline_from_flat_parameters(flat_parameters, make_copy=False)
         self.model = pipeline.model
 
     def forward(
-        self,
-        raw_images: FloatTensor,
-        image_sizes: IntTensor,
-        featurized_images: FloatTensor
+        self, raw_images: FloatTensor, image_sizes: IntTensor, featurized_images: FloatTensor
     ) -> (List[FloatTensor], List[FloatTensor], List[Any]):
         # RPN
         from detectron2.structures import ImageList
-        image_list = ImageList(
-            raw_images,
-            [(h, w) for h, w in image_sizes]
-        )
+
+        image_list = ImageList(raw_images, [(h, w) for h, w in image_sizes])
         assert len(self.model.proposal_generator.in_features) == 1
-        featurized_images_in_dict = {self.model.proposal_generator.in_features[0]: featurized_images}
-        proposals, _ = self.model.proposal_generator(
-            image_list,
-            featurized_images_in_dict,
-            None)
+        featurized_images_in_dict = {
+            self.model.proposal_generator.in_features[0]: featurized_images
+        }
+        proposals, _ = self.model.proposal_generator(image_list, featurized_images_in_dict, None)
         _, pooled_features = self.model.roi_heads.get_roi_features(
             featurized_images_in_dict, proposals
         )
@@ -134,5 +115,5 @@ class FasterRCNNProposalGenerator(ProposalGenerator):
         bboxes = proposal_bboxes.tensor
         pooled_features = pooled_features[r_indices]
         cls_probs = cls_probs[r_indices]
-        
+
         return pooled_features, bboxes, cls_probs
