@@ -18,7 +18,7 @@ from allennlp.data.vocabulary import Vocabulary
 logger = logging.getLogger(__name__)
 
 
-@DataLoader.register("multi_process_data_loader", constructor="from_partial_objects")
+@DataLoader.register("multi_process", constructor="from_partial_objects")
 class MultiProcessDataLoader(DataLoader):
     _INSTANCE_QUEUE_SIZE = 1000
     _INSTANCE_CHUNK_SIZE = 10
@@ -224,7 +224,7 @@ class MultiProcessDataLoader(DataLoader):
             # At this point self.max_batches_in_memory is not None since lazy must be False.
             assert self.max_batches_in_memory is not None
 
-            # First we start "instance workers", which are in charge generating raw
+            # First we start "instance workers", which are in charge of generating raw
             # instances using self.reader. The generated instances are then put
             # into the `instance_queue` for the `batch_worker` to consume.
             instance_queue: mp.JoinableQueue = mp.JoinableQueue(self._INSTANCE_QUEUE_SIZE)

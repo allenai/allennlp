@@ -31,7 +31,7 @@ class DataLoader(Registrable):
     The default implementation is `MultiProcessDataLoader`.
     """
 
-    default_implementation = "multi_process_data_loader"
+    default_implementation = "multi_process"
 
     def __len__(self) -> int:
         raise TypeError

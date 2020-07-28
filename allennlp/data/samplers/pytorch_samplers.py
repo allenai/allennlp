@@ -170,7 +170,7 @@ class PyTorchBasicBatchSampler(data.BatchSampler, PyTorchBatchSampler):
 @PyTorchBatchSampler.register("bucket")
 class PyTorchBucketBatchSampler(PyTorchBatchSampler):
     """
-    A PyTorch-compatable version of `BucketBatchSampler`.
+    A PyTorch-compatible version of `BucketBatchSampler`.
     """
 
     def __init__(
@@ -196,7 +196,7 @@ class PyTorchBucketBatchSampler(PyTorchBatchSampler):
 @PyTorchBatchSampler.register("max_tokens_sampler")
 class PyTorchMaxTokensBatchSampler(PyTorchBatchSampler):
     """
-    A PyTorch-compatable version of `MaxTokensBatchSampler`.
+    A PyTorch-compatible version of `MaxTokensBatchSampler`.
     """
 
     def __init__(

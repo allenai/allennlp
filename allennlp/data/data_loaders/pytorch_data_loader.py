@@ -30,7 +30,10 @@ class AllennlpDataset(data.Dataset):
         this method from `__len__` and `__getitem__`, this helps with type-checking
         since `AllennlpDataset` can be considered an `Iterable[Instance]`.
         """
-        yield from self.instances
+        for instance in self.instances:
+            if self.vocab is not None:
+                instance.index_fields(self.vocab)
+            yield instance
 
     def index_with(self, vocab: Vocabulary):
         self.vocab = vocab
@@ -74,7 +77,7 @@ def allennlp_worker_init_fn(worker_id):
         )
 
 
-@DataLoader.register("pytorch_data_loader", constructor="from_partial_objects")
+@DataLoader.register("pytorch", constructor="from_partial_objects")
 class PyTorchDataLoader(data.DataLoader, DataLoader):
     """
     A registrable version of the pytorch
