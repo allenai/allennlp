@@ -135,8 +135,11 @@ class MultiProcessDataLoader(DataLoader):
                 workers = self._start_instance_workers(queue)
 
                 for instance in Tqdm.tqdm(self._gather_instances(queue), desc="loading instances"):
+                    self.reader.apply_token_indexers(instance)
                     if not self.lazy:
                         self._instances.append(instance)  # type: ignore
+                    if self._vocab is not None:
+                        instance.index_fields(self._vocab)
                     yield instance
 
                 self._join_workers(workers)
@@ -177,13 +180,7 @@ class MultiProcessDataLoader(DataLoader):
     def _instance_worker(self, worker_id: int, queue: mp.JoinableQueue) -> None:
         self.reader._set_worker_info(WorkerInfo(self.num_workers, worker_id))
 
-        def index_fields(instance: Instance) -> Instance:
-            self.reader.apply_token_indexers(instance)
-            if self._vocab is not None:
-                instance.index_fields(self._vocab)
-            return instance
-
-        instances = (index_fields(instance) for instance in self.reader.read(self.data_path))
+        instances = self.reader.read(self.data_path)
 
         for instances_chunk in lazy_groups_of(instances, self._INSTANCE_CHUNK_SIZE):
             queue.put(instances_chunk)
