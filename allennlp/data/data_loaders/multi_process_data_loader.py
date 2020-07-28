@@ -1,6 +1,8 @@
 from collections import deque
 import logging
 import random
+import sys
+import traceback
 from typing import List, Iterator, Optional, Callable, Iterable
 
 import torch.multiprocessing as mp
@@ -132,12 +134,15 @@ class MultiProcessDataLoader(DataLoader):
                 queue: mp.JoinableQueue = mp.JoinableQueue(self._INSTANCE_QUEUE_SIZE)
                 workers = self._start_instance_workers(queue)
 
-                for instance in Tqdm.tqdm(self._gather_instances(queue), desc="loading instances"):
-                    if not self.lazy:
-                        self._instances.append(instance)  # type: ignore
-                    yield instance
-
-                self._join_workers(workers)
+                try:
+                    for instance in Tqdm.tqdm(
+                        self._gather_instances(queue), desc="loading instances"
+                    ):
+                        if not self.lazy:
+                            self._instances.append(instance)  # type: ignore
+                        yield instance
+                finally:
+                    self._join_workers(workers)
 
     def index_with(self, vocab: Vocabulary) -> None:
         self._vocab = vocab
@@ -155,36 +160,40 @@ class MultiProcessDataLoader(DataLoader):
 
     def _join_workers(self, workers: List[mp.Process]) -> None:
         for worker in workers:
-            # TODO: handle errors if any of the workers crash.
-            worker.join(1)
             if worker.is_alive():
-                logger.warning("Worker is still alive, killing now")
                 worker.terminate()
 
     def _gather_instances(self, queue: mp.JoinableQueue) -> Iterable[Instance]:
         done_count: int = 0
         while done_count < self.num_workers:
-            for instances_chunk in iter(queue.get, None):
+            for instances_chunk, worker_error in iter(queue.get, (None, None)):
+                if worker_error is not None:
+                    e, tb = worker_error
+                    sys.stderr.write("".join(tb))
+                    raise e
+
                 for instance in instances_chunk:
                     self.reader.apply_token_indexers(instance)
                     if self._vocab is not None:
                         instance.index_fields(self._vocab)
-                    yield instance
+                    yield instance, None
                 queue.task_done()
             queue.task_done()
-            # Every time we encounter an empty list, thats means a worker has finished.
             done_count += 1
 
     def _instance_worker(self, worker_id: int, queue: mp.JoinableQueue) -> None:
-        self.reader._set_worker_info(WorkerInfo(self.num_workers, worker_id))
+        try:
+            self.reader._set_worker_info(WorkerInfo(self.num_workers, worker_id))
 
-        instances = self.reader.read(self.data_path)
+            instances = self.reader.read(self.data_path)
 
-        for instances_chunk in lazy_groups_of(instances, self._INSTANCE_CHUNK_SIZE):
-            queue.put(instances_chunk)
+            for instances_chunk in lazy_groups_of(instances, self._INSTANCE_CHUNK_SIZE):
+                queue.put((instances_chunk, None))
+        except Exception as e:
+            queue.put((None, (e, traceback.format_exc())))
 
         # Indicate to the consumer that this worker is finished.
-        queue.put(None)
+        queue.put((None, None))
 
         # Wait for consumer to finish to avoid prematurely closing the queue.
         queue.join()
@@ -233,31 +242,38 @@ class MultiProcessDataLoader(DataLoader):
             )
             batch_worker.start()
 
-            # We can now start consuming from the `batch_queue` as the `batch_worker`
-            # produces batches.
-            batch_group: Optional[List[TensorDict]]
-            for batch_group in iter(batch_queue.get, None):
-                yield from batch_group
+            try:
+                # We can now start consuming from the `batch_queue` as the `batch_worker`
+                # produces batches.
+                for batch_group, worker_error in iter(batch_queue.get, (None, None)):
+                    if worker_error is not None:
+                        e, tb = worker_error
+                        sys.stderr.write("".join(tb))
+                        raise e
+
+                    yield from batch_group
+                    batch_queue.task_done()
+
+                # Indicate to the worker (producer of batch groups) that we've consumed
+                # everything.
                 batch_queue.task_done()
-
-            # Indicate to the worker (producer of batch groups) that we've consumed
-            # everything.
-            batch_queue.task_done()
-
-            # Join all of the workers.
-            self._join_workers(instance_workers + [batch_worker])
+            finally:
+                self._join_workers(instance_workers + [batch_worker])
 
     def _batch_worker(
         self, instance_queue: mp.JoinableQueue, batch_queue: mp.JoinableQueue
     ) -> None:
-        for batch_chunk in lazy_groups_of(
-            self._instances_to_batches(self._gather_instances(instance_queue)),
-            self._BATCH_CHUNK_SIZE,
-        ):
-            batch_queue.put(batch_chunk)
+        try:
+            for batch_chunk in lazy_groups_of(
+                self._instances_to_batches(self._gather_instances(instance_queue)),
+                self._BATCH_CHUNK_SIZE,
+            ):
+                batch_queue.put((batch_chunk, None))
+        except Exception as e:
+            batch_queue.put((None, (e, traceback.format_exc())))
 
         # Indicate to the consumer (main thread) that this worker is finished.
-        batch_queue.put(None)
+        batch_queue.put((None, None))
 
         # Wait for the consumer (in the main process) to finish receiving all batch groups
         # to avoid prematurely closing the queue.
