@@ -135,11 +135,8 @@ class MultiProcessDataLoader(DataLoader):
                 workers = self._start_instance_workers(queue)
 
                 for instance in Tqdm.tqdm(self._gather_instances(queue), desc="loading instances"):
-                    self.reader.apply_token_indexers(instance)
                     if not self.lazy:
                         self._instances.append(instance)  # type: ignore
-                    if self._vocab is not None:
-                        instance.index_fields(self._vocab)
                     yield instance
 
                 self._join_workers(workers)
@@ -169,9 +166,12 @@ class MultiProcessDataLoader(DataLoader):
     def _gather_instances(self, queue: mp.JoinableQueue) -> Iterable[Instance]:
         done_count: int = 0
         while done_count < self.num_workers:
-            instances_chunk: Optional[List[Instance]]
             for instances_chunk in iter(queue.get, None):
-                yield from instances_chunk
+                for instance in instances_chunk:
+                    self.reader.apply_token_indexers(instance)
+                    if self._vocab is not None:
+                        instance.index_fields(self._vocab)
+                    yield instance
                 queue.task_done()
             queue.task_done()
             # Every time we encounter an empty list, thats means a worker has finished.
