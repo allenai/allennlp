@@ -184,6 +184,9 @@ class DetectronFlatParameters(NamedTuple):
     attribute_head_loss_weight: float = 0.2
     attribute_head_num_classes: int = 400
 
+    # Test
+    test_detections_per_image: int = 36 # different from default (100)
+
 
 def get_pipeline_from_flat_parameters(
     fp: DetectronFlatParameters,
@@ -275,6 +278,10 @@ def get_pipeline_from_flat_parameters(
                 "FC_DIM": fp.attribute_head_fc_dim,
                 "LOSS_WEIGHT": fp.attribute_head_loss_weight,
                 "NUM_CLASSES": fp.attribute_head_num_classes,
+            },
+
+            "TEST": {
+                "DETECTIONS_PER_IMAGE": fp.test_detections_per_image,
             }
         },
     }
