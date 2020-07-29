@@ -53,6 +53,8 @@ class FasterRcnnProposalGenerator(ProposalGenerator):
         rpn_post_nms_topk_test: int = 1000,
         rpn_nms_thresh: float = 0.7,
         rpn_bbox_loss_weight: float = 1.0,  # not in detectron2 default config
+
+        test_detections_per_image: int = 36,  # different from default (100)
     ):
         super().__init__()
 
@@ -80,6 +82,7 @@ class FasterRcnnProposalGenerator(ProposalGenerator):
             rpn_post_nms_topk_test=rpn_post_nms_topk_test,
             rpn_nms_thresh=rpn_nms_thresh,
             rpn_bbox_loss_weight=rpn_bbox_loss_weight,
+            test_detections_per_image=test_detections_per_image
         )
         pipeline = detectron.get_pipeline_from_flat_parameters(flat_parameters, make_copy=False)
         self.model = pipeline.model
