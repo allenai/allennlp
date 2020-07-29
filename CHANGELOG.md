@@ -24,6 +24,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Added the option to specify `requires_grad: false` within an optimizers parameter groups.
 
+### Removed
+
+- Removed the `opt_level` parameter to `Model.load` and `load_archive`. In order to use AMP with a loaded
+  model now, just run the model's forward pass within torch's [`autocast`](https://pytorch.org/docs/stable/amp.html#torch.cuda.amp.autocast)
+  context.
+
 
 ## [v1.1.0rc1](https://github.com/allenai/allennlp/releases/tag/v1.1.0rc1) - 2020-07-14
 
