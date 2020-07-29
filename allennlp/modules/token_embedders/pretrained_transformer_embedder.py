@@ -301,7 +301,7 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
 
         # The number of segment each sequence spans, excluding padding. Mimicking ceiling operation.
         # Shape: (batch_size,)
-        num_effective_segments = (seq_lengths + self._max_length - 1) / self._max_length
+        num_effective_segments = (seq_lengths + self._max_length - 1) // self._max_length
         # The number of indices that end tokens should shift back.
         num_removed_non_end_tokens = (
             num_effective_segments * self._num_added_tokens - self._num_added_end_tokens
