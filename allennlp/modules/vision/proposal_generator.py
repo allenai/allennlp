@@ -22,8 +22,8 @@ class ProposalGenerator(nn.Module, Registrable):
         raise NotImplementedError()
 
 
-@ProposalGenerator.register("Faster-RCNN")
-class FasterRCNNProposalGenerator(ProposalGenerator):
+@ProposalGenerator.register("faster_rcnn")
+class FasterRcnnProposalGenerator(ProposalGenerator):
     """
     Faster R-CNN (https://arxiv.org/abs/1506.01497) with ResNet backbone.
     Based on detectron2 v0.2
@@ -87,15 +87,18 @@ class FasterRCNNProposalGenerator(ProposalGenerator):
     def forward(
         self, raw_images: FloatTensor, image_sizes: IntTensor, featurized_images: FloatTensor
     ) -> (List[FloatTensor], List[FloatTensor], List[Any]):
+        batch_size = len(image_sizes)
         # RPN
         from detectron2.structures import ImageList
 
-        image_list = ImageList(raw_images, [(h, w) for h, w in image_sizes])
+        image_list = ImageList(raw_images, [(image[0], image[1]) for image in image_sizes])
         assert len(self.model.proposal_generator.in_features) == 1
         featurized_images_in_dict = {
             self.model.proposal_generator.in_features[0]: featurized_images
         }
         proposals, _ = self.model.proposal_generator(image_list, featurized_images_in_dict, None)
+        num_proposals = len(proposals[0])
+        assert all([len(p) == num_proposals for p in proposals])
         _, pooled_features = self.model.roi_heads.get_roi_features(
             featurized_images_in_dict, proposals
         )
@@ -109,11 +112,19 @@ class FasterRCNNProposalGenerator(ProposalGenerator):
         )
 
         box_type = type(proposals[0].proposal_boxes)
-        proposal_bboxes = box_type.cat([p.proposal_boxes for p in proposals])
-        proposal_bboxes.tensor = proposal_bboxes.tensor[r_indices]
+        batch_boxes = []
+        batch_features = []
+        batch_probs = []
+        feature_dim = pooled_features.size(-1)
+        pooled_features = pooled_features.view(batch_size, num_proposals, feature_dim)
+        num_classes = cls_probs.size(-1)
+        cls_probs = cls_probs.view(batch_size, num_proposals, num_classes)
+        for image_num, image_proposal_indices in enumerate(r_indices):
+            batch_boxes.append(proposals[image_num].proposal_boxes.tensor[image_proposal_indices])
+            batch_features.append(pooled_features[image_num][image_proposal_indices])
+            batch_probs.append(cls_probs[image_num][image_proposal_indices])
 
-        bboxes = proposal_bboxes.tensor
-        pooled_features = pooled_features[r_indices]
-        cls_probs = cls_probs[r_indices]
-
-        return pooled_features, bboxes, cls_probs
+        features_tensor = torch.stack(batch_features, dim=0)
+        boxes_tensor = torch.stack(batch_boxes, dim=0)
+        probs_tensor = torch.stack(batch_probs, dim=0)
+        return features_tensor, boxes_tensor, probs_tensor

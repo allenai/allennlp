@@ -59,7 +59,6 @@ class DetectronImageLoader(ImageLoader):
     def load(self, filenames: ManyPaths) -> ImagesWithSize:
         images = [{"file_name": str(f)} for f in filenames]
         images = [self.mapper(i) for i in images]
-        original_size = [(image['width'], image['height']) for image in images]
         images = self.model.preprocess_image(images)
-        
+
         return images.tensor, torch.tensor(images.image_sizes, dtype=torch.int32)

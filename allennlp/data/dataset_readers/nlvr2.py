@@ -144,15 +144,15 @@ class Nlvr2Reader(DatasetReader):
         # Load images
         image_name_base = identifier[: identifier.rindex("-")]
         images_path = [self.images[f"{image_name_base}-img{image_id}.png"] for image_id in [0, 1]]
-        
-        # TODO: we need a image_reader method that can cache and return feature given a single image path.   
+
+        # TODO: we need a image_reader method that can cache and return feature given a single image path.
         images, sizes = self.image_loader([images_path[0]])
         import torch
         with torch.no_grad():
             featurized_images = self.image_featurizer(images, sizes)
             pooled_features, bboxes, cls_probs = \
                 self.proposal_generator(images, sizes, featurized_images)
-        
+
         from allennlp.data.fields import MetadataField
         from allennlp.data.fields import ArrayField
         from allennlp.data.fields import ListField
