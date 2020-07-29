@@ -1025,7 +1025,7 @@ class TestTrainer(TrainerTestBase):
 
 
 @requires_gpu
-class TestApexTrainer(TrainerTestBase):
+class TestAmpTrainer(TrainerTestBase):
     @pytest.mark.parametrize(
         "grad_norm, num_gradient_accumulation_steps", [(None, 1), (1.0, 1), (1.0, 2)]
     )
