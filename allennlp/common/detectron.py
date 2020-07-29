@@ -279,11 +279,11 @@ def get_pipeline_from_flat_parameters(
                 "LOSS_WEIGHT": fp.attribute_head_loss_weight,
                 "NUM_CLASSES": fp.attribute_head_num_classes,
             },
-
-            "TEST": {
-                "DETECTIONS_PER_IMAGE": fp.test_detections_per_image,
-            }
         },
+
+        "TEST": {
+            "DETECTIONS_PER_IMAGE": fp.test_detections_per_image,
+        }
     }
 
     return get_pipeline(None, None, overrides, make_copy)
