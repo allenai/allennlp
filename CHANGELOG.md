@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Changed
+
+- Upgraded PyTorch requirement to 1.6.
+- Replaced the NVIDIA Apex AMP module with torch's native AMP module. The default trainer (`GradientDescentTrainer`)
+  now takes a `use_amp: bool` parameter instead of the old `opt_level: str` parameter.
+
 ### Fixed
 
 - Removed unnecessary warning about deadlocks in `DataLoader`.
