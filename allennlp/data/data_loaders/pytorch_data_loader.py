@@ -60,6 +60,7 @@ class AllennlpLazyDataset(data.IterableDataset):
 
     def __iter__(self) -> Iterator[Instance]:
         for instance in Tqdm.tqdm(self.reader.read(self.file_path), desc="reading instances"):
+            self.reader.apply_token_indexers(instance)
             if self.vocab is not None:
                 instance.index_fields(self.vocab)
             yield instance

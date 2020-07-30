@@ -1,5 +1,6 @@
 from collections import deque
 import logging
+from multiprocessing.process import BaseProcess
 import random
 import sys
 import traceback
@@ -13,6 +14,7 @@ from allennlp.common.tqdm import Tqdm
 from allennlp.data.instance import Instance
 from allennlp.data.data_loaders.data_loader import DataLoader, TensorDict, allennlp_collate
 from allennlp.data.dataset_readers import DatasetReader, WorkerInfo
+from allennlp.data.fields import TextField
 from allennlp.data.samplers import BatchSampler
 from allennlp.data.vocabulary import Vocabulary
 
@@ -39,6 +41,7 @@ class MultiProcessDataLoader(DataLoader):
         collate_fn: Callable[[List[Instance]], TensorDict] = allennlp_collate,
         lazy: bool = False,
         max_batches_in_memory: int = 100,
+        start_method: str = "fork",
     ) -> None:
         # Do some parameter validation.
         if num_workers is not None and num_workers < 0:
@@ -62,6 +65,7 @@ class MultiProcessDataLoader(DataLoader):
         self.collate_fn = collate_fn
         self.lazy = lazy
         self.max_batches_in_memory = max_batches_in_memory
+        self.start_method = start_method
 
         # When lazy = False, we'll keep a cache of all instances in this list.
         self._instances: Optional[List[Instance]] = None
@@ -131,8 +135,9 @@ class MultiProcessDataLoader(DataLoader):
                         instance.index_fields(self._vocab)
                     yield instance
             else:
-                queue: mp.JoinableQueue = mp.JoinableQueue(self._INSTANCE_QUEUE_SIZE)
-                workers = self._start_instance_workers(queue)
+                ctx = mp.get_context(self.start_method)
+                queue: mp.JoinableQueue = ctx.JoinableQueue(self._INSTANCE_QUEUE_SIZE)
+                workers = self._start_instance_workers(queue, ctx)
 
                 try:
                     for instance in Tqdm.tqdm(
@@ -150,15 +155,17 @@ class MultiProcessDataLoader(DataLoader):
             for instance in self._instances:
                 instance.index_fields(vocab)
 
-    def _start_instance_workers(self, queue: mp.JoinableQueue) -> List[mp.Process]:
-        workers: List[mp.Process] = []
+    def _start_instance_workers(self, queue: mp.JoinableQueue, ctx) -> List[BaseProcess]:
+        workers: List[BaseProcess] = []
         for worker_id in range(self.num_workers):
-            worker = mp.Process(target=self._instance_worker, args=(worker_id, queue), daemon=True)
+            worker: BaseProcess = ctx.Process(
+                target=self._instance_worker, args=(worker_id, queue), daemon=True
+            )
             worker.start()
             workers.append(worker)
         return workers
 
-    def _join_workers(self, workers: List[mp.Process]) -> None:
+    def _join_workers(self, workers: List[BaseProcess]) -> None:
         for worker in workers:
             if worker.is_alive():
                 worker.terminate()
@@ -186,8 +193,25 @@ class MultiProcessDataLoader(DataLoader):
             self.reader._set_worker_info(WorkerInfo(self.num_workers, worker_id))
 
             instances = self.reader.read(self.data_path)
+            checked_for_token_indexers: bool = False
 
             for instances_chunk in lazy_groups_of(instances, self._INSTANCE_CHUNK_SIZE):
+                # Check the first instance to make sure it doesn't contain any TextFields with
+                # token_indexers because we don't want to be duplicating those by sending
+                # them across processes.
+                if not checked_for_token_indexers:
+                    for field_name, field in instances_chunk[0].fields.items():
+                        if isinstance(field, TextField) and field.token_indexers is not None:
+                            raise ValueError(
+                                f"Found a TextField ({field_name}) with token_indexers already "
+                                "applied, but you're using num_workers > 0 in your data loader. "
+                                "Make sure your dataset reader's text_to_instance() method doesn't "
+                                "add any token_indexers to the TextFields it creates. The token_indexers "
+                                "should be added to the instances in apply_token_indexers() method of your "
+                                "dataset reader (which you'll have to implement if you haven't done "
+                                "so already)"
+                            )
+                    checked_for_token_indexers = True
                 queue.put((instances_chunk, None))
         except Exception as e:
             queue.put((None, (e, traceback.format_exc())))
@@ -228,16 +252,18 @@ class MultiProcessDataLoader(DataLoader):
             for batch in self._instances_to_batches(self.iter_instances()):
                 yield batch
         else:
+            ctx = mp.get_context(self.start_method)
+
             # First we start "instance workers", which are in charge of generating raw
             # instances using self.reader. The generated instances are then put
             # into the `instance_queue` for the `batch_worker` to consume.
-            instance_queue: mp.JoinableQueue = mp.JoinableQueue(self._INSTANCE_QUEUE_SIZE)
-            instance_workers = self._start_instance_workers(instance_queue)
+            instance_queue: mp.JoinableQueue = ctx.JoinableQueue(self._INSTANCE_QUEUE_SIZE)
+            instance_workers = self._start_instance_workers(instance_queue, ctx)
 
             # Now start the `batch_worker`. This worker consumes from the `instance_queue`
             # and puts the resulting batches into the `batch_queue`.
-            batch_queue: mp.JoinableQueue = mp.JoinableQueue(self.max_batches_in_memory)  # type: ignore
-            batch_worker = mp.Process(
+            batch_queue: mp.JoinableQueue = ctx.JoinableQueue(self.max_batches_in_memory)  # type: ignore
+            batch_worker: BaseProcess = ctx.Process(
                 target=self._batch_worker, args=(instance_queue, batch_queue,), daemon=True
             )
             batch_worker.start()

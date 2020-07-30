@@ -45,7 +45,7 @@ class ModelTestCase(AllenNlpTestCase):
 
         # TODO(joelgrus) get rid of these
         # (a lot of the model tests use them, so they'll have to be changed)
-        self.dataset = Batch(list(self.instances))
+        self.dataset = Batch(self.instances)
         self.dataset.index_instances(self.vocab)
 
     def ensure_model_can_train_save_and_load(

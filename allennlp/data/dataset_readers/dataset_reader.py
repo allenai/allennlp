@@ -164,6 +164,9 @@ class DatasetReader(Registrable):
             file_path = str(file_path)
 
         for instance in self._multi_worker_islice(self._read(file_path)):
+            if self.__worker_info is None:
+                # If not running in a subprocess, it's safe to apply the token_indexers right away.
+                self.apply_token_indexers(instance)
             yield instance
 
     def _read(self, file_path: str) -> Iterable[Instance]:
