@@ -87,7 +87,7 @@ install :
 	pip install --upgrade pip setuptools wheel
 	# TODO(mattg): remove this!!  Hack for now to get CI working on vision branch, because of
 	# detectron2 mess.
-	pip install torch<1.6.0,>=1.5.0
+	pip install "torch<1.6.0,>=1.5.0"
 	# Due to a weird thing with pip, we may need egg-info before running `pip install -e`.
 	# See https://github.com/pypa/pip/issues/4537.
 	python setup.py install_egg_info
