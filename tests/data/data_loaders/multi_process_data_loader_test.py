@@ -12,6 +12,10 @@ def test_error_raised_when_text_fields_contain_token_indexers():
     """
     This tests that the MultiProcessDataLoader raises an error when num_workers > 0
     but the dataset reader doesn't implement apply_token_indexers().
+
+    It also tests that errors raised within a worker process are propogated upwards
+    to the main process, and that when that happens, all workers will be successfully
+    killed.
     """
 
     class BadDatasetReader(DatasetReader):
