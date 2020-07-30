@@ -21,8 +21,7 @@ logger = logging.getLogger(__name__)
 
 
 class BertEmbeddings(torch.nn.Module, FromParams):
-    """Construct the embeddings from word, position and token_type embeddings.
-    """
+    """Construct the embeddings from word, position and token_type embeddings."""
 
     def __init__(
         self,
@@ -73,8 +72,8 @@ class BertSelfAttention(torch.nn.Module):
         super().__init__()
         if hidden_size % num_attention_heads != 0:
             raise ValueError(
-                "The hidden size (%d) is not a multiple of the number of attention "
-                "heads (%d)" % (hidden_size, num_attention_heads)
+                "The hidden size (%d) is not a multiple of the number of attention heads (%d)"
+                % (hidden_size, num_attention_heads)
             )
         self.num_attention_heads = num_attention_heads
         self.attention_head_size = int(hidden_size / num_attention_heads)
@@ -228,8 +227,8 @@ class BertBiAttention(torch.nn.Module):
         super().__init__()
         if combined_hidden_size % num_attention_heads != 0:
             raise ValueError(
-                "The hidden size (%d) is not a multiple of the number of attention "
-                "heads (%d)" % (combined_hidden_size, num_attention_heads)
+                "The hidden size (%d) is not a multiple of the number of attention heads (%d)"
+                % (combined_hidden_size, num_attention_heads)
             )
 
         self.num_attention_heads = num_attention_heads

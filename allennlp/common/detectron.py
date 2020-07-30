@@ -19,6 +19,7 @@ class DetectronPipeline(NamedTuple):
 def update(d, u):
     for k, v in u.items():
         from collections.abc import Mapping
+
         if isinstance(v, Mapping):
             d[k] = update(d.get(k, {}), v)
         else:
@@ -59,6 +60,7 @@ def get_cfg(
         cfg = CfgNode(new_dict)
 
     import torch
+
     if not torch.cuda.is_available():
         cfg.MODEL.DEVICE = "cpu"
     if freeze:
@@ -74,8 +76,9 @@ def load_checkpoint(checkpoint_name: str):
     later, where the tarfile includes 1) config.json 2) _weights.th
     """
     gs_url = "https://storage.googleapis.com/allennlp-public-models"
-    detectron_checkpoint_url = f'{gs_url}/{checkpoint_name}.tar.gz!{checkpoint_name}/_weights.th'
+    detectron_checkpoint_url = f"{gs_url}/{checkpoint_name}.tar.gz!{checkpoint_name}/_weights.th"
     from allennlp.common.file_utils import cached_path
+
     return cached_path(detectron_checkpoint_url, extract_archive=True)
 
 
@@ -86,19 +89,22 @@ def get_pipeline(
     builtin_config_file: Optional[str] = None,
     yaml_config_file: Optional[str] = None,
     overrides: Optional[Dict[str, Any]] = None,
-    make_copy: bool = True
+    make_copy: bool = True,
 ) -> DetectronPipeline:
     global _pipeline_cache
 
     cfg = get_cfg(builtin_config_file, yaml_config_file, overrides)
-    spec = cfg.dump()   # Easiest way to get a hashable snapshot of CfgNode.
+    spec = cfg.dump()  # Easiest way to get a hashable snapshot of CfgNode.
     pipeline = _pipeline_cache.get(spec, None)
     if pipeline is None:
         from detectron2.data import DatasetMapper
+
         mapper = DatasetMapper(cfg)
         from detectron2.modeling import build_model
+
         model = build_model(cfg)
         from detectron2.checkpoint import DetectionCheckpointer
+
         DetectionCheckpointer(model).load(cfg.MODEL.WEIGHTS)
         model.eval()
         pipeline = DetectronPipeline(cfg, mapper, model)
@@ -106,6 +112,7 @@ def get_pipeline(
 
     if make_copy:
         import copy
+
         return copy.deepcopy(pipeline)
     else:
         return pipeline
@@ -136,7 +143,7 @@ class DetectronFlatParameters(NamedTuple):
     rpn_iou_labels: List[int] = [0, -1, 1]
     rpn_batch_size_per_image: int = 256
     rpn_positive_fraction: float = 0.5
-    rpn_bbox_reg_loss_type: str = 'smooth_l1'
+    rpn_bbox_reg_loss_type: str = "smooth_l1"
     rpn_bbox_reg_loss_weight: float = 1.0  # different from default (-1)
     rpn_bbox_reg_weights: Tuple[float, ...] = (1.0, 1.0, 1.0, 1.0)
     rpn_smooth_l1_beta: float = 0.1111  # different from default (0.0)
@@ -185,12 +192,11 @@ class DetectronFlatParameters(NamedTuple):
     attribute_head_num_classes: int = 400
 
     # Test
-    test_detections_per_image: int = 36 # different from default (100)
+    test_detections_per_image: int = 36  # different from default (100)
 
 
 def get_pipeline_from_flat_parameters(
-    fp: DetectronFlatParameters,
-    make_copy: bool = True
+    fp: DetectronFlatParameters, make_copy: bool = True
 ) -> DetectronPipeline:
     if fp.weights is None:
         weights = None
@@ -199,26 +205,20 @@ def get_pipeline_from_flat_parameters(
 
     overrides = {
         "VERSION": 2,
-        "INPUT": {
-            "MAX_ATTR_PER_INS": fp.max_attr_per_ins,
-        },
+        "INPUT": {"MAX_ATTR_PER_INS": fp.max_attr_per_ins,},
         "MODEL": {
             "DEVICE": fp.device,
             "WEIGHTS": weights,
             "META_ARCHITECTURE": fp.meta_architecture,
             "ATTRIBUTE_ON": fp.attribute_on,
-
             "PIXEL_MEAN": fp.pixel_mean,
             "PIXEL_STD": fp.pixel_std,
-
-            "PROPOSAL_GENERATOR": {
-                "NAME": "RPN",
-            },
+            "PROPOSAL_GENERATOR": {"NAME": "RPN",},
             "RESNETS": {
                 "STRIDE_IN_1X1": fp.stride_in_1x1,
                 "NUM_GROUPS": fp.num_groups,
                 "WIDTH_PER_GROUP": fp.width_per_group,
-                "DEPTH": fp.depth
+                "DEPTH": fp.depth,
             },
             "RPN": {
                 "HEAD_NAME": fp.rpn_head_name,
@@ -240,7 +240,6 @@ def get_pipeline_from_flat_parameters(
                 "NMS_THRESH": fp.rpn_nms_thresh,
                 "BBOX_LOSS_WEIGHT": fp.rpn_bbox_loss_weight,
             },
-
             "ROI_HEADS": {
                 "NAME": fp.roi_head_name,
                 "NUM_CLASSES": fp.roi_head_num_classes,
@@ -253,7 +252,6 @@ def get_pipeline_from_flat_parameters(
                 "NMS_THRESH_TEST": fp.roi_head_nms_thresh_test,
                 "PROPOSAL_APPEND_GT": fp.roi_head_proposal_append_gt,
             },
-
             "ROI_BOX_HEAD": {
                 "NAME": fp.box_head_name,
                 "BBOX_REG_LOSS_TYPE": fp.box_head_bbox_reg_loss_type,
@@ -272,7 +270,6 @@ def get_pipeline_from_flat_parameters(
                 "TRAIN_ON_PRED_BOXES": fp.box_head_train_on_pred_boxes,
                 "BBOX_LOSS_WEIGHT": fp.box_head_bbox_loss_weight,
             },
-
             "ROI_ATTRIBUTE_HEAD": {  # not in detectron2 default config
                 "OBJ_EMBED_DIM": fp.attribute_head_obj_embed_dim,
                 "FC_DIM": fp.attribute_head_fc_dim,
@@ -280,10 +277,7 @@ def get_pipeline_from_flat_parameters(
                 "NUM_CLASSES": fp.attribute_head_num_classes,
             },
         },
-
-        "TEST": {
-            "DETECTIONS_PER_IMAGE": fp.test_detections_per_image,
-        }
+        "TEST": {"DETECTIONS_PER_IMAGE": fp.test_detections_per_image,},
     }
 
     return get_pipeline(None, None, overrides, make_copy)

@@ -19,7 +19,6 @@ class TestResnetBackbone(AllenNlpTestCase):
         expected_width = math.ceil(image_width / backbone.get_stride())  # 75
         assert result.size() == (1, backbone.get_output_dim(), expected_height, expected_width)
 
-
     def test_output_shape_is_correct(self):
         backbone = ResnetBackbone()
         assert backbone.get_output_dim() == 1024

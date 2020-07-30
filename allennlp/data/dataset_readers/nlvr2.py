@@ -60,7 +60,7 @@ class Nlvr2Reader(DatasetReader):
         if not data_dir:
             github_url = "https://raw.githubusercontent.com/lil-lab/nlvr/"
             nlvr_commit = "68a11a766624a5b665ec7594982b8ecbedc728c7"
-            data_dir  = f"{github_url}{nlvr_commit}/nlvr2/data"
+            data_dir = f"{github_url}{nlvr_commit}/nlvr2/data"
         self.splits = {
             "dev": f"{data_dir}/dev.json",
             "test": f"{data_dir}/test1.json",
@@ -112,7 +112,7 @@ class Nlvr2Reader(DatasetReader):
         sentence_field = TextField(tokenized_sentence, self._token_indexers)
 
         # Load images
-        image_name_base = identifier[:identifier.rindex("-")]
+        image_name_base = identifier[: identifier.rindex("-")]
 
         # TODO(mattg): shouldn't we be using the URL?  What if images are reused?
         left_image_path = self.images[f"{image_name_base}-img0.png"]

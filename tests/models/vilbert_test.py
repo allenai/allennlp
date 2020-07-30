@@ -5,16 +5,8 @@ from allennlp.models.vilbert import Nlvr2Vilbert
 
 
 class TestVilbert(ModelTestCase):
-    def test_vilbert_can_train_save_and_load(self):
+    def test_model_can_train_save_and_load(self):
         param_file = self.FIXTURES_ROOT / "vilbert" / "experiment.json"
-        self.ensure_model_can_train_save_and_load(param_file)
-
-    def test_vilbert_grid_can_train_save_and_load(self):
-        param_file = self.FIXTURES_ROOT / "vilbert" / "experiment_detectron_grid.json"
-        self.ensure_model_can_train_save_and_load(param_file)
-
-    def test_vilbert_detectron_region_can_train_save_and_load(self):
-        param_file = self.FIXTURES_ROOT / "vilbert" / "experiment_detectron_region.json"
         self.ensure_model_can_train_save_and_load(param_file)
 
     def test_model_can_train_save_and_load_from_huggingface(self):
