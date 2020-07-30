@@ -4,7 +4,6 @@ from typing import Union, List, Callable, Optional, Dict, Any, Tuple
 import torch
 from torch import FloatTensor, IntTensor
 
-from allennlp.common.detectron import DetectronConfig, DetectronFlatParameters
 from allennlp.common.registrable import Registrable
 
 OnePath = Union[str, PathLike]
@@ -41,8 +40,9 @@ class ImageLoader(Registrable, Callable[[Union[OnePath, ManyPaths]], FloatTensor
 class DetectronImageLoader(ImageLoader):
     def __init__(
         self,
-        config: Optional[Union[DetectronConfig, DetectronFlatParameters]] = None
+        config: Optional[Union['DetectronConfig', 'DetectronFlatParameters']] = None
     ):
+        from allennlp.common.detectron import DetectronConfig, DetectronFlatParameters
         from allennlp.common import detectron
         if config is None:
             pipeline = detectron.get_pipeline_from_flat_parameters(make_copy=False, fp=DetectronFlatParameters())

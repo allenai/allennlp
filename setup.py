@@ -51,6 +51,7 @@ setup(
     ),
     install_requires=[
         "torch>=1.5.0,<1.6.0",
+        "torchvision>=0.6.0,<0.7.0",
         "jsonnet>=0.10.0 ; sys.platform != 'win32'",
         "overrides==3.1.0",
         "nltk",
