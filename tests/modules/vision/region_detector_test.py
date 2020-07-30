@@ -1,15 +1,15 @@
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.image_loader import DetectronImageLoader
 from allennlp.modules.vision.grid_embedder import ResnetBackbone
-from allennlp.modules.vision.proposal_generator import FasterRcnnProposalGenerator
+from allennlp.modules.vision.proposal_generator import FasterRcnnRegionDetector
 
 
-class TestFasterRcnnProposalGenerator(AllenNlpTestCase):
+class TestFasterRcnnRegionDetector(AllenNlpTestCase):
     def test_forward_runs(self):
         loader = DetectronImageLoader()
         backbone = ResnetBackbone()
         n_boxes = 40
-        generator = FasterRcnnProposalGenerator(test_detections_per_image=n_boxes)
+        generator = FasterRcnnRegionDetector(test_detections_per_image=n_boxes)
         image_pixels, image_size = loader(self.FIXTURES_ROOT / "detectron" / "000000001268.jpg")
         assert image_size[0] == 800
         assert image_size[1] == 1199

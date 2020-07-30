@@ -7,9 +7,9 @@ from torch import nn, FloatTensor, IntTensor
 from allennlp.common.registrable import Registrable
 
 
-class ProposalGenerator(nn.Module, Registrable):
+class RegionDetector(nn.Module, Registrable):
     """
-    A `ProposalGenerator` takes a batch of images as a tensor with the dimensions
+    A `RegionDetector` takes a batch of images as a tensor with the dimensions
     (Batch, Color, Height, Width), and returns a tensor in the format (Batch, #Boxes, 4).
     In other words, for every image, it returns a number of proposed boxes, identified by
     their four coordinates `(x1, y2, x2, y2)`. Coordinates are expected to be between 0
@@ -22,8 +22,8 @@ class ProposalGenerator(nn.Module, Registrable):
         raise NotImplementedError()
 
 
-@ProposalGenerator.register("faster_rcnn")
-class FasterRcnnProposalGenerator(ProposalGenerator):
+@RegionDetector.register("faster_rcnn")
+class FasterRcnnRegionDetector(RegionDetector):
     """
     Faster R-CNN (https://arxiv.org/abs/1506.01497) with ResNet backbone.
     Based on detectron2 v0.2
