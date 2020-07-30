@@ -18,12 +18,17 @@ class FakeGridEmbedder(GridEmbedder):
 
 
 class FakeRegionDetector(RegionDetector):
+    def __init__(self):
+        super().__init__()
+        self.calls = 0
+
     def forward(
         self,
         raw_images: torch.FloatTensor,
         image_sizes: torch.IntTensor,
         featurized_images: torch.FloatTensor,
     ) -> Dict[str, torch.FloatTensor]:
+        self.calls += 1
         batch_size, num_features, height, width = raw_images.size()
         features = torch.ones(batch_size, 1, 10, dtype=featurized_images.dtype)
         coordinates = torch.zeros(batch_size, 1, 4, dtype=image_sizes.dtype)
@@ -35,11 +40,12 @@ class FakeRegionDetector(RegionDetector):
 
 class TestNlvr2Reader(AllenNlpTestCase):
     def test_read(self):
+        detector = FakeRegionDetector()
         reader = Nlvr2Reader(
             image_dir=self.FIXTURES_ROOT / "data" / "nlvr2",
             image_loader=DetectronImageLoader(),
             image_featurizer=FakeGridEmbedder(),
-            region_detector=FakeRegionDetector(),
+            region_detector=detector,
             tokenizer=WhitespaceTokenizer(),
             token_indexers={"tokens": SingleIdTokenIndexer()},
         )
@@ -63,3 +69,9 @@ class TestNlvr2Reader(AllenNlpTestCase):
 
         # (batch size, 2 images per instance, num boxes (fake), 4 coords)
         assert tensors["box_coordinates"].size() == (8, 2, 1, 4)
+
+        # We have 8 images total, and 8 instances.  Those 8 images are processed two at a time in
+        # the region detector, and the results are cached, so we should only see the region detector
+        # called 4 times with this data.  This is testing the feature caching functionality in the
+        # dataset reader.
+        assert detector.calls == 4

@@ -87,6 +87,7 @@ class Nlvr2Reader(DatasetReader):
         self.image_loader = image_loader
         self.image_featurizer = image_featurizer
         self.region_detector = region_detector
+        self._feature_cache: Dict[str, Tuple[torch.FloatTensor, torch.IntTensor]] = {}
 
     @overrides
     def _read(self, split_or_filename: str):
@@ -112,18 +113,35 @@ class Nlvr2Reader(DatasetReader):
 
         # Load images
         image_name_base = identifier[:identifier.rindex("-")]
-        images_path = [self.images[f"{image_name_base}-img{image_id}.png"] for image_id in [0, 1]]
 
-        # TODO: we need a image_reader method that can cache and return feature given a single image path.
-        images, sizes = self.image_loader([images_path[0], images_path[1]])
-        with torch.no_grad():
-            featurized_images = self.image_featurizer(images)
-            detector_results = self.region_detector(images, sizes, featurized_images)
+        # TODO(mattg): shouldn't we be using the URL?  What if images are reused?
+        left_image_path = self.images[f"{image_name_base}-img0.png"]
+        right_image_path = self.images[f"{image_name_base}-img1.png"]
+
+        to_compute = []
+        if left_image_path not in self._feature_cache:
+            to_compute.append(left_image_path)
+        if right_image_path not in self._feature_cache:
+            to_compute.append(right_image_path)
+
+        if to_compute:
+            images, sizes = self.image_loader([left_image_path, right_image_path])
+            with torch.no_grad():
+                featurized_images = self.image_featurizer(images)
+                detector_results = self.region_detector(images, sizes, featurized_images)
+            features = detector_results["features"]
+            coordinates = detector_results["coordinates"]
+
+            for index, path in enumerate(to_compute):
+                self._feature_cache[path] = (features[index], coordinates[index])
+
+        left_features, left_coords = self._feature_cache[left_image_path]
+        right_features, right_coords = self._feature_cache[right_image_path]
 
         fields = {
             "sentence": sentence_field,
-            "box_features": ListField([ArrayField(a) for a in detector_results["features"]]),
-            "box_coordinates": ListField([ArrayField(a) for a in detector_results["coordinates"]]),
+            "box_features": ListField([ArrayField(left_features), ArrayField(right_features)]),
+            "box_coordinates": ListField([ArrayField(left_coords), ArrayField(right_coords)]),
             "identifier": MetadataField(identifier),
         }
 
