@@ -6,12 +6,10 @@
       "type": "detectron"
     },
     "image_featurizer": "resnet_backbone",
-    "proposal_generator": {
-      "type": "Faster-RCNN",
+    "region_detector": {
+      "type": "faster_rcnn",
       "weights": "RCNN-X152-C4-2020-07-18"
-    },
-    "mask_prepositions_verbs": false,
-    "drop_prepositions_verbs": false
+    }
   },
   "train_data_path": "test_fixtures/data/nlvr2/tiny-dev.json",
   "validation_data_path": "test_fixtures/data/nlvr2/tiny-dev.json",
