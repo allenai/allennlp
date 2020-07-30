@@ -1,4 +1,4 @@
-from typing import Tuple, List, Any
+from typing import Any, Dict, List, Tuple
 
 import torch
 import torch.nn.functional as F
@@ -10,15 +10,22 @@ from allennlp.common.registrable import Registrable
 class RegionDetector(nn.Module, Registrable):
     """
     A `RegionDetector` takes a batch of images as a tensor with the dimensions
-    (Batch, Color, Height, Width), and returns a tensor in the format (Batch, #Boxes, 4).
-    In other words, for every image, it returns a number of proposed boxes, identified by
-    their four coordinates `(x1, y2, x2, y2)`. Coordinates are expected to be between 0
-    and 1. Negative coordinates are interpreted as padding.
+    (Batch, Color, Height, Width), and finds regions of interest (or "boxes") within those images.
+
+    Those regions of interest are described by three values:
+    - A feature vector for each region, which is a tensor of shape (Batch, NumBoxes, FeatureDim)
+    - The coordinates of each region within the original image, with shape (Batch, NumBoxes, 4)
+    - (Optionally) Class probabilities from some object detector that was used to find the regions
+      of interest, with shape (Batch, NumBoxes, NumClasses).
+
+    Because the class probabilities are an optional return value, we return these tensors in a
+    dictionary, instead of a tuple (so you don't have a confusing check on the tuple size).  The
+    keys are "coordinates", "features", and "class_probs".
     """
 
     def forward(
         self, raw_images: FloatTensor, image_sizes: IntTensor, featurized_images: FloatTensor
-    ) -> FloatTensor:
+    ) -> Dict[str, FloatTensor]:
         raise NotImplementedError()
 
 
@@ -53,7 +60,6 @@ class FasterRcnnRegionDetector(RegionDetector):
         rpn_post_nms_topk_test: int = 1000,
         rpn_nms_thresh: float = 0.7,
         rpn_bbox_loss_weight: float = 1.0,  # not in detectron2 default config
-
         test_detections_per_image: int = 36,  # different from default (100)
     ):
         super().__init__()
@@ -82,7 +88,7 @@ class FasterRcnnRegionDetector(RegionDetector):
             rpn_post_nms_topk_test=rpn_post_nms_topk_test,
             rpn_nms_thresh=rpn_nms_thresh,
             rpn_bbox_loss_weight=rpn_bbox_loss_weight,
-            test_detections_per_image=test_detections_per_image
+            test_detections_per_image=test_detections_per_image,
         )
         pipeline = detectron.get_pipeline_from_flat_parameters(flat_parameters, make_copy=False)
         self.model = pipeline.model
@@ -130,4 +136,8 @@ class FasterRcnnRegionDetector(RegionDetector):
         features_tensor = torch.stack(batch_features, dim=0)
         boxes_tensor = torch.stack(batch_boxes, dim=0)
         probs_tensor = torch.stack(batch_probs, dim=0)
-        return features_tensor, boxes_tensor, probs_tensor
+        return {
+            "features": features_tensor,
+            "coordinates": boxes_tensor,
+            "class_probs": probs_tensor,
+        }

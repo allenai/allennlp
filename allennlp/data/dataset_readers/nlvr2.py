@@ -7,13 +7,14 @@ from overrides import overrides
 import torch
 
 from allennlp.common.file_utils import cached_path, json_lines_from_file
-from allennlp.data import TokenIndexer, Tokenizer
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
-from allennlp.data.fields import ArrayField, ListField, MetadataField, TextField
+from allennlp.data.fields import ArrayField, LabelField, ListField, MetadataField, TextField
 from allennlp.data.image_loader import ImageLoader
 from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import PretrainedTransformerIndexer
+from allennlp.data.token_indexers import TokenIndexer
 from allennlp.data.tokenizers import PretrainedTransformerTokenizer
+from allennlp.data.tokenizers import Tokenizer
 from allennlp.modules.vision import GridEmbedder, RegionDetector
 
 
@@ -114,18 +115,19 @@ class Nlvr2Reader(DatasetReader):
         images_path = [self.images[f"{image_name_base}-img{image_id}.png"] for image_id in [0, 1]]
 
         # TODO: we need a image_reader method that can cache and return feature given a single image path.
-        images, sizes = self.image_loader([images_path[0]])
+        images, sizes = self.image_loader([images_path[0], images_path[1]])
         with torch.no_grad():
-            featurized_images = self.image_featurizer(images, sizes)
-            pooled_features, bboxes, cls_probs = self.region_detector(
-                images, sizes, featurized_images
-            )
+            featurized_images = self.image_featurizer(images)
+            detector_results = self.region_detector(images, sizes, featurized_images)
 
         fields = {
-            "visual_features": ListField([ArrayField(a) for a in visual_features]),
-            "box_coordinates": ListField([ArrayField(a) for a in proposals]),
-            "sentence": MetadataField(sentence),
+            "sentence": sentence_field,
+            "box_features": ListField([ArrayField(a) for a in detector_results["features"]]),
+            "box_coordinates": ListField([ArrayField(a) for a in detector_results["coordinates"]]),
             "identifier": MetadataField(identifier),
-            "sentence_field": sentence_field,
         }
+
+        if label is not None:
+            fields["label"] = LabelField(int(label), skip_indexing=True)
+
         return Instance(fields)

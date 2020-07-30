@@ -68,7 +68,7 @@ class ResnetBackbone(GridEmbedder):
         pipeline = detectron.get_pipeline_from_flat_parameters(flat_parameters, make_copy=False)
         self.backbone = pipeline.model.backbone
 
-    def forward(self, images: FloatTensor, sizes: IntTensor) -> FloatTensor:
+    def forward(self, images: FloatTensor) -> FloatTensor:
         result = self.backbone(images)
         assert len(result) == 1
         return next(iter(result.values()))
