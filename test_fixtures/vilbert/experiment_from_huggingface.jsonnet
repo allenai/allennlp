@@ -14,9 +14,7 @@ local model_name = "bert-base-uncased";
         "model_name": model_name
       }
     },
-    "topk_images": -1,
-    "mask_prepositions_verbs": false,
-    "drop_prepositions_verbs": false
+    "topk_images": -1
   },
   "train_data_path": "train",
   "validation_data_path": "train",
