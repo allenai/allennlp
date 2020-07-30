@@ -46,10 +46,20 @@ class MultiProcessDataLoader(DataLoader):
         # Do some parameter validation.
         if num_workers is not None and num_workers < 0:
             raise ValueError("num_workers cannot be a negative number")
+
         if batch_size < 1:
             raise ValueError("batch_size must be at least 1")
+
+        if batch_sampler is not None:
+            if batch_size > 1:
+                raise ValueError("batch_sampler option is mutually exclusive with batch_size")
+
+            if shuffle:
+                raise ValueError("batch_sampler option is mutually exclusive with shuffle")
+
         if batches_per_epoch is not None and batches_per_epoch < 1:
             raise ValueError("batches_per_epoch must be at least 1")
+
         if lazy:
             if max_batches_in_memory < 1:
                 raise ValueError("max_batches_in_memory must be at least 1")
@@ -102,8 +112,10 @@ class MultiProcessDataLoader(DataLoader):
     def __iter__(self) -> Iterator[TensorDict]:
         if self._vocab is None:
             raise ValueError(
-                "You must index the data loader .index_with(vocab) before generating batches"
+                "This DataLoader has not been indexed with a Vocabulary yet. "
+                "Did you forget to call DataLoader.index_with(vocab)?"
             )
+
         if self.batches_per_epoch is None:
             yield from self._iter_batches()
         else:
@@ -201,7 +213,7 @@ class MultiProcessDataLoader(DataLoader):
                 # them across processes.
                 if not checked_for_token_indexers:
                     for field_name, field in instances_chunk[0].fields.items():
-                        if isinstance(field, TextField) and field.token_indexers is not None:
+                        if isinstance(field, TextField) and field._token_indexers is not None:
                             raise ValueError(
                                 f"Found a TextField ({field_name}) with token_indexers already "
                                 "applied, but you're using num_workers > 0 in your data loader. "
@@ -318,9 +330,10 @@ class MultiProcessDataLoader(DataLoader):
         num_workers: int = 0,
         lazy: bool = False,
         max_batches_in_memory: int = 100,
+        start_method: str = "fork",
     ) -> "MultiProcessDataLoader":
         if batch_sampler is not None:
-            batch_sampler_ = batch_sampler.construct(batch_size=batch_size)
+            batch_sampler_ = batch_sampler.construct()
         else:
             batch_sampler_ = None
 
@@ -335,4 +348,5 @@ class MultiProcessDataLoader(DataLoader):
             num_workers=num_workers,
             lazy=lazy,
             max_batches_in_memory=max_batches_in_memory,
+            start_method=start_method,
         )

@@ -1,47 +1,15 @@
+from typing import List
+
 import pytest
 
+from allennlp.common.params import Params
 from allennlp.data.instance import Instance
 from allennlp.data.dataset_readers import DatasetReader
-from allennlp.data.data_loaders.multi_process_data_loader import MultiProcessDataLoader
-from allennlp.data.fields import TextField
+from allennlp.data.data_loaders import DataLoader, MultiProcessDataLoader
+from allennlp.data.fields import TextField, MetadataField
 from allennlp.data.tokenizers import PretrainedTransformerTokenizer
 from allennlp.data.token_indexers import PretrainedTransformerIndexer
-
-
-def test_error_raised_when_text_fields_contain_token_indexers():
-    """
-    This tests that the MultiProcessDataLoader raises an error when num_workers > 0
-    but the dataset reader doesn't implement apply_token_indexers().
-
-    It also tests that errors raised within a worker process are propogated upwards
-    to the main process, and that when that happens, all workers will be successfully
-    killed.
-    """
-
-    class BadDatasetReader(DatasetReader):
-        def __init__(self, model: str = "epwalsh/bert-xsmall-dummy", **kwargs) -> None:
-            super().__init__(**kwargs)
-            self.tokenizer = PretrainedTransformerTokenizer(model)
-            self.token_indexers = {"tokens": PretrainedTransformerIndexer(model)}
-
-        def _read(self, file_path: str):
-            for i in range(10):
-                source = f"Hi there, I'm the {i}th instance"
-                target = f"Hello, {i}th instance!"
-                yield self.text_to_instance(source, target)
-
-        def text_to_instance(self, source: str, target: str = None) -> Instance:  # type: ignore
-            fields = {}
-            fields["source"] = TextField(self.tokenizer.tokenize(source), self.token_indexers)  # type: ignore
-            if target is not None:
-                fields["target"] = TextField(self.tokenizer.tokenize(target), self.token_indexers)  # type: ignore
-            return Instance(fields)  # type: ignore
-
-    with pytest.raises(ValueError, match="Make sure your dataset reader's text_to_instance()"):
-        loader = MultiProcessDataLoader(
-            BadDatasetReader(), "this-path-doesn't-matter", num_workers=2
-        )
-        list(loader.iter_instances())
+from allennlp.data.vocabulary import Vocabulary
 
 
 class MockDatasetReader(DatasetReader):
@@ -51,6 +19,10 @@ class MockDatasetReader(DatasetReader):
     It utilizes a transformers tokenizer, since historically we've deadlocking
     issues when using these within subprocesses. So these tests also serve as
     regression tests against those issues.
+
+    And unlike `MockOldDatasetReader` below, it implements all of the new API,
+    specifically the `apply_token_indexers` method, so that it can be used
+    with num_workers > 0.
     """
 
     NUM_INSTANCES = 1000
@@ -66,11 +38,12 @@ class MockDatasetReader(DatasetReader):
         for i in self.shard_iterable(range(self.NUM_INSTANCES)):
             source = f"Hi there, I'm the {i}th instance"
             target = f"Hello, {i}th instance!"
-            yield self.text_to_instance(source, target)
+            yield self.text_to_instance(i, source, target)
 
-    def text_to_instance(self, source: str, target: str = None) -> Instance:  # type: ignore
+    def text_to_instance(self, index: int, source: str, target: str = None) -> Instance:  # type: ignore
         fields = {}
         fields["source"] = TextField(self.tokenizer.tokenize(source))
+        fields["index"] = MetadataField(index)  # type: ignore
         if target is not None:
             fields["target"] = TextField(self.tokenizer.tokenize(target))
         return Instance(fields)  # type: ignore
@@ -79,3 +52,88 @@ class MockDatasetReader(DatasetReader):
         instance.fields["source"].token_indexers = self.token_indexers  # type: ignore
         if "target" in instance.fields:
             instance.fields["target"].token_indexers = self.token_indexers  # type: ignore
+
+
+class MockOldDatasetReader(DatasetReader):
+    def __init__(self, model: str = "epwalsh/bert-xsmall-dummy", **kwargs) -> None:
+        super().__init__(**kwargs)
+        self.tokenizer = PretrainedTransformerTokenizer(model)
+        self.token_indexers = {"tokens": PretrainedTransformerIndexer(model)}
+
+    def _read(self, file_path: str):
+        for i in range(10):
+            source = f"Hi there, I'm the {i}th instance"
+            target = f"Hello, {i}th instance!"
+            yield self.text_to_instance(source, target)
+
+    def text_to_instance(self, source: str, target: str = None) -> Instance:  # type: ignore
+        fields = {}
+        fields["source"] = TextField(self.tokenizer.tokenize(source), self.token_indexers)  # type: ignore
+        if target is not None:
+            fields["target"] = TextField(self.tokenizer.tokenize(target), self.token_indexers)  # type: ignore
+        return Instance(fields)  # type: ignore
+
+
+@pytest.mark.parametrize("lazy", (True, False))
+def test_error_raised_when_text_fields_contain_token_indexers(lazy):
+    """
+    This tests that the MultiProcessDataLoader raises an error when num_workers > 0
+    but the dataset reader doesn't implement apply_token_indexers().
+
+    It also tests that errors raised within a worker process are propogated upwards
+    to the main process, and that when that happens, all workers will be successfully
+    killed.
+    """
+
+    with pytest.raises(ValueError, match="Make sure your dataset reader's text_to_instance()"):
+        loader = MultiProcessDataLoader(
+            MockOldDatasetReader(), "this-path-doesn't-matter", num_workers=2, lazy=lazy
+        )
+        list(loader.iter_instances())
+
+
+@pytest.mark.parametrize(
+    "options",
+    [
+        dict(lazy=True, num_workers=2),
+        dict(lazy=False, num_workers=2),
+        dict(lazy=True, num_workers=2, start_method="spawn"),
+        dict(lazy=False, num_workers=2, start_method="spawn"),
+        dict(lazy=True, num_workers=0),
+        dict(lazy=False, num_workers=0),
+    ],
+)
+def test_multi_process_data_loader(options):
+    reader = MockDatasetReader()
+    data_path = "this doesn't matter"
+
+    options["type"] = "multi_process"
+    loader: MultiProcessDataLoader = DataLoader.from_params(
+        Params(options), reader=reader, data_path=data_path
+    )
+    if options.get("lazy"):
+        # Instances should be loaded immediately if lazy is False.
+        assert loader._instances
+
+    instances = loader.iter_instances()
+    # This should be a generator.
+    assert not isinstance(instances, (list, tuple))
+    instances = list(instances)
+    assert len(instances) == MockDatasetReader.NUM_INSTANCES
+
+    # Now build vocab.
+    vocab = Vocabulary.from_instances(instances)
+
+    # Before indexing the loader, trying to iterate through batches will raise an error.
+    with pytest.raises(ValueError, match="Did you forget to call DataLoader.index_with"):
+        list(loader)
+
+    loader.index_with(vocab)
+
+    # Run through a couple epochs to make sure we collect all of the instances.
+    for _ in range(2):
+        indices: List[int] = []
+        for batch in loader:
+            for index in batch["index"]:
+                indices.append(index)
+        assert len(indices) == len(set(indices)) == MockDatasetReader.NUM_INSTANCES
