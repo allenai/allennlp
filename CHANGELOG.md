@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [v1.1.0rc2](https://github.com/allenai/allennlp/releases/tag/v1.1.0rc2) - 2020-07-31
+
 ### Changed
 
 - Upgraded PyTorch requirement to 1.6.
@@ -17,12 +19,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Removed unnecessary warning about deadlocks in `DataLoader`.
 - Fixed testing models that only return a loss when they are in training mode.
-- Fixed a bug in `FromParams` that causes silent failure in case of the parameter type being Optional[Union[...]].
-- Cleanup/fix to module docstring in `allennlp/models/seq2seq_encoders/__init__.py`.
+- Fixed a bug in `FromParams` that caused silent failure in case of the parameter type being `Optional[Union[...]]`.
 
 ### Added
 
-- Added the option to specify `requires_grad: false` within an optimizers parameter groups.
+- Added the option to specify `requires_grad: false` within an optimizer's parameter groups.
 - Added the `file-friendly-logging` flag back to the `train` command. Also added this flag to the `predict`, `evaluate`, and `find-learning-rate` commands.
 
 ### Removed
