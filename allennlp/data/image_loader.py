@@ -47,8 +47,7 @@ DetectronInput = Union["DetectronConfig", "DetectronFlatParameters"]  # type: ig
 @ImageLoader.register("detectron")
 class DetectronImageLoader(ImageLoader):
     def __init__(
-        self,
-        config: Optional[DetectronInput] = None,
+        self, config: Optional[DetectronInput] = None,
     ):
         from allennlp.common.detectron import DetectronConfig, DetectronFlatParameters
         from allennlp.common import detectron
