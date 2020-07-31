@@ -1,4 +1,6 @@
-from typing import Tuple
+from typing import Dict, Union
+
+import torch
 
 from allennlp.training.metrics.metric import Metric
 from allennlp.training.metrics.fbeta_measure import FBetaMeasure
@@ -17,7 +19,12 @@ class F1Measure(FBetaMeasure):
         super().__init__(beta=1, labels=[positive_label])
         self._positive_label = positive_label
 
-    def get_metric(self, reset: bool = False) -> Tuple[float, float, float]:
+    def get_metric(
+        self,
+        reset: bool = False,
+        world_size: int = 1,
+        cuda_device: Union[int, torch.device] = torch.device("cpu"),
+    ) -> Dict[str, float]:
         """
         # Returns
 
@@ -25,13 +32,13 @@ class F1Measure(FBetaMeasure):
         recall : `float`
         f1-measure : `float`
         """
-        metric = super().get_metric(reset=reset)
+        metric = super().get_metric(reset=reset, world_size=world_size, cuda_device=cuda_device)
         # Because we just care about the class `positive_label`
         # there is just one item in `precision`, `recall`, `fscore`
         precision = metric["precision"][0]
         recall = metric["recall"][0]
-        fscore = metric["fscore"][0]
-        return precision, recall, fscore
+        f1 = metric["fscore"][0]
+        return {"precision": precision, "recall": recall, "f1": f1}
 
     @property
     def _true_positives(self):
