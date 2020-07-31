@@ -3,9 +3,9 @@
 global defaults for certain tqdm parameters.
 """
 import logging
-from time import time
-
 import sys
+from time import time
+from typing import Optional
 
 try:
     SHELL = str(type(get_ipython()))  # type:ignore # noqa: F821
@@ -16,6 +16,9 @@ if "zmqshell.ZMQInteractiveShell" in SHELL:
     from tqdm import tqdm_notebook as _tqdm
 else:
     from tqdm import tqdm as _tqdm
+
+from allennlp.common import logging as common_logging
+
 
 # This is necessary to stop tqdm from hanging
 # when exceptions are raised inside iterators.
@@ -47,20 +50,23 @@ def replace_cr_with_newline(message: str) -> str:
 
 class TqdmToLogsWriter(object):
     def __init__(self):
-        self.last_message_written_time = 0
+        self.last_message_written_time = 0.0
 
     def write(self, message):
-        if sys.stderr.isatty():
-            # We're running in a real terminal.
-            sys.stderr.write(message)
+        file_friendly_message: Optional[str] = None
+        if common_logging.FILE_FRIENDLY_LOGGING:
+            file_friendly_message = replace_cr_with_newline(message)
+            if file_friendly_message.strip():
+                sys.stderr.write(file_friendly_message)
         else:
-            # The output is being piped or redirected.
-            sys.stderr.write(replace_cr_with_newline(message))
+            sys.stderr.write(message)
+
         # Every 10 seconds we also log the message.
         now = time()
         if now - self.last_message_written_time >= 10 or "100%" in message:
-            message = replace_cr_with_newline(message)
-            for message in message.split("\n"):
+            if file_friendly_message is None:
+                file_friendly_message = replace_cr_with_newline(message)
+            for message in file_friendly_message.split("\n"):
                 message = message.strip()
                 if len(message) > 0:
                     logger.info(message)
@@ -73,8 +79,13 @@ class TqdmToLogsWriter(object):
 class Tqdm:
     @staticmethod
     def tqdm(*args, **kwargs):
-        # Use a slow interval if the output is being piped or redirected.
-        default_mininterval = 0.1 if sys.stderr.isatty() else 10.0
-        new_kwargs = {"file": TqdmToLogsWriter(), "mininterval": default_mininterval, **kwargs}
+        # Use a slower interval when FILE_FRIENDLY_LOGGING is set.
+        default_mininterval = 2.0 if common_logging.FILE_FRIENDLY_LOGGING else 0.1
+
+        new_kwargs = {
+            "file": TqdmToLogsWriter(),
+            "mininterval": default_mininterval,
+            **kwargs,
+        }
 
         return _tqdm(*args, **new_kwargs)

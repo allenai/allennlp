@@ -12,6 +12,7 @@ from typing import Any, Dict
 from overrides import overrides
 
 from allennlp.commands.subcommand import Subcommand
+from allennlp.common import logging as common_logging
 from allennlp.common.util import dump_metrics, prepare_environment
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data import DataLoader
@@ -84,6 +85,12 @@ class Evaluate(Subcommand):
             "extended, we will try to use the original file paths used during training. If "
             "they are not available we will use random vectors for embedding extension.",
         )
+        subparser.add_argument(
+            "--file-friendly-logging",
+            action="store_true",
+            default=False,
+            help="outputs tqdm status on separate lines and slows tqdm refresh rate",
+        )
 
         subparser.set_defaults(func=evaluate_from_args)
 
@@ -91,6 +98,8 @@ class Evaluate(Subcommand):
 
 
 def evaluate_from_args(args: argparse.Namespace) -> Dict[str, Any]:
+    common_logging.FILE_FRIENDLY_LOGGING = args.file_friendly_logging
+
     # Disable some of the more verbose logging statements
     logging.getLogger("allennlp.common.params").disabled = True
     logging.getLogger("allennlp.nn.initializers").disabled = True
