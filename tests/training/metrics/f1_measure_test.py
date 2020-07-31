@@ -206,7 +206,7 @@ class F1MeasureTest(AllenNlpTestCase):
                 ),
             ]
             targets = [torch.tensor([0, 4, 1]), torch.tensor([0, 3, 0])]
-            metric_args = {"predictions": predictions, "targets": targets}
+            metric_kwargs = {"predictions": predictions, "gold_labels": targets}
             desired_metrics = {
                 "precision": 1.0,
                 "recall": 0.333333333,
@@ -215,7 +215,7 @@ class F1MeasureTest(AllenNlpTestCase):
             test_this(
                 global_distributed_metric,
                 F1Measure(positive_label=0),
-                metric_args,
+                metric_kwargs,
                 desired_metrics,
                 exact=False,
             )

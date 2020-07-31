@@ -156,12 +156,12 @@ class CategoricalAccuracyTest(AllenNlpTestCase):
                 torch.tensor([[0.1, 0.6, 0.1, 0.2, 0.0]]),
             ]
             targets = [torch.tensor([0]), torch.tensor([3])]
-            metric_args = {"predictions": predictions, "targets": targets}
+            metric_kwargs = {"predictions": predictions, "gold_labels": targets}
             desired_values = {"accuracy": 0.5}
             test_this(
                 global_distributed_metric,
                 CategoricalAccuracy(),
-                metric_args,
+                metric_kwargs,
                 desired_values,
                 exact=True,
             )

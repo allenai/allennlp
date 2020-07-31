@@ -1,4 +1,4 @@
-from typing import Dict, Iterable, List, Optional, Tuple, Union
+from typing import Dict, Iterable, List, Optional, Tuple, Union, Any
 
 import torch
 import torch.distributed as dist
@@ -56,10 +56,20 @@ class Metric(Registrable):
         return (x.detach() if isinstance(x, torch.Tensor) else x for x in tensors)
 
     @staticmethod
-    def _aggregate_metric(metric_tensor: torch.Tensor) -> torch.Tensor:
+    def _aggregate_metrics(
+        metrics: Dict[str, Any],
+        world_size: int = 1,
+        cuda_device: Union[int, torch.device] = torch.device("cpu"),
+    ) -> Dict[str, Any]:
         """
         Aggregate metrics across different processes. The default is to
         take the average.
         """
         # raise NotImplementedError
-        dist.all_reduce(metric_tensor, op=dist.ReduceOp.SUM)
+        aggregated_metrics = {}
+        for metric_name, metric_val in metrics.items():
+            metric_tensor = torch.tensor(metric_val).to(cuda_device)
+            dist.all_reduce(metric_tensor, op=dist.ReduceOp.SUM)
+            reduced_metric = metric_tensor.item() / world_size
+            aggregated_metrics[metric_name] = reduced_metric
+        return aggregated_metrics

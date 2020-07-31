@@ -388,12 +388,16 @@ class FBetaMeasureTest(AllenNlpTestCase):
                 ),
             ]
             targets = [torch.tensor([0, 4, 1]), torch.tensor([0, 3, 0])]
-            metric_args = {"predictions": predictions, "targets": targets}
+            metric_kwargs = {"predictions": predictions, "gold_labels": targets}
             desired_metrics = {
                 "precision": self.desired_precisions,
                 "recall": self.desired_recalls,
                 "fscore": self.desired_fscores,
             }
             test_this(
-                global_distributed_metric, FBetaMeasure(), metric_args, desired_metrics, exact=False
+                global_distributed_metric,
+                FBetaMeasure(),
+                metric_kwargs,
+                desired_metrics,
+                exact=False,
             )

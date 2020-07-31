@@ -1,7 +1,8 @@
-from typing import Optional, List
+from typing import Optional, List, Union
 
 from overrides import overrides
 import torch
+import torch.distributed as dist
 
 from allennlp.training.metrics.metric import Metric
 
@@ -85,7 +86,12 @@ class AttachmentScores(Metric):
         self._total_sentences += correct_indices.size(0)
         self._total_words += correct_indices.numel() - (~mask).sum()
 
-    def get_metric(self, reset: bool = False):
+    def get_metric(
+        self,
+        reset: bool = False,
+        world_size: int = 1,
+        cuda_device: Union[int, torch.device] = torch.device("cpu"),
+    ):
         """
         # Returns
 
@@ -95,6 +101,24 @@ class AttachmentScores(Metric):
         labeled_attachment_score = 0.0
         unlabeled_exact_match = 0.0
         labeled_exact_match = 0.0
+
+        if world_size > 1:
+            self._unlabeled_correct = torch.tensor(self._unlabeled_correct).to(cuda_device)
+            self._exact_unlabeled_correct = torch.tensor(self._exact_unlabeled_correct).to(
+                cuda_device
+            )
+            self._labeled_correct = torch.tensor(self._labeled_correct).to(cuda_device)
+            self._exact_labeled_correct = torch.tensor(self._exact_labeled_correct).to(cuda_device)
+            self._total_sentences = torch.tensor(self._total_sentences).to(cuda_device)
+            self._total_words = torch.tensor(self._total_words).to(cuda_device)
+
+            dist.all_reduce(self._unlabeled_correct, op=dist.ReduceOp.SUM)
+            dist.all_reduce(self._exact_unlabeled_correct, op=dist.ReduceOp.SUM)
+            dist.all_reduce(self._labeled_correct, op=dist.ReduceOp.SUM)
+            dist.all_reduce(self._exact_labeled_correct, op=dist.ReduceOp.SUM)
+            dist.all_reduce(self._total_sentences, op=dist.ReduceOp.SUM)
+            dist.all_reduce(self._total_words, op=dist.ReduceOp.SUM)
+
         if self._total_words > 0.0:
             unlabeled_attachment_score = float(self._unlabeled_correct) / float(self._total_words)
             labeled_attachment_score = float(self._labeled_correct) / float(self._total_words)
@@ -105,12 +129,15 @@ class AttachmentScores(Metric):
             labeled_exact_match = float(self._exact_labeled_correct) / float(self._total_sentences)
         if reset:
             self.reset()
-        return {
+        metrics = {
             "UAS": unlabeled_attachment_score,
             "LAS": labeled_attachment_score,
             "UEM": unlabeled_exact_match,
             "LEM": labeled_exact_match,
         }
+        # if world_size > 1:
+        #    metrics = self._aggregate_metrics(metrics)
+        return metrics
 
     @overrides
     def reset(self):

@@ -72,17 +72,18 @@ def global_distributed_metric(
     world_size: int,
     gpu_id: Union[int, torch.device],
     metric: Metric,
-    metric_args: Dict[str, Any],
+    metric_kwargs: Dict[str, Any],
     desired_values: Dict[str, Any],
     exact: bool = True,
 ):
-    args = []
+    kwargs = {}
 
     # Use the arguments meant for the process with rank `global_rank`.
-    for argname in metric_args:
-        args.append(metric_args[argname][global_rank])
+    for argname in metric_kwargs:
+        # args.append(metric_args[argname][global_rank])
+        kwargs[argname] = metric_kwargs[argname][global_rank]
 
-    metric(*args)
+    metric(**kwargs)
 
     gpu_id = gpu_id if gpu_id >= 0 else torch.device("cpu")
     metrics = metric.get_metric(False, world_size, gpu_id)
