@@ -160,7 +160,7 @@ class CategoricalAccuracyTest(AllenNlpTestCase):
             desired_values = {"accuracy": 0.5}
             test_this(
                 global_distributed_metric,
-                CategoricalAccuracy,
+                CategoricalAccuracy(),
                 metric_args,
                 desired_values,
                 exact=True,

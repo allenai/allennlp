@@ -395,5 +395,5 @@ class FBetaMeasureTest(AllenNlpTestCase):
                 "fscore": self.desired_fscores,
             }
             test_this(
-                global_distributed_metric, FBetaMeasure, metric_args, desired_metrics, exact=False
+                global_distributed_metric, FBetaMeasure(), metric_args, desired_metrics, exact=False
             )
