@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Tuple
+from typing import Dict, List, Tuple
 
 import torch
 import torch.nn.functional as F
@@ -25,7 +25,7 @@ class RegionDetector(nn.Module, Registrable):
 
     def forward(
         self, raw_images: FloatTensor, image_sizes: IntTensor, featurized_images: FloatTensor
-    ) -> Dict[str, FloatTensor]:
+    ) -> Dict[str, torch.Tensor]:
         raise NotImplementedError()
 
 
@@ -95,7 +95,7 @@ class FasterRcnnRegionDetector(RegionDetector):
 
     def forward(
         self, raw_images: FloatTensor, image_sizes: IntTensor, featurized_images: FloatTensor
-    ) -> (List[FloatTensor], List[FloatTensor], List[Any]):
+    ) -> Dict[str, torch.Tensor]:
         batch_size = len(image_sizes)
         # RPN
         from detectron2.structures import ImageList
@@ -120,7 +120,6 @@ class FasterRcnnRegionDetector(RegionDetector):
             predictions, proposals
         )
 
-        box_type = type(proposals[0].proposal_boxes)
         batch_boxes = []
         batch_features = []
         batch_probs = []

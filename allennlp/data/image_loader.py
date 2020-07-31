@@ -1,5 +1,5 @@
 from os import PathLike
-from typing import Union, List, Callable, Optional, Dict, Any, Tuple
+from typing import Union, Sequence, Optional, Tuple
 
 import torch
 from torch import FloatTensor, IntTensor
@@ -7,25 +7,24 @@ from torch import FloatTensor, IntTensor
 from allennlp.common.registrable import Registrable
 
 OnePath = Union[str, PathLike]
-ManyPaths = List[OnePath]
+ManyPaths = Sequence[OnePath]
 
 ImagesWithSize = Tuple[FloatTensor, IntTensor]
 
 
-class ImageLoader(Registrable, Callable[[Union[OnePath, ManyPaths]], FloatTensor]):
+class ImageLoader(Registrable):
     """
-    An `ImageLoader` is a callable that takes as input one or more filenames, and outputs an two tensors.
-    The first one contains the images and is of shape (batch, color, height, width).
-    The second one contains the image sizes and is of shape (batch, [height, width]).
+    An `ImageLoader` is a callable that takes as input one or more filenames, and outputs two
+    tensors.  The first one contains the images and is of shape (batch, color, height, width).  The
+    second one contains the image sizes and is of shape (batch, 2) (where the two dimensions contain
+    height and width).
     """
 
     default_implementation = "detectron"
 
-    def __call__(
-        self, filename_or_filenames: Union[OnePath, ManyPaths]
-    ) -> Tuple[FloatTensor, IntTensor]:
+    def __call__(self, filename_or_filenames: Union[OnePath, ManyPaths]) -> ImagesWithSize:
         if not isinstance(filename_or_filenames, list):
-            pixels, sizes = self([filename_or_filenames])
+            pixels, sizes = self([filename_or_filenames])  # type: ignore
             return pixels[0], sizes[0]
 
         from allennlp.common.file_utils import cached_path
@@ -37,10 +36,19 @@ class ImageLoader(Registrable, Callable[[Union[OnePath, ManyPaths]], FloatTensor
         raise NotImplementedError()
 
 
+# These are in strings to avoid a costly / perhaps uninstalled import of detectron.  This typedef is
+# not inplace because it makes the line too long to include flake and mypy ignore statements inline.
+# TODO(mattg): Maybe better is to make some vision/ directory that doesn't get imported anywhere by
+# default, but allows for putting the detectron imports at the top of the file, because this isn't
+# the only place we have this issue.
+DetectronInput = Union["DetectronConfig", "DetectronFlatParameters"]  # type: ignore # noqa: F821
+
+
 @ImageLoader.register("detectron")
 class DetectronImageLoader(ImageLoader):
     def __init__(
-        self, config: Optional[Union["DetectronConfig", "DetectronFlatParameters"]] = None
+        self,
+        config: Optional[DetectronInput] = None,
     ):
         from allennlp.common.detectron import DetectronConfig, DetectronFlatParameters
         from allennlp.common import detectron
@@ -64,6 +72,9 @@ class DetectronImageLoader(ImageLoader):
     def load(self, filenames: ManyPaths) -> ImagesWithSize:
         images = [{"file_name": str(f)} for f in filenames]
         images = [self.mapper(i) for i in images]
-        images = self.model.preprocess_image(images)
+        processed_images = self.model.preprocess_image(images)
 
-        return images.tensor, torch.tensor(images.image_sizes, dtype=torch.int32)
+        return (
+            processed_images.tensor,
+            torch.tensor(processed_images.image_sizes, dtype=torch.int32),
+        )

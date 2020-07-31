@@ -62,5 +62,9 @@ class ArrayField(Field[torch.Tensor]):
     def __len__(self):
         return 1 if len(self.tensor.size()) <= 0 else self.tensor.size(0)
 
-    def __eq__(self, other: "ArrayField") -> bool:
-        return torch.equal(self.tensor, other.tensor)
+    def __eq__(self, other) -> bool:
+        if isinstance(self, other.__class__):
+            return (
+                torch.equal(self.tensor, other.tensor) and self.padding_value == other.padding_value
+            )
+        return NotImplemented

@@ -205,7 +205,7 @@ def get_pipeline_from_flat_parameters(
 
     overrides = {
         "VERSION": 2,
-        "INPUT": {"MAX_ATTR_PER_INS": fp.max_attr_per_ins,},
+        "INPUT": {"MAX_ATTR_PER_INS": fp.max_attr_per_ins},
         "MODEL": {
             "DEVICE": fp.device,
             "WEIGHTS": weights,
@@ -213,7 +213,7 @@ def get_pipeline_from_flat_parameters(
             "ATTRIBUTE_ON": fp.attribute_on,
             "PIXEL_MEAN": fp.pixel_mean,
             "PIXEL_STD": fp.pixel_std,
-            "PROPOSAL_GENERATOR": {"NAME": "RPN",},
+            "PROPOSAL_GENERATOR": {"NAME": "RPN"},
             "RESNETS": {
                 "STRIDE_IN_1X1": fp.stride_in_1x1,
                 "NUM_GROUPS": fp.num_groups,
@@ -277,7 +277,7 @@ def get_pipeline_from_flat_parameters(
                 "NUM_CLASSES": fp.attribute_head_num_classes,
             },
         },
-        "TEST": {"DETECTIONS_PER_IMAGE": fp.test_detections_per_image,},
+        "TEST": {"DETECTIONS_PER_IMAGE": fp.test_detections_per_image},
     }
 
     return get_pipeline(None, None, overrides, make_copy)

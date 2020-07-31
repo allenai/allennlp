@@ -1,6 +1,4 @@
-from typing import Tuple
-
-from torch import nn, FloatTensor, IntTensor
+from torch import nn, FloatTensor
 
 from allennlp.common.registrable import Registrable
 
@@ -26,7 +24,7 @@ class GridEmbedder(nn.Module, Registrable):
         """
         raise NotImplementedError
 
-    def get_stride(self) -> Tuple[int, int]:
+    def get_stride(self) -> int:
         """
         Returns the overall stride of this `GridEmbedder`, which, when combined with the input image
         size, will give you the height and width of the output grid.

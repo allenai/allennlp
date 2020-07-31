@@ -1,7 +1,7 @@
 import glob
 import os
 from os import PathLike
-from typing import Dict, Union
+from typing import Any, Dict, Tuple, Union
 
 from overrides import overrides
 import torch
@@ -95,10 +95,11 @@ class Nlvr2Reader(DatasetReader):
 
         json_file_path = cached_path(filename)
 
-        for json in json_lines_from_file(json_file_path):
-            identifier = json["identifier"]
-            sentence = json["sentence"]
-            label = bool(json["label"])
+        json_blob: Dict[str, Any]
+        for json_blob in json_lines_from_file(json_file_path):  # type: ignore
+            identifier = json_blob["identifier"]
+            sentence = json_blob["sentence"]
+            label = bool(json_blob["label"])
             instance = self.text_to_instance(identifier, sentence, label)
             if instance is not None:
                 yield instance
