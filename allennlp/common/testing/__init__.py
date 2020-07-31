@@ -1,11 +1,14 @@
 """
 Utilities and helpers for writing tests.
 """
+from typing import Dict, Any, Optional, Union
 import torch
+from torch.testing import assert_allclose
 import pytest
 
 from allennlp.common.testing.test_case import AllenNlpTestCase
 from allennlp.common.testing.model_test_case import ModelTestCase
+from allennlp.common.testing.distributed_test_context_manager import DistributedTestContextManager
 
 
 _available_devices = ["cpu"] + (["cuda"] if torch.cuda.is_available() else [])
@@ -45,3 +48,43 @@ def cpu_or_gpu(test_method):
     Decorator to indicate that a test should run on both CPU and GPU
     """
     return pytest.mark.gpu(test_method)
+
+
+# Helpers for testing distributed metrics
+
+
+def assert_metrics_values(
+    metrics: Dict[str, Any], desired_values: Dict[str, Any], exact: Optional[bool] = True
+):
+    for key in metrics:
+        if exact:
+            assert metrics[key] == desired_values[key], "{} != {}".format(
+                metrics[key], desired_values[key]
+            )
+        else:
+            assert_allclose(metrics[key], desired_values[key])
+
+
+def global_distributed_metric(
+    global_rank: int,
+    world_size: int,
+    gpu_id: Union[int, torch.device],
+    metric_class: type,
+    metric_args: Dict[str, Any],
+    desired_values: Dict[str, Any],
+    exact: bool = True,
+):
+    metric = metric_class()
+    args = []
+
+    # Use the arguments meant for the process with rank `global_rank`.
+    for argname in metric_args:
+        args.append(metric_args[argname][global_rank])
+
+    metric(*args)
+
+    gpu_id = gpu_id if gpu_id >= 0 else torch.device("cpu")
+    metrics = metric.get_metric(False, world_size, gpu_id)
+
+    # Call `assertion_metrics_values` to check if the metrics have the desired values.
+    assert_metrics_values(metrics, desired_values, exact)

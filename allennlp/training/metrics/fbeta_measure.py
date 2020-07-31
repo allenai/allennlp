@@ -1,6 +1,7 @@
 from typing import List, Optional, Union
 
 import torch
+import torch.distributed as dist
 from overrides import overrides
 
 from allennlp.common.checks import ConfigurationError
@@ -165,7 +166,12 @@ class FBetaMeasure(Metric):
         self._total_sum += mask.sum().to(torch.float)
 
     @overrides
-    def get_metric(self, reset: bool = False):
+    def get_metric(
+        self,
+        reset: bool = False,
+        world_size: int = 1,
+        cuda_device: Union[int, torch.device] = torch.device("cpu"),
+    ):
         """
         # Returns
 
@@ -179,9 +185,17 @@ class FBetaMeasure(Metric):
         if self._true_positive_sum is None:
             raise RuntimeError("You never call this metric before.")
 
-        tp_sum = self._true_positive_sum
-        pred_sum = self._pred_sum
-        true_sum = self._true_sum
+        if world_size > 1:
+            tp_sum = torch.tensor(self._true_positive_sum).to(cuda_device)
+            pred_sum = torch.tensor(self._pred_sum).to(cuda_device)
+            true_sum = torch.tensor(self._true_sum).to(cuda_device)
+            dist.all_reduce(tp_sum, op=dist.ReduceOp.SUM)
+            dist.all_reduce(pred_sum, op=dist.ReduceOp.SUM)
+            dist.all_reduce(true_sum, op=dist.ReduceOp.SUM)
+        else:
+            tp_sum = self._true_positive_sum
+            pred_sum = self._pred_sum
+            true_sum = self._true_sum
 
         if self._labels is not None:
             # Retain only selected labels and order them

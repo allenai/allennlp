@@ -6,7 +6,12 @@ from torch.testing import assert_allclose
 import pytest
 
 from allennlp.common.checks import ConfigurationError
-from allennlp.common.testing import AllenNlpTestCase, multi_device
+from allennlp.common.testing import (
+    AllenNlpTestCase,
+    multi_device,
+    DistributedTestContextManager,
+    global_distributed_metric,
+)
 from allennlp.training.metrics import FBetaMeasure
 
 
@@ -363,3 +368,32 @@ class FBetaMeasureTest(AllenNlpTestCase):
         assert_allclose(precisions, [0.0, 0.0])
         assert_allclose(recalls, [0.0, 0.0])
         assert_allclose(fscores, [0.0, 0.0])
+
+    def test_distributed_fbeta_measure(self):
+        with DistributedTestContextManager([-1, -1]) as test_this:
+            predictions = [
+                torch.tensor(
+                    [
+                        [0.35, 0.25, 0.1, 0.1, 0.2],
+                        [0.1, 0.6, 0.1, 0.2, 0.0],
+                        [0.1, 0.6, 0.1, 0.2, 0.0],
+                    ]
+                ),
+                torch.tensor(
+                    [
+                        [0.1, 0.5, 0.1, 0.2, 0.0],
+                        [0.1, 0.2, 0.1, 0.7, 0.0],
+                        [0.1, 0.6, 0.1, 0.2, 0.0],
+                    ]
+                ),
+            ]
+            targets = [torch.tensor([0, 4, 1]), torch.tensor([0, 3, 0])]
+            metric_args = {"predictions": predictions, "targets": targets}
+            desired_metrics = {
+                "precision": self.desired_precisions,
+                "recall": self.desired_recalls,
+                "fscore": self.desired_fscores,
+            }
+            test_this(
+                global_distributed_metric, FBetaMeasure, metric_args, desired_metrics, exact=False
+            )
