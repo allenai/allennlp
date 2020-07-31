@@ -10,7 +10,8 @@ from typing import Any, Dict, Iterable, Optional, Union, Tuple, Set, List
 from collections import Counter
 
 import torch
-import torch.distributed as dist
+
+# import torch.distributed as dist
 from torch.utils.data import DataLoader, Dataset
 from torch.nn.utils import clip_grad_norm_
 
@@ -286,7 +287,7 @@ def get_metrics(
     the `"loss"` metric is "average loss per batch".
     Returns the `"batch_loss"` separately.
     """
-    metrics = model.get_metrics(reset=reset)
+    metrics = model.get_metrics(reset=reset, world_size=world_size)
     if batch_loss is not None:
         metrics["batch_loss"] = batch_loss
     metrics["loss"] = float(total_loss / num_batches) if num_batches > 0 else 0.0
@@ -295,17 +296,19 @@ def get_metrics(
             metrics["batch_reg_loss"] = batch_reg_loss
         metrics["reg_loss"] = float(total_reg_loss / num_batches) if num_batches > 0 else 0.0
 
-    if world_size > 1:
-        # In distributed mode, average out all metrics across GPUs
-        aggregated_metrics = {}
-        for metric_name, metric_val in metrics.items():
-            metric_tensor = torch.tensor(metric_val).to(cuda_device)
-            dist.all_reduce(metric_tensor, op=dist.ReduceOp.SUM)
-            reduced_metric = metric_tensor.item() / world_size
-            aggregated_metrics[metric_name] = reduced_metric
-        return aggregated_metrics
-    else:
-        return metrics
+    return metrics
+
+    # if world_size > 1:
+    #     # In distributed mode, average out all metrics across GPUs
+    #     aggregated_metrics = {}
+    #     for metric_name, metric_val in metrics.items():
+    #         metric_tensor = torch.tensor(metric_val).to(cuda_device)
+    #         dist.all_reduce(metric_tensor, op=dist.ReduceOp.SUM)
+    #         reduced_metric = metric_tensor.item() / world_size
+    #         aggregated_metrics[metric_name] = reduced_metric
+    #     return aggregated_metrics
+    # else:
+    #     return metrics
 
 
 def evaluate(
