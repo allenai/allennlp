@@ -17,8 +17,11 @@ class DistributedTestContextManager:
 
     # Usage
 
+    ```
+    python
     with DistributedTestContextManager(devices_id) as test_this_function:
         test_this_function(your_distributed_func, name_of_variable_to_check, value_to_check_against)
+    ```
 
     """
 

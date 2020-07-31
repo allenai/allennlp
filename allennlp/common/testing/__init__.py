@@ -10,6 +10,8 @@ from allennlp.common.testing.test_case import AllenNlpTestCase
 from allennlp.common.testing.model_test_case import ModelTestCase
 from allennlp.common.testing.distributed_test_context_manager import DistributedTestContextManager
 
+from allennlp.training.metrics import Metric
+
 
 _available_devices = ["cpu"] + (["cuda"] if torch.cuda.is_available() else [])
 
@@ -69,12 +71,11 @@ def global_distributed_metric(
     global_rank: int,
     world_size: int,
     gpu_id: Union[int, torch.device],
-    metric_class: type,
+    metric: Metric,
     metric_args: Dict[str, Any],
     desired_values: Dict[str, Any],
     exact: bool = True,
 ):
-    metric = metric_class()
     args = []
 
     # Use the arguments meant for the process with rank `global_rank`.
