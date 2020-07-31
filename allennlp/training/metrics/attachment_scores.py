@@ -135,8 +135,6 @@ class AttachmentScores(Metric):
             "UEM": unlabeled_exact_match,
             "LEM": labeled_exact_match,
         }
-        # if world_size > 1:
-        #    metrics = self._aggregate_metrics(metrics)
         return metrics
 
     @overrides
