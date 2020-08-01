@@ -464,14 +464,12 @@ class AttributeStandardROIHeads(AttributeROIHeads, StandardROIHeads):
         self._init_keypoint_head(cfg, input_shape)
 
     def _init_box_head(self, cfg, input_shape):
-        # fmt: off
-        pooler_resolution        = cfg.MODEL.ROI_BOX_HEAD.POOLER_RESOLUTION
-        pooler_scales            = tuple(1.0 / input_shape[k].stride for k in self.in_features)
-        sampling_ratio           = cfg.MODEL.ROI_BOX_HEAD.POOLER_SAMPLING_RATIO
-        pooler_type              = cfg.MODEL.ROI_BOX_HEAD.POOLER_TYPE
+        pooler_resolution = cfg.MODEL.ROI_BOX_HEAD.POOLER_RESOLUTION
+        pooler_scales = tuple(1.0 / input_shape[k].stride for k in self.in_features)
+        sampling_ratio = cfg.MODEL.ROI_BOX_HEAD.POOLER_SAMPLING_RATIO
+        pooler_type = cfg.MODEL.ROI_BOX_HEAD.POOLER_TYPE
         self.train_on_pred_boxes = cfg.MODEL.ROI_BOX_HEAD.TRAIN_ON_PRED_BOXES
-        self.attribute_on        = cfg.MODEL.ATTRIBUTE_ON
-        # fmt: on
+        self.attribute_on = cfg.MODEL.ATTRIBUTE_ON
 
         in_channels = [input_shape[f].channels for f in self.in_features]
         assert len(set(in_channels)) == 1, in_channels

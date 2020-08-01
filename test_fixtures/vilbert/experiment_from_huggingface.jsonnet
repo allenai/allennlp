@@ -1,9 +1,11 @@
 local model_name = "bert-base-uncased";
 {
   "dataset_reader": {
-    "type": "nlvr2_lxmert",
-    "text_path_prefix": "test_fixtures/data/nlvr2/instances",
-    "visual_path_prefix": "test_fixtures/data/nlvr2/object_features",
+    "type": "nlvr2",
+    "image_dir": "test_fixtures/data/nlvr2",
+    "image_loader": "detectron",
+    "image_featurizer": "resnet_backbone",
+    "region_detector": "faster_rcnn",
     "tokenizer": {
       "type": "pretrained_transformer",
       "model_name": model_name
@@ -13,11 +15,10 @@ local model_name = "bert-base-uncased";
         "type": "pretrained_transformer",
         "model_name": model_name
       }
-    },
-    "topk_images": -1
+    }
   },
-  "train_data_path": "train",
-  "validation_data_path": "train",
+  "train_data_path": "test_fixtures/data/nlvr2/tiny-dev.json",
+  "validation_data_path": "test_fixtures/data/nlvr2/tiny-dev.json",
   "model": {
     "type": "nlvr2_vilbert_from_huggingface",
     "model_name": model_name,

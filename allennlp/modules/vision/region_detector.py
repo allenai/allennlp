@@ -60,7 +60,7 @@ class FasterRcnnRegionDetector(RegionDetector):
         rpn_post_nms_topk_test: int = 1000,
         rpn_nms_thresh: float = 0.7,
         rpn_bbox_loss_weight: float = 1.0,  # not in detectron2 default config
-        test_detections_per_image: int = 36,  # different from default (100)
+        detections_per_image: int = 36,  # different from default (100)
     ):
         super().__init__()
 
@@ -88,10 +88,11 @@ class FasterRcnnRegionDetector(RegionDetector):
             rpn_post_nms_topk_test=rpn_post_nms_topk_test,
             rpn_nms_thresh=rpn_nms_thresh,
             rpn_bbox_loss_weight=rpn_bbox_loss_weight,
-            test_detections_per_image=test_detections_per_image,
+            test_detections_per_image=detections_per_image,
         )
         pipeline = detectron.get_pipeline_from_flat_parameters(flat_parameters, make_copy=False)
         self.model = pipeline.model
+        self.detections_per_image = detections_per_image
 
     def forward(
         self, raw_images: FloatTensor, image_sizes: IntTensor, featurized_images: FloatTensor
@@ -106,8 +107,6 @@ class FasterRcnnRegionDetector(RegionDetector):
             self.model.proposal_generator.in_features[0]: featurized_images
         }
         proposals, _ = self.model.proposal_generator(image_list, featurized_images_in_dict, None)
-        num_proposals = len(proposals[0])
-        assert all([len(p) == num_proposals for p in proposals])
         _, pooled_features = self.model.roi_heads.get_roi_features(
             featurized_images_in_dict, proposals
         )
@@ -131,6 +130,7 @@ class FasterRcnnRegionDetector(RegionDetector):
             batch_boxes.append(proposals[image_num].proposal_boxes.tensor[image_proposal_indices])
             batch_features.append(pooled_features[image_num][image_proposal_indices])
             batch_probs.append(cls_probs[image_num][image_proposal_indices])
+            # TODO(mattg): handle padding up to the same number of boxes, and return a mask.
 
         features_tensor = torch.stack(batch_features, dim=0)
         boxes_tensor = torch.stack(batch_boxes, dim=0)
