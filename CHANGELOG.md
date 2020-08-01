@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Added
+
+- A `use_amp` option to `PretrainedTransformerEmbedder` and `PretrainedTransformerMismatchedEmbedder`,
+  which you can set to `True` if you want automatic mixed precision enabled only for the transformer
+  part of your model.
+
 ## [v1.1.0rc2](https://github.com/allenai/allennlp/releases/tag/v1.1.0rc2) - 2020-07-31
 
 ### Changed

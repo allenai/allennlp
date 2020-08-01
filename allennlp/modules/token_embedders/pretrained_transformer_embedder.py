@@ -4,6 +4,7 @@ from typing import Optional, Tuple
 from overrides import overrides
 
 import torch
+from torch.cuda import amp
 import torch.nn.functional as F
 from transformers import XLNetConfig
 
@@ -40,6 +41,10 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         When `True` (the default), only the final layer of the pretrained transformer is taken
         for the embeddings. But if set to `False`, a scalar mix of all of the layers
         is used.
+    use_amp: `bool`, optional (default = `False`)
+        If `True`, automatic mixed precision through `torch.cuda.amp` will be enabled for the
+        transformer model. Note that this setting will override any `use_amp` setting
+        higher up (such as in the `Trainer` object) for this module only.
     """
 
     def __init__(
@@ -50,6 +55,7 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         sub_module: str = None,
         train_parameters: bool = True,
         last_layer_only: bool = True,
+        use_amp: bool = False,
         override_weights_file: Optional[str] = None,
         override_weights_strip_prefix: Optional[str] = None
     ) -> None:
@@ -73,6 +79,8 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         if not last_layer_only:
             self._scalar_mix = ScalarMix(self.config.num_hidden_layers)
             self.config.output_hidden_states = True
+
+        self._use_amp = use_amp
 
         tokenizer = PretrainedTransformerTokenizer(model_name)
         self._num_added_start_tokens = len(tokenizer.single_sequence_start_tokens)
@@ -155,19 +163,20 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         if type_ids is not None:
             parameters["token_type_ids"] = type_ids
 
-        transformer_output = self.transformer_model(**parameters)
-        if self._scalar_mix is not None:
-            # As far as I can tell, the hidden states will always be the last element
-            # in the output tuple as long as the model is not also configured to return
-            # attention scores.
-            # See, for example, the return value description for BERT:
-            # https://huggingface.co/transformers/model_doc/bert.html#transformers.BertModel.forward
-            # These hidden states will also include the embedding layer, which we don't
-            # include in the scalar mix. Hence the `[1:]` slicing.
-            hidden_states = transformer_output[-1][1:]
-            embeddings = self._scalar_mix(hidden_states)
-        else:
-            embeddings = transformer_output[0]
+        with amp.autocast(self._use_amp):
+            transformer_output = self.transformer_model(**parameters)
+            if self._scalar_mix is not None:
+                # As far as I can tell, the hidden states will always be the last element
+                # in the output tuple as long as the model is not also configured to return
+                # attention scores.
+                # See, for example, the return value description for BERT:
+                # https://huggingface.co/transformers/model_doc/bert.html#transformers.BertModel.forward
+                # These hidden states will also include the embedding layer, which we don't
+                # include in the scalar mix. Hence the `[1:]` slicing.
+                hidden_states = transformer_output[-1][1:]
+                embeddings = self._scalar_mix(hidden_states)
+            else:
+                embeddings = transformer_output[0]
 
         if fold_long_sequences:
             embeddings = self._unfold_long_sequences(
