@@ -9,7 +9,7 @@ import pytest
 from flaky import flaky
 
 from allennlp.common.checks import ConfigurationError
-from allennlp.common.testing import AllenNlpTestCase
+from allennlp.common.testing import AllenNlpTestCase, requires_gpu
 from allennlp.common.util import sanitize
 from allennlp.data import Token, Vocabulary
 from allennlp.data.fields import TextField
@@ -1705,3 +1705,29 @@ class TestNnUtil(AllenNlpTestCase):
         tensors = text_field.as_tensor(text_field.get_padding_lengths())
         token_ids = util.get_token_ids_from_text_field_tensors(tensors)
         assert (token_ids == expected_token_ids).all()
+
+
+@requires_gpu
+def test_maybe_autocast():
+    a_float32 = torch.rand((8, 8), device="cuda")
+    b_float32 = torch.rand((8, 8), device="cuda")
+    c_float32 = torch.rand((8, 8), device="cuda")
+    d_float32 = torch.rand((8, 8), device="cuda")
+    assert a_float32.dtype == torch.float32
+
+    with util.maybe_autocast(True):
+        # torch.mm is on autocast's list of ops that should run in float16.
+        # Inputs are float32, but the op runs in float16 and produces float16 output.
+        b_float16 = torch.mm(a_float32, b_float32)
+        assert b_float16.dtype == torch.float16
+
+        with util.maybe_autocast(False):
+            # Now disable autocast wihtin this block. The output should be float32.
+            e_float32 = torch.mm(c_float32, b_float32)
+            assert e_float32.dtype == torch.float32
+
+        with util.maybe_autocast(None):
+            # But passing `None` should not override the current AMP setting,
+            # so it should still be enabled.
+            f_float16 = torch.mm(d_float32, b_float32)
+            assert f_float16.dtype == torch.float16
