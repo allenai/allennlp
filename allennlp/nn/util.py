@@ -6,6 +6,7 @@ import copy
 import json
 import logging
 from collections import defaultdict
+from contextlib import contextmanager
 from typing import Any, Dict, List, Optional, Sequence, Tuple, TypeVar, Union
 
 import math
@@ -1897,3 +1898,18 @@ def tiny_value_of_dtype(dtype: torch.dtype):
         return 1e-4
     else:
         raise TypeError("Does not support dtype " + str(dtype))
+
+
+@contextmanager
+def maybe_autocast(enabled: Optional[bool] = None):
+    """
+    This is a context manager that is really just a wrapper around
+    [`torch.cuda.amp.autocast`](https://pytorch.org/docs/stable/amp.html#torch.cuda.amp.autocast).
+
+    The only difference is that `enabled` can also be `None`, in which case this is a no-op.
+    """
+    if enabled is not None:
+        with torch.cuda.amp.autocast(enabled):
+            yield
+    else:
+        yield

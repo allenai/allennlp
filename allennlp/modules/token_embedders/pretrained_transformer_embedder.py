@@ -4,14 +4,13 @@ from typing import Optional, Tuple
 from overrides import overrides
 
 import torch
-from torch.cuda import amp
 import torch.nn.functional as F
 from transformers import XLNetConfig
 
 from allennlp.data.tokenizers import PretrainedTransformerTokenizer
 from allennlp.modules.scalar_mix import ScalarMix
 from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
-from allennlp.nn.util import batched_index_select
+from allennlp.nn.util import batched_index_select, maybe_autocast
 
 
 @TokenEmbedder.register("pretrained_transformer")
@@ -41,10 +40,10 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         When `True` (the default), only the final layer of the pretrained transformer is taken
         for the embeddings. But if set to `False`, a scalar mix of all of the layers
         is used.
-    use_amp: `bool`, optional (default = `False`)
-        If `True`, automatic mixed precision through `torch.cuda.amp` will be enabled for the
-        transformer model. Note that this setting will override any `use_amp` setting
-        higher up (such as in the `Trainer` object) for this module only.
+    use_amp: `Optional[bool]`, optional (default = `None`)
+        If specified, automatic mixed precision will be enabled (if `True`) or disabled
+        (if `False`) on the forward pass. This would override any global `use_amp`
+        setting for this module only.
     """
 
     def __init__(
@@ -55,7 +54,7 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         sub_module: str = None,
         train_parameters: bool = True,
         last_layer_only: bool = True,
-        use_amp: bool = False,
+        use_amp: Optional[bool] = None,
         override_weights_file: Optional[str] = None,
         override_weights_strip_prefix: Optional[str] = None
     ) -> None:
@@ -163,7 +162,7 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         if type_ids is not None:
             parameters["token_type_ids"] = type_ids
 
-        with amp.autocast(self._use_amp):
+        with maybe_autocast(self._use_amp):
             transformer_output = self.transformer_model(**parameters)
             if self._scalar_mix is not None:
                 # As far as I can tell, the hidden states will always be the last element
@@ -178,12 +177,12 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
             else:
                 embeddings = transformer_output[0]
 
-        if fold_long_sequences:
-            embeddings = self._unfold_long_sequences(
-                embeddings, segment_concat_mask, batch_size, num_segment_concat_wordpieces
-            )
+            if fold_long_sequences:
+                embeddings = self._unfold_long_sequences(
+                    embeddings, segment_concat_mask, batch_size, num_segment_concat_wordpieces
+                )
 
-        return embeddings
+            return embeddings
 
     def _fold_long_sequences(
         self,

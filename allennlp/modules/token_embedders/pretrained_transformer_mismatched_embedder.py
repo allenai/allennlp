@@ -31,10 +31,10 @@ class PretrainedTransformerMismatchedEmbedder(TokenEmbedder):
         When `True` (the default), only the final layer of the pretrained transformer is taken
         for the embeddings. But if set to `False`, a scalar mix of all of the layers
         is used.
-    use_amp: `bool`, optional (default = `False`)
-        If `True`, automatic mixed precision through `torch.cuda.amp` will be enabled for the
-        transformer model. Note that this setting will override any `use_amp` setting
-        higher up (such as in the `Trainer` object) for this module only.
+    use_amp: `Optional[bool]`, optional (default = `None`)
+        If specified, automatic mixed precision will be enabled (if `True`) or disabled
+        (if `False`) on the forward pass. This would override any global `use_amp`
+        setting for this module only.
     """
 
     def __init__(
@@ -43,7 +43,7 @@ class PretrainedTransformerMismatchedEmbedder(TokenEmbedder):
         max_length: int = None,
         train_parameters: bool = True,
         last_layer_only: bool = True,
-        use_amp: bool = False,
+        use_amp: Optional[bool] = None,
     ) -> None:
         super().__init__()
         # The matched version v.s. mismatched
