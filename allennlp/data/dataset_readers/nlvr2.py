@@ -53,6 +53,7 @@ class Nlvr2Reader(DatasetReader):
         tokenizer: Tokenizer = None,
         token_indexers: Dict[str, TokenIndexer] = None,
         lazy: bool = False,
+        paddings_per_image: int = 36,
     ) -> None:
         super().__init__(lazy)
 
@@ -88,7 +89,7 @@ class Nlvr2Reader(DatasetReader):
         self.image_featurizer = image_featurizer
         self.region_detector = region_detector
         self._feature_cache: Dict[str, Tuple[torch.FloatTensor, torch.IntTensor]] = {}
-
+        self._paddings_per_image = paddings_per_image
     @overrides
     def _read(self, split_or_filename: str):
         filename = self.splits.get(split_or_filename, split_or_filename)
@@ -115,7 +116,8 @@ class Nlvr2Reader(DatasetReader):
         # Load images
         image_name_base = identifier[: identifier.rindex("-")]
 
-        # TODO(mattg): shouldn't we be using the URL?  What if images are reused?
+        # TODO(mattg): shouldn't we be using the URL?  What if images are reused?  
+        # Since we use the image path, it will not be reused. 
         left_image_path = self.images[f"{image_name_base}-img0.png"]
         right_image_path = self.images[f"{image_name_base}-img1.png"]
 
@@ -130,19 +132,31 @@ class Nlvr2Reader(DatasetReader):
             with torch.no_grad():
                 featurized_images = self.image_featurizer(images)
                 detector_results = self.region_detector(images, sizes, featurized_images)
-            features = detector_results["features"]
-            coordinates = detector_results["coordinates"]
-
+            
             for index, path in enumerate(to_compute):
-                self._feature_cache[path] = (features[index], coordinates[index])
+                self._feature_cache[path] = (detector_results[index]['features'], detector_results[index]['boxes'])
 
         left_features, left_coords = self._feature_cache[left_image_path]
         right_features, right_coords = self._feature_cache[right_image_path]
 
+        # Padding left feature into the features into fixed size. 
+        left_features_padding = torch.zeros(self._paddings_per_image, left_features.size(1)).type_as(left_features)
+        left_coords_padding = torch.zeros(self._paddings_per_image, left_coords.size(1)).type_as(left_coords)
+        num_left_features = min(self._paddings_per_image, left_features.size(0))
+        left_features_padding[:num_left_features] = left_features[:num_left_features]
+        left_coords_padding[:num_left_features] = left_coords[:num_left_features]
+
+        # Padding right feature into the features into fixed size. 
+        right_features_padding = torch.zeros(self._paddings_per_image, right_features.size(1)).type_as(right_features)
+        right_coords_padding = torch.zeros(self._paddings_per_image, right_coords.size(1)).type_as(right_coords)
+        num_right_features = min(self._paddings_per_image, right_features.size(0))
+        right_features_padding[:num_right_features] = right_features[:num_right_features]
+        right_coords_padding[:num_right_features] = right_coords[:num_right_features]
+
         fields = {
             "sentence": sentence_field,
-            "box_features": ListField([ArrayField(left_features), ArrayField(right_features)]),
-            "box_coordinates": ListField([ArrayField(left_coords), ArrayField(right_coords)]),
+            "box_features": ListField([ArrayField(left_features_padding), ArrayField(right_features_padding)]),
+            "box_coordinates": ListField([ArrayField(left_coords_padding), ArrayField(right_coords_padding)]),
             "identifier": MetadataField(identifier),
         }
 

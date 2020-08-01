@@ -106,37 +106,32 @@ class FasterRcnnRegionDetector(RegionDetector):
         featurized_images_in_dict = {
             self.model.proposal_generator.in_features[0]: featurized_images
         }
+
         proposals, _ = self.model.proposal_generator(image_list, featurized_images_in_dict, None)
+
+        # this will concatenate the pooled_features from different images. 
         _, pooled_features = self.model.roi_heads.get_roi_features(
             featurized_images_in_dict, proposals
         )
+        
         predictions = self.model.roi_heads.box_predictor(pooled_features)
+        
         # class probablity
-        cls_probs = F.softmax(predictions[0], dim=-1)
-        cls_probs = cls_probs[:, :-1]  # background is last
+        cls_probs = [F.softmax(prediction, dim=-1) for prediction in predictions]
+        cls_probs = [cls_prob[:, :-1] for cls_prob in cls_probs] # background is last
 
         predictions, r_indices = self.model.roi_heads.box_predictor.inference(
             predictions, proposals
         )
-
-        batch_boxes = []
-        batch_features = []
-        batch_probs = []
-        feature_dim = pooled_features.size(-1)
-        pooled_features = pooled_features.view(batch_size, num_proposals, feature_dim)
-        num_classes = cls_probs.size(-1)
-        cls_probs = cls_probs.view(batch_size, num_proposals, num_classes)
+        
+        features = []
+        proposal_start = 0
         for image_num, image_proposal_indices in enumerate(r_indices):
-            batch_boxes.append(proposals[image_num].proposal_boxes.tensor[image_proposal_indices])
-            batch_features.append(pooled_features[image_num][image_proposal_indices])
-            batch_probs.append(cls_probs[image_num][image_proposal_indices])
-            # TODO(mattg): handle padding up to the same number of boxes, and return a mask.
-
-        features_tensor = torch.stack(batch_features, dim=0)
-        boxes_tensor = torch.stack(batch_boxes, dim=0)
-        probs_tensor = torch.stack(batch_probs, dim=0)
-        return {
-            "features": features_tensor,
-            "coordinates": boxes_tensor,
-            "class_probs": probs_tensor,
-        }
+            feature_cell = {}
+            feature_cell['boxes'] = proposals[image_num].proposal_boxes.tensor[image_proposal_indices]
+            feature_cell['probs'] = cls_probs[image_num][image_proposal_indices]
+            feature_cell['features'] = torch.narrow(pooled_features, 0, proposal_start, len(proposals[image_num]))[image_proposal_indices]
+            proposal_start += len(proposals[image_num])
+            features.append(feature_cell)
+            
+        return features

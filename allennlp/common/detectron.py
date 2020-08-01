@@ -16,6 +16,7 @@ from detectron2.modeling.roi_heads import (
 )
 from detectron2.modeling.roi_heads.fast_rcnn import FastRCNNOutputLayers
 from detectron2.modeling.poolers import ROIPooler
+from detectron2.modeling.box_regression import Box2BoxTransform
 
 
 class DetectronConfig(NamedTuple):
@@ -393,7 +394,15 @@ class AttributeRes5ROIHeads(AttributeROIHeads, Res5ROIHeads):
 
         self.res5, out_channels = self._build_res5_block(cfg)
         self.box_predictor = FastRCNNOutputLayers(
-            cfg, ShapeSpec(channels=out_channels, height=1, width=1)
+            input_shape=ShapeSpec(channels=out_channels, height=1, width=1),
+            box2box_transform=Box2BoxTransform(weights=cfg.MODEL.ROI_BOX_HEAD.BBOX_REG_WEIGHTS),
+            num_classes=cfg.MODEL.ROI_HEADS.NUM_CLASSES,
+            test_score_thresh=cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST,
+            test_topk_per_image=cfg.TEST.DETECTIONS_PER_IMAGE,
+            cls_agnostic_bbox_reg=cfg.MODEL.ROI_BOX_HEAD.CLS_AGNOSTIC_BBOX_REG,
+            smooth_l1_beta=cfg.MODEL.ROI_BOX_HEAD.SMOOTH_L1_BETA,
+            box_reg_loss_type=cfg.MODEL.ROI_BOX_HEAD.BBOX_REG_LOSS_TYPE,
+            loss_weight={"loss_box_reg": cfg.MODEL.ROI_BOX_HEAD.BBOX_REG_LOSS_WEIGHT},
         )
 
         if self.mask_on:
