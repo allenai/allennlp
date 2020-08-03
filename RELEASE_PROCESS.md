@@ -38,7 +38,7 @@ Then you can copy and paste the commands below without worrying about mistyping 
     ```
 
 4. Find the tag you just pushed [on GitHub](https://github.com/allenai/allennlp/tags) and
-click edit. Now copy over the latest section from the `CHANGELOG.md`. And finally, add a section called "Commits" with the output of a command like the following:
+click edit. Now copy over the latest section from the [`CHANGELOG.md`](https://raw.githubusercontent.com/allenai/allennlp/master/CHANGELOG.md). And finally, add a section called "Commits" with the output of a command like the following:
 
     ```bash
     OLD_TAG=$(git describe --always --tags --abbrev=0 $TAG^)

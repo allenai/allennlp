@@ -7,17 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [v1.1.0rc2](https://github.com/allenai/allennlp/releases/tag/v1.1.0rc2) - 2020-07-31
+
+### Changed
+
+- Upgraded PyTorch requirement to 1.6.
+- Replaced the NVIDIA Apex AMP module with torch's native AMP module. The default trainer (`GradientDescentTrainer`)
+  now takes a `use_amp: bool` parameter instead of the old `opt_level: str` parameter.
+
 ### Fixed
 
 - Removed unnecessary warning about deadlocks in `DataLoader`.
-- Use slower tqdm intervals when output is being piped or redirected.
 - Fixed testing models that only return a loss when they are in training mode.
-- Fixed a bug in `FromParams` that causes silent failure in case of the parameter type being Optional[Union[...]].
+- Fixed a bug in `FromParams` that caused silent failure in case of the parameter type being `Optional[Union[...]]`.
 
 ### Added
 
-- Added the option to specify `requires_grad: false` within an optimizers parameter groups.
+- Added the option to specify `requires_grad: false` within an optimizer's parameter groups.
+- Added the `file-friendly-logging` flag back to the `train` command. Also added this flag to the `predict`, `evaluate`, and `find-learning-rate` commands.
 
+### Removed
+
+- Removed the `opt_level` parameter to `Model.load` and `load_archive`. In order to use AMP with a loaded
+  model now, just run the model's forward pass within torch's [`autocast`](https://pytorch.org/docs/stable/amp.html#torch.cuda.amp.autocast)
+  context.
 
 ## [v1.1.0rc1](https://github.com/allenai/allennlp/releases/tag/v1.1.0rc1) - 2020-07-14
 
