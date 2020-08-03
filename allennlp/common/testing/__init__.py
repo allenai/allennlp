@@ -80,7 +80,6 @@ def global_distributed_metric(
 
     # Use the arguments meant for the process with rank `global_rank`.
     for argname in metric_kwargs:
-        # args.append(metric_args[argname][global_rank])
         kwargs[argname] = metric_kwargs[argname][global_rank]
 
     metric(**kwargs)

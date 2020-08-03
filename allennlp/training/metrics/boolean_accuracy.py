@@ -102,9 +102,9 @@ class BooleanAccuracy(Metric):
         else:
             accuracy = 0.0
         if world_size > 1:
-            accuracy = torch.tensor(accuracy).to(cuda_device)
-            dist.all_reduce(accuracy, op=dist.ReduceOp.SUM)
-            accuracy = accuracy.item() / world_size
+            accuracy_tensor = torch.tensor(accuracy).to(cuda_device)
+            dist.all_reduce(accuracy_tensor, op=dist.ReduceOp.SUM)
+            accuracy = accuracy_tensor.item() / world_size
         if reset:
             self.reset()
         return {"accuracy": accuracy}

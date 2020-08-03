@@ -1,4 +1,4 @@
-from typing import Dict, Optional
+from typing import Dict, Optional, Union
 
 from overrides import overrides
 import torch
@@ -176,8 +176,13 @@ class BasicClassifier(Model):
         output_dict["tokens"] = tokens
         return output_dict
 
-    def get_metrics(self, reset: bool = False) -> Dict[str, float]:
-        metrics = {"accuracy": self._accuracy.get_metric(reset)}
+    def get_metrics(
+        self,
+        reset: bool = False,
+        world_size: int = 1,
+        cuda_device: Union[int, torch.device] = torch.device("cpu"),
+    ) -> Dict[str, float]:
+        metrics = self._accuracy.get_metric(reset, world_size, cuda_device)
         return metrics
 
     default_predictor = "text_classifier"

@@ -161,17 +161,17 @@ class EvalbBracketingScorer(Metric):
         The average precision, recall and f1.
         """
         if world_size > 1:
-            self._correct_predicted_brackets = torch.tensor(self._correct_predicted_brackets).to(
+            _correct_predicted_brackets = torch.tensor(self._correct_predicted_brackets).to(
                 cuda_device
             )
-            self._predicted_brackets = torch.tensor(self._predicted_brackets).to(cuda_device)
-            self._gold_brackets = torch.tensor(self._gold_brackets).to(cuda_device)
-            dist.all_reduce(self._correct_predicted_brackets, op=dist.ReduceOp.SUM)
-            dist.all_reduce(self._predicted_brackets, op=dist.ReduceOp.SUM)
-            dist.all_reduce(self._gold_brackets, op=dist.ReduceOp.SUM)
-            self._correct_predicted_brackets = self._correct_predicted_brackets.item() / world_size
-            self._predicted_brackets = self._predicted_brackets.item() / world_size
-            self._gold_brackets = self._gold_brackets.item() / world_size
+            _predicted_brackets = torch.tensor(self._predicted_brackets).to(cuda_device)
+            _gold_brackets = torch.tensor(self._gold_brackets).to(cuda_device)
+            dist.all_reduce(_correct_predicted_brackets, op=dist.ReduceOp.SUM)
+            dist.all_reduce(_predicted_brackets, op=dist.ReduceOp.SUM)
+            dist.all_reduce(_gold_brackets, op=dist.ReduceOp.SUM)
+            self._correct_predicted_brackets = _correct_predicted_brackets.item() / world_size
+            self._predicted_brackets = _predicted_brackets.item() / world_size
+            self._gold_brackets = _gold_brackets.item() / world_size
 
         recall = (
             self._correct_predicted_brackets / self._gold_brackets

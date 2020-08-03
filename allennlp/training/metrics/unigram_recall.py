@@ -93,9 +93,9 @@ class UnigramRecall(Metric):
         """
         recall = self.correct_count / self.total_count if self.total_count > 0 else 0
         if world_size > 1:
-            recall = torch.tensor(recall).to(cuda_device)
-            dist.all_reduce(recall, op=dist.ReduceOp.SUM)
-            recall = recall.item() / world_size
+            recall_tensor = torch.tensor(recall).to(cuda_device)
+            dist.all_reduce(recall_tensor, op=dist.ReduceOp.SUM)
+            recall = recall_tensor.item() / world_size
         if reset:
             self.reset()
         return {"unigram_recall": recall}
