@@ -1,7 +1,9 @@
-from typing import Optional
+from typing import Optional, Union
+import warnings
 
 from overrides import overrides
 import torch
+import torch.distributed as dist
 from sklearn import metrics
 
 from allennlp.common.checks import ConfigurationError
@@ -82,7 +84,13 @@ class Auc(Metric):
             [self._all_gold_labels, torch.masked_select(gold_labels, mask).long()], dim=0
         )
 
-    def get_metric(self, reset: bool = False):
+    def get_metric(
+        self,
+        reset: bool = False,
+        world_size: int = 1,
+        cuda_device: Union[int, torch.device] = torch.device("cpu"),
+    ):
+
         if self._all_gold_labels.shape[0] == 0:
             return 0.5
         false_positive_rates, true_positive_rates, _ = metrics.roc_curve(
@@ -91,9 +99,18 @@ class Auc(Metric):
             pos_label=self._positive_label,
         )
         auc = metrics.auc(false_positive_rates, true_positive_rates)
+        if world_size > 1:
+            auc_tensor = torch.tensor(auc).to(cuda_device)
+            dist.all_reduce(auc_tensor, op=dist.ReduceOp.SUM)
+            auc = auc_tensor.item() / world_size
+            warnings.warn(
+                "Distributed aggregation for AUC is currently not supported. Returning simple average!",
+                RuntimeWarning,
+            )
+
         if reset:
             self.reset()
-        return auc
+        return {"auc": auc}
 
     @overrides
     def reset(self):
