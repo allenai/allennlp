@@ -243,7 +243,7 @@ class TestTrain(AllenNlpTestCase):
                 "dataset_reader": {"type": "sharded", "base_reader": {"type": "sequence_tagging"}},
                 "train_data_path": SEQUENCE_TAGGING_SHARDS_PATH,
                 "validation_data_path": SEQUENCE_TAGGING_SHARDS_PATH,
-                "data_loader": {"batch_size": 1, "max_batches_in_memory": max_batches_in_memory,},
+                "data_loader": {"batch_size": 1, "max_batches_in_memory": max_batches_in_memory},
                 "trainer": {"num_epochs": 2, "optimizer": "adam"},
                 "distributed": {"cuda_devices": devices},
             }
@@ -329,7 +329,7 @@ class TestTrain(AllenNlpTestCase):
                 "dataset_reader": {"type": "sequence_tagging"},
                 "train_data_path": SEQUENCE_TAGGING_DATA_PATH,
                 "validation_data_path": SEQUENCE_TAGGING_DATA_PATH,
-                "data_loader": {"batch_size": 1, "max_batches_in_memory": max_batches_in_memory,},
+                "data_loader": {"batch_size": 1, "max_batches_in_memory": max_batches_in_memory},
                 "trainer": {
                     "num_epochs": num_epochs,
                     "optimizer": "adam",
