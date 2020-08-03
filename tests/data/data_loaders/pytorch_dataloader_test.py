@@ -4,7 +4,7 @@ import pytest
 
 from allennlp.data.fields import LabelField
 from allennlp.data.instance import Instance
-from allennlp.data.data_loaders import PyTorchDataLoader
+from allennlp.data.data_loaders import PyTorchDataLoader, AllennlpDataset, AllennlpLazyDataset
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 
 
@@ -20,13 +20,13 @@ def test_loader_uses_all_instances_when_batches_per_epochs_set(lazy):
             for i in range(NUM_INSTANCES):
                 yield Instance({"index": LabelField(i, skip_indexing=True)})
 
-    loader = PyTorchDataLoader.from_partial_objects(
-        FakeDatasetReader(),
-        "balh",
-        batch_size=BATCH_SIZE,
-        batches_per_epoch=BATCHES_PER_EPOCH,
-        lazy=lazy,
-    )
+    reader = FakeDatasetReader()
+    if lazy:
+        dataset = AllennlpLazyDataset(reader, "path doesn't matter")
+    else:
+        dataset = AllennlpDataset(list(reader.read("path doesn't matter")))
+
+    loader = PyTorchDataLoader(dataset, batch_size=BATCH_SIZE, batches_per_epoch=BATCHES_PER_EPOCH,)
     epoch_batches = []
     for epoch in range(EPOCHS):
         batches = []
