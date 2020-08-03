@@ -1,7 +1,8 @@
-from typing import Optional
+from typing import Optional, Union
 
 from overrides import overrides
 import torch
+import torch.distributed as dist
 
 from allennlp.training.metrics.metric import Metric
 
@@ -40,16 +41,25 @@ class Entropy(Metric):
         self._count += 1
 
     @overrides
-    def get_metric(self, reset: bool = False):
+    def get_metric(
+        self,
+        reset: bool = False,
+        world_size: int = 1,
+        cuda_device: Union[int, torch.device] = torch.device("cpu"),
+    ):
         """
         # Returns
 
         The scalar average entropy.
         """
         average_value = self._entropy / self._count if self._count > 0 else 0
+        if world_size > 1:
+            average_value = torch.tensor(average_value).to(cuda_device)
+            dist.all_reduce(average_value, op=dist.ReduceOp.SUM)
+            average_value = average_value.item() / world_size
         if reset:
             self.reset()
-        return average_value
+        return {"entropy": average_value}
 
     @overrides
     def reset(self):
