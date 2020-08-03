@@ -1,7 +1,8 @@
-from typing import Optional
+from typing import Optional, Union
 
 from overrides import overrides
 import torch
+import torch.distributed as dist
 
 from allennlp.training.metrics.metric import Metric
 
@@ -42,16 +43,25 @@ class MeanAbsoluteError(Metric):
             self._total_count += gold_labels.numel()
         self._absolute_error += torch.sum(absolute_errors)
 
-    def get_metric(self, reset: bool = False):
+    def get_metric(
+        self,
+        reset: bool = False,
+        world_size: int = 1,
+        cuda_device: Union[int, torch.device] = torch.device("cpu"),
+    ):
         """
         # Returns
 
         The accumulated mean absolute error.
         """
         mean_absolute_error = self._absolute_error / self._total_count
+        if world_size > 1:
+            mean_absolute_error = torch.tensor(mean_absolute_error).to(cuda_device)
+            dist.all_reduce(mean_absolute_error, op=dist.ReduceOp.SUM)
+            mean_absolute_error = mean_absolute_error.item() / world_size
         if reset:
             self.reset()
-        return mean_absolute_error
+        return {"mae": mean_absolute_error}
 
     @overrides
     def reset(self):
