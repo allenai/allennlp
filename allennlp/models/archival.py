@@ -130,11 +130,7 @@ def archive_model(
 
 
 def load_archive(
-    archive_file: str,
-    cuda_device: int = -1,
-    opt_level: str = None,
-    overrides: str = "",
-    weights_file: str = None,
+    archive_file: str, cuda_device: int = -1, overrides: str = "", weights_file: str = None,
 ) -> Archive:
     """
     Instantiates an Archive from an archived `tar.gz` file.
@@ -146,12 +142,6 @@ def load_archive(
     cuda_device : `int`, optional (default = `-1`)
         If `cuda_device` is >= 0, the model will be loaded onto the
         corresponding GPU. Otherwise it will be loaded onto the CPU.
-    opt_level : `str`, optional, (default = `None`)
-        Each `opt_level` establishes a set of properties that govern Amp’s implementation of pure or mixed
-        precision training. Must be a choice of `"O0"`, `"O1"`, `"O2"`, or `"O3"`.
-        See the Apex [documentation](https://nvidia.github.io/apex/amp.html#opt-levels-and-properties) for
-        more details. If `None`, defaults to the `opt_level` found in the model params. If `cuda_device==-1`,
-        Amp is not used and this argument is ignored.
     overrides : `str`, optional (default = `""`)
         JSON overrides to apply to the unarchived `Params` object.
     weights_file : `str`, optional (default = `None`)
@@ -196,7 +186,6 @@ def load_archive(
         weights_file=weights_path,
         serialization_dir=serialization_dir,
         cuda_device=cuda_device,
-        opt_level=opt_level,
     )
 
     return Archive(model=model, config=config)

@@ -16,6 +16,7 @@ from overrides import overrides
 
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common import Params, Tqdm
+from allennlp.common import logging as common_logging
 from allennlp.common.checks import check_for_gpu, ConfigurationError
 from allennlp.common.util import prepare_environment
 from allennlp.data import Vocabulary
@@ -86,6 +87,12 @@ class FindLearningRate(Subcommand):
             required=False,
             help="overwrite the output directory if it exists",
         )
+        subparser.add_argument(
+            "--file-friendly-logging",
+            action="store_true",
+            default=False,
+            help="outputs tqdm status on separate lines and slows tqdm refresh rate",
+        )
 
         subparser.set_defaults(func=find_learning_rate_from_args)
 
@@ -96,6 +103,7 @@ def find_learning_rate_from_args(args: argparse.Namespace) -> None:
     """
     Start learning rate finder for given args
     """
+    common_logging.FILE_FRIENDLY_LOGGING = args.file_friendly_logging
     params = Params.from_file(args.param_path, args.overrides)
     find_learning_rate_model(
         params,
