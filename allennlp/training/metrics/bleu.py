@@ -1,9 +1,10 @@
 from collections import Counter
 import math
-from typing import Iterable, Tuple, Dict, Set
+from typing import Iterable, Tuple, Dict, Set, Union
 
 from overrides import overrides
 import torch
+import torch.distributed as dist
 
 from allennlp.training.metrics.metric import Metric
 
@@ -134,7 +135,29 @@ class BLEU(Metric):
             self._reference_lengths += valid_gold_targets_mask.sum().item()
 
     @overrides
-    def get_metric(self, reset: bool = False) -> Dict[str, float]:
+    def get_metric(
+        self,
+        reset: bool = False,
+        world_size: int = 1,
+        cuda_device: Union[int, torch.device] = torch.device("cpu"),
+    ) -> Dict[str, float]:
+
+        if world_size > 1:
+            _prediction_lengths = torch.tensor(self._prediction_lengths).to(cuda_device)
+            _reference_lengths = torch.tensor(self._reference_lengths).to(cuda_device)
+            for ngram in self._precision_matches:
+                _precision_matches = torch.tensor(self._precision_matches[ngram]).to(cuda_device)
+                _precision_totals = torch.tensor(self._precision_totals[ngram]).to(cuda_device)
+                dist.all_reduce(_precision_matches, op=dist.ReduceOp.SUM)
+                dist.all_reduce(_precision_totals, op=dist.ReduceOp.SUM)
+                self._precision_matches[ngram] = _precision_matches.item() / world_size
+                self._precision_totals[ngram] = _precision_totals.item() / world_size
+
+            dist.all_reduce(_prediction_lengths, op=dist.ReduceOp.SUM)
+            dist.all_reduce(_reference_lengths, op=dist.ReduceOp.SUM)
+            self._prediction_lengths = _prediction_lengths.item() / world_size
+            self._reference_lengths = _reference_lengths.item() / world_size
+
         brevity_penalty = self._get_brevity_penalty()
         ngram_scores = (
             weight
@@ -145,6 +168,7 @@ class BLEU(Metric):
             for n, weight in enumerate(self._ngram_weights, start=1)
         )
         bleu = brevity_penalty * math.exp(sum(ngram_scores))
+
         if reset:
             self.reset()
         return {"BLEU": bleu}
