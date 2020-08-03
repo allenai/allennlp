@@ -1,4 +1,4 @@
-from typing import Dict, Optional, List, Any
+from typing import Dict, Optional, List, Any, Union
 
 import numpy
 from overrides import overrides
@@ -207,13 +207,19 @@ class SimpleTagger(Model):
         return output_dict
 
     @overrides
-    def get_metrics(self, reset: bool = False) -> Dict[str, float]:
+    def get_metrics(
+        self,
+        reset: bool = False,
+        world_size: int = 1,
+        cuda_device: Union[int, torch.device] = torch.device("cpu"),
+    ) -> Dict[str, float]:
         metrics_to_return = {
-            metric_name: metric.get_metric(reset) for metric_name, metric in self.metrics.items()
+            metric_name: metric.get_metric(reset, world_size, cuda_device)["accuracy"]
+            for metric_name, metric in self.metrics.items()
         }
 
         if self.calculate_span_f1:
-            f1_dict = self._f1_metric.get_metric(reset=reset)
+            f1_dict = self._f1_metric.get_metric(reset, world_size, cuda_device)
             if self._verbose_metrics:
                 metrics_to_return.update(f1_dict)
             else:

@@ -54,9 +54,9 @@ class Entropy(Metric):
         """
         average_value = self._entropy / self._count if self._count > 0 else 0
         if world_size > 1:
-            average_value = torch.tensor(average_value).to(cuda_device)
-            dist.all_reduce(average_value, op=dist.ReduceOp.SUM)
-            average_value = average_value.item() / world_size
+            average_value_tensor = torch.tensor(average_value).to(cuda_device)
+            dist.all_reduce(average_value_tensor, op=dist.ReduceOp.SUM)
+            average_value = average_value_tensor.item() / world_size
         if reset:
             self.reset()
         return {"entropy": average_value}
