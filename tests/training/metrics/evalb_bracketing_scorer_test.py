@@ -1,6 +1,10 @@
 from nltk import Tree
 
-from allennlp.common.testing import AllenNlpTestCase
+from allennlp.common.testing import (
+    AllenNlpTestCase,
+    global_distributed_metric,
+    DistributedTestContextManager,
+)
 from allennlp.training.metrics import EvalbBracketingScorer
 
 
@@ -58,3 +62,19 @@ class EvalbBracketingScorerTest(AllenNlpTestCase):
         assert metrics["evalb_recall"] == 0.0
         assert metrics["evalb_precision"] == 0.0
         assert metrics["evalb_f1_measure"] == 0.0
+
+    def test_distributed_evalb(self):
+        with DistributedTestContextManager([-1, -1]) as test_this:
+            tree1 = Tree.fromstring("(S (VP (D the) (NP dog)) (VP (V chased) (NP (D the) (N cat))))")
+            tree2 = Tree.fromstring("(S (NP (D the) (N dog)) (VP (V chased) (NP (D the) (N cat))))")
+            predicted_trees = [[tree1], [tree2]]
+            gold_trees = [[tree2], [tree2]]
+            metric_kwargs = {"predicted_trees": predicted_trees, "gold_trees": gold_trees}
+            desired_values = {"evalb_recall": 0.875, "evalb_precision": 0.875, "evalb_f1_measure": 0.875}
+            test_this(
+                global_distributed_metric,
+                EvalbBracketingScorer(),
+                metric_kwargs,
+                desired_values,
+                exact=True,
+            )
