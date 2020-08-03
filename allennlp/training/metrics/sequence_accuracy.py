@@ -1,7 +1,8 @@
-from typing import Optional
+from typing import Optional, Union
 
 from overrides import overrides
 import torch
+import torch.distributed as dist
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.training.metrics.metric import Metric
@@ -69,7 +70,12 @@ class SequenceAccuracy(Metric):
         self.total_count += predictions.size()[0]
         self.correct_count += correct
 
-    def get_metric(self, reset: bool = False):
+    def get_metric(
+        self,
+        reset: bool = False,
+        world_size: int = 1,
+        cuda_device: Union[int, torch.device] = torch.device("cpu"),
+    ):
         """
         # Returns
 
@@ -79,10 +85,13 @@ class SequenceAccuracy(Metric):
             accuracy = self.correct_count / self.total_count
         else:
             accuracy = 0
-
+        if world_size > 1:
+            accuracy = torch.tensor(accuracy).to(cuda_device)
+            dist.all_reduce(accuracy, op=dist.ReduceOp.SUM)
+            accuracy = accuracy.item() / world_size
         if reset:
             self.reset()
-        return accuracy
+        return {"accuracy": accuracy}
 
     @overrides
     def reset(self):
