@@ -97,8 +97,6 @@ class Nlvr2LxmertReader(DatasetReader):
         Whether to mask prepositions and verbs in each sentence
     drop_prepositions_verbs: ``bool``, optional (default=False)
         Whether to drop (remove without replacement) prepositions and verbs in each sentence
-    lazy : ``bool``, optional
-        Whether to load data lazily.  Passed to super class.
     """
 
     def __init__(
@@ -108,9 +106,9 @@ class Nlvr2LxmertReader(DatasetReader):
         topk_images: int = -1,
         mask_prepositions_verbs: bool = False,
         drop_prepositions_verbs: bool = False,
-        lazy: bool = False,
+        **kwargs
     ) -> None:
-        super().__init__(lazy)
+        super().__init__(**kwargs)
         self.text_path_prefix = text_path_prefix
         self.visual_path_prefix = visual_path_prefix
         self._tokenizer = PretrainedTransformerTokenizer("bert-base-uncased")

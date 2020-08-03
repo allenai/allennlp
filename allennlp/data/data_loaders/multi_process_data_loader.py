@@ -34,8 +34,7 @@ class MultiProcessDataLoader(DataLoader):
         batches_per_epoch: int = None,
         num_workers: int = 0,
         collate_fn: Callable[[List[Instance]], TensorDict] = allennlp_collate,
-        lazy: bool = False,
-        max_batches_in_memory: int = 100,
+        max_batches_in_memory: int = None,
         start_method: str = "fork",
         instance_queue_size: int = 1000,
         instance_chunk_size: int = 10,
@@ -60,9 +59,8 @@ class MultiProcessDataLoader(DataLoader):
         if batches_per_epoch is not None and batches_per_epoch < 1:
             raise ValueError("batches_per_epoch must be at least 1")
 
-        if lazy:
-            if max_batches_in_memory < 1:
-                raise ValueError("max_batches_in_memory must be at least 1")
+        if max_batches_in_memory is not None and max_batches_in_memory < 1:
+            raise ValueError("max_batches_in_memory must be at least 1")
 
         self.reader = reader
         self.data_path = data_path
@@ -73,26 +71,25 @@ class MultiProcessDataLoader(DataLoader):
         self.batches_per_epoch = batches_per_epoch
         self.num_workers = num_workers
         self.collate_fn = collate_fn
-        self.lazy = lazy
         self.max_batches_in_memory = max_batches_in_memory
         self.start_method = start_method
         self._instance_queue_size = instance_queue_size
         self._instance_chunk_size = instance_chunk_size
         self._batch_chunk_size = batch_chunk_size
 
-        # When lazy = False, we'll keep a cache of all instances in this list.
+        # If max_batches_in_memory is not given, we'll keep a cache of all instances in this list.
         self._instances: Optional[List[Instance]] = None
         # Keeps track of state when `batches_per_epoch` is used.
         self._batch_generator: Optional[Iterator[TensorDict]] = None
         # For indexing instances.
         self._vocab: Optional[Vocabulary] = None
 
-        if not self.lazy:
-            # Load instances right away.
+        if self.max_batches_in_memory is None:
+            # Load all instances right away.
             deque(self.iter_instances(), maxlen=0)
 
     def __len__(self) -> int:
-        if not self.lazy:
+        if self.max_batches_in_memory is None:
             # We haven't read the instances yet, so we do so now, caching them as we go.
             if not self._instances:
                 deque(self.iter_instances(), maxlen=0)
@@ -137,7 +134,7 @@ class MultiProcessDataLoader(DataLoader):
         if self._instances:
             yield from self._instances
         else:
-            if not self.lazy:
+            if self.max_batches_in_memory is None:
                 self._instances = []
 
             if self.num_workers <= 0:
@@ -146,7 +143,7 @@ class MultiProcessDataLoader(DataLoader):
                     self.reader.read(self.data_path), desc="loading instances"
                 ):
                     self.reader.apply_token_indexers(instance)
-                    if not self.lazy:
+                    if self.max_batches_in_memory is None:
                         self._instances.append(instance)  # type: ignore
                     if self._vocab is not None:
                         instance.index_fields(self._vocab)
@@ -160,7 +157,7 @@ class MultiProcessDataLoader(DataLoader):
                     for instance in Tqdm.tqdm(
                         self._gather_instances(queue), desc="loading instances"
                     ):
-                        if not self.lazy:
+                        if self.max_batches_in_memory is None:
                             self._instances.append(instance)  # type: ignore
                         yield instance
                 finally:
@@ -241,7 +238,7 @@ class MultiProcessDataLoader(DataLoader):
 
     def _instances_to_batches(self, instance_iterator: Iterable[Instance]) -> Iterator[TensorDict]:
         instance_chunks: Iterable[List[Instance]]
-        if self.lazy:
+        if self.max_batches_in_memory is not None:
             chunk_size = (self.batch_size or 1) * self.max_batches_in_memory
             instance_chunks = lazy_groups_of(instance_iterator, chunk_size)
         else:
@@ -279,7 +276,11 @@ class MultiProcessDataLoader(DataLoader):
 
             # Now start the `batch_worker`. This worker consumes from the `instance_queue`
             # and puts the resulting batches into the `batch_queue`.
-            batch_queue: mp.JoinableQueue = ctx.JoinableQueue(self.max_batches_in_memory)  # type: ignore
+            batch_queue: mp.JoinableQueue
+            if self.max_batches_in_memory is not None:
+                batch_queue = ctx.JoinableQueue(self.max_batches_in_memory)
+            else:
+                batch_queue = ctx.JoinableQueue()
             batch_worker: BaseProcess = ctx.Process(
                 target=self._batch_worker, args=(instance_queue, batch_queue,), daemon=True
             )

@@ -224,8 +224,8 @@ class TestTrain(AllenNlpTestCase):
         assert load_archive(out_dir).model
 
     @cpu_or_gpu
-    @pytest.mark.parametrize("lazy", [True, False])
-    def test_train_model_distributed_with_sharded_reader(self, lazy):
+    @pytest.mark.parametrize("max_batches_in_memory", [None, 10])
+    def test_train_model_distributed_with_sharded_reader(self, max_batches_in_memory):
         if torch.cuda.device_count() >= 2:
             devices = [0, 1]
         else:
@@ -243,11 +243,7 @@ class TestTrain(AllenNlpTestCase):
                 "dataset_reader": {"type": "sharded", "base_reader": {"type": "sequence_tagging"}},
                 "train_data_path": SEQUENCE_TAGGING_SHARDS_PATH,
                 "validation_data_path": SEQUENCE_TAGGING_SHARDS_PATH,
-                "data_loader": {
-                    "batch_size": 1,
-                    "lazy": lazy,
-                    "max_batches_in_memory": 10 if lazy else None,
-                },
+                "data_loader": {"batch_size": 1, "max_batches_in_memory": max_batches_in_memory,},
                 "trainer": {"num_epochs": 2, "optimizer": "adam"},
                 "distributed": {"cuda_devices": devices},
             }
@@ -313,8 +309,8 @@ class TestTrain(AllenNlpTestCase):
             assert validation_complete in worker1_log
 
     @cpu_or_gpu
-    @pytest.mark.parametrize("lazy", [True, False])
-    def test_train_model_distributed_without_sharded_reader(self, lazy: bool):
+    @pytest.mark.parametrize("max_batches_in_memory", [None, 10])
+    def test_train_model_distributed_without_sharded_reader(self, max_batches_in_memory):
         if torch.cuda.device_count() >= 2:
             devices = [0, 1]
         else:
@@ -333,11 +329,7 @@ class TestTrain(AllenNlpTestCase):
                 "dataset_reader": {"type": "sequence_tagging"},
                 "train_data_path": SEQUENCE_TAGGING_DATA_PATH,
                 "validation_data_path": SEQUENCE_TAGGING_DATA_PATH,
-                "data_loader": {
-                    "batch_size": 1,
-                    "lazy": lazy,
-                    "max_batches_in_memory": 10 if lazy else None,
-                },
+                "data_loader": {"batch_size": 1, "max_batches_in_memory": max_batches_in_memory,},
                 "trainer": {
                     "num_epochs": num_epochs,
                     "optimizer": "adam",
