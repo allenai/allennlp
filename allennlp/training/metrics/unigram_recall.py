@@ -1,9 +1,10 @@
-from typing import Optional
+from typing import Optional, Union
 
 import sys
 
 from overrides import overrides
 import torch
+import torch.distributed as dist
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.training.metrics.metric import Metric
@@ -79,16 +80,25 @@ class UnigramRecall(Metric):
         self.correct_count += correct
         self.total_count += predictions.size()[0]
 
-    def get_metric(self, reset: bool = False):
+    def get_metric(
+        self,
+        reset: bool = False,
+        world_size: int = 1,
+        cuda_device: Union[int, torch.device] = torch.device("cpu"),
+    ):
         """
         # Returns
 
         The accumulated recall.
         """
         recall = self.correct_count / self.total_count if self.total_count > 0 else 0
+        if world_size > 1:
+            recall = torch.tensor(recall).to(cuda_device)
+            dist.all_reduce(recall, op=dist.ReduceOp.SUM)
+            recall = recall.item() / world_size
         if reset:
             self.reset()
-        return recall
+        return {"unigram_recall": recall}
 
     @overrides
     def reset(self):
