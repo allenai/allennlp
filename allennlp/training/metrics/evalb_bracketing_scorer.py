@@ -161,7 +161,9 @@ class EvalbBracketingScorer(Metric):
         The average precision, recall and f1.
         """
         if world_size > 1:
-            self._correct_predicted_brackets = torch.tensor(self._correct_predicted_brackets).to(cuda_device)
+            self._correct_predicted_brackets = torch.tensor(self._correct_predicted_brackets).to(
+                cuda_device
+            )
             self._predicted_brackets = torch.tensor(self._predicted_brackets).to(cuda_device)
             self._gold_brackets = torch.tensor(self._gold_brackets).to(cuda_device)
             dist.all_reduce(self._correct_predicted_brackets, op=dist.ReduceOp.SUM)

@@ -65,12 +65,18 @@ class EvalbBracketingScorerTest(AllenNlpTestCase):
 
     def test_distributed_evalb(self):
         with DistributedTestContextManager([-1, -1]) as test_this:
-            tree1 = Tree.fromstring("(S (VP (D the) (NP dog)) (VP (V chased) (NP (D the) (N cat))))")
+            tree1 = Tree.fromstring(
+                "(S (VP (D the) (NP dog)) (VP (V chased) (NP (D the) (N cat))))"
+            )
             tree2 = Tree.fromstring("(S (NP (D the) (N dog)) (VP (V chased) (NP (D the) (N cat))))")
             predicted_trees = [[tree1], [tree2]]
             gold_trees = [[tree2], [tree2]]
             metric_kwargs = {"predicted_trees": predicted_trees, "gold_trees": gold_trees}
-            desired_values = {"evalb_recall": 0.875, "evalb_precision": 0.875, "evalb_f1_measure": 0.875}
+            desired_values = {
+                "evalb_recall": 0.875,
+                "evalb_precision": 0.875,
+                "evalb_f1_measure": 0.875,
+            }
             test_this(
                 global_distributed_metric,
                 EvalbBracketingScorer(),
