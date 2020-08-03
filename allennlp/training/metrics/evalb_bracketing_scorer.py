@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Union
 import logging
 import os
 import tempfile
@@ -7,6 +7,9 @@ import shutil
 
 from overrides import overrides
 from nltk import Tree
+
+import torch
+import torch.distributed as dist
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.training.metrics.metric import Metric
@@ -146,12 +149,28 @@ class EvalbBracketingScorer(Metric):
         shutil.rmtree(tempdir)
 
     @overrides
-    def get_metric(self, reset: bool = False):
+    def get_metric(
+        self,
+        reset: bool = False,
+        world_size: int = 1,
+        cuda_device: Union[int, torch.device] = torch.device("cpu"),
+    ):
         """
         # Returns
 
         The average precision, recall and f1.
         """
+        if world_size > 1:
+            self._correct_predicted_brackets = torch.tensor(self._correct_predicted_brackets).to(cuda_device)
+            self._predicted_brackets = torch.tensor(self._predicted_brackets).to(cuda_device)
+            self._gold_brackets = torch.tensor(self._gold_brackets).to(cuda_device)
+            dist.all_reduce(self._correct_predicted_brackets, op=dist.ReduceOp.SUM)
+            dist.all_reduce(self._predicted_brackets, op=dist.ReduceOp.SUM)
+            dist.all_reduce(self._gold_brackets, op=dist.ReduceOp.SUM)
+            self._correct_predicted_brackets = self._correct_predicted_brackets.item() / world_size
+            self._predicted_brackets = self._predicted_brackets.item() / world_size
+            self._gold_brackets = self._gold_brackets.item() / world_size
+
         recall = (
             self._correct_predicted_brackets / self._gold_brackets
             if self._gold_brackets > 0
