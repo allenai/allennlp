@@ -8,7 +8,6 @@ from typing import List, Iterator, Optional, Callable, Iterable
 
 import torch.multiprocessing as mp
 
-from allennlp.common.lazy import Lazy
 from allennlp.common.util import lazy_groups_of
 from allennlp.common.tqdm import Tqdm
 from allennlp.data.instance import Instance
@@ -22,17 +21,13 @@ from allennlp.data.vocabulary import Vocabulary
 logger = logging.getLogger(__name__)
 
 
-@DataLoader.register("multi_process", constructor="from_partial_objects")
+@DataLoader.register("multi_process")
 class MultiProcessDataLoader(DataLoader):
-    _INSTANCE_QUEUE_SIZE = 1000
-    _INSTANCE_CHUNK_SIZE = 10
-    _BATCH_CHUNK_SIZE = 10
-
     def __init__(
         self,
         reader: DatasetReader,
         data_path: str,
-        batch_size: int = 1,
+        batch_size: int = None,
         drop_last: bool = False,
         shuffle: bool = False,
         batch_sampler: BatchSampler = None,
@@ -42,20 +37,25 @@ class MultiProcessDataLoader(DataLoader):
         lazy: bool = False,
         max_batches_in_memory: int = 100,
         start_method: str = "fork",
+        instance_queue_size: int = 1000,
+        instance_chunk_size: int = 10,
+        batch_chunk_size: int = 10,
     ) -> None:
         # Do some parameter validation.
         if num_workers is not None and num_workers < 0:
             raise ValueError("num_workers cannot be a negative number")
 
-        if batch_size < 1:
+        if batch_size is not None and batch_size < 1:
             raise ValueError("batch_size must be at least 1")
 
         if batch_sampler is not None:
-            if batch_size > 1:
+            if batch_size is not None:
                 raise ValueError("batch_sampler option is mutually exclusive with batch_size")
 
             if shuffle:
                 raise ValueError("batch_sampler option is mutually exclusive with shuffle")
+        elif batch_size is None:
+            raise ValueError("batch_size is required when batch_sampler is not supplied")
 
         if batches_per_epoch is not None and batches_per_epoch < 1:
             raise ValueError("batches_per_epoch must be at least 1")
@@ -76,6 +76,9 @@ class MultiProcessDataLoader(DataLoader):
         self.lazy = lazy
         self.max_batches_in_memory = max_batches_in_memory
         self.start_method = start_method
+        self._instance_queue_size = instance_queue_size
+        self._instance_chunk_size = instance_chunk_size
+        self._batch_chunk_size = batch_chunk_size
 
         # When lazy = False, we'll keep a cache of all instances in this list.
         self._instances: Optional[List[Instance]] = None
@@ -98,10 +101,12 @@ class MultiProcessDataLoader(DataLoader):
                 return self.batch_sampler.get_num_batches(self._instances)  # type: ignore
 
             num_instances = len(self._instances)  # type: ignore
-            if self.drop_last or num_instances % self.batch_size == 0:
-                return num_instances // self.batch_size
+            # We know batch_size won't be None here since `batch_sampler` is None.
+            batch_size: int = self.batch_size  # type: ignore
+            if self.drop_last or num_instances % batch_size == 0:
+                return num_instances // batch_size
             else:
-                return 1 + num_instances // self.batch_size
+                return 1 + num_instances // batch_size
         elif self.batches_per_epoch is not None:
             return self.batches_per_epoch
         else:
@@ -148,7 +153,7 @@ class MultiProcessDataLoader(DataLoader):
                     yield instance
             else:
                 ctx = mp.get_context(self.start_method)
-                queue: mp.JoinableQueue = ctx.JoinableQueue(self._INSTANCE_QUEUE_SIZE)
+                queue: mp.JoinableQueue = ctx.JoinableQueue(self._instance_queue_size)
                 workers = self._start_instance_workers(queue, ctx)
 
                 try:
@@ -207,7 +212,7 @@ class MultiProcessDataLoader(DataLoader):
             instances = self.reader.read(self.data_path)
             checked_for_token_indexers: bool = False
 
-            for instances_chunk in lazy_groups_of(instances, self._INSTANCE_CHUNK_SIZE):
+            for instances_chunk in lazy_groups_of(instances, self._instance_chunk_size):
                 # Check the first instance to make sure it doesn't contain any TextFields with
                 # token_indexers because we don't want to be duplicating those by sending
                 # them across processes.
@@ -237,7 +242,7 @@ class MultiProcessDataLoader(DataLoader):
     def _instances_to_batches(self, instance_iterator: Iterable[Instance]) -> Iterator[TensorDict]:
         instance_chunks: Iterable[List[Instance]]
         if self.lazy:
-            chunk_size = self.batch_size * self.max_batches_in_memory
+            chunk_size = (self.batch_size or 1) * self.max_batches_in_memory
             instance_chunks = lazy_groups_of(instance_iterator, chunk_size)
         else:
             instance_chunks = [list(instance_iterator)]
@@ -269,7 +274,7 @@ class MultiProcessDataLoader(DataLoader):
             # First we start "instance workers", which are in charge of generating raw
             # instances using self.reader. The generated instances are then put
             # into the `instance_queue` for the `batch_worker` to consume.
-            instance_queue: mp.JoinableQueue = ctx.JoinableQueue(self._INSTANCE_QUEUE_SIZE)
+            instance_queue: mp.JoinableQueue = ctx.JoinableQueue(self._instance_queue_size)
             instance_workers = self._start_instance_workers(instance_queue, ctx)
 
             # Now start the `batch_worker`. This worker consumes from the `instance_queue`
@@ -304,7 +309,7 @@ class MultiProcessDataLoader(DataLoader):
         try:
             for batch_chunk in lazy_groups_of(
                 self._instances_to_batches(self._gather_instances(instance_queue)),
-                self._BATCH_CHUNK_SIZE,
+                self._batch_chunk_size,
             ):
                 batch_queue.put((batch_chunk, None))
         except Exception as e:
@@ -316,37 +321,3 @@ class MultiProcessDataLoader(DataLoader):
         # Wait for the consumer (in the main process) to finish receiving all batch groups
         # to avoid prematurely closing the queue.
         batch_queue.join()
-
-    @classmethod
-    def from_partial_objects(
-        cls,
-        reader: DatasetReader,
-        data_path: str,
-        batch_size: int = 1,
-        drop_last: bool = False,
-        shuffle: bool = False,
-        batch_sampler: Lazy[BatchSampler] = None,
-        batches_per_epoch: int = None,
-        num_workers: int = 0,
-        lazy: bool = False,
-        max_batches_in_memory: int = 100,
-        start_method: str = "fork",
-    ) -> "MultiProcessDataLoader":
-        if batch_sampler is not None:
-            batch_sampler_ = batch_sampler.construct()
-        else:
-            batch_sampler_ = None
-
-        return cls(
-            reader,
-            data_path,
-            batch_size=batch_size,
-            drop_last=drop_last,
-            shuffle=shuffle,
-            batch_sampler=batch_sampler_,
-            batches_per_epoch=batches_per_epoch,
-            num_workers=num_workers,
-            lazy=lazy,
-            max_batches_in_memory=max_batches_in_memory,
-            start_method=start_method,
-        )

@@ -39,8 +39,6 @@ class ModelTestCase(AllenNlpTestCase):
             vocab = Vocabulary.from_instances(instances)
         self.vocab = vocab
         self.instances = instances
-        for instance in self.instances:
-            instance.index_fields(vocab)
         self.model = Model.from_params(vocab=self.vocab, params=params["model"])
 
         # TODO(joelgrus) get rid of these

@@ -1,11 +1,10 @@
-from typing import List
+from typing import List, Iterable
 
 import pytest
 
-from allennlp.common.params import Params
 from allennlp.data.instance import Instance
 from allennlp.data.dataset_readers import DatasetReader
-from allennlp.data.data_loaders import DataLoader, MultiProcessDataLoader
+from allennlp.data.data_loaders import MultiProcessDataLoader
 from allennlp.data.fields import TextField, MetadataField
 from allennlp.data.tokenizers import PretrainedTransformerTokenizer
 from allennlp.data.token_indexers import PretrainedTransformerIndexer
@@ -16,7 +15,7 @@ class MockDatasetReader(DatasetReader):
     """
     We'll use this mock dataset reader for most of the tests.
 
-    It utilizes a transformers tokenizer, since historically we've deadlocking
+    It utilizes a transformers tokenizer, since historically we've seen deadlocking
     issues when using these within subprocesses. So these tests also serve as
     regression tests against those issues.
 
@@ -87,7 +86,11 @@ def test_error_raised_when_text_fields_contain_token_indexers(lazy):
 
     with pytest.raises(ValueError, match="Make sure your dataset reader's text_to_instance()"):
         loader = MultiProcessDataLoader(
-            MockOldDatasetReader(), "this-path-doesn't-matter", num_workers=2, lazy=lazy
+            MockOldDatasetReader(),
+            "this-path-doesn't-matter",
+            num_workers=2,
+            lazy=lazy,
+            batch_size=1,
         )
         list(loader.iter_instances())
 
@@ -95,27 +98,24 @@ def test_error_raised_when_text_fields_contain_token_indexers(lazy):
 @pytest.mark.parametrize(
     "options",
     [
-        dict(lazy=True, num_workers=2),
-        dict(lazy=False, num_workers=2),
-        dict(lazy=True, num_workers=2, start_method="spawn"),
-        dict(lazy=False, num_workers=2, start_method="spawn"),
-        dict(lazy=True, num_workers=0),
-        dict(lazy=False, num_workers=0),
+        dict(lazy=True, num_workers=2, batch_size=1),
+        dict(lazy=False, num_workers=2, batch_size=1),
+        dict(lazy=True, num_workers=2, start_method="spawn", batch_size=1),
+        dict(lazy=False, num_workers=2, start_method="spawn", batch_size=1),
+        dict(lazy=True, num_workers=0, batch_size=1),
+        dict(lazy=False, num_workers=0, batch_size=1),
     ],
 )
 def test_multi_process_data_loader(options):
     reader = MockDatasetReader()
     data_path = "this doesn't matter"
 
-    options["type"] = "multi_process"
-    loader: MultiProcessDataLoader = DataLoader.from_params(
-        Params(options), reader=reader, data_path=data_path
-    )
-    if options.get("lazy"):
+    loader = MultiProcessDataLoader(reader=reader, data_path=data_path, **options)
+    if not options.get("lazy"):
         # Instances should be loaded immediately if lazy is False.
         assert loader._instances
 
-    instances = loader.iter_instances()
+    instances: Iterable[Instance] = loader.iter_instances()
     # This should be a generator.
     assert not isinstance(instances, (list, tuple))
     instances = list(instances)
@@ -135,5 +135,5 @@ def test_multi_process_data_loader(options):
         indices: List[int] = []
         for batch in loader:
             for index in batch["index"]:
-                indices.append(index)
+                indices.append(index)  # type: ignore
         assert len(indices) == len(set(indices)) == MockDatasetReader.NUM_INSTANCES

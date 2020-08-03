@@ -41,7 +41,7 @@ class DistributedInfo:
     Contains information about the node rank and world size when the reader is being
     used within distributed training.
 
-    From a `DatasetReader` this can be accessed with the [`get_dist_info()`](#get_dist_info) method.
+    From a `DatasetReader` this can be accessed with the [`get_distributed_info()`](#get_distributed_info) method.
     """
 
     world_size: int
@@ -101,7 +101,7 @@ class DatasetReader(Registrable):
         don't end up with duplicates.
 
         However, there is really no benefit to using multiple workers in your `DataLoader`
-        unless you implement handle the sharding within your `_read()` method, in which
+        unless you implement the sharding within your `_read()` method, in which
         case you should set `manual_multi_process_sharding` to `True`, just as with
         `manual_distributed_sharding`.
 
@@ -150,11 +150,11 @@ class DatasetReader(Registrable):
         self.max_instances = max_instances
         self.manual_distributed_sharding = manual_distributed_sharding
         self.manual_multi_process_sharding = manual_multi_process_sharding
-        self.__worker_info: Optional[WorkerInfo] = None
-        self.__dist_info: Optional[DistributedInfo] = None
+        self._worker_info: Optional[WorkerInfo] = None
+        self._distributed_info: Optional[DistributedInfo] = None
         # If we're actually in the main process, we can find the info using torch utils.
         if util.is_distributed():
-            self.__dist_info = DistributedInfo(dist.get_world_size(), dist.get_rank())
+            self._distributed_info = DistributedInfo(dist.get_world_size(), dist.get_rank())
 
     def read(self, file_path: Union[PathLike, str]) -> Iterator[Instance]:
         """
@@ -164,7 +164,7 @@ class DatasetReader(Registrable):
             file_path = str(file_path)
 
         for instance in self._multi_worker_islice(self._read(file_path)):
-            if self.__worker_info is None:
+            if self._worker_info is None:
                 # If not running in a subprocess, it's safe to apply the token_indexers right away.
                 self.apply_token_indexers(instance)
             yield instance
@@ -217,32 +217,32 @@ class DatasetReader(Registrable):
             is being used within distributed training, `get_worker_info()` will only
             provide information on the `DataLoader` worker within its node.
 
-            Use [`get_dist_info`](#get_dist_info) to get information on distributed
+            Use [`get_distributed_info`](#get_distributed_info) to get information on distributed
             training context.
 
         """
-        return self.__worker_info
+        return self._worker_info
 
-    def get_dist_info(self) -> Optional[DistributedInfo]:
+    def get_distributed_info(self) -> Optional[DistributedInfo]:
         """
         Provides a [`DistributedInfo`](#DistributedInfo) object when the reader is being
         used within distributed training.
 
         If not in distributed training, this is just `None`.
         """
-        return self.__dist_info
+        return self._distributed_info
 
     def _set_worker_info(self, info: Optional[WorkerInfo]) -> None:
         """
         Should only be used internally.
         """
-        self.__worker_info = info
+        self._worker_info = info
 
-    def _set_dist_info(self, info: Optional[DistributedInfo]) -> None:
+    def _set_distributed_info(self, info: Optional[DistributedInfo]) -> None:
         """
         Should only be used internally.
         """
-        self.__dist_info = info
+        self._distributed_info = info
 
     def shard_iterable(self, iterable: Iterable[_T]) -> Iterator[_T]:
         """
@@ -264,9 +264,9 @@ class DatasetReader(Registrable):
                 sharded_slice, dist.get_rank(), None, dist.get_world_size()
             )
 
-        if self.__worker_info is not None:
+        if self._worker_info is not None:
             sharded_slice = itertools.islice(
-                sharded_slice, self.__worker_info.id, None, self.__worker_info.num_workers
+                sharded_slice, self._worker_info.id, None, self._worker_info.num_workers
             )
 
         return sharded_slice
@@ -290,27 +290,32 @@ class DatasetReader(Registrable):
         # all workers processes is equal to self.max_instances.
         max_instances = self.max_instances
 
-        if self.__dist_info is not None:
+        if self._distributed_info is not None:
             if max_instances is not None:
                 # Need to scale down max_instances because otherwise each node would read self.max_instances,
                 # but we really want self.max_instances total across all nodes.
-                if self.__dist_info.node_rank < (max_instances % self.__dist_info.world_size):
-                    max_instances = max_instances // self.__dist_info.world_size + 1
+                if self._distributed_info.node_rank < (
+                    max_instances % self._distributed_info.world_size
+                ):
+                    max_instances = max_instances // self._distributed_info.world_size + 1
                 else:
-                    max_instances = max_instances // self.__dist_info.world_size
+                    max_instances = max_instances // self._distributed_info.world_size
 
             if not self.manual_distributed_sharding:
                 sharded_slice = itertools.islice(
-                    sharded_slice, self.__dist_info.node_rank, None, self.__dist_info.world_size
+                    sharded_slice,
+                    self._distributed_info.node_rank,
+                    None,
+                    self._distributed_info.world_size,
                 )
 
-        if self.__worker_info is not None:
+        if self._worker_info is not None:
             if max_instances is not None:
                 # Like in the distributed case above, we need to adjust max_instances.
-                if self.__worker_info.id < (max_instances % self.__worker_info.num_workers):
-                    max_instances = max_instances // self.__worker_info.num_workers + 1
+                if self._worker_info.id < (max_instances % self._worker_info.num_workers):
+                    max_instances = max_instances // self._worker_info.num_workers + 1
                 else:
-                    max_instances = max_instances // self.__worker_info.num_workers
+                    max_instances = max_instances // self._worker_info.num_workers
 
             if not self.manual_multi_process_sharding:
                 warnings.warn(
@@ -323,7 +328,7 @@ class DatasetReader(Registrable):
                     UserWarning,
                 )
                 sharded_slice = itertools.islice(
-                    sharded_slice, self.__worker_info.id, None, self.__worker_info.num_workers
+                    sharded_slice, self._worker_info.id, None, self._worker_info.num_workers
                 )
 
         if max_instances is not None:

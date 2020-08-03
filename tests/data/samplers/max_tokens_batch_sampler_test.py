@@ -1,4 +1,3 @@
-from allennlp.common import Params
 from allennlp.data import Instance, Token
 from allennlp.data.fields import TextField
 from allennlp.data.samplers import MaxTokensBatchSampler
@@ -56,25 +55,6 @@ class TestMaxTokensSampler(SamplerTest):
         assert sampler.sorting_keys is None
         sampler._guess_sorting_keys(instances)
         assert sampler.sorting_keys == ["passage"]
-
-    def test_from_params(self):
-        params = Params({})
-
-        sorting_keys = ["s1", "s2"]
-        params["sorting_keys"] = sorting_keys
-        params["max_tokens"] = 32
-        sampler = MaxTokensBatchSampler.from_params(params=params)
-
-        assert sampler.sorting_keys == sorting_keys
-        assert sampler.padding_noise == 0.1
-        assert sampler.max_tokens == 32
-
-        params = Params({"sorting_keys": sorting_keys, "padding_noise": 0.5, "max_tokens": 100})
-
-        sampler = MaxTokensBatchSampler.from_params(params=params)
-        assert sampler.sorting_keys == sorting_keys
-        assert sampler.padding_noise == 0.5
-        assert sampler.max_tokens == 100
 
     def test_batch_count(self):
         sampler = MaxTokensBatchSampler(max_tokens=8, padding_noise=0, sorting_keys=["text"])

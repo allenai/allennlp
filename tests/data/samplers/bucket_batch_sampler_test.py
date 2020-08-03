@@ -94,7 +94,6 @@ class TestBucketSampler(SamplerTest):
             self.get_mock_reader(),
             "fake_path",
             batch_sampler=sampler,
-            batch_size=2,
             collate_fn=lambda x: Batch(x),
         )
         data_loader.index_with(self.vocab)
@@ -110,7 +109,7 @@ class TestBucketSampler(SamplerTest):
     def test_batch_count(self):
         sampler = BucketBatchSampler(batch_size=2, padding_noise=0, sorting_keys=["text"])
         data_loader = MultiProcessDataLoader(
-            self.get_mock_reader(), "fake_path", batch_sampler=sampler, batch_size=2,
+            self.get_mock_reader(), "fake_path", batch_sampler=sampler
         )
         data_loader.index_with(self.vocab)
         assert len(data_loader) == 3
