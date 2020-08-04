@@ -1,10 +1,18 @@
+import copy
+from collections.abc import Mapping
 from typing import Any, Dict, Optional, NamedTuple, List, Tuple
 
-import torch
-from torch import nn
+from detectron2.checkpoint import DetectionCheckpointer
 from detectron2.config import CfgNode
+from detectron2.config import get_cfg
+from detectron2.data import DatasetMapper
 from detectron2.data import DatasetMapper
 from detectron2.layers import ShapeSpec
+from detectron2.model_zoo import get_config_file
+from detectron2.modeling import build_model
+from detectron2.modeling.box_regression import Box2BoxTransform
+from detectron2.modeling.poolers import ROIPooler
+from detectron2.modeling.roi_heads.fast_rcnn import FastRCNNOutputLayers
 from detectron2.modeling.roi_heads import (
     build_box_head,
     build_mask_head,
@@ -14,9 +22,10 @@ from detectron2.modeling.roi_heads import (
     Res5ROIHeads,
     StandardROIHeads,
 )
-from detectron2.modeling.roi_heads.fast_rcnn import FastRCNNOutputLayers
-from detectron2.modeling.poolers import ROIPooler
-from detectron2.modeling.box_regression import Box2BoxTransform
+from torch import nn
+import torch
+
+from allennlp.common.file_utils import cached_path
 
 
 class DetectronConfig(NamedTuple):
@@ -33,7 +42,6 @@ class DetectronPipeline(NamedTuple):
 
 def update(d, u):
     for k, v in u.items():
-        from collections.abc import Mapping
 
         if isinstance(v, Mapping):
             d[k] = update(d.get(k, {}), v)
@@ -60,10 +68,8 @@ def get_cfg(
     overrides: Optional[Dict[str, Any]] = None,
     freeze: bool = True,
 ) -> CfgNode:
-    from detectron2.config import get_cfg
 
     cfg = get_cfg()
-    from detectron2.model_zoo import get_config_file
 
     if builtin_config_file is not None:
         cfg.merge_from_file(get_config_file(builtin_config_file))
@@ -73,8 +79,6 @@ def get_cfg(
         old_dict = convert_to_dict(cfg, [])
         new_dict = update(old_dict, overrides)
         cfg = CfgNode(new_dict)
-
-    import torch
 
     if not torch.cuda.is_available():
         cfg.MODEL.DEVICE = "cpu"
@@ -92,7 +96,6 @@ def load_checkpoint(checkpoint_name: str):
     """
     gs_url = "https://storage.googleapis.com/allennlp-public-models"
     detectron_checkpoint_url = f"{gs_url}/{checkpoint_name}.tar.gz!{checkpoint_name}/_weights.th"
-    from allennlp.common.file_utils import cached_path
 
     return cached_path(detectron_checkpoint_url, extract_archive=True)
 
@@ -112,13 +115,9 @@ def get_pipeline(
     spec = cfg.dump()  # Easiest way to get a hashable snapshot of CfgNode.
     pipeline = _pipeline_cache.get(spec, None)
     if pipeline is None:
-        from detectron2.data import DatasetMapper
-
         mapper = DatasetMapper(cfg)
-        from detectron2.modeling import build_model
 
         model = build_model(cfg)
-        from detectron2.checkpoint import DetectionCheckpointer
 
         DetectionCheckpointer(model).load(cfg.MODEL.WEIGHTS)
         model.eval()
@@ -126,8 +125,6 @@ def get_pipeline(
         _pipeline_cache[spec] = pipeline
 
     if make_copy:
-        import copy
-
         return copy.deepcopy(pipeline)
     else:
         return pipeline

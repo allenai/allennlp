@@ -1,7 +1,7 @@
 import torch
 
 from allennlp.common.checks import ConfigurationError
-from allennlp.data.vocabulary import Vocabulary
+from allennlp.data import Vocabulary
 from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
 from allennlp.nn.util import get_text_field_mask
 
