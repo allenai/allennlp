@@ -506,7 +506,7 @@ class TrainModel(Registrable):
 
             for key, value in test_metrics.items():
                 metrics["test_" + key] = value
-        elif self.evaluation_data_loader:
+        elif self.evaluation_data_loader is not None:
             logger.info(
                 "To evaluate on the test set after training, pass the "
                 "'evaluate_on_test' flag, or use the 'allennlp evaluate' command."
