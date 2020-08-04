@@ -97,14 +97,17 @@ class BooleanAccuracy(Metric):
 
         The accumulated accuracy.
         """
+        if world_size > 1:
+            _correct_count = torch.tensor(self._correct_count).to(cuda_device)
+            _total_count = torch.tensor(self._total_count).to(cuda_device)
+            dist.all_reduce(_correct_count, op=dist.ReduceOp.SUM)
+            dist.all_reduce(_total_count, op=dist.ReduceOp.SUM)
+            self._correct_count = _correct_count.item() / world_size
+            self._total_count = _total_count.item() / world_size
         if self._total_count > 0:
             accuracy = float(self._correct_count) / float(self._total_count)
         else:
             accuracy = 0.0
-        if world_size > 1:
-            accuracy_tensor = torch.tensor(accuracy).to(cuda_device)
-            dist.all_reduce(accuracy_tensor, op=dist.ReduceOp.SUM)
-            accuracy = accuracy_tensor.item() / world_size
         if reset:
             self.reset()
         return {"accuracy": accuracy}

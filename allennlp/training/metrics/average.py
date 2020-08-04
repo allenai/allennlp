@@ -1,4 +1,8 @@
+from typing import Union
 from overrides import overrides
+
+import torch
+import torch.distributed as dist
 
 from allennlp.training.metrics.metric import Metric
 
@@ -28,16 +32,29 @@ class Average(Metric):
         self._count += 1
 
     @overrides
-    def get_metric(self, reset: bool = False):
+    def get_metric(
+        self,
+        reset: bool = False,
+        world_size: int = 1,
+        cuda_device: Union[int, torch.device] = torch.device("cpu"),
+    ):
         """
         # Returns
 
         The average of all values that were passed to `__call__`.
         """
+        if world_size > 1:
+            _count = torch.tensor(self._count).to(cuda_device)
+            _total_value = torch.tensor(self._total_value).to(cuda_device)
+            dist.all_reduce(_count, op=dist.ReduceOp.SUM)
+            dist.all_reduce(_total_value, op=dist.ReduceOp.SUM)
+            self._count = _count.item() / world_size
+            self._total_value = _total_value.item() / world_size
+
         average_value = self._total_value / self._count if self._count > 0 else 0
         if reset:
             self.reset()
-        return average_value
+        return {"average_value": average_value}
 
     @overrides
     def reset(self):

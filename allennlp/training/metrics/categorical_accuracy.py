@@ -105,14 +105,18 @@ class CategoricalAccuracy(Metric):
 
         The accumulated accuracy.
         """
+        if world_size > 1:
+            _correct_count = torch.tensor(self.correct_count).to(cuda_device)
+            _total_count = torch.tensor(self.total_count).to(cuda_device)
+            dist.all_reduce(_correct_count, op=dist.ReduceOp.SUM)
+            dist.all_reduce(_total_count, op=dist.ReduceOp.SUM)
+            self.correct_count = _correct_count.item() / world_size
+            self.total_count = _total_count.item() / world_size
+
         if self.total_count > 1e-12:
             accuracy = float(self.correct_count) / float(self.total_count)
         else:
             accuracy = 0.0
-        if world_size > 1:
-            accuracy_tensor = torch.tensor(accuracy).to(cuda_device)
-            dist.all_reduce(accuracy_tensor, op=dist.ReduceOp.SUM)
-            accuracy = accuracy_tensor.item() / world_size
         if reset:
             self.reset()
 

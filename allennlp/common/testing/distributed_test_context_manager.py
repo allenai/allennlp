@@ -70,7 +70,12 @@ class DistributedTestContextManager:
         self.func = func
         self.args = args
         self.kwargs = kwargs
-        mp.spawn(self.init_process, args=(self.device_ids, self.world_size), nprocs=self.nprocs)
+        mp.start_processes(
+            self.init_process,
+            args=(self.device_ids, self.world_size),
+            nprocs=self.nprocs,
+            start_method="fork",
+        )
 
     def __enter__(self):
         check_for_gpu(self.device_ids)
