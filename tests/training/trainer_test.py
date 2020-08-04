@@ -9,10 +9,6 @@ from typing import Any, Dict, List
 import math
 import pytest
 
-try:
-    from apex import amp
-except ImportError:
-    amp = None
 import torch
 from torch.utils.data import DataLoader
 from torch.nn.utils import clip_grad_norm_
@@ -1028,10 +1024,12 @@ class TestTrainer(TrainerTestBase):
         assert metrics["training_loss"] == float(sum(trainer.batch_losses) / batches_per_epoch)
 
 
-class TestApexTrainer(TrainerTestBase):
-    @requires_gpu
-    @pytest.mark.skipif(amp is None, reason="Apex is not installed.")
-    def test_trainer_can_run_amp(self):
+@requires_gpu
+class TestAmpTrainer(TrainerTestBase):
+    @pytest.mark.parametrize(
+        "grad_norm, num_gradient_accumulation_steps", [(None, 1), (1.0, 1), (1.0, 2)]
+    )
+    def test_trainer_can_run_amp(self, grad_norm, num_gradient_accumulation_steps):
         self.model.cuda()
         trainer = GradientDescentTrainer(
             self.model,
@@ -1039,7 +1037,9 @@ class TestApexTrainer(TrainerTestBase):
             self.data_loader,
             num_epochs=2,
             cuda_device=0,
-            opt_level="O1",
+            use_amp=True,
+            grad_norm=True,
+            num_gradient_accumulation_steps=num_gradient_accumulation_steps,
         )
         _ = trainer.train()
 

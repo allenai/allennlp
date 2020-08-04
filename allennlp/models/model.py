@@ -8,10 +8,6 @@ import os
 from os import PathLike
 from typing import Dict, List, Set, Type, Optional, Union
 
-try:
-    from apex import amp
-except ImportError:
-    amp = None
 import numpy
 import torch
 
@@ -272,7 +268,6 @@ class Model(torch.nn.Module, Registrable):
         serialization_dir: Union[str, PathLike],
         weights_file: Optional[Union[str, PathLike]] = None,
         cuda_device: int = -1,
-        opt_level: Optional[str] = None,
     ) -> "Model":
         """
         Instantiates an already-trained model, based on the experiment
@@ -292,9 +287,6 @@ class Model(torch.nn.Module, Registrable):
 
         model_params = config.get("model")
 
-        training_params = config.get("trainer", Params({}))
-        opt_level = opt_level or training_params.get("opt_level")
-
         # The experiment config tells us how to _train_ a model, including where to get pre-trained
         # embeddings from.  We're now _loading_ the model, so those embeddings will already be
         # stored in our weights.  We don't need any pretrained weight file anymore, and we don't
@@ -308,30 +300,6 @@ class Model(torch.nn.Module, Registrable):
             model.cuda(cuda_device)
         else:
             model.cpu()
-
-        # If opt_level is not None (i.e. it exists in the loaded models params or was provided
-        # as argument to this method), call amp.initialize on the loaded model.
-        # Log a warning if amp is not installed or we are loading onto the cpu so that these
-        # cases do not pass silently.
-        if opt_level is not None:
-            if amp is None:
-                logger.warning(
-                    (
-                        f"Apex must be installed to enable mixed-precision via amp."
-                        f" Got opt_level is not None (opt_level={opt_level}) but Apex is not installed."
-                        " Any further training or inference will happen at full-precision."
-                    )
-                )
-            if cuda_device == -1:
-                logger.warning(
-                    (
-                        f"A CUDA device must be specified to enable mixed-precision via amp."
-                        f" Got cuda_device=={cuda_device} but opt_level is not None (opt_level={opt_level})."
-                        " Any further training or inference will happen at full-precision."
-                    )
-                )
-            if amp is not None and cuda_device >= 0:
-                model = amp.initialize(model, opt_level=opt_level)
 
         # If vocab+embedding extension was done, the model initialized from from_params
         # and one defined by state dict in weights_file might not have same embedding shapes.
@@ -353,7 +321,6 @@ class Model(torch.nn.Module, Registrable):
         serialization_dir: Union[str, PathLike],
         weights_file: Optional[Union[str, PathLike]] = None,
         cuda_device: int = -1,
-        opt_level: Optional[str] = None,
     ) -> "Model":
         """
         Instantiates an already-trained model, based on the experiment
@@ -374,12 +341,6 @@ class Model(torch.nn.Module, Registrable):
         cuda_device: `int = -1`
             By default we load the model on the CPU, but if you want to load it
             for GPU usage you can specify the id of your GPU here
-        opt_level : `str`, optional (default = `None`)
-            Each `opt_level` establishes a set of properties that govern Amp’s implementation of pure or mixed
-            precision training. Must be a choice of `"O0"`, `"O1"`, `"O2"`, or `"O3"`.
-            See the Apex [documentation](https://nvidia.github.io/apex/amp.html#opt-levels-and-properties) for
-            more details. If `None`, defaults to the `opt_level` found in the model params. If `cuda_device==-1`,
-            Amp is not used and this argument is ignored.
 
         # Returns
 
@@ -403,7 +364,7 @@ class Model(torch.nn.Module, Registrable):
             # If we really need to change this, we would need to implement a recursive
             # get_model_class method, that recurses whenever it finds a from_archive model type.
             model_class = Model
-        return model_class._load(config, serialization_dir, weights_file, cuda_device, opt_level)
+        return model_class._load(config, serialization_dir, weights_file, cuda_device)
 
     def extend_embedder_vocab(self, embedding_sources_mapping: Dict[str, str] = None) -> None:
         """

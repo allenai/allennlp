@@ -12,6 +12,7 @@ import json
 from overrides import overrides
 
 from allennlp.commands.subcommand import Subcommand
+from allennlp.common import logging as common_logging
 from allennlp.common.checks import check_for_gpu, ConfigurationError
 from allennlp.common.file_utils import cached_path
 from allennlp.common.util import lazy_groups_of
@@ -82,6 +83,13 @@ class Predict(Subcommand):
 
         subparser.add_argument(
             "--predictor", type=str, help="optionally specify a specific predictor to use"
+        )
+
+        subparser.add_argument(
+            "--file-friendly-logging",
+            action="store_true",
+            default=False,
+            help="outputs tqdm status on separate lines and slows tqdm refresh rate",
         )
 
         subparser.set_defaults(func=_predict)
@@ -194,6 +202,8 @@ class _PredictManager:
 
 
 def _predict(args: argparse.Namespace) -> None:
+    common_logging.FILE_FRIENDLY_LOGGING = args.file_friendly_logging
+
     predictor = _get_predictor(args)
 
     if args.silent and not args.output_file:

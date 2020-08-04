@@ -22,9 +22,6 @@ codecov
 # Optional dependencies, which we install for testing purposes.
 matplotlib>=2.2.3
 
-# Required for automatic mixed precision (AMP) training
-git+https://github.com/NVIDIA/apex.git@master
-
 # For mocking HTTP requests/responses.
 responses>=0.7
 
@@ -45,7 +42,7 @@ nr.databind.core<0.0.17
 nr.interface<0.0.4
 
 mkdocs==1.1.2
-mkdocs-material==5.4.0
+mkdocs-material==5.5.0
 markdown-include==0.5.1
 
 #### PACKAGE-UPLOAD PACKAGES ####
