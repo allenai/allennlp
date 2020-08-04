@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Added
+
+- A new high-performance default `DataLoader`: `MultiProcessDataLoading`.
+
+### Changed
+
+- `DatasetReader`s are now always lazy. This means there is no `lazy` parameter in the base
+  class, and the `_read()` method should always be a generator.
+- The `DataLoader` now decides whether to load instances lazily or not.
+  With the `PyTorchDataLoader` this is controlled with the `lazy` parameter, but with
+  the `MultiProcessDataLoading` this is controlled by the `max_instances_in_memory` setting.
+
 ## [v1.1.0rc2](https://github.com/allenai/allennlp/releases/tag/v1.1.0rc2) - 2020-07-31
 
 ### Changed
