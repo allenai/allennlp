@@ -13,6 +13,8 @@ from allennlp.models.model import Model
 from allennlp.modules import TimeDistributed
 from allennlp.training.metrics import CategoricalAccuracy
 
+from transformers.modeling_auto import AutoModel
+from transformers.modeling_utils import PreTrainedModel
 from transformers.modeling_bert import ACT2FN
 
 logger = logging.getLogger(__name__)
@@ -342,11 +344,11 @@ class BertBiOutput(torch.nn.Module):
         super().__init__()
 
         self.dense1 = torch.nn.Linear(combined_hidden_size, hidden_size1)
-        self.LayerNorm1 = torch.nn.LayerNorm(hidden_size1, eps=1e-12)
+        self.layer_norm1 = torch.nn.LayerNorm(hidden_size1, eps=1e-12)
         self.dropout1 = torch.nn.Dropout(dropout1)
 
         self.dense2 = torch.nn.Linear(combined_hidden_size, hidden_size2)
-        self.LayerNorm2 = torch.nn.LayerNorm(hidden_size2, eps=1e-12)
+        self.layer_norm2 = torch.nn.LayerNorm(hidden_size2, eps=1e-12)
         self.dropout2 = torch.nn.Dropout(dropout2)
 
     def forward(self, hidden_states1, input_tensor1, hidden_states2, input_tensor2):
@@ -357,8 +359,8 @@ class BertBiOutput(torch.nn.Module):
         context_state2 = self.dense2(hidden_states2)
         context_state2 = self.dropout2(context_state2)
 
-        hidden_states1 = self.LayerNorm1(context_state1 + input_tensor1)
-        hidden_states2 = self.LayerNorm2(context_state2 + input_tensor2)
+        hidden_states1 = self.layer_norm1(context_state1 + input_tensor1)
+        hidden_states2 = self.layer_norm2(context_state2 + input_tensor2)
 
         return hidden_states1, hidden_states2
 
@@ -518,6 +520,78 @@ class BertEncoder(torch.nn.Module, FromParams):
         self.c_layer = torch.nn.ModuleList(
             [deepcopy(connect_layer) for _ in range(len(v_biattention_id))]
         )
+
+    @classmethod
+    def from_huggingface_model(
+        cls,
+        model: PreTrainedModel,
+        image_num_hidden_layers: int,
+        image_hidden_size: int,
+        combined_hidden_size: int,
+        image_intermediate_size: int,
+        image_attention_dropout: float,
+        image_hidden_dropout: float,
+        v_biattention_id: List[int],
+        t_biattention_id: List[int],
+        fixed_t_layer: int,
+        fixed_v_layer: int,
+        fast_mode: bool = False,
+        with_coattention: bool = True,
+        in_batch_pairs: bool = False,
+    ):
+        config = model.config
+
+        # TODO(mattg): this is brittle and will only work for particular transformer models.  But,
+        # it's the best we can do for now, I think.
+        num_attention_heads = config.num_attention_heads
+        text_num_hidden_layers = config.num_hidden_layers
+        text_hidden_size = config.hidden_size
+        text_intermediate_size = config.intermediate_size
+        text_attention_dropout = config.attention_probs_dropout_prob
+        text_hidden_dropout = config.hidden_dropout_prob
+        activation = config.hidden_act
+        encoder = cls(
+            text_num_hidden_layers=text_num_hidden_layers,
+            image_num_hidden_layers=image_num_hidden_layers,
+            text_hidden_size=text_hidden_size,
+            image_hidden_size=image_hidden_size,
+            combined_hidden_size=combined_hidden_size,
+            text_intermediate_size=text_intermediate_size,
+            image_intermediate_size=image_intermediate_size,
+            num_attention_heads=num_attention_heads,
+            text_attention_dropout=text_attention_dropout,
+            text_hidden_dropout=text_hidden_dropout,
+            image_attention_dropout=image_attention_dropout,
+            image_hidden_dropout=image_hidden_dropout,
+            activation=activation,
+            v_biattention_id=v_biattention_id,
+            t_biattention_id=t_biattention_id,
+            fixed_t_layer=fixed_t_layer,
+            fixed_v_layer=fixed_v_layer,
+            fast_mode=fast_mode,
+            with_coattention=with_coattention,
+            in_batch_pairs=in_batch_pairs,
+        )
+
+        # After creating the encoder, we copy weights over from the transformer.  This currently
+        # requires that the internal structure of the text side of this encoder *exactly matches*
+        # the internal structure of whatever transformer you're using.  This could be made more
+        # general by having some weight name transforms, or a name mapping, or something.  If we do
+        # this, making it a class like NameMapper would probably be good, because specifying the
+        # options without having a class to do it seems like a mess.
+        encoder_parameters = dict(encoder.named_parameters())
+        for name, parameter in model.named_parameters():
+            if name.startswith("encoder."):
+                name = name[8:]
+                name = name.replace("LayerNorm", "layer_norm")
+                if name not in encoder_parameters:
+                    raise ValueError(
+                        f"Couldn't find a matching parameter for {name}. Is this transformer "
+                        "compatible with the joint encoder you're using?"
+                    )
+                encoder_parameters[name].data.copy_(parameter.data)
+
+        return encoder
 
     def forward(
         self,
@@ -681,6 +755,7 @@ class BertImageFeatureEmbeddings(torch.nn.Module, FromParams):
 
 
 @Model.register("nlvr2_vilbert")
+@Model.register("nlvr2_vilbert_from_huggingface", constructor="from_huggingface_model_name")
 class Nlvr2Vilbert(Model):
     """
     Model for the NLVR2 task based on the LXMERT paper (Tan et al. 2019).
@@ -713,6 +788,101 @@ class Nlvr2Vilbert(Model):
         self.v_pooler = TimeDistributed(BertPooler(encoder.image_hidden_size, pooled_output_dim))
         self.classifier = torch.nn.Linear(pooled_output_dim * 2, 2)
         self.dropout = torch.nn.Dropout(dropout)
+
+    @classmethod
+    def from_huggingface_model_name(
+        cls,
+        vocab: Vocabulary,
+        model_name: str,
+        image_feature_dim: int,
+        image_num_hidden_layers: int,
+        image_hidden_size: int,
+        combined_hidden_size: int,
+        pooled_output_dim: int,
+        image_intermediate_size: int,
+        image_attention_dropout: float,
+        image_hidden_dropout: float,
+        v_biattention_id: List[int],
+        t_biattention_id: List[int],
+        fixed_t_layer: int,
+        fixed_v_layer: int,
+        pooled_dropout: float = 0.1,
+        fusion_method: str = "sum",
+        fast_mode: bool = False,
+        with_coattention: bool = True,
+        in_batch_pairs: bool = False,
+    ):
+        transformer = AutoModel.from_pretrained(model_name)
+
+        # TODO(mattg): This call to `transformer.embeddings` works with some transformers, but I'm
+        # not sure it works for all of them, or what to do if it fails.
+        # We should probably pull everything up until the instantiation of the image feature
+        # embedding out into a central "transformers_util" module, or something, and just have a
+        # method that pulls an initialized embedding layer out of a huggingface model.  One place
+        # for this somewhat hacky code to live, instead of having to duplicate it in various models.
+        text_embeddings = deepcopy(transformer.embeddings)
+
+        # Albert (and maybe others?) has this "embedding_size", that's different from "hidden_size".
+        # To get them to the same dimensionality, it uses a linear transform after the embedding
+        # layer, which we need to pull out and copy here.
+        if hasattr(transformer.config, "embedding_size"):
+            config = transformer.config
+
+            from transformers.modeling_albert import AlbertModel
+
+            if isinstance(transformer, AlbertModel):
+                linear_transform = deepcopy(transformer.encoder.embedding_hidden_mapping_in)
+            else:
+                logger.warning(
+                    "Unknown model that uses separate embedding size; weights of the linear "
+                    f"transform will not be initialized.  Model type is: {transformer.__class__}"
+                )
+                linear_transform = torch.nn.Linear(config.embedding_dim, config.hidden_dim)
+
+            # We can't just use torch.nn.Sequential here, even though that's basically all this is,
+            # because Sequential doesn't accept *inputs, only a single argument.
+
+            class EmbeddingsShim(torch.nn.Module):
+                def __init__(self, embeddings: torch.nn.Module, linear_transform: torch.nn.Module):
+                    super().__init__()
+                    self.linear_transform = linear_transform
+                    self.embeddings = embeddings
+
+                def forward(self, *inputs, **kwargs):
+                    return self.linear_transform(self.embeddings(*inputs, **kwargs))
+
+            text_embeddings = EmbeddingsShim(text_embeddings, linear_transform)
+
+        image_embeddings = BertImageFeatureEmbeddings(
+            feature_dim=image_feature_dim,
+            hidden_dim=image_hidden_size,
+            dropout=image_hidden_dropout,
+        )
+        encoder = BertEncoder.from_huggingface_model(
+            model=transformer,
+            image_num_hidden_layers=image_num_hidden_layers,
+            image_hidden_size=image_hidden_size,
+            combined_hidden_size=combined_hidden_size,
+            image_intermediate_size=image_intermediate_size,
+            image_attention_dropout=image_attention_dropout,
+            image_hidden_dropout=image_hidden_dropout,
+            v_biattention_id=v_biattention_id,
+            t_biattention_id=t_biattention_id,
+            fixed_t_layer=fixed_t_layer,
+            fixed_v_layer=fixed_v_layer,
+            fast_mode=fast_mode,
+            with_coattention=with_coattention,
+            in_batch_pairs=in_batch_pairs,
+        )
+        return cls(
+            vocab=vocab,
+            text_embeddings=text_embeddings,
+            image_embeddings=image_embeddings,
+            encoder=encoder,
+            pooled_output_dim=pooled_output_dim,
+            fusion_method=fusion_method,
+            dropout=pooled_dropout,
+        )
 
     def consistency(self, reset: bool) -> float:
         num_consistent_groups = sum(1 for c in self.consistency_wrong_map.values() if c == 0)
