@@ -73,8 +73,8 @@ class MockOldDatasetReader(DatasetReader):
         return Instance(fields)  # type: ignore
 
 
-@pytest.mark.parametrize("max_batches_in_memory", (None, 10))
-def test_error_raised_when_text_fields_contain_token_indexers(max_batches_in_memory):
+@pytest.mark.parametrize("max_instances_in_memory", (None, 10))
+def test_error_raised_when_text_fields_contain_token_indexers(max_instances_in_memory):
     """
     This tests that the MultiProcessDataLoader raises an error when num_workers > 0
     but the dataset reader doesn't implement apply_token_indexers().
@@ -89,7 +89,7 @@ def test_error_raised_when_text_fields_contain_token_indexers(max_batches_in_mem
             MockOldDatasetReader(),
             "this-path-doesn't-matter",
             num_workers=2,
-            max_batches_in_memory=max_batches_in_memory,
+            max_instances_in_memory=max_instances_in_memory,
             batch_size=1,
         )
         list(loader.iter_instances())
@@ -98,11 +98,11 @@ def test_error_raised_when_text_fields_contain_token_indexers(max_batches_in_mem
 @pytest.mark.parametrize(
     "options",
     [
-        dict(max_batches_in_memory=10, num_workers=2, batch_size=1),
+        dict(max_instances_in_memory=10, num_workers=2, batch_size=1),
         dict(num_workers=2, batch_size=1),
-        dict(max_batches_in_memory=10, num_workers=2, start_method="spawn", batch_size=1),
+        dict(max_instances_in_memory=10, num_workers=2, start_method="spawn", batch_size=1),
         dict(num_workers=2, start_method="spawn", batch_size=1),
-        dict(max_batches_in_memory=10, num_workers=0, batch_size=1),
+        dict(max_instances_in_memory=10, num_workers=0, batch_size=1),
         dict(num_workers=0, batch_size=1),
     ],
 )
@@ -111,8 +111,8 @@ def test_multi_process_data_loader(options):
     data_path = "this doesn't matter"
 
     loader = MultiProcessDataLoader(reader=reader, data_path=data_path, **options)
-    if not options.get("max_batches_in_memory"):
-        # Instances should be loaded immediately if max_batches_in_memory is None.
+    if not options.get("max_instances_in_memory"):
+        # Instances should be loaded immediately if max_instances_in_memory is None.
         assert loader._instances
 
     instances: Iterable[Instance] = loader.iter_instances()

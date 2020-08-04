@@ -105,9 +105,23 @@ class PyTorchDataLoader(data.DataLoader, DataLoader):
     through your data.  You might use this if you have a very large dataset and want more frequent
     checkpoints and evaluations on validation data, for instance.
 
-    In a typical AllenNLP configuration file, the `dataset` parameter does not get an entry under
-    the "data_loader", it gets constructed separately.
-    """
+    Note there are several caveats with this `DataLoader`:
+
+    1. Batch samplers can only be used with non-lazy datasets.
+    2. Using `num_workers > 0` with a non-lazy dataset does not mean your data will be read
+       with multiple workers. Only indexing will be done in parallel.
+       On the other hand, with a lazy dataset, instances *will* be read in parallel, but
+       this is not necessarily more efficient unless you specially handle the sharding logic
+       with your reader / dataset.
+       See
+       [Using your reader with multi-process or distributed data loading](/api/data/dataset_readers/dataset_reader/#datasetreader.using_your_reader_with_multi-process_or_distributed_data_loading)
+       for more information on how to optimize your `DatasetReader` for this use case.
+
+
+    !!! Note
+        In a typical AllenNLP configuration file, the `dataset` parameter does not get an entry under
+        the "data_loader", it gets constructed separately.
+    """  # noqa: E501
 
     def __init__(
         self,

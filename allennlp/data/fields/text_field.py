@@ -59,8 +59,11 @@ class TextField(SequenceField[TextFieldTensors]):
     def token_indexers(self) -> Dict[str, TokenIndexer]:
         if self._token_indexers is None:
             raise ValueError(
-                "TextField's token_indexers have not been set. Did you forget to call "
-                "DatasetReader.apply_token_indexers(instance) on your instance?"
+                "TextField's token_indexers have not been set.\n"
+                "Did you forget to call DatasetReader.apply_token_indexers(instance) "
+                "on your instance?\n"
+                "If apply_token_indexers() is being called but "
+                "you're still seeing this error, it may not be implemented correctly."
             )
         return self._token_indexers
 

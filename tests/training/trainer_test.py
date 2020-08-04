@@ -41,7 +41,7 @@ class TrainerTestBase(AllenNlpTestCase):
         self.reader = SequenceTaggingDatasetReader()
         self.data_loader = MultiProcessDataLoader(self.reader, self.data_path, batch_size=2)
         self.data_loader_lazy = MultiProcessDataLoader(
-            self.reader, self.data_path, batch_size=2, max_batches_in_memory=10
+            self.reader, self.data_path, batch_size=2, max_instances_in_memory=10
         )
         self.instances = list(self.data_loader.iter_instances())
         self.vocab = Vocabulary.from_instances(self.instances)

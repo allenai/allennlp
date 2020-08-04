@@ -82,16 +82,17 @@ class DatasetReader(Registrable):
 
     manual_distributed_sharding: `bool`, optional (default=`False`)
         By default, when used in a distributed setting, `DatasetReader` makes sure that each
-        worker process only receives a subset of the data. It does this by reading the whole
+        trainer process only receives a subset of the data. It does this by reading the whole
         dataset in each worker, but filtering out the instances that are not needed.
 
         While this ensures that each worker will recieve unique instances, it's not a very efficient
         way to do so since each worker still needs to process every single instance.
 
         A better way to handle this is to manually handle the filtering within your `_read()`
-        method, in which case you should set `manual_distributed_sharding` to `True`.
+        method, in which case you should set `manual_distributed_sharding` to `True` so that
+        the base class knows that you handling the filtering.
 
-        See the notes below about how to do this.
+        See the section below about how to do this.
 
     manual_multi_process_sharding : `bool`, optional (default=`False`)
         This is similar to the `manual_distributed_sharding` parameter, but applies to
@@ -105,35 +106,50 @@ class DatasetReader(Registrable):
         case you should set `manual_multi_process_sharding` to `True`, just as with
         `manual_distributed_sharding`.
 
-        See the note below about how to do this.
+        See the section below about how to do this.
 
-    # Notes
+    # Using your reader with multi-process or distributed data loading
 
-    The default mechanism for filtering out `Instance`s in the distributed or multi-process
-    `DataLoader` setting is not very efficient, since every worker would still need to
-    process every single `Instance` in your dataset.
+    There are two things you may need to update in your `DatasetReader` in order for
+    it to be efficient in the multi-process or distributed data loading context.
 
-    This can be improved by manually handling the filtering / sharding within your `_read()`
-    method.
+    1. The `_read()` method should handle filtering out all but the instances that
+        each particular worker should generate.
 
-    For example, if you were training using 2 GPUs and your `_read()` method reads a file
-    line-by-line, creating one `Instance` for each line, you could just check the node
-    rank within `_read()` and then throw away every other line starting at the line number
-    corresponding to the node rank.
+        This is important because the default mechanism for filtering out `Instance`s in
+        the distributed or multi-process `DataLoader` setting is not very efficient, since every
+        worker would still need to process every single `Instance` in your dataset.
 
-    The helper method `shard_iterable()` is there to make this easy for you.
-    You can wrap this around any iterable object in your `_read()` method, and it will
-    return an iterator that skips the right items based on the distributed training
-    or multi-process loading context. This method can always be called regardless
-    of whether or not you're actually using distributed training or multi-process loading.
+        But by manually handling the filtering / sharding within your `_read()` method, each
+        worker only needs to perform a subset of the work required to create instances.
 
-    Remember though that when you handle the sharding manually within `_read()`, you need
-    to let the `DatasetReader` know about this so that it doesn't do any additional
-    filtering. Therefore you need to ensure that both `self.manual_distributed_sharding` and
-    `self.manual_multi_process_sharding` are set to `True`.
+        For example, if you were training using 2 GPUs and your `_read()` method reads a file
+        line-by-line, creating one `Instance` for each line, you could just check the node
+        rank within `_read()` and then throw away every other line starting at the line number
+        corresponding to the node rank.
 
-    If you call the helper method `shard_iterable()` without setting these to `True`,
-    you get an exception.
+        The helper method [`shard_iterable()`](#shard_iterable) is there to make this easy for you.
+        You can wrap this around any iterable object in your `_read()` method, and it will
+        return an iterator that skips the right items based on the distributed training
+        or multi-process loading context. This method can always be called regardless
+        of whether or not you're actually using distributed training or multi-process loading.
+
+        Remember though that when you handle the sharding manually within `_read()`, you need
+        to let the `DatasetReader` know about this so that it doesn't do any additional
+        filtering. Therefore you need to ensure that both `self.manual_distributed_sharding` and
+        `self.manual_multi_process_sharding` are set to `True`.
+
+        If you call the helper method `shard_iterable()` without setting these to `True`,
+        you'll get an exception.
+
+    2. If the instances generated by `_read()` contain `TextField`s, those `TextField`s
+        should not have any token indexers assigned. The token indexers need to be applied
+        in the [`apply_token_indexers()`](#apply_token_indexers) method instead.
+
+        This is highly recommended because if the instances generated by your `_read()` method
+        have token indexers attached, those indexers will be duplicated when they are sent across
+        processes. If your token indexers contain large objects (such as `PretrainedTransformerTokenIndexer`s)
+        this could take up a massive amount of memory.
 
     """
 
