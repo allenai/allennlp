@@ -32,6 +32,20 @@ class GridEmbedder(nn.Module, Registrable):
         raise NotImplementedError
 
 
+@GridEmbedder.register("null")
+class NullGridEmbedder(GridEmbedder):
+    """A `GridEmbedder` that returns the input image as given."""
+
+    def forward(self, images: FloatTensor) -> FloatTensor:
+        return images
+
+    def get_output_dim(self) -> int:
+        return 3
+
+    def get_stride(self) -> int:
+        return 1
+
+
 @GridEmbedder.register("resnet_backbone")
 class ResnetBackbone(GridEmbedder):
     """Runs an image through resnet, as implemented by Detectron."""
