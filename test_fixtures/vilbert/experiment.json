@@ -3,9 +3,7 @@
     "type": "nlvr2_lxmert",
     "text_path_prefix": "test_fixtures/data/nlvr2/instances",
     "visual_path_prefix": "test_fixtures/data/nlvr2/object_features",
-    "topk_images": -1,
-    "mask_prepositions_verbs": false,
-    "drop_prepositions_verbs": false
+    "topk_images": -1
   },
   "train_data_path": "train",
   "validation_data_path": "train",
