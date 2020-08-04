@@ -156,7 +156,7 @@ class MultiProcessDataLoader(DataLoader):
             if batch_size is not None:
                 raise ValueError("batch_sampler option is mutually exclusive with batch_size")
 
-            if drop_last is not None:
+            if drop_last:
                 raise ValueError("batch_sampler option is mutually exclusive with drop_last")
 
             if shuffle:
