@@ -11,6 +11,7 @@ from nltk import Tree
 import torch
 import torch.distributed as dist
 
+from allennlp.common.util import is_distributed
 from allennlp.common.checks import ConfigurationError
 from allennlp.training.metrics.metric import Metric
 
@@ -160,7 +161,8 @@ class EvalbBracketingScorer(Metric):
 
         The average precision, recall and f1.
         """
-        if world_size > 1:
+        if is_distributed():
+            world_size = dist.get_world_size()
             _correct_predicted_brackets = torch.tensor(self._correct_predicted_brackets).to(
                 cuda_device
             )

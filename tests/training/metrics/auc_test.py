@@ -95,7 +95,7 @@ class AucTest(AllenNlpTestCase):
         auc = Auc()
         auc.get_metric()
 
-    def test_distributed_accuracy(self):
+    def test_distributed_auc(self):
         with DistributedTestContextManager([-1, -1]) as test_this:
             predictions = torch.randn((2, 8))
             labels = torch.randint(3, 5, (2, 8,), dtype=torch.long)

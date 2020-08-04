@@ -29,10 +29,7 @@ class Metric(Registrable):
         raise NotImplementedError
 
     def get_metric(
-        self,
-        reset: bool,
-        world_size: int = 1,
-        cuda_device: Union[int, torch.device] = torch.device("cpu"),
+        self, reset: bool, cuda_device: Union[int, torch.device] = torch.device("cpu"),
     ) -> Union[float, Tuple[float, ...], Dict[str, float], Dict[str, List[float]]]:
         """
         Compute and return the metric. Optionally also call `self.reset`.

@@ -4,6 +4,7 @@ import torch
 import torch.distributed as dist
 from overrides import overrides
 
+from allennlp.common.util import is_distributed
 from allennlp.common.checks import ConfigurationError
 from allennlp.training.metrics.metric import Metric
 
@@ -167,10 +168,7 @@ class FBetaMeasure(Metric):
 
     @overrides
     def get_metric(
-        self,
-        reset: bool = False,
-        world_size: int = 1,
-        cuda_device: Union[int, torch.device] = torch.device("cpu"),
+        self, reset: bool = False, cuda_device: Union[int, torch.device] = torch.device("cpu"),
     ):
         """
         # Returns
@@ -185,7 +183,7 @@ class FBetaMeasure(Metric):
         if self._true_positive_sum is None:
             raise RuntimeError("You never call this metric before.")
 
-        if world_size > 1:
+        if is_distributed():
             tp_sum = torch.tensor(self._true_positive_sum).to(cuda_device)
             pred_sum = torch.tensor(self._pred_sum).to(cuda_device)
             true_sum = torch.tensor(self._true_sum).to(cuda_device)

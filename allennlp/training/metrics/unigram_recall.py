@@ -6,6 +6,7 @@ from overrides import overrides
 import torch
 import torch.distributed as dist
 
+from allennlp.common.util import is_distributed
 from allennlp.common.checks import ConfigurationError
 from allennlp.training.metrics.metric import Metric
 
@@ -81,21 +82,22 @@ class UnigramRecall(Metric):
         self.total_count += predictions.size()[0]
 
     def get_metric(
-        self,
-        reset: bool = False,
-        world_size: int = 1,
-        cuda_device: Union[int, torch.device] = torch.device("cpu"),
+        self, reset: bool = False, cuda_device: Union[int, torch.device] = torch.device("cpu"),
     ):
         """
         # Returns
 
         The accumulated recall.
         """
+        if is_distributed():
+            world_size = dist.get_world_size()
+            _correct_count = torch.tensor(self.correct_count).to(cuda_device)
+            _total_count = torch.tensor(self.total_count).to(cuda_device)
+            dist.all_reduce(_correct_count, op=dist.ReduceOp.SUM)
+            dist.all_reduce(_total_count, op=dist.ReduceOp.SUM)
+            self.correct_count = _correct_count.item() / world_size
+            self.total_count = _total_count.item() / world_size
         recall = self.correct_count / self.total_count if self.total_count > 0 else 0
-        if world_size > 1:
-            recall_tensor = torch.tensor(recall).to(cuda_device)
-            dist.all_reduce(recall_tensor, op=dist.ReduceOp.SUM)
-            recall = recall_tensor.item() / world_size
         if reset:
             self.reset()
         return {"unigram_recall": recall}

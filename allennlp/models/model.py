@@ -213,10 +213,7 @@ class Model(torch.nn.Module, Registrable):
         return output_dict
 
     def get_metrics(
-        self,
-        reset: bool = False,
-        world_size: int = 1,
-        cuda_device: Union[int, torch.device] = torch.device("cpu"),
+        self, reset: bool = False, cuda_device: Union[int, torch.device] = torch.device("cpu"),
     ) -> Dict[str, float]:
         """
         Returns a dictionary of metrics. This method will be called by

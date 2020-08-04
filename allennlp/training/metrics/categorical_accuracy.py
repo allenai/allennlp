@@ -4,6 +4,7 @@ from overrides import overrides
 import torch
 import torch.distributed as dist
 
+from allennlp.common.util import is_distributed
 from allennlp.common.checks import ConfigurationError
 from allennlp.training.metrics.metric import Metric
 
@@ -95,17 +96,15 @@ class CategoricalAccuracy(Metric):
         self.correct_count += correct.sum()
 
     def get_metric(
-        self,
-        reset: bool = False,
-        world_size: int = 1,
-        cuda_device: Union[int, torch.device] = torch.device("cpu"),
+        self, reset: bool = False, cuda_device: Union[int, torch.device] = torch.device("cpu"),
     ):
         """
         # Returns
 
         The accumulated accuracy.
         """
-        if world_size > 1:
+        if is_distributed():
+            world_size = dist.get_world_size()
             _correct_count = torch.tensor(self.correct_count).to(cuda_device)
             _total_count = torch.tensor(self.total_count).to(cuda_device)
             dist.all_reduce(_correct_count, op=dist.ReduceOp.SUM)

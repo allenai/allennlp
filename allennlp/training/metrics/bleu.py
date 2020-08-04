@@ -6,6 +6,7 @@ from overrides import overrides
 import torch
 import torch.distributed as dist
 
+from allennlp.common.util import is_distributed
 from allennlp.training.metrics.metric import Metric
 
 
@@ -136,16 +137,15 @@ class BLEU(Metric):
 
     @overrides
     def get_metric(
-        self,
-        reset: bool = False,
-        world_size: int = 1,
-        cuda_device: Union[int, torch.device] = torch.device("cpu"),
+        self, reset: bool = False, cuda_device: Union[int, torch.device] = torch.device("cpu"),
     ) -> Dict[str, float]:
 
-        if world_size > 1:
+        if is_distributed():
+            world_size = dist.get_world_size()
             _prediction_lengths = torch.tensor(self._prediction_lengths).to(cuda_device)
             _reference_lengths = torch.tensor(self._reference_lengths).to(cuda_device)
             for ngram in self._precision_matches:
+                print("ngram", ngram, "rank", dist.get_rank())
                 _precision_matches = torch.tensor(self._precision_matches[ngram]).to(cuda_device)
                 _precision_totals = torch.tensor(self._precision_totals[ngram]).to(cuda_device)
                 dist.all_reduce(_precision_matches, op=dist.ReduceOp.SUM)

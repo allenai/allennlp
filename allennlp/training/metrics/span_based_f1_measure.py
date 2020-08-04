@@ -239,10 +239,7 @@ class SpanBasedF1Measure(Metric):
         return list(span_set)
 
     def get_metric(
-        self,
-        reset: bool = False,
-        world_size: int = 1,
-        cuda_device: Union[int, torch.device] = torch.device("cpu"),
+        self, reset: bool = False, cuda_device: Union[int, torch.device] = torch.device("cpu"),
     ):
         """
         # Returns

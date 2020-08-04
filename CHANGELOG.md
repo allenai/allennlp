@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Removed unnecessary warning about deadlocks in `DataLoader`.
 - Fixed testing models that only return a loss when they are in training mode.
 - Fixed a bug in `FromParams` that caused silent failure in case of the parameter type being `Optional[Union[...]]`.
+- Changed the evaluation of metrics in the distributed setting to metric-specific logic rather than default averaging.
 
 ### Added
 

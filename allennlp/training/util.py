@@ -287,7 +287,7 @@ def get_metrics(
     the `"loss"` metric is "average loss per batch".
     Returns the `"batch_loss"` separately.
     """
-    metrics = model.get_metrics(reset=reset, world_size=world_size, cuda_device=cuda_device)
+    metrics = model.get_metrics(reset=reset, cuda_device=cuda_device)
     if batch_loss is not None:
         metrics["batch_loss"] = batch_loss
     metrics["loss"] = float(total_loss / num_batches) if num_batches > 0 else 0.0

@@ -96,7 +96,7 @@ class BleuTest(AllenNlpTestCase):
         self.metric.reset()
         assert self.metric.get_metric()["BLEU"] == 0
 
-    def test_distributed_accuracy(self):
+    def test_distributed_bleu(self):
         with DistributedTestContextManager([-1, -1, -1]) as test_this:
             predictions = [
                 torch.tensor([[1, 0, 0]]),

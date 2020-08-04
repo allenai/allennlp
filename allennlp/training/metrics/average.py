@@ -4,6 +4,7 @@ from overrides import overrides
 import torch
 import torch.distributed as dist
 
+from allennlp.common.util import is_distributed
 from allennlp.training.metrics.metric import Metric
 
 
@@ -33,17 +34,15 @@ class Average(Metric):
 
     @overrides
     def get_metric(
-        self,
-        reset: bool = False,
-        world_size: int = 1,
-        cuda_device: Union[int, torch.device] = torch.device("cpu"),
+        self, reset: bool = False, cuda_device: Union[int, torch.device] = torch.device("cpu"),
     ):
         """
         # Returns
 
         The average of all values that were passed to `__call__`.
         """
-        if world_size > 1:
+        if is_distributed():
+            world_size = dist.get_world_size()
             _count = torch.tensor(self._count).to(cuda_device)
             _total_value = torch.tensor(self._total_value).to(cuda_device)
             dist.all_reduce(_count, op=dist.ReduceOp.SUM)

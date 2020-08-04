@@ -4,6 +4,7 @@ from overrides import overrides
 import torch
 import torch.distributed as dist
 
+from allennlp.common.util import is_distributed
 from allennlp.training.metrics.metric import Metric
 
 
@@ -87,10 +88,7 @@ class AttachmentScores(Metric):
         self._total_words += correct_indices.numel() - (~mask).sum()
 
     def get_metric(
-        self,
-        reset: bool = False,
-        world_size: int = 1,
-        cuda_device: Union[int, torch.device] = torch.device("cpu"),
+        self, reset: bool = False, cuda_device: Union[int, torch.device] = torch.device("cpu"),
     ):
         """
         # Returns
@@ -102,7 +100,7 @@ class AttachmentScores(Metric):
         unlabeled_exact_match = 0.0
         labeled_exact_match = 0.0
 
-        if world_size > 1:
+        if is_distributed():
             self._unlabeled_correct = torch.tensor(self._unlabeled_correct).to(cuda_device)
             self._exact_unlabeled_correct = torch.tensor(self._exact_unlabeled_correct).to(
                 cuda_device
