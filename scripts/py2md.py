@@ -217,7 +217,7 @@ class AllenNlpDocstringProcessor(Struct):
             state.current_section = Section.from_str(match.group(1).strip())
             name = match.group(1).strip()
             slug = (node.name + "." + match.group(1).strip()).lower().replace(" ", "_")
-            line = f'<h4 id="{slug}">{name}<a class="headerlink" href="#{slug}" title="Permanent link">&para;</a></h4>'  # noqa: E501
+            line = f'<h4 id="{slug}">{name}<a class="headerlink" href="#{slug}" title="Permanent link">&para;</a></h4>\n'  # noqa: E501
         else:
             if line and not line.startswith(" ") and not line.startswith("!!! "):
                 if state.current_section in (Section.ARGUMENTS, Section.PARAMETERS,):
