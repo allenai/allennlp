@@ -15,7 +15,8 @@ from allennlp.data.token_indexers import PretrainedTransformerIndexer
 from allennlp.data.token_indexers import TokenIndexer
 from allennlp.data.tokenizers import PretrainedTransformerTokenizer
 from allennlp.data.tokenizers import Tokenizer
-from allennlp.modules.vision import GridEmbedder, RegionDetector
+from allennlp.modules.vision.grid_embedder import GridEmbedder
+from allennlp.modules.vision.region_detector import RegionDetector
 
 
 @DatasetReader.register("nlvr2")

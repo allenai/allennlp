@@ -4,7 +4,7 @@ import torch
 import torch.nn.functional as F
 from torch import nn, FloatTensor, IntTensor
 
-from allennlp.common.registrable import Registrable
+from allennlp.common import Registrable
 
 
 class RegionDetector(nn.Module, Registrable):
@@ -26,6 +26,19 @@ class RegionDetector(nn.Module, Registrable):
     def forward(
         self, raw_images: FloatTensor, image_sizes: IntTensor, featurized_images: FloatTensor
     ) -> Dict[str, torch.Tensor]:
+        raise NotImplementedError()
+
+
+@RegionDetector.register("null")
+class NullRegionDetector(RegionDetector):
+    """A `RegionDetector` that never returns any proposals."""
+    def forward(
+        self,
+        raw_images: FloatTensor,
+        image_sizes: IntTensor,
+        featurized_images: FloatTensor
+    ) -> FloatTensor:
+        # TODO(mattg): fix this
         raise NotImplementedError()
 
 
@@ -109,13 +122,13 @@ class FasterRcnnRegionDetector(RegionDetector):
 
         proposals, _ = self.model.proposal_generator(image_list, featurized_images_in_dict, None)
 
-        # this will concatenate the pooled_features from different images. 
+        # this will concatenate the pooled_features from different images.
         _, pooled_features = self.model.roi_heads.get_roi_features(
             featurized_images_in_dict, proposals
         )
-        
+
         predictions = self.model.roi_heads.box_predictor(pooled_features)
-        
+
         # class probablity
         cls_probs = [F.softmax(prediction, dim=-1) for prediction in predictions]
         cls_probs = [cls_prob[:, :-1] for cls_prob in cls_probs] # background is last
@@ -123,7 +136,7 @@ class FasterRcnnRegionDetector(RegionDetector):
         predictions, r_indices = self.model.roi_heads.box_predictor.inference(
             predictions, proposals
         )
-        
+
         features = []
         proposal_start = 0
         for image_num, image_proposal_indices in enumerate(r_indices):
@@ -133,5 +146,5 @@ class FasterRcnnRegionDetector(RegionDetector):
             feature_cell['features'] = torch.narrow(pooled_features, 0, proposal_start, len(proposals[image_num]))[image_proposal_indices]
             proposal_start += len(proposals[image_num])
             features.append(feature_cell)
-            
+
         return features
