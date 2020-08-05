@@ -24,7 +24,7 @@ class MockDatasetReader(DatasetReader):
     with num_workers > 0.
     """
 
-    NUM_INSTANCES = 1000
+    NUM_INSTANCES = 100
 
     def __init__(self, model: str = "epwalsh/bert-xsmall-dummy", **kwargs) -> None:
         super().__init__(
@@ -137,3 +137,22 @@ def test_multi_process_data_loader(options):
             for index in batch["index"]:
                 indices.append(index)  # type: ignore
         assert len(indices) == len(set(indices)) == MockDatasetReader.NUM_INSTANCES
+
+
+def test_drop_last():
+    """
+    Ensures that the `drop_last` option is respected.
+    """
+    loader = MultiProcessDataLoader(MockDatasetReader(), "some path", batch_size=16, drop_last=True)
+    vocab = Vocabulary.from_instances(loader.iter_instances())
+    loader.index_with(vocab)
+
+    # Should still load all instances. `drop_last` only affects batches.
+    assert len(list(loader.iter_instances())) == MockDatasetReader.NUM_INSTANCES
+
+    # Just here because the assertions below depend on the exact value of NUM_INSTANCES.
+    assert MockDatasetReader.NUM_INSTANCES == 100
+    batches = list(loader)
+    for batch in batches:
+        assert len(batch["index"]) == 16
+    assert len(batches) == 6

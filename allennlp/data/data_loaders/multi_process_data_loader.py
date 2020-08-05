@@ -368,9 +368,10 @@ class MultiProcessDataLoader(DataLoader):
             else:
                 batches = lazy_groups_of(instances, self.batch_size)
 
-            batched_tensor_dicts = (self.collate_fn(batch) for batch in batches)
-
-            yield from batched_tensor_dicts
+            for batch in batches:
+                if self.batch_sampler is None and self.drop_last and len(batch) < self.batch_size:
+                    break
+                yield self.collate_fn(batch)
 
     def _iter_batches(self) -> Iterator[TensorDict]:
         if self._instances is not None or self.num_workers <= 0:
