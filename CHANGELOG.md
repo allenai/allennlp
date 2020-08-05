@@ -26,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Added the option to specify `requires_grad: false` within an optimizer's parameter groups.
 - Added the `file-friendly-logging` flag back to the `train` command. Also added this flag to the `predict`, `evaluate`, and `find-learning-rate` commands.
+- Added an `EpochCallback` to track current epoch as a model class member. 
 
 ### Removed
 
