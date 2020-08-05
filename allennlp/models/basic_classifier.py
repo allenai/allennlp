@@ -177,7 +177,7 @@ class BasicClassifier(Model):
         return output_dict
 
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
-        metrics = self._accuracy.get_metric(reset)
+        metrics = {"accuracy": self._accuracy.get_metric(reset)}
         return metrics
 
     default_predictor = "text_classifier"

@@ -209,8 +209,7 @@ class SimpleTagger(Model):
     @overrides
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
         metrics_to_return = {
-            metric_name: metric.get_metric(reset)["accuracy"]
-            for metric_name, metric in self.metrics.items()
+            metric_name: metric.get_metric(reset) for metric_name, metric in self.metrics.items()
         }
 
         if self.calculate_span_f1:
