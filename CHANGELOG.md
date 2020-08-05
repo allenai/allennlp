@@ -9,7 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Fixed a warning from `transformers` tokenizers when `max_length` is set.
+- Fixed how truncation was handled with `PretrainedTransformerTokenizer`.
+  Previously, if `max_length` was set to `None`, the tokenizer would still do truncation if the
+  transformer model had a default max length in its config.
+  Also, when `max_length` was set to a non-`None` value, several warnings would appear
+  for certain transformer models around the use of the `truncation` parameter.
 
 ## [v1.1.0rc2](https://github.com/allenai/allennlp/releases/tag/v1.1.0rc2) - 2020-07-31
 
