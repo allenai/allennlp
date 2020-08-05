@@ -24,7 +24,7 @@ class Perplexity(Average):
 
         The accumulated perplexity.
         """
-        average_loss = super().get_metric(reset)["average_value"]
+        average_loss = super().get_metric(reset)
         if average_loss == 0:
             perplexity = 0.0
 

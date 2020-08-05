@@ -50,7 +50,7 @@ class Average(Metric):
         average_value = self._total_value / self._count if self._count > 0 else 0
         if reset:
             self.reset()
-        return {"average_value": average_value}
+        return average_value
 
     @overrides
     def reset(self):
