@@ -3,6 +3,8 @@ A Vocabulary maps strings to integers, allowing for strings to be mapped to an
 out-of-vocabulary token.
 """
 
+from __future__ import annotations
+
 import codecs
 import copy
 import logging
@@ -264,7 +266,7 @@ class Vocabulary(Registrable):
     @classmethod
     def from_instances(
         cls,
-        instances: Iterable["adi.Instance"],
+        instances: Iterable[adi.Instance],
         min_count: Dict[str, int] = None,
         max_vocab_size: Union[int, Dict[str, int]] = None,
         non_padded_namespaces: Iterable[str] = DEFAULT_NON_PADDED_NAMESPACES,
@@ -369,7 +371,7 @@ class Vocabulary(Registrable):
     @classmethod
     def from_files_and_instances(
         cls,
-        instances: Iterable["adi.Instance"],
+        instances: Iterable[adi.Instance],
         directory: str,
         padding_token: Optional[str] = DEFAULT_PADDING_TOKEN,
         oov_token: Optional[str] = DEFAULT_OOV_TOKEN,
@@ -473,14 +475,14 @@ class Vocabulary(Registrable):
         if is_padded:
             assert self._oov_token in self._token_to_index[namespace], "OOV token not found!"
 
-    def extend_from_instances(self, instances: Iterable["adi.Instance"]) -> None:
+    def extend_from_instances(self, instances: Iterable[adi.Instance]) -> None:
         logger.info("Fitting token dictionary from dataset.")
         namespace_token_counts: Dict[str, Dict[str, int]] = defaultdict(lambda: defaultdict(int))
         for instance in Tqdm.tqdm(instances):
             instance.count_vocab_items(namespace_token_counts)
         self._extend(counter=namespace_token_counts)
 
-    def extend_from_vocab(self, vocab: "Vocabulary") -> None:
+    def extend_from_vocab(self, vocab: Vocabulary) -> None:
         """
         Adds all vocabulary items from all namespaces in the given vocabulary to this vocabulary.
         Useful if you want to load a model and extends its vocabulary from new instances.
