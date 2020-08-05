@@ -108,7 +108,7 @@ class BooleanAccuracy(Metric):
             accuracy = 0.0
         if reset:
             self.reset()
-        return {"accuracy": accuracy}
+        return accuracy
 
     @overrides
     def reset(self):

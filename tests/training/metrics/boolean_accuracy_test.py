@@ -17,20 +17,20 @@ class BooleanAccuracyTest(AllenNlpTestCase):
         predictions = torch.tensor([[0, 1], [2, 3], [4, 5], [6, 7]], device=device)
         targets = torch.tensor([[0, 1], [2, 2], [4, 5], [7, 7]], device=device)
         accuracy(predictions, targets)
-        assert accuracy.get_metric()["accuracy"] == 2 / 4
+        assert accuracy.get_metric() == 2 / 4
 
         mask = torch.ones(4, 2, device=device).bool()
         mask[1, 1] = 0
         accuracy(predictions, targets, mask)
-        assert accuracy.get_metric()["accuracy"] == 5 / 8
+        assert accuracy.get_metric() == 5 / 8
 
         targets[1, 1] = 3
         accuracy(predictions, targets)
-        assert accuracy.get_metric()["accuracy"] == 8 / 12
+        assert accuracy.get_metric() == 8 / 12
 
         accuracy.reset()
         accuracy(predictions, targets)
-        assert accuracy.get_metric()["accuracy"] == 3 / 4
+        assert accuracy.get_metric() == 3 / 4
 
     @multi_device
     def test_skips_completely_masked_instances(self, device: str):
@@ -44,7 +44,7 @@ class BooleanAccuracyTest(AllenNlpTestCase):
         accuracy(predictions, targets, mask)
 
         # First example should be skipped, second is correct with mask, third is correct, fourth is wrong.
-        assert accuracy.get_metric()["accuracy"] == 2 / 3
+        assert accuracy.get_metric() == 2 / 3
 
     @multi_device
     def test_incorrect_gold_labels_shape_catches_exceptions(self, device: str):
@@ -66,14 +66,14 @@ class BooleanAccuracyTest(AllenNlpTestCase):
     @multi_device
     def test_does_not_divide_by_zero_with_no_count(self, device: str):
         accuracy = BooleanAccuracy()
-        assert accuracy.get_metric()["accuracy"] == pytest.approx(0.0)
+        assert accuracy.get_metric() == pytest.approx(0.0)
 
     def test_distributed_accuracy(self):
         with DistributedTestContextManager([-1, -1]) as test_this:
             predictions = [torch.tensor([[0, 1], [2, 3]]), torch.tensor([[4, 5], [6, 7]])]
             targets = [torch.tensor([[0, 1], [2, 2]]), torch.tensor([[4, 5], [7, 7]])]
             metric_kwargs = {"predictions": predictions, "gold_labels": targets}
-            desired_values = {"accuracy": 0.5}
+            desired_values = 0.5
             test_this(
                 global_distributed_metric,
                 BooleanAccuracy(),
