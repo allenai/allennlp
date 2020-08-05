@@ -86,6 +86,9 @@ def global_distributed_metric(
 
     # gpu_id = gpu_id if gpu_id >= 0 else torch.device("cpu")
     metrics = metric.get_metric(False)
+    if not isinstance(metrics, Dict) and not isinstance(desired_values, Dict):
+        metrics = {"metric_value": metrics}
+        desired_values = {"metric_value": desired_values}
 
     # Call `assertion_metrics_values` to check if the metrics have the desired values.
     assert_metrics_values(metrics, desired_values, exact)  # type: ignore

@@ -21,7 +21,7 @@ class CategoricalAccuracyTest(AllenNlpTestCase):
         )
         targets = torch.tensor([0, 3], device=device)
         accuracy(predictions, targets)
-        actual_accuracy = accuracy.get_metric()["accuracy"]
+        actual_accuracy = accuracy.get_metric()
         assert actual_accuracy == 0.50
 
     @multi_device
@@ -32,7 +32,7 @@ class CategoricalAccuracyTest(AllenNlpTestCase):
         )
         targets = torch.tensor([0, 3], device=device)
         accuracy(predictions, targets)
-        actual_accuracy = accuracy.get_metric()["accuracy"]
+        actual_accuracy = accuracy.get_metric()
         assert actual_accuracy == 1.0
 
     @multi_device
@@ -46,7 +46,7 @@ class CategoricalAccuracyTest(AllenNlpTestCase):
         accuracy(predictions, targets)
         accuracy(predictions, torch.tensor([4, 4], device=device))
         accuracy(predictions, torch.tensor([4, 4], device=device))
-        actual_accuracy = accuracy.get_metric(reset=True)["accuracy"]
+        actual_accuracy = accuracy.get_metric(reset=True)
         assert actual_accuracy == 0.50
         assert accuracy.correct_count == 0.0
         assert accuracy.total_count == 0.0
@@ -61,7 +61,7 @@ class CategoricalAccuracyTest(AllenNlpTestCase):
         targets = torch.tensor([0, 3, 0], device=device)
         mask = torch.tensor([False, True, True], device=device)
         accuracy(predictions, targets, mask)
-        actual_accuracy = accuracy.get_metric()["accuracy"]
+        actual_accuracy = accuracy.get_metric()
         assert_allclose(actual_accuracy, 0.50)
 
     @multi_device
@@ -76,13 +76,13 @@ class CategoricalAccuracyTest(AllenNlpTestCase):
         )
         targets = torch.tensor([[0, 3, 4], [0, 1, 4]], device=device)
         accuracy(predictions, targets)
-        actual_accuracy = accuracy.get_metric(reset=True)["accuracy"]
+        actual_accuracy = accuracy.get_metric(reset=True)
         assert_allclose(actual_accuracy, 0.6666666)
 
         # Test the same thing but with a mask:
         mask = torch.tensor([[False, True, True], [True, False, True]], device=device)
         accuracy(predictions, targets, mask)
-        actual_accuracy = accuracy.get_metric(reset=True)["accuracy"]
+        actual_accuracy = accuracy.get_metric(reset=True)
         assert_allclose(actual_accuracy, 0.50)
 
     @multi_device
@@ -103,13 +103,13 @@ class CategoricalAccuracyTest(AllenNlpTestCase):
         # Test without mask:
         targets = torch.tensor([2, 1, 4], device=device)
         accuracy(predictions, targets)
-        assert accuracy.get_metric(reset=True)["accuracy"] == (0.25 + 1 + 0.5) / 3.0
+        assert accuracy.get_metric(reset=True) == (0.25 + 1 + 0.5) / 3.0
 
         # # # Test with mask
         mask = torch.tensor([True, False, True], device=device)
         targets = torch.tensor([2, 1, 4], device=device)
         accuracy(predictions, targets, mask)
-        assert accuracy.get_metric(reset=True)["accuracy"] == (0.25 + 0.5) / 2.0
+        assert accuracy.get_metric(reset=True) == (0.25 + 0.5) / 2.0
 
         # # Test tie-break with sequence
         predictions = torch.tensor(
@@ -131,7 +131,7 @@ class CategoricalAccuracyTest(AllenNlpTestCase):
             [[0, 1, 3], [0, 3, 4]], device=device  # 0.25 + 1 + 0.5  # 0.25 + 0 + 0.5 = 2.5
         )
         accuracy(predictions, targets)
-        actual_accuracy = accuracy.get_metric(reset=True)["accuracy"]
+        actual_accuracy = accuracy.get_metric(reset=True)
         assert_allclose(actual_accuracy, 2.5 / 6.0)
 
     @multi_device
@@ -147,7 +147,7 @@ class CategoricalAccuracyTest(AllenNlpTestCase):
     @multi_device
     def test_does_not_divide_by_zero_with_no_count(self, device: str):
         accuracy = CategoricalAccuracy()
-        assert accuracy.get_metric()["accuracy"] == pytest.approx(0.0)
+        assert accuracy.get_metric() == pytest.approx(0.0)
 
     def test_distributed_accuracy(self):
         with DistributedTestContextManager([-1, -1]) as test_this:
@@ -158,11 +158,11 @@ class CategoricalAccuracyTest(AllenNlpTestCase):
             targets = [torch.tensor([0, 3]), torch.tensor([0])]
             mask = [torch.tensor([False, True]), torch.tensor([True])]
             metric_kwargs = {"predictions": predictions, "gold_labels": targets, "mask": mask}
-            desired_values = {"accuracy": 0.5}
+            desired_accuracy = 0.5
             test_this(
                 global_distributed_metric,
                 CategoricalAccuracy(top_k=2),
                 metric_kwargs,
-                desired_values,
+                desired_accuracy,
                 exact=False,
             )

@@ -118,7 +118,8 @@ class CategoricalAccuracy(Metric):
         if reset:
             self.reset()
 
-        return {"accuracy": accuracy}
+        # return {"accuracy": accuracy}
+        return accuracy
 
     @overrides
     def reset(self):
