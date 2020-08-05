@@ -2,7 +2,10 @@ import numpy as np
 import torch
 from torch.testing import assert_allclose
 
-from allennlp.common.testing import AllenNlpTestCase, multi_device
+from allennlp.common.testing import (
+    AllenNlpTestCase,
+    multi_device,
+)
 from allennlp.training.metrics import Covariance
 
 
@@ -27,14 +30,14 @@ class CovarianceTest(AllenNlpTestCase):
                 labels[: stride * (i + 1), :].view(-1).cpu().numpy(),
             )[0, 1]
             covariance(timestep_predictions, timestep_labels)
-            assert_allclose(expected_covariance, covariance.get_metric())
+            assert_allclose(expected_covariance, covariance.get_metric()["covariance"])
 
         # Test reset
         covariance.reset()
         covariance(predictions, labels)
         assert_allclose(
             np.cov(predictions.view(-1).cpu().numpy(), labels.view(-1).cpu().numpy())[0, 1],
-            covariance.get_metric(),
+            covariance.get_metric()["covariance"],
         )
 
     @multi_device
@@ -60,7 +63,7 @@ class CovarianceTest(AllenNlpTestCase):
                 fweights=mask[: stride * (i + 1), :].view(-1).cpu().numpy(),
             )[0, 1]
             covariance(timestep_predictions, timestep_labels, timestep_mask)
-            assert_allclose(expected_covariance, covariance.get_metric())
+            assert_allclose(expected_covariance, covariance.get_metric()["covariance"])
 
         # Test reset
         covariance.reset()
@@ -71,5 +74,5 @@ class CovarianceTest(AllenNlpTestCase):
                 labels.view(-1).cpu().numpy(),
                 fweights=mask.view(-1).cpu().numpy(),
             )[0, 1],
-            covariance.get_metric(),
+            covariance.get_metric()["covariance"],
         )

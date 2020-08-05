@@ -1,9 +1,13 @@
+import logging
 from typing import Optional
 
 from overrides import overrides
 import torch
 
+from allennlp.common.util import is_distributed
 from allennlp.training.metrics.metric import Metric
+
+logger = logging.getLogger(__name__)
 
 
 @Metric.register("covariance")
@@ -72,6 +76,7 @@ class Covariance(Metric):
         updated_count = self._total_count + num_batch_items
 
         batch_mean_prediction = torch.sum(predictions) / num_batch_items
+
         delta_mean_prediction = (
             (batch_mean_prediction - self._total_prediction_mean) * num_batch_items
         ) / updated_count
@@ -104,10 +109,13 @@ class Covariance(Metric):
 
         The accumulated covariance.
         """
+
         covariance = self._total_co_moment / (self._total_count - 1)
+        if is_distributed():
+            logger.warning("Distributed aggregation for Covariance is currently not supported.")
         if reset:
             self.reset()
-        return covariance
+        return {"covariance": covariance}
 
     @overrides
     def reset(self):

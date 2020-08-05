@@ -212,9 +212,7 @@ class Model(torch.nn.Module, Registrable):
 
         return output_dict
 
-    def get_metrics(
-        self, reset: bool = False, cuda_device: Union[int, torch.device] = torch.device("cpu"),
-    ) -> Dict[str, float]:
+    def get_metrics(self, reset: bool = False) -> Dict[str, float]:
         """
         Returns a dictionary of metrics. This method will be called by
         `allennlp.training.Trainer` in order to compute and use model metrics for early

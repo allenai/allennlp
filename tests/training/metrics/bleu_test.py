@@ -97,15 +97,13 @@ class BleuTest(AllenNlpTestCase):
         assert self.metric.get_metric()["BLEU"] == 0
 
     def test_distributed_bleu(self):
-        with DistributedTestContextManager([-1, -1, -1]) as test_this:
+        with DistributedTestContextManager([-1, -1]) as test_this:
             predictions = [
-                torch.tensor([[1, 0, 0]]),
-                torch.tensor([[1, 1, 0]]),
+                torch.tensor([[1, 0, 0], [1, 1, 0]]),
                 torch.tensor([[1, 1, 1]]),
             ]
             gold_targets = [
-                torch.tensor([[2, 0, 0]]),
-                torch.tensor([[1, 0, 0]]),
+                torch.tensor([[2, 0, 0], [1, 0, 0]]),
                 torch.tensor([[1, 1, 2]]),
             ]
 

@@ -13,7 +13,7 @@ class DistributedTestContextManager:
     # Parameters
 
     device_ids: `List[int]`
-        List of cuda devices. There need to be at least 2 devices. Default is [-1, -1].
+        List of devices. There need to be at least 2 devices. Default is [-1, -1].
 
     # Usage
 
@@ -82,4 +82,5 @@ class DistributedTestContextManager:
         return self.test_this
 
     def __exit__(self, type, value, traceback):
+        # Using torch.multiprocessing.start_processes with `fork` as the start method does not require cleanup.
         pass

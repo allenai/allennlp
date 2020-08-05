@@ -1,4 +1,3 @@
-from typing import Union
 from overrides import overrides
 
 import torch
@@ -31,24 +30,22 @@ class Average(Metric):
         """
         self._total_value += list(self.detach_tensors(value))[0]
         self._count += 1
+        if is_distributed():
+            device = torch.device("cpu")
+            _count = torch.tensor(self._count).to(device)
+            _total_value = torch.tensor(self._total_value).to(device)
+            dist.all_reduce(_count, op=dist.ReduceOp.SUM)
+            dist.all_reduce(_total_value, op=dist.ReduceOp.SUM)
+            self._count = _count.item()
+            self._total_value = _total_value.item()
 
     @overrides
-    def get_metric(
-        self, reset: bool = False, cuda_device: Union[int, torch.device] = torch.device("cpu"),
-    ):
+    def get_metric(self, reset: bool = False):
         """
         # Returns
 
         The average of all values that were passed to `__call__`.
         """
-        if is_distributed():
-            world_size = dist.get_world_size()
-            _count = torch.tensor(self._count).to(cuda_device)
-            _total_value = torch.tensor(self._total_value).to(cuda_device)
-            dist.all_reduce(_count, op=dist.ReduceOp.SUM)
-            dist.all_reduce(_total_value, op=dist.ReduceOp.SUM)
-            self._count = _count.item() / world_size
-            self._total_value = _total_value.item() / world_size
 
         average_value = self._total_value / self._count if self._count > 0 else 0
         if reset:

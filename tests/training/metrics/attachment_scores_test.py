@@ -127,10 +127,6 @@ class AttachmentScoresTest(AllenNlpTestCase):
                 torch.tensor([[True, True, True, True, False, False]]),
             ]
 
-            # Change some stuff so our 4 of our label predictions are wrong.
-            # label_predictions[0][3:] = 3
-            # label_predictions[1][0] = 7
-
             metric_kwargs = {
                 "predicted_indices": predictions,
                 "gold_indices": gold_indices,

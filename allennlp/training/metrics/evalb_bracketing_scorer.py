@@ -1,4 +1,4 @@
-from typing import List, Union
+from typing import List
 import logging
 import os
 import tempfile
@@ -149,31 +149,26 @@ class EvalbBracketingScorer(Metric):
 
         shutil.rmtree(tempdir)
 
+        if is_distributed():
+            # Setting the device to CPU since this metric is not expected to run on GPUs.
+            device = torch.device("cpu")
+            _correct_predicted_brackets = torch.tensor(self._correct_predicted_brackets).to(device)
+            _predicted_brackets = torch.tensor(self._predicted_brackets).to(device)
+            _gold_brackets = torch.tensor(self._gold_brackets).to(device)
+            dist.all_reduce(_correct_predicted_brackets, op=dist.ReduceOp.SUM)
+            dist.all_reduce(_predicted_brackets, op=dist.ReduceOp.SUM)
+            dist.all_reduce(_gold_brackets, op=dist.ReduceOp.SUM)
+            self._correct_predicted_brackets = _correct_predicted_brackets.item()
+            self._predicted_brackets = _predicted_brackets.item()
+            self._gold_brackets = _gold_brackets.item()
+
     @overrides
-    def get_metric(
-        self,
-        reset: bool = False,
-        world_size: int = 1,
-        cuda_device: Union[int, torch.device] = torch.device("cpu"),
-    ):
+    def get_metric(self, reset: bool = False):
         """
         # Returns
 
         The average precision, recall and f1.
         """
-        if is_distributed():
-            world_size = dist.get_world_size()
-            _correct_predicted_brackets = torch.tensor(self._correct_predicted_brackets).to(
-                cuda_device
-            )
-            _predicted_brackets = torch.tensor(self._predicted_brackets).to(cuda_device)
-            _gold_brackets = torch.tensor(self._gold_brackets).to(cuda_device)
-            dist.all_reduce(_correct_predicted_brackets, op=dist.ReduceOp.SUM)
-            dist.all_reduce(_predicted_brackets, op=dist.ReduceOp.SUM)
-            dist.all_reduce(_gold_brackets, op=dist.ReduceOp.SUM)
-            self._correct_predicted_brackets = _correct_predicted_brackets.item() / world_size
-            self._predicted_brackets = _predicted_brackets.item() / world_size
-            self._gold_brackets = _gold_brackets.item() / world_size
 
         recall = (
             self._correct_predicted_brackets / self._gold_brackets

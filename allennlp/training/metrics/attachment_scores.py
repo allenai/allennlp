@@ -59,6 +59,7 @@ class AttachmentScores(Metric):
             predicted_indices, predicted_labels, gold_indices, gold_labels, mask
         )
         predicted_indices, predicted_labels, gold_indices, gold_labels, mask = detached
+        device = predicted_indices.device
 
         if mask is None:
             mask = torch.ones_like(predicted_indices).bool()
@@ -80,12 +81,26 @@ class AttachmentScores(Metric):
         correct_labels_and_indices = correct_indices * correct_labels
         labeled_exact_match = (correct_labels_and_indices + ~mask).prod(dim=-1)
 
+        if is_distributed():
+            dist.all_reduce(correct_indices, op=dist.ReduceOp.SUM)
+            dist.all_reduce(unlabeled_exact_match, op=dist.ReduceOp.SUM)
+            dist.all_reduce(correct_labels_and_indices, op=dist.ReduceOp.SUM)
+            dist.all_reduce(labeled_exact_match, op=dist.ReduceOp.SUM)
+
         self._unlabeled_correct += correct_indices.sum()
         self._exact_unlabeled_correct += unlabeled_exact_match.sum()
         self._labeled_correct += correct_labels_and_indices.sum()
         self._exact_labeled_correct += labeled_exact_match.sum()
         self._total_sentences += correct_indices.size(0)
         self._total_words += correct_indices.numel() - (~mask).sum()
+
+        if is_distributed():
+            _total_sentences = torch.tensor(self._total_sentences).to(device)
+            _total_words = torch.tensor(self._total_words).to(device)
+            dist.all_reduce(_total_sentences, op=dist.ReduceOp.SUM)
+            dist.all_reduce(_total_words, op=dist.ReduceOp.SUM)
+            self._total_sentences = _total_sentences.item()
+            self._total_words = _total_words.item()
 
     def get_metric(
         self, reset: bool = False, cuda_device: Union[int, torch.device] = torch.device("cpu"),
@@ -99,23 +114,6 @@ class AttachmentScores(Metric):
         labeled_attachment_score = 0.0
         unlabeled_exact_match = 0.0
         labeled_exact_match = 0.0
-
-        if is_distributed():
-            self._unlabeled_correct = torch.tensor(self._unlabeled_correct).to(cuda_device)
-            self._exact_unlabeled_correct = torch.tensor(self._exact_unlabeled_correct).to(
-                cuda_device
-            )
-            self._labeled_correct = torch.tensor(self._labeled_correct).to(cuda_device)
-            self._exact_labeled_correct = torch.tensor(self._exact_labeled_correct).to(cuda_device)
-            self._total_sentences = torch.tensor(self._total_sentences).to(cuda_device)
-            self._total_words = torch.tensor(self._total_words).to(cuda_device)
-
-            dist.all_reduce(self._unlabeled_correct, op=dist.ReduceOp.SUM)
-            dist.all_reduce(self._exact_unlabeled_correct, op=dist.ReduceOp.SUM)
-            dist.all_reduce(self._labeled_correct, op=dist.ReduceOp.SUM)
-            dist.all_reduce(self._exact_labeled_correct, op=dist.ReduceOp.SUM)
-            dist.all_reduce(self._total_sentences, op=dist.ReduceOp.SUM)
-            dist.all_reduce(self._total_words, op=dist.ReduceOp.SUM)
 
         if self._total_words > 0.0:
             unlabeled_attachment_score = float(self._unlabeled_correct) / float(self._total_words)

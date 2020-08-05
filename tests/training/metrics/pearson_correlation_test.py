@@ -50,13 +50,15 @@ class PearsonCorrelationTest(AllenNlpTestCase):
                     labels[: stride * (i + 1), :].view(-1).cpu().numpy(),
                 )
                 pearson_correlation(timestep_predictions, timestep_labels)
-                assert_allclose(expected_pearson_correlation, pearson_correlation.get_metric())
+                assert_allclose(
+                    expected_pearson_correlation, pearson_correlation.get_metric()["pearson_r"]
+                )
             # Test reset
             pearson_correlation.reset()
             pearson_correlation(predictions, labels)
             assert_allclose(
                 pearson_corrcoef(predictions.view(-1).cpu().numpy(), labels.view(-1).cpu().numpy()),
-                pearson_correlation.get_metric(),
+                pearson_correlation.get_metric()["pearson_r"],
             )
 
     @multi_device
@@ -91,7 +93,9 @@ class PearsonCorrelationTest(AllenNlpTestCase):
                 )
 
                 pearson_correlation(timestep_predictions, timestep_labels, timestep_mask)
-                assert_allclose(expected_pearson_correlation, pearson_correlation.get_metric())
+                assert_allclose(
+                    expected_pearson_correlation, pearson_correlation.get_metric()["pearson_r"]
+                )
             # Test reset
             pearson_correlation.reset()
             pearson_correlation(predictions, labels, mask)
@@ -101,4 +105,6 @@ class PearsonCorrelationTest(AllenNlpTestCase):
                 fweights=mask.view(-1).cpu().numpy(),
             )
 
-            assert_allclose(expected_pearson_correlation, pearson_correlation.get_metric())
+            assert_allclose(
+                expected_pearson_correlation, pearson_correlation.get_metric()["pearson_r"]
+            )

@@ -1,6 +1,6 @@
 from collections import Counter
 import math
-from typing import Iterable, Tuple, Dict, Set, Union
+from typing import Iterable, Tuple, Dict, Set
 
 from overrides import overrides
 import torch
@@ -118,10 +118,21 @@ class BLEU(Metric):
         None
         """
         predictions, gold_targets = self.detach_tensors(predictions, gold_targets)
+        device = gold_targets.device
+        if is_distributed():
+            world_size = dist.get_world_size()
+
         for ngram_size, _ in enumerate(self._ngram_weights, start=1):
             precision_matches, precision_totals = self._get_modified_precision_counts(
                 predictions, gold_targets, ngram_size
             )
+            if is_distributed():
+                _precision_matches = torch.tensor(precision_matches).to(device)
+                _precision_totals = torch.tensor(precision_totals).to(device)
+                dist.all_reduce(_precision_matches, op=dist.ReduceOp.SUM)
+                dist.all_reduce(_precision_totals, op=dist.ReduceOp.SUM)
+                precision_matches = _precision_matches.item() / world_size
+                precision_totals = _precision_totals.item() / world_size
             self._precision_matches[ngram_size] += precision_matches
             self._precision_totals[ngram_size] += precision_totals
         if not self._exclude_indices:
@@ -135,28 +146,16 @@ class BLEU(Metric):
             valid_gold_targets_mask = get_valid_tokens_mask(gold_targets, self._exclude_indices)
             self._reference_lengths += valid_gold_targets_mask.sum().item()
 
-    @overrides
-    def get_metric(
-        self, reset: bool = False, cuda_device: Union[int, torch.device] = torch.device("cpu"),
-    ) -> Dict[str, float]:
-
         if is_distributed():
-            world_size = dist.get_world_size()
-            _prediction_lengths = torch.tensor(self._prediction_lengths).to(cuda_device)
-            _reference_lengths = torch.tensor(self._reference_lengths).to(cuda_device)
-            for ngram in self._precision_matches:
-                print("ngram", ngram, "rank", dist.get_rank())
-                _precision_matches = torch.tensor(self._precision_matches[ngram]).to(cuda_device)
-                _precision_totals = torch.tensor(self._precision_totals[ngram]).to(cuda_device)
-                dist.all_reduce(_precision_matches, op=dist.ReduceOp.SUM)
-                dist.all_reduce(_precision_totals, op=dist.ReduceOp.SUM)
-                self._precision_matches[ngram] = _precision_matches.item() / world_size
-                self._precision_totals[ngram] = _precision_totals.item() / world_size
-
+            _prediction_lengths = torch.tensor(self._prediction_lengths).to(device)
+            _reference_lengths = torch.tensor(self._reference_lengths).to(device)
             dist.all_reduce(_prediction_lengths, op=dist.ReduceOp.SUM)
             dist.all_reduce(_reference_lengths, op=dist.ReduceOp.SUM)
             self._prediction_lengths = _prediction_lengths.item() / world_size
             self._reference_lengths = _reference_lengths.item() / world_size
+
+    @overrides
+    def get_metric(self, reset: bool = False) -> Dict[str, float]:
 
         brevity_penalty = self._get_brevity_penalty()
         ngram_scores = (

@@ -1,4 +1,4 @@
-from typing import Optional, Union
+from typing import Optional
 
 from overrides import overrides
 import torch
@@ -35,6 +35,7 @@ class MeanAbsoluteError(Metric):
             A tensor of the same shape as `predictions`.
         """
         predictions, gold_labels, mask = self.detach_tensors(predictions, gold_labels, mask)
+        device = gold_labels.device
 
         absolute_errors = torch.abs(predictions - gold_labels)
         if mask is not None:
@@ -44,22 +45,20 @@ class MeanAbsoluteError(Metric):
             self._total_count += gold_labels.numel()
         self._absolute_error += torch.sum(absolute_errors)
 
-    def get_metric(
-        self, reset: bool = False, cuda_device: Union[int, torch.device] = torch.device("cpu"),
-    ):
+        if is_distributed():
+            _absolute_error = torch.tensor(self._absolute_error).to(device)
+            _total_count = torch.tensor(self._total_count).to(device)
+            dist.all_reduce(_absolute_error, op=dist.ReduceOp.SUM)
+            dist.all_reduce(_total_count, op=dist.ReduceOp.SUM)
+            self._absolute_error = _absolute_error.item()
+            self._total_count = _total_count.item()
+
+    def get_metric(self, reset: bool = False):
         """
         # Returns
 
         The accumulated mean absolute error.
         """
-        if is_distributed():
-            world_size = dist.get_world_size()
-            _absolute_error = torch.tensor(self._absolute_error).to(cuda_device)
-            _total_count = torch.tensor(self._total_count).to(cuda_device)
-            dist.all_reduce(_absolute_error, op=dist.ReduceOp.SUM)
-            dist.all_reduce(_total_count, op=dist.ReduceOp.SUM)
-            self._absolute_error = _absolute_error.item() / world_size
-            self._total_count = _total_count.item() / world_size
         mean_absolute_error = self._absolute_error / self._total_count
         if reset:
             self.reset()

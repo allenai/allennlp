@@ -1,4 +1,4 @@
-from typing import Optional, Union
+from typing import Optional
 
 from overrides import overrides
 import torch
@@ -46,6 +46,7 @@ class BooleanAccuracy(Metric):
             A tensor of the same shape as `predictions`.
         """
         predictions, gold_labels, mask = self.detach_tensors(predictions, gold_labels, mask)
+        device = gold_labels.device
 
         # Some sanity checks.
         if gold_labels.size() != predictions.size():
@@ -87,22 +88,20 @@ class BooleanAccuracy(Metric):
         self._correct_count += (correct * keep).sum()
         self._total_count += keep.sum()
 
-    def get_metric(
-        self, reset: bool = False, cuda_device: Union[int, torch.device] = torch.device("cpu"),
-    ):
+        if is_distributed():
+            _correct_count = torch.tensor(self._correct_count).to(device)
+            _total_count = torch.tensor(self._total_count).to(device)
+            dist.all_reduce(_correct_count, op=dist.ReduceOp.SUM)
+            dist.all_reduce(_total_count, op=dist.ReduceOp.SUM)
+            self._correct_count = _correct_count.item()
+            self._total_count = _total_count.item()
+
+    def get_metric(self, reset: bool = False):
         """
         # Returns
 
         The accumulated accuracy.
         """
-        if is_distributed():
-            world_size = dist.get_world_size()
-            _correct_count = torch.tensor(self._correct_count).to(cuda_device)
-            _total_count = torch.tensor(self._total_count).to(cuda_device)
-            dist.all_reduce(_correct_count, op=dist.ReduceOp.SUM)
-            dist.all_reduce(_total_count, op=dist.ReduceOp.SUM)
-            self._correct_count = _correct_count.item() / world_size
-            self._total_count = _total_count.item() / world_size
         if self._total_count > 0:
             accuracy = float(self._correct_count) / float(self._total_count)
         else:

@@ -1,7 +1,6 @@
-from typing import Dict, Iterable, List, Optional, Tuple, Union, Any
+from typing import Dict, Iterable, Optional, Any
 
 import torch
-import torch.distributed as dist
 
 from allennlp.common.registrable import Registrable
 
@@ -28,9 +27,7 @@ class Metric(Registrable):
         """
         raise NotImplementedError
 
-    def get_metric(
-        self, reset: bool, cuda_device: Union[int, torch.device] = torch.device("cpu"),
-    ) -> Union[float, Tuple[float, ...], Dict[str, float], Dict[str, List[float]]]:
+    def get_metric(self, reset: bool) -> Dict[str, Any]:
         """
         Compute and return the metric. Optionally also call `self.reset`.
         """
@@ -51,22 +48,3 @@ class Metric(Registrable):
         """
         # Check if it's actually a tensor in case something else was passed.
         return (x.detach() if isinstance(x, torch.Tensor) else x for x in tensors)
-
-    @staticmethod
-    def _aggregate_metrics(
-        metrics: Dict[str, Any],
-        world_size: int = 1,
-        cuda_device: Union[int, torch.device] = torch.device("cpu"),
-    ) -> Dict[str, Any]:
-        """
-        Aggregate metrics across different processes. The default is to
-        take the average.
-        """
-        # raise NotImplementedError
-        aggregated_metrics = {}
-        for metric_name, metric_val in metrics.items():
-            metric_tensor = torch.tensor(metric_val).to(cuda_device)
-            dist.all_reduce(metric_tensor, op=dist.ReduceOp.SUM)
-            reduced_metric = metric_tensor.item() / world_size
-            aggregated_metrics[metric_name] = reduced_metric
-        return aggregated_metrics

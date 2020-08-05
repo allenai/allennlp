@@ -1,4 +1,4 @@
-from typing import Optional, Union
+from typing import Optional
 
 import sys
 
@@ -41,6 +41,7 @@ class UnigramRecall(Metric):
             A masking tensor the same size as `gold_labels`.
         """
         predictions, gold_labels, mask = self.detach_tensors(predictions, gold_labels, mask)
+        device = predictions.device
 
         # Some sanity checks.
         if gold_labels.dim() != predictions.dim() - 1:
@@ -81,22 +82,21 @@ class UnigramRecall(Metric):
         self.correct_count += correct
         self.total_count += predictions.size()[0]
 
-    def get_metric(
-        self, reset: bool = False, cuda_device: Union[int, torch.device] = torch.device("cpu"),
-    ):
+        if is_distributed():
+            _correct_count = torch.tensor(self.correct_count).to(device)
+            _total_count = torch.tensor(self.total_count).to(device)
+            dist.all_reduce(_correct_count, op=dist.ReduceOp.SUM)
+            dist.all_reduce(_total_count, op=dist.ReduceOp.SUM)
+            self.correct_count = _correct_count.item()
+            self.total_count = _total_count.item()
+
+    def get_metric(self, reset: bool = False):
         """
         # Returns
 
         The accumulated recall.
         """
-        if is_distributed():
-            world_size = dist.get_world_size()
-            _correct_count = torch.tensor(self.correct_count).to(cuda_device)
-            _total_count = torch.tensor(self.total_count).to(cuda_device)
-            dist.all_reduce(_correct_count, op=dist.ReduceOp.SUM)
-            dist.all_reduce(_total_count, op=dist.ReduceOp.SUM)
-            self.correct_count = _correct_count.item() / world_size
-            self.total_count = _total_count.item() / world_size
+
         recall = self.correct_count / self.total_count if self.total_count > 0 else 0
         if reset:
             self.reset()

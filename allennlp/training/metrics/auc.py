@@ -1,9 +1,8 @@
-from typing import Optional, Union
+from typing import Optional
 import logging
 
 from overrides import overrides
 import torch
-import torch.distributed as dist
 from sklearn import metrics
 
 from allennlp.common.util import is_distributed
@@ -87,9 +86,7 @@ class Auc(Metric):
             [self._all_gold_labels, torch.masked_select(gold_labels, mask).long()], dim=0
         )
 
-    def get_metric(
-        self, reset: bool = False, cuda_device: Union[int, torch.device] = torch.device("cpu"),
-    ):
+    def get_metric(self, reset: bool = False):
 
         if self._all_gold_labels.shape[0] == 0:
             return 0.5
@@ -100,13 +97,7 @@ class Auc(Metric):
         )
         auc = metrics.auc(false_positive_rates, true_positive_rates)
         if is_distributed():
-            world_size = dist.get_world_size()
-            auc_tensor = torch.tensor(auc).to(cuda_device)
-            dist.all_reduce(auc_tensor, op=dist.ReduceOp.SUM)
-            auc = auc_tensor.item() / world_size
-            logger.warn(
-                "Distributed aggregation for AUC is currently not supported. Returning simple average!",
-            )
+            logger.warning("Distributed aggregation for AUC is currently not supported.")
 
         if reset:
             self.reset()

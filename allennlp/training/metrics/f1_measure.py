@@ -1,6 +1,4 @@
-from typing import Dict, Union
-
-import torch
+from typing import Dict
 
 from allennlp.training.metrics.metric import Metric
 from allennlp.training.metrics.fbeta_measure import FBetaMeasure
@@ -19,9 +17,7 @@ class F1Measure(FBetaMeasure):
         super().__init__(beta=1, labels=[positive_label])
         self._positive_label = positive_label
 
-    def get_metric(
-        self, reset: bool = False, cuda_device: Union[int, torch.device] = torch.device("cpu"),
-    ) -> Dict[str, float]:
+    def get_metric(self, reset: bool = False) -> Dict[str, float]:
         """
         # Returns
 
@@ -29,7 +25,7 @@ class F1Measure(FBetaMeasure):
         recall : `float`
         f1-measure : `float`
         """
-        metric = super().get_metric(reset=reset, cuda_device=cuda_device)
+        metric = super().get_metric(reset=reset)
         # Because we just care about the class `positive_label`
         # there is just one item in `precision`, `recall`, `fscore`
         precision = metric["precision"][0]

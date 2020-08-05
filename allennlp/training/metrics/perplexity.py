@@ -1,3 +1,4 @@
+from typing import Dict
 from overrides import overrides
 import torch
 
@@ -18,15 +19,16 @@ class Perplexity(Average):
     """
 
     @overrides
-    def get_metric(self, reset: bool = False) -> float:
+    def get_metric(self, reset: bool = False) -> Dict[str, float]:
         """
         # Returns
 
         The accumulated perplexity.
         """
-        average_loss = super().get_metric(reset)
+        average_loss = super().get_metric(reset)["average_value"]
         if average_loss == 0:
-            return 0.0
+            perplexity = 0.0
+        perplexity = float(torch.exp(average_loss))
 
         # Exponentiate the loss to compute perplexity
-        return float(torch.exp(average_loss))
+        return {"perplexity": perplexity}

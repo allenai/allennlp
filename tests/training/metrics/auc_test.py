@@ -7,8 +7,6 @@ from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import (
     AllenNlpTestCase,
     multi_device,
-    global_distributed_metric,
-    DistributedTestContextManager,
 )
 from allennlp.training.metrics import Auc
 
@@ -94,36 +92,3 @@ class AucTest(AllenNlpTestCase):
     def test_auc_works_without_calling_metric_at_all(self, device: str):
         auc = Auc()
         auc.get_metric()
-
-    def test_distributed_auc(self):
-        with DistributedTestContextManager([-1, -1]) as test_this:
-            predictions = torch.randn((2, 8))
-            labels = torch.randint(3, 5, (2, 8,), dtype=torch.long)
-            # We make sure that the positive label is always present.
-            labels[:, 0] = 4
-
-            false_positive_rates, true_positive_rates, _ = metrics.roc_curve(
-                labels[0].cpu().numpy(), predictions[0].cpu().numpy(), pos_label=4,
-            )
-            real_auc_value = metrics.auc(false_positive_rates, true_positive_rates)
-            false_positive_rates, true_positive_rates, _ = metrics.roc_curve(
-                labels[1].cpu().numpy(), predictions[1].cpu().numpy(), pos_label=4,
-            )
-
-            # NOTE: we return the average.
-            real_auc_value += metrics.auc(false_positive_rates, true_positive_rates)
-            real_auc_value = real_auc_value / 2
-
-            predictions = [predictions[0], predictions[1]]
-            labels = [labels[0], labels[1]]
-
-            metric_kwargs = {"predictions": predictions, "gold_labels": labels}
-            desired_values = {"auc": real_auc_value}
-
-            test_this(
-                global_distributed_metric,
-                Auc(positive_label=4),
-                metric_kwargs,
-                desired_values,
-                exact=False,
-            )

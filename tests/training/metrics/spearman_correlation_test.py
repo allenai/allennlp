@@ -63,7 +63,7 @@ class SpearmanCorrelationTest(AllenNlpTestCase):
             spearman_correlation(predictions, labels)
             assert_allclose(
                 spearman_formula(predictions.reshape(-1), labels.reshape(-1)),
-                spearman_correlation.get_metric(),
+                spearman_correlation.get_metric()["spearman_correlation"],
             )
 
     @multi_device
@@ -98,7 +98,10 @@ class SpearmanCorrelationTest(AllenNlpTestCase):
             # too many identical numbers will result in different calculation results each time
             # but the positive and negative results are the same,
             # so here we only test the positive and negative results of the results.
-            assert (expected_spearman_correlation * spearman_correlation.get_metric()) > 0
+            assert (
+                expected_spearman_correlation
+                * spearman_correlation.get_metric()["spearman_correlation"]
+            ) > 0
 
     @multi_device
     def test_reset(self, device: str):
@@ -111,16 +114,16 @@ class SpearmanCorrelationTest(AllenNlpTestCase):
         # 1.test spearman_correlation.reset()
         spearman_correlation.reset()
         spearman_correlation(predictions, labels)
-        temp = spearman_correlation.get_metric()
+        temp = spearman_correlation.get_metric()["spearman_correlation"]
         spearman_correlation.reset()
         spearman_correlation(predictions, labels)
-        assert spearman_correlation.get_metric() == temp
+        assert spearman_correlation.get_metric()["spearman_correlation"] == temp
 
         # 2.test spearman_correlation.reset()
         spearman_correlation.reset()
         spearman_correlation(predictions, labels)
 
         spearman_correlation.get_metric(reset=False)
-        assert spearman_correlation.get_metric() != float("NaN")
+        assert spearman_correlation.get_metric()["spearman_correlation"] != float("NaN")
         spearman_correlation.get_metric(reset=True)
-        assert math.isnan(spearman_correlation.get_metric())
+        assert math.isnan(spearman_correlation.get_metric()["spearman_correlation"])

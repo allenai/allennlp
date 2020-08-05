@@ -1,10 +1,14 @@
+import logging
 from typing import Optional
 
 from overrides import overrides
 import torch
 import scipy.stats as stats
 
+from allennlp.common.util import is_distributed
 from allennlp.training.metrics.metric import Metric
+
+logger = logging.getLogger(__name__)
 
 
 @Metric.register("spearman_correlation")
@@ -65,14 +69,18 @@ class SpearmanCorrelation(Metric):
 
         The accumulated sample Spearman correlation.
         """
+
         spearman_correlation = stats.spearmanr(
             self.total_predictions.cpu().numpy(), self.total_gold_labels.cpu().numpy()
         )
-
+        if is_distributed():
+            logger.warning(
+                "Distributed aggregation for SpearmanCorrelation is currently not supported."
+            )
         if reset:
             self.reset()
 
-        return spearman_correlation[0]
+        return {"spearman_correlation": spearman_correlation[0]}
 
     @overrides
     def reset(self):

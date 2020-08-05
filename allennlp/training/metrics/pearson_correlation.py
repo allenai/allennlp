@@ -1,3 +1,5 @@
+import logging
+
 from typing import Optional
 import math
 import numpy as np
@@ -5,8 +7,11 @@ import numpy as np
 from overrides import overrides
 import torch
 
+from allennlp.common.util import is_distributed
 from allennlp.training.metrics.covariance import Covariance
 from allennlp.training.metrics.metric import Metric
+
+logger = logging.getLogger(__name__)
 
 
 @Metric.register("pearson_correlation")
@@ -66,9 +71,15 @@ class PearsonCorrelation(Metric):
 
         The accumulated sample Pearson correlation.
         """
-        covariance = self._predictions_labels_covariance.get_metric(reset=reset)
-        predictions_variance = self._predictions_variance.get_metric(reset=reset)
-        labels_variance = self._labels_variance.get_metric(reset=reset)
+        covariance = self._predictions_labels_covariance.get_metric(reset=reset)["covariance"]
+        predictions_variance = self._predictions_variance.get_metric(reset=reset)["covariance"]
+        labels_variance = self._labels_variance.get_metric(reset=reset)["covariance"]
+
+        if is_distributed():
+            logger.warning(
+                "Distributed aggregation for PearsonCorrelation is currently not supported."
+            )
+
         if reset:
             self.reset()
         denominator = math.sqrt(predictions_variance) * math.sqrt(labels_variance)
@@ -76,7 +87,7 @@ class PearsonCorrelation(Metric):
             pearson_r = 0
         else:
             pearson_r = covariance / denominator
-        return pearson_r
+        return {"pearson_r": pearson_r}
 
     @overrides
     def reset(self):

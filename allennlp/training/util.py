@@ -287,7 +287,7 @@ def get_metrics(
     the `"loss"` metric is "average loss per batch".
     Returns the `"batch_loss"` separately.
     """
-    metrics = model.get_metrics(reset=reset, cuda_device=cuda_device)
+    metrics = model.get_metrics(reset=reset)
     if batch_loss is not None:
         metrics["batch_loss"] = batch_loss
     metrics["loss"] = float(total_loss / num_batches) if num_batches > 0 else 0.0
@@ -297,18 +297,6 @@ def get_metrics(
         metrics["reg_loss"] = float(total_reg_loss / num_batches) if num_batches > 0 else 0.0
 
     return metrics
-
-    # if world_size > 1:
-    #     # In distributed mode, average out all metrics across GPUs
-    #     aggregated_metrics = {}
-    #     for metric_name, metric_val in metrics.items():
-    #         metric_tensor = torch.tensor(metric_val).to(cuda_device)
-    #         dist.all_reduce(metric_tensor, op=dist.ReduceOp.SUM)
-    #         reduced_metric = metric_tensor.item() / world_size
-    #         aggregated_metrics[metric_name] = reduced_metric
-    #     return aggregated_metrics
-    # else:
-    #     return metrics
 
 
 def evaluate(
