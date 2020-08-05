@@ -1,3 +1,4 @@
+local model_name = "bert-base-uncased";
 {
   "dataset_reader": {
     "type": "nlvr2",
@@ -5,9 +6,15 @@
     "image_loader": "detectron",
     "image_featurizer": "resnet_backbone",
     "region_detector": "faster_rcnn",
-    "tokenizer": "whitespace",
+    "tokenizer": {
+      "type": "pretrained_transformer",
+      "model_name": model_name
+    },
     "token_indexers": {
-      "tokens": "single_id"
+      "tokens": {
+        "type": "pretrained_transformer",
+        "model_name": model_name
+      }
     }
   },
   "train_data_path": "test_fixtures/data/nlvr2/tiny-dev.json",

@@ -136,7 +136,7 @@ class Nlvr2Reader(DatasetReader):
                 coordinates = detector_results["coordinates"]
 
             for index, path in enumerate(to_compute):
-                self._feature_cache[path] = (features, coordinates)
+                self._feature_cache[path] = (features[index], coordinates[index])
 
         left_features, left_coords = self._feature_cache[left_image_path]
         right_features, right_coords = self._feature_cache[right_image_path]
