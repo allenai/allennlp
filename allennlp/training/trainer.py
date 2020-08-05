@@ -180,7 +180,8 @@ EpochCallback.register("null")(EpochCallback)
 class TrackEpochCallback:
     """
     A callback that you can pass to the `GradientDescentTrainer` to access the current epoch number
-    in progress in the model as a class member `model.epoch`. Since the EpochCallback passes `epoch=-1`
+    in your model during training. This callback sets `model.epoch`, which can be read inside of
+    `model.forward()`. Since the EpochCallback passes `epoch=-1`
     at the start of the training, we set `model.epoch = epoch + 1` which now denotes the number of
     completed epochs at a given training state.
     """
