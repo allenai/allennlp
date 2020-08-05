@@ -152,6 +152,23 @@ class CategoricalAccuracyTest(AllenNlpTestCase):
     def test_distributed_accuracy(self):
         with DistributedTestContextManager([-1, -1]) as test_this:
             predictions = [
+                torch.tensor([[0.35, 0.25, 0.1, 0.1, 0.2]]),
+                torch.tensor([[0.1, 0.6, 0.1, 0.2, 0.0]]),
+            ]
+            targets = [torch.tensor([0]), torch.tensor([3])]
+            metric_kwargs = {"predictions": predictions, "gold_labels": targets}
+            desired_accuracy = 0.5
+            test_this(
+                global_distributed_metric,
+                CategoricalAccuracy(),
+                metric_kwargs,
+                desired_accuracy,
+                exact=False,
+            )
+
+    def test_distributed_accuracy_unequal_batches(self):
+        with DistributedTestContextManager([-1, -1]) as test_this:
+            predictions = [
                 torch.tensor([[0.35, 0.25, 0.1, 0.1, 0.2], [0.1, 0.6, 0.1, 0.2, 0.0]]),
                 torch.tensor([[0.1, 0.2, 0.5, 0.2, 0.0]]),
             ]

@@ -1,3 +1,4 @@
+import datetime
 from typing import List
 import torch
 import torch.distributed as dist
@@ -57,6 +58,7 @@ class DistributedTestContextManager:
                 init_method=f"tcp://{master_addr}:{master_port}",
                 world_size=world_size,
                 rank=global_rank,
+                timeout=datetime.timedelta(seconds=120),
             )
 
         self.func(global_rank, world_size, gpu_id, *self.args, **self.kwargs)
