@@ -2,10 +2,8 @@ import copy
 from collections.abc import Mapping
 from typing import Any, Dict, Optional, NamedTuple, List, Tuple
 
+from detectron2 import config
 from detectron2.checkpoint import DetectionCheckpointer
-from detectron2.config import CfgNode
-from detectron2.config import get_cfg
-from detectron2.data import DatasetMapper
 from detectron2.data import DatasetMapper
 from detectron2.layers import ShapeSpec
 from detectron2.model_zoo import get_config_file
@@ -35,7 +33,7 @@ class DetectronConfig(NamedTuple):
 
 
 class DetectronPipeline(NamedTuple):
-    cfg: CfgNode
+    cfg: config.CfgNode
     mapper: DatasetMapper
     model: nn.Module
 
@@ -53,7 +51,7 @@ def update(d, u):
 def convert_to_dict(cfg_node, key_list: Optional[List[str]] = None):
     if key_list is None:
         key_list = []
-    if not isinstance(cfg_node, CfgNode):
+    if not isinstance(cfg_node, config.CfgNode):
         return cfg_node
     else:
         cfg_dict = dict(cfg_node)
@@ -67,9 +65,9 @@ def get_cfg(
     yaml_config_file: Optional[str] = None,
     overrides: Optional[Dict[str, Any]] = None,
     freeze: bool = True,
-) -> CfgNode:
+) -> config.CfgNode:
 
-    cfg = get_cfg()
+    cfg = config.get_cfg()
 
     if builtin_config_file is not None:
         cfg.merge_from_file(get_config_file(builtin_config_file))
@@ -78,7 +76,7 @@ def get_cfg(
     if overrides is not None:
         old_dict = convert_to_dict(cfg, [])
         new_dict = update(old_dict, overrides)
-        cfg = CfgNode(new_dict)
+        cfg = config.CfgNode(new_dict)
 
     if not torch.cuda.is_available():
         cfg.MODEL.DEVICE = "cpu"
@@ -112,7 +110,7 @@ def get_pipeline(
     global _pipeline_cache
 
     cfg = get_cfg(builtin_config_file, yaml_config_file, overrides)
-    spec = cfg.dump()  # Easiest way to get a hashable snapshot of CfgNode.
+    spec = cfg.dump()  # Easiest way to get a hashable snapshot of config.CfgNode.
     pipeline = _pipeline_cache.get(spec, None)
     if pipeline is None:
         mapper = DatasetMapper(cfg)

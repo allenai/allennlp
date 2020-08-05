@@ -32,11 +32,9 @@ class RegionDetector(nn.Module, Registrable):
 @RegionDetector.register("null")
 class NullRegionDetector(RegionDetector):
     """A `RegionDetector` that never returns any proposals."""
+
     def forward(
-        self,
-        raw_images: FloatTensor,
-        image_sizes: IntTensor,
-        featurized_images: FloatTensor
+        self, raw_images: FloatTensor, image_sizes: IntTensor, featurized_images: FloatTensor
     ) -> FloatTensor:
         # TODO(mattg): fix this
         raise NotImplementedError()
@@ -130,21 +128,65 @@ class FasterRcnnRegionDetector(RegionDetector):
         predictions = self.model.roi_heads.box_predictor(pooled_features)
 
         # class probablity
-        cls_probs = [F.softmax(prediction, dim=-1) for prediction in predictions]
-        cls_probs = [cls_prob[:, :-1] for cls_prob in cls_probs] # background is last
+        cls_probs = F.softmax(predictions[0], dim=-1)
+        cls_probs = cls_probs[:, :-1]  # background is last
 
         predictions, r_indices = self.model.roi_heads.box_predictor.inference(
             predictions, proposals
         )
 
-        features = []
+        batch_coordinates = []
+        batch_features = []
+        batch_probs = []
+        batch_num_detections = torch.zeros(batch_size, device=raw_images.device, dtype=torch.int16)
+        feature_dim = pooled_features.size(-1)
+        num_classes = cls_probs.size(-1)
+
         proposal_start = 0
         for image_num, image_proposal_indices in enumerate(r_indices):
-            feature_cell = {}
-            feature_cell['boxes'] = proposals[image_num].proposal_boxes.tensor[image_proposal_indices]
-            feature_cell['probs'] = cls_probs[image_num][image_proposal_indices]
-            feature_cell['features'] = torch.narrow(pooled_features, 0, proposal_start, len(proposals[image_num]))[image_proposal_indices]
-            proposal_start += len(proposals[image_num])
-            features.append(feature_cell)
+            # "proposals" are the things that the proposal generator above thought might be useful
+            # boxes.  "detections" are proposals that made it passed the ROI feature and box
+            # predictor step.  We keep only the "detections", but we the features and predictions
+            # come from before we decided which things were "detections".
+            num_detections = len(image_proposal_indices)
+            num_image_proposals = len(proposals[image_num])
+            batch_num_detections[image_num] = num_detections
 
-        return features
+            coordinates = proposals[image_num].proposal_boxes.tensor[image_proposal_indices]
+
+            # Detectron puts all of the features and predictions into a squashed tensor of shape
+            # (total_num_proposals, feature_dim | num_classes).  This means that we have to iterate
+            # over these tensors in a funny way, keeping track of where we are in the tensor,
+            # instead of just doing a simple `.view()`.
+            image_features = torch.narrow(pooled_features, 0, proposal_start, num_image_proposals)
+            features = image_features[image_proposal_indices]
+            image_probs = torch.narrow(cls_probs, 0, proposal_start, num_image_proposals)
+            probs = image_probs[image_proposal_indices]
+
+            proposal_start += num_image_proposals
+            if num_detections < self.detections_per_image:
+                num_to_add = self.detections_per_image - num_detections
+
+                coords_padding = coordinates.new_zeros(size=(num_to_add, 4))
+                coordinates = torch.cat([coordinates, coords_padding], dim=0)
+
+                probs_padding = probs.new_zeros(size=(num_to_add, num_classes))
+                probs = torch.cat([probs, probs_padding], dim=0)
+
+                num_features = features.size(-1)
+                features_padding = features.new_zeros(size=(num_to_add, num_features))
+                features = torch.cat([features, features_padding], dim=0)
+
+            batch_coordinates.append(coordinates)
+            batch_features.append(features)
+            batch_probs.append(probs)
+
+        features_tensor = torch.stack(batch_features, dim=0)
+        coordinates = torch.stack(batch_coordinates, dim=0)
+        probs_tensor = torch.stack(batch_probs, dim=0)
+        return {
+            "features": features_tensor,
+            "coordinates": coordinates,
+            "class_probs": probs_tensor,
+            "num_regions": batch_num_detections,
+        }
