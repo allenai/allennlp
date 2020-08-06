@@ -233,7 +233,7 @@ class PretrainedTransformerTokenizer(Tokenizer):
         """
         text1_tokens = self._tokenize_text(text1)
         if text2:
-            text2_tokens = self._tokenizer_text(text2)
+            text2_tokens = self._tokenize_text(text2)
 
         if text2:
             assert self._add_special_tokens, "need set add_special_tokens to 'True' if have text2"
