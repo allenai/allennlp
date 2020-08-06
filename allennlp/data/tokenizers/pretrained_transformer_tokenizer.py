@@ -227,7 +227,26 @@ class PretrainedTransformerTokenizer(Tokenizer):
         return "a" in detokenized
 
     @overrides
-    def tokenize(self, text: str) -> List[Token]:
+    def tokenize(self, text1: str, text2: str = None) -> List[Token]:
+        """
+        This method  handles a single sentence (or sequence) of text and sentence pairs.
+        """
+        text1_tokens = self._tokenize_text(text1)
+        if text2:
+            text2_tokens = self._tokenizer_text(text2)
+
+        if text2:
+            assert self._add_special_tokens, "need set add_special_tokens to 'True' if have text2"
+
+        if self._add_special_tokens:
+            if text2:
+                tokens = self.add_special_tokens(text1_tokens, text2_tokens)
+            else:
+                tokens = self.add_special_tokens(text1_tokens)
+
+        return tokens
+
+    def _tokenize_text(self, text: str) -> List[Token]:
         """
         This method only handles a single sentence (or sequence) of text.
         """
@@ -270,10 +289,6 @@ class PretrainedTransformerTokenizer(Tokenizer):
                     idx_end=end,
                 )
             )
-
-        if self._add_special_tokens:
-            tokens = self.add_special_tokens(tokens)
-
         return tokens
 
     def _estimate_character_indices(
