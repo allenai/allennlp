@@ -91,11 +91,13 @@ class Auc(Metric):
             try:
                 # The following logic will only work if the batches are of equal length.
                 world_size = dist.get_world_size()
+                device = gold_labels.device
                 _all_predictions = [
-                    torch.zeros(self._all_predictions.shape) for i in range(world_size)
+                    torch.zeros(self._all_predictions.shape, device=device)
+                    for i in range(world_size)
                 ]
                 _all_gold_labels = [
-                    torch.zeros(self._all_gold_labels.shape, dtype=torch.long)
+                    torch.zeros(self._all_gold_labels.shape, device=device, dtype=torch.long)
                     for i in range(world_size)
                 ]
                 dist.all_gather(_all_predictions, self._all_predictions)

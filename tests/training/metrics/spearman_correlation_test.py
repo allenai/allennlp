@@ -1,9 +1,14 @@
 import math
-
+import pytest
 import torch
 from torch.testing import assert_allclose
 
-from allennlp.common.testing import AllenNlpTestCase, multi_device
+from allennlp.common.testing import (
+    AllenNlpTestCase,
+    multi_device,
+    global_distributed_metric,
+    DistributedTestContextManager,
+)
 from allennlp.training.metrics import SpearmanCorrelation
 
 
@@ -63,7 +68,7 @@ class SpearmanCorrelationTest(AllenNlpTestCase):
             spearman_correlation(predictions, labels)
             assert_allclose(
                 spearman_formula(predictions.reshape(-1), labels.reshape(-1)),
-                spearman_correlation.get_metric()["spearman_correlation"],
+                spearman_correlation.get_metric(),
             )
 
     @multi_device
@@ -98,10 +103,7 @@ class SpearmanCorrelationTest(AllenNlpTestCase):
             # too many identical numbers will result in different calculation results each time
             # but the positive and negative results are the same,
             # so here we only test the positive and negative results of the results.
-            assert (
-                expected_spearman_correlation
-                * spearman_correlation.get_metric()["spearman_correlation"]
-            ) > 0
+            assert (expected_spearman_correlation * spearman_correlation.get_metric()) > 0
 
     @multi_device
     def test_reset(self, device: str):
@@ -114,16 +116,53 @@ class SpearmanCorrelationTest(AllenNlpTestCase):
         # 1.test spearman_correlation.reset()
         spearman_correlation.reset()
         spearman_correlation(predictions, labels)
-        temp = spearman_correlation.get_metric()["spearman_correlation"]
+        temp = spearman_correlation.get_metric()
         spearman_correlation.reset()
         spearman_correlation(predictions, labels)
-        assert spearman_correlation.get_metric()["spearman_correlation"] == temp
+        assert spearman_correlation.get_metric() == temp
 
         # 2.test spearman_correlation.reset()
         spearman_correlation.reset()
         spearman_correlation(predictions, labels)
 
         spearman_correlation.get_metric(reset=False)
-        assert spearman_correlation.get_metric()["spearman_correlation"] != float("NaN")
+        assert spearman_correlation.get_metric() != float("NaN")
         spearman_correlation.get_metric(reset=True)
-        assert math.isnan(spearman_correlation.get_metric()["spearman_correlation"])
+        assert math.isnan(spearman_correlation.get_metric())
+
+    def test_distributed_spearman(self):
+        with DistributedTestContextManager([-1, -1]) as test_this:
+            batch_size = 10
+            num_labels = 10
+            predictions = torch.randn(batch_size, num_labels)
+            labels = 0.5 * predictions + torch.randn(batch_size, num_labels)
+            desired_spearman = spearman_formula(predictions.reshape(-1), labels.reshape(-1))
+            predictions = [predictions[:5], predictions[5:]]
+            labels = [labels[:5], labels[5:]]
+            metric_kwargs = {"predictions": predictions, "gold_labels": labels}
+            test_this(
+                global_distributed_metric,
+                SpearmanCorrelation(),
+                metric_kwargs,
+                desired_spearman,
+                exact=False,
+            )
+
+    def test_distributed_spearman_unequal_batches(self):
+        with DistributedTestContextManager([-1, -1]) as test_this:
+            batch_size = 10
+            num_labels = 10
+            predictions = torch.randn(batch_size, num_labels)
+            labels = 0.5 * predictions + torch.randn(batch_size, num_labels)
+            desired_spearman = spearman_formula(predictions.reshape(-1), labels.reshape(-1))
+            predictions = [predictions[:6], predictions[6:]]
+            labels = [labels[:6], labels[6:]]
+            metric_kwargs = {"predictions": predictions, "gold_labels": labels}
+            with pytest.raises(Exception) as _:
+                test_this(
+                    global_distributed_metric,
+                    SpearmanCorrelation(),
+                    metric_kwargs,
+                    desired_spearman,
+                    exact=False,
+                )

@@ -3,6 +3,7 @@ from typing import Optional
 
 from overrides import overrides
 import torch
+import torch.distributed as dist
 import scipy.stats as stats
 
 from allennlp.common.util import is_distributed
@@ -62,6 +63,29 @@ class SpearmanCorrelation(Metric):
             self.total_predictions = torch.cat((self.total_predictions, predictions), 0)
             self.total_gold_labels = torch.cat((self.total_gold_labels, gold_labels), 0)
 
+        if is_distributed():
+            try:
+                # The following logic will only work if the batches are of equal length.
+                world_size = dist.get_world_size()
+                device = gold_labels.device
+                _total_predictions = [
+                    torch.zeros(self.total_predictions.shape, device=device)
+                    for i in range(world_size)
+                ]
+                _total_gold_labels = [
+                    torch.zeros(self.total_gold_labels.shape, device=device)
+                    for i in range(world_size)
+                ]
+                dist.all_gather(_total_predictions, self.total_predictions)
+                dist.all_gather(_total_gold_labels, self.total_gold_labels)
+                self.total_predictions = torch.cat(_total_predictions, dim=0)
+                self.total_gold_labels = torch.cat(_total_gold_labels, dim=0)
+            except Exception:
+                logger.warning(
+                    "Distributed aggregation for SpearmanCorrelation is currently not supported "
+                    "for batches of unequal length."
+                )
+
     @overrides
     def get_metric(self, reset: bool = False):
         """
@@ -73,14 +97,10 @@ class SpearmanCorrelation(Metric):
         spearman_correlation = stats.spearmanr(
             self.total_predictions.cpu().numpy(), self.total_gold_labels.cpu().numpy()
         )
-        if is_distributed():
-            logger.warning(
-                "Distributed aggregation for SpearmanCorrelation is currently not supported."
-            )
         if reset:
             self.reset()
 
-        return {"spearman_correlation": spearman_correlation[0]}
+        return spearman_correlation[0]
 
     @overrides
     def reset(self):
