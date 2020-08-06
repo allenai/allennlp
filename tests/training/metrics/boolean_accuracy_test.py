@@ -81,3 +81,17 @@ class BooleanAccuracyTest(AllenNlpTestCase):
                 desired_values,
                 exact=True,
             )
+
+    def test_distributed_accuracy_unequal_batches(self):
+        with DistributedTestContextManager([-1, -1]) as test_this:
+            predictions = [torch.tensor([[0, 1], [2, 3], [4, 5]]), torch.tensor([[6, 7]])]
+            targets = [torch.tensor([[0, 1], [2, 2], [4, 5]]), torch.tensor([[7, 7]])]
+            metric_kwargs = {"predictions": predictions, "gold_labels": targets}
+            desired_values = 0.5
+            test_this(
+                global_distributed_metric,
+                BooleanAccuracy(),
+                metric_kwargs,
+                desired_values,
+                exact=True,
+            )
