@@ -3,6 +3,7 @@ import logging
 
 from overrides import overrides
 import torch
+import torch.distributed as dist
 from sklearn import metrics
 
 from allennlp.common.util import is_distributed
@@ -86,6 +87,26 @@ class Auc(Metric):
             [self._all_gold_labels, torch.masked_select(gold_labels, mask).long()], dim=0
         )
 
+        if is_distributed():
+            try:
+                # The following logic will only work if the batches are of equal length.
+                world_size = dist.get_world_size()
+                _all_predictions = [
+                    torch.zeros(self._all_predictions.shape) for i in range(world_size)
+                ]
+                _all_gold_labels = [
+                    torch.zeros(self._all_gold_labels.shape, dtype=torch.long)
+                    for i in range(world_size)
+                ]
+                dist.all_gather(_all_predictions, self._all_predictions)
+                dist.all_gather(_all_gold_labels, self._all_gold_labels)
+                self._all_predictions = torch.cat(_all_predictions, dim=0)
+                self._all_gold_labels = torch.cat(_all_gold_labels, dim=0)
+            except Exception:
+                logger.warning(
+                    "Distributed aggregation for AUC is currently not supported for batches of unequal length."
+                )
+
     def get_metric(self, reset: bool = False):
 
         if self._all_gold_labels.shape[0] == 0:
@@ -96,12 +117,10 @@ class Auc(Metric):
             pos_label=self._positive_label,
         )
         auc = metrics.auc(false_positive_rates, true_positive_rates)
-        if is_distributed():
-            logger.warning("Distributed aggregation for AUC is currently not supported.")
 
         if reset:
             self.reset()
-        return {"auc": auc}
+        return auc
 
     @overrides
     def reset(self):
