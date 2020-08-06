@@ -4,7 +4,12 @@ import numpy as np
 import torch
 from torch.testing import assert_allclose
 
-from allennlp.common.testing import AllenNlpTestCase, multi_device
+from allennlp.common.testing import (
+    AllenNlpTestCase,
+    multi_device,
+    global_distributed_metric,
+    DistributedTestContextManager,
+)
 from allennlp.training.metrics import PearsonCorrelation
 
 
@@ -50,15 +55,13 @@ class PearsonCorrelationTest(AllenNlpTestCase):
                     labels[: stride * (i + 1), :].view(-1).cpu().numpy(),
                 )
                 pearson_correlation(timestep_predictions, timestep_labels)
-                assert_allclose(
-                    expected_pearson_correlation, pearson_correlation.get_metric()["pearson_r"]
-                )
+                assert_allclose(expected_pearson_correlation, pearson_correlation.get_metric())
             # Test reset
             pearson_correlation.reset()
             pearson_correlation(predictions, labels)
             assert_allclose(
                 pearson_corrcoef(predictions.view(-1).cpu().numpy(), labels.view(-1).cpu().numpy()),
-                pearson_correlation.get_metric()["pearson_r"],
+                pearson_correlation.get_metric(),
             )
 
     @multi_device
@@ -93,9 +96,7 @@ class PearsonCorrelationTest(AllenNlpTestCase):
                 )
 
                 pearson_correlation(timestep_predictions, timestep_labels, timestep_mask)
-                assert_allclose(
-                    expected_pearson_correlation, pearson_correlation.get_metric()["pearson_r"]
-                )
+                assert_allclose(expected_pearson_correlation, pearson_correlation.get_metric())
             # Test reset
             pearson_correlation.reset()
             pearson_correlation(predictions, labels, mask)
@@ -105,6 +106,25 @@ class PearsonCorrelationTest(AllenNlpTestCase):
                 fweights=mask.view(-1).cpu().numpy(),
             )
 
-            assert_allclose(
-                expected_pearson_correlation, pearson_correlation.get_metric()["pearson_r"]
+            assert_allclose(expected_pearson_correlation, pearson_correlation.get_metric())
+
+    def test_distributed_pearson(self):
+        with DistributedTestContextManager([-1, -1]) as test_this:
+            batch_size = 10
+            num_labels = 10
+            predictions = torch.randn(batch_size, num_labels)
+            labels = 0.5 * predictions + torch.randn(batch_size, num_labels)
+
+            expected_pearson_correlation = pearson_corrcoef(
+                predictions.view(-1).cpu().numpy(), labels.view(-1).cpu().numpy(),
+            )
+            predictions = [predictions[:5], predictions[5:]]
+            labels = [labels[:5], labels[5:]]
+            metric_kwargs = {"predictions": predictions, "gold_labels": labels}
+            test_this(
+                global_distributed_metric,
+                PearsonCorrelation(),
+                metric_kwargs,
+                expected_pearson_correlation,
+                exact=(0.0001, 1e-01),
             )

@@ -1,7 +1,7 @@
 """
 Utilities and helpers for writing tests.
 """
-from typing import Dict, Any, Optional, Union
+from typing import Dict, Any, Optional, Union, Tuple
 import torch
 from torch.testing import assert_allclose
 import pytest
@@ -56,15 +56,18 @@ def cpu_or_gpu(test_method):
 
 
 def assert_metrics_values(
-    metrics: Dict[str, Any], desired_values: Dict[str, Any], exact: Optional[bool] = True
+    metrics: Dict[str, Any],
+    desired_values: Dict[str, Any],
+    rtol: float = 0.0001,
+    atol: float = 1e-05,
 ):
     for key in metrics:
-        if exact:
-            assert metrics[key] == desired_values[key], "{} != {}".format(
-                metrics[key], desired_values[key]
-            )
-        else:
-            assert_allclose(metrics[key], desired_values[key])
+        # if exact:
+        #    assert metrics[key] == desired_values[key], "{} != {}".format(
+        #        metrics[key], desired_values[key]
+        #    )
+        # else:
+        assert_allclose(metrics[key], desired_values[key], rtol=rtol, atol=atol)
 
 
 def global_distributed_metric(
@@ -74,7 +77,7 @@ def global_distributed_metric(
     metric: Metric,
     metric_kwargs: Dict[str, Any],
     desired_values: Dict[str, Any],
-    exact: bool = True,
+    exact: Union[bool, Tuple[float, float]] = True,
 ):
     kwargs = {}
 
@@ -91,4 +94,15 @@ def global_distributed_metric(
         desired_values = {"metric_value": desired_values}
 
     # Call `assertion_metrics_values` to check if the metrics have the desired values.
-    assert_metrics_values(metrics, desired_values, exact)  # type: ignore
+    if isinstance(exact, bool):
+        if exact:
+            rtol = 0.0
+            atol = 0.0
+        else:
+            rtol = 0.0001
+            atol = 1e-05
+    else:
+        rtol = exact[0]
+        atol = exact[1]
+
+    assert_metrics_values(metrics, desired_values, rtol, atol)  # type: ignore

@@ -3,6 +3,7 @@ from typing import Optional
 
 from overrides import overrides
 import torch
+import torch.distributed as dist
 
 from allennlp.common.util import is_distributed
 from allennlp.training.metrics.metric import Metric
@@ -95,6 +96,7 @@ class Covariance(Metric):
             batch_co_moment = torch.sum(batch_coresiduals * mask)
         else:
             batch_co_moment = torch.sum(batch_coresiduals)
+
         delta_co_moment = batch_co_moment + (
             previous_total_prediction_mean - batch_mean_prediction
         ) * (previous_total_label_mean - batch_mean_label) * (
@@ -102,6 +104,22 @@ class Covariance(Metric):
         )
         self._total_co_moment += delta_co_moment.item()
         self._total_count = updated_count
+
+        if is_distributed():
+            # Note: this gives an approximate aggregation of the covariance.
+            device = gold_labels.device
+            _total_co_moment = torch.tensor(self._total_co_moment).to(device)
+            _total_count = torch.tensor(self._total_count).to(device)
+            _total_prediction_mean = torch.tensor(self._total_prediction_mean).to(device)
+            _total_label_mean = torch.tensor(self._total_prediction_mean).to(device)
+            dist.all_reduce(_total_co_moment, op=dist.ReduceOp.SUM)
+            dist.all_reduce(_total_count, op=dist.ReduceOp.SUM)
+            dist.all_reduce(_total_prediction_mean, op=dist.ReduceOp.SUM)
+            dist.all_reduce(_total_label_mean, op=dist.ReduceOp.SUM)
+            self._total_co_moment = _total_co_moment.item()
+            self._total_count = _total_count.item()
+            self._total_prediction_mean = _total_prediction_mean.item()
+            self._total_label_mean = _total_label_mean.item()
 
     def get_metric(self, reset: bool = False):
         """
@@ -111,11 +129,9 @@ class Covariance(Metric):
         """
 
         covariance = self._total_co_moment / (self._total_count - 1)
-        if is_distributed():
-            logger.warning("Distributed aggregation for Covariance is currently not supported.")
         if reset:
             self.reset()
-        return {"covariance": covariance}
+        return covariance
 
     @overrides
     def reset(self):

@@ -6,6 +6,7 @@ import numpy as np
 
 from overrides import overrides
 import torch
+import torch.distributed as dist
 
 from allennlp.common.util import is_distributed
 from allennlp.training.metrics.covariance import Covariance
@@ -71,23 +72,29 @@ class PearsonCorrelation(Metric):
 
         The accumulated sample Pearson correlation.
         """
-        covariance = self._predictions_labels_covariance.get_metric(reset=reset)["covariance"]
-        predictions_variance = self._predictions_variance.get_metric(reset=reset)["covariance"]
-        labels_variance = self._labels_variance.get_metric(reset=reset)["covariance"]
-
+        covariance = self._predictions_labels_covariance.get_metric(reset=reset)
+        predictions_variance = self._predictions_variance.get_metric(reset=reset)
+        labels_variance = self._labels_variance.get_metric(reset=reset)
+        denominator = math.sqrt(predictions_variance) * math.sqrt(labels_variance)
         if is_distributed():
-            logger.warning(
-                "Distributed aggregation for PearsonCorrelation is currently not supported."
-            )
+            # Note: this gives an approximate aggregation of the covariance.
 
+            # Aggregating on the CPU since these are single float values.
+            device = torch.device("cpu")
+            _covariance = torch.tensor(covariance).to(device)
+            dist.all_reduce(_covariance, op=dist.ReduceOp.SUM)
+            covariance = _covariance.item()
+            _denominator = torch.tensor(denominator).to(device)
+            dist.all_reduce(_denominator, op=dist.ReduceOp.SUM)
+            denominator = _denominator.item()
         if reset:
             self.reset()
-        denominator = math.sqrt(predictions_variance) * math.sqrt(labels_variance)
+
         if np.around(denominator, decimals=5) == 0:
             pearson_r = 0
         else:
             pearson_r = covariance / denominator
-        return {"pearson_r": pearson_r}
+        return pearson_r
 
     @overrides
     def reset(self):
