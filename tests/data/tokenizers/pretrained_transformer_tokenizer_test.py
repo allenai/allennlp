@@ -20,7 +20,7 @@ class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
             "allen",
             "##nl",
             "##p",
-            "setence",
+            "sentence",
             ".",
             "[SEP]",
             "an",
