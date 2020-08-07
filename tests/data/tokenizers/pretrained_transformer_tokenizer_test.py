@@ -8,7 +8,7 @@ from allennlp.data.tokenizers import PretrainedTransformerTokenizer
 
 class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
     def test_splits_sentence_pairs(self):
-        tokenizer = PretrainedTransformerTokenizer("bert-base-cased")
+        tokenizer = PretrainedTransformerTokenizer("bert-base-uncased")
 
         sentence1 = "A, [MASK] AllenNLP sentence."
         sentence2 = "Another [MASK] AllenNLP sentence. "
