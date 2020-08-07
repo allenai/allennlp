@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Fixed
+
+- Fixed how truncation was handled with `PretrainedTransformerTokenizer`.
+  Previously, if `max_length` was set to `None`, the tokenizer would still do truncation if the
+  transformer model had a default max length in its config.
+  Also, when `max_length` was set to a non-`None` value, several warnings would appear
+  for certain transformer models around the use of the `truncation` parameter.
+
 ## [v1.1.0rc2](https://github.com/allenai/allennlp/releases/tag/v1.1.0rc2) - 2020-07-31
 
 ### Changed
@@ -26,6 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Added the option to specify `requires_grad: false` within an optimizer's parameter groups.
 - Added the `file-friendly-logging` flag back to the `train` command. Also added this flag to the `predict`, `evaluate`, and `find-learning-rate` commands.
+- Added an `EpochCallback` to track current epoch as a model class member. 
 
 ### Removed
 
