@@ -2,11 +2,10 @@
 Functions and exceptions for checking that
 AllenNLP and its models are configured correctly.
 """
-from typing import Union, List
-
 import logging
 import re
 import subprocess
+from typing import List, Union
 
 import torch
 from torch import cuda
@@ -20,7 +19,7 @@ class ConfigurationError(Exception):
     (e.g. missing properties, invalid properties, unknown properties).
     """
 
-    def __init__(self, message):
+    def __init__(self, message: str):
         super().__init__()
         self.message = message
 
