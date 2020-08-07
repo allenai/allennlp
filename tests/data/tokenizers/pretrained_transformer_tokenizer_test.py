@@ -7,6 +7,39 @@ from allennlp.data.tokenizers import PretrainedTransformerTokenizer
 
 
 class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
+    def test_splits_sentence_pairs(self):
+        tokenizer = PretrainedTransformerTokenizer("bert-base-cased")
+
+        sentence1 = "A, [MASK] AllenNLP sentence."
+        sentence2 = "Another [MASK] AllenNLP sentence. "
+        expected_tokens = [
+            "[CLS]",
+            "a",
+            ",",
+            "[MASK]",
+            "allen",
+            "##n",
+            "##lp",
+            "se",
+            "##nt",
+            "##ence",
+            ".",
+            "[SEP]",
+            "an",
+            "##other",
+            "[MASK]",
+            "allen",
+            "##n",
+            "##lp",
+            "se",
+            "##nt",
+            "##ence",
+            ".",
+            "[SEP]",
+        ]
+        tokens = [t.text for t in tokenizer.tokenize(sentence1, sentence2)]
+        assert tokens == expected_tokens
+
     def test_splits_roberta(self):
         tokenizer = PretrainedTransformerTokenizer("roberta-base")
 
