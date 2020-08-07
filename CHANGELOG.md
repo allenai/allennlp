@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Also, when `max_length` was set to a non-`None` value, several warnings would appear
   for certain transformer models around the use of the `truncation` parameter.
 - Fixed evaluation of all metrics when using distributed training.
+- Added a `py.typed` marker. Fixed type annotations in `allennlp.training.util`.
 
 ## [v1.1.0rc2](https://github.com/allenai/allennlp/releases/tag/v1.1.0rc2) - 2020-07-31
 
