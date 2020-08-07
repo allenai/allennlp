@@ -40,6 +40,8 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         When `True` (the default), only the final layer of the pretrained transformer is taken
         for the embeddings. But if set to `False`, a scalar mix of all of the layers
         is used.
+    gradient_checkpointing: `bool`, optional (default = `None`)
+        Enable or disable gradient checkpointing.
     """
 
     def __init__(
@@ -51,7 +53,8 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         train_parameters: bool = True,
         last_layer_only: bool = True,
         override_weights_file: Optional[str] = None,
-        override_weights_strip_prefix: Optional[str] = None
+        override_weights_strip_prefix: Optional[str] = None,
+        gradient_checkpointing: Optional[bool] = None,
     ) -> None:
         super().__init__()
         from allennlp.common import cached_transformers
@@ -59,6 +62,10 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         self.transformer_model = cached_transformers.get(
             model_name, True, override_weights_file, override_weights_strip_prefix
         )
+
+        if gradient_checkpointing is not None:
+            self.transformer_model.config.update({"gradient_checkpointing": gradient_checkpointing})
+
         self.config = self.transformer_model.config
         if sub_module:
             assert hasattr(self.transformer_model, sub_module)
@@ -301,7 +308,7 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
 
         # The number of segment each sequence spans, excluding padding. Mimicking ceiling operation.
         # Shape: (batch_size,)
-        num_effective_segments = (seq_lengths + self._max_length - 1) / self._max_length
+        num_effective_segments = (seq_lengths + self._max_length - 1) // self._max_length
         # The number of indices that end tokens should shift back.
         num_removed_non_end_tokens = (
             num_effective_segments * self._num_added_tokens - self._num_added_end_tokens

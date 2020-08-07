@@ -88,13 +88,11 @@ install :
 	# Due to a weird thing with pip, we may need egg-info before running `pip install -e`.
 	# See https://github.com/pypa/pip/issues/4537.
 	python setup.py install_egg_info
-	# Install allennlp as editable and all dependencies except apex since that requires torch to already be installed.
-	grep -Ev 'NVIDIA/apex\.git' dev-requirements.txt | pip install --upgrade --upgrade-strategy eager -e . -r /dev/stdin
-	# The above command will probably install the typing backport because of pydoc-markdown,
+	# Install allennlp as editable and all dependencies.
+	pip install --upgrade --upgrade-strategy eager -e . -r dev-requirements.txt
+	# The above command might install the typing backport because of pydoc-markdown,
 	# so we have to uninstall it again.
 	pip uninstall -y typing
-	# Now install apex.
-	grep -E 'NVIDIA/apex\.git' dev-requirements.txt | pip install --upgrade -r /dev/stdin
 
 #
 # Documention helpers.
