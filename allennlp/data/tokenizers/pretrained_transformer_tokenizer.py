@@ -236,7 +236,7 @@ class PretrainedTransformerTokenizer(Tokenizer):
             add_special_tokens=False,
             max_length=self._max_length,
             stride=self._stride,
-            truncation_strategy=self._truncation_strategy,
+            truncation=self._truncation_strategy if self._max_length is not None else False,
             return_tensors=None,
             return_offsets_mapping=self.tokenizer.is_fast,
             return_attention_mask=False,
