@@ -1,3 +1,4 @@
+import torch
 from torch import nn, FloatTensor
 
 from allennlp.common.registrable import Registrable
@@ -76,11 +77,24 @@ class ResnetBackbone(GridEmbedder):
             width_per_group=width_per_group,
             depth=depth,
         )
+        self.device = device
+        self.gpu = None
+        # set the gpu device here.
+        if torch.distributed.is_initialized():
+            self.gpu = torch.distributed.get_rank()
 
         pipeline = detectron.get_pipeline_from_flat_parameters(flat_parameters, make_copy=False)
         self.backbone = pipeline.model.backbone
 
     def forward(self, images: FloatTensor) -> FloatTensor:
+        
+        # move images into gpu if needed.
+        if self.device == 'cuda':
+            if self.gpu is not None:
+                images = images.cuda(self.gpu)
+            else:
+                images = images.cuda()
+
         result = self.backbone(images)
         assert len(result) == 1
         return next(iter(result.values()))
