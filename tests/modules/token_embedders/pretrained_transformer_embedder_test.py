@@ -26,10 +26,22 @@ class TestPretrainedTransformerEmbedder(AllenNlpTestCase):
         assert tuple(output.size()) == (1, 4, 768)
 
     @pytest.mark.parametrize(
-        "train_parameters, last_layer_only",
-        [(True, True), (False, True), (True, False), (False, False)],
+        "train_parameters, last_layer_only, gradient_checkpointing",
+        [
+            (True, True, False),
+            (False, True, False),
+            (True, False, False),
+            (False, False, False),
+            (
+                True,
+                False,
+                True,
+            ),  # checkpointing only makes sense when we're actually training the layers
+        ],
     )
-    def test_end_to_end(self, train_parameters: bool, last_layer_only: bool):
+    def test_end_to_end(
+        self, train_parameters: bool, last_layer_only: bool, gradient_checkpointing: bool
+    ):
         tokenizer = PretrainedTransformerTokenizer(model_name="bert-base-uncased")
         token_indexer = PretrainedTransformerIndexer(model_name="bert-base-uncased")
 
@@ -53,6 +65,7 @@ class TestPretrainedTransformerEmbedder(AllenNlpTestCase):
                         "model_name": "bert-base-uncased",
                         "train_parameters": train_parameters,
                         "last_layer_only": last_layer_only,
+                        "gradient_checkpointing": gradient_checkpointing,
                     }
                 }
             }
