@@ -40,7 +40,6 @@ DATASET_CACHE = CACHE_DIRECTORY
 
 # Warn if the user is still using the deprecated cache directory.
 if os.path.exists(DEPRECATED_CACHE_DIRECTORY):
-    logger = logging.getLogger(__name__)
     logger.warning(
         f"Deprecated cache directory found ({DEPRECATED_CACHE_DIRECTORY}).  "
         f"Please remove this directory from your system to free up space."
