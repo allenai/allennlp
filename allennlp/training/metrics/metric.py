@@ -11,6 +11,8 @@ class Metric(Registrable):
     accumulated.
     """
 
+    supports_distributed = False
+
     def __call__(
         self, predictions: torch.Tensor, gold_labels: torch.Tensor, mask: Optional[torch.BoolTensor]
     ):

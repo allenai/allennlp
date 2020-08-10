@@ -8,7 +8,7 @@ from allennlp.common.testing import (
     AllenNlpTestCase,
     multi_device,
     global_distributed_metric,
-    DistributedTestContextManager,
+    run_distributed_test,
 )
 from allennlp.training.metrics import Auc
 
@@ -96,50 +96,50 @@ class AucTest(AllenNlpTestCase):
         auc.get_metric()
 
     def test_distributed_auc(self):
-        with DistributedTestContextManager([-1, -1]) as test_this:
-            predictions = torch.randn(8)
-            labels = torch.randint(3, 5, (8,), dtype=torch.long)
-            # We make sure that the positive label is always present.
-            labels[0] = 4
+        predictions = torch.randn(8)
+        labels = torch.randint(3, 5, (8,), dtype=torch.long)
+        # We make sure that the positive label is always present.
+        labels[0] = 4
 
-            false_positive_rates, true_positive_rates, _ = metrics.roc_curve(
-                labels.cpu().numpy(), predictions.cpu().numpy(), pos_label=4
-            )
+        false_positive_rates, true_positive_rates, _ = metrics.roc_curve(
+            labels.cpu().numpy(), predictions.cpu().numpy(), pos_label=4
+        )
 
-            predictions = [predictions[:4], predictions[4:]]
-            labels = [labels[:4], labels[4:]]
+        predictions = [predictions[:4], predictions[4:]]
+        labels = [labels[:4], labels[4:]]
 
-            metric_kwargs = {"predictions": predictions, "gold_labels": labels}
-            desired_auc = metrics.auc(false_positive_rates, true_positive_rates)
-            test_this(
+        metric_kwargs = {"predictions": predictions, "gold_labels": labels}
+        desired_auc = metrics.auc(false_positive_rates, true_positive_rates)
+        run_distributed_test(
+            [-1, -1],
+            global_distributed_metric,
+            Auc(positive_label=4),
+            metric_kwargs,
+            desired_auc,
+            exact=False,
+        )
+
+    def test_distributed_auc_unequal_batches(self):
+        predictions = torch.randn(8)
+        labels = torch.randint(3, 5, (8,), dtype=torch.long)
+        # We make sure that the positive label is always present.
+        labels[0] = 4
+
+        false_positive_rates, true_positive_rates, _ = metrics.roc_curve(
+            labels.cpu().numpy(), predictions.cpu().numpy(), pos_label=4
+        )
+
+        predictions = [predictions[:2], predictions[2:]]
+        labels = [labels[:2], labels[2:]]
+
+        metric_kwargs = {"predictions": predictions, "gold_labels": labels}
+        desired_auc = metrics.auc(false_positive_rates, true_positive_rates)
+        with pytest.raises(Exception) as _:
+            run_distributed_test(
+                [-1, -1],
                 global_distributed_metric,
                 Auc(positive_label=4),
                 metric_kwargs,
                 desired_auc,
                 exact=False,
             )
-
-    def test_distributed_auc_unequal_batches(self):
-        with DistributedTestContextManager([-1, -1]) as test_this:
-            predictions = torch.randn(8)
-            labels = torch.randint(3, 5, (8,), dtype=torch.long)
-            # We make sure that the positive label is always present.
-            labels[0] = 4
-
-            false_positive_rates, true_positive_rates, _ = metrics.roc_curve(
-                labels.cpu().numpy(), predictions.cpu().numpy(), pos_label=4
-            )
-
-            predictions = [predictions[:2], predictions[2:]]
-            labels = [labels[:2], labels[2:]]
-
-            metric_kwargs = {"predictions": predictions, "gold_labels": labels}
-            desired_auc = metrics.auc(false_positive_rates, true_positive_rates)
-            with pytest.raises(Exception) as _:
-                test_this(
-                    global_distributed_metric,
-                    Auc(positive_label=4),
-                    metric_kwargs,
-                    desired_auc,
-                    exact=False,
-                )

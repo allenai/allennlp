@@ -4,7 +4,7 @@ from allennlp.common.testing import (
     AllenNlpTestCase,
     multi_device,
     global_distributed_metric,
-    DistributedTestContextManager,
+    run_distributed_test,
 )
 from allennlp.training.metrics import MeanAbsoluteError
 
@@ -40,21 +40,21 @@ class MeanAbsoluteErrorTest(AllenNlpTestCase):
         assert mae.get_metric()["mae"] == 32.0 / 12.0
 
     def test_distributed_accuracy(self):
-        with DistributedTestContextManager([-1, -1]) as test_this:
-            predictions = [
-                torch.tensor([[1.0, 1.5, 1.0], [2.0, 3.0, 3.5]]),
-                torch.tensor([[4.0, 5.0, 5.5], [6.0, 7.0, 7.5]]),
-            ]
-            targets = [
-                torch.tensor([[0.0, 1.0, 0.0], [2.0, 2.0, 0.0]]),
-                torch.tensor([[4.0, 5.0, 0.0], [7.0, 7.0, 0.0]]),
-            ]
-            metric_kwargs = {"predictions": predictions, "gold_labels": targets}
-            desired_values = {"mae": 21.0 / 12.0}
-            test_this(
-                global_distributed_metric,
-                MeanAbsoluteError(),
-                metric_kwargs,
-                desired_values,
-                exact=True,
-            )
+        predictions = [
+            torch.tensor([[1.0, 1.5, 1.0], [2.0, 3.0, 3.5]]),
+            torch.tensor([[4.0, 5.0, 5.5], [6.0, 7.0, 7.5]]),
+        ]
+        targets = [
+            torch.tensor([[0.0, 1.0, 0.0], [2.0, 2.0, 0.0]]),
+            torch.tensor([[4.0, 5.0, 0.0], [7.0, 7.0, 0.0]]),
+        ]
+        metric_kwargs = {"predictions": predictions, "gold_labels": targets}
+        desired_values = {"mae": 21.0 / 12.0}
+        run_distributed_test(
+            [-1, -1],
+            global_distributed_metric,
+            MeanAbsoluteError(),
+            metric_kwargs,
+            desired_values,
+            exact=True,
+        )

@@ -1,4 +1,3 @@
-import logging
 from typing import Dict, List, Optional, Set, Callable
 from collections import defaultdict
 
@@ -17,7 +16,6 @@ from allennlp.data.dataset_readers.dataset_utils.span_utils import (
     TypedStringSpan,
 )
 
-logger = logging.getLogger(__name__)
 
 TAGS_TO_SPANS_FUNCTION_TYPE = Callable[[List[str], Optional[List[str]]], List[TypedStringSpan]]
 
@@ -255,7 +253,7 @@ class SpanBasedF1Measure(Metric):
             recall and f1-measure for all spans.
         """
         if is_distributed():
-            logger.warning(
+            raise RuntimeError(
                 "Distributed aggregation for SpanBasedF1Measure is currently not supported."
             )
         all_tags: Set[str] = set()

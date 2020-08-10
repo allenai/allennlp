@@ -5,7 +5,7 @@ from allennlp.common.testing import (
     AllenNlpTestCase,
     multi_device,
     global_distributed_metric,
-    DistributedTestContextManager,
+    run_distributed_test,
 )
 from allennlp.training.metrics import BooleanAccuracy
 
@@ -69,29 +69,29 @@ class BooleanAccuracyTest(AllenNlpTestCase):
         assert accuracy.get_metric() == pytest.approx(0.0)
 
     def test_distributed_accuracy(self):
-        with DistributedTestContextManager([-1, -1]) as test_this:
-            predictions = [torch.tensor([[0, 1], [2, 3]]), torch.tensor([[4, 5], [6, 7]])]
-            targets = [torch.tensor([[0, 1], [2, 2]]), torch.tensor([[4, 5], [7, 7]])]
-            metric_kwargs = {"predictions": predictions, "gold_labels": targets}
-            desired_values = 0.5
-            test_this(
-                global_distributed_metric,
-                BooleanAccuracy(),
-                metric_kwargs,
-                desired_values,
-                exact=True,
-            )
+        predictions = [torch.tensor([[0, 1], [2, 3]]), torch.tensor([[4, 5], [6, 7]])]
+        targets = [torch.tensor([[0, 1], [2, 2]]), torch.tensor([[4, 5], [7, 7]])]
+        metric_kwargs = {"predictions": predictions, "gold_labels": targets}
+        desired_values = 0.5
+        run_distributed_test(
+            [-1, -1],
+            global_distributed_metric,
+            BooleanAccuracy(),
+            metric_kwargs,
+            desired_values,
+            exact=True,
+        )
 
     def test_distributed_accuracy_unequal_batches(self):
-        with DistributedTestContextManager([-1, -1]) as test_this:
-            predictions = [torch.tensor([[0, 1], [2, 3], [4, 5]]), torch.tensor([[6, 7]])]
-            targets = [torch.tensor([[0, 1], [2, 2], [4, 5]]), torch.tensor([[7, 7]])]
-            metric_kwargs = {"predictions": predictions, "gold_labels": targets}
-            desired_values = 0.5
-            test_this(
-                global_distributed_metric,
-                BooleanAccuracy(),
-                metric_kwargs,
-                desired_values,
-                exact=True,
-            )
+        predictions = [torch.tensor([[0, 1], [2, 3], [4, 5]]), torch.tensor([[6, 7]])]
+        targets = [torch.tensor([[0, 1], [2, 2], [4, 5]]), torch.tensor([[7, 7]])]
+        metric_kwargs = {"predictions": predictions, "gold_labels": targets}
+        desired_values = 0.5
+        run_distributed_test(
+            [-1, -1],
+            global_distributed_metric,
+            BooleanAccuracy(),
+            metric_kwargs,
+            desired_values,
+            exact=True,
+        )

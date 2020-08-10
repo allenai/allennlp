@@ -6,7 +6,7 @@ from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import (
     AllenNlpTestCase,
     multi_device,
-    DistributedTestContextManager,
+    run_distributed_test,
     global_distributed_metric,
 )
 from allennlp.training.metrics import F1Measure
@@ -188,34 +188,26 @@ class F1MeasureTest(AllenNlpTestCase):
         assert_allclose(f1, 0.66666666666)
 
     def test_distributed_fbeta_measure(self):
-        with DistributedTestContextManager([-1, -1]) as test_this:
-            predictions = [
-                torch.tensor(
-                    [
-                        [0.35, 0.25, 0.1, 0.1, 0.2],
-                        [0.1, 0.6, 0.1, 0.2, 0.0],
-                        [0.1, 0.6, 0.1, 0.2, 0.0],
-                    ]
-                ),
-                torch.tensor(
-                    [
-                        [0.1, 0.5, 0.1, 0.2, 0.0],
-                        [0.1, 0.2, 0.1, 0.7, 0.0],
-                        [0.1, 0.6, 0.1, 0.2, 0.0],
-                    ]
-                ),
-            ]
-            targets = [torch.tensor([0, 4, 1]), torch.tensor([0, 3, 0])]
-            metric_kwargs = {"predictions": predictions, "gold_labels": targets}
-            desired_metrics = {
-                "precision": 1.0,
-                "recall": 0.333333333,
-                "f1": 0.499999999,
-            }
-            test_this(
-                global_distributed_metric,
-                F1Measure(positive_label=0),
-                metric_kwargs,
-                desired_metrics,
-                exact=False,
-            )
+        predictions = [
+            torch.tensor(
+                [[0.35, 0.25, 0.1, 0.1, 0.2], [0.1, 0.6, 0.1, 0.2, 0.0], [0.1, 0.6, 0.1, 0.2, 0.0]]
+            ),
+            torch.tensor(
+                [[0.1, 0.5, 0.1, 0.2, 0.0], [0.1, 0.2, 0.1, 0.7, 0.0], [0.1, 0.6, 0.1, 0.2, 0.0]]
+            ),
+        ]
+        targets = [torch.tensor([0, 4, 1]), torch.tensor([0, 3, 0])]
+        metric_kwargs = {"predictions": predictions, "gold_labels": targets}
+        desired_metrics = {
+            "precision": 1.0,
+            "recall": 0.333333333,
+            "f1": 0.499999999,
+        }
+        run_distributed_test(
+            [-1, -1],
+            global_distributed_metric,
+            F1Measure(positive_label=0),
+            metric_kwargs,
+            desired_metrics,
+            exact=False,
+        )

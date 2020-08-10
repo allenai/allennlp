@@ -151,8 +151,8 @@ class BLEU(Metric):
             _reference_lengths = torch.tensor(self._reference_lengths).to(device)
             dist.all_reduce(_prediction_lengths, op=dist.ReduceOp.SUM)
             dist.all_reduce(_reference_lengths, op=dist.ReduceOp.SUM)
-            self._prediction_lengths = _prediction_lengths.item() / world_size
-            self._reference_lengths = _reference_lengths.item() / world_size
+            self._prediction_lengths = _prediction_lengths.item()
+            self._reference_lengths = _reference_lengths.item()
 
     @overrides
     def get_metric(self, reset: bool = False) -> Dict[str, float]:

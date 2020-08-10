@@ -1,5 +1,4 @@
 from typing import Optional
-import logging
 
 from overrides import overrides
 import torch
@@ -9,8 +8,6 @@ from sklearn import metrics
 from allennlp.common.util import is_distributed
 from allennlp.common.checks import ConfigurationError
 from allennlp.training.metrics.metric import Metric
-
-logger = logging.getLogger(__name__)
 
 
 @Metric.register("auc")
@@ -105,7 +102,7 @@ class Auc(Metric):
                 self._all_predictions = torch.cat(_all_predictions, dim=0)
                 self._all_gold_labels = torch.cat(_all_gold_labels, dim=0)
             except Exception:
-                logger.warning(
+                raise RuntimeError(
                     "Distributed aggregation for AUC is currently not supported for batches of unequal length."
                 )
 

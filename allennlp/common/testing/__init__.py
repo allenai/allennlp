@@ -1,14 +1,14 @@
 """
 Utilities and helpers for writing tests.
 """
-from typing import Dict, Any, Optional, Union, Tuple
+from typing import Dict, Any, Optional, Union, Tuple, List
 import torch
 from torch.testing import assert_allclose
 import pytest
 
 from allennlp.common.testing.test_case import AllenNlpTestCase
 from allennlp.common.testing.model_test_case import ModelTestCase
-from allennlp.common.testing.distributed_test_context_manager import DistributedTestContextManager
+from allennlp.common.testing.distributed_test import run_distributed_test
 
 from allennlp.training.metrics import Metric
 
@@ -62,11 +62,6 @@ def assert_metrics_values(
     atol: float = 1e-05,
 ):
     for key in metrics:
-        # if exact:
-        #    assert metrics[key] == desired_values[key], "{} != {}".format(
-        #        metrics[key], desired_values[key]
-        #    )
-        # else:
         assert_allclose(metrics[key], desired_values[key], rtol=rtol, atol=atol)
 
 
@@ -75,7 +70,7 @@ def global_distributed_metric(
     world_size: int,
     gpu_id: Union[int, torch.device],
     metric: Metric,
-    metric_kwargs: Dict[str, Any],
+    metric_kwargs: Dict[str, List[Any]],
     desired_values: Dict[str, Any],
     exact: Union[bool, Tuple[float, float]] = True,
 ):
@@ -87,7 +82,6 @@ def global_distributed_metric(
 
     metric(**kwargs)
 
-    # gpu_id = gpu_id if gpu_id >= 0 else torch.device("cpu")
     metrics = metric.get_metric(False)
     if not isinstance(metrics, Dict) and not isinstance(desired_values, Dict):
         metrics = {"metric_value": metrics}

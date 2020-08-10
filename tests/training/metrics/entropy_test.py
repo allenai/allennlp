@@ -5,7 +5,7 @@ from allennlp.common.testing import (
     AllenNlpTestCase,
     multi_device,
     global_distributed_metric,
-    DistributedTestContextManager,
+    run_distributed_test,
 )
 from allennlp.training.metrics import Entropy
 
@@ -49,11 +49,15 @@ class EntropyTest(AllenNlpTestCase):
         assert metric.get_metric()["entropy"] == 0.0
 
     def test_distributed_entropy(self):
-        with DistributedTestContextManager([-1, -1]) as test_this:
-            logits = torch.tensor([[1, 1, 1, 1], [1, 1, 1, 1]], dtype=torch.float)
-            logits = [logits[0], logits[1]]
-            metric_kwargs = {"logits": logits}
-            desired_values = {"entropy": 1.38629436}
-            test_this(
-                global_distributed_metric, Entropy(), metric_kwargs, desired_values, exact=False,
-            )
+        logits = torch.tensor([[1, 1, 1, 1], [1, 1, 1, 1]], dtype=torch.float)
+        logits = [logits[0], logits[1]]
+        metric_kwargs = {"logits": logits}
+        desired_values = {"entropy": 1.38629436}
+        run_distributed_test(
+            [-1, -1],
+            global_distributed_metric,
+            Entropy(),
+            metric_kwargs,
+            desired_values,
+            exact=False,
+        )

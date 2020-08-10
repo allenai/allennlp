@@ -6,7 +6,7 @@ from torch.testing import assert_allclose
 from allennlp.common.testing import (
     AllenNlpTestCase,
     multi_device,
-    DistributedTestContextManager,
+    run_distributed_test,
 )
 from allennlp.training.metrics import ROUGE
 
@@ -76,32 +76,35 @@ class RougeTest(AllenNlpTestCase):
             assert score == 0.0
 
     def test_distributed_rouge(self):
-        with DistributedTestContextManager([-1, -1]) as test_this:
 
-            predictions = [torch.tensor([[1, 0, 1, 2], [1, 0, 3, 0]]), torch.tensor([[1, 2, 3, 0]])]
-            targets = [torch.tensor([[2, 0, 1, 2], [1, 2, 1, 0]]), torch.tensor([[1, 0, 2, 3]])]
+        predictions = [torch.tensor([[1, 0, 1, 2], [1, 0, 3, 0]]), torch.tensor([[1, 2, 3, 0]])]
+        targets = [torch.tensor([[2, 0, 1, 2], [1, 2, 1, 0]]), torch.tensor([[1, 0, 2, 3]])]
 
-            metric_kwargs = {"predictions": predictions, "gold_targets": targets}
-            desired_values = {}
-            desired_values["unigram_recall"] = 2 / 3 + 1 / 3 + 3 / 3
-            desired_values["unigram_precision"] = 2 / 3 + 1 / 2 + 3 / 3
-            desired_values["unigram_f1"] = (
-                self.f1(2 / 3, 2 / 3) + self.f1(1 / 2, 1 / 3) + self.f1(3 / 3, 3 / 3)
-            )
+        metric_kwargs = {"predictions": predictions, "gold_targets": targets}
+        desired_values = {}
+        desired_values["unigram_recall"] = 2 / 3 + 1 / 3 + 3 / 3
+        desired_values["unigram_precision"] = 2 / 3 + 1 / 2 + 3 / 3
+        desired_values["unigram_f1"] = (
+            self.f1(2 / 3, 2 / 3) + self.f1(1 / 2, 1 / 3) + self.f1(3 / 3, 3 / 3)
+        )
 
-            desired_values["bigram_recall"] = 1 / 1 + 0 / 2 + 1 / 1
-            desired_values["bigram_precision"] = 1 / 1 + 0 + 1 / 2
-            desired_values["bigram_f1"] = (
-                self.f1(1 / 1, 1 / 1) + self.f1(0, 0 / 2) + self.f1(1 / 2, 1 / 1)
-            )
+        desired_values["bigram_recall"] = 1 / 1 + 0 / 2 + 1 / 1
+        desired_values["bigram_precision"] = 1 / 1 + 0 + 1 / 2
+        desired_values["bigram_f1"] = (
+            self.f1(1 / 1, 1 / 1) + self.f1(0, 0 / 2) + self.f1(1 / 2, 1 / 1)
+        )
 
-            desired_values["total_rouge_l_f1"] = (
-                self.f1(2 / 3, 2 / 3) + self.f1(1 / 3, 1 / 2) + self.f1(3 / 3, 3 / 3)
-            )
+        desired_values["total_rouge_l_f1"] = (
+            self.f1(2 / 3, 2 / 3) + self.f1(1 / 3, 1 / 2) + self.f1(3 / 3, 3 / 3)
+        )
 
-            test_this(
-                global_distributed_rouge, ROUGE(exclude_indices={0}), metric_kwargs, desired_values,
-            )
+        run_distributed_test(
+            [-1, -1],
+            global_distributed_rouge,
+            ROUGE(exclude_indices={0}),
+            metric_kwargs,
+            desired_values,
+        )
 
 
 def global_distributed_rouge(

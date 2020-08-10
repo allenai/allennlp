@@ -44,6 +44,7 @@ class PearsonCorrelation(Metric):
         self._predictions_labels_covariance = Covariance()
         self._predictions_variance = Covariance()
         self._labels_variance = Covariance()
+        self._device = torch.device("cpu")
 
     def __call__(
         self,
@@ -62,6 +63,7 @@ class PearsonCorrelation(Metric):
             A tensor of the same shape as `predictions`.
         """
         predictions, gold_labels, mask = self.detach_tensors(predictions, gold_labels, mask)
+        self._device = gold_labels.device
         self._predictions_labels_covariance(predictions, gold_labels, mask)
         self._predictions_variance(predictions, predictions, mask)
         self._labels_variance(gold_labels, gold_labels, mask)
@@ -79,8 +81,7 @@ class PearsonCorrelation(Metric):
         if is_distributed():
             # Note: this gives an approximate aggregation of the covariance.
 
-            # Aggregating on the CPU since these are single float values.
-            device = torch.device("cpu")
+            device = self._device
             _covariance = torch.tensor(covariance).to(device)
             dist.all_reduce(_covariance, op=dist.ReduceOp.SUM)
             covariance = _covariance.item()

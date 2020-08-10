@@ -5,7 +5,7 @@ from allennlp.common.testing import (
     AllenNlpTestCase,
     multi_device,
     global_distributed_metric,
-    DistributedTestContextManager,
+    run_distributed_test,
 )
 from allennlp.training.metrics import UnigramRecall
 
@@ -66,29 +66,29 @@ class UnigramRecallTest(AllenNlpTestCase):
         assert_allclose(actual_recall, 0)
 
     def test_distributed_accuracy(self):
-        with DistributedTestContextManager([-1, -1]) as test_this:
-            gold = torch.tensor([[2, 4, 8], [1, 2, 3], [7, 1, 1], [11, 14, 17]])
-            predictions = torch.tensor(
-                [
-                    [[2, 4, 8], [2, 5, 9]],  # 3/3
-                    [[-1, 2, 4], [3, 8, -1]],  # 2/2
-                    [[-1, -1, -1], [7, 2, -1]],  # 1/2
-                    [[12, 13, 17], [11, 13, 18]],  # 2/2
-                ]
-            )
-            mask = torch.tensor(
-                [[True, True, True], [False, True, True], [True, True, False], [True, False, True]]
-            )
-            gold = [gold[:2], gold[2:]]
-            predictions = [predictions[:2], predictions[2:]]
-            mask = [mask[:2], mask[2:]]
+        gold = torch.tensor([[2, 4, 8], [1, 2, 3], [7, 1, 1], [11, 14, 17]])
+        predictions = torch.tensor(
+            [
+                [[2, 4, 8], [2, 5, 9]],  # 3/3
+                [[-1, 2, 4], [3, 8, -1]],  # 2/2
+                [[-1, -1, -1], [7, 2, -1]],  # 1/2
+                [[12, 13, 17], [11, 13, 18]],  # 2/2
+            ]
+        )
+        mask = torch.tensor(
+            [[True, True, True], [False, True, True], [True, True, False], [True, False, True]]
+        )
+        gold = [gold[:2], gold[2:]]
+        predictions = [predictions[:2], predictions[2:]]
+        mask = [mask[:2], mask[2:]]
 
-            metric_kwargs = {"predictions": predictions, "gold_labels": gold, "mask": mask}
-            desired_values = {"unigram_recall": 7 / 8}
-            test_this(
-                global_distributed_metric,
-                UnigramRecall(),
-                metric_kwargs,
-                desired_values,
-                exact=False,
-            )
+        metric_kwargs = {"predictions": predictions, "gold_labels": gold, "mask": mask}
+        desired_values = {"unigram_recall": 7 / 8}
+        run_distributed_test(
+            [-1, -1],
+            global_distributed_metric,
+            UnigramRecall(),
+            metric_kwargs,
+            desired_values,
+            exact=False,
+        )

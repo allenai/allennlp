@@ -1,4 +1,3 @@
-import logging
 from typing import Optional
 
 from overrides import overrides
@@ -8,8 +7,6 @@ import scipy.stats as stats
 
 from allennlp.common.util import is_distributed
 from allennlp.training.metrics.metric import Metric
-
-logger = logging.getLogger(__name__)
 
 
 @Metric.register("spearman_correlation")
@@ -81,7 +78,7 @@ class SpearmanCorrelation(Metric):
                 self.total_predictions = torch.cat(_total_predictions, dim=0)
                 self.total_gold_labels = torch.cat(_total_gold_labels, dim=0)
             except Exception:
-                logger.warning(
+                raise RuntimeError(
                     "Distributed aggregation for SpearmanCorrelation is currently not supported "
                     "for batches of unequal length."
                 )

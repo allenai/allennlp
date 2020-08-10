@@ -18,6 +18,8 @@ class CategoricalAccuracy(Metric):
     classes with same maximum predicted scores.
     """
 
+    supports_distributed = True
+
     def __init__(self, top_k: int = 1, tie_break: bool = False) -> None:
         if top_k > 1 and tie_break:
             raise ConfigurationError(
@@ -71,7 +73,8 @@ class CategoricalAccuracy(Metric):
             if self._top_k == 1:
                 top_k = predictions.max(-1)[1].unsqueeze(-1)
             else:
-                top_k = predictions.topk(min(self._top_k, predictions.shape[-1]), -1)[1]
+                _, sorted_indices = predictions.sort(dim=-1, descending=True)
+                top_k = sorted_indices[..., : min(self._top_k, predictions.shape[-1])]
 
             # This is of shape (batch_size, ..., top_k).
             correct = top_k.eq(gold_labels.unsqueeze(-1)).float()
@@ -118,7 +121,6 @@ class CategoricalAccuracy(Metric):
         if reset:
             self.reset()
 
-        # return {"accuracy": accuracy}
         return accuracy
 
     @overrides
