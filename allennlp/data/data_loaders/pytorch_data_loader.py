@@ -219,6 +219,16 @@ class PyTorchDataLoader(data.DataLoader, DataLoader):
         multiprocessing_context: str = None,
         batches_per_epoch: int = None,
     ) -> "PyTorchDataLoader":
+        """
+        This is the default method used to construct a `PyTorchDataLoader` from a configuration
+        file.
+
+        In a typical training config file, the `reader` and `data_path` don't need to
+        be specified under the "data_loader" portion. Instead, the reader is constructed
+        separately from the top-level "dataset_reader" or "validation_dataset_reader",
+        while the `data_path` will be taken from the top-level "train_data_path",
+        "validation_data_path", or "test_data_path".
+        """
         dataset: data.Dataset
 
         if lazy:
