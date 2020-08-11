@@ -81,6 +81,7 @@ class Token:
         text_id: int = None,
         type_id: int = None,
     ) -> None:
+        assert isinstance(text, str)  # Some very hard to debug errors happen when this is not true.
         self.text = text
         self.idx = idx
         self.idx_end = idx_end

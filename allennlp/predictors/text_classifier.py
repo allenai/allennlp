@@ -30,9 +30,11 @@ class TextClassifierPredictor(Predictor):
         Runs the underlying model, and adds the `"label"` to the output.
         """
         sentence = json_dict["sentence"]
-        if not hasattr(self._dataset_reader, "tokenizer") and not hasattr(
-            self._dataset_reader, "_tokenizer"
-        ):
+        reader_has_tokenizer = (
+            getattr(self._dataset_reader, "tokenizer", None) is not None
+            or getattr(self._dataset_reader, "_tokenizer", None) is not None
+        )
+        if not reader_has_tokenizer:
             tokenizer = SpacyTokenizer()
             sentence = tokenizer.tokenize(sentence)
         return self._dataset_reader.text_to_instance(sentence)
