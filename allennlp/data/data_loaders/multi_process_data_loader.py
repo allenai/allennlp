@@ -24,9 +24,11 @@ logger = logging.getLogger(__name__)
 @DataLoader.register("multi_process")
 class MultiProcessDataLoader(DataLoader):
     """
-    The `MultiProcessDataLoader` is a data loader that's optimized for AllenNLP experiments.
-    Unlike the `PyTorchDataLoader`, it can efficiently utilize multiple workers and always
-    allows you to use a `BatchSampler`.
+    The `MultiProcessDataLoader` is a [`DataLoader`](../data_loader/#dataloader)
+    that's optimized for AllenNLP experiments.
+    Unlike the [`PyTorchDataLoader`](../pytorch_data_loader/#pytorchdataloader),
+    it can efficiently utilize multiple workers and always allows you to use a
+    [`BatchSampler`](../../samplers/batch_sampler/#batchsampler).
 
     See
     [Using your reader with multi-process or distributed data loading](/api/data/dataset_readers/dataset_reader/#datasetreader.using_your_reader_with_multi-process_or_distributed_data_loading)

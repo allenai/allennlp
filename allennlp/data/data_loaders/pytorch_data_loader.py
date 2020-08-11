@@ -12,6 +12,11 @@ from allennlp.data.data_loaders.data_loader import DataLoader, allennlp_collate
 
 
 class AllennlpDataset(data.Dataset):
+    """
+    An AllenNLP-specific implementation of a PyTorch
+    [`Dataset`](https://pytorch.org/docs/stable/data.html#torch.utils.data.Dataset).
+    """
+
     def __init__(self, instances: List[Instance], vocab: Vocabulary = None):
         self.instances = instances
         self.vocab = vocab
@@ -41,6 +46,9 @@ class AllennlpDataset(data.Dataset):
 
 class AllennlpLazyDataset(data.IterableDataset):
     """
+    An AllenNLP-specific implementation of a PyTorch
+    [`IterableDataset`](https://pytorch.org/docs/stable/data.html#torch.utils.data.IterableDataset).
+
     # Parameters
 
     instance_generator : `Callable[[str], Iterable[Instance]]`
@@ -70,6 +78,12 @@ class AllennlpLazyDataset(data.IterableDataset):
 
 
 def allennlp_worker_init_fn(worker_id):
+    """
+    The default worker init function used by [`PyTorchDataLoader`](#pytorchdataloader).
+
+    This is needed when using `num_workers > 0` so that each worker process knows which
+    instances it's responsible for.
+    """
     worker_info = data.get_worker_info()
     dataset = worker_info.dataset
     if isinstance(dataset, AllennlpLazyDataset):
@@ -81,15 +95,19 @@ def allennlp_worker_init_fn(worker_id):
 @DataLoader.register("pytorch", constructor="from_partial_objects")
 class PyTorchDataLoader(data.DataLoader, DataLoader):
     """
-    A registrable version of the pytorch
+    A registrable version of the PyTorch
     [DataLoader](https://pytorch.org/docs/stable/data.html#torch.utils.data.DataLoader).
-    You can use this class directly in python code, but it is identical to using
-    pytorch data_loader with allennlp's custom collate and worker init functions:
+    You can use this class directly in Python code, but it is identical to using
+    PyTorch `DataLoader` with allennlp's custom [collate](../data_loader/#allennlp_collate)
+    and [worker init](#allennlp_worker_init_fn) functions:
 
     ```
-    from torch.utils.data import DataLoader
+    from allennlp.data.data_loaders import (
+        DataLoader,
+        allennlp_collate,
+        allennlp_worker_init_fn,
+    )
 
-    from allennlp.data.data_loaders import allennlp_collate, allennlp_worker_init_fn
     # Construct a data_loader directly for a dataset which contains allennlp
     # Instances which have _already_ been indexed.
     my_loader = PyTorchDataLoader(
