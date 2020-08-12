@@ -29,6 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed testing models that only return a loss when they are in training mode.
 - Fixed a bug in `FromParams` that caused silent failure in case of the parameter type being `Optional[Union[...]]`.
 - Fixed a bug where the program crashes if `evaluation_data_loader` is a `AllennlpLazyDataset`.
+- Fixed evaluation of all metrics when using distributed training.
 
 ### Added
 

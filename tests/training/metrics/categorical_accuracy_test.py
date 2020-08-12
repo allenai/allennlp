@@ -3,7 +3,12 @@ import torch
 from torch.testing import assert_allclose
 
 from allennlp.common.checks import ConfigurationError
-from allennlp.common.testing import AllenNlpTestCase, multi_device
+from allennlp.common.testing import (
+    AllenNlpTestCase,
+    multi_device,
+    global_distributed_metric,
+    run_distributed_test,
+)
 from allennlp.training.metrics import CategoricalAccuracy
 
 
@@ -143,3 +148,38 @@ class CategoricalAccuracyTest(AllenNlpTestCase):
     def test_does_not_divide_by_zero_with_no_count(self, device: str):
         accuracy = CategoricalAccuracy()
         assert accuracy.get_metric() == pytest.approx(0.0)
+
+    def test_distributed_accuracy(self):
+        predictions = [
+            torch.tensor([[0.35, 0.25, 0.1, 0.1, 0.2]]),
+            torch.tensor([[0.1, 0.6, 0.1, 0.2, 0.0]]),
+        ]
+        targets = [torch.tensor([0]), torch.tensor([3])]
+        metric_kwargs = {"predictions": predictions, "gold_labels": targets}
+        desired_accuracy = 0.5
+        run_distributed_test(
+            [-1, -1],
+            global_distributed_metric,
+            CategoricalAccuracy(),
+            metric_kwargs,
+            desired_accuracy,
+            exact=False,
+        )
+
+    def test_distributed_accuracy_unequal_batches(self):
+        predictions = [
+            torch.tensor([[0.35, 0.25, 0.1, 0.1, 0.2], [0.1, 0.6, 0.1, 0.2, 0.0]]),
+            torch.tensor([[0.1, 0.2, 0.5, 0.2, 0.0]]),
+        ]
+        targets = [torch.tensor([0, 3]), torch.tensor([0])]
+        mask = [torch.tensor([False, True]), torch.tensor([True])]
+        metric_kwargs = {"predictions": predictions, "gold_labels": targets, "mask": mask}
+        desired_accuracy = 0.5
+        run_distributed_test(
+            [-1, -1],
+            global_distributed_metric,
+            CategoricalAccuracy(top_k=2),
+            metric_kwargs,
+            desired_accuracy,
+            exact=False,
+        )

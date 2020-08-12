@@ -1,6 +1,11 @@
 import torch
 
-from allennlp.common.testing import AllenNlpTestCase, multi_device
+from allennlp.common.testing import (
+    AllenNlpTestCase,
+    multi_device,
+    run_distributed_test,
+    global_distributed_metric,
+)
 from allennlp.training.metrics import AttachmentScores
 
 
@@ -103,3 +108,43 @@ class AttachmentScoresTest(AllenNlpTestCase):
 
         for value in scorer.get_metric().values():
             assert value == 1.0
+
+    def test_distributed_attachment_scores(self):
+        predictions = [torch.Tensor([[0, 1, 3, 5, 2, 4]]), torch.Tensor([[0, 3, 2, 1, 0, 0]])]
+
+        gold_indices = [torch.Tensor([[0, 1, 3, 5, 2, 4]]), torch.Tensor([[0, 3, 2, 1, 0, 0]])]
+
+        label_predictions = [
+            torch.Tensor([[0, 5, 2, 3, 3, 3]]),
+            torch.Tensor([[7, 4, 8, 2, 0, 0]]),
+        ]
+
+        gold_labels = [torch.Tensor([[0, 5, 2, 1, 4, 2]]), torch.Tensor([[0, 4, 8, 2, 0, 0]])]
+
+        mask = [
+            torch.tensor([[True, True, True, True, True, True]]),
+            torch.tensor([[True, True, True, True, False, False]]),
+        ]
+
+        metric_kwargs = {
+            "predicted_indices": predictions,
+            "gold_indices": gold_indices,
+            "predicted_labels": label_predictions,
+            "gold_labels": gold_labels,
+            "mask": mask,
+        }
+
+        desired_metrics = {
+            "UAS": 1.0,
+            "LAS": 0.6,
+            "UEM": 1.0,
+            "LEM": 0.0,
+        }
+        run_distributed_test(
+            [-1, -1],
+            global_distributed_metric,
+            AttachmentScores(),
+            metric_kwargs,
+            desired_metrics,
+            exact=True,
+        )
