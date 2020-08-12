@@ -31,6 +31,8 @@ class PretrainedTransformerMismatchedEmbedder(TokenEmbedder):
         When `True` (the default), only the final layer of the pretrained transformer is taken
         for the embeddings. But if set to `False`, a scalar mix of all of the layers
         is used.
+    gradient_checkpointing: `bool`, optional (default = `None`)
+        Enable or disable gradient checkpointing.
     """
 
     def __init__(
@@ -39,6 +41,7 @@ class PretrainedTransformerMismatchedEmbedder(TokenEmbedder):
         max_length: int = None,
         train_parameters: bool = True,
         last_layer_only: bool = True,
+        gradient_checkpointing: Optional[bool] = None,
     ) -> None:
         super().__init__()
         # The matched version v.s. mismatched
@@ -47,6 +50,7 @@ class PretrainedTransformerMismatchedEmbedder(TokenEmbedder):
             max_length=max_length,
             train_parameters=train_parameters,
             last_layer_only=last_layer_only,
+            gradient_checkpointing=gradient_checkpointing,
         )
 
     @overrides
