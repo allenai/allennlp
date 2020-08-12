@@ -67,7 +67,12 @@ class AllennlpLazyDataset(data.IterableDataset):
         self.vocab = vocab
 
     def __iter__(self) -> Iterator[Instance]:
-        for instance in Tqdm.tqdm(self.reader.read(self.file_path), desc="reading instances"):
+        instance_iterator: Iterator[Instance] = self.reader.read(self.file_path)
+        worker_info = data.get_worker_info()
+        if worker_info is None or worker_info.id == 0:
+            # Wrap with Tqdm progress bar if this is the main or only worker.
+            instance_iterator = Tqdm.tqdm(instance_iterator, desc="reading instances")
+        for instance in instance_iterator:
             self.reader.apply_token_indexers(instance)
             if self.vocab is not None:
                 instance.index_fields(self.vocab)
