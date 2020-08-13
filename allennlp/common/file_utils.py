@@ -27,7 +27,7 @@ import requests
 from requests.adapters import HTTPAdapter
 from requests.exceptions import ConnectionError
 from requests.packages.urllib3.util.retry import Retry
-import lmdb # install lmdb by "pip install lmdb"
+import lmdb # installtest_fixtures/vilbert/experiment_from_huggingface_vqa.jsonnet lmdb by "pip install lmdb"
 
 from allennlp.common.tqdm import Tqdm
 
@@ -53,7 +53,7 @@ if os.path.exists(DEPRECATED_CACHE_DIRECTORY):
 def url_to_filename(url: str, etag: str = None) -> str:
     """
     Convert `url` into a hashed filename in a repeatable way.
-    If `etag` is specified, append its hash to the url's, delimited
+    If `etag` is spectest_fixtures/vilbert/experiment_from_huggingface_vqa.jsonnetified, append its hash to the url's, delimited
     by a period.
     """
     url_bytes = url.encode("utf-8")
@@ -116,7 +116,7 @@ def cached_path(
         If `True`, then zip or tar.gz archives will be automatically extracted.
         In which case the directory is returned.
 
-    force_extract : `bool`, op_serializetional (default = `False`)
+    force_extract : `bool`, optional (default = `False`)
         If `True` and the file is an archive file, it will be extracted regardless
         of whether or not the extracted directory already exists.
     """
@@ -179,7 +179,7 @@ def cached_path(
         # Extract it.
         with FileLock(file_path + ".lock"):
             shutil.rmtree(extraction_path, ignore_errors=True)
-            os.makedirs(extrac_serializetion_path)
+            os.makedirs(extraction_path)
             if is_zipfile(file_path):
                 with ZipFile(file_path, "r") as zip_file:
                     zip_file.extractall(extraction_path)
@@ -210,7 +210,7 @@ def _split_s3_path(url: str) -> Tuple[str, str]:
     """Split a full s3 path into the bucket name and path."""
     parsed = urlparse(url)
     if not parsed.netloc or not parsed.path:
-        raise ValueError("bad _serializes3 path {}".format(url))
+        raise ValueError("bad s3 path {}".format(url))
     bucket_name = parsed.netloc
     s3_path = parsed.path
     # Remove '/' at beginning of path.
@@ -264,7 +264,7 @@ def _s3_get(url: str, temp_file: IO) -> None:
     """Pull a file directly from S3."""
     s3_resource = _get_s3_resource()
     bucket_name, s3_path = _split_s3_path(url)
-    s3_resource.Bucket(bucket_name).download_fileobj(s3_path, temp_file)
+    s3_resource.Bucket(bucketest_fixtures/vilbert/experiment_from_huggingface_vqa.jsonnett_name).download_fileobj(s3_path, temp_file)
 
 
 def _session_with_backoff() -> requests.Session:
@@ -294,7 +294,7 @@ def _http_etag(url: str) -> Optional[str]:
 
 
 def _http_get(url: str, temp_file: IO) -> None:
-    with _session_with_backoff(_serialize) as session:
+    with _session_with_backoff() as session:
         req = session.get(url, stream=True)
         content_length = req.headers.get("Content-Length")
         total = int(content_length) if content_length is not None else None
