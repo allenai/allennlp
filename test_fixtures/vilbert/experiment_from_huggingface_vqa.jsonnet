@@ -3,16 +3,15 @@ local model_name = "bert-base-uncased";
   "dataset_reader": {
     "type": "vqav2",
     "lazy": true,
-    "image_dir": "/net/nfs2.corp/prior/datasets/coco/",
+    "image_dir": "/home/jiasenl/data/coco/",
+    "lmdb_cache_dir": "/home/jiasenl/data/coco.lmdb",
     "data_dir": "test_fixtures/data/vqav2",
     "image_loader": "detectron",
     "image_featurizer": {
       "type": "resnet_backbone",
-      "device": "cuda"
     },
     "region_detector": {
       "type": "faster_rcnn",
-      "device": "cuda"
     },
     "tokenizer": {
       "type": "pretrained_transformer",
@@ -57,8 +56,5 @@ local model_name = "bert-base-uncased";
     },
     "validation_metric": "+denotation_acc",
     "num_epochs": 1,
-  },  
-  "distributed": {
-    "cuda_devices":[0,1,2]
   }
 }

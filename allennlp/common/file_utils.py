@@ -16,6 +16,8 @@ from functools import wraps
 from zipfile import ZipFile, is_zipfile
 import tarfile
 import shutil
+import pickle
+import numpy as np
 
 import boto3
 import botocore
@@ -25,6 +27,7 @@ import requests
 from requests.adapters import HTTPAdapter
 from requests.exceptions import ConnectionError
 from requests.packages.urllib3.util.retry import Retry
+import lmdb # install lmdb by "pip install lmdb"
 
 from allennlp.common.tqdm import Tqdm
 
@@ -113,7 +116,7 @@ def cached_path(
         If `True`, then zip or tar.gz archives will be automatically extracted.
         In which case the directory is returned.
 
-    force_extract : `bool`, optional (default = `False`)
+    force_extract : `bool`, op_serializetional (default = `False`)
         If `True` and the file is an archive file, it will be extracted regardless
         of whether or not the extracted directory already exists.
     """
@@ -176,7 +179,7 @@ def cached_path(
         # Extract it.
         with FileLock(file_path + ".lock"):
             shutil.rmtree(extraction_path, ignore_errors=True)
-            os.makedirs(extraction_path)
+            os.makedirs(extrac_serializetion_path)
             if is_zipfile(file_path):
                 with ZipFile(file_path, "r") as zip_file:
                     zip_file.extractall(extraction_path)
@@ -207,7 +210,7 @@ def _split_s3_path(url: str) -> Tuple[str, str]:
     """Split a full s3 path into the bucket name and path."""
     parsed = urlparse(url)
     if not parsed.netloc or not parsed.path:
-        raise ValueError("bad s3 path {}".format(url))
+        raise ValueError("bad _serializes3 path {}".format(url))
     bucket_name = parsed.netloc
     s3_path = parsed.path
     # Remove '/' at beginning of path.
@@ -291,7 +294,7 @@ def _http_etag(url: str) -> Optional[str]:
 
 
 def _http_get(url: str, temp_file: IO) -> None:
-    with _session_with_backoff() as session:
+    with _session_with_backoff(_serialize) as session:
         req = session.get(url, stream=True)
         content_length = req.headers.get("Content-Length")
         total = int(content_length) if content_length is not None else None
@@ -318,6 +321,66 @@ def _find_latest_cached(url: str, cache_dir: Union[str, Path]) -> Optional[str]:
         return candidates[0][0]
     return None
 
+
+def _serialize(data):
+    buffer = pickle.dumps(data, protocol=-1)
+    return np.frombuffer(buffer, dtype=np.uint8)
+
+class LmdbCache:
+    """
+    This is a conect manager to save the feature from reader into disk lmdb file. 
+    
+    TODO: We may also want to provide the in-memory cache in the future, it should be 
+    multi-threaded safe. It aslo provides the ability to cache the feature in the memory 
+    to reduce I/O usage.
+    """
+    def __init__(self, cache_filename, read_only=False) -> None:
+        self.cache_filename = cache_filename
+        self.cache_directory = os.path.dirname(self.cache_filename)
+        # the index list is a dictionary we maintained in the lmdb env.
+        if read_only:
+            self.env = lmdb.open(self.cache_filename, max_readers=1, readonly=True, lock=False,
+                             readahead=False, meminit=False)                
+        else:
+            self.env = lmdb.open(self.cache_filename, map_size=1099511627776)
+
+        with self.env.begin(write=False) as txn:
+            _indexs = txn.get("_indexs".encode())
+        
+        if _indexs != None:
+            _indexs = pickle.loads(_indexs)
+        else:
+            _indexs = {}
+            with self.env.begin(write=True) as txn:
+                txn.put("_indexs".encode(), _serialize(_indexs))
+
+        self._indexs = _indexs
+
+    def __contains__(self, index):
+        # check whether the index is exist in keylist
+        # update the _indexs
+        with self.env.begin(write=False) as txn:
+            self._indexs = pickle.loads(txn.get("_indexs".encode()))        
+
+        return index in self._indexs
+
+    def __getitem__(self, index):
+        # read from lmdb file and return it.
+        with self.env.begin(write=False) as txn:
+            value = pickle.loads(txn.get(index.encode()))
+
+        return value
+
+    def __setitem__(self, index, value):
+        # update the _indexs    
+        self._indexs[index] = None
+
+        with self.env.begin(write=True) as txn:
+            txn.put(index.encode(), _serialize(value))        
+            txn.put("_indexs".encode(), _serialize(self._indexs))    
+    
+    def __del__(self):
+        self.env.close()
 
 class CacheFile:
     """
@@ -354,7 +417,7 @@ class CacheFile:
             os.replace(self.temp_file.name, self.cache_filename)
             return True
         # Something went wrong, remove the temp file.
-        logger.debug("removing temp file %s", self.temp_file.name)
+        logger.debug("removing temp file_feature_cache %s", self.temp_file.name)
         os.remove(self.temp_file.name)
         return False
 
