@@ -18,6 +18,7 @@ def main():
             and not issue.assignees
             and (dt.utcnow() - issue.updated_at).days > 7
             and not any(label.name.lower() in LABELS_TO_EXEMPT for label in issue.get_labels())
+            and issue.pull_request is None
         ):
             print("Closing", issue)
             #  issue.create_comment(
