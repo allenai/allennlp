@@ -1,0 +1,32 @@
+name: Issues Bot
+
+on:
+  # TODO: remove the PR trigger
+  pull_request:
+    branches:
+    - master
+  schedule:
+  - cron: '5 16-24 * * 1,2,3,4,5'  # 5 past the hour, every hour from 16-24 UTC, on Monday - Friday
+
+jobs:
+  close_stale_issues:
+    name: Close Stale Issues
+    if: github.repository == 'allenai/allennlp'
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: secrets.GITHUB_TOKEN
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Setup Python
+      uses: actions/setup-python@v1
+      with:
+        python-version: 3.7
+
+    - name: Install requirements
+      run: |
+        pip install PyGithub
+
+    - name: 
+      run: |
+        python scripts/close_stale_issues.py
