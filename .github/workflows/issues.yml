@@ -27,6 +27,6 @@ jobs:
       run: |
         pip install PyGithub
 
-    - name: 
+    - name: Close stale issues
       run: |
         python scripts/close_stale_issues.py
