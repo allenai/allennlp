@@ -1,0 +1,1 @@
+from allennlp.modules.transformer.bert_embeddings import BertEmbeddings
