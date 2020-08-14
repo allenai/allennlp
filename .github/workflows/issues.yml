@@ -6,7 +6,7 @@ on:
     branches:
     - master
   schedule:
-  - cron: '5 16-24 * * 1,2,3,4,5'  # 5 past the hour, every hour from 16-24 UTC, on Monday - Friday
+  - cron: '5 16-23 * * 1,2,3,4,5'  # 5 past the hour, every hour from 16-24 UTC, on Monday - Friday
 
 jobs:
   close_stale_issues:
