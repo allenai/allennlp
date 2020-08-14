@@ -21,11 +21,12 @@ def main():
             and issue.pull_request is None
         ):
             print("Closing", issue)
-            #  issue.create_comment(
-            #      "This issue is being closed due to lack of activity. "
-            #      "If you think it still needs to be addressed, please comment on this thread."
-            #  )
-            #  issue.add_to_labels("stale")
+            issue.create_comment(
+                "This issue is being closed due to lack of activity. "
+                "If you think it still needs to be addressed, please comment on this thread."
+            )
+            issue.add_to_labels("stale")
+            issue.edit(state="closed")
 
 
 if __name__ == "__main__":
