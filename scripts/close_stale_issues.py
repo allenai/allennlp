@@ -24,7 +24,7 @@ def main():
             print("Closing", issue)
             issue.create_comment(
                 "This issue is being closed due to lack of activity. "
-                "If you think it still needs to be addressed, please comment on this thread."
+                "If you think it still needs to be addressed, please comment on this thread 👇"
             )
             issue.add_to_labels("stale")
             issue.edit(state="closed")
