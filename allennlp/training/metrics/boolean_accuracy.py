@@ -46,7 +46,6 @@ class BooleanAccuracy(Metric):
             A tensor of the same shape as `predictions`.
         """
         predictions, gold_labels, mask = self.detach_tensors(predictions, gold_labels, mask)
-        device = gold_labels.device
 
         # Some sanity checks.
         if gold_labels.size() != predictions.size():
@@ -85,16 +84,17 @@ class BooleanAccuracy(Metric):
 
         # Since masked positions are correct, we need to explicitly exclude instance predictions
         # where the entire prediction is masked (because they look "correct").
-        self._correct_count += (correct * keep).sum()
-        self._total_count += keep.sum()
+        correct_count_diff = (correct * keep).sum()
+        total_count_diff = keep.sum()
 
         if is_distributed():
-            _correct_count = torch.tensor(self._correct_count).to(device)
-            _total_count = torch.tensor(self._total_count).to(device)
-            dist.all_reduce(_correct_count, op=dist.ReduceOp.SUM)
-            dist.all_reduce(_total_count, op=dist.ReduceOp.SUM)
-            self._correct_count = _correct_count.item()
-            self._total_count = _total_count.item()
+            dist.all_reduce(correct_count_diff, op=dist.ReduceOp.SUM)
+            dist.all_reduce(total_count_diff, op=dist.ReduceOp.SUM)
+            self._correct_count += correct_count_diff.item()
+            self._total_count += total_count_diff.item()
+        else:
+            self._correct_count += correct_count_diff
+            self._total_count += total_count_diff
 
     def get_metric(self, reset: bool = False):
         """

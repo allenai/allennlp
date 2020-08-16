@@ -50,7 +50,6 @@ class CategoricalAccuracy(Metric):
             A masking tensor the same size as `gold_labels`.
         """
         predictions, gold_labels, mask = self.detach_tensors(predictions, gold_labels, mask)
-        device = gold_labels.device
 
         # Some sanity checks.
         num_classes = predictions.size(-1)
@@ -94,18 +93,19 @@ class CategoricalAccuracy(Metric):
 
         if mask is not None:
             correct *= mask.view(-1, 1)
-            self.total_count += mask.sum()
+            total_count_diff = mask.sum()
         else:
-            self.total_count += gold_labels.numel()
-        self.correct_count += correct.sum()
+            total_count_diff = torch.tensor(gold_labels.numel())
+        correct_count_diff = correct.sum()
 
         if is_distributed():
-            _correct_count = torch.tensor(self.correct_count).to(device)
-            _total_count = torch.tensor(self.total_count).to(device)
-            dist.all_reduce(_correct_count, op=dist.ReduceOp.SUM)
-            dist.all_reduce(_total_count, op=dist.ReduceOp.SUM)
-            self.correct_count = _correct_count.item()
-            self.total_count = _total_count.item()
+            dist.all_reduce(correct_count_diff, op=dist.ReduceOp.SUM)
+            dist.all_reduce(total_count_diff, op=dist.ReduceOp.SUM)
+            self.correct_count += correct_count_diff.item()
+            self.total_count += total_count_diff.item()
+        else:
+            self.correct_count += correct_count_diff
+            self.total_count += total_count_diff
 
     def get_metric(self, reset: bool = False):
         """
