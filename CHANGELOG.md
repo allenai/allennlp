@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [v1.1.0rc3](https://github.com/allenai/allennlp/releases/tag/v1.1.0rc3) - 2020-08-12
+
 ### Fixed
 
 - Fixed how truncation was handled with `PretrainedTransformerTokenizer`.
@@ -14,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   transformer model had a default max length in its config.
   Also, when `max_length` was set to a non-`None` value, several warnings would appear
   for certain transformer models around the use of the `truncation` parameter.
+- Fixed evaluation of all metrics when using distributed training.
 
 ## [v1.1.0rc2](https://github.com/allenai/allennlp/releases/tag/v1.1.0rc2) - 2020-07-31
 

@@ -8,6 +8,10 @@ import shutil
 from overrides import overrides
 from nltk import Tree
 
+import torch
+import torch.distributed as dist
+
+from allennlp.common.util import is_distributed
 from allennlp.common.checks import ConfigurationError
 from allennlp.training.metrics.metric import Metric
 
@@ -145,6 +149,19 @@ class EvalbBracketingScorer(Metric):
 
         shutil.rmtree(tempdir)
 
+        if is_distributed():
+            # Setting the device to CPU since this metric is not expected to run on GPUs.
+            device = torch.device("cpu")
+            _correct_predicted_brackets = torch.tensor(self._correct_predicted_brackets).to(device)
+            _predicted_brackets = torch.tensor(self._predicted_brackets).to(device)
+            _gold_brackets = torch.tensor(self._gold_brackets).to(device)
+            dist.all_reduce(_correct_predicted_brackets, op=dist.ReduceOp.SUM)
+            dist.all_reduce(_predicted_brackets, op=dist.ReduceOp.SUM)
+            dist.all_reduce(_gold_brackets, op=dist.ReduceOp.SUM)
+            self._correct_predicted_brackets = _correct_predicted_brackets.item()
+            self._predicted_brackets = _predicted_brackets.item()
+            self._gold_brackets = _gold_brackets.item()
+
     @overrides
     def get_metric(self, reset: bool = False):
         """
@@ -152,6 +169,7 @@ class EvalbBracketingScorer(Metric):
 
         The average precision, recall and f1.
         """
+
         recall = (
             self._correct_predicted_brackets / self._gold_brackets
             if self._gold_brackets > 0

@@ -2,7 +2,12 @@ import numpy as np
 import torch
 from torch.testing import assert_allclose
 
-from allennlp.common.testing import AllenNlpTestCase, multi_device
+from allennlp.common.testing import (
+    AllenNlpTestCase,
+    multi_device,
+    global_distributed_metric,
+    run_distributed_test,
+)
 from allennlp.training.metrics import Covariance
 
 
@@ -72,4 +77,60 @@ class CovarianceTest(AllenNlpTestCase):
                 fweights=mask.view(-1).cpu().numpy(),
             )[0, 1],
             covariance.get_metric(),
+        )
+
+    def test_distributed_covariance(self):
+        batch_size = 10
+        num_labels = 10
+        predictions = torch.randn(batch_size, num_labels)
+        labels = 0.5 * predictions + torch.randn(batch_size, num_labels)
+        # Random binary mask
+        mask = torch.randint(0, 2, size=(batch_size, num_labels)).bool()
+
+        expected_covariance = np.cov(
+            predictions.view(-1).cpu().numpy(),
+            labels.view(-1).cpu().numpy(),
+            fweights=mask.view(-1).cpu().numpy(),
+        )[0, 1]
+
+        predictions = [predictions[:5], predictions[5:]]
+        labels = [labels[:5], labels[5:]]
+        mask = [mask[:5], mask[5:]]
+
+        metric_kwargs = {"predictions": predictions, "gold_labels": labels, "mask": mask}
+        run_distributed_test(
+            [-1, -1],
+            global_distributed_metric,
+            Covariance(),
+            metric_kwargs,
+            expected_covariance,
+            exact=(0.0001, 1e-01),
+        )
+
+    def test_distributed_covariance_unequal_batches(self):
+        batch_size = 10
+        num_labels = 10
+        predictions = torch.randn(batch_size, num_labels)
+        labels = 0.5 * predictions + torch.randn(batch_size, num_labels)
+        # Random binary mask
+        mask = torch.randint(0, 2, size=(batch_size, num_labels)).bool()
+
+        expected_covariance = np.cov(
+            predictions.view(-1).cpu().numpy(),
+            labels.view(-1).cpu().numpy(),
+            fweights=mask.view(-1).cpu().numpy(),
+        )[0, 1]
+
+        predictions = [predictions[:6], predictions[6:]]
+        labels = [labels[:6], labels[6:]]
+        mask = [mask[:6], mask[6:]]
+
+        metric_kwargs = {"predictions": predictions, "gold_labels": labels, "mask": mask}
+        run_distributed_test(
+            [-1, -1],
+            global_distributed_metric,
+            Covariance(),
+            metric_kwargs,
+            expected_covariance,
+            exact=(0.0001, 1e-01),
         )
