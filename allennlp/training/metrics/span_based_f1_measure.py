@@ -3,6 +3,7 @@ from collections import defaultdict
 
 import torch
 
+from allennlp.common.util import is_distributed
 from allennlp.common.checks import ConfigurationError
 from allennlp.nn.util import get_lengths_from_binary_sequence_mask
 from allennlp.data.vocabulary import Vocabulary
@@ -251,6 +252,10 @@ class SpanBasedF1Measure(Metric):
             Additionally, an `overall` key is included, which provides the precision,
             recall and f1-measure for all spans.
         """
+        if is_distributed():
+            raise RuntimeError(
+                "Distributed aggregation for SpanBasedF1Measure is currently not supported."
+            )
         all_tags: Set[str] = set()
         all_tags.update(self._true_positives.keys())
         all_tags.update(self._false_positives.keys())

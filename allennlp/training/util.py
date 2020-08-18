@@ -6,12 +6,13 @@ import logging
 import os
 import shutil
 from os import PathLike
-from typing import Any, Dict, Iterable, Optional, Union, Tuple, Set, List
+from typing import Any, Dict, Iterable, Optional, Union, Tuple, Set, List, TYPE_CHECKING
 from collections import Counter
 
 import torch
-import torch.distributed as dist
-from torch.utils.data import DataLoader, Dataset
+
+# import torch.distributed as dist
+from torch.utils.data import DataLoader
 from torch.nn.utils import clip_grad_norm_
 
 from allennlp.common.checks import check_for_gpu, ConfigurationError
@@ -22,6 +23,10 @@ from allennlp.data.dataset_readers import DatasetReader
 from allennlp.models.archival import CONFIG_NAME
 from allennlp.models.model import Model
 from allennlp.nn import util as nn_util
+
+if TYPE_CHECKING:
+    from allennlp.data import AllennlpDataset
+    from allennlp.data import AllennlpLazyDataset
 
 logger = logging.getLogger(__name__)
 
@@ -89,7 +94,7 @@ def read_all_datasets(
     validation_dataset_reader: DatasetReader = None,
     validation_data_path: str = None,
     test_data_path: str = None,
-) -> Dict[str, Dataset]:
+) -> Dict[str, Union["AllennlpDataset", "AllennlpLazyDataset"]]:
     """
     Reads all datasets (perhaps lazily, if the corresponding dataset readers are lazy) and returns a
     dictionary mapping dataset name ("train", "validation" or "test") to the iterable resulting from
@@ -99,7 +104,7 @@ def read_all_datasets(
     logger.info("Reading training data from %s", train_data_path)
     train_data = dataset_reader.read(train_data_path)
 
-    datasets: Dict[str, Dataset] = {"train": train_data}
+    datasets = {"train": train_data}
 
     validation_dataset_reader = validation_dataset_reader or dataset_reader
 
@@ -118,11 +123,11 @@ def read_all_datasets(
 
 def datasets_from_params(
     params: Params, train: bool = True, validation: bool = True, test: bool = True
-) -> Dict[str, Dataset]:
+) -> Dict[str, Union["AllennlpDataset", "AllennlpLazyDataset"]]:
     """
     Load datasets specified by the config.
     """
-    datasets: Dict[str, Dataset] = {}
+    datasets: Dict[str, Union["AllennlpDataset", "AllennlpLazyDataset"]] = {}
 
     train = train and ("train_data_path" in params)
     validation = validation and ("validation_data_path" in params)
@@ -295,17 +300,7 @@ def get_metrics(
             metrics["batch_reg_loss"] = batch_reg_loss
         metrics["reg_loss"] = float(total_reg_loss / num_batches) if num_batches > 0 else 0.0
 
-    if world_size > 1:
-        # In distributed mode, average out all metrics across GPUs
-        aggregated_metrics = {}
-        for metric_name, metric_val in metrics.items():
-            metric_tensor = torch.tensor(metric_val).to(cuda_device)
-            dist.all_reduce(metric_tensor, op=dist.ReduceOp.SUM)
-            reduced_metric = metric_tensor.item() / world_size
-            aggregated_metrics[metric_name] = reduced_metric
-        return aggregated_metrics
-    else:
-        return metrics
+    return metrics
 
 
 def evaluate(
@@ -435,7 +430,7 @@ def make_vocab_from_params(
     if datasets_for_vocab_creation is None and vocab_params.get("type") in ("empty", "from_files"):
         datasets_for_vocab_creation = []
 
-    datasets: Dict[str, Dataset]
+    datasets: Dict[str, Union["AllennlpDataset", "AllennlpLazyDataset"]]
     if datasets_for_vocab_creation is None:
         # If `datasets_for_vocab_creation` was not specified, we'll use all datasets
         # from the config.

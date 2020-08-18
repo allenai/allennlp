@@ -1,8 +1,10 @@
-from typing import Optional, List
+from typing import Optional, List, Union
 
 from overrides import overrides
 import torch
+import torch.distributed as dist
 
+from allennlp.common.util import is_distributed
 from allennlp.training.metrics.metric import Metric
 
 
@@ -57,6 +59,7 @@ class AttachmentScores(Metric):
             predicted_indices, predicted_labels, gold_indices, gold_labels, mask
         )
         predicted_indices, predicted_labels, gold_indices, gold_labels, mask = detached
+        device = predicted_indices.device
 
         if mask is None:
             mask = torch.ones_like(predicted_indices).bool()
@@ -78,6 +81,12 @@ class AttachmentScores(Metric):
         correct_labels_and_indices = correct_indices * correct_labels
         labeled_exact_match = (correct_labels_and_indices + ~mask).prod(dim=-1)
 
+        if is_distributed():
+            dist.all_reduce(correct_indices, op=dist.ReduceOp.SUM)
+            dist.all_reduce(unlabeled_exact_match, op=dist.ReduceOp.SUM)
+            dist.all_reduce(correct_labels_and_indices, op=dist.ReduceOp.SUM)
+            dist.all_reduce(labeled_exact_match, op=dist.ReduceOp.SUM)
+
         self._unlabeled_correct += correct_indices.sum()
         self._exact_unlabeled_correct += unlabeled_exact_match.sum()
         self._labeled_correct += correct_labels_and_indices.sum()
@@ -85,7 +94,17 @@ class AttachmentScores(Metric):
         self._total_sentences += correct_indices.size(0)
         self._total_words += correct_indices.numel() - (~mask).sum()
 
-    def get_metric(self, reset: bool = False):
+        if is_distributed():
+            _total_sentences = torch.tensor(self._total_sentences).to(device)
+            _total_words = torch.tensor(self._total_words).to(device)
+            dist.all_reduce(_total_sentences, op=dist.ReduceOp.SUM)
+            dist.all_reduce(_total_words, op=dist.ReduceOp.SUM)
+            self._total_sentences = _total_sentences.item()
+            self._total_words = _total_words.item()
+
+    def get_metric(
+        self, reset: bool = False, cuda_device: Union[int, torch.device] = torch.device("cpu"),
+    ):
         """
         # Returns
 
@@ -95,6 +114,7 @@ class AttachmentScores(Metric):
         labeled_attachment_score = 0.0
         unlabeled_exact_match = 0.0
         labeled_exact_match = 0.0
+
         if self._total_words > 0.0:
             unlabeled_attachment_score = float(self._unlabeled_correct) / float(self._total_words)
             labeled_attachment_score = float(self._labeled_correct) / float(self._total_words)
@@ -105,12 +125,13 @@ class AttachmentScores(Metric):
             labeled_exact_match = float(self._exact_labeled_correct) / float(self._total_sentences)
         if reset:
             self.reset()
-        return {
+        metrics = {
             "UAS": unlabeled_attachment_score,
             "LAS": labeled_attachment_score,
             "UEM": unlabeled_exact_match,
             "LEM": labeled_exact_match,
         }
+        return metrics
 
     @overrides
     def reset(self):

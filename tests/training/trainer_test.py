@@ -28,6 +28,7 @@ from allennlp.training import (
     TensorboardWriter,
     BatchCallback,
     EpochCallback,
+    TrackEpochCallback,
 )
 from allennlp.training.learning_rate_schedulers import CosineWithRestarts
 from allennlp.training.learning_rate_schedulers import ExponentialLearningRateScheduler
@@ -985,6 +986,19 @@ class TestTrainer(TrainerTestBase):
         trainer.train()
         expected_calls = [epoch for epoch in range(-1, 4)]
         assert trainer.epoch_callback_calls == expected_calls
+
+    def test_track_epoch_callback(self):
+        num_epochs = 4
+        trainer = GradientDescentTrainer(
+            self.model,
+            self.optimizer,
+            self.data_loader,
+            num_epochs=num_epochs,
+            validation_data_loader=self.validation_data_loader,
+            epoch_callbacks=[TrackEpochCallback()],
+        )
+        trainer.train()
+        assert trainer.model.epoch == num_epochs
 
     def test_total_loss_is_average_of_batch_loss(self):
 

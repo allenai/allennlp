@@ -139,6 +139,24 @@ class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
         idxs = [t.idx for t in tokenized]
         assert idxs == expected_idxs
 
+    def test_max_length(self):
+        tokenizer = PretrainedTransformerTokenizer(
+            "bert-base-cased", max_length=10, add_special_tokens=False
+        )
+        tokens = tokenizer.tokenize(
+            "hi there, this should be at least 10 tokens, but some will be truncated"
+        )
+        assert len(tokens) == 10
+
+    def test_no_max_length(self):
+        tokenizer = PretrainedTransformerTokenizer(
+            "bert-base-cased", max_length=None, add_special_tokens=False
+        )
+        # Even though the bert model has a max input length of 512, when we tokenize
+        # with `max_length = None`, we should not get any truncation.
+        tokens = tokenizer.tokenize(" ".join(["a"] * 550))
+        assert len(tokens) == 550
+
     def test_token_idx_roberta(self):
         sentence = "A, naïve <mask> AllenNLP sentence."
         expected_tokens = [

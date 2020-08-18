@@ -176,6 +176,29 @@ class EpochCallback(Registrable):
 EpochCallback.register("null")(EpochCallback)
 
 
+@EpochCallback.register("track_epoch_callback")
+class TrackEpochCallback:
+    """
+    A callback that you can pass to the `GradientDescentTrainer` to access the current epoch number
+    in your model during training. This callback sets `model.epoch`, which can be read inside of
+    `model.forward()`. Since the EpochCallback passes `epoch=-1`
+    at the start of the training, we set `model.epoch = epoch + 1` which now denotes the number of
+    completed epochs at a given training state.
+    """
+
+    def __init__(self):
+        super().__init__()
+
+    def __call__(
+        self,
+        trainer: "GradientDescentTrainer",
+        metrics: Dict[str, Any],
+        epoch: int,
+        is_master: bool,
+    ) -> None:
+        trainer.model.epoch = epoch + 1
+
+
 @Trainer.register("gradient_descent", constructor="from_partial_objects")
 class GradientDescentTrainer(Trainer):
     """
