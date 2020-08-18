@@ -1,3 +1,4 @@
+from typing import Any, Dict, List, Tuple, Union
 import math
 from collections import Counter
 
@@ -117,3 +118,46 @@ class BleuTest(AllenNlpTestCase):
             desired_values,
             exact=False,
         )
+
+    def test_multiple_distributed_runs(self):
+        predictions = [
+            torch.tensor([[1, 0, 0], [1, 1, 0]]),
+            torch.tensor([[1, 1, 1]]),
+        ]
+        gold_targets = [
+            torch.tensor([[2, 0, 0], [1, 0, 0]]),
+            torch.tensor([[1, 1, 2]]),
+        ]
+
+        check = math.exp(0.5 * (math.log(3) - math.log(6)) + 0.5 * (math.log(1) - math.log(3)))
+        metric_kwargs = {"predictions": predictions, "gold_targets": gold_targets}
+        desired_values = {"BLEU": check}
+        run_distributed_test(
+            [-1, -1],
+            multiple_runs,
+            BLEU(ngram_weights=(0.5, 0.5), exclude_indices={0}),
+            metric_kwargs,
+            desired_values,
+            exact=False,
+        )
+
+
+def multiple_runs(
+    global_rank: int,
+    world_size: int,
+    gpu_id: Union[int, torch.device],
+    metric: BLEU,
+    metric_kwargs: Dict[str, List[Any]],
+    desired_values: Dict[str, Any],
+    exact: Union[bool, Tuple[float, float]] = True,
+):
+
+    kwargs = {}
+    # Use the arguments meant for the process with rank `global_rank`.
+    for argname in metric_kwargs:
+        kwargs[argname] = metric_kwargs[argname][global_rank]
+
+    for i in range(200):
+        metric(**kwargs)
+
+    assert_allclose(desired_values["BLEU"], metric.get_metric()["BLEU"])
