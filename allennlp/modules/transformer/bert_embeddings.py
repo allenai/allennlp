@@ -8,7 +8,6 @@ from allennlp.common import FromParams
 class BertEmbeddings(torch.nn.Module, FromParams):
     """
     Construct the embeddings from word, position and token_type embeddings.
-    TODO: add docstring info for all params.
     """
 
     def __init__(
