@@ -36,7 +36,7 @@ class TextClassifierPredictor(Predictor):
         )
         if not reader_has_tokenizer:
             tokenizer = SpacyTokenizer()
-            sentence = tokenizer.tokenize(sentence)
+            sentence = [t.text for t in tokenizer.tokenize(sentence)]
         return self._dataset_reader.text_to_instance(sentence)
 
     @overrides
