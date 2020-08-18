@@ -29,11 +29,11 @@ class EntropyTest(AllenNlpTestCase):
         metric = Entropy()
         logits = torch.tensor([[1, 1, 1, 1], [1, 1, 1, 1]], dtype=torch.float, device=device)
         metric(logits)
-        assert_allclose(metric.get_metric()["entropy"], torch.tensor(1.38629436, device=device))
+        assert_allclose(metric.get_metric()["entropy"], 1.38629436)
         # actual values shouldn't effect uniform distribution:
         logits = torch.tensor([[2, 2, 2, 2], [2, 2, 2, 2]], dtype=torch.float, device=device)
         metric(logits)
-        assert_allclose(metric.get_metric()["entropy"], torch.tensor(1.38629436, device=device))
+        assert_allclose(metric.get_metric()["entropy"], 1.38629436)
 
         metric.reset()
         assert metric._entropy == 0.0
