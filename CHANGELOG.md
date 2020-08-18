@@ -12,6 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added a workflow to GitHub Actions that will automatically close unassigned stale issues and
   ping the assignees of assigned stale issues.
 
+### Fixed
+
+- Fixed a bug in distributed metrics that caused nan values due to repeated addition of an accumulated variable.
+
 ## [v1.1.0rc3](https://github.com/allenai/allennlp/releases/tag/v1.1.0rc3) - 2020-08-12
 
 ### Fixed
