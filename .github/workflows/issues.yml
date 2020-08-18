@@ -1,0 +1,54 @@
+name: Issues Bot
+
+on:
+  # Uncomment this PR trigger for testing.
+  # pull_request:
+  #   branches:
+  #   - master
+  schedule:
+    - cron: '5 16 * * 1,2,3,4,5'  # runs at 16:05 UTC Monday - Friday
+
+jobs:
+  close_stale_issues:
+    name: Close Stale Issues
+    if: github.repository == 'allenai/allennlp'
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Setup Python
+      uses: actions/setup-python@v1
+      with:
+        python-version: 3.7
+
+    - name: Install requirements
+      run: |
+        pip install PyGithub
+
+    - name: Close stale issues
+      run: |
+        python scripts/close_stale_issues.py
+
+  ping_assignees:
+    name: Ping Inactive Assignees
+    if: github.repository == 'allenai/allennlp'
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Setup Python
+      uses: actions/setup-python@v1
+      with:
+        python-version: 3.7
+
+    - name: Install requirements
+      run: |
+        pip install PyGithub
+
+    - name: Ping inactive assignees
+      run: |
+        python scripts/ping_issue_assignees.py

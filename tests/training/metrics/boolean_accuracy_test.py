@@ -1,7 +1,12 @@
 import torch
 import pytest
 
-from allennlp.common.testing import AllenNlpTestCase, multi_device
+from allennlp.common.testing import (
+    AllenNlpTestCase,
+    multi_device,
+    global_distributed_metric,
+    run_distributed_test,
+)
 from allennlp.training.metrics import BooleanAccuracy
 
 
@@ -62,3 +67,31 @@ class BooleanAccuracyTest(AllenNlpTestCase):
     def test_does_not_divide_by_zero_with_no_count(self, device: str):
         accuracy = BooleanAccuracy()
         assert accuracy.get_metric() == pytest.approx(0.0)
+
+    def test_distributed_accuracy(self):
+        predictions = [torch.tensor([[0, 1], [2, 3]]), torch.tensor([[4, 5], [6, 7]])]
+        targets = [torch.tensor([[0, 1], [2, 2]]), torch.tensor([[4, 5], [7, 7]])]
+        metric_kwargs = {"predictions": predictions, "gold_labels": targets}
+        desired_values = 0.5
+        run_distributed_test(
+            [-1, -1],
+            global_distributed_metric,
+            BooleanAccuracy(),
+            metric_kwargs,
+            desired_values,
+            exact=True,
+        )
+
+    def test_distributed_accuracy_unequal_batches(self):
+        predictions = [torch.tensor([[0, 1], [2, 3], [4, 5]]), torch.tensor([[6, 7]])]
+        targets = [torch.tensor([[0, 1], [2, 2], [4, 5]]), torch.tensor([[7, 7]])]
+        metric_kwargs = {"predictions": predictions, "gold_labels": targets}
+        desired_values = 0.5
+        run_distributed_test(
+            [-1, -1],
+            global_distributed_metric,
+            BooleanAccuracy(),
+            metric_kwargs,
+            desired_values,
+            exact=True,
+        )

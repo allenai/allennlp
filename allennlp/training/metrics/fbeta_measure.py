@@ -1,8 +1,10 @@
 from typing import List, Optional, Union
 
 import torch
+import torch.distributed as dist
 from overrides import overrides
 
+from allennlp.common.util import is_distributed
 from allennlp.common.checks import ConfigurationError
 from allennlp.training.metrics.metric import Metric
 
@@ -108,6 +110,7 @@ class FBetaMeasure(Metric):
             A masking tensor the same size as `gold_labels`.
         """
         predictions, gold_labels, mask = self.detach_tensors(predictions, gold_labels, mask)
+        device = gold_labels.device
 
         # Calculate true_positive_sum, true_negative_sum, pred_sum, true_sum
         num_classes = predictions.size(-1)
@@ -164,6 +167,17 @@ class FBetaMeasure(Metric):
         self._true_sum += true_sum
         self._total_sum += mask.sum().to(torch.float)
 
+        if is_distributed():
+            _true_positive_sum = torch.tensor(self._true_positive_sum).to(device)
+            _pred_sum = torch.tensor(self._pred_sum).to(device)
+            _true_sum = torch.tensor(self._true_sum).to(device)
+            dist.all_reduce(_true_positive_sum, op=dist.ReduceOp.SUM)
+            dist.all_reduce(_pred_sum, op=dist.ReduceOp.SUM)
+            dist.all_reduce(_true_sum, op=dist.ReduceOp.SUM)
+            self._true_positive_sum = _true_positive_sum
+            self._pred_sum = _pred_sum
+            self._true_sum = _true_sum
+
     @overrides
     def get_metric(self, reset: bool = False):
         """
@@ -179,9 +193,10 @@ class FBetaMeasure(Metric):
         if self._true_positive_sum is None:
             raise RuntimeError("You never call this metric before.")
 
-        tp_sum = self._true_positive_sum
-        pred_sum = self._pred_sum
-        true_sum = self._true_sum
+        else:
+            tp_sum = self._true_positive_sum
+            pred_sum = self._pred_sum
+            true_sum = self._true_sum
 
         if self._labels is not None:
             # Retain only selected labels and order them

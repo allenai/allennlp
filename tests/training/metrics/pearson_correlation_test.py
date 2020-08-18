@@ -4,7 +4,12 @@ import numpy as np
 import torch
 from torch.testing import assert_allclose
 
-from allennlp.common.testing import AllenNlpTestCase, multi_device
+from allennlp.common.testing import (
+    AllenNlpTestCase,
+    multi_device,
+    global_distributed_metric,
+    run_distributed_test,
+)
 from allennlp.training.metrics import PearsonCorrelation
 
 
@@ -102,3 +107,24 @@ class PearsonCorrelationTest(AllenNlpTestCase):
             )
 
             assert_allclose(expected_pearson_correlation, pearson_correlation.get_metric())
+
+    def test_distributed_pearson(self):
+        batch_size = 10
+        num_labels = 10
+        predictions = torch.randn(batch_size, num_labels)
+        labels = 0.5 * predictions + torch.randn(batch_size, num_labels)
+
+        expected_pearson_correlation = pearson_corrcoef(
+            predictions.view(-1).cpu().numpy(), labels.view(-1).cpu().numpy(),
+        )
+        predictions = [predictions[:5], predictions[5:]]
+        labels = [labels[:5], labels[5:]]
+        metric_kwargs = {"predictions": predictions, "gold_labels": labels}
+        run_distributed_test(
+            [-1, -1],
+            global_distributed_metric,
+            PearsonCorrelation(),
+            metric_kwargs,
+            expected_pearson_correlation,
+            exact=(0.0001, 1e-01),
+        )
