@@ -2,7 +2,9 @@ from typing import Optional
 
 from overrides import overrides
 import torch
+import torch.distributed as dist
 
+from allennlp.common.util import is_distributed
 from allennlp.common.checks import ConfigurationError
 from allennlp.training.metrics.metric import Metric
 
@@ -35,6 +37,7 @@ class SequenceAccuracy(Metric):
             A masking tensor the same size as `gold_labels`.
         """
         predictions, gold_labels, mask = self.detach_tensors(predictions, gold_labels, mask)
+        device = gold_labels.device
 
         # Some sanity checks.
         if gold_labels.dim() != predictions.dim() - 1:
@@ -69,6 +72,14 @@ class SequenceAccuracy(Metric):
         self.total_count += predictions.size()[0]
         self.correct_count += correct
 
+        if is_distributed():
+            _correct_count = torch.tensor(self.correct_count).to(device)
+            _total_count = torch.tensor(self.total_count).to(device)
+            dist.all_reduce(_correct_count, op=dist.ReduceOp.SUM)
+            dist.all_reduce(_total_count, op=dist.ReduceOp.SUM)
+            self.correct_count = _correct_count.item()
+            self.total_count = _total_count.item()
+
     def get_metric(self, reset: bool = False):
         """
         # Returns
@@ -79,10 +90,9 @@ class SequenceAccuracy(Metric):
             accuracy = self.correct_count / self.total_count
         else:
             accuracy = 0
-
         if reset:
             self.reset()
-        return accuracy
+        return {"accuracy": accuracy}
 
     @overrides
     def reset(self):

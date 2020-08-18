@@ -9,7 +9,7 @@ import numpy as np
 from overrides import overrides
 import torch
 
-from allennlp.common.file_utils import cached_path, json_lines_from_file
+from allennlp.common.file_utils import cached_path, json_lines_from_file, LmdbCache
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.fields import ArrayField, LabelField, ListField, MetadataField, TextField
 from allennlp.data.image_loader import ImageLoader
@@ -67,8 +67,6 @@ class VQAv2Reader(DatasetReader):
     ----------
     image_dir: `str`
         Path to directory containing `png` image files.
-    image_loader: `ImageLoader`
-        For whatever image preprocessing you want to do.
     image_featurizer: `GridEmbedder`
         The backbone image processor (like a ResNet), whose output will be passed to the region
         detector for finding object boxes in the image.
@@ -82,10 +80,15 @@ class VQAv2Reader(DatasetReader):
     token_indexers: `Dict[str, TokenIndexer]`
     lazy : `bool`, optional
         Whether to load data lazily. Passed to super class.
+    lmdb_cache_dir: `str`
+        For whatever image preprocessing you want to do.
+    read_only: `bool`
+        If true, will open the lmdb env with readonly option.
     """
     def __init__(
-        self, 
+        self,
         image_dir: Union[str, PathLike],
+        lmdb_cache_dir: Union[str, PathLike],
         image_loader: ImageLoader,
         image_featurizer: GridEmbedder,
         region_detector: RegionDetector,
@@ -93,6 +96,7 @@ class VQAv2Reader(DatasetReader):
         tokenizer: Tokenizer = None,
         token_indexers: Dict[str, TokenIndexer] = None,
         lazy: bool = False,
+        read_only: bool = False,
     ) -> None:
         super().__init__(lazy)
         self._image_dir = image_dir
@@ -111,12 +115,15 @@ class VQAv2Reader(DatasetReader):
         self.ans2label = pickle.load(open(ans2label_path, "rb"))
         self.label2ans = pickle.load(open(label2ans_path, "rb"))
         self.num_labels = len(self.ans2label)
-
+        self._read_only = read_only
+        
+        if not self._read_only:
         # image loading
-        self.image_loader = image_loader
-        self.image_featurizer = image_featurizer
-        self.region_detector = region_detector
-        self._feature_cache: Dict[str, Tuple[torch.FloatTensor, torch.IntTensor]] = {}
+            self.image_loader = image_loader
+            self.image_featurizer = image_featurizer
+            self.region_detector = region_detector
+        
+        self._feature_cache = LmdbCache(lmdb_cache_dir, self._read_only)
 
     @overrides
     def _read(self, split: str):
@@ -156,6 +163,7 @@ class VQAv2Reader(DatasetReader):
         # Load images
         to_compute = []
         image_path = instance_dict['file_name']
+
         if image_path not in self._feature_cache:
             to_compute.append(image_path)
 

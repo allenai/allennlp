@@ -1,4 +1,4 @@
-from typing import Dict, Iterable, List, Optional, Tuple, Union
+from typing import Dict, Iterable, Optional, Any
 
 import torch
 
@@ -10,6 +10,8 @@ class Metric(Registrable):
     A very general abstract class representing a metric which can be
     accumulated.
     """
+
+    supports_distributed = False
 
     def __call__(
         self, predictions: torch.Tensor, gold_labels: torch.Tensor, mask: Optional[torch.BoolTensor]
@@ -27,9 +29,7 @@ class Metric(Registrable):
         """
         raise NotImplementedError
 
-    def get_metric(
-        self, reset: bool
-    ) -> Union[float, Tuple[float, ...], Dict[str, float], Dict[str, List[float]]]:
+    def get_metric(self, reset: bool) -> Dict[str, Any]:
         """
         Compute and return the metric. Optionally also call `self.reset`.
         """

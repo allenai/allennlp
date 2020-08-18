@@ -16,6 +16,8 @@ from functools import wraps
 from zipfile import ZipFile, is_zipfile
 import tarfile
 import shutil
+import pickle
+import numpy as np
 
 import boto3
 import botocore
@@ -25,6 +27,7 @@ import requests
 from requests.adapters import HTTPAdapter
 from requests.exceptions import ConnectionError
 from requests.packages.urllib3.util.retry import Retry
+import lmdb # installtest_fixtures/vilbert/experiment_from_huggingface_vqa.jsonnet lmdb by "pip install lmdb"
 
 from allennlp.common.tqdm import Tqdm
 
@@ -40,7 +43,6 @@ DATASET_CACHE = CACHE_DIRECTORY
 
 # Warn if the user is still using the deprecated cache directory.
 if os.path.exists(DEPRECATED_CACHE_DIRECTORY):
-    logger = logging.getLogger(__name__)
     logger.warning(
         f"Deprecated cache directory found ({DEPRECATED_CACHE_DIRECTORY}).  "
         f"Please remove this directory from your system to free up space."
@@ -50,7 +52,7 @@ if os.path.exists(DEPRECATED_CACHE_DIRECTORY):
 def url_to_filename(url: str, etag: str = None) -> str:
     """
     Convert `url` into a hashed filename in a repeatable way.
-    If `etag` is specified, append its hash to the url's, delimited
+    If `etag` is spectest_fixtures/vilbert/experiment_from_huggingface_vqa.jsonnetified, append its hash to the url's, delimited
     by a period.
     """
     url_bytes = url.encode("utf-8")
@@ -261,7 +263,7 @@ def _s3_get(url: str, temp_file: IO) -> None:
     """Pull a file directly from S3."""
     s3_resource = _get_s3_resource()
     bucket_name, s3_path = _split_s3_path(url)
-    s3_resource.Bucket(bucket_name).download_fileobj(s3_path, temp_file)
+    s3_resource.Bucket(bucketest_fixtures/vilbert/experiment_from_huggingface_vqa.jsonnett_name).download_fileobj(s3_path, temp_file)
 
 
 def _session_with_backoff() -> requests.Session:
@@ -319,6 +321,66 @@ def _find_latest_cached(url: str, cache_dir: Union[str, Path]) -> Optional[str]:
     return None
 
 
+def _serialize(data):
+    buffer = pickle.dumps(data, protocol=-1)
+    return np.frombuffer(buffer, dtype=np.uint8)
+
+class LmdbCache:
+    """
+    This is a conect manager to save the feature from reader into disk lmdb file. 
+    
+    TODO: We may also want to provide the in-memory cache in the future, it should be 
+    multi-threaded safe. It aslo provides the ability to cache the feature in the memory 
+    to reduce I/O usage.
+    """
+    def __init__(self, cache_filename, read_only=False) -> None:
+        self.cache_filename = cache_filename
+        self.cache_directory = os.path.dirname(self.cache_filename)
+        # the index list is a dictionary we maintained in the lmdb env.
+        if read_only:
+            self.env = lmdb.open(self.cache_filename, max_readers=1, readonly=True, lock=False,
+                             readahead=False, meminit=False)                
+        else:
+            self.env = lmdb.open(self.cache_filename, map_size=1099511627776)
+
+        with self.env.begin(write=False) as txn:
+            _indexs = txn.get("_indexs".encode())
+        
+        if _indexs != None:
+            _indexs = pickle.loads(_indexs)
+        else:
+            _indexs = {}
+            with self.env.begin(write=True) as txn:
+                txn.put("_indexs".encode(), _serialize(_indexs))
+
+        self._indexs = _indexs
+
+    def __contains__(self, index):
+        # check whether the index is exist in keylist
+        # update the _indexs
+        with self.env.begin(write=False) as txn:
+            self._indexs = pickle.loads(txn.get("_indexs".encode()))        
+
+        return index in self._indexs
+
+    def __getitem__(self, index):
+        # read from lmdb file and return it.
+        with self.env.begin(write=False) as txn:
+            value = pickle.loads(txn.get(index.encode()))
+
+        return value
+
+    def __setitem__(self, index, value):
+        # update the _indexs    
+        self._indexs[index] = None
+
+        with self.env.begin(write=True) as txn:
+            txn.put(index.encode(), _serialize(value))        
+            txn.put("_indexs".encode(), _serialize(self._indexs))    
+    
+    def __del__(self):
+        self.env.close()
+
 class CacheFile:
     """
     This is a context manager that makes robust caching easier.
@@ -354,7 +416,7 @@ class CacheFile:
             os.replace(self.temp_file.name, self.cache_filename)
             return True
         # Something went wrong, remove the temp file.
-        logger.debug("removing temp file %s", self.temp_file.name)
+        logger.debug("removing temp file_feature_cache %s", self.temp_file.name)
         os.remove(self.temp_file.name)
         return False
 

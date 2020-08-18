@@ -4,7 +4,9 @@ import sys
 
 from overrides import overrides
 import torch
+import torch.distributed as dist
 
+from allennlp.common.util import is_distributed
 from allennlp.common.checks import ConfigurationError
 from allennlp.training.metrics.metric import Metric
 
@@ -39,6 +41,7 @@ class UnigramRecall(Metric):
             A masking tensor the same size as `gold_labels`.
         """
         predictions, gold_labels, mask = self.detach_tensors(predictions, gold_labels, mask)
+        device = predictions.device
 
         # Some sanity checks.
         if gold_labels.dim() != predictions.dim() - 1:
@@ -79,16 +82,25 @@ class UnigramRecall(Metric):
         self.correct_count += correct
         self.total_count += predictions.size()[0]
 
+        if is_distributed():
+            _correct_count = torch.tensor(self.correct_count).to(device)
+            _total_count = torch.tensor(self.total_count).to(device)
+            dist.all_reduce(_correct_count, op=dist.ReduceOp.SUM)
+            dist.all_reduce(_total_count, op=dist.ReduceOp.SUM)
+            self.correct_count = _correct_count.item()
+            self.total_count = _total_count.item()
+
     def get_metric(self, reset: bool = False):
         """
         # Returns
 
         The accumulated recall.
         """
+
         recall = self.correct_count / self.total_count if self.total_count > 0 else 0
         if reset:
             self.reset()
-        return recall
+        return {"unigram_recall": recall}
 
     @overrides
     def reset(self):
