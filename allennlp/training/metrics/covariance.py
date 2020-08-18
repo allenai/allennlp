@@ -74,7 +74,7 @@ class Covariance(Metric):
         # previous_total_label_mean below -- we handle this in the code by
         # calling .item() judiciously.
         previous_count = self._total_count
-        updated_count = self._total_count + num_batch_items
+        updated_count = previous_count + num_batch_items
 
         batch_mean_prediction = torch.sum(predictions) / num_batch_items
 
@@ -82,16 +82,15 @@ class Covariance(Metric):
             (batch_mean_prediction - self._total_prediction_mean) * num_batch_items
         ) / updated_count
         previous_total_prediction_mean = self._total_prediction_mean
-        self._total_prediction_mean += delta_mean_prediction.item()
 
         batch_mean_label = torch.sum(gold_labels) / num_batch_items
         delta_mean_label = (
             (batch_mean_label - self._total_label_mean) * num_batch_items
         ) / updated_count
         previous_total_label_mean = self._total_label_mean
-        self._total_label_mean += delta_mean_label.item()
 
         batch_coresiduals = (predictions - batch_mean_prediction) * (gold_labels - batch_mean_label)
+
         if mask is not None:
             batch_co_moment = torch.sum(batch_coresiduals * mask)
         else:
@@ -102,24 +101,24 @@ class Covariance(Metric):
         ) * (previous_total_label_mean - batch_mean_label) * (
             previous_count * num_batch_items / updated_count
         )
-        self._total_co_moment += delta_co_moment.item()
-        self._total_count = updated_count
 
         if is_distributed():
             # Note: this gives an approximate aggregation of the covariance.
             device = gold_labels.device
-            _total_co_moment = torch.tensor(self._total_co_moment).to(device)
-            _total_count = torch.tensor(self._total_count).to(device)
-            _total_prediction_mean = torch.tensor(self._total_prediction_mean).to(device)
-            _total_label_mean = torch.tensor(self._total_prediction_mean).to(device)
-            dist.all_reduce(_total_co_moment, op=dist.ReduceOp.SUM)
+            delta_mean_prediction = torch.tensor(delta_mean_prediction).to(device)
+            delta_mean_label = torch.tensor(delta_mean_label).to(device)
+            delta_co_moment = torch.tensor(delta_co_moment).to(device)
+            _total_count = torch.tensor(updated_count).to(device)
+            dist.all_reduce(delta_mean_prediction, op=dist.ReduceOp.SUM)
+            dist.all_reduce(delta_mean_label, op=dist.ReduceOp.SUM)
+            dist.all_reduce(delta_co_moment, op=dist.ReduceOp.SUM)
             dist.all_reduce(_total_count, op=dist.ReduceOp.SUM)
-            dist.all_reduce(_total_prediction_mean, op=dist.ReduceOp.SUM)
-            dist.all_reduce(_total_label_mean, op=dist.ReduceOp.SUM)
-            self._total_co_moment = _total_co_moment.item()
-            self._total_count = _total_count.item()
-            self._total_prediction_mean = _total_prediction_mean.item()
-            self._total_label_mean = _total_label_mean.item()
+            updated_count = _total_count.item()
+
+        self._total_prediction_mean += delta_mean_prediction.item()
+        self._total_label_mean += delta_mean_label.item()
+        self._total_co_moment += delta_co_moment.item()
+        self._total_count = updated_count
 
     def get_metric(self, reset: bool = False):
         """
