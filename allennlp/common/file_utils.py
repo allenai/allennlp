@@ -27,7 +27,7 @@ import requests
 from requests.adapters import HTTPAdapter
 from requests.exceptions import ConnectionError
 from requests.packages.urllib3.util.retry import Retry
-import lmdb # installtest_fixtures/vilbert/experiment_from_huggingface_vqa.jsonnet lmdb by "pip install lmdb"
+import lmdb 
 
 from allennlp.common.tqdm import Tqdm
 
@@ -52,7 +52,7 @@ if os.path.exists(DEPRECATED_CACHE_DIRECTORY):
 def url_to_filename(url: str, etag: str = None) -> str:
     """
     Convert `url` into a hashed filename in a repeatable way.
-    If `etag` is spectest_fixtures/vilbert/experiment_from_huggingface_vqa.jsonnetified, append its hash to the url's, delimited
+    If `etag` is specified, append its hash to the url's, delimited
     by a period.
     """
     url_bytes = url.encode("utf-8")
@@ -263,7 +263,7 @@ def _s3_get(url: str, temp_file: IO) -> None:
     """Pull a file directly from S3."""
     s3_resource = _get_s3_resource()
     bucket_name, s3_path = _split_s3_path(url)
-    s3_resource.Bucket(bucketest_fixtures/vilbert/experiment_from_huggingface_vqa.jsonnett_name).download_fileobj(s3_path, temp_file)
+    s3_resource.Bucket(bucket_name).download_fileobj(s3_path, temp_file)
 
 
 def _session_with_backoff() -> requests.Session:
