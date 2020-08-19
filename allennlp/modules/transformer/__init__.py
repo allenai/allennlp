@@ -1,2 +1,3 @@
 from allennlp.modules.transformer.bert_embeddings import BertEmbeddings
 from allennlp.modules.transformer.bert_self_attention import BertSelfAttention
+from allennlp.modules.transformer.bert_self_output import BertSelfOutput
