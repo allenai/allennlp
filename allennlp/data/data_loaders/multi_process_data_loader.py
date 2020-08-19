@@ -337,7 +337,7 @@ class MultiProcessDataLoader(DataLoader):
                                 "add any token_indexers to the TextFields it creates. The token_indexers "
                                 "should be added to the instances in apply_token_indexers() method of your "
                                 "dataset reader (which you'll have to implement if you haven't done "
-                                "so already)"
+                                "so already)."
                             )
                     checked_for_token_indexers = True
                 queue.put((instances_chunk, None))

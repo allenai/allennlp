@@ -6,11 +6,10 @@ import logging
 import os
 import shutil
 from os import PathLike
-from typing import Any, Dict, Iterable, Optional, Union, Tuple, Set, List, TYPE_CHECKING
+from typing import Any, Dict, Iterable, Optional, Union, Tuple, Set, List
 from collections import Counter
 
 import torch
-import torch.distributed as dist
 from torch.nn.utils import clip_grad_norm_
 
 from allennlp.common.checks import check_for_gpu, ConfigurationError
@@ -22,9 +21,6 @@ from allennlp.models.archival import CONFIG_NAME
 from allennlp.models.model import Model
 from allennlp.nn import util as nn_util
 
-if TYPE_CHECKING:
-    from allennlp.data import AllennlpDataset
-    from allennlp.data import AllennlpLazyDataset
 
 logger = logging.getLogger(__name__)
 
