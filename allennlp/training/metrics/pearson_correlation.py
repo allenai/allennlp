@@ -1,12 +1,18 @@
+import logging
+
 from typing import Optional
 import math
 import numpy as np
 
 from overrides import overrides
 import torch
+import torch.distributed as dist
 
+from allennlp.common.util import is_distributed
 from allennlp.training.metrics.covariance import Covariance
 from allennlp.training.metrics.metric import Metric
+
+logger = logging.getLogger(__name__)
 
 
 @Metric.register("pearson_correlation")
@@ -38,6 +44,7 @@ class PearsonCorrelation(Metric):
         self._predictions_labels_covariance = Covariance()
         self._predictions_variance = Covariance()
         self._labels_variance = Covariance()
+        self._device = torch.device("cpu")
 
     def __call__(
         self,
@@ -56,6 +63,7 @@ class PearsonCorrelation(Metric):
             A tensor of the same shape as `predictions`.
         """
         predictions, gold_labels, mask = self.detach_tensors(predictions, gold_labels, mask)
+        self._device = gold_labels.device
         self._predictions_labels_covariance(predictions, gold_labels, mask)
         self._predictions_variance(predictions, predictions, mask)
         self._labels_variance(gold_labels, gold_labels, mask)
@@ -69,9 +77,20 @@ class PearsonCorrelation(Metric):
         covariance = self._predictions_labels_covariance.get_metric(reset=reset)
         predictions_variance = self._predictions_variance.get_metric(reset=reset)
         labels_variance = self._labels_variance.get_metric(reset=reset)
+        denominator = math.sqrt(predictions_variance) * math.sqrt(labels_variance)
+        if is_distributed():
+            # Note: this gives an approximate aggregation of the covariance.
+
+            device = self._device
+            _covariance = torch.tensor(covariance).to(device)
+            dist.all_reduce(_covariance, op=dist.ReduceOp.SUM)
+            covariance = _covariance.item()
+            _denominator = torch.tensor(denominator).to(device)
+            dist.all_reduce(_denominator, op=dist.ReduceOp.SUM)
+            denominator = _denominator.item()
         if reset:
             self.reset()
-        denominator = math.sqrt(predictions_variance) * math.sqrt(labels_variance)
+
         if np.around(denominator, decimals=5) == 0:
             pearson_r = 0
         else:

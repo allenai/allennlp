@@ -6,7 +6,7 @@ import logging
 import os
 import shutil
 from os import PathLike
-from typing import Any, Dict, Iterable, Optional, Union, Tuple, Set, List
+from typing import Any, Dict, Iterable, Optional, Union, Tuple, Set, List, TYPE_CHECKING
 from collections import Counter
 
 import torch
@@ -21,6 +21,10 @@ from allennlp.data.dataset_readers import DatasetReader
 from allennlp.models.archival import CONFIG_NAME
 from allennlp.models.model import Model
 from allennlp.nn import util as nn_util
+
+if TYPE_CHECKING:
+    from allennlp.data import AllennlpDataset
+    from allennlp.data import AllennlpLazyDataset
 
 logger = logging.getLogger(__name__)
 
@@ -271,17 +275,7 @@ def get_metrics(
             metrics["batch_reg_loss"] = batch_reg_loss
         metrics["reg_loss"] = float(total_reg_loss / num_batches) if num_batches > 0 else 0.0
 
-    if world_size > 1:
-        # In distributed mode, average out all metrics across GPUs
-        aggregated_metrics = {}
-        for metric_name, metric_val in metrics.items():
-            metric_tensor = torch.tensor(metric_val).to(cuda_device)
-            dist.all_reduce(metric_tensor, op=dist.ReduceOp.SUM)
-            reduced_metric = metric_tensor.item() / world_size
-            aggregated_metrics[metric_name] = reduced_metric
-        return aggregated_metrics
-    else:
-        return metrics
+    return metrics
 
 
 def evaluate(

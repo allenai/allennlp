@@ -4,7 +4,12 @@ from collections import Counter
 import torch
 from torch.testing import assert_allclose
 
-from allennlp.common.testing import AllenNlpTestCase, multi_device
+from allennlp.common.testing import (
+    AllenNlpTestCase,
+    multi_device,
+    global_distributed_metric,
+    run_distributed_test,
+)
 from allennlp.training.metrics import BLEU
 from allennlp.training.util import ngrams, get_valid_tokens_mask
 
@@ -90,3 +95,25 @@ class BleuTest(AllenNlpTestCase):
     def test_bleu_computed_with_zero_counts(self, device: str):
         self.metric.reset()
         assert self.metric.get_metric()["BLEU"] == 0
+
+    def test_distributed_bleu(self):
+        predictions = [
+            torch.tensor([[1, 0, 0], [1, 1, 0]]),
+            torch.tensor([[1, 1, 1]]),
+        ]
+        gold_targets = [
+            torch.tensor([[2, 0, 0], [1, 0, 0]]),
+            torch.tensor([[1, 1, 2]]),
+        ]
+
+        check = math.exp(0.5 * (math.log(3) - math.log(6)) + 0.5 * (math.log(1) - math.log(3)))
+        metric_kwargs = {"predictions": predictions, "gold_targets": gold_targets}
+        desired_values = {"BLEU": check}
+        run_distributed_test(
+            [-1, -1],
+            global_distributed_metric,
+            BLEU(ngram_weights=(0.5, 0.5), exclude_indices={0}),
+            metric_kwargs,
+            desired_values,
+            exact=False,
+        )

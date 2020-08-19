@@ -18,6 +18,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The `DataLoader` now decides whether to load instances lazily or not.
   With the `PyTorchDataLoader` this is controlled with the `lazy` parameter, but with
   the `MultiProcessDataLoading` this is controlled by the `max_instances_in_memory` setting.
+- Added a workflow to GitHub Actions that will automatically close unassigned stale issues and
+  ping the assignees of assigned stale issues.
+
+## [v1.1.0rc3](https://github.com/allenai/allennlp/releases/tag/v1.1.0rc3) - 2020-08-12
+
+### Fixed
+
+- Fixed how truncation was handled with `PretrainedTransformerTokenizer`.
+  Previously, if `max_length` was set to `None`, the tokenizer would still do truncation if the
+  transformer model had a default max length in its config.
+  Also, when `max_length` was set to a non-`None` value, several warnings would appear
+  for certain transformer models around the use of the `truncation` parameter.
+- Fixed evaluation of all metrics when using distributed training.
+- Added a `py.typed` marker. Fixed type annotations in `allennlp.training.util`.
+- Fixed problem with automatically detecting whether tokenization is necessary.
+  This affected primarily the Roberta SST model.
 
 ## [v1.1.0rc2](https://github.com/allenai/allennlp/releases/tag/v1.1.0rc2) - 2020-07-31
 
@@ -32,11 +48,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Removed unnecessary warning about deadlocks in `DataLoader`.
 - Fixed testing models that only return a loss when they are in training mode.
 - Fixed a bug in `FromParams` that caused silent failure in case of the parameter type being `Optional[Union[...]]`.
+- Fixed a bug where the program crashes if `evaluation_data_loader` is a `AllennlpLazyDataset`.
 
 ### Added
 
 - Added the option to specify `requires_grad: false` within an optimizer's parameter groups.
 - Added the `file-friendly-logging` flag back to the `train` command. Also added this flag to the `predict`, `evaluate`, and `find-learning-rate` commands.
+- Added an `EpochCallback` to track current epoch as a model class member. 
+- Added the option to enable or disable gradient checkpointing for transformer token embedders via boolean parameter `gradient_checkpointing`.
 
 ### Removed
 

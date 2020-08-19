@@ -3,7 +3,9 @@ from typing import Tuple, Dict, Set
 
 from overrides import overrides
 import torch
+import torch.distributed as dist
 
+from allennlp.common.util import is_distributed
 from allennlp.training.metrics.metric import Metric
 
 
@@ -105,6 +107,12 @@ class ROUGE(Metric):
 
             total_f1 += f1
 
+        if is_distributed():
+            device = predicted_tokens.device
+            _total_f1 = torch.tensor(total_f1).to(device)
+            dist.all_reduce(_total_f1, op=dist.ReduceOp.SUM)
+            total_f1 = _total_f1.item()
+
         return total_f1
 
     def _get_rouge_n_stats(
@@ -147,6 +155,18 @@ class ROUGE(Metric):
             total_recall += recall
             total_precision += precision
             total_f1 += f1
+
+        if is_distributed():
+            device = predicted_tokens.device
+            _total_recall = torch.tensor(total_recall).to(device)
+            _total_precision = torch.tensor(total_precision).to(device)
+            _total_f1 = torch.tensor(total_f1).to(device)
+            dist.all_reduce(_total_recall, op=dist.ReduceOp.SUM)
+            dist.all_reduce(_total_precision, op=dist.ReduceOp.SUM)
+            dist.all_reduce(_total_f1, op=dist.ReduceOp.SUM)
+            total_recall = _total_recall.item()
+            total_precision = _total_precision.item()
+            total_f1 = _total_f1.item()
 
         return total_recall, total_precision, total_f1
 

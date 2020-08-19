@@ -18,7 +18,7 @@ class Perplexity(Average):
     """
 
     @overrides
-    def get_metric(self, reset: bool = False) -> float:
+    def get_metric(self, reset: bool = False):
         """
         # Returns
 
@@ -26,7 +26,9 @@ class Perplexity(Average):
         """
         average_loss = super().get_metric(reset)
         if average_loss == 0:
-            return 0.0
+            perplexity = 0.0
 
         # Exponentiate the loss to compute perplexity
-        return float(torch.exp(average_loss))
+        perplexity = float(torch.exp(average_loss))
+
+        return perplexity
