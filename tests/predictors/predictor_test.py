@@ -35,9 +35,7 @@ class TestPredictor(AllenNlpTestCase):
         assert predictor._dataset_reader._token_indexers["tokens"].namespace == "test_tokens"
 
     def test_get_gradients(self):
-        inputs = {
-            "sentence": "I always write unit tests",
-        }
+        inputs = {"sentence": "I always write unit tests"}
 
         archive = load_archive(
             self.FIXTURES_ROOT / "basic_classifier" / "serialization" / "model.tar.gz"
@@ -54,9 +52,7 @@ class TestPredictor(AllenNlpTestCase):
             assert len(grads["grad_input_1"][0]) == 5  # 9 words in hypothesis
 
     def test_get_gradients_when_requires_grad_is_false(self):
-        inputs = {
-            "sentence": "I always write unit tests",
-        }
+        inputs = {"sentence": "I always write unit tests"}
 
         archive = load_archive(
             self.FIXTURES_ROOT
@@ -78,3 +74,23 @@ class TestPredictor(AllenNlpTestCase):
             assert bool(grads)
         # ensure that no side effects remain
         assert not embedding_layer.weight.requires_grad
+
+    def test_captures_model_internals(self):
+        inputs = {"sentence": "I always write unit tests"}
+
+        archive = load_archive(
+            self.FIXTURES_ROOT
+            / "basic_classifier"
+            / "embedding_with_trainable_is_false"
+            / "model.tar.gz"
+        )
+        predictor = Predictor.from_archive(archive)
+
+        with predictor.capture_model_internals() as internals:
+            predictor.predict_json(inputs)
+
+        assert len(internals) == 10
+
+        with predictor.capture_model_internals(r"_text_field_embedder.*") as internals:
+            predictor.predict_json(inputs)
+        assert len(internals) == 2

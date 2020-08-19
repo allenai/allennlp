@@ -3,6 +3,7 @@ import json
 from contextlib import contextmanager
 
 import numpy
+import re
 from torch.utils.hooks import RemovableHandle
 from torch import Tensor
 from torch import backends
@@ -144,7 +145,7 @@ class Predictor(Registrable):
         return backward_hooks
 
     @contextmanager
-    def capture_model_internals(self) -> Iterator[dict]:
+    def capture_model_internals(self, module_regex: str = r".+") -> Iterator[dict]:
         """
         Context manager that captures the internal-module outputs of
         this predictor's model. The idea is that you could use it as follows:
@@ -166,10 +167,15 @@ class Predictor(Registrable):
 
             return _add_output
 
-        for idx, module in enumerate(self._model.modules()):
-            if module != self._model:
+        regex = re.compile(module_regex)
+        for idx, (name, module) in enumerate(self._model.named_modules()):
+            if regex.fullmatch(name) and module != self._model:
+                # for idx, module in enumerate(self._model.modules()):
+                #     if module != self._model:
                 hook = module.register_forward_hook(add_output(idx))
                 hooks.append(hook)
+            else:
+                pass
 
         # If you capture the return value of the context manager, you get the results dict.
         yield results
