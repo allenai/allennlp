@@ -165,9 +165,9 @@ class FBetaMeasure(Metric):
         self._total_sum += mask.sum().to(torch.float)
 
         if is_distributed():
-            true_positive_sum = torch.tensor(true_positive_sum).to(device)
-            pred_sum = torch.tensor(pred_sum).to(device)
-            true_sum = torch.tensor(true_sum).to(device)
+            true_positive_sum = torch.LongTensor(true_positive_sum).to(device)
+            pred_sum = torch.LongTensor(pred_sum).to(device)
+            true_sum = torch.LongTensor(true_sum).to(device)
             dist.all_reduce(true_positive_sum, op=dist.ReduceOp.SUM)
             dist.all_reduce(pred_sum, op=dist.ReduceOp.SUM)
             dist.all_reduce(true_sum, op=dist.ReduceOp.SUM)

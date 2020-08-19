@@ -48,7 +48,7 @@ class MeanAbsoluteError(Metric):
 
         if is_distributed():
             absolute_error = torch.tensor(_absolute_error).to(device)
-            total_count = torch.tensor(_total_count).to(device)
+            total_count = torch.LongTensor(_total_count).to(device)
             dist.all_reduce(absolute_error, op=dist.ReduceOp.SUM)
             dist.all_reduce(total_count, op=dist.ReduceOp.SUM)
             _absolute_error = absolute_error.item()
