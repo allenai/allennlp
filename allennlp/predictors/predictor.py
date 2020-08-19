@@ -7,31 +7,13 @@ from torch.utils.hooks import RemovableHandle
 from torch import Tensor
 from torch import backends
 
-from allennlp.common import Registrable
+from allennlp.common import Registrable, plugins
 from allennlp.common.util import JsonDict, sanitize
 from allennlp.data import DatasetReader, Instance
 from allennlp.data.batch import Batch
 from allennlp.models import Model
 from allennlp.models.archival import Archive, load_archive
 from allennlp.nn import util
-
-# a mapping from model `type` to the default Predictor for that type
-DEFAULT_PREDICTORS = {
-    "atis_parser": "atis-parser",
-    "basic_classifier": "text_classifier",
-    "biaffine_parser": "biaffine-dependency-parser",
-    "bimpm": "textual-entailment",
-    "constituency_parser": "constituency-parser",
-    "coref": "coreference-resolution",
-    "crf_tagger": "sentence-tagger",
-    "decomposable_attention": "textual-entailment",
-    "event2mind": "event2mind",
-    "simple_tagger": "sentence-tagger",
-    "srl": "semantic-role-labeling",
-    "srl_bert": "semantic-role-labeling",
-    "quarel_parser": "quarel-parser",
-    "wikitables_mml_parser": "wikitables-parser",
-}
 
 
 class Predictor(Registrable):
@@ -40,7 +22,9 @@ class Predictor(Registrable):
     that can be used for serving models through the web API or making predictions in bulk.
     """
 
-    def __init__(self, model: Model, dataset_reader: DatasetReader) -> None:
+    def __init__(self, model: Model, dataset_reader: DatasetReader, frozen: bool = True) -> None:
+        if frozen:
+            model.eval()
         self._model = model
         self._dataset_reader = dataset_reader
         self.cuda_device = next(self._model.named_parameters())[1].get_device()
@@ -71,8 +55,8 @@ class Predictor(Registrable):
 
         # Returns
 
-        List[instance]
-        A list of `Instance`'s.
+        `List[instance]`
+            A list of `Instance`'s.
         """
 
         instance = self._json_to_instance(inputs)
@@ -86,23 +70,30 @@ class Predictor(Registrable):
 
         # Parameters
 
-        instances: List[Instance]
+        instances : `List[Instance]`
 
         # Returns
 
-        Tuple[Dict[str, Any], Dict[str, Any]]
-        The first item is a Dict of gradient entries for each input.
-        The keys have the form  `{grad_input_1: ..., grad_input_2: ... }`
-        up to the number of inputs given. The second item is the model's output.
+        `Tuple[Dict[str, Any], Dict[str, Any]]`
+            The first item is a Dict of gradient entries for each input.
+            The keys have the form  `{grad_input_1: ..., grad_input_2: ... }`
+            up to the number of inputs given. The second item is the model's output.
 
-        Notes
-        -----
+        # Notes
+
         Takes a `JsonDict` representing the inputs of the model and converts
         them to [`Instances`](../data/instance.md)), sends these through
         the model [`forward`](../models/model.md#forward) function after registering hooks on the embedding
         layer of the model. Calls `backward` on the loss and then removes the
         hooks.
         """
+        # set requires_grad to true for all parameters, but save original values to
+        # restore them later
+        original_param_name_to_requires_grad_dict = {}
+        for param_name, param in self._model.named_parameters():
+            original_param_name_to_requires_grad_dict[param_name] = param.requires_grad
+            param.requires_grad = True
+
         embedding_gradients: List[Tensor] = []
         hooks: List[RemovableHandle] = self._register_embedding_gradient_hooks(embedding_gradients)
 
@@ -126,6 +117,10 @@ class Predictor(Registrable):
         for idx, grad in enumerate(embedding_gradients):
             key = "grad_input_" + str(idx + 1)
             grad_dict[key] = grad.detach().cpu().numpy()
+
+        # restore the original requires_grad values of the parameters
+        for param_name, param in self._model.named_parameters():
+            param.requires_grad = original_param_name_to_requires_grad_dict[param_name]
 
         return grad_dict, outputs
 
@@ -239,6 +234,8 @@ class Predictor(Registrable):
         predictor_name: str = None,
         cuda_device: int = -1,
         dataset_reader_to_load: str = "validation",
+        frozen: bool = True,
+        import_plugins: bool = True,
     ) -> "Predictor":
         """
         Instantiate a `Predictor` from an archive path.
@@ -250,24 +247,35 @@ class Predictor(Registrable):
 
         archive_path : `str`
             The path to the archive.
-        predictor_name : `str`, optional (default=None)
+        predictor_name : `str`, optional (default=`None`)
             Name that the predictor is registered as, or None to use the
             predictor associated with the model.
-        cuda_device : `int`, optional (default=-1)
+        cuda_device : `int`, optional (default=`-1`)
             If `cuda_device` is >= 0, the model will be loaded onto the
             corresponding GPU. Otherwise it will be loaded onto the CPU.
-        dataset_reader_to_load : `str`, optional (default="validation")
+        dataset_reader_to_load : `str`, optional (default=`"validation"`)
             Which dataset reader to load from the archive, either "train" or
             "validation".
+        frozen : `bool`, optional (default=`True`)
+            If we should call `model.eval()` when building the predictor.
+        import_plugins : `bool`, optional (default=`True`)
+            If `True`, we attempt to import plugins before loading the predictor.
+            This comes with additional overhead, but means you don't need to explicitly
+            import the modules that your predictor depends on as long as those modules
+            can be found by `allennlp.common.plugins.import_plugins()`.
 
         # Returns
 
-        A Predictor instance.
+        `Predictor`
+            A Predictor instance.
         """
+        if import_plugins:
+            plugins.import_plugins()
         return Predictor.from_archive(
             load_archive(archive_path, cuda_device=cuda_device),
             predictor_name,
             dataset_reader_to_load=dataset_reader_to_load,
+            frozen=frozen,
         )
 
     @classmethod
@@ -276,6 +284,7 @@ class Predictor(Registrable):
         archive: Archive,
         predictor_name: str = None,
         dataset_reader_to_load: str = "validation",
+        frozen: bool = True,
     ) -> "Predictor":
         """
         Instantiate a `Predictor` from an [`Archive`](../models/archival.md);
@@ -284,14 +293,15 @@ class Predictor(Registrable):
         one is not found, the base class (i.e. `Predictor`) will be used. Optionally specify
         which [`DatasetReader`](../data/dataset_readers/dataset_reader.md) should be loaded;
         otherwise, the validation one will be used if it exists followed by the training dataset reader.
+        Optionally specify if the loaded model should be frozen, meaning `model.eval()` will be called.
         """
         # Duplicate the config so that the config inside the archive doesn't get consumed
         config = archive.config.duplicate()
 
         if not predictor_name:
             model_type = config.get("model").get("type")
-            if model_type in DEFAULT_PREDICTORS:
-                predictor_name = DEFAULT_PREDICTORS[model_type]
+            model_class, _ = Model.resolve_class_name(model_type)
+            predictor_name = model_class.default_predictor
         predictor_class: Type[Predictor] = Predictor.by_name(  # type: ignore
             predictor_name
         ) if predictor_name is not None else cls
@@ -303,6 +313,7 @@ class Predictor(Registrable):
         dataset_reader = DatasetReader.from_params(dataset_reader_params)
 
         model = archive.model
-        model.eval()
+        if frozen:
+            model.eval()
 
         return predictor_class(model, dataset_reader)

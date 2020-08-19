@@ -14,6 +14,8 @@ class ArrayField(Field[numpy.ndarray]):
     for each dimension.
     """
 
+    __slots__ = ["array", "padding_value", "dtype"]
+
     def __init__(
         self, array: numpy.ndarray, padding_value: int = 0, dtype: numpy.dtype = numpy.float32
     ) -> None:
@@ -60,4 +62,7 @@ class ArrayField(Field[numpy.ndarray]):
         return f"ArrayField with shape: {self.array.shape} and dtype: {self.dtype}."
 
     def __len__(self):
-        return self.array.shape[0]
+        return 1 if self.array.ndim == 0 else self.array.shape[0]
+
+    def __eq__(self, other) -> bool:
+        return numpy.array_equal(self.array, other.array)

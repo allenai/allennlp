@@ -6,9 +6,9 @@ from overrides import overrides
 import torch
 import torch.nn.functional as F
 from transformers import XLNetConfig
-from transformers.modeling_auto import AutoModel
 
 from allennlp.data.tokenizers import PretrainedTransformerTokenizer
+from allennlp.modules.scalar_mix import ScalarMix
 from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
 from allennlp.nn.util import batched_index_select
 
@@ -18,41 +18,87 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
     """
     Uses a pretrained model from `transformers` as a `TokenEmbedder`.
 
+    Registered as a `TokenEmbedder` with name "pretrained_transformer".
+
     # Parameters
 
     model_name : `str`
         The name of the `transformers` model to use. Should be the same as the corresponding
         `PretrainedTransformerIndexer`.
-    max_length : `int`, optional (default = None)
+    max_length : `int`, optional (default = `None`)
         If positive, folds input token IDs into multiple segments of this length, pass them
         through the transformer model independently, and concatenate the final representations.
         Should be set to the same value as the `max_length` option on the
         `PretrainedTransformerIndexer`.
+    sub_module: `str`, optional (default = `None`)
+        The name of a submodule of the transformer to be used as the embedder. Some transformers naturally act
+        as embedders such as BERT. However, other models consist of encoder and decoder, in which case we just
+        want to use the encoder.
+    train_parameters: `bool`, optional (default = `True`)
+        If this is `True`, the transformer weights get updated during training.
+    last_layer_only: `bool`, optional (default = `True`)
+        When `True` (the default), only the final layer of the pretrained transformer is taken
+        for the embeddings. But if set to `False`, a scalar mix of all of the layers
+        is used.
+    gradient_checkpointing: `bool`, optional (default = `None`)
+        Enable or disable gradient checkpointing.
     """
 
-    def __init__(self, model_name: str, max_length: int = None) -> None:
+    def __init__(
+        self,
+        model_name: str,
+        *,
+        max_length: int = None,
+        sub_module: str = None,
+        train_parameters: bool = True,
+        last_layer_only: bool = True,
+        override_weights_file: Optional[str] = None,
+        override_weights_strip_prefix: Optional[str] = None,
+        gradient_checkpointing: Optional[bool] = None,
+    ) -> None:
         super().__init__()
-        self.transformer_model = AutoModel.from_pretrained(model_name)
+        from allennlp.common import cached_transformers
+
+        self.transformer_model = cached_transformers.get(
+            model_name, True, override_weights_file, override_weights_strip_prefix
+        )
+
+        if gradient_checkpointing is not None:
+            self.transformer_model.config.update({"gradient_checkpointing": gradient_checkpointing})
+
+        self.config = self.transformer_model.config
+        if sub_module:
+            assert hasattr(self.transformer_model, sub_module)
+            self.transformer_model = getattr(self.transformer_model, sub_module)
         self._max_length = max_length
+
         # I'm not sure if this works for all models; open an issue on github if you find a case
         # where it doesn't work.
-        self.output_dim = self.transformer_model.config.hidden_size
+        self.output_dim = self.config.hidden_size
+
+        self._scalar_mix: Optional[ScalarMix] = None
+        if not last_layer_only:
+            self._scalar_mix = ScalarMix(self.config.num_hidden_layers)
+            self.config.output_hidden_states = True
 
         tokenizer = PretrainedTransformerTokenizer(model_name)
-        self._num_added_start_tokens = tokenizer.num_added_start_tokens
-        self._num_added_end_tokens = tokenizer.num_added_end_tokens
+        self._num_added_start_tokens = len(tokenizer.single_sequence_start_tokens)
+        self._num_added_end_tokens = len(tokenizer.single_sequence_end_tokens)
         self._num_added_tokens = self._num_added_start_tokens + self._num_added_end_tokens
+
+        if not train_parameters:
+            for param in self.transformer_model.parameters():
+                param.requires_grad = False
 
     @overrides
     def get_output_dim(self):
         return self.output_dim
 
     def _number_of_token_type_embeddings(self):
-        config = self.transformer_model.config
-        if isinstance(config, XLNetConfig):
-            return 2  # XLNet has hardcoded 2
-        elif hasattr(config, "type_vocab_size"):
-            return config.type_vocab_size
+        if isinstance(self.config, XLNetConfig):
+            return 3  # XLNet has 3 type ids
+        elif hasattr(self.config, "type_vocab_size"):
+            return self.config.type_vocab_size
         else:
             return 0
 
@@ -67,29 +113,27 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         """
         # Parameters
 
-        token_ids: torch.LongTensor
-            Shape: [
-                batch_size, num_wordpieces if max_length is None else num_segment_concat_wordpieces
-            ].
+        token_ids: `torch.LongTensor`
+            Shape: `[batch_size, num_wordpieces if max_length is None else num_segment_concat_wordpieces]`.
             num_segment_concat_wordpieces is num_wordpieces plus special tokens inserted in the
             middle, e.g. the length of: "[CLS] A B C [SEP] [CLS] D E F [SEP]" (see indexer logic).
-        mask: torch.BoolTensor
+        mask: `torch.BoolTensor`
             Shape: [batch_size, num_wordpieces].
-        type_ids: Optional[torch.LongTensor]
-            Shape: [
-                batch_size, num_wordpieces if max_length is None else num_segment_concat_wordpieces
-            ].
-        segment_concat_mask: Optional[torch.BoolTensor]
-            Shape: [batch_size, num_segment_concat_wordpieces].
+        type_ids: `Optional[torch.LongTensor]`
+            Shape: `[batch_size, num_wordpieces if max_length is None else num_segment_concat_wordpieces]`.
+        segment_concat_mask: `Optional[torch.BoolTensor]`
+            Shape: `[batch_size, num_segment_concat_wordpieces]`.
 
-        # Returns:
+        # Returns
 
-        Shape: [batch_size, num_wordpieces, embedding_size].
+        `torch.Tensor`
+            Shape: `[batch_size, num_wordpieces, embedding_size]`.
+
         """
-
-        # Some of the huggingface transformers don't support type ids at all and crash when you supply them. For
-        # others, you can supply a tensor of zeros, and if you don't, they act as if you did. There is no practical
-        # difference to the caller, so here we pretend that one case is the same as another case.
+        # Some of the huggingface transformers don't support type ids at all and crash when you supply
+        # them. For others, you can supply a tensor of zeros, and if you don't, they act as if you did.
+        # There is no practical difference to the caller, so here we pretend that one case is the same
+        # as another case.
         if type_ids is not None:
             max_type_id = type_ids.max()
             if max_type_id == 0:
@@ -111,13 +155,26 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         # or if self._max_length is not None:
         # [batch_size * num_segments, self._max_length, embedding_size]
 
-        # We call this with kwargs because some of the huggingface models don't have the token_type_ids parameter
-        # and fail even when it's given as None.
+        # We call this with kwargs because some of the huggingface models don't have the
+        # token_type_ids parameter and fail even when it's given as None.
         # Also, as of transformers v2.5.1, they are taking FloatTensor masks.
         parameters = {"input_ids": token_ids, "attention_mask": transformer_mask.float()}
         if type_ids is not None:
             parameters["token_type_ids"] = type_ids
-        embeddings = self.transformer_model(**parameters)[0]
+
+        transformer_output = self.transformer_model(**parameters)
+        if self._scalar_mix is not None:
+            # As far as I can tell, the hidden states will always be the last element
+            # in the output tuple as long as the model is not also configured to return
+            # attention scores.
+            # See, for example, the return value description for BERT:
+            # https://huggingface.co/transformers/model_doc/bert.html#transformers.BertModel.forward
+            # These hidden states will also include the embedding layer, which we don't
+            # include in the scalar mix. Hence the `[1:]` slicing.
+            hidden_states = transformer_output[-1][1:]
+            embeddings = self._scalar_mix(hidden_states)
+        else:
+            embeddings = transformer_output[0]
 
         if fold_long_sequences:
             embeddings = self._unfold_long_sequences(
@@ -143,14 +200,14 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         # Parameters
 
         token_ids: `torch.LongTensor`
-            Shape: [batch_size, num_segment_concat_wordpieces].
+            Shape: `[batch_size, num_segment_concat_wordpieces]`.
             num_segment_concat_wordpieces is num_wordpieces plus special tokens inserted in the
             middle, i.e. the length of: "[CLS] A B C [SEP] [CLS] D E F [SEP]" (see indexer logic).
         mask: `torch.BoolTensor`
-            Shape: [batch_size, num_segment_concat_wordpieces].
+            Shape: `[batch_size, num_segment_concat_wordpieces]`.
             The mask for the concatenated segments of wordpieces. The same as `segment_concat_mask`
             in `forward()`.
-        type_ids: Optional[torch.LongTensor]
+        type_ids: `Optional[torch.LongTensor]`
             Shape: [batch_size, num_segment_concat_wordpieces].
 
         # Returns:
@@ -223,7 +280,7 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
 
         embeddings = embeddings.reshape(batch_size, num_segments * self._max_length, embedding_size)
         mask = mask.reshape(batch_size, num_segments * self._max_length)
-        # We assume that all 1s in the mask preceed all 0s, and add an assert for that.
+        # We assume that all 1s in the mask precede all 0s, and add an assert for that.
         # Open an issue on GitHub if this breaks for you.
         # Shape: (batch_size,)
         seq_lengths = mask.sum(-1)
@@ -251,7 +308,7 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
 
         # The number of segment each sequence spans, excluding padding. Mimicking ceiling operation.
         # Shape: (batch_size,)
-        num_effective_segments = (seq_lengths + self._max_length - 1) / self._max_length
+        num_effective_segments = (seq_lengths + self._max_length - 1) // self._max_length
         # The number of indices that end tokens should shift back.
         num_removed_non_end_tokens = (
             num_effective_segments * self._num_added_tokens - self._num_added_end_tokens

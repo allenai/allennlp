@@ -6,7 +6,7 @@ import torch
 from allennlp.data import TextFieldTensors, Vocabulary
 from allennlp.models.model import Model
 from allennlp.modules import FeedForward, Seq2SeqEncoder, Seq2VecEncoder, TextFieldEmbedder
-from allennlp.nn import InitializerApplicator
+from allennlp.nn import InitializerApplicator, util
 from allennlp.nn.util import get_text_field_mask
 from allennlp.training.metrics import CategoricalAccuracy
 
@@ -21,6 +21,8 @@ class BasicClassifier(Model):
     `Seq2SeqEncoder` is not provided, we will pass the embedded text directly to the
     `Seq2VecEncoder`.
 
+    Registered as a `Model` with name "basic_classifier".
+
     # Parameters
 
     vocab : `Vocabulary`
@@ -32,14 +34,14 @@ class BasicClassifier(Model):
         Required Seq2Vec encoder layer. If `seq2seq_encoder` is provided, this encoder
         will pool its output. Otherwise, this encoder will operate directly on the output
         of the `text_field_embedder`.
-    feedforward : `FeedForward`, optional, (default = None).
+    feedforward : `FeedForward`, optional, (default = `None`)
         An optional feedforward layer to apply after the seq2vec_encoder.
     dropout : `float`, optional (default = `None`)
         Dropout percentage to use.
     num_labels : `int`, optional (default = `None`)
         Number of labels to project to in classification layer. By default, the classification layer will
         project to the size of the vocabulary namespace corresponding to labels.
-    label_namespace : `str`, optional (default = "labels")
+    label_namespace : `str`, optional (default = `"labels"`)
         Vocabulary namespace corresponding to labels. By default, we use the "labels" namespace.
     initializer : `InitializerApplicator`, optional (default=`InitializerApplicator()`)
         If provided, will be used to initialize the model parameters.
@@ -55,6 +57,7 @@ class BasicClassifier(Model):
         dropout: float = None,
         num_labels: int = None,
         label_namespace: str = "labels",
+        namespace: str = "tokens",
         initializer: InitializerApplicator = InitializerApplicator(),
         **kwargs,
     ) -> None:
@@ -79,6 +82,7 @@ class BasicClassifier(Model):
         else:
             self._dropout = None
         self._label_namespace = label_namespace
+        self._namespace = namespace
 
         if num_labels:
             self._num_labels = num_labels
@@ -96,23 +100,23 @@ class BasicClassifier(Model):
         """
         # Parameters
 
-        tokens : TextFieldTensors
+        tokens : `TextFieldTensors`
             From a `TextField`
-        label : torch.IntTensor, optional (default = None)
+        label : `torch.IntTensor`, optional (default = `None`)
             From a `LabelField`
 
         # Returns
 
         An output dictionary consisting of:
 
-        logits : torch.FloatTensor
-            A tensor of shape `(batch_size, num_labels)` representing
-            unnormalized log probabilities of the label.
-        probs : torch.FloatTensor
-            A tensor of shape `(batch_size, num_labels)` representing
-            probabilities of the label.
-        loss : torch.FloatTensor, optional
-            A scalar loss to be optimised.
+            - `logits` (`torch.FloatTensor`) :
+                A tensor of shape `(batch_size, num_labels)` representing
+                unnormalized log probabilities of the label.
+            - `probs` (`torch.FloatTensor`) :
+                A tensor of shape `(batch_size, num_labels)` representing
+                probabilities of the label.
+            - `loss` : (`torch.FloatTensor`, optional) :
+                A scalar loss to be optimised.
         """
         embedded_text = self._text_field_embedder(tokens)
         mask = get_text_field_mask(tokens)
@@ -132,7 +136,7 @@ class BasicClassifier(Model):
         probs = torch.nn.functional.softmax(logits, dim=-1)
 
         output_dict = {"logits": logits, "probs": probs}
-
+        output_dict["token_ids"] = util.get_token_ids_from_text_field_tensors(tokens)
         if label is not None:
             loss = self._loss(logits, label.long().view(-1))
             output_dict["loss"] = loss
@@ -161,8 +165,19 @@ class BasicClassifier(Model):
             )
             classes.append(label_str)
         output_dict["label"] = classes
+        tokens = []
+        for instance_tokens in output_dict["token_ids"]:
+            tokens.append(
+                [
+                    self.vocab.get_token_from_index(token_id.item(), namespace=self._namespace)
+                    for token_id in instance_tokens
+                ]
+            )
+        output_dict["tokens"] = tokens
         return output_dict
 
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
         metrics = {"accuracy": self._accuracy.get_metric(reset)}
         return metrics
+
+    default_predictor = "text_classifier"

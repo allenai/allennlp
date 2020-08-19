@@ -24,6 +24,8 @@ class ListField(SequenceField[DataArray]):
         contained `Field` objects must be of the same type.
     """
 
+    __slots__ = ["field_list"]
+
     def __init__(self, field_list: List[Field]) -> None:
         field_class_set = {field.__class__ for field in field_list}
         assert (

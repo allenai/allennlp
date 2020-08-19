@@ -23,6 +23,8 @@ class Instance(Mapping[str, Field]):
         The `Field` objects that will be used to produce data arrays for this instance.
     """
 
+    __slots__ = ["fields", "indexed"]
+
     def __init__(self, fields: MutableMapping[str, Field]) -> None:
         self.fields = fields
         self.indexed = False
@@ -100,7 +102,12 @@ class Instance(Mapping[str, Field]):
         return tensors
 
     def __str__(self) -> str:
-        base_string = f"Instance with fields:\n"
+        base_string = "Instance with fields:\n"
         return " ".join(
             [base_string] + [f"\t {name}: {field} \n" for name, field in self.fields.items()]
         )
+
+    def duplicate(self) -> "Instance":
+        new = Instance({k: field.duplicate() for k, field in self.fields.items()})
+        new.indexed = self.indexed
+        return new

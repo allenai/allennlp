@@ -17,21 +17,24 @@ from allennlp.nn.util import get_dropout_mask
 class AugmentedLSTMCell(torch.nn.Module):
     """
     `AugmentedLSTMCell` implements a AugmentedLSTM cell.
-    Args:
-        embed_dim (int): The number of expected features in the input.
-        lstm_dim (int): Number of features in the hidden state of the LSTM.
-        Defaults to 32.
-        use_highway (bool): If `True` we append a highway network to the
-        outputs of the LSTM.
-        Defaults to True.
-        use_bias (bool): If `True` we use a bias in our LSTM calculations, otherwise
-        we don't.
 
-    Attributes:
-        input_linearity (nn.Module): Fused weight matrix which
-            computes a linear function over the input.
-        state_linearity (nn.Module): Fused weight matrix which
-            computes a linear function over the states.
+    # Parameters
+
+    embed_dim : `int`
+        The number of expected features in the input.
+    lstm_dim : `int`
+        Number of features in the hidden state of the LSTM.
+    use_highway : `bool`, optional (default = `True`)
+        If `True` we append a highway network to the outputs of the LSTM.
+    use_bias : `bool`, optional (default = `True`)
+        If `True` we use a bias in our LSTM calculations, otherwise we don't.
+
+    # Attributes
+
+    input_linearity : `nn.Module`
+        Fused weight matrix which computes a linear function over the input.
+    state_linearity : `nn.Module`
+        Fused weight matrix which computes a linear function over the states.
     """
 
     def __init__(
@@ -85,19 +88,23 @@ class AugmentedLSTMCell(torch.nn.Module):
         variational_dropout_mask: Optional[torch.BoolTensor] = None,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
-        Warning: DO NOT USE THIS LAYER DIRECTLY, INSTEAD USE the AugmentedLSTM class
+        !!! Warning
+            DO NOT USE THIS LAYER DIRECTLY, instead use the AugmentedLSTM class
 
-        Args:
-            x (torch.Tensor): Input tensor of shape
-                (bsize x input_dim).
-            states (Tuple[torch.Tensor, torch.Tensor]): Tuple of tensors containing
-                the hidden state and the cell state of each element in
-                the batch. Each of these tensors have a dimension of
-                (bsize x nhid). Defaults to `None`.
+        # Parameters
 
-        Returns:
-            Tuple[torch.Tensor, torch.Tensor]:
-                Returned states. Shape of each state is (bsize x nhid).
+        x : `torch.Tensor`
+            Input tensor of shape (bsize x input_dim).
+        states : `Tuple[torch.Tensor, torch.Tensor]`
+            Tuple of tensors containing
+            the hidden state and the cell state of each element in
+            the batch. Each of these tensors have a dimension of
+            (bsize x nhid). Defaults to `None`.
+
+        # Returns
+
+        `Tuple[torch.Tensor, torch.Tensor]`
+            Returned states. Shape of each state is (bsize x nhid).
 
         """
         hidden_state, memory_state = states
@@ -145,21 +152,28 @@ class AugmentedLstm(torch.nn.Module):
     appends an optional highway network to the output layer. Furthermore the
     dropout controls the level of variational dropout done.
 
-    Args:
-        input_size (int): The number of expected features in the input.
-        hidden_size (int): Number of features in the hidden state of the LSTM.
-            Defaults to 32.
-        go_forward (bool): Whether to compute features left to right (forward)
-            or right to left (backward).
-        recurrent_dropout_probability (float): Variational dropout probability
-            to use. Defaults to 0.0.
-        use_highway (bool): If `True` we append a highway network to the
-            outputs of the LSTM.
-        use_input_projection_bias (bool): If `True` we use a bias in
-            our LSTM calculations, otherwise we don't.
+    # Parameters
 
-    Attributes:
-        cell (AugmentedLSTMCell): AugmentedLSTMCell that is applied at every timestep.
+    input_size : `int`
+        The number of expected features in the input.
+    hidden_size : `int`
+        Number of features in the hidden state of the LSTM.
+        Defaults to 32.
+    go_forward : `bool`
+        Whether to compute features left to right (forward)
+        or right to left (backward).
+    recurrent_dropout_probability : `float`
+        Variational dropout probability to use. Defaults to 0.0.
+    use_highway : `bool`
+        If `True` we append a highway network to the outputs of the LSTM.
+    use_input_projection_bias : `bool`
+        If `True` we use a bias in our LSTM calculations, otherwise we don't.
+
+    # Attributes
+
+    cell : `AugmentedLSTMCell`
+        `AugmentedLSTMCell` that is applied at every timestep.
+
     """
 
     def __init__(
@@ -193,17 +207,21 @@ class AugmentedLstm(torch.nn.Module):
         Given an input batch of sequential data such as word embeddings, produces a single layer unidirectional
         AugmentedLSTM representation of the sequential input and new state tensors.
 
-        Args:
-            inputs (PackedSequence): `bsize` sequences of shape `(len, input_dim)` each, in PackedSequence format
-            states (Tuple[torch.Tensor, torch.Tensor]): Tuple of tensors containing the initial hidden state and
-                the cell state of each element in the batch. Each of these tensors have a dimension of
-                (1 x bsize x nhid). Defaults to `None`.
+        # Parameters
 
-        Returns:
-            Tuple[PackedSequence, Tuple[torch.Tensor, torch.Tensor]]:
-                AugmentedLSTM representation of input and the state of the LSTM `t = seq_len`.
-                Shape of representation is (bsize x seq_len x representation_dim).
-                Shape of each state is (1 x bsize x nhid).
+        inputs : `PackedSequence`
+            `bsize` sequences of shape `(len, input_dim)` each, in PackedSequence format
+        states : `Tuple[torch.Tensor, torch.Tensor]`
+            Tuple of tensors containing the initial hidden state and
+            the cell state of each element in the batch. Each of these tensors have a dimension of
+            (1 x bsize x nhid). Defaults to `None`.
+
+        # Returns
+
+        `Tuple[PackedSequence, Tuple[torch.Tensor, torch.Tensor]]`
+            AugmentedLSTM representation of input and the state of the LSTM `t = seq_len`.
+            Shape of representation is (bsize x seq_len x representation_dim).
+            Shape of each state is (1 x bsize x nhid).
 
         """
         if not isinstance(inputs, PackedSequence):
@@ -281,31 +299,34 @@ class BiAugmentedLstm(torch.nn.Module):
     Furthermore the dropout controls the level of variational dropout done.
 
     # Parameters
-        input_size : `int`, required.
-            The dimension of the inputs to the LSTM.
-        hidden_size : `int`, required.
-            The dimension of the outputs of the LSTM.
-        num_layers (int): Number of recurrent layers. Eg. setting `num_layers=2`
-            would mean stacking two LSTMs together to form a stacked LSTM,
-            with the second LSTM taking in the outputs of the first LSTM and
-            computing the final result. Defaults to 1.
-        bias (bool): If `True` we use a bias in our LSTM calculations, otherwise
-            we don't.
-        recurrent_dropout_probability (float): Variational dropout probability to use.
-            Defaults to 0.0.
-        bidirectional (bool): If `True`, becomes a bidirectional LSTM. Defaults
-            to `True`.
-                    to the outputs of the LSTM.
-        padding_value (float): Value for the padded elements. Defaults to 0.0.
-        use_highway : `bool`, optional (default = True)
-            Whether or not to use highway connections between layers. This effectively involves
-            reparameterising the normal output of an LSTM as::
 
-                gate = sigmoid(W_x1 * x_t + W_h * h_t)
-                output = gate * h_t  + (1 - gate) * (W_x2 * x_t)
+    input_size : `int`, required
+        The dimension of the inputs to the LSTM.
+    hidden_size : `int`, required.
+        The dimension of the outputs of the LSTM.
+    num_layers : `int`
+        Number of recurrent layers. Eg. setting `num_layers=2`
+        would mean stacking two LSTMs together to form a stacked LSTM,
+        with the second LSTM taking in the outputs of the first LSTM and
+        computing the final result. Defaults to 1.
+    bias : `bool`
+        If `True` we use a bias in our LSTM calculations, otherwise we don't.
+    recurrent_dropout_probability : `float`, optional (default = `0.0`)
+        Variational dropout probability to use.
+    bidirectional : `bool`
+        If `True`, becomes a bidirectional LSTM. Defaults to `True`.
+    padding_value : `float`, optional (default = `0.0`)
+        Value for the padded elements. Defaults to 0.0.
+    use_highway : `bool`, optional (default = `True`)
+        Whether or not to use highway connections between layers. This effectively involves
+        reparameterising the normal output of an LSTM as::
+
+            gate = sigmoid(W_x1 * x_t + W_h * h_t)
+            output = gate * h_t  + (1 - gate) * (W_x2 * x_t)
+
     # Returns
 
-    output_accumulator : PackedSequence
+    output_accumulator : `PackedSequence`
         The outputs of the LSTM for each timestep. A tensor of shape (batch_size, max_timesteps, hidden_size) where
         for a given batch element, all outputs past the sequence length for that batch are zero tensors.
     """
@@ -371,21 +392,24 @@ class BiAugmentedLstm(torch.nn.Module):
         a AugmentedLSTM representation of the sequential input and new state
         tensors.
 
-        Args:
-            inputs : `PackedSequence`, required.
-                A tensor of shape (batch_size, num_timesteps, input_size)
-                to apply the LSTM over.
-            states (Tuple[torch.Tensor, torch.Tensor]): Tuple of tensors containing
-                the initial hidden state and the cell state of each element in
-                the batch. Each of these tensors have a dimension of
-                (bsize x num_layers x num_directions * nhid). Defaults to `None`.
+        # Parameters
 
-        Returns:
-            Tuple[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
-                AgumentedLSTM representation of input and
-                the state of the LSTM `t = seq_len`.
-                Shape of representation is (bsize x seq_len x representation_dim).
-                Shape of each state is (bsize x num_layers * num_directions x nhid).
+        inputs : `PackedSequence`, required.
+            A tensor of shape (batch_size, num_timesteps, input_size)
+            to apply the LSTM over.
+        states : `Tuple[torch.Tensor, torch.Tensor]`
+            Tuple of tensors containing
+            the initial hidden state and the cell state of each element in
+            the batch. Each of these tensors have a dimension of
+            (bsize x num_layers x num_directions * nhid). Defaults to `None`.
+
+        # Returns
+
+        `Tuple[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]`
+            AgumentedLSTM representation of input and
+            the state of the LSTM `t = seq_len`.
+            Shape of representation is (bsize x seq_len x representation_dim).
+            Shape of each state is (bsize x num_layers * num_directions x nhid).
 
         """
 

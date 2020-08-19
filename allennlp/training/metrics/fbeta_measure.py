@@ -1,8 +1,10 @@
 from typing import List, Optional, Union
 
 import torch
+import torch.distributed as dist
 from overrides import overrides
 
+from allennlp.common.util import is_distributed
 from allennlp.common.checks import ConfigurationError
 from allennlp.training.metrics.metric import Metric
 
@@ -34,10 +36,10 @@ class FBetaMeasure(Metric):
 
     # Parameters
 
-    beta : `float`, optional (default = 1.0)
+    beta : `float`, optional (default = `1.0`)
         The strength of recall versus precision in the F-score.
 
-    average : string, [None (default), 'micro', 'macro', 'weighted']
+    average : `str`, optional (default = `None`)
         If `None`, the scores for each class are returned. Otherwise, this
         determines the type of averaging performed on the data:
 
@@ -53,7 +55,7 @@ class FBetaMeasure(Metric):
             alters 'macro' to account for label imbalance; it can result in an
             F-score that is not between precision and recall.
 
-    labels: list, optional
+    labels: `list`, optional
         The set of labels to include and their order if `average is None`.
         Labels present in the data can be excluded, for example to calculate a
         multi-class average ignoring a majority negative class. Labels not present
@@ -104,10 +106,11 @@ class FBetaMeasure(Metric):
         gold_labels : `torch.Tensor`, required.
             A tensor of integer class label of shape (batch_size, ...). It must be the same
             shape as the `predictions` tensor without the `num_classes` dimension.
-        mask : `torch.BoolTensor`, optional (default = None).
+        mask : `torch.BoolTensor`, optional (default = `None`).
             A masking tensor the same size as `gold_labels`.
         """
         predictions, gold_labels, mask = self.detach_tensors(predictions, gold_labels, mask)
+        device = gold_labels.device
 
         # Calculate true_positive_sum, true_negative_sum, pred_sum, true_sum
         num_classes = predictions.size(-1)
@@ -129,8 +132,11 @@ class FBetaMeasure(Metric):
             mask = torch.ones_like(gold_labels).bool()
         gold_labels = gold_labels.float()
 
+        # If the prediction tensor is all zeros, the record is not classified to any of the labels.
+        pred_mask = predictions.sum(dim=-1) != 0
         argmax_predictions = predictions.max(dim=-1)[1].float()
-        true_positives = (gold_labels == argmax_predictions) & mask
+
+        true_positives = (gold_labels == argmax_predictions) & mask & pred_mask
         true_positives_bins = gold_labels[true_positives]
 
         # Watch it:
@@ -142,7 +148,7 @@ class FBetaMeasure(Metric):
                 true_positives_bins.long(), minlength=num_classes
             ).float()
 
-        pred_bins = argmax_predictions[mask].long()
+        pred_bins = argmax_predictions[mask & pred_mask].long()
         # Watch it:
         # When the `mask` is all 0, we will get an _empty_ tensor.
         if pred_bins.shape[0] != 0:
@@ -161,24 +167,36 @@ class FBetaMeasure(Metric):
         self._true_sum += true_sum
         self._total_sum += mask.sum().to(torch.float)
 
+        if is_distributed():
+            _true_positive_sum = torch.tensor(self._true_positive_sum).to(device)
+            _pred_sum = torch.tensor(self._pred_sum).to(device)
+            _true_sum = torch.tensor(self._true_sum).to(device)
+            dist.all_reduce(_true_positive_sum, op=dist.ReduceOp.SUM)
+            dist.all_reduce(_pred_sum, op=dist.ReduceOp.SUM)
+            dist.all_reduce(_true_sum, op=dist.ReduceOp.SUM)
+            self._true_positive_sum = _true_positive_sum
+            self._pred_sum = _pred_sum
+            self._true_sum = _true_sum
+
     @overrides
     def get_metric(self, reset: bool = False):
         """
         # Returns
 
-        A tuple of the following metrics based on the accumulated count statistics:
-        precisions : List[float]
-        recalls : List[float]
-        f1-measures : List[float]
+        precisions : `List[float]`
+        recalls : `List[float]`
+        f1-measures : `List[float]`
 
-        If `self.average` is not `None`, you will get `float` instead of `List[float]`.
+        !!! Note
+            If `self.average` is not `None`, you will get `float` instead of `List[float]`.
         """
         if self._true_positive_sum is None:
             raise RuntimeError("You never call this metric before.")
 
-        tp_sum = self._true_positive_sum
-        pred_sum = self._pred_sum
-        true_sum = self._true_sum
+        else:
+            tp_sum = self._true_positive_sum
+            pred_sum = self._pred_sum
+            true_sum = self._true_sum
 
         if self._labels is not None:
             # Retain only selected labels and order them

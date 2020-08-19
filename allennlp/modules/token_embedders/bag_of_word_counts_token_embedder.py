@@ -17,10 +17,12 @@ class BagOfWordCountsTokenEmbedder(TokenEmbedder):
 
     By default, we ignore padding tokens.
 
+    Registered as a `TokenEmbedder` with name "bag_of_word_counts".
+
     # Parameters
 
     vocab : `Vocabulary`
-    vocab_namespace : `str`, optional (default = "tokens")
+    vocab_namespace : `str`, optional (default = `"tokens"`)
         namespace of vocabulary to embed
     projection_dim : `int`, optional (default = `None`)
         if specified, will project the resulting bag of words representation
@@ -65,8 +67,9 @@ class BagOfWordCountsTokenEmbedder(TokenEmbedder):
 
         # Returns
 
-        The bag-of-words representations for the input sequence, shape
-        `(batch_size, vocab_size)`
+        `torch.Tensor`
+            The bag-of-words representations for the input sequence, shape
+            `(batch_size, vocab_size)`
         """
         bag_of_words_vectors = []
 

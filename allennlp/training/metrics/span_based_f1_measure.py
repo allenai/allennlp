@@ -3,6 +3,7 @@ from collections import defaultdict
 
 import torch
 
+from allennlp.common.util import is_distributed
 from allennlp.common.checks import ConfigurationError
 from allennlp.nn.util import get_lengths_from_binary_sequence_mask
 from allennlp.data.vocabulary import Vocabulary
@@ -48,10 +49,12 @@ class SpanBasedF1Measure(Metric):
 
         vocabulary : `Vocabulary`, required.
             A vocabulary containing the tag namespace.
-        tag_namespace : str, required.
+
+        tag_namespace : `str`, required.
             This metric assumes that a BIO format is used in which the
             labels are of the format: ["B-LABEL", "I-LABEL"].
-        ignore_classes : List[str], optional.
+
+        ignore_classes : `List[str]`, optional.
             Span labels which will be ignored when computing span metrics.
             A "span label" is the part that comes after the BIO label, so it
             would be "ARG1" for the tag "B-ARG1". For example by passing:
@@ -64,9 +67,11 @@ class SpanBasedF1Measure(Metric):
 
             This is helpful for instance, to avoid computing metrics for "V"
             spans in a BIO tagging scheme which are typically not included.
-        label_encoding : `str`, optional (default = "BIO")
+
+        label_encoding : `str`, optional (default = `"BIO"`)
             The encoding used to specify label span endpoints in the sequence.
             Valid options are "BIO", "IOB1", "BIOUL" or "BMES".
+
         tags_to_spans_function : `Callable`, optional (default = `None`)
             If `label_encoding` is `None`, `tags_to_spans_function` will be
             used to generate spans.
@@ -111,9 +116,9 @@ class SpanBasedF1Measure(Metric):
         gold_labels : `torch.Tensor`, required.
             A tensor of integer class label of shape (batch_size, sequence_length). It must be the same
             shape as the `predictions` tensor without the `num_classes` dimension.
-        mask : `torch.BoolTensor`, optional (default = None).
+        mask : `torch.BoolTensor`, optional (default = `None`).
             A masking tensor the same size as `gold_labels`.
-        prediction_map : `torch.Tensor`, optional (default = None).
+        prediction_map : `torch.Tensor`, optional (default = `None`).
             A tensor of size (batch_size, num_classes) which provides a mapping from the index of predictions
             to the indices of the label vocabulary. If provided, the output label at each timestep will be
             `vocabulary.get_index_to_token_vocabulary(prediction_map[batch, argmax(predictions[batch, t]))`,
@@ -238,14 +243,19 @@ class SpanBasedF1Measure(Metric):
         """
         # Returns
 
-        A Dict per label containing following the span based metrics:
-        precision : float
-        recall : float
-        f1-measure : float
+        `Dict[str, float]`
+            A Dict per label containing following the span based metrics:
+            - precision : `float`
+            - recall : `float`
+            - f1-measure : `float`
 
-        Additionally, an `overall` key is included, which provides the precision,
-        recall and f1-measure for all spans.
+            Additionally, an `overall` key is included, which provides the precision,
+            recall and f1-measure for all spans.
         """
+        if is_distributed():
+            raise RuntimeError(
+                "Distributed aggregation for SpanBasedF1Measure is currently not supported."
+            )
         all_tags: Set[str] = set()
         all_tags.update(self._true_positives.keys())
         all_tags.update(self._false_positives.keys())

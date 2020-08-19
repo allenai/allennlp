@@ -12,13 +12,17 @@ class NoamLR(LearningRateScheduler):
     to the inverse square root of the step number, scaled by the inverse square root of the
     dimensionality of the model. Time will tell if this is just madness or it's actually important.
 
+    Registered as a `LearningRateScheduler` with name "noam".
+
     # Parameters
 
+    optimizer : `torch.optim.Optimizer`
+        This argument does not get an entry in a configuration file for the object.
     model_size : `int`, required.
         The hidden size parameter which dominates the number of parameters in your model.
     warmup_steps : `int`, required.
         The number of steps to linearly increase the learning rate.
-    factor : `float`, optional (default = 1.0).
+    factor : `float`, optional (default = `1.0`).
         The overall scale factor for the learning rate decay.
     """
 
@@ -36,7 +40,7 @@ class NoamLR(LearningRateScheduler):
         super().__init__(optimizer, last_epoch=last_epoch)
 
     @overrides
-    def step(self, metric: float = None, epoch: int = None) -> None:
+    def step(self, metric: float = None) -> None:
         pass
 
     def step_batch(self, batch_num_total: int = None) -> None:

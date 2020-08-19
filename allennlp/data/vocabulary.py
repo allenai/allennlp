@@ -7,13 +7,17 @@ import codecs
 import copy
 import logging
 import os
+import re
 from collections import defaultdict
 from typing import Any, Callable, Dict, Iterable, List, Optional, Set, Union, TYPE_CHECKING
 
-from allennlp.common.util import namespace_match
+from filelock import FileLock
+
 from allennlp.common import Registrable
+from allennlp.common.file_utils import cached_path
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.tqdm import Tqdm
+from allennlp.common.util import namespace_match
 
 if TYPE_CHECKING:
     from allennlp.data import instance as adi  # noqa
@@ -25,6 +29,7 @@ DEFAULT_NON_PADDED_NAMESPACES = ("*tags", "*labels")
 DEFAULT_PADDING_TOKEN = "@@PADDING@@"
 DEFAULT_OOV_TOKEN = "@@UNKNOWN@@"
 NAMESPACE_PADDING_FILE = "non_padded_namespaces.txt"
+_NEW_LINE_REGEX = re.compile(r"\n|\r\n")
 
 
 class _NamespaceDependentDefaultDict(defaultdict):
@@ -115,7 +120,7 @@ def _read_pretrained_tokens(embeddings_file_uri: str) -> List[str]:
                 tokens.append(token)
             else:
                 line_begin = line[:20] + "..." if len(line) > 20 else line
-                logger.warning(f"Skipping line number %d: %s", line_number, line_begin)
+                logger.warning("Skipping line number %d: %s", line_number, line_begin)
     return tokens
 
 
@@ -133,6 +138,17 @@ class Vocabulary(Registrable):
     methods on this class allow you to pass in a namespace; by default we use the 'tokens'
     namespace, and you can omit the namespace argument everywhere and just use the default.
 
+    This class is registered as a `Vocabulary` with four different names, which all point to
+    different `@classmethod` constructors found in this class.  `from_instances` is registered as
+    "from_instances", `from_files` is registered as "from_files", `from_files_and_instances` is
+    registered as "extend", and `empty` is registered as "empty".  If you are using a configuration
+    file to construct a vocabulary, you can use any of those strings as the "type" key in the
+    configuration file to use the corresponding `@classmethod` to construct the object.
+    "from_instances" is the default.  Look at the docstring for the `@classmethod` to see what keys
+    are allowed in the configuration file (when there is an `instances` argument to the
+    `@classmethod`, it will be passed in separately and does not need a corresponding key in the
+    configuration file).
+
     # Parameters
 
     counter : `Dict[str, Dict[str, int]]`, optional (default=`None`)
@@ -140,18 +156,21 @@ class Vocabulary(Registrable):
         counts and, together with the other parameters to this class, use them to decide which
         words are in-vocabulary.  If this is `None`, we just won't initialize the vocabulary with
         anything.
-    min_count : `Dict[str, int]`, optional (default=None)
+
+    min_count : `Dict[str, int]`, optional (default=`None`)
         When initializing the vocab from a counter, you can specify a minimum count, and every
         token with a count less than this will not be added to the dictionary.  These minimum
         counts are `namespace-specific`, so you can specify different minimums for labels versus
         words tokens, for example.  If a namespace does not have a key in the given dictionary, we
         will add all seen tokens to that namespace.
+
     max_vocab_size : `Union[int, Dict[str, int]]`, optional (default=`None`)
         If you want to cap the number of tokens in your vocabulary, you can do so with this
         parameter.  If you specify a single integer, every namespace will have its vocabulary fixed
         to be no larger than this.  If you specify a dictionary, then each namespace in the
         `counter` can have a separate maximum vocabulary size.  Any missing key will have a value
         of `None`, which means no cap on the vocabulary size.
+
     non_padded_namespaces : `Iterable[str]`, optional
         By default, we assume you are mapping word / character tokens to integers, and so you want
         to reserve word indices for padding and out-of-vocabulary tokens.  However, if you are
@@ -166,6 +185,7 @@ class Vocabulary(Registrable):
         The default is `("*tags", "*labels")`, so as long as your namespace ends in "tags" or
         "labels" (which is true by default for all tag and label fields in this code), you don't
         have to specify anything here.
+
     pretrained_files : `Dict[str, str]`, optional
         If provided, this map specifies the path to optional pretrained embedding files for each
         namespace. This can be used to either restrict the vocabulary to only words which appear
@@ -173,25 +193,31 @@ class Vocabulary(Registrable):
         regardless of their count, depending on the value of `only_include_pretrained_words`.
         Words which appear in the pretrained embedding file but not in the data are NOT included
         in the Vocabulary.
+
     min_pretrained_embeddings : `Dict[str, int]`, optional
         If provided, specifies for each namespace a minimum number of lines (typically the
         most common words) to keep from pretrained embedding files, even for words not
         appearing in the data.
-    only_include_pretrained_words : `bool`, optional (default=False)
+
+    only_include_pretrained_words : `bool`, optional (default=`False`)
         This defines the strategy for using any pretrained embedding files which may have been
         specified in `pretrained_files`. If False, an inclusive strategy is used: and words
         which are in the `counter` and in the pretrained file are added to the `Vocabulary`,
         regardless of whether their count exceeds `min_count` or not. If True, we use an
         exclusive strategy: words are only included in the Vocabulary if they are in the pretrained
         embedding file (their count must still be at least `min_count`).
-    tokens_to_add : `Dict[str, List[str]]`, optional (default=None)
+
+    tokens_to_add : `Dict[str, List[str]]`, optional (default=`None`)
         If given, this is a list of tokens to add to the vocabulary, keyed by the namespace to add
         the tokens to.  This is a way to be sure that certain items appear in your vocabulary,
         regardless of any other vocabulary computation.
-    padding_token : `str`,  optional (default=DEFAULT_PADDING_TOKEN)
+
+    padding_token : `str`,  optional (default=`DEFAULT_PADDING_TOKEN`)
         If given, this the string used for padding.
-    oov_token : `str`,  optional (default=DEFAULT_OOV_TOKEN)
+
+    oov_token : `str`,  optional (default=`DEFAULT_OOV_TOKEN`)
         If given, this the string used for the out of vocabulary (OOVs) tokens.
+
     """
 
     default_implementation = "from_instances"
@@ -254,12 +280,15 @@ class Vocabulary(Registrable):
         We count all of the vocabulary items in the instances, then pass those counts
         and the other parameters, to :func:`__init__`.  See that method for a description
         of what the other parameters do.
+
+        The `instances` parameter does not get an entry in a typical AllenNLP configuration file,
+        but the other parameters do (if you want non-default parameters).
         """
         logger.info("Fitting token dictionary from dataset.")
         padding_token = padding_token if padding_token is not None else DEFAULT_PADDING_TOKEN
         oov_token = oov_token if oov_token is not None else DEFAULT_OOV_TOKEN
         namespace_token_counts: Dict[str, Dict[str, int]] = defaultdict(lambda: defaultdict(int))
-        for instance in Tqdm.tqdm(instances):
+        for instance in Tqdm.tqdm(instances, desc="building vocab"):
             instance.count_vocab_items(namespace_token_counts)
 
         return cls(
@@ -283,40 +312,57 @@ class Vocabulary(Registrable):
         oov_token: Optional[str] = DEFAULT_OOV_TOKEN,
     ) -> "Vocabulary":
         """
-        Loads a `Vocabulary` that was serialized using `save_to_files`.
+        Loads a `Vocabulary` that was serialized either using `save_to_files` or inside
+        a model archive file.
 
         # Parameters
 
         directory : `str`
-            The directory containing the serialized vocabulary.
+            The directory or archive file containing the serialized vocabulary.
         """
         logger.info("Loading token dictionary from %s.", directory)
         padding_token = padding_token if padding_token is not None else DEFAULT_PADDING_TOKEN
         oov_token = oov_token if oov_token is not None else DEFAULT_OOV_TOKEN
-        with codecs.open(
-            os.path.join(directory, NAMESPACE_PADDING_FILE), "r", "utf-8"
-        ) as namespace_file:
-            non_padded_namespaces = [namespace_str.strip() for namespace_str in namespace_file]
 
-        vocab = cls(
-            non_padded_namespaces=non_padded_namespaces,
-            padding_token=padding_token,
-            oov_token=oov_token,
-        )
-
-        # Check every file in the directory.
-        for namespace_filename in os.listdir(directory):
-            if namespace_filename == NAMESPACE_PADDING_FILE:
-                continue
-            if namespace_filename.startswith("."):
-                continue
-            namespace = namespace_filename.replace(".txt", "")
-            if any(namespace_match(pattern, namespace) for pattern in non_padded_namespaces):
-                is_padded = False
+        if not os.path.isdir(directory):
+            base_directory = cached_path(directory, extract_archive=True)
+            # For convenience we'll check for a 'vocabulary' subdirectory of the archive.
+            # That way you can use model archives directly.
+            vocab_subdir = os.path.join(base_directory, "vocabulary")
+            if os.path.isdir(vocab_subdir):
+                directory = vocab_subdir
+            elif os.path.isdir(base_directory):
+                directory = base_directory
             else:
-                is_padded = True
-            filename = os.path.join(directory, namespace_filename)
-            vocab.set_from_file(filename, is_padded, namespace=namespace, oov_token=oov_token)
+                raise ConfigurationError(f"{directory} is neither a directory nor an archive")
+
+        # We use a lock file to avoid race conditions where multiple processes
+        # might be reading/writing from/to the same vocab files at once.
+        with FileLock(os.path.join(directory, ".lock")):
+            with codecs.open(
+                os.path.join(directory, NAMESPACE_PADDING_FILE), "r", "utf-8"
+            ) as namespace_file:
+                non_padded_namespaces = [namespace_str.strip() for namespace_str in namespace_file]
+
+            vocab = cls(
+                non_padded_namespaces=non_padded_namespaces,
+                padding_token=padding_token,
+                oov_token=oov_token,
+            )
+
+            # Check every file in the directory.
+            for namespace_filename in os.listdir(directory):
+                if namespace_filename == NAMESPACE_PADDING_FILE:
+                    continue
+                if namespace_filename.startswith("."):
+                    continue
+                namespace = namespace_filename.replace(".txt", "")
+                if any(namespace_match(pattern, namespace) for pattern in non_padded_namespaces):
+                    is_padded = False
+                else:
+                    is_padded = True
+                filename = os.path.join(directory, namespace_filename)
+                vocab.set_from_file(filename, is_padded, namespace=namespace, oov_token=oov_token)
 
         return vocab
 
@@ -337,6 +383,10 @@ class Vocabulary(Registrable):
     ) -> "Vocabulary":
         """
         Extends an already generated vocabulary using a collection of instances.
+
+        The `instances` parameter does not get an entry in a typical AllenNLP configuration file,
+        but the other parameters do (if you want non-default parameters).  See `__init__` for a
+        description of what the other parameters mean.
         """
         vocab = cls.from_files(directory, padding_token, oov_token)
         logger.info("Fitting token dictionary from dataset.")
@@ -389,17 +439,17 @@ class Vocabulary(Registrable):
             line, with nothing else in the line.  The index we assign to the token is the line
             number in the file (1-indexed if `is_padded`, 0-indexed otherwise).  Note that this
             file should contain the OOV token string!
-        is_padded : `bool`, optional (default=True)
+        is_padded : `bool`, optional (default=`True`)
             Is this vocabulary padded?  For token / word / character vocabularies, this should be
             `True`; while for tag or label vocabularies, this should typically be `False`.  If
             `True`, we add a padding token with index 0, and we enforce that the `oov_token` is
             present in the file.
-        oov_token : `str`, optional (default=DEFAULT_OOV_TOKEN)
+        oov_token : `str`, optional (default=`DEFAULT_OOV_TOKEN`)
             What token does this vocabulary use to represent out-of-vocabulary characters?  This
             must show up as a line in the vocabulary file.  When we find it, we replace
             `oov_token` with `self._oov_token`, because we only use one OOV token across
             namespaces.
-        namespace : `str`, optional (default="tokens")
+        namespace : `str`, optional (default=`"tokens"`)
             What namespace should we overwrite with this vocab file?
         """
         if is_padded:
@@ -409,7 +459,7 @@ class Vocabulary(Registrable):
             self._token_to_index[namespace] = {}
             self._index_to_token[namespace] = {}
         with codecs.open(filename, "r", "utf-8") as input_file:
-            lines = input_file.read().split("\n")
+            lines = _NEW_LINE_REGEX.split(input_file.read())
             # Be flexible about having final newline or not
             if lines and lines[-1] == "":
                 lines = lines[:-1]
@@ -576,21 +626,24 @@ class Vocabulary(Registrable):
         if os.listdir(directory):
             logging.warning("vocabulary serialization directory %s is not empty", directory)
 
-        with codecs.open(
-            os.path.join(directory, NAMESPACE_PADDING_FILE), "w", "utf-8"
-        ) as namespace_file:
-            for namespace_str in self._non_padded_namespaces:
-                print(namespace_str, file=namespace_file)
-
-        for namespace, mapping in self._index_to_token.items():
-            # Each namespace gets written to its own file, in index order.
+        # We use a lock file to avoid race conditions where multiple processes
+        # might be reading/writing from/to the same vocab files at once.
+        with FileLock(os.path.join(directory, ".lock")):
             with codecs.open(
-                os.path.join(directory, namespace + ".txt"), "w", "utf-8"
-            ) as token_file:
-                num_tokens = len(mapping)
-                start_index = 1 if mapping[0] == self._padding_token else 0
-                for i in range(start_index, num_tokens):
-                    print(mapping[i].replace("\n", "@@NEWLINE@@"), file=token_file)
+                os.path.join(directory, NAMESPACE_PADDING_FILE), "w", "utf-8"
+            ) as namespace_file:
+                for namespace_str in self._non_padded_namespaces:
+                    print(namespace_str, file=namespace_file)
+
+            for namespace, mapping in self._index_to_token.items():
+                # Each namespace gets written to its own file, in index order.
+                with codecs.open(
+                    os.path.join(directory, namespace + ".txt"), "w", "utf-8"
+                ) as token_file:
+                    num_tokens = len(mapping)
+                    start_index = 1 if mapping[0] == self._padding_token else 0
+                    for i in range(start_index, num_tokens):
+                        print(mapping[i].replace("\n", "@@NEWLINE@@"), file=token_file)
 
     def is_padded(self, namespace: str) -> bool:
         """
@@ -630,15 +683,18 @@ class Vocabulary(Registrable):
         return self._token_to_index[namespace]
 
     def get_token_index(self, token: str, namespace: str = "tokens") -> int:
-        if token in self._token_to_index[namespace]:
+        try:
             return self._token_to_index[namespace][token]
-        else:
+        except KeyError:
             try:
                 return self._token_to_index[namespace][self._oov_token]
             except KeyError:
                 logger.error("Namespace: %s", namespace)
                 logger.error("Token: %s", token)
-                raise
+                raise KeyError(
+                    f"'{token}' not found in vocab namespace '{namespace}', and namespace "
+                    f"does not contain the default OOV token ('{self._oov_token}')"
+                )
 
     def get_token_from_index(self, index: int, namespace: str = "tokens") -> str:
         return self._index_to_token[namespace][index]
@@ -655,7 +711,7 @@ class Vocabulary(Registrable):
         return False
 
     def __str__(self) -> str:
-        base_string = f"Vocabulary with namespaces:\n"
+        base_string = "Vocabulary with namespaces:\n"
         non_padded_namespaces = f"\tNon Padded Namespaces: {self._non_padded_namespaces}\n"
         namespaces = [
             f"\tNamespace: {name}, Size: {self.get_vocab_size(name)} \n"
@@ -665,7 +721,7 @@ class Vocabulary(Registrable):
 
     def __repr__(self) -> str:
         # This is essentially the same as __str__, but with no newlines
-        base_string = f"Vocabulary with namespaces: "
+        base_string = "Vocabulary with namespaces: "
         namespaces = [
             f"{name}, Size: {self.get_vocab_size(name)} ||" for name in self._index_to_token
         ]

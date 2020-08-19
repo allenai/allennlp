@@ -63,26 +63,26 @@ class Elmo(torch.nn.Module, FromParams):
         character-convnet output, 1st lstm output, 2nd lstm output).
     requires_grad : `bool`, optional
         If True, compute gradient of ELMo parameters for fine tuning.
-    do_layer_norm : `bool`, optional, (default = False).
+    do_layer_norm : `bool`, optional, (default = `False`).
         Should we apply layer normalization (passed to `ScalarMix`)?
-    dropout : `float`, optional, (default = 0.5).
+    dropout : `float`, optional, (default = `0.5`).
         The dropout to be applied to the ELMo representations.
-    vocab_to_cache : `List[str]`, optional, (default = None).
+    vocab_to_cache : `List[str]`, optional, (default = `None`).
         A list of words to pre-compute and cache character convolutions
         for. If you use this option, Elmo expects that you pass word
         indices of shape (batch_size, timesteps) to forward, instead
         of character indices. If you use this option and pass a word which
         wasn't pre-cached, this will break.
-    keep_sentence_boundaries : `bool`, optional, (default = False)
+    keep_sentence_boundaries : `bool`, optional, (default = `False`)
         If True, the representation of the sentence boundary tokens are
         not removed.
-    scalar_mix_parameters : `List[float]`, optional, (default = None)
+    scalar_mix_parameters : `List[float]`, optional, (default = `None`)
         If not `None`, use these scalar mix parameters to weight the representations
         produced by different layers. These mixing weights are not updated during
         training. The mixing weights here should be the unnormalized (i.e., pre-softmax)
         weights. So, if you wanted to use only the 1st layer of a 2-layer ELMo,
         you can set this to [-9e10, 1, -9e10 ].
-    module : `torch.nn.Module`, optional, (default = None).
+    module : `torch.nn.Module`, optional, (default = `None`).
         If provided, then use this module instead of the pre-trained ELMo biLM.
         If using this option, then pass `None` for both `options_file`
         and `weight_file`.  The module must provide a public attribute
@@ -150,12 +150,13 @@ class Elmo(torch.nn.Module, FromParams):
 
         # Returns
 
-        Dict with keys:
-        `'elmo_representations'` : `List[torch.Tensor]`
-            A `num_output_representations` list of ELMo representations for the input sequence.
-            Each representation is shape `(batch_size, timesteps, embedding_dim)`
-        `'mask'`:  `torch.BoolTensor`
-            Shape `(batch_size, timesteps)` long tensor with sequence mask.
+        `Dict[str, Union[torch.Tensor, List[torch.Tensor]]]`
+            A dict with the following keys:
+            - `'elmo_representations'` (`List[torch.Tensor]`) :
+              A `num_output_representations` list of ELMo representations for the input sequence.
+              Each representation is shape `(batch_size, timesteps, embedding_dim)`
+            - `'mask'` (`torch.BoolTensor`) :
+              Shape `(batch_size, timesteps)` long tensor with sequence mask.
         """
         # reshape the input if needed
         original_shape = inputs.size()
@@ -245,7 +246,7 @@ def batch_to_ids(batch: List[List[str]]) -> torch.Tensor:
     dataset = Batch(instances)
     vocab = Vocabulary()
     dataset.index_instances(vocab)
-    return dataset.as_tensor_dict()["elmo"]["character_ids"]["tokens"]
+    return dataset.as_tensor_dict()["elmo"]["character_ids"]["elmo_tokens"]
 
 
 class _ElmoCharacterEncoder(torch.nn.Module):
@@ -268,8 +269,9 @@ class _ElmoCharacterEncoder(torch.nn.Module):
         ELMo JSON options file
     weight_file : `str`
         ELMo hdf5 weight file
-    requires_grad : `bool`, optional, (default = False).
+    requires_grad : `bool`, optional, (default = `False`).
         If True, compute gradient of ELMo parameters for fine tuning.
+
 
     The relevant section of the options file is something like:
 
@@ -485,9 +487,9 @@ class _ElmoBiLm(torch.nn.Module):
         ELMo JSON options file
     weight_file : `str`
         ELMo hdf5 weight file
-    requires_grad : `bool`, optional, (default = False).
+    requires_grad : `bool`, optional, (default = `False`).
         If True, compute gradient of ELMo parameters for fine tuning.
-    vocab_to_cache : `List[str]`, optional, (default = None).
+    vocab_to_cache : `List[str]`, optional, (default = `None`).
         A list of words to pre-compute and cache character convolutions
         for. If you use this option, _ElmoBiLm expects that you pass word
         indices of shape (batch_size, timesteps) to forward, instead
@@ -581,7 +583,7 @@ class _ElmoBiLm(torch.nn.Module):
                 type_representation, mask = add_sentence_boundary_token_ids(
                     embedded_inputs, mask_without_bos_eos, self._bos_embedding, self._eos_embedding
                 )
-            except RuntimeError:
+            except (RuntimeError, IndexError):
                 # Back off to running the character convolutions,
                 # as we might not have the words in the cache.
                 token_embedding = self._token_embedder(inputs)

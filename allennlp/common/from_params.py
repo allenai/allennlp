@@ -1,45 +1,3 @@
-"""
-One of the design principles of AllenNLP is the use of a modular,
-declarative language (JSON) for defining experiments and models.
-
-This is implemented by giving each AllenNLP class a method
-
-```
-    @classmethod
-    def from_params(cls, params: Params, **extras) -> 'ClassName':
-        ...
-```
-
-that contains the logic for instantiating a class instance from a JSON-like
-`Params` object. Historically you had to implement your own `from_params`
-method on every class you wanted to instantiate this way, even though
-most of the time you were simply popping off params and handing them to the
-constructor (making sure that you popped them using the same default values
-as in the constructor.)
-
-It turns out that in those simple cases, we can generate a `from_params`
-method automatically. This implementation lives in the `FromParams` class.
-Every `Registrable` subclass automatically gets it, and you can have your
-non-`Registrable` classes subclass from it as well.
-
-The inclusion of `extras` allows for non-FromParams parameters to be passed
-as well. For instance, all of our `Model` subclasses require a
-`Vocabulary` parameter. Accordingly, the `train` command calls
-
-```
-model = Model.from_params(params=params.pop('model'), vocab=vocab)
-```
-
-As an AllenNLP user, you will probably never need to worry about this.
-However, if you do, note that the extra arguments must be called by keyword.
-Prior to this default implementation it was possible to call them positionally
-but this is no longer the case.
-
-In some cases you might want the construction of class instances `from_params`
-to include more elaborate logic than "pop off params and hand them to the constructor".
-In this case your class just needs to explicitly implement its own `from_params`
-method.
-"""
 import collections.abc
 from copy import deepcopy
 from pathlib import Path
@@ -119,7 +77,24 @@ def can_construct_from_params(type_: Type) -> bool:
             return True
         args = getattr(type_, "__args__")
         return all(can_construct_from_params(arg) for arg in args)
+
     return hasattr(type_, "from_params")
+
+
+def is_base_registrable(cls) -> bool:
+    """
+    Checks whether this is a class that directly inherits from Registrable, or is a subclass of such
+    a class.
+    """
+    from allennlp.common.registrable import Registrable  # import here to avoid circular imports
+
+    if not issubclass(cls, Registrable):
+        return False
+    method_resolution_order = inspect.getmro(cls)[1:]
+    for base_class in method_resolution_order:
+        if issubclass(base_class, Registrable) and base_class is not Registrable:
+            return False
+    return True
 
 
 def remove_optional(annotation: type):
@@ -130,8 +105,9 @@ def remove_optional(annotation: type):
     """
     origin = getattr(annotation, "__origin__", None)
     args = getattr(annotation, "__args__", ())
-    if origin == Union and len(args) == 2 and args[1] == type(None):  # noqa
-        return args[0]
+
+    if origin == Union:
+        return Union[tuple([arg for arg in args if arg != type(None)])]  # noqa: E721
     else:
         return annotation
 
@@ -152,11 +128,15 @@ def infer_params(cls: Type[T], constructor: Callable[..., T] = None):
         return parameters
 
     # "mro" is "method resolution order".  The first one is the current class, the next is the
-    # first superclass, and so on.  Taking the first superclass should work in almost all cases that
-    # we're looking for here.  This could fail, though, if you are using multiple inheritance and we
-    # pick the wrong superclass.  We'll worry about how to fix that when we run into an actual
-    # problem because of it.
-    super_class = cls.mro()[1]
+    # first superclass, and so on.  We take the first superclass we find that inherits from
+    # FromParams.
+    super_class = None
+    for super_class_candidate in cls.mro()[1:]:
+        if issubclass(super_class_candidate, FromParams):
+            super_class = super_class_candidate
+            break
+    if not super_class:
+        raise RuntimeError("found a kwargs parameter with no inspectable super class")
     super_parameters = infer_params(super_class)
 
     return {**super_parameters, **parameters}  # Subclass parameters overwrite superclass ones
@@ -247,7 +227,7 @@ def pop_and_construct_arg(
 ) -> Any:
     """
     Does the work of actually constructing an individual argument for
-    [`create_kwargs`](./from_params#create_kwargs).
+    [`create_kwargs`](./#create_kwargs).
 
     Here we're in the inner loop of iterating over the parameters to a particular constructor,
     trying to construct just one of them.  The information we get for that parameter is its name,
@@ -336,11 +316,10 @@ def construct_arg(
             # In some cases we allow a string instead of a param dict, so
             # we need to handle that case separately.
             if isinstance(popped_params, str):
-                return annotation.by_name(popped_params)()
-            else:
-                if isinstance(popped_params, dict):
-                    popped_params = Params(popped_params)
-                return annotation.from_params(params=popped_params, **subextras)
+                popped_params = Params({"type": popped_params})
+            elif isinstance(popped_params, dict):
+                popped_params = Params(popped_params)
+            return annotation.from_params(params=popped_params, **subextras)
         elif not optional:
             # Not optional and not supplied, that's an error!
             raise ConfigurationError(f"expected key {argument_name} for {class_name}")
@@ -550,7 +529,26 @@ class FromParams:
         if isinstance(params, str):
             params = Params({"type": params})
 
+        if not isinstance(params, Params):
+            raise ConfigurationError(
+                "from_params was passed a `params` object that was not a `Params`. This probably "
+                "indicates malformed parameters in a configuration file, where something that "
+                "should have been a dictionary was actually a list, or something else. "
+                f"This happened when constructing an object of type {cls}."
+            )
+
         registered_subclasses = Registrable._registry.get(cls)
+
+        if is_base_registrable(cls) and registered_subclasses is None:
+            # NOTE(mattg): There are some potential corner cases in this logic if you have nested
+            # Registrable types.  We don't currently have any of those, but if we ever get them,
+            # adding some logic to check `constructor_to_call` should solve the issue.  Not
+            # bothering to add that unnecessary complexity for now.
+            raise ConfigurationError(
+                "Tried to construct an abstract Registrable base class that has no registered "
+                "concrete types. This might mean that you need to use --include-package to get "
+                "your concrete classes actually registered."
+            )
 
         if registered_subclasses is not None and not constructor_to_call:
             # We know `cls` inherits from Registrable, so we'll use a cast to make mypy happy.
@@ -606,6 +604,7 @@ class FromParams:
                 # Without this logic, create_kwargs will look at object.__init__ and see that
                 # it takes *args and **kwargs and look for those.
                 kwargs: Dict[str, Any] = {}
+                params.assert_empty(cls.__name__)
             else:
                 # This class has a constructor, so create kwargs for it.
                 kwargs = create_kwargs(constructor_to_inspect, cls, params, **extras)

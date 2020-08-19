@@ -23,6 +23,8 @@ class PretrainedTransformerMismatchedIndexer(TokenIndexer):
     `PretrainedTransformerMismatchedEmbedder` to embed these wordpieces and then pull out a single
     vector for each original word.
 
+    Registered as a `TokenIndexer` with name "pretrained_transformer_mismatched".
+
     # Parameters
 
     model_name : `str`
@@ -32,7 +34,7 @@ class PretrainedTransformerMismatchedIndexer(TokenIndexer):
         We use a somewhat confusing default value of `tags` so that we do not add padding or UNK
         tokens to this namespace, which would break on loading because we wouldn't find our default
         OOV token.
-    max_length : `int`, optional (default = None)
+    max_length : `int`, optional (default = `None`)
         If positive, split the document into segments of this many tokens (including special tokens)
         before feeding into the embedder. The embedder embeds these segments independently and
         concatenate the results to get the original document representation. Should be set to
@@ -61,12 +63,17 @@ class PretrainedTransformerMismatchedIndexer(TokenIndexer):
         self._matched_indexer._add_encoding_to_vocabulary_if_needed(vocabulary)
 
         wordpieces, offsets = self._allennlp_tokenizer.intra_word_tokenize([t.text for t in tokens])
+
+        # For tokens that don't correspond to any word pieces, we put (-1, -1) into the offsets.
+        # That results in the embedding for the token to be all zeros.
+        offsets = [x if x is not None else (-1, -1) for x in offsets]
+
         output: IndexedTokenList = {
             "token_ids": [t.text_id for t in wordpieces],
-            "mask": [1] * len(tokens),  # for original tokens (i.e. word-level)
+            "mask": [True] * len(tokens),  # for original tokens (i.e. word-level)
             "type_ids": [t.type_id for t in wordpieces],
             "offsets": offsets,
-            "wordpiece_mask": [1] * len(wordpieces),  # for wordpieces (i.e. subword-level)
+            "wordpiece_mask": [True] * len(wordpieces),  # for wordpieces (i.e. subword-level)
         }
 
         return self._matched_indexer._postprocess_output(output)

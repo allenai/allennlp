@@ -13,6 +13,9 @@ class InvertedTriangular(MomentumScheduler):
     linearly for `warm_up` epochs until reaching its original value again. If there
     are still more epochs left over to train, the momentum will stay flat at the original
     value.
+
+    Registered as a `MomentumScheduler` with name "inverted_triangular".  The "optimizer" argument
+    does not get an entry in a configuration file for the object.
     """
 
     def __init__(

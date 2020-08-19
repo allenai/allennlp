@@ -2,44 +2,13 @@
 The `train` subcommand can be used to train a model.
 It requires a configuration file and a directory in
 which to write the results.
-
-   $ allennlp train --help
-    usage: allennlp train [-h] -s SERIALIZATION_DIR [-r] [-f] [-o OVERRIDES]
-                          [--file-friendly-logging] [--node-rank NODE_RANK]
-                          [--dry-run] [--include-package INCLUDE_PACKAGE]
-                          param_path
-
-    Train the specified model on the specified dataset.
-
-    positional arguments:
-      param_path            path to parameter file describing the model to be
-                            trained
-
-    optional arguments:
-      -h, --help            show this help message and exit
-      -s SERIALIZATION_DIR, --serialization-dir SERIALIZATION_DIR
-                            directory in which to save the model and its logs
-      -r, --recover         recover training from the state in serialization_dir
-      -f, --force           overwrite the output directory if it exists
-      -o OVERRIDES, --overrides OVERRIDES
-                            a JSON structure used to override the experiment
-                            configuration
-      --file-friendly-logging
-                            outputs tqdm status on separate lines and slows tqdm
-                            refresh rate
-      --node-rank NODE_RANK
-                            rank of this node in the distributed setup (default =
-                            0)
-      --dry-run             do not train a model, but create a vocabulary, show
-                            dataset statistics and other training information
-      --include-package INCLUDE_PACKAGE
-                            additional packages to include
 """
 
 import argparse
 import logging
 import os
-from typing import Any, Dict, List, Optional
+from os import PathLike
+from typing import Any, Dict, List, Optional, Union
 
 import torch
 import torch.distributed as dist
@@ -49,13 +18,14 @@ from overrides import overrides
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common import Params, Registrable, Lazy
 from allennlp.common.checks import check_for_gpu, ConfigurationError
+from allennlp.common import logging as common_logging
 from allennlp.common import util as common_util
 from allennlp.common.plugins import import_plugins
 from allennlp.data import DatasetReader, Vocabulary
 from allennlp.data import DataLoader
 from allennlp.models.archival import archive_model, CONFIG_NAME
 from allennlp.models.model import _DEFAULT_WEIGHTS, Model
-from allennlp.training.trainer_base import TrainerBase
+from allennlp.training.trainer import Trainer
 from allennlp.training import util as training_util
 
 logger = logging.getLogger(__name__)
@@ -101,14 +71,11 @@ class Train(Subcommand):
             "--overrides",
             type=str,
             default="",
-            help="a JSON structure used to override the experiment configuration",
-        )
-
-        subparser.add_argument(
-            "--file-friendly-logging",
-            action="store_true",
-            default=False,
-            help="outputs tqdm status on separate lines and slows tqdm refresh rate",
+            help=(
+                "a json(net) structure used to override the experiment configuration, e.g., "
+                "'{\"iterator.batch_size\": 16}'.  Nested parameters can be specified either"
+                " with nested dictionaries or with dot syntax."
+            ),
         )
 
         subparser.add_argument(
@@ -118,8 +85,16 @@ class Train(Subcommand):
         subparser.add_argument(
             "--dry-run",
             action="store_true",
-            help="do not train a model, but create a vocabulary, show dataset statistics and "
-            "other training information",
+            help=(
+                "do not train a model, but create a vocabulary, show dataset statistics and "
+                "other training information"
+            ),
+        )
+        subparser.add_argument(
+            "--file-friendly-logging",
+            action="store_true",
+            default=False,
+            help="outputs tqdm status on separate lines and slows tqdm refresh rate",
         )
 
         subparser.set_defaults(func=train_model_from_args)
@@ -135,28 +110,28 @@ def train_model_from_args(args: argparse.Namespace):
         parameter_filename=args.param_path,
         serialization_dir=args.serialization_dir,
         overrides=args.overrides,
-        file_friendly_logging=args.file_friendly_logging,
         recover=args.recover,
         force=args.force,
         node_rank=args.node_rank,
         include_package=args.include_package,
         dry_run=args.dry_run,
+        file_friendly_logging=args.file_friendly_logging,
     )
 
 
 def train_model_from_file(
-    parameter_filename: str,
-    serialization_dir: str,
+    parameter_filename: Union[str, PathLike],
+    serialization_dir: Union[str, PathLike],
     overrides: str = "",
-    file_friendly_logging: bool = False,
     recover: bool = False,
     force: bool = False,
     node_rank: int = 0,
     include_package: List[str] = None,
     dry_run: bool = False,
+    file_friendly_logging: bool = False,
 ) -> Optional[Model]:
     """
-    A wrapper around :func:`train_model` which loads the params from a file.
+    A wrapper around [`train_model`](#train_model) which loads the params from a file.
 
     # Parameters
 
@@ -164,25 +139,25 @@ def train_model_from_file(
         A json parameter file specifying an AllenNLP experiment.
     serialization_dir : `str`
         The directory in which to save results and logs. We just pass this along to
-        :func:`train_model`.
+        [`train_model`](#train_model).
     overrides : `str`
         A JSON string that we will use to override values in the input parameter file.
-    file_friendly_logging : `bool`, optional (default=False)
-        If `True`, we make our output more friendly to saved model files.  We just pass this
-        along to :func:`train_model`.
-    recover : `bool`, optional (default=False)
+    recover : `bool`, optional (default=`False`)
         If `True`, we will try to recover a training run from an existing serialization
         directory.  This is only intended for use when something actually crashed during the middle
         of a run.  For continuing training a model on new data, see `Model.from_archive`.
-    force : `bool`, optional (default=False)
+    force : `bool`, optional (default=`False`)
         If `True`, we will overwrite the serialization directory if it already exists.
     node_rank : `int`, optional
         Rank of the current node in distributed training
     include_package : `str`, optional
         In distributed mode, extra packages mentioned will be imported in trainer workers.
-    dry_run : `bool`, optional (default=False)
+    dry_run : `bool`, optional (default=`False`)
         Do not train a model, but create a vocabulary, show dataset statistics and other training
         information.
+    file_friendly_logging : `bool`, optional (default=`False`)
+        If `True`, we add newlines to tqdm output, even on an interactive terminal, and we slow
+        down tqdm's output to only once every 10 seconds.
 
     # Returns
 
@@ -194,29 +169,28 @@ def train_model_from_file(
     return train_model(
         params=params,
         serialization_dir=serialization_dir,
-        file_friendly_logging=file_friendly_logging,
         recover=recover,
         force=force,
         node_rank=node_rank,
         include_package=include_package,
         dry_run=dry_run,
+        file_friendly_logging=file_friendly_logging,
     )
 
 
 def train_model(
     params: Params,
-    serialization_dir: str,
-    file_friendly_logging: bool = False,
+    serialization_dir: Union[str, PathLike],
     recover: bool = False,
     force: bool = False,
     node_rank: int = 0,
     include_package: List[str] = None,
-    batch_weight_key: str = "",
     dry_run: bool = False,
+    file_friendly_logging: bool = False,
 ) -> Optional[Model]:
     """
-    Trains the model specified in the given :class:`Params` object, using the data and training
-    parameters also specified in that object, and saves the results in `serialization_dir`.
+    Trains the model specified in the given [`Params`](../common/params.md#params) object, using the data
+    and training parameters also specified in that object, and saves the results in `serialization_dir`.
 
     # Parameters
 
@@ -224,30 +198,30 @@ def train_model(
         A parameter object specifying an AllenNLP Experiment.
     serialization_dir : `str`
         The directory in which to save results and logs.
-    file_friendly_logging : `bool`, optional (default=False)
-        If `True`, we add newlines to tqdm output, even on an interactive terminal, and we slow
-        down tqdm's output to only once every 10 seconds.
-    recover : `bool`, optional (default=False)
+    recover : `bool`, optional (default=`False`)
         If `True`, we will try to recover a training run from an existing serialization
         directory.  This is only intended for use when something actually crashed during the middle
         of a run.  For continuing training a model on new data, see `Model.from_archive`.
-    force : `bool`, optional (default=False)
+    force : `bool`, optional (default=`False`)
         If `True`, we will overwrite the serialization directory if it already exists.
     node_rank : `int`, optional
         Rank of the current node in distributed training
     include_package : `List[str]`, optional
         In distributed mode, extra packages mentioned will be imported in trainer workers.
-    batch_weight_key : `str`, optional (default="")
-        If non-empty, name of metric used to weight the loss on a per-batch basis.
-    dry_run : `bool`, optional (default=False)
+    dry_run : `bool`, optional (default=`False`)
         Do not train a model, but create a vocabulary, show dataset statistics and other training
         information.
+    file_friendly_logging : `bool`, optional (default=`False`)
+        If `True`, we add newlines to tqdm output, even on an interactive terminal, and we slow
+        down tqdm's output to only once every 10 seconds.
 
     # Returns
 
     best_model : `Optional[Model]`
         The model with the best epoch weights or `None` if in dry run.
     """
+    common_logging.FILE_FRIENDLY_LOGGING = file_friendly_logging
+
     training_util.create_serialization_dir(params, serialization_dir, recover, force)
     params.to_file(os.path.join(serialization_dir, CONFIG_NAME))
 
@@ -259,11 +233,11 @@ def train_model(
             process_rank=0,
             params=params,
             serialization_dir=serialization_dir,
-            file_friendly_logging=file_friendly_logging,
             include_package=include_package,
-            batch_weight_key=batch_weight_key,
             dry_run=dry_run,
+            file_friendly_logging=file_friendly_logging,
         )
+
         if not dry_run:
             archive_model(serialization_dir)
         return model
@@ -288,7 +262,7 @@ def train_model(
         world_size = num_nodes * num_procs
 
         logging.info(
-            f"Switching to distributed training mode since multiple GPUs are configured"
+            "Switching to distributed training mode since multiple GPUs are configured | "
             f"Master is at: {master_addr}:{master_port} | Rank of this node: {node_rank} | "
             f"Number of workers in this node: {num_procs} | Number of nodes: {num_nodes} | "
             f"World size: {world_size}"
@@ -318,15 +292,14 @@ def train_model(
             args=(
                 params.duplicate(),
                 serialization_dir,
-                file_friendly_logging,
                 include_package,
-                batch_weight_key,
                 dry_run,
                 node_rank,
                 master_addr,
                 master_port,
                 world_size,
                 device_ids,
+                file_friendly_logging,
             ),
             nprocs=num_procs,
         )
@@ -341,16 +314,15 @@ def train_model(
 def _train_worker(
     process_rank: int,
     params: Params,
-    serialization_dir: str,
-    file_friendly_logging: bool = False,
+    serialization_dir: Union[str, PathLike],
     include_package: List[str] = None,
-    batch_weight_key: str = "",
     dry_run: bool = False,
     node_rank: int = 0,
     master_addr: str = "127.0.0.1",
     master_port: int = 29500,
     world_size: int = 1,
-    distributed_device_ids: List[str] = None,
+    distributed_device_ids: List[int] = None,
+    file_friendly_logging: bool = False,
 ) -> Optional[Model]:
     """
     Helper to train the configured model/experiment. In distributed mode, this is spawned as a
@@ -365,36 +337,36 @@ def _train_worker(
         A parameter object specifying an AllenNLP Experiment.
     serialization_dir : `str`
         The directory in which to save results and logs.
-    file_friendly_logging : `bool`, optional (default=False)
-        If `True`, we add newlines to tqdm output, even on an interactive terminal, and we slow
-        down tqdm's output to only once every 10 seconds.
     include_package : `List[str]`, optional
         In distributed mode, since this function would have been spawned as a separate process,
         the extra imports need to be done again. NOTE: This does not have any effect in single
         GPU training.
-    batch_weight_key : `str`, optional (default="")
-        If non-empty, name of metric used to weight the loss on a per-batch basis.
-    dry_run : `bool`, optional (default=False)
+    dry_run : `bool`, optional (default=`False`)
         Do not train a model, but create a vocabulary, show dataset statistics and other training
         information.
     node_rank : `int`, optional
         Rank of the node.
-    master_addr : `str`, optional (default="127.0.0.1")
+    master_addr : `str`, optional (default=`"127.0.0.1"`)
         Address of the master node for distributed training.
-    master_port : `str`, optional (default="29500")
+    master_port : `str`, optional (default=`"29500"`)
         Port of the master node for distributed training.
     world_size : `int`, optional
         The number of processes involved in distributed training.
     distributed_device_ids: `List[str]`, optional
         IDs of the devices used involved in distributed training.
+    file_friendly_logging : `bool`, optional (default=`False`)
+        If `True`, we add newlines to tqdm output, even on an interactive terminal, and we slow
+        down tqdm's output to only once every 10 seconds.
 
     # Returns
 
     best_model : `Optional[Model]`
         The model with the best epoch weights or `None` if in distributed training or in dry run.
     """
-    common_util.prepare_global_logging(
-        serialization_dir, file_friendly_logging, rank=process_rank, world_size=world_size
+    common_logging.FILE_FRIENDLY_LOGGING = file_friendly_logging
+
+    common_logging.prepare_global_logging(
+        serialization_dir, rank=process_rank, world_size=world_size,
     )
     common_util.prepare_environment(params)
 
@@ -433,23 +405,28 @@ def _train_worker(
         params["trainer"]["world_size"] = world_size
         params["trainer"]["distributed"] = True
 
-        torch.cuda.set_device(int(gpu_id))
-        dist.init_process_group(
-            backend="nccl",
-            init_method=f"tcp://{master_addr}:{master_port}",
-            world_size=world_size,
-            rank=global_rank,
-        )
+        if gpu_id >= 0:
+            torch.cuda.set_device(int(gpu_id))
+            dist.init_process_group(
+                backend="nccl",
+                init_method=f"tcp://{master_addr}:{master_port}",
+                world_size=world_size,
+                rank=global_rank,
+            )
+        else:
+            dist.init_process_group(
+                backend="gloo",
+                init_method=f"tcp://{master_addr}:{master_port}",
+                world_size=world_size,
+                rank=global_rank,
+            )
         logging.info(
             f"Process group of world size {world_size} initialized "
             f"for distributed training in worker {global_rank}"
         )
 
     train_loop = TrainModel.from_params(
-        params=params,
-        serialization_dir=serialization_dir,
-        local_rank=process_rank,
-        batch_weight_key=batch_weight_key,
+        params=params, serialization_dir=serialization_dir, local_rank=process_rank,
     )
 
     if dry_run:
@@ -484,8 +461,8 @@ class TrainModel(Registrable):
     This class exists so that we can easily read a configuration file with the `allennlp train`
     command.  The basic logic is that we call `train_loop =
     TrainModel.from_params(params_from_config_file)`, then `train_loop.run()`.  This class performs
-    very little logic, pushing most of it to the `TrainerBase` that has a `train()` method.  The
-    point here is to construct all of the dependencies for the `TrainerBase` in a way that we can do
+    very little logic, pushing most of it to the `Trainer` that has a `train()` method.  The
+    point here is to construct all of the dependencies for the `Trainer` in a way that we can do
     it using `from_params()`, while having all of those dependencies transparently documented and
     not hidden in calls to `params.pop()`.  If you are writing your own training loop, you almost
     certainly should not use this class, but you might look at the code for this class to see what
@@ -500,12 +477,15 @@ class TrainModel(Registrable):
     """
 
     default_implementation = "default"
+    """
+    The default implementation is registered as 'default'.
+    """
 
     def __init__(
         self,
         serialization_dir: str,
         model: Model,
-        trainer: TrainerBase,
+        trainer: Trainer,
         evaluation_data_loader: DataLoader = None,
         evaluate_on_test: bool = False,
         batch_weight_key: str = "",
@@ -521,7 +501,7 @@ class TrainModel(Registrable):
         return self.trainer.train()
 
     def finish(self, metrics: Dict[str, Any]):
-        if self.evaluation_data_loader and self.evaluate_on_test:
+        if self.evaluation_data_loader is not None and self.evaluate_on_test:
             logger.info("The model will be evaluated using the best epoch weights.")
             test_metrics = training_util.evaluate(
                 self.model,
@@ -532,7 +512,7 @@ class TrainModel(Registrable):
 
             for key, value in test_metrics.items():
                 metrics["test_" + key] = value
-        elif self.evaluation_data_loader:
+        elif self.evaluation_data_loader is not None:
             logger.info(
                 "To evaluate on the test set after training, pass the "
                 "'evaluate_on_test' flag, or use the 'allennlp evaluate' command."
@@ -546,12 +526,11 @@ class TrainModel(Registrable):
         cls,
         serialization_dir: str,
         local_rank: int,
-        batch_weight_key: str,
         dataset_reader: DatasetReader,
         train_data_path: str,
         model: Lazy[Model],
         data_loader: Lazy[DataLoader],
-        trainer: Lazy[TrainerBase],
+        trainer: Lazy[Trainer],
         vocabulary: Lazy[Vocabulary] = None,
         datasets_for_vocab_creation: List[str] = None,
         validation_dataset_reader: DatasetReader = None,
@@ -559,6 +538,7 @@ class TrainModel(Registrable):
         validation_data_loader: Lazy[DataLoader] = None,
         test_data_path: str = None,
         evaluate_on_test: bool = False,
+        batch_weight_key: str = "",
     ) -> "TrainModel":
         """
         This method is intended for use with our `FromParams` logic, to construct a `TrainModel`
@@ -580,12 +560,17 @@ class TrainModel(Registrable):
         dependencies when we call their `construct()` method, which you can see in the code below.
 
         # Parameters
+
         serialization_dir: `str`
             The directory where logs and model archives will be saved.
+
+            In a typical AllenNLP configuration file, this parameter does not get an entry as a
+            top-level key, it gets passed in separately.
         local_rank: `int`
             The process index that is initialized using the GPU device id.
-        batch_weight_key: `str`
-            The name of metric used to weight the loss on a per-batch basis.
+
+            In a typical AllenNLP configuration file, this parameter does not get an entry as a
+            top-level key, it gets passed in separately.
         dataset_reader: `DatasetReader`
             The `DatasetReader` that will be used for training and (by default) for validation.
         train_data_path: `str`
@@ -597,32 +582,35 @@ class TrainModel(Registrable):
         data_loader: `Lazy[DataLoader]`
             The data_loader we use to batch instances from the dataset reader at training and (by
             default) validation time. This is lazy because it takes a dataset in it's constructor.
-        trainer: `Lazy[TrainerBase]`
+        trainer: `Lazy[Trainer]`
             The `Trainer` that actually implements the training loop.  This is a lazy object because
             it depends on the model that's going to be trained.
-        vocabulary: `Lazy[Vocabulary]`, optional (default=None)
+        vocabulary: `Lazy[Vocabulary]`, optional (default=`None`)
             The `Vocabulary` that we will use to convert strings in the data to integer ids (and
             possibly set sizes of embedding matrices in the `Model`).  By default we construct the
             vocabulary from the instances that we read.
-        datasets_for_vocab_creation: `List[str]`, optional (default=None)
+        datasets_for_vocab_creation: `List[str]`, optional (default=`None`)
             If you pass in more than one dataset but don't want to use all of them to construct a
             vocabulary, you can pass in this key to limit it.  Valid entries in the list are
             "train", "validation" and "test".
-        validation_dataset_reader: `DatasetReader`, optional (default=None)
+        validation_dataset_reader: `DatasetReader`, optional (default=`None`)
             If given, we will use this dataset reader for the validation data instead of
             `dataset_reader`.
-        validation_data_path: `str`, optional (default=None)
+        validation_data_path: `str`, optional (default=`None`)
             If given, we will use this data for computing validation metrics and early stopping.
-        validation_data_loader: `Lazy[DataLoader]`, optional (default=None)
+        validation_data_loader: `Lazy[DataLoader]`, optional (default=`None`)
             If given, the data_loader we use to batch instances from the dataset reader at
             validation and test time. This is lazy because it takes a dataset in it's constructor.
-        test_data_path: `str`, optional (default=None)
+        test_data_path: `str`, optional (default=`None`)
             If given, we will use this as test data.  This makes it available for vocab creation by
             default, but nothing else.
-        evaluate_on_test: `bool`, optional (default=False)
+        evaluate_on_test: `bool`, optional (default=`False`)
             If given, we will evaluate the final model on this data at the end of training.  Note
             that we do not recommend using this for actual test data in every-day experimentation;
             you should only very rarely evaluate your model on actual test data.
+        batch_weight_key: `str`, optional (default=`""`)
+            The name of metric used to weight the loss on a per-batch basis.  This is only used
+            during evaluation on final test data, if you've specified `evaluate_on_test=True`.
         """
 
         datasets = training_util.read_all_datasets(
@@ -638,10 +626,15 @@ class TrainModel(Registrable):
                 if key not in datasets:
                     raise ConfigurationError(f"invalid 'dataset_for_vocab_creation' {key}")
 
+            logger.info(
+                "From dataset instances, %s will be considered for vocabulary creation.",
+                ", ".join(datasets_for_vocab_creation),
+            )
+
         instance_generator = (
             instance
             for key, dataset in datasets.items()
-            if not datasets_for_vocab_creation or key in datasets_for_vocab_creation
+            if datasets_for_vocab_creation is None or key in datasets_for_vocab_creation
             for instance in dataset
         )
 
@@ -652,7 +645,9 @@ class TrainModel(Registrable):
 
         # Initializing the model can have side effect of expanding the vocabulary.
         # Save the vocab only in the master. In the degenerate non-distributed
-        # case, we're trivially the master.
+        # case, we're trivially the master. In the distributed case this is safe
+        # to do without worrying about race conditions since saving and loading
+        # the vocab involves acquiring a file lock.
         if common_util.is_master():
             vocabulary_path = os.path.join(serialization_dir, "vocabulary")
             vocabulary_.save_to_files(vocabulary_path)

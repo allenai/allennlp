@@ -27,6 +27,8 @@ class SequenceTaggingDatasetReader(DatasetReader):
     and converts it into a `Dataset` suitable for sequence tagging. You can also specify
     alternative delimiters in the constructor.
 
+    Registered as a `DatasetReader` with name "sequence_tagging".
+
     # Parameters
 
     word_tag_delimiter: `str`, optional (default=`"###"`)

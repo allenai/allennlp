@@ -12,6 +12,8 @@ class ComposeEncoder(Seq2SeqEncoder):
 
     Among other things, this can be used to add a "pre-contextualizer" before a Seq2SeqEncoder.
 
+    Registered as a `Seq2SeqEncoder` with name "compose".
+
     # Parameters
 
     encoders : `List[Seq2SeqEncoder]`, required.
@@ -48,7 +50,7 @@ class ComposeEncoder(Seq2SeqEncoder):
 
         inputs : `torch.Tensor`, required.
             A tensor of shape (batch_size, timesteps, input_dim)
-        mask : `torch.BoolTensor`, optional (default = None).
+        mask : `torch.BoolTensor`, optional (default = `None`).
             A tensor of shape (batch_size, timesteps).
 
         # Returns

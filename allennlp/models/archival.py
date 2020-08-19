@@ -1,8 +1,8 @@
 """
 Helper functions for archiving models and restoring archived models.
 """
-
-from typing import NamedTuple
+from os import PathLike
+from typing import NamedTuple, Union
 import atexit
 import logging
 import os
@@ -58,7 +58,7 @@ class Archive(NamedTuple):
         path : `str`, required
             Path of target module to be loaded from the model.
             Eg. "_textfield_embedder.token_embedder_tokens"
-        freeze : `bool`, optional (default=True)
+        freeze : `bool`, optional (default=`True`)
             Whether to freeze the module parameters or not.
 
         """
@@ -89,7 +89,9 @@ _WEIGHTS_NAME = "weights.th"
 
 
 def archive_model(
-    serialization_dir: str, weights: str = _DEFAULT_WEIGHTS, archive_path: str = None
+    serialization_dir: Union[str, PathLike],
+    weights: str = _DEFAULT_WEIGHTS,
+    archive_path: Union[str, PathLike] = None,
 ) -> None:
     """
     Archive the model weights, its training configuration, and its vocabulary to `model.tar.gz`.
@@ -98,9 +100,9 @@ def archive_model(
 
     serialization_dir : `str`
         The directory where the weights and vocabulary are written out.
-    weights : `str`, optional (default=_DEFAULT_WEIGHTS)
+    weights : `str`, optional (default=`_DEFAULT_WEIGHTS`)
         Which weights file to include in the archive. The default is `best.th`.
-    archive_path : `str`, optional, (default = None)
+    archive_path : `str`, optional, (default = `None`)
         A full path to serialize the model to. The default is "model.tar.gz" inside the
         serialization_dir. If you pass a directory here, we'll serialize the model
         to "model.tar.gz" inside the directory.
@@ -128,7 +130,7 @@ def archive_model(
 
 
 def load_archive(
-    archive_file: str, cuda_device: int = -1, overrides: str = "", weights_file: str = None
+    archive_file: str, cuda_device: int = -1, overrides: str = "", weights_file: str = None,
 ) -> Archive:
     """
     Instantiates an Archive from an archived `tar.gz` file.
@@ -137,13 +139,13 @@ def load_archive(
 
     archive_file : `str`
         The archive file to load the model from.
-    weights_file : `str`, optional (default = None)
-        The weights file to use.  If unspecified, weights.th in the archive_file will be used.
-    cuda_device : `int`, optional (default = -1)
+    cuda_device : `int`, optional (default = `-1`)
         If `cuda_device` is >= 0, the model will be loaded onto the
         corresponding GPU. Otherwise it will be loaded onto the CPU.
-    overrides : `str`, optional (default = "")
+    overrides : `str`, optional (default = `""`)
         JSON overrides to apply to the unarchived `Params` object.
+    weights_file : `str`, optional (default = `None`)
+        The weights file to use.  If unspecified, weights.th in the archive_file will be used.
     """
     # redirect to the cache, if necessary
     resolved_archive_file = cached_path(archive_file)

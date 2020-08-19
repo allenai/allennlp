@@ -64,6 +64,15 @@ class TokenIndexer(Registrable):
         """
         raise NotImplementedError
 
+    def indices_to_tokens(
+        self, indexed_tokens: IndexedTokenList, vocabulary: Vocabulary
+    ) -> List[Token]:
+        """
+        Inverse operations of tokens_to_indices. Takes an `IndexedTokenList` and converts it back
+        into a list of tokens.
+        """
+        raise NotImplementedError
+
     def get_empty_token_list(self) -> IndexedTokenList:
         """
         Returns an `already indexed` version of an empty token list.  This is typically just an
@@ -101,7 +110,13 @@ class TokenIndexer(Registrable):
         """
         tensor_dict = {}
         for key, val in tokens.items():
-            tensor_dict[key] = torch.LongTensor(pad_sequence_to_length(val, padding_lengths[key]))
+            if val and isinstance(val[0], bool):
+                tensor = torch.BoolTensor(
+                    pad_sequence_to_length(val, padding_lengths[key], default_value=lambda: False)
+                )
+            else:
+                tensor = torch.LongTensor(pad_sequence_to_length(val, padding_lengths[key]))
+            tensor_dict[key] = tensor
         return tensor_dict
 
     def __eq__(self, other) -> bool:

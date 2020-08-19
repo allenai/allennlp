@@ -25,13 +25,33 @@ class FeedForward(torch.nn.Module, FromParams):
         The output dimension of each of the `Linear` layers.  If this is a single `int`, we use
         it for all `Linear` layers.  If it is a `List[int]`, `len(hidden_dims)` must be
         `num_layers`.
-    activations : `Union[Callable, List[Callable]]`, required
+    activations : `Union[Activation, List[Activation]]`, required
         The activation function to use after each `Linear` layer.  If this is a single function,
-        we use it after all `Linear` layers.  If it is a `List[Callable]`,
-        `len(activations)` must be `num_layers`.
-    dropout : `Union[float, List[float]]`, optional (default = 0.0)
+        we use it after all `Linear` layers.  If it is a `List[Activation]`,
+        `len(activations)` must be `num_layers`. Activation must have torch.nn.Module type.
+    dropout : `Union[float, List[float]]`, optional (default = `0.0`)
         If given, we will apply this amount of dropout after each layer.  Semantics of `float`
         versus `List[float]` is the same as with other parameters.
+
+    # Examples
+
+    ```python
+    FeedForward(124, 2, [64, 32], torch.nn.ReLU(), 0.2)
+    #> FeedForward(
+    #>   (_activations): ModuleList(
+    #>     (0): ReLU()
+    #>     (1): ReLU()
+    #>   )
+    #>   (_linear_layers): ModuleList(
+    #>     (0): Linear(in_features=124, out_features=64, bias=True)
+    #>     (1): Linear(in_features=64, out_features=32, bias=True)
+    #>   )
+    #>   (_dropout): ModuleList(
+    #>     (0): Dropout(p=0.2, inplace=False)
+    #>     (1): Dropout(p=0.2, inplace=False)
+    #>   )
+    #> )
+    ```
     """
 
     def __init__(
@@ -62,7 +82,7 @@ class FeedForward(torch.nn.Module, FromParams):
             raise ConfigurationError(
                 "len(dropout) (%d) != num_layers (%d)" % (len(dropout), num_layers)
             )
-        self._activations = activations
+        self._activations = torch.nn.ModuleList(activations)
         input_dims = [input_dim] + hidden_dims[:-1]
         linear_layers = []
         for layer_input_dim, layer_output_dim in zip(input_dims, hidden_dims):

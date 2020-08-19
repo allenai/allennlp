@@ -52,6 +52,8 @@ class Conll2003DatasetReader(DatasetReader):
     on any combination of blank lines and "DOCSTART" tags; in particular, it does the right
     thing on well formed inputs.)
 
+    Registered as a `DatasetReader` with name "conll2003".
+
     # Parameters
 
     token_indexers : `Dict[str, TokenIndexer]`, optional (default=`{"tokens": SingleIdTokenIndexer()}`)

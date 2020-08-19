@@ -72,7 +72,7 @@ def uniform_unit_scaling(tensor: torch.Tensor, nonlinearity: str = "linear"):
 
     tensor : `torch.Tensor`, required.
         The tensor to initialise.
-    nonlinearity : `str`, optional (default = "linear")
+    nonlinearity : `str`, optional (default = `"linear"`)
         The non-linearity which is performed after the projection that this
         tensor is involved in. This must be the name of a function contained
         in the `torch.nn.functional` package.
@@ -107,12 +107,12 @@ def block_orthogonal(tensor: torch.Tensor, split_sizes: List[int], gain: float =
 
     tensor : `torch.Tensor`, required.
         A tensor to initialize.
-    split_sizes : List[int], required.
+    split_sizes : `List[int]`, required.
         A list of length `tensor.ndim()` specifying the size of the
         blocks along that particular dimension. E.g. `[10, 20]` would
         result in the tensor being split into chunks of size 10 along the
         first dimension and 20 along the second.
-    gain : float, optional (default = 1.0)
+    gain : `float`, optional (default = `1.0`)
         The gain (scaling) applied to the orthogonal initialization.
     """
     data = tensor.data
@@ -168,48 +168,80 @@ class _InitializerWrapper(Initializer):
 
 @Initializer.register("normal")
 class NormalInitializer(_InitializerWrapper):
+    """
+    Registered as an `Initializer` with name "normal".
+    """
+
     def __init__(self, mean: float = 0.0, std: float = 0.1):
         super().__init__(init_function=torch.nn.init.normal_, mean=mean, std=std)
 
 
 @Initializer.register("orthogonal")
 class OrthogonalInitializer(_InitializerWrapper):
+    """
+    Registered as an `Initializer` with name "orthogonal".
+    """
+
     def __init__(self, gain: float = 1.0):
         super().__init__(init_function=torch.nn.init.orthogonal_, gain=gain)
 
 
 @Initializer.register("uniform")
 class UniformInitializer(_InitializerWrapper):
+    """
+    Registered as an `Initializer` with name "uniform".
+    """
+
     def __init__(self, a: float = 0.0, b: float = 1.0):
         super().__init__(init_function=torch.nn.init.uniform_, a=a, b=b)
 
 
 @Initializer.register("constant")
 class ConstantInitializer(_InitializerWrapper):
+    """
+    Registered as an `Initializer` with name "constant".
+    """
+
     def __init__(self, val: float):
         super().__init__(init_function=torch.nn.init.constant_, val=val)
 
 
 @Initializer.register("dirac")
 class DiracInitializer(_InitializerWrapper):
+    """
+    Registered as an `Initializer` with name "dirac".
+    """
+
     def __init__(self):
         super().__init__(init_function=torch.nn.init.dirac_)
 
 
 @Initializer.register("xavier_uniform")
 class XavierUniformInitializer(_InitializerWrapper):
+    """
+    Registered as an `Initializer` with name "xavir_uniform".
+    """
+
     def __init__(self, gain: float = 1.0):
         super().__init__(init_function=torch.nn.init.xavier_uniform_, gain=gain)
 
 
 @Initializer.register("xavier_normal")
 class XavierNormalInitializer(_InitializerWrapper):
+    """
+    Registered as an `Initializer` with name "xavier_normal".
+    """
+
     def __init__(self, gain: float = 1.0):
         super().__init__(init_function=torch.nn.init.xavier_normal_, gain=gain)
 
 
 @Initializer.register("kaiming_uniform")
 class KaimingUniformInitializer(_InitializerWrapper):
+    """
+    Registered as an `Initializer` with name "kaiming_uniform".
+    """
+
     def __init__(self, a: float = 0.0, mode: str = "fan_in", nonlinearity: str = "leaky_relu"):
         super().__init__(
             init_function=torch.nn.init.kaiming_uniform_, a=a, mode=mode, nonlinearity=nonlinearity
@@ -218,6 +250,10 @@ class KaimingUniformInitializer(_InitializerWrapper):
 
 @Initializer.register("kaiming_normal")
 class KaimingNormalInitializer(_InitializerWrapper):
+    """
+    Registered as an `Initializer` with name "kaiming_normal".
+    """
+
     def __init__(self, a: float = 0.0, mode: str = "fan_in", nonlinearity: str = "leaky_relu"):
         super().__init__(
             init_function=torch.nn.init.kaiming_normal_, a=a, mode=mode, nonlinearity=nonlinearity
@@ -226,36 +262,60 @@ class KaimingNormalInitializer(_InitializerWrapper):
 
 @Initializer.register("sparse")
 class SparseInitializer(_InitializerWrapper):
+    """
+    Registered as an `Initializer` with name "sparse".
+    """
+
     def __init__(self, sparsity: float, std: float = 0.01):
         super().__init__(init_function=torch.nn.init.sparse_, sparsity=sparsity, std=std)
 
 
 @Initializer.register("eye")
 class EyeInitializer(_InitializerWrapper):
+    """
+    Registered as an `Initializer` with name "eye".
+    """
+
     def __init__(self):
         super().__init__(init_function=torch.nn.init.eye_)
 
 
 @Initializer.register("block_orthogonal")
 class BlockOrthogonalInitializer(_InitializerWrapper):
+    """
+    Registered as an `Initializer` with name "block_orthogonal".
+    """
+
     def __init__(self, split_sizes: List[int], gain: float = 1.0):
         super().__init__(init_function=block_orthogonal, split_sizes=split_sizes, gain=gain)
 
 
 @Initializer.register("uniform_unit_scaling")
 class UniformUnitScalingInitializer(_InitializerWrapper):
+    """
+    Registered as an `Initializer` with name "uniform_unit_scaling".
+    """
+
     def __init__(self, nonlinearity: str = "linear"):
         super().__init__(init_function=uniform_unit_scaling, nonlinearity=nonlinearity)
 
 
 @Initializer.register("zero")
 class ZeroInitializer(_InitializerWrapper):
+    """
+    Registered as an `Initializer` with name "zero".
+    """
+
     def __init__(self):
         super().__init__(init_function=zero)
 
 
 @Initializer.register("lstm_hidden_bias")
 class LstmHiddenBiasInitializer(_InitializerWrapper):
+    """
+    Registered as an `Initializer` with name "lstm_hidden_bias".
+    """
+
     def __init__(self):
         super().__init__(init_function=lstm_hidden_bias)
 
@@ -309,11 +369,13 @@ class PretrainedModelInitializer(Initializer):
             ]
     ```
 
+    Registered as an `Initializer` with name "pretrained".
+
     # Parameters
 
     weights_file_path : `str`, required
         The path to the weights file which has the pretrained model parameters.
-    parameter_name_overrides : `Dict[str, str]`, optional (default = None)
+    parameter_name_overrides : `Dict[str, str]`, optional (default = `None`)
         The mapping from the new parameter name to the name which should be used
         to index into the pretrained model parameters. If a parameter name is not
         specified, the initializer will use the parameter's default name as the key.
@@ -341,7 +403,7 @@ class PretrainedModelInitializer(Initializer):
             )
 
         # Copy the parameters from the source to the destination
-        tensor.data[:] = source_weights[:]
+        tensor.data.copy_(source_weights.data)
 
 
 class InitializerApplicator(FromParams):
@@ -378,13 +440,12 @@ class InitializerApplicator(FromParams):
 
     # Parameters
 
-    regexes : `List[Tuple[str, Initializer]]`, optional (default = [])
+    regexes : `List[Tuple[str, Initializer]]`, optional (default = `[]`)
         A list mapping parameter regexes to initializers.  We will check each parameter against
         each regex in turn, and apply the initializer paired with the first matching regex, if
-        any. If "prevent" is assigned to any regex, then it will override and prevent the matched
-        parameters to be initialzed.
+        any.
 
-    prevent_regexes: `List[str]`, optional (default=None)
+    prevent_regexes: `List[str]`, optional (default=`None`)
         Any parameter name matching one of these regexes will not be initialized, regardless of
         whether it matches one of the regexes passed in the `regexes` parameter.
     """
@@ -404,13 +465,13 @@ class InitializerApplicator(FromParams):
 
         # Parameters
 
-        module : torch.nn.Module, required.
+        module : `torch.nn.Module`, required.
             The Pytorch module to apply the initializers to.
         """
         logger.info("Initializing parameters")
         unused_regexes = {initializer[0] for initializer in self._initializers}
         uninitialized_parameters = set()
-        # Store which initialisers were applied to which parameters.
+        # Store which initializers were applied to which parameters.
         for name, parameter in module.named_parameters():
             for initializer_regex, initializer in self._initializers:
                 allow = self._prevent_regex is None or not bool(

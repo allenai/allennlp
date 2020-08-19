@@ -13,7 +13,6 @@ from allennlp.commands.test_install import _get_module_root
 from allennlp.commands.train import train_model_from_file, train_model
 from allennlp.common import Params
 from allennlp.common.util import pushd
-from allennlp.training.metrics import EvalbBracketingScorer
 
 
 logger = logging.getLogger(__name__)
@@ -62,27 +61,15 @@ def train_fixture_gpu(config_prefix: str) -> None:
 if __name__ == "__main__":
     module_root = _get_module_root().parent
     with pushd(module_root, verbose=True):
-        if len(sys.argv) >= 2 and sys.argv[1].lower() == "gpu":
-            train_fixture_gpu("allennlp/tests/fixtures/srl/")
-        else:
-            models = [
-                ("basic_classifier", "experiment_seq2seq.jsonnet"),
-                "biaffine_dependency_parser",
-                "constituency_parser",
-                "coref",
-                "decomposable_attention",
-                "encoder_decoder/composed_seq2seq",
-                "encoder_decoder/simple_seq2seq",
-                "encoder_decoder/copynet_seq2seq",
-                "esim",
-                "simple_tagger_with_span_f1",
-                "srl",
-            ]
-            for model in models:
-                if model == "constituency_parser":
-                    EvalbBracketingScorer.compile_evalb()
-                if isinstance(model, tuple):
-                    model, config_filename = model
-                    train_fixture(f"allennlp/tests/fixtures/{model}/", config_filename)
-                else:
-                    train_fixture(f"allennlp/tests/fixtures/{model}/")
+        models = [
+            ("basic_classifier", "experiment_seq2seq.jsonnet"),
+            "simple_tagger",
+            "simple_tagger_with_elmo",
+            "simple_tagger_with_span_f1",
+        ]
+        for model in models:
+            if isinstance(model, tuple):
+                model, config_filename = model
+                train_fixture(f"allennlp/tests/fixtures/{model}/", config_filename)
+            else:
+                train_fixture(f"allennlp/tests/fixtures/{model}/")

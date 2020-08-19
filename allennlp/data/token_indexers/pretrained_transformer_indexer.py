@@ -22,6 +22,8 @@ class PretrainedTransformerIndexer(TokenIndexer):
     corresponding :class:`PretrainedTransformerTokenizer` to tokenize your input.  Otherwise you'll
     have a mismatch between your tokens and your vocabulary, and you'll get a lot of UNK tokens.
 
+    Registered as a `TokenIndexer` with name "pretrained_transformer".
+
     # Parameters
 
     model_name : `str`
@@ -31,7 +33,7 @@ class PretrainedTransformerIndexer(TokenIndexer):
         We use a somewhat confusing default value of `tags` so that we do not add padding or UNK
         tokens to this namespace, which would break on loading because we wouldn't find our default
         OOV token.
-    max_length : `int`, optional (default = None)
+    max_length : `int`, optional (default = `None`)
         If not None, split the document into segments of this many tokens (including special tokens)
         before feeding into the embedder. The embedder embeds these segments independently and
         concatenate the results to get the original document representation. Should be set to
@@ -47,13 +49,14 @@ class PretrainedTransformerIndexer(TokenIndexer):
         self._tokenizer = self._allennlp_tokenizer.tokenizer
         self._added_to_vocabulary = False
 
-        self._num_added_start_tokens = self._allennlp_tokenizer.num_added_start_tokens
-        self._num_added_end_tokens = self._allennlp_tokenizer.num_added_end_tokens
+        self._num_added_start_tokens = len(self._allennlp_tokenizer.single_sequence_start_tokens)
+        self._num_added_end_tokens = len(self._allennlp_tokenizer.single_sequence_end_tokens)
 
         self._max_length = max_length
         if self._max_length is not None:
+            num_added_tokens = len(self._allennlp_tokenizer.tokenize("a")) - 1
             self._effective_max_length = (  # we need to take into account special tokens
-                self._max_length - self._tokenizer.num_added_tokens()
+                self._max_length - num_added_tokens
             )
             if self._effective_max_length <= 0:
                 raise ValueError(
@@ -62,28 +65,21 @@ class PretrainedTransformerIndexer(TokenIndexer):
 
     def _add_encoding_to_vocabulary_if_needed(self, vocab: Vocabulary) -> None:
         """
-        Copies tokens from ```transformers``` model to the specified namespace.
-        Transformers vocab is taken from the <vocab>/<encoder> keys of the tokenizer object.
+        Copies tokens from ```transformers``` model's vocab to the specified namespace.
         """
         if self._added_to_vocabulary:
             return
 
-        vocab_field_name = None
-        if hasattr(self._tokenizer, "vocab"):
-            vocab_field_name = "vocab"
-        elif hasattr(self._tokenizer, "encoder"):
-            vocab_field_name = "encoder"
-        else:
-            logger.warning(
-                """Wasn't able to fetch vocabulary from pretrained transformers lib.
-                Neither <vocab> nor <encoder> are the valid fields for vocab.
-                Your tokens will still be correctly indexed, but vocabulary file will not be saved."""
+        try:
+            vocab_items = self._tokenizer.get_vocab().items()
+        except NotImplementedError:
+            vocab_items = (
+                (self._tokenizer.convert_ids_to_tokens(idx), idx)
+                for idx in range(self._tokenizer.vocab_size)
             )
-        if vocab_field_name is not None:
-            pretrained_vocab = getattr(self._tokenizer, vocab_field_name)
-            for word, idx in pretrained_vocab.items():
-                vocab._token_to_index[self._namespace][word] = idx
-                vocab._index_to_token[self._namespace][idx] = word
+        for word, idx in vocab_items:
+            vocab._token_to_index[self._namespace][word] = idx
+            vocab._index_to_token[self._namespace][idx] = word
 
         self._added_to_vocabulary = True
 
@@ -98,11 +94,31 @@ class PretrainedTransformerIndexer(TokenIndexer):
 
         indices, type_ids = self._extract_token_and_type_ids(tokens)
         # The mask has 1 for real tokens and 0 for padding tokens. Only real tokens are attended to.
-        output = {"token_ids": indices, "mask": [1] * len(indices)}
-        if type_ids is not None:
-            output["type_ids"] = type_ids
+        output: IndexedTokenList = {
+            "token_ids": indices,
+            "mask": [True] * len(indices),
+            "type_ids": type_ids,
+        }
 
         return self._postprocess_output(output)
+
+    @overrides
+    def indices_to_tokens(
+        self, indexed_tokens: IndexedTokenList, vocabulary: Vocabulary
+    ) -> List[Token]:
+        self._add_encoding_to_vocabulary_if_needed(vocabulary)
+
+        token_ids = indexed_tokens["token_ids"]
+        type_ids = indexed_tokens.get("type_ids")
+
+        return [
+            Token(
+                text=vocabulary.get_token_from_index(token_ids[i], self._namespace),
+                text_id=token_ids[i],
+                type_id=type_ids[i] if type_ids is not None else None,
+            )
+            for i in range(len(token_ids))
+        ]
 
     def _extract_token_and_type_ids(
         self, tokens: List[Token]
@@ -128,7 +144,7 @@ class PretrainedTransformerIndexer(TokenIndexer):
             if type_ids is not None and getattr(token, "type_id", None) is not None:
                 type_ids.append(token.type_id)
             else:
-                type_ids = None
+                type_ids.append(0)
 
         return indices, type_ids
 
@@ -164,11 +180,8 @@ class PretrainedTransformerIndexer(TokenIndexer):
             indices = [i for segment in folded_indices for i in segment]
 
             output["token_ids"] = indices
-            # `create_token_type_ids_from_sequences()` inserts special tokens
-            output["type_ids"] = self._tokenizer.create_token_type_ids_from_sequences(
-                indices[self._num_added_start_tokens : -self._num_added_end_tokens]
-            )
-            output["segment_concat_mask"] = [1] * len(indices)
+            output["type_ids"] = [0] * len(indices)
+            output["segment_concat_mask"] = [True] * len(indices)
 
         return output
 
@@ -183,20 +196,33 @@ class PretrainedTransformerIndexer(TokenIndexer):
     def as_padded_tensor_dict(
         self, tokens: IndexedTokenList, padding_lengths: Dict[str, int]
     ) -> Dict[str, torch.Tensor]:
-        # Different transformers use different padding values for tokens, but for mask and type id, the padding
-        # value is always 0.
-        return {
-            key: torch.LongTensor(
+        tensor_dict = {}
+        for key, val in tokens.items():
+            if key == "type_ids":
+                padding_value = 0
+                mktensor = torch.LongTensor
+            elif key == "mask" or key == "wordpiece_mask":
+                padding_value = False
+                mktensor = torch.BoolTensor
+            elif len(val) > 0 and isinstance(val[0], bool):
+                padding_value = False
+                mktensor = torch.BoolTensor
+            else:
+                padding_value = self._tokenizer.pad_token_id
+                if padding_value is None:
+                    padding_value = (
+                        0  # Some tokenizers don't have padding tokens and rely on the mask only.
+                    )
+                mktensor = torch.LongTensor
+
+            tensor = mktensor(
                 pad_sequence_to_length(
-                    val,
-                    padding_lengths[key],
-                    default_value=lambda: 0
-                    if key in {"mask", "type_ids"}
-                    else self._tokenizer.pad_token_id,
+                    val, padding_lengths[key], default_value=lambda: padding_value
                 )
             )
-            for key, val in tokens.items()
-        }
+
+            tensor_dict[key] = tensor
+        return tensor_dict
 
     def __eq__(self, other):
         if isinstance(other, PretrainedTransformerIndexer):

@@ -6,6 +6,7 @@ import numpy as np
 import torch
 
 from allennlp.common.checks import ConfigurationError
+from allennlp.nn import util
 
 
 def _choice(num_words: int, num_samples: int) -> Tuple[np.ndarray, int]:
@@ -46,12 +47,14 @@ class SampledSoftmaxLoss(torch.nn.Module):
     """
     Based on the default log_uniform_candidate_sampler in tensorflow.
 
-    NOTE: num_words DOES NOT include padding id.
+    !!! NOTE
+        num_words DOES NOT include padding id.
 
-    NOTE: In all cases except (tie_embeddings=True and use_character_inputs=False)
-    the weights are dimensioned as num_words and do not include an entry for the padding (0) id.
-    For the (tie_embeddings=True and use_character_inputs=False) case,
-    then the embeddings DO include the extra 0 padding, to be consistent with the word embedding layer.
+    !!! NOTE
+        In all cases except (tie_embeddings=True and use_character_inputs=False)
+        the weights are dimensioned as num_words and do not include an entry for the padding (0) id.
+        For the (tie_embeddings=True and use_character_inputs=False) case,
+        then the embeddings DO include the extra 0 padding, to be consistent with the word embedding layer.
 
     # Parameters
 
@@ -61,13 +64,13 @@ class SampledSoftmaxLoss(torch.nn.Module):
         The dimension to softmax over
     num_samples, `int`, required
         During training take this many samples. Must be less than num_words.
-    sparse, `bool`, optional (default = False)
+    sparse, `bool`, optional (default = `False`)
         If this is true, we use a sparse embedding matrix.
-    unk_id, `int`, optional (default = None)
+    unk_id, `int`, optional (default = `None`)
         If provided, the id that represents unknown characters.
-    use_character_inputs, `bool`, optional (default = True)
+    use_character_inputs, `bool`, optional (default = `True`)
         Whether to use character inputs
-    use_fast_sampler, `bool`, optional (default = False)
+    use_fast_sampler, `bool`, optional (default = `False`)
         Whether to use the fast cython sampler.
     """
 
@@ -205,13 +208,19 @@ class SampledSoftmaxLoss(torch.nn.Module):
         # compute the logits and remove log expected counts
         # [batch_size, ]
         true_logits = (
-            (true_w * embeddings).sum(dim=1) + true_b - torch.log(target_expected_count + 1e-7)
+            (true_w * embeddings).sum(dim=1)
+            + true_b
+            - torch.log(
+                target_expected_count + util.tiny_value_of_dtype(target_expected_count.dtype)
+            )
         )
         # [batch_size, n_samples]
         sampled_logits = (
             torch.matmul(embeddings, sampled_w.t())
             + sampled_b
-            - torch.log(sampled_expected_count + 1e-7)
+            - torch.log(
+                sampled_expected_count + util.tiny_value_of_dtype(sampled_expected_count.dtype)
+            )
         )
 
         # remove true labels -- we will take

@@ -1,10 +1,11 @@
 import logging
-from typing import List, Iterable
+from typing import List, Iterable, Tuple
 import random
 import math
 
 from torch.utils import data
 
+from allennlp.common.checks import ConfigurationError
 from allennlp.common.util import lazy_groups_of
 from allennlp.data.instance import Instance
 from allennlp.data.samplers import BatchSampler
@@ -29,11 +30,15 @@ class BucketBatchSampler(BatchSampler):
 
     # Parameters
 
-    data_source: `data.Dataset`, required,
+    data_source: `data.Dataset`, required
         The pytorch `Dataset` of allennlp Instances to bucket.
-    batch_size : int, required.
+
+        In a typical AllenNLP configuration file, this parameter does not get an entry under the
+        "batch_sampler", it gets constructed separately.
+    batch_size : `int`, required
         The size of each batch of instances yielded when calling the dataloader.
-    sorting_keys : List[str], optional
+
+    sorting_keys : `List[str]`, optional
         To bucket inputs into batches, we want to group the instances by padding length, so that we
         minimize the amount of padding necessary per batch. In order to do this, we need to know
         which fields need what type of padding, and in what order.
@@ -48,13 +53,16 @@ class BucketBatchSampler(BatchSampler):
         When you need to specify this yourself, you can create an instance from your dataset and
         call `Instance.get_padding_lengths()` to see a list of all keys used in your data.  You
         should give one or more of those as the sorting keys here.
-    padding_noise : float, optional (default=.1)
+
+    padding_noise : `float`, optional (default=`.1`)
         When sorting by padding length, we add a bit of noise to the lengths, so that the sorting
         isn't deterministic.  This parameter determines how much noise we add, as a percentage of
         the actual padding value for each instance.
-    drop_last : `bool`, (default = False)
+
+    drop_last : `bool`, (default = `False`)
         If `True`, the sampler will drop the last batch if
         its size would be less than batch_size`.
+
     """
 
     def __init__(
@@ -73,7 +81,9 @@ class BucketBatchSampler(BatchSampler):
         self.data_source = data_source
         self.drop_last = drop_last
 
-    def _argsort_by_padding(self, instances: Iterable[Instance]) -> List[int]:
+    def _argsort_by_padding(
+        self, instances: Iterable[Instance]
+    ) -> Tuple[List[int], List[List[int]]]:
         """
         Argsorts the instances by their padding lengths, using the keys in
         `sorting_keys` (in the order in which they are provided). `sorting_keys`
@@ -86,26 +96,36 @@ class BucketBatchSampler(BatchSampler):
         instances_with_lengths = []
         for instance in instances:
             # Make sure instance is indexed before calling .get_padding
-            instance_with_lengths = (
-                [
-                    add_noise_to_value(len(instance.fields.get(field_name)), self.padding_noise)
-                    for field_name in self.sorting_keys
-                ],
-                instance,
-            )
-            instances_with_lengths.append(instance_with_lengths)
+            lengths = []
+            noisy_lengths = []
+            for field_name in self.sorting_keys:
+                if field_name not in instance.fields:
+                    raise ConfigurationError(
+                        f'Sorting key "{field_name}" is not a field in instance. '
+                        f"Available fields/keys are {list(instance.fields.keys())}."
+                    )
+                lengths.append(len(instance.fields[field_name]))
+
+                noisy_lengths.append(add_noise_to_value(lengths[-1], self.padding_noise))
+            instances_with_lengths.append((noisy_lengths, lengths, instance))
         with_indices = [(x, i) for i, x in enumerate(instances_with_lengths)]
         with_indices.sort(key=lambda x: x[0][0])
-        return [instance_with_index[-1] for instance_with_index in with_indices]
+        return (
+            [instance_with_index[-1] for instance_with_index in with_indices],
+            [instance_with_index[0][1] for instance_with_index in with_indices],
+        )
 
     def __iter__(self) -> Iterable[List[int]]:
-
-        indices = self._argsort_by_padding(self.data_source)
+        indices, _ = self._argsort_by_padding(self.data_source)
+        batches = []
         for group in lazy_groups_of(indices, self.batch_size):
             batch_indices = list(group)
             if self.drop_last and len(batch_indices) < self.batch_size:
                 continue
-            yield batch_indices
+            batches.append(batch_indices)
+        random.shuffle(batches)
+        for batch in batches:
+            yield batch
 
     def _guess_sorting_keys(self, instances: Iterable[Instance], num_instances: int = 10) -> None:
         """
@@ -116,7 +136,7 @@ class BucketBatchSampler(BatchSampler):
 
         instances : `Iterable[Instance]`, required.
             The dataset to guess sorting keys for.
-        num_instances : `int`, optional (default = 10)
+        num_instances : `int`, optional (default = `10`)
             The number of instances to use to guess sorting keys. Typically
             the default value is completely sufficient, but if your instances
             are not homogeneous, you might need more.

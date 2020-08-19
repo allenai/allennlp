@@ -167,12 +167,12 @@ class ConditionalRandomField(torch.nn.Module):
 
     num_tags : `int`, required
         The number of tags.
-    constraints : `List[Tuple[int, int]]`, optional (default: None)
+    constraints : `List[Tuple[int, int]]`, optional (default = `None`)
         An optional list of allowed transitions (from_tag_id, to_tag_id).
         These are applied to `viterbi_tags()` but do not affect `forward()`.
         These should be derived from `allowed_transitions` so that the
         start and end transitions are handled correctly for your tag type.
-    include_start_end_transitions : `bool`, optional (default: True)
+    include_start_end_transitions : `bool`, optional (default = `True`)
         Whether to include the start and end transition parameters.
     """
 
@@ -246,8 +246,8 @@ class ConditionalRandomField(torch.nn.Module):
             # Add all the scores together and logexp over the current_tag axis.
             inner = broadcast_alpha + emit_scores + transition_scores
 
-            # In valid positions (mask == 1) we want to take the logsumexp over the current_tag dimension
-            # of `inner`. Otherwise (mask == 0) we want to retain the previous alpha.
+            # In valid positions (mask == True) we want to take the logsumexp over the current_tag dimension
+            # of `inner`. Otherwise (mask == False) we want to retain the previous alpha.
             alpha = util.logsumexp(inner, 1) * mask[i].view(batch_size, 1) + alpha * (
                 ~mask[i]
             ).view(batch_size, 1)
@@ -324,6 +324,9 @@ class ConditionalRandomField(torch.nn.Module):
 
         if mask is None:
             mask = torch.ones(*tags.size(), dtype=torch.bool)
+        else:
+            # The code below fails in weird ways if this isn't a bool tensor, so we make sure.
+            mask = mask.to(torch.bool)
 
         log_denominator = self._input_likelihood(inputs, mask)
         log_numerator = self._joint_likelihood(inputs, tags, mask)

@@ -5,7 +5,8 @@ an AllenNLP model.
 
 import logging
 import os
-from typing import Dict, Union, List, Set, Type
+from os import PathLike
+from typing import Dict, List, Set, Type, Optional, Union
 
 import numpy
 import torch
@@ -46,6 +47,11 @@ class Model(torch.nn.Module, Registrable):
     `Trainer`. Metrics that begin with "_" will not be logged
     to the progress bar by `Trainer`.
 
+    The `from_archive` method on this class is registered as a `Model` with name "from_archive".
+    So, if you are using a configuration file, you can specify a model as `{"type": "from_archive",
+    "archive_file": "/path/to/archive.tar.gz"}`, which will pull out the model from the given
+    location and return it.
+
     # Parameters
 
     vocab: `Vocabulary`
@@ -53,26 +59,38 @@ class Model(torch.nn.Module, Registrable):
         when constructing embedding matrices or output classifiers (as the vocabulary holds the
         number of classes in your output, also), and translating model output into human-readable
         form.
+
+        In a typical AllenNLP configuration file, this parameter does not get an entry under the
+        "model", it gets specified as a top-level parameter, then is passed in to the model
+        separately.
     regularizer: `RegularizerApplicator`, optional
         If given, the `Trainer` will use this to regularize model parameters.
     """
 
     _warn_for_unseparable_batches: Set[str] = set()
+    default_predictor: Optional[str] = None
 
     def __init__(self, vocab: Vocabulary, regularizer: RegularizerApplicator = None) -> None:
         super().__init__()
         self.vocab = vocab
         self._regularizer = regularizer
 
-    def get_regularization_penalty(self) -> Union[float, torch.Tensor]:
+    def get_regularization_penalty(self) -> Optional[torch.Tensor]:
         """
         Computes the regularization penalty for the model.
-        Returns 0 if the model was not configured to use regularization.
+        Returns None if the model was not configured to use regularization.
         """
         if self._regularizer is None:
-            return 0.0
+            regularization_penalty = None
         else:
-            return self._regularizer(self)
+            try:
+                regularization_penalty = self._regularizer(self)
+                if isinstance(regularization_penalty, float):
+                    assert regularization_penalty == 0.0
+                    regularization_penalty = torch.tensor(regularization_penalty)
+            except AssertionError:
+                raise RuntimeError("The regularizer cannot be a non-zero float.")
+        return regularization_penalty
 
     def get_parameters_for_histogram_tensorboard_logging(self) -> List[str]:
         """
@@ -107,7 +125,7 @@ class Model(torch.nn.Module, Registrable):
 
         # Parameters
 
-        inputs:
+        *inputs : `Any`
             Tensors comprising everything needed to perform a training update, `including` labels,
             which should be optional (i.e have a default value of `None`).  At inference time,
             simply pass the relevant inputs, not including the labels.
@@ -142,7 +160,7 @@ class Model(torch.nn.Module, Registrable):
 
         # Parameters
 
-        instances : List[Instance], required
+        instances : `List[Instance]`, required
             The instances to run the model on.
 
         # Returns
@@ -245,7 +263,11 @@ class Model(torch.nn.Module, Registrable):
 
     @classmethod
     def _load(
-        cls, config: Params, serialization_dir: str, weights_file: str = None, cuda_device: int = -1
+        cls,
+        config: Params,
+        serialization_dir: Union[str, PathLike],
+        weights_file: Optional[Union[str, PathLike]] = None,
+        cuda_device: int = -1,
     ) -> "Model":
         """
         Instantiates an already-trained model, based on the experiment
@@ -272,6 +294,13 @@ class Model(torch.nn.Module, Registrable):
         remove_pretrained_embedding_params(model_params)
         model = Model.from_params(vocab=vocab, params=model_params)
 
+        # Force model to cpu or gpu, as appropriate, to make sure that the embeddings are
+        # in sync with the weights
+        if cuda_device >= 0:
+            model.cuda(cuda_device)
+        else:
+            model.cpu()
+
         # If vocab+embedding extension was done, the model initialized from from_params
         # and one defined by state dict in weights_file might not have same embedding shapes.
         # Eg. when model embedder module was transferred along with vocab extension, the
@@ -283,18 +312,15 @@ class Model(torch.nn.Module, Registrable):
         model_state = torch.load(weights_file, map_location=util.device_mapping(cuda_device))
         model.load_state_dict(model_state)
 
-        # Force model to cpu or gpu, as appropriate, to make sure that the embeddings are
-        # in sync with the weights
-        if cuda_device >= 0:
-            model.cuda(cuda_device)
-        else:
-            model.cpu()
-
         return model
 
     @classmethod
     def load(
-        cls, config: Params, serialization_dir: str, weights_file: str = None, cuda_device: int = -1
+        cls,
+        config: Params,
+        serialization_dir: Union[str, PathLike],
+        weights_file: Optional[Union[str, PathLike]] = None,
+        cuda_device: int = -1,
     ) -> "Model":
         """
         Instantiates an already-trained model, based on the experiment
@@ -302,24 +328,23 @@ class Model(torch.nn.Module, Registrable):
 
         # Parameters
 
-        config: Params
+        config : `Params`
             The configuration that was used to train the model. It should definitely
             have a `model` section, and should probably have a `trainer` section
             as well.
-        serialization_dir: str = None
+        serialization_dir: `str = None`
             The directory containing the serialized weights, parameters, and vocabulary
             of the model.
-        weights_file: str = None
+        weights_file: `str = None`
             By default we load the weights from `best.th` in the serialization
             directory, but you can override that value here.
-        cuda_device: int = -1
+        cuda_device: `int = -1`
             By default we load the model on the CPU, but if you want to load it
             for GPU usage you can specify the id of your GPU here
 
-
         # Returns
 
-        model: Model
+        model : `Model`
             The model specified in the configuration, loaded with the serialized
             vocabulary and the trained weights.
         """
@@ -333,6 +358,12 @@ class Model(torch.nn.Module, Registrable):
         # This allows subclasses of Model to override _load.
 
         model_class: Type[Model] = cls.by_name(model_type)  # type: ignore
+        if not isinstance(model_class, type):
+            # If you're using from_archive to specify your model (e.g., for fine tuning), then you
+            # can't currently override the behavior of _load; we just use the default Model._load.
+            # If we really need to change this, we would need to implement a recursive
+            # get_model_class method, that recurses whenever it finds a from_archive model type.
+            model_class = Model
         return model_class._load(config, serialization_dir, weights_file, cuda_device)
 
     def extend_embedder_vocab(self, embedding_sources_mapping: Dict[str, str] = None) -> None:
@@ -345,7 +376,7 @@ class Model(torch.nn.Module, Registrable):
 
         # Parameters
 
-        embedding_sources_mapping : Dict[str, str], (optional, default=None)
+        embedding_sources_mapping : `Dict[str, str]`, optional (default = `None`)
             Mapping from model_path to pretrained-file path of the embedding
             modules. If pretrained-file used at time of embedding initialization
             isn't available now, user should pass this mapping. Model path is
@@ -359,7 +390,7 @@ class Model(torch.nn.Module, Registrable):
             if hasattr(module, "extend_vocab"):
                 pretrained_file = embedding_sources_mapping.get(model_path)
                 module.extend_vocab(
-                    self.vocab, extension_pretrained_file=pretrained_file, model_path=model_path
+                    self.vocab, extension_pretrained_file=pretrained_file, model_path=model_path,
                 )
 
     @classmethod

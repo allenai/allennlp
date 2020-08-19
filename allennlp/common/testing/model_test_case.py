@@ -1,5 +1,6 @@
 import copy
 import json
+from os import PathLike
 from typing import Any, Dict, Iterable, Set, Union
 
 import torch
@@ -12,6 +13,7 @@ from allennlp.data import DatasetReader, Vocabulary
 from allennlp.data import DataLoader
 from allennlp.data.batch import Batch
 from allennlp.models import load_archive, Model
+from allennlp.training import GradientDescentTrainer
 
 
 class ModelTestCase(AllenNlpTestCase):
@@ -47,7 +49,7 @@ class ModelTestCase(AllenNlpTestCase):
 
     def ensure_model_can_train_save_and_load(
         self,
-        param_file: str,
+        param_file: Union[PathLike, str],
         tolerance: float = 1e-4,
         cuda_device: int = -1,
         gradients_to_ignore: Set[str] = None,
@@ -63,31 +65,31 @@ class ModelTestCase(AllenNlpTestCase):
         param_file : `str`
             Path to a training configuration file that we will use to train the model for this
             test.
-        tolerance : `float`, optional (default=1e-4)
+        tolerance : `float`, optional (default=`1e-4`)
             When comparing model predictions between the originally-trained model and the model
             after saving and loading, we will use this tolerance value (passed as `rtol` to
             `numpy.testing.assert_allclose`).
-        cuda_device : `int`, optional (default=-1)
+        cuda_device : `int`, optional (default=`-1`)
             The device to run the test on.
-        gradients_to_ignore : `Set[str]`, optional (default=None)
+        gradients_to_ignore : `Set[str]`, optional (default=`None`)
             This test runs a gradient check to make sure that we're actually computing gradients
             for all of the parameters in the model.  If you really want to ignore certain
             parameters when doing that check, you can pass their names here.  This is not
             recommended unless you're `really` sure you don't need to have non-zero gradients for
             those parameters (e.g., some of the beam search / state machine models have
             infrequently-used parameters that are hard to force the model to use in a small test).
-        overrides : `str`, optional (default = "")
+        overrides : `str`, optional (default = `""`)
             A JSON string that we will use to override values in the input parameter file.
-        metric_to_check: `str`, optional (default = None)
+        metric_to_check: `str`, optional (default = `None`)
             We may want to automatically perform a check that model reaches given metric when
             training (on validation set, if it is specified). It may be useful in CI, for example.
             You can pass any metric that is in your model returned metrics.
-        metric_terminal_value: `str`, optional (default = None)
+        metric_terminal_value: `str`, optional (default = `None`)
             When you set `metric_to_check`, you need to set the value this metric must converge to
-        metric_tolerance: `float`, optional (default=1e-4)
+        metric_tolerance: `float`, optional (default=`1e-4`)
             Tolerance to check you model metric against metric terminal value. One can expect some
             variance in model metrics when the training process is highly stochastic.
-        disable_dropout : `bool`, optional (default = True)
+        disable_dropout : `bool`, optional (default = `True`)
             If True we will set all dropout to 0 before checking gradients. (Otherwise, with small
             datasets, you may get zero gradients because of unlucky dropout.)
         """
@@ -164,18 +166,80 @@ class ModelTestCase(AllenNlpTestCase):
         print("Predicting with loaded model")
         loaded_model_predictions = loaded_model(**loaded_batch)
 
-        # Check loaded model's loss exists and we can compute gradients, for continuing training.
-        loaded_model_loss = loaded_model_predictions["loss"]
-        assert loaded_model_loss is not None
-        loaded_model_loss.backward()
-
         # Both outputs should have the same keys and the values for these keys should be close.
         for key in model_predictions.keys():
             self.assert_fields_equal(
                 model_predictions[key], loaded_model_predictions[key], name=key, tolerance=tolerance
             )
 
+        # Check loaded model's loss exists and we can compute gradients, for continuing training.
+        loaded_model.train()
+        loaded_model_predictions = loaded_model(**loaded_batch)
+        loaded_model_loss = loaded_model_predictions["loss"]
+        assert loaded_model_loss is not None
+        loaded_model_loss.backward()
+
         return model, loaded_model
+
+    def ensure_model_can_train(
+        self,
+        trainer: GradientDescentTrainer,
+        gradients_to_ignore: Set[str] = None,
+        metric_to_check: str = None,
+        metric_terminal_value: float = None,
+        metric_tolerance: float = 1e-4,
+        disable_dropout: bool = True,
+    ):
+        """
+        A simple test for model training behavior when you are not using configuration files. In
+        this case, we don't have a story around saving and loading models (you need to handle that
+        yourself), so we don't have tests for that.  We just test that the model can train, and that
+        it computes gradients for all parameters.
+
+        Because the `Trainer` already has a reference to a model and to a data loader, we just take
+        the `Trainer` object itself, and grab the `Model` and other necessary objects from there.
+
+        # Parameters
+
+        trainer: `GradientDescentTrainer`
+            The `Trainer` to use for the test, which already has references to a `Model` and a
+            `DataLoader`, which we will use in the test.
+        gradients_to_ignore : `Set[str]`, optional (default=`None`)
+            This test runs a gradient check to make sure that we're actually computing gradients
+            for all of the parameters in the model.  If you really want to ignore certain
+            parameters when doing that check, you can pass their names here.  This is not
+            recommended unless you're `really` sure you don't need to have non-zero gradients for
+            those parameters (e.g., some of the beam search / state machine models have
+            infrequently-used parameters that are hard to force the model to use in a small test).
+        metric_to_check: `str`, optional (default = `None`)
+            We may want to automatically perform a check that model reaches given metric when
+            training (on validation set, if it is specified). It may be useful in CI, for example.
+            You can pass any metric that is in your model returned metrics.
+        metric_terminal_value: `str`, optional (default = `None`)
+            When you set `metric_to_check`, you need to set the value this metric must converge to
+        metric_tolerance: `float`, optional (default=`1e-4`)
+            Tolerance to check you model metric against metric terminal value. One can expect some
+            variance in model metrics when the training process is highly stochastic.
+        disable_dropout : `bool`, optional (default = `True`)
+            If True we will set all dropout to 0 before checking gradients. (Otherwise, with small
+            datasets, you may get zero gradients because of unlucky dropout.)
+        """
+        metrics = trainer.train()
+        if metric_to_check is not None:
+            metric_value = metrics.get(f"best_validation_{metric_to_check}") or metrics.get(
+                f"training_{metric_to_check}"
+            )
+            assert metric_value is not None, f"Cannot find {metric_to_check} in metrics.json file"
+            assert metric_terminal_value is not None, "Please specify metric terminal value"
+            assert abs(metric_value - metric_terminal_value) < metric_tolerance
+
+        model_batch = next(iter(trainer.data_loader))
+
+        # Check gradients are None for non-trainable parameters and check that
+        # trainable parameters receive some gradient if they are trainable.
+        self.check_model_computes_gradients_correctly(
+            trainer.model, model_batch, gradients_to_ignore, disable_dropout
+        )
 
     def assert_fields_equal(self, field1, field2, name: str, tolerance: float = 1e-6) -> None:
         if isinstance(field1, torch.Tensor):
@@ -214,6 +278,7 @@ class ModelTestCase(AllenNlpTestCase):
     ):
         print("Checking gradients")
         model.zero_grad()
+        model.train()
 
         original_dropouts: Dict[str, float] = {}
 
@@ -268,7 +333,7 @@ class ModelTestCase(AllenNlpTestCase):
 
         # Parameters
 
-        keys_to_ignore : `Iterable[str]`, optional (default=())
+        keys_to_ignore : `Iterable[str]`, optional (default=`()`)
             Names of metrics that should not be taken into account, e.g. "batch_weight".
         """
         self.model.eval()

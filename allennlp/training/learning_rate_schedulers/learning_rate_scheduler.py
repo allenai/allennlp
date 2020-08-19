@@ -26,8 +26,8 @@ class _PyTorchLearningRateSchedulerWrapper(LearningRateScheduler):
         return self.lr_scheduler.get_last_lr()
 
     @overrides
-    def step(self, metric: float = None, epoch: int = None) -> None:
-        self.lr_scheduler.step(epoch)
+    def step(self, metric: float = None) -> None:
+        self.lr_scheduler.step()
 
     @overrides
     def state_dict(self) -> Dict[str, Any]:
@@ -40,18 +40,23 @@ class _PyTorchLearningRateSchedulerWrapper(LearningRateScheduler):
 
 class _PyTorchLearningRateSchedulerWithMetricsWrapper(_PyTorchLearningRateSchedulerWrapper):
     @overrides
-    def step(self, metric: float = None, epoch: int = None) -> None:
+    def step(self, metric: float = None) -> None:
         if metric is None:
             raise ConfigurationError(
                 "This learning rate scheduler requires "
                 "a validation metric to compute the schedule and therefore "
                 "must be used with a validation dataset."
             )
-        self.lr_scheduler.step(metric, epoch)
+        self.lr_scheduler.step(metric)
 
 
 @LearningRateScheduler.register("step")
 class StepLearningRateScheduler(_PyTorchLearningRateSchedulerWrapper):
+    """
+    Registered as a `LearningRateScheduler` with name "step".  The "optimizer" argument does not get
+    an entry in a configuration file for the object.
+    """
+
     def __init__(
         self, optimizer: Optimizer, step_size: int, gamma: float = 0.1, last_epoch: int = -1
     ) -> None:
@@ -63,6 +68,11 @@ class StepLearningRateScheduler(_PyTorchLearningRateSchedulerWrapper):
 
 @LearningRateScheduler.register("multi_step")
 class MultiStepLearningRateScheduler(_PyTorchLearningRateSchedulerWrapper):
+    """
+    Registered as a `LearningRateScheduler` with name "multi_step".  The "optimizer" argument does
+    not get an entry in a configuration file for the object.
+    """
+
     def __init__(
         self, optimizer: Optimizer, milestones: List[int], gamma: float = 0.1, last_epoch: int = -1
     ) -> None:
@@ -74,6 +84,11 @@ class MultiStepLearningRateScheduler(_PyTorchLearningRateSchedulerWrapper):
 
 @LearningRateScheduler.register("exponential")
 class ExponentialLearningRateScheduler(_PyTorchLearningRateSchedulerWrapper):
+    """
+    Registered as a `LearningRateScheduler` with name "exponential".  The "optimizer" argument does
+    not get an entry in a configuration file for the object.
+    """
+
     def __init__(self, optimizer: Optimizer, gamma: float = 0.1, last_epoch: int = -1) -> None:
         lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(
             optimizer=optimizer, gamma=gamma, last_epoch=last_epoch
@@ -83,6 +98,11 @@ class ExponentialLearningRateScheduler(_PyTorchLearningRateSchedulerWrapper):
 
 @LearningRateScheduler.register("reduce_on_plateau")
 class ReduceOnPlateauLearningRateScheduler(_PyTorchLearningRateSchedulerWithMetricsWrapper):
+    """
+    Registered as a `LearningRateScheduler` with name "reduce_on_plateau".  The "optimizer" argument
+    does not get an entry in a configuration file for the object.
+    """
+
     def __init__(
         self,
         optimizer: Optimizer,
@@ -102,8 +122,10 @@ class ReduceOnPlateauLearningRateScheduler(_PyTorchLearningRateSchedulerWithMetr
             factor=factor,
             patience=patience,
             verbose=verbose,
+            threshold_mode=threshold_mode,
             threshold=threshold,
             cooldown=cooldown,
             min_lr=min_lr,
+            eps=eps,
         )
         super().__init__(lr_scheduler)

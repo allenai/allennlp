@@ -15,6 +15,8 @@ class AdditiveAttention(Attention):
     This attention is often referred as concat or additive attention. It was introduced in
     <https://arxiv.org/abs/1409.0473> by Bahdanau et al.
 
+    Registered as an `Attention` with name "additive".
+
     # Parameters
 
     vector_dim : `int`, required
@@ -25,7 +27,7 @@ class AdditiveAttention(Attention):
         The dimension of the matrix, `y`, described above.  This is `y.size()[-1]` - the length
         of the vector that will go into the similarity computation.  We need this so we can build
         the weight matrix correctly.
-    normalize : `bool`, optional (default : `True`)
+    normalize : `bool`, optional (default = `True`)
         If true, we normalize the computed similarities with a softmax, to return a probability
         distribution for your attention.  If false, this is just computing a similarity score.
     """

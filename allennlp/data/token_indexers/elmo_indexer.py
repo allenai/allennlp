@@ -99,6 +99,8 @@ class ELMoTokenCharactersIndexer(TokenIndexer):
     """
     Convert a token to an array of character ids to compute ELMo representations.
 
+    Registered as a `TokenIndexer` with name "elmo_characters".
+
     # Parameters
 
     namespace : `str`, optional (default=`elmo_characters`)
@@ -125,6 +127,10 @@ class ELMoTokenCharactersIndexer(TokenIndexer):
         pass
 
     @overrides
+    def get_empty_token_list(self) -> IndexedTokenList:
+        return {"elmo_tokens": []}
+
+    @overrides
     def tokens_to_indices(
         self, tokens: List[Token], vocabulary: Vocabulary
     ) -> Dict[str, List[List[int]]]:
@@ -138,7 +144,7 @@ class ELMoTokenCharactersIndexer(TokenIndexer):
             raise ConfigurationError(
                 "ELMoTokenCharactersIndexer needs a tokenizer that retains text"
             )
-        return {"tokens": [self._mapper.convert_word_to_char_ids(text) for text in texts]}
+        return {"elmo_tokens": [self._mapper.convert_word_to_char_ids(text) for text in texts]}
 
     @overrides
     def as_padded_tensor_dict(
@@ -150,9 +156,9 @@ class ELMoTokenCharactersIndexer(TokenIndexer):
         def padding_token():
             return [0] * ELMoCharacterMapper.max_word_length
 
-        tensor_dict["tokens"] = torch.LongTensor(
+        tensor_dict["elmo_tokens"] = torch.LongTensor(
             pad_sequence_to_length(
-                tokens["tokens"], padding_lengths["tokens"], default_value=padding_token
+                tokens["elmo_tokens"], padding_lengths["elmo_tokens"], default_value=padding_token
             )
         )
         return tensor_dict

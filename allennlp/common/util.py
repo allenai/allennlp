@@ -11,7 +11,6 @@ import subprocess
 import sys
 from contextlib import contextmanager
 from itertools import islice, zip_longest
-from logging import Filter
 from pathlib import Path
 from typing import (
     Any,
@@ -36,7 +35,6 @@ from spacy.language import Language as SpacyModelType
 
 from allennlp.common.checks import log_pytorch_version_info
 from allennlp.common.params import Params
-from allennlp.common.tqdm import Tqdm
 
 try:
     import resource
@@ -121,7 +119,7 @@ def group_by_count(iterable: List[Any], count: int, default_value: Any) -> List[
     This is a short method, but it's complicated and hard to remember as a one-liner, so we just
     make a function out of it.
     """
-    return [list(l) for l in zip_longest(*[iter(iterable)] * count, fillvalue=default_value)]
+    return [list(x) for x in zip_longest(*[iter(iterable)] * count, fillvalue=default_value)]
 
 
 A = TypeVar("A")
@@ -153,25 +151,25 @@ def pad_sequence_to_length(
 
     # Parameters
 
-    sequence : List
+    sequence : `List`
         A list of objects to be padded.
 
-    desired_length : int
+    desired_length : `int`
         Maximum length of each sequence. Longer sequences are truncated to this length, and
         shorter ones are padded to it.
 
-    default_value: Callable, default=lambda: 0
+    default_value: `Callable`, optional (default=`lambda: 0`)
         Callable that outputs a default value (of any type) to use as padding values.  This is
         a lambda to avoid using the same object when the default value is more complex, like a
         list.
 
-    padding_on_right : bool, default=True
+    padding_on_right : `bool`, optional (default=`True`)
         When we add padding tokens (or truncate the sequence), should we do it on the right or
         the left?
 
     # Returns
 
-    padded_sequence : List
+    padded_sequence : `List`
     """
     # Truncates the sequence to the desired length.
     if padding_on_right:
@@ -179,11 +177,14 @@ def pad_sequence_to_length(
     else:
         padded_sequence = sequence[-desired_length:]
     # Continues to pad with default_value() until we reach the desired length.
-    for _ in range(desired_length - len(padded_sequence)):
-        if padding_on_right:
-            padded_sequence.append(default_value())
-        else:
-            padded_sequence.insert(0, default_value())
+    pad_length = desired_length - len(padded_sequence)
+    # This just creates the default value once, so if it's a list, and if it gets mutated
+    # later, it could cause subtle bugs. But the risk there is low, and this is much faster.
+    values_to_pad = [default_value()] * pad_length
+    if padding_on_right:
+        padded_sequence = padded_sequence + values_to_pad
+    else:
+        padded_sequence = values_to_pad + padded_sequence
     return padded_sequence
 
 
@@ -226,7 +227,7 @@ def prepare_environment(params: Params):
 
     # Parameters
 
-    params: Params object or dict, required.
+    params: `Params`
         A `Params` object or dict holding the json parameters.
     """
     seed = params.pop_int("random_seed", 13370)
@@ -244,121 +245,6 @@ def prepare_environment(params: Params):
             torch.cuda.manual_seed_all(torch_seed)
 
     log_pytorch_version_info()
-
-
-class FileFriendlyLogFilter(Filter):
-    """
-    TQDM and requests use carriage returns to get the training line to update for each batch
-    without adding more lines to the terminal output.  Displaying those in a file won't work
-    correctly, so we'll just make sure that each batch shows up on its one line.
-    """
-
-    def filter(self, record):
-        if "\r" in record.msg:
-            record.msg = record.msg.replace("\r", "")
-            if not record.msg or record.msg[-1] != "\n":
-                record.msg += "\n"
-        return True
-
-
-class WorkerLogFilter(Filter):
-    def __init__(self, rank=-1):
-        super().__init__()
-        self._rank = rank
-
-    def filter(self, record):
-        if self._rank != -1:
-            record.msg = f"Rank {self._rank} | {record.msg}"
-        return True
-
-
-def prepare_global_logging(
-    serialization_dir: str, file_friendly_logging: bool, rank: int = 0, world_size: int = 1
-) -> None:
-    # If we don't have a terminal as stdout,
-    # force tqdm to be nicer.
-    if not sys.stdout.isatty():
-        file_friendly_logging = True
-
-    Tqdm.set_slower_interval(file_friendly_logging)
-
-    # Handlers for stdout/err logging
-    output_stream_log_handler = logging.StreamHandler(sys.stdout)
-    error_stream_log_handler = logging.StreamHandler(sys.stderr)
-
-    if world_size == 1:
-        # This case is not distributed training and hence will stick to the older
-        # log file names
-        output_file_log_handler = logging.FileHandler(
-            filename=os.path.join(serialization_dir, "stdout.log")
-        )
-        error_file_log_handler = logging.FileHandler(
-            filename=os.path.join(serialization_dir, "stderr.log")
-        )
-    else:
-        # Create log files with worker ids
-        output_file_log_handler = logging.FileHandler(
-            filename=os.path.join(serialization_dir, f"stdout_worker{rank}.log")
-        )
-        error_file_log_handler = logging.FileHandler(
-            filename=os.path.join(serialization_dir, f"stderr_worker{rank}.log")
-        )
-
-        # This adds the worker's rank to messages being logged to files.
-        # This will help when combining multiple worker log files using `less` command.
-        worker_filter = WorkerLogFilter(rank)
-        output_file_log_handler.addFilter(worker_filter)
-        error_file_log_handler.addFilter(worker_filter)
-
-    formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(name)s - %(message)s")
-
-    root_logger = logging.getLogger()
-
-    # Remove the already set stream handler in root logger.
-    # Not doing this will result in duplicate log messages
-    # printed in the console
-    if len(root_logger.handlers) > 0:
-        for handler in root_logger.handlers:
-            root_logger.removeHandler(handler)
-
-    # file handlers need to be handled for tqdm's \r char
-    file_friendly_log_filter = FileFriendlyLogFilter()
-
-    if os.environ.get("ALLENNLP_DEBUG"):
-        LEVEL = logging.DEBUG
-    else:
-        LEVEL = logging.INFO
-
-    if rank == 0:
-        # stdout/stderr handlers are added only for the
-        # master worker. This is to avoid cluttering the console
-        # screen with too many log messages from all workers.
-        output_stream_log_handler.setFormatter(formatter)
-        error_stream_log_handler.setFormatter(formatter)
-
-        output_stream_log_handler.setLevel(LEVEL)
-        error_stream_log_handler.setLevel(logging.ERROR)
-
-        if file_friendly_logging:
-            output_stream_log_handler.addFilter(file_friendly_log_filter)
-            error_stream_log_handler.addFilter(file_friendly_log_filter)
-
-        root_logger.addHandler(output_stream_log_handler)
-        root_logger.addHandler(error_stream_log_handler)
-
-    output_file_log_handler.addFilter(file_friendly_log_filter)
-    error_file_log_handler.addFilter(file_friendly_log_filter)
-
-    output_file_log_handler.setFormatter(formatter)
-    error_file_log_handler.setFormatter(formatter)
-
-    output_file_log_handler.setLevel(LEVEL)
-    error_file_log_handler.setLevel(logging.ERROR)
-
-    root_logger.addHandler(output_file_log_handler)
-    root_logger.addHandler(error_file_log_handler)
-
-    root_logger.setLevel(LEVEL)
 
 
 LOADED_SPACY_MODELS: Dict[Tuple[str, bool, bool, bool], SpacyModelType] = {}
@@ -465,30 +351,50 @@ def import_module_and_submodules(package_name: str) -> None:
             import_module_and_submodules(subpackage)
 
 
-def peak_memory_mb() -> float:
+def peak_memory_mb() -> Dict[int, float]:
     """
-    Get peak memory usage for this process, as measured by
-    max-resident-set size:
+    Get peak memory usage for each worker, as measured by max-resident-set size:
 
     https://unix.stackexchange.com/questions/30940/getrusage-system-call-what-is-maximum-resident-set-size
 
-    Only works on OSX and Linux, returns 0.0 otherwise.
+    Only works on OSX and Linux, otherwise the result will be 0.0 for every worker.
     """
     if resource is None or sys.platform not in ("linux", "darwin"):
-        return 0.0
-
-    # TODO(joelgrus): For whatever, our pinned version 0.521 of mypy does not like
-    # next line, but later versions (e.g. 0.530) are fine with it. Once we get that
-    # figured out, remove the type: ignore.
-    peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss  # type: ignore
-
-    if sys.platform == "darwin":
-        # On OSX the result is in bytes.
-        return peak / 1_000_000
-
+        peak_mb = 0.0
     else:
-        # On Linux the result is in kilobytes.
-        return peak / 1_000
+        peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+        if sys.platform == "darwin":
+            # On OSX the result is in bytes.
+            peak_mb = peak / 1_000_000
+        else:
+            # On Linux the result is in kilobytes.
+            peak_mb = peak / 1_000
+
+    if is_distributed():
+        global_rank = dist.get_rank()
+        world_size = dist.get_world_size()
+
+        peak_mb_tensor = torch.tensor([float(global_rank), peak_mb])
+        # All of these tensors will be gathered into this list.
+        gather_results = [torch.tensor([0.0, 0.0]) for _ in range(world_size)]
+
+        # If the backend is 'nccl', this means we're training on GPUs, so these tensors
+        # need to be on GPU.
+        if dist.get_backend() == "nccl":
+            peak_mb_tensor = peak_mb_tensor.cuda()
+            gather_results = [x.cuda() for x in gather_results]
+
+        dist.all_gather(gather_results, peak_mb_tensor)
+
+        results_dict: Dict[int, float] = {}
+        for peak_mb_tensor in gather_results:
+            worker = int(peak_mb_tensor[0])
+            peak_mb = round(float(peak_mb_tensor[1]), 3)
+            results_dict[worker] = peak_mb
+
+        return results_dict
+    else:
+        return {0: peak_mb}
 
 
 def gpu_memory_mb() -> Dict[int, int]:
@@ -541,6 +447,14 @@ def is_lazy(iterable: Iterable[A]) -> bool:
     return not isinstance(iterable, list)
 
 
+def int_to_device(device: Union[int, torch.device]) -> torch.device:
+    if isinstance(device, torch.device):
+        return device
+    if device < 0:
+        return torch.device("cpu")
+    return torch.device(device)
+
+
 def log_frozen_and_tunable_parameter_names(model: torch.nn.Module) -> None:
     frozen_parameter_names, tunable_parameter_names = get_frozen_and_tunable_parameter_names(model)
 
@@ -587,21 +501,20 @@ def is_master(
 
     # Parameters
 
-    global_rank : int ( default = None )
+    global_rank : `int` ( default = `None` )
         Global rank of the process if in a distributed process group. If not
         given, rank is obtained using `torch.distributed.get_rank()`
-    world_size : int ( default = None )
+    world_size : `int` ( default = `None` )
         Number of processes in the distributed group. If not
         given, this is obtained using `torch.distributed.get_world_size()`
-    num_procs_per_node: int ( default = None ),
+    num_procs_per_node: `int` ( default = `None` )
         Number of GPU processes running per node
     """
-    distributed = dist.is_available() and dist.is_initialized()
 
     # In non-distributed case, a "master" process doesn't make any
     # sense. So instead of raising an error, returning True would
     # make things less painful
-    if not distributed:
+    if not is_distributed():
         return True
 
     if global_rank is None:
@@ -628,11 +541,79 @@ def is_distributed() -> bool:
 
 def sanitize_wordpiece(wordpiece: str) -> str:
     """
-    Sanitizes wordpieces from BERT or RoBERTa tokenizers.
+    Sanitizes wordpieces from BERT, RoBERTa or ALBERT tokenizers.
     """
     if wordpiece.startswith("##"):
         return wordpiece[2:]
     elif wordpiece.startswith("Ġ"):
         return wordpiece[1:]
+    elif wordpiece.startswith("▁"):
+        return wordpiece[1:]
     else:
         return wordpiece
+
+
+def sanitize_ptb_tokenized_string(text: str) -> str:
+    """
+    Sanitizes string that was tokenized using PTBTokenizer
+    """
+    tokens = text.split(" ")
+    if len(tokens) == 0:
+        return text
+
+    # Replace quotation marks and parentheses
+    token_map = {
+        "``": '"',
+        "''": '"',
+        "-lrb-": "(",
+        "-rrb-": ")",
+        "-lsb-": "[",
+        "-rsb-": "]",
+        "-lcb-": "{",
+        "-rcb-": "}",
+        "<s>": "",
+        "</s>": "",
+    }
+
+    # Merge punctuation with previous tokens
+    punct_forward = {"`", "$", "#"}
+    punct_backward = {".", ",", "!", "?", ":", ";", "%", "'"}
+
+    # Exact matches that get merged forward or backward
+    em_forward = {"(", "[", "{"}
+    em_backward = {"n't", "na", ")", "]", "}"}
+
+    new_tokens: List[str] = []
+
+    merge_fwd = False
+    for i, orig_token in enumerate(tokens):
+        tokens[i] = token_map[orig_token.lower()] if orig_token.lower() in token_map else orig_token
+        new_token = tokens[i].lower()
+
+        # merge_fwd was set by previous token, so it should be prepended to current token
+        if merge_fwd:
+            tokens[i] = tokens[i - 1] + tokens[i]
+
+        if len(tokens[i]) == 0:
+            continue
+
+        # Special cases for `` and '', those tells us if " is the start or end of a quotation.
+        # Also always merge tokens starting with ' backward and don't merge back if we just merged forward
+        merge_bckwd = not merge_fwd and (
+            orig_token == "''"
+            or new_token in em_backward
+            or new_token.startswith("'")
+            or all(c in punct_backward for c in new_token)
+        )
+        merge_fwd = (
+            orig_token == "``"
+            or new_token in em_forward
+            or all(c in punct_forward for c in new_token)
+        )
+
+        if merge_bckwd and new_tokens:
+            new_tokens[-1] += tokens[i]
+        elif not new_tokens or not merge_fwd or i == len(tokens) - 1:
+            new_tokens.append(tokens[i])
+
+    return " ".join(new_tokens)

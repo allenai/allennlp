@@ -11,6 +11,4 @@ coverage:
     changes: false
 comment: false
 ignore:
-  - "allennlp/tests"
-  - "allennlp/tools/squad_eval.py"
-  - "allennlp/tools/wikitables_evaluator.py"
+  - "tests/"

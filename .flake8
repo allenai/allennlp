@@ -18,7 +18,7 @@ per-file-ignores =
 
     # tests don't have to respect
     #  E731: do not assign a lambda expression, use a def
-    allennlp/tests/**:E731
+    tests/**:E731
 
     # scripts don't have to respect
     #  E402: imports not at top of file (because we mess with sys.path)

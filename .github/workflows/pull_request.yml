@@ -1,0 +1,159 @@
+name: PR
+
+on:
+  pull_request:
+    branches:
+    - master
+
+jobs:
+  changelog:
+    name: CHANGELOG
+    runs-on: ubuntu-latest
+
+    steps:
+    # Note that checkout@v2 will not work with the git command below!
+    - uses: actions/checkout@v1
+
+    - name: Debugging info
+      run: |
+        git remote -v
+
+    - name: Check that CHANGELOG has been updated
+      run: |
+        # If this step fails, this means you haven't updated the CHANGELOG.md
+        # file with notes on your contribution.
+        git diff --name-only $(git merge-base origin/master HEAD) | grep '^CHANGELOG.md$' && echo "Thanks for helping keep our CHANGELOG up-to-date!"
+
+  gpu_checks:
+    name: GPU Checks
+    runs-on: [self-hosted, GPU]
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set Docker tag
+      run: |
+        echo "::set-env name=DOCKER_TAG::$GITHUB_SHA";
+
+    - name: Build test image
+      run: |
+        make docker-test-image DOCKER_TAG=$DOCKER_TAG
+
+    - name: Run GPU tests
+      run: |
+        make docker-test-run DOCKER_TAG=$DOCKER_TAG ARGS='gpu-test'
+
+  check_core:
+    name: Check Core
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ['3.6', '3.7']
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Setup Python
+      uses: actions/setup-python@v1
+      with:
+        python-version: ${{ matrix.python }}
+
+    - uses: actions/cache@v1
+      with:
+        path: ${{ env.pythonLocation }}
+        key: ${{ runner.os }}-pydeps-${{ env.pythonLocation }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
+
+    - name: Install requirements
+      run: |
+        make install
+
+    - name: Debug info
+      run: |
+        pip freeze
+
+    - name: Format
+      if: always()
+      run: |
+        make format
+
+    - name: Lint
+      if: always()
+      run: |
+        make lint
+
+    - name: Type check
+      if: always()
+      run: |
+        make typecheck
+
+    - name: Run tests
+      if: always()
+      run: |
+        make test-with-cov
+
+    - name: Ensure docs can build
+      if: always()
+      run: |
+        make build-docs
+
+    - name: Upload coverage to Codecov
+      if: matrix.python == '3.7' && github.repository == 'allenai/allennlp'
+      uses: codecov/codecov-action@v1
+      with:
+        file: ./coverage.xml
+        # Ignore codecov failures as the codecov server is not
+        # very reliable but we don't want to report a failure
+        # in the github UI just because the coverage report failed to
+        # be published.
+        fail_ci_if_error: false
+
+    - name: Clean up
+      if: always()
+      run: |
+        pip uninstall --yes allennlp
+
+  check_models:
+    name: Check Models
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ['3.6', '3.7']
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Setup Python
+      uses: actions/setup-python@v1
+      with:
+        python-version: ${{ matrix.python }}
+
+    - uses: actions/cache@v1
+      with:
+        path: ${{ env.pythonLocation }}
+        key: ${{ runner.os }}-pydeps-${{ env.pythonLocation }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
+
+    - name: Install requirements
+      run: |
+        make install
+
+    - name: Debug info
+      run: |
+        pip freeze
+
+    - name: Pull and install models repo
+      env:
+        ALLENNLP_VERSION_OVERRIDE: ""  # Don't replace the core library.
+      run: |
+        git clone https://github.com/allenai/allennlp-models.git
+        cd allennlp-models
+        pip install --upgrade --upgrade-strategy eager -e . -r dev-requirements.txt
+
+    - name: Run models tests
+      run: |
+        cd allennlp-models && make test
+
+    - name: Clean up
+      if: always()
+      run: |
+        pip uninstall --yes allennlp
+        pip uninstall --yes allennlp_models

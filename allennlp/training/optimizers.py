@@ -1,21 +1,20 @@
 """
 AllenNLP just uses
-`PyTorch optimizers <https://pytorch.org/docs/master/optim.html>`_ ,
+[PyTorch optimizers](https://pytorch.org/docs/master/optim.html),
 with a thin wrapper to allow registering them and instantiating them `from_params`.
 
 The available optimizers are
 
-* `"adadelta" <https://pytorch.org/docs/master/optim.html#torch.optim.Adadelta>`_
-* `"adagrad" <https://pytorch.org/docs/master/optim.html#torch.optim.Adagrad>`_
-* `"adam" <https://pytorch.org/docs/master/optim.html#torch.optim.Adam>`_
-* `"adamw" <https://pytorch.org/docs/master/optim.html#torch.optim.AdamW>`_
-* `"huggingface_adamw"
-  <https://huggingface.co/transformers/main_classes/optimizer_schedules.html#transformers.AdamW>`_
-* `"sparse_adam" <https://pytorch.org/docs/master/optim.html#torch.optim.SparseAdam>`_
-* `"sgd" <https://pytorch.org/docs/master/optim.html#torch.optim.SGD>`_
-* `"rmsprop <https://pytorch.org/docs/master/optim.html#torch.optim.RMSprop>`_
-* `"adamax <https://pytorch.org/docs/master/optim.html#torch.optim.Adamax>`_
-* `"averaged_sgd <https://pytorch.org/docs/master/optim.html#torch.optim.ASGD>`_
+* [adadelta](https://pytorch.org/docs/master/optim.html#torch.optim.Adadelta)
+* [adagrad](https://pytorch.org/docs/master/optim.html#torch.optim.Adagrad)
+* [adam](https://pytorch.org/docs/master/optim.html#torch.optim.Adam)
+* [adamw](https://pytorch.org/docs/master/optim.html#torch.optim.AdamW)
+* [huggingface_adamw](https://huggingface.co/transformers/main_classes/optimizer_schedules.html#transformers.AdamW)
+* [sparse_adam](https://pytorch.org/docs/master/optim.html#torch.optim.SparseAdam)
+* [sgd](https://pytorch.org/docs/master/optim.html#torch.optim.SGD)
+* [rmsprop](https://pytorch.org/docs/master/optim.html#torch.optim.RMSprop)
+* [adamax](https://pytorch.org/docs/master/optim.html#torch.optim.Adamax)
+* [averaged_sgd](https://pytorch.org/docs/master/optim.html#torch.optim.ASGD)
 """
 
 import logging
@@ -45,18 +44,32 @@ def make_parameter_groups(
     `groups` contains something like:
 
     ```
-     [
-          (["regex1", "regex2"], {"lr": 1e-3}),
-          (["regex3"], {"lr": 1e-4})
-     ]
-     ```
+    [
+        (["regex1", "regex2"], {"lr": 1e-3}),
+        (["regex3"], {"lr": 1e-4})
+    ]
+    ```
 
-    The return value in the right format to be passed directly as the `params` argument to a pytorch
-    `Optimizer`.  If there are multiple groups specified, this is list of dictionaries, where each
+    All of key-value pairs specified in each of these dictionaries will passed passed as-is
+    to the optimizer, with the exception of a dictionaries that specify `requires_grad` to be `False`:
+
+    ```
+    [
+        ...
+        (["regex"], {"requires_grad": False})
+    ]
+    ```
+
+    When a parameter group has `{"requires_grad": False}`, the gradient on all matching parameters
+    will be disabled and that group will be dropped so that it's not actually passed to the optimizer.
+
+    Ultimately, the return value of this function is in the right format to be passed directly
+    as the `params` argument to a pytorch `Optimizer`.
+    If there are multiple groups specified, this is list of dictionaries, where each
     dict contains a "parameter group" and groups specific options, e.g., {'params': [list of
     parameters], 'lr': 1e-3, ...}.  Any config option not specified in the additional options (e.g.
     for the default group) is inherited from the top level arguments given in the constructor.  See:
-    https://pytorch.org/docs/0.3.0/optim.html?#per-parameter-options.  See also our
+    <https://pytorch.org/docs/0.3.0/optim.html?#per-parameter-options>.  See also our
     `test_optimizer_parameter_groups` test for an example of how this works in this code.
 
     The dictionary's return type is labeled as `Any`, because it can be a `List[torch.nn.Parameter]`
@@ -98,13 +111,38 @@ def make_parameter_groups(
                 parameter_groups[-1]["params"].append(param)
                 parameter_group_names[-1].add(name)
 
-        # log the parameter groups
+        # find and remove any groups with 'requires_grad = False'
+        no_grad_group_indices: List[int] = []
+        for k, (names, group) in enumerate(zip(parameter_group_names, parameter_groups)):
+            if group.get("requires_grad") is False:
+                no_grad_group_indices.append(k)
+                logging.info("Disabling gradient for the following parameters: %s", names)
+                for param in group["params"]:
+                    param.requires_grad_(False)
+
+                # warn about any other unused options in that group.
+                unused_options = {
+                    key: val for key, val in group.items() if key not in ("params", "requires_grad")
+                }
+                if unused_options:
+                    logger.warning("Ignoring unused options %s for %s", unused_options, names)
+        parameter_group_names = [
+            names
+            for (k, names) in enumerate(parameter_group_names)
+            if k not in no_grad_group_indices
+        ]
+        parameter_groups = [
+            group for (k, group) in enumerate(parameter_groups) if k not in no_grad_group_indices
+        ]
+
+        # log the remaining parameter groups
         logger.info("Done constructing parameter groups.")
-        for k in range(len(groups) + 1):
+        for k in range(len(parameter_groups)):
             group_options = {
                 key: val for key, val in parameter_groups[k].items() if key != "params"
             }
             logger.info("Group %s: %s, %s", k, list(parameter_group_names[k]), group_options)
+
         # check for unused regex
         for regex, count in regex_use_counts.items():
             if count == 0:
@@ -143,6 +181,12 @@ class Optimizer(Registrable):
     you use a different name, your code will crash.  Nothing will technically crash if you use a
     name other than `parameter_groups` for your second argument, it will just be annoyingly
     inconsistent.
+
+    Most subclasses of `Optimizer` take both a `model_parameters` and a `parameter_groups`
+    constructor argument.  The `model_parameters` argument does not get an entry in a typical
+    AllenNLP configuration file, but the `parameter_groups` argument does (if you want a non-default
+    value).  See the documentation for the `make_parameter_groups` function for more information on
+    how the `parameter_groups` argument should be specified.
     """
 
     default_implementation = "adam"
@@ -154,6 +198,10 @@ class Optimizer(Registrable):
 
 @Optimizer.register("adam")
 class AdamOptimizer(Optimizer, torch.optim.Adam):
+    """
+    Registered as an `Optimizer` with name "adam".
+    """
+
     def __init__(
         self,
         model_parameters: List[Tuple[str, torch.nn.Parameter]],
@@ -176,6 +224,10 @@ class AdamOptimizer(Optimizer, torch.optim.Adam):
 
 @Optimizer.register("sparse_adam")
 class SparseAdamOptimizer(Optimizer, torch.optim.SparseAdam):
+    """
+    Registered as an `Optimizer` with name "sparse_adam".
+    """
+
     def __init__(
         self,
         model_parameters: List[Tuple[str, torch.nn.Parameter]],
@@ -194,6 +246,10 @@ class SparseAdamOptimizer(Optimizer, torch.optim.SparseAdam):
 
 @Optimizer.register("adamax")
 class AdamaxOptimizer(Optimizer, torch.optim.Adamax):
+    """
+    Registered as an `Optimizer` with name "adamax".
+    """
+
     def __init__(
         self,
         model_parameters: List[Tuple[str, torch.nn.Parameter]],
@@ -214,6 +270,10 @@ class AdamaxOptimizer(Optimizer, torch.optim.Adamax):
 
 @Optimizer.register("adamw")
 class AdamWOptimizer(Optimizer, torch.optim.AdamW):
+    """
+    Registered as an `Optimizer` with name "adamw".
+    """
+
     def __init__(
         self,
         model_parameters: List[Tuple[str, torch.nn.Parameter]],
@@ -236,15 +296,19 @@ class AdamWOptimizer(Optimizer, torch.optim.AdamW):
 
 @Optimizer.register("huggingface_adamw")
 class HuggingfaceAdamWOptimizer(Optimizer, transformers.AdamW):
+    """
+    Registered as an `Optimizer` with name "huggingface_adamw".
+    """
+
     def __init__(
         self,
         model_parameters: List[Tuple[str, torch.nn.Parameter]],
         parameter_groups: List[Tuple[List[str], Dict[str, Any]]] = None,
-        lr: float = 0.001,
+        lr: float = 1e-5,
         betas: Tuple[float, float] = (0.9, 0.999),
-        eps: float = 1e-06,
+        eps: float = 1e-08,
         weight_decay: float = 0.0,
-        correct_bias: bool = False,
+        correct_bias: bool = True,
     ):
         super().__init__(
             params=make_parameter_groups(model_parameters, parameter_groups),
@@ -258,6 +322,10 @@ class HuggingfaceAdamWOptimizer(Optimizer, transformers.AdamW):
 
 @Optimizer.register("adagrad")
 class AdagradOptimizer(Optimizer, torch.optim.Adagrad):
+    """
+    Registered as an `Optimizer` with name "adagrad".
+    """
+
     def __init__(
         self,
         model_parameters: List[Tuple[str, torch.nn.Parameter]],
@@ -280,6 +348,10 @@ class AdagradOptimizer(Optimizer, torch.optim.Adagrad):
 
 @Optimizer.register("adadelta")
 class AdadeltaOptimizer(Optimizer, torch.optim.Adadelta):
+    """
+    Registered as an `Optimizer` with name "adadelta".
+    """
+
     def __init__(
         self,
         model_parameters: List[Tuple[str, torch.nn.Parameter]],
@@ -300,6 +372,10 @@ class AdadeltaOptimizer(Optimizer, torch.optim.Adadelta):
 
 @Optimizer.register("sgd")
 class SgdOptimizer(Optimizer, torch.optim.SGD):
+    """
+    Registered as an `Optimizer` with name "sgd".
+    """
+
     def __init__(
         self,
         model_parameters: List[Tuple[str, torch.nn.Parameter]],
@@ -322,6 +398,10 @@ class SgdOptimizer(Optimizer, torch.optim.SGD):
 
 @Optimizer.register("rmsprop")
 class RmsPropOptimizer(Optimizer, torch.optim.RMSprop):
+    """
+    Registered as an `Optimizer` with name "rmsprop".
+    """
+
     def __init__(
         self,
         model_parameters: List[Tuple[str, torch.nn.Parameter]],
@@ -346,6 +426,10 @@ class RmsPropOptimizer(Optimizer, torch.optim.RMSprop):
 
 @Optimizer.register("averaged_sgd")
 class AveragedSgdOptimizer(Optimizer, torch.optim.ASGD):
+    """
+    Registered as an `Optimizer` with name "averaged_sgd".
+    """
+
     def __init__(
         self,
         model_parameters: List[Tuple[str, torch.nn.Parameter]],
@@ -375,16 +459,18 @@ class DenseSparseAdam(Optimizer, torch.optim.Optimizer):
     Implements Adam algorithm with dense & sparse gradients.
     It has been proposed in Adam: A Method for Stochastic Optimization.
 
+    Registered as an `Optimizer` with name "dense_sparse_adam".
+
     # Parameters
 
     params : `iterable`
         iterable of parameters to optimize or dicts defining parameter groups
-    lr : `float`, optional (default: 1e-3)
+    lr : `float`, optional (default = `1e-3`)
         The learning rate.
-    betas : `Tuple[float, float]`, optional (default: (0.9, 0.999))
+    betas : `Tuple[float, float]`, optional (default = `(0.9, 0.999)`)
         coefficients used for computing running averages of gradient
         and its square.
-    eps : `float`, optional, (default: 1e-8)
+    eps : `float`, optional, (default = `1e-8`)
         A term added to the denominator to improve numerical stability.
     """
 
@@ -479,14 +565,14 @@ class DenseSparseAdam(Optimizer, torch.optim.Optimizer):
 
                 else:
                     # Decay the first and second moment running average coefficient
-                    exp_avg.mul_(beta1).add_(1 - beta1, grad)
-                    exp_avg_sq.mul_(beta2).addcmul_(1 - beta2, grad, grad)
+                    exp_avg.mul_(beta1).add_(grad, alpha=1 - beta1)
+                    exp_avg_sq.mul_(beta2).addcmul_(grad, grad, value=1 - beta2)
                     denom = exp_avg_sq.sqrt().add_(group["eps"])
 
                     bias_correction1 = 1 - beta1 ** state["step"]
                     bias_correction2 = 1 - beta2 ** state["step"]
                     step_size = group["lr"] * math.sqrt(bias_correction2) / bias_correction1
 
-                    p.data.addcdiv_(-step_size, exp_avg, denom)
+                    p.data.addcdiv_(exp_avg, denom, value=-step_size)
 
         return loss

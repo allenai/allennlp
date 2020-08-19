@@ -28,6 +28,8 @@ class LinearMatrixAttention(MatrixAttention):
     similarity function is computed as `x * w * y + b` (with `w` the diagonal of `W`), you can
     accomplish that with this class by using "x*y" for `combination`.
 
+    Registered as a `MatrixAttention` with name "linear".
+
     # Parameters
 
     tensor_1_dim : `int`, required
@@ -38,11 +40,11 @@ class LinearMatrixAttention(MatrixAttention):
         The dimension of the second tensor, `y`, described above.  This is `y.size()[-1]` - the
         length of the vector that will go into the similarity computation.  We need this so we can
         build weight vectors correctly.
-    combination : `str`, optional (default="x,y")
+    combination : `str`, optional (default=`"x,y"`)
         Described above.
-    activation : `Activation`, optional (default=linear (i.e. no activation))
-        An activation function applied after the `w^T * [x;y] + b` calculation.  Default is no
-        activation.
+    activation : `Activation`, optional (default=`linear`)
+        An activation function applied after the `w^T * [x;y] + b` calculation.  Default is
+        linear, i.e. no activation.
     """
 
     def __init__(

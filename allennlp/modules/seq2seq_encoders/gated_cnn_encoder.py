@@ -138,6 +138,7 @@ class GatedCnnEncoder(Seq2SeqEncoder):
     [[2, 512, 1]], [[2, 512, 2]], [[2, 512, 4]], [[2, 512, 8]],   # receptive field == 57
     ]
 
+    Registered as a `Seq2SeqEncoder` with name "gated-cnn-encoder".
 
     # Parameters
 
@@ -145,9 +146,9 @@ class GatedCnnEncoder(Seq2SeqEncoder):
         The dimension of the inputs.
     layers : `Sequence[Sequence[Sequence[int]]]`, required
         The layer dimensions for each `ResidualBlock`.
-    dropout : `float`, optional (default = 0.0)
+    dropout : `float`, optional (default = `0.0`)
         The dropout for each `ResidualBlock`.
-    return_all_layers : `bool`, optional (default = False)
+    return_all_layers : `bool`, optional (default = `False`)
         Whether to return all layers or just the last layer.
     """
 

@@ -1,52 +1,9 @@
 """
-The ``predict`` subcommand allows you to make bulk JSON-to-JSON
+The `predict` subcommand allows you to make bulk JSON-to-JSON
 or dataset to JSON predictions using a trained model and its
-:class:`~allennlp.predictors.predictor.Predictor` wrapper.
-
-    $ allennlp predict --help
-    usage: allennlp predict [-h] [--output-file OUTPUT_FILE]
-                            [--weights-file WEIGHTS_FILE]
-                            [--batch-size BATCH_SIZE] [--silent]
-                            [--cuda-device CUDA_DEVICE] [--use-dataset-reader]
-                            [--dataset-reader-choice {train,validation}]
-                            [-o OVERRIDES] [--predictor PREDICTOR]
-                            [--include-package INCLUDE_PACKAGE]
-                            archive_file input_file
-
-    Run the specified model against a JSON-lines input file.
-
-    positional arguments:
-      archive_file          the archived model to make predictions with
-      input_file            path to or url of the input file
-
-    optional arguments:
-      -h, --help            show this help message and exit
-      --output-file OUTPUT_FILE
-                            path to output file
-      --weights-file WEIGHTS_FILE
-                            a path that overrides which weights file to use
-      --batch-size BATCH_SIZE
-                            The batch size to use for processing
-      --silent              do not print output to stdout
-      --cuda-device CUDA_DEVICE
-                            id of GPU to use (if any)
-      --use-dataset-reader  Whether to use the dataset reader of the original
-                            model to load Instances. The validation dataset reader
-                            will be used if it exists, otherwise it will fall back
-                            to the train dataset reader. This behavior can be
-                            overridden with the --dataset-reader-choice flag.
-      --dataset-reader-choice {train,validation}
-                            Indicates which model dataset reader to use if the
-                            --use-dataset-reader flag is set. (default =
-                            validation)
-      -o OVERRIDES, --overrides OVERRIDES
-                            a JSON structure used to override the experiment
-                            configuration
-      --predictor PREDICTOR
-                            optionally specify a specific predictor to use
-      --include-package INCLUDE_PACKAGE
-                            additional packages to include
+[`Predictor`](../predictors/predictor.md#predictor) wrapper.
 """
+
 from typing import List, Iterator, Optional
 import argparse
 import sys
@@ -55,6 +12,7 @@ import json
 from overrides import overrides
 
 from allennlp.commands.subcommand import Subcommand
+from allennlp.common import logging as common_logging
 from allennlp.common.checks import check_for_gpu, ConfigurationError
 from allennlp.common.file_utils import cached_path
 from allennlp.common.util import lazy_groups_of
@@ -120,11 +78,22 @@ class Predict(Subcommand):
             "--overrides",
             type=str,
             default="",
-            help="a JSON structure used to override the experiment configuration",
+            help=(
+                "a json(net) structure used to override the experiment configuration, e.g., "
+                "'{\"iterator.batch_size\": 16}'.  Nested parameters can be specified either"
+                " with nested dictionaries or with dot syntax."
+            ),
         )
 
         subparser.add_argument(
             "--predictor", type=str, help="optionally specify a specific predictor to use"
+        )
+
+        subparser.add_argument(
+            "--file-friendly-logging",
+            action="store_true",
+            default=False,
+            help="outputs tqdm status on separate lines and slows tqdm refresh rate",
         )
 
         subparser.set_defaults(func=_predict)
@@ -237,6 +206,8 @@ class _PredictManager:
 
 
 def _predict(args: argparse.Namespace) -> None:
+    common_logging.FILE_FRIENDLY_LOGGING = args.file_friendly_logging
+
     predictor = _get_predictor(args)
 
     if args.silent and not args.output_file:

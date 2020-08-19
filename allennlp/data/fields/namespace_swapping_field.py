@@ -23,6 +23,8 @@ class NamespaceSwappingField(Field[torch.Tensor]):
         The namespace that the tokens from the source sentence will be mapped to.
     """
 
+    __slots__ = ["_source_tokens", "_target_namespace", "_mapping_array"]
+
     def __init__(self, source_tokens: List[Token], target_namespace: str) -> None:
         self._source_tokens = source_tokens
         self._target_namespace = target_namespace
@@ -47,7 +49,10 @@ class NamespaceSwappingField(Field[torch.Tensor]):
 
     @overrides
     def empty_field(self) -> "NamespaceSwappingField":
-        return NamespaceSwappingField([], self._target_namespace)
+        empty_field = NamespaceSwappingField([], self._target_namespace)
+        empty_field._mapping_array = []
+
+        return empty_field
 
     def __len__(self):
         return len(self._source_tokens)

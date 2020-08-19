@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 
-@dataclass
+@dataclass(init=False, repr=False)
 class Token:
     """
     A simple token representation, keeping track of the token's text, offset in the passage it was
@@ -15,6 +15,8 @@ class Token:
         The original text represented by this token.
     idx : `int`, optional
         The character offset of this token into the tokenized passage.
+    idx_end : `int`, optional
+        The character offset one past the last character in the tokenized passage.
     lemma_ : `str`, optional
         The lemma of this token.
     pos_ : `str`, optional
@@ -34,20 +36,64 @@ class Token:
     type_id : `int`, optional
         Token type id used by some pretrained language models like original BERT
 
-
         The other fields on `Token` follow the fields on spacy's `Token` object; this is one we
         added, similar to spacy's `lex_id`.
     """
 
-    text: Optional[str] = None
-    idx: Optional[int] = None
-    lemma_: Optional[str] = None
-    pos_: Optional[str] = None
-    tag_: Optional[str] = None
-    dep_: Optional[str] = None
-    ent_type_: Optional[str] = None
-    text_id: Optional[int] = None
-    type_id: Optional[int] = None
+    __slots__ = [
+        "text",
+        "idx",
+        "idx_end",
+        "lemma_",
+        "pos_",
+        "tag_",
+        "dep_",
+        "ent_type_",
+        "text_id",
+        "type_id",
+    ]
+    # Defining the `__slots__` of this class is an optimization that dramatically reduces
+    # the size in memory of a `Token` instance. The downside of using `__slots__`
+    # with a dataclass is that you can't assign default values at the class level,
+    # which is why we need a custom `__init__` function that provides the default values.
+
+    text: Optional[str]
+    idx: Optional[int]
+    idx_end: Optional[int]
+    lemma_: Optional[str]
+    pos_: Optional[str]
+    tag_: Optional[str]
+    dep_: Optional[str]
+    ent_type_: Optional[str]
+    text_id: Optional[int]
+    type_id: Optional[int]
+
+    def __init__(
+        self,
+        text: str = None,
+        idx: int = None,
+        idx_end: int = None,
+        lemma_: str = None,
+        pos_: str = None,
+        tag_: str = None,
+        dep_: str = None,
+        ent_type_: str = None,
+        text_id: int = None,
+        type_id: int = None,
+    ) -> None:
+        assert text is None or isinstance(
+            text, str
+        )  # Some very hard to debug errors happen when this is not true.
+        self.text = text
+        self.idx = idx
+        self.idx_end = idx_end
+        self.lemma_ = lemma_
+        self.pos_ = pos_
+        self.tag_ = tag_
+        self.dep_ = dep_
+        self.ent_type_ = ent_type_
+        self.text_id = text_id
+        self.type_id = type_id
 
     def __str__(self):
         return self.text
@@ -60,6 +106,7 @@ def show_token(token: Token) -> str:
     return (
         f"{token.text} "
         f"(idx: {token.idx}) "
+        f"(idx_end: {token.idx_end}) "
         f"(lemma: {token.lemma_}) "
         f"(pos: {token.pos_}) "
         f"(tag: {token.tag_}) "

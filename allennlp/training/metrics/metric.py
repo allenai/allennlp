@@ -1,4 +1,4 @@
-from typing import Dict, Iterable, List, Optional, Tuple, Union
+from typing import Dict, Iterable, Optional, Any
 
 import torch
 
@@ -11,6 +11,8 @@ class Metric(Registrable):
     accumulated.
     """
 
+    supports_distributed = False
+
     def __call__(
         self, predictions: torch.Tensor, gold_labels: torch.Tensor, mask: Optional[torch.BoolTensor]
     ):
@@ -21,15 +23,13 @@ class Metric(Registrable):
             A tensor of predictions.
         gold_labels : `torch.Tensor`, required.
             A tensor corresponding to some gold label to evaluate against.
-        mask : `torch.BoolTensor`, optional (default = None).
+        mask : `torch.BoolTensor`, optional (default = `None`).
             A mask can be passed, in order to deal with metrics which are
             computed over potentially padded elements, such as sequence labels.
         """
         raise NotImplementedError
 
-    def get_metric(
-        self, reset: bool
-    ) -> Union[float, Tuple[float, ...], Dict[str, float], Dict[str, List[float]]]:
+    def get_metric(self, reset: bool) -> Dict[str, Any]:
         """
         Compute and return the metric. Optionally also call `self.reset`.
         """

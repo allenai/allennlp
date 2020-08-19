@@ -27,6 +27,8 @@ class IndexField(Field[torch.Tensor]):
         A field containing the sequence that this `IndexField` is a pointer into.
     """
 
+    __slots__ = ["sequence_index", "sequence_field"]
+
     def __init__(self, index: int, sequence_field: SequenceField) -> None:
         self.sequence_index = index
         self.sequence_field = sequence_field

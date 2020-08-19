@@ -23,6 +23,8 @@ class InputReduction(Attacker):
     The functions on this class handle a special case for NER by looking for a field called "tags"
     This check is brittle, i.e., the code could break if the name of this field has changed, or if
     a non-NER model has a field called "tags".
+
+    Registered as an `Attacker` with name "input-reduction".
     """
 
     def __init__(self, predictor: Predictor, beam_size: int = 3) -> None:

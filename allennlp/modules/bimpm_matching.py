@@ -15,6 +15,7 @@ from allennlp.nn.util import (
     masked_max,
     masked_mean,
     masked_softmax,
+    tiny_value_of_dtype,
 )
 
 
@@ -36,9 +37,10 @@ def multi_perspective_match(
 
     # Returns
 
-    A tuple of two tensors consisting multi-perspective matching results.
-    The first one is of the shape (batch, seq_len, 1), the second one is of shape
-    (batch, seq_len, num_perspectives)
+    `torch.Tensor` :
+        Shape `(batch, seq_len, 1)`.
+    `torch.Tensor` :
+        Shape `(batch, seq_len, num_perspectives)`.
     """
     assert vector1.size(0) == vector2.size(0)
     assert weight.size(1) == vector1.size(2) == vector1.size(2)
@@ -59,7 +61,7 @@ def multi_perspective_match(
 
 
 def multi_perspective_match_pairwise(
-    vector1: torch.Tensor, vector2: torch.Tensor, weight: torch.Tensor, eps: float = 1e-8
+    vector1: torch.Tensor, vector2: torch.Tensor, weight: torch.Tensor
 ) -> torch.Tensor:
     """
     Calculate multi-perspective cosine matching between each time step of
@@ -73,13 +75,12 @@ def multi_perspective_match_pairwise(
         A tensor of shape `(batch, seq_len2, hidden_size)`
     weight : `torch.Tensor`
         A tensor of shape `(num_perspectives, hidden_size)`
-    eps : `float` optional, (default = 1e-8)
-        A small value to avoid zero division problem
 
     # Returns
 
-    A tensor of shape (batch, seq_len1, seq_len2, num_perspectives) consisting
-    multi-perspective matching results
+    `torch.Tensor` :
+        A tensor of shape `(batch, seq_len1, seq_len2, num_perspectives)` consisting
+        multi-perspective matching results
     """
     num_perspectives = weight.size(0)
 
@@ -99,7 +100,9 @@ def multi_perspective_match_pairwise(
     norm_value = vector1_norm * vector2_norm.transpose(2, 3)
 
     # (batch, seq_len1, seq_len2, num_perspectives)
-    return (mul_result / norm_value.clamp(min=eps)).permute(0, 2, 3, 1)
+    return (mul_result / norm_value.clamp(min=tiny_value_of_dtype(norm_value.dtype))).permute(
+        0, 2, 3, 1
+    )
 
 
 class BiMpmMatching(nn.Module, FromParams):
@@ -112,23 +115,23 @@ class BiMpmMatching(nn.Module, FromParams):
 
     # Parameters
 
-    hidden_dim : `int`, optional (default = 100)
+    hidden_dim : `int`, optional (default = `100`)
         The hidden dimension of the representations
-    num_perspectives : `int`, optional (default = 20)
+    num_perspectives : `int`, optional (default = `20`)
         The number of perspectives for matching
-    share_weights_between_directions : `bool`, optional (default = True)
+    share_weights_between_directions : `bool`, optional (default = `True`)
         If True, share weight between matching from sentence1 to sentence2 and from sentence2
         to sentence1, useful for non-symmetric tasks
-    is_forward : `bool`, optional (default = None)
+    is_forward : `bool`, optional (default = `None`)
         Whether the matching is for forward sequence or backward sequence, useful in finding last
         token in full matching. It can not be None if with_full_match is True.
-    with_full_match : `bool`, optional (default = True)
+    with_full_match : `bool`, optional (default = `True`)
         If True, include full match
-    with_maxpool_match : `bool`, optional (default = True)
+    with_maxpool_match : `bool`, optional (default = `True`)
         If True, include max pool match
-    with_attentive_match : `bool`, optional (default = True)
+    with_attentive_match : `bool`, optional (default = `True`)
         If True, include attentive match
-    with_max_attentive_match : `bool`, optional (default = True)
+    with_max_attentive_match : `bool`, optional (default = `True`)
         If True, include max attentive match
     """
 
@@ -228,8 +231,9 @@ class BiMpmMatching(nn.Module, FromParams):
 
         # Returns
 
-        A tuple of matching vectors for the two sentences. Each of which is a list of
-        matching vectors of shape (batch, seq_len, num_perspectives or 1)
+        `Tuple[List[torch.Tensor], List[torch.Tensor]]` :
+            A tuple of matching vectors for the two sentences. Each of which is a list of
+            matching vectors of shape (batch, seq_len, num_perspectives or 1)
         """
         assert (not mask_2.requires_grad) and (not mask_1.requires_grad)
         assert context_1.size(-1) == context_2.size(-1) == self.hidden_dim

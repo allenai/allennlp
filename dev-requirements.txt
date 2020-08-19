@@ -4,13 +4,10 @@
 flake8
 
 # Static type checking
-mypy==0.761
+mypy==0.782
 
 # Automatic code formatting
 black
-
-# For creating git precommit hooks
-pre-commit==2.1.1
 
 # Allows generation of coverage reports with pytest.
 pytest-cov
@@ -22,21 +19,28 @@ codecov
 # Optional dependencies, which we install for testing purposes.
 matplotlib>=2.2.3
 
-# Required to run sanic tests
-aiohttp
+# For mocking HTTP requests/responses.
+responses>=0.7
 
-# Required for automatic mixed precision (AMP) training
-git+https://github.com/NVIDIA/apex.git@master
+# For running tests that aren't 100% reliable.
+flaky
+
+# For running benchmarks.
+pytest-benchmark
 
 #### DOC-RELATED PACKAGES ####
 
 # YAML manipulation
 ruamel.yaml
 
-mathy_pydoc>=0.6.7,<0.7.0
+# Generating markdown files from Python modules.
+git+https://github.com/NiklasRosenstein/pydoc-markdown.git@f0bf8af1db4f11581c19d206d4ed1ab34b4854c1
+nr.databind.core<0.0.17
+nr.interface<0.0.4
+
+mkdocs==1.1.2
+mkdocs-material>=5.5.0,<5.6.0
 markdown-include==0.5.1
-# Package for the material theme for mkdocs
-mkdocs-material==4.6.3
 
 #### PACKAGE-UPLOAD PACKAGES ####
 

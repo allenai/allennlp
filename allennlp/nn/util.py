@@ -34,13 +34,16 @@ def has_tensor(obj) -> bool:
         return False
 
 
-def move_to_device(obj, cuda_device: int):
+def move_to_device(obj, cuda_device: Union[torch.device, int]):
     """
     Given a structure (possibly) containing Tensors on the CPU,
     move all the Tensors to the specified GPU (or do nothing, if they should be on the CPU).
     """
+    from allennlp.common.util import int_to_device
 
-    if cuda_device < 0 or not has_tensor(obj):
+    cuda_device = int_to_device(cuda_device)
+
+    if cuda_device == torch.device("cpu") or not has_tensor(obj):
         return obj
     elif isinstance(obj, torch.Tensor):
         return obj.cuda(cuda_device)
@@ -107,14 +110,15 @@ def get_lengths_from_binary_sequence_mask(mask: torch.BoolTensor) -> torch.LongT
 
     # Parameters
 
-    mask : torch.BoolTensor, required.
+    mask : `torch.BoolTensor`, required.
         A 2D binary mask of shape (batch_size, sequence_length) to
         calculate the per-batch sequence lengths from.
 
     # Returns
 
-    A torch.LongTensor of shape (batch_size,) representing the lengths
-    of the sequences in the batch.
+    `torch.LongTensor`
+        A torch.LongTensor of shape (batch_size,) representing the lengths
+        of the sequences in the batch.
     """
     return mask.sum(-1)
 
@@ -144,22 +148,22 @@ def sort_batch_by_length(tensor: torch.Tensor, sequence_lengths: torch.Tensor):
 
     # Parameters
 
-    tensor : torch.FloatTensor, required.
+    tensor : `torch.FloatTensor`, required.
         A batch first Pytorch tensor.
-    sequence_lengths : torch.LongTensor, required.
+    sequence_lengths : `torch.LongTensor`, required.
         A tensor representing the lengths of some dimension of the tensor which
         we want to sort by.
 
     # Returns
 
-    sorted_tensor : torch.FloatTensor
+    sorted_tensor : `torch.FloatTensor`
         The original tensor sorted along the batch dimension with respect to sequence_lengths.
-    sorted_sequence_lengths : torch.LongTensor
+    sorted_sequence_lengths : `torch.LongTensor`
         The original sequence_lengths sorted by decreasing size.
-    restoration_indices : torch.LongTensor
+    restoration_indices : `torch.LongTensor`
         Indices into the sorted_tensor such that
         `sorted_tensor.index_select(0, restoration_indices) == original_tensor`
-    permutation_index : torch.LongTensor
+    permutation_index : `torch.LongTensor`
         The indices used to sort the tensor. This is useful if you want to sort many
         tensors using the same ordering.
     """
@@ -220,16 +224,17 @@ def get_dropout_mask(dropout_probability: float, tensor_for_masking: torch.Tenso
 
     # Parameters
 
-    dropout_probability : float, required.
+    dropout_probability : `float`, required.
         Probability of dropping a dimension of the input.
-    tensor_for_masking : torch.Tensor, required.
+    tensor_for_masking : `torch.Tensor`, required.
 
 
     # Returns
 
-    A torch.FloatTensor consisting of the binary mask scaled by 1/ (1 - dropout_probability).
-    This scaling ensures expected values and variances of the output of applying this mask
-     and the original tensor are the same.
+    `torch.FloatTensor`
+        A torch.FloatTensor consisting of the binary mask scaled by 1/ (1 - dropout_probability).
+        This scaling ensures expected values and variances of the output of applying this mask
+        and the original tensor are the same.
     """
     binary_mask = (torch.rand(tensor_for_masking.size()) > dropout_probability).to(
         tensor_for_masking.device
@@ -240,11 +245,7 @@ def get_dropout_mask(dropout_probability: float, tensor_for_masking: torch.Tenso
 
 
 def masked_softmax(
-    vector: torch.Tensor,
-    mask: torch.BoolTensor,
-    dim: int = -1,
-    memory_efficient: bool = False,
-    mask_fill_value: float = -1e32,
+    vector: torch.Tensor, mask: torch.BoolTensor, dim: int = -1, memory_efficient: bool = False,
 ) -> torch.Tensor:
     """
     `torch.nn.functional.softmax(vector)` does not work if some elements of `vector` should be
@@ -274,9 +275,11 @@ def masked_softmax(
             # To limit numerical errors from large vector elements outside the mask, we zero these out.
             result = torch.nn.functional.softmax(vector * mask, dim=dim)
             result = result * mask
-            result = result / (result.sum(dim=dim, keepdim=True) + 1e-13)
+            result = result / (
+                result.sum(dim=dim, keepdim=True) + tiny_value_of_dtype(result.dtype)
+            )
         else:
-            masked_vector = vector.masked_fill(~mask, mask_fill_value)
+            masked_vector = vector.masked_fill(~mask, min_value_of_dtype(vector.dtype))
             result = torch.nn.functional.softmax(masked_vector, dim=dim)
     return result
 
@@ -307,19 +310,13 @@ def masked_log_softmax(vector: torch.Tensor, mask: torch.BoolTensor, dim: int = 
             mask = mask.unsqueeze(1)
         # vector + mask.log() is an easy way to zero out masked elements in logspace, but it
         # results in nans when the whole vector is masked.  We need a very small value instead of a
-        # zero in the mask for these cases.  log(1 + 1e-45) is still basically 0, so we can safely
-        # just add 1e-45 before calling mask.log().  We use 1e-45 because 1e-46 is so small it
-        # becomes 0 - this is just the smallest value we can actually use.
-        vector = vector + (mask + 1e-45).log()
+        # zero in the mask for these cases.
+        vector = vector + (mask + tiny_value_of_dtype(vector.dtype)).log()
     return torch.nn.functional.log_softmax(vector, dim=dim)
 
 
 def masked_max(
-    vector: torch.Tensor,
-    mask: torch.BoolTensor,
-    dim: int,
-    keepdim: bool = False,
-    min_val: float = -1e7,
+    vector: torch.Tensor, mask: torch.BoolTensor, dim: int, keepdim: bool = False,
 ) -> torch.Tensor:
     """
     To calculate max along certain dimensions on masked values
@@ -334,20 +331,19 @@ def masked_max(
         The dimension to calculate max
     keepdim : `bool`
         Whether to keep dimension
-    min_val : `float`
-        The minimal value for paddings
 
     # Returns
 
-    A `torch.Tensor` of including the maximum values.
+    `torch.Tensor`
+        A `torch.Tensor` of including the maximum values.
     """
-    replaced_vector = vector.masked_fill(~mask, min_val)
+    replaced_vector = vector.masked_fill(~mask, min_value_of_dtype(vector.dtype))
     max_value, _ = replaced_vector.max(dim=dim, keepdim=keepdim)
     return max_value
 
 
 def masked_mean(
-    vector: torch.Tensor, mask: torch.BoolTensor, dim: int, keepdim: bool = False, eps: float = 1e-8
+    vector: torch.Tensor, mask: torch.BoolTensor, dim: int, keepdim: bool = False
 ) -> torch.Tensor:
     """
     To calculate mean along certain dimensions on masked values
@@ -362,36 +358,36 @@ def masked_mean(
         The dimension to calculate mean
     keepdim : `bool`
         Whether to keep dimension
-    eps : `float`
-        A small value to avoid zero division problem.
 
     # Returns
 
-    A `torch.Tensor` of including the mean values.
+    `torch.Tensor`
+        A `torch.Tensor` of including the mean values.
     """
     replaced_vector = vector.masked_fill(~mask, 0.0)
 
     value_sum = torch.sum(replaced_vector, dim=dim, keepdim=keepdim)
     value_count = torch.sum(mask, dim=dim, keepdim=keepdim)
-    return value_sum / value_count.float().clamp(min=eps)
+    return value_sum / value_count.float().clamp(min=tiny_value_of_dtype(torch.float))
 
 
 def masked_flip(padded_sequence: torch.Tensor, sequence_lengths: List[int]) -> torch.Tensor:
     """
-        Flips a padded tensor along the time dimension without affecting masked entries.
+    Flips a padded tensor along the time dimension without affecting masked entries.
 
-        # Parameters
+    # Parameters
 
-        padded_sequence : `torch.Tensor`
-            The tensor to flip along the time dimension.
-            Assumed to be of dimensions (batch size, num timesteps, ...)
-        sequence_lengths : `torch.Tensor`
-            A list containing the lengths of each unpadded sequence in the batch.
+    padded_sequence : `torch.Tensor`
+        The tensor to flip along the time dimension.
+        Assumed to be of dimensions (batch size, num timesteps, ...)
+    sequence_lengths : `torch.Tensor`
+        A list containing the lengths of each unpadded sequence in the batch.
 
-        # Returns
+    # Returns
 
+    `torch.Tensor`
         A `torch.Tensor` of the same shape as padded_sequence.
-        """
+    """
     assert padded_sequence.size(0) == len(
         sequence_lengths
     ), f"sequence_lengths length ${len(sequence_lengths)} does not match batch size ${padded_sequence.size(0)}"
@@ -420,13 +416,13 @@ def viterbi_decode(
 
     # Parameters
 
-    tag_sequence : torch.Tensor, required.
+    tag_sequence : `torch.Tensor`, required.
         A tensor of shape (sequence_length, num_tags) representing scores for
         a set of tags over a given sequence.
-    transition_matrix : torch.Tensor, required.
+    transition_matrix : `torch.Tensor`, required.
         A tensor of shape (num_tags, num_tags) representing the binary potentials
         for transitioning between a given pair of tags.
-    tag_observations : Optional[List[int]], optional, (default = None)
+    tag_observations : `Optional[List[int]]`, optional, (default = `None`)
         A list of length `sequence_length` containing the class ids of observed
         elements in the sequence, with unobserved elements being set to -1. Note that
         it is possible to provide evidence which results in degenerate labelings if
@@ -434,24 +430,24 @@ def viterbi_decode(
         other, or those transitions are extremely unlikely. In this situation we log a
         warning, but the responsibility for providing self-consistent evidence ultimately
         lies with the user.
-    allowed_start_transitions : torch.Tensor, optional, (default = None)
+    allowed_start_transitions : `torch.Tensor`, optional, (default = `None`)
         An optional tensor of shape (num_tags,) describing which tags the START token
         may transition *to*. If provided, additional transition constraints will be used for
         determining the start element of the sequence.
-    allowed_end_transitions : torch.Tensor, optional, (default = None)
+    allowed_end_transitions : `torch.Tensor`, optional, (default = `None`)
         An optional tensor of shape (num_tags,) describing which tags may transition *to* the
         end tag. If provided, additional transition constraints will be used for determining
         the end element of the sequence.
-    top_k : int, optional, (default = None)
+    top_k : `int`, optional, (default = `None`)
         Optional integer specifying how many of the top paths to return. For top_k>=1, returns
         a tuple of two lists: top_k_paths, top_k_scores, For top_k==None, returns a flattened
         tuple with just the top path and its score (not in lists, for backwards compatibility).
 
     # Returns
 
-    viterbi_path : List[int]
+    viterbi_path : `List[int]`
         The tag indices of the maximum likelihood tag sequence.
-    viterbi_score : torch.Tensor
+    viterbi_score : `torch.Tensor`
         The score of the viterbi path.
     """
     if top_k is None:
@@ -584,13 +580,15 @@ def viterbi_decode(
 
 
 def get_text_field_mask(
-    text_field_tensors: Dict[str, Dict[str, torch.Tensor]], num_wrapping_dims: int = 0
+    text_field_tensors: Dict[str, Dict[str, torch.Tensor]],
+    num_wrapping_dims: int = 0,
+    padding_id: int = 0,
 ) -> torch.BoolTensor:
     """
     Takes the dictionary of tensors produced by a `TextField` and returns a mask
-    with 0 where the tokens are padding, and 1 otherwise.  We also handle `TextFields`
-    wrapped by an arbitrary number of `ListFields`, where the number of wrapping `ListFields`
-    is given by `num_wrapping_dims`.
+    with 0 where the tokens are padding, and 1 otherwise. `padding_id` specifies the id of padding tokens.
+    We also handle `TextFields` wrapped by an arbitrary number of `ListFields`, where the number of wrapping
+    `ListFields` is given by `num_wrapping_dims`.
 
     If `num_wrapping_dims == 0`, the returned mask has shape `(batch_size, num_tokens)`.
     If `num_wrapping_dims > 0` then the returned mask has `num_wrapping_dims` extra
@@ -610,7 +608,7 @@ def get_text_field_mask(
     masks = []
     for indexer_name, indexer_tensors in text_field_tensors.items():
         if "mask" in indexer_tensors:
-            masks.append(indexer_tensors["mask"])
+            masks.append(indexer_tensors["mask"].bool())
     if len(masks) == 1:
         return masks[0]
     elif len(masks) > 1:
@@ -629,10 +627,10 @@ def get_text_field_mask(
     smallest_dim = tensor_dims[0][0] - num_wrapping_dims
     if smallest_dim == 2:
         token_tensor = tensor_dims[0][1]
-        return token_tensor != 0
+        return token_tensor != padding_id
     elif smallest_dim == 3:
         character_tensor = tensor_dims[0][1]
-        return (character_tensor > 0).any(dim=-1)
+        return (character_tensor != padding_id).any(dim=-1)
     else:
         raise ValueError("Expected a tensor with dimension 2 or 3, found {}".format(smallest_dim))
 
@@ -723,20 +721,20 @@ def sequence_cross_entropy_with_logits(
         index of the true class for each corresponding step.
     weights : `Union[torch.FloatTensor, torch.BoolTensor]`, required.
         A `torch.FloatTensor` of size (batch, sequence_length)
-    average: str, optional (default = "batch")
+    average: `str`, optional (default = `"batch"`)
         If "batch", average the loss across the batches. If "token", average
         the loss across each item in the input. If `None`, return a vector
         of losses per batch element.
-    label_smoothing : `float`, optional (default = None)
+    label_smoothing : `float`, optional (default = `None`)
         Whether or not to apply label smoothing to the cross-entropy loss.
         For example, with a label smoothing value of 0.2, a 4 class classification
         target would look like `[0.05, 0.05, 0.85, 0.05]` if the 3rd class was
         the correct label.
-    gamma : `float`, optional (default = None)
+    gamma : `float`, optional (default = `None`)
         Focal loss[*] focusing parameter `gamma` to reduces the relative loss for
         well-classified examples and put more focus on hard. The greater value
         `gamma` is, the more focus on hard examples.
-    alpha : `float` or `List[float]`, optional (default = None)
+    alpha : `Union[float, List[float]]`, optional (default = `None`)
         Focal loss[*] weighting factor `alpha` to balance between classes. Can be
         used independently with `gamma`. If a single `float` is provided, it
         is assumed binary case using `alpha` and `1 - alpha` for positive and
@@ -748,16 +746,17 @@ def sequence_cross_entropy_with_logits(
 
     # Returns
 
-    A torch.FloatTensor representing the cross entropy loss.
-    If `average=="batch"` or `average=="token"`, the returned loss is a scalar.
-    If `average is None`, the returned loss is a vector of shape (batch_size,).
+    `torch.FloatTensor`
+        A torch.FloatTensor representing the cross entropy loss.
+        If `average=="batch"` or `average=="token"`, the returned loss is a scalar.
+        If `average is None`, the returned loss is a vector of shape (batch_size,).
 
     """
     if average not in {None, "token", "batch"}:
         raise ValueError("Got average f{average}, expected one of None, 'token', or 'batch'")
 
     # make sure weights are float
-    weights = weights.float()
+    weights = weights.to(logits.dtype)
     # sum all dim except batch
     non_batch_dims = tuple(range(1, len(weights.shape)))
     # shape : (batch_size,)
@@ -834,14 +833,22 @@ def sequence_cross_entropy_with_logits(
 
     if average == "batch":
         # shape : (batch_size,)
-        per_batch_loss = negative_log_likelihood.sum(non_batch_dims) / (weights_batch_sum + 1e-13)
-        num_non_empty_sequences = (weights_batch_sum > 0).float().sum() + 1e-13
+        per_batch_loss = negative_log_likelihood.sum(non_batch_dims) / (
+            weights_batch_sum + tiny_value_of_dtype(negative_log_likelihood.dtype)
+        )
+        num_non_empty_sequences = (weights_batch_sum > 0).sum() + tiny_value_of_dtype(
+            negative_log_likelihood.dtype
+        )
         return per_batch_loss.sum() / num_non_empty_sequences
     elif average == "token":
-        return negative_log_likelihood.sum() / (weights_batch_sum.sum() + 1e-13)
+        return negative_log_likelihood.sum() / (
+            weights_batch_sum.sum() + tiny_value_of_dtype(negative_log_likelihood.dtype)
+        )
     else:
         # shape : (batch_size,)
-        per_batch_loss = negative_log_likelihood.sum(non_batch_dims) / (weights_batch_sum + 1e-13)
+        per_batch_loss = negative_log_likelihood.sum(non_batch_dims) / (
+            weights_batch_sum + tiny_value_of_dtype(negative_log_likelihood.dtype)
+        )
         return per_batch_loss
 
 
@@ -962,7 +969,8 @@ def _rindex(sequence: Sequence[T], obj: T) -> int:
 
     # Returns
 
-    zero-based index associated to the position of the last item equal to obj
+    `int`
+        zero-based index associated to the position of the last item equal to obj
     """
     for i in range(len(sequence) - 1, -1, -1):
         if sequence[i] == obj:
@@ -1128,11 +1136,11 @@ def logsumexp(tensor: torch.Tensor, dim: int = -1, keepdim: bool = False) -> tor
 
     # Parameters
 
-    tensor : torch.FloatTensor, required.
+    tensor : `torch.FloatTensor`, required.
         A tensor of arbitrary size.
-    dim : int, optional (default = -1)
+    dim : `int`, optional (default = `-1`)
         The dimension of the tensor to apply the logsumexp to.
-    keepdim: bool, optional (default = False)
+    keepdim: `bool`, optional (default = `False`)
         Whether to retain a dimension of size one at the dimension we reduce over.
     """
     max_score, _ = tensor.max(dim, keepdim=keepdim)
@@ -1230,7 +1238,7 @@ def batched_index_select(
     indices : `torch.LongTensor`
         A tensor of shape (batch_size, ...), where each element is an index into the
         `sequence_length` dimension of the `target` tensor.
-    flattened_indices : Optional[torch.Tensor], optional (default = None)
+    flattened_indices : `Optional[torch.Tensor]`, optional (default = `None`)
         An optional tensor representing the result of calling `flatten_and_batch_shift_indices`
         on `indices`. This is helpful in the case that the indices can be flattened once and
         cached for many batch lookups.
@@ -1381,15 +1389,16 @@ def bucket_values(
 
     distances : `torch.Tensor`, required.
         A Tensor of any size, to be bucketed.
-    num_identity_buckets: int, optional (default = 4).
+    num_identity_buckets: `int`, optional (default = `4`).
         The number of identity buckets (those only holding a single value).
-    num_total_buckets : int, (default = 10)
+    num_total_buckets : `int`, (default = `10`)
         The total number of buckets to bucket values into.
 
     # Returns
 
-    A tensor of the same shape as the input, containing the indices of the buckets
-    the values were placed in.
+    `torch.Tensor`
+        A tensor of the same shape as the input, containing the indices of the buckets
+        the values were placed in.
     """
     # Chunk the values into semi-logscale buckets using .floor().
     # This is a semi-logscale bucketing because we divide by log(2) after taking the log.
@@ -1411,7 +1420,7 @@ def bucket_values(
 
 def add_sentence_boundary_token_ids(
     tensor: torch.Tensor, mask: torch.BoolTensor, sentence_begin_token: Any, sentence_end_token: Any
-) -> Tuple[torch.Tensor, torch.Tensor]:
+) -> Tuple[torch.Tensor, torch.BoolTensor]:
     """
     Add begin/end of sentence tokens to the batch of sentences.
     Given a batch of sentences with size `(batch_size, timesteps)` or
@@ -1426,10 +1435,12 @@ def add_sentence_boundary_token_ids(
         A tensor of shape `(batch_size, timesteps)` or `(batch_size, timesteps, dim)`
     mask : `torch.BoolTensor`
          A tensor of shape `(batch_size, timesteps)`
-    sentence_begin_token: Any (anything that can be broadcast in torch for assignment)
-        For 2D input, a scalar with the <S> id. For 3D input, a tensor with length dim.
-    sentence_end_token: Any (anything that can be broadcast in torch for assignment)
-        For 2D input, a scalar with the </S> id. For 3D input, a tensor with length dim.
+    sentence_begin_token: `Any`
+        Can be anything that can be broadcast in torch for assignment.
+        For 2D input, a scalar with the `<S>` id. For 3D input, a tensor with length dim.
+    sentence_end_token: `Any`
+        Can be anything that can be broadcast in torch for assignment.
+        For 2D input, a scalar with the `</S>` id. For 3D input, a tensor with length dim.
 
     # Returns
 
@@ -1515,8 +1526,7 @@ def add_positional_features(
 
     """
     Implements the frequency-based positional encoding described
-    in [Attention is all you Need]
-    (https://www.semanticscholar.org/paper/Attention-Is-All-You-Need-Vaswani-Shazeer/0737da0767d77606169cbf4187b83e1ab62f6077).
+    in [Attention is All you Need][0].
 
     Adds sinusoids of different frequencies to a `Tensor`. A sinusoid of a
     different frequency and phase is added to each dimension of the input `Tensor`.
@@ -1527,18 +1537,21 @@ def add_positional_features(
     signals sin(timestep / timescale) and cos(timestep / timescale) are
     generated and concatenated along the hidden_dim dimension.
 
+    [0]: https://www.semanticscholar.org/paper/Attention-Is-All-You-Need-Vaswani-Shazeer/0737da0767d77606169cbf4187b83e1ab62f6077
+
     # Parameters
 
     tensor : `torch.Tensor`
         a Tensor with shape (batch_size, timesteps, hidden_dim).
-    min_timescale : `float`, optional (default = 1.0)
+    min_timescale : `float`, optional (default = `1.0`)
         The smallest timescale to use.
-    max_timescale : `float`, optional (default = 1.0e4)
+    max_timescale : `float`, optional (default = `1.0e4`)
         The largest timescale to use.
 
     # Returns
 
-    The input tensor augmented with the sinusoidal frequencies.
+    `torch.Tensor`
+        The input tensor augmented with the sinusoidal frequencies.
     """  # noqa
     _, timesteps, hidden_dim = tensor.size()
 
@@ -1652,11 +1665,30 @@ def find_embedding_layer(model: torch.nn.Module) -> torch.nn.Module:
     )
     from allennlp.modules.token_embedders.embedding import Embedding
 
+    # The special case only works if we don't have mismatched embedding.  What we essentially want
+    # to do is grab a transformer's wordpiece embedding layer, because using that is a lot easier
+    # for something like hotflip than running a network to embed all tokens in a vocabulary.  If
+    # you've used a mismatched embedder, though, your input tokens are actually *words*, so that's
+    # what we'll be visualizing and attacking, even though you're modeling things at the wordpiece
+    # level.  In this case, we need to return gradients and things at the word level, so we can't
+    # use our shortcut of just returning the wordpiece embedding.
+    mismatched = False
     for module in model.modules():
-        if isinstance(module, BertEmbeddings):
-            return module.word_embeddings
-        if isinstance(module, GPT2Model):
-            return module.wte
+        if "Mismatched" in module.__class__.__name__:
+            # We don't currently have a good way to check whether an embedder is mismatched, and it
+            # doesn't seem like it's worth it to try to add an API call for this somewhere,
+            # especially as we can't really call it here in a type-safe way, anyway, as we're
+            # iterating over plain pytorch Modules.  This check should work for now (v1.0), but it's
+            # possible that some class gets added later that will require this check to change.
+            mismatched = True
+
+    if not mismatched:
+        for module in model.modules():
+            if isinstance(module, BertEmbeddings):
+                return module.word_embeddings
+            if isinstance(module, GPT2Model):
+                return module.wte
+
     for module in model.modules():
         if isinstance(module, TextFieldEmbedder):
 
@@ -1786,8 +1818,8 @@ def masked_topk(
     k = k.reshape(-1)
 
     # Make sure that we don't select any masked items by setting their scores to be very
-    # negative.  These are logits, typically, so -1e20 should be plenty negative.
-    input_ = replace_masked_values(input_, mask, -1e20)
+    # negative.
+    input_ = replace_masked_values(input_, mask, min_value_of_dtype(input_.dtype))
 
     # Shape: (batch_size, max_k)
     _, top_indices = input_.topk(max_k, 1)
@@ -1822,3 +1854,46 @@ def masked_topk(
         top_mask.reshape(*permuted_size).permute(*reverse_permutation),
         top_indices.reshape(*permuted_size).permute(*reverse_permutation),
     )
+
+
+def info_value_of_dtype(dtype: torch.dtype):
+    """
+    Returns the `finfo` or `iinfo` object of a given PyTorch data type. Does not allow torch.bool.
+    """
+    if dtype == torch.bool:
+        raise TypeError("Does not support torch.bool")
+    elif dtype.is_floating_point:
+        return torch.finfo(dtype)
+    else:
+        return torch.iinfo(dtype)
+
+
+def min_value_of_dtype(dtype: torch.dtype):
+    """
+    Returns the minimum value of a given PyTorch data type. Does not allow torch.bool.
+    """
+    return info_value_of_dtype(dtype).min
+
+
+def max_value_of_dtype(dtype: torch.dtype):
+    """
+    Returns the maximum value of a given PyTorch data type. Does not allow torch.bool.
+    """
+    return info_value_of_dtype(dtype).max
+
+
+def tiny_value_of_dtype(dtype: torch.dtype):
+    """
+    Returns a moderately tiny value for a given PyTorch data type that is used to avoid numerical
+    issues such as division by zero.
+    This is different from `info_value_of_dtype(dtype).tiny` because it causes some NaN bugs.
+    Only supports floating point dtypes.
+    """
+    if not dtype.is_floating_point:
+        raise TypeError("Only supports floating point dtypes.")
+    if dtype == torch.float or dtype == torch.double:
+        return 1e-13
+    elif dtype == torch.half:
+        return 1e-4
+    else:
+        raise TypeError("Does not support dtype " + str(dtype))
