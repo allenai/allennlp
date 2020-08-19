@@ -3,6 +3,7 @@ Utilities for working with the local dataset cache.
 """
 
 import glob
+import io
 import os
 import logging
 import tempfile
@@ -21,6 +22,7 @@ import numpy as np
 
 import boto3
 import botocore
+import torch
 from botocore.exceptions import ClientError, EndpointConnectionError
 from filelock import FileLock
 import requests
@@ -325,61 +327,54 @@ def _serialize(data):
     buffer = pickle.dumps(data, protocol=-1)
     return np.frombuffer(buffer, dtype=np.uint8)
 
-class LmdbCache:
-    """
-    This is a conect manager to save the feature from reader into disk lmdb file. 
-    
-    TODO: We may also want to provide the in-memory cache in the future, it should be 
-    multi-threaded safe. It aslo provides the ability to cache the feature in the memory 
-    to reduce I/O usage.
-    """
-    def __init__(self, cache_filename, read_only=False) -> None:
-        self.cache_filename = cache_filename
-        self.cache_directory = os.path.dirname(self.cache_filename)
-        # the index list is a dictionary we maintained in the lmdb env.
-        if read_only:
-            self.env = lmdb.open(self.cache_filename, max_readers=1, readonly=True, lock=False,
-                             readahead=False, meminit=False)                
-        else:
-            self.env = lmdb.open(self.cache_filename, map_size=1099511627776)
 
-        with self.env.begin(write=False) as txn:
-            _indexs = txn.get("_indexs".encode())
-        
-        if _indexs != None:
-            _indexs = pickle.loads(_indexs)
-        else:
-            _indexs = {}
-            with self.env.begin(write=True) as txn:
-                txn.put("_indexs".encode(), _serialize(_indexs))
+class TensorCache:
+    def __init__(
+        self,
+        filename: Union[str, PathLike],
+        map_size: int = 1024*1024*1024*1024
+    ) -> None:
+        self.lmdb_env = lmdb.open(
+            filename,
+            subdir=False,
+            map_size=map_size,
+            max_readers=os.cpu_count() * 2,
+            max_spare_txns=os.cpu_count() * 2,
+            metasync=False,
+            sync=True,
+            readahead=False,
+            meminit=False)
 
-        self._indexs = _indexs
+    def __contains__(self, key: str):
+        key = key.encode()
+        with self.lmdb_env.begin(write=False) as txn:
+            result = txn.get(key)
+            return result is not None
 
-    def __contains__(self, index):
-        # check whether the index is exist in keylist
-        # update the _indexs
-        with self.env.begin(write=False) as txn:
-            self._indexs = pickle.loads(txn.get("_indexs".encode()))        
+    def __getitem__(self, key: str):
+        with self.lmdb_env.begin(write=False) as txn:
+            buffer = txn.get(key)
+            if buffer is None:
+                raise KeyError()
+            return torch.load(buffer, map_location="cpu")
 
-        return index in self._indexs
+    def __setitem__(self, key: str, tensor: torch.Tensor):
+        key = key.encode()
+        buffer = io.BytesIO()
+        torch.save(tensor, buffer, pickle_protocol=pickle.HIGHEST_PROTOCOL)
+        with self.lmdb_env.begin(write=True) as txn:
+            txn.put(key, buffer.getbuffer())
 
-    def __getitem__(self, index):
-        # read from lmdb file and return it.
-        with self.env.begin(write=False) as txn:
-            value = pickle.loads(txn.get(index.encode()))
+    def __delitem__(self, key: str):
+        key = key.encode()
+        with self.lmdb_env.begin(write=True) as txn:
+            txn.delete(key)
 
-        return value
-
-    def __setitem__(self, index, value):
-        # update the _indexs    
-        self._indexs[index] = None
-
-        with self.env.begin(write=True) as txn:
-            txn.put(index.encode(), _serialize(value))        
-            txn.put("_indexs".encode(), _serialize(self._indexs))    
-    
     def __del__(self):
-        self.env.close()
+        if self.lmdb_env is not None:
+            self.lmdb_env.close()
+            self.lmdb_env = None
+
 
 class CacheFile:
     """
