@@ -21,6 +21,7 @@ from allennlp.data.tokenizers import Tokenizer
 from allennlp.modules.vision.grid_embedder import GridEmbedder
 from allennlp.modules.vision.region_detector import RegionDetector
 
+
 def load_vqa_dataset(dataset_root, image_root, prefix):
     """
     Load a json in VQA's annotation format and convert to Vision and Language Dataset Dict.
@@ -59,6 +60,7 @@ def load_vqa_dataset(dataset_root, image_root, prefix):
             dataset_dicts.append(record)
 
     return dataset_dicts
+
 
 @DatasetReader.register("vqav2")
 class VQAv2Reader(DatasetReader):
@@ -118,7 +120,7 @@ class VQAv2Reader(DatasetReader):
         self._read_only = read_only
         
         if not self._read_only:
-        # image loading
+            # image loading
             self.image_loader = image_loader
             self.image_featurizer = image_featurizer
             self.region_detector = region_detector
