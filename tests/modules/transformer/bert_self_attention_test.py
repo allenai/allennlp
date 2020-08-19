@@ -1,8 +1,6 @@
 import copy
 import torch
 
-import pytest
-
 from allennlp.common import Params
 from allennlp.modules.transformer import BertSelfAttention
 from allennlp.common.testing import AllenNlpTestCase
