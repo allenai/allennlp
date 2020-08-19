@@ -5,3 +5,4 @@ from allennlp.modules.transformer.bert_attention import BertAttention
 from allennlp.modules.transformer.bert_intermediate import BertIntermediate
 from allennlp.modules.transformer.bert_output import BertOutput
 from allennlp.modules.transformer.bert_layer import BertLayer
+from allennlp.modules.transformer.bert_biattention import BertBiAttention
