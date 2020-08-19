@@ -1,12 +1,12 @@
 import glob
 import os
 from os import PathLike
-from typing import Any, Dict, Tuple, Union
+from typing import Any, Dict, Union, Optional
 
 from overrides import overrides
 import torch
 
-from allennlp.common.file_utils import cached_path, json_lines_from_file
+from allennlp.common.file_utils import cached_path, json_lines_from_file, TensorCache
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.fields import ArrayField, LabelField, ListField, MetadataField, TextField
 from allennlp.data.image_loader import ImageLoader
@@ -38,6 +38,8 @@ class Nlvr2Reader(DatasetReader):
         Path to directory containing text files for each dataset split. These files contain
         the sentences and metadata for each task instance.  If this is `None`, we will grab the
         files from the official NLVR github repository.
+    feature_cache_dir: `str`, optional
+        Path to a directory that will contain a cache of featurized images.
     tokenizer: `Tokenizer`, optional
     token_indexers: `Dict[str, TokenIndexer]`
     lazy : `bool`, optional
@@ -50,9 +52,11 @@ class Nlvr2Reader(DatasetReader):
         image_loader: ImageLoader,
         image_featurizer: GridEmbedder,
         region_detector: RegionDetector,
-        data_dir: Union[str, PathLike] = None,
-        tokenizer: Tokenizer = None,
-        token_indexers: Dict[str, TokenIndexer] = None,
+        *,
+        feature_cache_dir: Optional[Union[str, PathLike]] = None,
+        data_dir: Optional[Union[str, PathLike]] = None,
+        tokenizer: Optional[Tokenizer] = None,
+        token_indexers: Optional[Dict[str, TokenIndexer]] = None,
         lazy: bool = False,
     ) -> None:
         super().__init__(lazy)
@@ -88,7 +92,15 @@ class Nlvr2Reader(DatasetReader):
         self.image_loader = image_loader
         self.image_featurizer = image_featurizer
         self.region_detector = region_detector
-        self._feature_cache: Dict[str, Tuple[torch.FloatTensor, torch.IntTensor]] = {}
+
+        # feature cache
+        if feature_cache_dir is None:
+            self._features_cache = {}
+            self._coordinates_cache = {}
+        else:
+            os.makedirs(feature_cache_dir, exist_ok=True)
+            self._features_cache = TensorCache(os.path.join(feature_cache_dir, "features"))
+            self._coordinates_cache = TensorCache(os.path.join(feature_cache_dir, "coordinates"))
 
     @overrides
     def _read(self, split_or_filename: str):
@@ -115,19 +127,14 @@ class Nlvr2Reader(DatasetReader):
 
         # Load images
         image_name_base = identifier[: identifier.rindex("-")]
-
-        # TODO(mattg): shouldn't we be using the URL?  What if images are reused?
-        # Since we use the image path, it will not be reused.
-        left_image_path = self.images[f"{image_name_base}-img0.png"]
-        right_image_path = self.images[f"{image_name_base}-img1.png"]
+        image_paths = [self.images[f"{image_name_base}-{suffix}"] for suffix in ["img0.png", "img1.png"]]
 
         to_compute = []
-        if left_image_path not in self._feature_cache:
-            to_compute.append(left_image_path)
-        if right_image_path not in self._feature_cache:
-            to_compute.append(right_image_path)
-
-        if to_compute:
+        for path in image_paths:
+            name = os.path.basename(path)
+            if name not in self._features_cache or name not in self._coordinates_cache:
+                to_compute.append(path)
+        if len(to_compute) > 0:
             images, sizes = self.image_loader(to_compute)
             with torch.no_grad():
                 featurized_images = self.image_featurizer(images)
@@ -136,10 +143,17 @@ class Nlvr2Reader(DatasetReader):
                 coordinates = detector_results["coordinates"]
 
             for index, path in enumerate(to_compute):
-                self._feature_cache[path] = (features[index], coordinates[index])
+                self._features_cache[os.path.basename(path)] = features[index]
+                self._coordinates_cache[os.path.basename(path)] = coordinates[index]
 
-        left_features, left_coords = self._feature_cache[left_image_path]
-        right_features, right_coords = self._feature_cache[right_image_path]
+        left_features, right_features = [
+            self._features_cache[os.path.basename(path)]
+            for path in image_paths
+        ]
+        left_coords, right_coords = [
+            self._coordinates_cache[os.path.basename(path)]
+            for path in image_paths
+        ]
 
         fields = {
             "sentence": sentence_field,
