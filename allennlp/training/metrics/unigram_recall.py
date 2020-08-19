@@ -83,8 +83,8 @@ class UnigramRecall(Metric):
         _total_count = predictions.size()[0]
 
         if is_distributed():
-            correct_count = torch.LongTensor(_correct_count).to(device)
-            total_count = torch.LongTensor(_total_count).to(device)
+            correct_count = torch.tensor(_correct_count).to(device)
+            total_count = torch.tensor(_total_count).to(device)
             dist.all_reduce(correct_count, op=dist.ReduceOp.SUM)
             dist.all_reduce(total_count, op=dist.ReduceOp.SUM)
             _correct_count = correct_count.item()

@@ -43,7 +43,7 @@ class Entropy(Metric):
         _count = 1
 
         if is_distributed():
-            count = torch.LongTensor(_count).to(device)
+            count = torch.tensor(_count).to(device)
             dist.all_reduce(_entropy, op=dist.ReduceOp.SUM)
             dist.all_reduce(count, op=dist.ReduceOp.SUM)
             _count = count.item()
