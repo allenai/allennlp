@@ -3,7 +3,8 @@ from typing import Optional
 
 from overrides import overrides
 import torch
-import torch.distributed as dist
+
+# import torch.distributed as dist
 
 from allennlp.common.util import is_distributed
 from allennlp.training.metrics.metric import Metric
@@ -54,6 +55,7 @@ class Covariance(Metric):
             A tensor of the same shape as `predictions`.
         """
         predictions, gold_labels, mask = self.detach_tensors(predictions, gold_labels, mask)
+
         # Flatten predictions, gold_labels, and mask. We calculate the covariance between
         # the vectors, since each element in the predictions and gold_labels tensor is assumed
         # to be a separate observation.
@@ -102,18 +104,22 @@ class Covariance(Metric):
             previous_count * num_batch_items / updated_count
         )
 
-        if is_distributed():
-            # Note: this gives an approximate aggregation of the covariance.
-            device = gold_labels.device
-            delta_mean_prediction = torch.tensor(delta_mean_prediction).to(device)
-            delta_mean_label = torch.tensor(delta_mean_label).to(device)
-            delta_co_moment = torch.tensor(delta_co_moment).to(device)
-            _total_count = torch.tensor(updated_count).to(device)
-            dist.all_reduce(delta_mean_prediction, op=dist.ReduceOp.SUM)
-            dist.all_reduce(delta_mean_label, op=dist.ReduceOp.SUM)
-            dist.all_reduce(delta_co_moment, op=dist.ReduceOp.SUM)
-            dist.all_reduce(_total_count, op=dist.ReduceOp.SUM)
-            updated_count = _total_count.item()
+        # Due to the online computation of covariance, the following code can
+        # still lead to nan values in later iterations. To be revisited.
+
+        # if is_distributed():
+
+        #     # Note: this gives an approximate aggregation of the covariance.
+        #     device = gold_labels.device
+        #     delta_mean_prediction = torch.tensor(delta_mean_prediction).to(device)
+        #     delta_mean_label = torch.tensor(delta_mean_label).to(device)
+        #     delta_co_moment = torch.tensor(delta_co_moment).to(device)
+        #     _total_count = torch.tensor(updated_count).to(device)
+        #     dist.all_reduce(delta_mean_prediction, op=dist.ReduceOp.SUM)
+        #     dist.all_reduce(delta_mean_label, op=dist.ReduceOp.SUM)
+        #     dist.all_reduce(delta_co_moment, op=dist.ReduceOp.SUM)
+        #     dist.all_reduce(_total_count, op=dist.ReduceOp.SUM)
+        #     updated_count = _total_count.item()
 
         self._total_prediction_mean += delta_mean_prediction.item()
         self._total_label_mean += delta_mean_label.item()
@@ -126,7 +132,8 @@ class Covariance(Metric):
 
         The accumulated covariance.
         """
-
+        if is_distributed():
+            raise RuntimeError("Distributed aggregation for Covariance is currently not supported.")
         covariance = self._total_co_moment / (self._total_count - 1)
         if reset:
             self.reset()
