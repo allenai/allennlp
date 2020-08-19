@@ -6,7 +6,7 @@ from typing import Any, Dict, Tuple, Union
 from overrides import overrides
 import torch
 
-from allennlp.common.file_utils import cached_path, json_lines_from_file
+from allennlp.common.file_utils import cached_path, json_lines_from_file, LmdbCache
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.fields import ArrayField, LabelField, ListField, MetadataField, TextField
 from allennlp.data.image_loader import ImageLoader
@@ -47,6 +47,7 @@ class Nlvr2Reader(DatasetReader):
     def __init__(
         self,
         image_dir: Union[str, PathLike],
+        lmdb_cache_dir: Union[str, PathLike],
         image_loader: ImageLoader,
         image_featurizer: GridEmbedder,
         region_detector: RegionDetector,
@@ -88,7 +89,7 @@ class Nlvr2Reader(DatasetReader):
         self.image_loader = image_loader
         self.image_featurizer = image_featurizer
         self.region_detector = region_detector
-        self._feature_cache: Dict[str, Tuple[torch.FloatTensor, torch.IntTensor]] = {}
+        self._feature_cache = LmdbCache(lmdb_cache_dir, self._read_only)
 
     @overrides
     def _read(self, split_or_filename: str):

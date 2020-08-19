@@ -328,10 +328,10 @@ def _serialize(data):
 
 class LmdbCache:
     """
-    This is a conect manager to save the feature from reader into disk lmdb file. 
-    
-    TODO: We may also want to provide the in-memory cache in the future, it should be 
-    multi-threaded safe. It aslo provides the ability to cache the feature in the memory 
+    This is a connect manager to save the feature from reader into disk lmdb file.
+
+    TODO: We may also want to provide the in-memory cache in the future, it should be
+    multi-threaded safe. It also provides the ability to cache the feature in the memory
     to reduce I/O usage.
     """
     def __init__(self, cache_filename, read_only=False) -> None:
@@ -340,13 +340,13 @@ class LmdbCache:
         # the index list is a dictionary we maintained in the lmdb env.
         if read_only:
             self.env = lmdb.open(self.cache_filename, max_readers=1, readonly=True, lock=False,
-                             readahead=False, meminit=False)                
+                             readahead=False, meminit=False)
         else:
             self.env = lmdb.open(self.cache_filename, map_size=1099511627776)
 
         with self.env.begin(write=False) as txn:
             _indexs = txn.get("_indexs".encode())
-        
+
         if _indexs != None:
             _indexs = pickle.loads(_indexs)
         else:
@@ -360,7 +360,7 @@ class LmdbCache:
         # check whether the index is exist in keylist
         # update the _indexs
         with self.env.begin(write=False) as txn:
-            self._indexs = pickle.loads(txn.get("_indexs".encode()))        
+            self._indexs = pickle.loads(txn.get("_indexs".encode()))
 
         return index in self._indexs
 
@@ -372,13 +372,13 @@ class LmdbCache:
         return value
 
     def __setitem__(self, index, value):
-        # update the _indexs    
+        # update the _indexs
         self._indexs[index] = None
 
         with self.env.begin(write=True) as txn:
-            txn.put(index.encode(), _serialize(value))        
-            txn.put("_indexs".encode(), _serialize(self._indexs))    
-    
+            txn.put(index.encode(), _serialize(value))
+            txn.put("_indexs".encode(), _serialize(self._indexs))
+
     def __del__(self):
         self.env.close()
 
