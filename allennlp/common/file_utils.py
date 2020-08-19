@@ -416,7 +416,7 @@ class CacheFile:
             os.replace(self.temp_file.name, self.cache_filename)
             return True
         # Something went wrong, remove the temp file.
-        logger.debug("removing temp file_feature_cache %s", self.temp_file.name)
+        logger.debug("removing temp file %s", self.temp_file.name)
         os.remove(self.temp_file.name)
         return False
 
