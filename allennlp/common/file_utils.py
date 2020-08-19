@@ -14,10 +14,12 @@ from pathlib import Path
 from typing import Optional, Tuple, Union, IO, Callable, Set, List, Iterator, Iterable
 from hashlib import sha256
 from functools import wraps
+from weakref import WeakValueDictionary
 from zipfile import ZipFile, is_zipfile
 import tarfile
 import shutil
 import pickle
+
 import numpy as np
 
 import boto3
@@ -345,30 +347,56 @@ class TensorCache:
             readahead=False,
             meminit=False)
 
+        # We have another cache here that makes sure we return the same object for the same key. Without it,
+        # you would get a different tensor, using different memory, every time you call __getitem__(), even
+        # if you call it with the same key.
+        # The downside is that we can't keep self.cache_cache up to date when multiple processes modify the
+        # cache at the same time. We can guarantee though that it is up to date as long as processes either
+        # write new values, or read existing ones.
+        self.cache_cache = WeakValueDictionary()
+
     def __contains__(self, key: str):
-        key = key.encode()
+        if key in self.cache_cache:
+            return True
+        encoded_key = key.encode()
         with self.lmdb_env.begin(write=False) as txn:
-            result = txn.get(key)
+            result = txn.get(encoded_key)
             return result is not None
 
     def __getitem__(self, key: str):
-        with self.lmdb_env.begin(write=False) as txn:
-            buffer = txn.get(key)
-            if buffer is None:
-                raise KeyError()
-            return torch.load(buffer, map_location="cpu")
+        try:
+            return self.cache_cache[key]
+        except KeyError:
+            encoded_key = key.encode()
+            with self.lmdb_env.begin(write=False) as txn:
+                buffer = txn.get(encoded_key)
+                if buffer is None:
+                    raise KeyError()
+                tensor = torch.load(io.BytesIO(buffer), map_location="cpu")
+            self.cache_cache[key] = tensor
+            return tensor
 
     def __setitem__(self, key: str, tensor: torch.Tensor):
-        key = key.encode()
+        encoded_key = key.encode()
         buffer = io.BytesIO()
-        torch.save(tensor, buffer, pickle_protocol=pickle.HIGHEST_PROTOCOL)
+        if tensor.storage().size() != np.prod(tensor.size()):
+            tensor = tensor.clone()
+        assert tensor.storage().size() == np.prod(tensor.size())
+        torch.save(tensor.detach(), buffer, pickle_protocol=pickle.HIGHEST_PROTOCOL)
         with self.lmdb_env.begin(write=True) as txn:
-            txn.put(key, buffer.getbuffer())
+            txn.put(encoded_key, buffer.getbuffer())
+
+        self.cache_cache[key] = tensor
 
     def __delitem__(self, key: str):
-        key = key.encode()
+        encoded_key = key.encode()
         with self.lmdb_env.begin(write=True) as txn:
-            txn.delete(key)
+            txn.delete(encoded_key)
+
+        try:
+            del self.cache_cache[key]
+        except KeyError:
+            pass
 
     def __del__(self):
         if self.lmdb_env is not None:
