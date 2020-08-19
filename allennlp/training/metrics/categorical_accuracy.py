@@ -93,19 +93,17 @@ class CategoricalAccuracy(Metric):
 
         if mask is not None:
             correct *= mask.view(-1, 1)
-            total_count_diff = mask.sum()
+            _total_count = mask.sum()
         else:
-            total_count_diff = torch.tensor(gold_labels.numel())
-        correct_count_diff = correct.sum()
+            _total_count = torch.tensor(gold_labels.numel())
+        _correct_count = correct.sum()
 
         if is_distributed():
-            dist.all_reduce(correct_count_diff, op=dist.ReduceOp.SUM)
-            dist.all_reduce(total_count_diff, op=dist.ReduceOp.SUM)
-            self.correct_count += correct_count_diff.item()
-            self.total_count += total_count_diff.item()
-        else:
-            self.correct_count += correct_count_diff
-            self.total_count += total_count_diff
+            dist.all_reduce(_correct_count, op=dist.ReduceOp.SUM)
+            dist.all_reduce(_total_count, op=dist.ReduceOp.SUM)
+
+        self.correct_count += _correct_count.item()
+        self.total_count += _total_count.item()
 
     def get_metric(self, reset: bool = False):
         """

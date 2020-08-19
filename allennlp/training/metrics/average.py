@@ -28,16 +28,18 @@ class Average(Metric):
         value : `float`
             The value to average.
         """
-        self._total_value += list(self.detach_tensors(value))[0]
-        self._count += 1
+        _total_value = list(self.detach_tensors(value))[0]
+        _count = 1
         if is_distributed():
             device = torch.device("cpu")
-            _count = torch.tensor(self._count).to(device)
-            _total_value = torch.tensor(self._total_value).to(device)
-            dist.all_reduce(_count, op=dist.ReduceOp.SUM)
-            dist.all_reduce(_total_value, op=dist.ReduceOp.SUM)
-            self._count = _count.item()
-            self._total_value = _total_value.item()
+            count = torch.tensor(_count).to(device)
+            total_value = torch.tensor(_total_value).to(device)
+            dist.all_reduce(count, op=dist.ReduceOp.SUM)
+            dist.all_reduce(total_value, op=dist.ReduceOp.SUM)
+            _count = count.item()
+            _total_value = total_value.item()
+        self._count += _count
+        self._total_value += _total_value
 
     @overrides
     def get_metric(self, reset: bool = False):
