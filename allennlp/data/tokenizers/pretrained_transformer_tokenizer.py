@@ -231,12 +231,16 @@ class PretrainedTransformerTokenizer(Tokenizer):
         """
         This method only handles a single sentence (or sequence) of text.
         """
+        max_length = self._max_length
+        if max_length is not None and self._add_special_tokens:
+            max_length -= self.num_special_tokens_for_sequence()
+
         encoded_tokens = self.tokenizer.encode_plus(
             text=text,
             add_special_tokens=False,
-            max_length=self._max_length,
+            max_length=max_length,
             stride=self._stride,
-            truncation=self._truncation_strategy if self._max_length is not None else False,
+            truncation=self._truncation_strategy if max_length is not None else False,
             return_tensors=None,
             return_offsets_mapping=self.tokenizer.is_fast,
             return_attention_mask=False,
