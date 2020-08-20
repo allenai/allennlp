@@ -1,3 +1,5 @@
+from typing import Any, Dict, List, Tuple, Union
+
 import torch
 import pytest
 
@@ -95,3 +97,33 @@ class BooleanAccuracyTest(AllenNlpTestCase):
             desired_values,
             exact=True,
         )
+
+    def test_multiple_distributed_runs(self):
+        predictions = [torch.tensor([[0, 1], [2, 3]]), torch.tensor([[4, 5], [6, 7]])]
+        targets = [torch.tensor([[0, 1], [2, 2]]), torch.tensor([[4, 5], [7, 7]])]
+        metric_kwargs = {"predictions": predictions, "gold_labels": targets}
+        desired_values = 0.5
+        run_distributed_test(
+            [-1, -1], multiple_runs, BooleanAccuracy(), metric_kwargs, desired_values, exact=True,
+        )
+
+
+def multiple_runs(
+    global_rank: int,
+    world_size: int,
+    gpu_id: Union[int, torch.device],
+    metric: BooleanAccuracy,
+    metric_kwargs: Dict[str, List[Any]],
+    desired_values: Dict[str, Any],
+    exact: Union[bool, Tuple[float, float]] = True,
+):
+
+    kwargs = {}
+    # Use the arguments meant for the process with rank `global_rank`.
+    for argname in metric_kwargs:
+        kwargs[argname] = metric_kwargs[argname][global_rank]
+
+    for i in range(200):
+        metric(**kwargs)
+
+    assert desired_values == metric.get_metric()

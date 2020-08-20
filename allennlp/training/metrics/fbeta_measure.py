@@ -162,21 +162,19 @@ class FBetaMeasure(Metric):
         else:
             true_sum = torch.zeros(num_classes, device=predictions.device)
 
-        self._true_positive_sum += true_positive_sum
-        self._pred_sum += pred_sum
-        self._true_sum += true_sum
         self._total_sum += mask.sum().to(torch.float)
 
         if is_distributed():
-            _true_positive_sum = torch.tensor(self._true_positive_sum).to(device)
-            _pred_sum = torch.tensor(self._pred_sum).to(device)
-            _true_sum = torch.tensor(self._true_sum).to(device)
-            dist.all_reduce(_true_positive_sum, op=dist.ReduceOp.SUM)
-            dist.all_reduce(_pred_sum, op=dist.ReduceOp.SUM)
-            dist.all_reduce(_true_sum, op=dist.ReduceOp.SUM)
-            self._true_positive_sum = _true_positive_sum
-            self._pred_sum = _pred_sum
-            self._true_sum = _true_sum
+            true_positive_sum = torch.tensor(true_positive_sum).to(device)
+            pred_sum = torch.tensor(pred_sum).to(device)
+            true_sum = torch.tensor(true_sum).to(device)
+            dist.all_reduce(true_positive_sum, op=dist.ReduceOp.SUM)
+            dist.all_reduce(pred_sum, op=dist.ReduceOp.SUM)
+            dist.all_reduce(true_sum, op=dist.ReduceOp.SUM)
+
+        self._true_positive_sum += true_positive_sum
+        self._pred_sum += pred_sum
+        self._true_sum += true_sum
 
     @overrides
     def get_metric(self, reset: bool = False):
