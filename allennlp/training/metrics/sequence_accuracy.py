@@ -69,16 +69,19 @@ class SequenceAccuracy(Metric):
         some_match = matches_per_question.max(dim=1)[0]
         correct = some_match.sum().item()
 
-        self.total_count += predictions.size()[0]
-        self.correct_count += correct
+        _total_count = predictions.size()[0]
+        _correct_count = correct
 
         if is_distributed():
-            _correct_count = torch.tensor(self.correct_count).to(device)
-            _total_count = torch.tensor(self.total_count).to(device)
-            dist.all_reduce(_correct_count, op=dist.ReduceOp.SUM)
-            dist.all_reduce(_total_count, op=dist.ReduceOp.SUM)
-            self.correct_count = _correct_count.item()
-            self.total_count = _total_count.item()
+            correct_count = torch.tensor(_correct_count).to(device)
+            total_count = torch.tensor(_total_count).to(device)
+            dist.all_reduce(correct_count, op=dist.ReduceOp.SUM)
+            dist.all_reduce(total_count, op=dist.ReduceOp.SUM)
+            _correct_count = correct_count.item()
+            _total_count = total_count.item()
+
+        self.correct_count += _correct_count
+        self.total_count += _total_count
 
     def get_metric(self, reset: bool = False):
         """

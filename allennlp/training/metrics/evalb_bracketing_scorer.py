@@ -138,29 +138,37 @@ class EvalbBracketingScorer(Metric):
             command, stdout=subprocess.PIPE, universal_newlines=True, check=True
         )
 
+        _correct_predicted_brackets = 0.0
+        _gold_brackets = 0.0
+        _predicted_brackets = 0.0
+
         for line in completed_process.stdout.split("\n"):
             stripped = line.strip().split()
             if len(stripped) == 12 and stripped != self._header_line:
                 # This line contains results for a single tree.
                 numeric_line = [float(x) for x in stripped]
-                self._correct_predicted_brackets += numeric_line[5]
-                self._gold_brackets += numeric_line[6]
-                self._predicted_brackets += numeric_line[7]
+                _correct_predicted_brackets += numeric_line[5]
+                _gold_brackets += numeric_line[6]
+                _predicted_brackets += numeric_line[7]
 
         shutil.rmtree(tempdir)
 
         if is_distributed():
             # Setting the device to CPU since this metric is not expected to run on GPUs.
             device = torch.device("cpu")
-            _correct_predicted_brackets = torch.tensor(self._correct_predicted_brackets).to(device)
-            _predicted_brackets = torch.tensor(self._predicted_brackets).to(device)
-            _gold_brackets = torch.tensor(self._gold_brackets).to(device)
-            dist.all_reduce(_correct_predicted_brackets, op=dist.ReduceOp.SUM)
-            dist.all_reduce(_predicted_brackets, op=dist.ReduceOp.SUM)
-            dist.all_reduce(_gold_brackets, op=dist.ReduceOp.SUM)
-            self._correct_predicted_brackets = _correct_predicted_brackets.item()
-            self._predicted_brackets = _predicted_brackets.item()
-            self._gold_brackets = _gold_brackets.item()
+            correct_predicted_brackets = torch.tensor(_correct_predicted_brackets).to(device)
+            predicted_brackets = torch.tensor(_predicted_brackets).to(device)
+            gold_brackets = torch.tensor(_gold_brackets).to(device)
+            dist.all_reduce(correct_predicted_brackets, op=dist.ReduceOp.SUM)
+            dist.all_reduce(predicted_brackets, op=dist.ReduceOp.SUM)
+            dist.all_reduce(gold_brackets, op=dist.ReduceOp.SUM)
+            _correct_predicted_brackets = correct_predicted_brackets.item()
+            _predicted_brackets = predicted_brackets.item()
+            _gold_brackets = gold_brackets.item()
+
+        self._correct_predicted_brackets += _correct_predicted_brackets
+        self._gold_brackets += _gold_brackets
+        self._predicted_brackets += _predicted_brackets
 
     @overrides
     def get_metric(self, reset: bool = False):

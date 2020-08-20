@@ -133,26 +133,32 @@ class BLEU(Metric):
                 dist.all_reduce(_precision_totals, op=dist.ReduceOp.SUM)
                 precision_matches = _precision_matches.item() / world_size
                 precision_totals = _precision_totals.item() / world_size
+
             self._precision_matches[ngram_size] += precision_matches
             self._precision_totals[ngram_size] += precision_totals
+
         if not self._exclude_indices:
-            self._prediction_lengths += predictions.size(0) * predictions.size(1)
-            self._reference_lengths += gold_targets.size(0) * gold_targets.size(1)
+            _prediction_lengths = predictions.size(0) * predictions.size(1)
+            _reference_lengths = gold_targets.size(0) * gold_targets.size(1)
+
         else:
             from allennlp.training.util import get_valid_tokens_mask
 
             valid_predictions_mask = get_valid_tokens_mask(predictions, self._exclude_indices)
-            self._prediction_lengths += valid_predictions_mask.sum().item()
             valid_gold_targets_mask = get_valid_tokens_mask(gold_targets, self._exclude_indices)
-            self._reference_lengths += valid_gold_targets_mask.sum().item()
+            _prediction_lengths = valid_predictions_mask.sum().item()
+            _reference_lengths = valid_gold_targets_mask.sum().item()
 
         if is_distributed():
-            _prediction_lengths = torch.tensor(self._prediction_lengths).to(device)
-            _reference_lengths = torch.tensor(self._reference_lengths).to(device)
-            dist.all_reduce(_prediction_lengths, op=dist.ReduceOp.SUM)
-            dist.all_reduce(_reference_lengths, op=dist.ReduceOp.SUM)
-            self._prediction_lengths = _prediction_lengths.item()
-            self._reference_lengths = _reference_lengths.item()
+            prediction_lengths = torch.tensor(_prediction_lengths).to(device)
+            reference_lengths = torch.tensor(_reference_lengths).to(device)
+            dist.all_reduce(prediction_lengths, op=dist.ReduceOp.SUM)
+            dist.all_reduce(reference_lengths, op=dist.ReduceOp.SUM)
+            _prediction_lengths = prediction_lengths.item()
+            _reference_lengths = reference_lengths.item()
+
+        self._prediction_lengths += _prediction_lengths
+        self._reference_lengths += _reference_lengths
 
     @overrides
     def get_metric(self, reset: bool = False) -> Dict[str, float]:

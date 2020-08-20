@@ -1,3 +1,5 @@
+from typing import Any, Dict, List, Tuple, Union
+
 import pytest
 import torch
 from torch.testing import assert_allclose
@@ -183,3 +185,41 @@ class CategoricalAccuracyTest(AllenNlpTestCase):
             desired_accuracy,
             exact=False,
         )
+
+    def test_multiple_distributed_runs(self):
+        predictions = [
+            torch.tensor([[0.35, 0.25, 0.1, 0.1, 0.2]]),
+            torch.tensor([[0.1, 0.6, 0.1, 0.2, 0.0]]),
+        ]
+        targets = [torch.tensor([0]), torch.tensor([3])]
+        metric_kwargs = {"predictions": predictions, "gold_labels": targets}
+        desired_accuracy = 0.5
+        run_distributed_test(
+            [-1, -1],
+            multiple_runs,
+            CategoricalAccuracy(),
+            metric_kwargs,
+            desired_accuracy,
+            exact=True,
+        )
+
+
+def multiple_runs(
+    global_rank: int,
+    world_size: int,
+    gpu_id: Union[int, torch.device],
+    metric: CategoricalAccuracy,
+    metric_kwargs: Dict[str, List[Any]],
+    desired_values: Dict[str, Any],
+    exact: Union[bool, Tuple[float, float]] = True,
+):
+
+    kwargs = {}
+    # Use the arguments meant for the process with rank `global_rank`.
+    for argname in metric_kwargs:
+        kwargs[argname] = metric_kwargs[argname][global_rank]
+
+    for i in range(200):
+        metric(**kwargs)
+
+    assert desired_values == metric.get_metric()

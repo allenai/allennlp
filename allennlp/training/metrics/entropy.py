@@ -39,16 +39,16 @@ class Entropy(Metric):
         weighted_negative_likelihood = -log_probs * probabilities
         entropy = weighted_negative_likelihood.sum(-1)
 
-        self._entropy += entropy.sum() / mask.sum()
-        self._count += 1
+        _entropy = entropy.sum() / mask.sum()
+        _count = 1
 
         if is_distributed():
-            _entropy = torch.tensor(self._entropy).to(device)
-            _count = torch.tensor(self._count).to(device)
+            count = torch.tensor(_count).to(device)
             dist.all_reduce(_entropy, op=dist.ReduceOp.SUM)
-            dist.all_reduce(_count, op=dist.ReduceOp.SUM)
-            self._entropy = _entropy.item()
-            self._count = _count.item()
+            dist.all_reduce(count, op=dist.ReduceOp.SUM)
+            _count = count.item()
+        self._entropy += _entropy.item()
+        self._count += _count
 
     @overrides
     def get_metric(self, reset: bool = False):
