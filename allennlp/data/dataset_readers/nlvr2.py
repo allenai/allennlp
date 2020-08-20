@@ -87,9 +87,10 @@ class Nlvr2Reader(DatasetReader):
             "unbalanced_dev": f"{data_dir}/balanced/unbalanced_dev.json",
             "unbalanced_test": f"{data_dir}/balanced/unbalanced_test1.json",
         }
+        from tqdm import tqdm
         self.images = {
             os.path.basename(filename): filename
-            for filename in glob.iglob(os.path.join(image_dir, "**", "*.png"), recursive=True)
+            for filename in tqdm(glob.iglob(os.path.join(image_dir, "**", "*.png"), recursive=True), desc="Discovering images")
         }
 
         # tokenizers and indexers
