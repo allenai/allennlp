@@ -145,7 +145,7 @@ class Predictor(Registrable):
         return backward_hooks
 
     @contextmanager
-    def capture_model_internals(self, module_regex: str = r".+") -> Iterator[dict]:
+    def capture_model_internals(self, module_regex: str = r".*") -> Iterator[dict]:
         """
         Context manager that captures the internal-module outputs of
         this predictor's model. The idea is that you could use it as follows:
