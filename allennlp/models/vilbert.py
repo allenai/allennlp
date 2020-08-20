@@ -900,8 +900,6 @@ class Nlvr2Vilbert(Model):
         label: torch.Tensor = None,
     ) -> Dict[str, torch.Tensor]:
 
-        print(box_features.size())
-        print(sentence)
         batch_size, num_images, _, feature_size = box_features.size()
 
         # TODO(mattg): have this make fewer assumptions.
