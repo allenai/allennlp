@@ -29,7 +29,7 @@ class ModelTestCase(AllenNlpTestCase):
 
         reader = DatasetReader.from_params(params["dataset_reader"])
         # The dataset reader might be lazy, but a lazy list here breaks some of our tests.
-        instances = reader.read(str(dataset_file))
+        instances = list(reader.read(str(dataset_file)))
         # Use parameters for vocabulary if they are present in the config file, so that choices like
         # "non_padded_namespaces", "min_count" etc. can be set if needed.
         if "vocabulary" in params:
@@ -39,12 +39,11 @@ class ModelTestCase(AllenNlpTestCase):
             vocab = Vocabulary.from_instances(instances)
         self.vocab = vocab
         self.instances = instances
-        self.instances.index_with(vocab)
         self.model = Model.from_params(vocab=self.vocab, params=params["model"])
 
         # TODO(joelgrus) get rid of these
         # (a lot of the model tests use them, so they'll have to be changed)
-        self.dataset = Batch(list(self.instances))
+        self.dataset = Batch(self.instances)
         self.dataset.index_instances(self.vocab)
 
     def ensure_model_can_train_save_and_load(
@@ -119,21 +118,22 @@ class ModelTestCase(AllenNlpTestCase):
         params = Params.from_file(param_file, params_overrides=overrides)
         reader = DatasetReader.from_params(params["dataset_reader"])
 
-        print("Reading with original model")
-        model_dataset = reader.read(params["validation_data_path"])
-        model_dataset.index_with(model.vocab)
-
-        print("Reading with loaded model")
-        loaded_dataset = reader.read(params["validation_data_path"])
-        loaded_dataset.index_with(loaded_model.vocab)
-
         # Need to duplicate params because DataLoader.from_params will consume.
         data_loader_params = params["data_loader"]
         data_loader_params["shuffle"] = False
         data_loader_params2 = Params(copy.deepcopy(data_loader_params.as_dict()))
 
-        data_loader = DataLoader.from_params(dataset=model_dataset, params=data_loader_params)
-        data_loader2 = DataLoader.from_params(dataset=loaded_dataset, params=data_loader_params2)
+        print("Reading with original model")
+        data_loader = DataLoader.from_params(
+            params=data_loader_params, reader=reader, data_path=params["validation_data_path"]
+        )
+        data_loader.index_with(model.vocab)
+
+        print("Reading with loaded model")
+        data_loader2 = DataLoader.from_params(
+            params=data_loader_params2, reader=reader, data_path=params["validation_data_path"]
+        )
+        data_loader2.index_with(loaded_model.vocab)
 
         # We'll check that even if we index the dataset with each model separately, we still get
         # the same result out.

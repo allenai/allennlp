@@ -20,8 +20,7 @@ from torch.nn.utils import clip_grad_norm_
 from allennlp.common import Lazy, Registrable, Tqdm
 from allennlp.common import util as common_util
 from allennlp.common.checks import ConfigurationError, check_for_gpu
-from allennlp.data import DataLoader
-from allennlp.data.dataloader import TensorDict
+from allennlp.data import DataLoader, TensorDict
 from allennlp.models.model import Model
 from allennlp.nn import util as nn_util
 from allennlp.training import util as training_util
@@ -204,7 +203,7 @@ class GradientDescentTrainer(Trainer):
     """
     A trainer for doing supervised learning with gradient descent. It just takes a labeled dataset
     and a `DataLoader`, and uses the supplied `Optimizer` to learn the weights for your model over
-    some fixed number of epochs. You can also pass in a validation dataloader and enable early
+    some fixed number of epochs. You can also pass in a validation data_loader and enable early
     stopping. There are many other bells and whistles as well.
 
     Registered as a `Trainer` with the name "gradient_descent" (and is also the default `Trainer`).

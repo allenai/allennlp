@@ -94,8 +94,6 @@ class Nlvr2LxmertReader(DatasetReader):
         images are loaded
     tokenizer: `Tokenizer`, optional
     token_indexers: `Dict[str, TokenIndexer]`
-    lazy : `bool`, optional
-        Whether to load data lazily.  Passed to super class.
     """
 
     def __init__(
@@ -105,9 +103,9 @@ class Nlvr2LxmertReader(DatasetReader):
         topk_images: int = -1,
         tokenizer: Tokenizer = None,
         token_indexers: Dict[str, TokenIndexer] = None,
-        lazy: bool = False,
+        **kwargs
     ) -> None:
-        super().__init__(lazy)
+        super().__init__(**kwargs)
         self.text_path_prefix = text_path_prefix
         self.visual_path_prefix = visual_path_prefix
         if not tokenizer:

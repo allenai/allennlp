@@ -560,64 +560,98 @@ class TrainModel(Registrable):
 
             In a typical AllenNLP configuration file, this parameter does not get an entry as a
             top-level key, it gets passed in separately.
+
         local_rank: `int`
             The process index that is initialized using the GPU device id.
 
             In a typical AllenNLP configuration file, this parameter does not get an entry as a
             top-level key, it gets passed in separately.
+
         dataset_reader: `DatasetReader`
             The `DatasetReader` that will be used for training and (by default) for validation.
+
         train_data_path: `str`
             The file (or directory) that will be passed to `dataset_reader.read()` to construct the
             training data.
+
         model: `Lazy[Model]`
             The model that we will train.  This is lazy because it depends on the `Vocabulary`;
             after constructing the vocabulary we call `model.construct(vocab=vocabulary)`.
+
         data_loader: `Lazy[DataLoader]`
             The data_loader we use to batch instances from the dataset reader at training and (by
             default) validation time. This is lazy because it takes a dataset in it's constructor.
+
         trainer: `Lazy[Trainer]`
             The `Trainer` that actually implements the training loop.  This is a lazy object because
             it depends on the model that's going to be trained.
+
         vocabulary: `Lazy[Vocabulary]`, optional (default=`None`)
             The `Vocabulary` that we will use to convert strings in the data to integer ids (and
             possibly set sizes of embedding matrices in the `Model`).  By default we construct the
             vocabulary from the instances that we read.
+
         datasets_for_vocab_creation: `List[str]`, optional (default=`None`)
             If you pass in more than one dataset but don't want to use all of them to construct a
             vocabulary, you can pass in this key to limit it.  Valid entries in the list are
             "train", "validation" and "test".
+
         validation_dataset_reader: `DatasetReader`, optional (default=`None`)
             If given, we will use this dataset reader for the validation data instead of
             `dataset_reader`.
+
         validation_data_path: `str`, optional (default=`None`)
             If given, we will use this data for computing validation metrics and early stopping.
+
         validation_data_loader: `Lazy[DataLoader]`, optional (default=`None`)
             If given, the data_loader we use to batch instances from the dataset reader at
             validation and test time. This is lazy because it takes a dataset in it's constructor.
+
         test_data_path: `str`, optional (default=`None`)
             If given, we will use this as test data.  This makes it available for vocab creation by
             default, but nothing else.
+
         evaluate_on_test: `bool`, optional (default=`False`)
             If given, we will evaluate the final model on this data at the end of training.  Note
             that we do not recommend using this for actual test data in every-day experimentation;
             you should only very rarely evaluate your model on actual test data.
+
         batch_weight_key: `str`, optional (default=`""`)
             The name of metric used to weight the loss on a per-batch basis.  This is only used
             during evaluation on final test data, if you've specified `evaluate_on_test=True`.
         """
+        # Train data loader.
+        data_loaders: Dict[str, DataLoader] = {
+            "train": data_loader.construct(reader=dataset_reader, data_path=train_data_path)
+        }
 
-        datasets = training_util.read_all_datasets(
-            train_data_path=train_data_path,
-            dataset_reader=dataset_reader,
-            validation_dataset_reader=validation_dataset_reader,
-            validation_data_path=validation_data_path,
-            test_data_path=test_data_path,
-        )
+        # Validation data loader.
+        if validation_data_path is not None:
+            validation_dataset_reader = validation_dataset_reader or dataset_reader
+            validation_data_loader_ = validation_data_loader.construct(
+                reader=validation_dataset_reader, data_path=validation_data_path
+            )
+            if validation_data_loader_ is None:
+                validation_data_loader_ = data_loader.construct(
+                    reader=validation_dataset_reader, data_path=validation_data_path
+                )
+            data_loaders["validation"] = validation_data_loader_
+
+        # Test data loader.
+        if test_data_path is not None:
+            test_dataset_reader = validation_dataset_reader or dataset_reader
+            test_data_loader_ = validation_data_loader.construct(
+                reader=test_dataset_reader, data_path=test_data_path
+            )
+            if test_data_loader_ is None:
+                test_data_loader_ = data_loader.construct(
+                    reader=test_dataset_reader, data_path=test_data_path
+                )
+            data_loaders["test"] = test_data_loader_
 
         if datasets_for_vocab_creation:
             for key in datasets_for_vocab_creation:
-                if key not in datasets:
+                if key not in data_loaders:
                     raise ConfigurationError(f"invalid 'dataset_for_vocab_creation' {key}")
 
             logger.info(
@@ -627,9 +661,9 @@ class TrainModel(Registrable):
 
         instance_generator = (
             instance
-            for key, dataset in datasets.items()
+            for key, data_loader in data_loaders.items()
             if datasets_for_vocab_creation is None or key in datasets_for_vocab_creation
-            for instance in dataset
+            for instance in data_loader.iter_instances()
         )
 
         vocabulary_ = vocabulary.construct(instances=instance_generator)
@@ -646,42 +680,23 @@ class TrainModel(Registrable):
             vocabulary_path = os.path.join(serialization_dir, "vocabulary")
             vocabulary_.save_to_files(vocabulary_path)
 
-        for dataset in datasets.values():
-            dataset.index_with(model_.vocab)
-
-        data_loader_ = data_loader.construct(dataset=datasets["train"])
-        validation_data = datasets.get("validation")
-        if validation_data is not None:
-            # Because of the way Lazy[T] works, we can't check it's existence
-            # _before_ we've tried to construct it. It returns None if it is not
-            # present, so we try to construct it first, and then afterward back off
-            # to the data_loader configuration used for training if it returns None.
-            validation_data_loader_ = validation_data_loader.construct(dataset=validation_data)
-            if validation_data_loader_ is None:
-                validation_data_loader_ = data_loader.construct(dataset=validation_data)
-        else:
-            validation_data_loader_ = None
-
-        test_data = datasets.get("test")
-        if test_data is not None:
-            test_data_loader = validation_data_loader.construct(dataset=test_data)
-            if test_data_loader is None:
-                test_data_loader = data_loader.construct(dataset=test_data)
-        else:
-            test_data_loader = None
+        for data_loader_ in data_loaders.values():
+            data_loader_.index_with(model_.vocab)
 
         # We don't need to pass serialization_dir and local_rank here, because they will have been
         # passed through the trainer by from_params already, because they were keyword arguments to
         # construct this class in the first place.
         trainer_ = trainer.construct(
-            model=model_, data_loader=data_loader_, validation_data_loader=validation_data_loader_,
+            model=model_,
+            data_loader=data_loaders["train"],
+            validation_data_loader=data_loaders.get("validation"),
         )
 
         return cls(
             serialization_dir=serialization_dir,
             model=model_,
             trainer=trainer_,
-            evaluation_data_loader=test_data_loader,
+            evaluation_data_loader=data_loaders.get("test"),
             evaluate_on_test=evaluate_on_test,
             batch_weight_key=batch_weight_key,
         )

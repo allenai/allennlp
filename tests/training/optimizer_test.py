@@ -2,7 +2,7 @@ from allennlp.common.params import Params
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Vocabulary
 from allennlp.data.dataset_readers import SequenceTaggingDatasetReader
-from allennlp.data import PyTorchDataLoader
+from allennlp.data import PyTorchDataLoader, AllennlpDataset
 from allennlp.models.simple_tagger import SimpleTagger
 from allennlp.training import GradientDescentTrainer
 from allennlp.training.optimizers import Optimizer
@@ -80,8 +80,12 @@ class TestOptimizer(AllenNlpTestCase):
 class TestDenseSparseAdam(AllenNlpTestCase):
     def setup_method(self):
         super().setup_method()
-        self.instances = SequenceTaggingDatasetReader().read(
-            self.FIXTURES_ROOT / "data" / "sequence_tagging.tsv"
+        self.instances = AllennlpDataset(
+            list(
+                SequenceTaggingDatasetReader().read(
+                    self.FIXTURES_ROOT / "data" / "sequence_tagging.tsv"
+                )
+            )
         )
         self.vocab = Vocabulary.from_instances(self.instances)
         self.model_params = Params(
