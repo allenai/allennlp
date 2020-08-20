@@ -57,9 +57,21 @@ class Nlvr2Reader(DatasetReader):
         data_dir: Optional[Union[str, PathLike]] = None,
         tokenizer: Optional[Tokenizer] = None,
         token_indexers: Optional[Dict[str, TokenIndexer]] = None,
+        cuda_device: Optional[Union[int, torch.device]] = None,
         lazy: bool = False,
     ) -> None:
         super().__init__(lazy)
+
+        if cuda_device is None:
+            from torch import cuda
+            if cuda.device_count() > 0:
+                cuda_device = 0
+            else:
+                cuda_device = -1
+        from allennlp.common.checks import check_for_gpu
+        check_for_gpu(cuda_device)
+        from allennlp.common.util import int_to_device
+        self.cuda_device = int_to_device(cuda_device)
 
         # Paths to data
         if not data_dir:
@@ -90,8 +102,8 @@ class Nlvr2Reader(DatasetReader):
 
         # image loading
         self.image_loader = image_loader
-        self.image_featurizer = image_featurizer
-        self.region_detector = region_detector
+        self.image_featurizer = image_featurizer.to(self.cuda_device)
+        self.region_detector = region_detector.to(self.cuda_device)
 
         # feature cache
         if feature_cache_dir is None:
@@ -137,14 +149,16 @@ class Nlvr2Reader(DatasetReader):
         if len(to_compute) > 0:
             images, sizes = self.image_loader(to_compute)
             with torch.no_grad():
+                images = images.to(self.cuda_device)
+                sizes = sizes.to(self.cuda_device)
                 featurized_images = self.image_featurizer(images)
                 detector_results = self.region_detector(images, sizes, featurized_images)
                 features = detector_results["features"]
                 coordinates = detector_results["coordinates"]
 
             for index, path in enumerate(to_compute):
-                self._features_cache[os.path.basename(path)] = features[index]
-                self._coordinates_cache[os.path.basename(path)] = coordinates[index]
+                self._features_cache[os.path.basename(path)] = features[index].cpu()
+                self._coordinates_cache[os.path.basename(path)] = coordinates[index].cpu()
 
         left_features, right_features = [
             self._features_cache[os.path.basename(path)]
