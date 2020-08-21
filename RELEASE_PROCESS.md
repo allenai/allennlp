@@ -57,7 +57,7 @@ click edit. Now copy over the latest section from the [`CHANGELOG.md`](https://r
 That's it! GitHub Actions will handle the rest.
 
 
-6. After publishing the release for the core repo, follow the same process to publish a release for `allennlp-models` repo.
+6. After publishing the release for the core repo, follow the same process to publish a release for the `allennlp-models` repo.
 
 
 ## Fixing a failed release
