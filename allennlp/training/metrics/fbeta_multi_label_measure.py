@@ -151,7 +151,11 @@ class FBetaMultiLabelMeasure(FBetaMeasure):
             torch.zeros_like(predictions),
         )
 
-        class_indices = torch.arange(num_classes).unsqueeze(0).repeat(gold_labels.size(0), 1)
+        class_indices = (
+            torch.arange(num_classes, device=predictions.device)
+            .unsqueeze(0)
+            .repeat(gold_labels.size(0), 1)
+        )
         true_positives = (gold_labels * threshold_predictions).bool() & mask & pred_mask
         true_positives_bins = class_indices[true_positives]
 
@@ -159,7 +163,6 @@ class FBetaMultiLabelMeasure(FBetaMeasure):
         # The total numbers of true positives under all _predicted_ classes are zeros.
         if true_positives_bins.shape[0] == 0:
             true_positive_sum = torch.zeros(num_classes, device=predictions.device)
-
         else:
             true_positive_sum = torch.bincount(
                 true_positives_bins.long(), minlength=num_classes
