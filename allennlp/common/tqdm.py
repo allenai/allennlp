@@ -3,6 +3,7 @@
 global defaults for certain tqdm parameters.
 """
 import logging
+from allennlp.common import logging as common_logging
 import sys
 from time import time
 from typing import Optional
@@ -16,8 +17,6 @@ if "zmqshell.ZMQInteractiveShell" in SHELL:
     from tqdm import tqdm_notebook as _tqdm
 else:
     from tqdm import tqdm as _tqdm
-
-from allennlp.common import logging as common_logging
 
 
 # This is necessary to stop tqdm from hanging

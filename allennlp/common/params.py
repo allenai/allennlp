@@ -1,12 +1,12 @@
-from os import PathLike
-from typing import Any, Dict, List, Union
-from collections.abc import MutableMapping
-from collections import OrderedDict
 import copy
 import json
 import logging
 import os
 import zlib
+from collections import OrderedDict
+from collections.abc import MutableMapping
+from os import PathLike
+from typing import Any, Dict, List, Union
 
 from overrides import overrides
 
@@ -392,7 +392,7 @@ class Params(MutableMapping):
         log_recursively(self.params, self.history)
         return params_as_dict
 
-    def as_flat_dict(self):
+    def as_flat_dict(self) -> Dict[str, Any]:
         """
         Returns the parameters of a flat dictionary from keys to values.
         Nested structure is collapsed with periods.

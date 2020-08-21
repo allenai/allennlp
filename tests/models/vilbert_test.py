@@ -9,6 +9,19 @@ class TestVilbert(ModelTestCase):
         param_file = self.FIXTURES_ROOT / "vilbert" / "experiment.jsonnet"
         self.ensure_model_can_train_save_and_load(param_file)
 
+    def test_model_can_train_save_and_load_with_cache(self):
+        import tempfile
+        with tempfile.TemporaryDirectory(prefix=self.__class__.__name__) as d:
+            overrides = {
+                "dataset_reader": {
+                    "feature_cache_dir": str(d)
+                }
+            }
+            import json
+            overrides = json.dumps(overrides)
+            param_file = self.FIXTURES_ROOT / "vilbert" / "experiment.jsonnet"
+            self.ensure_model_can_train_save_and_load(param_file, overrides=overrides)
+
     def test_model_can_train_save_and_load_from_huggingface(self):
         param_file = self.FIXTURES_ROOT / "vilbert" / "experiment_from_huggingface.jsonnet"
         self.ensure_model_can_train_save_and_load(param_file)

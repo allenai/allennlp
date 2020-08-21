@@ -5,7 +5,7 @@ from tqdm import tqdm
 
 import torch
 
-from allennlp.common.file_utils import LmdbCache, cached_path
+from allennlp.common.file_utils import TensorCache, cached_path
 from allennlp.data import DetectronImageLoader
 from allennlp.modules.vision import ResnetBackbone, FasterRcnnRegionDetector
 
@@ -20,7 +20,9 @@ def parse_args():
 
 if __name__ == "__main__":
     args = parse_args()
-    feature_cache = LmdbCache(args.cache_path, read_only=False)
+    os.makedirs(args.cache_path, exist_ok=True)
+    features_cache = TensorCache(os.path.join(args.cache_path, "features"))
+    coordinates_cache = TensorCache(os.path.join(args.cache_path, "coordinates"))
     image_paths = list(glob.iglob(os.path.join(args.image_dir, "**", "*.png"), recursive=True))
     image_keys = [os.path.basename(filename) for filename in image_paths]
 
@@ -41,4 +43,5 @@ if __name__ == "__main__":
         features = detector_results["features"]
         coordinates = detector_results["coordinates"]
         for subindex in range(index, end):
-            feature_cache[image_paths[subindex]] = (features[subindex-index], coordinates[subindex-index])
+            features_cache[image_keys[subindex]] = features[subindex-index]
+            coordinates_cache[image_keys[subindex]] = coordinates[subindex-index]

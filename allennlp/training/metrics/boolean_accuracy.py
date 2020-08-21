@@ -2,7 +2,9 @@ from typing import Optional
 
 from overrides import overrides
 import torch
+import torch.distributed as dist
 
+from allennlp.common.util import is_distributed
 from allennlp.training.metrics.metric import Metric
 
 
@@ -82,8 +84,17 @@ class BooleanAccuracy(Metric):
 
         # Since masked positions are correct, we need to explicitly exclude instance predictions
         # where the entire prediction is masked (because they look "correct").
-        self._correct_count += (correct * keep).sum()
-        self._total_count += keep.sum()
+        correct_count_diff = (correct * keep).sum()
+        total_count_diff = keep.sum()
+
+        if is_distributed():
+            dist.all_reduce(correct_count_diff, op=dist.ReduceOp.SUM)
+            dist.all_reduce(total_count_diff, op=dist.ReduceOp.SUM)
+            self._correct_count += correct_count_diff.item()
+            self._total_count += total_count_diff.item()
+        else:
+            self._correct_count += correct_count_diff
+            self._total_count += total_count_diff
 
     def get_metric(self, reset: bool = False):
         """

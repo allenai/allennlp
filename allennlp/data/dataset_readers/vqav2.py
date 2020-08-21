@@ -9,7 +9,7 @@ import numpy as np
 from overrides import overrides
 import torch
 
-from allennlp.common.file_utils import cached_path, json_lines_from_file, LmdbCache
+from allennlp.common.file_utils import cached_path, json_lines_from_file, TensorCache
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.fields import ArrayField, LabelField, ListField, MetadataField, TextField
 from allennlp.data.image_loader import ImageLoader
@@ -20,6 +20,7 @@ from allennlp.data.tokenizers import PretrainedTransformerTokenizer
 from allennlp.data.tokenizers import Tokenizer
 from allennlp.modules.vision.grid_embedder import GridEmbedder
 from allennlp.modules.vision.region_detector import RegionDetector
+
 
 def load_vqa_dataset(dataset_root, image_root, prefix):
     """
@@ -60,6 +61,7 @@ def load_vqa_dataset(dataset_root, image_root, prefix):
 
     return dataset_dicts
 
+
 @DatasetReader.register("vqav2")
 class VQAv2Reader(DatasetReader):
     """
@@ -80,7 +82,7 @@ class VQAv2Reader(DatasetReader):
     token_indexers: `Dict[str, TokenIndexer]`
     lazy : `bool`, optional
         Whether to load data lazily. Passed to super class.
-    lmdb_cache_dir: `str`
+    lmdb_cache: `str`
         For whatever image preprocessing you want to do.
     read_only: `bool`
         If true, will open the lmdb env with readonly option.
@@ -88,7 +90,7 @@ class VQAv2Reader(DatasetReader):
     def __init__(
         self,
         image_dir: Union[str, PathLike],
-        lmdb_cache_dir: Union[str, PathLike],
+        lmdb_cache: Union[str, PathLike],
         image_loader: ImageLoader,
         image_featurizer: GridEmbedder,
         region_detector: RegionDetector,
@@ -118,12 +120,12 @@ class VQAv2Reader(DatasetReader):
         self._read_only = read_only
         
         if not self._read_only:
-        # image loading
+            # image loading
             self.image_loader = image_loader
             self.image_featurizer = image_featurizer
             self.region_detector = region_detector
         
-        self._feature_cache = LmdbCache(lmdb_cache_dir, self._read_only)
+        self._feature_cache = TensorCache(lmdb_cache)
 
     @overrides
     def _read(self, split: str):

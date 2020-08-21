@@ -43,8 +43,8 @@ class ArrayField(Field[torch.Tensor]):
     def as_tensor(self, padding_lengths: Dict[str, int]) -> torch.Tensor:
         pad = [
             padding
-            for i, dimension_size in reversed(list(enumerate(padding_lengths.values())))
-            for padding in [0, dimension_size - self.tensor.size(i)]
+            for i, dimension_size in reversed(list(enumerate(self.tensor.size())))
+            for padding in [0, padding_lengths["dimension_" + str(i)] - dimension_size]
         ]
         return torch.nn.functional.pad(self.tensor, pad, value=self.padding_value)
 
