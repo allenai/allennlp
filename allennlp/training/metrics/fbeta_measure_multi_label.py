@@ -11,8 +11,8 @@ from allennlp.training.metrics.metric import Metric
 
 
 @Metric.register("fbeta_multi_label")
-class FBetaMeasureMultiLabel(FBetaMeasure):
-    """Compute precision, recall, F-measure and support for each class.
+class FBetaMultiLabelMeasure(FBetaMeasure):
+    """Compute precision, recall, F-measure and support for multi-label classification.
 
     The precision is the ratio `tp / (tp + fp)` where `tp` is the number of
     true positives and `fp` the number of false positives. The precision is
@@ -140,35 +140,55 @@ class FBetaMeasureMultiLabel(FBetaMeasure):
             self._total_sum = torch.zeros(num_classes, device=predictions.device)
 
         if mask is None:
-            mask = gold_labels.bool()
-        else:
-            mask = mask.unsqueeze(-1).expand_as(gold_labels)
+            mask = torch.ones_like(gold_labels).bool()
         gold_labels = gold_labels.float()
 
-        pred_mask = (predictions.sum(dim=-1) != 0).unsqueeze(-1).expand_as(gold_labels)
+        # If the prediction tensor is all zeros, the record is not classified to any of the labels.
+        pred_mask = (predictions.sum(dim=-1) != 0).unsqueeze(-1)
         threshold_predictions = torch.where(
             predictions >= self._threshold,
             torch.ones_like(predictions),
             torch.zeros_like(predictions),
         )
 
-        true_positives = (gold_labels == threshold_predictions) & mask & pred_mask
-        true_positive_sum = true_positives.sum(dim=0).float()
-        pred_sum = threshold_predictions.sum(dim=0).float()
-        true_sum = gold_labels.sum(dim=0).float()
+        class_indices = torch.arange(num_classes).unsqueeze(0).repeat(gold_labels.size(0), 1)
+        true_positives = (gold_labels * threshold_predictions).bool() & mask & pred_mask
+        true_positives_bins = class_indices[true_positives]
+
+        # Watch it:
+        # The total numbers of true positives under all _predicted_ classes are zeros.
+        if true_positives_bins.shape[0] == 0:
+            true_positive_sum = torch.zeros(num_classes, device=predictions.device)
+
+        else:
+            true_positive_sum = torch.bincount(
+                true_positives_bins.long(), minlength=num_classes
+            ).float()
+
+        pred_bins = class_indices[threshold_predictions.bool() & mask & pred_mask]
+        # Watch it:
+        # When the `mask` is all 0, we will get an _empty_ tensor.
+        if pred_bins.shape[0] != 0:
+            pred_sum = torch.bincount(pred_bins, minlength=num_classes).float()
+        else:
+            pred_sum = torch.zeros(num_classes, device=predictions.device)
+
+        gold_labels_bins = class_indices[gold_labels.bool() & mask]
+        if gold_labels_bins.shape[0] != 0:
+            true_sum = torch.bincount(gold_labels_bins, minlength=num_classes).float()
+        else:
+            true_sum = torch.zeros(num_classes, device=predictions.device)
+
+        self._total_sum += gold_labels.sum().to(torch.float)
+
+        if is_distributed():
+            true_positive_sum = torch.tensor(true_positive_sum).to(device)
+            pred_sum = torch.tensor(pred_sum).to(device)
+            true_sum = torch.tensor(true_sum).to(device)
+            dist.all_reduce(true_positive_sum, op=dist.ReduceOp.SUM)
+            dist.all_reduce(pred_sum, op=dist.ReduceOp.SUM)
+            dist.all_reduce(true_sum, op=dist.ReduceOp.SUM)
 
         self._true_positive_sum += true_positive_sum
         self._pred_sum += pred_sum
         self._true_sum += true_sum
-        self._total_sum += mask.sum().to(torch.float)
-
-        if is_distributed():
-            _true_positive_sum = torch.tensor(self._true_positive_sum).to(device)
-            _pred_sum = torch.tensor(self._pred_sum).to(device)
-            _true_sum = torch.tensor(self._true_sum).to(device)
-            dist.all_reduce(_true_positive_sum, op=dist.ReduceOp.SUM)
-            dist.all_reduce(_pred_sum, op=dist.ReduceOp.SUM)
-            dist.all_reduce(_true_sum, op=dist.ReduceOp.SUM)
-            self._true_positive_sum = _true_positive_sum
-            self._pred_sum = _pred_sum
-            self._true_sum = _true_sum
