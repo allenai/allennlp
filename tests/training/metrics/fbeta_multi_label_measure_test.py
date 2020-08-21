@@ -43,9 +43,8 @@ class FBetaMultiLabelMeasureTest(AllenNlpTestCase):
         self.pred_sum = [4, 3, 3, 4, 1]
         self.true_sum = [4, 5, 2, 4, 0]
         self.true_positive_sum = [3, 3, 2, 4, 0]
-        # I don't think this is correct for multi-label
-        self.true_negative_sum = [10.0, 10.0, 12.0, 11.0, 14.0]
-        self.total_sum = [15, 15, 15, 15, 15]
+        self.true_negative_sum = [1, 1, 3, 2, 5]
+        self.total_sum = [30, 30, 30, 30, 30]
 
         # true_positive_sum / pred_sum
         desired_precisions = [3 / 4, 3 / 3, 2 / 3, 4 / 4, 0 / 1]

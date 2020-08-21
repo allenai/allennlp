@@ -182,7 +182,7 @@ class FBetaMultiLabelMeasure(FBetaMeasure):
         else:
             true_sum = torch.zeros(num_classes, device=predictions.device)
 
-        self._total_sum += gold_labels.sum().to(torch.float)
+        self._total_sum += mask.expand_as(gold_labels).sum().to(torch.float)
 
         if is_distributed():
             true_positive_sum = torch.tensor(true_positive_sum).to(device)
@@ -195,3 +195,16 @@ class FBetaMultiLabelMeasure(FBetaMeasure):
         self._true_positive_sum += true_positive_sum
         self._pred_sum += pred_sum
         self._true_sum += true_sum
+
+    @property
+    def _true_negative_sum(self):
+        if self._total_sum is None:
+            return None
+        else:
+            true_negative_sum = (
+                self._total_sum[0] / self._true_positive_sum.size(0)
+                - self._pred_sum
+                - self._true_sum
+                + self._true_positive_sum
+            )
+            return true_negative_sum
