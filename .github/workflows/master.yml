@@ -138,7 +138,10 @@ jobs:
         ALLENNLP_VERSION_OVERRIDE: ""  # Don't replace the core library.
       run: |
         git clone https://github.com/allenai/allennlp-models.git
-        cd allennlp-models && pip install --upgrade --upgrade-strategy eager -e . -r dev-requirements.txt
+        cd allennlp-models
+        # TODO: remove this next line when it's no longer necessary.
+        git checkout vision
+        pip install --upgrade --upgrade-strategy eager -e . -r dev-requirements.txt
 
     - name: Run models tests
       run: |
