@@ -33,11 +33,9 @@ if __name__ == "__main__":
         image_featurizer.cuda()
         region_detector.cuda()
 
-    images, sizes = image_loader(image_paths)
     for index in tqdm(range(0, len(image_paths), args.batch_size)):
         end = min(index+args.batch_size, len(image_paths))
-        batch_images = images[index:end]
-        batch_shapes = sizes[index:end]
+        batch_images, batch_shapes = image_loader(image_paths[index:end])
         with torch.no_grad():
             if torch.cuda.is_available() and args.use_cuda:
                 batch_images = batch_images.cuda()
