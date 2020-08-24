@@ -49,11 +49,9 @@ class Nlvr2Reader(DatasetReader):
     def __init__(
         self,
         image_dir: Union[str, PathLike],
-        lmdb_cache_dir: Union[str, PathLike],
         image_loader: ImageLoader,
         image_featurizer: GridEmbedder,
         region_detector: RegionDetector,
-        *,
         feature_cache_dir: Optional[Union[str, PathLike]] = None,
         data_dir: Optional[Union[str, PathLike]] = None,
         tokenizer: Optional[Tokenizer] = None,
