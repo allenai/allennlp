@@ -8,8 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Unreleased
 
 ### Added
-- predictor.capture_model_internals() now accepts a regex specifying
-  modules to capture
+
+- `Predictor.capture_model_internals()` now accepts a regex specifying
+  which modules to capture
 
 ## [v1.1.0rc4](https://github.com/allenai/allennlp/releases/tag/v1.1.0rc4) - 2020-08-20
 
