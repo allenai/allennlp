@@ -30,7 +30,7 @@ if __name__ == "__main__":
     image_featurizer = ResnetBackbone()
     region_detector = FasterRcnnRegionDetector()
     if torch.cuda.is_available() and args.use_cuda:
-        backbone.cuda()
+        image_featurizer.cuda()
         region_detector.cuda()
 
     images, sizes = image_loader(image_paths)
@@ -38,8 +38,9 @@ if __name__ == "__main__":
         end = min(index+args.batch_size, images.shape[0])
         batch_images = images[index:end].to(image_featurizer.device)
         batch_shapes = sizes[index:end]
-        featurized_images = image_featurizer(batch_images)
-        detector_results = region_detector(batch_images, batch_shapes, featurized_images)
+        with torch.no_grad():
+            featurized_images = image_featurizer(batch_images)
+            detector_results = region_detector(batch_images, batch_shapes, featurized_images)
         features = detector_results["features"]
         coordinates = detector_results["coordinates"]
         for subindex in range(index, end):
