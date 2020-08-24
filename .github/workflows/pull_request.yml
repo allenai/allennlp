@@ -23,7 +23,7 @@ jobs:
       run: |
         # If this step fails, this means you haven't updated the CHANGELOG.md
         # file with notes on your contribution.
-        git diff --name-only $(git merge-base origin/master HEAD) | grep '^CHANGELOG.md$' && echo "Thanks for helping keep our CHANGELOG up-to-date!"
+        git diff --name-only $(git merge-base origin/${{ github.base_ref }} HEAD) | grep '^CHANGELOG.md$' && echo "Thanks for helping keep our CHANGELOG up-to-date!"
 
   gpu_checks:
     name: GPU Checks

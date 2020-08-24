@@ -4,6 +4,7 @@ on:
   push:
     branches:
     - master
+    - vision
   release:
     types: [published]
   schedule:
@@ -291,7 +292,7 @@ jobs:
 
     - name: Upload master image
       # Only run this for pushes to master on the main repo, not forks.
-      if: github.repository == 'allenai/allennlp' && github.event_name == 'push'
+      if: github.repository == 'allenai/allennlp' && github.event_name == 'push' && github.ref == 'refs/heads/master'
       run: |
         docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
         docker push $DOCKER_IMAGE_NAME
@@ -422,9 +423,9 @@ jobs:
         EOL
 
     - name: Deploy docs
-      # Only run this on main repo (not forks) for commits and releases but not for
-      # nightly builds.
-      if: github.repository == 'allenai/allennlp' && github.event_name != 'schedule'
+      # Only run this on main repo (not forks) master branch for commits and releases,
+      # but not for nightly builds.
+      if: github.repository == 'allenai/allennlp' && github.event_name != 'schedule' && github.ref == 'refs/heads/master'
       run: |
         # And push them up to GitHub
         cd ~/allennlp-docs/
