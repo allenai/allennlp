@@ -1,5 +1,9 @@
 from overrides import overrides
 
+import torch
+import torch.distributed as dist
+
+from allennlp.common.util import is_distributed
 from allennlp.training.metrics.metric import Metric
 
 
@@ -24,8 +28,18 @@ class Average(Metric):
         value : `float`
             The value to average.
         """
-        self._total_value += list(self.detach_tensors(value))[0]
-        self._count += 1
+        _total_value = list(self.detach_tensors(value))[0]
+        _count = 1
+        if is_distributed():
+            device = torch.device("cpu")
+            count = torch.tensor(_count).to(device)
+            total_value = torch.tensor(_total_value).to(device)
+            dist.all_reduce(count, op=dist.ReduceOp.SUM)
+            dist.all_reduce(total_value, op=dist.ReduceOp.SUM)
+            _count = count.item()
+            _total_value = total_value.item()
+        self._count += _count
+        self._total_value += _total_value
 
     @overrides
     def get_metric(self, reset: bool = False):
@@ -34,6 +48,7 @@ class Average(Metric):
 
         The average of all values that were passed to `__call__`.
         """
+
         average_value = self._total_value / self._count if self._count > 0 else 0
         if reset:
             self.reset()

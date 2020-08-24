@@ -1,4 +1,4 @@
-from typing import List
+from typing import Any, Dict, List, Tuple, Union
 
 import torch
 from sklearn.metrics import precision_recall_fscore_support
@@ -6,7 +6,12 @@ from torch.testing import assert_allclose
 import pytest
 
 from allennlp.common.checks import ConfigurationError
-from allennlp.common.testing import AllenNlpTestCase, multi_device
+from allennlp.common.testing import (
+    AllenNlpTestCase,
+    multi_device,
+    run_distributed_test,
+    global_distributed_metric,
+)
 from allennlp.training.metrics import FBetaMeasure
 
 
@@ -363,3 +368,72 @@ class FBetaMeasureTest(AllenNlpTestCase):
         assert_allclose(precisions, [0.0, 0.0])
         assert_allclose(recalls, [0.0, 0.0])
         assert_allclose(fscores, [0.0, 0.0])
+
+    def test_distributed_fbeta_measure(self):
+        predictions = [
+            torch.tensor(
+                [[0.35, 0.25, 0.1, 0.1, 0.2], [0.1, 0.6, 0.1, 0.2, 0.0], [0.1, 0.6, 0.1, 0.2, 0.0]]
+            ),
+            torch.tensor(
+                [[0.1, 0.5, 0.1, 0.2, 0.0], [0.1, 0.2, 0.1, 0.7, 0.0], [0.1, 0.6, 0.1, 0.2, 0.0]]
+            ),
+        ]
+        targets = [torch.tensor([0, 4, 1]), torch.tensor([0, 3, 0])]
+        metric_kwargs = {"predictions": predictions, "gold_labels": targets}
+        desired_metrics = {
+            "precision": self.desired_precisions,
+            "recall": self.desired_recalls,
+            "fscore": self.desired_fscores,
+        }
+        run_distributed_test(
+            [-1, -1],
+            global_distributed_metric,
+            FBetaMeasure(),
+            metric_kwargs,
+            desired_metrics,
+            exact=False,
+        )
+
+    def test_multiple_distributed_runs(self):
+        predictions = [
+            torch.tensor(
+                [[0.35, 0.25, 0.1, 0.1, 0.2], [0.1, 0.6, 0.1, 0.2, 0.0], [0.1, 0.6, 0.1, 0.2, 0.0]]
+            ),
+            torch.tensor(
+                [[0.1, 0.5, 0.1, 0.2, 0.0], [0.1, 0.2, 0.1, 0.7, 0.0], [0.1, 0.6, 0.1, 0.2, 0.0]]
+            ),
+        ]
+        targets = [torch.tensor([0, 4, 1]), torch.tensor([0, 3, 0])]
+        metric_kwargs = {"predictions": predictions, "gold_labels": targets}
+        desired_metrics = {
+            "precision": self.desired_precisions,
+            "recall": self.desired_recalls,
+            "fscore": self.desired_fscores,
+        }
+        run_distributed_test(
+            [-1, -1], multiple_runs, FBetaMeasure(), metric_kwargs, desired_metrics, exact=False,
+        )
+
+
+def multiple_runs(
+    global_rank: int,
+    world_size: int,
+    gpu_id: Union[int, torch.device],
+    metric: FBetaMeasure,
+    metric_kwargs: Dict[str, List[Any]],
+    desired_values: Dict[str, Any],
+    exact: Union[bool, Tuple[float, float]] = True,
+):
+
+    kwargs = {}
+    # Use the arguments meant for the process with rank `global_rank`.
+    for argname in metric_kwargs:
+        kwargs[argname] = metric_kwargs[argname][global_rank]
+
+    for i in range(200):
+        metric(**kwargs)
+
+    metric_values = metric.get_metric()
+
+    for key in desired_values:
+        assert_allclose(desired_values[key], metric_values[key])

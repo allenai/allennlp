@@ -78,3 +78,36 @@ class TestPredictor(AllenNlpTestCase):
             assert bool(grads)
         # ensure that no side effects remain
         assert not embedding_layer.weight.requires_grad
+
+    def test_captures_model_internals(self):
+        inputs = {"sentence": "I always write unit tests"}
+
+        archive = load_archive(
+            self.FIXTURES_ROOT
+            / "basic_classifier"
+            / "embedding_with_trainable_is_false"
+            / "model.tar.gz"
+        )
+        predictor = Predictor.from_archive(archive)
+
+        with predictor.capture_model_internals() as internals:
+            predictor.predict_json(inputs)
+
+        assert len(internals) == 10
+
+        with predictor.capture_model_internals(r"_text_field_embedder.*") as internals:
+            predictor.predict_json(inputs)
+        assert len(internals) == 2
+
+    def test_predicts_batch_json(self):
+        inputs = {"sentence": "I always write unit tests"}
+
+        archive = load_archive(
+            self.FIXTURES_ROOT
+            / "basic_classifier"
+            / "embedding_with_trainable_is_false"
+            / "model.tar.gz"
+        )
+        predictor = Predictor.from_archive(archive)
+        results = predictor.predict_batch_json([inputs] * 3)
+        assert len(results) == 3

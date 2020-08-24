@@ -213,7 +213,7 @@ class SimpleTagger(Model):
         }
 
         if self.calculate_span_f1:
-            f1_dict = self._f1_metric.get_metric(reset=reset)
+            f1_dict = self._f1_metric.get_metric(reset)
             if self._verbose_metrics:
                 metrics_to_return.update(f1_dict)
             else:

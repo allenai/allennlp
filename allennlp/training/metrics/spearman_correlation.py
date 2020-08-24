@@ -2,8 +2,10 @@ from typing import Optional
 
 from overrides import overrides
 import torch
+import torch.distributed as dist
 import scipy.stats as stats
 
+from allennlp.common.util import is_distributed
 from allennlp.training.metrics.metric import Metric
 
 
@@ -58,6 +60,33 @@ class SpearmanCorrelation(Metric):
             self.total_predictions = torch.cat((self.total_predictions, predictions), 0)
             self.total_gold_labels = torch.cat((self.total_gold_labels, gold_labels), 0)
 
+        if is_distributed():
+            world_size = dist.get_world_size()
+            device = gold_labels.device
+            # Check if batch lengths are equal.
+            _all_batch_lengths = [torch.tensor(0) for i in range(world_size)]
+            dist.all_gather(
+                _all_batch_lengths, torch.tensor(self.total_predictions.shape[0], device=device)
+            )
+            _all_batch_lengths = [batch_length.item() for batch_length in _all_batch_lengths]
+
+            if len(set(_all_batch_lengths)) > 1:
+                # Subsequent dist.all_gather() calls currently do not handle tensors of different length.
+                raise RuntimeError(
+                    "Distributed aggregation for SpearmanCorrelation is currently not supported "
+                    "for batches of unequal length."
+                )
+            _total_predictions = [
+                torch.zeros(self.total_predictions.shape, device=device) for i in range(world_size)
+            ]
+            _total_gold_labels = [
+                torch.zeros(self.total_gold_labels.shape, device=device) for i in range(world_size)
+            ]
+            dist.all_gather(_total_predictions, self.total_predictions)
+            dist.all_gather(_total_gold_labels, self.total_gold_labels)
+            self.total_predictions = torch.cat(_total_predictions, dim=0)
+            self.total_gold_labels = torch.cat(_total_gold_labels, dim=0)
+
     @overrides
     def get_metric(self, reset: bool = False):
         """
@@ -65,10 +94,10 @@ class SpearmanCorrelation(Metric):
 
         The accumulated sample Spearman correlation.
         """
+
         spearman_correlation = stats.spearmanr(
             self.total_predictions.cpu().numpy(), self.total_gold_labels.cpu().numpy()
         )
-
         if reset:
             self.reset()
 

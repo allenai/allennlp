@@ -2,7 +2,9 @@ from typing import Optional
 
 from overrides import overrides
 import torch
+import torch.distributed as dist
 
+from allennlp.common.util import is_distributed
 from allennlp.training.metrics.metric import Metric
 
 
@@ -33,14 +35,27 @@ class MeanAbsoluteError(Metric):
             A tensor of the same shape as `predictions`.
         """
         predictions, gold_labels, mask = self.detach_tensors(predictions, gold_labels, mask)
+        device = gold_labels.device
 
         absolute_errors = torch.abs(predictions - gold_labels)
+
         if mask is not None:
             absolute_errors *= mask
-            self._total_count += torch.sum(mask)
+            _total_count = torch.sum(mask)
         else:
-            self._total_count += gold_labels.numel()
-        self._absolute_error += torch.sum(absolute_errors)
+            _total_count = gold_labels.numel()
+        _absolute_error = torch.sum(absolute_errors)
+
+        if is_distributed():
+            absolute_error = torch.tensor(_absolute_error).to(device)
+            total_count = torch.tensor(_total_count).to(device)
+            dist.all_reduce(absolute_error, op=dist.ReduceOp.SUM)
+            dist.all_reduce(total_count, op=dist.ReduceOp.SUM)
+            _absolute_error = absolute_error.item()
+            _total_count = total_count.item()
+
+        self._absolute_error += _absolute_error
+        self._total_count += _total_count
 
     def get_metric(self, reset: bool = False):
         """
@@ -51,7 +66,7 @@ class MeanAbsoluteError(Metric):
         mean_absolute_error = self._absolute_error / self._total_count
         if reset:
             self.reset()
-        return mean_absolute_error
+        return {"mae": mean_absolute_error}
 
     @overrides
     def reset(self):
