@@ -1334,7 +1334,7 @@ def batched_index_scatter(
     """
     prev_shape = target.size()
     # Shape: (batch_size * num_indices)
-    flattened_indices = util.flatten_and_batch_shift_indices(indices * mask, target.size(1))
+    flattened_indices = flatten_and_batch_shift_indices(indices * mask, target.size(1))
     # Shape: (batch_size * sequence_length, embedding_size)
     flattened_target = target.view(-1, target.size(-1))
     # Shape: (nonzero_indices, 1)
