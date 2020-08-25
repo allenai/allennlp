@@ -205,5 +205,6 @@ class Conll2003DatasetReader(DatasetReader):
 
         return Instance(instance_fields)
 
+    @overrides
     def apply_token_indexers(self, instance: Instance) -> None:
         instance.fields["tokens"]._token_indexers = self._token_indexers  # type: ignore

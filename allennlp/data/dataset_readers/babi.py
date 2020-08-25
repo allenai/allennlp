@@ -127,6 +127,7 @@ class BabiReader(DatasetReader):
 
         return Instance(fields)
 
+    @overrides
     def apply_token_indexers(self, instance: Instance) -> None:
         if self._keep_sentences:
             for text_field in instance.fields["context"]:  # type: ignore

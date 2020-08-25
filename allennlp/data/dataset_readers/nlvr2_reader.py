@@ -227,5 +227,6 @@ class Nlvr2LxmertReader(DatasetReader):
             fields["denotation"] = LabelField(int(denotation), skip_indexing=True)
         return Instance(fields)
 
+    @overrides
     def apply_token_indexers(self, instance: Instance) -> None:
         instance.fields["sentence_field"]._token_indexers = self._token_indexers  # type: ignore

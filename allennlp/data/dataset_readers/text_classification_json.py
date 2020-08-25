@@ -149,6 +149,7 @@ class TextClassificationJsonReader(DatasetReader):
             fields["label"] = LabelField(label, skip_indexing=self._skip_label_indexing)
         return Instance(fields)
 
+    @overrides
     def apply_token_indexers(self, instance: Instance) -> None:
         if self._segment_sentences:
             for text_field in instance.fields["tokens"]:  # type: ignore

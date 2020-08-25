@@ -99,5 +99,6 @@ class SequenceTaggingDatasetReader(DatasetReader):
             fields["tags"] = SequenceLabelField(tags, sequence)
         return Instance(fields)
 
+    @overrides
     def apply_token_indexers(self, instance: Instance) -> None:
         instance.fields["tokens"]._token_indexers = self._token_indexers  # type: ignore
