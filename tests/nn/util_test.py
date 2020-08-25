@@ -1114,7 +1114,7 @@ class TestNnUtil(AllenNlpTestCase):
 
     def test_batched_index_scatter(self):
         targets = torch.zeros([3, 5, 2])
-        indices = torch.tensor([[4, 2, 3, -1], [0, 1, -1, -1], [1, 3, -1, -1]])
+        indices = torch.tensor([[4, 2, 3, -1], [0, 1, -1, -1], [3, 1, -1, -1]])
         replace = (
             torch.arange(indices.numel())
             .float()
@@ -1134,7 +1134,7 @@ class TestNnUtil(AllenNlpTestCase):
                 [[0, 0], [9, 9], [0, 0], [8, 8], [0, 0]],
             ],
         )
-
+g
     def test_batched_span_select(self):
         # Each element is a vector of its index.
         targets = torch.ones([3, 12, 2]).cumsum(1) - 1
