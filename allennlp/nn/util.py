@@ -1264,6 +1264,48 @@ def batched_index_select(
     return selected_targets
 
 
+def batched_index_fill(
+    target: torch.Tensor, indices: torch.LongTensor, mask: torch.Tensor, fill_value: int = 1
+) -> torch.Tensor:
+    """
+    The given `indices` in `target` will be will be filled with `fill_value` given a `mask`.
+
+
+    # Parameters
+
+    target : `torch.Tensor`, required.
+        A 2 dimensional tensor of shape (batch_size, sequence_length).
+        This is the tensor to be filled.
+    indices : `torch.LongTensor`, required
+        A 2 dimensional tensor of shape (batch_size, num_indices),
+        These are the indices that will be filled in the original tensor.
+    mask : `torch.Tensor`, required.
+        A 2 dimensional tensor of shape (batch_size, num_indices), mask.sum() == `nonzero_indices`.
+    fill_value : `torch.Tensor`,
+        The value we fill the tensor with.
+
+    # Returns
+
+    filled_target : `torch.Tensor`
+        A tensor with shape (batch_size, sequence_length) where 'indices'ען
+    """
+    prev_shape = target.size()
+    # Shape: (batch_size * num_indices)
+    flattened_indices = flatten_and_batch_shift_indices(indices * mask, target.size(1))
+    # Shape: (batch_size * num_indices, 1)
+    mask = mask.bool().view(-1)
+    # Shape: (batch_size * sequence_length, 1)
+    flattened_target = target.view(-1, 1)
+    # Shape: (nonzero_indices, 1)
+    unmasked_indices = flattened_indices[mask].unsqueeze(-1)
+
+    flattened_target.scatter_(0, unmasked_indices, fill_value)
+
+    filled_target = flattened_target.reshape(prev_shape)
+
+    return filled_target
+
+
 def batched_span_select(target: torch.Tensor, spans: torch.LongTensor) -> torch.Tensor:
     """
     The given `spans` of size `(batch_size, num_spans, 2)` indexes into the sequence
