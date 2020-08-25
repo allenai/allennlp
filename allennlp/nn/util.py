@@ -1348,8 +1348,7 @@ def batched_index_scatter(
 def batched_span_select(target: torch.Tensor, spans: torch.LongTensor) -> torch.Tensor:
     """
     The given `spans` of size `(batch_size, num_spans, 2)` indexes into the sequence
-    dimension (dimension 2) of the target, which has size `(batch_size, sequence_length,
-    embedding_size)`.
+    dimension (dimension 2) of the target, which has size `(batch_size, sequence_length, embedding_size)`.
 
     This function returns segmented spans in the target with respect to the provided span indices.
 
