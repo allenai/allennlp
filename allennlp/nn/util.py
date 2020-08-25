@@ -1287,7 +1287,7 @@ def batched_index_fill(
     # Returns
 
     filled_target : `torch.Tensor`
-        A tensor with shape (batch_size, sequence_length) where 'indices' are filled with `fill_value` TODO 
+        A tensor with shape (batch_size, sequence_length) where 'indices' are filled with `fill_value`
     """
     prev_shape = target.size()
     # Shape: (batch_size * num_indices)
@@ -1310,7 +1310,8 @@ def batched_index_scatter(
     target: torch.Tensor, indices: torch.LongTensor, mask: torch.Tensor, replace: torch.Tensor,
 ) -> torch.Tensor:
     """
-    The given `indices` in `target` will be will be scattered with corresponding index from the `replace` tensor given a `mask`.
+    The given `indices` in `target` will be will be scattered with corresponding index 
+    from the `replace` tensor given a `mask`.
 
 
     # Parameters
@@ -1330,7 +1331,8 @@ def batched_index_scatter(
     # Returns
 
     scattered_target : `torch.Tensor`
-        A tensor with shape (batch_size, sequence_length, embedding_dim) where 'indices' are replaced with the corrosponding vector from `replace`
+        A tensor with shape (batch_size, sequence_length, embedding_dim) where 'indices' 
+        are replaced with the corrosponding vector from `replace`
     """
     prev_shape = target.size()
     # Shape: (batch_size * num_indices)

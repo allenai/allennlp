@@ -1134,7 +1134,7 @@ class TestNnUtil(AllenNlpTestCase):
                 [[0, 0], [9, 9], [0, 0], [8, 8], [0, 0]],
             ],
         )
-g
+
     def test_batched_span_select(self):
         # Each element is a vector of its index.
         targets = torch.ones([3, 12, 2]).cumsum(1) - 1
