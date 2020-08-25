@@ -86,9 +86,18 @@ class SequenceTaggingDatasetReader(DatasetReader):
         """
 
         fields: Dict[str, Field] = {}
-        sequence = TextField(tokens, self._token_indexers)
+        sequence = TextField(
+            tokens,
+            # Token indexers are applied later during multi-process loading with
+            # the `apply_token_indexers` method, so we only apply them now if there
+            # is a single worker.
+            None if self._worker_info is not None else self._token_indexers,
+        )
         fields["tokens"] = sequence
         fields["metadata"] = MetadataField({"words": [x.text for x in tokens]})
         if tags is not None:
             fields["tags"] = SequenceLabelField(tags, sequence)
         return Instance(fields)
+
+    def apply_token_indexers(self, instance: Instance) -> None:
+        instance.fields["tokens"]._token_indexers = self._token_indexers  # type: ignore

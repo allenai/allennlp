@@ -86,7 +86,13 @@ class BabiReader(DatasetReader):
         if self._keep_sentences:
             context_field_ks = ListField(
                 [
-                    TextField([Token(word) for word in line], self._token_indexers)
+                    TextField(
+                        [Token(word) for word in line],
+                        # Token indexers are applied later during multi-process loading with
+                        # the `apply_token_indexers` method, so we only apply them now if there
+                        # is a single worker.
+                        None if self._worker_info is not None else self._token_indexers,
+                    )
                     for line in context
                 ]
             )
@@ -96,11 +102,36 @@ class BabiReader(DatasetReader):
             )
         else:
             context_field = TextField(
-                [Token(word) for line in context for word in line], self._token_indexers
+                [Token(word) for line in context for word in line],
+                # Token indexers are applied later during multi-process loading with
+                # the `apply_token_indexers` method, so we only apply them now if there
+                # is a single worker.
+                None if self._worker_info is not None else self._token_indexers,
             )
 
         fields["context"] = context_field_ks if self._keep_sentences else context_field
-        fields["question"] = TextField([Token(word) for word in question], self._token_indexers)
-        fields["answer"] = TextField([Token(answer)], self._token_indexers)
+        fields["question"] = TextField(
+            [Token(word) for word in question],
+            # Token indexers are applied later during multi-process loading with
+            # the `apply_token_indexers` method, so we only apply them now if there
+            # is a single worker.
+            None if self._worker_info is not None else self._token_indexers,
+        )
+        fields["answer"] = TextField(
+            [Token(answer)],
+            # Token indexers are applied later during multi-process loading with
+            # the `apply_token_indexers` method, so we only apply them now if there
+            # is a single worker.
+            None if self._worker_info is not None else self._token_indexers,
+        )
 
         return Instance(fields)
+
+    def apply_token_indexers(self, instance: Instance) -> None:
+        if self._keep_sentences:
+            for text_field in instance.fields["context"]:  # type: ignore
+                text_field._token_indexers = self._token_indexers  # type: ignore
+        else:
+            instance.fields["context"]._token_indexers = self._token_indexers  # type: ignore
+        instance.fields["question"]._token_indexers = self._token_indexers  # type: ignore
+        instance.fields["answer"]._token_indexers = self._token_indexers  # type: ignore

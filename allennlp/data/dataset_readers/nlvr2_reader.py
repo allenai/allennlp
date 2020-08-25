@@ -184,7 +184,13 @@ class Nlvr2LxmertReader(DatasetReader):
         only_predictions: bool = False,
     ) -> Instance:
         tokenized_sentence = self._tokenizer.tokenize(question)
-        sentence_field = TextField(tokenized_sentence, self._token_indexers)
+        sentence_field = TextField(
+            tokenized_sentence,
+            # Token indexers are applied later during multi-process loading with
+            # the `apply_token_indexers` method, so we only apply them now if there
+            # is a single worker.
+            None if self._worker_info is not None else self._token_indexers,
+        )
 
         original_identifier = identifier
         all_boxes = []
@@ -220,3 +226,6 @@ class Nlvr2LxmertReader(DatasetReader):
         if denotation is not None:
             fields["denotation"] = LabelField(int(denotation), skip_indexing=True)
         return Instance(fields)
+
+    def apply_token_indexers(self, instance: Instance) -> None:
+        instance.fields["sentence_field"]._token_indexers = self._token_indexers  # type: ignore
