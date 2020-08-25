@@ -1318,8 +1318,9 @@ def batched_span_select(target: torch.Tensor, spans: torch.LongTensor) -> torch.
     # than using it as a non-inclusive upper bound.
     span_mask = max_span_range_indices <= span_widths
     raw_span_indices = span_starts + max_span_range_indices
-    # We also don't want to include span indices which greater than sequence_length,
+    # We also don't want to include span indices which greater than the sequence_length,
     # which happens because some spans near the end of the sequence
+    # have a start index + max_batch_span_width > sequence_length, so we add this to the mask here.
     span_mask = span_mask & (raw_span_indices < target.size(1)) & (0 <= raw_span_indices)
     span_indices = raw_span_indices * span_mask
 
