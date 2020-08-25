@@ -1102,6 +1102,39 @@ class TestNnUtil(AllenNlpTestCase):
         with pytest.raises(ConfigurationError):
             util.batched_index_select(targets, indices)
 
+    def test_batched_index_fill(self):
+        targets = torch.zeros([3, 5])
+        indices = torch.tensor([[4, 2, 3, -1], [0, 1, -1, -1], [1, 3, -1, -1]])
+        mask = indices >= 0
+        filled = util.batched_index_fill(targets, indices, mask)
+
+        numpy.testing.assert_array_equal(
+            filled, [[0, 0, 1, 1, 1], [1, 1, 0, 0, 0], [0, 1, 0, 1, 0]]
+        )
+
+    def test_batched_index_scatter(self):
+        targets = torch.zeros([3, 5, 2])
+        indices = torch.tensor([[4, 2, 3, -1], [0, 1, -1, -1], [1, 3, -1, -1]])
+        replace = (
+            torch.arange(indices.numel())
+            .float()
+            .reshape(indices.shape)
+            .unsqueeze(-1)
+            .expand(indices.shape + (2,))
+        )
+
+        mask = indices >= 0
+        filled = util.batched_index_scatter(targets, indices, mask, replace)
+
+        numpy.testing.assert_array_equal(
+            filled,
+            [
+                [[0, 0], [0, 0], [1, 1], [2, 2], [0, 0]],
+                [[4, 4], [5, 5], [0, 0], [0, 0], [0, 0]],
+                [[0, 0], [9, 9], [0, 0], [8, 8], [0, 0]],
+            ],
+        )
+
     def test_batched_span_select(self):
         # Each element is a vector of its index.
         targets = torch.ones([3, 12, 2]).cumsum(1) - 1
