@@ -15,7 +15,7 @@ def parse_args():
     parser.add_argument("--image-dir", type=str, required=True)
     parser.add_argument("--cache-dir", type=str, required=True)
     parser.add_argument("--use-cuda", action="store_true", help="use GPU if one is available")
-    parser.add_argument("--batch-size", type=int, default=16)
+    parser.add_argument("--batch-size", type=int, default=1)
     args = parser.parse_args()
     return args
 
@@ -37,13 +37,10 @@ if __name__ == "__main__":
 
     for index in tqdm(range(0, len(image_paths), args.batch_size)):
         end = min(index+args.batch_size, len(image_paths))
-        batch_images, batch_shapes = image_loader(image_paths[index:end])
+        batch_images = image_loader(image_paths[index:end])
         with torch.no_grad():
-            if torch.cuda.is_available() and args.use_cuda:
-                batch_images = batch_images.cuda()
-                batch_shapes = batch_shapes.cuda()
             featurized_images = image_featurizer(batch_images)
-            detector_results = region_detector(batch_images, batch_shapes, featurized_images)
+            detector_results = region_detector(batch_images, featurized_images)
             features = detector_results["features"]
             coordinates = detector_results["coordinates"]
         for subindex in range(index, end):

@@ -14,10 +14,8 @@ ImagesWithSize = Tuple[FloatTensor, IntTensor]
 
 class ImageLoader(Registrable):
     """
-    An `ImageLoader` is a callable that takes as input one or more filenames, and outputs two
-    tensors.  The first one contains the images and is of shape (batch, color, height, width).  The
-    second one contains the image sizes and is of shape (batch, 2) (where the two dimensions contain
-    height and width).
+    An `ImageLoader` is a callable that takes as input one or more filenames, and outputs a list of
+    image tensors.
     """
 
     default_implementation = "detectron"
@@ -66,14 +64,10 @@ class DetectronImageLoader(ImageLoader):
             raise ValueError("Unknown type of `config`")
 
         self.mapper = pipeline.mapper
-        self.model = pipeline.model
 
     def load(self, filenames: ManyPaths) -> ImagesWithSize:
         images = [{"file_name": str(f)} for f in filenames]
         images = [self.mapper(i) for i in images]
-        processed_images = self.model.preprocess_image(images)
 
-        return (
-            processed_images.tensor,
-            torch.tensor(processed_images.image_sizes, dtype=torch.int32),
-        )
+        return images
+

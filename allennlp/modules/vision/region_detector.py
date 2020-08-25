@@ -24,7 +24,7 @@ class RegionDetector(nn.Module, Registrable):
     """
 
     def forward(
-        self, raw_images: FloatTensor, image_sizes: IntTensor, featurized_images: FloatTensor
+        self, images: List, featurized_images: FloatTensor
     ) -> Dict[str, torch.Tensor]:
         raise NotImplementedError()
 
@@ -34,7 +34,7 @@ class NullRegionDetector(RegionDetector):
     """A `RegionDetector` that never returns any proposals."""
 
     def forward(
-        self, raw_images: FloatTensor, image_sizes: IntTensor, featurized_images: FloatTensor
+        self, images: List, featurized_images: FloatTensor
     ) -> FloatTensor:
         # TODO(mattg): fix this
         raise NotImplementedError()
@@ -106,27 +106,25 @@ class FasterRcnnRegionDetector(RegionDetector):
         self.detections_per_image = detections_per_image
 
     def forward(
-        self, raw_images: FloatTensor, image_sizes: IntTensor, featurized_images: FloatTensor
+        self, images: List, featurized_images: FloatTensor
     ) -> Dict[str, torch.Tensor]:
-        batch_size = len(image_sizes)
-        # RPN
-        from detectron2.structures import ImageList
 
-        image_list = ImageList(raw_images, [(image[0], image[1]) for image in image_sizes])
+        batch_size = len(images)
+        # this is a little awkward, since we do this operation twice. 
+        images = self.model.preprocess_image(images)
+
         assert len(self.model.proposal_generator.in_features) == 1
         featurized_images_in_dict = {
             self.model.proposal_generator.in_features[0]: featurized_images
         }
 
-        proposals, _ = self.model.proposal_generator(image_list, featurized_images_in_dict, None)
-
+        proposals, _ = self.model.proposal_generator(images, featurized_images_in_dict, None)
         # this will concatenate the pooled_features from different images.
         _, pooled_features = self.model.roi_heads.get_roi_features(
             featurized_images_in_dict, proposals
         )
 
         predictions = self.model.roi_heads.box_predictor(pooled_features)
-
         # class probablity
         cls_probs = F.softmax(predictions[0], dim=-1)
         cls_probs = cls_probs[:, :-1]  # background is last
@@ -138,7 +136,7 @@ class FasterRcnnRegionDetector(RegionDetector):
         batch_coordinates = []
         batch_features = []
         batch_probs = []
-        batch_num_detections = torch.zeros(batch_size, device=raw_images.device, dtype=torch.int16)
+        batch_num_detections = torch.zeros(batch_size, device=featurized_images.device, dtype=torch.int16)
         feature_dim = pooled_features.size(-1)
         num_classes = cls_probs.size(-1)
 

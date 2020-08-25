@@ -1,5 +1,6 @@
 import torch
 from torch import nn, FloatTensor
+from typing import List
 
 from allennlp.common.registrable import Registrable
 
@@ -85,17 +86,13 @@ class ResnetBackbone(GridEmbedder):
 
         pipeline = detectron.get_pipeline_from_flat_parameters(flat_parameters, make_copy=False)
         self.backbone = pipeline.model.backbone
+        self.preprocess_image = pipeline.model.preprocess_image
 
-    def forward(self, images: FloatTensor) -> FloatTensor:
+    def forward(self, images:List) -> FloatTensor:
         
         # move images into gpu if needed.
-        if self.device == 'cuda':
-            if self.gpu is not None:
-                images = images.cuda(self.gpu)
-            else:
-                images = images.cuda()
-
-        result = self.backbone(images)
+        images = self.preprocess_image(images)
+        result = self.backbone(images.tensor)
         assert len(result) == 1
         return next(iter(result.values()))
 
