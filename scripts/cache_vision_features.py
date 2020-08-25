@@ -9,20 +9,22 @@ from allennlp.common.file_utils import TensorCache, cached_path
 from allennlp.data import DetectronImageLoader
 from allennlp.modules.vision import ResnetBackbone, FasterRcnnRegionDetector
 
+
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--image_dir", type=str)
-    parser.add_argument("--cache_path", type=str)
+    parser.add_argument("--image-dir", type=str, required=True)
+    parser.add_argument("--cache-dir", type=str, required=True)
     parser.add_argument("--use-cuda", action="store_true", help="use GPU if one is available")
     parser.add_argument("--batch-size", type=int, default=16)
     args = parser.parse_args()
     return args
 
+
 if __name__ == "__main__":
     args = parse_args()
-    os.makedirs(args.cache_path, exist_ok=True)
-    features_cache = TensorCache(os.path.join(args.cache_path, "features"))
-    coordinates_cache = TensorCache(os.path.join(args.cache_path, "coordinates"))
+    os.makedirs(args.cache_dir, exist_ok=True)
+    features_cache = TensorCache(os.path.join(args.cache_dir, "features"))
+    coordinates_cache = TensorCache(os.path.join(args.cache_dir, "coordinates"))
     image_paths = list(glob.iglob(os.path.join(args.image_dir, "**", "*.png"), recursive=True))
     image_keys = [os.path.basename(filename) for filename in image_paths]
 
