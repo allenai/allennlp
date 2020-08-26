@@ -1314,7 +1314,10 @@ def masked_index_fill(
 
 
 def masked_index_replace(
-    target: torch.Tensor, indices: torch.LongTensor, mask: torch.BoolTensor, replace: torch.Tensor,
+    target: torch.Tensor,
+    indices: torch.LongTensor,
+    mask: torch.BoolTensor,
+    replace: torch.Tensor,
 ) -> torch.Tensor:
     """
     The given `indices` in `target` will be will be replaced with corresponding index
