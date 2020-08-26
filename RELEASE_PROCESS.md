@@ -56,6 +56,10 @@ click edit. Now copy over the latest section from the [`CHANGELOG.md`](https://r
 
 That's it! GitHub Actions will handle the rest.
 
+
+6. After publishing the release for the core repo, follow the same process to publish a release for the `allennlp-models` repo.
+
+
 ## Fixing a failed release
 
 If for some reason the GitHub Actions release workflow failed with an error that needs to be fixed, you'll have to delete both the tag and corresponding release from GitHub. After you've pushed a fix, delete the tag from your local clone with

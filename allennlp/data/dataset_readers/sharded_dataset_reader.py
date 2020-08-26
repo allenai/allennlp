@@ -1,10 +1,8 @@
 import glob
 import logging
 import os
-import torch
 from typing import Iterable
 
-from allennlp.common import util
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.file_utils import cached_path
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
@@ -26,7 +24,9 @@ class ShardedDatasetReader(DatasetReader):
     files within the archive.
 
     The order the files are processed in is deterministic to enable the
-    instances to be filtered according to worker rank in the distributed case.
+    instances to be filtered according to worker rank in the distributed training or multi-process
+    data loading scenarios. In either case, the number of file shards should ideally be a multiple
+    of the number of workers, and each file should produce roughly the same number of instances.
 
     Registered as a `DatasetReader` with name "sharded".
 
@@ -37,27 +37,14 @@ class ShardedDatasetReader(DatasetReader):
     """
 
     def __init__(self, base_reader: DatasetReader, **kwargs) -> None:
-        super().__init__(manual_distributed_sharding=True, **kwargs)
-
-        if util.is_distributed():
-            self._rank = torch.distributed.get_rank()
-            self._world_size = torch.distributed.get_world_size()
-        else:
-            self._rank = 0
-            self._world_size = 1
-
+        super().__init__(
+            manual_distributed_sharding=True, manual_multi_process_sharding=True, **kwargs
+        )
         self.reader = base_reader
-        # We have to check that the base reader doesn't implement manual distributed
-        # sharding itself, because if it does, then only a fraction of the instances
-        # will be read.
-        if getattr(self.reader, "manual_distributed_sharding", False):
-            raise ValueError(
-                "The base reader of a sharded dataset reader should not implement "
-                "manual distributed sharding itself."
-            )
-        # However we still need to set this flag to `True` after the fact so that
-        # all of the instances within each shard are used.
-        self.reader.manual_distributed_sharding = True
+        # We have to make the base reader think that it's the only worker so that it doesn't
+        # do any of its own filtering.
+        self.reader._set_worker_info(None)
+        self.reader._set_distributed_info(None)
 
     def text_to_instance(self, *args, **kwargs) -> Instance:
         """
@@ -87,8 +74,7 @@ class ShardedDatasetReader(DatasetReader):
         # Ensure a consistent order.
         shards.sort()
 
-        for i, shard in enumerate(shards):
-            if i % self._world_size == self._rank:
-                logger.info(f"reading instances from {shard}")
-                for instance in self.reader.read(shard):
-                    yield instance
+        for shard in self.shard_iterable(shards):
+            logger.info(f"reading instances from {shard}")
+            for instance in self.reader.read(shard):
+                yield instance

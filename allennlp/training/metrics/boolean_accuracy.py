@@ -84,17 +84,14 @@ class BooleanAccuracy(Metric):
 
         # Since masked positions are correct, we need to explicitly exclude instance predictions
         # where the entire prediction is masked (because they look "correct").
-        correct_count_diff = (correct * keep).sum()
-        total_count_diff = keep.sum()
+        _correct_count = (correct * keep).sum()
+        _total_count = keep.sum()
 
         if is_distributed():
-            dist.all_reduce(correct_count_diff, op=dist.ReduceOp.SUM)
-            dist.all_reduce(total_count_diff, op=dist.ReduceOp.SUM)
-            self._correct_count += correct_count_diff.item()
-            self._total_count += total_count_diff.item()
-        else:
-            self._correct_count += correct_count_diff
-            self._total_count += total_count_diff
+            dist.all_reduce(_correct_count, op=dist.ReduceOp.SUM)
+            dist.all_reduce(_total_count, op=dist.ReduceOp.SUM)
+        self._correct_count += _correct_count.item()
+        self._total_count += _total_count.item()
 
     def get_metric(self, reset: bool = False):
         """

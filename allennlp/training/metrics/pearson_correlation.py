@@ -6,7 +6,8 @@ import numpy as np
 
 from overrides import overrides
 import torch
-import torch.distributed as dist
+
+# import torch.distributed as dist
 
 from allennlp.common.util import is_distributed
 from allennlp.training.metrics.covariance import Covariance
@@ -64,9 +65,10 @@ class PearsonCorrelation(Metric):
         """
         predictions, gold_labels, mask = self.detach_tensors(predictions, gold_labels, mask)
         self._device = gold_labels.device
-        self._predictions_labels_covariance(predictions, gold_labels, mask)
-        self._predictions_variance(predictions, predictions, mask)
-        self._labels_variance(gold_labels, gold_labels, mask)
+        if not is_distributed():
+            self._predictions_labels_covariance(predictions, gold_labels, mask)
+            self._predictions_variance(predictions, predictions, mask)
+            self._labels_variance(gold_labels, gold_labels, mask)
 
     def get_metric(self, reset: bool = False):
         """
@@ -74,20 +76,14 @@ class PearsonCorrelation(Metric):
 
         The accumulated sample Pearson correlation.
         """
+        if is_distributed():
+            raise RuntimeError(
+                "Distributed aggregation for PearsonCorrelation is currently not supported."
+            )
         covariance = self._predictions_labels_covariance.get_metric(reset=reset)
         predictions_variance = self._predictions_variance.get_metric(reset=reset)
         labels_variance = self._labels_variance.get_metric(reset=reset)
         denominator = math.sqrt(predictions_variance) * math.sqrt(labels_variance)
-        if is_distributed():
-            # Note: this gives an approximate aggregation of the covariance.
-
-            device = self._device
-            _covariance = torch.tensor(covariance).to(device)
-            dist.all_reduce(_covariance, op=dist.ReduceOp.SUM)
-            covariance = _covariance.item()
-            _denominator = torch.tensor(denominator).to(device)
-            dist.all_reduce(_denominator, op=dist.ReduceOp.SUM)
-            denominator = _denominator.item()
         if reset:
             self.reset()
 
