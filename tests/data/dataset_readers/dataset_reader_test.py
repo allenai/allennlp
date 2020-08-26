@@ -131,8 +131,7 @@ def test_instance_slicing(
                 reader = reader_class(max_instances=max_instances)
                 reader._set_worker_info(WorkerInfo(num_workers, worker_id))
                 result = set(
-                    x["index"].label  # type: ignore
-                    for x in reader.read("the-path-doesnt-matter")
+                    x["index"].label for x in reader.read("the-path-doesnt-matter")  # type: ignore
                 )
                 results.append(result)
     elif world_size is not None:
@@ -144,8 +143,7 @@ def test_instance_slicing(
             monkeypatch.setattr(dist, "get_world_size", lambda: world_size)
             reader = reader_class(max_instances=max_instances)
             result = set(
-                x["index"].label  # type: ignore
-                for x in reader.read("the-path-doesnt-matter")
+                x["index"].label for x in reader.read("the-path-doesnt-matter")  # type: ignore
             )
             results.append(result)
     elif num_workers is not None:
@@ -155,15 +153,13 @@ def test_instance_slicing(
             reader = reader_class(max_instances=max_instances)
             reader._set_worker_info(WorkerInfo(num_workers, worker_id))
             result = set(
-                x["index"].label  # type: ignore
-                for x in reader.read("the-path-doesnt-matter")
+                x["index"].label for x in reader.read("the-path-doesnt-matter")  # type: ignore
             )
             results.append(result)
     else:
         reader = reader_class(max_instances=max_instances)
         result = set(
-            x["index"].label  # type: ignore
-            for x in reader.read("the-path-doesnt-matter")
+            x["index"].label for x in reader.read("the-path-doesnt-matter")  # type: ignore
         )
         results.append(result)
 

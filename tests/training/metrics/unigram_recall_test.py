@@ -114,7 +114,12 @@ class UnigramRecallTest(AllenNlpTestCase):
         metric_kwargs = {"predictions": predictions, "gold_labels": gold, "mask": mask}
         desired_values = {"unigram_recall": 7 / 8}
         run_distributed_test(
-            [-1, -1], multiple_runs, UnigramRecall(), metric_kwargs, desired_values, exact=True,
+            [-1, -1],
+            multiple_runs,
+            UnigramRecall(),
+            metric_kwargs,
+            desired_values,
+            exact=True,
         )
 
 

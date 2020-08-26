@@ -68,7 +68,9 @@ class ErrorFilter(Filter):
 
 
 def prepare_global_logging(
-    serialization_dir: Union[str, PathLike], rank: int = 0, world_size: int = 1,
+    serialization_dir: Union[str, PathLike],
+    rank: int = 0,
+    world_size: int = 1,
 ) -> None:
     root_logger = logging.getLogger()
 

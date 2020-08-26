@@ -182,7 +182,12 @@ class AttachmentScoresTest(AllenNlpTestCase):
             "LEM": 0.0,
         }
         run_distributed_test(
-            [-1, -1], multiple_runs, AttachmentScores(), metric_kwargs, desired_metrics, exact=True,
+            [-1, -1],
+            multiple_runs,
+            AttachmentScores(),
+            metric_kwargs,
+            desired_metrics,
+            exact=True,
         )
 
 
