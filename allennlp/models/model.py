@@ -390,7 +390,9 @@ class Model(torch.nn.Module, Registrable):
             if hasattr(module, "extend_vocab"):
                 pretrained_file = embedding_sources_mapping.get(model_path)
                 module.extend_vocab(
-                    self.vocab, extension_pretrained_file=pretrained_file, model_path=model_path,
+                    self.vocab,
+                    extension_pretrained_file=pretrained_file,
+                    model_path=model_path,
                 )
 
     @classmethod

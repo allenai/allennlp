@@ -411,7 +411,12 @@ class FBetaMeasureTest(AllenNlpTestCase):
             "fscore": self.desired_fscores,
         }
         run_distributed_test(
-            [-1, -1], multiple_runs, FBetaMeasure(), metric_kwargs, desired_metrics, exact=False,
+            [-1, -1],
+            multiple_runs,
+            FBetaMeasure(),
+            metric_kwargs,
+            desired_metrics,
+            exact=False,
         )
 
 
