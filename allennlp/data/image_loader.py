@@ -2,7 +2,7 @@ from os import PathLike
 from typing import Union, Sequence, Optional, Tuple
 
 import torch
-from torch import FloatTensor, IntTensor
+from torch import FloatTensor, IntTensor, ByteTensor
 
 from allennlp.common.registrable import Registrable
 
@@ -66,14 +66,15 @@ class DetectronImageLoader(ImageLoader):
             raise ValueError("Unknown type of `config`")
 
         self.mapper = pipeline.mapper
-        self.model = pipeline.model
 
     def load(self, filenames: ManyPaths) -> ImagesWithSize:
         images = [{"file_name": str(f)} for f in filenames]
         images = [self.mapper(i) for i in images]
-        processed_images = self.model.preprocess_image(images)
+
+        from detectron2.structures import ImageList
+        images = ImageList.from_tensors([image['image'] for image in images])
 
         return (
-            processed_images.tensor,
-            torch.tensor(processed_images.image_sizes, dtype=torch.int32),
+            images.tensor.float() / 256,
+            torch.tensor(images.image_sizes, dtype=torch.int32)
         )

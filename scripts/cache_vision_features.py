@@ -39,10 +39,7 @@ if __name__ == "__main__":
         end = min(index+args.batch_size, len(image_paths))
         batch_images, batch_shapes = image_loader(image_paths[index:end])
         with torch.no_grad():
-            if torch.cuda.is_available() and args.use_cuda:
-                batch_images = batch_images.cuda()
-                batch_shapes = batch_shapes.cuda()
-            featurized_images = image_featurizer(batch_images)
+            featurized_images = image_featurizer(batch_images, batch_shapes)
             detector_results = region_detector(batch_images, batch_shapes, featurized_images)
             features = detector_results["features"]
             coordinates = detector_results["coordinates"]
