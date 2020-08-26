@@ -130,7 +130,10 @@ def archive_model(
 
 
 def load_archive(
-    archive_file: str, cuda_device: int = -1, overrides: str = "", weights_file: str = None,
+    archive_file: str,
+    cuda_device: int = -1,
+    overrides: str = "",
+    weights_file: str = None,
 ) -> Archive:
     """
     Instantiates an Archive from an archived `tar.gz` file.

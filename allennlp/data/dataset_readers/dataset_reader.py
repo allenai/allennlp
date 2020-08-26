@@ -287,7 +287,10 @@ class DatasetReader(Registrable):
 
         return sharded_slice
 
-    def _multi_worker_islice(self, iterable: Iterable[_T],) -> Iterator[_T]:
+    def _multi_worker_islice(
+        self,
+        iterable: Iterable[_T],
+    ) -> Iterator[_T]:
         """
         This is just like `shard_iterable` but is for internal use only.
 
