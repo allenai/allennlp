@@ -1295,7 +1295,6 @@ def masked_index_fill(
     filled_target : `torch.Tensor`
         A tensor with shape (batch_size, sequence_length) where 'indices' are filled with `fill_value`
     """
-    target = target.clone()
     mask = mask.bool()
     prev_shape = target.size()
     # Shape: (batch_size * num_indices)
@@ -1307,7 +1306,7 @@ def masked_index_fill(
     # Shape: (nonzero_indices, 1)
     unmasked_indices = flattened_indices[mask].unsqueeze(-1)
 
-    flattened_target.scatter_(0, unmasked_indices, fill_value)
+    flattened_target.scatter(0, unmasked_indices, fill_value)
 
     filled_target = flattened_target.reshape(prev_shape)
 
