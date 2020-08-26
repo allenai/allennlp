@@ -5,14 +5,13 @@ import torch
 
 from allennlp.data import Vocabulary
 from allennlp.models.heads.head import Head
-from allennlp.models.model import Model
 from allennlp.modules import FeedForward, Seq2VecEncoder
 from allennlp.modules.seq2vec_encoders import ClsPooler
 from allennlp.training.metrics import CategoricalAccuracy
 
 
 @Head.register("classifier")
-class ClassifierHead(Model):
+class ClassifierHead(Head):
     """
     A classification `Head`.  Takes encoded text, gets a single vector out of it, runs an optional
     feedforward layer on that vector, then classifies it into some label space.

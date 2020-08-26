@@ -1,10 +1,13 @@
 from typing import Dict, Optional
 
+from overrides import overrides
 import torch
 
-from allennlp.data import TextFieldTensors
+from allennlp.data import TextFieldTensors, Vocabulary
 from allennlp.modules.backbones.backbone import Backbone
-from allennlp.modules.token_embedders.pretrained_transformer_embedder import PretrainedTransformerEmbedder
+from allennlp.modules.token_embedders.pretrained_transformer_embedder import (
+    PretrainedTransformerEmbedder,
+)
 from allennlp.nn import util
 
 
@@ -13,7 +16,7 @@ class PretrainedTransformerBackbone(Backbone):
     """
     Uses a pretrained model from `transformers` as a `Backbone`.
 
-    This class passes all of its arguments to a `PretrainedTransformerEmbedder`, which it uses to
+    This class passes most of its arguments to a `PretrainedTransformerEmbedder`, which it uses to
     implement the underlying encoding logic (we duplicate the arguments here instead of taking an
     `Embedder` as a constructor argument just to simplify the user-facing API).
 
@@ -21,6 +24,10 @@ class PretrainedTransformerBackbone(Backbone):
 
     # Parameters
 
+    vocab : `Vocabulary`
+        Necessary for converting input ids to strings in `make_output_human_readable`.  If you set
+        `output_token_strings` to `False`, or if you never call `make_output_human_readable`, then
+        this will not be used and can be safely set to `None`.
     model_name : `str`
         The name of the `transformers` model to use. Should be the same as the corresponding
         `PretrainedTransformerIndexer`.
@@ -39,10 +46,19 @@ class PretrainedTransformerBackbone(Backbone):
         When `True` (the default), only the final layer of the pretrained transformer is taken
         for the embeddings. But if set to `False`, a scalar mix of all of the layers
         is used.
+    output_token_strings : `bool`, optional (default = `True`)
+        If `True`, we will add the input token ids to the output dictionary in `forward` (with key
+        "token_ids"), and convert them to strings in `make_output_human_readable` (with key
+        "tokens").  This is necessary for certain demo functionality, and it adds only a trivial
+        amount of computation if you are not using a demo.
+    vocab_namespace : `str`, optional (default = `"tags"`)
+        The namespace to use in conjunction with the `Vocabulary` above.  We use a somewhat
+        confusing default of "tags" here, to match what is done in `PretrainedTransformerIndexer`.
     """
 
     def __init__(
         self,
+        vocab: Vocabulary,
         model_name: str,
         *,
         max_length: int = None,
@@ -50,9 +66,13 @@ class PretrainedTransformerBackbone(Backbone):
         train_parameters: bool = True,
         last_layer_only: bool = True,
         override_weights_file: Optional[str] = None,
-        override_weights_strip_prefix: Optional[str] = None
+        override_weights_strip_prefix: Optional[str] = None,
+        output_token_strings: bool = True,
+        vocab_namespace: str = "tags",
     ) -> None:
         super().__init__()
+        self._vocab = vocab
+        self._namespace = vocab_namespace
         self._embedder = PretrainedTransformerEmbedder(
             model_name=model_name,
             max_length=max_length,
@@ -62,8 +82,9 @@ class PretrainedTransformerBackbone(Backbone):
             override_weights_file=override_weights_file,
             override_weights_strip_prefix=override_weights_strip_prefix,
         )
+        self._output_token_strings = output_token_strings
 
-    def forward(self, text: TextFieldTensors) -> Dict[str, torch.Tensor]:
+    def forward(self, text: TextFieldTensors) -> Dict[str, torch.Tensor]:  # type: ignore
         if len(text) != 1:
             raise ValueError(
                 "PretrainedTransformerBackbone is only compatible with using a single TokenIndexer"
@@ -71,4 +92,25 @@ class PretrainedTransformerBackbone(Backbone):
         text_inputs = next(iter(text.values()))
         mask = util.get_text_field_mask(text)
         encoded_text = self._embedder(**text_inputs)
-        return {"encoded_text": encoded_text, "encoded_text_mask": mask}
+        outputs = {"encoded_text": encoded_text, "encoded_text_mask": mask}
+        if self._output_token_strings:
+            outputs["token_ids"] = util.get_token_ids_from_text_field_tensors(text)
+        return outputs
+
+    @overrides
+    def make_output_human_readable(
+        self, output_dict: Dict[str, torch.Tensor]
+    ) -> Dict[str, torch.Tensor]:
+        if not self._output_token_strings:
+            return output_dict
+
+        tokens = []
+        for instance_tokens in output_dict["token_ids"]:
+            tokens.append(
+                [
+                    self._vocab.get_token_from_index(token_id.item(), namespace=self._namespace)
+                    for token_id in instance_tokens
+                ]
+            )
+        output_dict["tokens"] = tokens
+        return output_dict

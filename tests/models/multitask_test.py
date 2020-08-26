@@ -1,5 +1,5 @@
 from allennlp.common.testing import ModelTestCase
-from allennlp.data import Instance, Vocabulary, Token
+from allennlp.data import Instance, Vocabulary
 from allennlp.data.fields import LabelField, TextField
 from allennlp.data.token_indexers import PretrainedTransformerIndexer
 from allennlp.data.tokenizers import PretrainedTransformerTokenizer
@@ -12,7 +12,7 @@ class TestMultiTaskModel(ModelTestCase):
     def test_forward_works(self):
         transformer_name = "epwalsh/bert-xsmall-dummy"
         vocab = Vocabulary()
-        backbone = PretrainedTransformerBackbone(model_name=transformer_name)
+        backbone = PretrainedTransformerBackbone(vocab, transformer_name)
         head = ClassifierHead(vocab, input_dim=20, num_labels=3)
         model = MultiTaskModel(vocab, backbone, {"cls": head})
         tokenizer = PretrainedTransformerTokenizer(model_name=transformer_name)
