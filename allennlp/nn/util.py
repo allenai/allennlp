@@ -245,7 +245,10 @@ def get_dropout_mask(dropout_probability: float, tensor_for_masking: torch.Tenso
 
 
 def masked_softmax(
-    vector: torch.Tensor, mask: torch.BoolTensor, dim: int = -1, memory_efficient: bool = False,
+    vector: torch.Tensor,
+    mask: torch.BoolTensor,
+    dim: int = -1,
+    memory_efficient: bool = False,
 ) -> torch.Tensor:
     """
     `torch.nn.functional.softmax(vector)` does not work if some elements of `vector` should be
@@ -316,7 +319,10 @@ def masked_log_softmax(vector: torch.Tensor, mask: torch.BoolTensor, dim: int = 
 
 
 def masked_max(
-    vector: torch.Tensor, mask: torch.BoolTensor, dim: int, keepdim: bool = False,
+    vector: torch.Tensor,
+    mask: torch.BoolTensor,
+    dim: int,
+    keepdim: bool = False,
 ) -> torch.Tensor:
     """
     To calculate max along certain dimensions on masked values
