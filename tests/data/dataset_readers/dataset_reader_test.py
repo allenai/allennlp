@@ -123,9 +123,9 @@ def test_instance_slicing(
         minimum_expected_result_size //= world_size
         minimum_expected_result_size //= num_workers
         maximum_expected_result_size = minimum_expected_result_size + 1
-        for node_rank in range(world_size):
+        for global_rank in range(world_size):
             monkeypatch.setattr(common_util, "is_distributed", lambda: True)
-            monkeypatch.setattr(dist, "get_rank", lambda: node_rank)
+            monkeypatch.setattr(dist, "get_rank", lambda: global_rank)
             monkeypatch.setattr(dist, "get_world_size", lambda: world_size)
             for worker_id in range(num_workers):
                 reader = reader_class(max_instances=max_instances)
@@ -137,9 +137,9 @@ def test_instance_slicing(
     elif world_size is not None:
         minimum_expected_result_size //= world_size
         maximum_expected_result_size = minimum_expected_result_size + 1
-        for node_rank in range(world_size):
+        for global_rank in range(world_size):
             monkeypatch.setattr(common_util, "is_distributed", lambda: True)
-            monkeypatch.setattr(dist, "get_rank", lambda: node_rank)
+            monkeypatch.setattr(dist, "get_rank", lambda: global_rank)
             monkeypatch.setattr(dist, "get_world_size", lambda: world_size)
             reader = reader_class(max_instances=max_instances)
             result = set(
