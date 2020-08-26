@@ -847,10 +847,12 @@ class TestVocabularyFromFilesWithArchive(AllenNlpTestCase):
         self.zip_archive = self.TEST_DIR / "vocab.zip"
         self.model_archive = self.TEST_DIR / "model.tar.gz"
         shutil.copyfile(
-            self.FIXTURES_ROOT / "data" / "vocab.tar.gz", self.tar_archive,
+            self.FIXTURES_ROOT / "data" / "vocab.tar.gz",
+            self.tar_archive,
         )
         shutil.copyfile(
-            self.FIXTURES_ROOT / "data" / "vocab.zip", self.zip_archive,
+            self.FIXTURES_ROOT / "data" / "vocab.zip",
+            self.zip_archive,
         )
         shutil.copyfile(
             self.FIXTURES_ROOT / "simple_tagger" / "serialization" / "model.tar.gz",

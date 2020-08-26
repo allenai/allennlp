@@ -327,12 +327,7 @@ def test_instance_slicing(
         )
 
     reader = MockDatasetReader(max_instances=max_instances)
-    result = list(
-        (
-            x["index"].label  # type: ignore
-            for x in reader.read("the-path-doesnt-matter")
-        )
-    )
+    result = list((x["index"].label for x in reader.read("the-path-doesnt-matter")))  # type: ignore
 
     assert result == expected_result
 

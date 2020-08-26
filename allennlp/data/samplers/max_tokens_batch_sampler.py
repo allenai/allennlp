@@ -63,7 +63,9 @@ class MaxTokensBatchSampler(BucketBatchSampler):
         self.max_tokens = max_tokens
 
     def _lazy_groups_of_max_size(
-        self, iterable: Iterable[A], sizes: Iterable[int],
+        self,
+        iterable: Iterable[A],
+        sizes: Iterable[int],
     ) -> Iterator[List[A]]:
         """
         Takes an `iterable` of data and an iterable `sizes` of the same length which represents the sizes of each

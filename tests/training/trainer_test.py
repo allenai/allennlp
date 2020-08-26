@@ -141,7 +141,11 @@ class TestTrainer(TrainerTestBase):
 
         with pytest.raises(ConfigurationError):
             GradientDescentTrainer(
-                self.model, self.optimizer, self.data_loader, num_epochs=2, cuda_device=[0, 1],
+                self.model,
+                self.optimizer,
+                self.data_loader,
+                num_epochs=2,
+                cuda_device=[0, 1],
             )
 
     def test_data_loader_lazy_epoch_size_correct(self):
@@ -703,7 +707,9 @@ class TestTrainer(TrainerTestBase):
             num_epochs=2,
             serialization_dir=self.TEST_DIR,
             tensorboard_writer=TensorboardWriter(
-                serialization_dir=self.TEST_DIR, should_log_learning_rate=True, summary_interval=2,
+                serialization_dir=self.TEST_DIR,
+                should_log_learning_rate=True,
+                summary_interval=2,
             ),
         )
 

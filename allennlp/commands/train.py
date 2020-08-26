@@ -366,7 +366,9 @@ def _train_worker(
     common_logging.FILE_FRIENDLY_LOGGING = file_friendly_logging
 
     common_logging.prepare_global_logging(
-        serialization_dir, rank=process_rank, world_size=world_size,
+        serialization_dir,
+        rank=process_rank,
+        world_size=world_size,
     )
     common_util.prepare_environment(params)
 
@@ -426,7 +428,9 @@ def _train_worker(
         )
 
     train_loop = TrainModel.from_params(
-        params=params, serialization_dir=serialization_dir, local_rank=process_rank,
+        params=params,
+        serialization_dir=serialization_dir,
+        local_rank=process_rank,
     )
 
     if dry_run:
@@ -680,7 +684,9 @@ class TrainModel(Registrable):
         # passed through the trainer by from_params already, because they were keyword arguments to
         # construct this class in the first place.
         trainer_ = trainer.construct(
-            model=model_, data_loader=data_loader_, validation_data_loader=validation_data_loader_,
+            model=model_,
+            data_loader=data_loader_,
+            validation_data_loader=validation_data_loader_,
         )
 
         return cls(
