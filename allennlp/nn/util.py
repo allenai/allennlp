@@ -1264,8 +1264,8 @@ def batched_index_select(
     return selected_targets
 
 
-def batched_index_fill(
-    target: torch.Tensor, indices: torch.LongTensor, mask: torch.Tensor, fill_value: int = 1
+def masked_index_fill(
+    target: torch.Tensor, indices: torch.LongTensor, mask: torch.BoolTensor, fill_value: int = 1
 ) -> torch.Tensor:
     """
     The given `indices` in `target` will be will be filled with `fill_value` given a `mask`.
@@ -1289,11 +1289,13 @@ def batched_index_fill(
     filled_target : `torch.Tensor`
         A tensor with shape (batch_size, sequence_length) where 'indices' are filled with `fill_value`
     """
+    target = target.clone()
+    mask = mask.bool()
     prev_shape = target.size()
     # Shape: (batch_size * num_indices)
     flattened_indices = flatten_and_batch_shift_indices(indices * mask, target.size(1))
     # Shape: (batch_size * num_indices, 1)
-    mask = mask.bool().view(-1)
+    mask = mask.view(-1)
     # Shape: (batch_size * sequence_length, 1)
     flattened_target = target.view(-1, 1)
     # Shape: (nonzero_indices, 1)
@@ -1306,11 +1308,11 @@ def batched_index_fill(
     return filled_target
 
 
-def batched_index_scatter(
-    target: torch.Tensor, indices: torch.LongTensor, mask: torch.Tensor, replace: torch.Tensor,
+def masked_index_replace(
+    target: torch.Tensor, indices: torch.LongTensor, mask: torch.BoolTensor, replace: torch.Tensor,
 ) -> torch.Tensor:
     """
-    The given `indices` in `target` will be will be scattered with corresponding index
+    The given `indices` in `target` will be will be replaced with corresponding index
     from the `replace` tensor given a `mask`.
 
 
@@ -1318,10 +1320,10 @@ def batched_index_scatter(
 
     target : `torch.Tensor`, required.
         A 3 dimensional tensor of shape (batch_size, sequence_length, embedding_dim).
-        This is the tensor to be scattered into.
+        This is the tensor to be replaced into.
     indices : `torch.LongTensor`, required
         A 2 dimensional tensor of shape (batch_size, num_indices),
-        These are the indices that will be scattered in the original tensor.
+        These are the indices that will be replaced in the original tensor.
     mask : `torch.Tensor`, required.
         A 2 dimensional tensor of shape (batch_size, num_indices), mask.sum() == `nonzero_indices`.
     replace : `torch.Tensor`, required.
@@ -1330,21 +1332,23 @@ def batched_index_scatter(
 
     # Returns
 
-    scattered_target : `torch.Tensor`
+    replaced_target : `torch.Tensor`
         A tensor with shape (batch_size, sequence_length, embedding_dim) where 'indices'
         are replaced with the corrosponding vector from `replace`
     """
+    target = target.clone()
+    mask = mask.bool()
     prev_shape = target.size()
     # Shape: (batch_size * num_indices)
     flattened_indices = flatten_and_batch_shift_indices(indices * mask, target.size(1))
     # Shape: (batch_size * sequence_length, embedding_size)
     flattened_target = target.view(-1, target.size(-1))
     # Shape: (nonzero_indices, 1)
-    mask = mask.bool().view(-1)
+    mask = mask.view(-1)
     flattened_target[flattened_indices[mask]] = replace.view(-1, replace.size(-1))[mask]
     # Shape: (batch_size, sequence_length, embedding_dim)
-    scattered_target = flattened_target.reshape(prev_shape)
-    return scattered_target
+    replaced_target = flattened_target.reshape(prev_shape)
+    return replaced_target
 
 
 def batched_span_select(target: torch.Tensor, spans: torch.LongTensor) -> torch.Tensor:
