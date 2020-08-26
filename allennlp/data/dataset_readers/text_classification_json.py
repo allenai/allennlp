@@ -55,7 +55,9 @@ class TextClassificationJsonReader(DatasetReader):
         skip_label_indexing: bool = False,
         **kwargs,
     ) -> None:
-        super().__init__(**kwargs)
+        super().__init__(
+            manual_distributed_sharding=True, manual_multi_process_sharding=True, **kwargs
+        )
         self._tokenizer = tokenizer or SpacyTokenizer()
         self._segment_sentences = segment_sentences
         self._max_sequence_length = max_sequence_length
@@ -67,7 +69,7 @@ class TextClassificationJsonReader(DatasetReader):
     @overrides
     def _read(self, file_path):
         with open(cached_path(file_path), "r") as data_file:
-            for line in data_file.readlines():
+            for line in self.shard_iterable(data_file.readlines()):
                 if not line:
                     continue
                 items = json.loads(line)
@@ -83,9 +85,7 @@ class TextClassificationJsonReader(DatasetReader):
                             )
                     else:
                         label = str(label)
-                instance = self.text_to_instance(text=text, label=label)
-                if instance is not None:
-                    yield instance
+                yield self.text_to_instance(text=text, label=label)
 
     def _truncate(self, tokens):
         """

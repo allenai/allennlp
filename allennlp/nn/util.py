@@ -1271,7 +1271,6 @@ def batched_span_select(target: torch.Tensor, spans: torch.LongTensor) -> torch.
     embedding_size)`.
 
     This function returns segmented spans in the target with respect to the provided span indices.
-    It does not guarantee element order within each span.
 
     # Parameters
 
@@ -1318,12 +1317,12 @@ def batched_span_select(target: torch.Tensor, spans: torch.LongTensor) -> torch.
     # inclusive, so we want to include indices which are equal to span_widths rather
     # than using it as a non-inclusive upper bound.
     span_mask = max_span_range_indices <= span_widths
-    raw_span_indices = span_ends - max_span_range_indices
-    # We also don't want to include span indices which are less than zero,
-    # which happens because some spans near the beginning of the sequence
-    # have an end index < max_batch_span_width, so we add this to the mask here.
-    span_mask = span_mask & (raw_span_indices >= 0)
-    span_indices = torch.nn.functional.relu(raw_span_indices.float()).long()
+    raw_span_indices = span_starts + max_span_range_indices
+    # We also don't want to include span indices which greater than the sequence_length,
+    # which happens because some spans near the end of the sequence
+    # have a start index + max_batch_span_width > sequence_length, so we add this to the mask here.
+    span_mask = span_mask & (raw_span_indices < target.size(1)) & (0 <= raw_span_indices)
+    span_indices = raw_span_indices * span_mask
 
     # Shape: (batch_size, num_spans, max_batch_span_width, embedding_dim)
     span_embeddings = batched_index_select(target, span_indices)

@@ -1,3 +1,4 @@
+from typing import Any, Dict, List, Tuple, Union
 import torch
 
 from allennlp.common.testing import (
@@ -58,3 +59,39 @@ class MeanAbsoluteErrorTest(AllenNlpTestCase):
             desired_values,
             exact=True,
         )
+
+    def test_multiple_distributed_runs(self):
+        predictions = [
+            torch.tensor([[1.0, 1.5, 1.0], [2.0, 3.0, 3.5]]),
+            torch.tensor([[4.0, 5.0, 5.5], [6.0, 7.0, 7.5]]),
+        ]
+        targets = [
+            torch.tensor([[0.0, 1.0, 0.0], [2.0, 2.0, 0.0]]),
+            torch.tensor([[4.0, 5.0, 0.0], [7.0, 7.0, 0.0]]),
+        ]
+        metric_kwargs = {"predictions": predictions, "gold_labels": targets}
+        desired_values = {"mae": 21.0 / 12.0}
+        run_distributed_test(
+            [-1, -1], multiple_runs, MeanAbsoluteError(), metric_kwargs, desired_values, exact=True,
+        )
+
+
+def multiple_runs(
+    global_rank: int,
+    world_size: int,
+    gpu_id: Union[int, torch.device],
+    metric: MeanAbsoluteError,
+    metric_kwargs: Dict[str, List[Any]],
+    desired_values: Dict[str, Any],
+    exact: Union[bool, Tuple[float, float]] = True,
+):
+
+    kwargs = {}
+    # Use the arguments meant for the process with rank `global_rank`.
+    for argname in metric_kwargs:
+        kwargs[argname] = metric_kwargs[argname][global_rank]
+
+    for i in range(200):
+        metric(**kwargs)
+
+    assert desired_values["mae"] == metric.get_metric()["mae"]

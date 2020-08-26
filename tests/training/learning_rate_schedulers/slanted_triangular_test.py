@@ -5,11 +5,10 @@ from typing import Any, Dict, List, Tuple
 import torch
 import pytest
 
-from allennlp.data.dataset_readers.dataset_reader import AllennlpDataset
 from allennlp.common import Lazy, Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.data import PyTorchDataLoader
+from allennlp.data import PyTorchDataLoader, AllennlpDataset
 from allennlp.training import Trainer
 from allennlp.training.learning_rate_schedulers import LearningRateScheduler, SlantedTriangular
 from allennlp.training.optimizers import Optimizer
