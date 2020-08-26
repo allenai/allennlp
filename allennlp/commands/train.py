@@ -366,9 +366,7 @@ def _train_worker(
     common_logging.FILE_FRIENDLY_LOGGING = file_friendly_logging
 
     common_logging.prepare_global_logging(
-        serialization_dir,
-        rank=process_rank,
-        world_size=world_size,
+        serialization_dir, rank=process_rank, world_size=world_size,
     )
     common_util.prepare_environment(params)
 
@@ -428,9 +426,7 @@ def _train_worker(
         )
 
     train_loop = TrainModel.from_params(
-        params=params,
-        serialization_dir=serialization_dir,
-        local_rank=process_rank,
+        params=params, serialization_dir=serialization_dir, local_rank=process_rank,
     )
 
     if dry_run:
