@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `Predictor.capture_model_internals()` now accepts a regex specifying which modules to capture
 - A new high-performance default `DataLoader`: `MultiProcessDataLoading`.
 
 ### Changed
@@ -18,6 +19,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The `DataLoader` now decides whether to load instances lazily or not.
   With the `PyTorchDataLoader` this is controlled with the `lazy` parameter, but with
   the `MultiProcessDataLoading` this is controlled by the `max_instances_in_memory` setting.
+
+
+## [v1.1.0rc4](https://github.com/allenai/allennlp/releases/tag/v1.1.0rc4) - 2020-08-20
+
+### Added
+
 - Added a workflow to GitHub Actions that will automatically close unassigned stale issues and
   ping the assignees of assigned stale issues.
 
@@ -39,6 +46,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed problem with automatically detecting whether tokenization is necessary.
   This affected primarily the Roberta SST model.
 - Improved help text for using the --overrides command line flag.
+
 
 ## [v1.1.0rc2](https://github.com/allenai/allennlp/releases/tag/v1.1.0rc2) - 2020-07-31
 
