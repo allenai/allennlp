@@ -1306,7 +1306,7 @@ def masked_index_fill(
     # Shape: (nonzero_indices, 1)
     unmasked_indices = flattened_indices[mask].unsqueeze(-1)
 
-    flattened_target.scatter(0, unmasked_indices, fill_value)
+    flattened_target = flattened_target.scatter(0, unmasked_indices, fill_value)
 
     filled_target = flattened_target.reshape(prev_shape)
 
