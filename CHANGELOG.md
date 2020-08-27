@@ -11,6 +11,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `Predictor.capture_model_internals()` now accepts a regex specifying
   which modules to capture
+- A `MultiTaskModel` and abstractions to use with it, including `Backbone` and `Head`.  The
+  `MultiTaskModel` first runs its inputs through the `Backbone`, then passes the result (and
+whatever other relevant inputs it got) to each `Head` that's in use.  This is intended for
+multi-task learning, but so far it is incomplete, as there are no corresponding dataset readers or
+data loaders.  Those are coming soon.
 
 ## [v1.1.0rc4](https://github.com/allenai/allennlp/releases/tag/v1.1.0rc4) - 2020-08-20
 

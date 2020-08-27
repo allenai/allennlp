@@ -39,12 +39,12 @@ class MultiTaskModel(Model):
     vocab: `Vocab`
     backbone: `Backbone`
     heads: `Dict[str, Head]`
-    loss_weights: `Dict[str, float]`, optional (default = equal weighting)
+    loss_weights: `Dict[str, float]`, optional (default = `equal weighting`)
         If you want, you can specify a weight for each head, which we will multiply the loss by when
         aggregating across heads.  This is equivalent in many cases to specifying a separate
         learning rate per head, and just putting a weighting on the loss is much easier than
         figuring out the right way to specify that in the optimizer.
-    arg_name_mapping: `Dict[str, str]`, optional (default = identity mapping)
+    arg_name_mapping: `Dict[str, str]`, optional (default = `identity mapping`)
         The mapping changes the names in the `**kwargs` dictionary passed to `forward` before
         passing on the arguments to the backbone and heads.  It is done independently for each head,
         so there is no risk of clobbering keys if, e.g., you have two separate classification heads.
@@ -54,12 +54,12 @@ class MultiTaskModel(Model):
         (though in this particular example, the `"text"` argument goes to the backbone, and so you
         can't have both "question" and "review" in the same batch, or they would clobber each
         other; we check for this case and raise an error).
-    backbone_arguments: `Set[str]`, optional (default = inferred)
+    backbone_arguments: `Set[str]`, optional (default = `inferred`)
         The list of arguments that should be passed from `**kwargs` to `backbone.forward`.  If not
         given, we will use the `inspect` module to figure this out.  The only time that this
         inference might fail is if you have optional arguments that you want to be ignored, or
         something.  You very likely don't need to worry about this argument.
-    head_arguments: `Dict[str, Set[str]]`, optional (default = inferred)
+    head_arguments: `Dict[str, Set[str]]`, optional (default = `inferred`)
         The list of arguments that should be passed from `**kwargs` to `head.forward` for ach head.
         If not given, we will use the `inspect` module to figure this out.  The only time that this
         inference might fail is if you have optional arguments that you want to be ignored, or
