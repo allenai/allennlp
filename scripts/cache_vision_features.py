@@ -4,11 +4,11 @@ import argparse
 from tqdm import tqdm
 
 import torch
+from torchvision.datasets.folder import IMG_EXTENSIONS
 
 from allennlp.common.file_utils import TensorCache, cached_path
 from allennlp.data import DetectronImageLoader
 from allennlp.modules.vision import ResnetBackbone, FasterRcnnRegionDetector
-
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -25,7 +25,9 @@ if __name__ == "__main__":
     os.makedirs(args.cache_dir, exist_ok=True)
     features_cache = TensorCache(os.path.join(args.cache_dir, "features"))
     coordinates_cache = TensorCache(os.path.join(args.cache_dir, "coordinates"))
-    image_paths = list(glob.iglob(os.path.join(args.image_dir, "**", "*.png"), recursive=True))
+    image_paths = []
+    for extension in IMG_EXTENSIONS:
+        image_paths += list(glob.iglob(os.path.join(args.image_dir, "**", "*."+extension), recursive=True))
     filtered_image_paths = []
     image_keys = []
     for path in image_paths:
