@@ -90,7 +90,7 @@ class TestMultiTaskModel(ModelTestCase):
         assert "cls2_loss" in outputs
         assert "loss" in outputs
         combined_loss = outputs["cls1_loss"].item() + outputs["cls2_loss"].item()
-        assert abs(outputs["loss"].item() - combined_loss) <= 1e-7
+        assert abs(outputs["loss"].item() - combined_loss) <= 1e-6
 
         # This should fail, because we are using the same label field for both heads, but it's the
         # wrong label for cls1, and the sizes don't match.  This shows up as an IndexError in this

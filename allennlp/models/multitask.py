@@ -75,7 +75,7 @@ class MultiTaskModel(Model):
         heads: Dict[str, Head],
         *,
         loss_weights: Dict[str, float] = None,
-        arg_name_mapping: Dict[str, str] = None,
+        arg_name_mapping: Dict[str, Dict[str, str]] = None,
         allowed_arguments: Dict[str, Set[str]] = None,
         initializer: InitializerApplicator = InitializerApplicator(),
         **kwargs,
