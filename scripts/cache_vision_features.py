@@ -26,7 +26,15 @@ if __name__ == "__main__":
     features_cache = TensorCache(os.path.join(args.cache_dir, "features"))
     coordinates_cache = TensorCache(os.path.join(args.cache_dir, "coordinates"))
     image_paths = list(glob.iglob(os.path.join(args.image_dir, "**", "*.png"), recursive=True))
-    image_keys = [os.path.basename(filename) for filename in image_paths]
+    filtered_image_paths = []
+    image_keys = []
+    for path in image_paths:
+        key = os.path.basename(path)
+        if key in features_cache and key in coordinates_cache:
+            continue
+        image_keys.append(key)
+        filtered_image_paths.append(path)
+    image_paths = filtered_image_paths
 
     image_loader = DetectronImageLoader()
     image_featurizer = ResnetBackbone()
