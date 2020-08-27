@@ -1,6 +1,6 @@
 from collections import defaultdict
 import inspect
-from typing import Dict, List, Set
+from typing import Any, Dict, List, Set
 
 from overrides import overrides
 import torch
@@ -44,25 +44,25 @@ class MultiTaskModel(Model):
         aggregating across heads.  This is equivalent in many cases to specifying a separate
         learning rate per head, and just putting a weighting on the loss is much easier than
         figuring out the right way to specify that in the optimizer.
-    arg_name_mapping: `Dict[str, str]`, optional (default = `identity mapping`)
+    arg_name_mapping: `Dict[str, Dict[str, str]]`, optional (default = `identity mapping`)
         The mapping changes the names in the `**kwargs` dictionary passed to `forward` before
-        passing on the arguments to the backbone and heads.  It is done independently for each head,
-        so there is no risk of clobbering keys if, e.g., you have two separate classification heads.
-        If you are using dataset readers that use dataset-specific names for their keys, this lets
-        you change them to be consistent.  For example, this dictionary might end up looking like
-        this: `{"question": "text", "review": "text", "sentiment": "label", "topic": "label"}`
-        (though in this particular example, the `"text"` argument goes to the backbone, and so you
-        can't have both "question" and "review" in the same batch, or they would clobber each
-        other; we check for this case and raise an error).
-    backbone_arguments: `Set[str]`, optional (default = `inferred`)
-        The list of arguments that should be passed from `**kwargs` to `backbone.forward`.  If not
-        given, we will use the `inspect` module to figure this out.  The only time that this
-        inference might fail is if you have optional arguments that you want to be ignored, or
-        something.  You very likely don't need to worry about this argument.
-    head_arguments: `Dict[str, Set[str]]`, optional (default = `inferred`)
-        The list of arguments that should be passed from `**kwargs` to `head.forward` for ach head.
-        If not given, we will use the `inspect` module to figure this out.  The only time that this
-        inference might fail is if you have optional arguments that you want to be ignored, or
+        passing on the arguments to the backbone and heads.  This is keyed by component, and the
+        top-level keys must match the keys passed in the `heads` parameter, plus a "backbone" key
+        for the backbone.  If you are using dataset readers that use dataset-specific names for
+        their keys, this lets you change them to be consistent.  For example, this dictionary might
+        end up looking like this: `{"backbone": {"question": "text", "review": "text"},
+        "classifier1": {"sentiment": "label"}, "classifier2": {"topic": "label"}}`.
+        Though in this particular example, we have two different inputs mapping to the same key in
+        the backbone; this will work, as long are you are careful that you don't give both of those
+        inputs in the same batch. If we see overlapping keys, we will crash.  If you want to be able
+        to do this kind of mixed training in the same batch, you need to handle that in your data
+        code, not here; we won't handle complex batching inside this model.
+    allowed_arguments: `Dict[str, Set[str]]`, optional (default = `inferred`)
+        The list of arguments that should be passed from `**kwargs` to the `forward` method for the
+        backbone and each head.  If you provide this, the keys in here should match the keys given
+        in the `heads` parameter, plus a "backbone" key for the backbone arguments.  If not given,
+        we will use the `inspect` module to figure this out.  The only time that this inference
+        might fail is if you have optional arguments that you want to be ignored, or
         something.  You very likely don't need to worry about this argument.
     initializer: `InitializerApplicator`, optional (default=`InitializerApplicator()`)
         If provided, will be used to initialize the model parameters.
@@ -76,19 +76,18 @@ class MultiTaskModel(Model):
         *,
         loss_weights: Dict[str, float] = None,
         arg_name_mapping: Dict[str, str] = None,
-        backbone_arguments: Set[str] = None,
-        head_arguments: Dict[str, Set[str]] = None,
+        allowed_arguments: Dict[str, Set[str]] = None,
         initializer: InitializerApplicator = InitializerApplicator(),
         **kwargs,
     ):
         super().__init__(vocab, **kwargs)
         self._backbone = backbone
         self._heads = torch.nn.ModuleDict(heads)
-        self._arg_name_mapping = arg_name_mapping or {}
+        self._arg_name_mapping = arg_name_mapping or defaultdict(dict)
 
-        self._backbone_arguments = backbone_arguments or get_forward_arguments(backbone)
-        self._head_arguments = head_arguments or {
-            key: get_forward_arguments(heads[key]) for key in heads
+        self._allowed_arguments = allowed_arguments or {
+            "backbone": get_forward_arguments(backbone),
+            **{key: get_forward_arguments(heads[key]) for key in heads},
         }
         self._loss_weights = loss_weights or defaultdict(lambda: 1.0)
         self._active_heads: List[str] = None
@@ -112,19 +111,7 @@ class MultiTaskModel(Model):
         self._active_heads = active_heads
 
     def forward(self, **kwargs) -> Dict[str, torch.Tensor]:  # type: ignore
-        backbone_arguments = {}
-        for key, value in kwargs.items():
-            new_key = self._arg_name_mapping.get(key, key)
-            if new_key in self._backbone_arguments:
-                if new_key in backbone_arguments:
-                    raise ValueError(
-                        f"Got duplicate argument {new_key} for backbone. This likely "
-                        "means that you mapped multiple backbone inputs to the same name. "
-                        "This is generally ok, but you have to be sure each batch only gets "
-                        "one of those inputs."
-                    )
-                backbone_arguments[new_key] = value
-
+        backbone_arguments = self._get_arguments(kwargs, "backbone")
         backbone_outputs = self._backbone(**backbone_arguments)
 
         outputs = {**backbone_outputs}
@@ -134,20 +121,12 @@ class MultiTaskModel(Model):
                 continue
 
             combined_arguments = {**backbone_outputs, **kwargs}
-            head_arguments = {}
-            for key, value in combined_arguments.items():
-                # This is similar to the name replacement logic above, but it can't be combined,
-                # because we don't want to clobber values if, e.g., we have two different classifier
-                # heads that both need to use the "label" key.  This must be done separately for
-                # each head.
-                new_key = self._arg_name_mapping.get(key, key)
-                if new_key in self._head_arguments[head_name]:
-                    head_arguments[new_key] = value
+            head_arguments = self._get_arguments(combined_arguments, head_name)
 
             if (
                 self._active_heads is None
                 and self.training
-                and head_arguments.keys() != self._head_arguments[head_name]
+                and head_arguments.keys() != self._allowed_arguments[head_name]
             ):
                 continue
 
@@ -167,6 +146,29 @@ class MultiTaskModel(Model):
 
         return outputs
 
+    def _get_arguments(self, available_args: Dict[str, Any], component: str) -> Dict[str, Any]:
+        """
+        Given a list of things we might want to pass to a component (where "component" is either the
+        backbone or a head), this method figures out which things we should actually pass, by
+        mapping names and looking at allowed arguments.
+        """
+        allowed_args = self._allowed_arguments[component]
+        name_mapping = self._arg_name_mapping[component]
+        kept_arguments = {}
+        for key, value in available_args.items():
+            new_key = name_mapping.get(key, key)
+            if new_key in allowed_args:
+                if new_key in kept_arguments:
+                    raise ValueError(
+                        f"Got duplicate argument {new_key} for {component}. This likely means that"
+                        " you mapped multiple inputs to the same name. This is generally ok for"
+                        " the backbone, but you have to be sure each batch only gets one of those"
+                        " inputs.  This is typically not ok for heads, and means something is not"
+                        " set up right."
+                    )
+                kept_arguments[new_key] = value
+        return kept_arguments
+
     @overrides
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
         metrics = {}
@@ -181,6 +183,8 @@ class MultiTaskModel(Model):
     ) -> Dict[str, torch.Tensor]:
         output_dict = self._backbone.make_output_human_readable(output_dict)
         for head_name in self._heads:
+            if self._active_heads is not None and head_name not in self._active_heads:
+                continue
             head_outputs = {}
             for key, value in output_dict.items():
                 if key.startswith(head_name):
