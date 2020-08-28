@@ -51,8 +51,8 @@ class DistributedInfo:
 
     global_rank: int
     """
-    The 0-indexed ID of the current process within the distributed group. This will be between 0 and `world_size - 1`,
-    inclusive.
+    The 0-indexed ID of the current process within the distributed group.
+    This will be between 0 and `world_size - 1`, inclusive.
     """
 
 
