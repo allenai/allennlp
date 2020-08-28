@@ -38,7 +38,7 @@ class WorkerInfo:
 @dataclass
 class DistributedInfo:
     """
-    Contains information about the node rank and world size when the reader is being
+    Contains information about the global process rank and total world size when the reader is being
     used within distributed training.
 
     From a `DatasetReader` this can be accessed with the [`get_distributed_info()`](#get_distributed_info) method.
@@ -46,12 +46,13 @@ class DistributedInfo:
 
     world_size: int
     """
-    The total number of distributed nodes.
+    The total number of processes in the distributed group.
     """
 
-    node_rank: int
+    global_rank: int
     """
-    The 0-indexed ID of the current node.
+    The 0-indexed ID of the current process within the distributed group.
+    This will be between 0 and `world_size - 1`, inclusive.
     """
 
 
@@ -313,7 +314,7 @@ class DatasetReader(Registrable):
             if max_instances is not None:
                 # Need to scale down max_instances because otherwise each node would read self.max_instances,
                 # but we really want self.max_instances total across all nodes.
-                if self._distributed_info.node_rank < (
+                if self._distributed_info.global_rank < (
                     max_instances % self._distributed_info.world_size
                 ):
                     max_instances = max_instances // self._distributed_info.world_size + 1
@@ -323,7 +324,7 @@ class DatasetReader(Registrable):
             if not self.manual_distributed_sharding:
                 sharded_slice = itertools.islice(
                     sharded_slice,
-                    self._distributed_info.node_rank,
+                    self._distributed_info.global_rank,
                     None,
                     self._distributed_info.world_size,
                 )
