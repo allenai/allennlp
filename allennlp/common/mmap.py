@@ -44,7 +44,7 @@ def _warmup_mmap_file(path):
             pass
 
 
-class MMapCache:
+class MMapCacheReader:
     class Index(object):
         _HDR_MAGIC = b"MMIDIDX\x00\x00"
 
@@ -230,7 +230,7 @@ class MMapCacheBuilder(object):
 
     def merge_file_(self, another_file):
         # Concatenate index
-        index = MMapCache.Index(index_file_path(another_file))
+        index = MMapCacheReader.Index(index_file_path(another_file))
         assert index.dtype == self._dtype
 
         for size in index.sizes:
@@ -243,7 +243,7 @@ class MMapCacheBuilder(object):
     def finalize(self, index_file):
         self._data_file.close()
 
-        with MMapCache.Index.writer(index_file, self._dtype) as index:
+        with MMapCacheReader.Index.writer(index_file, self._dtype) as index:
             index.write(self._sizes)
 
 
@@ -260,7 +260,7 @@ class MMapCache:
         if os.path.exists(self.cache_path)):
             if self.is_finalized(self.cache_path):
                 #scenario 2, we can read.
-                self._cache = MMapCache(self.cache_path)
+                self._cache = MMapCacheReader(self.cache_path)
             else:
                 #scenario 3, another training process is currently writing to it or was interrupted while it was writing.
                 pass
