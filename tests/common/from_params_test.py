@@ -881,7 +881,7 @@ class TestFromParams(AllenNlpTestCase):
         assert foo.c == {"2": "3"}
 
         class Bar(Foo):
-            def __init__(self, a: int,  b: str, d: int, **kwargs) -> None:
+            def __init__(self, a: int, b: str, d: int, **kwargs) -> None:
                 super().__init__(a, b=b, **kwargs)
                 self.d = d
 
