@@ -112,7 +112,9 @@ def remove_optional(annotation: type):
         return annotation
 
 
-def infer_params(cls: Type[T], constructor: Callable[..., T] = None):
+def infer_params(cls: Type[T], constructor: Callable[..., T] = None) -> Dict[str, Any]:
+    if cls == FromParams:
+        return {}
     if constructor is None:
         constructor = cls.__init__
 
@@ -135,9 +137,10 @@ def infer_params(cls: Type[T], constructor: Callable[..., T] = None):
         if issubclass(super_class_candidate, FromParams):
             super_class = super_class_candidate
             break
-    if not super_class:
-        raise RuntimeError("found a kwargs parameter with no inspectable super class")
-    super_parameters = infer_params(super_class)
+    if super_class:
+        super_parameters = infer_params(super_class)
+    else:
+        super_parameters = {}
 
     return {**super_parameters, **parameters}  # Subclass parameters overwrite superclass ones
 
@@ -161,6 +164,7 @@ def create_kwargs(
     kwargs: Dict[str, Any] = {}
 
     parameters = infer_params(cls, constructor)
+    accepts_kwargs = False
 
     # Iterate over all the constructor parameters and their annotations.
     for param_name, param in parameters.items():
@@ -169,8 +173,15 @@ def create_kwargs(
         # "self" you kind of deserve what happens.
         if param_name == "self":
             continue
-        # Also skip **kwargs parameters; we handled them above.
+
         if param.kind == param.VAR_KEYWORD:
+            # When a class takes **kwargs, we do two things: first, we assume that the **kwargs are
+            # getting passed to the super class, so we inspect super class constructors to get
+            # allowed arguments (that happens in `infer_params` above).  Second, we store the fact
+            # that the method allows extra keys; if we get extra parameters, instead of crashing,
+            # we'll just pass them as-is to the constructor, and hope that you know what you're
+            # doing.
+            accepts_kwargs = True
             continue
 
         # If the annotation is a compound type like typing.Dict[str, int],
@@ -190,7 +201,10 @@ def create_kwargs(
         if constructed_arg is not param.default:
             kwargs[param_name] = constructed_arg
 
-    params.assert_empty(cls.__name__)
+    if accepts_kwargs:
+        kwargs.update(params)
+    else:
+        params.assert_empty(cls.__name__)
     return kwargs
 
 
@@ -587,9 +601,7 @@ class FromParams:
                 # instead of adding a `from_params` method for them somehow.  We just trust that
                 # you've done the right thing in passing your parameters, and nothing else needs to
                 # be recursively constructed.
-                extras = create_extras(subclass, extras)
-                constructor_args = {**params, **extras}
-                return subclass(**constructor_args)  # type: ignore
+                return subclass(**params)  # type: ignore
         else:
             # This is not a base class, so convert our params and extras into a dict of kwargs.
 
