@@ -55,6 +55,9 @@ created a couple of template repositories that you can use as a starting place:
 In addition, there are external tutorials:
 
 * [Hyperparameter optimization for AllenNLP using Optuna](https://medium.com/optuna/hyperparameter-optimization-for-allennlp-using-optuna-54b4bfecd78b)
+* [Training with multiple GPUs in AllenNLP](https://medium.com/ai2-blog/tutorial-how-to-train-with-multiple-gpus-in-allennlp-c4d7c17eb6d6)
+
+And others on the [AI2 AllenNLP blog](https://medium.com/ai2-blog/allennlp/home).
 
 ## Package Overview
 
