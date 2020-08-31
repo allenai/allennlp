@@ -880,6 +880,17 @@ class TestFromParams(AllenNlpTestCase):
         assert foo.b == "hi"
         assert foo.c == {"2": "3"}
 
+        class Bar(Foo):
+            def __init__(self, a: int,  b: str, d: int, **kwargs) -> None:
+                super().__init__(a, b=b, **kwargs)
+                self.d = d
+
+        bar = Bar.from_params(Params({"a": 2, "b": "hi", "c": {"2": "3"}, "d": 0}))
+        assert bar.a == 2
+        assert bar.b == "hi"
+        assert bar.c == {"2": "3"}
+        assert bar.d == 0
+
     def test_from_params_base_class_kwargs_crashes_if_params_not_handled(self):
         class Bar(FromParams):
             def __init__(self, c: str = None) -> None:
@@ -890,8 +901,6 @@ class TestFromParams(AllenNlpTestCase):
                 super().__init__(**kwargs)
                 self.a = a
                 self.b = b
-                for key, value in kwargs.items():
-                    setattr(self, key, value)
 
         foo = Foo.from_params(Params({"a": 2, "b": "hi", "c": "some value"}))
         assert foo.a == 2
