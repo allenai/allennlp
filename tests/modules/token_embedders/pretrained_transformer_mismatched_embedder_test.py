@@ -8,6 +8,7 @@ from allennlp.data.fields import TextField
 from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import PretrainedTransformerMismatchedIndexer
 from allennlp.modules.text_field_embedders import BasicTextFieldEmbedder
+from allennlp.modules.token_embedders import PretrainedTransformerMismatchedEmbedder
 from allennlp.common.testing import AllenNlpTestCase
 
 
@@ -153,17 +154,9 @@ class TestPretrainedTransformerMismatchedEmbedder(AllenNlpTestCase):
         tokens1 = [Token(word) for word in sentence1]
         tokens2 = [Token(word) for word in sentence2]
         vocab = Vocabulary()
-        params = Params(
-            {
-                "token_embedders": {
-                    "bert": {
-                        "type": "pretrained_transformer_mismatched",
-                        "model_name": "bert-base-uncased",
-                    }
-                }
-            }
-        )
-        token_embedder = BasicTextFieldEmbedder.from_params(vocab=vocab, params=params)
+
+        token_embedder = BasicTextFieldEmbedder(
+            {"bert": PretrainedTransformerMismatchedEmbedder("bert-base-uncased")})
 
         instance1 = Instance({"tokens": TextField(tokens1, {"bert": token_indexer})})
         instance2 = Instance({"tokens": TextField(tokens2, {"bert": token_indexer})})
