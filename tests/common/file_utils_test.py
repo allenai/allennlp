@@ -305,7 +305,10 @@ class TestCachedPathWithArchive(AllenNlpTestCase):
             headers={"Content-Length": str(len(byt))},
         )
         responses.add(
-            responses.HEAD, url, status=200, headers={"ETag": "fake-etag"},
+            responses.HEAD,
+            url,
+            status=200,
+            headers={"ETag": "fake-etag"},
         )
 
         extracted = cached_path(url, cache_dir=self.TEST_DIR, extract_archive=True)
@@ -327,7 +330,10 @@ class TestCachedPathWithArchive(AllenNlpTestCase):
             headers={"Content-Length": str(len(byt))},
         )
         responses.add(
-            responses.HEAD, url, status=200, headers={"ETag": "fake-etag"},
+            responses.HEAD,
+            url,
+            status=200,
+            headers={"ETag": "fake-etag"},
         )
 
         extracted = cached_path(url, cache_dir=self.TEST_DIR, extract_archive=True)

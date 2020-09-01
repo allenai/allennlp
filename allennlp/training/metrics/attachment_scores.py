@@ -103,7 +103,9 @@ class AttachmentScores(Metric):
         self._total_words += total_words
 
     def get_metric(
-        self, reset: bool = False, cuda_device: Union[int, torch.device] = torch.device("cpu"),
+        self,
+        reset: bool = False,
+        cuda_device: Union[int, torch.device] = torch.device("cpu"),
     ):
         """
         # Returns

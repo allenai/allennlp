@@ -26,7 +26,11 @@ def test_loader_uses_all_instances_when_batches_per_epochs_set(lazy):
     else:
         dataset = AllennlpDataset(list(reader.read("path doesn't matter")))
 
-    loader = PyTorchDataLoader(dataset, batch_size=BATCH_SIZE, batches_per_epoch=BATCHES_PER_EPOCH,)
+    loader = PyTorchDataLoader(
+        dataset,
+        batch_size=BATCH_SIZE,
+        batches_per_epoch=BATCHES_PER_EPOCH,
+    )
     epoch_batches = []
     for epoch in range(EPOCHS):
         batches = []

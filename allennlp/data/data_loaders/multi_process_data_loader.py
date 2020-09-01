@@ -392,7 +392,12 @@ class MultiProcessDataLoader(DataLoader):
             # and puts the resulting batches into the `batch_queue`.
             batch_queue: mp.JoinableQueue = ctx.JoinableQueue(self._batch_queue_size)
             batch_worker: BaseProcess = ctx.Process(
-                target=self._batch_worker, args=(instance_queue, batch_queue,), daemon=True
+                target=self._batch_worker,
+                args=(
+                    instance_queue,
+                    batch_queue,
+                ),
+                daemon=True,
             )
             batch_worker.start()
 

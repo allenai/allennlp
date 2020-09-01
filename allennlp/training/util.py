@@ -275,7 +275,10 @@ def get_metrics(
 
 
 def evaluate(
-    model: Model, data_loader: DataLoader, cuda_device: int = -1, batch_weight_key: str = None,
+    model: Model,
+    data_loader: DataLoader,
+    cuda_device: int = -1,
+    batch_weight_key: str = None,
 ) -> Dict[str, Any]:
     """
     # Parameters

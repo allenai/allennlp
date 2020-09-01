@@ -46,7 +46,10 @@ def init_process(
 
 
 def run_distributed_test(
-    device_ids: List[int] = [-1, -1], func: Callable = None, *args, **kwargs,
+    device_ids: List[int] = [-1, -1],
+    func: Callable = None,
+    *args,
+    **kwargs,
 ):
     """
     This runs the `func` in a simulated distributed environment.
