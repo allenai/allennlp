@@ -11,16 +11,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Fixed handling of some edge cases when constructing classes with `FromParams` where the class
   accepts `**kwargs`.
+- Fixed division by zero error when there are zero-length spans in the input to a
+  `PretrainedTransformerMismatchedIndexer`.
 
 ### Added
 
 - `Predictor.capture_model_internals()` now accepts a regex specifying
   which modules to capture
-
-
-### Fixed
-
-- Fixed division by zero error when there are zero-length spans in the input to a `PretrainedTransformerMismatchedIndexer`.
 
 
 ## [v1.1.0rc4](https://github.com/allenai/allennlp/releases/tag/v1.1.0rc4) - 2020-08-20
