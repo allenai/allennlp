@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Fixed
+
+- Fixed handling of some edge cases when constructing classes with `FromParams` where the class
+  accepts `**kwargs`.
+
 ### Added
 
 - `Predictor.capture_model_internals()` now accepts a regex specifying
