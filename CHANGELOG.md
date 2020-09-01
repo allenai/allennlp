@@ -12,6 +12,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Predictor.capture_model_internals()` now accepts a regex specifying
   which modules to capture
 
+
+### Fixed
+
+- Fixed division by zero error when there are zero-length spans in the input to a `PretrainedTransformerMismatchedIndexer`.
+
+
 ## [v1.1.0rc4](https://github.com/allenai/allennlp/releases/tag/v1.1.0rc4) - 2020-08-20
 
 ### Added
@@ -58,7 +64,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Added the option to specify `requires_grad: false` within an optimizer's parameter groups.
 - Added the `file-friendly-logging` flag back to the `train` command. Also added this flag to the `predict`, `evaluate`, and `find-learning-rate` commands.
-- Added an `EpochCallback` to track current epoch as a model class member. 
+- Added an `EpochCallback` to track current epoch as a model class member.
 - Added the option to enable or disable gradient checkpointing for transformer token embedders via boolean parameter `gradient_checkpointing`.
 
 ### Removed
