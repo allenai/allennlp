@@ -156,7 +156,8 @@ class TestPretrainedTransformerMismatchedEmbedder(AllenNlpTestCase):
         vocab = Vocabulary()
 
         token_embedder = BasicTextFieldEmbedder(
-            {"bert": PretrainedTransformerMismatchedEmbedder("bert-base-uncased")})
+            {"bert": PretrainedTransformerMismatchedEmbedder("bert-base-uncased")}
+        )
 
         instance1 = Instance({"tokens": TextField(tokens1, {"bert": token_indexer})})
         instance2 = Instance({"tokens": TextField(tokens2, {"bert": token_indexer})})
