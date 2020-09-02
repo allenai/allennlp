@@ -8,6 +8,9 @@ from allennlp.common import FromParams
 class BertEmbeddings(torch.nn.Module, FromParams):
     """
     Construct the embeddings from word, position and token_type embeddings.
+    Details in the paper:
+    [BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding, Devlin et al, 2019]
+    (https://api.semanticscholar.org/CorpusID:52967399)
     """
 
     def __init__(

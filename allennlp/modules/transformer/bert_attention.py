@@ -2,7 +2,7 @@ import torch
 
 from allennlp.common import FromParams
 
-from allennlp.modules.transformer.bert_self_attention import BertSelfAttention
+from allennlp.modules.transformer.self_attention import SelfAttention
 from allennlp.modules.transformer.bert_self_output import BertSelfOutput
 
 
@@ -15,7 +15,7 @@ class BertAttention(torch.nn.Module, FromParams):
         hidden_dropout: float = 0.0,
     ):
         super().__init__()
-        self.self = BertSelfAttention(hidden_size, num_attention_heads, attention_dropout)
+        self.self = SelfAttention(hidden_size, num_attention_heads, attention_dropout)
         self.output = BertSelfOutput(hidden_size, hidden_dropout)
 
     def forward(self, input_tensor, attention_mask):

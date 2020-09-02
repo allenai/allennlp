@@ -1,13 +1,26 @@
-import math
-
 import torch
 
 from allennlp.common import FromParams
+from allennlp.modules.transformer.attention_scores import attention_map
+
+ATTN_MAP = attention_map()
 
 
-class BertSelfAttention(torch.nn.Module, FromParams):
+class SelfAttention(torch.nn.Module, FromParams):
+    """
+    This module computes the self-attention, similar to the architecture in BERT. Additionally, the attention
+    scoring function can be specified.
+    Details in the paper:
+    [BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding, Devlin et al, 2019]
+    (https://api.semanticscholar.org/CorpusID:52967399)
+    """
+
     def __init__(
-        self, hidden_size: int, num_attention_heads: int, dropout: float = 0.0,
+        self,
+        hidden_size: int,
+        num_attention_heads: int,
+        dropout: float = 0.0,
+        scoring_func: str = "scaled_dot_product",
     ):
         super().__init__()
         if hidden_size % num_attention_heads != 0:
@@ -23,15 +36,26 @@ class BertSelfAttention(torch.nn.Module, FromParams):
         self.key = torch.nn.Linear(hidden_size, self.all_head_size)
         self.value = torch.nn.Linear(hidden_size, self.all_head_size)
 
+        self.scoring_func = scoring_func
+        if self.scoring_func in ["general", "additive"]:
+            self.attn = ATTN_MAP[self.scoring_func](hidden_size)
+        else:
+            self.attn = ATTN_MAP[self.scoring_func]()
+
         self.dropout = torch.nn.Dropout(dropout)
 
     def transpose_for_scores(self, x):
-        new_x_shape = x.size()[:-1] + (self.num_attention_heads, self.attention_head_size,)
+        new_x_shape = x.size()[:-1] + (
+            self.num_attention_heads,
+            self.attention_head_size,
+        )
         x = x.view(*new_x_shape)
         return x.permute(0, 2, 1, 3)
 
     def forward(
-        self, hidden_states: torch.Tensor, attention_mask: torch.Tensor,
+        self,
+        hidden_states: torch.Tensor,
+        attention_mask: torch.Tensor,
     ):
         mixed_query_layer = self.query(hidden_states)
         mixed_key_layer = self.key(hidden_states)
@@ -41,12 +65,10 @@ class BertSelfAttention(torch.nn.Module, FromParams):
         key_layer = self.transpose_for_scores(mixed_key_layer)
         value_layer = self.transpose_for_scores(mixed_value_layer)
 
-        # Take the dot product between "query" and "key" to get the raw
-        # attention scores.
-        attention_scores = torch.matmul(query_layer, key_layer.transpose(-1, -2))
-        attention_scores = attention_scores / math.sqrt(self.attention_head_size)
-        # Apply the attention mask is (precomputed for all layers in
-        # BertModel forward() function)
+        if self.scoring_func == "scaled_dot_product":
+            attention_scores = self.attn(query_layer, key_layer, self.attention_head_size)
+        else:
+            attention_scores = self.attn(query_layer, key_layer)
         attention_scores = attention_scores + attention_mask
 
         # Normalize the attention scores to probabilities.
