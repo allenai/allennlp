@@ -104,7 +104,12 @@ class BooleanAccuracyTest(AllenNlpTestCase):
         metric_kwargs = {"predictions": predictions, "gold_labels": targets}
         desired_values = 0.5
         run_distributed_test(
-            [-1, -1], multiple_runs, BooleanAccuracy(), metric_kwargs, desired_values, exact=True,
+            [-1, -1],
+            multiple_runs,
+            BooleanAccuracy(),
+            metric_kwargs,
+            desired_values,
+            exact=True,
         )
 
 

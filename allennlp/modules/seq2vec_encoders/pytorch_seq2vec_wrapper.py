@@ -72,9 +72,11 @@ class PytorchSeq2VecWrapper(Seq2VecEncoder):
 
         batch_size = mask.size(0)
 
-        _, state, restoration_indices, = self.sort_and_run_forward(
-            self._module, inputs, mask, hidden_state
-        )
+        (
+            _,
+            state,
+            restoration_indices,
+        ) = self.sort_and_run_forward(self._module, inputs, mask, hidden_state)
 
         # Deal with the fact the LSTM state is a tuple of (state, memory).
         if isinstance(state, tuple):

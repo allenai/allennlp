@@ -653,8 +653,8 @@ class EmbeddingsTextFile(Iterator[str]):
 
     @staticmethod
     def _get_num_tokens_from_first_line(line: str) -> Optional[int]:
-        """ This function takes in input a string and if it contains 1 or 2 integers, it assumes the
-        largest one it the number of tokens. Returns None if the line doesn't match that pattern. """
+        """This function takes in input a string and if it contains 1 or 2 integers, it assumes the
+        largest one it the number of tokens. Returns None if the line doesn't match that pattern."""
         fields = line.split(" ")
         if 1 <= len(fields) <= 2:
             try:

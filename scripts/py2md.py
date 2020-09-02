@@ -220,7 +220,10 @@ class AllenNlpDocstringProcessor(Struct):
             line = f'<h4 id="{slug}">{name}<a class="headerlink" href="#{slug}" title="Permanent link">&para;</a></h4>\n'  # noqa: E501
         else:
             if line and not line.startswith(" ") and not line.startswith("!!! "):
-                if state.current_section in (Section.ARGUMENTS, Section.PARAMETERS,):
+                if state.current_section in (
+                    Section.ARGUMENTS,
+                    Section.PARAMETERS,
+                ):
                     param = Param.from_line(line)
                     if param:
                         line = param.to_line()
@@ -378,7 +381,9 @@ class AllenNlpRenderer(MarkdownRenderer):
             "__init__" in cls.members and not cls.members["__init__"].visible
         ):
             code += ":\n" + self._format_function_signature(
-                cls.members["__init__"], add_method_bar=True, include_parent_class=False,
+                cls.members["__init__"],
+                add_method_bar=True,
+                include_parent_class=False,
             )
         return code
 
