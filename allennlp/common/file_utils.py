@@ -202,7 +202,6 @@ def cached_path(
                     tar_file.close()
                 # Extraction was successful, rename temp directory to final
                 # cache directory.
-                os.makedirs(extraction_path)
                 os.replace(tmp_extraction_dir, extraction_path)
             finally:
                 shutil.rmtree(tmp_extraction_dir, ignore_errors=True)
