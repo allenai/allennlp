@@ -69,5 +69,5 @@ def run_distributed_test(
         init_process,
         args=(device_ids, world_size, func, args, kwargs),
         nprocs=nprocs,
-        start_method="fork",
+        start_method="spawn",
     )
