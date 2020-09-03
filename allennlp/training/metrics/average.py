@@ -31,9 +31,8 @@ class Average(Metric):
         _total_value = list(self.detach_tensors(value))[0]
         _count = 1
         if is_distributed():
-            device = torch.device("cpu")
-            count = torch.tensor(_count).to(device)
-            total_value = torch.tensor(_total_value).to(device)
+            count = torch.tensor(_count)
+            total_value = torch.tensor(_total_value)
             dist.all_reduce(count, op=dist.ReduceOp.SUM)
             dist.all_reduce(total_value, op=dist.ReduceOp.SUM)
             _count = count.item()

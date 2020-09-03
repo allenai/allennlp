@@ -45,7 +45,6 @@ class PearsonCorrelation(Metric):
         self._predictions_labels_covariance = Covariance()
         self._predictions_variance = Covariance()
         self._labels_variance = Covariance()
-        self._device = torch.device("cpu")
 
     def __call__(
         self,
@@ -64,7 +63,6 @@ class PearsonCorrelation(Metric):
             A tensor of the same shape as `predictions`.
         """
         predictions, gold_labels, mask = self.detach_tensors(predictions, gold_labels, mask)
-        self._device = gold_labels.device
         if not is_distributed():
             self._predictions_labels_covariance(predictions, gold_labels, mask)
             self._predictions_variance(predictions, predictions, mask)
