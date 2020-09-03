@@ -60,7 +60,7 @@ class BiAttention(torch.nn.Module, FromParams):
 
         self.dropout2 = torch.nn.Dropout(dropout2)
 
-    def transpose_for_scores(self, x):
+    def _transpose_for_scores(self, x):
         new_x_shape = x.size()[:-1] + (
             self.num_attention_heads,
             self.attention_head_size,
@@ -83,18 +83,18 @@ class BiAttention(torch.nn.Module, FromParams):
         mixed_key_layer1 = self.key1(input_tensor1)
         mixed_value_layer1 = self.value1(input_tensor1)
 
-        query_layer1 = self.transpose_for_scores(mixed_query_layer1)
-        key_layer1 = self.transpose_for_scores(mixed_key_layer1)
-        value_layer1 = self.transpose_for_scores(mixed_value_layer1)
+        query_layer1 = self._transpose_for_scores(mixed_query_layer1)
+        key_layer1 = self._transpose_for_scores(mixed_key_layer1)
+        value_layer1 = self._transpose_for_scores(mixed_value_layer1)
 
         # for second modality:
         mixed_query_layer2 = self.query2(input_tensor2)
         mixed_key_layer2 = self.key2(input_tensor2)
         mixed_value_layer2 = self.value2(input_tensor2)
 
-        query_layer2 = self.transpose_for_scores(mixed_query_layer2)
-        key_layer2 = self.transpose_for_scores(mixed_key_layer2)
-        value_layer2 = self.transpose_for_scores(mixed_value_layer2)
+        query_layer2 = self._transpose_for_scores(mixed_query_layer2)
+        key_layer2 = self._transpose_for_scores(mixed_key_layer2)
+        value_layer2 = self._transpose_for_scores(mixed_value_layer2)
 
         attention_scores1 = self.attn1(query_layer2, key_layer1, self.attention_head_size)
         attention_scores1 = attention_scores1 + attention_mask1

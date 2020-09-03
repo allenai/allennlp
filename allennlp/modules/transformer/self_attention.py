@@ -44,7 +44,7 @@ class SelfAttention(torch.nn.Module, FromParams):
 
         self.dropout = torch.nn.Dropout(dropout)
 
-    def transpose_for_scores(self, x):
+    def _transpose_for_scores(self, x):
         new_x_shape = x.size()[:-1] + (
             self.num_attention_heads,
             self.attention_head_size,
@@ -61,9 +61,9 @@ class SelfAttention(torch.nn.Module, FromParams):
         mixed_key_layer = self.key(hidden_states)
         mixed_value_layer = self.value(hidden_states)
 
-        query_layer = self.transpose_for_scores(mixed_query_layer)
-        key_layer = self.transpose_for_scores(mixed_key_layer)
-        value_layer = self.transpose_for_scores(mixed_value_layer)
+        query_layer = self._transpose_for_scores(mixed_query_layer)
+        key_layer = self._transpose_for_scores(mixed_key_layer)
+        value_layer = self._transpose_for_scores(mixed_value_layer)
 
         if self.scoring_func == "scaled_dot_product":
             attention_scores = self.attn(query_layer, key_layer, self.attention_head_size)

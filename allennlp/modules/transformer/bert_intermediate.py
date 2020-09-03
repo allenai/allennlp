@@ -3,7 +3,7 @@ import torch
 
 from allennlp.common import FromParams
 
-from transformers.modeling_bert import ACT2FN  # TODO: remove this dependency?
+from transformers.modeling_bert import ACT2FN
 
 
 class BertIntermediate(torch.nn.Module, FromParams):

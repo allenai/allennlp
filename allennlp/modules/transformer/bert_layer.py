@@ -6,7 +6,7 @@ from allennlp.common import FromParams
 
 from allennlp.modules.transformer.bert_attention import BertAttention
 from allennlp.modules.transformer.bert_intermediate import BertIntermediate
-from allennlp.modules.transformer.bert_output import BertOutput
+from allennlp.modules.transformer.output_layer import OutputLayer
 
 
 class BertLayer(torch.nn.Module, FromParams):
@@ -29,8 +29,8 @@ class BertLayer(torch.nn.Module, FromParams):
         self.intermediate = BertIntermediate(
             hidden_size=hidden_size, intermediate_size=intermediate_size, activation=activation
         )
-        self.output = BertOutput(
-            hidden_size=hidden_size, intermediate_size=intermediate_size, dropout=hidden_dropout
+        self.output = OutputLayer(
+            input_size=intermediate_size, hidden_size=hidden_size, dropout=hidden_dropout
         )
 
     def forward(self, hidden_states, attention_mask):

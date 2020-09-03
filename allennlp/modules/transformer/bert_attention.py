@@ -3,7 +3,7 @@ import torch
 from allennlp.common import FromParams
 
 from allennlp.modules.transformer.self_attention import SelfAttention
-from allennlp.modules.transformer.bert_self_output import BertSelfOutput
+from allennlp.modules.transformer.output_layer import OutputLayer
 
 
 class BertAttention(torch.nn.Module, FromParams):
@@ -16,7 +16,7 @@ class BertAttention(torch.nn.Module, FromParams):
     ):
         super().__init__()
         self.self = SelfAttention(hidden_size, num_attention_heads, attention_dropout)
-        self.output = BertSelfOutput(hidden_size, hidden_dropout)
+        self.output = OutputLayer(hidden_size, hidden_size, hidden_dropout)
 
     def forward(self, input_tensor, attention_mask):
         self_output = self.self(input_tensor, attention_mask)
