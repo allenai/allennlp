@@ -8,6 +8,7 @@ from allennlp.data.fields import TextField
 from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import PretrainedTransformerMismatchedIndexer
 from allennlp.modules.text_field_embedders import BasicTextFieldEmbedder
+from allennlp.modules.token_embedders import PretrainedTransformerMismatchedEmbedder
 from allennlp.common.testing import AllenNlpTestCase
 
 
@@ -143,3 +144,36 @@ class TestPretrainedTransformerMismatchedEmbedder(AllenNlpTestCase):
         assert not torch.isnan(bert_vectors).any()
         assert all(bert_vectors[0, 1] == 0)
         assert all(bert_vectors[1, 1] == 0)
+
+    def test_exotic_tokens_no_nan_grads(self):
+        token_indexer = PretrainedTransformerMismatchedIndexer("bert-base-uncased")
+
+        sentence1 = ["A", "", "AllenNLP", "sentence", "."]
+        sentence2 = ["A", "\uf732\uf730\uf730\uf733", "AllenNLP", "sentence", "."]
+
+        tokens1 = [Token(word) for word in sentence1]
+        tokens2 = [Token(word) for word in sentence2]
+        vocab = Vocabulary()
+
+        token_embedder = BasicTextFieldEmbedder(
+            {"bert": PretrainedTransformerMismatchedEmbedder("bert-base-uncased")}
+        )
+
+        instance1 = Instance({"tokens": TextField(tokens1, {"bert": token_indexer})})
+        instance2 = Instance({"tokens": TextField(tokens2, {"bert": token_indexer})})
+
+        batch = Batch([instance1, instance2])
+        batch.index_instances(vocab)
+
+        padding_lengths = batch.get_padding_lengths()
+        tensor_dict = batch.as_tensor_dict(padding_lengths)
+        tokens = tensor_dict["tokens"]
+
+        bert_vectors = token_embedder(tokens)
+        test_loss = bert_vectors.mean()
+
+        test_loss.backward()
+
+        for name, param in token_embedder.named_parameters():
+            grad = param.grad
+            assert (grad is None) or (not torch.any(torch.isnan(grad)).item())
