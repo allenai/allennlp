@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   accepts `**kwargs`.
 - Fixed division by zero error when there are zero-length spans in the input to a
   `PretrainedTransformerMismatchedIndexer`.
+- Improved robustness of `cached_path` when extracting archives so that the cache won't be corrupted
+  if a failure occurs during extraction.
 
 ### Added
 
