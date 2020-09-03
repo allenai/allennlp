@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `PretrainedTransformerMismatchedIndexer`.
 - Improved robustness of `cached_path` when extracting archives so that the cache won't be corrupted
   if a failure occurs during extraction.
-- Fixed a bug with the `Average` metric in distributed training.
+- Fixed a bug with the `average` and `evalb_bracketing_score` metrics in distributed training.
 
 ### Added
 
