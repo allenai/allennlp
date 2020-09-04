@@ -62,12 +62,12 @@ def run_distributed_test(
     func: `Callable`
         `func` needs to be global for spawning the processes, so that it can be pickled.
     """
-
     check_for_gpu(device_ids)
+    start_method = "spawn" if any(x >= 0 for x in device_ids) else "fork"
     nprocs = world_size = len(device_ids)
     mp.start_processes(
         init_process,
         args=(device_ids, world_size, func, args, kwargs),
         nprocs=nprocs,
-        start_method="spawn",
+        start_method=start_method,
     )
