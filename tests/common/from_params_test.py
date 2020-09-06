@@ -961,3 +961,16 @@ class TestFromParams(AllenNlpTestCase):
         assert foo.a == 2
         assert foo.b == "hi"
         assert foo.c == {"2": "3"}
+
+    def test_from_params_child_has_kwargs_base_implicit_constructor(self):
+        class Foo(FromParams):
+            pass
+
+        class Bar(Foo):
+            def __init__(self, a: int, **kwargs) -> None:
+                self.a = a
+
+        Bar.from_params(Params({"a": 2}))
+
+        bar = Bar.from_params(Params({"a": 2}))
+        assert bar.a == 2

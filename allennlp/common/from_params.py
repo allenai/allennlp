@@ -126,6 +126,10 @@ def infer_params(cls: Type[T], constructor: Callable[..., T] = None) -> Dict[str
         if param.kind == param.VAR_KEYWORD:
             has_kwargs = True
 
+    args_param = parameters.get("args", None)
+    if args_param and args_param.kind == args_param.VAR_POSITIONAL:
+        del parameters["args"]
+
     if not has_kwargs:
         return parameters
 
