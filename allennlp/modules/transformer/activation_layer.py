@@ -6,7 +6,7 @@ from allennlp.common import FromParams
 from transformers.modeling_bert import ACT2FN
 
 
-class BertIntermediate(torch.nn.Module, FromParams):
+class ActivationLayer(torch.nn.Module, FromParams):
     def __init__(
         self,
         hidden_size: int,
@@ -16,9 +16,9 @@ class BertIntermediate(torch.nn.Module, FromParams):
         super().__init__()
         self.dense = torch.nn.Linear(hidden_size, intermediate_size)
         if isinstance(activation, str):
-            self.intermediate_act_fn = ACT2FN[activation]
+            self.act_fn = ACT2FN[activation]
         else:
-            self.intermediate_act_fn = activation
+            self.act_fn = activation
 
     def forward(self, hidden_states):
         hidden_states = self.dense(hidden_states)

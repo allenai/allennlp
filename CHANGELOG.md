@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `Predictor.capture_model_internals()` now accepts a regex specifying which modules to capture
 - A new high-performance default `DataLoader`: `MultiProcessDataLoading`.
+- Transformer toolkit to plug and play with modular components of transformer architectures.
 
 ### Changed
 

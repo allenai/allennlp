@@ -5,7 +5,7 @@ import torch
 from allennlp.common import FromParams
 
 
-class BertEmbeddings(torch.nn.Module, FromParams):
+class TransformerEmbeddings(torch.nn.Module, FromParams):
     """
     Construct the embeddings from word, position and token_type embeddings.
     Details in the paper:

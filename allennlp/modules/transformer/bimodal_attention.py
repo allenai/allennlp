@@ -6,7 +6,7 @@ from allennlp.modules.transformer.attention_scores import attention_map
 ATTN_MAP = attention_map()
 
 
-class BiAttention(torch.nn.Module, FromParams):
+class BiModalAttention(torch.nn.Module, FromParams):
     """
     Computes attention for two modalities, based on
     [ViLBERT: Pretraining Task-Agnostic Visiolinguistic Representations

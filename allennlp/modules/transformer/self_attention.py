@@ -28,6 +28,7 @@ class SelfAttention(torch.nn.Module, FromParams):
                 "The hidden size (%d) is not a multiple of the number of attention "
                 "heads (%d)" % (hidden_size, num_attention_heads)
             )
+        self.hidden_size = hidden_size
         self.num_attention_heads = num_attention_heads
         self.attention_head_size = int(hidden_size / num_attention_heads)
         self.all_head_size = self.num_attention_heads * self.attention_head_size
