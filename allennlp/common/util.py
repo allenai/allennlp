@@ -636,3 +636,30 @@ def format_size(size: int) -> str:
     if KBs >= 1:
         return f"{round(KBs, 1):.1f}K"
     return f"{size}B"
+
+
+def shuffle_iterable(i: Iterable, pool_size: int = 1024) -> Iterable:
+    import random
+
+    i = iter(i)
+    pool = []
+
+    # fill up the pool
+    for item in i:
+        pool.append(item)
+        if len(pool) >= pool_size:
+            break
+
+    # play in it
+    while len(pool) > 0:
+        index = random.randrange(len(pool))
+        yield pool[index]
+        try:
+            pool[index] = next(i)
+        except StopIteration:
+            del pool[index]
+            break
+
+    # drain it
+    random.shuffle(pool)
+    yield from pool

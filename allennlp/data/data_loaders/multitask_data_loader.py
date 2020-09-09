@@ -81,7 +81,6 @@ class MultiTaskDataLoader(DataLoader):
         # _schedule_ the epoch's instances into batches, again relying on the scheduler.
         epoch_generators = self._get_instances_for_epoch()
 
-
     def iter_instances(self) -> Iterator[Instance]:
         # The only external contract for this method is that it iterates over instances
         # individually; it doesn't actually specify anything about batching or anything else.  The

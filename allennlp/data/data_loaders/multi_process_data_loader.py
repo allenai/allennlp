@@ -8,7 +8,7 @@ from typing import List, Iterator, Optional, Callable, Iterable
 
 import torch.multiprocessing as mp
 
-from allennlp.common.util import lazy_groups_of
+from allennlp.common.util import lazy_groups_of, shuffle_iterable
 from allennlp.common.tqdm import Tqdm
 from allennlp.data.instance import Instance
 from allennlp.data.data_loaders.data_loader import DataLoader, TensorDict, allennlp_collate
@@ -351,16 +351,18 @@ class MultiProcessDataLoader(DataLoader):
         queue.join()
 
     def _instances_to_batches(self, instance_iterator: Iterable[Instance]) -> Iterator[TensorDict]:
-        instance_chunks: Iterable[List[Instance]]
         if self.max_instances_in_memory is not None:
+            if self.shuffle:
+                instance_iterator = shuffle_iterable(
+                    instance_iterator, self.max_instances_in_memory
+                )
             instance_chunks = lazy_groups_of(instance_iterator, self.max_instances_in_memory)
         else:
             instance_chunks = [list(instance_iterator)]
+            if self.shuffle:
+                random.shuffle(instance_chunks[0])
 
         for instances in instance_chunks:
-            if self.shuffle:
-                random.shuffle(instances)
-
             batches: Iterator[List[Instance]]
             if self.batch_sampler:
                 batches = (
