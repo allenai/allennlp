@@ -127,8 +127,8 @@ def infer_params(cls: Type[T], constructor: Callable[..., T] = None) -> Dict[str
         elif param.kind == param.VAR_POSITIONAL:
             var_positional_key = param.name
 
-    if var_positional_key:
-        del parameters[var_positional_key]
+    '''if var_positional_key:
+        del parameters[var_positional_key]'''
 
     if not has_kwargs:
         return parameters
@@ -504,12 +504,12 @@ class FromParams:
     because sometimes we want non-Registrable classes to be instantiatable from_params.
     """
 
-    def __init__(self):
+    '''def __init__(self):
         """
         A bare constructor so that argument inference on super classes will stop here
         and not on `object`'s constructor which has unwanted *args and **kwargs.
         """
-        pass
+        pass'''
 
     @classmethod
     def from_params(
