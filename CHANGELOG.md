@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Changed
+
+- `transformers` dependency updated to version 3.1.0.
+
 ### Fixed
 
 - Ignore *args when constructing classes with `FromParams`.
