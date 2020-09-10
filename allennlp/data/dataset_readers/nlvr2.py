@@ -58,9 +58,8 @@ class Nlvr2Reader(DatasetReader):
         tokenizer: Optional[Tokenizer] = None,
         token_indexers: Optional[Dict[str, TokenIndexer]] = None,
         cuda_device: Optional[Union[int, torch.device]] = None,
-        lazy: bool = False,
     ) -> None:
-        super().__init__(lazy)
+        super().__init__()
 
         if cuda_device is None:
             from torch import cuda
@@ -127,8 +126,7 @@ class Nlvr2Reader(DatasetReader):
             sentence = json_blob["sentence"]
             label = bool(json_blob["label"])
             instance = self.text_to_instance(identifier, sentence, label)
-            if instance is not None:
-                yield instance
+            yield instance
 
     @overrides
     def text_to_instance(

@@ -1,14 +1,17 @@
-import glob
-import os
+from collections import defaultdict
 from os import PathLike
-from typing import Any, Dict, Tuple, Union, Optional
-import pickle
+from typing import Any, Dict, List, Tuple, Union, Optional
+import glob
 import json
-import numpy as np
+import os
+import pickle
+import re
 
 from overrides import overrides
 import torch
 
+from allennlp.common.checks import check_for_gpu
+from allennlp.common.util import int_to_device
 from allennlp.common.file_utils import cached_path, json_lines_from_file, TensorCache
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.fields import ArrayField, LabelField, ListField, MetadataField, TextField
@@ -22,44 +25,216 @@ from allennlp.modules.vision.grid_embedder import GridEmbedder
 from allennlp.modules.vision.region_detector import RegionDetector
 
 
-def load_vqa_dataset(dataset_root, image_root, prefix):
-    """
-    Load a json in VQA's annotation format and convert to Vision and Language Dataset Dict.
-    Args:
-        question_file (str): full path to the VQA json question_file.
-        image_root (str): the directory of the image or features.
-    """
+contractions = {
+    "aint": "ain't",
+    "arent": "aren't",
+    "cant": "can't",
+    "couldve": "could've",
+    "couldnt": "couldn't",
+    "couldn'tve": "couldn't've",
+    "couldnt've": "couldn't've",
+    "didnt": "didn't",
+    "doesnt": "doesn't",
+    "dont": "don't",
+    "hadnt": "hadn't",
+    "hadnt've": "hadn't've",
+    "hadn'tve": "hadn't've",
+    "hasnt": "hasn't",
+    "havent": "haven't",
+    "hed": "he'd",
+    "hed've": "he'd've",
+    "he'dve": "he'd've",
+    "hes": "he's",
+    "howd": "how'd",
+    "howll": "how'll",
+    "hows": "how's",
+    "Id've": "I'd've",
+    "I'dve": "I'd've",
+    "Im": "I'm",
+    "Ive": "I've",
+    "isnt": "isn't",
+    "itd": "it'd",
+    "itd've": "it'd've",
+    "it'dve": "it'd've",
+    "itll": "it'll",
+    "let's": "let's",
+    "maam": "ma'am",
+    "mightnt": "mightn't",
+    "mightnt've": "mightn't've",
+    "mightn'tve": "mightn't've",
+    "mightve": "might've",
+    "mustnt": "mustn't",
+    "mustve": "must've",
+    "neednt": "needn't",
+    "notve": "not've",
+    "oclock": "o'clock",
+    "oughtnt": "oughtn't",
+    "ow's'at": "'ow's'at",
+    "'ows'at": "'ow's'at",
+    "'ow'sat": "'ow's'at",
+    "shant": "shan't",
+    "shed've": "she'd've",
+    "she'dve": "she'd've",
+    "she's": "she's",
+    "shouldve": "should've",
+    "shouldnt": "shouldn't",
+    "shouldnt've": "shouldn't've",
+    "shouldn'tve": "shouldn't've",
+    "somebody'd": "somebodyd",
+    "somebodyd've": "somebody'd've",
+    "somebody'dve": "somebody'd've",
+    "somebodyll": "somebody'll",
+    "somebodys": "somebody's",
+    "someoned": "someone'd",
+    "someoned've": "someone'd've",
+    "someone'dve": "someone'd've",
+    "someonell": "someone'll",
+    "someones": "someone's",
+    "somethingd": "something'd",
+    "somethingd've": "something'd've",
+    "something'dve": "something'd've",
+    "somethingll": "something'll",
+    "thats": "that's",
+    "thered": "there'd",
+    "thered've": "there'd've",
+    "there'dve": "there'd've",
+    "therere": "there're",
+    "theres": "there's",
+    "theyd": "they'd",
+    "theyd've": "they'd've",
+    "they'dve": "they'd've",
+    "theyll": "they'll",
+    "theyre": "they're",
+    "theyve": "they've",
+    "twas": "'twas",
+    "wasnt": "wasn't",
+    "wed've": "we'd've",
+    "we'dve": "we'd've",
+    "weve": "we've",
+    "werent": "weren't",
+    "whatll": "what'll",
+    "whatre": "what're",
+    "whats": "what's",
+    "whatve": "what've",
+    "whens": "when's",
+    "whered": "where'd",
+    "wheres": "where's",
+    "whereve": "where've",
+    "whod": "who'd",
+    "whod've": "who'd've",
+    "who'dve": "who'd've",
+    "wholl": "who'll",
+    "whos": "who's",
+    "whove": "who've",
+    "whyll": "why'll",
+    "whyre": "why're",
+    "whys": "why's",
+    "wont": "won't",
+    "wouldve": "would've",
+    "wouldnt": "wouldn't",
+    "wouldnt've": "wouldn't've",
+    "wouldn'tve": "wouldn't've",
+    "yall": "y'all",
+    "yall'll": "y'all'll",
+    "y'allll": "y'all'll",
+    "yall'd've": "y'all'd've",
+    "y'alld've": "y'all'd've",
+    "y'all'dve": "y'all'd've",
+    "youd": "you'd",
+    "youd've": "you'd've",
+    "you'dve": "you'd've",
+    "youll": "you'll",
+    "youre": "you're",
+    "youve": "you've",
+}
+manual_map = {
+    "none": "0",
+    "zero": "0",
+    "one": "1",
+    "two": "2",
+    "three": "3",
+    "four": "4",
+    "five": "5",
+    "six": "6",
+    "seven": "7",
+    "eight": "8",
+    "nine": "9",
+    "ten": "10",
+}
+articles = ["a", "an", "the"]
+period_strip = re.compile("(?!<=\d)(\.)(?!\d)")
+comma_strip = re.compile("(\d)(\,)(\d)")
+punct = [
+    ";",
+    r"/",
+    "[",
+    "]",
+    '"',
+    "{",
+    "}",
+    "(",
+    ")",
+    "=",
+    "+",
+    "\\",
+    "_",
+    "-",
+    ">",
+    "<",
+    "@",
+    "`",
+    ",",
+    "?",
+    "!",
+]
 
-    question_path = os.path.join(dataset_root, 'annotations', 'v2_OpenEnded_mscoco_%s_questions.json' %prefix)
-    questions = sorted(
-        json.load(open(question_path))["questions"], key=lambda x: x["question_id"]
-    )
 
-    dataset_dicts = []
-    if "test" not in prefix:
-        ans_path = os.path.join(dataset_root, 'cache', '%s_target.pkl' %prefix)
-        # load answer pickle file
-        answers = pickle.load(open(ans_path, "rb"))
-        answers = sorted(answers, key=lambda x: x["question_id"])
+def process_punctuation(inText):
+    outText = inText
+    for p in punct:
+        if (p + " " in inText or " " + p in inText) or (re.search(comma_strip, inText) != None):
+            outText = outText.replace(p, "")
+        else:
+            outText = outText.replace(p, " ")
+    outText = period_strip.sub("", outText, re.UNICODE)
+    return outText
 
-        for question, answer in zip(questions, answers):
-            record = {}
-            assert question['question_id'] == answer['question_id']
-            record['question'] = question['question']
-            record['question_id'] = question['question_id']
-            record['labels'] = answer['labels']
-            record['scores'] = answer['scores']
-            record['file_name'] = os.path.join(image_root, prefix, 'COCO_%s_%012d.jpg'%(prefix,question['image_id']))
-            dataset_dicts.append(record)
+
+def process_digit_article(inText):
+    outText = []
+    tempText = inText.lower().split()
+    for word in tempText:
+        word = manual_map.setdefault(word, word)
+        if word not in articles:
+            outText.append(word)
+        else:
+            pass
+    for wordId, word in enumerate(outText):
+        if word in contractions:
+            outText[wordId] = contractions[word]
+    outText = " ".join(outText)
+    return outText
+
+
+def preprocess_answer(answer):
+    answer = process_digit_article(process_punctuation(answer))
+    answer = answer.replace(",", "")
+    return answer
+
+
+def get_score(count: int) -> float:
+    if count == 0:
+        return 0.0
+    elif count == 1:
+        return 0.3
+    elif count == 2:
+        return 0.6
+    elif count == 3:
+        return 0.9
+    elif count > 3:
+        return 1.0
     else:
-        for question in questions:
-            record = {}
-            record['question'] = question['question']
-            record['question_id'] = question['question_id']
-            record['file_name'] = os.path.join(image_root, prefix, 'COCO_%s_%012d.jpg'%(prefix,question['image_id']))
-            dataset_dicts.append(record)
-
-    return dataset_dicts
+        raise ValueError()
 
 
 @DatasetReader.register("vqav2")
@@ -83,6 +258,7 @@ class VQAv2Reader(DatasetReader):
     lazy : `bool`, optional
         Whether to load data lazily. Passed to super class.
     """
+
     def __init__(
         self,
         image_dir: Union[str, PathLike],
@@ -95,23 +271,26 @@ class VQAv2Reader(DatasetReader):
         tokenizer: Tokenizer = None,
         token_indexers: Dict[str, TokenIndexer] = None,
         cuda_device: Optional[Union[int, torch.device]] = None,
-        lazy: bool = False,
     ) -> None:
-        super().__init__(lazy)
+        super().__init__()
 
         if cuda_device is None:
-            from torch import cuda
-            if cuda.device_count() > 0:
+            if torch.cuda.device_count() > 0:
                 cuda_device = 0
             else:
                 cuda_device = -1
-        from allennlp.common.checks import check_for_gpu
         check_for_gpu(cuda_device)
-        from allennlp.common.util import int_to_device
         self.cuda_device = int_to_device(cuda_device)
 
         self._image_dir = image_dir
-        self._data_dir = data_dir
+
+        if not data_dir:
+            data_dir = "TODO"  # TODO(mattg): upload combined files to some central place
+        self.splits = {
+            "train2014": f"{data_dir}/combined_train2014.json",
+            "val2014": f"{data_dir}/combined_val2014.json",
+            "test2015": f"{data_dir}/combined_test2015.json",
+        }
 
         # tokenizers and indexers
         if not tokenizer:
@@ -120,12 +299,6 @@ class VQAv2Reader(DatasetReader):
         if token_indexers is None:
             token_indexers = {"tokens": PretrainedTransformerIndexer("bert-base-uncased")}
         self._token_indexers = token_indexers
-
-        ans2label_path = os.path.join(data_dir, "cache", "trainval_ans2label.pkl")
-        label2ans_path = os.path.join(data_dir, "cache", "trainval_label2ans.pkl")
-        self.ans2label = pickle.load(open(ans2label_path, "rb"))
-        self.label2ans = pickle.load(open(label2ans_path, "rb"))
-        self.num_labels = len(self.ans2label)
 
         # image loading
         self.image_loader = image_loader
@@ -143,49 +316,42 @@ class VQAv2Reader(DatasetReader):
 
     @overrides
     def _read(self, split: str):
-        """
-        split can be train, val, test, trainval, minival.
-        """
-        if split == 'train':
-            datasets = load_vqa_dataset(self._data_dir, self._image_dir, 'train2014')
-        elif split == 'val': 
-            datasets = load_vqa_dataset(self._data_dir, self._image_dir, 'val2014')
-        elif split == 'test':
-            datasets = load_vqa_dataset(self._data_dir, self._image_dir, 'test2015')
-        elif split == 'trainval':
-            datasets_train = load_vqa_dataset(self._data_dir, self._image_dir, 'train2014')
-            datasets_val = load_vqa_dataset(self._data_dir, self._image_dir, 'val2014')
-            datasets = datasets_train + datasets_val[:-3000]
-        elif split == 'minival':
-            datasets_val = load_vqa_dataset(self._data_dir, self._image_dir, 'val2014')
-            datasets = datasets_val[-3000:]
-        else:
-            pass
+        if split not in self.splits:
+            raise ValueError(
+                f"Unrecognized split: {split}. We require a split, not a filename, for VQA "
+                "because the image filenames require using the split."
+            )
+        filename = self.splits[split]
 
-        for instance_dict in datasets:
-            instance = self.text_to_instance(instance_dict, split)
-            if instance is not None:
-                yield instance
+        json_file_path = cached_path(filename)
+
+        with open(json_file_path) as json_file:
+            data = json.load(json_file)
+
+        for question_dict in data["questions"]:
+            image_id = question_dict["image_id"]
+            image_path = os.path.join(self._image_dir, split, f"COCO_{split}_{image_id:012d}.jpg")
+            yield self.text_to_instance(
+                question=question_dict["question"],
+                image_path=image_path,
+                answers=question_dict.get("answers"),
+            )
 
     @overrides
     def text_to_instance(
         self,  # type: ignore
-        instance_dict: Dict,
-        split: str,
+        question: str,
+        image_path: str,
+        answers: List[Dict[str, str]] = None,
     ) -> Instance:
-        tokenized_sentence = self._tokenizer.tokenize(instance_dict['question'])
-        sentence_field = TextField(tokenized_sentence, self._token_indexers)
+        tokenized_question = self._tokenizer.tokenize(question)
+        question_field = TextField(tokenized_question, self._token_indexers)
 
         # Load images
-        to_compute = []
-        image_path = instance_dict['file_name']
         name = os.path.basename(image_path)
 
-        if name not in self._features_cache or name not in self.__coordinates_cache:
-            to_compute.append(image_path)
-
-        if len(to_compute) > 0:
-            images, sizes = self.image_loader(to_compute)
+        if name not in self._features_cache or name not in self._coordinates_cache:
+            images, sizes = self.image_loader([image_path])
             with torch.no_grad():
                 images = images.to(self.cuda_device)
                 sizes = sizes.to(self.cuda_device)
@@ -194,27 +360,35 @@ class VQAv2Reader(DatasetReader):
                 features = detector_results["features"]
                 coordinates = detector_results["coordinates"]
 
-            for index, path in enumerate(to_compute):
-                self._features_cache[os.path.basename(image_path)] = features[index].cpu()
-                self._coordinates_cache[os.path.basename(image_path)] = coordinates[index].cpu()
+            self._features_cache[os.path.basename(image_path)] = features[0].cpu()
+            self._coordinates_cache[os.path.basename(image_path)] = coordinates[0].cpu()
 
         features = self._features_cache[name]
         coords = self._coordinates_cache[name]
 
-        target = torch.zeros(self.num_labels)
-        if "test" not in split:
-            if len(instance_dict["labels"]):
-                labels = torch.from_numpy(np.array(instance_dict["labels"]))
-                scores = torch.from_numpy(np.array(instance_dict["scores"], dtype=np.float32))
-                if labels is not None:
-                    target.scatter_(0, labels, scores)
-
         fields = {
             "box_features": ArrayField(features),
             "box_coordinates": ArrayField(coords),
-            "sentence": sentence_field,
-            "identifier": MetadataField(instance_dict['question_id']),
-            "label": ArrayField(target),
+            "question": question_field,
         }
+
+        if answers:
+            answer_fields = []
+            weights = []
+            answer_counts = defaultdict(int)
+            for answer_dict in answers:
+                answer = preprocess_answer(answer_dict["answer"])
+                answer_counts[answer] += 1
+
+            for answer, count in answer_counts.items():
+                # Using a namespace other than "labels" so that OOV answers don't crash.  We'll have
+                # to mask OOV labels in the loss.  This is not ideal; it'd be better to remove OOV
+                # answers from the training data entirely, but we can't do that in our current
+                # pipeline without providing preprocessed input to the dataset reader.
+                answer_fields.append(LabelField(answer, label_namespace="answers"))
+                weights.append(get_score(count))
+
+            fields["labels"] = ListField(answer_fields)
+            fields["label_weights"] = ArrayField(torch.tensor(weights))
 
         return Instance(fields)

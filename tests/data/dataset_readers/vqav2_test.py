@@ -4,7 +4,7 @@ import torch
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Batch, Vocabulary
-from allennlp.data.dataset_readers import Nlvr2Reader
+from allennlp.data.dataset_readers import VQAv2Reader
 from allennlp.data.image_loader import DetectronImageLoader
 from allennlp.data.tokenizers import WhitespaceTokenizer
 from allennlp.data.token_indexers import SingleIdTokenIndexer
@@ -38,40 +38,36 @@ class FakeRegionDetector(RegionDetector):
         return {"features": features, "coordinates": coordinates}
 
 
-class TestNlvr2Reader(AllenNlpTestCase):
+class TestVQAv2Reader(AllenNlpTestCase):
     def test_read(self):
-        detector = FakeRegionDetector()
-        reader = Nlvr2Reader(
-            image_dir=self.FIXTURES_ROOT / "data" / "nlvr2",
+        reader = VQAv2Reader(
+            image_dir=self.FIXTURES_ROOT / "data" / "vqav2" / "images",
+            data_dir=self.FIXTURES_ROOT / "data" / "vqav2",
             image_loader=DetectronImageLoader(),
             image_featurizer=FakeGridEmbedder(),
-            region_detector=detector,
+            region_detector=FakeRegionDetector(),
             tokenizer=WhitespaceTokenizer(),
             token_indexers={"tokens": SingleIdTokenIndexer()},
         )
-        instances = list(reader.read("test_fixtures/data/nlvr2/tiny-dev.json"))
-        assert len(instances) == 8
+        instances = list(reader.read("train2014"))
+        assert len(instances) == 3
 
         instance = instances[0]
         assert len(instance.fields) == 5
-        assert len(instance["sentence"]) == 18
-        sentence_tokens = [t.text for t in instance["sentence"]]
-        assert sentence_tokens[:6] == ["The", "right", "image", "shows", "a", "curving"]
-        assert instance["label"].label == 1
-        assert instance["identifier"].metadata == "dev-850-0-0"
+        assert len(instance["question"]) == 7
+        question_tokens = [t.text for t in instance["question"]]
+        assert question_tokens == ["What", "is", "this", "photo", "taken", "looking", "through?"]
+        assert len(instance["labels"]) == 3
+        labels = [field.label for field in instance["labels"].field_list]
+        assert labels == ["net", "netting", "mesh"]
+        assert torch.all(instance["label_weights"].tensor == torch.tensor([1.0, 0.3, 0.3]))
 
         batch = Batch(instances)
         batch.index_instances(Vocabulary())
         tensors = batch.as_tensor_dict()
 
-        # (batch size, 2 images per instance, num boxes (fake), num features (fake))
-        assert tensors["box_features"].size() == (8, 2, 1, 10)
+        # (batch size, num boxes (fake), num features (fake))
+        assert tensors["box_features"].size() == (3, 1, 10)
 
-        # (batch size, 2 images per instance, num boxes (fake), 4 coords)
-        assert tensors["box_coordinates"].size() == (8, 2, 1, 4)
-
-        # We have 8 images total, and 8 instances.  Those 8 images are processed two at a time in
-        # the region detector, and the results are cached, so we should only see the region detector
-        # called 4 times with this data.  This is testing the feature caching functionality in the
-        # dataset reader.
-        assert detector.calls == 4
+        # (batch size, num boxes (fake), 4 coords)
+        assert tensors["box_coordinates"].size() == (3, 1, 4)

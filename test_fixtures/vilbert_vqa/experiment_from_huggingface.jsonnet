@@ -2,17 +2,14 @@ local model_name = "bert-base-uncased";
 {
   "dataset_reader": {
     "type": "vqav2",
-    "lazy": true,
-    "image_dir": "/home/jiasen/Dataset/coco",
+    "image_dir": "test_fixtures/data/vqav2/images",
     "data_dir": "test_fixtures/data/vqav2",
     "image_loader": "detectron",
     "image_featurizer": {
       "type": "resnet_backbone",
-      "device": "cuda"
     },
     "region_detector": {
       "type": "faster_rcnn",
-      "device": "cuda"
     },
     "tokenizer": {
       "type": "pretrained_transformer",
@@ -26,10 +23,10 @@ local model_name = "bert-base-uncased";
     }
   },
   "vocabulary": "empty",
-  "train_data_path": "train",
-  "validation_data_path": "val",
+  "train_data_path": "train2014",
+  "validation_data_path": "train2014",
   "model": {
-    "type": "nlvr2_vilbert_from_huggingface",
+    "type": "vqa_vilbert_from_huggingface",
     "model_name": model_name,
     "image_feature_dim": 2048,
     "image_hidden_size": 24,
@@ -55,10 +52,5 @@ local model_name = "bert-base-uncased";
     },
     "validation_metric": "+denotation_acc",
     "num_epochs": 1,
-  }
-  {
-    "distributed": {
-      "cuda_devices":[0]
-    }
   }
 }
