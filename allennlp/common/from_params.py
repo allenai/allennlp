@@ -504,10 +504,10 @@ class FromParams:
     because sometimes we want non-Registrable classes to be instantiatable from_params.
     """
 
-    def __init__(self):
+    def __init__(self, **kwargs):
         """
-        A bare constructor so that argument inference on super classes will stop here
-        and not on `object`'s constructor which has unwanted *args and **kwargs.
+        A constructor so that argument inference on super classes will stop here
+        and not on `object`'s constructor which has unwanted *args.
         """
         pass
 
