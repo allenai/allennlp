@@ -44,6 +44,8 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         Enable or disable gradient checkpointing.
     """
 
+    authorized_missing_keys = [r"position_ids$"]
+
     def __init__(
         self,
         model_name: str,
@@ -89,6 +91,11 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         if not train_parameters:
             for param in self.transformer_model.parameters():
                 param.requires_grad = False
+
+        authorized_missing_keys = getattr(self.transformer_model, "authorized_missing_keys", [])
+        if r"position_ids$" not in authorized_missing_keys:
+            authorized_missing_keys.append(r"position_ids$")
+        self.transformer_model.authorized_missing_keys = authorized_missing_keys
 
     @overrides
     def get_output_dim(self):
