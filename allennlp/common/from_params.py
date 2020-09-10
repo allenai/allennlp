@@ -113,8 +113,6 @@ def remove_optional(annotation: type):
 
 
 def infer_params(cls: Type[T], constructor: Callable[..., T] = None) -> Dict[str, Any]:
-    if cls == FromParams:
-        return {}
     if constructor is None:
         constructor = cls.__init__
 
@@ -122,13 +120,15 @@ def infer_params(cls: Type[T], constructor: Callable[..., T] = None) -> Dict[str
     parameters = dict(signature.parameters)
 
     has_kwargs = False
+    var_positional_key = None
     for param in parameters.values():
         if param.kind == param.VAR_KEYWORD:
             has_kwargs = True
+        elif param.kind == param.VAR_POSITIONAL:
+            var_positional_key = param.name
 
-    args_param = parameters.get("args", None)
-    if args_param and args_param.kind == args_param.VAR_POSITIONAL:
-        del parameters["args"]
+    if var_positional_key:
+        del parameters[var_positional_key]
 
     if not has_kwargs:
         return parameters
@@ -503,6 +503,13 @@ class FromParams:
     Mixin to give a from_params method to classes. We create a distinct base class for this
     because sometimes we want non-Registrable classes to be instantiatable from_params.
     """
+
+    def __init__(self):
+        """
+        A bare constructor so that argument inference on super classes will stop here
+        and not on `object`'s constructor which has unwanted *args and **kwargs.
+        """
+        pass
 
     @classmethod
     def from_params(
