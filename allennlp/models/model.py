@@ -322,7 +322,7 @@ class Model(torch.nn.Module, Registrable):
 
         def filter_out_authorized_missing_keys(module, prefix=""):
             nonlocal missing_keys
-            for pat in getattr(module.__class__, "authorized_missing_keys", []):
+            for pat in getattr(module.__class__, "authorized_missing_keys", None) or []:
                 missing_keys = [
                     k
                     for k in missing_keys
