@@ -127,8 +127,8 @@ def infer_params(cls: Type[T], constructor: Callable[..., T] = None) -> Dict[str
         elif param.kind == param.VAR_POSITIONAL:
             var_positional_key = param.name
 
-    '''if var_positional_key:
-        del parameters[var_positional_key]'''
+    if var_positional_key:
+        del parameters[var_positional_key]
 
     if not has_kwargs:
         return parameters
