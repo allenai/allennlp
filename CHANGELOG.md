@@ -9,12 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Ignore *args when constructing classes with `FromParams`.
+
+## [v1.1.0](https://github.com/allenai/allennlp/releases/tag/v1.1.0) - 2020-09-08
+
+### Fixed
+
 - Fixed handling of some edge cases when constructing classes with `FromParams` where the class
   accepts `**kwargs`.
 - Fixed division by zero error when there are zero-length spans in the input to a
   `PretrainedTransformerMismatchedIndexer`.
 - Improved robustness of `cached_path` when extracting archives so that the cache won't be corrupted
   if a failure occurs during extraction.
+- Fixed a bug with the `average` and `evalb_bracketing_score` metrics in distributed training.
 
 ### Added
 
