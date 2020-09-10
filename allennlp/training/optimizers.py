@@ -197,7 +197,7 @@ class Optimizer(Registrable):
 
 
 @Optimizer.register("adam")
-class AdamOptimizer(Optimizer, torch.optim.Adam):
+class AdamOptimizer(torch.optim.Adam, Optimizer):
     """
     Registered as an `Optimizer` with name "adam".
     """
@@ -223,7 +223,7 @@ class AdamOptimizer(Optimizer, torch.optim.Adam):
 
 
 @Optimizer.register("sparse_adam")
-class SparseAdamOptimizer(Optimizer, torch.optim.SparseAdam):
+class SparseAdamOptimizer(torch.optim.SparseAdam, Optimizer):
     """
     Registered as an `Optimizer` with name "sparse_adam".
     """
@@ -245,7 +245,7 @@ class SparseAdamOptimizer(Optimizer, torch.optim.SparseAdam):
 
 
 @Optimizer.register("adamax")
-class AdamaxOptimizer(Optimizer, torch.optim.Adamax):
+class AdamaxOptimizer(torch.optim.Adamax, Optimizer):
     """
     Registered as an `Optimizer` with name "adamax".
     """
@@ -269,7 +269,7 @@ class AdamaxOptimizer(Optimizer, torch.optim.Adamax):
 
 
 @Optimizer.register("adamw")
-class AdamWOptimizer(Optimizer, torch.optim.AdamW):
+class AdamWOptimizer(torch.optim.AdamW, Optimizer):
     """
     Registered as an `Optimizer` with name "adamw".
     """
@@ -295,7 +295,7 @@ class AdamWOptimizer(Optimizer, torch.optim.AdamW):
 
 
 @Optimizer.register("huggingface_adamw")
-class HuggingfaceAdamWOptimizer(Optimizer, transformers.AdamW):
+class HuggingfaceAdamWOptimizer(transformers.AdamW, Optimizer):
     """
     Registered as an `Optimizer` with name "huggingface_adamw".
     """
@@ -321,7 +321,7 @@ class HuggingfaceAdamWOptimizer(Optimizer, transformers.AdamW):
 
 
 @Optimizer.register("adagrad")
-class AdagradOptimizer(Optimizer, torch.optim.Adagrad):
+class AdagradOptimizer(torch.optim.Adagrad, Optimizer):
     """
     Registered as an `Optimizer` with name "adagrad".
     """
@@ -347,7 +347,7 @@ class AdagradOptimizer(Optimizer, torch.optim.Adagrad):
 
 
 @Optimizer.register("adadelta")
-class AdadeltaOptimizer(Optimizer, torch.optim.Adadelta):
+class AdadeltaOptimizer(torch.optim.Adadelta, Optimizer):
     """
     Registered as an `Optimizer` with name "adadelta".
     """
@@ -371,7 +371,7 @@ class AdadeltaOptimizer(Optimizer, torch.optim.Adadelta):
 
 
 @Optimizer.register("sgd")
-class SgdOptimizer(Optimizer, torch.optim.SGD):
+class SgdOptimizer(torch.optim.SGD, Optimizer):
     """
     Registered as an `Optimizer` with name "sgd".
     """
@@ -397,7 +397,7 @@ class SgdOptimizer(Optimizer, torch.optim.SGD):
 
 
 @Optimizer.register("rmsprop")
-class RmsPropOptimizer(Optimizer, torch.optim.RMSprop):
+class RmsPropOptimizer(torch.optim.RMSprop, Optimizer):
     """
     Registered as an `Optimizer` with name "rmsprop".
     """
@@ -425,7 +425,7 @@ class RmsPropOptimizer(Optimizer, torch.optim.RMSprop):
 
 
 @Optimizer.register("averaged_sgd")
-class AveragedSgdOptimizer(Optimizer, torch.optim.ASGD):
+class AveragedSgdOptimizer(torch.optim.ASGD, Optimizer):
     """
     Registered as an `Optimizer` with name "averaged_sgd".
     """
@@ -451,7 +451,7 @@ class AveragedSgdOptimizer(Optimizer, torch.optim.ASGD):
 
 
 @Optimizer.register("dense_sparse_adam")
-class DenseSparseAdam(Optimizer, torch.optim.Optimizer):
+class DenseSparseAdam(torch.optim.Optimizer, Optimizer):
     """
     NOTE: This class has been copied verbatim from the separate Dense and
     Sparse versions of Adam in Pytorch.
