@@ -1,5 +1,6 @@
 from typing import List, Iterator, Dict, Tuple, Any, Type
 import json
+import re
 from contextlib import contextmanager
 
 import numpy
@@ -144,7 +145,7 @@ class Predictor(Registrable):
         return backward_hooks
 
     @contextmanager
-    def capture_model_internals(self) -> Iterator[dict]:
+    def capture_model_internals(self, module_regex: str = ".*") -> Iterator[dict]:
         """
         Context manager that captures the internal-module outputs of
         this predictor's model. The idea is that you could use it as follows:
@@ -166,8 +167,9 @@ class Predictor(Registrable):
 
             return _add_output
 
-        for idx, module in enumerate(self._model.modules()):
-            if module != self._model:
+        regex = re.compile(module_regex)
+        for idx, (name, module) in enumerate(self._model.named_modules()):
+            if regex.fullmatch(name) and module != self._model:
                 hook = module.register_forward_hook(add_output(idx))
                 hooks.append(hook)
 
@@ -302,9 +304,9 @@ class Predictor(Registrable):
             model_type = config.get("model").get("type")
             model_class, _ = Model.resolve_class_name(model_type)
             predictor_name = model_class.default_predictor
-        predictor_class: Type[Predictor] = Predictor.by_name(  # type: ignore
-            predictor_name
-        ) if predictor_name is not None else cls
+        predictor_class: Type[Predictor] = (
+            Predictor.by_name(predictor_name) if predictor_name is not None else cls  # type: ignore
+        )
 
         if dataset_reader_to_load == "validation" and "validation_dataset_reader" in config:
             dataset_reader_params = config["validation_dataset_reader"]

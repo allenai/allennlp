@@ -28,7 +28,11 @@ class ROUGE(Metric):
         the indices of the start, end, and pad tokens.
     """
 
-    def __init__(self, ngram_size: int = 2, exclude_indices: Set[int] = None,) -> None:
+    def __init__(
+        self,
+        ngram_size: int = 2,
+        exclude_indices: Set[int] = None,
+    ) -> None:
         self._ngram_size = ngram_size
         self._exclude_indices = exclude_indices or set()
 

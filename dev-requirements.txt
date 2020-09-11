@@ -7,7 +7,7 @@ flake8
 mypy==0.782
 
 # Automatic code formatting
-black
+black==20.8b1
 
 # Allows generation of coverage reports with pytest.
 pytest-cov
@@ -40,7 +40,7 @@ nr.interface<0.0.4
 
 mkdocs==1.1.2
 mkdocs-material>=5.5.0,<5.6.0
-markdown-include==0.5.1
+markdown-include==0.6.0
 
 #### PACKAGE-UPLOAD PACKAGES ####
 

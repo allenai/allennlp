@@ -245,7 +245,10 @@ def get_dropout_mask(dropout_probability: float, tensor_for_masking: torch.Tenso
 
 
 def masked_softmax(
-    vector: torch.Tensor, mask: torch.BoolTensor, dim: int = -1, memory_efficient: bool = False,
+    vector: torch.Tensor,
+    mask: torch.BoolTensor,
+    dim: int = -1,
+    memory_efficient: bool = False,
 ) -> torch.Tensor:
     """
     `torch.nn.functional.softmax(vector)` does not work if some elements of `vector` should be
@@ -316,7 +319,10 @@ def masked_log_softmax(vector: torch.Tensor, mask: torch.BoolTensor, dim: int = 
 
 
 def masked_max(
-    vector: torch.Tensor, mask: torch.BoolTensor, dim: int, keepdim: bool = False,
+    vector: torch.Tensor,
+    mask: torch.BoolTensor,
+    dim: int,
+    keepdim: bool = False,
 ) -> torch.Tensor:
     """
     To calculate max along certain dimensions on masked values
@@ -1264,6 +1270,95 @@ def batched_index_select(
     return selected_targets
 
 
+def masked_index_fill(
+    target: torch.Tensor, indices: torch.LongTensor, mask: torch.BoolTensor, fill_value: int = 1
+) -> torch.Tensor:
+    """
+    The given `indices` in `target` will be will be filled with `fill_value` given a `mask`.
+
+
+    # Parameters
+
+    target : `torch.Tensor`, required.
+        A 2 dimensional tensor of shape (batch_size, sequence_length).
+        This is the tensor to be filled.
+    indices : `torch.LongTensor`, required
+        A 2 dimensional tensor of shape (batch_size, num_indices),
+        These are the indices that will be filled in the original tensor.
+    mask : `torch.Tensor`, required.
+        A 2 dimensional tensor of shape (batch_size, num_indices), mask.sum() == `nonzero_indices`.
+    fill_value : `int`, optional (default = `1`)
+        The value we fill the tensor with.
+
+    # Returns
+
+    filled_target : `torch.Tensor`
+        A tensor with shape (batch_size, sequence_length) where 'indices' are filled with `fill_value`
+    """
+    mask = mask.bool()
+    prev_shape = target.size()
+    # Shape: (batch_size * num_indices)
+    flattened_indices = flatten_and_batch_shift_indices(indices * mask, target.size(1))
+    # Shape: (batch_size * num_indices, 1)
+    mask = mask.view(-1)
+    # Shape: (batch_size * sequence_length, 1)
+    flattened_target = target.view(-1, 1)
+    # Shape: (nonzero_indices, 1)
+    unmasked_indices = flattened_indices[mask].unsqueeze(-1)
+
+    flattened_target = flattened_target.scatter(0, unmasked_indices, fill_value)
+
+    filled_target = flattened_target.reshape(prev_shape)
+
+    return filled_target
+
+
+def masked_index_replace(
+    target: torch.Tensor,
+    indices: torch.LongTensor,
+    mask: torch.BoolTensor,
+    replace: torch.Tensor,
+) -> torch.Tensor:
+    """
+    The given `indices` in `target` will be will be replaced with corresponding index
+    from the `replace` tensor given a `mask`.
+
+
+    # Parameters
+
+    target : `torch.Tensor`, required.
+        A 3 dimensional tensor of shape (batch_size, sequence_length, embedding_dim).
+        This is the tensor to be replaced into.
+    indices : `torch.LongTensor`, required
+        A 2 dimensional tensor of shape (batch_size, num_indices),
+        These are the indices that will be replaced in the original tensor.
+    mask : `torch.Tensor`, required.
+        A 2 dimensional tensor of shape (batch_size, num_indices), mask.sum() == `nonzero_indices`.
+    replace : `torch.Tensor`, required.
+        A 3 dimensional tensor of shape (batch_size, num_indices, embedding_dim),
+        The tensor to perform scatter from.
+
+    # Returns
+
+    replaced_target : `torch.Tensor`
+        A tensor with shape (batch_size, sequence_length, embedding_dim) where 'indices'
+        are replaced with the corrosponding vector from `replace`
+    """
+    target = target.clone()
+    mask = mask.bool()
+    prev_shape = target.size()
+    # Shape: (batch_size * num_indices)
+    flattened_indices = flatten_and_batch_shift_indices(indices * mask, target.size(1))
+    # Shape: (batch_size * sequence_length, embedding_size)
+    flattened_target = target.view(-1, target.size(-1))
+    # Shape: (nonzero_indices, 1)
+    mask = mask.view(-1)
+    flattened_target[flattened_indices[mask]] = replace.view(-1, replace.size(-1))[mask]
+    # Shape: (batch_size, sequence_length, embedding_dim)
+    replaced_target = flattened_target.reshape(prev_shape)
+    return replaced_target
+
+
 def batched_span_select(target: torch.Tensor, spans: torch.LongTensor) -> torch.Tensor:
     """
     The given `spans` of size `(batch_size, num_spans, 2)` indexes into the sequence
@@ -1271,7 +1366,6 @@ def batched_span_select(target: torch.Tensor, spans: torch.LongTensor) -> torch.
     embedding_size)`.
 
     This function returns segmented spans in the target with respect to the provided span indices.
-    It does not guarantee element order within each span.
 
     # Parameters
 
@@ -1318,12 +1412,12 @@ def batched_span_select(target: torch.Tensor, spans: torch.LongTensor) -> torch.
     # inclusive, so we want to include indices which are equal to span_widths rather
     # than using it as a non-inclusive upper bound.
     span_mask = max_span_range_indices <= span_widths
-    raw_span_indices = span_ends - max_span_range_indices
-    # We also don't want to include span indices which are less than zero,
-    # which happens because some spans near the beginning of the sequence
-    # have an end index < max_batch_span_width, so we add this to the mask here.
-    span_mask = span_mask & (raw_span_indices >= 0)
-    span_indices = torch.nn.functional.relu(raw_span_indices.float()).long()
+    raw_span_indices = span_starts + max_span_range_indices
+    # We also don't want to include span indices which greater than the sequence_length,
+    # which happens because some spans near the end of the sequence
+    # have a start index + max_batch_span_width > sequence_length, so we add this to the mask here.
+    span_mask = span_mask & (raw_span_indices < target.size(1)) & (0 <= raw_span_indices)
+    span_indices = raw_span_indices * span_mask
 
     # Shape: (batch_size, num_spans, max_batch_span_width, embedding_dim)
     span_embeddings = batched_index_select(target, span_indices)

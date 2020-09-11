@@ -70,7 +70,12 @@ class EntropyTest(AllenNlpTestCase):
         metric_kwargs = {"logits": logits}
         desired_values = {"entropy": 1.38629436}
         run_distributed_test(
-            [-1, -1], multiple_runs, Entropy(), metric_kwargs, desired_values, exact=False,
+            [-1, -1],
+            multiple_runs,
+            Entropy(),
+            metric_kwargs,
+            desired_values,
+            exact=False,
         )
 
 
