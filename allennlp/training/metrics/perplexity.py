@@ -1,5 +1,4 @@
 from overrides import overrides
-import torch
 import math
 
 from allennlp.training.metrics.average import Average
