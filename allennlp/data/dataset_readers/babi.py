@@ -88,10 +88,6 @@ class BabiReader(DatasetReader):
                 [
                     TextField(
                         [Token(word) for word in line],
-                        # Token indexers are applied later during multi-process loading with
-                        # the `apply_token_indexers` method, so we only apply them now if there
-                        # is a single worker.
-                        None if self._worker_info is not None else self._token_indexers,
                     )
                     for line in context
                 ]
@@ -103,27 +99,13 @@ class BabiReader(DatasetReader):
         else:
             context_field = TextField(
                 [Token(word) for line in context for word in line],
-                # Token indexers are applied later during multi-process loading with
-                # the `apply_token_indexers` method, so we only apply them now if there
-                # is a single worker.
-                None if self._worker_info is not None else self._token_indexers,
             )
 
         fields["context"] = context_field_ks if self._keep_sentences else context_field
         fields["question"] = TextField(
             [Token(word) for word in question],
-            # Token indexers are applied later during multi-process loading with
-            # the `apply_token_indexers` method, so we only apply them now if there
-            # is a single worker.
-            None if self._worker_info is not None else self._token_indexers,
         )
-        fields["answer"] = TextField(
-            [Token(answer)],
-            # Token indexers are applied later during multi-process loading with
-            # the `apply_token_indexers` method, so we only apply them now if there
-            # is a single worker.
-            None if self._worker_info is not None else self._token_indexers,
-        )
+        fields["answer"] = TextField([Token(answer)])
 
         return Instance(fields)
 

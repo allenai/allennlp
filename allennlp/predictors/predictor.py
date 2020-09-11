@@ -60,6 +60,7 @@ class Predictor(Registrable):
         """
 
         instance = self._json_to_instance(inputs)
+        self._dataset_reader.apply_token_indexers(instance)
         outputs = self._model.forward_on_instance(instance)
         new_instances = self.predictions_to_labeled_instances(instance, outputs)
         return new_instances
@@ -96,6 +97,9 @@ class Predictor(Registrable):
 
         embedding_gradients: List[Tensor] = []
         hooks: List[RemovableHandle] = self._register_embedding_gradient_hooks(embedding_gradients)
+
+        for instance in instances:
+            self._dataset_reader.apply_token_indexers(instance)
 
         dataset = Batch(instances)
         dataset.index_instances(self._model.vocab)
@@ -179,6 +183,7 @@ class Predictor(Registrable):
             hook.remove()
 
     def predict_instance(self, instance: Instance) -> JsonDict:
+        self._dataset_reader.apply_token_indexers(instance)
         outputs = self._model.forward_on_instance(instance)
         return sanitize(outputs)
 
@@ -210,6 +215,8 @@ class Predictor(Registrable):
         return self.predict_batch_instance(instances)
 
     def predict_batch_instance(self, instances: List[Instance]) -> List[JsonDict]:
+        for instance in instances:
+            self._dataset_reader.apply_token_indexers(instance)
         outputs = self._model.forward_on_instances(instances)
         return sanitize(outputs)
 
@@ -302,9 +309,9 @@ class Predictor(Registrable):
             model_type = config.get("model").get("type")
             model_class, _ = Model.resolve_class_name(model_type)
             predictor_name = model_class.default_predictor
-        predictor_class: Type[Predictor] = Predictor.by_name(  # type: ignore
-            predictor_name
-        ) if predictor_name is not None else cls
+        predictor_class: Type[Predictor] = (
+            Predictor.by_name(predictor_name) if predictor_name is not None else cls  # type: ignore
+        )
 
         if dataset_reader_to_load == "validation" and "validation_dataset_reader" in config:
             dataset_reader_params = config["validation_dataset_reader"]

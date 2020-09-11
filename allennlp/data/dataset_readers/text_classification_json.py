@@ -124,27 +124,13 @@ class TextClassificationJsonReader(DatasetReader):
                 word_tokens = self._tokenizer.tokenize(sentence)
                 if self._max_sequence_length is not None:
                     word_tokens = self._truncate(word_tokens)
-                sentences.append(
-                    TextField(
-                        word_tokens,
-                        # Token indexers are applied later during multi-process loading with
-                        # the `apply_token_indexers` method, so we only apply them now if there
-                        # is a single worker.
-                        None if self._worker_info is not None else self._token_indexers,
-                    )
-                )
+                sentences.append(TextField(word_tokens))
             fields["tokens"] = ListField(sentences)
         else:
             tokens = self._tokenizer.tokenize(text)
             if self._max_sequence_length is not None:
                 tokens = self._truncate(tokens)
-            fields["tokens"] = TextField(
-                tokens,
-                # Token indexers are applied later during multi-process loading with
-                # the `apply_token_indexers` method, so we only apply them now if there
-                # is a single worker.
-                None if self._worker_info is not None else self._token_indexers,
-            )
+            fields["tokens"] = TextField(tokens)
         if label is not None:
             fields["label"] = LabelField(label, skip_indexing=self._skip_label_indexing)
         return Instance(fields)
