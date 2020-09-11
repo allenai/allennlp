@@ -48,5 +48,7 @@ class ModelWithIncorrectValidationMetricTest(ModelTestCase):
 
     def test_03_test_validation_metric_exists_and_its_terminal_value_is_met(self):
         self.ensure_model_can_train_save_and_load(
-            self.param_file, metric_to_check="accuracy", metric_terminal_value=1.0,
+            self.param_file,
+            metric_to_check="accuracy",
+            metric_terminal_value=1.0,
         )

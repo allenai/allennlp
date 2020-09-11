@@ -624,7 +624,7 @@ class Vocabulary(Registrable):
         """
         os.makedirs(directory, exist_ok=True)
         if os.listdir(directory):
-            logging.warning("vocabulary serialization directory %s is not empty", directory)
+            logger.warning("vocabulary serialization directory %s is not empty", directory)
 
         # We use a lock file to avoid race conditions where multiple processes
         # might be reading/writing from/to the same vocab files at once.

@@ -203,7 +203,9 @@ class MultiProcessDataLoader(DataLoader):
             deque(self.iter_instances(), maxlen=0)
 
     def __len__(self) -> int:
-        if self.max_instances_in_memory is None:
+        if self.batches_per_epoch is not None:
+            return self.batches_per_epoch
+        elif self.max_instances_in_memory is None:
             # We haven't read the instances yet, so we do so now, caching them as we go.
             if not self._instances:
                 deque(self.iter_instances(), maxlen=0)
@@ -218,8 +220,6 @@ class MultiProcessDataLoader(DataLoader):
                 return num_instances // batch_size
             else:
                 return 1 + num_instances // batch_size
-        elif self.batches_per_epoch is not None:
-            return self.batches_per_epoch
         else:
             # We can't know the number of batches for a lazy loader when batches_per_epoch
             # is not specified.
@@ -392,7 +392,12 @@ class MultiProcessDataLoader(DataLoader):
             # and puts the resulting batches into the `batch_queue`.
             batch_queue: mp.JoinableQueue = ctx.JoinableQueue(self._batch_queue_size)
             batch_worker: BaseProcess = ctx.Process(
-                target=self._batch_worker, args=(instance_queue, batch_queue,), daemon=True
+                target=self._batch_worker,
+                args=(
+                    instance_queue,
+                    batch_queue,
+                ),
+                daemon=True,
             )
             batch_worker.start()
 

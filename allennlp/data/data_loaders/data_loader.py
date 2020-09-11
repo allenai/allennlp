@@ -20,7 +20,7 @@ def allennlp_collate(instances: List[Instance]) -> TensorDict:
     batch.
     """
     batch = Batch(instances)
-    return batch.as_tensor_dict(batch.get_padding_lengths())
+    return batch.as_tensor_dict()
 
 
 class DataLoader(Registrable):

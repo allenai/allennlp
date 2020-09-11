@@ -121,9 +121,7 @@ class TestPredict(AllenNlpTestCase):
         @Predictor.register("test-predictor")
         class _TestPredictor(Predictor):
             def dump_line(self, outputs: JsonDict) -> str:
-                data = {
-                    "dataset_reader_type": type(self._dataset_reader).__name__  # type: ignore
-                }
+                data = {"dataset_reader_type": type(self._dataset_reader).__name__}  # type: ignore
                 return json.dumps(data) + "\n"
 
             def load_line(self, line: str) -> JsonDict:

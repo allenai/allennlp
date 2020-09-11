@@ -561,7 +561,8 @@ class TestFromParams(AllenNlpTestCase):
             assert torch.all(trained_parameter == transfer_parameter)
         # Any other module's parameters shouldn't be same (eg. _feedforward)
         for trained_parameter, transfer_parameter in zip(
-            trained_model._feedforward.parameters(), transfer_model._feedforward.parameters(),
+            trained_model._feedforward.parameters(),
+            transfer_model._feedforward.parameters(),
         ):
             assert torch.all(trained_parameter != transfer_parameter)
 
@@ -853,3 +854,102 @@ class TestFromParams(AllenNlpTestCase):
             WrapperClass.from_params(
                 params=Params({"nested_class": {"wrong_varname": "varstring"}})
             )
+
+    def test_from_params_handles_base_class_kwargs(self):
+        class Foo(FromParams):
+            def __init__(self, a: int, b: str = None, **kwargs) -> None:
+                self.a = a
+                self.b = b
+                for key, value in kwargs.items():
+                    setattr(self, key, value)
+
+        foo = Foo.from_params(Params({"a": 2, "b": "hi"}))
+        assert foo.a == 2
+        assert foo.b == "hi"
+
+        foo = Foo.from_params(Params({"a": 2, "b": "hi", "c": {"2": "3"}}))
+        assert foo.a == 2
+        assert foo.b == "hi"
+        assert foo.c == {"2": "3"}
+
+        class Bar(Foo):
+            def __init__(self, a: int, b: str, d: int, **kwargs) -> None:
+                super().__init__(a, b=b, **kwargs)
+                self.d = d
+
+        bar = Bar.from_params(Params({"a": 2, "b": "hi", "c": {"2": "3"}, "d": 0}))
+        assert bar.a == 2
+        assert bar.b == "hi"
+        assert bar.c == {"2": "3"}
+        assert bar.d == 0
+
+    def test_from_params_base_class_kwargs_crashes_if_params_not_handled(self):
+        class Bar(FromParams):
+            def __init__(self, c: str = None) -> None:
+                self.c = c
+
+        class Foo(Bar):
+            def __init__(self, a: int, b: str = None, **kwargs) -> None:
+                super().__init__(**kwargs)
+                self.a = a
+                self.b = b
+
+        foo = Foo.from_params(Params({"a": 2, "b": "hi", "c": "some value"}))
+        assert foo.a == 2
+        assert foo.b == "hi"
+        assert foo.c == "some value"
+
+        with pytest.raises(TypeError, match="invalid_key"):
+            Foo.from_params(Params({"a": 2, "b": "hi", "invalid_key": "some value"}))
+
+    def test_from_params_handles_kwargs_in_non_from_params_registered_class(self):
+        class Bar(Registrable):
+            pass
+
+        class Baz:
+            def __init__(self, a: int) -> None:
+                self.a = a
+
+        @Bar.register("foo")
+        class Foo(Baz):
+            def __init__(self, a: int, b: str = None, **kwargs) -> None:
+                super().__init__(a)
+                self.b = b
+                for key, value in kwargs.items():
+                    setattr(self, key, value)
+
+        foo = Bar.from_params(Params({"type": "foo", "a": 2, "b": "hi"}))
+        assert foo.a == 2
+        assert foo.b == "hi"
+
+        foo = Bar.from_params(Params({"type": "foo", "a": 2, "b": "hi", "c": {"2": "3"}}))
+        assert foo.a == 2
+        assert foo.b == "hi"
+        assert foo.c == {"2": "3"}
+
+    def test_from_params_does_not_pass_extras_to_non_from_params_registered_class(self):
+        class Bar(Registrable):
+            pass
+
+        class Baz:
+            def __init__(self, a: int, c: Dict[str, str] = None) -> None:
+                self.a = a
+                self.c = c
+
+        @Bar.register("foo")
+        class Foo(Baz):
+            def __init__(self, a: int, b: str = None, **kwargs) -> None:
+                super().__init__(a, **kwargs)
+                self.b = b
+
+        foo = Bar.from_params(Params({"type": "foo", "a": 2, "b": "hi"}))
+        assert foo.a == 2
+        assert foo.b == "hi"
+        assert foo.c is None
+
+        foo = Bar.from_params(
+            params=Params({"type": "foo", "a": 2, "b": "hi", "c": {"2": "3"}}), extra="4"
+        )
+        assert foo.a == 2
+        assert foo.b == "hi"
+        assert foo.c == {"2": "3"}

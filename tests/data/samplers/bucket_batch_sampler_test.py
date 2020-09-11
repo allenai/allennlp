@@ -86,7 +86,10 @@ class TestBucketSampler(SamplerTest):
 
     def test_drop_last_works(self):
         sampler = BucketBatchSampler(
-            batch_size=2, padding_noise=0, sorting_keys=["text"], drop_last=True,
+            batch_size=2,
+            padding_noise=0,
+            sorting_keys=["text"],
+            drop_last=True,
         )
         # We use a custom collate_fn for testing, which doesn't actually create tensors,
         # just the allennlp Batches.
@@ -116,7 +119,10 @@ class TestBucketSampler(SamplerTest):
 
     def test_batch_count_with_drop_last(self):
         sampler = BucketBatchSampler(
-            batch_size=2, padding_noise=0, sorting_keys=["text"], drop_last=True,
+            batch_size=2,
+            padding_noise=0,
+            sorting_keys=["text"],
+            drop_last=True,
         )
         data_loader = MultiProcessDataLoader(
             self.get_mock_reader(), "fake_path", batch_sampler=sampler
