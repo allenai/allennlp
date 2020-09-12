@@ -208,3 +208,11 @@ class FBetaMultiLabelMeasure(FBetaMeasure):
                 + self._true_positive_sum
             )
             return true_negative_sum
+
+
+@Metric.register("f1_multi_label")
+class F1MultiLabelMeasure(FBetaMultiLabelMeasure):
+    def __init__(
+        self, average: str = None, labels: List[int] = None, threshold: float = 0.5
+    ) -> None:
+        super().__init__(1.0, average, labels, threshold)
