@@ -86,9 +86,13 @@ class SequenceTaggingDatasetReader(DatasetReader):
         """
 
         fields: Dict[str, Field] = {}
-        sequence = TextField(tokens, self._token_indexers)
+        sequence = TextField(tokens)
         fields["tokens"] = sequence
         fields["metadata"] = MetadataField({"words": [x.text for x in tokens]})
         if tags is not None:
             fields["tags"] = SequenceLabelField(tags, sequence)
         return Instance(fields)
+
+    @overrides
+    def apply_token_indexers(self, instance: Instance) -> None:
+        instance.fields["tokens"]._token_indexers = self._token_indexers  # type: ignore
