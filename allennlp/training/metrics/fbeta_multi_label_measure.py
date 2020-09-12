@@ -1,4 +1,4 @@
-from typing import List, Optional, Union
+from typing import List, Optional
 
 import torch
 import torch.distributed as dist
@@ -74,33 +74,8 @@ class FBetaMultiLabelMeasure(FBetaMeasure):
         labels: List[int] = None,
         threshold: float = 0.5,
     ) -> None:
-        average_options = {None, "micro", "macro", "weighted"}
-        if average not in average_options:
-            raise ConfigurationError(f"`average` has to be one of {average_options}.")
-        if beta <= 0:
-            raise ConfigurationError("`beta` should be >0 in the F-beta score.")
-        if labels is not None and len(labels) == 0:
-            raise ConfigurationError("`labels` cannot be an empty list.")
-        self._beta = beta
-        self._average = average
-        self._labels = labels
+        super().__init__(beta, average, labels)
         self._threshold = threshold
-
-        # statistics
-        # the total number of true positive instances under each class
-        # Shape: (num_classes, )
-        self._true_positive_sum: Union[None, torch.Tensor] = None
-        # the total number of instances
-        # Shape: (num_classes, )
-        self._total_sum: Union[None, torch.Tensor] = None
-        # the total number of instances under each _predicted_ class,
-        # including true positives and false positives
-        # Shape: (num_classes, )
-        self._pred_sum: Union[None, torch.Tensor] = None
-        # the total number of instances under each _true_ class,
-        # including true positives and false negatives
-        # Shape: (num_classes, )
-        self._true_sum: Union[None, torch.Tensor] = None
 
     @overrides
     def __call__(
