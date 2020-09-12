@@ -113,8 +113,6 @@ def remove_optional(annotation: type):
 
 
 def infer_params(cls: Type[T], constructor: Callable[..., T] = None) -> Dict[str, Any]:
-    if cls == FromParams:
-        return {}
     if constructor is None:
         constructor = cls.__init__
 
@@ -122,9 +120,15 @@ def infer_params(cls: Type[T], constructor: Callable[..., T] = None) -> Dict[str
     parameters = dict(signature.parameters)
 
     has_kwargs = False
+    var_positional_key = None
     for param in parameters.values():
         if param.kind == param.VAR_KEYWORD:
             has_kwargs = True
+        elif param.kind == param.VAR_POSITIONAL:
+            var_positional_key = param.name
+
+    if var_positional_key:
+        del parameters[var_positional_key]
 
     if not has_kwargs:
         return parameters

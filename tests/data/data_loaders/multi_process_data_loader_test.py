@@ -156,3 +156,14 @@ def test_drop_last():
     for batch in batches:
         assert len(batch["index"]) == 16
     assert len(batches) == 6
+
+
+def test_batches_per_epoch():
+    loader = MultiProcessDataLoader(
+        MockDatasetReader(), "some path", batch_size=4, batches_per_epoch=10
+    )
+    vocab = Vocabulary.from_instances(loader.iter_instances())
+    loader.index_with(vocab)
+
+    assert len(loader) == 10
+    assert len(list(loader)) == 10
