@@ -120,11 +120,7 @@ class FBetaMultiLabelMeasure(FBetaMeasure):
 
         # If the prediction tensor is all zeros, the record is not classified to any of the labels.
         pred_mask = (predictions.sum(dim=-1) != 0).unsqueeze(-1)
-        threshold_predictions = torch.where(
-            predictions >= self._threshold,
-            torch.ones_like(predictions),
-            torch.zeros_like(predictions),
-        )
+        threshold_predictions = (predictions >= self._threshold).float()
 
         class_indices = (
             torch.arange(num_classes, device=predictions.device)
