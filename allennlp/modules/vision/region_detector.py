@@ -111,11 +111,7 @@ class FasterRcnnRegionDetector(RegionDetector):
         batch_size = len(image_sizes)
 
         raw_images = [
-            {
-                "image": (image[:, :height, :width] * 256).byte(),
-                "height": height,
-                "width": width
-            }
+            {"image": (image[:, :height, :width] * 256).byte(), "height": height, "width": width}
             for image, (height, width) in zip(raw_images, image_sizes)
         ]
         image_list = self.model.preprocess_image(raw_images)
@@ -146,8 +142,9 @@ class FasterRcnnRegionDetector(RegionDetector):
         batch_coordinates = []
         batch_features = []
         batch_probs = []
-        batch_num_detections = torch.zeros(batch_size, device=image_list.tensor.device, dtype=torch.int16)
-        feature_dim = pooled_features.size(-1)
+        batch_num_detections = torch.zeros(
+            batch_size, device=image_list.tensor.device, dtype=torch.int16
+        )
         num_classes = cls_probs.size(-1)
 
         proposal_start = 0

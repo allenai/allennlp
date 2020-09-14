@@ -1,5 +1,4 @@
-import torch
-from torch import nn, FloatTensor, IntTensor, ByteTensor
+from torch import nn, FloatTensor, IntTensor
 
 from allennlp.common.registrable import Registrable
 
@@ -84,14 +83,10 @@ class ResnetBackbone(GridEmbedder):
 
     def forward(self, images: FloatTensor, sizes: IntTensor) -> FloatTensor:
         images = [
-            {
-                "image": (image[:, :height, :width] * 256).byte(),
-                "height": height,
-                "width": width
-            }
+            {"image": (image[:, :height, :width] * 256).byte(), "height": height, "width": width}
             for image, (height, width) in zip(images, sizes)
         ]
-        images = self.preprocessor(images)   # This returns tensors on the correct device.
+        images = self.preprocessor(images)  # This returns tensors on the correct device.
         result = self.backbone(images.tensor)
         assert len(result) == 1
         return next(iter(result.values()))

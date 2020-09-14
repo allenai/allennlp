@@ -1,10 +1,11 @@
 import glob
 import os
 from os import PathLike
-from typing import Any, Dict, Union, Optional
+from typing import Any, Dict, Union, Optional, MutableMapping
 
 from overrides import overrides
 import torch
+from torch import Tensor
 
 from allennlp.common.file_utils import cached_path, json_lines_from_file, TensorCache
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
@@ -64,13 +65,16 @@ class Nlvr2Reader(DatasetReader):
 
         if cuda_device is None:
             from torch import cuda
+
             if cuda.device_count() > 0:
                 cuda_device = 0
             else:
                 cuda_device = -1
         from allennlp.common.checks import check_for_gpu
+
         check_for_gpu(cuda_device)
         from allennlp.common.util import int_to_device
+
         self.cuda_device = int_to_device(cuda_device)
 
         # Paths to data
@@ -88,9 +92,13 @@ class Nlvr2Reader(DatasetReader):
             "unbalanced_test": f"{data_dir}/balanced/unbalanced_test1.json",
         }
         from tqdm import tqdm
+
         self.images = {
             os.path.basename(filename): filename
-            for filename in tqdm(glob.iglob(os.path.join(image_dir, "**", "*.png"), recursive=True), desc="Discovering images")
+            for filename in tqdm(
+                glob.iglob(os.path.join(image_dir, "**", "*.png"), recursive=True),
+                desc="Discovering images",
+            )
         }
 
         # tokenizers and indexers
@@ -108,8 +116,8 @@ class Nlvr2Reader(DatasetReader):
 
         # feature cache
         if feature_cache_dir is None:
-            self._features_cache = {}
-            self._coordinates_cache = {}
+            self._features_cache: MutableMapping[str, Tensor] = {}
+            self._coordinates_cache: MutableMapping[str, Tensor] = {}
         else:
             os.makedirs(feature_cache_dir, exist_ok=True)
             self._features_cache = TensorCache(os.path.join(feature_cache_dir, "features"))
@@ -132,7 +140,10 @@ class Nlvr2Reader(DatasetReader):
 
     @overrides
     def text_to_instance(
-        self, identifier: str, sentence: str, label: bool,  # type: ignore
+        self,
+        identifier: str,
+        sentence: str,
+        label: bool,  # type: ignore
     ) -> Instance:
         tokenized_sentence = self._tokenizer.tokenize(sentence)
 
@@ -140,7 +151,9 @@ class Nlvr2Reader(DatasetReader):
 
         # Load images
         image_name_base = identifier[: identifier.rindex("-")]
-        image_paths = [self.images[f"{image_name_base}-{suffix}"] for suffix in ["img0.png", "img1.png"]]
+        image_paths = [
+            self.images[f"{image_name_base}-{suffix}"] for suffix in ["img0.png", "img1.png"]
+        ]
 
         to_compute = []
         for path in image_paths:
@@ -162,12 +175,10 @@ class Nlvr2Reader(DatasetReader):
                 self._coordinates_cache[os.path.basename(path)] = coordinates[index].cpu()
 
         left_features, right_features = [
-            self._features_cache[os.path.basename(path)]
-            for path in image_paths
+            self._features_cache[os.path.basename(path)] for path in image_paths
         ]
         left_coords, right_coords = [
-            self._coordinates_cache[os.path.basename(path)]
-            for path in image_paths
+            self._coordinates_cache[os.path.basename(path)] for path in image_paths
         ]
 
         fields = {
