@@ -11,3 +11,4 @@ from allennlp.modules.transformer.attention_scores import (
     ScaledDotProduct,
     ContentBaseAttention,
 )
+from allennlp.modules.transformer.positional_encoding import SinusoidalPositionalEncoding
