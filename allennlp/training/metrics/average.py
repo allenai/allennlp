@@ -31,7 +31,7 @@ class Average(Metric):
         _total_value = list(self.detach_tensors(value))[0]
         _count = 1
         if is_distributed():
-            device = torch.device("cpu")
+            device = torch.device("cuda" if dist.get_backend() == "nccl" else "cpu")
             count = torch.tensor(_count).to(device)
             total_value = torch.tensor(_total_value).to(device)
             dist.all_reduce(count, op=dist.ReduceOp.SUM)
@@ -49,10 +49,10 @@ class Average(Metric):
         The average of all values that were passed to `__call__`.
         """
 
-        average_value = self._total_value / self._count if self._count > 0 else 0
+        average_value = self._total_value / self._count if self._count > 0 else 0.0
         if reset:
             self.reset()
-        return average_value
+        return float(average_value)
 
     @overrides
     def reset(self):

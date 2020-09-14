@@ -143,7 +143,7 @@ class Conll2003DatasetReader(DatasetReader):
         We take `pre-tokenized` input here, because we don't have a tokenizer in this class.
         """
 
-        sequence = TextField(tokens, self._token_indexers)
+        sequence = TextField(tokens)
         instance_fields: Dict[str, Field] = {"tokens": sequence}
         instance_fields["metadata"] = MetadataField({"words": [x.text for x in tokens]})
 
@@ -198,3 +198,7 @@ class Conll2003DatasetReader(DatasetReader):
             )
 
         return Instance(instance_fields)
+
+    @overrides
+    def apply_token_indexers(self, instance: Instance) -> None:
+        instance.fields["tokens"]._token_indexers = self._token_indexers  # type: ignore

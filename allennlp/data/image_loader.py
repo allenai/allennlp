@@ -47,7 +47,8 @@ DetectronInput = Union["DetectronConfig", "DetectronFlatParameters"]  # type: ig
 @ImageLoader.register("detectron")
 class DetectronImageLoader(ImageLoader):
     def __init__(
-        self, config: Optional[DetectronInput] = None,
+        self,
+        config: Optional[DetectronInput] = None,
     ):
         from allennlp.common.detectron import DetectronConfig, DetectronFlatParameters
         from allennlp.common import detectron
@@ -66,14 +67,13 @@ class DetectronImageLoader(ImageLoader):
             raise ValueError("Unknown type of `config`")
 
         self.mapper = pipeline.mapper
-        self.model = pipeline.model
 
     def load(self, filenames: ManyPaths) -> ImagesWithSize:
         images = [{"file_name": str(f)} for f in filenames]
         images = [self.mapper(i) for i in images]
-        processed_images = self.model.preprocess_image(images)
 
-        return (
-            processed_images.tensor,
-            torch.tensor(processed_images.image_sizes, dtype=torch.int32),
-        )
+        from detectron2.structures import ImageList
+
+        images = ImageList.from_tensors([image["image"] for image in images])
+
+        return (images.tensor.float() / 256, torch.tensor(images.image_sizes, dtype=torch.int32))  # type: ignore

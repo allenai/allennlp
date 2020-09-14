@@ -8,13 +8,8 @@ from allennlp.data.dataset_readers import Nlvr2Reader
 from allennlp.data.image_loader import DetectronImageLoader
 from allennlp.data.tokenizers import WhitespaceTokenizer
 from allennlp.data.token_indexers import SingleIdTokenIndexer
-from allennlp.modules.vision.grid_embedder import GridEmbedder
+from allennlp.modules.vision.grid_embedder import NullGridEmbedder
 from allennlp.modules.vision.region_detector import RegionDetector
-
-
-class FakeGridEmbedder(GridEmbedder):
-    def forward(self, images: torch.FloatTensor):
-        return images
 
 
 class FakeRegionDetector(RegionDetector):
@@ -44,7 +39,7 @@ class TestNlvr2Reader(AllenNlpTestCase):
         reader = Nlvr2Reader(
             image_dir=self.FIXTURES_ROOT / "data" / "nlvr2",
             image_loader=DetectronImageLoader(),
-            image_featurizer=FakeGridEmbedder(),
+            image_featurizer=NullGridEmbedder(),
             region_detector=detector,
             tokenizer=WhitespaceTokenizer(),
             token_indexers={"tokens": SingleIdTokenIndexer()},

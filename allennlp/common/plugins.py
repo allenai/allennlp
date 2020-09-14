@@ -10,6 +10,7 @@ one per line.
 import importlib
 import logging
 import os
+import sys
 from typing import Iterable
 
 from allennlp.common.util import push_python_path, import_module_and_submodules
@@ -46,6 +47,12 @@ def import_plugins() -> None:
     """
     Imports the plugins found with `discover_plugins()`.
     """
+
+    # Workaround for a presumed Python issue where spawned processes can't find modules in the current directory.
+    cwd = os.getcwd()
+    if cwd not in sys.path:
+        sys.path.append(cwd)
+
     for module_name in DEFAULT_PLUGINS:
         try:
             # For default plugins we recursively import everything.

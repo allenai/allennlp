@@ -7,12 +7,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Added
+
+- Added `TensorCache` class for caching tensors on disk
+- Added reader for the NLVR2 dataset
+- Added cache for Detectron models that we might re-use several times in the code base
+- Added abstraction and concrete implementation for image loading
+- Added abstraction and concrete implementation for `GridEmbedder`
+- Added abstraction and demo implementation for an image augmentation module.
+- Added abstraction and concrete implementation for region detectors.
+- Added the ability to ignore certain missing keys when loading a model from an archive. This is done
+  by adding a class-level variable called `authorized_missing_keys` to any PyTorch module that a `Model` uses.
+  If defined, `authorized_missing_keys` should be a list of regex string patterns.
+- Added `FBetaMultiLabelMeasure`, a multi-label Fbeta metric. This is a subclass of the existing `FBetaMeasure`.
+
+### Changed
+
+- `transformers` dependency updated to version 3.1.0.
+- `ArrayField` is now implemented in terms of torch tensors, not numpy.
+
+### Fixed
+
+- Ignore *args when constructing classes with `FromParams`.
+- Ensured some consistency in the types of the values that metrics return
+- `PretrainedTransformerTokenizer` will now never return a sequence that's longer than `max_length`, even with special tokens
+
+## [v1.1.0](https://github.com/allenai/allennlp/releases/tag/v1.1.0) - 2020-09-08
+
 ### Fixed
 
 - Fixed handling of some edge cases when constructing classes with `FromParams` where the class
   accepts `**kwargs`.
 - Fixed division by zero error when there are zero-length spans in the input to a
   `PretrainedTransformerMismatchedIndexer`.
+- Improved robustness of `cached_path` when extracting archives so that the cache won't be corrupted
+  if a failure occurs during extraction.
+- Fixed a bug with the `average` and `evalb_bracketing_score` metrics in distributed training.
 
 ### Added
 

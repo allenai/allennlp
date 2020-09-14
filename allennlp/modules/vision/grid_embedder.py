@@ -1,5 +1,4 @@
-import torch
-from torch import nn, FloatTensor
+from torch import nn, FloatTensor, IntTensor
 
 from allennlp.common.registrable import Registrable
 
@@ -14,7 +13,7 @@ class GridEmbedder(nn.Module, Registrable):
     of the patch. The size of the image might change during this operation.
     """
 
-    def forward(self, images: FloatTensor) -> FloatTensor:
+    def forward(self, images: FloatTensor, sizes: IntTensor) -> FloatTensor:
         raise NotImplementedError()
 
     def get_output_dim(self) -> int:
@@ -37,7 +36,7 @@ class GridEmbedder(nn.Module, Registrable):
 class NullGridEmbedder(GridEmbedder):
     """A `GridEmbedder` that returns the input image as given."""
 
-    def forward(self, images: FloatTensor) -> FloatTensor:
+    def forward(self, images: FloatTensor, sizes: IntTensor) -> FloatTensor:
         return images
 
     def get_output_dim(self) -> int:
@@ -77,25 +76,18 @@ class ResnetBackbone(GridEmbedder):
             width_per_group=width_per_group,
             depth=depth,
         )
-        self.device = device
-        self.gpu = None
-        # set the gpu device here.
-        if torch.distributed.is_initialized():
-            self.gpu = torch.distributed.get_rank()
 
         pipeline = detectron.get_pipeline_from_flat_parameters(flat_parameters, make_copy=False)
+        self.preprocessor = pipeline.model.preprocess_image
         self.backbone = pipeline.model.backbone
 
-    def forward(self, images: FloatTensor) -> FloatTensor:
-        
-        # move images into gpu if needed.
-        if self.device == 'cuda':
-            if self.gpu is not None:
-                images = images.cuda(self.gpu)
-            else:
-                images = images.cuda()
-
-        result = self.backbone(images)
+    def forward(self, images: FloatTensor, sizes: IntTensor) -> FloatTensor:
+        images = [
+            {"image": (image[:, :height, :width] * 256).byte(), "height": height, "width": width}
+            for image, (height, width) in zip(images, sizes)
+        ]
+        images = self.preprocessor(images)  # This returns tensors on the correct device.
+        result = self.backbone(images.tensor)
         assert len(result) == 1
         return next(iter(result.values()))
 
