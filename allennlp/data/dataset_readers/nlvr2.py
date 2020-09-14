@@ -43,8 +43,6 @@ class Nlvr2Reader(DatasetReader):
         Path to a directory that will contain a cache of featurized images.
     tokenizer: `Tokenizer`, optional
     token_indexers: `Dict[str, TokenIndexer]`
-    lazy : `bool`, optional
-        Whether to load data lazily. Passed to super class.
     """
 
     def __init__(
@@ -59,9 +57,12 @@ class Nlvr2Reader(DatasetReader):
         tokenizer: Optional[Tokenizer] = None,
         token_indexers: Optional[Dict[str, TokenIndexer]] = None,
         cuda_device: Optional[Union[int, torch.device]] = None,
-        lazy: bool = False,
+        max_instances: Optional[int] = None,
     ) -> None:
-        super().__init__(lazy)
+        super().__init__(
+            max_instances=max_instances,
+            manual_distributed_sharding=True,
+            manual_multi_process_sharding=True)
 
         if cuda_device is None:
             from torch import cuda
@@ -130,7 +131,7 @@ class Nlvr2Reader(DatasetReader):
         json_file_path = cached_path(filename)
 
         json_blob: Dict[str, Any]
-        for json_blob in json_lines_from_file(json_file_path):  # type: ignore
+        for json_blob in self.shard_iterable(json_lines_from_file(json_file_path)):  # type: ignore
             identifier = json_blob["identifier"]
             sentence = json_blob["sentence"]
             label = bool(json_blob["label"])
@@ -147,7 +148,7 @@ class Nlvr2Reader(DatasetReader):
     ) -> Instance:
         tokenized_sentence = self._tokenizer.tokenize(sentence)
 
-        sentence_field = TextField(tokenized_sentence, self._token_indexers)
+        sentence_field = TextField(tokenized_sentence, None)
 
         # Load images
         image_name_base = identifier[: identifier.rindex("-")]
@@ -192,3 +193,7 @@ class Nlvr2Reader(DatasetReader):
             fields["label"] = LabelField(int(label), skip_indexing=True)
 
         return Instance(fields)
+
+    @overrides
+    def apply_token_indexers(self, instance: Instance) -> None:
+        instance["sentence"].token_indexers = self._token_indexers

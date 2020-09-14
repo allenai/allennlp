@@ -44,7 +44,7 @@ class TestNlvr2Reader(AllenNlpTestCase):
             tokenizer=WhitespaceTokenizer(),
             token_indexers={"tokens": SingleIdTokenIndexer()},
         )
-        instances = reader.read("test_fixtures/data/nlvr2/tiny-dev.json")
+        instances = list(reader.read("test_fixtures/data/nlvr2/tiny-dev.json"))
         assert len(instances) == 8
 
         instance = instances[0]
