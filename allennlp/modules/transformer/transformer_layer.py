@@ -1,15 +1,17 @@
-from typing import Union
+from typing import Union, Optional, Dict
 
 import torch
 
 from allennlp.common import FromParams
+
+from allennlp.modules.transformer.transformer_module import TransformerModule
 
 from allennlp.modules.transformer.activation_layer import ActivationLayer
 from allennlp.modules.transformer.self_attention import SelfAttention
 from allennlp.modules.transformer.output_layer import OutputLayer
 
 
-class AttentionLayer(torch.nn.Module, FromParams):
+class AttentionLayer(TransformerModule, FromParams):
     def __init__(
         self,
         hidden_size: int,
@@ -26,7 +28,8 @@ class AttentionLayer(torch.nn.Module, FromParams):
         attention_output = self.output(self_output, input_tensor)
         return attention_output
 
-class TransformerLayer(torch.nn.Module, FromParams):
+
+class TransformerLayer(TransformerModule, FromParams):
     def __init__(
         self,
         hidden_size: int,
@@ -57,20 +60,31 @@ class TransformerLayer(torch.nn.Module, FromParams):
         return layer_output
 
     @classmethod
-    def from_pretrained_module(cls, pretrained_module: torch.nn.Module, mapping_source: Optional[str, Dict]="huggingface"):
-        if mapping_source == "huggingface":
-            pass
-        else:
-            #mapping source gives the conversion from layer names.
-            pass
-        hidden_size = mapping_source["attention"].self.hidden_size
-        num_attention_heads = mapping_source["attention"].num_attention_heads
-        attention_dropout = mapping_source["attention"].self.dropout.p
-        hidden_dropout = mapping_source["attention"].output.dropout.p
-        intermediate_size = mapping_source["intermediate"].dense.out_features
+    def from_pretrained_module(
+        cls,
+        pretrained_module: torch.nn.Module,
+        source="huggingface",
+        mapping: Optional[Dict[str, str]] = None,
+    ):
 
-        module = cls(hidden_size, intermediate_size, num_attention_heads, attention_dropout, hidden_dropout)
+        submodules = cls._get_mapped_submodules(pretrained_module)
 
-        for name, parameter in pretrained_module.named_parameters():
-            # somehow do this recursively.
+        hidden_size = submodules["attention.self.query"].in_features
+        num_attention_heads = submodules["attention.self"].num_attention_heads
+        attention_dropout = submodules["attention.self.dropout"].p
+        hidden_dropout = submodules["attention.output.dropout"].p
+        intermediate_size = submodules["intermediate.dense"].out_features
+        activation = submodules["intermediate"].intermediate_act_fn
 
+        module = cls(
+            hidden_size,
+            intermediate_size,
+            num_attention_heads,
+            attention_dropout,
+            hidden_dropout,
+            activation,
+        )
+
+        module._load_from_pretrained_module(pretrained_module)
+
+        return module

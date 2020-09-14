@@ -3,10 +3,12 @@ import torch
 from allennlp.common import FromParams
 from allennlp.modules.transformer.attention_scores import attention_map
 
+from allennlp.modules.transformer.transformer_module import TransformerModule
+
 ATTN_MAP = attention_map()
 
 
-class SelfAttention(torch.nn.Module, FromParams):
+class SelfAttention(TransformerModule, FromParams):
     """
     This module computes the self-attention, similar to the architecture in BERT. Additionally, the attention
     scoring function can be specified.

@@ -3,10 +3,12 @@ import torch
 
 from allennlp.common import FromParams
 
+from allennlp.modules.transformer.transformer_module import TransformerModule
+
 from transformers.modeling_bert import ACT2FN
 
 
-class ActivationLayer(torch.nn.Module, FromParams):
+class ActivationLayer(TransformerModule, FromParams):
     def __init__(
         self,
         hidden_size: int,
