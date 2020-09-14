@@ -8,10 +8,22 @@ import os
 import logging
 import tempfile
 import json
+from abc import ABC
 from os import PathLike
 from urllib.parse import urlparse
 from pathlib import Path
-from typing import Optional, Tuple, Union, IO, Callable, Set, List, Iterator, Iterable
+from typing import (
+    Optional,
+    Tuple,
+    Union,
+    IO,
+    Callable,
+    Set,
+    List,
+    Iterator,
+    Iterable,
+    MutableMapping,
+)
 from hashlib import sha256
 from functools import wraps
 from weakref import WeakValueDictionary
@@ -32,6 +44,7 @@ from requests.adapters import HTTPAdapter
 from requests.exceptions import ConnectionError
 from requests.packages.urllib3.util.retry import Retry
 import lmdb
+from torch import Tensor
 
 from allennlp.common.tqdm import Tqdm
 
@@ -350,11 +363,10 @@ def _serialize(data):
     buffer = pickle.dumps(data, protocol=-1)
     return np.frombuffer(buffer, dtype=np.uint8)
 
-class TensorCache:
+
+class TensorCache(MutableMapping[str, Tensor], ABC):
     def __init__(
-        self,
-        filename: Union[str, PathLike],
-        map_size: int = 1024*1024*1024*1024
+        self, filename: Union[str, PathLike], map_size: int = 1024 * 1024 * 1024 * 1024
     ) -> None:
         self.lmdb_env = lmdb.open(
             filename,
@@ -365,7 +377,8 @@ class TensorCache:
             metasync=False,
             sync=True,
             readahead=False,
-            meminit=False)
+            meminit=False,
+        )
 
         # We have another cache here that makes sure we return the same object for the same key. Without it,
         # you would get a different tensor, using different memory, every time you call __getitem__(), even
@@ -373,9 +386,11 @@ class TensorCache:
         # The downside is that we can't keep self.cache_cache up to date when multiple processes modify the
         # cache at the same time. We can guarantee though that it is up to date as long as processes either
         # write new values, or read existing ones.
-        self.cache_cache = WeakValueDictionary()
+        self.cache_cache: MutableMapping[str, Tensor] = WeakValueDictionary()
 
-    def __contains__(self, key: str):
+    def __contains__(self, key: object):
+        if not isinstance(key, str):
+            return False
         if key in self.cache_cache:
             return True
         encoded_key = key.encode()
@@ -422,6 +437,12 @@ class TensorCache:
         if self.lmdb_env is not None:
             self.lmdb_env.close()
             self.lmdb_env = None
+
+    def __len__(self):
+        return self.lmdb_env.stat()["entries"]
+
+    def __iter__(self):
+        raise NotImplementedError()
 
 
 class CacheFile:
