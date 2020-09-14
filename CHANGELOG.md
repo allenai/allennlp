@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added `TensorCache` class for caching tensors on disk
+- Added reader for the NLVR2 dataset
+- Added cache for Detectron models that we might re-use several times in the code base
+- Added abstraction and concrete implementation for image loading
+- Added abstraction and concrete implementation for `GridEmbedder`
+- Added abstraction and demo implementation for an image augmentation module.
+- Added abstraction and concrete implementation for region detectors.
 - Added the ability to ignore certain missing keys when loading a model from an archive. This is done
   by adding a class-level variable called `authorized_missing_keys` to any PyTorch module that a `Model` uses.
   If defined, `authorized_missing_keys` should be a list of regex string patterns.
@@ -17,11 +24,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - `transformers` dependency updated to version 3.1.0.
+- `ArrayField` is now implemented in terms of torch tensors, not numpy.
 
 ### Fixed
 
 - Ignore *args when constructing classes with `FromParams`.
 - Ensured some consistency in the types of the values that metrics return
+- `PretrainedTransformerTokenizer` will now never return a sequence that's longer than `max_length`, even with special tokens
 
 ## [v1.1.0](https://github.com/allenai/allennlp/releases/tag/v1.1.0) - 2020-09-08
 
