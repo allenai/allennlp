@@ -1,14 +1,18 @@
 import os
 import glob
 import argparse
+from os import PathLike
+from typing import Union, List
+
 from tqdm import tqdm
 
 import torch
 from torchvision.datasets.folder import IMG_EXTENSIONS
 
-from allennlp.common.file_utils import TensorCache, cached_path
+from allennlp.common.file_utils import TensorCache
 from allennlp.data import DetectronImageLoader
 from allennlp.modules.vision import ResnetBackbone, FasterRcnnRegionDetector
+
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -27,16 +31,12 @@ if __name__ == "__main__":
     coordinates_cache = TensorCache(os.path.join(args.cache_dir, "coordinates"))
     image_paths = []
     for extension in IMG_EXTENSIONS:
-        image_paths += list(glob.iglob(os.path.join(args.image_dir, "**", "*."+extension), recursive=True))
-    filtered_image_paths = []
-    image_keys = []
-    for path in image_paths:
-        key = os.path.basename(path)
-        if key in features_cache and key in coordinates_cache:
-            continue
-        image_keys.append(key)
-        filtered_image_paths.append(path)
-    image_paths = filtered_image_paths
+        extension = extension.lstrip(
+            "."
+        )  # Some versions of detectron have the period. Others do not.
+        image_paths += list(
+            glob.iglob(os.path.join(args.image_dir, "**", "*." + extension), recursive=True)
+        )
 
     image_loader = DetectronImageLoader()
     image_featurizer = ResnetBackbone()
@@ -45,14 +45,27 @@ if __name__ == "__main__":
         image_featurizer.cuda()
         region_detector.cuda()
 
-    for index in tqdm(range(0, len(image_paths), args.batch_size)):
-        end = min(index+args.batch_size, len(image_paths))
-        batch_images, batch_shapes = image_loader(image_paths[index:end])
+    def process_batch(batch: List[Union[str, PathLike]]):
+        batch_images, batch_shapes = image_loader(batch)
         with torch.no_grad():
             featurized_images = image_featurizer(batch_images, batch_shapes)
             detector_results = region_detector(batch_images, batch_shapes, featurized_images)
             features = detector_results["features"]
             coordinates = detector_results["coordinates"]
-        for subindex in range(index, end):
-            features_cache[image_keys[subindex]] = features[subindex-index].cpu()
-            coordinates_cache[image_keys[subindex]] = coordinates[subindex-index].cpu()
+        for filename, image_features, image_coordinates in zip(batch, features, coordinates):
+            filename = os.path.basename(filename)
+            features_cache[filename] = features.cpu()
+            coordinates_cache[filename] = coordinates.cpu()
+
+    image_path_batch = []
+    for image_path in tqdm(image_paths, desc="Processing images"):
+        key = os.path.basename(image_path)
+        if key in features_cache and key in coordinates_cache:
+            continue
+        image_path_batch.append(image_path)
+
+        if len(image_path_batch) >= args.batch_size:
+            process_batch(image_path_batch)
+            image_path_batch.clear()
+    if len(image_path_batch) > 0:
+        process_batch(image_path_batch)
