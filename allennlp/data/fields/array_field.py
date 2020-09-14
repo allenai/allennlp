@@ -68,3 +68,8 @@ class ArrayField(Field[torch.Tensor]):
                 torch.equal(self.tensor, other.tensor) and self.padding_value == other.padding_value
             )
         return NotImplemented
+
+    @property
+    def array(self):
+        """This is a compatibility method that returns the underlying tensor as a numpy array."""
+        return self.tensor.numpy()
