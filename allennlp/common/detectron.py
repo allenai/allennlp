@@ -333,7 +333,9 @@ class AttributePredictor(nn.Module):
         weights[weights > 1] = 0.0
         n_valid = len((label >= 0).sum(dim=1).nonzero())
         label = label.view(-1)
-        attr_loss = F.cross_entropy(score, label, reduction="none", ignore_index=-1)
+        from torch.nn.functional import cross_entropy
+
+        attr_loss = cross_entropy(score, label, reduction="none", ignore_index=-1)
         attr_loss = (attr_loss * weights).view(n, -1).sum(dim=1)
 
         if n_valid > 0:
@@ -505,6 +507,8 @@ class AttributeStandardROIHeads(AttributeROIHeads, StandardROIHeads):
                     pred_boxes = self.box_predictor.predict_boxes_for_gt_classes(
                         predictions, proposals
                     )
+                    from detectron2.structures import Boxes
+
                     for proposals_per_image, pred_boxes_per_image in zip(proposals, pred_boxes):
                         proposals_per_image.proposal_boxes = Boxes(pred_boxes_per_image)
             losses = self.box_predictor.losses(predictions, proposals)
