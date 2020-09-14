@@ -62,7 +62,8 @@ class Nlvr2Reader(DatasetReader):
         super().__init__(
             max_instances=max_instances,
             manual_distributed_sharding=True,
-            manual_multi_process_sharding=True)
+            manual_multi_process_sharding=True,
+        )
 
         if cuda_device is None:
             from torch import cuda
@@ -196,4 +197,4 @@ class Nlvr2Reader(DatasetReader):
 
     @overrides
     def apply_token_indexers(self, instance: Instance) -> None:
-        instance["sentence"].token_indexers = self._token_indexers
+        instance["sentence"].token_indexers = self._token_indexers  # type: ignore
