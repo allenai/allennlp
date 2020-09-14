@@ -31,7 +31,7 @@ import requests
 from requests.adapters import HTTPAdapter
 from requests.exceptions import ConnectionError
 from requests.packages.urllib3.util.retry import Retry
-import lmdb 
+import lmdb
 
 from allennlp.common.tqdm import Tqdm
 
@@ -349,7 +349,6 @@ def _find_latest_cached(url: str, cache_dir: Union[str, Path]) -> Optional[str]:
 def _serialize(data):
     buffer = pickle.dumps(data, protocol=-1)
     return np.frombuffer(buffer, dtype=np.uint8)
-
 
 class TensorCache:
     def __init__(

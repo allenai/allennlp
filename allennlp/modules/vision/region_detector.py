@@ -109,10 +109,18 @@ class FasterRcnnRegionDetector(RegionDetector):
         self, raw_images: FloatTensor, image_sizes: IntTensor, featurized_images: FloatTensor
     ) -> Dict[str, torch.Tensor]:
         batch_size = len(image_sizes)
-        # RPN
-        from detectron2.structures import ImageList
 
-        image_list = ImageList(raw_images, [(image[0], image[1]) for image in image_sizes])
+        raw_images = [
+            {
+                "image": (image[:, :height, :width] * 256).byte(),
+                "height": height,
+                "width": width
+            }
+            for image, (height, width) in zip(raw_images, image_sizes)
+        ]
+        image_list = self.model.preprocess_image(raw_images)
+
+        # RPN
         assert len(self.model.proposal_generator.in_features) == 1
         featurized_images_in_dict = {
             self.model.proposal_generator.in_features[0]: featurized_images
@@ -127,7 +135,7 @@ class FasterRcnnRegionDetector(RegionDetector):
 
         predictions = self.model.roi_heads.box_predictor(pooled_features)
 
-        # class probablity
+        # class probability
         cls_probs = F.softmax(predictions[0], dim=-1)
         cls_probs = cls_probs[:, :-1]  # background is last
 
@@ -138,7 +146,7 @@ class FasterRcnnRegionDetector(RegionDetector):
         batch_coordinates = []
         batch_features = []
         batch_probs = []
-        batch_num_detections = torch.zeros(batch_size, device=raw_images.device, dtype=torch.int16)
+        batch_num_detections = torch.zeros(batch_size, device=image_list.tensor.device, dtype=torch.int16)
         feature_dim = pooled_features.size(-1)
         num_classes = cls_probs.size(-1)
 
