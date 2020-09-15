@@ -1,5 +1,3 @@
-import torch
-
 from allennlp.common import FromParams
 
 from allennlp.modules.transformer.activation_layer import ActivationLayer
@@ -72,7 +70,7 @@ class BiModalConnectionLayer(TransformerModule, FromParams):
         )
         self.output1 = OutputLayer(
             hidden_size=hidden_size1,
-            intermediate_size=intermediate_size1,
+            input_size=intermediate_size1,
             dropout=dropout1,
         )
 
@@ -83,7 +81,7 @@ class BiModalConnectionLayer(TransformerModule, FromParams):
         )
         self.output2 = OutputLayer(
             hidden_size=hidden_size2,
-            intermediate_size=intermediate_size2,
+            input_size=intermediate_size2,
             dropout=dropout2,
         )
 

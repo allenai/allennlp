@@ -10,7 +10,7 @@ class TransformerModule(torch.nn.Module):
 
     _huggingface_mapping: Dict[str, str] = {}
 
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
         super().__init__()
 
     @classmethod
@@ -95,9 +95,10 @@ class TransformerModule(torch.nn.Module):
         pretrained_module: torch.nn.Module,
         source="huggingface",
         mapping: Optional[Dict[str, str]] = None,
+        **kwargs,
     ):
 
         args = cls._get_input_arguments(pretrained_module, source, mapping)
-        module = cls(*args)
+        module = cls(*args, **kwargs)
         module._load_from_pretrained_module(pretrained_module)
         return module

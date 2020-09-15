@@ -56,10 +56,10 @@ class TransformerEncoder(TransformerModule, FromParams):
             layer_outputs = layer_module(
                 hidden_states,
                 attention_mask,
-                # layer_head_mask,
-                # encoder_hidden_states,
-                # encoder_attention_mask,
-                # output_attentions,
+                layer_head_mask,
+                encoder_hidden_states,
+                encoder_attention_mask,
+                output_attentions,
             )
             hidden_states = layer_outputs[0]
             if output_attentions:
