@@ -1,6 +1,6 @@
 from collections import defaultdict
 from os import PathLike
-from typing import Any, Dict, List, Tuple, Union, Optional
+from typing import Any, Dict, List, Tuple, Union, Optional, MutableMapping
 import glob
 import json
 import os
@@ -9,6 +9,7 @@ import re
 
 from overrides import overrides
 import torch
+from torch import Tensor
 
 from allennlp.common.checks import check_for_gpu
 from allennlp.common.util import int_to_device
@@ -271,8 +272,13 @@ class VQAv2Reader(DatasetReader):
         tokenizer: Tokenizer = None,
         token_indexers: Dict[str, TokenIndexer] = None,
         cuda_device: Optional[Union[int, torch.device]] = None,
+        max_instances: Optional[int] = None,
     ) -> None:
-        super().__init__()
+        super().__init__(
+            max_instances=max_instances,
+            manual_distributed_sharding=True,
+            manual_multi_process_sharding=True,
+        )
 
         if cuda_device is None:
             if torch.cuda.device_count() > 0:
@@ -307,8 +313,8 @@ class VQAv2Reader(DatasetReader):
 
         # feature cache
         if feature_cache_dir is None:
-            self._features_cache = {}
-            self._coordinates_cache = {}
+            self._features_cache: MutableMapping[str, Tensor] = {}
+            self._coordinates_cache: MutableMapping[str, Tensor] = {}
         else:
             os.makedirs(feature_cache_dir, exist_ok=True)
             self._features_cache = TensorCache(os.path.join(feature_cache_dir, "features"))
@@ -328,7 +334,7 @@ class VQAv2Reader(DatasetReader):
         with open(json_file_path) as json_file:
             data = json.load(json_file)
 
-        for question_dict in data["questions"]:
+        for question_dict in self.shard_iterable(data["questions"]):
             image_id = question_dict["image_id"]
             image_path = os.path.join(self._image_dir, split, f"COCO_{split}_{image_id:012d}.jpg")
             yield self.text_to_instance(
