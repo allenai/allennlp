@@ -30,8 +30,8 @@ local model_name = "bert-base-uncased";
     "image_intermediate_size": 3072,
     "image_attention_dropout": 0.1,
     "image_hidden_dropout": 0.1,
-    "v_biattention_id": [0, 1, 2, 3, 4, 5],
-    "t_biattention_id": [6, 7, 8, 9, 10, 11],
+    "v_biattention_id": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+    "t_biattention_id": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
     "fixed_t_layer": 0,
     "fixed_v_layer": 0,
     "fusion_method": "mul"
