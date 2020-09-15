@@ -137,6 +137,7 @@ class Nlvr2Reader(DatasetReader):
             sentence = json_blob["sentence"]
             label = bool(json_blob["label"])
             instance = self.text_to_instance(identifier, sentence, label)
+            if instance is not None:
                 yield instance
 
     @overrides
