@@ -60,14 +60,13 @@ class TransformerLayer(TransformerModule, FromParams):
         return layer_output
 
     @classmethod
-    def from_pretrained_module(
+    def _get_input_arguments(
         cls,
         pretrained_module: torch.nn.Module,
         source="huggingface",
         mapping: Optional[Dict[str, str]] = None,
     ):
-
-        submodules = cls._get_mapped_submodules(pretrained_module)
+        submodules = cls._get_mapped_submodules(pretrained_module, source, mapping)
 
         hidden_size = submodules["attention.self.query"].in_features
         num_attention_heads = submodules["attention.self"].num_attention_heads
@@ -76,7 +75,7 @@ class TransformerLayer(TransformerModule, FromParams):
         intermediate_size = submodules["intermediate.dense"].out_features
         activation = submodules["intermediate"].intermediate_act_fn
 
-        module = cls(
+        return (
             hidden_size,
             intermediate_size,
             num_attention_heads,
@@ -84,7 +83,3 @@ class TransformerLayer(TransformerModule, FromParams):
             hidden_dropout,
             activation,
         )
-
-        module._load_from_pretrained_module(pretrained_module)
-
-        return module
