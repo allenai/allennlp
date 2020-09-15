@@ -91,3 +91,6 @@ def attention_map():
     attn_map["scaled_dot_product"] = ScaledDotProduct
     attn_map["content_base"] = ContentBaseAttention
     return attn_map
+
+
+ATTN_MAP = attention_map()

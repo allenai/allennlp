@@ -2,12 +2,14 @@ import torch
 
 from allennlp.common import FromParams
 
-from allennlp.modules.transformer.bert_intermediate import BertIntermediate
+from allennlp.modules.transformer.activation_layer import ActivationLayer
 from allennlp.modules.transformer.output_layer import OutputLayer
-from allennlp.modules.transformer.biattention import BiAttention
+from allennlp.modules.transformer.bimodal_attention import BiModalAttention
+
+from allennlp.modules.transformer.transformer_module import TransformerModule
 
 
-class BiModalOutput(torch.nn.Module, FromParams):
+class BiModalOutput(TransformerModule, FromParams):
     def __init__(
         self,
         hidden_size1: int,
@@ -29,7 +31,10 @@ class BiModalOutput(torch.nn.Module, FromParams):
         return hidden_states1, hidden_states2
 
 
-class BiModalConnectionLayer(torch.nn.Module, FromParams):
+class BiModalConnectionLayer(TransformerModule, FromParams):
+
+    _huggingface_mapping = {"bimodal_attention": "biAttention", "bimodal_output": "biOutput"}
+
     def __init__(
         self,
         hidden_size1: int,
@@ -43,7 +48,7 @@ class BiModalConnectionLayer(torch.nn.Module, FromParams):
         activation: str,
     ):
         super().__init__()
-        self.biAttention = BiAttention(
+        self.bimodal_attention = BiModalAttention(
             hidden_size1=hidden_size1,
             hidden_size2=hidden_size2,
             combined_hidden_size=combined_hidden_size,
@@ -52,7 +57,7 @@ class BiModalConnectionLayer(torch.nn.Module, FromParams):
             dropout2=dropout2,
         )
 
-        self.biModalOutput = BiModalOutput(
+        self.bimodal_output = BiModalOutput(
             hidden_size1=hidden_size1,
             hidden_size2=hidden_size2,
             combined_hidden_size=combined_hidden_size,
@@ -60,7 +65,7 @@ class BiModalConnectionLayer(torch.nn.Module, FromParams):
             dropout2=dropout2,
         )
 
-        self.intermediate1 = BertIntermediate(
+        self.intermediate1 = ActivationLayer(
             hidden_size=hidden_size1,
             intermediate_size=intermediate_size1,
             activation=activation,
@@ -71,7 +76,7 @@ class BiModalConnectionLayer(torch.nn.Module, FromParams):
             dropout=dropout1,
         )
 
-        self.intermediate2 = BertIntermediate(
+        self.intermediate2 = ActivationLayer(
             hidden_size=hidden_size2,
             intermediate_size=intermediate_size2,
             activation=activation,
@@ -92,7 +97,7 @@ class BiModalConnectionLayer(torch.nn.Module, FromParams):
         use_co_attention_mask=False,
     ):
 
-        bi_output1, bi_output2 = self.biAttention(
+        bi_output1, bi_output2 = self.bimodal_attention(
             input_tensor1,
             attention_mask1,
             input_tensor2,
@@ -101,7 +106,7 @@ class BiModalConnectionLayer(torch.nn.Module, FromParams):
             use_co_attention_mask,
         )
 
-        attention_output1, attention_output2 = self.biModalOutput(
+        attention_output1, attention_output2 = self.bimodal_output(
             bi_output2, input_tensor1, bi_output1, input_tensor2
         )
 

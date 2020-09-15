@@ -1,11 +1,9 @@
 import torch
 
 from allennlp.common import FromParams
-from allennlp.modules.transformer.attention_scores import attention_map
+from allennlp.modules.transformer.attention_scores import ATTN_MAP
 
 from allennlp.modules.transformer.transformer_module import TransformerModule
-
-ATTN_MAP = attention_map()
 
 
 class SelfAttention(TransformerModule, FromParams):

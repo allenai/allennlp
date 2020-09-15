@@ -2,11 +2,11 @@ import copy
 import torch
 
 from allennlp.common import Params
-from allennlp.modules.transformer import BiAttention
+from allennlp.modules.transformer import BiModalAttention
 from allennlp.common.testing import AllenNlpTestCase
 
 
-class TestBiAttention(AllenNlpTestCase):
+class TestBiModalAttention(AllenNlpTestCase):
     def setup_method(self):
         super().setup_method()
 
@@ -21,7 +21,7 @@ class TestBiAttention(AllenNlpTestCase):
 
         params = Params(copy.deepcopy(self.params_dict))
 
-        self.biattention = BiAttention.from_params(params)
+        self.biattention = BiModalAttention.from_params(params)
 
     def test_can_construct_from_params(self):
 

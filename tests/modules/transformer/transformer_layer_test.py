@@ -3,10 +3,54 @@ import torch
 
 from allennlp.common import Params
 from allennlp.common.testing import assert_equal_parameters
-from allennlp.modules.transformer import TransformerLayer
+from allennlp.modules.transformer import AttentionLayer, TransformerLayer
 from allennlp.common.testing import AllenNlpTestCase
 
 from transformers.modeling_auto import AutoModel
+
+
+class TestAttentionLayer(AllenNlpTestCase):
+    def setup_method(self):
+        super().setup_method()
+
+        self.params_dict = {
+            "hidden_size": 6,
+            "num_attention_heads": 2,
+            "attention_dropout": 0.1,
+            "hidden_dropout": 0.2,
+        }
+
+        params = Params(copy.deepcopy(self.params_dict))
+
+        self.attention_layer = AttentionLayer.from_params(params)
+
+    def test_can_construct_from_params(self):
+
+        attention_layer = self.attention_layer
+
+        assert attention_layer.self.num_attention_heads == self.params_dict["num_attention_heads"]
+        assert attention_layer.self.attention_head_size == int(
+            self.params_dict["hidden_size"] / self.params_dict["num_attention_heads"]
+        )
+        assert (
+            attention_layer.self.all_head_size
+            == self.params_dict["num_attention_heads"] * attention_layer.self.attention_head_size
+        )
+        assert attention_layer.self.query.in_features == self.params_dict["hidden_size"]
+        assert attention_layer.self.key.in_features == self.params_dict["hidden_size"]
+        assert attention_layer.self.value.in_features == self.params_dict["hidden_size"]
+        assert attention_layer.self.dropout.p == self.params_dict["attention_dropout"]
+
+        assert attention_layer.output.dense.in_features == self.params_dict["hidden_size"]
+        assert attention_layer.output.dense.out_features == self.params_dict["hidden_size"]
+        assert (
+            attention_layer.output.layer_norm.normalized_shape[0] == self.params_dict["hidden_size"]
+        )
+        assert attention_layer.output.dropout.p == self.params_dict["hidden_dropout"]
+
+    def test_forward_runs(self):
+
+        self.attention_layer.forward(torch.randn(2, 3, 6), torch.randn(2, 2, 3, 3))
 
 
 class TestTransformerLayer(AllenNlpTestCase):
