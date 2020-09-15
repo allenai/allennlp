@@ -16,7 +16,7 @@ class TestFasterRcnnRegionDetector(AllenNlpTestCase):
         assert image_size[1] == 1199
         image_pixels = image_pixels.unsqueeze(0).expand(batch_size, -1, -1, -1)
         image_size = image_size.unsqueeze(0).expand(batch_size, -1)
-        grid_features = backbone(image_pixels)
+        grid_features = backbone(image_pixels, image_size)
         results = detector(image_pixels, image_size, grid_features)
         assert results["coordinates"].size() == (batch_size, num_boxes, 4)
         assert results["features"].size() == (batch_size, num_boxes, 2048)
