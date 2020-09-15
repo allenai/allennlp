@@ -1,3 +1,4 @@
+import pytest
 from transformers.modeling_auto import AutoModel
 
 from allennlp.common.testing import ModelTestCase
@@ -20,6 +21,7 @@ class TestVilbert(ModelTestCase):
             param_file = self.FIXTURES_ROOT / "vilbert" / "experiment.jsonnet"
             self.ensure_model_can_train_save_and_load(param_file, overrides=overrides)
 
+    @pytest.mark.skip
     def test_model_can_train_save_and_load_from_huggingface(self):
         param_file = self.FIXTURES_ROOT / "vilbert" / "experiment_from_huggingface.jsonnet"
         self.ensure_model_can_train_save_and_load(param_file)
