@@ -1,6 +1,7 @@
 from typing import Dict
 
 import torch
+from torch import Tensor
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Batch, Vocabulary
@@ -8,13 +9,8 @@ from allennlp.data.dataset_readers import VQAv2Reader
 from allennlp.data.image_loader import DetectronImageLoader
 from allennlp.data.tokenizers import WhitespaceTokenizer
 from allennlp.data.token_indexers import SingleIdTokenIndexer
-from allennlp.modules.vision.grid_embedder import GridEmbedder
+from allennlp.modules.vision.grid_embedder import NullGridEmbedder
 from allennlp.modules.vision.region_detector import RegionDetector
-
-
-class FakeGridEmbedder(GridEmbedder):
-    def forward(self, images: torch.FloatTensor):
-        return images
 
 
 class FakeRegionDetector(RegionDetector):
@@ -27,7 +23,7 @@ class FakeRegionDetector(RegionDetector):
         raw_images: torch.FloatTensor,
         image_sizes: torch.IntTensor,
         featurized_images: torch.FloatTensor,
-    ) -> Dict[str, torch.FloatTensor]:
+    ) -> Dict[str, Tensor]:
         self.calls += 1
         batch_size, num_features, height, width = raw_images.size()
         features = torch.ones(batch_size, 1, 10, dtype=featurized_images.dtype)
@@ -44,7 +40,7 @@ class TestVQAv2Reader(AllenNlpTestCase):
             image_dir=self.FIXTURES_ROOT / "data" / "vqav2" / "images",
             data_dir=self.FIXTURES_ROOT / "data" / "vqav2",
             image_loader=DetectronImageLoader(),
-            image_featurizer=FakeGridEmbedder(),
+            image_featurizer=NullGridEmbedder(),
             region_detector=FakeRegionDetector(),
             tokenizer=WhitespaceTokenizer(),
             token_indexers={"tokens": SingleIdTokenIndexer()},
