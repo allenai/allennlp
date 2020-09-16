@@ -1,3 +1,6 @@
+from typing import Union
+
+import torch
 from torch import nn, FloatTensor, IntTensor
 
 from allennlp.common.registrable import Registrable
@@ -53,7 +56,7 @@ class ResnetBackbone(GridEmbedder):
     def __init__(
         self,
         meta_architecture: str = "GeneralizedRCNN",
-        device: str = "cpu",
+        device: Union[str, int, torch.device] = "cpu",
         weights: str = "RCNN-X152-C4-2020-07-18",
         attribute_on: bool = True,  # not in detectron2 default config
         max_attr_per_ins: int = 16,  # not in detectron2 default config

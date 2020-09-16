@@ -1,14 +1,15 @@
 import math
 
-from allennlp.common.testing import AllenNlpTestCase
+from allennlp.common.testing import AllenNlpTestCase, requires_gpu
 from allennlp.data.image_loader import DetectronImageLoader
 from allennlp.modules.vision.grid_embedder import ResnetBackbone
 
 
 class TestResnetBackbone(AllenNlpTestCase):
+    @requires_gpu
     def test_forward_runs(self):
         loader = DetectronImageLoader()
-        backbone = ResnetBackbone()
+        backbone = ResnetBackbone(device=0)
         image_pixels, image_size = loader(self.FIXTURES_ROOT / "detectron" / "000000001268.jpg")
         image_height = image_size[0]  # 800 for the image above
         image_width = image_size[1]  # 1199 for the image above
