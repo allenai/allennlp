@@ -66,6 +66,7 @@ class TransformerModule(torch.nn.Module):
         if mapping is None:
             self._construct_default_mapping(source)
             mapping = self._default_mapping
+
         pretrained_parameters = dict(pretrained_module.named_parameters())
         for name, parameter in self.named_parameters():
             pretrained_name = name

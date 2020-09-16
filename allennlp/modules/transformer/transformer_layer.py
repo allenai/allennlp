@@ -68,18 +68,13 @@ class TransformerLayer(TransformerModule, FromParams):
     ):
         submodules = cls._get_mapped_submodules(pretrained_module, source, mapping)
 
-        hidden_size = submodules["attention.self.query"].in_features
-        num_attention_heads = submodules["attention.self"].num_attention_heads
-        attention_dropout = submodules["attention.self.dropout"].p
-        hidden_dropout = submodules["attention.output.dropout"].p
-        intermediate_size = submodules["intermediate.dense"].out_features
-        activation = submodules["intermediate"].intermediate_act_fn
+        kwargs = {}
 
-        return (
-            hidden_size,
-            intermediate_size,
-            num_attention_heads,
-            attention_dropout,
-            hidden_dropout,
-            activation,
-        )
+        kwargs["hidden_size"] = submodules["attention.self.query"].in_features
+        kwargs["num_attention_heads"] = submodules["attention.self"].num_attention_heads
+        kwargs["attention_dropout"] = submodules["attention.self.dropout"].p
+        kwargs["hidden_dropout"] = submodules["attention.output.dropout"].p
+        kwargs["intermediate_size"] = submodules["intermediate.dense"].out_features
+        kwargs["activation"] = submodules["intermediate"].intermediate_act_fn
+
+        return kwargs

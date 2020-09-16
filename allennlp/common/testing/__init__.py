@@ -117,7 +117,7 @@ def assert_equal_parameters(
     for name, parameter in new_module.named_parameters():
         for key, val in new_module._default_mapping.items():
             name = name.replace(key, val)
-            if ignore_missing:
-                if name not in old_parameters:
-                    continue
-            assert torch.all(torch.eq(old_parameters[name], parameter))
+        if ignore_missing:
+            if name not in old_parameters:
+                continue
+        assert torch.all(torch.eq(old_parameters[name], parameter))
