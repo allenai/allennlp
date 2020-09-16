@@ -1,11 +1,36 @@
-from typing import Optional
+from typing import Optional, List
 
 import torch
 
 from allennlp.common import FromParams
 
+from allennlp.modules.transformer.transformer_module import TransformerModule
 
-class TransformerEmbeddings(torch.nn.Module, FromParams):
+
+class Embeddings(TransformerModule, FromParams):
+    """
+    General class for embeddings for any modality.
+    """
+
+    def __init__(self, embeddings: List[torch.nn.Module], hidden_size: int, dropout: float):
+        super().__init__()
+        self.embeddings = embeddings
+        self.layer_norm = torch.nn.LayerNorm(hidden_size, eps=1e-12)
+        self.dropout = torch.nn.Dropout(dropout)
+
+    def forward(self, inputs: List[torch.Tensor]) -> torch.Tensor:
+        assert len(inputs) == len(self.embeddings)
+        outputs = []
+        for i, inp in enumerate(inputs):
+            outputs.append(self.embeddings[i](inp))
+
+        outputs = sum(outputs)  # type: ignore
+        outputs = self.layer_norm(outputs)
+        outputs = self.dropout(outputs)
+        return outputs
+
+
+class TransformerEmbeddings(TransformerModule, FromParams):
     """
     Construct the embeddings from word, position and token_type embeddings.
     Details in the paper:
@@ -23,33 +48,23 @@ class TransformerEmbeddings(torch.nn.Module, FromParams):
         dropout: float,
     ):
         super().__init__()
-        self.word_embeddings = torch.nn.Embedding(vocab_size, hidden_size, padding_idx=pad_token_id)
-        self.position_embeddings = torch.nn.Embedding(max_position_embeddings, hidden_size)
-        self.token_type_embeddings = torch.nn.Embedding(type_vocab_size, hidden_size)
+        word_embeddings = torch.nn.Embedding(vocab_size, hidden_size, padding_idx=pad_token_id)
+        position_embeddings = torch.nn.Embedding(max_position_embeddings, hidden_size)
+        token_type_embeddings = torch.nn.Embedding(type_vocab_size, hidden_size)
 
-        self.layer_norm = torch.nn.LayerNorm(hidden_size, eps=1e-12)
-        self.dropout = torch.nn.Dropout(dropout)
+        embeddings = [word_embeddings, position_embeddings, token_type_embeddings]
+
+        self.embeddings = Embeddings(embeddings, hidden_size, dropout)
 
     def forward(
         self,
-        input_ids: Optional[torch.Tensor] = None,
+        input_ids: torch.Tensor,
         token_type_ids: Optional[torch.Tensor] = None,
         position_ids: Optional[torch.Tensor] = None,
-        input_embeds: Optional[torch.Tensor] = None,
     ) -> torch.Tensor:
 
-        assert (input_ids is None and input_embeds is not None) or (
-            input_ids is not None and input_embeds is None
-        )
-
-        if input_ids is not None:
-            input_shape = input_ids.size()
-            device = input_ids.device
-            input_embeds = self.word_embeddings(input_ids)
-        else:
-            input_shape = input_embeds.size()[:-1]
-            device = input_embeds.device
-
+        input_shape = input_ids.size()
+        device = input_ids.device
         seq_length = input_shape[1]
 
         if position_ids is None:
@@ -59,10 +74,6 @@ class TransformerEmbeddings(torch.nn.Module, FromParams):
         if token_type_ids is None:
             token_type_ids = torch.zeros(input_shape, dtype=torch.long, device=device)
 
-        position_embeddings = self.position_embeddings(position_ids)
-        token_type_embeddings = self.token_type_embeddings(token_type_ids)
+        embeddings = self.embeddings([input_ids, position_ids, token_type_ids])
 
-        embeddings = input_embeds + position_embeddings + token_type_embeddings
-        embeddings = self.layer_norm(embeddings)
-        embeddings = self.dropout(embeddings)
         return embeddings

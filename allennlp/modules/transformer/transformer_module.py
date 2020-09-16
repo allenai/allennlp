@@ -22,7 +22,7 @@ class TransformerModule(torch.nn.Module):
         """
         submodules = dict(pretrained_module.named_modules())
         if mapping is None:
-            if source == "huggingface":
+            if "huggingface" in source:
                 mapping = cls._huggingface_mapping
             else:
                 mapping = {}
@@ -41,7 +41,7 @@ class TransformerModule(torch.nn.Module):
         expected pretrained module, as per `source`.
         """
         mapping = {}
-        if source == "huggingface":
+        if "huggingface" in source:
             mapping = self._huggingface_mapping
         for name, module in self.named_modules():
             if name != "":
@@ -97,8 +97,8 @@ class TransformerModule(torch.nn.Module):
         mapping: Optional[Dict[str, str]] = None,
         **kwargs,
     ):
-
-        args = cls._get_input_arguments(pretrained_module, source, mapping)
-        module = cls(*args, **kwargs)
+        final_kwargs = cls._get_input_arguments(pretrained_module, source, mapping)
+        final_kwargs.update(kwargs)
+        module = cls(**final_kwargs)
         module._load_from_pretrained_module(pretrained_module)
         return module

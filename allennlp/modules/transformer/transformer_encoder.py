@@ -77,25 +77,17 @@ class TransformerEncoder(TransformerModule, FromParams):
         source="huggingface",
         mapping: Optional[Dict[str, str]] = None,
     ):
-        # FIX: Maybe this should return kwargs, so that it's easy for users to change things
-        # like "num_hidden_layers" instead of args[0].
         submodules = cls._get_mapped_submodules(pretrained_module, source, mapping)
 
-        num_hidden_layers = len(submodules["layers"])
+        kwargs = {}
 
-        hidden_size = submodules["layers.0.attention.self.query"].in_features
-        num_attention_heads = submodules["layers.0.attention.self"].num_attention_heads
-        attention_dropout = submodules["layers.0.attention.self.dropout"].p
-        hidden_dropout = submodules["layers.0.attention.output.dropout"].p
-        intermediate_size = submodules["layers.0.intermediate.dense"].out_features
-        activation = submodules["layers.0.intermediate"].intermediate_act_fn
+        kwargs["num_hidden_layers"] = len(submodules["layers"])
 
-        return (
-            num_hidden_layers,
-            hidden_size,
-            intermediate_size,
-            num_attention_heads,
-            attention_dropout,
-            hidden_dropout,
-            activation,
-        )
+        kwargs["hidden_size"] = submodules["layers.0.attention.self.query"].in_features
+        kwargs["num_attention_heads"] = submodules["layers.0.attention.self"].num_attention_heads
+        kwargs["attention_dropout"] = submodules["layers.0.attention.self.dropout"].p
+        kwargs["hidden_dropout"] = submodules["layers.0.attention.output.dropout"].p
+        kwargs["intermediate_size"] = submodules["layers.0.intermediate.dense"].out_features
+        kwargs["activation"] = submodules["layers.0.intermediate"].intermediate_act_fn
+
+        return kwargs

@@ -22,7 +22,9 @@ class ActivationLayer(TransformerModule, FromParams):
         else:
             self.act_fn = activation
 
-    def forward(self, hidden_states):
+    def forward(self, hidden_states, pool=False):
+        if pool:
+            hidden_states = hidden_states[:, 0]
         hidden_states = self.dense(hidden_states)
         hidden_states = self.act_fn(hidden_states)
         return hidden_states

@@ -43,9 +43,9 @@ class TestTransformerEncoder(AllenNlpTestCase):
 
     def test_loading_partial_pretrained_weights(self):
 
-        args = list(TransformerEncoder._get_input_arguments(self.pretrained.encoder))
+        kwargs = TransformerEncoder._get_input_arguments(self.pretrained.encoder)
         # The pretrained module has 12 bert layers, while the instance will have only 3.
-        args[0] = 3
-        transformer_encoder = TransformerEncoder(*args)
+        kwargs["num_hidden_layers"] = 3
+        transformer_encoder = TransformerEncoder(**kwargs)
         transformer_encoder._load_from_pretrained_module(self.pretrained.encoder)
         assert_equal_parameters(self.pretrained.encoder, transformer_encoder)

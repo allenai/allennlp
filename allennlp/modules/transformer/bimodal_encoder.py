@@ -11,6 +11,9 @@ from allennlp.modules.transformer.transformer_module import TransformerModule
 
 
 class BiModalEncoder(TransformerModule, FromParams):
+
+    _huggingface_mapping = {"layers1": "layer"}
+
     def __init__(
         self,
         num_hidden_layers1: int,
@@ -213,28 +216,54 @@ class BiModalEncoder(TransformerModule, FromParams):
         """
         The `pretrained_module` only supplies one of the modalities.
         """
-        # FIX: Maybe this should return kwargs, so that it's easy for users to change things
-        # like "num_hidden_layers" instead of args[0].
         submodules = cls._get_mapped_submodules(pretrained_module, source, mapping)
 
-        num_hidden_layers = len(submodules["layers"])
+        kwargs = {}
 
-        hidden_size = submodules["layers.0.attention.self.query"].in_features
-        num_attention_heads = submodules["layers.0.attention.self"].num_attention_heads
-        attention_dropout = submodules["layers.0.attention.self.dropout"].p
-        hidden_dropout = submodules["layers.0.attention.output.dropout"].p
-        intermediate_size = submodules["layers.0.intermediate.dense"].out_features
-        activation = submodules["layers.0.intermediate"].intermediate_act_fn
+        kwargs["num_hidden_layers1"] = len(submodules["layers1"])
 
-        return (
-            num_hidden_layers,
-            hidden_size,
-            intermediate_size,
-            num_attention_heads,
-            attention_dropout,
-            hidden_dropout,
-            activation,
-        )
+        kwargs["hidden_size1"] = submodules["layers1.0.attention.self.query"].in_features
+        kwargs["num_attention_heads"] = submodules["layers1.0.attention.self"].num_attention_heads
+        kwargs["attention_dropout1"] = submodules["layers1.0.attention.self.dropout"].p
+        kwargs["hidden_dropout1"] = submodules["layers1.0.attention.output.dropout"].p
+        kwargs["intermediate_size1"] = submodules["layers1.0.intermediate.dense"].out_features
+        kwargs["activation"] = submodules["layers1.0.intermediate"].intermediate_act_fn
+
+        return kwargs
+
+    def _load_from_pretrained_module(
+        self,
+        pretrained_module: torch.nn.Module,
+        source="huggingface",
+        mapping: Optional[Dict[str, str]] = None,
+    ):
+        """
+        Loads the weights of the `pretrained_module` into the instance.
+        Optionally, a `mapping` is specified for any differences in parameter names
+        between `pretrained_module` and the instance.
+        """
+        # FIX: ignore_absent_parameters should be a general option.
+        if mapping is None:
+            self._construct_default_mapping(source)
+            mapping = self._default_mapping
+        pretrained_parameters = dict(pretrained_module.named_parameters())
+        ignore_absent_parameters = ["layers2", "c_layer"]  # FIX: specific to source.
+        for name, parameter in self.named_parameters():
+            pretrained_name = name
+            for key, val in mapping.items():
+                # so that we replace the names of submodules too.
+                # eg. module.key.anothermodule --> module.val.anothermodule
+                pretrained_name = pretrained_name.replace(key, val)
+
+            if not any(
+                [pretrained_name.startswith(paraname) for paraname in ignore_absent_parameters]
+            ):
+                if pretrained_name not in pretrained_parameters:
+                    raise ValueError(
+                        f"Couldn't find a matching parameter for {name}. Is this module "
+                        "compatible with the pretrained module you're using?"
+                    )
+                parameter.data.copy_(pretrained_parameters[pretrained_name].data)
 
     @classmethod
     def from_pretrained_module(
@@ -247,6 +276,7 @@ class BiModalEncoder(TransformerModule, FromParams):
         """
         The `pretrained_module` only supplies one of the modalities.
         """
+
         required_kwargs = [
             "num_hidden_layers2",
             "hidden_size2",
@@ -259,10 +289,15 @@ class BiModalEncoder(TransformerModule, FromParams):
             "fixed_layer2",
         ]
         for key in required_kwargs:
-            assert key in kwargs
+            assert key in kwargs, "`{}` is a required argument.".format(key)
 
-        kwargs["fast_mode"] = kwargs.get("fast_mode", False)
-        kwargs["with_coattention"] = kwargs.get("with_coattention", True)
-        kwargs["in_batch_pairs"] = kwargs.get("in_batch_pairs", False)
+        final_kwargs = {}
+        final_kwargs.update(cls._get_input_arguments(pretrained_module, source, mapping))
 
-        return super().from_pretrained_module(pretrained_module, source, mapping, **kwargs)
+        final_kwargs.update(kwargs)
+
+        final_kwargs["fast_mode"] = final_kwargs.get("fast_mode", False)
+        final_kwargs["with_coattention"] = final_kwargs.get("with_coattention", True)
+        final_kwargs["in_batch_pairs"] = final_kwargs.get("in_batch_pairs", False)
+
+        return super().from_pretrained_module(pretrained_module, source, mapping, **final_kwargs)
