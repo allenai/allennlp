@@ -23,7 +23,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Ignore *args when constructing classes with `FromParams`.
-- Ensured some consistency in the types of the values that metrics return
+- Ensured some consistency in the types of the values that metrics return.
+- Fix a PyTorch warning by explicitly providing the `as_tuple` argument (leaving
+  it as its default value of `False`) to `Tensor.nonzero()`.
 
 ## [v1.1.0](https://github.com/allenai/allennlp/releases/tag/v1.1.0) - 2020-09-08
 
