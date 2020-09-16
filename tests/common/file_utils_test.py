@@ -245,7 +245,9 @@ class TestFileUtils(AllenNlpTestCase):
 
         # archives
         filename = cached_path(
-            self.FIXTURES_ROOT / "common" / "quote.tar.gz!quote.txt", extract_archive=True
+            self.FIXTURES_ROOT / "common" / "quote.tar.gz!quote.txt",
+            extract_archive=True,
+            cache_dir=self.TEST_DIR,
         )
         with open(filename, "r") as f:
             assert f.read().startswith("I mean, ")

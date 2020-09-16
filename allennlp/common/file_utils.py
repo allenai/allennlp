@@ -119,6 +119,8 @@ def cached_path(
     if cache_dir is None:
         cache_dir = CACHE_DIRECTORY
 
+    os.makedirs(cache_dir, exist_ok=True)
+
     if isinstance(url_or_filename, PathLike):
         url_or_filename = str(url_or_filename)
 
@@ -392,8 +394,6 @@ def get_from_cache(url: str, cache_dir: Union[str, Path] = None) -> str:
     """
     if cache_dir is None:
         cache_dir = CACHE_DIRECTORY
-
-    os.makedirs(cache_dir, exist_ok=True)
 
     # Get eTag to add to filename, if it exists.
     try:
