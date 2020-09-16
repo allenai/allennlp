@@ -27,11 +27,11 @@ logger = logging.getLogger(__name__)
 @Model.register("vqa_vilbert_from_huggingface", constructor="from_huggingface_model_name")
 class VqaVilbert(Model):
     """
-    Model for VQA task based on the Vilbert paper.
+    Model for VQA task based on the VilBERT paper.
 
     # Parameters
 
-    vocab: ``Vocabulary``
+    vocab : `Vocabulary`
     """
 
     def __init__(
