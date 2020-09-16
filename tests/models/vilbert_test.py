@@ -1,4 +1,3 @@
-import pytest
 from transformers.modeling_auto import AutoModel
 
 from allennlp.common.testing import ModelTestCase
