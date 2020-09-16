@@ -69,8 +69,6 @@ test-with-cov :
 
 .PHONY : gpu-test
 gpu-test : check-for-cuda
-	# reinstall detectron, because it installs different binaries when a GPU is present
-	pip install --force-reinstall --no-deps $(fgrep detectron dev-requirements.txt)
 	pytest --color=yes -v -rf -m gpu
 
 .PHONY : benchmarks
