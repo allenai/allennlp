@@ -359,7 +359,7 @@ class VQAv2Reader(DatasetReader):
             with torch.no_grad():
                 images = images.to(self.cuda_device)
                 sizes = sizes.to(self.cuda_device)
-                featurized_images = self.image_featurizer(images)
+                featurized_images = self.image_featurizer(images, sizes)
                 detector_results = self.region_detector(images, sizes, featurized_images)
                 features = detector_results["features"]
                 coordinates = detector_results["coordinates"]
