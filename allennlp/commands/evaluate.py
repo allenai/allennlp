@@ -37,10 +37,10 @@ class Evaluate(Subcommand):
             "input_file", type=str, help="path to the file containing the evaluation data"
         )
 
-        subparser.add_argument("--output-file", type=str, help="path to write the metrics to")
+        subparser.add_argument("--output-file", type=str, help="optional path to write the metrics to as JSON")
 
         subparser.add_argument(
-            "--predictions-output-file", type=str, help="path to write the predictions to"
+            "--predictions-output-file", type=str, help="optional path to write the predictions to as JSON lines"
         )
 
         subparser.add_argument(
