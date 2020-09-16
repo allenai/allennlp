@@ -248,5 +248,5 @@ class VqaVilbert(Model):
     @overrides
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
         return {
-            # "denotation_acc": self.accuracy.get_metric(reset),
+            "denotation_acc": self.accuracy.get_metric(reset),
         }
