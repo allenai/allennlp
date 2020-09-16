@@ -28,11 +28,6 @@ RUN touch allennlp/__init__.py && touch README.md
 COPY setup.py setup.py
 COPY dev-requirements.txt dev-requirements.txt
 
-# Setting this variable makes Detectron2 build a CUDA version, even if CUDA is not available during
-# docker build.
-ENV FORCE_CUDA="1"
-ENV CUDA_HOME "/usr/local/cuda"
-
 # Now install deps by installing the shell package, and then uninstall it so we can
 # re-install the full package below.
 RUN pip install --no-cache-dir -e . && \
@@ -40,6 +35,9 @@ RUN pip install --no-cache-dir -e . && \
     pip uninstall -y typing && \
     pip uninstall -y allennlp && \
     rm -rf allennlp/
+
+# reinstall Detectron, because the version referenced in dev-requirements.txt is not reliable.
+RUN python -m pip install detectron2 -f https://dl.fbaipublicfiles.com/detectron2/wheels/cu102/torch1.6/index.html
 
 # Now add the full package source and re-install just the package.
 COPY . .
