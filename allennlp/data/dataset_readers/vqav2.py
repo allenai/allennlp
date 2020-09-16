@@ -1,10 +1,8 @@
 from collections import defaultdict
 from os import PathLike
-from typing import Any, Dict, List, Tuple, Union, Optional, MutableMapping
-import glob
+from typing import Dict, List, Union, Optional, MutableMapping
 import json
 import os
-import pickle
 import re
 
 from overrides import overrides
@@ -13,9 +11,9 @@ from torch import Tensor
 
 from allennlp.common.checks import check_for_gpu
 from allennlp.common.util import int_to_device
-from allennlp.common.file_utils import cached_path, json_lines_from_file, TensorCache
+from allennlp.common.file_utils import cached_path, TensorCache
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
-from allennlp.data.fields import ArrayField, LabelField, ListField, MetadataField, TextField
+from allennlp.data.fields import ArrayField, LabelField, ListField, TextField
 from allennlp.data.image_loader import ImageLoader
 from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import PretrainedTransformerIndexer
@@ -163,8 +161,8 @@ manual_map = {
     "ten": "10",
 }
 articles = ["a", "an", "the"]
-period_strip = re.compile("(?!<=\d)(\.)(?!\d)")
-comma_strip = re.compile("(\d)(\,)(\d)")
+period_strip = re.compile(r"(?!<=\d)(\.)(?!\d)")
+comma_strip = re.compile(r"(\d)(\,)(\d)")
 punct = [
     ";",
     r"/",
@@ -193,7 +191,7 @@ punct = [
 def process_punctuation(inText):
     outText = inText
     for p in punct:
-        if (p + " " in inText or " " + p in inText) or (re.search(comma_strip, inText) != None):
+        if (p + " " in inText or " " + p in inText) or (re.search(comma_strip, inText) is not None):
             outText = outText.replace(p, "")
         else:
             outText = outText.replace(p, " ")
@@ -381,7 +379,7 @@ class VQAv2Reader(DatasetReader):
         if answers:
             answer_fields = []
             weights = []
-            answer_counts = defaultdict(int)
+            answer_counts: MutableMapping[str, int] = defaultdict(int)
             for answer_dict in answers:
                 answer = preprocess_answer(answer_dict["answer"])
                 answer_counts[answer] += 1

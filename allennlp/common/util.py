@@ -24,6 +24,7 @@ from typing import (
     Tuple,
     TypeVar,
     Union,
+    Sequence,
 )
 
 import numpy
@@ -140,7 +141,7 @@ def lazy_groups_of(iterable: Iterable[A], group_size: int) -> Iterator[List[A]]:
 
 
 def pad_sequence_to_length(
-    sequence: List,
+    sequence: Sequence,
     desired_length: int,
     default_value: Callable[[], Any] = lambda: 0,
     padding_on_right: bool = True,
@@ -171,6 +172,7 @@ def pad_sequence_to_length(
 
     padded_sequence : `List`
     """
+    sequence = list(sequence)
     # Truncates the sequence to the desired length.
     if padding_on_right:
         padded_sequence = sequence[:desired_length]

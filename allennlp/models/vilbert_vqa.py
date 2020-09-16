@@ -1,13 +1,11 @@
 import collections
 import logging
-import math
 from copy import deepcopy
 from typing import Dict, List
 
 from overrides import overrides
 import torch
 
-from allennlp.common import FromParams
 from allennlp.data import TextFieldTensors, Vocabulary
 from allennlp.models.model import Model
 from allennlp.nn import util
@@ -21,8 +19,6 @@ from allennlp.models.vilbert import (
 )
 
 from transformers.modeling_auto import AutoModel
-from transformers.modeling_utils import PreTrainedModel
-from transformers.modeling_bert import ACT2FN
 
 logger = logging.getLogger(__name__)
 
