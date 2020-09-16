@@ -1,6 +1,7 @@
 from transformers.modeling_auto import AutoModel
 
 from allennlp.common.testing import ModelTestCase
+from allennlp.data import Vocabulary
 from allennlp.models.vilbert_vqa import VqaVilbert
 
 
@@ -25,9 +26,12 @@ class TestVqaVilbert(ModelTestCase):
         self.ensure_model_can_train_save_and_load(param_file)
 
     def test_model_loads_weights_correctly(self):
+        vocab = Vocabulary()
+        vocab.add_tokens_to_namespace(["orange", "net", "netting", "pitcher", "catcher"], "answers")
+
         model_name = "epwalsh/bert-xsmall-dummy"
         model = VqaVilbert.from_huggingface_model_name(
-            vocab=None,
+            vocab=vocab,
             model_name=model_name,
             image_feature_dim=2048,
             image_num_hidden_layers=1,
