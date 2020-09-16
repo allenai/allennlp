@@ -54,7 +54,11 @@ class FindLearningRate(Subcommand):
             "--overrides",
             type=str,
             default="",
-            help="a JSON structure used to override the experiment configuration",
+            help=(
+                "a json(net) structure used to override the experiment configuration, e.g., "
+                "'{\"iterator.batch_size\": 16}'.  Nested parameters can be specified either"
+                " with nested dictionaries or with dot syntax."
+            ),
         )
         subparser.add_argument(
             "--start-lr", type=float, default=1e-5, help="learning rate to start the search"

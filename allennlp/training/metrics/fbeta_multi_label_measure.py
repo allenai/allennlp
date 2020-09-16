@@ -1,17 +1,18 @@
-from typing import List, Optional, Union
+from typing import List, Optional
 
 import torch
 import torch.distributed as dist
 from overrides import overrides
 
-from allennlp.common.util import is_distributed
 from allennlp.common.checks import ConfigurationError
+from allennlp.common.util import is_distributed
+from allennlp.training.metrics import FBetaMeasure
 from allennlp.training.metrics.metric import Metric
 
 
-@Metric.register("fbeta")
-class FBetaMeasure(Metric):
-    """Compute precision, recall, F-measure and support for each class.
+@Metric.register("fbeta_multi_label")
+class FBetaMultiLabelMeasure(FBetaMeasure):
+    """Compute precision, recall, F-measure and support for multi-label classification.
 
     The precision is the ratio `tp / (tp + fp)` where `tp` is the number of
     true positives and `fp` the number of false positives. The precision is
@@ -61,35 +62,20 @@ class FBetaMeasure(Metric):
         multi-class average ignoring a majority negative class. Labels not present
         in the data will result in 0 components in a macro or weighted average.
 
+    threshold: `float`, optional (default = `0.5`)
+        Logits over this threshold will be considered predictions for the corresponding class.
+
     """
 
-    def __init__(self, beta: float = 1.0, average: str = None, labels: List[int] = None) -> None:
-        average_options = {None, "micro", "macro", "weighted"}
-        if average not in average_options:
-            raise ConfigurationError(f"`average` has to be one of {average_options}.")
-        if beta <= 0:
-            raise ConfigurationError("`beta` should be >0 in the F-beta score.")
-        if labels is not None and len(labels) == 0:
-            raise ConfigurationError("`labels` cannot be an empty list.")
-        self._beta = beta
-        self._average = average
-        self._labels = labels
-
-        # statistics
-        # the total number of true positive instances under each class
-        # Shape: (num_classes, )
-        self._true_positive_sum: Union[None, torch.Tensor] = None
-        # the total number of instances
-        # Shape: (num_classes, )
-        self._total_sum: Union[None, torch.Tensor] = None
-        # the total number of instances under each _predicted_ class,
-        # including true positives and false positives
-        # Shape: (num_classes, )
-        self._pred_sum: Union[None, torch.Tensor] = None
-        # the total number of instances under each _true_ class,
-        # including true positives and false negatives
-        # Shape: (num_classes, )
-        self._true_sum: Union[None, torch.Tensor] = None
+    def __init__(
+        self,
+        beta: float = 1.0,
+        average: str = None,
+        labels: List[int] = None,
+        threshold: float = 0.5,
+    ) -> None:
+        super().__init__(beta, average, labels)
+        self._threshold = threshold
 
     @overrides
     def __call__(
@@ -133,11 +119,16 @@ class FBetaMeasure(Metric):
         gold_labels = gold_labels.float()
 
         # If the prediction tensor is all zeros, the record is not classified to any of the labels.
-        pred_mask = predictions.sum(dim=-1) != 0
-        argmax_predictions = predictions.max(dim=-1)[1].float()
+        pred_mask = (predictions.sum(dim=-1) != 0).unsqueeze(-1)
+        threshold_predictions = (predictions >= self._threshold).float()
 
-        true_positives = (gold_labels == argmax_predictions) & mask & pred_mask
-        true_positives_bins = gold_labels[true_positives]
+        class_indices = (
+            torch.arange(num_classes, device=predictions.device)
+            .unsqueeze(0)
+            .repeat(gold_labels.size(0), 1)
+        )
+        true_positives = (gold_labels * threshold_predictions).bool() & mask & pred_mask
+        true_positives_bins = class_indices[true_positives]
 
         # Watch it:
         # The total numbers of true positives under all _predicted_ classes are zeros.
@@ -148,7 +139,7 @@ class FBetaMeasure(Metric):
                 true_positives_bins.long(), minlength=num_classes
             ).float()
 
-        pred_bins = argmax_predictions[mask & pred_mask].long()
+        pred_bins = class_indices[threshold_predictions.bool() & mask & pred_mask]
         # Watch it:
         # When the `mask` is all 0, we will get an _empty_ tensor.
         if pred_bins.shape[0] != 0:
@@ -156,13 +147,13 @@ class FBetaMeasure(Metric):
         else:
             pred_sum = torch.zeros(num_classes, device=predictions.device)
 
-        gold_labels_bins = gold_labels[mask].long()
-        if gold_labels.shape[0] != 0:
+        gold_labels_bins = class_indices[gold_labels.bool() & mask]
+        if gold_labels_bins.shape[0] != 0:
             true_sum = torch.bincount(gold_labels_bins, minlength=num_classes).float()
         else:
             true_sum = torch.zeros(num_classes, device=predictions.device)
 
-        self._total_sum += mask.sum().to(torch.float)
+        self._total_sum += mask.expand_as(gold_labels).sum().to(torch.float)
 
         if is_distributed():
             true_positive_sum = torch.tensor(true_positive_sum).to(device)
@@ -176,95 +167,23 @@ class FBetaMeasure(Metric):
         self._pred_sum += pred_sum
         self._true_sum += true_sum
 
-    @overrides
-    def get_metric(self, reset: bool = False):
-        """
-        # Returns
-
-        precisions : `List[float]`
-        recalls : `List[float]`
-        f1-measures : `List[float]`
-
-        !!! Note
-            If `self.average` is not `None`, you will get `float` instead of `List[float]`.
-        """
-        if self._true_positive_sum is None:
-            raise RuntimeError("You never call this metric before.")
-
-        else:
-            tp_sum = self._true_positive_sum
-            pred_sum = self._pred_sum
-            true_sum = self._true_sum
-
-        if self._labels is not None:
-            # Retain only selected labels and order them
-            tp_sum = tp_sum[self._labels]
-            pred_sum = pred_sum[self._labels]
-            true_sum = true_sum[self._labels]
-
-        if self._average == "micro":
-            tp_sum = tp_sum.sum()
-            pred_sum = pred_sum.sum()
-            true_sum = true_sum.sum()
-
-        beta2 = self._beta ** 2
-        # Finally, we have all our sufficient statistics.
-        precision = _prf_divide(tp_sum, pred_sum)
-        recall = _prf_divide(tp_sum, true_sum)
-        fscore = (1 + beta2) * precision * recall / (beta2 * precision + recall)
-        fscore[tp_sum == 0] = 0.0
-
-        if self._average == "macro":
-            precision = precision.mean()
-            recall = recall.mean()
-            fscore = fscore.mean()
-        elif self._average == "weighted":
-            weights = true_sum
-            weights_sum = true_sum.sum()
-            precision = _prf_divide((weights * precision).sum(), weights_sum)
-            recall = _prf_divide((weights * recall).sum(), weights_sum)
-            fscore = _prf_divide((weights * fscore).sum(), weights_sum)
-
-        if reset:
-            self.reset()
-
-        if self._average is None:
-            return {
-                "precision": precision.tolist(),
-                "recall": recall.tolist(),
-                "fscore": fscore.tolist(),
-            }
-        else:
-            return {"precision": precision.item(), "recall": recall.item(), "fscore": fscore.item()}
-
-    @overrides
-    def reset(self) -> None:
-        self._true_positive_sum = None
-        self._pred_sum = None
-        self._true_sum = None
-        self._total_sum = None
-
     @property
     def _true_negative_sum(self):
         if self._total_sum is None:
             return None
         else:
             true_negative_sum = (
-                self._total_sum - self._pred_sum - self._true_sum + self._true_positive_sum
+                self._total_sum[0] / self._true_positive_sum.size(0)
+                - self._pred_sum
+                - self._true_sum
+                + self._true_positive_sum
             )
             return true_negative_sum
 
 
-def _prf_divide(numerator, denominator):
-    """Performs division and handles divide-by-zero.
-
-    On zero-division, sets the corresponding result elements to zero.
-    """
-    result = numerator / denominator
-    mask = denominator == 0.0
-    if not mask.any():
-        return result
-
-    # remove nan
-    result[mask] = 0.0
-    return result
+@Metric.register("f1_multi_label")
+class F1MultiLabelMeasure(FBetaMultiLabelMeasure):
+    def __init__(
+        self, average: str = None, labels: List[int] = None, threshold: float = 0.5
+    ) -> None:
+        super().__init__(1.0, average, labels, threshold)

@@ -116,7 +116,7 @@ def make_parameter_groups(
         for k, (names, group) in enumerate(zip(parameter_group_names, parameter_groups)):
             if group.get("requires_grad") is False:
                 no_grad_group_indices.append(k)
-                logging.info("Disabling gradient for the following parameters: %s", names)
+                logger.info("Disabling gradient for the following parameters: %s", names)
                 for param in group["params"]:
                     param.requires_grad_(False)
 

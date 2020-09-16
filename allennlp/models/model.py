@@ -6,6 +6,7 @@ an AllenNLP model.
 import logging
 import os
 from os import PathLike
+import re
 from typing import Dict, List, Set, Type, Optional, Union
 
 import numpy
@@ -309,8 +310,36 @@ class Model(torch.nn.Module, Registrable):
         # If vocab and model embeddings are in sync, following would be just a no-op.
         model.extend_embedder_vocab()
 
+        # Load state dict. We pass `strict=False` so PyTorch doesn't raise a RuntimeError
+        # if the state dict is missing keys because we handle this case below.
         model_state = torch.load(weights_file, map_location=util.device_mapping(cuda_device))
-        model.load_state_dict(model_state)
+        missing_keys, unexpected_keys = model.load_state_dict(model_state, strict=False)
+
+        # Modules might define a class variable called `authorized_missing_keys`,
+        # a list of regex patterns, that tells us to ignore missing keys that match
+        # any of the patterns.
+        # We sometimes need this in order to load older models with newer versions of AllenNLP.
+
+        def filter_out_authorized_missing_keys(module, prefix=""):
+            nonlocal missing_keys
+            for pat in getattr(module.__class__, "authorized_missing_keys", None) or []:
+                missing_keys = [
+                    k
+                    for k in missing_keys
+                    if k.startswith(prefix) and re.search(pat[len(prefix) :], k) is None
+                ]
+            for name, child in module._modules.items():
+                if child is not None:
+                    filter_out_authorized_missing_keys(child, prefix + name + ".")
+
+        filter_out_authorized_missing_keys(model)
+
+        if unexpected_keys or missing_keys:
+            raise RuntimeError(
+                f"Error loading state dict for {model.__class__.__name__}\n\t"
+                f"Missing keys: {missing_keys}\n\t"
+                f"Unexpected keys: {unexpected_keys}"
+            )
 
         return model
 
@@ -390,7 +419,9 @@ class Model(torch.nn.Module, Registrable):
             if hasattr(module, "extend_vocab"):
                 pretrained_file = embedding_sources_mapping.get(model_path)
                 module.extend_vocab(
-                    self.vocab, extension_pretrained_file=pretrained_file, model_path=model_path,
+                    self.vocab,
+                    extension_pretrained_file=pretrained_file,
+                    model_path=model_path,
                 )
 
     @classmethod

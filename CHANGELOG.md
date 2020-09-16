@@ -7,6 +7,55 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Added
+
+- Added a flag `--predictions-output-file` to the `evaluate` command, which tells AllenNLP to write the
+  predictions from the given dataset to the file as JSON lines.
+- Added the ability to ignore certain missing keys when loading a model from an archive. This is done
+  by adding a class-level variable called `authorized_missing_keys` to any PyTorch module that a `Model` uses.
+  If defined, `authorized_missing_keys` should be a list of regex string patterns.
+- Added `FBetaMultiLabelMeasure`, a multi-label Fbeta metric. This is a subclass of the existing `FBetaMeasure`.
+
+### Changed
+
+- `transformers` dependency updated to version 3.1.0.
+
+### Fixed
+
+- Ignore *args when constructing classes with `FromParams`.
+- Ensured some consistency in the types of the values that metrics return
+
+## [v1.1.0](https://github.com/allenai/allennlp/releases/tag/v1.1.0) - 2020-09-08
+
+### Fixed
+
+- Fixed handling of some edge cases when constructing classes with `FromParams` where the class
+  accepts `**kwargs`.
+- Fixed division by zero error when there are zero-length spans in the input to a
+  `PretrainedTransformerMismatchedIndexer`.
+- Improved robustness of `cached_path` when extracting archives so that the cache won't be corrupted
+  if a failure occurs during extraction.
+- Fixed a bug with the `average` and `evalb_bracketing_score` metrics in distributed training.
+
+### Added
+
+- `Predictor.capture_model_internals()` now accepts a regex specifying
+  which modules to capture
+
+
+## [v1.1.0rc4](https://github.com/allenai/allennlp/releases/tag/v1.1.0rc4) - 2020-08-20
+
+### Added
+
+- Added a workflow to GitHub Actions that will automatically close unassigned stale issues and
+  ping the assignees of assigned stale issues.
+
+### Fixed
+
+- Fixed a bug in distributed metrics that caused nan values due to repeated addition of an accumulated variable.
+
+## [v1.1.0rc3](https://github.com/allenai/allennlp/releases/tag/v1.1.0rc3) - 2020-08-12
+
 ### Fixed
 
 - Fixed how truncation was handled with `PretrainedTransformerTokenizer`.
@@ -14,6 +63,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   transformer model had a default max length in its config.
   Also, when `max_length` was set to a non-`None` value, several warnings would appear
   for certain transformer models around the use of the `truncation` parameter.
+- Fixed evaluation of all metrics when using distributed training.
+- Added a `py.typed` marker. Fixed type annotations in `allennlp.training.util`.
+- Fixed problem with automatically detecting whether tokenization is necessary.
+  This affected primarily the Roberta SST model.
+- Improved help text for using the --overrides command line flag.
+
 
 ## [v1.1.0rc2](https://github.com/allenai/allennlp/releases/tag/v1.1.0rc2) - 2020-07-31
 
@@ -34,7 +89,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Added the option to specify `requires_grad: false` within an optimizer's parameter groups.
 - Added the `file-friendly-logging` flag back to the `train` command. Also added this flag to the `predict`, `evaluate`, and `find-learning-rate` commands.
-- Added an `EpochCallback` to track current epoch as a model class member. 
+- Added an `EpochCallback` to track current epoch as a model class member.
+- Added the option to enable or disable gradient checkpointing for transformer token embedders via boolean parameter `gradient_checkpointing`.
 
 ### Removed
 

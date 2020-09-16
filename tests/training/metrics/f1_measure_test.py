@@ -3,7 +3,12 @@ import torch
 from torch.testing import assert_allclose
 
 from allennlp.common.checks import ConfigurationError
-from allennlp.common.testing import AllenNlpTestCase, multi_device
+from allennlp.common.testing import (
+    AllenNlpTestCase,
+    multi_device,
+    run_distributed_test,
+    global_distributed_metric,
+)
 from allennlp.training.metrics import F1Measure
 
 
@@ -34,7 +39,10 @@ class F1MeasureTest(AllenNlpTestCase):
         #  False Negative, True Negative, False Negative]
         targets = torch.tensor([0, 4, 1, 0, 3, 0], device=device)
         f1_measure(predictions, targets)
-        precision, recall, f1 = f1_measure.get_metric()
+        metrics = f1_measure.get_metric()
+        precision = metrics["precision"]
+        recall = metrics["recall"]
+        f1 = metrics["f1"]
         assert f1_measure._true_positives == 1.0
         assert f1_measure._true_negatives == 3.0
         assert f1_measure._false_positives == 0.0
@@ -52,7 +60,10 @@ class F1MeasureTest(AllenNlpTestCase):
         # Test the same thing with a mask:
         mask = torch.tensor([True, False, True, True, True, False], device=device)
         f1_measure(predictions, targets, mask)
-        precision, recall, f1 = f1_measure.get_metric()
+        metrics = f1_measure.get_metric()
+        precision = metrics["precision"]
+        recall = metrics["recall"]
+        f1 = metrics["f1"]
         assert f1_measure._true_positives == 1.0
         assert f1_measure._true_negatives == 2.0
         assert f1_measure._false_positives == 0.0
@@ -80,7 +91,10 @@ class F1MeasureTest(AllenNlpTestCase):
         #  False Positive, True Negative, False Positive]
         targets = torch.tensor([0, 4, 1, 0, 3, 0], device=device)
         f1_measure(predictions, targets)
-        precision, recall, f1 = f1_measure.get_metric()
+        metrics = f1_measure.get_metric()
+        precision = metrics["precision"]
+        recall = metrics["recall"]
+        f1 = metrics["f1"]
         assert f1_measure._true_positives == 1.0
         assert f1_measure._true_negatives == 2.0
         assert f1_measure._false_positives == 3.0
@@ -114,7 +128,10 @@ class F1MeasureTest(AllenNlpTestCase):
         targets = torch.tensor([0, 4, 1, 0, 3, 0], device=device)
         f1_measure(predictions, targets)
         f1_measure(predictions, targets)
-        precision, recall, f1 = f1_measure.get_metric()
+        metrics = f1_measure.get_metric()
+        precision = metrics["precision"]
+        recall = metrics["recall"]
+        f1 = metrics["f1"]
         assert f1_measure._true_positives == 2.0
         assert f1_measure._true_negatives == 6.0
         assert f1_measure._false_positives == 0.0
@@ -142,7 +159,10 @@ class F1MeasureTest(AllenNlpTestCase):
         #  [True Positive, True Negative, False Negative]]
         targets = torch.tensor([[0, 3, 4], [0, 1, 0]], device=device)
         f1_measure(predictions, targets)
-        precision, recall, f1 = f1_measure.get_metric()
+        metrics = f1_measure.get_metric()
+        precision = metrics["precision"]
+        recall = metrics["recall"]
+        f1 = metrics["f1"]
         assert f1_measure._true_positives == 2.0
         assert f1_measure._true_negatives == 3.0
         assert f1_measure._false_positives == 0.0
@@ -155,7 +175,10 @@ class F1MeasureTest(AllenNlpTestCase):
         # Test the same thing with a mask:
         mask = torch.tensor([[False, True, False], [True, True, True]], device=device)
         f1_measure(predictions, targets, mask)
-        precision, recall, f1 = f1_measure.get_metric()
+        metrics = f1_measure.get_metric()
+        precision = metrics["precision"]
+        recall = metrics["recall"]
+        f1 = metrics["f1"]
         assert f1_measure._true_positives == 1.0
         assert f1_measure._true_negatives == 2.0
         assert f1_measure._false_positives == 0.0
@@ -163,3 +186,28 @@ class F1MeasureTest(AllenNlpTestCase):
         assert_allclose(precision, 1.0)
         assert_allclose(recall, 0.5)
         assert_allclose(f1, 0.66666666666)
+
+    def test_distributed_fbeta_measure(self):
+        predictions = [
+            torch.tensor(
+                [[0.35, 0.25, 0.1, 0.1, 0.2], [0.1, 0.6, 0.1, 0.2, 0.0], [0.1, 0.6, 0.1, 0.2, 0.0]]
+            ),
+            torch.tensor(
+                [[0.1, 0.5, 0.1, 0.2, 0.0], [0.1, 0.2, 0.1, 0.7, 0.0], [0.1, 0.6, 0.1, 0.2, 0.0]]
+            ),
+        ]
+        targets = [torch.tensor([0, 4, 1]), torch.tensor([0, 3, 0])]
+        metric_kwargs = {"predictions": predictions, "gold_labels": targets}
+        desired_metrics = {
+            "precision": 1.0,
+            "recall": 0.333333333,
+            "f1": 0.499999999,
+        }
+        run_distributed_test(
+            [-1, -1],
+            global_distributed_metric,
+            F1Measure(positive_label=0),
+            metric_kwargs,
+            desired_metrics,
+            exact=False,
+        )

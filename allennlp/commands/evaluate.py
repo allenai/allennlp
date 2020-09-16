@@ -13,7 +13,7 @@ from overrides import overrides
 
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common import logging as common_logging
-from allennlp.common.util import dump_metrics, prepare_environment
+from allennlp.common.util import prepare_environment
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data import DataLoader
 from allennlp.models.archival import load_archive
@@ -37,7 +37,15 @@ class Evaluate(Subcommand):
             "input_file", type=str, help="path to the file containing the evaluation data"
         )
 
-        subparser.add_argument("--output-file", type=str, help="path to output file")
+        subparser.add_argument(
+            "--output-file", type=str, help="optional path to write the metrics to as JSON"
+        )
+
+        subparser.add_argument(
+            "--predictions-output-file",
+            type=str,
+            help="optional path to write the predictions to as JSON lines",
+        )
 
         subparser.add_argument(
             "--weights-file", type=str, help="a path that overrides which weights file to use"
@@ -53,7 +61,11 @@ class Evaluate(Subcommand):
             "--overrides",
             type=str,
             default="",
-            help="a JSON structure used to override the experiment configuration",
+            help=(
+                "a json(net) structure used to override the experiment configuration, e.g., "
+                "'{\"iterator.batch_size\": 16}'.  Nested parameters can be specified either"
+                " with nested dictionaries or with dot syntax."
+            ),
         )
 
         subparser.add_argument(
@@ -147,10 +159,15 @@ def evaluate_from_args(args: argparse.Namespace) -> Dict[str, Any]:
         data_loader_params["batch_size"] = args.batch_size
     data_loader = DataLoader.from_params(dataset=instances, params=data_loader_params)
 
-    metrics = evaluate(model, data_loader, args.cuda_device, args.batch_weight_key)
+    metrics = evaluate(
+        model,
+        data_loader,
+        args.cuda_device,
+        args.batch_weight_key,
+        output_file=args.output_file,
+        predictions_output_file=args.predictions_output_file,
+    )
 
     logger.info("Finished evaluating.")
-
-    dump_metrics(args.output_file, metrics, log=True)
 
     return metrics

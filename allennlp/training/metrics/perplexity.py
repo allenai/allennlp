@@ -1,5 +1,5 @@
 from overrides import overrides
-import torch
+import math
 
 from allennlp.training.metrics.average import Average
 from allennlp.training.metrics.metric import Metric
@@ -18,7 +18,7 @@ class Perplexity(Average):
     """
 
     @overrides
-    def get_metric(self, reset: bool = False) -> float:
+    def get_metric(self, reset: bool = False):
         """
         # Returns
 
@@ -29,4 +29,4 @@ class Perplexity(Average):
             return 0.0
 
         # Exponentiate the loss to compute perplexity
-        return float(torch.exp(average_loss))
+        return math.exp(average_loss)
