@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added a flag `--predictions-output-file` to the `evaluate` command, which tells AllenNLP to write the
+  predictions from the given dataset to the file as JSON lines.
 - Added the ability to ignore certain missing keys when loading a model from an archive. This is done
   by adding a class-level variable called `authorized_missing_keys` to any PyTorch module that a `Model` uses.
   If defined, `authorized_missing_keys` should be a list of regex string patterns.

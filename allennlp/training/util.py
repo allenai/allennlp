@@ -5,6 +5,7 @@ import datetime
 import logging
 import os
 import shutil
+import json
 from os import PathLike
 from typing import Any, Dict, Iterable, Optional, Union, Tuple, Set, List, TYPE_CHECKING
 from collections import Counter
@@ -18,6 +19,7 @@ from torch.nn.utils import clip_grad_norm_
 from allennlp.common.checks import check_for_gpu, ConfigurationError
 from allennlp.common.params import Params
 from allennlp.common.tqdm import Tqdm
+from allennlp.common.util import dump_metrics, sanitize
 from allennlp.data import Instance, Vocabulary, Batch
 from allennlp.data.dataset_readers import DatasetReader
 from allennlp.models.archival import CONFIG_NAME
@@ -308,6 +310,8 @@ def evaluate(
     data_loader: DataLoader,
     cuda_device: int = -1,
     batch_weight_key: str = None,
+    output_file: str = None,
+    predictions_output_file: str = None,
 ) -> Dict[str, Any]:
     """
     # Parameters
@@ -323,8 +327,21 @@ def evaluate(
     batch_weight_key : `str`, optional (default=`None`)
         If given, this is a key in the output dictionary for each batch that specifies how to weight
         the loss for that batch.  If this is not given, we use a weight of 1 for every batch.
+    metrics_output_file : `str`, optional (default=`None`)
+        Optional path to write the final metrics to.
+    predictions_output_file : `str`, optional (default=`None`)
+        Optional path to write the predictions to.
+
+    # Returns
+
+    `Dict[str, Any]`
+        The final metrics.
     """
     check_for_gpu(cuda_device)
+    predictions_file = (
+        None if predictions_output_file is None else open(predictions_output_file, "w")
+    )
+
     with torch.no_grad():
         model.eval()
 
@@ -381,14 +398,24 @@ def evaluate(
             )
             generator_tqdm.set_description(description, refresh=False)
 
+            if predictions_file is not None:
+                predictions = json.dumps(sanitize(model.make_output_human_readable(output_dict)))
+                predictions_file.write(predictions + "\n")
+
+        if predictions_file is not None:
+            predictions_file.close()
+
         final_metrics = model.get_metrics(reset=True)
         if loss_count > 0:
             # Sanity check
             if loss_count != batch_count:
                 raise RuntimeError(
-                    "The model you are trying to evaluate only sometimes " + "produced a loss!"
+                    "The model you are trying to evaluate only sometimes produced a loss!"
                 )
             final_metrics["loss"] = total_loss / total_weight
+
+        if output_file is not None:
+            dump_metrics(output_file, final_metrics, log=True)
 
         return final_metrics
 
