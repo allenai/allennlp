@@ -99,7 +99,7 @@ class TestArrayField(AllenNlpTestCase):
 
         # Empty fields should have the same dtype
         empty_field = array_field2.empty_field()
-        assert empty_field.dtype == array_field2.dtype
+        assert empty_field.tensor.dtype == array_field2.tensor.dtype
 
     def test_len_works_with_scalar(self):
         array = ArrayField(numpy.asarray(42))
