@@ -1,4 +1,4 @@
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Union
 
 import torch
 import torch.nn.functional as F
@@ -50,7 +50,7 @@ class FasterRcnnRegionDetector(RegionDetector):
     def __init__(
         self,
         meta_architecture: str = "GeneralizedRCNN",
-        device: str = "cpu",
+        device: Union[str, int, torch.device] = "cpu",
         weights: str = "RCNN-X152-C4-2020-07-18",
         # RPN
         rpn_head_name: str = "StandardRPNHead",

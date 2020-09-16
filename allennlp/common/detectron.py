@@ -1,6 +1,6 @@
 import copy
 from collections.abc import Mapping
-from typing import Any, Dict, Optional, NamedTuple, List, Tuple
+from typing import Any, Dict, Optional, NamedTuple, List, Tuple, Union
 
 from detectron2 import config
 from detectron2.checkpoint import DetectionCheckpointer
@@ -130,7 +130,7 @@ def get_pipeline(
 
 class DetectronFlatParameters(NamedTuple):
     meta_architecture: str = "GeneralizedRCNN"
-    device: str = "cpu"
+    device: Union[str, int, torch.device] = "cpu"
     weights: str = "RCNN-X152-C4-2020-07-18"
 
     attribute_on: bool = True  # not in detectron2 default config
