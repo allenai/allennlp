@@ -17,10 +17,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - `transformers` dependency updated to version 3.1.0.
+- When `cached_path` is called on a local archive with `extract=True`, the archive is now extracted into a unique subdirectory of the cache root instead of a subdirectory of the archive's directory. The extraction directory is also unique to the modification time of the archive, so if the file changes, subsequent calls to `cached_path` will know to re-extract the archive.
 
 ### Fixed
 
-- Ignore *args when constructing classes with `FromParams`.
+- Ignore `*args` when constructing classes with `FromParams`.
 - Ensured some consistency in the types of the values that metrics return
 
 ## [v1.1.0](https://github.com/allenai/allennlp/releases/tag/v1.1.0) - 2020-09-08

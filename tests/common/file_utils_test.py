@@ -11,7 +11,7 @@ from requests.exceptions import ConnectionError
 
 from allennlp.common import file_utils
 from allennlp.common.file_utils import (
-    url_to_filename,
+    resource_to_filename,
     filename_to_url,
     get_from_cache,
     cached_path,
@@ -77,7 +77,7 @@ class TestFileUtils(AllenNlpTestCase):
 
         # We'll create two cached versions of this fake resource using two different etags.
         etags = ['W/"3e5885bfcbf4c47bc4ee9e2f6e5ea916"', 'W/"3e5885bfcbf4c47bc4ee9e2f6e5ea918"']
-        filenames = [os.path.join(self.TEST_DIR, url_to_filename(url, etag)) for etag in etags]
+        filenames = [os.path.join(self.TEST_DIR, resource_to_filename(url, etag)) for etag in etags]
         for filename, etag in zip(filenames, etags):
             meta_filename = filename + ".json"
             with open(filename, "w") as f:
@@ -93,7 +93,7 @@ class TestFileUtils(AllenNlpTestCase):
 
         # We also want to make sure this works when the latest cached version doesn't
         # have a corresponding etag.
-        filename = os.path.join(self.TEST_DIR, url_to_filename(url))
+        filename = os.path.join(self.TEST_DIR, resource_to_filename(url))
         meta_filename = filename + ".json"
         with open(filename, "w") as f:
             f.write("some random data")
@@ -102,7 +102,7 @@ class TestFileUtils(AllenNlpTestCase):
 
         assert get_from_cache(url, cache_dir=self.TEST_DIR) == filename
 
-    def test_url_to_filename(self):
+    def test_resource_to_filename(self):
         for url in [
             "http://allenai.org",
             "http://allennlp.org",
@@ -110,7 +110,7 @@ class TestFileUtils(AllenNlpTestCase):
             "http://pytorch.org",
             "https://allennlp.s3.amazonaws.com" + "/long" * 20 + "/url",
         ]:
-            filename = url_to_filename(url)
+            filename = resource_to_filename(url)
             assert "http" not in filename
             with pytest.raises(FileNotFoundError):
                 filename_to_url(filename, cache_dir=self.TEST_DIR)
@@ -125,14 +125,14 @@ class TestFileUtils(AllenNlpTestCase):
             assert back_to_url == url
             assert etag is None
 
-    def test_url_to_filename_with_etags(self):
+    def test_resource_to_filename_with_etags(self):
         for url in [
             "http://allenai.org",
             "http://allennlp.org",
             "https://www.google.com",
             "http://pytorch.org",
         ]:
-            filename = url_to_filename(url, etag="mytag")
+            filename = resource_to_filename(url, etag="mytag")
             assert "http" not in filename
             pathlib.Path(os.path.join(self.TEST_DIR, filename)).touch()
             json.dump(
@@ -143,16 +143,16 @@ class TestFileUtils(AllenNlpTestCase):
             assert back_to_url == url
             assert etag == "mytag"
         baseurl = "http://allenai.org/"
-        assert url_to_filename(baseurl + "1") != url_to_filename(baseurl, etag="1")
+        assert resource_to_filename(baseurl + "1") != resource_to_filename(baseurl, etag="1")
 
-    def test_url_to_filename_with_etags_eliminates_quotes(self):
+    def test_resource_to_filename_with_etags_eliminates_quotes(self):
         for url in [
             "http://allenai.org",
             "http://allennlp.org",
             "https://www.google.com",
             "http://pytorch.org",
         ]:
-            filename = url_to_filename(url, etag='"mytag"')
+            filename = resource_to_filename(url, etag='"mytag"')
             assert "http" not in filename
             pathlib.Path(os.path.join(self.TEST_DIR, filename)).touch()
             json.dump(
@@ -180,7 +180,7 @@ class TestFileUtils(AllenNlpTestCase):
         set_up_glove(url, self.glove_bytes, change_etag_every=2)
 
         filename = get_from_cache(url, cache_dir=self.TEST_DIR)
-        assert filename == os.path.join(self.TEST_DIR, url_to_filename(url, etag="0"))
+        assert filename == os.path.join(self.TEST_DIR, resource_to_filename(url, etag="0"))
 
         # We should have made one HEAD request and one GET request.
         method_counts = Counter(call.request.method for call in responses.calls)
@@ -208,7 +208,7 @@ class TestFileUtils(AllenNlpTestCase):
         # A third call should have a different ETag and should force a new download,
         # which means another HEAD call and another GET call.
         filename3 = get_from_cache(url, cache_dir=self.TEST_DIR)
-        assert filename3 == os.path.join(self.TEST_DIR, url_to_filename(url, etag="1"))
+        assert filename3 == os.path.join(self.TEST_DIR, resource_to_filename(url, etag="1"))
 
         method_counts = Counter(call.request.method for call in responses.calls)
         assert len(method_counts) == 2
@@ -238,7 +238,7 @@ class TestFileUtils(AllenNlpTestCase):
         filename = cached_path(url, cache_dir=self.TEST_DIR)
 
         assert len(responses.calls) == 2
-        assert filename == os.path.join(self.TEST_DIR, url_to_filename(url, etag="0"))
+        assert filename == os.path.join(self.TEST_DIR, resource_to_filename(url, etag="0"))
 
         with open(filename, "rb") as cached_file:
             assert cached_file.read() == self.glove_bytes
@@ -274,20 +274,18 @@ class TestCachedPathWithArchive(AllenNlpTestCase):
             self.FIXTURES_ROOT / "utf-8_sample" / "archives" / "utf-8.zip", self.zip_file
         )
 
-    @staticmethod
-    def check_extracted(extracted: str):
+    def check_extracted(self, extracted: str):
         assert os.path.isdir(extracted)
+        assert pathlib.Path(extracted).parent == self.TEST_DIR
         assert os.path.exists(os.path.join(extracted, "dummy.txt"))
         assert os.path.exists(os.path.join(extracted, "folder/utf-8_sample.txt"))
 
     def test_cached_path_extract_local_tar(self):
         extracted = cached_path(self.tar_file, cache_dir=self.TEST_DIR, extract_archive=True)
-        assert os.path.basename(extracted) == "utf-8-tar-gz-extracted"
         self.check_extracted(extracted)
 
     def test_cached_path_extract_local_zip(self):
         extracted = cached_path(self.zip_file, cache_dir=self.TEST_DIR, extract_archive=True)
-        assert os.path.basename(extracted) == "utf-8-zip-extracted"
         self.check_extracted(extracted)
 
     @responses.activate

@@ -46,15 +46,15 @@ if os.path.exists(DEPRECATED_CACHE_DIRECTORY):
     )
 
 
-def url_to_filename(url: str, etag: str = None) -> str:
+def resource_to_filename(resource: str, etag: str = None) -> str:
     """
-    Convert `url` into a hashed filename in a repeatable way.
-    If `etag` is specified, append its hash to the url's, delimited
+    Convert a `resource` into a hashed filename in a repeatable way.
+    If `etag` is specified, append its hash to the resources's, delimited
     by a period.
     """
-    url_bytes = url.encode("utf-8")
-    url_hash = sha256(url_bytes)
-    filename = url_hash.hexdigest()
+    resource_bytes = resource.encode("utf-8")
+    resource_hash = sha256(resource_bytes)
+    filename = resource_hash.hexdigest()
 
     if etag:
         etag_bytes = etag.encode("utf-8")
@@ -149,6 +149,7 @@ def cached_path(
     parsed = urlparse(url_or_filename)
 
     extraction_path: Optional[str] = None
+    extraction_lock_path: Optional[str] = None
 
     if parsed.scheme in ("http", "https", "s3"):
         # URL, so get it from the cache (downloading if necessary)
@@ -158,17 +159,21 @@ def cached_path(
             # This is the path the file should be extracted to.
             # For example ~/.allennlp/cache/234234.21341 -> ~/.allennlp/cache/234234.21341-extracted
             extraction_path = file_path + "-extracted"
+            extraction_lock_path = file_path + ".lock"
 
     elif os.path.exists(url_or_filename):
         # File, and it exists.
         file_path = url_or_filename
 
         if extract_archive and (is_zipfile(file_path) or tarfile.is_tarfile(file_path)):
-            # This is the path the file should be extracted to.
-            # For example model.tar.gz -> model-tar-gz-extracted
-            extraction_dir, extraction_name = os.path.split(file_path)
-            extraction_name = extraction_name.replace(".", "-") + "-extracted"
-            extraction_path = os.path.join(extraction_dir, extraction_name)
+            # We'll use a unique directory within the cache to root to extract the archive to.
+            # The name of the directoy is a hash of the resource file path and it's modification
+            # time. That way, if the file changes, we'll know when to extract it again.
+            extraction_name = (
+                resource_to_filename(file_path, str(os.path.getmtime(file_path))) + "-extracted"
+            )
+            extraction_path = os.path.join(cache_dir, extraction_name)
+            extraction_lock_path = extraction_path + ".lock"
 
     elif parsed.scheme == "":
         # File, but it doesn't exist.
@@ -185,7 +190,7 @@ def cached_path(
             return extraction_path
 
         # Extract it.
-        with FileLock(file_path + ".lock"):
+        with FileLock(extraction_lock_path):
             shutil.rmtree(extraction_path, ignore_errors=True)
 
             # We extract first to a temporary directory in case something goes wrong
@@ -324,7 +329,7 @@ def _http_get(url: str, temp_file: IO) -> None:
 
 
 def _find_latest_cached(url: str, cache_dir: Union[str, Path]) -> Optional[str]:
-    filename = url_to_filename(url)
+    filename = resource_to_filename(url)
     cache_path = os.path.join(cache_dir, filename)
     candidates: List[Tuple[str, float]] = []
     for path in glob.glob(cache_path + "*"):
@@ -427,7 +432,7 @@ def get_from_cache(url: str, cache_dir: Union[str, Path] = None) -> str:
         # If this is the case, try to proceed without eTag check.
         etag = None
 
-    filename = url_to_filename(url, etag)
+    filename = resource_to_filename(url, etag)
 
     # Get cache path to put the file.
     cache_path = os.path.join(cache_dir, filename)
