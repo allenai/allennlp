@@ -56,7 +56,7 @@ to `git@github.com:allenai/allennlp.git` (or the `HTTPS` equivalent).
 7. Click "Publish Release". GitHub Actions will then handle the rest, including publishing the package to PyPI the Docker image to Docker Hub.
 
 
-8. After publishing the release for the core repo, follow the same process to publish a release for the `allennlp-models` repo.
+8. After the [GitHub Actions workflow](https://github.com/allenai/allennlp/actions?query=workflow%3AMaster+event%3Arelease) finishes, follow the same process to publish a release for the `allennlp-models` repo.
 
 
 ## Fixing a failed release
