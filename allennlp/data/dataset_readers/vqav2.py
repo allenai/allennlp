@@ -467,7 +467,7 @@ class VQAv2Reader(DatasetReader):
         answers: List[Dict[str, str]] = None,
     ) -> Instance:
         tokenized_question = self._tokenizer.tokenize(question)
-        question_field = TextField(tokenized_question, self._token_indexers)
+        question_field = TextField(tokenized_question, None)
         if isinstance(image, str):
             features, coords = next(self._process_image_paths([image]))
         else:
@@ -499,3 +499,7 @@ class VQAv2Reader(DatasetReader):
             fields["label_weights"] = ArrayField(torch.tensor(weights))
 
         return Instance(fields)
+
+    @overrides
+    def apply_token_indexers(self, instance: Instance) -> None:
+        instance["question"].token_indexers = self._token_indexers
