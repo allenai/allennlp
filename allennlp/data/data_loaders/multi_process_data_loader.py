@@ -81,7 +81,7 @@ class MultiProcessDataLoader(DataLoader):
     max_instances_in_memory: `int`, optional (default = `None`)
         If not specified, all instances will be read and cached in memory for the duration
         of the data loader's life. This is generally ideal when your data can fit in memory
-        during training. However, when you're datasets are too big, using this option
+        during training. However, when your datasets are too big, using this option
         will turn on lazy loading, where only `max_instances_in_memory` instances are processed
         at a time.
 
