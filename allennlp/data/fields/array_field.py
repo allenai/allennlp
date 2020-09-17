@@ -32,7 +32,7 @@ class ArrayField(Field[torch.Tensor]):
         if isinstance(tensor, np.ndarray):
             tensor = torch.from_numpy(tensor)
 
-        self.tensor = tensor
+        self.tensor = tensor.cpu()
         self.padding_value = padding_value
 
     @overrides
