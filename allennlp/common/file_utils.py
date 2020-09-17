@@ -46,7 +46,7 @@ if os.path.exists(DEPRECATED_CACHE_DIRECTORY):
     )
 
 
-def resource_to_filename(resource: str, etag: str = None) -> str:
+def _resource_to_filename(resource: str, etag: str = None) -> str:
     """
     Convert a `resource` into a hashed filename in a repeatable way.
     If `etag` is specified, append its hash to the resources's, delimited
@@ -172,7 +172,7 @@ def cached_path(
             # The name of the directoy is a hash of the resource file path and it's modification
             # time. That way, if the file changes, we'll know when to extract it again.
             extraction_name = (
-                resource_to_filename(file_path, str(os.path.getmtime(file_path))) + "-extracted"
+                _resource_to_filename(file_path, str(os.path.getmtime(file_path))) + "-extracted"
             )
             extraction_path = os.path.join(cache_dir, extraction_name)
             extraction_lock_path = extraction_path + ".lock"
@@ -331,7 +331,7 @@ def _http_get(url: str, temp_file: IO) -> None:
 
 
 def _find_latest_cached(url: str, cache_dir: Union[str, Path]) -> Optional[str]:
-    filename = resource_to_filename(url)
+    filename = _resource_to_filename(url)
     cache_path = os.path.join(cache_dir, filename)
     candidates: List[Tuple[str, float]] = []
     for path in glob.glob(cache_path + "*"):
@@ -432,7 +432,7 @@ def get_from_cache(url: str, cache_dir: Union[str, Path] = None) -> str:
         # If this is the case, try to proceed without eTag check.
         etag = None
 
-    filename = resource_to_filename(url, etag)
+    filename = _resource_to_filename(url, etag)
 
     # Get cache path to put the file.
     cache_path = os.path.join(cache_dir, filename)
