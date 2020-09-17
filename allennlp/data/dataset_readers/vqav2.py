@@ -1,5 +1,4 @@
 import glob
-import itertools
 from collections import defaultdict
 from os import PathLike
 from typing import (
