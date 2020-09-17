@@ -11,7 +11,9 @@ from overrides import overrides
 import torch
 from torch import Tensor
 from tqdm import tqdm
+import torch.distributed as dist
 
+from allennlp.common import util
 from allennlp.common.checks import check_for_gpu
 from allennlp.common.util import int_to_device, lazy_groups_of
 from allennlp.common.file_utils import cached_path, TensorCache
@@ -283,7 +285,10 @@ class VQAv2Reader(DatasetReader):
 
         if cuda_device is None:
             if torch.cuda.device_count() > 0:
-                cuda_device = 0
+                if util.is_distributed():
+                    cuda_device = dist.get_rank() % torch.cuda.device_count()
+                else:
+                    cuda_device = 0
             else:
                 cuda_device = -1
         check_for_gpu(cuda_device)
