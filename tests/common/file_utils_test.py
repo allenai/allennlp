@@ -77,7 +77,9 @@ class TestFileUtils(AllenNlpTestCase):
 
         # We'll create two cached versions of this fake resource using two different etags.
         etags = ['W/"3e5885bfcbf4c47bc4ee9e2f6e5ea916"', 'W/"3e5885bfcbf4c47bc4ee9e2f6e5ea918"']
-        filenames = [os.path.join(self.TEST_DIR, _resource_to_filename(url, etag)) for etag in etags]
+        filenames = [
+            os.path.join(self.TEST_DIR, _resource_to_filename(url, etag)) for etag in etags
+        ]
         for filename, etag in zip(filenames, etags):
             meta_filename = filename + ".json"
             with open(filename, "w") as f:
