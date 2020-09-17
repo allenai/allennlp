@@ -7,6 +7,7 @@ import os
 import logging
 import tempfile
 import json
+from dataclasses import dataclass, asdict
 from os import PathLike
 from urllib.parse import urlparse
 from pathlib import Path
@@ -16,6 +17,7 @@ from functools import wraps
 from zipfile import ZipFile, is_zipfile
 import tarfile
 import shutil
+import time
 
 import boto3
 import botocore
@@ -379,6 +381,40 @@ class CacheFile:
         return False
 
 
+@dataclass
+class _Meta:
+    resource: str
+    """
+    URL or path to the resource.
+    """
+
+    etag: Optional[str]
+    """
+    Optional ETag associated with the current cached version of the resource.
+    """
+
+    def to_file(self, path: Union[str, Path]) -> None:
+        with open(path, "w") as meta_file:
+            json.dump(asdict(self), meta_file)
+
+    @classmethod
+    def from_path(cls, path: Union[str, Path]) -> "_Meta":
+        with open(path) as meta_file:
+            data = json.load(meta_file)
+            if "resource" not in data:
+                # For backwards compat.
+                data["resource"] = data.pop("url")
+        return cls(**data)
+
+    @classmethod
+    def new(cls, resource: Union[str, Path], etag: str = None) -> "_Meta":
+        now = time.time()
+        return cls(
+            resource=str(resource),
+            etag=etag,
+        )
+
+
 # TODO(joelgrus): do we want to do checksums or anything like that?
 def get_from_cache(url: str, cache_dir: Union[str, Path] = None) -> str:
     """
@@ -452,10 +488,8 @@ def get_from_cache(url: str, cache_dir: Union[str, Path] = None) -> str:
                     _http_get(url, cache_file)
 
             logger.debug("creating metadata file for %s", cache_path)
-            meta = {"url": url, "etag": etag}
-            meta_path = cache_path + ".json"
-            with open(meta_path, "w") as meta_file:
-                json.dump(meta, meta_file)
+            meta = _Meta.new(url, etag)
+            meta.to_file(cache_path + ".json")
 
     return cache_path
 
