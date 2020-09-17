@@ -7,7 +7,7 @@ to `git@github.com:allenai/allennlp.git` (or the `HTTPS` equivalent).
 
 ## Steps
 
-1. Set the environment variable `TAG`, which should be of the from `v{VERSION}`.
+1. Set the environment variable `TAG`, which should be of the form `v{VERSION}`.
 
     For example, if the version of the release is `1.0.0`, you should set `TAG` to `v1.0.0`:
 
@@ -34,24 +34,16 @@ to `git@github.com:allenai/allennlp.git` (or the `HTTPS` equivalent).
 4. Commit and push these changes with:
 
     ```
-    git commit -a -m "Prepare for release $TAG"
-    git push
+    git commit -a -m "Prepare for release $TAG" && git push
     ```
     
 5. Then add the tag in git to mark the release:
 
     ```
-    git tag $TAG -m "Release $TAG"
+    git tag $TAG -m "Release $TAG" && git push --tags
     ```
 
-6. Push the tag to the main repo.
-
-    ```
-    git push --tags origin master
-    ```
-
-7. Find the tag you just pushed [on GitHub](https://github.com/allenai/allennlp/tags) and
-click edit. Now copy output of:
+6. Find the tag you just pushed [on GitHub](https://github.com/allenai/allennlp/tags), click edit, then copy over the output of:
 
     ```
     python scripts/release_notes.py
@@ -59,12 +51,12 @@ click edit. Now copy output of:
 
     On a Mac, for example, you can just pipe the above command into `pbcopy`.
 
-8. Click "Publish Release", and if this is a pre-release make sure you check that box.
+7. Check the box "This is a pre-release" if the release is a release candidate (ending with `rc*`). Otherwise leave it unchecked.
 
-    GitHub Actions will then handle the rest, including publishing the package to PyPI a the Docker image to Docker Hub.
+7. Click "Publish Release". GitHub Actions will then handle the rest, including publishing the package to PyPI the Docker image to Docker Hub.
 
 
-9. After publishing the release for the core repo, follow the same process to publish a release for the `allennlp-models` repo.
+8. After publishing the release for the core repo, follow the same process to publish a release for the `allennlp-models` repo.
 
 
 ## Fixing a failed release
