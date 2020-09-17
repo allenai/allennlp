@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added a script: `scripts/release_notes.py`, which automatically prepares markdown release notes from the
+  CHANGELOG and commit history.
 - Added a flag `--predictions-output-file` to the `evaluate` command, which tells AllenNLP to write the
   predictions from the given dataset to the file as JSON lines.
 - Added the ability to ignore certain missing keys when loading a model from an archive. This is done
@@ -22,7 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Ignore *args when constructing classes with `FromParams`.
+- Ignore *args* when constructing classes with `FromParams`.
 - Ensured some consistency in the types of the values that metrics return.
 - Fix a PyTorch warning by explicitly providing the `as_tuple` argument (leaving
   it as its default value of `False`) to `Tensor.nonzero()`.
