@@ -2,8 +2,10 @@ local model_name = "bert-base-uncased";
 {
   "dataset_reader": {
     "type": "vqav2",
-    "image_dir": "/Users/dirkg/Documents/data/vision/coco",
-    "feature_cache_dir": "/Users/dirkg/Documents/data/vision/coco/feature_cache",
+    #"image_dir": "/Users/dirkg/Documents/data/vision/coco",
+    "image_dir": "/net/nfs.corp/allennlp/dirkg/data/vision/coco",
+    #"feature_cache_dir": "/Users/dirkg/Documents/data/vision/coco/feature_cache/vqa",
+    "feature_cache_dir": "/net/nfs.corp/allennlp/dirkg/data/vision/coco/feature_cache/vqa",
     "image_loader": "detectron",
     "image_featurizer": "resnet_backbone",
     "region_detector": "faster_rcnn",
