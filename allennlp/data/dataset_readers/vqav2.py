@@ -273,7 +273,7 @@ class VQAv2Reader(DatasetReader):
         token_indexers: Dict[str, TokenIndexer] = None,
         cuda_device: Optional[Union[int, torch.device]] = None,
         max_instances: Optional[int] = None,
-        image_processing_batch_size: int = 3# TODO: change this back to 8
+        image_processing_batch_size: int = 8
     ) -> None:
         super().__init__(
             max_instances=max_instances,
