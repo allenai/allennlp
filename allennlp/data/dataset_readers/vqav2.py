@@ -15,7 +15,7 @@ import torch.distributed as dist
 
 from allennlp.common import util
 from allennlp.common.checks import check_for_gpu
-from allennlp.common.util import int_to_device, lazy_groups_of
+from allennlp.common.util import int_to_device
 from allennlp.common.file_utils import cached_path, TensorCache
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.fields import ArrayField, LabelField, ListField, TextField
@@ -332,38 +332,54 @@ class VQAv2Reader(DatasetReader):
             annotations: Optional[str]
             questions: str
 
+        aws_base = "https://s3.amazonaws.com/cvmlp/vqa/"
+        mscoco_base = aws_base + "mscoco/vqa/"
+        scene_base = aws_base + "abstract_v002/vqa/"
         splits = {
             "balanced_real_train": Split(
-                "https://s3.amazonaws.com/cvmlp/vqa/mscoco/vqa/v2_Annotations_Train_mscoco.zip!v2_mscoco_train2014_annotations.json",
-                "https://s3.amazonaws.com/cvmlp/vqa/mscoco/vqa/v2_Questions_Train_mscoco.zip!v2_OpenEnded_mscoco_train2014_questions.json",
+                mscoco_base
+                + "v2_Annotations_Train_mscoco.zip!v2_mscoco_train2014_annotations.json",
+                mscoco_base
+                + "v2_Questions_Train_mscoco.zip!v2_OpenEnded_mscoco_train2014_questions.json",
             ),
             "balanced_real_val": Split(
-                "https://s3.amazonaws.com/cvmlp/vqa/mscoco/vqa/v2_Annotations_Val_mscoco.zip!v2_mscoco_val2014_annotations.json",
-                "https://s3.amazonaws.com/cvmlp/vqa/mscoco/vqa/v2_Questions_Val_mscoco.zip!v2_OpenEnded_mscoco_val2014_questions.json",
+                mscoco_base + "v2_Annotations_Val_mscoco.zip!v2_mscoco_val2014_annotations.json",
+                mscoco_base
+                + "v2_Questions_Val_mscoco.zip!v2_OpenEnded_mscoco_val2014_questions.json",
             ),
             "balanced_real_test": Split(
                 None,
-                "https://s3.amazonaws.com/cvmlp/vqa/mscoco/vqa/v2_Questions_Test_mscoco.zip!v2_OpenEnded_mscoco_test2015_questions.json",
+                mscoco_base
+                + "v2_Questions_Test_mscoco.zip!v2_OpenEnded_mscoco_test2015_questions.json",
             ),
             "balanced_bas_train": Split(  # "bas" is Binary Abstract Scenes
-                "https://s3.amazonaws.com/cvmlp/vqa/abstract_v002/vqa/Annotations_Binary_Train2017_abstract_v002.zip!abstract_v002_train2017_annotations.json",
-                "https://s3.amazonaws.com/cvmlp/vqa/abstract_v002/vqa/Questions_Binary_Train2017_abstract_v002.zip!OpenEnded_abstract_v002_train2017_questions.json",
+                scene_base
+                + "Annotations_Binary_Train2017_abstract_v002.zip!abstract_v002_train2017_annotations.json",
+                scene_base
+                + "Questions_Binary_Train2017_abstract_v002.zip!OpenEnded_abstract_v002_train2017_questions.json",
             ),
             "balanced_bas_val": Split(
-                "https://s3.amazonaws.com/cvmlp/vqa/abstract_v002/vqa/Annotations_Binary_Val2017_abstract_v002.zip!abstract_v002_val2017_annotations.json",
-                "https://s3.amazonaws.com/cvmlp/vqa/abstract_v002/vqa/Questions_Binary_Val2017_abstract_v002.zip!OpenEnded_abstract_v002_val2017_questions.json",
+                scene_base
+                + "Annotations_Binary_Val2017_abstract_v002.zip!abstract_v002_val2017_annotations.json",
+                scene_base
+                + "Questions_Binary_Val2017_abstract_v002.zip!OpenEnded_abstract_v002_val2017_questions.json",
             ),
             "abstract_scenes_train": Split(
-                "https://s3.amazonaws.com/cvmlp/vqa/abstract_v002/vqa/Annotations_Train_abstract_v002.zip!abstract_v002_train2015_annotations.json",
-                "https://s3.amazonaws.com/cvmlp/vqa/abstract_v002/vqa/Questions_Train_abstract_v002.zip!OpenEnded_abstract_v002_train2015_questions.json",
+                scene_base
+                + "Annotations_Train_abstract_v002.zip!abstract_v002_train2015_annotations.json",
+                scene_base
+                + "Questions_Train_abstract_v002.zip!OpenEnded_abstract_v002_train2015_questions.json",
             ),
             "abstract_scenes_val": Split(
-                "https://s3.amazonaws.com/cvmlp/vqa/abstract_v002/vqa/Annotations_Val_abstract_v002.zip!abstract_v002_val2015_annotations.json",
-                "https://s3.amazonaws.com/cvmlp/vqa/abstract_v002/vqa/Questions_Val_abstract_v002.zip!OpenEnded_abstract_v002_val2015_questions.json",
+                scene_base
+                + "Annotations_Val_abstract_v002.zip!abstract_v002_val2015_annotations.json",
+                scene_base
+                + "Questions_Val_abstract_v002.zip!OpenEnded_abstract_v002_val2015_questions.json",
             ),
             "abstract_scenes_test": Split(
                 None,
-                "https://s3.amazonaws.com/cvmlp/vqa/abstract_v002/vqa/Questions_Test_abstract_v002.zip!OpenEnded_abstract_v002_test2015_questions.json",
+                scene_base
+                + "Questions_Test_abstract_v002.zip!OpenEnded_abstract_v002_test2015_questions.json",
             ),
         }
 
