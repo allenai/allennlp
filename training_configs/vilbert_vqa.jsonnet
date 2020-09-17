@@ -18,7 +18,9 @@ local model_name = "bert-base-uncased";
         "type": "pretrained_transformer",
         "model_name": model_name
       }
-    }
+    },
+    #"max_instances": 10000,
+    "image_processing_batch_size": 16
   },
   "train_data_path": "balanced_real_train",
   "validation_data_path": "balanced_real_val",
@@ -59,7 +61,9 @@ local model_name = "bert-base-uncased";
     "fusion_method": "sum"
   },
   "data_loader": {
-    "batch_size": 32
+    "batch_size": 32,
+    "shuffle": true,
+    #"max_instances_in_memory": 1024,
   },
   "trainer": {
     "optimizer": {
@@ -67,5 +71,5 @@ local model_name = "bert-base-uncased";
       "lr": 0.00005
     },
     "num_epochs": 3
-  }
+  },
 }
