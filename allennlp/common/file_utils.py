@@ -151,7 +151,6 @@ def cached_path(
     parsed = urlparse(url_or_filename)
 
     extraction_path: Optional[str] = None
-    extraction_lock_path: Optional[str] = None
 
     if parsed.scheme in ("http", "https", "s3"):
         # URL, so get it from the cache (downloading if necessary)
@@ -161,7 +160,6 @@ def cached_path(
             # This is the path the file should be extracted to.
             # For example ~/.allennlp/cache/234234.21341 -> ~/.allennlp/cache/234234.21341-extracted
             extraction_path = file_path + "-extracted"
-            extraction_lock_path = file_path + ".lock"
 
     elif os.path.exists(url_or_filename):
         # File, and it exists.
@@ -175,7 +173,6 @@ def cached_path(
                 _resource_to_filename(file_path, str(os.path.getmtime(file_path))) + "-extracted"
             )
             extraction_path = os.path.join(cache_dir, extraction_name)
-            extraction_lock_path = extraction_path + ".lock"
 
     elif parsed.scheme == "":
         # File, but it doesn't exist.
@@ -192,7 +189,7 @@ def cached_path(
             return extraction_path
 
         # Extract it.
-        with FileLock(extraction_lock_path):
+        with FileLock(extraction_path + ".lock"):
             shutil.rmtree(extraction_path, ignore_errors=True)
 
             # We extract first to a temporary directory in case something goes wrong
