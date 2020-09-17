@@ -2,7 +2,18 @@ import glob
 import itertools
 from collections import defaultdict
 from os import PathLike
-from typing import Dict, List, Union, Optional, MutableMapping, NamedTuple, Tuple, Iterable
+from typing import (
+    Dict,
+    List,
+    Union,
+    Optional,
+    MutableMapping,
+    NamedTuple,
+    Set,
+    Tuple,
+    Iterator,
+    Iterable,
+)
 import json
 import os
 import re
@@ -327,7 +338,7 @@ class VQAv2Reader(DatasetReader):
         self.image_processing_batch_size = image_processing_batch_size
 
     @overrides
-    def _read(self, split: str):
+    def _read(self, split_name: str):
         class Split(NamedTuple):
             annotations: Optional[str]
             questions: str
@@ -384,10 +395,10 @@ class VQAv2Reader(DatasetReader):
         }
 
         try:
-            split = splits[split]
+            split = splits[split_name]
         except KeyError:
             raise ValueError(
-                f"Unrecognized split: {split}. We require a split, not a filename, for VQA "
+                f"Unrecognized split: {split_name}. We require a split, not a filename, for VQA "
                 "because the image filenames require using the split."
             )
 
@@ -406,7 +417,6 @@ class VQAv2Reader(DatasetReader):
         # them in batches. So this code gathers up instances until it has enough to fill up a batch
         # that needs processing, and then processes them all.
         question_dicts = self.shard_iterable(questions["questions"])
-        question_dicts, processed_images = itertools.tee(question_dicts)
         processed_images = self._process_image_paths(
             self.images[f"{question_dict['image_id']:012d}.jpg"] for question_dict in question_dicts
         )
@@ -417,9 +427,9 @@ class VQAv2Reader(DatasetReader):
                 answers = answers["answers"]
             yield self.text_to_instance(question_dict["question"], processed_image, answers)
 
-    def _process_image_paths(self, image_paths: Iterable[str]) -> Iterable[Tuple[Tensor, Tensor]]:
-        batch = []
-        unprocessed_paths = set()
+    def _process_image_paths(self, image_paths: Iterable[str]) -> Iterator[Tuple[Tensor, Tensor]]:
+        batch: List[Union[str, Tuple[Tensor, Tensor]]] = []
+        unprocessed_paths: Set[str] = set()
 
         def yield_batch():
             # process the images
@@ -452,8 +462,8 @@ class VQAv2Reader(DatasetReader):
         for image_path in image_paths:
             basename = os.path.basename(image_path)
             try:
-                features = self._features_cache[basename]
-                coordinates = self._coordinates_cache[basename]
+                features: Tensor = self._features_cache[basename]
+                coordinates: Tensor = self._coordinates_cache[basename]
                 if len(batch) <= 0:
                     yield features, coordinates
                 else:
@@ -512,4 +522,4 @@ class VQAv2Reader(DatasetReader):
 
     @overrides
     def apply_token_indexers(self, instance: Instance) -> None:
-        instance["question"].token_indexers = self._token_indexers
+        instance["question"].token_indexers = self._token_indexers  # type: ignore
