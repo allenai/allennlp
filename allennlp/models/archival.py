@@ -3,7 +3,6 @@ Helper functions for archiving models and restoring archived models.
 """
 from os import PathLike
 from typing import NamedTuple, Union
-import atexit
 import logging
 import os
 import tempfile
@@ -158,43 +157,40 @@ def load_archive(
     else:
         logger.info(f"loading archive file {archive_file} from cache at {resolved_archive_file}")
 
-    if os.path.isdir(resolved_archive_file):
-        serialization_dir = resolved_archive_file
-    else:
-        # Extract archive to temp dir
-        tempdir = tempfile.mkdtemp()
-        logger.info(f"extracting archive file {resolved_archive_file} to temp dir {tempdir}")
-        with tarfile.open(resolved_archive_file, "r:gz") as archive:
-            archive.extractall(tempdir)
-        # Postpone cleanup until exit in case the unarchived contents are needed outside
-        # this function.
-        atexit.register(_cleanup_archive_dir, tempdir)
+    tempdir = None
+    try:
+        if os.path.isdir(resolved_archive_file):
+            serialization_dir = resolved_archive_file
+        else:
+            # Extract archive to temp dir
+            tempdir = tempfile.mkdtemp()
+            logger.info(f"extracting archive file {resolved_archive_file} to temp dir {tempdir}")
+            with tarfile.open(resolved_archive_file, "r:gz") as archive:
+                archive.extractall(tempdir)
+            serialization_dir = tempdir
 
-        serialization_dir = tempdir
+        # Load config
+        config = Params.from_file(os.path.join(serialization_dir, CONFIG_NAME), overrides)
 
-    # Load config
-    config = Params.from_file(os.path.join(serialization_dir, CONFIG_NAME), overrides)
+        if weights_file:
+            weights_path = weights_file
+        else:
+            weights_path = os.path.join(serialization_dir, _WEIGHTS_NAME)
+            # Fallback for serialization directories.
+            if not os.path.exists(weights_path):
+                weights_path = os.path.join(serialization_dir, _DEFAULT_WEIGHTS)
 
-    if weights_file:
-        weights_path = weights_file
-    else:
-        weights_path = os.path.join(serialization_dir, _WEIGHTS_NAME)
-        # Fallback for serialization directories.
-        if not os.path.exists(weights_path):
-            weights_path = os.path.join(serialization_dir, _DEFAULT_WEIGHTS)
+        # Instantiate model. Use a duplicate of the config, as it will get consumed.
+        model = Model.load(
+            config.duplicate(),
+            weights_file=weights_path,
+            serialization_dir=serialization_dir,
+            cuda_device=cuda_device,
+        )
 
-    # Instantiate model. Use a duplicate of the config, as it will get consumed.
-    model = Model.load(
-        config.duplicate(),
-        weights_file=weights_path,
-        serialization_dir=serialization_dir,
-        cuda_device=cuda_device,
-    )
+    finally:
+        if tempdir is not None:
+            logger.info(f"removing temporary unarchived model dir at {tempdir}")
+            shutil.rmtree(tempdir, ignore_errors=True)
 
     return Archive(model=model, config=config)
-
-
-def _cleanup_archive_dir(path: str):
-    if os.path.exists(path):
-        logger.info("removing temporary unarchived model dir at %s", path)
-        shutil.rmtree(path)
