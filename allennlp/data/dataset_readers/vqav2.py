@@ -275,7 +275,7 @@ class VQAv2Reader(DatasetReader):
         token_indexers: Dict[str, TokenIndexer] = None,
         cuda_device: Optional[Union[int, torch.device]] = None,
         max_instances: Optional[int] = None,
-        image_processing_batch_size: int = 8
+        image_processing_batch_size: int = 8,
     ) -> None:
         super().__init__(
             max_instances=max_instances,
@@ -335,36 +335,36 @@ class VQAv2Reader(DatasetReader):
         splits = {
             "balanced_real_train": Split(
                 "https://s3.amazonaws.com/cvmlp/vqa/mscoco/vqa/v2_Annotations_Train_mscoco.zip!v2_mscoco_train2014_annotations.json",
-                "https://s3.amazonaws.com/cvmlp/vqa/mscoco/vqa/v2_Questions_Train_mscoco.zip!v2_OpenEnded_mscoco_train2014_questions.json"
+                "https://s3.amazonaws.com/cvmlp/vqa/mscoco/vqa/v2_Questions_Train_mscoco.zip!v2_OpenEnded_mscoco_train2014_questions.json",
             ),
             "balanced_real_val": Split(
                 "https://s3.amazonaws.com/cvmlp/vqa/mscoco/vqa/v2_Annotations_Val_mscoco.zip!v2_mscoco_val2014_annotations.json",
-                "https://s3.amazonaws.com/cvmlp/vqa/mscoco/vqa/v2_Questions_Val_mscoco.zip!v2_OpenEnded_mscoco_val2014_questions.json"
+                "https://s3.amazonaws.com/cvmlp/vqa/mscoco/vqa/v2_Questions_Val_mscoco.zip!v2_OpenEnded_mscoco_val2014_questions.json",
             ),
             "balanced_real_test": Split(
                 None,
-                "https://s3.amazonaws.com/cvmlp/vqa/mscoco/vqa/v2_Questions_Test_mscoco.zip!v2_OpenEnded_mscoco_test2015_questions.json"
+                "https://s3.amazonaws.com/cvmlp/vqa/mscoco/vqa/v2_Questions_Test_mscoco.zip!v2_OpenEnded_mscoco_test2015_questions.json",
             ),
-            "balanced_bas_train": Split(        # "bas" is Binary Abstract Scenes
+            "balanced_bas_train": Split(  # "bas" is Binary Abstract Scenes
                 "https://s3.amazonaws.com/cvmlp/vqa/abstract_v002/vqa/Annotations_Binary_Train2017_abstract_v002.zip!abstract_v002_train2017_annotations.json",
-                "https://s3.amazonaws.com/cvmlp/vqa/abstract_v002/vqa/Questions_Binary_Train2017_abstract_v002.zip!OpenEnded_abstract_v002_train2017_questions.json"
+                "https://s3.amazonaws.com/cvmlp/vqa/abstract_v002/vqa/Questions_Binary_Train2017_abstract_v002.zip!OpenEnded_abstract_v002_train2017_questions.json",
             ),
             "balanced_bas_val": Split(
                 "https://s3.amazonaws.com/cvmlp/vqa/abstract_v002/vqa/Annotations_Binary_Val2017_abstract_v002.zip!abstract_v002_val2017_annotations.json",
-                "https://s3.amazonaws.com/cvmlp/vqa/abstract_v002/vqa/Questions_Binary_Val2017_abstract_v002.zip!OpenEnded_abstract_v002_val2017_questions.json"
+                "https://s3.amazonaws.com/cvmlp/vqa/abstract_v002/vqa/Questions_Binary_Val2017_abstract_v002.zip!OpenEnded_abstract_v002_val2017_questions.json",
             ),
             "abstract_scenes_train": Split(
                 "https://s3.amazonaws.com/cvmlp/vqa/abstract_v002/vqa/Annotations_Train_abstract_v002.zip!abstract_v002_train2015_annotations.json",
-                "https://s3.amazonaws.com/cvmlp/vqa/abstract_v002/vqa/Questions_Train_abstract_v002.zip!OpenEnded_abstract_v002_train2015_questions.json"
+                "https://s3.amazonaws.com/cvmlp/vqa/abstract_v002/vqa/Questions_Train_abstract_v002.zip!OpenEnded_abstract_v002_train2015_questions.json",
             ),
             "abstract_scenes_val": Split(
                 "https://s3.amazonaws.com/cvmlp/vqa/abstract_v002/vqa/Annotations_Val_abstract_v002.zip!abstract_v002_val2015_annotations.json",
-                "https://s3.amazonaws.com/cvmlp/vqa/abstract_v002/vqa/Questions_Val_abstract_v002.zip!OpenEnded_abstract_v002_val2015_questions.json"
+                "https://s3.amazonaws.com/cvmlp/vqa/abstract_v002/vqa/Questions_Val_abstract_v002.zip!OpenEnded_abstract_v002_val2015_questions.json",
             ),
             "abstract_scenes_test": Split(
                 None,
-                "https://s3.amazonaws.com/cvmlp/vqa/abstract_v002/vqa/Questions_Test_abstract_v002.zip!OpenEnded_abstract_v002_test2015_questions.json"
-            )
+                "https://s3.amazonaws.com/cvmlp/vqa/abstract_v002/vqa/Questions_Test_abstract_v002.zip!OpenEnded_abstract_v002_test2015_questions.json",
+            ),
         }
 
         try:
@@ -381,8 +381,7 @@ class VQAv2Reader(DatasetReader):
             with open(cached_path(split.annotations, extract_archive=True)) as f:
                 annotations = json.load(f)
                 annotations_by_question_id = {
-                    a["question_id"]: a
-                    for a in annotations["annotations"]
+                    a["question_id"]: a for a in annotations["annotations"]
                 }
         with open(cached_path(split.questions, extract_archive=True)) as f:
             questions = json.load(f)
@@ -393,8 +392,7 @@ class VQAv2Reader(DatasetReader):
         question_dicts = self.shard_iterable(questions["questions"])
         question_dicts, processed_images = itertools.tee(question_dicts)
         processed_images = self._process_image_paths(
-            self.images[f"{question_dict['image_id']:012d}.jpg"]
-            for question_dict in question_dicts
+            self.images[f"{question_dict['image_id']:012d}.jpg"] for question_dict in question_dicts
         )
 
         for question_dict, processed_image in zip(question_dicts, processed_images):
@@ -420,10 +418,7 @@ class VQAv2Reader(DatasetReader):
                 coordinates = detector_results["coordinates"]
 
             # store the processed results in memory, so we can complete the batch
-            paths_to_tensors = {
-                path: (features[i], coordinates[i])
-                for i, path in enumerate(paths)
-            }
+            paths_to_tensors = {path: (features[i], coordinates[i]) for i, path in enumerate(paths)}
 
             # store the processed results in the cache
             for path, (features, coordinates) in paths_to_tensors.items():
@@ -457,7 +452,6 @@ class VQAv2Reader(DatasetReader):
 
         if len(batch) > 0:
             yield from yield_batch()
-
 
     @overrides
     def text_to_instance(
