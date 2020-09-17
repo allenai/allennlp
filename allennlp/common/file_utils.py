@@ -17,7 +17,6 @@ from functools import wraps
 from zipfile import ZipFile, is_zipfile
 import tarfile
 import shutil
-import time
 
 import boto3
 import botocore
@@ -207,8 +206,10 @@ def cached_path(
                     tar_file.extractall(tmp_extraction_dir)
                     tar_file.close()
                 # Extraction was successful, rename temp directory to final
-                # cache directory.
+                # cache directory and dump the meta data.
                 os.replace(tmp_extraction_dir, extraction_path)
+                meta = _Meta(resource=file_path)
+                meta.to_file(extraction_path + ".json")
             finally:
                 shutil.rmtree(tmp_extraction_dir, ignore_errors=True)
 
@@ -334,7 +335,7 @@ def _find_latest_cached(url: str, cache_dir: Union[str, Path]) -> Optional[str]:
     cache_path = os.path.join(cache_dir, filename)
     candidates: List[Tuple[str, float]] = []
     for path in glob.glob(cache_path + "*"):
-        if path.endswith(".json"):
+        if path.endswith(".json") or path.endswith("-extracted") or path.endswith(".lock"):
             continue
         mtime = os.path.getmtime(path)
         candidates.append((path, mtime))
@@ -392,7 +393,7 @@ class _Meta:
     URL or path to the resource.
     """
 
-    etag: Optional[str]
+    etag: Optional[str] = None
     """
     Optional ETag associated with the current cached version of the resource.
     """
@@ -409,14 +410,6 @@ class _Meta:
                 # For backwards compat.
                 data["resource"] = data.pop("url")
         return cls(**data)
-
-    @classmethod
-    def new(cls, resource: Union[str, Path], etag: str = None) -> "_Meta":
-        now = time.time()
-        return cls(
-            resource=str(resource),
-            etag=etag,
-        )
 
 
 # TODO(joelgrus): do we want to do checksums or anything like that?
@@ -490,7 +483,7 @@ def get_from_cache(url: str, cache_dir: Union[str, Path] = None) -> str:
                     _http_get(url, cache_file)
 
             logger.debug("creating metadata file for %s", cache_path)
-            meta = _Meta.new(url, etag)
+            meta = _Meta(resource=url, etag=etag)
             meta.to_file(cache_path + ".json")
 
     return cache_path

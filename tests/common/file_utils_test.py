@@ -18,6 +18,7 @@ from allennlp.common.file_utils import (
     _split_s3_path,
     open_compressed,
     CacheFile,
+    _Meta,
 )
 from allennlp.common.testing import AllenNlpTestCase
 
@@ -81,13 +82,17 @@ class TestFileUtils(AllenNlpTestCase):
             os.path.join(self.TEST_DIR, _resource_to_filename(url, etag)) for etag in etags
         ]
         for filename, etag in zip(filenames, etags):
-            meta_filename = filename + ".json"
+            meta = _Meta(resource=url, etag=etag)
+            meta.to_file(filename + ".json")
             with open(filename, "w") as f:
                 f.write("some random data")
-            with open(meta_filename, "w") as meta_f:
-                json.dump({"url": url, "etag": etag}, meta_f)
             # os.path.getmtime is only accurate to the second.
             time.sleep(1.1)
+
+        # Should know to ignore lock files and extraction directories.
+        with open(filenames[-1] + ".lock", "w") as f:
+            f.write("")
+        os.mkdir(filenames[-1] + "-extracted")
 
         # The version corresponding to the last etag should be returned, since
         # that one has the latest "last modified" time.
@@ -96,11 +101,10 @@ class TestFileUtils(AllenNlpTestCase):
         # We also want to make sure this works when the latest cached version doesn't
         # have a corresponding etag.
         filename = os.path.join(self.TEST_DIR, _resource_to_filename(url))
-        meta_filename = filename + ".json"
+        meta = _Meta(resource=url)
+        meta.to_file(filename + ".json")
         with open(filename, "w") as f:
             f.write("some random data")
-        with open(meta_filename, "w") as meta_f:
-            json.dump({"url": url, "etag": etag}, meta_f)
 
         assert get_from_cache(url, cache_dir=self.TEST_DIR) == filename
 
@@ -183,6 +187,9 @@ class TestFileUtils(AllenNlpTestCase):
 
         filename = get_from_cache(url, cache_dir=self.TEST_DIR)
         assert filename == os.path.join(self.TEST_DIR, _resource_to_filename(url, etag="0"))
+        assert os.path.exists(filename + ".json")
+        meta = _Meta.from_path(filename + ".json")
+        assert meta.resource == url
 
         # We should have made one HEAD request and one GET request.
         method_counts = Counter(call.request.method for call in responses.calls)
@@ -283,6 +290,7 @@ class TestCachedPathWithArchive(AllenNlpTestCase):
         assert pathlib.Path(extracted).parent == self.TEST_DIR
         assert os.path.exists(os.path.join(extracted, "dummy.txt"))
         assert os.path.exists(os.path.join(extracted, "folder/utf-8_sample.txt"))
+        assert os.path.exists(extracted + ".json")
 
     def test_cached_path_extract_local_tar(self):
         extracted = cached_path(self.tar_file, cache_dir=self.TEST_DIR, extract_archive=True)
