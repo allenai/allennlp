@@ -22,6 +22,7 @@ from allennlp.common.file_utils import (
     _Meta,
     _format_size,
     _format_timedelta,
+    inspect_cache,
 )
 from allennlp.common.testing import AllenNlpTestCase
 
@@ -288,6 +289,35 @@ class TestFileUtils(AllenNlpTestCase):
         assert meta.etag == etag
         assert meta.creation_time is not None
         assert meta.size == len(self.glove_bytes)
+
+    def create_cache_entry(self, url: str, etag: str):
+        filename = os.path.join(self.TEST_DIR, _resource_to_filename(url, etag))
+        with open(filename, "wb") as f:
+            f.write(self.glove_bytes)
+        meta = _Meta(resource=url, etag=etag, creation_time=time.time(), size=len(self.glove_bytes))
+        meta.to_file(filename + ".json")
+
+    def test_inspect(self, capsys):
+        self.create_cache_entry("http://fake.datastore.com/glove.txt.gz", "etag-1")
+        self.create_cache_entry("http://fake.datastore.com/glove.txt.gz", "etag-2")
+
+        inspect_cache(cache_dir=self.TEST_DIR)
+
+        captured = capsys.readouterr()
+        assert "http://fake.datastore.com/glove.txt.gz" in captured.out
+        assert "2 versions" in captured.out
+
+    def test_inspect_with_patterns(self, capsys):
+        self.create_cache_entry("http://fake.datastore.com/glove.txt.gz", "etag-1")
+        self.create_cache_entry("http://fake.datastore.com/glove.txt.gz", "etag-2")
+        self.create_cache_entry("http://other.fake.datastore.com/glove.txt.gz", "etag-3")
+
+        inspect_cache(cache_dir=self.TEST_DIR, patterns=["http://fake.*"])
+
+        captured = capsys.readouterr()
+        assert "http://fake.datastore.com/glove.txt.gz" in captured.out
+        assert "2 versions" in captured.out
+        assert "http://other.fake.datastore.com/glove.txt.gz" not in captured.out
 
 
 class TestCachedPathWithArchive(AllenNlpTestCase):

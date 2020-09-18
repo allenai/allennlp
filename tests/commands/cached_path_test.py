@@ -20,7 +20,7 @@ class TestCachedPathCommand(AllenNlpTestCase):
         assert "Cached resources:" in captured.out
         assert "Total size: 0B" in captured.out
 
-    def test_inspect_bad_options(self, capsys):
+    def test_inspect_with_bad_options(self, capsys):
         sys.argv = [
             "allennlp",
             "cached-path",
