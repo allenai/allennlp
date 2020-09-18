@@ -44,6 +44,8 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         Enable or disable gradient checkpointing.
     """
 
+    authorized_missing_keys = [r"position_ids$"]
+
     def __init__(
         self,
         model_name: str,

@@ -90,6 +90,7 @@ class TestTextClassifierPredictor(AllenNlpTestCase):
         predictor = Predictor.from_archive(archive, "text_classifier")
 
         instance = predictor._json_to_instance(inputs)
+        predictor._dataset_reader.apply_token_indexers(instance)
         outputs = predictor._model.forward_on_instance(instance)
         new_instances = predictor.predictions_to_labeled_instances(instance, outputs)
         assert "label" in new_instances[0].fields

@@ -122,21 +122,32 @@ def cached_path(
     if isinstance(url_or_filename, PathLike):
         url_or_filename = str(url_or_filename)
 
+    file_path: str
+
     # If we're using the /a/b/foo.zip!c/d/file.txt syntax, handle it here.
     exclamation_index = url_or_filename.find("!")
     if extract_archive and exclamation_index >= 0:
         archive_path = url_or_filename[:exclamation_index]
-        archive_path = cached_path(archive_path, cache_dir, True, force_extract)
-        if not os.path.isdir(archive_path):
+        file_name = url_or_filename[exclamation_index + 1 :]
+
+        # Call 'cached_path' recursively now to get the local path to the archive itself.
+        cached_archive_path = cached_path(archive_path, cache_dir, True, force_extract)
+        if not os.path.isdir(cached_archive_path):
             raise ValueError(
                 f"{url_or_filename} uses the ! syntax, but does not specify an archive file."
             )
-        return os.path.join(archive_path, url_or_filename[exclamation_index + 1 :])
+
+        # Now return the full path to the desired file within the extracted archive,
+        # provided it exists.
+        file_path = os.path.join(cached_archive_path, file_name)
+        if not os.path.exists(file_path):
+            raise FileNotFoundError(f"file {file_name} not found within {archive_path}")
+
+        return file_path
 
     url_or_filename = os.path.expanduser(url_or_filename)
     parsed = urlparse(url_or_filename)
 
-    file_path: str
     extraction_path: Optional[str] = None
 
     if parsed.scheme in ("http", "https", "s3"):
@@ -161,29 +172,39 @@ def cached_path(
 
     elif parsed.scheme == "":
         # File, but it doesn't exist.
-        raise FileNotFoundError("file {} not found".format(url_or_filename))
+        raise FileNotFoundError(f"file {url_or_filename} not found")
 
     else:
         # Something unknown
-        raise ValueError("unable to parse {} as a URL or as a local path".format(url_or_filename))
+        raise ValueError(f"unable to parse {url_or_filename} as a URL or as a local path")
 
     if extraction_path is not None:
-        # No need to extract again.
+        # If the extracted directory already exists (and is non-empty), then no
+        # need to extract again unless `force_extract=True`.
         if os.path.isdir(extraction_path) and os.listdir(extraction_path) and not force_extract:
             return extraction_path
 
         # Extract it.
         with FileLock(file_path + ".lock"):
             shutil.rmtree(extraction_path, ignore_errors=True)
-            os.makedirs(extraction_path)
-            if is_zipfile(file_path):
-                with ZipFile(file_path, "r") as zip_file:
-                    zip_file.extractall(extraction_path)
-                    zip_file.close()
-            else:
-                tar_file = tarfile.open(file_path)
-                tar_file.extractall(extraction_path)
-                tar_file.close()
+
+            # We extract first to a temporary directory in case something goes wrong
+            # during the extraction process so we don't end up with a corrupted cache.
+            tmp_extraction_dir = tempfile.mkdtemp(dir=os.path.split(extraction_path)[0])
+            try:
+                if is_zipfile(file_path):
+                    with ZipFile(file_path, "r") as zip_file:
+                        zip_file.extractall(tmp_extraction_dir)
+                        zip_file.close()
+                else:
+                    tar_file = tarfile.open(file_path)
+                    tar_file.extractall(tmp_extraction_dir)
+                    tar_file.close()
+                # Extraction was successful, rename temp directory to final
+                # cache directory.
+                os.replace(tmp_extraction_dir, extraction_path)
+            finally:
+                shutil.rmtree(tmp_extraction_dir, ignore_errors=True)
 
         return extraction_path
 
