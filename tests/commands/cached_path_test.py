@@ -16,4 +16,4 @@ class TestCachedPathCommand(AllenNlpTestCase):
         main()
         captured = capsys.readouterr()
         assert "Cached resources:" in captured.out
-        assert "Total cache size: 0B" in captured.out
+        assert "Total size: 0B" in captured.out
