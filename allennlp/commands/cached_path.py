@@ -28,7 +28,8 @@ class CachedPath(Subcommand):
         subparser.add_argument(
             "resources",
             type=str,
-            help="""The URLs or paths to the resources.""",
+            help="""The URLs or paths to the resources.
+            If using the --inspect or --remove flag, this can also contain glob patterns.""",
             nargs="*",
         )
         subparser.add_argument(
@@ -61,11 +62,12 @@ class CachedPath(Subcommand):
 def _cached_path(args: argparse.Namespace):
     logger.info("Cache directory: %s", args.cache_dir)
     if args.inspect:
-        if args.resources or args.extract_archive or args.force_extract:
+        if args.extract_archive or args.force_extract:
             raise RuntimeError(
-                "cached-path cannot accept any resource paths or options when --inspect flag is used."
+                "cached-path cannot accept --extract-archive or --force-extract "
+                "options when --inspect flag is used."
             )
-        inspect_cache(args.cache_dir)
+        inspect_cache(cache_dir=args.cache_dir, patterns=args.resources)
     else:
         for resource in args.resources:
             print(

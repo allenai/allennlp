@@ -10,6 +10,7 @@ import json
 from collections import defaultdict
 from dataclasses import dataclass, asdict
 from datetime import timedelta
+from fnmatch import fnmatch
 from os import PathLike
 from urllib.parse import urlparse
 from pathlib import Path
@@ -626,19 +627,25 @@ def _format_size(size: int) -> str:
     return f"{size}B"
 
 
-def inspect_cache(cache_dir: Union[str, Path] = None):
+def _find_entries(
+    cache_dir: Union[str, Path] = None, patterns: List[str] = None
+) -> Tuple[int, Dict[str, Tuple[List[_Meta], List[_Meta]]]]:
     """
-    Print out useful information about the cache directory.
+    Find all cache entries, filtering ones that don't match any of the glob patterns given.
+
+    Returns the total size of the matching entries and mapping or resource name to meta data.
+
+    The values in the returned mapping are tuples because we seperate meta entries that
+    correspond to extraction directories vs regular cache entries.
     """
     cache_dir = os.path.expanduser(cache_dir or CACHE_DIRECTORY)
 
-    # Gather cache entries by resource.
-    # The values in this mapping are tuples because we seperate meta entries that
-    # correspond to extraction directories vs regular cache entries.
-    cache_entries: Dict[str, Tuple[List[_Meta], List[_Meta]]] = defaultdict(lambda: ([], []))
     total_size: int = 0
+    cache_entries: Dict[str, Tuple[List[_Meta], List[_Meta]]] = defaultdict(lambda: ([], []))
     for meta_path in glob.glob(str(cache_dir) + "/*.json"):
         meta = _Meta.from_path(meta_path)
+        if patterns and not any(fnmatch(meta.resource, p) for p in patterns):
+            continue
         if meta.extraction_dir:
             cache_entries[meta.resource][1].append(meta)
         else:
@@ -654,6 +661,18 @@ def inspect_cache(cache_dir: Union[str, Path] = None):
         metas[0].sort(key=lambda meta: meta.creation_time, reverse=True)
         # Extraction directories.
         metas[1].sort(key=lambda meta: meta.creation_time, reverse=True)
+
+    return total_size, cache_entries
+
+
+def inspect_cache(cache_dir: Union[str, Path] = None, patterns: List[str] = None):
+    """
+    Print out useful information about the cache directory.
+    """
+    cache_dir = os.path.expanduser(cache_dir or CACHE_DIRECTORY)
+
+    # Gather cache entries by resource.
+    total_size, cache_entries = _find_entries(cache_dir=cache_dir, patterns=patterns)
 
     print("Cached resources:")
     for resource, metas in sorted(
