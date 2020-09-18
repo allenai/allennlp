@@ -207,6 +207,10 @@ def create_kwargs(
 
     if accepts_kwargs:
         kwargs.update(params)
+        if "transformers_from_pretrained_kwargs" in extras:
+            kwargs["transformers_from_pretrained_kwargs"] = extras[
+                "transformers_from_pretrained_kwargs"
+            ]
     else:
         params.assert_empty(cls.__name__)
     return kwargs

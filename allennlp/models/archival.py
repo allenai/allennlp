@@ -8,6 +8,7 @@ import os
 import tempfile
 import tarfile
 import shutil
+from pathlib import Path
 
 from torch.nn import Module
 
@@ -129,7 +130,7 @@ def archive_model(
 
 
 def load_archive(
-    archive_file: str,
+    archive_file: Union[str, Path],
     cuda_device: int = -1,
     overrides: str = "",
     weights_file: str = None,
@@ -139,7 +140,7 @@ def load_archive(
 
     # Parameters
 
-    archive_file : `str`
+    archive_file : `str`/`Path`
         The archive file to load the model from.
     cuda_device : `int`, optional (default = `-1`)
         If `cuda_device` is >= 0, the model will be loaded onto the

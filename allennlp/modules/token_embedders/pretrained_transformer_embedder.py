@@ -57,12 +57,17 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         override_weights_file: Optional[str] = None,
         override_weights_strip_prefix: Optional[str] = None,
         gradient_checkpointing: Optional[bool] = None,
+        **kwargs,
     ) -> None:
         super().__init__()
         from allennlp.common import cached_transformers
 
         self.transformer_model = cached_transformers.get(
-            model_name, True, override_weights_file, override_weights_strip_prefix
+            model_name,
+            True,
+            override_weights_file=override_weights_file,
+            override_weights_strip_prefix=override_weights_strip_prefix,
+            **kwargs,
         )
 
         if gradient_checkpointing is not None:
@@ -83,7 +88,10 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
             self._scalar_mix = ScalarMix(self.config.num_hidden_layers)
             self.config.output_hidden_states = True
 
-        tokenizer = PretrainedTransformerTokenizer(model_name)
+        tokenizer = PretrainedTransformerTokenizer(
+            model_name,
+            tokenizer_kwargs=kwargs.get("transformers_from_pretrained_kwargs", {}),
+        )
         self._num_added_start_tokens = len(tokenizer.single_sequence_start_tokens)
         self._num_added_end_tokens = len(tokenizer.single_sequence_end_tokens)
         self._num_added_tokens = self._num_added_start_tokens + self._num_added_end_tokens
