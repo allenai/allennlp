@@ -219,9 +219,12 @@ def cached_path(
                 # cache directory and dump the meta data.
                 os.replace(tmp_extraction_dir, extraction_path)
                 meta = _Meta(
-                    resource=url_or_filename, creation_time=time.time(), extraction_dir=True
+                    resource=url_or_filename,
+                    cached_path=extraction_path,
+                    creation_time=time.time(),
+                    extraction_dir=True,
                 )
-                meta.to_file(extraction_path + ".json")
+                meta.to_file()
             finally:
                 shutil.rmtree(tmp_extraction_dir, ignore_errors=True)
 
@@ -416,6 +419,11 @@ class _Meta:
     URL or normalized path to the resource.
     """
 
+    cached_path: str
+    """
+    Path to the corresponding cached version of the resource.
+    """
+
     creation_time: float
     """
     The unix timestamp of when the corresponding resource was cached or extracted.
@@ -436,8 +444,8 @@ class _Meta:
     Does this meta corresponded to an extraction directory?
     """
 
-    def to_file(self, path: Union[str, Path]) -> None:
-        with open(path, "w") as meta_file:
+    def to_file(self) -> None:
+        with open(self.cached_path + ".json", "w") as meta_file:
             json.dump(asdict(self), meta_file)
 
     @classmethod
@@ -452,9 +460,11 @@ class _Meta:
                 data["creation_time"] = os.path.getmtime(path[:-5])
             if "extraction_dir" not in data and path.endswith("-extracted.json"):
                 data["extraction_dir"] = True
+            if "cached_path" not in data:
+                data["cached_path"] = path[:-5]
         meta = cls(**data)
         if meta.size is None and not meta.extraction_dir:
-            meta.size = os.path.getsize(path[:-5])
+            meta.size = os.path.getsize(meta.cached_path)
         return meta
 
 
@@ -530,9 +540,13 @@ def get_from_cache(url: str, cache_dir: Union[str, Path] = None) -> str:
 
             logger.debug("creating metadata file for %s", cache_path)
             meta = _Meta(
-                resource=url, creation_time=time.time(), etag=etag, size=os.path.getsize(cache_path)
+                resource=url,
+                cached_path=cache_path,
+                creation_time=time.time(),
+                etag=etag,
+                size=os.path.getsize(cache_path),
             )
-            meta.to_file(cache_path + ".json")
+            meta.to_file()
 
     return cache_path
 
@@ -628,7 +642,8 @@ def _format_size(size: int) -> str:
 
 
 def _find_entries(
-    cache_dir: Union[str, Path] = None, patterns: List[str] = None
+    patterns: List[str] = None,
+    cache_dir: Union[str, Path] = None,
 ) -> Tuple[int, Dict[str, Tuple[List[_Meta], List[_Meta]]]]:
     """
     Find all cache entries, filtering ones that don't match any of the glob patterns given.
@@ -665,14 +680,37 @@ def _find_entries(
     return total_size, cache_entries
 
 
-def inspect_cache(cache_dir: Union[str, Path] = None, patterns: List[str] = None):
+def remove_cache_entries(patterns: List[str], cache_dir: Union[str, Path] = None) -> int:
+    """
+    Remove cache entries matching the given patterns.
+
+    Returns the total reclaimed space in bytes.
+    """
+    total_size, cache_entries = _find_entries(patterns=patterns, cache_dir=cache_dir)
+    for resource, metas in cache_entries.items():
+        for meta in metas[0]:
+            logger.info("Removing cached version of %s at %s", resource, meta.cached_path)
+            os.remove(meta.cached_path)
+            if os.path.exists(meta.cached_path + ".lock"):
+                os.remove(meta.cached_path + ".lock")
+            os.remove(meta.cached_path + ".json")
+        for meta in metas[1]:
+            logger.info("Removing extracted version of %s at %s", resource, meta.cached_path)
+            shutil.rmtree(meta.cached_path)
+            if os.path.exists(meta.cached_path + ".lock"):
+                os.remove(meta.cached_path + ".lock")
+            os.remove(meta.cached_path + ".json")
+    return total_size
+
+
+def inspect_cache(patterns: List[str] = None, cache_dir: Union[str, Path] = None):
     """
     Print out useful information about the cache directory.
     """
     cache_dir = os.path.expanduser(cache_dir or CACHE_DIRECTORY)
 
     # Gather cache entries by resource.
-    total_size, cache_entries = _find_entries(cache_dir=cache_dir, patterns=patterns)
+    total_size, cache_entries = _find_entries(patterns=patterns, cache_dir=cache_dir)
 
     print("Cached resources:")
     for resource, metas in sorted(

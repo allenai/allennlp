@@ -8,7 +8,13 @@ import logging
 from overrides import overrides
 
 from allennlp.commands.subcommand import Subcommand
-from allennlp.common.file_utils import cached_path, CACHE_DIRECTORY, inspect_cache
+from allennlp.common.file_utils import (
+    cached_path,
+    CACHE_DIRECTORY,
+    inspect_cache,
+    remove_cache_entries,
+    _format_size,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -56,18 +62,36 @@ class CachedPath(Subcommand):
             action="store_true",
             help="""Print some useful information about the cache.""",
         )
+        subparser.add_argument(
+            "--remove",
+            action="store_true",
+            help="""Remove any cache entries matching the given resource patterns.""",
+        )
         return subparser
 
 
 def _cached_path(args: argparse.Namespace):
     logger.info("Cache directory: %s", args.cache_dir)
     if args.inspect:
-        if args.extract_archive or args.force_extract:
+        if args.extract_archive or args.force_extract or args.remove:
             raise RuntimeError(
-                "cached-path cannot accept --extract-archive or --force-extract "
+                "cached-path cannot accept --extract-archive, --force-extract, or --remove "
                 "options when --inspect flag is used."
             )
-        inspect_cache(cache_dir=args.cache_dir, patterns=args.resources)
+        inspect_cache(patterns=args.resources, cache_dir=args.cache_dir)
+    elif args.remove:
+        if args.extract_archive or args.force_extract or args.inspect:
+            raise RuntimeError(
+                "cached-path cannot accept --extract-archive, --force-extract, or --inspect "
+                "options when --remove flag is used."
+            )
+        if not args.resources:
+            raise RuntimeError(
+                "Missing positional argument(s) 'resources'. 'resources' is required when using "
+                "the --remove option. If you really want to remove everything, pass '*' for 'resources'."
+            )
+        reclaimed_space = remove_cache_entries(args.resources, cache_dir=args.cache_dir)
+        print(f"Reclaimed {_format_size(reclaimed_space)} of space")
     else:
         for resource in args.resources:
             print(

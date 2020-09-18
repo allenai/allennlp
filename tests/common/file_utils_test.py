@@ -22,7 +22,9 @@ from allennlp.common.file_utils import (
     _Meta,
     _format_size,
     _format_timedelta,
+    _find_entries,
     inspect_cache,
+    remove_cache_entries,
 )
 from allennlp.common.testing import AllenNlpTestCase
 
@@ -86,8 +88,8 @@ class TestFileUtils(AllenNlpTestCase):
             os.path.join(self.TEST_DIR, _resource_to_filename(url, etag)) for etag in etags
         ]
         for filename, etag in zip(filenames, etags):
-            meta = _Meta(resource=url, creation_time=time.time(), etag=etag)
-            meta.to_file(filename + ".json")
+            meta = _Meta(resource=url, cached_path=filename, creation_time=time.time(), etag=etag)
+            meta.to_file()
             with open(filename, "w") as f:
                 f.write("some random data")
             # os.path.getmtime is only accurate to the second.
@@ -105,8 +107,7 @@ class TestFileUtils(AllenNlpTestCase):
         # We also want to make sure this works when the latest cached version doesn't
         # have a corresponding etag.
         filename = os.path.join(self.TEST_DIR, _resource_to_filename(url))
-        meta = _Meta(resource=url, creation_time=time.time())
-        meta.to_file(filename + ".json")
+        meta = _Meta(resource=url, cached_path=filename, creation_time=time.time())
         with open(filename, "w") as f:
             f.write("some random data")
 
@@ -290,12 +291,22 @@ class TestFileUtils(AllenNlpTestCase):
         assert meta.creation_time is not None
         assert meta.size == len(self.glove_bytes)
 
-    def create_cache_entry(self, url: str, etag: str):
+    def create_cache_entry(self, url: str, etag: str, as_extraction_dir: bool = False):
         filename = os.path.join(self.TEST_DIR, _resource_to_filename(url, etag))
+        if as_extraction_dir:
+            os.mkdir(filename + "-extracted")
+            filename = filename + "-extracted/glove.txt"
         with open(filename, "wb") as f:
             f.write(self.glove_bytes)
-        meta = _Meta(resource=url, etag=etag, creation_time=time.time(), size=len(self.glove_bytes))
-        meta.to_file(filename + ".json")
+        meta = _Meta(
+            resource=url,
+            cached_path=filename,
+            etag=etag,
+            creation_time=time.time(),
+            size=len(self.glove_bytes),
+            extraction_dir=as_extraction_dir,
+        )
+        meta.to_file()
 
     def test_inspect(self, capsys):
         self.create_cache_entry("http://fake.datastore.com/glove.txt.gz", "etag-1")
@@ -318,6 +329,21 @@ class TestFileUtils(AllenNlpTestCase):
         assert "http://fake.datastore.com/glove.txt.gz" in captured.out
         assert "2 versions" in captured.out
         assert "http://other.fake.datastore.com/glove.txt.gz" not in captured.out
+
+    def test_remove_entries(self):
+        self.create_cache_entry("http://fake.datastore.com/glove.txt.gz", "etag-1")
+        self.create_cache_entry("http://fake.datastore.com/glove.txt.gz", "etag-2")
+        self.create_cache_entry(
+            "http://fake.datastore.com/glove.txt.gz", "etag-3", as_extraction_dir=True
+        )
+        self.create_cache_entry("http://other.fake.datastore.com/glove.txt.gz", "etag-4")
+
+        reclaimed_space = remove_cache_entries(["http://fake.*"], cache_dir=self.TEST_DIR)
+        assert reclaimed_space == 2 * len(self.glove_bytes)
+
+        size_left, entries_left = _find_entries(cache_dir=self.TEST_DIR)
+        assert size_left == len(self.glove_bytes)
+        assert len(entries_left) == 1
 
 
 class TestCachedPathWithArchive(AllenNlpTestCase):

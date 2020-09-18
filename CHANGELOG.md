@@ -18,6 +18,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   If defined, `authorized_missing_keys` should be a list of regex string patterns.
 - Added `FBetaMultiLabelMeasure`, a multi-label Fbeta metric. This is a subclass of the existing `FBetaMeasure`.
 - Added a `cached-path` command.
+- Added a function `inspect_cache` to `common.file_utils` that prints useful information about the cache. This can also 
+  be used from the `cached-path` command with `allennlp cached-path --inspect`.
+- Added a function `remove_cache_entries` to `common.file_utils` that removes any cache entries matching the given
+  glob patterns. This can used from the `cached-path` command with `allennlp cached-path --remove some-files-*`.
 
 ### Changed
 

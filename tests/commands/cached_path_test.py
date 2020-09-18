@@ -31,3 +31,27 @@ class TestCachedPathCommand(AllenNlpTestCase):
         ]
         with pytest.raises(RuntimeError, match="--extract-archive"):
             main()
+
+    def test_remove_with_bad_options(self, capsys):
+        sys.argv = [
+            "allennlp",
+            "cached-path",
+            "--cache-dir",
+            str(self.TEST_DIR),
+            "--remove",
+            "--extract-archive",
+            "*",
+        ]
+        with pytest.raises(RuntimeError, match="--extract-archive"):
+            main()
+
+    def test_remove_with_missing_positionals(self, capsys):
+        sys.argv = [
+            "allennlp",
+            "cached-path",
+            "--cache-dir",
+            str(self.TEST_DIR),
+            "--remove",
+        ]
+        with pytest.raises(RuntimeError, match="Missing positional"):
+            main()
