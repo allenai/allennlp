@@ -88,7 +88,9 @@ class TestFileUtils(AllenNlpTestCase):
             os.path.join(self.TEST_DIR, _resource_to_filename(url, etag)) for etag in etags
         ]
         for filename, etag in zip(filenames, etags):
-            meta = _Meta(resource=url, cached_path=filename, creation_time=time.time(), etag=etag)
+            meta = _Meta(
+                resource=url, cached_path=filename, creation_time=time.time(), etag=etag, size=2341
+            )
             meta.to_file()
             with open(filename, "w") as f:
                 f.write("some random data")
@@ -107,7 +109,7 @@ class TestFileUtils(AllenNlpTestCase):
         # We also want to make sure this works when the latest cached version doesn't
         # have a corresponding etag.
         filename = os.path.join(self.TEST_DIR, _resource_to_filename(url))
-        meta = _Meta(resource=url, cached_path=filename, creation_time=time.time())
+        meta = _Meta(resource=url, cached_path=filename, creation_time=time.time(), size=2341)
         with open(filename, "w") as f:
             f.write("some random data")
 
@@ -349,10 +351,10 @@ class TestFileUtils(AllenNlpTestCase):
         )
 
         reclaimed_space = remove_cache_entries(["http://fake.*"], cache_dir=self.TEST_DIR)
-        assert reclaimed_space == 2 * len(self.glove_bytes)
+        assert reclaimed_space == 3 * len(self.glove_bytes)
 
         size_left, entries_left = _find_entries(cache_dir=self.TEST_DIR)
-        assert size_left == len(self.glove_bytes)
+        assert size_left == 2 * len(self.glove_bytes)
         assert len(entries_left) == 1
         entry_left = list(entries_left.values())[0]
         # one regular cache file and one extraction dir

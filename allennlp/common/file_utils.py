@@ -201,6 +201,7 @@ def cached_path(
 
         # Extract it.
         with FileLock(extraction_path + ".lock"):
+            logger.info("Extracting %s to %s", url_or_filename, extraction_path)
             shutil.rmtree(extraction_path, ignore_errors=True)
 
             # We extract first to a temporary directory in case something goes wrong
@@ -223,6 +224,7 @@ def cached_path(
                     cached_path=extraction_path,
                     creation_time=time.time(),
                     extraction_dir=True,
+                    size=_get_resource_size(extraction_path),
                 )
                 meta.to_file()
             finally:
@@ -429,14 +431,14 @@ class _Meta:
     The unix timestamp of when the corresponding resource was cached or extracted.
     """
 
+    size: int = None
+    """
+    The size of the corresponding resource, in bytes.
+    """
+
     etag: Optional[str] = None
     """
     Optional ETag associated with the current cached version of the resource.
-    """
-
-    size: Optional[int] = None
-    """
-    The size of the corresponding resource, in bytes.
     """
 
     extraction_dir: bool = False
@@ -462,10 +464,9 @@ class _Meta:
                 data["extraction_dir"] = True
             if "cached_path" not in data:
                 data["cached_path"] = path[:-5]
-        meta = cls(**data)
-        if meta.size is None and not meta.extraction_dir:
-            meta.size = os.path.getsize(meta.cached_path)
-        return meta
+            if "size" not in data:
+                data["size"] = _get_resource_size(data["cached_path"])
+        return cls(**data)
 
 
 # TODO(joelgrus): do we want to do checksums or anything like that?
@@ -544,7 +545,7 @@ def get_from_cache(url: str, cache_dir: Union[str, Path] = None) -> str:
                 cached_path=cache_path,
                 creation_time=time.time(),
                 etag=etag,
-                size=os.path.getsize(cache_path),
+                size=_get_resource_size(cache_path),
             )
             meta.to_file()
 
@@ -598,6 +599,22 @@ def text_lines_from_file(filename: Union[str, Path], strip_lines: bool = True) -
 
 def json_lines_from_file(filename: Union[str, Path]) -> Iterable[Union[list, dict]]:
     return (json.loads(line) for line in text_lines_from_file(filename))
+
+
+def _get_resource_size(path: str) -> int:
+    """
+    Get the size of a file or directory.
+    """
+    if os.path.isfile(path):
+        return os.path.getsize(path)
+    total_size = 0
+    for dirpath, dirnames, filenames in os.walk(path):
+        for f in filenames:
+            fp = os.path.join(dirpath, f)
+            # skip if it is symbolic link
+            if not os.path.islink(fp):
+                total_size += os.path.getsize(fp)
+    return total_size
 
 
 def _format_timedelta(td: timedelta) -> str:
@@ -665,10 +682,7 @@ def _find_entries(
             cache_entries[meta.resource][1].append(meta)
         else:
             cache_entries[meta.resource][0].append(meta)
-            # We know meta.size will not be None for regular cache entries.
-            # See _Meta.from_path()
-            assert meta.size is not None
-            total_size += meta.size
+        total_size += meta.size
 
     # Sort entries for each resource by creation time, newest first.
     for metas in cache_entries.values():
@@ -726,10 +740,7 @@ def inspect_cache(patterns: List[str] = None, cache_dir: Union[str, Path] = None
         if metas[0]:
             td = timedelta(seconds=time.time() - metas[0][0].creation_time)
             n_versions = len(metas[0])
-            size = metas[0][0].size  # type: ignore
-            # We know meta.size will not be None for regular cache entries.
-            # See _Meta.from_path()
-            assert size is not None
+            size = metas[0][0].size
             print(
                 f"  {n_versions} {'versions' if n_versions > 1 else 'version'} cached, "
                 f"latest {_format_size(size)} from {_format_timedelta(td)} ago"
@@ -737,8 +748,9 @@ def inspect_cache(patterns: List[str] = None, cache_dir: Union[str, Path] = None
         if metas[1]:
             td = timedelta(seconds=time.time() - metas[1][0].creation_time)
             n_versions = len(metas[1])
+            size = metas[1][0].size
             print(
                 f"  {n_versions} {'versions' if n_versions > 1 else 'version'} extracted, "
-                f"latest from {_format_timedelta(td)} ago"
+                f"latest {_format_size(size)} from {_format_timedelta(td)} ago"
             )
     print(f"\nTotal size: {_format_size(total_size)} (excluding extraction directories)")
