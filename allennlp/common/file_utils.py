@@ -753,4 +753,4 @@ def inspect_cache(patterns: List[str] = None, cache_dir: Union[str, Path] = None
                 f"  {n_versions} {'versions' if n_versions > 1 else 'version'} extracted, "
                 f"latest {_format_size(size)} from {_format_timedelta(td)} ago"
             )
-    print(f"\nTotal size: {_format_size(total_size)} (excluding extraction directories)")
+    print(f"\nTotal size: {_format_size(total_size)}")
