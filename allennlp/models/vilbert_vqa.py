@@ -252,7 +252,7 @@ class VqaVilbert(Model):
         self, output_dict: Dict[str, torch.Tensor]
     ) -> Dict[str, torch.Tensor]:
         tokens = {}
-        for i, logit in output_dict["logits"]:
+        for i, logit in enumerate(output_dict["logits"]):
             tokens[self.vocab.get_token_from_index(i)] = logit
         output_dict['tokens'] = tokens
         return output_dict
