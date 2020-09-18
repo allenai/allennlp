@@ -55,3 +55,16 @@ class TestCachedPathCommand(AllenNlpTestCase):
         ]
         with pytest.raises(RuntimeError, match="Missing positional"):
             main()
+
+    def test_remove_empty_cache(self, capsys):
+        sys.argv = [
+            "allennlp",
+            "cached-path",
+            "--cache-dir",
+            str(self.TEST_DIR),
+            "--remove",
+            "*",
+        ]
+        main()
+        captured = capsys.readouterr()
+        assert "Reclaimed 0B of space" in captured.out

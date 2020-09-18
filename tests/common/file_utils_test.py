@@ -293,14 +293,17 @@ class TestFileUtils(AllenNlpTestCase):
 
     def create_cache_entry(self, url: str, etag: str, as_extraction_dir: bool = False):
         filename = os.path.join(self.TEST_DIR, _resource_to_filename(url, etag))
+        cache_path = filename
         if as_extraction_dir:
-            os.mkdir(filename + "-extracted")
+            cache_path = filename + "-extracted"
             filename = filename + "-extracted/glove.txt"
+            os.mkdir(cache_path)
         with open(filename, "wb") as f:
             f.write(self.glove_bytes)
+        open(cache_path + ".lock", "a").close()
         meta = _Meta(
             resource=url,
-            cached_path=filename,
+            cached_path=cache_path,
             etag=etag,
             creation_time=time.time(),
             size=len(self.glove_bytes),
@@ -311,17 +314,21 @@ class TestFileUtils(AllenNlpTestCase):
     def test_inspect(self, capsys):
         self.create_cache_entry("http://fake.datastore.com/glove.txt.gz", "etag-1")
         self.create_cache_entry("http://fake.datastore.com/glove.txt.gz", "etag-2")
+        self.create_cache_entry(
+            "http://fake.datastore.com/glove.txt.gz", "etag-3", as_extraction_dir=True
+        )
 
         inspect_cache(cache_dir=self.TEST_DIR)
 
         captured = capsys.readouterr()
         assert "http://fake.datastore.com/glove.txt.gz" in captured.out
-        assert "2 versions" in captured.out
+        assert "2 versions cached" in captured.out
+        assert "1 version extracted" in captured.out
 
     def test_inspect_with_patterns(self, capsys):
         self.create_cache_entry("http://fake.datastore.com/glove.txt.gz", "etag-1")
         self.create_cache_entry("http://fake.datastore.com/glove.txt.gz", "etag-2")
-        self.create_cache_entry("http://other.fake.datastore.com/glove.txt.gz", "etag-3")
+        self.create_cache_entry("http://other.fake.datastore.com/glove.txt.gz", "etag-4")
 
         inspect_cache(cache_dir=self.TEST_DIR, patterns=["http://fake.*"])
 
@@ -337,6 +344,9 @@ class TestFileUtils(AllenNlpTestCase):
             "http://fake.datastore.com/glove.txt.gz", "etag-3", as_extraction_dir=True
         )
         self.create_cache_entry("http://other.fake.datastore.com/glove.txt.gz", "etag-4")
+        self.create_cache_entry(
+            "http://other.fake.datastore.com/glove.txt.gz", "etag-5", as_extraction_dir=True
+        )
 
         reclaimed_space = remove_cache_entries(["http://fake.*"], cache_dir=self.TEST_DIR)
         assert reclaimed_space == 2 * len(self.glove_bytes)
@@ -344,6 +354,14 @@ class TestFileUtils(AllenNlpTestCase):
         size_left, entries_left = _find_entries(cache_dir=self.TEST_DIR)
         assert size_left == len(self.glove_bytes)
         assert len(entries_left) == 1
+        entry_left = list(entries_left.values())[0]
+        # one regular cache file and one extraction dir
+        assert len(entry_left[0]) == 1
+        assert len(entry_left[1]) == 1
+
+        # Now remove everything.
+        remove_cache_entries(["*"], cache_dir=self.TEST_DIR)
+        assert len(os.listdir(self.TEST_DIR)) == 0
 
 
 class TestCachedPathWithArchive(AllenNlpTestCase):
