@@ -59,6 +59,7 @@ class VqaVilbert(Model):
         self.v_pooler = BertPooler(encoder.image_hidden_size, pooled_output_dim)
 
         num_labels = vocab.get_vocab_size(label_namespace)
+        self.label_namespace = label_namespace
 
         self.classifier = torch.nn.Linear(pooled_output_dim, num_labels)
         self.dropout = torch.nn.Dropout(dropout)
@@ -253,6 +254,6 @@ class VqaVilbert(Model):
     ) -> Dict[str, torch.Tensor]:
         tokens = {}
         for i, logit in enumerate(output_dict["logits"]):
-            tokens[self.vocab.get_token_from_index(i)] = logit
+            tokens[self.vocab.get_token_from_index(i, self.label_namespace)] = logit
         output_dict['tokens'] = tokens
         return output_dict
