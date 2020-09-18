@@ -1,3 +1,4 @@
+from datetime import timedelta
 from collections import Counter
 import os
 import pathlib
@@ -19,6 +20,8 @@ from allennlp.common.file_utils import (
     open_compressed,
     CacheFile,
     _Meta,
+    _format_size,
+    _format_timedelta,
 )
 from allennlp.common.testing import AllenNlpTestCase
 
@@ -373,3 +376,35 @@ class TestCacheFile(AllenNlpTestCase):
                 raise IOError("I made this up")
         assert not os.path.exists(handle.name)
         assert not os.path.exists(cache_filename)
+
+
+@pytest.mark.parametrize(
+    "size, result",
+    [
+        (12, "12B"),
+        (1200, "1.2K"),
+        (12000, "12K"),
+        (120000, "120K"),
+        (1200000, "1.2M"),
+        (12000000, "12M"),
+        (120000000, "120M"),
+        (1200000000, "1.2G"),
+        (12000000000, "12G"),
+    ],
+)
+def test_format_size(size: int, result: str):
+    assert _format_size(size) == result
+
+
+@pytest.mark.parametrize(
+    "td, result",
+    [
+        (timedelta(days=2, hours=3), "2 days"),
+        (timedelta(days=1, hours=3), "1 day"),
+        (timedelta(hours=3, minutes=12), "3 hours"),
+        (timedelta(hours=1, minutes=12), "1 hour, 12 mins"),
+        (timedelta(minutes=12), "12 mins"),
+    ],
+)
+def test_format_timedelta(td: timedelta, result: str):
+    assert _format_timedelta(td) == result
