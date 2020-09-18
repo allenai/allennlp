@@ -246,3 +246,13 @@ class VqaVilbert(Model):
         return {
             "denotation_acc": self.accuracy.get_metric(reset),
         }
+
+    @overrides
+    def make_output_human_readable(
+        self, output_dict: Dict[str, torch.Tensor]
+    ) -> Dict[str, torch.Tensor]:
+        tokens = {}
+        for i, logit in output_dict["logits"]:
+            tokens[self.vocab.get_token_from_index(i)] = logit
+        output_dict['tokens'] = tokens
+        return output_dict
