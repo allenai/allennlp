@@ -399,9 +399,20 @@ class CacheFile:
 
 @dataclass
 class _Meta:
+    """
+    Any resource that is downloaded to - or extracted in - the cache directory will
+    have a meta JSON file written next to it, which corresponds to an instance
+    of this class.
+
+    In older versions of AllenNLP, this meta document just had two fields: 'url' and
+    'etag'. The 'url' field is now the more general 'resource' field, but these old
+    meta files are still compatible when a `_Meta` is instantiated with the `.from_path()`
+    class method.
+    """
+
     resource: str
     """
-    URL or path to the resource.
+    URL or normalized path to the resource.
     """
 
     creation_time: float
@@ -421,7 +432,7 @@ class _Meta:
 
     extraction_dir: bool = False
     """
-    Does this meta corresponded to an archive's extraction directory?
+    Does this meta corresponded to an extraction directory?
     """
 
     def to_file(self, path: Union[str, Path]) -> None:
@@ -616,6 +627,9 @@ def _format_size(size: int) -> str:
 
 
 def inspect_cache(cache_dir: Union[str, Path] = None):
+    """
+    Print out useful information about the cache directory.
+    """
     cache_dir = os.path.expanduser(cache_dir or CACHE_DIRECTORY)
 
     # Gather cache entries by resource.
