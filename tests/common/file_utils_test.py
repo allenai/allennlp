@@ -82,7 +82,7 @@ class TestFileUtils(AllenNlpTestCase):
             os.path.join(self.TEST_DIR, _resource_to_filename(url, etag)) for etag in etags
         ]
         for filename, etag in zip(filenames, etags):
-            meta = _Meta(resource=url, etag=etag)
+            meta = _Meta(resource=url, creation_time=time.time(), etag=etag)
             meta.to_file(filename + ".json")
             with open(filename, "w") as f:
                 f.write("some random data")
@@ -101,7 +101,7 @@ class TestFileUtils(AllenNlpTestCase):
         # We also want to make sure this works when the latest cached version doesn't
         # have a corresponding etag.
         filename = os.path.join(self.TEST_DIR, _resource_to_filename(url))
-        meta = _Meta(resource=url)
+        meta = _Meta(resource=url, creation_time=time.time())
         meta.to_file(filename + ".json")
         with open(filename, "w") as f:
             f.write("some random data")
@@ -271,6 +271,20 @@ class TestFileUtils(AllenNlpTestCase):
             with open_compressed(compressed_file) as f:
                 compressed_lines = [line.strip() for line in f]
             assert compressed_lines == uncompressed_lines
+
+    def test_meta_backwards_compatible(self):
+        url = "http://fake.datastore.com/glove.txt.gz"
+        etag = "some-fake-etag"
+        filename = os.path.join(self.TEST_DIR, _resource_to_filename(url, etag))
+        with open(filename, "wb") as f:
+            f.write(self.glove_bytes)
+        with open(filename + ".json", "w") as meta_file:
+            json.dump({"url": url, "etag": etag}, meta_file)
+        meta = _Meta.from_path(filename + ".json")
+        assert meta.resource == url
+        assert meta.etag == etag
+        assert meta.creation_time is not None
+        assert meta.size == len(self.glove_bytes)
 
 
 class TestCachedPathWithArchive(AllenNlpTestCase):

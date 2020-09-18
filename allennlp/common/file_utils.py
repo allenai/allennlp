@@ -7,16 +7,19 @@ import os
 import logging
 import tempfile
 import json
+from collections import defaultdict
 from dataclasses import dataclass, asdict
+from datetime import timedelta
 from os import PathLike
 from urllib.parse import urlparse
 from pathlib import Path
-from typing import Optional, Tuple, Union, IO, Callable, Set, List, Iterator, Iterable
+from typing import Optional, Tuple, Union, IO, Callable, Set, List, Iterator, Iterable, Dict
 from hashlib import sha256
 from functools import wraps
 from zipfile import ZipFile, is_zipfile
 import tarfile
 import shutil
+import time
 
 import boto3
 import botocore
@@ -120,6 +123,7 @@ def cached_path(
     if cache_dir is None:
         cache_dir = CACHE_DIRECTORY
 
+    cache_dir = os.path.expanduser(cache_dir)
     os.makedirs(cache_dir, exist_ok=True)
 
     if isinstance(url_or_filename, PathLike):
@@ -148,7 +152,6 @@ def cached_path(
 
         return file_path
 
-    url_or_filename = os.path.expanduser(url_or_filename)
     parsed = urlparse(url_or_filename)
 
     extraction_path: Optional[str] = None
@@ -162,26 +165,32 @@ def cached_path(
             # For example ~/.allennlp/cache/234234.21341 -> ~/.allennlp/cache/234234.21341-extracted
             extraction_path = file_path + "-extracted"
 
-    elif os.path.exists(url_or_filename):
-        # File, and it exists.
-        file_path = url_or_filename
-
-        if extract_archive and (is_zipfile(file_path) or tarfile.is_tarfile(file_path)):
-            # We'll use a unique directory within the cache to root to extract the archive to.
-            # The name of the directoy is a hash of the resource file path and it's modification
-            # time. That way, if the file changes, we'll know when to extract it again.
-            extraction_name = (
-                _resource_to_filename(file_path, str(os.path.getmtime(file_path))) + "-extracted"
-            )
-            extraction_path = os.path.join(cache_dir, extraction_name)
-
-    elif parsed.scheme == "":
-        # File, but it doesn't exist.
-        raise FileNotFoundError(f"file {url_or_filename} not found")
-
     else:
-        # Something unknown
-        raise ValueError(f"unable to parse {url_or_filename} as a URL or as a local path")
+        url_or_filename = os.path.expanduser(url_or_filename)
+
+        if os.path.exists(url_or_filename):
+            # File, and it exists.
+            file_path = url_or_filename
+            # Normalize the path.
+            url_or_filename = os.path.abspath(url_or_filename)
+
+            if extract_archive and (is_zipfile(file_path) or tarfile.is_tarfile(file_path)):
+                # We'll use a unique directory within the cache to root to extract the archive to.
+                # The name of the directoy is a hash of the resource file path and it's modification
+                # time. That way, if the file changes, we'll know when to extract it again.
+                extraction_name = (
+                    _resource_to_filename(url_or_filename, str(os.path.getmtime(file_path)))
+                    + "-extracted"
+                )
+                extraction_path = os.path.join(cache_dir, extraction_name)
+
+        elif parsed.scheme == "":
+            # File, but it doesn't exist.
+            raise FileNotFoundError(f"file {url_or_filename} not found")
+
+        else:
+            # Something unknown
+            raise ValueError(f"unable to parse {url_or_filename} as a URL or as a local path")
 
     if extraction_path is not None:
         # If the extracted directory already exists (and is non-empty), then no
@@ -208,7 +217,9 @@ def cached_path(
                 # Extraction was successful, rename temp directory to final
                 # cache directory and dump the meta data.
                 os.replace(tmp_extraction_dir, extraction_path)
-                meta = _Meta(resource=file_path)
+                meta = _Meta(
+                    resource=url_or_filename, creation_time=time.time(), extraction_dir=True
+                )
                 meta.to_file(extraction_path + ".json")
             finally:
                 shutil.rmtree(tmp_extraction_dir, ignore_errors=True)
@@ -393,9 +404,24 @@ class _Meta:
     URL or path to the resource.
     """
 
+    creation_time: float
+    """
+    The unix timestamp of when the corresponding resource was cached or extracted.
+    """
+
     etag: Optional[str] = None
     """
     Optional ETag associated with the current cached version of the resource.
+    """
+
+    size: Optional[int] = None
+    """
+    The size of the corresponding resource, in bytes.
+    """
+
+    extraction_dir: bool = False
+    """
+    Does this meta corresponded to an archive's extraction directory?
     """
 
     def to_file(self, path: Union[str, Path]) -> None:
@@ -404,12 +430,20 @@ class _Meta:
 
     @classmethod
     def from_path(cls, path: Union[str, Path]) -> "_Meta":
+        path = str(path)
         with open(path) as meta_file:
             data = json.load(meta_file)
+            # For backwards compat:
             if "resource" not in data:
-                # For backwards compat.
                 data["resource"] = data.pop("url")
-        return cls(**data)
+            if "creation_time" not in data:
+                data["creation_time"] = os.path.getmtime(path[:-5])
+            if "extraction_dir" not in data and path.endswith("-extracted.json"):
+                data["extraction_dir"] = True
+        meta = cls(**data)
+        if meta.size is None and not meta.extraction_dir:
+            meta.size = os.path.getsize(path[:-5])
+        return meta
 
 
 # TODO(joelgrus): do we want to do checksums or anything like that?
@@ -483,7 +517,9 @@ def get_from_cache(url: str, cache_dir: Union[str, Path] = None) -> str:
                     _http_get(url, cache_file)
 
             logger.debug("creating metadata file for %s", cache_path)
-            meta = _Meta(resource=url, etag=etag)
+            meta = _Meta(
+                resource=url, creation_time=time.time(), etag=etag, size=os.path.getsize(cache_path)
+            )
             meta.to_file(cache_path + ".json")
 
     return cache_path
@@ -536,3 +572,102 @@ def text_lines_from_file(filename: Union[str, Path], strip_lines: bool = True) -
 
 def json_lines_from_file(filename: Union[str, Path]) -> Iterable[Union[list, dict]]:
     return (json.loads(line) for line in text_lines_from_file(filename))
+
+
+def _format_timedelta(td: timedelta) -> str:
+    """
+    Format a timedelta for humans.
+    """
+    if td.days > 1:
+        return f"{td.days} days"
+    elif td.days > 0:
+        return f"{td.days} day"
+    else:
+        hours, remainder = divmod(td.seconds, 3600)
+        minutes, _ = divmod(remainder, 60)
+        if hours > 1:
+            return f"{hours} hours"
+        elif hours > 0:
+            return f"{hours} hour, {minutes} mins"
+        else:
+            return f"{minutes} mins"
+
+
+def _format_size(size: int) -> str:
+    """
+    Format a size (in bytes) for humans.
+    """
+    GBs = size / (1000 * 1000 * 1000)
+    if GBs >= 10:
+        return f"{int(GBs)}G"
+    if GBs >= 1:
+        return f"{GBs:.1f}G"
+    MBs = size / (1000 * 1000)
+    if MBs >= 10:
+        return f"{int(MBs)}M"
+    if MBs >= 1:
+        return f"{MBs:.1f}M"
+    KBs = size / 1000
+    if KBs >= 10:
+        return f"{int(KBs)}K"
+    if KBs >= 1:
+        return f"{KBs:.1f}K"
+    return f"{size}B"
+
+
+def inspect_cache(cache_dir: Union[str, Path] = None):
+    cache_dir = os.path.expanduser(cache_dir or CACHE_DIRECTORY)
+
+    # Gather cache entries by resource.
+    # The values in this mapping are tuples because we seperate meta entries that
+    # correspond to extraction directories vs regular cache entries.
+    cache_entries: Dict[str, Tuple[List[_Meta], List[_Meta]]] = defaultdict(lambda: ([], []))
+    total_size: int = 0
+    for meta_path in glob.glob(str(cache_dir) + "/*.json"):
+        meta = _Meta.from_path(meta_path)
+        if meta.extraction_dir:
+            cache_entries[meta.resource][1].append(meta)
+        else:
+            cache_entries[meta.resource][0].append(meta)
+            # We know meta.size will not be None for regular cache entries.
+            # See _Meta.from_path()
+            assert meta.size is not None
+            total_size += meta.size
+
+    # Sort entries for each resource by creation time, newest first.
+    for metas in cache_entries.values():
+        # Regular entries.
+        metas[0].sort(key=lambda meta: meta.creation_time, reverse=True)
+        # Extraction directories.
+        metas[1].sort(key=lambda meta: meta.creation_time, reverse=True)
+
+    print("Cached resources:")
+    for resource, metas in sorted(
+        cache_entries.items(),
+        # Sort by creation time, latest first.
+        key=lambda x: max(
+            0 if not x[1][0] else x[1][0][0].creation_time,
+            0 if not x[1][1] else x[1][1][0].creation_time,
+        ),
+        reverse=True,
+    ):
+        print("\n➥", resource)
+        if metas[0]:
+            td = timedelta(seconds=time.time() - metas[0][0].creation_time)
+            n_versions = len(metas[0])
+            size = metas[0][0].size  # type: ignore
+            # We know meta.size will not be None for regular cache entries.
+            # See _Meta.from_path()
+            assert size is not None
+            print(
+                f"  {n_versions} {'versions' if n_versions > 1 else 'version'} cached, "
+                f"latest {_format_size(size)} from {_format_timedelta(td)} ago"
+            )
+        if metas[1]:
+            td = timedelta(seconds=time.time() - metas[1][0].creation_time)
+            n_versions = len(metas[1])
+            print(
+                f"  {n_versions} {'versions' if n_versions > 1 else 'version'} extracted, "
+                f"latest from {_format_timedelta(td)} ago"
+            )
+    print(f"\nTotal cache size: {_format_size(total_size)} (excluding extraction directories)")

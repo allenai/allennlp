@@ -34,6 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   at end of function rather than via `atexit`.
 - Fixed a bug where using `cached_path()` offline could return a cached resource's lock file instead
   of the cache file.
+- Fixed a bug where `cached_path()` would fail if passed a `cache_dir` with the user home shortcut `~/`.
 
 ## [v1.1.0](https://github.com/allenai/allennlp/releases/tag/v1.1.0) - 2020-09-08
 
