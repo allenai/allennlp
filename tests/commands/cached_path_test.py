@@ -15,3 +15,5 @@ class TestCachedPathCommand(AllenNlpTestCase):
         sys.argv = ["allennlp", "cached-path", "--cache-dir", str(self.TEST_DIR), "--inspect"]
         main()
         captured = capsys.readouterr()
+        assert "Cached resources:" in captured.out
+        assert "Total cache size: 0B" in captured.out
