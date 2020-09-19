@@ -765,7 +765,7 @@ class BertImageFeatureEmbeddings(torch.nn.Module, FromParams):
 
     def forward(self, image_feature: torch.Tensor, image_location: torch.Tensor):
         img_embeddings = self.image_embeddings(image_feature)
-        loc_embeddings = self.image_location_embeddings(image_location)
+        loc_embeddings = self.image_location_embeddings(image_location.float())
         embeddings = self.layer_norm(img_embeddings + loc_embeddings)
         embeddings = self.dropout(embeddings)
 
