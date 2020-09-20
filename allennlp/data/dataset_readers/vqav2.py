@@ -416,8 +416,9 @@ class VQAv2Reader(DatasetReader):
         # them in batches. So this code gathers up instances until it has enough to fill up a batch
         # that needs processing, and then processes them all.
         question_dicts = self.shard_iterable(questions["questions"])
+        image_prefix = "COCO_%s_" %questions['data_subtype']
         processed_images = self._process_image_paths(
-            self.images[f"{question_dict['image_id']:012d}.jpg"] for question_dict in question_dicts
+            self.images[f"{image_prefix}{question_dict['image_id']:012d}.jpg"] for question_dict in question_dicts
         )
 
         for question_dict, processed_image in zip(question_dicts, processed_images):
