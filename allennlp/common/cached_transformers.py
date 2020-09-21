@@ -78,12 +78,12 @@ def get(
             transformer = AutoModel.from_pretrained(
                 model_name,
                 state_dict=override_weights,
-                **kwargs.get("transformers_from_pretrained_kwargs", {}),
+                **kwargs,
             )
         else:
             transformer = AutoModel.from_pretrained(
                 model_name,
-                **kwargs.get("transformers_from_pretrained_kwargs", {}),
+                **kwargs,
             )
         _model_cache[spec] = transformer
     if make_copy:

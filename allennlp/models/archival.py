@@ -140,7 +140,7 @@ def load_archive(
 
     # Parameters
 
-    archive_file : `str`/`Path`
+    archive_file : `Union[str, Path]`
         The archive file to load the model from.
     cuda_device : `int`, optional (default = `-1`)
         If `cuda_device` is >= 0, the model will be loaded onto the

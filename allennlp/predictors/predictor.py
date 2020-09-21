@@ -249,7 +249,7 @@ class Predictor(Registrable):
 
         # Parameters
 
-        archive_path : `str`/`Path`
+        archive_path : `Union[str, Path]`
             The path to the archive.
         predictor_name : `str`, optional (default=`None`)
             Name that the predictor is registered as, or None to use the

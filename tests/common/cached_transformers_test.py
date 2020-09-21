@@ -12,10 +12,8 @@ def test_get_missing_from_cache_local_files_only():
             cached_transformers.get(
                 "bert-base-uncased",
                 True,
-                transformers_from_pretrained_kwargs={
-                    "cache_dir": tempdir,
-                    "local_files_only": True,
-                },
+                cache_dir=tempdir,
+                local_files_only=True,
             )
         assert str(execinfo.value) == (
             "Cannot find the requested files in the cached path and "

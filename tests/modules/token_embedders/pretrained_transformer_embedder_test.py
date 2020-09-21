@@ -250,10 +250,14 @@ class TestPretrainedTransformerEmbedder(AllenNlpTestCase):
             with pytest.raises(ValueError) as execinfo:
                 PretrainedTransformerEmbedder(
                     "bert-base-uncased",
-                    transformers_from_pretrained_kwargs={
-                        "cache_dir": tempdir,
-                        "local_files_only": True,
-                    },
+                    tokenizer_kwargs=dict(
+                        cache_dir=tempdir,
+                        local_files_only=True,
+                    ),
+                    transformer_kwargs=dict(
+                        cache_dir=tempdir,
+                        local_files_only=True,
+                    ),
                 )
             assert str(execinfo.value) == (
                 "Cannot find the requested files in the cached path and "

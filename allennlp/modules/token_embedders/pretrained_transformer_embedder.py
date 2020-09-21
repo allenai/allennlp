@@ -1,5 +1,5 @@
 import math
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Dict, Any
 
 from overrides import overrides
 
@@ -57,7 +57,8 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         override_weights_file: Optional[str] = None,
         override_weights_strip_prefix: Optional[str] = None,
         gradient_checkpointing: Optional[bool] = None,
-        **kwargs,
+        tokenizer_kwargs: Optional[Dict[str, Any]] = None,
+        transformer_kwargs: Optional[Dict[str, Any]] = None,
     ) -> None:
         super().__init__()
         from allennlp.common import cached_transformers
@@ -67,7 +68,7 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
             True,
             override_weights_file=override_weights_file,
             override_weights_strip_prefix=override_weights_strip_prefix,
-            **kwargs,
+            **(transformer_kwargs or {}),
         )
 
         if gradient_checkpointing is not None:
@@ -90,7 +91,7 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
 
         tokenizer = PretrainedTransformerTokenizer(
             model_name,
-            tokenizer_kwargs=kwargs.get("transformers_from_pretrained_kwargs", {}),
+            **(tokenizer_kwargs or {}),
         )
         self._num_added_start_tokens = len(tokenizer.single_sequence_start_tokens)
         self._num_added_end_tokens = len(tokenizer.single_sequence_end_tokens)
