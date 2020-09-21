@@ -2,9 +2,8 @@ local model_name = "bert-base-uncased";
 {
   "dataset_reader": {
     "type": "vqav2",
-    "image_dir": "test_fixtures/data/vqav2/images",
+    "image_dir": "/net/nfs2.corp/prior/datasets/coco",
     "feature_cache_dir": "test_fixtures/data/vqav2/images/experiment_cache",
-    "data_dir": "test_fixtures/data/vqav2",
     "image_loader": "detectron",
     "image_featurizer": "resnet_backbone",
     "region_detector": "faster_rcnn",
@@ -19,8 +18,8 @@ local model_name = "bert-base-uncased";
       }
     }
   },
-  "train_data_path": "train2014",
-  "validation_data_path": "train2014",
+  "train_data_path": "balanced_real_train",
+  "validation_data_path": "balanced_real_val",
   "model": {
     "type": "vqa_vilbert",
     "text_embeddings": {
@@ -65,6 +64,9 @@ local model_name = "bert-base-uncased";
       "type": "huggingface_adamw",
       "lr": 0.00005
     },
-    "num_epochs": 1
+    "num_epochs": 1,
+  },
+  "distributed": {
+    "cuda_devices": [0, 1]
   }
 }
