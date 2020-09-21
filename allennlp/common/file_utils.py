@@ -640,21 +640,21 @@ def _format_size(size: int) -> str:
     """
     Format a size (in bytes) for humans.
     """
-    GBs = size / (1000 * 1000 * 1000)
+    GBs = size / (1024 * 1024 * 1024)
     if GBs >= 10:
-        return f"{int(GBs)}G"
+        return f"{int(round(GBs, 0))}G"
     if GBs >= 1:
-        return f"{GBs:.1f}G"
-    MBs = size / (1000 * 1000)
+        return f"{round(GBs, 1):.1f}G"
+    MBs = size / (1024 * 1024)
     if MBs >= 10:
-        return f"{int(MBs)}M"
+        return f"{int(round(MBs, 0))}M"
     if MBs >= 1:
-        return f"{MBs:.1f}M"
-    KBs = size / 1000
+        return f"{round(MBs, 1):.1f}M"
+    KBs = size / 1024
     if KBs >= 10:
-        return f"{int(KBs)}K"
+        return f"{int(round(KBs, 0))}K"
     if KBs >= 1:
-        return f"{KBs:.1f}K"
+        return f"{round(KBs, 1):.1f}K"
     return f"{size}B"
 
 
