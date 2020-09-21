@@ -19,7 +19,7 @@ class VilbertVqaPredictor(Predictor):
     def _json_to_instance(self, json_dict: JsonDict) -> Instance:
         question = json_dict["question"]
         image = cached_path(json_dict["image"])
-        return self._dataset_reader.text_to_instance(question, image)
+        return self._dataset_reader.text_to_instance(question, image, use_cache=False)
 
     @overrides
     def predictions_to_labeled_instances(

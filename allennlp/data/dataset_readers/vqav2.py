@@ -326,15 +326,34 @@ class VQAv2Reader(DatasetReader):
         self.region_detector = region_detector.to(self.cuda_device)
 
         # feature cache
-        if feature_cache_dir is None:
-            self._features_cache: MutableMapping[str, Tensor] = {}
-            self._coordinates_cache: MutableMapping[str, Tensor] = {}
-        else:
-            os.makedirs(feature_cache_dir, exist_ok=True)
-            self._features_cache = TensorCache(os.path.join(feature_cache_dir, "features"))
-            self._coordinates_cache = TensorCache(os.path.join(feature_cache_dir, "coordinates"))
+        self.feature_cache_dir = feature_cache_dir
+        self._features_cache_instance = None
+        self._coordinates_cache_instance = None
 
         self.image_processing_batch_size = image_processing_batch_size
+
+    @property
+    def _features_cache(self) -> MutableMapping[str, Tensor]:
+        if self._features_cache_instance is None:
+            if self.feature_cache_dir is None:
+                self._features_cache_instance = {}
+            else:
+                os.makedirs(self.feature_cache_dir, exist_ok=True)
+                self._features_cache_instance = TensorCache(os.path.join(self.feature_cache_dir, "features"))
+
+        return self._features_cache_instance
+
+    @property
+    def _coordinates_cache(self) -> MutableMapping[str, Tensor]:
+        if self._coordinates_cache_instance is None:
+            if self.coordinates_cache_dir is None:
+                self._coordinates_cache_instance = {}
+            else:
+                os.makedirs(self.features_cache_dir, exist_ok=True)
+                self._coordinates_cache_instance = TensorCache(os.path.join(self.feature_cache_dir, "coordinates"))
+
+        return self._coordinates_cache_instance
+
 
     @overrides
     def _read(self, split_name: str):
@@ -428,7 +447,12 @@ class VQAv2Reader(DatasetReader):
                 answers = answers["answers"]
             yield self.text_to_instance(question_dict["question"], processed_image, answers)
 
-    def _process_image_paths(self, image_paths: Iterable[str]) -> Iterator[Tuple[Tensor, Tensor]]:
+    def _process_image_paths(
+        self,
+        image_paths: Iterable[str],
+        *,
+        use_cache: bool = True
+    ) -> Iterator[Tuple[Tensor, Tensor]]:
         batch: List[Union[str, Tuple[Tensor, Tensor]]] = []
         unprocessed_paths: Set[str] = set()
 
@@ -448,10 +472,11 @@ class VQAv2Reader(DatasetReader):
             paths_to_tensors = {path: (features[i], coordinates[i]) for i, path in enumerate(paths)}
 
             # store the processed results in the cache
-            for path, (features, coordinates) in paths_to_tensors.items():
-                basename = os.path.basename(path)
-                self._features_cache[basename] = features
-                self._coordinates_cache[basename] = coordinates
+            if use_cache:
+                for path, (features, coordinates) in paths_to_tensors.items():
+                    basename = os.path.basename(path)
+                    self._features_cache[basename] = features
+                    self._coordinates_cache[basename] = coordinates
 
             # yield the batch
             for b in batch:
@@ -463,12 +488,16 @@ class VQAv2Reader(DatasetReader):
         for image_path in image_paths:
             basename = os.path.basename(image_path)
             try:
-                features: Tensor = self._features_cache[basename]
-                coordinates: Tensor = self._coordinates_cache[basename]
-                if len(batch) <= 0:
-                    yield features, coordinates
+                if use_cache:
+                    features: Tensor = self._features_cache[basename]
+                    coordinates: Tensor = self._coordinates_cache[basename]
+                    if len(batch) <= 0:
+                        yield features, coordinates
+                    else:
+                        batch.append((features, coordinates))
                 else:
-                    batch.append((features, coordinates))
+                    # If we're not using the cache, we pretend we had a cache miss here.
+                    raise KeyError
             except KeyError:
                 batch.append(image_path)
                 unprocessed_paths.add(image_path)
@@ -486,11 +515,13 @@ class VQAv2Reader(DatasetReader):
         question: str,
         image: Union[str, Tuple[Tensor, Tensor]],
         answers: List[Dict[str, str]] = None,
+        *,
+        use_cache: bool = True
     ) -> Instance:
         tokenized_question = self._tokenizer.tokenize(question)
         question_field = TextField(tokenized_question, None)
         if isinstance(image, str):
-            features, coords = next(self._process_image_paths([image]))
+            features, coords = next(self._process_image_paths([image], use_cache=use_cache))
         else:
             features, coords = image
 
