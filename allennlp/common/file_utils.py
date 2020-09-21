@@ -726,7 +726,11 @@ def inspect_cache(patterns: List[str] = None, cache_dir: Union[str, Path] = None
     # Gather cache entries by resource.
     total_size, cache_entries = _find_entries(patterns=patterns, cache_dir=cache_dir)
 
-    print("Cached resources:")
+    if patterns:
+        print(f"Cached resources matching {patterns}:")
+    else:
+        print("Cached resources:")
+
     for resource, metas in sorted(
         cache_entries.items(),
         # Sort by creation time, latest first.
