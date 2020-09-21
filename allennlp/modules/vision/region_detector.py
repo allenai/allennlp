@@ -32,20 +32,21 @@ class RegionDetector(nn.Module, Registrable):
 @RegionDetector.register("null")
 class NullRegionDetector(RegionDetector):
     """
-    A `RegionDetector` that returns a single proposal per image, for testing purposes.  The
-    features for the proposal are a 10-dimensional vector of 1s, and the coordinates are the size of
-    the image.
+    A `RegionDetector` that returns two proposals per image, for testing purposes.  The features for
+    the proposal are a random 10-dimensional vector, and the coordinates are the size of the image.
     """
 
     def forward(
         self, raw_images: FloatTensor, image_sizes: IntTensor, featurized_images: FloatTensor
     ) -> FloatTensor:
         batch_size, num_features, height, width = raw_images.size()
-        features = torch.ones(batch_size, 1, 10, dtype=featurized_images.dtype).to(raw_images.device)
-        coordinates = torch.zeros(batch_size, 1, 4, dtype=torch.int).to(raw_images.device)
+        features = torch.rand(batch_size, 2, 10, dtype=featurized_images.dtype).to(raw_images.device)
+        coordinates = torch.zeros(batch_size, 2, 4, dtype=torch.int).to(raw_images.device)
         for image_num in range(batch_size):
             coordinates[image_num, 0, 2] = image_sizes[image_num, 0]
             coordinates[image_num, 0, 3] = image_sizes[image_num, 1]
+            coordinates[image_num, 1, 2] = image_sizes[image_num, 0]
+            coordinates[image_num, 1, 3] = image_sizes[image_num, 1]
         return {"features": features, "coordinates": coordinates}
 
 

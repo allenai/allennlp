@@ -34,7 +34,8 @@ local model_name = "epwalsh/bert-xsmall-dummy";
     "t_biattention_id": [0, 1],
     "fixed_t_layer": 0,
     "fixed_v_layer": 0,
-    "fusion_method": "mul"
+    "fusion_method": "sum",
+    "pooled_dropout": 0.0,
   },
   "data_loader": {
     "batch_size": 32
