@@ -4,6 +4,7 @@ from tempfile import mkdtemp
 
 from allennlp.common import cached_transformers
 
+
 def test_get_missing_from_cache_local_files_only():
     tempdir = mkdtemp()
     try:
