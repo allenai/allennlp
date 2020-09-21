@@ -253,8 +253,13 @@ class VqaVilbert(Model):
     def make_output_human_readable(
         self, output_dict: Dict[str, torch.Tensor]
     ) -> Dict[str, torch.Tensor]:
-        tokens = {}
-        for i, prob in enumerate(output_dict["probs"]):
-            tokens[self.vocab.get_token_from_index(i, self.label_namespace)] = float(prob)
-        output_dict['tokens'] = tokens
+        batch_tokens = []
+        for batch_index, batch in enumerate(output_dict["probs"]):
+            tokens = {}
+            for i, prob in enumerate(batch):
+                tokens[self.vocab.get_token_from_index(i, self.label_namespace)] = float(prob)
+            batch_tokens.append(tokens)
+        output_dict['tokens'] = batch_tokens
         return output_dict
+
+    default_predictor = "vilbert_vqa"
