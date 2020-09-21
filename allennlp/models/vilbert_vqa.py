@@ -229,6 +229,7 @@ class VqaVilbert(Model):
 
         outputs = {}
         outputs["logits"] = logits
+        outputs["probs"] = torch.softmax(logits, dim=1)
         if labels is not None:
             label_mask = labels > 1  # 0 is padding, 1 is OOV, which we want to ignore
             weighted_labels = util.masked_index_replace(
@@ -253,7 +254,7 @@ class VqaVilbert(Model):
         self, output_dict: Dict[str, torch.Tensor]
     ) -> Dict[str, torch.Tensor]:
         tokens = {}
-        for i, logit in enumerate(output_dict["logits"]):
-            tokens[self.vocab.get_token_from_index(i, self.label_namespace)] = logit
+        for i, prob in enumerate(output_dict["probs"]):
+            tokens[self.vocab.get_token_from_index(i, self.label_namespace)] = float(prob)
         output_dict['tokens'] = tokens
         return output_dict
