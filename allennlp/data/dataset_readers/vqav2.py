@@ -24,7 +24,7 @@ from tqdm import tqdm
 import torch.distributed as dist
 
 from allennlp.common import util
-from allennlp.common.checks import check_for_gpu
+from allennlp.common.checks import check_for_gpu, ConfigurationError
 from allennlp.common.util import int_to_device
 from allennlp.common.file_utils import cached_path, TensorCache
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
@@ -416,11 +416,7 @@ class VQAv2Reader(DatasetReader):
             ),
         }
 
-        if isinstance(split_name, list):
-            if len(split_name) != 2:
-                raise ValueError(f"Need two files passed to this reader, got: {split_name}")
-            split = Split(split_name[0], split_name[1])
-        else:
+        if isinstance(split_name, str):
             try:
                 split = splits[split_name]
             except KeyError:
@@ -428,6 +424,12 @@ class VQAv2Reader(DatasetReader):
                     f"Unrecognized split: {split_name}. We require a split, not a filename, for "
                     "VQA because the image filenames require using the split."
                 )
+        elif isinstance(split_name, list):
+            if len(split_name) != 2:
+                raise ValueError(f"Need two files passed to this reader, got: {split_name}")
+            split = Split(split_name[0], split_name[1])
+        else:
+            raise ConfigurationError("Expected a string or a list for the dataset reader.")
 
         if split.annotations is None:
             annotations_by_question_id = {}

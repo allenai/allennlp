@@ -460,7 +460,7 @@ def _train_worker(
     return None
 
 
-DataPath = Union[List[str], Dict[str, str], str]
+DataPath = Union[str, List[str], Dict[str, str]]
 
 
 class TrainModel(Registrable):
