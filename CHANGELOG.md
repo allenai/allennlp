@@ -31,6 +31,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   it as its default value of `False`) to `Tensor.nonzero()`.
 - Remove temporary directory when extracting model archive in `load_archive`
   at end of function rather than via `atexit`.
+- Fixed a bug in our doc building script where markdown links did not render properly
+  if the "href" part of the link (the part inside the `()`) was on a new line.
 
 ## [v1.1.0](https://github.com/allenai/allennlp/releases/tag/v1.1.0) - 2020-09-08
 
