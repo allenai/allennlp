@@ -34,7 +34,7 @@ class BertPooler(Seq2VecEncoder):
     transformer_kwargs: `Dict[str, Any]`, optional (default = `None`)
         Dictionary with
         [additional arguments](https://github.com/huggingface/transformers/blob/155c782a2ccd103cf63ad48a2becd7c76a7d2115/transformers/modeling_utils.py#L253)
-        for `AutoTokenizer.from_pretrained`.
+        for `AutoModel.from_pretrained`.
     """  # noqa: E501
 
     def __init__(
