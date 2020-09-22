@@ -3,6 +3,7 @@ Subcommand for building a vocabulary from a training config.
 """
 
 import argparse
+import json
 import logging
 import os
 import tarfile
@@ -93,3 +94,7 @@ def build_vocab_from_args(args: argparse.Namespace):
             # Clean up.
             if os.path.exists(temp_archive.name):
                 os.remove(temp_archive.name)
+
+    print(f"Success! Vocab saved to {args.output_path}")
+    print('You can now set the "vocabulary" entry of your training config to:')
+    print(json.dumps({"type": "from_files", "directory": os.path.abspath(args.output_path)}))
