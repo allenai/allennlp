@@ -1,5 +1,7 @@
 This is a docstring.
 
+And this is a multi-line line: [http://example.com](https://example.com/blah/blah/blah.html).
+
 <a name=".scripts.tests.py2md.basic_example.SOME_GLOBAL_VAR"></a>
 ## SOME\_GLOBAL\_VAR
 
