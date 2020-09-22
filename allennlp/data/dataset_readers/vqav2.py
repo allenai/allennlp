@@ -328,8 +328,8 @@ class VQAv2Reader(DatasetReader):
         # feature cache
         self.feature_cache_dir = feature_cache_dir
         self.coordinates_cache_dir = feature_cache_dir
-        self._features_cache_instance = None
-        self._coordinates_cache_instance = None
+        self._features_cache_instance: Optional[MutableMapping[str, Tensor]] = None
+        self._coordinates_cache_instance: Optional[MutableMapping[str, Tensor]] = None
 
         self.image_processing_batch_size = image_processing_batch_size
 
@@ -445,7 +445,6 @@ class VQAv2Reader(DatasetReader):
         # that needs processing, and then processes them all.
         question_dicts = list(self.shard_iterable(questions["questions"]))
         image_prefix = "COCO_%s_" % questions["data_subtype"]
-        distributed = torch.distributed.is_initialized()
         processed_images = self._process_image_paths(
             self.images[f"{image_prefix}{question_dict['image_id']:012d}.jpg"]
             for question_dict in question_dicts

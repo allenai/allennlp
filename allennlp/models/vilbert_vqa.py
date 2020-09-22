@@ -226,10 +226,9 @@ class VqaVilbert(Model):
             raise ValueError(f"Fusion method '{self.fusion_method}' not supported")
 
         logits = self.classifier(pooled_output)
+        probs = torch.sigmoid(logits)
 
-        outputs = {}
-        outputs["logits"] = logits
-        outputs["probs"] = torch.softmax(logits, dim=1)
+        outputs = {"logits": logits, "probs": probs}
         if labels is not None:
             label_mask = labels > 1  # 0 is padding, 1 is OOV, which we want to ignore
 
