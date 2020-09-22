@@ -51,11 +51,10 @@ class PretrainedTransformerTokenizer(Tokenizer):
         - 'only_first': Only truncate the first sequence
         - 'only_second': Only truncate the second sequence
         - 'do_not_truncate': Do not truncate (raise an error if the input sequence is longer than max_length)
-    tokenizer_kwargs: `Dict[str, Any]`
+    tokenizer_kwargs: `Dict[str, Any]`, optional (default = `None`)
         Dictionary with
         [additional arguments](https://github.com/huggingface/transformers/blob/155c782a2ccd103cf63ad48a2becd7c76a7d2115/transformers/tokenization_utils.py#L691)
         for `AutoTokenizer.from_pretrained`.
-
     """  # noqa: E501
 
     def __init__(
