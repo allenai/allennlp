@@ -226,10 +226,9 @@ class VqaVilbert(Model):
             raise ValueError(f"Fusion method '{self.fusion_method}' not supported")
 
         logits = self.classifier(pooled_output)
+        probs = torch.sigmoid(logits)
 
-        outputs = {}
-        outputs["logits"] = logits
-        outputs["probs"] = torch.softmax(logits, dim=1)
+        outputs = {"logits": logits, "probs": probs}
         if labels is not None:
             label_mask = labels > 1  # 0 is padding, 1 is OOV, which we want to ignore
             weighted_labels = util.masked_index_replace(
@@ -238,7 +237,7 @@ class VqaVilbert(Model):
                 label_mask,
                 label_weights.unsqueeze(-1),
             ).squeeze(-1)
-            outputs["loss"] = self.loss(torch.sigmoid(logits), weighted_labels).sum()
+            outputs["loss"] = self.loss(probs, weighted_labels).sum()
             # TODO(mattg): We don't have a suitable accuracy metric for this yet, I don't think.
             # self.accuracy(logits, labels)
         return outputs
