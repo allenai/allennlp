@@ -5,8 +5,8 @@ local model_name = "bert-base-uncased";
     "image_dir": "/net/nfs2.corp/prior/datasets/coco",
     "feature_cache_dir": "test_fixtures/data/vqav2/images/experiment_cache",
     "image_loader": "detectron",
-    "image_featurizer": "resnet_backbone",
-    "region_detector": "faster_rcnn",
+    "image_featurizer": "null",
+    "region_detector": "null",
     "tokenizer": {
       "type": "pretrained_transformer",
       "model_name": model_name

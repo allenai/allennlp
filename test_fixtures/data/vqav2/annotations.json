@@ -14,10 +14,8 @@
     "name": "Creative Commons Attribution 4.0 International License"
   },
   "data_subtype": "train2014",
-  "questions": [
+  "annotations": [
     {
-      "image_id": 458752,
-      "question": "What is this photo taken looking through?",
       "question_id": 458752000,
       "answers": [
         {
@@ -61,20 +59,18 @@
           "answer_id": 8
         },
         {
-          "answer": "net",
+          "answer": "pitcher",
           "answer_confidence": "yes",
           "answer_id": 9
         },
         {
-          "answer": "net",
+          "answer": "orange",
           "answer_confidence": "yes",
           "answer_id": 10
         }
       ]
     },
     {
-      "image_id": 458752,
-      "question": "What position is this man playing?",
       "question_id": 458752001,
       "answers": [
         {
@@ -130,8 +126,6 @@
       ]
     },
     {
-      "image_id": 458752,
-      "question": "What color is the players shirt?",
       "question_id": 458752002,
       "answers": [
         {

@@ -178,7 +178,12 @@ class DatasetReader(Registrable):
         Returns an iterator of instances that can be read from the file path.
         """
         if not isinstance(file_path, str):
-            file_path = str(file_path)
+            if isinstance(file_path, list):
+                file_path = [str(f) for f in file_path]
+            elif isinstance(file_path, dict):
+                file_path = {k: str(v) for k, v in file_path.items()}
+            else:
+                file_path = str(file_path)
 
         for instance in self._multi_worker_islice(self._read(file_path)):
             if self._worker_info is None:

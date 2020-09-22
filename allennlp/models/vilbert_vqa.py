@@ -9,7 +9,7 @@ import torch
 from allennlp.data import TextFieldTensors, Vocabulary
 from allennlp.models.model import Model
 from allennlp.nn import util
-from allennlp.training.metrics import CategoricalAccuracy
+from allennlp.training.metrics import CategoricalAccuracy, F1MultiLabelMeasure
 
 from allennlp.models.vilbert import (
     BertEmbeddings,
@@ -48,7 +48,7 @@ class VqaVilbert(Model):
         super().__init__(vocab)
         self.loss = torch.nn.BCELoss()
         self.consistency_wrong_map: Dict[str, int] = collections.Counter()
-        self.accuracy = CategoricalAccuracy()
+        self.f1 = F1MultiLabelMeasure(average="micro")
         self.fusion_method = fusion_method
 
         self.embeddings = text_embeddings
@@ -232,22 +232,34 @@ class VqaVilbert(Model):
         outputs["probs"] = torch.softmax(logits, dim=1)
         if labels is not None:
             label_mask = labels > 1  # 0 is padding, 1 is OOV, which we want to ignore
+
             weighted_labels = util.masked_index_replace(
                 logits.new_zeros(logits.size() + (1,)),
-                labels,
+                labels.clamp(min=0),
                 label_mask,
                 label_weights.unsqueeze(-1),
             ).squeeze(-1)
-            outputs["loss"] = self.loss(torch.sigmoid(logits), weighted_labels).sum()
-            # TODO(mattg): We don't have a suitable accuracy metric for this yet, I don't think.
-            # self.accuracy(logits, labels)
+
+            # weighted_labels now has shape (batch_size, num_labels).  We need to ignore the first
+            # two columns of this in our loss function and accuracy metric.  The first column is a
+            # padding label, and the second column is an OOV label.  We want the loss function to
+            # be computed on every other label.
+            binary_label_mask = weighted_labels.new_ones(logits.size())
+            binary_label_mask[:, 0] = 0
+            binary_label_mask[:, 1] = 0
+
+            outputs["loss"] = torch.nn.functional.binary_cross_entropy_with_logits(
+                logits, weighted_labels, weight=binary_label_mask
+            )
+
+            # TODO(mattg): Multi-label F1 is good, but it is not exactly the VQA accuracy metric.
+            # That still needs to be implemented.
+            self.f1(logits, weighted_labels, binary_label_mask.bool())
         return outputs
 
     @overrides
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
-        return {
-            "denotation_acc": self.accuracy.get_metric(reset),
-        }
+        return self.f1.get_metric(reset)
 
     @overrides
     def make_output_human_readable(
@@ -259,7 +271,7 @@ class VqaVilbert(Model):
             for i, prob in enumerate(batch):
                 tokens[self.vocab.get_token_from_index(i, self.label_namespace)] = float(prob)
             batch_tokens.append(tokens)
-        output_dict['tokens'] = batch_tokens
+        output_dict["tokens"] = batch_tokens
         return output_dict
 
     default_predictor = "vilbert_vqa"

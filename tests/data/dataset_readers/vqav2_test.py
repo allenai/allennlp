@@ -38,14 +38,20 @@ class TestVQAv2Reader(AllenNlpTestCase):
     def test_read(self):
         reader = VQAv2Reader(
             image_dir=self.FIXTURES_ROOT / "data" / "vqav2" / "images",
-            data_dir=self.FIXTURES_ROOT / "data" / "vqav2",
             image_loader=DetectronImageLoader(),
             image_featurizer=NullGridEmbedder(),
             region_detector=FakeRegionDetector(),
             tokenizer=WhitespaceTokenizer(),
             token_indexers={"tokens": SingleIdTokenIndexer()},
         )
-        instances = list(reader.read("train2014"))
+        instances = list(
+            reader.read(
+                [
+                    "test_fixtures/data/vqav2/annotations.json",
+                    "test_fixtures/data/vqav2/questions.json",
+                ]
+            )
+        )
         assert len(instances) == 3
 
         instance = instances[0]
@@ -53,10 +59,10 @@ class TestVQAv2Reader(AllenNlpTestCase):
         assert len(instance["question"]) == 7
         question_tokens = [t.text for t in instance["question"]]
         assert question_tokens == ["What", "is", "this", "photo", "taken", "looking", "through?"]
-        assert len(instance["labels"]) == 3
+        assert len(instance["labels"]) == 5
         labels = [field.label for field in instance["labels"].field_list]
-        assert labels == ["net", "netting", "mesh"]
-        assert torch.all(instance["label_weights"].tensor == torch.tensor([1.0, 0.3, 0.3]))
+        assert labels == ["net", "netting", "mesh", "pitcher", "orange"]
+        assert torch.all(instance["label_weights"].tensor == torch.tensor([1.0, 0.3, 0.3, 0.3, 0.3]))
 
         batch = Batch(instances)
         batch.index_instances(Vocabulary())
