@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   by adding a class-level variable called `authorized_missing_keys` to any PyTorch module that a `Model` uses.
   If defined, `authorized_missing_keys` should be a list of regex string patterns.
 - Added `FBetaMultiLabelMeasure`, a multi-label Fbeta metric. This is a subclass of the existing `FBetaMeasure`.
+- Added ability to pass additional key word arguments to `cached_transformers.get()`, which will be passed on to `AutoModel.from_pretrained()`.
+- Added an `overrides` argument to `Predictor.from_path()`.
 - Added a `cached-path` command.
 - Added a function `inspect_cache` to `common.file_utils` that prints useful information about the cache. This can also 
   be used from the `cached-path` command with `allennlp cached-path --inspect`.
