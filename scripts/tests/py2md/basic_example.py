@@ -1,5 +1,8 @@
 """
 This is a docstring.
+
+And this is a multi-line line: [http://example.com]
+(https://example.com/blah/blah/blah.html).
 """
 
 SOME_GLOBAL_VAR = "Ahhhh I'm a global var!!"

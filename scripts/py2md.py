@@ -174,6 +174,7 @@ class AllenNlpDocstringProcessor(Struct):
 
     CROSS_REF_RE = re.compile("(:(class|func|mod):`~?([a-zA-Z0-9_.]+)`)")
     UNDERSCORE_HEADER_RE = re.compile(r"(.*)\n-{3,}\n")
+    MULTI_LINE_LINK_RE = re.compile(r"(\[[^\]]+\])\n(\([^\)]+\))")
 
     @override
     def process(self, graph, resolver):
@@ -190,6 +191,10 @@ class AllenNlpDocstringProcessor(Struct):
 
         # Standardize header syntax to use '#' instead of underscores.
         docstring = self.UNDERSCORE_HEADER_RE.sub(r"# \g<1>", docstring)
+
+        # It's common to break up markdown links into multiple lines in docstrings, but
+        # they won't render as links in the doc HTML unless they are all on one line.
+        docstring = self.MULTI_LINE_LINK_RE.sub(r"\g<1>\g<2>", docstring)
 
         for line in docstring.split("\n"):
             # Check if we're starting or ending a codeblock.
