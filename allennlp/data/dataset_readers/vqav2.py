@@ -440,7 +440,6 @@ class VQAv2Reader(DatasetReader):
         # that needs processing, and then processes them all.
         question_dicts = self.shard_iterable(questions["questions"])
         image_prefix = "COCO_%s_" % questions["data_subtype"]
-        distributed = torch.distributed.is_initialized()
         processed_images = self._process_image_paths(
             self.images[f"{image_prefix}{question_dict['image_id']:012d}.jpg"]
             for question_dict in question_dicts
