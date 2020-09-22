@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Dict
 import math
 import torch
 
@@ -11,7 +11,7 @@ class Attention(torch.nn.Module, FromParams):
         super().__init__()
         self.hidden_size = hidden_size
 
-    def forward(self, *args):
+    def forward(self, query: torch.Tensor, key: torch.Tensor):
         return NotImplementedError
 
 
@@ -22,7 +22,7 @@ class GeneralAttention(Attention):
         super().__init__(hidden_size)
         self.Wa = torch.nn.Linear(self.hidden_size, self.hidden_size)
 
-    def forward(self, query: torch.Tensor, key: torch.Tensor) -> torch.Tensor:  # type: ignore
+    def forward(self, query: torch.Tensor, key: torch.Tensor) -> torch.Tensor:
         scores = self.Wa(query)
         scores = torch.matmul(scores, key.transpose(-1, -2))
         return scores
@@ -37,7 +37,7 @@ class AdditiveAttention(Attention):
         self.Wa = torch.nn.Linear(2 * self.hidden_size, self.hidden_size)
         self.va = torch.nn.Linear(self.hidden_size, 1)
 
-    def forward(self, query: torch.tensor, key: torch.tensor) -> torch.Tensor:  # type: ignore
+    def forward(self, query: torch.tensor, key: torch.tensor) -> torch.Tensor:
         concatenated = torch.cat([query, key], dim=1)
         scores = self.va(torch.tanh(self.Wa(concatenated)))
         return scores
@@ -50,7 +50,7 @@ class DotProduct(Attention):
     def __init__(self):
         super().__init__()
 
-    def forward(self, query: torch.Tensor, key: torch.Tensor) -> torch.Tensor:  # type: ignore
+    def forward(self, query: torch.Tensor, key: torch.Tensor) -> torch.Tensor:
         scores = torch.matmul(query, key.transpose(-1, -2))
         return scores
 
@@ -59,14 +59,13 @@ class ScaledDotProduct(Attention):
     # Reference: [Attention Is All You Need (Vaswani et al, 2017)]
     # (https://api.semanticscholar.org/CorpusID:13756489)
     # Note: This does not have any parameters; it is a module for uniformity's sake.
-    def __init__(self):
+    def __init__(self, attention_head_size: int):
         super().__init__()
+        self.attention_head_size = attention_head_size
 
-    def forward(  # type: ignore
-        self, query: torch.Tensor, key: torch.Tensor, attention_head_size: int
-    ) -> torch.Tensor:
+    def forward(self, query: torch.Tensor, key: torch.Tensor) -> torch.Tensor:
         scores = torch.matmul(query, key.transpose(-1, -2))
-        scores = scores / math.sqrt(attention_head_size)
+        scores = scores / math.sqrt(self.attention_head_size)
         return scores
 
 
@@ -78,19 +77,15 @@ class ContentBaseAttention(Attention):
         super().__init__()
         self.cos = torch.nn.CosineSimilarity(dim=1)  # TODO: check dim.
 
-    def forward(self, query: torch.Tensor, key: torch.Tensor) -> torch.Tensor:  # type: ignore
+    def forward(self, query: torch.Tensor, key: torch.Tensor) -> torch.Tensor:
         scores = self.cos(query, key)
         return scores
 
 
-def attention_map():
-    attn_map = {}
-    attn_map["general"] = GeneralAttention
-    attn_map["additive"] = AdditiveAttention
-    attn_map["dot_product"] = DotProduct
-    attn_map["scaled_dot_product"] = ScaledDotProduct
-    attn_map["content_base"] = ContentBaseAttention
-    return attn_map
+ATTN_MAP: Dict[str, Attention] = {}
 
-
-ATTN_MAP = attention_map()
+ATTN_MAP["general"] = GeneralAttention  # type: ignore
+ATTN_MAP["additive"] = AdditiveAttention  # type: ignore
+ATTN_MAP["dot_product"] = DotProduct  # type: ignore
+ATTN_MAP["scaled_dot_product"] = ScaledDotProduct  # type: ignore
+ATTN_MAP["content_base"] = ContentBaseAttention  # type: ignore

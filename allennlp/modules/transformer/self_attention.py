@@ -40,6 +40,8 @@ class SelfAttention(TransformerModule, FromParams):
         self.scoring_func = scoring_func
         if self.scoring_func in ["general", "additive"]:
             self.attn = ATTN_MAP[self.scoring_func](hidden_size)
+        elif self.scoring_func == "scaled_dot_product":
+            self.attn = ATTN_MAP[self.scoring_func](self.attention_head_size)
         else:
             self.attn = ATTN_MAP[self.scoring_func]()
 
@@ -66,10 +68,7 @@ class SelfAttention(TransformerModule, FromParams):
         key_layer = self._transpose_for_scores(mixed_key_layer)
         value_layer = self._transpose_for_scores(mixed_value_layer)
 
-        if self.scoring_func == "scaled_dot_product":
-            attention_scores = self.attn(query_layer, key_layer, self.attention_head_size)
-        else:
-            attention_scores = self.attn(query_layer, key_layer)
+        attention_scores = self.attn(query_layer, key_layer)
         attention_scores = attention_scores + attention_mask
 
         # Normalize the attention scores to probabilities.

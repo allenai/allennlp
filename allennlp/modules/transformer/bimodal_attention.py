@@ -43,6 +43,8 @@ class BiModalAttention(TransformerModule, FromParams):
         self.scoring_func1 = scoring_func1
         if self.scoring_func1 in ["general", "additive"]:
             self.attn1 = ATTN_MAP[self.scoring_func1](hidden_size1)
+        elif self.scoring_func1 == "scaled_dot_product":
+            self.attn1 = ATTN_MAP[self.scoring_func1](self.attention_head_size)
         else:
             self.attn1 = ATTN_MAP[self.scoring_func1]()
 
@@ -55,6 +57,8 @@ class BiModalAttention(TransformerModule, FromParams):
         self.scoring_func2 = scoring_func2
         if self.scoring_func2 in ["general", "additive"]:
             self.attn2 = ATTN_MAP[self.scoring_func2](hidden_size2)
+        elif self.scoring_func2 == "scaled_dot_product":
+            self.attn2 = ATTN_MAP[self.scoring_func2](self.attention_head_size)
         else:
             self.attn2 = ATTN_MAP[self.scoring_func2]()
 
@@ -96,7 +100,7 @@ class BiModalAttention(TransformerModule, FromParams):
         key_layer2 = self._transpose_for_scores(mixed_key_layer2)
         value_layer2 = self._transpose_for_scores(mixed_value_layer2)
 
-        attention_scores1 = self.attn1(query_layer2, key_layer1, self.attention_head_size)
+        attention_scores1 = self.attn1(query_layer2, key_layer1)
         attention_scores1 = attention_scores1 + attention_mask1
         if use_co_attention_mask:
             attention_scores1 = attention_scores1 + co_attention_mask.permute(0, 1, 3, 2)
@@ -113,7 +117,7 @@ class BiModalAttention(TransformerModule, FromParams):
         new_context_layer_shape1 = context_layer1.size()[:-2] + (self.all_head_size,)
         context_layer1 = context_layer1.view(*new_context_layer_shape1)
 
-        attention_scores2 = self.attn1(query_layer1, key_layer2, self.attention_head_size)
+        attention_scores2 = self.attn2(query_layer1, key_layer2)
         # we can comment this line for single flow.
         attention_scores2 = attention_scores2 + attention_mask2
         if use_co_attention_mask:

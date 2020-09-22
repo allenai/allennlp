@@ -66,10 +66,10 @@ class TestScaledDotProduct(AllenNlpTestCase):
     def setup_method(self):
         super().setup_method()
 
-        self.scaled_dot_product = ScaledDotProduct()
+        self.scaled_dot_product = ScaledDotProduct(8)
 
     def test_forward_runs(self):
-        self.scaled_dot_product(torch.randn(4, 3), torch.randn(4, 3), 8)
+        self.scaled_dot_product(torch.randn(4, 3), torch.randn(4, 3))
 
 
 class TestContentBaseAttention(AllenNlpTestCase):
