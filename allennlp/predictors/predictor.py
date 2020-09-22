@@ -1,7 +1,8 @@
-from typing import List, Iterator, Dict, Tuple, Any, Type
+from typing import List, Iterator, Dict, Tuple, Any, Type, Union
 import json
 import re
 from contextlib import contextmanager
+from pathlib import Path
 
 import numpy
 from torch.utils.hooks import RemovableHandle
@@ -232,12 +233,13 @@ class Predictor(Registrable):
     @classmethod
     def from_path(
         cls,
-        archive_path: str,
+        archive_path: Union[str, Path],
         predictor_name: str = None,
         cuda_device: int = -1,
         dataset_reader_to_load: str = "validation",
         frozen: bool = True,
         import_plugins: bool = True,
+        overrides: str = "",
     ) -> "Predictor":
         """
         Instantiate a `Predictor` from an archive path.
@@ -247,7 +249,7 @@ class Predictor(Registrable):
 
         # Parameters
 
-        archive_path : `str`
+        archive_path : `Union[str, Path]`
             The path to the archive.
         predictor_name : `str`, optional (default=`None`)
             Name that the predictor is registered as, or None to use the
@@ -265,6 +267,8 @@ class Predictor(Registrable):
             This comes with additional overhead, but means you don't need to explicitly
             import the modules that your predictor depends on as long as those modules
             can be found by `allennlp.common.plugins.import_plugins()`.
+        overrides : `str`, optional (default = `""`)
+            JSON overrides to apply to the unarchived `Params` object.
 
         # Returns
 
@@ -274,7 +278,7 @@ class Predictor(Registrable):
         if import_plugins:
             plugins.import_plugins()
         return Predictor.from_archive(
-            load_archive(archive_path, cuda_device=cuda_device),
+            load_archive(archive_path, cuda_device=cuda_device, overrides=overrides),
             predictor_name,
             dataset_reader_to_load=dataset_reader_to_load,
             frozen=frozen,
