@@ -9,7 +9,7 @@ import torch
 from allennlp.data import TextFieldTensors, Vocabulary
 from allennlp.models.model import Model
 from allennlp.nn import util
-from allennlp.training.metrics import CategoricalAccuracy, F1MultiLabelMeasure
+from allennlp.training.metrics import F1MultiLabelMeasure
 
 from allennlp.models.vilbert import (
     BertEmbeddings,
