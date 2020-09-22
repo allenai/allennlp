@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 import itertools
 from os import PathLike
-from typing import Iterable, Iterator, Optional, Union, TypeVar
+from typing import Iterable, Iterator, Optional, Union, TypeVar, Dict, List
 import logging
 import warnings
 
@@ -57,6 +57,9 @@ class DistributedInfo:
 
 
 _T = TypeVar("_T")
+
+PathOrStr = Union[PathLike, str]
+DatasetReaderInput = Union[PathOrStr, List[PathOrStr], Dict[str, PathOrStr]]
 
 
 class DatasetReader(Registrable):
@@ -173,7 +176,7 @@ class DatasetReader(Registrable):
         if util.is_distributed():
             self._distributed_info = DistributedInfo(dist.get_world_size(), dist.get_rank())
 
-    def read(self, file_path: Union[PathLike, str]) -> Iterator[Instance]:
+    def read(self, file_path: DatasetReaderInput) -> Iterator[Instance]:
         """
         Returns an iterator of instances that can be read from the file path.
         """
@@ -185,7 +188,7 @@ class DatasetReader(Registrable):
             else:
                 file_path = str(file_path)
 
-        for instance in self._multi_worker_islice(self._read(file_path)):
+        for instance in self._multi_worker_islice(self._read(file_path)):  # type: ignore
             if self._worker_info is None:
                 # If not running in a subprocess, it's safe to apply the token_indexers right away.
                 self.apply_token_indexers(instance)
