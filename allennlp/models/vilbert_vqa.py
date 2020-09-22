@@ -258,7 +258,7 @@ class VqaVilbert(Model):
             for i, prob in enumerate(batch):
                 tokens[self.vocab.get_token_from_index(i, self.label_namespace)] = float(prob)
             batch_tokens.append(tokens)
-        output_dict['tokens'] = batch_tokens
+        output_dict["tokens"] = batch_tokens
         return output_dict
 
     default_predictor = "vilbert_vqa"

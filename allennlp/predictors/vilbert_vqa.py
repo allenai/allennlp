@@ -25,4 +25,4 @@ class VilbertVqaPredictor(Predictor):
     def predictions_to_labeled_instances(
         self, instance: Instance, outputs: Dict[str, numpy.ndarray]
     ) -> List[Instance]:
-        return [instance]   # TODO
+        return [instance]  # TODO

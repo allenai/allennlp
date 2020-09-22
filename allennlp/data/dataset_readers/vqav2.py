@@ -340,7 +340,9 @@ class VQAv2Reader(DatasetReader):
                 self._features_cache_instance = {}
             else:
                 os.makedirs(self.feature_cache_dir, exist_ok=True)
-                self._features_cache_instance = TensorCache(os.path.join(self.feature_cache_dir, "features"))
+                self._features_cache_instance = TensorCache(
+                    os.path.join(self.feature_cache_dir, "features")
+                )
 
         return self._features_cache_instance
 
@@ -351,10 +353,11 @@ class VQAv2Reader(DatasetReader):
                 self._coordinates_cache_instance = {}
             else:
                 os.makedirs(self.feature_cache_dir, exist_ok=True)
-                self._coordinates_cache_instance = TensorCache(os.path.join(self.feature_cache_dir, "coordinates"))
+                self._coordinates_cache_instance = TensorCache(
+                    os.path.join(self.feature_cache_dir, "coordinates")
+                )
 
         return self._coordinates_cache_instance
-
 
     @overrides
     def _read(self, split_name: str):
@@ -436,10 +439,11 @@ class VQAv2Reader(DatasetReader):
         # them in batches. So this code gathers up instances until it has enough to fill up a batch
         # that needs processing, and then processes them all.
         question_dicts = self.shard_iterable(questions["questions"])
-        image_prefix = "COCO_%s_" %questions['data_subtype']
+        image_prefix = "COCO_%s_" % questions["data_subtype"]
         distributed = torch.distributed.is_initialized()
         processed_images = self._process_image_paths(
-            self.images[f"{image_prefix}{question_dict['image_id']:012d}.jpg"] for question_dict in question_dicts
+            self.images[f"{image_prefix}{question_dict['image_id']:012d}.jpg"]
+            for question_dict in question_dicts
         )
 
         for question_dict, processed_image in zip(question_dicts, processed_images):
@@ -449,10 +453,7 @@ class VQAv2Reader(DatasetReader):
             yield self.text_to_instance(question_dict["question"], processed_image, answers)
 
     def _process_image_paths(
-        self,
-        image_paths: Iterable[str],
-        *,
-        use_cache: bool = True
+        self, image_paths: Iterable[str], *, use_cache: bool = True
     ) -> Iterator[Tuple[Tensor, Tensor]]:
         batch: List[Union[str, Tuple[Tensor, Tensor]]] = []
         unprocessed_paths: Set[str] = set()
@@ -517,7 +518,7 @@ class VQAv2Reader(DatasetReader):
         image: Union[str, Tuple[Tensor, Tensor]],
         answers: List[Dict[str, str]] = None,
         *,
-        use_cache: bool = True
+        use_cache: bool = True,
     ) -> Instance:
         tokenized_question = self._tokenizer.tokenize(question)
         question_field = TextField(tokenized_question, None)
