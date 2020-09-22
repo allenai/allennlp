@@ -1,18 +1,16 @@
-from shutil import rmtree
 import pytest
-from tempfile import mkdtemp
 
 from allennlp.common import cached_transformers
+from allennlp.common.testing import AllenNlpTestCase
 
 
-def test_get_missing_from_cache_local_files_only():
-    tempdir = mkdtemp()
-    try:
+class TestCachedTransformers(AllenNlpTestCase):
+    def test_get_missing_from_cache_local_files_only(self):
         with pytest.raises(ValueError) as execinfo:
             cached_transformers.get(
                 "bert-base-uncased",
                 True,
-                cache_dir=tempdir,
+                cache_dir=self.TEST_DIR,
                 local_files_only=True,
             )
         assert str(execinfo.value) == (
@@ -21,17 +19,12 @@ def test_get_missing_from_cache_local_files_only():
             "look-ups and downloads online, set 'local_files_only' "
             "to False."
         )
-    finally:
-        rmtree(tempdir)
 
-
-def test_get_tokenizer_missing_from_cache_local_files_only():
-    tempdir = mkdtemp()
-    try:
+    def test_get_tokenizer_missing_from_cache_local_files_only(self):
         with pytest.raises(ValueError) as execinfo:
             cached_transformers.get_tokenizer(
                 "bert-base-uncased",
-                cache_dir=tempdir,
+                cache_dir=self.TEST_DIR,
                 local_files_only=True,
             )
         assert str(execinfo.value) == (
@@ -40,5 +33,3 @@ def test_get_tokenizer_missing_from_cache_local_files_only():
             "look-ups and downloads online, set 'local_files_only' "
             "to False."
         )
-    finally:
-        rmtree(tempdir)
