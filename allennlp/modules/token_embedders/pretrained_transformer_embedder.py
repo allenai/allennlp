@@ -48,7 +48,7 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         for `AutoTokenizer.from_pretrained`.
     transformer_kwargs: `Dict[str, Any]`, optional (default = `None`)
         Dictionary with
-        [additional arguments](https://github.com/huggingface/transformers/blob/155c782a2ccd103cf63ad48a2becd7c76a7d2115/transformers/modeling_utils.py)
+        [additional arguments](https://github.com/huggingface/transformers/blob/155c782a2ccd103cf63ad48a2becd7c76a7d2115/transformers/modeling_utils.py#L253)
         for `AutoModel.from_pretrained`.
     """  # noqa: E501
 
@@ -99,7 +99,7 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
 
         tokenizer = PretrainedTransformerTokenizer(
             model_name,
-            tokenizer_kwargs=tokenizer_kwargs or {},
+            tokenizer_kwargs=tokenizer_kwargs,
         )
         self._num_added_start_tokens = len(tokenizer.single_sequence_start_tokens)
         self._num_added_end_tokens = len(tokenizer.single_sequence_end_tokens)
