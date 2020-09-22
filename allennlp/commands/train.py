@@ -261,13 +261,6 @@ def train_model(
         num_procs = len(device_ids)
         world_size = num_nodes * num_procs
 
-        logging.info(
-            "Switching to distributed training mode since multiple GPUs are configured | "
-            f"Master is at: {master_addr}:{master_port} | Rank of this node: {node_rank} | "
-            f"Number of workers in this node: {num_procs} | Number of nodes: {num_nodes} | "
-            f"World size: {world_size}"
-        )
-
         # Creating `Vocabulary` objects from workers could be problematic since
         # the data loaders in each worker will yield only `rank` specific
         # instances. Hence it is safe to construct the vocabulary and write it
@@ -286,6 +279,13 @@ def train_model(
             "padding_token": vocab._padding_token,
             "oov_token": vocab._oov_token,
         }
+
+        logging.info(
+            "Switching to distributed training mode since multiple GPUs are configured | "
+            f"Master is at: {master_addr}:{master_port} | Rank of this node: {node_rank} | "
+            f"Number of workers in this node: {num_procs} | Number of nodes: {num_nodes} | "
+            f"World size: {world_size}"
+        )
 
         mp.spawn(
             _train_worker,
