@@ -62,7 +62,9 @@ class TestVQAv2Reader(AllenNlpTestCase):
         assert len(instance["labels"]) == 5
         labels = [field.label for field in instance["labels"].field_list]
         assert labels == ["net", "netting", "mesh", "pitcher", "orange"]
-        assert torch.all(instance["label_weights"].tensor == torch.tensor([1.0, 0.3, 0.3, 0.3, 0.3]))
+        assert torch.all(
+            instance["label_weights"].tensor == torch.tensor([1.0, 0.3, 0.3, 0.3, 0.3])
+        )
 
         batch = Batch(instances)
         batch.index_instances(Vocabulary())
