@@ -20,6 +20,7 @@ local model_name = "bert-base-uncased";
       }
     }
   },
+  "vocabulary": {"min_count": {"answers": 9}},
   "train_data_path": "balanced_real_train",
   "validation_data_path": "balanced_real_val",
   "model": {
