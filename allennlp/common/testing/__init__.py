@@ -120,4 +120,5 @@ def assert_equal_parameters(
         if ignore_missing:
             if name not in old_parameters:
                 continue
-        assert torch.all(torch.eq(old_parameters[name], parameter))
+        #assert torch.all(torch.eq(old_parameters[name], parameter))
+        assert torch.allclose(old_parameters[name], parameter)
