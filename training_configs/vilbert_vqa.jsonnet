@@ -27,7 +27,7 @@ local model_name = "bert-base-uncased";
     "type": "vqa_vilbert",
     "text_embeddings": {
       "vocab_size": 30522,
-      "hidden_size": 22,
+      "hidden_size": 768,
       "pad_token_id": 0,
       "max_position_embeddings": 50,
       "type_vocab_size": 4,
@@ -35,7 +35,7 @@ local model_name = "bert-base-uncased";
     },
     "image_embeddings": {
       "feature_dim": 2048,
-      "hidden_dim": 28
+      "hidden_dim": 1024
     },
     "encoder": {
       "text_num_hidden_layers": 12,
