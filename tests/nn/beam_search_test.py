@@ -44,7 +44,9 @@ def take_step_no_timestep(
 
 
 def take_step_with_timestep(
-    last_predictions: torch.Tensor, state: Dict[str, torch.Tensor]
+    last_predictions: torch.Tensor,
+    state: Dict[str, torch.Tensor],
+    timestep: int,
 ) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:
     return take_step_no_timestep(last_predictions, state)
 
