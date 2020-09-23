@@ -1,4 +1,5 @@
-from typing import List, Callable, Tuple, Dict, cast
+from inspect import signature
+from typing import List, Callable, Tuple, Dict, cast, TypeVar
 import warnings
 
 import torch
@@ -7,8 +8,20 @@ from allennlp.common.checks import ConfigurationError
 
 
 StateType = Dict[str, torch.Tensor]
-StepFunctionType = Callable[[torch.Tensor, StateType, int], Tuple[torch.Tensor, StateType]]
+StepFunctionTypeWithTimestep = Callable[
+    [torch.Tensor, StateType, int], Tuple[torch.Tensor, StateType]
+]
 StepFunctionTypeNoTimestep = Callable[[torch.Tensor, StateType], Tuple[torch.Tensor, StateType]]
+
+StepFunctionType = TypeVar(
+    "StepFunctionType", StepFunctionTypeWithTimestep, StepFunctionTypeNoTimestep
+)
+"""
+The type of step function that can be passed to [`BeamSearch.search`](#search).
+
+This can either be [`StepFunctionTypeWithTimestep`](#stepfunctiontypewithtimestep)
+or [`StepFunctionTypeNoTimestep`](#stepfunctiontypenotimestep).
+"""
 
 
 class BeamSearch:
@@ -29,7 +42,7 @@ class BeamSearch:
         If not given, this just defaults to `beam_size`. Setting this parameter
         to a number smaller than `beam_size` may give better results, as it can introduce
         more diversity into the search. See
-        [Beam Search Strategies for Neural Machine Translation. Freitag and Al-Onaizan, 2017]
+        [*Beam Search Strategies for Neural Machine Translation*, Freitag and Al-Onaizan, 2017]
         (https://arxiv.org/abs/1702.01806).
     """
 
@@ -94,18 +107,25 @@ class BeamSearch:
             A tensor containing the initial predictions with shape `(batch_size,)`.
             Usually the initial predictions are just the index of the "start" token
             in the target vocabulary.
+
         start_state : `StateType`
             The initial state passed to the `step` function. Each value of the state dict
             should be a tensor of shape `(batch_size, *)`, where `*` means any other
             number of dimensions.
+
         step : `StepFunctionType`
             A function that is responsible for computing the next most likely tokens,
             given the current state and the predictions from the last time step.
-            The function should accept two arguments. The first being a tensor
-            of shape `(group_size,)`, representing the index of the predicted
-            tokens from the last time step, and the second being the current state.
+            The function should accept two or three arguments:
+
+            - a tensor of shape `(group_size,)` representing the index of the predicted
+            tokens from the last time step,
+            - the current state, a `StateType`, and
+            - optionally, the timestep, an `int`.
+
             The `group_size` will be `batch_size * beam_size`, except in the initial
             step, for which it will just be `batch_size`.
+
             The function is expected to return a tuple, where the first element
             is a tensor of shape `(group_size, target_vocab_size)` containing
             the log probabilities of the tokens for the next step, and the second
@@ -119,13 +139,10 @@ class BeamSearch:
             has shape `(batch_size, beam_size, max_steps)` and `log_probabilities`
             has shape `(batch_size, beam_size)`.
         """
-
-        # If the step function we're given does not take the time step argument, wrap it
-        # in one that does.
-        from inspect import signature
-
         step_signature = signature(step)
         if len(step_signature.parameters) < 3:
+            # If the step function we're given does not take the time step argument, wrap it
+            # in one that does.
             old_step = cast(StepFunctionTypeNoTimestep, step)
 
             def new_step(
@@ -133,7 +150,18 @@ class BeamSearch:
             ):
                 return old_step(last_predictions, state)
 
-            step = new_step
+            return self._search(start_predictions, start_state, new_step)
+        else:
+            return self._search(
+                start_predictions, start_state, cast(StepFunctionTypeWithTimestep, step)
+            )
+
+    def _search(
+        self,
+        start_predictions: torch.Tensor,
+        start_state: StateType,
+        step: StepFunctionTypeWithTimestep,
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
 
         batch_size = start_predictions.size()[0]
 
