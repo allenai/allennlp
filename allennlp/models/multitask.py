@@ -17,6 +17,7 @@ def get_forward_arguments(module: torch.nn.Module) -> Set[str]:
     return set([arg for arg in signature.parameters if arg != "self"])
 
 
+@Model.register("multitask")
 class MultiTaskModel(Model):
     """
     A `MultiTaskModel` consists of a `Backbone` that encodes its inputs in some way, then a
