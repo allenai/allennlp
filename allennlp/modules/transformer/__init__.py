@@ -1,10 +1,3 @@
-from allennlp.modules.transformer.attention_scores import (
-    GeneralAttention,
-    AdditiveAttention,
-    DotProduct,
-    ScaledDotProduct,
-    ContentBaseAttention,
-)
 from allennlp.modules.transformer.positional_encoding import SinusoidalPositionalEncoding
 
 from allennlp.modules.transformer.transformer_module import TransformerModule

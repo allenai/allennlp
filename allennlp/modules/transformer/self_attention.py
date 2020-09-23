@@ -1,8 +1,7 @@
 import torch
 
 from allennlp.common import FromParams
-from allennlp.modules.transformer.attention_scores import ATTN_MAP
-
+from allennlp.modules.attention import Attention
 from allennlp.modules.transformer.transformer_module import TransformerModule
 
 
@@ -38,12 +37,12 @@ class SelfAttention(TransformerModule, FromParams):
         self.value = torch.nn.Linear(hidden_size, self.all_head_size)
 
         self.scoring_func = scoring_func
-        if self.scoring_func in ["general", "additive"]:
-            self.attn = ATTN_MAP[self.scoring_func](hidden_size)
+        if self.scoring_func in ["additive", "linear", "bilinear"]:
+            self.attn = Attention.by_name(self.scoring_func)(hidden_size, hidden_size)
         elif self.scoring_func == "scaled_dot_product":
-            self.attn = ATTN_MAP[self.scoring_func](self.attention_head_size)
+            self.attn = Attention.by_name(self.scoring_func)(self.attention_head_size, False)
         else:
-            self.attn = ATTN_MAP[self.scoring_func]()
+            self.attn = Attention.by_name(self.scoring_func)()
 
         self.dropout = torch.nn.Dropout(dropout)
 
@@ -68,7 +67,7 @@ class SelfAttention(TransformerModule, FromParams):
         key_layer = self._transpose_for_scores(mixed_key_layer)
         value_layer = self._transpose_for_scores(mixed_value_layer)
 
-        attention_scores = self.attn(query_layer, key_layer)
+        attention_scores = self.attn(query_layer, key_layer.transpose(-1, -2))
         attention_scores = attention_scores + attention_mask
 
         # Normalize the attention scores to probabilities.
