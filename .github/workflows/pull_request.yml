@@ -60,8 +60,8 @@ jobs:
 
     - uses: actions/cache@v2
       with:
-        path: ${{ env.pythonLocation }}
-        key: ${{ runner.os }}-pydeps-${{ env.pythonLocation }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
 
     - name: Install requirements
       run: |
@@ -129,8 +129,8 @@ jobs:
 
     - uses: actions/cache@v2
       with:
-        path: ${{ env.pythonLocation }}
-        key: ${{ runner.os }}-pydeps-${{ env.pythonLocation }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
 
     - name: Install requirements
       run: |
