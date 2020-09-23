@@ -5,6 +5,7 @@ import torch
 
 from allennlp.common.checks import ConfigurationError
 
+
 StateType = Dict[str, torch.Tensor]
 StepFunctionType = Callable[[torch.Tensor, StateType, int], Tuple[torch.Tensor, StateType]]
 StepFunctionTypeNoTimestep = Callable[[torch.Tensor, StateType], Tuple[torch.Tensor, StateType]]
@@ -14,8 +15,6 @@ class BeamSearch:
     """
     Implements the beam search algorithm for decoding the most likely sequences.
 
-    [0]: https://arxiv.org/abs/1702.01806
-
     # Parameters
 
     end_index : `int`
@@ -23,15 +22,15 @@ class BeamSearch:
     max_steps : `int`, optional (default = `50`)
         The maximum number of decoding steps to take, i.e. the maximum length
         of the predicted sequences.
-
     beam_size : `int`, optional (default = `10`)
         The width of the beam used.
     per_node_beam_size : `int`, optional (default = `beam_size`)
         The maximum number of candidates to consider per node, at each step in the search.
         If not given, this just defaults to `beam_size`. Setting this parameter
         to a number smaller than `beam_size` may give better results, as it can introduce
-        more diversity into the search. See [Beam Search Strategies for Neural Machine Translation.
-        Freitag and Al-Onaizan, 2017][0].
+        more diversity into the search. See
+        [Beam Search Strategies for Neural Machine Translation. Freitag and Al-Onaizan, 2017]
+        (https://arxiv.org/abs/1702.01806).
     """
 
     def __init__(
@@ -47,7 +46,7 @@ class BeamSearch:
         self.per_node_beam_size = per_node_beam_size or beam_size
 
     @staticmethod
-    def reconstruct_sequences(predictions, backpointers):
+    def _reconstruct_sequences(predictions, backpointers):
         # Reconstruct the sequences.
         # shape: [(batch_size, beam_size, 1)]
         reconstructed_predictions = [predictions[-1].unsqueeze(2)]
@@ -79,8 +78,8 @@ class BeamSearch:
         Given a starting state and a step function, apply beam search to find the
         most likely target sequences.
 
-        Notes
-        -----
+        # Notes
+
         If your step function returns `-inf` for some log probabilities
         (like if you're using a masked log-softmax) then some of the "best"
         sequences returned may also have `-inf` log probability. Specifically
@@ -348,7 +347,7 @@ class BeamSearch:
                 RuntimeWarning,
             )
 
-        reconstructed_predictions = self.reconstruct_sequences(predictions, backpointers)
+        reconstructed_predictions = self._reconstruct_sequences(predictions, backpointers)
 
         # shape: (batch_size, beam_size, max_steps)
         all_predictions = torch.cat(list(reversed(reconstructed_predictions)), 2)
