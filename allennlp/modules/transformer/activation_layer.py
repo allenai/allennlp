@@ -13,7 +13,7 @@ class ActivationLayer(TransformerModule, FromParams):
         self,
         hidden_size: int,
         intermediate_size: int,
-        activation: Union[str, torch.nn.Module],  # TODO: restrict to activation
+        activation: Union[str, torch.nn.Module],
     ):
         super().__init__()
         self.dense = torch.nn.Linear(hidden_size, intermediate_size)

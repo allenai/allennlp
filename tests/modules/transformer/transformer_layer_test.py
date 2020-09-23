@@ -132,4 +132,6 @@ class TestTransformerLayer(AllenNlpTestCase):
                 break
 
         module = TransformerLayer.from_pretrained_module(pretrained_module)
-        assert_equal_parameters(pretrained_module, module)
+        assert_equal_parameters(
+            pretrained_module, module, mapping=module._construct_default_mapping("huggingface")
+        )

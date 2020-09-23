@@ -37,7 +37,7 @@ class TransformerLayer(TransformerModule, FromParams):
         num_attention_heads: int,
         attention_dropout: float,
         hidden_dropout: float,
-        activation: Union[str, torch.nn.Module],  # TODO: restrict to activation?
+        activation: Union[str, torch.nn.Module],
     ):
         super().__init__()
         self.attention = AttentionLayer(

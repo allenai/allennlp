@@ -105,17 +105,22 @@ def global_distributed_metric(
 
 
 def assert_equal_parameters(
-    old_module: torch.nn.Module, new_module: TransformerModule, ignore_missing: bool = False
+    old_module: torch.nn.Module,
+    new_module: TransformerModule,
+    ignore_missing: bool = False,
+    mapping: Optional[Dict] = None,
 ):
     """
     Tests if the parameters present in the `new_module` are equal to the ones in `old_module`.
     Note that any parameters present in the `old_module` that are not present in `new_module`
     are ignored.
     """
+    mapping = mapping or {}
+
     old_parameters = dict(old_module.named_parameters())
 
     for name, parameter in new_module.named_parameters():
-        for key, val in new_module._default_mapping.items():
+        for key, val in mapping.items():
             name = name.replace(key, val)
         if ignore_missing:
             if name not in old_parameters:

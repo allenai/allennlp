@@ -46,11 +46,12 @@ class TransformerModule(torch.nn.Module):
         for name, module in self.named_modules():
             if name != "":
                 if hasattr(module, "_construct_default_mapping"):
-                    module._construct_default_mapping(source)
+                    # module._construct_default_mapping(source)
                     mapping.update(
-                        module._default_mapping
+                        module._construct_default_mapping(source)
                     )  # FIX: can potentially cause collisions.
-        self._default_mapping = mapping
+        # self._default_mapping = mapping
+        return mapping
 
     def _load_from_pretrained_module(
         self,
@@ -64,8 +65,8 @@ class TransformerModule(torch.nn.Module):
         between `pretrained_module` and the instance.
         """
         if mapping is None:
-            self._construct_default_mapping(source)
-            mapping = self._default_mapping
+            mapping = self._construct_default_mapping(source)
+            # mapping = self._default_mapping
 
         pretrained_parameters = dict(pretrained_module.named_parameters())
         for name, parameter in self.named_parameters():

@@ -244,8 +244,8 @@ class BiModalEncoder(TransformerModule, FromParams):
         """
         # FIX: ignore_absent_parameters should be a general option.
         if mapping is None:
-            self._construct_default_mapping(source)
-            mapping = self._default_mapping
+            mapping = self._construct_default_mapping(source)
+            # mapping = self._default_mapping
         pretrained_parameters = dict(pretrained_module.named_parameters())
         ignore_absent_parameters = ["layers2", "c_layer"]  # FIX: specific to source.
         for name, parameter in self.named_parameters():

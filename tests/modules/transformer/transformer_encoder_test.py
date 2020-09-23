@@ -39,7 +39,9 @@ class TestTransformerEncoder(AllenNlpTestCase):
     def test_loading_from_pretrained_weights(self):
         pretrained_module = self.pretrained.encoder
         module = TransformerEncoder.from_pretrained_module(pretrained_module)
-        assert_equal_parameters(pretrained_module, module)
+        assert_equal_parameters(
+            pretrained_module, module, module._construct_default_mapping("huggingface")
+        )
 
     def test_loading_partial_pretrained_weights(self):
 
@@ -48,4 +50,8 @@ class TestTransformerEncoder(AllenNlpTestCase):
         kwargs["num_hidden_layers"] = 3
         transformer_encoder = TransformerEncoder(**kwargs)
         transformer_encoder._load_from_pretrained_module(self.pretrained.encoder)
-        assert_equal_parameters(self.pretrained.encoder, transformer_encoder)
+        assert_equal_parameters(
+            self.pretrained.encoder,
+            transformer_encoder,
+            transformer_encoder._construct_default_mapping("huggingface"),
+        )
