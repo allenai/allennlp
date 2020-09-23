@@ -20,8 +20,8 @@ from allennlp.common.file_utils import (
     open_compressed,
     CacheFile,
     _Meta,
-    _format_size,
-    _format_timedelta,
+    format_size,
+    format_timedelta,
     _find_entries,
     inspect_cache,
     remove_cache_entries,
@@ -469,7 +469,7 @@ class TestCacheFile(AllenNlpTestCase):
     ],
 )
 def test_format_size(size: int, result: str):
-    assert _format_size(size) == result
+    assert format_size(size) == result
 
 
 @pytest.mark.parametrize(
@@ -483,4 +483,4 @@ def test_format_size(size: int, result: str):
     ],
 )
 def test_format_timedelta(td: timedelta, result: str):
-    assert _format_timedelta(td) == result
+    assert format_timedelta(td) == result

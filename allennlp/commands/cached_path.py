@@ -13,7 +13,7 @@ from allennlp.common.file_utils import (
     CACHE_DIRECTORY,
     inspect_cache,
     remove_cache_entries,
-    _format_size,
+    format_size,
 )
 
 
@@ -91,7 +91,7 @@ def _cached_path(args: argparse.Namespace):
                 "the --remove option. If you really want to remove everything, pass '*' for 'resources'."
             )
         reclaimed_space = remove_cache_entries(args.resources, cache_dir=args.cache_dir)
-        print(f"Reclaimed {_format_size(reclaimed_space)} of space")
+        print(f"Reclaimed {format_size(reclaimed_space)} of space")
     else:
         for resource in args.resources:
             print(

@@ -607,7 +607,7 @@ def _get_resource_size(path: str) -> int:
     """
     if os.path.isfile(path):
         return os.path.getsize(path)
-    inodes: Set[int] = {}
+    inodes: Set[int] = set()
     total_size = 0
     for dirpath, dirnames, filenames in os.walk(path):
         for f in filenames:
@@ -621,7 +621,7 @@ def _get_resource_size(path: str) -> int:
     return total_size
 
 
-def _format_timedelta(td: timedelta) -> str:
+def format_timedelta(td: timedelta) -> str:
     """
     Format a timedelta for humans.
     """
@@ -640,7 +640,7 @@ def _format_timedelta(td: timedelta) -> str:
             return f"{minutes} mins"
 
 
-def _format_size(size: int) -> str:
+def format_size(size: int) -> str:
     """
     Format a size (in bytes) for humans.
     """
@@ -751,7 +751,7 @@ def inspect_cache(patterns: List[str] = None, cache_dir: Union[str, Path] = None
             size = metas[0][0].size
             print(
                 f"  {n_versions} {'versions' if n_versions > 1 else 'version'} cached, "
-                f"latest {_format_size(size)} from {_format_timedelta(td)} ago"
+                f"latest {format_size(size)} from {format_timedelta(td)} ago"
             )
         if metas[1]:
             td = timedelta(seconds=time.time() - metas[1][0].creation_time)
@@ -759,6 +759,6 @@ def inspect_cache(patterns: List[str] = None, cache_dir: Union[str, Path] = None
             size = metas[1][0].size
             print(
                 f"  {n_versions} {'versions' if n_versions > 1 else 'version'} extracted, "
-                f"latest {_format_size(size)} from {_format_timedelta(td)} ago"
+                f"latest {format_size(size)} from {format_timedelta(td)} ago"
             )
-    print(f"\nTotal size: {_format_size(total_size)}")
+    print(f"\nTotal size: {format_size(total_size)}")
