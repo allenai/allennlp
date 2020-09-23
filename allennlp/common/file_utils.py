@@ -759,7 +759,7 @@ def inspect_cache(patterns: List[str] = None, cache_dir: Union[str, Path] = None
         ),
         reverse=True,
     ):
-        print("\n➥", resource)
+        print("\n-", resource)
         if entry.regular_files:
             td = timedelta(seconds=time.time() - entry.regular_files[0].creation_time)
             n_versions = len(entry.regular_files)
