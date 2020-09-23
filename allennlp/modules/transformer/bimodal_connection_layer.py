@@ -18,8 +18,8 @@ class BiModalOutput(TransformerModule, FromParams):
     ):
         super().__init__()
 
-        self.bert_output1 = OutputLayer(hidden_size1, combined_hidden_size, dropout1)
-        self.bert_output2 = OutputLayer(hidden_size2, combined_hidden_size, dropout2)
+        self.bert_output1 = OutputLayer(combined_hidden_size, hidden_size1, dropout1)
+        self.bert_output2 = OutputLayer(combined_hidden_size, hidden_size2, dropout2)
 
     def forward(self, hidden_states1, input_tensor1, hidden_states2, input_tensor2):
 

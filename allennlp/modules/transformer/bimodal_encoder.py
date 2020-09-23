@@ -266,38 +266,43 @@ class BiModalEncoder(TransformerModule, FromParams):
                 parameter.data.copy_(pretrained_parameters[pretrained_name].data)
 
     @classmethod
-    def from_pretrained_module(
+    def from_pretrained_module(  # type: ignore
         cls,
         pretrained_module: torch.nn.Module,
+        num_hidden_layers2: int,
+        hidden_size2: int,
+        combined_hidden_size: int,
+        intermediate_size2: int,
+        attention_dropout2: float,
+        hidden_dropout2: float,
+        biattention_id1: List[int],
+        biattention_id2: List[int],
+        fixed_layer1: int,
+        fixed_layer2: int,
+        fast_mode: bool = False,
+        with_coattention: bool = True,
+        in_batch_pairs: bool = False,
         source="huggingface",
         mapping: Optional[Dict[str, str]] = None,
-        **kwargs,
+        # **kwargs,
     ):
         """
         The `pretrained_module` only supplies one of the modalities.
         """
-
-        required_kwargs = [
-            "num_hidden_layers2",
-            "hidden_size2",
-            "combined_hidden_size",
-            "intermediate_size2",
-            "attention_dropout2",
-            "biattention_id1",
-            "biattention_id2",
-            "fixed_layer1",
-            "fixed_layer2",
-        ]
-        for key in required_kwargs:
-            assert key in kwargs, "`{}` is a required argument.".format(key)
-
         final_kwargs = {}
         final_kwargs.update(cls._get_input_arguments(pretrained_module, source, mapping))
-
-        final_kwargs.update(kwargs)
-
-        final_kwargs["fast_mode"] = final_kwargs.get("fast_mode", False)
-        final_kwargs["with_coattention"] = final_kwargs.get("with_coattention", True)
-        final_kwargs["in_batch_pairs"] = final_kwargs.get("in_batch_pairs", False)
+        final_kwargs["num_hidden_layers2"] = num_hidden_layers2
+        final_kwargs["hidden_size2"] = hidden_size2
+        final_kwargs["combined_hidden_size"] = combined_hidden_size
+        final_kwargs["intermediate_size2"] = intermediate_size2
+        final_kwargs["attention_dropout2"] = attention_dropout2
+        final_kwargs["hidden_dropout2"] = hidden_dropout2
+        final_kwargs["biattention_id1"] = biattention_id1
+        final_kwargs["biattention_id2"] = biattention_id2
+        final_kwargs["fixed_layer1"] = fixed_layer1
+        final_kwargs["fixed_layer2"] = fixed_layer2
+        final_kwargs["fast_mode"] = fast_mode
+        final_kwargs["with_coattention"] = with_coattention
+        final_kwargs["in_batch_pairs"] = in_batch_pairs
 
         return super().from_pretrained_module(pretrained_module, source, mapping, **final_kwargs)

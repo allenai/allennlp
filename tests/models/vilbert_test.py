@@ -35,6 +35,7 @@ class TestVilbert(ModelTestCase):
         def convert_transformer_param_name(name: str):
             # We wrap the encoder in a `TimeDistributed`, which gives us this extra _module.
             name = name.replace("encoder", "encoder._module")
+            name = name.replace("layer", "layers1")
             name = name.replace("LayerNorm", "layer_norm")
             return name
 
