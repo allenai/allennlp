@@ -607,12 +607,16 @@ def _get_resource_size(path: str) -> int:
     """
     if os.path.isfile(path):
         return os.path.getsize(path)
+    inodes: Set[int] = {}
     total_size = 0
     for dirpath, dirnames, filenames in os.walk(path):
         for f in filenames:
             fp = os.path.join(dirpath, f)
-            # skip if it is symbolic link
-            if not os.path.islink(fp):
+            # skip if it is symbolic link or the same as a file we've already accounted
+            # for (this could happen with hard links).
+            inode = os.stat(fp).st_ino
+            if not os.path.islink(fp) and inode not in inodes:
+                inodes.add(inode)
                 total_size += os.path.getsize(fp)
     return total_size
 
