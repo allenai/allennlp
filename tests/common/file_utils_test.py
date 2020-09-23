@@ -1,3 +1,4 @@
+from datetime import timedelta
 from collections import Counter
 import os
 import pathlib
@@ -18,6 +19,12 @@ from allennlp.common.file_utils import (
     _split_s3_path,
     open_compressed,
     CacheFile,
+    _Meta,
+    format_size,
+    format_timedelta,
+    _find_entries,
+    inspect_cache,
+    remove_cache_entries,
 )
 from allennlp.common.testing import AllenNlpTestCase
 
@@ -81,13 +88,19 @@ class TestFileUtils(AllenNlpTestCase):
             os.path.join(self.TEST_DIR, _resource_to_filename(url, etag)) for etag in etags
         ]
         for filename, etag in zip(filenames, etags):
-            meta_filename = filename + ".json"
+            meta = _Meta(
+                resource=url, cached_path=filename, creation_time=time.time(), etag=etag, size=2341
+            )
+            meta.to_file()
             with open(filename, "w") as f:
                 f.write("some random data")
-            with open(meta_filename, "w") as meta_f:
-                json.dump({"url": url, "etag": etag}, meta_f)
             # os.path.getmtime is only accurate to the second.
             time.sleep(1.1)
+
+        # Should know to ignore lock files and extraction directories.
+        with open(filenames[-1] + ".lock", "w") as f:
+            f.write("")
+        os.mkdir(filenames[-1] + "-extracted")
 
         # The version corresponding to the last etag should be returned, since
         # that one has the latest "last modified" time.
@@ -96,11 +109,9 @@ class TestFileUtils(AllenNlpTestCase):
         # We also want to make sure this works when the latest cached version doesn't
         # have a corresponding etag.
         filename = os.path.join(self.TEST_DIR, _resource_to_filename(url))
-        meta_filename = filename + ".json"
+        meta = _Meta(resource=url, cached_path=filename, creation_time=time.time(), size=2341)
         with open(filename, "w") as f:
             f.write("some random data")
-        with open(meta_filename, "w") as meta_f:
-            json.dump({"url": url, "etag": etag}, meta_f)
 
         assert get_from_cache(url, cache_dir=self.TEST_DIR) == filename
 
@@ -183,6 +194,9 @@ class TestFileUtils(AllenNlpTestCase):
 
         filename = get_from_cache(url, cache_dir=self.TEST_DIR)
         assert filename == os.path.join(self.TEST_DIR, _resource_to_filename(url, etag="0"))
+        assert os.path.exists(filename + ".json")
+        meta = _Meta.from_path(filename + ".json")
+        assert meta.resource == url
 
         # We should have made one HEAD request and one GET request.
         method_counts = Counter(call.request.method for call in responses.calls)
@@ -265,6 +279,92 @@ class TestFileUtils(AllenNlpTestCase):
                 compressed_lines = [line.strip() for line in f]
             assert compressed_lines == uncompressed_lines
 
+    def test_meta_backwards_compatible(self):
+        url = "http://fake.datastore.com/glove.txt.gz"
+        etag = "some-fake-etag"
+        filename = os.path.join(self.TEST_DIR, _resource_to_filename(url, etag))
+        with open(filename, "wb") as f:
+            f.write(self.glove_bytes)
+        with open(filename + ".json", "w") as meta_file:
+            json.dump({"url": url, "etag": etag}, meta_file)
+        meta = _Meta.from_path(filename + ".json")
+        assert meta.resource == url
+        assert meta.etag == etag
+        assert meta.creation_time is not None
+        assert meta.size == len(self.glove_bytes)
+
+    def create_cache_entry(self, url: str, etag: str, as_extraction_dir: bool = False):
+        filename = os.path.join(self.TEST_DIR, _resource_to_filename(url, etag))
+        cache_path = filename
+        if as_extraction_dir:
+            cache_path = filename + "-extracted"
+            filename = filename + "-extracted/glove.txt"
+            os.mkdir(cache_path)
+        with open(filename, "wb") as f:
+            f.write(self.glove_bytes)
+        open(cache_path + ".lock", "a").close()
+        meta = _Meta(
+            resource=url,
+            cached_path=cache_path,
+            etag=etag,
+            creation_time=time.time(),
+            size=len(self.glove_bytes),
+            extraction_dir=as_extraction_dir,
+        )
+        meta.to_file()
+
+    def test_inspect(self, capsys):
+        self.create_cache_entry("http://fake.datastore.com/glove.txt.gz", "etag-1")
+        self.create_cache_entry("http://fake.datastore.com/glove.txt.gz", "etag-2")
+        self.create_cache_entry(
+            "http://fake.datastore.com/glove.txt.gz", "etag-3", as_extraction_dir=True
+        )
+
+        inspect_cache(cache_dir=self.TEST_DIR)
+
+        captured = capsys.readouterr()
+        assert "http://fake.datastore.com/glove.txt.gz" in captured.out
+        assert "2 versions cached" in captured.out
+        assert "1 version extracted" in captured.out
+
+    def test_inspect_with_patterns(self, capsys):
+        self.create_cache_entry("http://fake.datastore.com/glove.txt.gz", "etag-1")
+        self.create_cache_entry("http://fake.datastore.com/glove.txt.gz", "etag-2")
+        self.create_cache_entry("http://other.fake.datastore.com/glove.txt.gz", "etag-4")
+
+        inspect_cache(cache_dir=self.TEST_DIR, patterns=["http://fake.*"])
+
+        captured = capsys.readouterr()
+        assert "http://fake.datastore.com/glove.txt.gz" in captured.out
+        assert "2 versions" in captured.out
+        assert "http://other.fake.datastore.com/glove.txt.gz" not in captured.out
+
+    def test_remove_entries(self):
+        self.create_cache_entry("http://fake.datastore.com/glove.txt.gz", "etag-1")
+        self.create_cache_entry("http://fake.datastore.com/glove.txt.gz", "etag-2")
+        self.create_cache_entry(
+            "http://fake.datastore.com/glove.txt.gz", "etag-3", as_extraction_dir=True
+        )
+        self.create_cache_entry("http://other.fake.datastore.com/glove.txt.gz", "etag-4")
+        self.create_cache_entry(
+            "http://other.fake.datastore.com/glove.txt.gz", "etag-5", as_extraction_dir=True
+        )
+
+        reclaimed_space = remove_cache_entries(["http://fake.*"], cache_dir=self.TEST_DIR)
+        assert reclaimed_space == 3 * len(self.glove_bytes)
+
+        size_left, entries_left = _find_entries(cache_dir=self.TEST_DIR)
+        assert size_left == 2 * len(self.glove_bytes)
+        assert len(entries_left) == 1
+        entry_left = list(entries_left.values())[0]
+        # one regular cache file and one extraction dir
+        assert len(entry_left[0]) == 1
+        assert len(entry_left[1]) == 1
+
+        # Now remove everything.
+        remove_cache_entries(["*"], cache_dir=self.TEST_DIR)
+        assert len(os.listdir(self.TEST_DIR)) == 0
+
 
 class TestCachedPathWithArchive(AllenNlpTestCase):
     def setup_method(self):
@@ -283,6 +383,7 @@ class TestCachedPathWithArchive(AllenNlpTestCase):
         assert pathlib.Path(extracted).parent == self.TEST_DIR
         assert os.path.exists(os.path.join(extracted, "dummy.txt"))
         assert os.path.exists(os.path.join(extracted, "folder/utf-8_sample.txt"))
+        assert os.path.exists(extracted + ".json")
 
     def test_cached_path_extract_local_tar(self):
         extracted = cached_path(self.tar_file, cache_dir=self.TEST_DIR, extract_archive=True)
@@ -351,3 +452,35 @@ class TestCacheFile(AllenNlpTestCase):
                 raise IOError("I made this up")
         assert not os.path.exists(handle.name)
         assert not os.path.exists(cache_filename)
+
+
+@pytest.mark.parametrize(
+    "size, result",
+    [
+        (12, "12B"),
+        (int(1.2 * 1024), "1.2K"),
+        (12 * 1024, "12K"),
+        (120 * 1024, "120K"),
+        (int(1.2 * 1024 * 1024), "1.2M"),
+        (12 * 1024 * 1024, "12M"),
+        (120 * 1024 * 1024, "120M"),
+        (int(1.2 * 1024 * 1024 * 1024), "1.2G"),
+        (12 * 1024 * 1024 * 1024, "12G"),
+    ],
+)
+def test_format_size(size: int, result: str):
+    assert format_size(size) == result
+
+
+@pytest.mark.parametrize(
+    "td, result",
+    [
+        (timedelta(days=2, hours=3), "2 days"),
+        (timedelta(days=1, hours=3), "1 day"),
+        (timedelta(hours=3, minutes=12), "3 hours"),
+        (timedelta(hours=1, minutes=12), "1 hour, 12 mins"),
+        (timedelta(minutes=12), "12 mins"),
+    ],
+)
+def test_format_timedelta(td: timedelta, result: str):
+    assert format_timedelta(td) == result
