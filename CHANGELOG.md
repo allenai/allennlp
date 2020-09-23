@@ -18,6 +18,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   by adding a class-level variable called `authorized_missing_keys` to any PyTorch module that a `Model` uses.
   If defined, `authorized_missing_keys` should be a list of regex string patterns.
 - Added `FBetaMultiLabelMeasure`, a multi-label Fbeta metric. This is a subclass of the existing `FBetaMeasure`.
+- Added ability to pass additional key word arguments to `cached_transformers.get()`, which will be passed on to `AutoModel.from_pretrained()`.
+- Added an `overrides` argument to `Predictor.from_path()`.
+- Added a `cached-path` command.
+- Added a function `inspect_cache` to `common.file_utils` that prints useful information about the cache. This can also 
+  be used from the `cached-path` command with `allennlp cached-path --inspect`.
+- Added a function `remove_cache_entries` to `common.file_utils` that removes any cache entries matching the given
+  glob patterns. This can used from the `cached-path` command with `allennlp cached-path --remove some-files-*`.
 
 ### Changed
 
@@ -32,6 +39,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   it as its default value of `False`) to `Tensor.nonzero()`.
 - Remove temporary directory when extracting model archive in `load_archive`
   at end of function rather than via `atexit`.
+- Fixed a bug where using `cached_path()` offline could return a cached resource's lock file instead
+  of the cache file.
+- Fixed a bug where `cached_path()` would fail if passed a `cache_dir` with the user home shortcut `~/`.
+- Fixed a bug in our doc building script where markdown links did not render properly
+  if the "href" part of the link (the part inside the `()`) was on a new line.
 
 ## [v1.1.0](https://github.com/allenai/allennlp/releases/tag/v1.1.0) - 2020-09-08
 

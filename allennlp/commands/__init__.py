@@ -6,6 +6,7 @@ from overrides import overrides
 
 from allennlp import __version__
 from allennlp.commands.build_vocab import BuildVocab
+from allennlp.commands.cached_path import CachedPath
 from allennlp.commands.evaluate import Evaluate
 from allennlp.commands.find_learning_rate import FindLearningRate
 from allennlp.commands.predict import Predict
