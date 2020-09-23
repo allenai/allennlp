@@ -45,7 +45,7 @@ local model_name = "bert-base-uncased";
       "combined_hidden_size": 1024,
       "text_intermediate_size": 3072,
       "image_intermediate_size": 1024,
-      "num_attention_heads": 12,
+      "num_attention_heads": 8,
       "text_attention_dropout": 0.1,
       "image_attention_dropout": 0.1,
       "text_hidden_dropout": 0.1,
@@ -60,7 +60,9 @@ local model_name = "bert-base-uncased";
     "fusion_method": "sum"
   },
   "data_loader": {
-    "batch_size": 32
+    "batch_size": 32,
+    "shuffle": true,
+    "max_instances_in_memory": 1024
   },
   "trainer": {
     "optimizer": {
