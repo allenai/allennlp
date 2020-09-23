@@ -14,7 +14,19 @@ from fnmatch import fnmatch
 from os import PathLike
 from urllib.parse import urlparse
 from pathlib import Path
-from typing import Optional, Tuple, Union, IO, Callable, Set, List, Iterator, Iterable, Dict
+from typing import (
+    Optional,
+    Tuple,
+    Union,
+    IO,
+    Callable,
+    Set,
+    List,
+    Iterator,
+    Iterable,
+    Dict,
+    NamedTuple,
+)
 from hashlib import sha256
 from functools import wraps
 from zipfile import ZipFile, is_zipfile
@@ -662,10 +674,15 @@ def format_size(size: int) -> str:
     return f"{size}B"
 
 
+class _CacheEntry(NamedTuple):
+    regular_files: List[_Meta]
+    extraction_dirs: List[_Meta]
+
+
 def _find_entries(
     patterns: List[str] = None,
     cache_dir: Union[str, Path] = None,
-) -> Tuple[int, Dict[str, Tuple[List[_Meta], List[_Meta]]]]:
+) -> Tuple[int, Dict[str, _CacheEntry]]:
     """
     Find all cache entries, filtering ones that don't match any of the glob patterns given.
 
@@ -677,23 +694,21 @@ def _find_entries(
     cache_dir = os.path.expanduser(cache_dir or CACHE_DIRECTORY)
 
     total_size: int = 0
-    cache_entries: Dict[str, Tuple[List[_Meta], List[_Meta]]] = defaultdict(lambda: ([], []))
+    cache_entries: Dict[str, _CacheEntry] = defaultdict(lambda: _CacheEntry([], []))
     for meta_path in glob.glob(str(cache_dir) + "/*.json"):
         meta = _Meta.from_path(meta_path)
         if patterns and not any(fnmatch(meta.resource, p) for p in patterns):
             continue
         if meta.extraction_dir:
-            cache_entries[meta.resource][1].append(meta)
+            cache_entries[meta.resource].extraction_dirs.append(meta)
         else:
-            cache_entries[meta.resource][0].append(meta)
+            cache_entries[meta.resource].regular_files.append(meta)
         total_size += meta.size
 
     # Sort entries for each resource by creation time, newest first.
-    for metas in cache_entries.values():
-        # Regular entries.
-        metas[0].sort(key=lambda meta: meta.creation_time, reverse=True)
-        # Extraction directories.
-        metas[1].sort(key=lambda meta: meta.creation_time, reverse=True)
+    for entry in cache_entries.values():
+        entry.regular_files.sort(key=lambda meta: meta.creation_time, reverse=True)
+        entry.extraction_dirs.sort(key=lambda meta: meta.creation_time, reverse=True)
 
     return total_size, cache_entries
 
@@ -705,14 +720,14 @@ def remove_cache_entries(patterns: List[str], cache_dir: Union[str, Path] = None
     Returns the total reclaimed space in bytes.
     """
     total_size, cache_entries = _find_entries(patterns=patterns, cache_dir=cache_dir)
-    for resource, metas in cache_entries.items():
-        for meta in metas[0]:
+    for resource, entry in cache_entries.items():
+        for meta in entry.regular_files:
             logger.info("Removing cached version of %s at %s", resource, meta.cached_path)
             os.remove(meta.cached_path)
             if os.path.exists(meta.cached_path + ".lock"):
                 os.remove(meta.cached_path + ".lock")
             os.remove(meta.cached_path + ".json")
-        for meta in metas[1]:
+        for meta in entry.extraction_dirs:
             logger.info("Removing extracted version of %s at %s", resource, meta.cached_path)
             shutil.rmtree(meta.cached_path)
             if os.path.exists(meta.cached_path + ".lock"):
@@ -735,7 +750,7 @@ def inspect_cache(patterns: List[str] = None, cache_dir: Union[str, Path] = None
     else:
         print("Cached resources:")
 
-    for resource, metas in sorted(
+    for resource, entry in sorted(
         cache_entries.items(),
         # Sort by creation time, latest first.
         key=lambda x: max(
@@ -745,18 +760,18 @@ def inspect_cache(patterns: List[str] = None, cache_dir: Union[str, Path] = None
         reverse=True,
     ):
         print("\n➥", resource)
-        if metas[0]:
-            td = timedelta(seconds=time.time() - metas[0][0].creation_time)
-            n_versions = len(metas[0])
-            size = metas[0][0].size
+        if entry.regular_files:
+            td = timedelta(seconds=time.time() - entry.regular_files[0].creation_time)
+            n_versions = len(entry.regular_files)
+            size = entry.regular_files[0].size
             print(
                 f"  {n_versions} {'versions' if n_versions > 1 else 'version'} cached, "
                 f"latest {format_size(size)} from {format_timedelta(td)} ago"
             )
-        if metas[1]:
-            td = timedelta(seconds=time.time() - metas[1][0].creation_time)
-            n_versions = len(metas[1])
-            size = metas[1][0].size
+        if entry.extraction_dirs:
+            td = timedelta(seconds=time.time() - entry.extraction_dirs[0].creation_time)
+            n_versions = len(entry.extraction_dirs)
+            size = entry.extraction_dirs[0].size
             print(
                 f"  {n_versions} {'versions' if n_versions > 1 else 'version'} extracted, "
                 f"latest {format_size(size)} from {format_timedelta(td)} ago"
