@@ -469,6 +469,8 @@ class BertEncoder(torch.nn.Module, FromParams):
         text_intermediate_size: int,
         image_intermediate_size: int,
         num_attention_heads: int,
+        image_num_attenton_heads: int,
+        combined_num_attention_heads: int,
         text_attention_dropout: float,
         text_hidden_dropout: float,
         image_attention_dropout: float,
@@ -478,9 +480,6 @@ class BertEncoder(torch.nn.Module, FromParams):
         t_biattention_id: List[int],
         fixed_t_layer: int,
         fixed_v_layer: int,
-        fast_mode: bool = False,
-        with_coattention: bool = True,
-        in_batch_pairs: bool = False,
     ):
         super().__init__()
 
@@ -490,11 +489,8 @@ class BertEncoder(torch.nn.Module, FromParams):
         # Bi-Attention: Given the output of two bertlayer, perform bi-directional
         # attention and add on two layers.
 
-        self.FAST_MODE = fast_mode
-        self.with_coattention = with_coattention
         self.v_biattention_id = v_biattention_id
         self.t_biattention_id = t_biattention_id
-        self.in_batch_pairs = in_batch_pairs
         self.fixed_t_layer = fixed_t_layer
         self.fixed_v_layer = fixed_v_layer
         self.combined_size = combined_hidden_size
@@ -512,7 +508,7 @@ class BertEncoder(torch.nn.Module, FromParams):
         v_layer = BertLayer(
             hidden_size=image_hidden_size,
             intermediate_size=image_intermediate_size,
-            num_attention_heads=num_attention_heads,
+            num_attention_heads=image_num_attenton_heads,
             attention_dropout=image_attention_dropout,
             hidden_dropout=image_hidden_dropout,
             activation=activation,
@@ -523,7 +519,7 @@ class BertEncoder(torch.nn.Module, FromParams):
             combined_hidden_size=combined_hidden_size,
             intermediate_size1=text_intermediate_size,
             intermediate_size2=image_intermediate_size,
-            num_attention_heads=num_attention_heads,
+            num_attention_heads=combined_num_attention_heads,
             dropout1=text_hidden_dropout,
             dropout2=image_hidden_dropout,
             activation=activation,
@@ -544,6 +540,8 @@ class BertEncoder(torch.nn.Module, FromParams):
         image_num_hidden_layers: int,
         image_hidden_size: int,
         combined_hidden_size: int,
+        image_num_attenton_heads: int,
+        combined_num_attention_heads: int,
         image_intermediate_size: int,
         image_attention_dropout: float,
         image_hidden_dropout: float,
@@ -551,9 +549,6 @@ class BertEncoder(torch.nn.Module, FromParams):
         t_biattention_id: List[int],
         fixed_t_layer: int,
         fixed_v_layer: int,
-        fast_mode: bool = False,
-        with_coattention: bool = True,
-        in_batch_pairs: bool = False,
     ):
         config = model.config
 
@@ -566,12 +561,15 @@ class BertEncoder(torch.nn.Module, FromParams):
         text_attention_dropout = config.attention_probs_dropout_prob
         text_hidden_dropout = config.hidden_dropout_prob
         activation = config.hidden_act
+        
         encoder = cls(
             text_num_hidden_layers=text_num_hidden_layers,
             image_num_hidden_layers=image_num_hidden_layers,
             text_hidden_size=text_hidden_size,
             image_hidden_size=image_hidden_size,
             combined_hidden_size=combined_hidden_size,
+            image_num_attenton_heads=image_num_attenton_heads,
+            combined_num_attention_heads=combined_num_attention_heads,
             text_intermediate_size=text_intermediate_size,
             image_intermediate_size=image_intermediate_size,
             num_attention_heads=num_attention_heads,
@@ -584,9 +582,6 @@ class BertEncoder(torch.nn.Module, FromParams):
             t_biattention_id=t_biattention_id,
             fixed_t_layer=fixed_t_layer,
             fixed_v_layer=fixed_v_layer,
-            fast_mode=fast_mode,
-            with_coattention=with_coattention,
-            in_batch_pairs=in_batch_pairs,
         )
 
         # After creating the encoder, we copy weights over from the transformer.  This currently
@@ -651,64 +646,16 @@ class BertEncoder(torch.nn.Module, FromParams):
 
             for idx in range(v_start, v_end):
                 image_embedding = self.v_layer[idx](image_embedding, image_attention_mask)
-
-            if count == 0 and self.in_batch_pairs:
-                # new batch size is the batch_size ^2
-                image_embedding = (
-                    image_embedding.unsqueeze(0)
-                    .expand(batch_size, batch_size, num_regions, v_hidden_size)
-                    .contiguous()
-                    .view(batch_size * batch_size, num_regions, v_hidden_size)
-                )
-                image_attention_mask = (
-                    image_attention_mask.unsqueeze(0)
-                    .expand(batch_size, batch_size, 1, 1, num_regions)
-                    .contiguous()
-                    .view(batch_size * batch_size, 1, 1, num_regions)
-                )
-
-                txt_embedding = (
-                    txt_embedding.unsqueeze(1)
-                    .expand(batch_size, batch_size, num_words, t_hidden_size)
-                    .contiguous()
-                    .view(batch_size * batch_size, num_words, t_hidden_size)
-                )
-                txt_attention_mask = (
-                    txt_attention_mask.unsqueeze(1)
-                    .expand(batch_size, batch_size, 1, 1, num_words)
-                    .contiguous()
-                    .view(batch_size * batch_size, 1, 1, num_words)
-                )
-                co_attention_mask = (
-                    co_attention_mask.unsqueeze(1)
-                    .expand(batch_size, batch_size, 1, num_regions, num_words)
-                    .contiguous()
-                    .view(batch_size * batch_size, 1, num_regions, num_words)
-                )
-
-            if count == 0 and self.FAST_MODE:
-                txt_embedding = txt_embedding.expand(
-                    image_embedding.size(0),
-                    txt_embedding.size(1),
-                    txt_embedding.size(2),
-                )
-                txt_attention_mask = txt_attention_mask.expand(
-                    image_embedding.size(0),
-                    txt_attention_mask.size(1),
-                    txt_attention_mask.size(2),
-                    txt_attention_mask.size(3),
-                )
-
-            if self.with_coattention:
-                # do the bi attention.
-                txt_embedding, image_embedding = self.c_layer[count](
-                    txt_embedding,
-                    txt_attention_mask,
-                    image_embedding,
-                    image_attention_mask,
-                    co_attention_mask,
-                    use_co_attention_mask,
-                )
+                
+            # do the bi attention.
+            txt_embedding, image_embedding = self.c_layer[count](
+                txt_embedding,
+                txt_attention_mask,
+                image_embedding,
+                image_attention_mask,
+                co_attention_mask,
+                use_co_attention_mask,
+            )
 
             v_start = v_end
             t_start = t_end
@@ -764,6 +711,7 @@ class BertImageFeatureEmbeddings(torch.nn.Module, FromParams):
         self.dropout = torch.nn.Dropout(dropout)
 
     def forward(self, image_feature: torch.Tensor, image_location: torch.Tensor):
+
         img_embeddings = self.image_embeddings(image_feature)
         loc_embeddings = self.image_location_embeddings(image_location.float())
         embeddings = self.layer_norm(img_embeddings + loc_embeddings)
@@ -826,9 +774,6 @@ class Nlvr2Vilbert(Model):
         fixed_v_layer: int,
         pooled_dropout: float = 0.1,
         fusion_method: str = "sum",
-        fast_mode: bool = False,
-        with_coattention: bool = True,
-        in_batch_pairs: bool = False,
     ):
         transformer = AutoModel.from_pretrained(model_name)
 
@@ -888,9 +833,6 @@ class Nlvr2Vilbert(Model):
             t_biattention_id=t_biattention_id,
             fixed_t_layer=fixed_t_layer,
             fixed_v_layer=fixed_v_layer,
-            fast_mode=fast_mode,
-            with_coattention=with_coattention,
-            in_batch_pairs=in_batch_pairs,
         )
         return cls(
             vocab=vocab,

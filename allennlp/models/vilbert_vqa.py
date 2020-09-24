@@ -72,7 +72,9 @@ class VqaVilbert(Model):
         image_feature_dim: int,
         image_num_hidden_layers: int,
         image_hidden_size: int,
+        image_num_attenton_heads: int, 
         combined_hidden_size: int,
+        combined_num_attention_heads: int, 
         pooled_output_dim: int,
         image_intermediate_size: int,
         image_attention_dropout: float,
@@ -83,9 +85,6 @@ class VqaVilbert(Model):
         fixed_v_layer: int,
         pooled_dropout: float = 0.1,
         fusion_method: str = "sum",
-        fast_mode: bool = False,
-        with_coattention: bool = True,
-        in_batch_pairs: bool = False,
     ):
         transformer = AutoModel.from_pretrained(model_name)
 
@@ -133,11 +132,14 @@ class VqaVilbert(Model):
             hidden_dim=image_hidden_size,
             dropout=image_hidden_dropout,
         )
+
         encoder = BertEncoder.from_huggingface_model(
             model=transformer,
             image_num_hidden_layers=image_num_hidden_layers,
             image_hidden_size=image_hidden_size,
+            image_num_attenton_heads=image_num_attenton_heads,
             combined_hidden_size=combined_hidden_size,
+            combined_num_attention_heads=combined_num_attention_heads,
             image_intermediate_size=image_intermediate_size,
             image_attention_dropout=image_attention_dropout,
             image_hidden_dropout=image_hidden_dropout,
@@ -145,9 +147,6 @@ class VqaVilbert(Model):
             t_biattention_id=t_biattention_id,
             fixed_t_layer=fixed_t_layer,
             fixed_v_layer=fixed_v_layer,
-            fast_mode=fast_mode,
-            with_coattention=with_coattention,
-            in_batch_pairs=in_batch_pairs,
         )
         return cls(
             vocab=vocab,
@@ -204,6 +203,7 @@ class VqaVilbert(Model):
 
         # (batch_size, num_boxes, image_embedding_dim)
         v_embedding_output = self.image_embeddings(box_features, box_coordinates)
+        
         encoded_layers_t, encoded_layers_v = self.encoder(
             embedding_output,
             v_embedding_output,
@@ -211,7 +211,7 @@ class VqaVilbert(Model):
             extended_image_attention_mask,
             extended_co_attention_mask,
         )
-
+        
         sequence_output_t = encoded_layers_t[:, :, :, -1]
         sequence_output_v = encoded_layers_v[:, :, :, -1]
 
@@ -228,6 +228,8 @@ class VqaVilbert(Model):
         logits = self.classifier(pooled_output)
         probs = torch.sigmoid(logits)
 
+        import pdb
+        pdb.set_trace()
         outputs = {"logits": logits, "probs": probs}
         if labels is not None:
             label_mask = labels > 1  # 0 is padding, 1 is OOV, which we want to ignore
@@ -250,7 +252,7 @@ class VqaVilbert(Model):
             outputs["loss"] = torch.nn.functional.binary_cross_entropy_with_logits(
                 logits, weighted_labels, weight=binary_label_mask
             )
-
+            
             # TODO(mattg): Multi-label F1 is good, but it is not exactly the VQA accuracy metric.
             # That still needs to be implemented.
             self.f1(logits, weighted_labels, binary_label_mask.bool())
