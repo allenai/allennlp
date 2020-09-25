@@ -10,11 +10,6 @@ assignees: ''
 <!--
 Please fill this template entirely and do not erase any of it.
 We reserve the right to close without a response bug reports which are incomplete.
-
-If you can't fill in the checklist then it's likely that this is a question, not a bug,
-in which case it probably belongs on our discource forum instead:
-
-https://discourse.allennlp.org/
 -->
 
 ## Checklist
