@@ -110,7 +110,7 @@ environment you want to use, you can skip to the 'installing via pip' section.
 
 1.  [Download and install Conda](https://conda.io/projects/conda/en/latest/user-guide/install/index.html).
 
-2.  Create a Conda environment with Python 3.7:
+2.  Create a Conda environment with Python 3.7 (3.6 or 3.8 would work as well):
 
     ```
     conda create -n allennlp python=3.7
