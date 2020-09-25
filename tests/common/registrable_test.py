@@ -62,11 +62,11 @@ class TestRegistrable(AllenNlpTestCase):
         # Registering under a name that already exists should overwrite
         # if exist_ok=True.
         @base_class.register("fake", exist_ok=True)  # noqa
-        class FakeAlternate(base_class):
+        class FakeAlternate2(base_class):
 
             pass
 
-        assert base_class.by_name("fake") == FakeAlternate
+        assert base_class.by_name("fake") == FakeAlternate2
 
         del Registrable._registry[base_class]["fake"]
 
