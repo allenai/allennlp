@@ -105,12 +105,12 @@ We support AllenNLP on Mac and Linux environments. We presently do not support W
 #### Setting up a virtual environment
 
 [Conda](https://conda.io/) can be used set up a virtual environment with the
-version of Python required for AllenNLP.  If you already have a Python 3.6 or 3.7
+version of Python required for AllenNLP.  If you already have a Python 3
 environment you want to use, you can skip to the 'installing via pip' section.
 
 1.  [Download and install Conda](https://conda.io/projects/conda/en/latest/user-guide/install/index.html).
 
-2.  Create a Conda environment with Python 3.7:
+2.  Create a Conda environment with Python 3.7 (3.6 or 3.8 would work as well):
 
     ```
     conda create -n allennlp python=3.7
