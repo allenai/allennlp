@@ -3,7 +3,7 @@ local model_name = "bert-base-uncased";
   "dataset_reader": {
     "type": "vqav2",
     "image_dir": "/net/nfs2.corp/prior/datasets/coco",
-    "feature_cache_dir": "test_fixtures/data/vqav2/images/experiment_cache",
+    "feature_cache_dir": "/net/nfs2.corp/prior/datasets/coco/coco_experiment_cache",
     "image_loader": "detectron",
     "image_featurizer": "resnet_backbone",
     "region_detector": "faster_rcnn",
@@ -41,7 +41,9 @@ local model_name = "bert-base-uncased";
     "fusion_method": "mul"
   },
   "data_loader": {
-    "batch_size": 32
+    "batch_size": 32,
+    "shuffle": true,
+    "max_instances_in_memory": 1024
   },
   "trainer": {
     "optimizer": {

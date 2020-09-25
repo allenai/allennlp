@@ -227,9 +227,7 @@ class VqaVilbert(Model):
 
         logits = self.classifier(pooled_output)
         probs = torch.sigmoid(logits)
-        
-        import pdb
-        pdb.set_trace()
+
         outputs = {"logits": logits, "probs": probs}
         if labels is not None:
             label_mask = labels > 1  # 0 is padding, 1 is OOV, which we want to ignore
@@ -248,10 +246,10 @@ class VqaVilbert(Model):
             binary_label_mask = weighted_labels.new_ones(logits.size())
             binary_label_mask[:, 0] = 0
             binary_label_mask[:, 1] = 0
-
+            
             outputs["loss"] = torch.nn.functional.binary_cross_entropy_with_logits(
-                logits, weighted_labels, weight=binary_label_mask
-            )
+                logits, weighted_labels, weight=binary_label_mask, reduction='sum'
+            ) / batch_size
             
             # TODO(mattg): Multi-label F1 is good, but it is not exactly the VQA accuracy metric.
             # That still needs to be implemented.
