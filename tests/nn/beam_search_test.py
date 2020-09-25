@@ -21,8 +21,8 @@ transition_probabilities = torch.tensor(
 )
 
 
-def take_step(
-    last_predictions: torch.Tensor, state: Dict[str, torch.Tensor], step: int
+def take_step_no_timestep(
+    last_predictions: torch.Tensor, state: Dict[str, torch.Tensor]
 ) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:
     """
     Take decoding step.
@@ -41,6 +41,14 @@ def take_step(
         log_probs_list.append(log_probs)
 
     return torch.stack(log_probs_list), state
+
+
+def take_step_with_timestep(
+    last_predictions: torch.Tensor,
+    state: Dict[str, torch.Tensor],
+    timestep: int,
+) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:
+    return take_step_no_timestep(last_predictions, state)
 
 
 class BeamSearchTest(AllenNlpTestCase):
@@ -62,6 +70,7 @@ class BeamSearchTest(AllenNlpTestCase):
         expected_log_probs: np.array = None,
         beam_search: BeamSearch = None,
         state: Dict[str, torch.Tensor] = None,
+        take_step=take_step_with_timestep,
     ) -> None:
         expected_top_k = expected_top_k if expected_top_k is not None else self.expected_top_k
         expected_log_probs = (
@@ -83,8 +92,9 @@ class BeamSearchTest(AllenNlpTestCase):
         assert list(log_probs.size()) == [batch_size, beam_size]
         np.testing.assert_allclose(log_probs[0].numpy(), expected_log_probs)
 
-    def test_search(self):
-        self._check_results()
+    @pytest.mark.parametrize("step_function", [take_step_with_timestep, take_step_no_timestep])
+    def test_search(self, step_function):
+        self._check_results(take_step=step_function)
 
     def test_finished_state(self):
         state = {}
@@ -207,13 +217,15 @@ class BeamSearchTest(AllenNlpTestCase):
         # The beam search should warn us of this.
         initial_predictions = torch.LongTensor([self.end_index - 1, self.end_index - 1])
         with pytest.warns(RuntimeWarning, match="Infinite log probabilities"):
-            self.beam_search.search(initial_predictions, {}, take_step)
+            self.beam_search.search(initial_predictions, {}, take_step_no_timestep)
 
     def test_empty_sequences(self):
         initial_predictions = torch.LongTensor([self.end_index - 1, self.end_index - 1])
         beam_search = BeamSearch(self.end_index, beam_size=1)
         with pytest.warns(RuntimeWarning, match="Empty sequences predicted"):
-            predictions, log_probs = beam_search.search(initial_predictions, {}, take_step)
+            predictions, log_probs = beam_search.search(
+                initial_predictions, {}, take_step_with_timestep
+            )
         # predictions hould have shape `(batch_size, beam_size, max_predicted_length)`.
         assert list(predictions.size()) == [2, 1, 1]
         # log probs hould have shape `(batch_size, beam_size)`.
