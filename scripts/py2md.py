@@ -174,7 +174,7 @@ class AllenNlpDocstringProcessor(Struct):
 
     CROSS_REF_RE = re.compile("(:(class|func|mod):`~?([a-zA-Z0-9_.]+)`)")
     UNDERSCORE_HEADER_RE = re.compile(r"(.*)\n-{3,}\n")
-    MULTI_LINE_LINK_RE = re.compile(r"(\[[^\]]+\])\n(\([^\)]+\))")
+    MULTI_LINE_LINK_RE = re.compile(r"(\[[^\]]+\])\n\s*(\([^\)]+\))")
 
     @override
     def process(self, graph, resolver):
