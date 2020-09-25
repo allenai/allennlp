@@ -41,7 +41,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python: ['3.6', '3.7']
+        python: ['3.7', '3.8']
 
     steps:
     - uses: actions/checkout@v2
@@ -109,7 +109,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python: ['3.6', '3.7']
+        python: ['3.7', '3.8']
 
     steps:
     - uses: actions/checkout@v2
@@ -226,7 +226,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python: ['3.6', '3.7']
+        python: ['3.7', '3.8']
 
     steps:
     - name: Setup Python

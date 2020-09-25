@@ -29,7 +29,7 @@ setup(
         "Intended Audience :: Science/Research",
         "Development Status :: 3 - Alpha",
         "License :: OSI Approved :: Apache Software License",
-        "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3",
         "Topic :: Scientific/Engineering :: Artificial Intelligence",
     ],
     keywords="allennlp NLP deep learning machine reading",

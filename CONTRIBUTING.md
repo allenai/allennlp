@@ -74,7 +74,7 @@ When you're ready to contribute code to address an open issue, please follow the
         upstream https://github.com/allenai/allennlp.git (fetch)
         upstream https://github.com/allenai/allennlp.git (push)
 
-    Finally, you'll need to create a Python 3.6 or 3.7 virtual environment suitable for working on AllenNLP. There a number of tools out there that making working with virtual environments easier, but the most direct way is with the [`venv` module](https://docs.python.org/3.7/library/venv.html) in the standard library.
+    Finally, you'll need to create a Python 3 virtual environment suitable for working on AllenNLP. There a number of tools out there that making working with virtual environments easier, but the most direct way is with the [`venv` module](https://docs.python.org/3.7/library/venv.html) in the standard library.
 
     Once your virtual environment is activated, you can install your local clone in "editable mode" with
 
