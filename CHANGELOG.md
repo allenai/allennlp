@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added context manager functionality (`__enter__` and `__exit__`) to `Trainer`,
+  which will call automatically close used resources if `with` statement is used.
 - Added official support for Python 3.8.
 - Added a script: `scripts/release_notes.py`, which automatically prepares markdown release notes from the
   CHANGELOG and commit history.
@@ -28,6 +30,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Now `trainer.train()` does not close the `tensorboard` writer in the end (moved to `Trainer.close()`).
+  Instead, `with` statement is used with `Trainer` to auto-close such objects properly.
 - `transformers` dependency updated to version 3.1.0.
 - When `cached_path` is called on a local archive with `extract_archive=True`, the archive is now extracted into a unique subdirectory of the cache root instead of a subdirectory of the archive's directory. The extraction directory is also unique to the modification time of the archive, so if the file changes, subsequent calls to `cached_path` will know to re-extract the archive.
 
