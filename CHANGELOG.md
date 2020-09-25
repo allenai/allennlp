@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added official support for Python 3.8.
 - Added a script: `scripts/release_notes.py`, which automatically prepares markdown release notes from the
   CHANGELOG and commit history.
 - Added a flag `--predictions-output-file` to the `evaluate` command, which tells AllenNLP to write the
