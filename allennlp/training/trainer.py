@@ -102,6 +102,18 @@ class Trainer(Registrable):
         """
         raise NotImplementedError
 
+    def close(self):
+        """
+        Close all resources used by the Trainer.
+        """
+        return
+
+    def __enter__(self) -> "Trainer":
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+        self.close()
+
 
 class BatchCallback(Registrable):
     """
@@ -966,15 +978,16 @@ class GradientDescentTrainer(Trainer):
 
             epochs_trained += 1
 
-        # make sure pending events are flushed to disk and files are closed properly
-        self._tensorboard.close()
-
         # Load the best model state before returning
         best_model_state = self._checkpointer.best_model_state()
         if best_model_state:
             self.model.load_state_dict(best_model_state)
 
         return metrics
+
+    def close(self):
+        # make sure pending events are flushed to disk and files are closed properly
+        self._tensorboard.close()
 
     @contextmanager
     def get_checkpoint_state(self) -> Iterator[Tuple[Dict[str, Any], Dict[str, Any]]]:
