@@ -227,7 +227,7 @@ class VqaVilbert(Model):
 
         logits = self.classifier(pooled_output)
         probs = torch.sigmoid(logits)
-
+        
         import pdb
         pdb.set_trace()
         outputs = {"logits": logits, "probs": probs}
