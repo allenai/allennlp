@@ -33,6 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Fixed a bug where sometimes tensorboard logger may be not closed properly. Making `Trainer` a context manager.
 - Fixed up the documentation for the `allennlp.nn.beam_search` module.
 - Ignore `*args` when constructing classes with `FromParams`.
 - Ensured some consistency in the types of the values that metrics return.
