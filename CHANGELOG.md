@@ -44,6 +44,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed a bug where `cached_path()` would fail if passed a `cache_dir` with the user home shortcut `~/`.
 - Fixed a bug in our doc building script where markdown links did not render properly
   if the "href" part of the link (the part inside the `()`) was on a new line.
+- Changed how gradients are zeroed out with an optimization. See [this video from NVIDIA](https://www.youtube.com/watch?v=9mS1fIYj1So)
+  at around the 9 minute mark.
 
 ## [v1.1.0](https://github.com/allenai/allennlp/releases/tag/v1.1.0) - 2020-09-08
 
