@@ -1,8 +1,8 @@
-
 import torch
 from overrides import overrides
 
 from allennlp.common.registrable import Registrable
+
 
 class SpanExtractor(torch.nn.Module, Registrable):
     """
@@ -15,46 +15,49 @@ class SpanExtractor(torch.nn.Module, Registrable):
     shape (batch_size, num_spans, ...), forming some representation of the
     spans.
     """
+
     @overrides
-    def forward(self, # pylint: disable=arguments-differ
-                sequence_tensor: torch.FloatTensor,
-                span_indices: torch.LongTensor,
-                sequence_mask: torch.LongTensor = None,
-                span_indices_mask: torch.LongTensor = None):
+    def forward(
+        self,
+        sequence_tensor: torch.FloatTensor,
+        span_indices: torch.LongTensor,
+        sequence_mask: torch.BoolTensor = None,
+        span_indices_mask: torch.BoolTensor = None,
+    ):
         """
         Given a sequence tensor, extract spans and return representations of
         them. Span representation can be computed in many different ways,
         such as concatenation of the start and end spans, attention over the
         vectors contained inside the span, etc.
 
-        Parameters
-        ----------
-        sequence_tensor : ``torch.FloatTensor``, required.
+        # Parameters
+
+        sequence_tensor : `torch.FloatTensor`, required.
             A tensor of shape (batch_size, sequence_length, embedding_size)
             representing an embedded sequence of words.
-        span_indices : ``torch.LongTensor``, required.
-            A tensor of shape ``(batch_size, num_spans, 2)``, where the last
+        span_indices : `torch.LongTensor`, required.
+            A tensor of shape `(batch_size, num_spans, 2)`, where the last
             dimension represents the inclusive start and end indices of the
-            span to be extracted from the ``sequence_tensor``.
-        sequence_mask : ``torch.LongTensor``, optional (default = ``None``).
+            span to be extracted from the `sequence_tensor`.
+        sequence_mask : `torch.BoolTensor`, optional (default = `None`).
             A tensor of shape (batch_size, sequence_length) representing padded
             elements of the sequence.
-        span_indices_mask : ``torch.LongTensor``, optional (default = ``None``).
+        span_indices_mask : `torch.BoolTensor`, optional (default = `None`).
             A tensor of shape (batch_size, num_spans) representing the valid
-            spans in the ``indices`` tensor. This mask is optional because
+            spans in the `indices` tensor. This mask is optional because
             sometimes it's easier to worry about masking after calling this
             function, rather than passing a mask directly.
 
-        Returns
-        -------
-        A tensor of shape ``(batch_size, num_spans, embedded_span_size)``,
-        where ``embedded_span_size`` depends on the way spans are represented.
+        # Returns
+
+        A tensor of shape `(batch_size, num_spans, embedded_span_size)`,
+        where `embedded_span_size` depends on the way spans are represented.
         """
         raise NotImplementedError
 
     def get_input_dim(self) -> int:
         """
-        Returns the expected final dimension of the ``sequence_tensor``.
+        Returns the expected final dimension of the `sequence_tensor`.
         """
         raise NotImplementedError
 

@@ -17,25 +17,21 @@ inputs and their outputs.  Private methods should also most often have docstring
 who read your code know what the method is supposed to do.  The basic outline we use for docstrings
 is: (1) a brief description of what the method does, sometimes also including how or why the method
 does it, (2) the parameters / arguments to the method, (3) the return value of the method, if any.
-If the method is particularly simple or the arguments are obvious, (2) and (3) can be omitted.  We
-use [numpydoc](https://github.com/numpy/numpy/blob/master/doc/HOWTO_DOCUMENT.rst.txt) to produce
-our documentation, so function arguments and return values should be formatted as shown in the link
-(or as seen in just about any model or module in the codebase).  We treat the class docstring as
-the documentation for `__init__` methods, giving parameters there and omitting any docstring on the
-constructor itself.  For model / module constructors and methods like `forward`, _always_ include
-the parameters and return values (when there is one) in the docstring.
+If the method is particularly simple or the arguments are obvious, (2) and (3) can be omitted. Our
+docs use Markdown formatting, so function arguments and return values should be formatted as Markdown
+headers (e.g `# Parameters`), seen in just about any model or module in the codebase.  We treat the
+class docstring as the documentation for `__init__` methods, giving parameters there and omitting 
+any docstring on the constructor itself.  For model / module constructors and methods like 
+`forward`, _always_ include the parameters and return values (when there is one) in the docstring.
 
 ## Code format
 
-We use pylint to enforce some basic consistency in formatting.  Those formatting guidelines roughly
-follow [Google's python style
+We use `flake8`, `black` and `mypy` to enforce some basic consistency in formatting.  Those
+formatting guidelines roughly follow [Google's python style
 guide](https://google.github.io/styleguide/pyguide.html#Python_Style_Rules), with a few notable
 exceptions.  In particular, because we use type annotations and descriptive variable names, we use
 100-character lines instead of 80-character lines, and it's ok to go over sometimes in code.
-Pylint enforces a hard boundary of 115 characters, but you should try to stay under 100 characters
-most of the time (in particular, comments and docstrings should wrap to the next line at no more
-than 100 characters).  Additionally, we use `numpydoc` and `sphinx` for building our docs, so
-Google's docstring formats don't apply.
+Additionally, we use `mkdocs` for building our docs, so Google's docstring formats don't apply.
 
 ## Naming
 
@@ -50,9 +46,9 @@ that are inseparable from a companion class can also go in the same file (often 
 private classes).
 
 To avoid verbosity when importing classes structured this way, classes should be imported from
-their module's `__init__.py`.  For example, the `Dataset` class is in `allennlp/data/dataset.py`,
+their module's `__init__.py`.  For example, the `Batch` class is in `allennlp/data/batch.py`,
 but `allennlp/data/__init__.py` imports the class, so that you can just do `from allennlp.data
-import Dataset`.
+import Batch`.
 
 Abstract classes typically go in a module containing the abstract class and all built-in
 implementations.  This includes things like `Field` (in `allennlp.data.fields`), `Seq2SeqEncoder`

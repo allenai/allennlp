@@ -1,2 +1,0 @@
-denotations
-rule_labels

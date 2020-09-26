@@ -1,6 +1,6 @@
 """
 A wrapper that unrolls the second (time) dimension of a tensor
-into the first (batch) dimension, applies some other ``Module``,
+into the first (batch) dimension, applies some other `Module`,
 and then rolls the time dimension back up.
 """
 
@@ -12,23 +12,24 @@ import torch
 
 class TimeDistributed(torch.nn.Module):
     """
-    Given an input shaped like ``(batch_size, time_steps, [rest])`` and a ``Module`` that takes
-    inputs like ``(batch_size, [rest])``, ``TimeDistributed`` reshapes the input to be
-    ``(batch_size * time_steps, [rest])``, applies the contained ``Module``, then reshapes it back.
+    Given an input shaped like `(batch_size, time_steps, [rest])` and a `Module` that takes
+    inputs like `(batch_size, [rest])`, `TimeDistributed` reshapes the input to be
+    `(batch_size * time_steps, [rest])`, applies the contained `Module`, then reshapes it back.
 
-    Note that while the above gives shapes with ``batch_size`` first, this ``Module`` also works if
-    ``batch_size`` is second - we always just combine the first two dimensions, then split them.
+    Note that while the above gives shapes with `batch_size` first, this `Module` also works if
+    `batch_size` is second - we always just combine the first two dimensions, then split them.
 
     It also reshapes keyword arguments unless they are not tensors or their name is specified in
-    the optional ``pass_through`` iterable.
+    the optional `pass_through` iterable.
     """
+
     def __init__(self, module):
         super().__init__()
         self._module = module
 
     @overrides
     def forward(self, *inputs, pass_through: List[str] = None, **kwargs):
-        # pylint: disable=arguments-differ
+
         pass_through = pass_through or []
 
         reshaped_inputs = [self._reshape_tensor(input_tensor) for input_tensor in inputs]

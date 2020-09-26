@@ -1,8 +1,7 @@
 include LICENSE
 include README.md
-include requirements.txt
 recursive-include allennlp *
 recursive-include scripts *
-recursive-include training_config *.json
-recursive-include tutorials *
-recursive-exclude * __pycache__
+global-exclude .DS_Store *.py[cod]
+prune **/__pycache__
+prune **/.mypy_cache

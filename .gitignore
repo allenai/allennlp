@@ -5,6 +5,8 @@
 allennlp.egg-info/
 build/
 dist/
+pip-wheel-metadata/
+context.tar.gz
 
 
 # dev tools
@@ -12,6 +14,9 @@ dist/
 .envrc
 .python-version
 .idea
+.venv/
+.vscode/
+/*.iml
 
 
 # jupyter notebooks
@@ -39,3 +44,10 @@ __pycache__
 
 .coverage
 .pytest_cache/
+
+# documentation build artifacts
+
+docs/*.md
+docs/api
+site/
+mkdocs.yml

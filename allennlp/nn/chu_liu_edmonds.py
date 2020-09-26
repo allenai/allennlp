@@ -1,12 +1,12 @@
-
 from typing import List, Set, Tuple, Dict
 import numpy
 
 from allennlp.common.checks import ConfigurationError
 
-def decode_mst(energy: numpy.ndarray,
-               length: int,
-               has_labels: bool = True) -> Tuple[numpy.ndarray, numpy.ndarray]:
+
+def decode_mst(
+    energy: numpy.ndarray, length: int, has_labels: bool = True
+) -> Tuple[numpy.ndarray, numpy.ndarray]:
     """
     Note: Counter to typical intuition, this function decodes the _maximum_
     spanning tree.
@@ -14,16 +14,16 @@ def decode_mst(energy: numpy.ndarray,
     Decode the optimal MST tree with the Chu-Liu-Edmonds algorithm for
     maximum spanning arborescences on graphs.
 
-    Parameters
-    ----------
-    energy : ``numpy.ndarray``, required.
+    # Parameters
+
+    energy : `numpy.ndarray`, required.
         A tensor with shape (num_labels, timesteps, timesteps)
-        containing the energy of each edge. If has_labels is ``False``,
+        containing the energy of each edge. If has_labels is `False`,
         the tensor should have shape (timesteps, timesteps) instead.
-    length : ``int``, required.
+    length : `int`, required.
         The length of this sequence, as the energy may have come
         from a padded batch.
-    has_labels : ``bool``, optional, (default = True)
+    has_labels : `bool`, optional, (default = `True`)
         Whether the graph has labels or not.
     """
     if has_labels and energy.ndim != 3:
@@ -68,8 +68,9 @@ def decode_mst(energy: numpy.ndarray,
     final_edges: Dict[int, int] = {}
 
     # The main algorithm operates inplace.
-    chu_liu_edmonds(length, score_matrix, current_nodes,
-                    final_edges, old_input, old_output, representatives)
+    chu_liu_edmonds(
+        length, score_matrix, current_nodes, final_edges, old_input, old_output, representatives
+    )
 
     heads = numpy.zeros([max_length], numpy.int32)
     if has_labels:
@@ -84,13 +85,16 @@ def decode_mst(energy: numpy.ndarray,
 
     return heads, head_type
 
-def chu_liu_edmonds(length: int,
-                    score_matrix: numpy.ndarray,
-                    current_nodes: List[bool],
-                    final_edges: Dict[int, int],
-                    old_input: numpy.ndarray,
-                    old_output: numpy.ndarray,
-                    representatives: List[Set[int]]):
+
+def chu_liu_edmonds(
+    length: int,
+    score_matrix: numpy.ndarray,
+    current_nodes: List[bool],
+    final_edges: Dict[int, int],
+    old_input: numpy.ndarray,
+    old_output: numpy.ndarray,
+    representatives: List[Set[int]],
+):
     """
     Applies the chu-liu-edmonds algorithm recursively
     to a graph with edge weights defined by score_matrix.
@@ -98,29 +102,29 @@ def chu_liu_edmonds(length: int,
     Note that this function operates in place, so variables
     will be modified.
 
-    Parameters
-    ----------
-    length : ``int``, required.
+    # Parameters
+
+    length : `int`, required.
         The number of nodes.
-    score_matrix : ``numpy.ndarray``, required.
+    score_matrix : `numpy.ndarray`, required.
         The score matrix representing the scores for pairs
         of nodes.
-    current_nodes : ``List[bool]``, required.
+    current_nodes : `List[bool]`, required.
         The nodes which are representatives in the graph.
         A representative at it's most basic represents a node,
         but as the algorithm progresses, individual nodes will
         represent collapsed cycles in the graph.
-    final_edges: ``Dict[int, int]``, required.
+    final_edges : `Dict[int, int]`, required.
         An empty dictionary which will be populated with the
         nodes which are connected in the maximum spanning tree.
-    old_input: ``numpy.ndarray``, required.
-    old_output: ``numpy.ndarray``, required.
-    representatives : ``List[Set[int]]``, required.
+    old_input : `numpy.ndarray`, required.
+    old_output : `numpy.ndarray`, required.
+    representatives : `List[Set[int]]`, required.
         A list containing the nodes that a particular node
         is representing at this iteration in the graph.
 
-    Returns
-    -------
+    # Returns
+
     Nothing - all variables are modified in place.
 
     """
@@ -181,9 +185,11 @@ def chu_liu_edmonds(length: int,
 
             # Add the new edge score to the cycle weight
             # and subtract the edge we're considering removing.
-            score = (cycle_weight +
-                     score_matrix[node, node_in_cycle] -
-                     score_matrix[parents[node_in_cycle], node_in_cycle])
+            score = (
+                cycle_weight
+                + score_matrix[node, node_in_cycle]
+                - score_matrix[parents[node_in_cycle], node_in_cycle]
+            )
 
             if score > out_edge_weight:
                 out_edge_weight = score
@@ -217,7 +223,9 @@ def chu_liu_edmonds(length: int,
             if i > 0:
                 representatives[cycle_representative].add(node)
 
-    chu_liu_edmonds(length, score_matrix, current_nodes, final_edges, old_input, old_output, representatives)
+    chu_liu_edmonds(
+        length, score_matrix, current_nodes, final_edges, old_input, old_output, representatives
+    )
 
     # Expansion stage.
     # check each node in cycle, if one of its representatives
@@ -241,9 +249,9 @@ def chu_liu_edmonds(length: int,
         previous = parents[previous]
 
 
-def _find_cycle(parents: List[int],
-                length: int,
-                current_nodes: List[bool]) -> Tuple[bool, List[int]]:
+def _find_cycle(
+    parents: List[int], length: int, current_nodes: List[bool]
+) -> Tuple[bool, List[int]]:
 
     added = [False for _ in range(length)]
     added[0] = True

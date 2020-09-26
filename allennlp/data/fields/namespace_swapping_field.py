@@ -11,29 +11,30 @@ from allennlp.data.fields.field import Field
 
 class NamespaceSwappingField(Field[torch.Tensor]):
     """
-    A ``NamespaceSwappingField`` is used to map tokens in one namespace to tokens in another namespace.
+    A `NamespaceSwappingField` is used to map tokens in one namespace to tokens in another namespace.
     It is used by seq2seq models with a copy mechanism that copies tokens from the source
     sentence into the target sentence.
 
-    Parameters
-    ----------
-    source_tokens : ``List[Token]``
+    # Parameters
+
+    source_tokens : `List[Token]`
         The tokens from the source sentence.
-    target_namespace : ``str``
+    target_namespace : `str`
         The namespace that the tokens from the source sentence will be mapped to.
     """
 
-    def __init__(self,
-                 source_tokens: List[Token],
-                 target_namespace: str) -> None:
+    __slots__ = ["_source_tokens", "_target_namespace", "_mapping_array"]
+
+    def __init__(self, source_tokens: List[Token], target_namespace: str) -> None:
         self._source_tokens = source_tokens
         self._target_namespace = target_namespace
         self._mapping_array: List[int] = None
 
     @overrides
     def index(self, vocab: Vocabulary):
-        self._mapping_array = [vocab.get_token_index(x.text, self._target_namespace)
-                               for x in self._source_tokens]
+        self._mapping_array = [
+            vocab.get_token_index(x.text, self._target_namespace) for x in self._source_tokens
+        ]
 
     @overrides
     def get_padding_lengths(self) -> Dict[str, int]:
@@ -47,5 +48,11 @@ class NamespaceSwappingField(Field[torch.Tensor]):
         return tensor
 
     @overrides
-    def empty_field(self) -> 'NamespaceSwappingField':
-        return NamespaceSwappingField([], self._target_namespace)
+    def empty_field(self) -> "NamespaceSwappingField":
+        empty_field = NamespaceSwappingField([], self._target_namespace)
+        empty_field._mapping_array = []
+
+        return empty_field
+
+    def __len__(self):
+        return len(self._source_tokens)

@@ -1,0 +1,25 @@
+[flake8]
+max-line-length = 115
+
+ignore =
+    # these rules don't play well with black
+    E203  # whitespace before :
+    W503  # line break before binary operator
+
+exclude =
+    build/**
+    doc/**
+    tutorials/tagger/**
+
+per-file-ignores =
+    # __init__.py files are allowed to have unused imports and lines-too-long
+    */__init__.py:F401
+    */**/**/__init__.py:F401,E501
+
+    # tests don't have to respect
+    #  E731: do not assign a lambda expression, use a def
+    tests/**:E731
+
+    # scripts don't have to respect
+    #  E402: imports not at top of file (because we mess with sys.path)
+    scripts/**:E402

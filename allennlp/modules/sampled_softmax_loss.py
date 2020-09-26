@@ -6,11 +6,12 @@ import numpy as np
 import torch
 
 from allennlp.common.checks import ConfigurationError
+from allennlp.nn import util
 
 
 def _choice(num_words: int, num_samples: int) -> Tuple[np.ndarray, int]:
     """
-    Chooses ``num_samples`` samples without replacement from [0, ..., num_words).
+    Chooses `num_samples` samples without replacement from [0, ..., num_words).
     Returns a tuple (samples, num_tries).
     """
     num_tries = 0
@@ -18,7 +19,7 @@ def _choice(num_words: int, num_samples: int) -> Tuple[np.ndarray, int]:
 
     def get_buffer() -> np.ndarray:
         log_samples = np.random.rand(num_samples) * np.log(num_words + 1)
-        samples = np.exp(log_samples).astype('int64') - 1
+        samples = np.exp(log_samples).astype("int64") - 1
         return np.clip(samples, a_min=0, a_max=num_words - 1)
 
     sample_buffer = get_buffer()
@@ -46,38 +47,43 @@ class SampledSoftmaxLoss(torch.nn.Module):
     """
     Based on the default log_uniform_candidate_sampler in tensorflow.
 
-    NOTE: num_words DOES NOT include padding id.
+    !!! NOTE
+        num_words DOES NOT include padding id.
 
-    NOTE: In all cases except (tie_embeddings=True and use_character_inputs=False)
-    the weights are dimensioned as num_words and do not include an entry for the padding (0) id.
-    For the (tie_embeddings=True and use_character_inputs=False) case,
-    then the embeddings DO include the extra 0 padding, to be consistent with the word embedding layer.
+    !!! NOTE
+        In all cases except (tie_embeddings=True and use_character_inputs=False)
+        the weights are dimensioned as num_words and do not include an entry for the padding (0) id.
+        For the (tie_embeddings=True and use_character_inputs=False) case,
+        then the embeddings DO include the extra 0 padding, to be consistent with the word embedding layer.
 
-    Parameters
-    ----------
-    num_words, ``int``
+    # Parameters
+
+    num_words, `int`, required
         The number of words in the vocabulary
-    embedding_dim, ``int``
+    embedding_dim, `int`, required
         The dimension to softmax over
-    num_samples, ``int``
+    num_samples, `int`, required
         During training take this many samples. Must be less than num_words.
-    sparse, ``bool``, optional (default = False)
+    sparse, `bool`, optional (default = `False`)
         If this is true, we use a sparse embedding matrix.
-    unk_id, ``int``, optional (default = None)
+    unk_id, `int`, optional (default = `None`)
         If provided, the id that represents unknown characters.
-    use_character_inputs, ``bool``, optional (default = True)
+    use_character_inputs, `bool`, optional (default = `True`)
         Whether to use character inputs
-    use_fast_sampler, ``bool``, optional (default = False)
+    use_fast_sampler, `bool`, optional (default = `False`)
         Whether to use the fast cython sampler.
     """
-    def __init__(self,
-                 num_words: int,
-                 embedding_dim: int,
-                 num_samples: int,
-                 sparse: bool = False,
-                 unk_id: int = None,
-                 use_character_inputs: bool = True,
-                 use_fast_sampler: bool = False) -> None:
+
+    def __init__(
+        self,
+        num_words: int,
+        embedding_dim: int,
+        num_samples: int,
+        sparse: bool = False,
+        unk_id: int = None,
+        use_character_inputs: bool = True,
+        use_fast_sampler: bool = False,
+    ) -> None:
         super().__init__()
 
         # TODO(joelgrus): implement tie_embeddings (maybe)
@@ -93,14 +99,20 @@ class SampledSoftmaxLoss(torch.nn.Module):
         # Glorit init (std=(1.0 / sqrt(fan_in))
         if sparse:
             # create our own sparse embedding
-            self.softmax_w = torch.nn.Embedding(num_words, embedding_dim, sparse=True)
+            self.softmax_w = torch.nn.Embedding(
+                num_embeddings=num_words, embedding_dim=embedding_dim, sparse=True
+            )
             self.softmax_w.weight.data.normal_(mean=0.0, std=1.0 / np.sqrt(embedding_dim))
-            self.softmax_b = torch.nn.Embedding(num_words, 1, sparse=True)
+            self.softmax_b = torch.nn.Embedding(
+                num_embeddings=num_words, embedding_dim=1, sparse=True
+            )
             self.softmax_b.weight.data.fill_(0.0)
         else:
             # just create tensors to use as the embeddings
             # Glorit init (std=(1.0 / sqrt(fan_in))
-            self.softmax_w = torch.nn.Parameter(torch.randn(num_words, embedding_dim) / np.sqrt(embedding_dim))
+            self.softmax_w = torch.nn.Parameter(
+                torch.randn(num_words, embedding_dim) / np.sqrt(embedding_dim)
+            )
             self.softmax_b = torch.nn.Parameter(torch.zeros(num_words))
 
         self.sparse = sparse
@@ -121,19 +133,19 @@ class SampledSoftmaxLoss(torch.nn.Module):
             num_words = self.softmax_w.size(0)
 
         self._num_words = num_words
-        self._log_num_words_p1 = np.log(num_words + 1)  # pylint: disable=assignment-from-no-return
+        self._log_num_words_p1 = np.log(num_words + 1)
 
         # compute the probability of each sampled id
-        self._probs = (np.log(np.arange(num_words) + 2) -
-                       np.log(np.arange(num_words) + 1)) / self._log_num_words_p1
+        self._probs = (
+            np.log(np.arange(num_words) + 2) - np.log(np.arange(num_words) + 1)
+        ) / self._log_num_words_p1
 
-
-    def forward(self,
-                embeddings: torch.Tensor,
-                targets: torch.Tensor,
-                target_token_embedding: torch.Tensor = None) -> torch.Tensor:
-        # pylint: disable=arguments-differ
-
+    def forward(
+        self,
+        embeddings: torch.Tensor,
+        targets: torch.Tensor,
+        target_token_embedding: torch.Tensor = None,
+    ) -> torch.Tensor:
         # embeddings is size (n, embedding_dim)
         # targets is (n_words, ) with the index of the actual target
         # when tieing weights, target_token_embedding is required.
@@ -143,18 +155,17 @@ class SampledSoftmaxLoss(torch.nn.Module):
 
         if embeddings.shape[0] == 0:
             # empty batch
-            return torch.tensor(0.0).to(embeddings.device)  # pylint: disable=not-callable
+            return torch.tensor(0.0).to(embeddings.device)
 
         if not self.training:
             return self._forward_eval(embeddings, targets)
         else:
             return self._forward_train(embeddings, targets, target_token_embedding)
 
-    def _forward_train(self,
-                       embeddings: torch.Tensor,
-                       targets: torch.Tensor,
-                       target_token_embedding: torch.Tensor) -> torch.Tensor:
-        # pylint: disable=unused-argument
+    def _forward_train(
+        self, embeddings: torch.Tensor, targets: torch.Tensor, target_token_embedding: torch.Tensor
+    ) -> torch.Tensor:
+
         # (target_token_embedding is only used in the tie_embeddings case,
         #  which is not implemented)
 
@@ -165,8 +176,11 @@ class SampledSoftmaxLoss(torch.nn.Module):
 
         # NOTE: targets input has padding removed (so 0 == the first id, NOT the padding id)
 
-        sampled_ids, target_expected_count, sampled_expected_count = \
-            self.log_uniform_candidate_sampler(targets, choice_func=self.choice_func)
+        (
+            sampled_ids,
+            target_expected_count,
+            sampled_expected_count,
+        ) = self.log_uniform_candidate_sampler(targets, choice_func=self.choice_func)
 
         long_targets = targets.long()
         long_targets.requires_grad_(False)
@@ -193,10 +207,21 @@ class SampledSoftmaxLoss(torch.nn.Module):
 
         # compute the logits and remove log expected counts
         # [batch_size, ]
-        true_logits = (true_w * embeddings).sum(dim=1) + true_b - torch.log(target_expected_count + 1e-7)
+        true_logits = (
+            (true_w * embeddings).sum(dim=1)
+            + true_b
+            - torch.log(
+                target_expected_count + util.tiny_value_of_dtype(target_expected_count.dtype)
+            )
+        )
         # [batch_size, n_samples]
-        sampled_logits = (torch.matmul(embeddings, sampled_w.t()) +
-                          sampled_b - torch.log(sampled_expected_count + 1e-7))
+        sampled_logits = (
+            torch.matmul(embeddings, sampled_w.t())
+            + sampled_b
+            - torch.log(
+                sampled_expected_count + util.tiny_value_of_dtype(sampled_expected_count.dtype)
+            )
+        )
 
         # remove true labels -- we will take
         # softmax, so set the sampled logits of true values to a large
@@ -214,12 +239,11 @@ class SampledSoftmaxLoss(torch.nn.Module):
         # the likelihood loss can become very large if the corresponding
         # true logit is very small, so we apply a per-target cap here
         # so that a single logit for a very rare word won't dominate the batch.
-        #nll_loss = -1.0 * torch.clamp(log_softmax[:, 0], -1000, 1e6).sum()
         nll_loss = -1.0 * log_softmax[:, 0].sum()
         return nll_loss
 
     def _forward_eval(self, embeddings: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
-        # pylint: disable=invalid-name
+
         # evaluation mode, use full softmax
         if self.sparse:
             w = self.softmax_w.weight
@@ -233,8 +257,7 @@ class SampledSoftmaxLoss(torch.nn.Module):
             targets_ = targets + 1
         else:
             targets_ = targets
-        return torch.nn.functional.nll_loss(log_softmax, targets_.long(),
-                                            reduction="sum")
+        return torch.nn.functional.nll_loss(log_softmax, targets_.long(), reduction="sum")
 
     def log_uniform_candidate_sampler(self, targets, choice_func=_choice):
         # returns sampled, true_expected_count, sampled_expected_count
@@ -258,10 +281,14 @@ class SampledSoftmaxLoss(torch.nn.Module):
 
         # Compute expected count = (1 - (1-p)^num_tries) = -expm1(num_tries * log1p(-p))
         # P(class) = (log(class + 2) - log(class + 1)) / log(range_max + 1)
-        target_probs = torch.log((targets.float() + 2.0) / (targets.float() + 1.0)) / self._log_num_words_p1
+        target_probs = (
+            torch.log((targets.float() + 2.0) / (targets.float() + 1.0)) / self._log_num_words_p1
+        )
         target_expected_count = -1.0 * (torch.exp(num_tries * torch.log1p(-target_probs)) - 1.0)
-        sampled_probs = torch.log((sampled_ids.float() + 2.0) /
-                                  (sampled_ids.float() + 1.0)) / self._log_num_words_p1
+        sampled_probs = (
+            torch.log((sampled_ids.float() + 2.0) / (sampled_ids.float() + 1.0))
+            / self._log_num_words_p1
+        )
         sampled_expected_count = -1.0 * (torch.exp(num_tries * torch.log1p(-sampled_probs)) - 1.0)
 
         sampled_ids.requires_grad_(False)

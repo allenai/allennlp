@@ -1,19 +1,23 @@
-from typing import Dict, List, TypeVar, Generic
-import warnings
+from typing import Any, Dict, List
 
 import torch
-import numpy
 
 from allennlp.common import Registrable
+from allennlp.common.util import pad_sequence_to_length
 from allennlp.data.tokenizers.token import Token
 from allennlp.data.vocabulary import Vocabulary
 
-TokenType = TypeVar("TokenType", int, List[int], numpy.ndarray)  # pylint: disable=invalid-name
+# An indexed token list represents the arguments that will be passed to a TokenEmbedder
+# corresponding to this TokenIndexer.  Each argument that the TokenEmbedder needs will have one
+# entry in the IndexedTokenList dictionary, and that argument will typically be a list of integers
+# (for single ID word embeddings) or a nested list of integers (for character ID word embeddings),
+# though it could also be a mask, or any other data that you want to pass.
+IndexedTokenList = Dict[str, List[Any]]
 
 
-class TokenIndexer(Generic[TokenType], Registrable):
+class TokenIndexer(Registrable):
     """
-    A ``TokenIndexer`` determines how string tokens get represented as arrays of indices in a model.
+    A `TokenIndexer` determines how string tokens get represented as arrays of indices in a model.
     This class both converts strings into numerical values, with the help of a
     :class:`~allennlp.data.vocabulary.Vocabulary`, and it produces actual arrays.
 
@@ -22,20 +26,20 @@ class TokenIndexer(Generic[TokenType], Registrable):
     or in some other way that you can come up with (e.g., if you have some structured input you
     want to represent in a special way in your data arrays, you can do that here).
 
-    Parameters
-    ----------
-    token_min_padding_length : ``int``, optional (default=``0``)
+    # Parameters
+
+    token_min_padding_length : `int`, optional (default=`0`)
         The minimum padding length required for the :class:`TokenIndexer`. For example,
         the minimum padding length of :class:`SingleIdTokenIndexer` is the largest size of
         filter when using :class:`CnnEncoder`.
         Note that if you set this for one TokenIndexer, you likely have to set it for all
         :class:`TokenIndexer` for the same field, otherwise you'll get mismatched tensor sizes.
     """
-    default_implementation = 'single_id'
+
+    default_implementation = "single_id"
     has_warned_for_as_padded_tensor = False
 
-    def __init__(self,
-                 token_min_padding_length: int = 0) -> None:
+    def __init__(self, token_min_padding_length: int = 0) -> None:
         self._token_min_padding_length: int = token_min_padding_length
 
     def count_vocab_items(self, token: Token, counter: Dict[str, Dict[str, int]]):
@@ -49,89 +53,71 @@ class TokenIndexer(Generic[TokenType], Registrable):
         """
         raise NotImplementedError
 
-    def tokens_to_indices(self,
-                          tokens: List[Token],
-                          vocabulary: Vocabulary,
-                          index_name: str) -> Dict[str, List[TokenType]]:
+    def tokens_to_indices(self, tokens: List[Token], vocabulary: Vocabulary) -> IndexedTokenList:
         """
-        Takes a list of tokens and converts them to one or more sets of indices.
+        Takes a list of tokens and converts them to an `IndexedTokenList`.
         This could be just an ID for each token from the vocabulary.
         Or it could split each token into characters and return one ID per character.
         Or (for instance, in the case of byte-pair encoding) there might not be a clean
-        mapping from individual tokens to indices.
+        mapping from individual tokens to indices, and the `IndexedTokenList` could be a complex
+        data structure.
         """
         raise NotImplementedError
 
-    def get_padding_token(self) -> TokenType: # pylint: disable=no-self-use
+    def indices_to_tokens(
+        self, indexed_tokens: IndexedTokenList, vocabulary: Vocabulary
+    ) -> List[Token]:
         """
-        Deprecated. Please just implement the padding token in `as_padded_tensor` instead.
-        TODO(Mark): remove in 1.0 release. This is only a concrete implementation to preserve
-        backward compatability, otherwise it would be abstract.
-
-        When we need to add padding tokens, what should they look like?  This method returns a
-        "blank" token of whatever type is returned by :func:`tokens_to_indices`.
-        """
-        warnings.warn("Using a Field with get_padding_token as an inherited method,"
-                      " which will be depreciated in 1.0.0."
-                      "Please implement as_padded_tensor instead.", FutureWarning)
-        return 0 # type: ignore
-
-    def get_padding_lengths(self, token: TokenType) -> Dict[str, int]:
-        """
-        This method returns a padding dictionary for the given token that specifies lengths for
-        all arrays that need padding.  For example, for single ID tokens the returned dictionary
-        will be empty, but for a token characters representation, this will return the number
-        of characters in the token.
+        Inverse operations of tokens_to_indices. Takes an `IndexedTokenList` and converts it back
+        into a list of tokens.
         """
         raise NotImplementedError
 
-    def get_token_min_padding_length(self) -> int:
+    def get_empty_token_list(self) -> IndexedTokenList:
         """
-        This method returns the minimum padding length required for this TokenIndexer.
-        For example, the minimum padding length of `SingleIdTokenIndexer` is the largest
-        size of filter when using `CnnEncoder`.
-        """
-        return self._token_min_padding_length
-
-    def as_padded_tensor(self,
-                         tokens: Dict[str, List[TokenType]],
-                         desired_num_tokens: Dict[str, int],
-                         padding_lengths: Dict[str, int]) -> Dict[str, torch.Tensor]:
-        """
-        This method pads a list of tokens to ``desired_num_tokens`` and returns that padded list
-        of input tokens as a torch Tensor. If the input token list is longer than ``desired_num_tokens``
-        then it will be truncated.
-
-        ``padding_lengths`` is used to provide supplemental padding parameters which are needed
-        in some cases.  For example, it contains the widths to pad characters to when doing
-        character-level padding.
-
-        Note that this method should be abstract, but it is implemented to allow backward compatability.
-        """
-        if not self.has_warned_for_as_padded_tensor:
-            warnings.warn("Using a Field with pad_token_sequence, which will be depreciated in 1.0.0."
-                          "Please implement as_padded_tensor instead.", FutureWarning)
-            self.has_warned_for_as_padded_tensor = True
-
-        padded = self.pad_token_sequence(tokens, desired_num_tokens, padding_lengths)
-        return {key: torch.LongTensor(array) for key, array in padded.items()}
-
-    def pad_token_sequence(self,
-                           tokens: Dict[str, List[TokenType]],
-                           desired_num_tokens: Dict[str, int],
-                           padding_lengths: Dict[str, int]) -> Dict[str, TokenType]:
-        """
-        Deprecated. Please use `as_padded_tensor` instead.
-        TODO(Mark): remove in 1.0 release.
+        Returns an `already indexed` version of an empty token list.  This is typically just an
+        empty list for whatever keys are used in the indexer.
         """
         raise NotImplementedError
 
-    def get_keys(self, index_name: str) -> List[str]:
+    def get_padding_lengths(self, indexed_tokens: IndexedTokenList) -> Dict[str, int]:
         """
-        Return a list of the keys this indexer return from ``tokens_to_indices``.
+        This method returns a padding dictionary for the given `indexed_tokens` specifying all
+        lengths that need padding.  If all you have is a list of single ID tokens, this is just the
+        length of the list, and that's what the default implementation will give you.  If you have
+        something more complicated, like a list of character ids for token, you'll need to override
+        this.
         """
-        # pylint: disable=no-self-use
-        return [index_name]
+        padding_lengths = {}
+        for key, token_list in indexed_tokens.items():
+            padding_lengths[key] = max(len(token_list), self._token_min_padding_length)
+        return padding_lengths
+
+    def as_padded_tensor_dict(
+        self, tokens: IndexedTokenList, padding_lengths: Dict[str, int]
+    ) -> Dict[str, torch.Tensor]:
+        """
+        This method pads a list of tokens given the input padding lengths (which could actually
+        truncate things, depending on settings) and returns that padded list of input tokens as a
+        `Dict[str, torch.Tensor]`.  This is a dictionary because there should be one key per
+        argument that the `TokenEmbedder` corresponding to this class expects in its `forward()`
+        method (where the argument name in the `TokenEmbedder` needs to make the key in this
+        dictionary).
+
+        The base class implements the case when all you want to do is create a padded `LongTensor`
+        for every list in the `tokens` dictionary.  If your `TokenIndexer` needs more complex
+        logic than that, you need to override this method.
+        """
+        tensor_dict = {}
+        for key, val in tokens.items():
+            if val and isinstance(val[0], bool):
+                tensor = torch.BoolTensor(
+                    pad_sequence_to_length(val, padding_lengths[key], default_value=lambda: False)
+                )
+            else:
+                tensor = torch.LongTensor(pad_sequence_to_length(val, padding_lengths[key]))
+            tensor_dict[key] = tensor
+        return tensor_dict
 
     def __eq__(self, other) -> bool:
         if isinstance(self, other.__class__):

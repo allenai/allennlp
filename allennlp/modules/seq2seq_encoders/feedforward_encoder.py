@@ -9,7 +9,10 @@ from allennlp.modules.seq2seq_encoders.seq2seq_encoder import Seq2SeqEncoder
 class FeedForwardEncoder(Seq2SeqEncoder):
     """
     This class applies the `FeedForward` to each item in sequences.
+
+    Registered as a `Seq2SeqEncoder` with name "feedforward".
     """
+
     def __init__(self, feedforward: FeedForward) -> None:
         super().__init__()
         self._feedforward = feedforward
@@ -27,23 +30,21 @@ class FeedForwardEncoder(Seq2SeqEncoder):
         return False
 
     @overrides
-    def forward(self,  # pylint: disable=arguments-differ
-                inputs: torch.Tensor,
-                mask: torch.LongTensor = None) -> torch.Tensor:
+    def forward(self, inputs: torch.Tensor, mask: torch.BoolTensor = None) -> torch.Tensor:
         """
-        Parameters
-        ----------
-        inputs : ``torch.Tensor``, required.
+        # Parameters
+
+        inputs : `torch.Tensor`, required.
             A tensor of shape (batch_size, timesteps, input_dim)
-        mask : ``torch.LongTensor``, optional (default = None).
+        mask : `torch.BoolTensor`, optional (default = `None`).
             A tensor of shape (batch_size, timesteps).
 
-        Returns
-        -------
+        # Returns
+
         A tensor of shape (batch_size, timesteps, output_dim).
         """
         if mask is None:
             return self._feedforward(inputs)
         else:
             outputs = self._feedforward(inputs)
-            return outputs * mask.unsqueeze(dim=-1).float()
+            return outputs * mask.unsqueeze(dim=-1)
