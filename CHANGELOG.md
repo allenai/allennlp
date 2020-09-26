@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `Trainer` now has a `close()` method to free the resources. Defaults to no-op.
 - Added official support for Python 3.8.
 - Added a script: `scripts/release_notes.py`, which automatically prepares markdown release notes from the
   CHANGELOG and commit history.
@@ -28,12 +29,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The `Trainer.train()` method is moved to `_train()`. Now, the `train()` is supposed to call `_train()` and auto-close all the resources.
+  The tensorboard writer is `close` is moved to `GradientDescentTrainer.close()`.
+  From user's perspective, the change is backward-compatible.
+  However, `_train()` is the abstract method that needs to be implemented.
 - `transformers` dependency updated to version 3.1.0.
 - When `cached_path` is called on a local archive with `extract_archive=True`, the archive is now extracted into a unique subdirectory of the cache root instead of a subdirectory of the archive's directory. The extraction directory is also unique to the modification time of the archive, so if the file changes, subsequent calls to `cached_path` will know to re-extract the archive.
 - Removed the `truncation_strategy` parameter to `PretrainedTransformerTokenizer`. The way we're calling the tokenizer, the truncation strategy takes no effect anyways.
 
 ### Fixed
 
+- Fixed a bug where sometimes tensorboard logger may be not closed properly.
 - Fixed up the documentation for the `allennlp.nn.beam_search` module.
 - Ignore `*args` when constructing classes with `FromParams`.
 - Ensured some consistency in the types of the values that metrics return.

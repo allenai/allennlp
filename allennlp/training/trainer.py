@@ -5,7 +5,7 @@ import os
 import re
 import time
 import traceback
-from contextlib import contextmanager
+from contextlib import contextmanager, closing
 from typing import Any, Dict, Iterator, List, Optional, Tuple, Union
 
 from allennlp.common.util import int_to_device
@@ -84,7 +84,21 @@ class Trainer(Registrable):
         self._master = self._rank == 0
         self._world_size = world_size
 
+    def close(self) -> None:
+        """
+        Finalize, close and free all the resources.
+        """
+        pass
+
     def train(self) -> Dict[str, Any]:
+        """
+        Trains the supplied model with the supplied parameters.
+        Intended to called only once per run. Auto-closes the Trainer.
+        """
+        with closing(self):
+            return self._train()
+
+    def _train(self) -> Dict[str, Any]:
         """
         Train a model and return the results.
         """
@@ -831,7 +845,13 @@ class GradientDescentTrainer(Trainer):
 
         return val_loss, val_reg_loss, batches_this_epoch
 
-    def train(self) -> Dict[str, Any]:
+    def close(self) -> None:
+        """
+        Finalize, close and free all the resources.
+        """
+        self._tensorboard.close()
+
+    def _train(self) -> Dict[str, Any]:
         """
         Trains the supplied model with the supplied parameters.
         """
@@ -965,9 +985,6 @@ class GradientDescentTrainer(Trainer):
                 logger.info("Estimated training time remaining: %s", formatted_time)
 
             epochs_trained += 1
-
-        # make sure pending events are flushed to disk and files are closed properly
-        self._tensorboard.close()
 
         # Load the best model state before returning
         best_model_state = self._checkpointer.best_model_state()
