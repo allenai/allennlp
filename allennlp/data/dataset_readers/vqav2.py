@@ -24,7 +24,7 @@ from tqdm import tqdm
 import torch.distributed as dist
 
 from allennlp.common import util
-from allennlp.common.checks import check_for_gpu
+from allennlp.common.checks import check_for_gpu, ConfigurationError
 from allennlp.common.util import int_to_device
 from allennlp.common.file_utils import cached_path, TensorCache
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
@@ -286,6 +286,8 @@ class VQAv2Reader(DatasetReader):
         cuda_device: Optional[Union[int, torch.device]] = None,
         max_instances: Optional[int] = None,
         image_processing_batch_size: int = 8,
+        skip_image_feature_extraction: bool = False,
+        create_answer_vocab: bool = False,
     ) -> None:
         super().__init__(
             max_instances=max_instances,
@@ -303,15 +305,7 @@ class VQAv2Reader(DatasetReader):
                 cuda_device = -1
         check_for_gpu(cuda_device)
         self.cuda_device = int_to_device(cuda_device)
-
-        self.images = {
-            os.path.basename(filename): filename
-            for filename in tqdm(
-                glob.iglob(os.path.join(image_dir, "**", "*.jpg"), recursive=True),
-                desc="Discovering images",
-            )
-        }
-
+    
         # tokenizers and indexers
         if not tokenizer:
             tokenizer = PretrainedTransformerTokenizer("bert-base-uncased")
@@ -320,113 +314,180 @@ class VQAv2Reader(DatasetReader):
             token_indexers = {"tokens": PretrainedTransformerIndexer("bert-base-uncased")}
         self._token_indexers = token_indexers
 
-        # image loading
-        self.image_loader = image_loader
-        self.image_featurizer = image_featurizer.to(self.cuda_device)
-        self.region_detector = region_detector.to(self.cuda_device)
+        self.skip_image_feature_extraction = skip_image_feature_extraction
+        self.create_answer_vocab = create_answer_vocab
+        if not skip_image_feature_extraction:
+            
+            self.images = {
+                os.path.basename(filename): filename
+                for filename in tqdm(
+                    glob.iglob(os.path.join(image_dir, "**", "*.jpg"), recursive=True),
+                    desc="Discovering images",
+                )
+            }
+            # image loading
+            self.image_loader = image_loader
+            self.image_featurizer = image_featurizer.to(self.cuda_device)
+            self.region_detector = region_detector.to(self.cuda_device)
 
-        # feature cache
-        if feature_cache_dir is None:
-            self._features_cache: MutableMapping[str, Tensor] = {}
-            self._coordinates_cache: MutableMapping[str, Tensor] = {}
-        else:
-            os.makedirs(feature_cache_dir, exist_ok=True)
-            self._features_cache = TensorCache(os.path.join(feature_cache_dir, "features"))
-            self._coordinates_cache = TensorCache(os.path.join(feature_cache_dir, "coordinates"))
+            # feature cache
+            self.feature_cache_dir = feature_cache_dir
+            self.coordinates_cache_dir = feature_cache_dir
+            self._features_cache_instance: Optional[MutableMapping[str, Tensor]] = None
+            self._coordinates_cache_instance: Optional[MutableMapping[str, Tensor]] = None
 
-        self.image_processing_batch_size = image_processing_batch_size
+            self.image_processing_batch_size = image_processing_batch_size
+
+    @property
+    def _features_cache(self) -> MutableMapping[str, Tensor]:
+        if self._features_cache_instance is None:
+            if self.feature_cache_dir is None:
+                self._features_cache_instance = {}
+            else:
+                os.makedirs(self.feature_cache_dir, exist_ok=True)
+                self._features_cache_instance = TensorCache(
+                    os.path.join(self.feature_cache_dir, "features")
+                )
+
+        return self._features_cache_instance
+
+    @property
+    def _coordinates_cache(self) -> MutableMapping[str, Tensor]:
+        if self._coordinates_cache_instance is None:
+            if self.coordinates_cache_dir is None:
+                self._coordinates_cache_instance = {}
+            else:
+                os.makedirs(self.feature_cache_dir, exist_ok=True)
+                self._coordinates_cache_instance = TensorCache(
+                    os.path.join(self.feature_cache_dir, "coordinates")
+                )
+
+        return self._coordinates_cache_instance
 
     @overrides
     def _read(self, split_name: str):
         class Split(NamedTuple):
-            annotations: Optional[str]
-            questions: str
+            annotations: Optional[List[str]]
+            questions: List[str]
 
         aws_base = "https://s3.amazonaws.com/cvmlp/vqa/"
         mscoco_base = aws_base + "mscoco/vqa/"
         scene_base = aws_base + "abstract_v002/vqa/"
         splits = {
             "balanced_real_train": Split(
-                mscoco_base
-                + "v2_Annotations_Train_mscoco.zip!v2_mscoco_train2014_annotations.json",
-                mscoco_base
-                + "v2_Questions_Train_mscoco.zip!v2_OpenEnded_mscoco_train2014_questions.json",
+                [mscoco_base
+                + "v2_Annotations_Train_mscoco.zip!v2_mscoco_train2014_annotations.json"],
+                [mscoco_base
+                + "v2_Questions_Train_mscoco.zip!v2_OpenEnded_mscoco_train2014_questions.json"],
             ),
             "balanced_real_val": Split(
-                mscoco_base + "v2_Annotations_Val_mscoco.zip!v2_mscoco_val2014_annotations.json",
-                mscoco_base
-                + "v2_Questions_Val_mscoco.zip!v2_OpenEnded_mscoco_val2014_questions.json",
+                [mscoco_base + "v2_Annotations_Val_mscoco.zip!v2_mscoco_val2014_annotations.json"],
+                [mscoco_base
+                + "v2_Questions_Val_mscoco.zip!v2_OpenEnded_mscoco_val2014_questions.json"],
             ),
             "balanced_real_test": Split(
-                None,
-                mscoco_base
-                + "v2_Questions_Test_mscoco.zip!v2_OpenEnded_mscoco_test2015_questions.json",
+                [],
+                [mscoco_base
+                + "v2_Questions_Test_mscoco.zip!v2_OpenEnded_mscoco_test2015_questions.json"],
             ),
+            "balanced_real_train_val": Split(
+                [mscoco_base
+                + "v2_Annotations_Train_mscoco.zip!v2_mscoco_train2014_annotations.json", 
+                mscoco_base + "v2_Annotations_Val_mscoco.zip!v2_mscoco_val2014_annotations.json"],
+                [mscoco_base
+                + "v2_Questions_Train_mscoco.zip!v2_OpenEnded_mscoco_train2014_questions.json",
+                mscoco_base
+                + "v2_Questions_Val_mscoco.zip!v2_OpenEnded_mscoco_val2014_questions.json"],
+            ),
+
             "balanced_bas_train": Split(  # "bas" is Binary Abstract Scenes
-                scene_base
-                + "Annotations_Binary_Train2017_abstract_v002.zip!abstract_v002_train2017_annotations.json",
-                scene_base
-                + "Questions_Binary_Train2017_abstract_v002.zip!OpenEnded_abstract_v002_train2017_questions.json",
+                [scene_base
+                + "Annotations_Binary_Train2017_abstract_v002.zip!abstract_v002_train2017_annotations.json"],
+                [scene_base
+                + "Questions_Binary_Train2017_abstract_v002.zip!OpenEnded_abstract_v002_train2017_questions.json"],
             ),
             "balanced_bas_val": Split(
-                scene_base
-                + "Annotations_Binary_Val2017_abstract_v002.zip!abstract_v002_val2017_annotations.json",
-                scene_base
-                + "Questions_Binary_Val2017_abstract_v002.zip!OpenEnded_abstract_v002_val2017_questions.json",
+                [scene_base
+                + "Annotations_Binary_Val2017_abstract_v002.zip!abstract_v002_val2017_annotations.json"],
+                [scene_base
+                + "Questions_Binary_Val2017_abstract_v002.zip!OpenEnded_abstract_v002_val2017_questions.json"],
             ),
             "abstract_scenes_train": Split(
-                scene_base
-                + "Annotations_Train_abstract_v002.zip!abstract_v002_train2015_annotations.json",
-                scene_base
-                + "Questions_Train_abstract_v002.zip!OpenEnded_abstract_v002_train2015_questions.json",
+                [scene_base
+                + "Annotations_Train_abstract_v002.zip!abstract_v002_train2015_annotations.json"],
+                [scene_base
+                + "Questions_Train_abstract_v002.zip!OpenEnded_abstract_v002_train2015_questions.json"],
             ),
             "abstract_scenes_val": Split(
-                scene_base
-                + "Annotations_Val_abstract_v002.zip!abstract_v002_val2015_annotations.json",
-                scene_base
-                + "Questions_Val_abstract_v002.zip!OpenEnded_abstract_v002_val2015_questions.json",
+                [scene_base
+                + "Annotations_Val_abstract_v002.zip!abstract_v002_val2015_annotations.json"],
+                [scene_base
+                + "Questions_Val_abstract_v002.zip!OpenEnded_abstract_v002_val2015_questions.json"],
             ),
             "abstract_scenes_test": Split(
-                None,
-                scene_base
-                + "Questions_Test_abstract_v002.zip!OpenEnded_abstract_v002_test2015_questions.json",
+                [],
+                [scene_base
+                + "Questions_Test_abstract_v002.zip!OpenEnded_abstract_v002_test2015_questions.json"],
             ),
         }
 
-        try:
-            split = splits[split_name]
-        except KeyError:
-            raise ValueError(
-                f"Unrecognized split: {split_name}. We require a split, not a filename, for VQA "
-                "because the image filenames require using the split."
-            )
-
-        if split.annotations is None:
-            annotations_by_question_id = {}
+        if isinstance(split_name, str):
+            try:
+                split = splits[split_name]
+            except KeyError:
+                raise ValueError(
+                    f"Unrecognized split: {split_name}. We require a split, not a filename, for "
+                    "VQA because the image filenames require using the split."
+                )
+        elif isinstance(split_name, list):
+            if len(split_name) != 2:
+                raise ValueError(f"Need two files passed to this reader, got: {split_name}")
+            split = Split(split_name[0], split_name[1])
         else:
-            with open(cached_path(split.annotations, extract_archive=True)) as f:
-                annotations = json.load(f)
-                annotations_by_question_id = {
-                    a["question_id"]: a for a in annotations["annotations"]
-                }
-        with open(cached_path(split.questions, extract_archive=True)) as f:
-            questions = json.load(f)
+            raise ConfigurationError("Expected a string or a list for the dataset reader.")
 
-        # It would be much easier to just process one image at a time, but it's faster to process
-        # them in batches. So this code gathers up instances until it has enough to fill up a batch
-        # that needs processing, and then processes them all.
-        question_dicts = self.shard_iterable(questions["questions"])
-        processed_images = self._process_image_paths(
-            self.images[f"{question_dict['image_id']:012d}.jpg"] for question_dict in question_dicts
-        )
+        annotations_by_question_id = {}
+        if len(split.annotations) != 0:
+            for annotation_path in split.annotations:
+                with open(cached_path(annotation_path, extract_archive=True)) as f:
+                    annotations = json.load(f)
+                    for a in annotations["annotations"]:
+                        annotations_by_question_id[a["question_id"]] = a
+
+        questions = []
+        for question_path in split.questions:
+            with open(cached_path(question_path, extract_archive=True)) as f:
+                questions_file = json.load(f)
+                image_subtype = questions_file["data_subtype"]
+                for ques in questions_file["questions"]:
+                    ques['image_subtype'] = image_subtype
+                    questions.append(ques)
+
+        question_dicts = list(self.shard_iterable(questions))
+        if not self.skip_image_feature_extraction:
+            # It would be much easier to just process one image at a time, but it's faster to process
+            # them in batches. So this code gathers up instances until it has enough to fill up a batch
+            # that needs processing, and then processes them all.
+            processed_images = self._process_image_paths(
+                self.images[f"COCO_{question_dict['image_subtype']}_{question_dict['image_id']:012d}.jpg"]
+                for question_dict in question_dicts
+            )
+        else:
+            processed_images = [None for i in range(len(question_dicts))]
 
         for question_dict, processed_image in zip(question_dicts, processed_images):
             answers = annotations_by_question_id.get(question_dict["question_id"])
+            gt_answers = None
+            multiple_choice_answer = None
             if answers is not None:
-                answers = answers["answers"]
-            yield self.text_to_instance(question_dict["question"], processed_image, answers)
+                gt_answers = answers["answers"]
+                multiple_choice_answer = answers["multiple_choice_answer"]
+            
+            yield self.text_to_instance(question_dict["question"], processed_image, gt_answers, multiple_choice_answer)
 
-    def _process_image_paths(self, image_paths: Iterable[str]) -> Iterator[Tuple[Tensor, Tensor]]:
+    def _process_image_paths(
+        self, image_paths: Iterable[str], *, use_cache: bool = True
+    ) -> Iterator[Tuple[Tensor, Tensor]]:
         batch: List[Union[str, Tuple[Tensor, Tensor]]] = []
         unprocessed_paths: Set[str] = set()
 
@@ -446,10 +507,11 @@ class VQAv2Reader(DatasetReader):
             paths_to_tensors = {path: (features[i], coordinates[i]) for i, path in enumerate(paths)}
 
             # store the processed results in the cache
-            for path, (features, coordinates) in paths_to_tensors.items():
-                basename = os.path.basename(path)
-                self._features_cache[basename] = features
-                self._coordinates_cache[basename] = coordinates
+            if use_cache:
+                for path, (features, coordinates) in paths_to_tensors.items():
+                    basename = os.path.basename(path)
+                    self._features_cache[basename] = features
+                    self._coordinates_cache[basename] = coordinates
 
             # yield the batch
             for b in batch:
@@ -461,12 +523,16 @@ class VQAv2Reader(DatasetReader):
         for image_path in image_paths:
             basename = os.path.basename(image_path)
             try:
-                features: Tensor = self._features_cache[basename]
-                coordinates: Tensor = self._coordinates_cache[basename]
-                if len(batch) <= 0:
-                    yield features, coordinates
+                if use_cache:
+                    features: Tensor = self._features_cache[basename]
+                    coordinates: Tensor = self._coordinates_cache[basename]
+                    if len(batch) <= 0:
+                        yield features, coordinates
+                    else:
+                        batch.append((features, coordinates))
                 else:
-                    batch.append((features, coordinates))
+                    # If we're not using the cache, we pretend we had a cache miss here.
+                    raise KeyError
             except KeyError:
                 batch.append(image_path)
                 unprocessed_paths.add(image_path)
@@ -484,36 +550,45 @@ class VQAv2Reader(DatasetReader):
         question: str,
         image: Union[str, Tuple[Tensor, Tensor]],
         answers: List[Dict[str, str]] = None,
+        multiple_choice_answer: str = None,
+        *,
+        use_cache: bool = True,
     ) -> Instance:
         tokenized_question = self._tokenizer.tokenize(question)
         question_field = TextField(tokenized_question, None)
-        if isinstance(image, str):
-            features, coords = next(self._process_image_paths([image]))
-        else:
-            features, coords = image
-
         fields = {
-            "box_features": ArrayField(features),
-            "box_coordinates": ArrayField(coords),
             "question": question_field,
         }
 
+        if image is not None: 
+            if isinstance(image, str):
+                features, coords = next(self._process_image_paths([image], use_cache=use_cache))
+            else:
+                features, coords = image
+
+            fields["box_features"] = ArrayField(features)
+            fields["box_coordinates"] = ArrayField(coords)
+    
         if answers:
             answer_fields = []
             weights = []
             answer_counts: MutableMapping[str, int] = defaultdict(int)
-            for answer_dict in answers:
-                answer = preprocess_answer(answer_dict["answer"])
+            
+            if self.create_answer_vocab:
+                answers = [{"answer": multiple_choice_answer}]
+
+            for answer in answers:
+                answer = preprocess_answer(answer["answer"])
                 answer_counts[answer] += 1
 
             for answer, count in answer_counts.items():
                 # Using a namespace other than "labels" so that OOV answers don't crash.  We'll have
                 # to mask OOV labels in the loss.  This is not ideal; it'd be better to remove OOV
                 # answers from the training data entirely, but we can't do that in our current
-                # pipeline without providing preprocessed input to the dataset reader.
+                # pipeline without providing preprocessed input to the dataset reader. 
                 answer_fields.append(LabelField(answer, label_namespace="answers"))
                 weights.append(get_score(count))
-
+            
             fields["labels"] = ListField(answer_fields)
             fields["label_weights"] = ArrayField(torch.tensor(weights))
 

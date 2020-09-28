@@ -5,7 +5,7 @@ from allennlp.models.vilbert import Nlvr2Vilbert
 
 
 class TestVilbert(ModelTestCase):
-    def test_model_can_train_save_and_load_small_model(self):
+    def test_model_can_train_save_and_load(self):
         param_file = self.FIXTURES_ROOT / "vilbert" / "experiment.jsonnet"
         self.ensure_model_can_train_save_and_load(param_file)
 
@@ -19,10 +19,6 @@ class TestVilbert(ModelTestCase):
             overrides = json.dumps(overrides)
             param_file = self.FIXTURES_ROOT / "vilbert" / "experiment.jsonnet"
             self.ensure_model_can_train_save_and_load(param_file, overrides=overrides)
-
-    def test_model_can_train_save_and_load_from_huggingface(self):
-        param_file = self.FIXTURES_ROOT / "vilbert" / "experiment_from_huggingface.jsonnet"
-        self.ensure_model_can_train_save_and_load(param_file)
 
     def test_model_loads_weights_correctly(self):
         model_name = "epwalsh/bert-xsmall-dummy"

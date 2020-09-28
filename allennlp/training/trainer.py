@@ -584,22 +584,21 @@ class GradientDescentTrainer(Trainer):
 
             batch_group_outputs = []
             for batch in batch_group:
-                # TODO(mattg): vision stuff is incompatible with 1.6, removing autocast for now.
-                # THIS SHOULD NOT BE COMMITTED TO MASTER!
-                batch_outputs = self.batch_outputs(batch, for_training=True)
-                batch_group_outputs.append(batch_outputs)
-                loss = batch_outputs.get("loss")
-                reg_loss = batch_outputs.get("reg_loss")
-                if torch.isnan(loss):
-                    raise ValueError("nan loss encountered")
-                loss = loss / len(batch_group)
+                with amp.autocast(self._use_amp):
+                    batch_outputs = self.batch_outputs(batch, for_training=True)
+                    batch_group_outputs.append(batch_outputs)
+                    loss = batch_outputs.get("loss")
+                    reg_loss = batch_outputs.get("reg_loss")
+                    if torch.isnan(loss):
+                        raise ValueError("nan loss encountered")
+                    loss = loss / len(batch_group)
 
-                batch_loss = loss.item()
-                train_loss += batch_loss
-                if reg_loss is not None:
-                    reg_loss = reg_loss / len(batch_group)
-                    batch_reg_loss = reg_loss.item()
-                    train_reg_loss += batch_reg_loss
+                    batch_loss = loss.item()
+                    train_loss += batch_loss
+                    if reg_loss is not None:
+                        reg_loss = reg_loss / len(batch_group)
+                        batch_reg_loss = reg_loss.item()
+                        train_reg_loss += batch_reg_loss
 
                 if self._scaler is not None:
                     self._scaler.scale(loss).backward()
@@ -772,23 +771,22 @@ class GradientDescentTrainer(Trainer):
                     )
                     break
 
-            # TODO(mattg): vision stuff is incompatible with 1.6, removing autocast for now.
-            # THIS SHOULD NOT BE COMMITTED TO MASTER!
-            batch_outputs = self.batch_outputs(batch, for_training=False)
-            loss = batch_outputs.get("loss")
-            reg_loss = batch_outputs.get("reg_loss")
-            if loss is not None:
-                # You shouldn't necessarily have to compute a loss for validation, so we allow for
-                # `loss` to be None.  We need to be careful, though - `batches_this_epoch` is
-                # currently only used as the divisor for the loss function, so we can safely only
-                # count those batches for which we actually have a loss.  If this variable ever
-                # gets used for something else, we might need to change things around a bit.
-                batches_this_epoch += 1
-                val_batch_loss = loss.detach().cpu().numpy()
-                val_loss += val_batch_loss
-                if reg_loss is not None:
-                    val_batch_reg_loss = reg_loss.detach().cpu().numpy()
-                    val_reg_loss += val_batch_reg_loss
+            with amp.autocast(self._use_amp):
+                batch_outputs = self.batch_outputs(batch, for_training=False)
+                loss = batch_outputs.get("loss")
+                reg_loss = batch_outputs.get("reg_loss")
+                if loss is not None:
+                    # You shouldn't necessarily have to compute a loss for validation, so we allow for
+                    # `loss` to be None.  We need to be careful, though - `batches_this_epoch` is
+                    # currently only used as the divisor for the loss function, so we can safely only
+                    # count those batches for which we actually have a loss.  If this variable ever
+                    # gets used for something else, we might need to change things around a bit.
+                    batches_this_epoch += 1
+                    val_batch_loss = loss.detach().cpu().numpy()
+                    val_loss += val_batch_loss
+                    if reg_loss is not None:
+                        val_batch_reg_loss = reg_loss.detach().cpu().numpy()
+                        val_reg_loss += val_batch_reg_loss
 
             # Update the description with the latest metrics
             val_metrics = training_util.get_metrics(

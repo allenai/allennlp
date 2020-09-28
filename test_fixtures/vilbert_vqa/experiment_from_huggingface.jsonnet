@@ -2,15 +2,11 @@ local model_name = "bert-base-uncased";
 {
   "dataset_reader": {
     "type": "vqav2",
-    "image_dir": "test_fixtures/data/vqav2/images",
-    "data_dir": "test_fixtures/data/vqav2",
+    "image_dir": "/net/nfs2.corp/prior/datasets/coco",
+    "feature_cache_dir": "/net/nfs2.corp/prior/datasets/coco/coco_experiment_cache",
     "image_loader": "detectron",
-    "image_featurizer": {
-      "type": "resnet_backbone",
-    },
-    "region_detector": {
-      "type": "faster_rcnn",
-    },
+    "image_featurizer": "resnet_backbone",
+    "region_detector": "faster_rcnn",
     "tokenizer": {
       "type": "pretrained_transformer",
       "model_name": model_name
@@ -22,28 +18,32 @@ local model_name = "bert-base-uncased";
       }
     }
   },
-  "vocabulary": "empty",
-  "train_data_path": "train2014",
-  "validation_data_path": "train2014",
+  "vocabulary": {"type": "from_files", "directory": "./test_fixtures/data/vqav2/vocabulary/vocab.tar.gz"},
+  "train_data_path": "balanced_real_train",
+  "validation_data_path": "balanced_real_val",
   "model": {
     "type": "vqa_vilbert_from_huggingface",
     "model_name": model_name,
     "image_feature_dim": 2048,
-    "image_hidden_size": 24,
-    "image_num_hidden_layers": 12,
-    "combined_hidden_size": 36,
-    "pooled_output_dim": 3,
-    "image_intermediate_size": 7,
-    "image_attention_dropout": 0.0,
-    "image_hidden_dropout": 0.0,
-    "v_biattention_id": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
-    "t_biattention_id": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+    "image_hidden_size": 1024,
+    "image_num_attenton_heads": 8,
+    "image_num_hidden_layers": 6,
+    "combined_hidden_size": 1024,
+    "combined_num_attention_heads": 8,
+    "pooled_output_dim": 1024,
+    "image_intermediate_size": 1024,
+    "image_attention_dropout": 0.1,
+    "image_hidden_dropout": 0.1,
+    "v_biattention_id": [0, 1, 2, 3, 4, 5],
+    "t_biattention_id": [6, 7, 8, 9, 10, 11],
     "fixed_t_layer": 0,
     "fixed_v_layer": 0,
-    "fusion_method": "sum"
+    "fusion_method": "mul"
   },
   "data_loader": {
-    "batch_size": 32
+    "batch_size": 32,
+    "shuffle": true,
+    "max_instances_in_memory": 1024
   },
   "trainer": {
     "optimizer": {
@@ -52,5 +52,5 @@ local model_name = "bert-base-uncased";
     },
     "validation_metric": "+denotation_acc",
     "num_epochs": 1,
-  }
+  },
 }

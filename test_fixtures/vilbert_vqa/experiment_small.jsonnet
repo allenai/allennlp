@@ -1,8 +1,8 @@
 local model_name = "epwalsh/bert-xsmall-dummy";
 {
   "dataset_reader": {
-    "type": "nlvr2",
-    "image_dir": "test_fixtures/data/nlvr2",
+    "type": "vqav2",
+    "image_dir": "test_fixtures/data/vqav2/images",
     "image_loader": "detectron",
     "image_featurizer": "null",
     "region_detector": "null",
@@ -17,10 +17,18 @@ local model_name = "epwalsh/bert-xsmall-dummy";
       }
     }
   },
-  "train_data_path": "test_fixtures/data/nlvr2/tiny-dev.json",
-  "validation_data_path": "test_fixtures/data/nlvr2/tiny-dev.json",
+  "train_data_path": [
+    "test_fixtures/data/vqav2/annotations.json",
+    "test_fixtures/data/vqav2/questions.json"
+  ],
+  "validation_data_path": [
+    "test_fixtures/data/vqav2/annotations.json",
+    "test_fixtures/data/vqav2/questions.json"
+  ],
+  "vocabulary": {"min_count": {"answers": 2}},
+  "datasets_for_vocab_creation": ["train"],
   "model": {
-    "type": "nlvr2_vilbert_from_huggingface",
+    "type": "vqa_vilbert_from_huggingface",
     "model_name": model_name,
     "image_feature_dim": 10,
     "image_hidden_size": 200,
@@ -42,10 +50,9 @@ local model_name = "epwalsh/bert-xsmall-dummy";
   },
   "trainer": {
     "optimizer": {
-        "type": "adam",
-        "lr": 0.05
+      "type": "huggingface_adamw",
+      "lr": 0.00005
     },
-    "validation_metric": "+denotation_acc",
-    "num_epochs": 1
-  }
+    "num_epochs": 1,
+  },
 }

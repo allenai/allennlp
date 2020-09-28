@@ -9,7 +9,7 @@ import torch
 from allennlp.data import TextFieldTensors, Vocabulary
 from allennlp.models.model import Model
 from allennlp.nn import util
-from allennlp.training.metrics import CategoricalAccuracy
+from allennlp.training.metrics import F1MultiLabelMeasure
 
 from allennlp.models.vilbert import (
     BertEmbeddings,
@@ -48,7 +48,7 @@ class VqaVilbert(Model):
         super().__init__(vocab)
         self.loss = torch.nn.BCELoss()
         self.consistency_wrong_map: Dict[str, int] = collections.Counter()
-        self.accuracy = CategoricalAccuracy()
+        self.f1 = F1MultiLabelMeasure(average="micro")
         self.fusion_method = fusion_method
 
         self.embeddings = text_embeddings
@@ -59,6 +59,7 @@ class VqaVilbert(Model):
         self.v_pooler = BertPooler(encoder.image_hidden_size, pooled_output_dim)
 
         num_labels = vocab.get_vocab_size(label_namespace)
+        self.label_namespace = label_namespace
 
         self.classifier = torch.nn.Linear(pooled_output_dim, num_labels)
         self.dropout = torch.nn.Dropout(dropout)
@@ -71,7 +72,9 @@ class VqaVilbert(Model):
         image_feature_dim: int,
         image_num_hidden_layers: int,
         image_hidden_size: int,
+        image_num_attenton_heads: int, 
         combined_hidden_size: int,
+        combined_num_attention_heads: int, 
         pooled_output_dim: int,
         image_intermediate_size: int,
         image_attention_dropout: float,
@@ -82,9 +85,6 @@ class VqaVilbert(Model):
         fixed_v_layer: int,
         pooled_dropout: float = 0.1,
         fusion_method: str = "sum",
-        fast_mode: bool = False,
-        with_coattention: bool = True,
-        in_batch_pairs: bool = False,
     ):
         transformer = AutoModel.from_pretrained(model_name)
 
@@ -132,11 +132,14 @@ class VqaVilbert(Model):
             hidden_dim=image_hidden_size,
             dropout=image_hidden_dropout,
         )
+
         encoder = BertEncoder.from_huggingface_model(
             model=transformer,
             image_num_hidden_layers=image_num_hidden_layers,
             image_hidden_size=image_hidden_size,
+            image_num_attenton_heads=image_num_attenton_heads,
             combined_hidden_size=combined_hidden_size,
+            combined_num_attention_heads=combined_num_attention_heads,
             image_intermediate_size=image_intermediate_size,
             image_attention_dropout=image_attention_dropout,
             image_hidden_dropout=image_hidden_dropout,
@@ -144,9 +147,6 @@ class VqaVilbert(Model):
             t_biattention_id=t_biattention_id,
             fixed_t_layer=fixed_t_layer,
             fixed_v_layer=fixed_v_layer,
-            fast_mode=fast_mode,
-            with_coattention=with_coattention,
-            in_batch_pairs=in_batch_pairs,
         )
         return cls(
             vocab=vocab,
@@ -203,6 +203,7 @@ class VqaVilbert(Model):
 
         # (batch_size, num_boxes, image_embedding_dim)
         v_embedding_output = self.image_embeddings(box_features, box_coordinates)
+        
         encoded_layers_t, encoded_layers_v = self.encoder(
             embedding_output,
             v_embedding_output,
@@ -210,7 +211,7 @@ class VqaVilbert(Model):
             extended_image_attention_mask,
             extended_co_attention_mask,
         )
-
+        
         sequence_output_t = encoded_layers_t[:, :, :, -1]
         sequence_output_v = encoded_layers_v[:, :, :, -1]
 
@@ -225,24 +226,51 @@ class VqaVilbert(Model):
             raise ValueError(f"Fusion method '{self.fusion_method}' not supported")
 
         logits = self.classifier(pooled_output)
+        probs = torch.sigmoid(logits)
 
-        outputs = {}
-        outputs["logits"] = logits
+        outputs = {"logits": logits, "probs": probs}
         if labels is not None:
             label_mask = labels > 1  # 0 is padding, 1 is OOV, which we want to ignore
+
             weighted_labels = util.masked_index_replace(
                 logits.new_zeros(logits.size() + (1,)),
-                labels,
+                labels.clamp(min=0),
                 label_mask,
                 label_weights.unsqueeze(-1),
             ).squeeze(-1)
-            outputs["loss"] = self.loss(torch.sigmoid(logits), weighted_labels).sum()
-            # TODO(mattg): We don't have a suitable accuracy metric for this yet, I don't think.
-            # self.accuracy(logits, labels)
+
+            # weighted_labels now has shape (batch_size, num_labels).  We need to ignore the first
+            # two columns of this in our loss function and accuracy metric.  The first column is a
+            # padding label, and the second column is an OOV label.  We want the loss function to
+            # be computed on every other label.
+            binary_label_mask = weighted_labels.new_ones(logits.size())
+            binary_label_mask[:, 0] = 0
+            binary_label_mask[:, 1] = 0
+            
+            outputs["loss"] = torch.nn.functional.binary_cross_entropy_with_logits(
+                logits, weighted_labels, weight=binary_label_mask, reduction='sum'
+            ) / batch_size
+            
+            # TODO(mattg): Multi-label F1 is good, but it is not exactly the VQA accuracy metric.
+            # That still needs to be implemented.
+            self.f1(logits, weighted_labels, binary_label_mask.bool())
         return outputs
 
     @overrides
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
-        return {
-            "denotation_acc": self.accuracy.get_metric(reset),
-        }
+        return self.f1.get_metric(reset)
+
+    @overrides
+    def make_output_human_readable(
+        self, output_dict: Dict[str, torch.Tensor]
+    ) -> Dict[str, torch.Tensor]:
+        batch_tokens = []
+        for batch_index, batch in enumerate(output_dict["probs"]):
+            tokens = {}
+            for i, prob in enumerate(batch):
+                tokens[self.vocab.get_token_from_index(i, self.label_namespace)] = float(prob)
+            batch_tokens.append(tokens)
+        output_dict["tokens"] = batch_tokens
+        return output_dict
+
+    default_predictor = "vilbert_vqa"
