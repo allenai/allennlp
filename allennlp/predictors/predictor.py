@@ -109,7 +109,11 @@ class Predictor(Registrable):
             )
 
             loss = outputs["loss"]
-            self._model.zero_grad()
+            # Zero gradients.
+            # NOTE: this is actually more efficient than calling `self._model.zero_grad()`
+            # because it avoids a read op when the gradients are first updated below.
+            for p in self._model.parameters():
+                p.grad = None
             loss.backward()
 
         for hook in hooks:
