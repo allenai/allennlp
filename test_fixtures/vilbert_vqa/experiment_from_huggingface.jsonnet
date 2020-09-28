@@ -26,7 +26,7 @@ local model_name = "bert-base-uncased";
     "model_name": model_name,
     "image_feature_dim": 2048,
     "image_hidden_size": 1024,
-    "image_num_attenton_heads": 8,
+    "image_num_attention_heads": 8,
     "image_num_hidden_layers": 6,
     "combined_hidden_size": 1024,
     "combined_num_attention_heads": 8,
