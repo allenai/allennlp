@@ -47,7 +47,7 @@ class BuildVocab(Subcommand):
             default="",
             help=(
                 "a json(net) structure used to override the experiment configuration, e.g., "
-                "'{\"iterator.batch_size\": 16}'.  Nested parameters can be specified either"
+                "'{\"vocabulary.min_count.labels\": 10}'.  Nested parameters can be specified either"
                 " with nested dictionaries or with dot syntax."
             ),
         )
