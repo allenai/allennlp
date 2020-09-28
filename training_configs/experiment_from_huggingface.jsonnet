@@ -18,7 +18,7 @@ local model_name = "bert-base-uncased";
       }
     }
   },
-  "vocabulary": {"type": "from_files", "directory": "./test_fixtures/data/vqav2/vocabulary/vocab.tar.gz"},
+  "vocabulary": {"min_count": {"answers": 9}},
   "train_data_path": "balanced_real_train",
   "validation_data_path": "balanced_real_val",
   "model": {
