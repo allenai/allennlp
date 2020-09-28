@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict, List, Any, Optional
 import logging
 
 from overrides import overrides
@@ -39,15 +39,28 @@ class PretrainedTransformerMismatchedIndexer(TokenIndexer):
         before feeding into the embedder. The embedder embeds these segments independently and
         concatenate the results to get the original document representation. Should be set to
         the same value as the `max_length` option on the `PretrainedTransformerMismatchedEmbedder`.
-    """
+    tokenizer_kwargs : `Dict[str, Any]`, optional (default = `None`)
+        Dictionary with
+        [additional arguments](https://github.com/huggingface/transformers/blob/155c782a2ccd103cf63ad48a2becd7c76a7d2115/transformers/tokenization_utils.py#L691)
+        for `AutoTokenizer.from_pretrained`.
+    """  # noqa: E501
 
     def __init__(
-        self, model_name: str, namespace: str = "tags", max_length: int = None, **kwargs
+        self,
+        model_name: str,
+        namespace: str = "tags",
+        max_length: int = None,
+        tokenizer_kwargs: Optional[Dict[str, Any]] = None,
+        **kwargs,
     ) -> None:
         super().__init__(**kwargs)
         # The matched version v.s. mismatched
         self._matched_indexer = PretrainedTransformerIndexer(
-            model_name, namespace, max_length, **kwargs
+            model_name,
+            namespace=namespace,
+            max_length=max_length,
+            tokenizer_kwargs=tokenizer_kwargs,
+            **kwargs,
         )
         self._allennlp_tokenizer = self._matched_indexer._allennlp_tokenizer
         self._tokenizer = self._matched_indexer._tokenizer

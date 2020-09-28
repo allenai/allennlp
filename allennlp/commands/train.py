@@ -122,7 +122,7 @@ def train_model_from_args(args: argparse.Namespace):
 def train_model_from_file(
     parameter_filename: Union[str, PathLike],
     serialization_dir: Union[str, PathLike],
-    overrides: str = "",
+    overrides: Union[str, Dict[str, Any]] = "",
     recover: bool = False,
     force: bool = False,
     node_rank: int = 0,
@@ -140,8 +140,8 @@ def train_model_from_file(
     serialization_dir : `str`
         The directory in which to save results and logs. We just pass this along to
         [`train_model`](#train_model).
-    overrides : `str`
-        A JSON string that we will use to override values in the input parameter file.
+    overrides : `Union[str, Dict[str, Any]]`, optional (default = `""`)
+        A JSON string or a dict that we will use to override values in the input parameter file.
     recover : `bool`, optional (default=`False`)
         If `True`, we will try to recover a training run from an existing serialization
         directory.  This is only intended for use when something actually crashed during the middle
