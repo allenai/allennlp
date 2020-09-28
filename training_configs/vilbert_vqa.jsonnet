@@ -59,7 +59,7 @@ local model_name = "bert-base-uncased";
       "fixed_v_layer": 0
     },
     "pooled_output_dim": 1024,
-    "fusion_method": "sum"
+    "fusion_method": "mul"
   },
   "data_loader": {
     "batch_size": 32,
