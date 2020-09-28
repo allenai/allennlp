@@ -43,7 +43,7 @@ local model_name = "bert-base-uncased";
       "combined_hidden_size": 1024,
       "text_intermediate_size": 3072,
       "image_intermediate_size": 1024,
-      "num_attention_heads": 12,
+      "text_num_attention_heads": 12,
       "text_attention_dropout": 0.1,
       "image_attention_dropout": 0.1,
       "text_hidden_dropout": 0.1,

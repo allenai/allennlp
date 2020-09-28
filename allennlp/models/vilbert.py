@@ -468,7 +468,7 @@ class BertEncoder(torch.nn.Module, FromParams):
         combined_hidden_size: int,
         text_intermediate_size: int,
         image_intermediate_size: int,
-        num_attention_heads: int,
+        text_num_attention_heads: int,
         image_num_attention_heads: int,
         combined_num_attention_heads: int,
         text_attention_dropout: float,
@@ -500,7 +500,7 @@ class BertEncoder(torch.nn.Module, FromParams):
         layer = BertLayer(
             hidden_size=text_hidden_size,
             intermediate_size=text_intermediate_size,
-            num_attention_heads=num_attention_heads,
+            num_attention_heads=text_num_attention_heads,
             attention_dropout=text_attention_dropout,
             hidden_dropout=text_hidden_dropout,
             activation=activation,

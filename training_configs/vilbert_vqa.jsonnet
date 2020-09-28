@@ -40,19 +40,24 @@ local model_name = "bert-base-uncased";
       "hidden_dim": 1024
     },
     "encoder": {
-      "text_num_hidden_layers": 12,
-      "image_num_hidden_layers": 6,
-      "text_hidden_size": 768,
       "image_hidden_size": 1024,
-      "combined_hidden_size": 1024,
-      "text_intermediate_size": 3072,
+      "image_num_hidden_layers": 6,
       "image_intermediate_size": 1024,
-      "num_attention_heads": 8,
-      "text_attention_dropout": 0.1,
+      "image_num_attention_heads": 8,
       "image_attention_dropout": 0.1,
-      "text_hidden_dropout": 0.1,
       "image_hidden_dropout": 0.1,
+
+      "text_hidden_size": 768,
+      "text_num_hidden_layers": 12,
+      "text_intermediate_size": 3072,
+      "text_num_attention_heads": 12,
+      "text_attention_dropout": 0.1,
+      "text_hidden_dropout": 0.1,
+
+      "combined_num_attention_heads": 8,
+      "combined_hidden_size": 1024,
       "activation": "gelu",
+
       "v_biattention_id": [0, 1, 2, 3, 4, 5],
       "t_biattention_id": [6, 7, 8, 9, 10, 11],
       "fixed_t_layer": 0,
