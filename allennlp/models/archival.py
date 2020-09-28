@@ -2,7 +2,7 @@
 Helper functions for archiving models and restoring archived models.
 """
 from os import PathLike
-from typing import NamedTuple, Union
+from typing import NamedTuple, Union, Dict, Any
 import logging
 import os
 import tempfile
@@ -132,7 +132,7 @@ def archive_model(
 def load_archive(
     archive_file: Union[str, Path],
     cuda_device: int = -1,
-    overrides: str = "",
+    overrides: Union[str, Dict[str, Any]] = "",
     weights_file: str = None,
 ) -> Archive:
     """
@@ -145,7 +145,7 @@ def load_archive(
     cuda_device : `int`, optional (default = `-1`)
         If `cuda_device` is >= 0, the model will be loaded onto the
         corresponding GPU. Otherwise it will be loaded onto the CPU.
-    overrides : `str`, optional (default = `""`)
+    overrides : `Union[str, Dict[str, Any]]`, optional (default = `""`)
         JSON overrides to apply to the unarchived `Params` object.
     weights_file : `str`, optional (default = `None`)
         The weights file to use.  If unspecified, weights.th in the archive_file will be used.
