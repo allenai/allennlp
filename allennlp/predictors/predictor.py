@@ -239,7 +239,7 @@ class Predictor(Registrable):
         dataset_reader_to_load: str = "validation",
         frozen: bool = True,
         import_plugins: bool = True,
-        overrides: str = "",
+        overrides: Union[str, Dict[str, Any]] = "",
     ) -> "Predictor":
         """
         Instantiate a `Predictor` from an archive path.
@@ -267,7 +267,7 @@ class Predictor(Registrable):
             This comes with additional overhead, but means you don't need to explicitly
             import the modules that your predictor depends on as long as those modules
             can be found by `allennlp.common.plugins.import_plugins()`.
-        overrides : `str`, optional (default = `""`)
+        overrides : `Union[str, Dict[str, Any]]`, optional (default = `""`)
             JSON overrides to apply to the unarchived `Params` object.
 
         # Returns
