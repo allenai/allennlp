@@ -83,6 +83,9 @@ class Trainer(Registrable):
         self._rank = local_rank
         self._master = self._rank == 0
         self._world_size = world_size
+        # We check whether the context manager is used,
+        # to warn user to properly close the Trainer.
+        self._entered = False
 
     def train(self) -> Dict[str, Any]:
         """
@@ -109,9 +112,11 @@ class Trainer(Registrable):
         return
 
     def __enter__(self) -> "Trainer":
+        self._entered = True
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+        self._entered = False
         self.close()
 
 
@@ -855,6 +860,13 @@ class GradientDescentTrainer(Trainer):
                 "Could not recover training from the checkpoint.  Did you mean to output to "
                 "a different serialization directory or delete the existing serialization "
                 "directory?"
+            )
+
+        if not self._entered:
+            logger.warning(
+                "The `train` method does not close the resources automatically."
+                "It's recommended to treat Trainer as a context manager, "
+                "use `with` statements to properly close them."
             )
 
         training_util.enable_gradient_clipping(self.model, self._grad_clipping)
