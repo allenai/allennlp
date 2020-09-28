@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added a `build-vocab` subcommand that can be used to build a vocabulary from a training config file.
 - Added `tokenizer_kwargs` argument to `PretrainedTransformerMismatchedIndexer`.
 - Added `tokenizer_kwargs` and `transformer_kwargs` arguments to `PretrainedTransformerMismatchedEmbedder`.
 - Added official support for Python 3.8.

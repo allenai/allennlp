@@ -386,14 +386,16 @@ class CacheFile:
     goes wrong while writing to the temporary file, it will be removed.
     """
 
-    def __init__(self, cache_filename: Union[Path, str], mode="w+b") -> None:
+    def __init__(
+        self, cache_filename: Union[Path, str], mode: str = "w+b", suffix: str = ".tmp"
+    ) -> None:
         self.cache_filename = (
             cache_filename if isinstance(cache_filename, Path) else Path(cache_filename)
         )
         self.cache_directory = os.path.dirname(self.cache_filename)
         self.mode = mode
         self.temp_file = tempfile.NamedTemporaryFile(
-            self.mode, dir=self.cache_directory, delete=False, suffix=".tmp"
+            self.mode, dir=self.cache_directory, delete=False, suffix=suffix
         )
 
     def __enter__(self):
