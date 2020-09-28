@@ -51,6 +51,6 @@ local model_name = "bert-base-uncased";
         "lr": 0.00005
     },
     "validation_metric": "+denotation_acc",
-    "num_epochs": 1,
+    "num_epochs": 20,
   },
 }

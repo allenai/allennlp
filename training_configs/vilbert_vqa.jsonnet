@@ -76,6 +76,7 @@ local model_name = "bert-base-uncased";
       "type": "huggingface_adamw",
       "lr": 0.00005
     },
-    "num_epochs": 3
+    "validation_metric": "+denotation_acc",
+    "num_epochs": 20
   },
 }
