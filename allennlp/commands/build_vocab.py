@@ -12,6 +12,7 @@ import tempfile
 from overrides import overrides
 
 from allennlp.commands.subcommand import Subcommand
+from allennlp.common.file_utils import CacheFile
 from allennlp.common.params import Params
 from allennlp.training.util import make_vocab_from_params
 
@@ -72,13 +73,10 @@ def build_vocab_from_args(args: argparse.Namespace):
         # Serializes the vocab to 'tempdir/vocabulary'.
         make_vocab_from_params(params, temp_dir)
 
-        # We create a temp file to archive the vocab to in case something goes wrong
-        # while creating the archive so we're not left with a corrupted file.
-        temp_archive = tempfile.NamedTemporaryFile(
-            suffix=".tar.gz", dir=output_directory, delete=False
-        )
-
-        try:
+        # The CacheFile context manager gives us a temporary file to write to.
+        # On a successful exit from the context, it will rename the temp file to
+        # the target `output_path`.
+        with CacheFile(args.output_path, suffix=".tar.gz") as temp_archive:
             logger.info("Archiving vocabulary to %s", args.output_path)
 
             with tarfile.open(temp_archive.name, "w:gz") as archive:
@@ -87,13 +85,6 @@ def build_vocab_from_args(args: argparse.Namespace):
                     if fname.endswith(".lock"):
                         continue
                     archive.add(os.path.join(vocab_dir, fname), arcname=fname)
-
-            # Archive successful, now replace the temp file with the target output path.
-            os.replace(temp_archive.name, args.output_path)
-        finally:
-            # Clean up.
-            if os.path.exists(temp_archive.name):
-                os.remove(temp_archive.name)
 
     print(f"Success! Vocab saved to {args.output_path}")
     print('You can now set the "vocabulary" entry of your training config to:')
