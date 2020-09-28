@@ -9,8 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Added `tokenizer_kwargs` to `PretrainedTransformerMismatchedIndexer`.
-- Added `tokenizer_kwargs`/`transformer_kwargs` to `PretrainedTransformerMismatchedEmbedder`.
+- Added `tokenizer_kwargs` argument to `PretrainedTransformerMismatchedIndexer`.
+- Added `tokenizer_kwargs` and `transformer_kwargs` arguments to `PretrainedTransformerMismatchedEmbedder`.
 - Added official support for Python 3.8.
 - Added a script: `scripts/release_notes.py`, which automatically prepares markdown release notes from the
   CHANGELOG and commit history.
