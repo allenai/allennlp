@@ -57,8 +57,8 @@ class PretrainedTransformerMismatchedIndexer(TokenIndexer):
         # The matched version v.s. mismatched
         self._matched_indexer = PretrainedTransformerIndexer(
             model_name,
-            namespace,
-            max_length,
+            namespace=namespace,
+            max_length=max_length,
             tokenizer_kwargs=tokenizer_kwargs,
             **kwargs,
         )
