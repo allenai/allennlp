@@ -502,8 +502,8 @@ class TrainModel(Registrable):
         self.batch_weight_key = batch_weight_key
 
     def run(self) -> Dict[str, Any]:
-        with self.trainer as trainer:
-            return trainer.train()
+        with self.trainer:
+            return self.trainer.train()
 
     def finish(self, metrics: Dict[str, Any]):
         if self.evaluation_data_loader is not None and self.evaluate_on_test:
