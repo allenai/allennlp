@@ -29,7 +29,7 @@ class MultiTaskModel(Model):
     right arguments to the right modules, but we allow you to specify these arguments yourself in
     case our inference code gets it wrong.
 
-    It the caller's responsibility to make sure that the backbone and all heads are compatible with
+    It is the caller's responsibility to make sure that the backbone and all heads are compatible with
     each other, and with the input data that comes from a `MultiTaskDatasetReader`.  We give some
     arguments in this class and in `MultiTaskDatasetReader` to help with plumbing the arguments in
     complex cases (e.g., you can change argument names so that they match what the backbone and
@@ -105,7 +105,7 @@ class MultiTaskModel(Model):
         If you want to limit which heads are run during evaluation, or if the inference for which
         task to run during training is incorrect (e.g., if your head has multiple optional
         arguments, and only some are actually required to compute a loss), then you can use this
-        method to override our inference and force the use of whatever set of hads you want.
+        method to override our inference and force the use of whatever set of heads you want.
 
         To get back to the default mode of operation, call this method with `None` as an argument.
         """
