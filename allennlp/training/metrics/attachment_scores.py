@@ -1,4 +1,4 @@
-from typing import Optional, List, Union
+from typing import Optional, List
 
 from overrides import overrides
 import torch
@@ -105,7 +105,6 @@ class AttachmentScores(Metric):
     def get_metric(
         self,
         reset: bool = False,
-        cuda_device: Union[int, torch.device] = torch.device("cpu"),
     ):
         """
         # Returns

@@ -97,8 +97,11 @@ class SimpleTaggerRegularizationTest(ModelTestCase):
         params = Params.from_file(param_file)
         self.reader = DatasetReader.from_params(params["dataset_reader"])
         self.data_loader = DataLoader.from_params(
-            dataset=self.instances, params=params["data_loader"]
+            reader=self.reader,
+            data_path=str(self.FIXTURES_ROOT / "data" / "sequence_tagging.tsv"),
+            params=params["data_loader"],
         )
+        self.data_loader.index_with(self.vocab)
         self.trainer = Trainer.from_params(
             model=self.model,
             data_loader=self.data_loader,

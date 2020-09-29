@@ -1,14 +1,13 @@
 import logging
-from typing import List, Iterable, Tuple
-import random
 import math
-
-from torch.utils import data
+from typing import List, Iterable, Tuple, Sequence
+import random
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.util import lazy_groups_of
 from allennlp.data.instance import Instance
-from allennlp.data.samplers import BatchSampler
+from allennlp.data.samplers.batch_sampler import BatchSampler
+
 
 logger = logging.getLogger(__name__)
 
@@ -30,13 +29,8 @@ class BucketBatchSampler(BatchSampler):
 
     # Parameters
 
-    data_source: `data.Dataset`, required
-        The pytorch `Dataset` of allennlp Instances to bucket.
-
-        In a typical AllenNLP configuration file, this parameter does not get an entry under the
-        "batch_sampler", it gets constructed separately.
     batch_size : `int`, required
-        The size of each batch of instances yielded when calling the dataloader.
+        The size of each batch of instances yielded when calling the data_loader.
 
     sorting_keys : `List[str]`, optional
         To bucket inputs into batches, we want to group the instances by padding length, so that we
@@ -67,18 +61,14 @@ class BucketBatchSampler(BatchSampler):
 
     def __init__(
         self,
-        data_source: data.Dataset,
         batch_size: int,
         sorting_keys: List[str] = None,
         padding_noise: float = 0.1,
         drop_last: bool = False,
     ):
-
-        self.vocab = data_source.vocab
         self.sorting_keys = sorting_keys
         self.padding_noise = padding_noise
         self.batch_size = batch_size
-        self.data_source = data_source
         self.drop_last = drop_last
 
     def _argsort_by_padding(
@@ -115,8 +105,8 @@ class BucketBatchSampler(BatchSampler):
             [instance_with_index[0][1] for instance_with_index in with_indices],
         )
 
-    def __iter__(self) -> Iterable[List[int]]:
-        indices, _ = self._argsort_by_padding(self.data_source)
+    def get_batch_indices(self, instances: Sequence[Instance]) -> Iterable[List[int]]:
+        indices, _ = self._argsort_by_padding(instances)
         batches = []
         for group in lazy_groups_of(indices, self.batch_size):
             batch_indices = list(group)
@@ -144,7 +134,6 @@ class BucketBatchSampler(BatchSampler):
         max_length = 0.0
         longest_field: str = None
         for i, instance in enumerate(instances):
-            instance.index_fields(self.vocab)
             for field_name, field in instance.fields.items():
                 length = len(field)
                 if length > max_length:
@@ -163,8 +152,8 @@ class BucketBatchSampler(BatchSampler):
             )
         self.sorting_keys = [longest_field]
 
-    def __len__(self):
-        batch_count_float = len(self.data_source) / self.batch_size
+    def get_num_batches(self, instances: Sequence[Instance]) -> int:
+        batch_count_float = len(instances) / self.batch_size
         if self.drop_last:
             return math.floor(batch_count_float)
         else:

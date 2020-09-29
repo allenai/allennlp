@@ -6,7 +6,7 @@ from tensorboardX import SummaryWriter
 import torch
 
 from allennlp.common.from_params import FromParams
-from allennlp.data.dataloader import TensorDict
+from allennlp.data import TensorDict
 from allennlp.nn import util as nn_util
 from allennlp.training.optimizers import Optimizer
 from allennlp.training import util as training_util

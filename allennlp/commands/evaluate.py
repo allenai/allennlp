@@ -130,9 +130,18 @@ def evaluate_from_args(args: argparse.Namespace) -> Dict[str, Any]:
         dataset_reader = DatasetReader.from_params(validation_dataset_reader_params)
     else:
         dataset_reader = DatasetReader.from_params(config.pop("dataset_reader"))
+
     evaluation_data_path = args.input_file
     logger.info("Reading evaluation data from %s", evaluation_data_path)
-    instances = dataset_reader.read(evaluation_data_path)
+
+    data_loader_params = config.pop("validation_data_loader", None)
+    if data_loader_params is None:
+        data_loader_params = config.pop("data_loader")
+    if args.batch_size:
+        data_loader_params["batch_size"] = args.batch_size
+    data_loader = DataLoader.from_params(
+        params=data_loader_params, reader=dataset_reader, data_path=evaluation_data_path
+    )
 
     embedding_sources = (
         json.loads(args.embedding_sources_mapping) if args.embedding_sources_mapping else {}
@@ -140,16 +149,10 @@ def evaluate_from_args(args: argparse.Namespace) -> Dict[str, Any]:
 
     if args.extend_vocab:
         logger.info("Vocabulary is being extended with test instances.")
-        model.vocab.extend_from_instances(instances=instances)
+        model.vocab.extend_from_instances(instances=data_loader.iter_instances())
         model.extend_embedder_vocab(embedding_sources)
 
-    instances.index_with(model.vocab)
-    data_loader_params = config.pop("validation_data_loader", None)
-    if data_loader_params is None:
-        data_loader_params = config.pop("data_loader")
-    if args.batch_size:
-        data_loader_params["batch_size"] = args.batch_size
-    data_loader = DataLoader.from_params(dataset=instances, params=data_loader_params)
+    data_loader.index_with(model.vocab)
 
     metrics = evaluate(model, data_loader, args.cuda_device, args.batch_weight_key)
 

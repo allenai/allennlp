@@ -8,7 +8,6 @@ from allennlp.common.registrable import Registrable
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.common.util import push_python_path
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
-from allennlp.data.samplers import Sampler, BatchSampler
 from allennlp.data.token_indexers.token_indexer import TokenIndexer
 from allennlp.data.tokenizers.tokenizer import Tokenizer
 from allennlp.modules.text_field_embedders.text_field_embedder import TextFieldEmbedder
@@ -69,13 +68,6 @@ class TestRegistrable(AllenNlpTestCase):
         assert base_class.by_name("fake") == FakeAlternate
 
         del Registrable._registry[base_class]["fake"]
-
-    # TODO(mattg): maybe move all of these into tests for the base class?
-
-    def test_registry_has_builtin_samplers(self):
-        assert Sampler.by_name("random").__name__ == "RandomSampler"
-        assert Sampler.by_name("sequential").__name__ == "SequentialSampler"
-        assert BatchSampler.by_name("bucket").__name__ == "BucketBatchSampler"
 
     def test_registry_has_builtin_tokenizers(self):
         assert Tokenizer.by_name("spacy").__name__ == "SpacyTokenizer"

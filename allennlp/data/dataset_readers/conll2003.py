@@ -88,7 +88,9 @@ class Conll2003DatasetReader(DatasetReader):
         label_namespace: str = "labels",
         **kwargs,
     ) -> None:
-        super().__init__(**kwargs)
+        super().__init__(
+            manual_distributed_sharding=True, manual_multi_process_sharding=True, **kwargs
+        )
         self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
         if tag_label is not None and tag_label not in self._VALID_LABELS:
             raise ConfigurationError("unknown tag label type: {}".format(tag_label))
@@ -112,19 +114,23 @@ class Conll2003DatasetReader(DatasetReader):
         with open(file_path, "r") as data_file:
             logger.info("Reading instances from lines in file at: %s", file_path)
 
-            # Group into alternative divider / sentence chunks.
-            for is_divider, lines in itertools.groupby(data_file, _is_divider):
+            # Group lines into sentence chunks based on the divider.
+            line_chunks = (
+                lines
+                for is_divider, lines in itertools.groupby(data_file, _is_divider)
                 # Ignore the divider chunks, so that `lines` corresponds to the words
                 # of a single sentence.
-                if not is_divider:
-                    fields = [line.strip().split() for line in lines]
-                    # unzipping trick returns tuples, but our Fields need lists
-                    fields = [list(field) for field in zip(*fields)]
-                    tokens_, pos_tags, chunk_tags, ner_tags = fields
-                    # TextField requires `Token` objects
-                    tokens = [Token(token) for token in tokens_]
+                if not is_divider
+            )
+            for lines in self.shard_iterable(line_chunks):
+                fields = [line.strip().split() for line in lines]
+                # unzipping trick returns tuples, but our Fields need lists
+                fields = [list(field) for field in zip(*fields)]
+                tokens_, pos_tags, chunk_tags, ner_tags = fields
+                # TextField requires `Token` objects
+                tokens = [Token(token) for token in tokens_]
 
-                    yield self.text_to_instance(tokens, pos_tags, chunk_tags, ner_tags)
+                yield self.text_to_instance(tokens, pos_tags, chunk_tags, ner_tags)
 
     def text_to_instance(  # type: ignore
         self,
@@ -137,7 +143,7 @@ class Conll2003DatasetReader(DatasetReader):
         We take `pre-tokenized` input here, because we don't have a tokenizer in this class.
         """
 
-        sequence = TextField(tokens, self._token_indexers)
+        sequence = TextField(tokens)
         instance_fields: Dict[str, Field] = {"tokens": sequence}
         instance_fields["metadata"] = MetadataField({"words": [x.text for x in tokens]})
 
@@ -192,3 +198,7 @@ class Conll2003DatasetReader(DatasetReader):
             )
 
         return Instance(instance_fields)
+
+    @overrides
+    def apply_token_indexers(self, instance: Instance) -> None:
+        instance.fields["tokens"]._token_indexers = self._token_indexers  # type: ignore

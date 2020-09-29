@@ -7,22 +7,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Added
+
+- Added the ability to ignore certain missing keys when loading a model from an archive. This is done
+  by adding a class-level variable called `authorized_missing_keys` to any PyTorch module that a `Model` uses.
+  If defined, `authorized_missing_keys` should be a list of regex string patterns.
+- Added `FBetaMultiLabelMeasure`, a multi-label Fbeta metric. This is a subclass of the existing `FBetaMeasure`.
+- A `MultiTaskModel` and abstractions to use with it, including `Backbone` and `Head`.  The
+  `MultiTaskModel` first runs its inputs through the `Backbone`, then passes the result (and
+whatever other relevant inputs it got) to each `Head` that's in use.  This is intended for
+multi-task learning, but so far it is incomplete, as there are no corresponding dataset readers or
+data loaders.  Those are coming soon.
+- A new high-performance default `DataLoader`: `MultiProcessDataLoading`.
+
+
+### Changed
+
+- `transformers` dependency updated to version 3.1.0.
+- `DatasetReader`s are now always lazy. This means there is no `lazy` parameter in the base
+  class, and the `_read()` method should always be a generator.
+- The `DataLoader` now decides whether to load instances lazily or not.
+  With the `PyTorchDataLoader` this is controlled with the `lazy` parameter, but with
+  the `MultiProcessDataLoading` this is controlled by the `max_instances_in_memory` setting.
+
+### Fixed
+
+- Ignore *args when constructing classes with `FromParams`.
+- Ensured some consistency in the types of the values that metrics return
+
+## [v1.1.0](https://github.com/allenai/allennlp/releases/tag/v1.1.0) - 2020-09-08
+
 ### Fixed
 
 - Fixed handling of some edge cases when constructing classes with `FromParams` where the class
   accepts `**kwargs`.
 - Fixed division by zero error when there are zero-length spans in the input to a
   `PretrainedTransformerMismatchedIndexer`.
+- Improved robustness of `cached_path` when extracting archives so that the cache won't be corrupted
+  if a failure occurs during extraction.
+- Fixed a bug with the `average` and `evalb_bracketing_score` metrics in distributed training.
 
 ### Added
 
-- `Predictor.capture_model_internals()` now accepts a regex specifying
-  which modules to capture
-- A `MultiTaskModel` and abstractions to use with it, including `Backbone` and `Head`.  The
-  `MultiTaskModel` first runs its inputs through the `Backbone`, then passes the result (and
-whatever other relevant inputs it got) to each `Head` that's in use.  This is intended for
-multi-task learning, but so far it is incomplete, as there are no corresponding dataset readers or
-data loaders.  Those are coming soon.
+- `Predictor.capture_model_internals()` now accepts a regex specifying which modules to capture
 
 
 ## [v1.1.0rc4](https://github.com/allenai/allennlp/releases/tag/v1.1.0rc4) - 2020-08-20
