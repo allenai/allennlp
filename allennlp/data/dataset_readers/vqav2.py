@@ -447,12 +447,11 @@ class VQAv2Reader(DatasetReader):
             raise ConfigurationError("Expected a string or a list for the dataset reader.")
 
         annotations_by_question_id = {}
-        if len(split.annotations) != 0:
-            for annotation_path in split.annotations:
-                with open(cached_path(annotation_path, extract_archive=True)) as f:
-                    annotations = json.load(f)
-                    for a in annotations["annotations"]:
-                        annotations_by_question_id[a["question_id"]] = a
+        for annotation_path in split.annotations:
+            with open(cached_path(annotation_path, extract_archive=True)) as f:
+                annotations = json.load(f)
+                for a in annotations["annotations"]:
+                    annotations_by_question_id[a["question_id"]] = a
 
         questions = []
         for question_path in split.questions:
