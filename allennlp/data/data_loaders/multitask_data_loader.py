@@ -25,7 +25,6 @@ class MultiTaskDataLoader(DataLoader):
         batch_size_multiplier: Dict[str, int] = None,
         batches_per_epoch: int = None,
         drop_last: bool = False,
-        shuffle: Dict[str, bool] = None,
         num_workers: Dict[str, int] = None,
         max_instances_in_memory: Dict[str, int] = None,
         start_method: Dict[str, str] = None,
@@ -41,7 +40,6 @@ class MultiTaskDataLoader(DataLoader):
         self._batch_size_multiplier = batch_size_multiplier or defaultdict(lambda: 1)
         self._drop_last = drop_last
 
-        self._shuffle = shuffle or {}
         self._num_workers = num_workers or {}
         self._max_instances_in_memory = max_instances_in_memory or {}
         self._start_method = start_method or {}
@@ -107,8 +105,6 @@ class MultiTaskDataLoader(DataLoader):
         kwargs["reader"] = self.readers[key]
         kwargs["data_path"] = self.data_paths[key]
         kwargs["batch_size"] = 1
-        if key in self._shuffle:
-            kwargs["shuffle"] = self._shuffle[key]
         if key in self._num_workers:
             kwargs["num_workers"] = self._num_workers[key]
         if key in self._max_instances_in_memory:
