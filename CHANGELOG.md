@@ -5,7 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## Unreleased (2.0 branch)
+
+### Added
+
+- A new high-performance default `DataLoader`: `MultiProcessDataLoading`.
+- A `MultiTaskModel` and abstractions to use with it, including `Backbone` and `Head`.  The
+  `MultiTaskModel` first runs its inputs through the `Backbone`, then passes the result (and
+whatever other relevant inputs it got) to each `Head` that's in use.  This is intended for
+multi-task learning, but so far it is incomplete, as there are no corresponding dataset readers or
+data loaders.  Those are coming soon.
+
+### Changed
+
+- `DatasetReader`s are now always lazy. This means there is no `lazy` parameter in the base
+  class, and the `_read()` method should always be a generator.
+- The `DataLoader` now decides whether to load instances lazily or not.
+  With the `PyTorchDataLoader` this is controlled with the `lazy` parameter, but with
+  the `MultiProcessDataLoading` this is controlled by the `max_instances_in_memory` setting.
+
+
+## Unreleased (1.x branch)
 
 ### Added
 
@@ -13,22 +33,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   by adding a class-level variable called `authorized_missing_keys` to any PyTorch module that a `Model` uses.
   If defined, `authorized_missing_keys` should be a list of regex string patterns.
 - Added `FBetaMultiLabelMeasure`, a multi-label Fbeta metric. This is a subclass of the existing `FBetaMeasure`.
-- A `MultiTaskModel` and abstractions to use with it, including `Backbone` and `Head`.  The
-  `MultiTaskModel` first runs its inputs through the `Backbone`, then passes the result (and
-whatever other relevant inputs it got) to each `Head` that's in use.  This is intended for
-multi-task learning, but so far it is incomplete, as there are no corresponding dataset readers or
-data loaders.  Those are coming soon.
-- A new high-performance default `DataLoader`: `MultiProcessDataLoading`.
-
 
 ### Changed
 
 - `transformers` dependency updated to version 3.1.0.
-- `DatasetReader`s are now always lazy. This means there is no `lazy` parameter in the base
-  class, and the `_read()` method should always be a generator.
-- The `DataLoader` now decides whether to load instances lazily or not.
-  With the `PyTorchDataLoader` this is controlled with the `lazy` parameter, but with
-  the `MultiProcessDataLoading` this is controlled by the `max_instances_in_memory` setting.
 
 ### Fixed
 
