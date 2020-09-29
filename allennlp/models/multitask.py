@@ -174,6 +174,8 @@ class MultiTaskModel(Model):
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
         metrics = {}
         for head_name in self._heads:
+            if self._active_heads is not None and head_name not in self._active_heads:
+                continue
             for key, value in self._heads[head_name].get_metrics(reset).items():
                 metrics[f"{head_name}_{key}"] = value
         return metrics
