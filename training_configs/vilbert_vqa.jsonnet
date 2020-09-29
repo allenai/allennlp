@@ -74,7 +74,11 @@ local model_name = "bert-base-uncased";
   "trainer": {
     "optimizer": {
       "type": "huggingface_adamw",
-      "lr": 0.00005
+      "lr": 4e-5
+    },
+    "learning_rate_scheduler": {
+      "type": "linear_with_warmup",
+      "warmup_steps": 300000 / 30
     },
     "validation_metric": "+denotation_acc",
     "num_epochs": 20
