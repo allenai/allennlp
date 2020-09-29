@@ -105,7 +105,7 @@ class MultiTaskModel(Model):
         If you want to limit which heads are run during evaluation, or if the inference for which
         task to run during training is incorrect (e.g., if your head has multiple optional
         arguments, and only some are actually required to compute a loss), then you can use this
-        method to override our inference and force the use of whatever set of hads you want.
+        method to override our inference and force the use of whatever set of heads you want.
 
         To get back to the default mode of operation, call this method with `None` as an argument.
         """
