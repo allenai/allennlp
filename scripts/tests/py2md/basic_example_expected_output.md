@@ -150,3 +150,20 @@ class AnotherClassWithReallyLongConstructor:
  | ) -> None
 ```
 
+<a name=".scripts.tests.py2md.basic_example.ClassWithDecorator"></a>
+## ClassWithDecorator
+
+```python
+@dataclass
+class ClassWithDecorator
+```
+
+<a name=".scripts.tests.py2md.basic_example.ClassWithDecorator.x"></a>
+### x
+
+```python
+class ClassWithDecorator:
+ | ...
+ | x: int = None
+```
+
