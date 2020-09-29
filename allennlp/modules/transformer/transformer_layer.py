@@ -65,16 +65,19 @@ class TransformerLayer(TransformerModule, FromParams):
         pretrained_module: torch.nn.Module,
         source="huggingface",
         mapping: Optional[Dict[str, str]] = None,
+        **kwargs,
     ):
         submodules = cls._get_mapped_submodules(pretrained_module, source, mapping)
 
-        kwargs = {}
+        final_kwargs = {}
 
-        kwargs["hidden_size"] = submodules["attention.self.query"].in_features
-        kwargs["num_attention_heads"] = submodules["attention.self"].num_attention_heads
-        kwargs["attention_dropout"] = submodules["attention.self.dropout"].p
-        kwargs["hidden_dropout"] = submodules["attention.output.dropout"].p
-        kwargs["intermediate_size"] = submodules["intermediate.dense"].out_features
-        kwargs["activation"] = submodules["intermediate"].intermediate_act_fn
+        final_kwargs["hidden_size"] = submodules["attention.self.query"].in_features
+        final_kwargs["num_attention_heads"] = submodules["attention.self"].num_attention_heads
+        final_kwargs["attention_dropout"] = submodules["attention.self.dropout"].p
+        final_kwargs["hidden_dropout"] = submodules["attention.output.dropout"].p
+        final_kwargs["intermediate_size"] = submodules["intermediate.dense"].out_features
+        final_kwargs["activation"] = submodules["intermediate"].intermediate_act_fn
 
-        return kwargs
+        final_kwargs.update(**kwargs)
+
+        return final_kwargs

@@ -24,6 +24,7 @@ class TransformerEncoder(TransformerModule, FromParams):
         activation: Union[str, torch.nn.Module],
     ):
         super().__init__()
+        self._hidden_size = hidden_size
         layer = TransformerLayer(
             hidden_size,
             intermediate_size,
@@ -44,26 +45,26 @@ class TransformerEncoder(TransformerModule, FromParams):
         output_attentions=False,
         output_hidden_states=False,
     ):
-        # FIX: forward doesn't work yet!
+        # FIX: forward doesn't work generally enough yet!
         all_hidden_states = () if output_hidden_states else None
         all_attentions = () if output_attentions else None
         for i, layer_module in enumerate(self.layers):
             if output_hidden_states:
                 all_hidden_states = all_hidden_states + (hidden_states,)
 
-            layer_head_mask = head_mask[i] if head_mask is not None else None
+            # layer_head_mask = head_mask[i] if head_mask is not None else None
 
-            layer_outputs = layer_module(
+            hidden_states = layer_module(
                 hidden_states,
-                attention_mask,
-                layer_head_mask,
-                encoder_hidden_states,
-                encoder_attention_mask,
-                output_attentions,
+                attention_mask=0.0,
+                # layer_head_mask,
+                # encoder_hidden_states,
+                # encoder_attention_mask,
+                # output_attentions,
             )
-            hidden_states = layer_outputs[0]
-            if output_attentions:
-                all_attentions = all_attentions + (layer_outputs[1],)
+            # hidden_states = layer_outputs[0]
+            # if output_attentions:
+            #    all_attentions = all_attentions + (layer_outputs[1],)
 
         if output_hidden_states:
             all_hidden_states = all_hidden_states + (hidden_states,)
@@ -76,18 +77,23 @@ class TransformerEncoder(TransformerModule, FromParams):
         pretrained_module: torch.nn.Module,
         source="huggingface",
         mapping: Optional[Dict[str, str]] = None,
+        **kwargs,
     ):
         submodules = cls._get_mapped_submodules(pretrained_module, source, mapping)
 
-        kwargs = {}
+        final_kwargs = {}
 
-        kwargs["num_hidden_layers"] = len(submodules["layers"])
+        final_kwargs["num_hidden_layers"] = len(submodules["layers"])
 
-        kwargs["hidden_size"] = submodules["layers.0.attention.self.query"].in_features
-        kwargs["num_attention_heads"] = submodules["layers.0.attention.self"].num_attention_heads
-        kwargs["attention_dropout"] = submodules["layers.0.attention.self.dropout"].p
-        kwargs["hidden_dropout"] = submodules["layers.0.attention.output.dropout"].p
-        kwargs["intermediate_size"] = submodules["layers.0.intermediate.dense"].out_features
-        kwargs["activation"] = submodules["layers.0.intermediate"].intermediate_act_fn
+        final_kwargs["hidden_size"] = submodules["layers.0.attention.self.query"].in_features
+        final_kwargs["num_attention_heads"] = submodules[
+            "layers.0.attention.self"
+        ].num_attention_heads
+        final_kwargs["attention_dropout"] = submodules["layers.0.attention.self.dropout"].p
+        final_kwargs["hidden_dropout"] = submodules["layers.0.attention.output.dropout"].p
+        final_kwargs["intermediate_size"] = submodules["layers.0.intermediate.dense"].out_features
+        final_kwargs["activation"] = submodules["layers.0.intermediate"].intermediate_act_fn
 
-        return kwargs
+        final_kwargs.update(**kwargs)
+
+        return final_kwargs

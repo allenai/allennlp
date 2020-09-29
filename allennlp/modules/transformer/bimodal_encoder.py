@@ -212,24 +212,29 @@ class BiModalEncoder(TransformerModule, FromParams):
         pretrained_module: torch.nn.Module,
         source="huggingface",
         mapping: Optional[Dict[str, str]] = None,
+        **kwargs,
     ):
         """
         The `pretrained_module` only supplies one of the modalities.
         """
         submodules = cls._get_mapped_submodules(pretrained_module, source, mapping)
 
-        kwargs = {}
+        final_kwargs = {}
 
-        kwargs["num_hidden_layers1"] = len(submodules["layers1"])
+        final_kwargs["num_hidden_layers1"] = len(submodules["layers1"])
 
-        kwargs["hidden_size1"] = submodules["layers1.0.attention.self.query"].in_features
-        kwargs["num_attention_heads"] = submodules["layers1.0.attention.self"].num_attention_heads
-        kwargs["attention_dropout1"] = submodules["layers1.0.attention.self.dropout"].p
-        kwargs["hidden_dropout1"] = submodules["layers1.0.attention.output.dropout"].p
-        kwargs["intermediate_size1"] = submodules["layers1.0.intermediate.dense"].out_features
-        kwargs["activation"] = submodules["layers1.0.intermediate"].intermediate_act_fn
+        final_kwargs["hidden_size1"] = submodules["layers1.0.attention.self.query"].in_features
+        final_kwargs["num_attention_heads"] = submodules[
+            "layers1.0.attention.self"
+        ].num_attention_heads
+        final_kwargs["attention_dropout1"] = submodules["layers1.0.attention.self.dropout"].p
+        final_kwargs["hidden_dropout1"] = submodules["layers1.0.attention.output.dropout"].p
+        final_kwargs["intermediate_size1"] = submodules["layers1.0.intermediate.dense"].out_features
+        final_kwargs["activation"] = submodules["layers1.0.intermediate"].intermediate_act_fn
 
-        return kwargs
+        final_kwargs.update(**kwargs)
+
+        return final_kwargs
 
     def _load_from_pretrained_module(
         self,

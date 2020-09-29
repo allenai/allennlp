@@ -6,12 +6,16 @@ import torch
 class TransformerModule(torch.nn.Module):
     """
     Base class to help with generalized loading of pretrained weights.
+
+    `_huggingface_mapping` is an optional mapping for each class, that determines
+    any differences in the module names between the class modules and the huggingface model's
+    modules.
     """
 
     _huggingface_mapping: Dict[str, str] = {}
 
     def __init__(self, *args, **kwargs):
-        super().__init__()
+        super().__init__(*args, **kwargs)
 
     @classmethod
     def _get_mapped_submodules(
@@ -88,8 +92,13 @@ class TransformerModule(torch.nn.Module):
         pretrained_module: torch.nn.Module,
         source="huggingface",
         mapping: Optional[Dict[str, str]] = None,
+        **kwargs,
     ):
-        return NotImplementedError
+        """
+        Constructs the arguments required for instantiating an object of this class, using
+        the values from `pretrained_module`.
+        """
+        return kwargs
 
     @classmethod
     def from_pretrained_module(
@@ -99,6 +108,10 @@ class TransformerModule(torch.nn.Module):
         mapping: Optional[Dict[str, str]] = None,
         **kwargs,
     ):
+        """
+        Creates and returns an instance of the class, by using the weights
+        (and the architecture, by default) of the `pretrained_module`.
+        """
         final_kwargs = cls._get_input_arguments(pretrained_module, source, mapping)
         final_kwargs.update(kwargs)
         module = cls(**final_kwargs)

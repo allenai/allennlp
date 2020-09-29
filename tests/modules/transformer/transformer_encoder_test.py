@@ -1,5 +1,7 @@
 import copy
 
+import torch
+
 from allennlp.common import Params
 from allennlp.common.testing import assert_equal_parameters
 from allennlp.modules.transformer import TransformerEncoder
@@ -33,8 +35,8 @@ class TestTransformerEncoder(AllenNlpTestCase):
         modules = dict(self.transformer_encoder.named_modules())
         assert len(modules["layers"]) == self.params_dict["num_hidden_layers"]
 
-    # def test_forward_runs(self):
-    #     self.transformer_encoder.forward(torch.randn(2, 3, 6), torch.randn(2, 2, 3, 3))
+    def test_forward_runs(self):
+        self.transformer_encoder.forward(torch.randn(2, 3, 6), torch.randn(2, 2, 3, 3))
 
     def test_loading_from_pretrained_weights(self):
         pretrained_module = self.pretrained.encoder
