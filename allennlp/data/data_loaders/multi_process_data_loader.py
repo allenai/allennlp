@@ -356,7 +356,9 @@ class MultiProcessDataLoader(DataLoader):
                 instance_iterator = shuffle_iterable(
                     instance_iterator, self.max_instances_in_memory
                 )
-            instance_chunks = lazy_groups_of(instance_iterator, self.max_instances_in_memory)
+            instance_chunks: Iterable[List[Instance]] = lazy_groups_of(
+                instance_iterator, self.max_instances_in_memory
+            )
         else:
             instance_chunks = [list(instance_iterator)]
             if self.shuffle:

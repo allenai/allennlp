@@ -1,4 +1,4 @@
-from typing import Any, Dict
+from typing import Any, Dict, Mapping
 
 from allennlp.common.registrable import Registrable
 from allennlp.data.data_loaders.data_loader import DataLoader
@@ -14,7 +14,7 @@ class MultiTaskEpochSampler(Registrable):
     `Callback` during training.
     """
 
-    def get_task_proportions(self, data_loaders: Dict[str, DataLoader]) -> Dict[str, float]:
+    def get_task_proportions(self, data_loaders: Mapping[str, DataLoader]) -> Dict[str, float]:
         """
         Given a dictionary of `DataLoaders` for each dataset, returns what percentage of the
         instances for the current epoch of training should come from each dataset.  The input

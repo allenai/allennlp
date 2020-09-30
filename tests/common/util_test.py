@@ -139,6 +139,7 @@ class TestCommonUtils(AllenNlpTestCase):
     def test_cycle_iterator_function(self):
         global cycle_iterator_function_calls
         cycle_iterator_function_calls = 0
+
         def one_and_two():
             global cycle_iterator_function_calls
             cycle_iterator_function_calls += 1

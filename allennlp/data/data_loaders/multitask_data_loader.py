@@ -1,12 +1,13 @@
-from typing import Any, Dict, Iterator
+from typing import Any, Dict, Iterable, Iterator, List
 import itertools
 import math
 
 from allennlp.common import util
 from allennlp.data.batch import Batch
-from allennlp.data.data_loaders.data_loader import DataLoader, TensorDict, allennlp_collate
+from allennlp.data.data_loaders.data_loader import DataLoader, TensorDict
 from allennlp.data.data_loaders.multi_process_data_loader import MultiProcessDataLoader
 from allennlp.data.data_loaders.multitask_scheduler import MultiTaskScheduler
+from allennlp.data.data_loaders.multitask_epoch_sampler import MultiTaskEpochSampler
 from allennlp.data.dataset_readers.multitask import MultiTaskDatasetReader
 from allennlp.data.instance import Instance
 from allennlp.data.vocabulary import Vocabulary
@@ -99,6 +100,7 @@ class MultiTaskDataLoader(DataLoader):
         self.readers = reader.readers
         self.data_paths = data_path
         self.scheduler = scheduler
+        self.sampler = sampler
 
         self._batch_size = batch_size
         self._instances_per_epoch = instances_per_epoch
@@ -167,9 +169,9 @@ class MultiTaskDataLoader(DataLoader):
         # Finally, we take that combined list and yield `batch_size` batches from it.
         epoch_instances = self._get_instances_for_epoch()
         scheduled_instances = self.scheduler.order_epoch_instances(epoch_instances)
-        batch_instances = []
+        batch_instances: List[Instance] = []
         current_batch_size = 0
-        for dataset, instance in scheduled_instances.items():
+        for dataset, instance in scheduled_instances:
             current_batch_size += self._batch_size_multiplier.get(dataset, 1)
             if current_batch_size > self._batch_size:
                 batch = Batch(batch_instances)
@@ -204,10 +206,13 @@ class MultiTaskDataLoader(DataLoader):
         for loader in self._loaders.values():
             loader.index_with(vocab)
 
-    def _get_instances_for_epoch(self) -> Dict[str, Iterator[Instance]]:
+    def _get_instances_for_epoch(self) -> Dict[str, Iterable[Instance]]:
         if self._instances_per_epoch is None:
-            return {key: iter(loader) for key, loader in self._loaders}
-        dataset_proportions = self.scheduler.get_task_proportions()
+            return {
+                key: util.shuffle_iterable(loader.iter_instances())
+                for key, loader in self._loaders.items()
+            }
+        dataset_proportions = self.sampler.get_task_proportions(self._loaders)
         num_instances_per_dataset = {
             key: math.floor(proportion * self._instances_per_epoch)
             for key, proportion in dataset_proportions.items()

@@ -1,6 +1,7 @@
-from typing import Any, Dict, Iterator, Tuple
+from typing import Any, Dict, Iterable, Tuple
 
 from allennlp.common.registrable import Registrable
+from allennlp.data.instance import Instance
 
 
 class MultiTaskScheduler(Registrable):
@@ -15,11 +16,11 @@ class MultiTaskScheduler(Registrable):
     """
 
     def order_epoch_instances(
-        self, epoch_instances: Dict[str, Iterator[Instance]]
-    ) -> Iterator[Tuple[str, Instance]]:
+        self, epoch_instances: Dict[str, Iterable[Instance]]
+    ) -> Iterable[Tuple[str, Instance]]:
         """
-        Given a dictionary of `Iterator[Instance]` for each dataset, combines them into a single
-        `Iterator`, where the values returned by that iterator are (dataset, instance) tuples.
+        Given a dictionary of `Iterable[Instance]` for each dataset, combines them into a single
+        `Iterable`, where the values returned by that iterator are (dataset, instance) tuples.
         """
         raise NotImplementedError
 

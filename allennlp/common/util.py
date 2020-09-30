@@ -638,7 +638,7 @@ def format_size(size: int) -> str:
     return f"{size}B"
 
 
-def shuffle_iterable(i: Iterable, pool_size: int = 1024) -> Iterable:
+def shuffle_iterable(i: Iterable[T], pool_size: int = 1024) -> Iterable[T]:
     import random
 
     i = iter(i)
@@ -665,7 +665,7 @@ def shuffle_iterable(i: Iterable, pool_size: int = 1024) -> Iterable:
     yield from pool
 
 
-def cycle_iterator_function(iterator_function: Callable[[], Iterator[T]]) -> Iterator[T]:
+def cycle_iterator_function(iterator_function: Callable[[], Iterable[T]]) -> Iterator[T]:
     """
     Functionally equivalent to `itertools.cycle(iterator_function())`, but this function does not
     cache the result of calling the iterator like `cycle` does.  Instead, we just call
