@@ -554,7 +554,7 @@ class BertEncoder(torch.nn.Module, FromParams):
 
         # TODO(mattg): this is brittle and will only work for particular transformer models.  But,
         # it's the best we can do for now, I think.
-        num_attention_heads = config.num_attention_heads
+        text_num_attention_heads = config.num_attention_heads
         text_num_hidden_layers = config.num_hidden_layers
         text_hidden_size = config.hidden_size
         text_intermediate_size = config.intermediate_size
@@ -568,11 +568,11 @@ class BertEncoder(torch.nn.Module, FromParams):
             text_hidden_size=text_hidden_size,
             image_hidden_size=image_hidden_size,
             combined_hidden_size=combined_hidden_size,
-            image_num_attenton_heads=image_num_attenton_heads,
+            image_num_attention_heads=image_num_attenton_heads,
             combined_num_attention_heads=combined_num_attention_heads,
             text_intermediate_size=text_intermediate_size,
             image_intermediate_size=image_intermediate_size,
-            num_attention_heads=num_attention_heads,
+            text_num_attention_heads=text_num_attention_heads,
             text_attention_dropout=text_attention_dropout,
             text_hidden_dropout=text_hidden_dropout,
             image_attention_dropout=image_attention_dropout,
