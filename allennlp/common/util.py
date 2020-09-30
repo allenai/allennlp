@@ -663,3 +663,19 @@ def shuffle_iterable(i: Iterable, pool_size: int = 1024) -> Iterable:
     # drain it
     random.shuffle(pool)
     yield from pool
+
+
+def cycle_iterator_function(iterator_function: Callable[[], Iterator[T]]) -> Iterator[T]:
+    """
+    Functionally equivalent to `itertools.cycle(iterator_function())`, but this function does not
+    cache the result of calling the iterator like `cycle` does.  Instead, we just call
+    `iterator_function()` again whenever we get a `StopIteration`.  This should only be preferred
+    over `itertools.cycle` in cases where you're sure you don't want the caching behavior that's
+    done in `itertools.cycle`.
+    """
+    iterator = iter(iterator_function())
+    while True:
+        try:
+            yield next(iterator)
+        except StopIteration:
+            iterator = iter(iterator_function())
