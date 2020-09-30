@@ -5,6 +5,8 @@ And this is a multi-line line: [http://example.com]
 (https://example.com/blah/blah/blah.html).
 """
 
+from dataclasses import dataclass
+
 SOME_GLOBAL_VAR = "Ahhhh I'm a global var!!"
 """
 This is a global var.
@@ -116,6 +118,11 @@ class AnotherClassWithReallyLongConstructor:
         self.b = another_long_name
         self.c = these_variable_names_are_terrible
         self.other = kwargs
+
+
+@dataclass
+class ClassWithDecorator:
+    x: int
 
 
 class _PrivateClass:
