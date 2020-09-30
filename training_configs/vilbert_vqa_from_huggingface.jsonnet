@@ -53,7 +53,7 @@ local model_name = "bert-base-uncased";
       "type": "linear_with_warmup",
       "warmup_steps": 300000 / 30
     },
-    "validation_metric": "+denotation_acc",
+    "validation_metric": "+fscore",
     "num_epochs": 20,
   },
 }
