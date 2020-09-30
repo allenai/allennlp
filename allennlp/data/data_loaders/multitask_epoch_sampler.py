@@ -32,3 +32,36 @@ class MultiTaskEpochSampler(Registrable):
         to implement this method.
         """
         raise NotImplementedError
+
+
+@MultiTaskEpochSampler.register("uniform")
+class UniformSampler(MultiTaskEpochSampler):
+    """
+    Returns a uniform distribution over datasets at every epoch.
+
+    Registered as a `MultiTaskEpochSampler` with name "uniform".
+    """
+
+    def get_task_proportions(self, data_loaders: Mapping[str, DataLoader]) -> Dict[str, float]:
+        return {key: 1 / len(data_loaders) for key in data_loaders}
+
+
+@MultiTaskEpochSampler.register("proportional")
+class ProportionalSampler(MultiTaskEpochSampler):
+    """
+    Samples from every dataset according to its size.  This will have essentially the same effect as
+    using all of the data at every epoch, but it lets you control for number of instances per epoch,
+    if you want to do that.  This requires that all data loaders have a `__len__` (which means no
+    lazy loading).  If you need this functionality with lazy loading, implement your own sampler
+    that takes dataset sizes as a constructor parameter.
+
+    Registered as a `MultiTaskEpochSampler` with name "proportional".
+    """
+
+    def get_task_proportions(self, data_loaders: Mapping[str, DataLoader]) -> Dict[str, float]:
+        try:
+            sizes = {key: len(loader) for key, loader in data_loaders.items()}
+        except TypeError:
+            raise ValueError("ProportionalSampler got passed a data loader without a length")
+        total_size = sum(sizes.values())
+        return {key: size / total_size for key, size in sizes.items()}
