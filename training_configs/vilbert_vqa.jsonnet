@@ -68,8 +68,7 @@ local model_name = "bert-base-uncased";
   },
   "data_loader": {
     "batch_size": 32,
-    "shuffle": true,
-    "max_instances_in_memory": 1024
+    "shuffle": true
   },
   "trainer": {
     "optimizer": {
