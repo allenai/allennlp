@@ -2,11 +2,10 @@ import copy
 import torch
 
 from allennlp.common import Params
+from allennlp.common import cached_transformers
 from allennlp.common.testing import assert_equal_parameters
 from allennlp.modules.transformer import AttentionLayer, TransformerLayer
 from allennlp.common.testing import AllenNlpTestCase
-
-from transformers.modeling_auto import AutoModel
 
 
 class TestAttentionLayer(AllenNlpTestCase):
@@ -69,7 +68,7 @@ class TestTransformerLayer(AllenNlpTestCase):
         params = Params(copy.deepcopy(self.params_dict))
 
         self.transformer_layer = TransformerLayer.from_params(params)
-        self.pretrained = AutoModel.from_pretrained("bert-base-uncased")
+        self.pretrained = cached_transformers.get("bert-base-uncased", False)
 
     def test_can_construct_from_params(self):
 

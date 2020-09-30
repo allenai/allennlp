@@ -1,5 +1,4 @@
-from transformers.modeling_auto import AutoModel
-
+from allennlp.common import cached_transformers
 from allennlp.common.testing import ModelTestCase
 from allennlp.models.vilbert import Nlvr2Vilbert
 
@@ -39,7 +38,7 @@ class TestVilbert(ModelTestCase):
             name = name.replace("LayerNorm", "layer_norm")
             return name
 
-        transformer = AutoModel.from_pretrained(model_name)
+        transformer = cached_transformers.get(model_name, False)
         model_parameters = dict(model.named_parameters())
         transformer_parameters = dict(transformer.named_parameters())
 

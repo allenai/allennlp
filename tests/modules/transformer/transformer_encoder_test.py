@@ -3,11 +3,10 @@ import copy
 import torch
 
 from allennlp.common import Params
+from allennlp.common import cached_transformers
 from allennlp.common.testing import assert_equal_parameters
 from allennlp.modules.transformer import TransformerEncoder
 from allennlp.common.testing import AllenNlpTestCase
-
-from transformers.modeling_auto import AutoModel
 
 
 class TestTransformerEncoder(AllenNlpTestCase):
@@ -28,7 +27,7 @@ class TestTransformerEncoder(AllenNlpTestCase):
 
         self.transformer_encoder = TransformerEncoder.from_params(params)
 
-        self.pretrained = AutoModel.from_pretrained("bert-base-uncased")
+        self.pretrained = cached_transformers.get("bert-base-uncased", False)
 
     def test_can_construct_from_params(self):
 
