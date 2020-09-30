@@ -1,5 +1,6 @@
 import glob
-from collections import defaultdict
+import logging
+from collections import Counter
 from os import PathLike
 from typing import (
     Dict,
@@ -26,7 +27,7 @@ import torch.distributed as dist
 from allennlp.common import util
 from allennlp.common.checks import check_for_gpu, ConfigurationError
 from allennlp.common.util import int_to_device
-from allennlp.common.file_utils import cached_path, TensorCache
+from allennlp.common.file_utils import cached_path, TensorCache, text_lines_from_file
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.fields import ArrayField, LabelField, ListField, TextField
 from allennlp.data.image_loader import ImageLoader
@@ -38,6 +39,7 @@ from allennlp.data.tokenizers import Tokenizer
 from allennlp.modules.vision.grid_embedder import GridEmbedder
 from allennlp.modules.vision.region_detector import RegionDetector
 
+logger = logging.getLogger(__name__)
 
 contractions = {
     "aint": "ain't",
@@ -280,6 +282,7 @@ class VQAv2Reader(DatasetReader):
         image_featurizer: GridEmbedder,
         region_detector: RegionDetector,
         *,
+        answer_vocab: Union[str, List[str]] = "https://storage.googleapis.com/allennlp-public-data/vqav2/answers.txt",
         feature_cache_dir: Optional[Union[str, PathLike]] = None,
         tokenizer: Tokenizer = None,
         token_indexers: Dict[str, TokenIndexer] = None,
@@ -287,7 +290,6 @@ class VQAv2Reader(DatasetReader):
         max_instances: Optional[int] = None,
         image_processing_batch_size: int = 8,
         skip_image_feature_extraction: bool = False,
-        create_answer_vocab: bool = False,
     ) -> None:
         super().__init__(
             max_instances=max_instances,
@@ -307,17 +309,23 @@ class VQAv2Reader(DatasetReader):
         self.cuda_device = int_to_device(cuda_device)
     
         # tokenizers and indexers
-        if not tokenizer:
+        if tokenizer is None:
             tokenizer = PretrainedTransformerTokenizer("bert-base-uncased")
         self._tokenizer = tokenizer
         if token_indexers is None:
             token_indexers = {"tokens": PretrainedTransformerIndexer("bert-base-uncased")}
         self._token_indexers = token_indexers
 
+        # read answer vocab
+        if isinstance(answer_vocab, str):
+            answer_vocab = cached_path(answer_vocab)
+            self.answer_vocab = text_lines_from_file(answer_vocab)
+        else:
+            self.answer_vocab = answer_vocab
+        self.answer_vocab = frozenset(preprocess_answer(a) for a in self.answer_vocab)
+
         self.skip_image_feature_extraction = skip_image_feature_extraction
-        self.create_answer_vocab = create_answer_vocab
         if not skip_image_feature_extraction:
-            
             self.images = {
                 os.path.basename(filename): filename
                 for filename in tqdm(
@@ -474,15 +482,24 @@ class VQAv2Reader(DatasetReader):
         else:
             processed_images = [None for i in range(len(question_dicts))]
 
+        attempted_instances_count = 0
+        failed_instances_count = 0
         for question_dict, processed_image in zip(question_dicts, processed_images):
             answers = annotations_by_question_id.get(question_dict["question_id"])
-            gt_answers = None
-            multiple_choice_answer = None
             if answers is not None:
-                gt_answers = answers["answers"]
-                multiple_choice_answer = answers["multiple_choice_answer"]
-            
-            yield self.text_to_instance(question_dict["question"], processed_image, gt_answers, multiple_choice_answer)
+                answers = answers["answers"]
+
+            instance = self.text_to_instance(question_dict["question"], processed_image, answers)
+            attempted_instances_count += 1
+            if instance is None:
+                failed_instances_count += 1
+            else:
+                yield instance
+
+            if attempted_instances_count % 2000 == 0:
+                failed_instances_fraction = failed_instances_count / attempted_instances_count
+                if failed_instances_fraction > 0.1:
+                    logger.warning(f"{failed_instances_fraction*100:.0f}% of instances have no answers.")
 
     def _process_image_paths(
         self, image_paths: Iterable[str], *, use_cache: bool = True
@@ -549,10 +566,9 @@ class VQAv2Reader(DatasetReader):
         question: str,
         image: Union[str, Tuple[Tensor, Tensor]],
         answers: List[Dict[str, str]] = None,
-        multiple_choice_answer: str = None,
         *,
         use_cache: bool = True,
-    ) -> Instance:
+    ) -> Optional[Instance]:
         tokenized_question = self._tokenizer.tokenize(question)
         question_field = TextField(tokenized_question, None)
         fields = {
@@ -571,23 +587,20 @@ class VQAv2Reader(DatasetReader):
         if answers:
             answer_fields = []
             weights = []
-            answer_counts: MutableMapping[str, int] = defaultdict(int)
-            
-            if self.create_answer_vocab:
-                answers = [{"answer": multiple_choice_answer}]
+            answer_counts = Counter()
 
             for answer in answers:
                 answer = preprocess_answer(answer["answer"])
                 answer_counts[answer] += 1
 
             for answer, count in answer_counts.items():
-                # Using a namespace other than "labels" so that OOV answers don't crash.  We'll have
-                # to mask OOV labels in the loss.  This is not ideal; it'd be better to remove OOV
-                # answers from the training data entirely, but we can't do that in our current
-                # pipeline without providing preprocessed input to the dataset reader. 
-                answer_fields.append(LabelField(answer, label_namespace="answers"))
-                weights.append(get_score(count))
-            
+                if answer in self.answer_vocab:
+                    answer_fields.append(LabelField(answer, label_namespace="answers"))
+                    weights.append(get_score(count))
+
+            if len(answer_fields) <= 0:
+                return None
+
             fields["labels"] = ListField(answer_fields)
             fields["label_weights"] = ArrayField(torch.tensor(weights))
 
