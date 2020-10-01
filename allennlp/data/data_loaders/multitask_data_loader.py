@@ -16,6 +16,22 @@ from allennlp.data.vocabulary import Vocabulary
 @DataLoader.register("multitask")
 class MultiTaskDataLoader(DataLoader):
     """
+    A `DataLoader` intended for multi-task learning.  The basic idea is that you use a
+    `MultiTaskDatasetReader`, which takes a dictionary of `DatasetReaders`, keyed by some name.  You
+    use those same names for various parameters here, including the data paths that get passed to
+    each reader.  We will load each dataset and iterate over instances in them using a
+    `MultiTaskEpochSampler` and a `MultiTaskScheduler`.  The `EpochSampler` says how much to use
+    from each dataset at each epoch, and the `Scheduler` orders the instances in the epoch however
+    you want.  Both of these are designed to be used in conjunction with trainer `Callbacks`, if
+    desired, to have the sampling and/or scheduling behavior be dependent on the current state of
+    training.
+
+    While it is not necessarily required, this `DatasetReader` was designed to be used alongisde a
+    `MultiTaskModel`, which can handle instances coming from different datasets.  If your datasets
+    are similar enough (say, they are all reading comprehension datasets with the same format), or
+    your model is flexible enough, then you could feasibly use this `DataLoader` with a normal,
+    non-multitask `Model`.
+
     Registered as a `DataLoader` with name "multitask".
 
     # Parameters
