@@ -137,7 +137,13 @@ class MultiTaskDataLoader(DataLoader):
             # iterator, and it will call the lambda function each time it runs out of instances,
             # which will produce a new shuffling of the dataset.
             key: util.cycle_iterator_function(
-                lambda: util.shuffle_iterable(loader.iter_instances())
+                # This default argument to the lambda function is necessary to create a new scope
+                # for the loader variable, so a _different_ loader gets saved for every iterator.
+                # Dictionary comprehensions don't create new scopes in python.  If you don't have
+                # this loader, you end up with `loader` always referring to the last loader in the
+                # iteration...  mypy also doesn't know what to do with this, for some reason I can't
+                # figure out.
+                lambda l=loader: util.shuffle_iterable(l.iter_instances())  # type: ignore
             )
             for key, loader in self._loaders.items()
         }
@@ -178,6 +184,8 @@ class MultiTaskDataLoader(DataLoader):
                 yield batch.as_tensor_dict()
                 batch_instances = [instance]
                 current_batch_size = self._batch_size_multiplier.get(dataset, 1)
+            else:
+                batch_instances.append(instance)
 
         # Based on how we yield batches above, we are guaranteed to always have leftover instances,
         # so we don't need a check for that here.

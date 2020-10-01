@@ -1,4 +1,5 @@
 from collections import defaultdict
+import itertools
 from typing import Any, Dict, Iterable, Tuple, Union
 
 import more_itertools
@@ -49,7 +50,10 @@ class RoundRobinScheduler(MultiTaskScheduler):
     def order_epoch_instances(
         self, epoch_instances: Dict[str, Iterable[Instance]]
     ) -> Iterable[Tuple[str, Instance]]:
-        iterators = list(epoch_instances.values())
+        iterators = [
+            zip(itertools.cycle([dataset]), iterator)
+            for dataset, iterator in epoch_instances.items()
+        ]
         return more_itertools.roundrobin(*iterators)
 
 
@@ -91,7 +95,7 @@ class HomogeneousRoundRobinScheduler(MultiTaskScheduler):
         self, epoch_instances: Dict[str, Iterable[Instance]]
     ) -> Iterable[Tuple[str, Instance]]:
         grouped_iterators = [
-            util.lazy_groups_of(iterator, self.batch_size[dataset])
+            util.lazy_groups_of(zip(itertools.cycle([dataset]), iterator), self.batch_size[dataset])
             for dataset, iterator in epoch_instances.items()
         ]
         batch_iterator = more_itertools.roundrobin(*grouped_iterators)
