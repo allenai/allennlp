@@ -62,17 +62,11 @@ class DeepspeedConfig(FromParams):
         self.wall_clock_breakdown = wall_clock_breakdown
 
     @staticmethod
-    def build_deepspeed_args(deepspeed_config_path: str, local_rank: int = 0):
-        from argparse import ArgumentParser, Namespace
-        parser = ArgumentParser()
-        parser.add_argument('--local_rank', type=int, default=local_rank)
-        parser = deepspeed.add_config_arguments(parser)
+    def build_deepspeed_args(local_rank: int = 0):
+        from argparse import Namespace
 
-        args, _ = parser.parse_known_args()
-        arg_dict = vars(args)
-
-        arg_dict.update(dict(deepspeed_config=deepspeed_config_path, deepspeed=True, local_rank=local_rank))
-        return Namespace(**arg_dict)
+        args = dict(deepspeed_config=deepspeed_config_path, deepspeed=True, local_rank=local_rank)
+        return Namespace(**args)
 
     @property
     def config(self):
@@ -84,15 +78,6 @@ class DeepspeedConfig(FromParams):
         # }
         return vars(self)
 
-    def _to_temp_file(self, serialization_dir, **kwargs):
-        fd, path = tempfile.mkstemp(dir=serialization_dir)
-        
-        config = {**self.config, **kwargs}
-        with os.fdopen(fd, 'w') as f:
-            f.write(json.dumps(config))
-
-        return path
-
     def launch(
         self,
         model: torch.nn.Module,
@@ -103,16 +88,18 @@ class DeepspeedConfig(FromParams):
         gradient_accumulation_steps: int,
         **kwargs
     ):
-        path = self._to_temp_file(serialization_dir, train_batch_size=batch_size, gradient_accumulation_steps=gradient_accumulation_steps)
+        path = ''
+        config = dict(**self.config, train_batch_size=batch_size, gradient_accumulation_steps=gradient_accumulation_steps)
         ds = deepspeed.initialize(
             args=self.build_deepspeed_args(path, local_rank),
             model=model,
             model_parameters=model.parameters(),
             dist_init_required=False,
+            config_params=config,
             **kwargs
         )
 
-        os.remove(path)
+        # os.remove(path)
         return ds
 
 @Trainer.register("deepspeed", constructor="from_partial_objects")
@@ -711,6 +698,7 @@ class DeepspeedTrainer(Trainer):
         model: Model,
         serialization_dir: str,
         data_loader: DataLoader,
+        deepspeed_config: DeepspeedConfig,
         validation_data_loader: DataLoader = None,
         local_rank: int = 0,
         patience: int = None,
@@ -727,7 +715,6 @@ class DeepspeedTrainer(Trainer):
         checkpointer: Lazy[Checkpointer] = None,
         batch_callbacks: List[BatchCallback] = None,
         epoch_callbacks: List[EpochCallback] = None,
-        deepspeed_config: DeepspeedConfig = None
     ) -> "Trainer":
         """
         This method exists so that we can have a documented method to construct this class using
