@@ -9,7 +9,7 @@ import pkgutil
 import random
 import subprocess
 import sys
-from contextlib import contextmanager
+from contextlib import contextmanager, closing
 from itertools import islice, zip_longest
 from pathlib import Path
 from typing import (
@@ -617,3 +617,24 @@ def sanitize_ptb_tokenized_string(text: str) -> str:
             new_tokens.append(tokens[i])
 
     return " ".join(new_tokens)
+
+
+def find_open_port(
+    port_range: Tuple[int, int] = (29500, 29600), host: str = "127.0.0.1"
+) -> Optional[int]:
+    """
+    Find an open port within the given range (inclusive on start port, exclusive on the
+    end port).
+
+    Returns the first open port within the range given, if one can be found.
+    Otherwise returns `None`.
+    """
+    import socket
+
+    for port in range(*port_range):
+        with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as sock:
+            if sock.connect_ex((host, port)) == 0:
+                return port
+            else:
+                continue
+    return None

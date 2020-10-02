@@ -257,7 +257,11 @@ def train_model(
         check_for_gpu(device_ids)
 
         master_addr = distributed_params.pop("master_address", "127.0.0.1")
-        master_port = distributed_params.pop("master_port", 29500)
+        master_port = distributed_params.pop(
+            "master_port", common_util.find_open_port(host=master_addr)
+        )
+        if master_port is None:
+            raise RuntimeError("Could not find an open port to use")
         num_procs = len(device_ids)
         world_size = num_nodes * num_procs
 
