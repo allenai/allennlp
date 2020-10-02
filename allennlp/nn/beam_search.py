@@ -4,6 +4,9 @@ import warnings
 import torch
 
 from allennlp.common.checks import ConfigurationError
+from allennlp.nn.samplers.sampler import Sampler
+from allennlp.nn.samplers.samplers import TopKSampler
+from allennlp.nn.samplers.samplers import TopPSampler
 
 StateType = Dict[str, torch.Tensor]
 StepFunctionType = Callable[[torch.Tensor, StateType, int], Tuple[torch.Tensor, StateType]]
@@ -73,7 +76,8 @@ class BeamSearch:
 
     @torch.no_grad()
     def search(
-        self, start_predictions: torch.Tensor, start_state: StateType, step: StepFunctionType
+        self, start_predictions: torch.Tensor, start_state: StateType, step: StepFunctionType, 
+        sampler: Sampler = None
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Given a starting state and a step function, apply beam search to find the
@@ -166,10 +170,17 @@ class BeamSearch:
                 f"Please decrease beam_size or per_node_beam_size."
             )
 
-        # shape: (batch_size, beam_size), (batch_size, beam_size)
-        start_top_log_probabilities, start_predicted_classes = start_class_log_probabilities.topk(
-            self.beam_size
-        )
+        '''
+        Need to get (instead of top)
+        '''
+        if sampler is not None:
+            start_top_log_probabilities, start_predicted_classes = sampler(start_class_log_probabilities)   
+        else:
+            # shape: (batch_size, beam_size), (batch_size, beam_size)
+            start_top_log_probabilities, start_predicted_classes = start_class_log_probabilities.topk(
+                self.beam_size
+            )
+
         if self.beam_size == 1 and (start_predicted_classes == self._end_index).all():
             warnings.warn(
                 "Empty sequences predicted. You may want to increase the beam size or ensure "
@@ -248,10 +259,14 @@ class BeamSearch:
                 class_log_probabilities,
             )
 
+
             # shape (both): (batch_size * beam_size, per_node_beam_size)
-            top_log_probabilities, predicted_classes = cleaned_log_probabilities.topk(
-                self.per_node_beam_size
-            )
+            if sampler is not None:
+                top_log_probabilities, predicted_classes = sampler(cleaned_log_probabilities)   
+            else:
+                top_log_probabilities, predicted_classes = cleaned_log_probabilities.topk(
+                    self.per_node_beam_size
+                )
 
             # Here we expand the last log probabilities to (batch_size * beam_size, per_node_beam_size)
             # so that we can add them to the current log probs for this timestep.
@@ -354,3 +369,139 @@ class BeamSearch:
         all_predictions = torch.cat(list(reversed(reconstructed_predictions)), 2)
 
         return all_predictions, last_log_probabilities
+
+    @classmethod
+    def top_k_sampling(
+        cls, 
+        end_index: int,
+        start_predictions: torch.Tensor, 
+        start_state: StateType, 
+        step: StepFunctionType,
+        max_steps: int = 50,
+        beam_size: int = 10,
+        k: int = 1, 
+        temperature: float = 1.0,
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        """
+        Given an initial state, step function, and index of the end token in target vocabulary,
+        apply beam search to find `beam_size` candidate sequences, found by sampling from
+        tokens which cumulatively make up the top `p` of the total tokens to choose from.
+
+        # Parameters
+
+        end_index : `int`
+            The index of the "stop" or "end" token in the target vocabulary.
+        start_predictions : `torch.Tensor`
+            A tensor containing the initial predictions with shape `(batch_size,)`.
+            Usually the initial predictions are just the index of the "start" token
+            in the target vocabulary.
+        start_state : `StateType`
+            The initial state passed to the `step` function. Each value of the state dict
+            should be a tensor of shape `(batch_size, *)`, where `*` means any other
+            number of dimensions.
+        step : `StepFunctionType`
+            A function that is responsible for computing the next most likely tokens,
+            given the current state and the predictions from the last time step.
+            The function should accept two arguments. The first being a tensor
+            of shape `(group_size,)`, representing the index of the predicted
+            tokens from the last time step, and the second being the current state.
+            The `group_size` will be `batch_size * beam_size`, except in the initial
+            step, for which it will just be `batch_size`.
+            The function is expected to return a tuple, where the first element
+            is a tensor of shape `(group_size, target_vocab_size)` containing
+            the log probabilities of the tokens for the next step, and the second
+            element is the updated state. The tensor in the state should have shape
+            `(group_size, *)`, where `*` means any other number of dimensions.
+        max_steps : `int`, optional (default = `50`)
+            The maximum number of decoding steps to take, i.e. the maximum length
+            of the predicted sequences.
+        beam_size : `int`, optional (default = `10`)
+            The width of the beam used.
+        k : `int`, optional (default = `1`)
+            The number of top next tokens to select from.
+        temperature : `float`, optional (default = 1.0)
+            The 'temperature' of the probability distribution to be sampled
+            from, lowering below 1.0 creates a sharper distribution.
+
+        # Returns
+
+        `Tuple[torch.Tensor, torch.Tensor]`
+            Tuple of `(predictions, log_probabilities)`, where `predictions`
+            has shape `(batch_size, beam_size, max_steps)` and `log_probabilities`
+            has shape `(batch_size, beam_size)`.
+        """
+        sampler_k = TopKSampler(k, temperature)
+        return cls(
+            end_index = end_index,
+            max_steps = max_steps,
+            beam_size = beam_size,
+            per_node_beam_size = 1,
+        ).search(start_predictions, start_state, step, sampler_k)
+
+    @classmethod
+    def top_p_sampling(
+        cls, 
+        end_index: int,
+        start_predictions: torch.Tensor, 
+        start_state: StateType, 
+        step: StepFunctionType,
+        max_steps: int = 50,
+        beam_size: int = 10,
+        p: float = 0.9, 
+        temperature: float = 1.0,
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        """
+        Given an initial state, step function, and index of the end token in target vocabulary,
+        apply beam search to find `beam_size` candidate sequences, found by sampling from
+        tokens which cumulatively make up the top `p` of the total tokens to choose from.
+
+        # Parameters
+
+        end_index : `int`
+            The index of the "stop" or "end" token in the target vocabulary.
+        start_predictions : `torch.Tensor`
+            A tensor containing the initial predictions with shape `(batch_size,)`.
+            Usually the initial predictions are just the index of the "start" token
+            in the target vocabulary.
+        start_state : `StateType`
+            The initial state passed to the `step` function. Each value of the state dict
+            should be a tensor of shape `(batch_size, *)`, where `*` means any other
+            number of dimensions.
+        step : `StepFunctionType`
+            A function that is responsible for computing the next most likely tokens,
+            given the current state and the predictions from the last time step.
+            The function should accept two arguments. The first being a tensor
+            of shape `(group_size,)`, representing the index of the predicted
+            tokens from the last time step, and the second being the current state.
+            The `group_size` will be `batch_size * beam_size`, except in the initial
+            step, for which it will just be `batch_size`.
+            The function is expected to return a tuple, where the first element
+            is a tensor of shape `(group_size, target_vocab_size)` containing
+            the log probabilities of the tokens for the next step, and the second
+            element is the updated state. The tensor in the state should have shape
+            `(group_size, *)`, where `*` means any other number of dimensions.
+        max_steps : `int`, optional (default = `50`)
+            The maximum number of decoding steps to take, i.e. the maximum length
+            of the predicted sequences.
+        beam_size : `int`, optional (default = `10`)
+            The width of the beam used.
+        p : `float`, optional (default = `0.9`)
+            The cumulative probability of top next tokens to select from.
+        temperature : `float`, optional (default = 1.0)
+            The 'temperature' of the probability distribution to be sampled
+            from, lowering below 1.0 creates a sharper distribution.
+
+        # Returns
+
+        `Tuple[torch.Tensor, torch.Tensor]`
+            Tuple of `(predictions, log_probabilities)`, where `predictions`
+            has shape `(batch_size, beam_size, max_steps)` and `log_probabilities`
+            has shape `(batch_size, beam_size)`.
+        """
+        sampler_p = TopPSampler(p, temperature)
+        return cls(
+            end_index = end_index,
+            max_steps = max_steps,
+            beam_size = beam_size,
+            per_node_beam_size = 1,
+        ).search(start_predictions, start_state, step, sampler_p)
