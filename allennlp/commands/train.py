@@ -260,8 +260,6 @@ def train_model(
         master_port = distributed_params.pop(
             "master_port", common_util.find_open_port(host=master_addr)
         )
-        if master_port is None:
-            raise RuntimeError("Could not find an open port to use")
         num_procs = len(device_ids)
         world_size = num_nodes * num_procs
 
