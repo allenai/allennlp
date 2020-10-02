@@ -619,14 +619,14 @@ def sanitize_ptb_tokenized_string(text: str) -> str:
     return " ".join(new_tokens)
 
 
-def find_open_port(host: str = "127.0.0.1") -> int:
+def find_open_port() -> int:
     """
-    Find a random open port on the given host.
+    Find a random open port on local host.
     """
     import socket
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
         # Passes 0 means find any open port.
         # See https://stackoverflow.com/questions/1365265/on-localhost-how-do-i-pick-a-free-port-number
-        sock.bind((host, 0))
+        sock.bind(("", 0))
         return sock.getsockname()[1]

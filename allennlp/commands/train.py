@@ -257,9 +257,14 @@ def train_model(
         check_for_gpu(device_ids)
 
         master_addr = distributed_params.pop("master_address", "127.0.0.1")
-        master_port = distributed_params.pop(
-            "master_port", common_util.find_open_port(host=master_addr)
-        )
+        if master_addr in ("127.0.0.1", "0.0.0.0", "localhost"):
+            # If just running locally, we can automatically find an open port if one is not
+            # specified.
+            master_port = distributed_params.pop("master_port", common_util.find_open_port())
+        else:
+            # Otherwise we require that the port be specified.
+            master_port = distributed_params.pop("master_port")
+
         num_procs = len(device_ids)
         world_size = num_nodes * num_procs
 
