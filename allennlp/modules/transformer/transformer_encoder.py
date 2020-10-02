@@ -45,26 +45,25 @@ class TransformerEncoder(TransformerModule, FromParams):
         output_attentions=False,
         output_hidden_states=False,
     ):
-        # FIX: forward doesn't work generally enough yet!
         all_hidden_states = () if output_hidden_states else None
         all_attentions = () if output_attentions else None
         for i, layer_module in enumerate(self.layers):
             if output_hidden_states:
                 all_hidden_states = all_hidden_states + (hidden_states,)
 
-            # layer_head_mask = head_mask[i] if head_mask is not None else None
+            layer_head_mask = head_mask[i] if head_mask is not None else None
 
-            hidden_states = layer_module(
+            layer_outputs = layer_module(
                 hidden_states,
-                attention_mask=0.0,
-                # layer_head_mask,
-                # encoder_hidden_states,
-                # encoder_attention_mask,
-                # output_attentions,
+                0.0,
+                layer_head_mask,
+                encoder_hidden_states,
+                encoder_attention_mask,
+                output_attentions,
             )
-            # hidden_states = layer_outputs[0]
-            # if output_attentions:
-            #    all_attentions = all_attentions + (layer_outputs[1],)
+            hidden_states = layer_outputs[0]
+            if output_attentions:
+                all_attentions = all_attentions + (layer_outputs[1],)
 
         if output_hidden_states:
             all_hidden_states = all_hidden_states + (hidden_states,)

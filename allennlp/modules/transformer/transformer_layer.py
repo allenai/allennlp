@@ -23,10 +23,26 @@ class AttentionLayer(TransformerModule, FromParams):
         self.self = SelfAttention(hidden_size, num_attention_heads, attention_dropout)
         self.output = OutputLayer(hidden_size, hidden_size, hidden_dropout)
 
-    def forward(self, input_tensor, attention_mask):
-        self_output = self.self(input_tensor, attention_mask)
-        attention_output = self.output(self_output, input_tensor)
-        return attention_output
+    def forward(
+        self,
+        input_tensor: torch.Tensor,
+        attention_mask: torch.Tensor,
+        head_mask: Optional[torch.Tensor] = None,
+        encoder_hidden_states: Optional[torch.Tensor] = None,
+        encoder_attention_mask: Optional[torch.Tensor] = None,
+        output_attentions: bool = False,
+    ):
+        self_output = self.self(
+            input_tensor,
+            attention_mask,
+            head_mask,
+            encoder_hidden_states,
+            encoder_attention_mask,
+            output_attentions,
+        )
+        attention_output = self.output(self_output[0], input_tensor)
+        outputs = (attention_output,) + self_output[1:]  # add attentions if we output them
+        return outputs
 
 
 class TransformerLayer(TransformerModule, FromParams):
@@ -53,11 +69,30 @@ class TransformerLayer(TransformerModule, FromParams):
             input_size=intermediate_size, hidden_size=hidden_size, dropout=hidden_dropout
         )
 
-    def forward(self, hidden_states: torch.Tensor, attention_mask: torch.Tensor):
-        attention_output = self.attention(hidden_states, attention_mask)
+    def forward(
+        self,
+        hidden_states: torch.Tensor,
+        attention_mask: torch.Tensor,
+        head_mask: Optional[torch.Tensor] = None,
+        encoder_hidden_states: Optional[torch.Tensor] = None,
+        encoder_attention_mask: Optional[torch.Tensor] = None,
+        output_attentions: bool = False,
+    ):
+        attention_outputs = self.attention(
+            hidden_states,
+            attention_mask,
+            head_mask,
+            encoder_hidden_states,
+            encoder_attention_mask,
+            output_attentions,
+        )
+        attention_output = attention_outputs[0]
+        outputs = attention_outputs[1:]  # add self attentions if we output attention weights
+
         intermediate_output = self.intermediate(attention_output)
         layer_output = self.output(intermediate_output, attention_output)
-        return layer_output
+        outputs = (layer_output,) + outputs
+        return outputs
 
     @classmethod
     def _get_input_arguments(

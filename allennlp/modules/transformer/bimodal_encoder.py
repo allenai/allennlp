@@ -111,19 +111,19 @@ class BiModalEncoder(TransformerModule, FromParams):
 
             for idx in range(start1, self.fixed_layer1):
                 with torch.no_grad():
-                    embedding1 = self.layers1[idx](embedding1, attention_mask1)
+                    embedding1 = self.layers1[idx](embedding1, attention_mask1)[0]
                     start1 = self.fixed_layer1
 
             for idx in range(start1, end1):
-                embedding1 = self.layers1[idx](embedding1, attention_mask1)
+                embedding1 = self.layers1[idx](embedding1, attention_mask1)[0]
 
             for idx in range(start2, self.fixed_layer2):
                 with torch.no_grad():
-                    embedding2 = self.layers2[idx](embedding2, attention_mask2)
+                    embedding2 = self.layers2[idx](embedding2, attention_mask2)[0]
                     start2 = self.fixed_layer2
 
             for idx in range(start2, end2):
-                embedding2 = self.layers2[idx](embedding2, attention_mask2)
+                embedding2 = self.layers2[idx](embedding2, attention_mask2)[0]
 
             if count == 0 and self.in_batch_pairs:
                 # new batch size is the batch_size ^2
@@ -191,10 +191,10 @@ class BiModalEncoder(TransformerModule, FromParams):
                 all_encoder_layers2.append(embedding2)
 
         for idx in range(start2, len(self.layers2)):
-            embedding2 = self.layers2[idx](embedding2, attention_mask2)
+            embedding2 = self.layers2[idx](embedding2, attention_mask2)[0]
 
         for idx in range(start1, len(self.layers1)):
-            embedding1 = self.layers1[idx](embedding1, attention_mask1)
+            embedding1 = self.layers1[idx](embedding1, attention_mask1)[0]
 
         # add the end part to finish.
         if not output_all_encoded_layers:
