@@ -95,7 +95,7 @@ class CategoricalAccuracy(Metric):
             correct *= mask.view(-1, 1)
             _total_count = mask.sum()
         else:
-            _total_count = torch.tensor(gold_labels.numel())
+            _total_count = torch.tensor(gold_labels.numel(), device=gold_labels.device)
         _correct_count = correct.sum()
 
         if is_distributed():
