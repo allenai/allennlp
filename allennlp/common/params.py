@@ -383,12 +383,6 @@ class Params(MutableMapping):
                 else:
                     logger.info(f"{history}{key} = {value}")
 
-        logger.info(
-            "Converting Params object to dict; logging of default "
-            "values will not occur when dictionary parameters are "
-            "used subsequently."
-        )
-        logger.info("CURRENTLY DEFINED PARAMETERS: ")
         log_recursively(self.params, self.history)
         return params_as_dict
 
