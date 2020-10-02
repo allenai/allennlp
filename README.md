@@ -49,7 +49,7 @@ created a couple of template repositories that you can use as a starting place:
 * If you'd prefer to use python code to configure your experiments and run your training loop, use
   [this template](https://github.com/allenai/allennlp-template-python-script). There are a few
   things that are currently a little harder in this setup (loading a saved model, and using
-  distributed training), but except for those its functionality is equivalent to the config files
+  distributed training), but otherwise it's functionality equivalent to the config files
   setup.
 
 In addition, there are external tutorials:
