@@ -53,6 +53,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   if the "href" part of the link (the part inside the `()`) was on a new line.
 - Changed how gradients are zeroed out with an optimization. See [this video from NVIDIA](https://www.youtube.com/watch?v=9mS1fIYj1So)
   at around the 9 minute mark.
+- Fixed a bug where parameters to a `FromParams` class that are dictionaries wouldn't get logged
+  when an instance is instantiated `from_params`.
 
 
 ## [v1.1.0](https://github.com/allenai/allennlp/releases/tag/v1.1.0) - 2020-09-08
