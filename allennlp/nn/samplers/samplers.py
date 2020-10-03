@@ -41,7 +41,7 @@ class TopKSampler(Sampler):
     def __call__(self, logits: torch.Tensor, k: int = 1) -> torch.Tensor:
         min_threshold = torch.topk(logits, k)[0][..., -1]
         filtered_indices = logits < min_threshold
-        logits[filtered_indices] = filter_val
+        logits[..., filtered_indices] = filter_val
 
         filtered_probabilites = torch.nn.functional.softmax(filtered_logits_descending, dim=-1)
         return torch.multinomial(filtered_probabilites, 1)
