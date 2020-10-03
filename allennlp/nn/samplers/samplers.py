@@ -81,17 +81,15 @@ class TopPSampler(Sampler):
         probabilities_summed = torch.cumsum(probabilities_descending, dim=-1)
 
         # When the cumulative sum reaches p, replace all remaining with `filter_val`
-        filtered_indices = probabilities_summed < self.p
+        filtered_indices = probabilities_summed >= self.p
+
         # We want to include the firt index where probabilities_summes >= p, so we shift over one
         filtered_indices[..., 1:] = filtered_indices[..., :-1].clone()
         filtered_indices[..., 0] = 0
 
         # Here we set the filtered indices in the original logits to be the filter value
-        logits[sorting_indices[filtered_indices]] = self.filter_val
-        #filtered_logits_descending = torch.where(filtered_indices, self.filter_val, logits_descending)
-        
+        logits[..., sorting_indices[filtered_indices]] = self.filter_val
 
         filtered_probabilites = torch.nn.functional.softmax(logits, dim=-1)
-        print(filtered_probabilites)
 
         return torch.multinomial(filtered_probabilites, 1)
