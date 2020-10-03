@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 
 @Model.register("nlvr2_vilbert")
-@Model.register("nlvr2_vilbert_from_huggingface", constructor="from_huggingface_model_name")
+@Model.register("nlvr2_vilbert_from_huggingface", constructor="from_pretrained_module")
 class Nlvr2Vilbert(Model, TransformerModule):
     """
     Model for the NLVR2 task based on the LXMERT paper (Tan et al. 2019).

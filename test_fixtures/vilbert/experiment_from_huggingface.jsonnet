@@ -20,7 +20,7 @@ local model_name = "bert-base-uncased";
   "validation_data_path": "train",
   "model": {
     "type": "nlvr2_vilbert_from_huggingface",
-    "model_name": model_name,
+    "pretrained_module": model_name,
     "image_feature_dim": 2048,
     "image_hidden_size": 24,
     "image_num_hidden_layers": 12,
