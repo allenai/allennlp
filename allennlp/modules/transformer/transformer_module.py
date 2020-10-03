@@ -1,6 +1,12 @@
-from typing import Optional, Dict
+from typing import Optional, Dict, Union
+import logging
+import inspect
 
 import torch
+
+from allennlp.common import cached_transformers
+
+logger = logging.getLogger(__name__)
 
 
 class TransformerModule(torch.nn.Module):
@@ -10,9 +16,13 @@ class TransformerModule(torch.nn.Module):
     `_huggingface_mapping` is an optional mapping for each class, that determines
     any differences in the module names between the class modules and the huggingface model's
     modules.
+
+    `_relevant_module` is an optional str which is the expected name of the module in
+    the huggingface pretrained model.
     """
 
     _huggingface_mapping: Dict[str, str] = {}
+    _relevant_module: str = ""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -30,10 +40,11 @@ class TransformerModule(torch.nn.Module):
                 mapping = cls._huggingface_mapping
             else:
                 mapping = {}
-        inverse_mapping = {val: key for key, val in mapping.items()}
+        # inverse_mapping = {val: key for key, val in mapping.items()}
         for name, module in pretrained_module.named_modules():
             newname = name
-            for key, val in inverse_mapping.items():
+            # for key, val in inverse_mapping.items():
+            for key, val in mapping.items():
                 newname = newname.replace(key, val)
             submodules[newname] = submodules.pop(name)
         return submodules
@@ -50,10 +61,11 @@ class TransformerModule(torch.nn.Module):
         for name, module in self.named_modules():
             if name != "":
                 if hasattr(module, "_construct_default_mapping"):
-                    # module._construct_default_mapping(source)
-                    mapping.update(
-                        module._construct_default_mapping(source)
-                    )  # FIX: can potentially cause collisions.
+                    # We handle collisions by giving priority to the outer module's mapping.
+                    mapping = dict(
+                        list(module._construct_default_mapping(source).items())
+                        + list(mapping.items())
+                    )
         # self._default_mapping = mapping
         return mapping
 
@@ -70,12 +82,12 @@ class TransformerModule(torch.nn.Module):
         """
         if mapping is None:
             mapping = self._construct_default_mapping(source)
-            # mapping = self._default_mapping
 
+        inverse_mapping = {val: key for key, val in mapping.items()}
         pretrained_parameters = dict(pretrained_module.named_parameters())
         for name, parameter in self.named_parameters():
             pretrained_name = name
-            for key, val in mapping.items():
+            for key, val in inverse_mapping.items():
                 # so that we replace the names of submodules too.
                 # eg. module.key.anothermodule --> module.val.anothermodule
                 pretrained_name = pretrained_name.replace(key, val)
@@ -101,9 +113,49 @@ class TransformerModule(torch.nn.Module):
         return kwargs
 
     @classmethod
+    def get_relevant_module(
+        cls,
+        pretrained_module: Union[str, torch.nn.Module],
+        relevant_module: Optional[str] = None,
+        source="huggingface",
+        mapping: Optional[Dict[str, str]] = None,
+    ):
+        """
+        Returns the relevant underlying module given a model name/object.
+
+        # Parameters:
+
+        pretrained_module: Name of the transformer model, or the actual object.
+        relevant_module: Name of the desired module. Defaults to cls._relevant_module.
+        source: Where the model came from. Default - huggingface.
+        mapping: Optional mapping that determines any differences in the module names
+        between the class modules and the input model's modules. Default - cls._huggingface_mapping
+        """
+        # if it's not str, we assume that it's the actual module,
+        # and not the model containing the module.
+        if isinstance(pretrained_module, str):
+            pretrained_module = cached_transformers.get(pretrained_module, False)
+
+        relevant_module = relevant_module or cls._relevant_module
+
+        if relevant_module != "":
+            submodules = cls._get_mapped_submodules(pretrained_module, source, mapping)
+            # If the relevant_module is not found, we assume that the pretrained_module
+            # is already the relevant module.
+            if relevant_module in submodules:
+                pretrained_module = submodules[relevant_module]
+            else:
+                logger.warning(
+                    "{} was not found! The submodules are: {}".format(
+                        relevant_module, submodules.keys()
+                    )
+                )
+        return pretrained_module
+
+    @classmethod
     def from_pretrained_module(
         cls,
-        pretrained_module: torch.nn.Module,
+        pretrained_module: Union[str, torch.nn.Module],
         source="huggingface",
         mapping: Optional[Dict[str, str]] = None,
         **kwargs,
@@ -111,7 +163,19 @@ class TransformerModule(torch.nn.Module):
         """
         Creates and returns an instance of the class, by using the weights
         (and the architecture, by default) of the `pretrained_module`.
+        Optionally, the architecture can be changed by providing arguments.
         """
+        accepted_args = inspect.getfullargspec(cls).args
+        accepted_args.remove("self")
+        for key in kwargs:
+            assert key in accepted_args, (
+                "{} is not a valid argument for creating an instance of `{}`. "
+                "Accepted arguments are {}.".format(key, cls.__name__, accepted_args)
+            )
+
+        pretrained_module = cls.get_relevant_module(
+            pretrained_module, source=source, mapping=mapping
+        )
         final_kwargs = cls._get_input_arguments(pretrained_module, source, mapping)
         final_kwargs.update(kwargs)
         module = cls(**final_kwargs)

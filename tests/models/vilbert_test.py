@@ -14,9 +14,9 @@ class TestVilbert(ModelTestCase):
 
     def test_model_loads_weights_correctly(self):
         model_name = "epwalsh/bert-xsmall-dummy"
-        model = Nlvr2Vilbert.from_huggingface_model_name(
+        model = Nlvr2Vilbert.from_pretrained_module(
+            pretrained_module=model_name,
             vocab=None,
-            model_name=model_name,
             image_feature_dim=2048,
             image_num_hidden_layers=1,
             image_hidden_size=3,

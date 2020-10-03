@@ -68,7 +68,9 @@ class TestTransformerLayer(AllenNlpTestCase):
         params = Params(copy.deepcopy(self.params_dict))
 
         self.transformer_layer = TransformerLayer.from_params(params)
-        self.pretrained = cached_transformers.get("bert-base-uncased", False)
+        self.pretrained_name = "bert-base-uncased"
+
+        self.pretrained = cached_transformers.get(self.pretrained_name, False)
 
     def test_can_construct_from_params(self):
 
@@ -131,6 +133,20 @@ class TestTransformerLayer(AllenNlpTestCase):
                 break
 
         module = TransformerLayer.from_pretrained_module(pretrained_module)
-        assert_equal_parameters(
-            pretrained_module, module, mapping=module._construct_default_mapping("huggingface")
-        )
+        mapping = {
+            val: key for key, val in module._construct_default_mapping("huggingface").items()
+        }
+        assert_equal_parameters(pretrained_module, module, mapping=mapping)
+
+    def test_loading_from_pretrained_weights_using_model_name(self):
+
+        # Hacky way to get a bert layer.
+        for i, pretrained_module in enumerate(self.pretrained.encoder.layer.modules()):
+            if i == 1:
+                break
+
+        module = TransformerLayer.from_pretrained_module(self.pretrained_name)
+        mapping = {
+            val: key for key, val in module._construct_default_mapping("huggingface").items()
+        }
+        assert_equal_parameters(pretrained_module, module, mapping=mapping)

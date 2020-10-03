@@ -1,4 +1,4 @@
-from typing import Optional, Dict, List
+from typing import Optional, Dict, List, Union
 import torch
 
 from allennlp.common import FromParams
@@ -12,7 +12,8 @@ from allennlp.modules.transformer.transformer_module import TransformerModule
 
 class BiModalEncoder(TransformerModule, FromParams):
 
-    _huggingface_mapping = {"layers1": "layer"}
+    _huggingface_mapping = {"layer": "layers1"}
+    _relevant_module = "encoder"
 
     def __init__(
         self,
@@ -250,12 +251,12 @@ class BiModalEncoder(TransformerModule, FromParams):
         # FIX: ignore_absent_parameters should be a general option.
         if mapping is None:
             mapping = self._construct_default_mapping(source)
-            # mapping = self._default_mapping
+        inverse_mapping = {val: key for key, val in mapping.items()}
         pretrained_parameters = dict(pretrained_module.named_parameters())
         ignore_absent_parameters = ["layers2", "c_layer"]  # FIX: specific to source.
         for name, parameter in self.named_parameters():
             pretrained_name = name
-            for key, val in mapping.items():
+            for key, val in inverse_mapping.items():
                 # so that we replace the names of submodules too.
                 # eg. module.key.anothermodule --> module.val.anothermodule
                 pretrained_name = pretrained_name.replace(key, val)
@@ -266,14 +267,14 @@ class BiModalEncoder(TransformerModule, FromParams):
                 if pretrained_name not in pretrained_parameters:
                     raise ValueError(
                         f"Couldn't find a matching parameter for {name}. Is this module "
-                        "compatible with the pretrained module you're using?"
+                        f"compatible with the pretrained module you're using? - {pretrained_name}"
                     )
                 parameter.data.copy_(pretrained_parameters[pretrained_name].data)
 
     @classmethod
     def from_pretrained_module(  # type: ignore
         cls,
-        pretrained_module: torch.nn.Module,
+        pretrained_module: Union[str, torch.nn.Module],
         num_hidden_layers2: int,
         hidden_size2: int,
         combined_hidden_size: int,
@@ -294,6 +295,9 @@ class BiModalEncoder(TransformerModule, FromParams):
         """
         The `pretrained_module` only supplies one of the modalities.
         """
+        pretrained_module = cls.get_relevant_module(
+            pretrained_module, source=source, mapping=mapping
+        )
         final_kwargs = {}
         final_kwargs.update(cls._get_input_arguments(pretrained_module, source, mapping))
         final_kwargs["num_hidden_layers2"] = num_hidden_layers2

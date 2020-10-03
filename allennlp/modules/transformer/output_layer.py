@@ -7,7 +7,7 @@ from allennlp.modules.transformer.transformer_module import TransformerModule
 
 class OutputLayer(TransformerModule, FromParams):
 
-    _huggingface_mapping = {"layer_norm": "LayerNorm"}
+    _huggingface_mapping = {"LayerNorm": "layer_norm"}
 
     def __init__(self, input_size: int, hidden_size: int, dropout: float):
         super().__init__()

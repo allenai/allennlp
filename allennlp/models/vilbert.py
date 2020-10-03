@@ -1,7 +1,7 @@
 import collections
 import logging
 from copy import deepcopy
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union
 
 from overrides import overrides
 import torch
@@ -11,7 +11,6 @@ from allennlp.models.model import Model
 from allennlp.modules import TimeDistributed
 from allennlp.training.metrics import CategoricalAccuracy
 
-from transformers.modeling_auto import AutoModel
 
 from allennlp.modules.transformer import (
     TextEmbeddings,
@@ -71,14 +70,9 @@ class Nlvr2Vilbert(Model, TransformerModule):
         self.dropout = torch.nn.Dropout(dropout)
 
     @classmethod
-    def from_huggingface_model_name(cls, model_name, **kwargs):
-        pretrained_module = AutoModel.from_pretrained(model_name)
-        return cls.from_pretrained_module(pretrained_module, **kwargs)
-
-    @classmethod
     def from_pretrained_module(  # type: ignore
         cls,
-        pretrained_module: torch.nn.Module,
+        pretrained_module: Union[str, torch.nn.Module],
         vocab: Vocabulary,
         image_num_hidden_layers: int,
         image_feature_dim: int,
@@ -101,7 +95,9 @@ class Nlvr2Vilbert(Model, TransformerModule):
         mapping: Optional[Dict[str, str]] = None,
         # **kwargs,
     ):
-
+        pretrained_module = cls.get_relevant_module(
+            pretrained_module, source=source, mapping=mapping
+        )
         submodules = cls._get_mapped_submodules(pretrained_module, source, mapping)
         text_embeddings = deepcopy(submodules["embeddings"])
         # FIX: change to below:

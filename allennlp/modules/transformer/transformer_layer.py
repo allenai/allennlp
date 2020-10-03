@@ -46,6 +46,9 @@ class AttentionLayer(TransformerModule, FromParams):
 
 
 class TransformerLayer(TransformerModule, FromParams):
+    _relevant_module = "encoder.layers.0"
+    _huggingface_mapping = {"layer": "layers"}
+
     def __init__(
         self,
         hidden_size: int,

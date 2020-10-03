@@ -11,7 +11,8 @@ from allennlp.modules.transformer.transformer_module import TransformerModule
 
 class TransformerEncoder(TransformerModule, FromParams):
 
-    _huggingface_mapping = {"layers": "layer"}
+    _huggingface_mapping = {"layer": "layers"}
+    _relevant_module = "encoder"
 
     def __init__(
         self,

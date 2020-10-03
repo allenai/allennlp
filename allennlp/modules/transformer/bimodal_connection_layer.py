@@ -31,7 +31,7 @@ class BiModalOutput(TransformerModule, FromParams):
 
 class BiModalConnectionLayer(TransformerModule, FromParams):
 
-    _huggingface_mapping = {"bimodal_attention": "biAttention", "bimodal_output": "biOutput"}
+    _huggingface_mapping = {"biAttention": "bimodal_attention", "biOutput": "bimodal_output"}
 
     def __init__(
         self,
