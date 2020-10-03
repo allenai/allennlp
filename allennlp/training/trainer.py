@@ -713,9 +713,9 @@ class GradientDescentTrainer(Trainer):
         )
 
         for (worker, memory) in cpu_memory_usage:
-            metrics["worker_" + str(worker) + "_memory_MB"] = int(memory / (1024 * 1024))
+            metrics["worker_" + str(worker) + "_memory_MB"] = memory / (1024 * 1024)
         for (gpu_num, memory) in gpu_memory_usage:
-            metrics["gpu_" + str(gpu_num) + "_memory_MB"] = int(memory / (1024 * 1024))
+            metrics["gpu_" + str(gpu_num) + "_memory_MB"] = memory / (1024 * 1024)
         return metrics
 
     def _validation_loss(self, epoch: int) -> Tuple[float, float, int]:
