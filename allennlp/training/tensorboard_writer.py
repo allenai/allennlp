@@ -98,15 +98,15 @@ class TensorboardWriter(FromParams):
             val = value
         return val
 
-    def log_memory_usage(
-        self, cpu_memory_usage: Dict[int, float], gpu_memory_usage: Dict[int, int]
-    ):
+    def log_memory_usage(self, cpu_memory_usage: Dict[int, int], gpu_memory_usage: Dict[int, int]):
         cpu_memory_usage_total = 0.0
-        for worker, memory in cpu_memory_usage.items():
+        for worker, mem_bytes in cpu_memory_usage.items():
+            memory = int(mem_bytes / (1024 * 1024))
             self.add_train_scalar(f"memory_usage/worker_{worker}_cpu", memory)
             cpu_memory_usage_total += memory
         self.add_train_scalar("memory_usage/cpu", cpu_memory_usage_total)
-        for gpu, memory in gpu_memory_usage.items():
+        for gpu, mem_bytes in gpu_memory_usage.items():
+            memory = int(mem_bytes / (1024 * 1024))
             self.add_train_scalar(f"memory_usage/gpu_{gpu}", memory)
 
     def log_batch(

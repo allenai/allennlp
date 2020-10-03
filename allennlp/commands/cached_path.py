@@ -13,7 +13,6 @@ from allennlp.common.file_utils import (
     CACHE_DIRECTORY,
     inspect_cache,
     remove_cache_entries,
-    format_size,
 )
 
 
@@ -80,6 +79,8 @@ def _cached_path(args: argparse.Namespace):
             )
         inspect_cache(patterns=args.resources, cache_dir=args.cache_dir)
     elif args.remove:
+        from allennlp.common.util import format_size
+
         if args.extract_archive or args.force_extract or args.inspect:
             raise RuntimeError(
                 "cached-path cannot accept --extract-archive, --force-extract, or --inspect "

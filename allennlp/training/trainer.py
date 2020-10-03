@@ -144,11 +144,10 @@ class TensoboardBatchMemoryUsage(BatchCallback):
     ) -> None:
         # In the distributed case we need to call this from every worker, since every
         # worker reports its own memory usage.
-        cpu_memory_usage = common_util.peak_memory_mb()
-        # But we only want to call `gpu_memory_mb` and `log_memory_usage` from the
-        # master process.
+        cpu_memory_usage = common_util.peak_cpu_memory()
+        gpu_memory_usage = common_util.peak_gpu_memory()
+        # But we only want to log from the master process.
         if is_master:
-            gpu_memory_usage = common_util.gpu_memory_mb()
             trainer._tensorboard.log_memory_usage(cpu_memory_usage, gpu_memory_usage)
 
 
@@ -502,13 +501,13 @@ class GradientDescentTrainer(Trainer):
         """
         logger.info("Epoch %d/%d", epoch, self._num_epochs - 1)
         cpu_memory_usage = []
-        for worker, memory in common_util.peak_memory_mb().items():
+        for worker, memory in common_util.peak_cpu_memory().items():
             cpu_memory_usage.append((worker, memory))
-            logger.info(f"Worker {worker} memory usage MB: {memory}")
+            logger.info(f"Worker {worker} memory usage: {common_util.format_size(memory)}")
         gpu_memory_usage = []
-        for gpu, memory in common_util.gpu_memory_mb().items():
+        for gpu, memory in common_util.peak_gpu_memory().items():
             gpu_memory_usage.append((gpu, memory))
-            logger.info(f"GPU {gpu} memory usage MB: {memory}")
+            logger.info(f"GPU {gpu} memory usage: {common_util.format_size(memory)}")
 
         regularization_penalty = self.model.get_regularization_penalty()
 
@@ -714,9 +713,9 @@ class GradientDescentTrainer(Trainer):
         )
 
         for (worker, memory) in cpu_memory_usage:
-            metrics["worker_" + str(worker) + "_memory_MB"] = memory
+            metrics["worker_" + str(worker) + "_memory_MB"] = int(memory / (1024 * 1024))
         for (gpu_num, memory) in gpu_memory_usage:
-            metrics["gpu_" + str(gpu_num) + "_memory_MB"] = memory
+            metrics["gpu_" + str(gpu_num) + "_memory_MB"] = int(memory / (1024 * 1024))
         return metrics
 
     def _validation_loss(self, epoch: int) -> Tuple[float, float, int]:

@@ -1,13 +1,13 @@
 """
 Various utilities that don't fit anywhere else.
 """
+from datetime import timedelta
 import importlib
 import json
 import logging
 import os
 import pkgutil
 import random
-import subprocess
 import sys
 from contextlib import contextmanager
 from itertools import islice, zip_longest
@@ -351,7 +351,7 @@ def import_module_and_submodules(package_name: str) -> None:
             import_module_and_submodules(subpackage)
 
 
-def peak_memory_mb() -> Dict[int, float]:
+def peak_cpu_memory() -> Dict[int, int]:
     """
     Get peak memory usage for each worker, as measured by max-resident-set size:
 
@@ -360,72 +360,77 @@ def peak_memory_mb() -> Dict[int, float]:
     Only works on OSX and Linux, otherwise the result will be 0.0 for every worker.
     """
     if resource is None or sys.platform not in ("linux", "darwin"):
-        peak_mb = 0.0
+        peak_bytes = 0
     else:
         peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
         if sys.platform == "darwin":
             # On OSX the result is in bytes.
-            peak_mb = peak / 1_000_000
+            peak_bytes = peak
         else:
             # On Linux the result is in kilobytes.
-            peak_mb = peak / 1_000
+            peak_bytes = peak * 1_024
 
     if is_distributed():
         global_rank = dist.get_rank()
         world_size = dist.get_world_size()
 
-        peak_mb_tensor = torch.tensor([float(global_rank), peak_mb])
+        peak_bytes_tensor = torch.tensor([global_rank, peak_bytes])
         # All of these tensors will be gathered into this list.
-        gather_results = [torch.tensor([0.0, 0.0]) for _ in range(world_size)]
+        gather_results = [torch.tensor([0, 0]) for _ in range(world_size)]
 
         # If the backend is 'nccl', this means we're training on GPUs, so these tensors
         # need to be on GPU.
         if dist.get_backend() == "nccl":
-            peak_mb_tensor = peak_mb_tensor.cuda()
+            peak_bytes_tensor = peak_bytes_tensor.cuda()
             gather_results = [x.cuda() for x in gather_results]
 
-        dist.all_gather(gather_results, peak_mb_tensor)
+        dist.all_gather(gather_results, peak_bytes_tensor)
 
-        results_dict: Dict[int, float] = {}
-        for peak_mb_tensor in gather_results:
-            worker = int(peak_mb_tensor[0])
-            peak_mb = round(float(peak_mb_tensor[1]), 3)
-            results_dict[worker] = peak_mb
+        results_dict: Dict[int, int] = {}
+        for peak_bytes_tensor in gather_results:
+            results_dict[int(peak_bytes_tensor[0])] = int(peak_bytes_tensor[1])
 
         return results_dict
     else:
-        return {0: peak_mb}
+        return {0: peak_bytes}
 
 
-def gpu_memory_mb() -> Dict[int, int]:
+def peak_gpu_memory() -> Dict[int, int]:
     """
-    Get the current GPU memory usage.
-    Based on https://discuss.pytorch.org/t/access-gpu-memory-usage-in-pytorch/3192/4
+    Get the peak GPU memory usage in bytes by device.
 
     # Returns
 
     `Dict[int, int]`
         Keys are device ids as integers.
-        Values are memory usage as integers in MB.
+        Values are memory usage as integers in bytes.
         Returns an empty `dict` if GPUs are not available.
     """
-    try:
-        result = subprocess.check_output(
-            ["nvidia-smi", "--query-gpu=memory.used", "--format=csv,nounits,noheader"],
-            encoding="utf-8",
-        )
-        gpu_memory = [int(x) for x in result.strip().split("\n")]
-        return {gpu: memory for gpu, memory in enumerate(gpu_memory)}
-    except FileNotFoundError:
-        # `nvidia-smi` doesn't exist, assume that means no GPU.
+    if not torch.cuda.is_available():
         return {}
-    except:  # noqa
-        # Catch *all* exceptions, because this memory check is a nice-to-have
-        # and we'd never want a training run to fail because of it.
-        logger.warning(
-            "unable to check gpu_memory_mb() due to occasional failure, continuing", exc_info=True
-        )
-        return {}
+
+    if is_distributed():
+        # If the backend is not 'nccl', we're training on CPU.
+        if dist.get_backend() != "nccl":
+            return {}
+
+        device = torch.cuda.current_device()
+        global_rank = dist.get_rank()
+        world_size = dist.get_world_size()
+        peak_bytes = torch.cuda.max_memory_allocated(device)
+        peak_bytes_tensor = torch.tensor([global_rank, peak_bytes], device=device)
+        # All of these tensors will be gathered into this list.
+        gather_results = [torch.tensor([0, 0], device=device) for _ in range(world_size)]
+
+        dist.all_gather(gather_results, peak_bytes_tensor)
+
+        results_dict: Dict[int, int] = {}
+        for peak_bytes_tensor in gather_results:
+            results_dict[int(peak_bytes_tensor[0])] = int(peak_bytes_tensor[1])
+
+        return results_dict
+    else:
+        return {0: torch.cuda.max_memory_allocated()}
 
 
 def ensure_list(iterable: Iterable[A]) -> List[A]:
@@ -617,3 +622,44 @@ def sanitize_ptb_tokenized_string(text: str) -> str:
             new_tokens.append(tokens[i])
 
     return " ".join(new_tokens)
+
+
+def format_timedelta(td: timedelta) -> str:
+    """
+    Format a timedelta for humans.
+    """
+    if td.days > 1:
+        return f"{td.days} days"
+    elif td.days > 0:
+        return f"{td.days} day"
+    else:
+        hours, remainder = divmod(td.seconds, 3600)
+        minutes, _ = divmod(remainder, 60)
+        if hours > 1:
+            return f"{hours} hours"
+        elif hours > 0:
+            return f"{hours} hour, {minutes} mins"
+        else:
+            return f"{minutes} mins"
+
+
+def format_size(size: int) -> str:
+    """
+    Format a size (in bytes) for humans.
+    """
+    GBs = size / (1024 * 1024 * 1024)
+    if GBs >= 10:
+        return f"{int(round(GBs, 0))}G"
+    if GBs >= 1:
+        return f"{round(GBs, 1):.1f}G"
+    MBs = size / (1024 * 1024)
+    if MBs >= 10:
+        return f"{int(round(MBs, 0))}M"
+    if MBs >= 1:
+        return f"{round(MBs, 1):.1f}M"
+    KBs = size / 1024
+    if KBs >= 10:
+        return f"{int(round(KBs, 0))}K"
+    if KBs >= 1:
+        return f"{round(KBs, 1):.1f}K"
+    return f"{size}B"
