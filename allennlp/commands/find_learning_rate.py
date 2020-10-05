@@ -188,7 +188,9 @@ def find_learning_rate_model(
 
     train_data = all_datasets["train"]
     train_data.index_with(vocab)
-    model = Model.from_params(vocab=vocab, params=params.pop("model"), serialization_dir=serialization_dir)
+    model = Model.from_params(
+        vocab=vocab, params=params.pop("model"), serialization_dir=serialization_dir
+    )
     data_loader = DataLoader.from_params(dataset=train_data, params=params.pop("data_loader"))
 
     trainer_params = params.pop("trainer")

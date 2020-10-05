@@ -320,7 +320,9 @@ class Predictor(Registrable):
             dataset_reader_params = config["validation_dataset_reader"]
         else:
             dataset_reader_params = config["dataset_reader"]
-        dataset_reader = DatasetReader.from_params(dataset_reader_params, serialization_dir=archive.serialization_dir)
+        dataset_reader = DatasetReader.from_params(
+            dataset_reader_params, serialization_dir=archive.serialization_dir
+        )
 
         model = archive.model
         if frozen:

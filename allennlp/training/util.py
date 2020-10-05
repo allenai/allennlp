@@ -124,7 +124,11 @@ def read_all_datasets(
 
 
 def datasets_from_params(
-    params: Params, train: bool = True, validation: bool = True, test: bool = True, serialization_dir: Optional[str] = None
+    params: Params,
+    train: bool = True,
+    validation: bool = True,
+    test: bool = True,
+    serialization_dir: Optional[str] = None,
 ) -> Dict[str, Union["AllennlpDataset", "AllennlpLazyDataset"]]:
     """
     Load datasets specified by the config.
@@ -139,7 +143,9 @@ def datasets_from_params(
         return datasets
 
     dataset_reader_params = params.pop("dataset_reader")
-    dataset_reader = DatasetReader.from_params(dataset_reader_params, serialization_dir=serialization_dir)
+    dataset_reader = DatasetReader.from_params(
+        dataset_reader_params, serialization_dir=serialization_dir
+    )
 
     if train:
         train_data_path = params.pop("train_data_path")

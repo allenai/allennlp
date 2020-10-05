@@ -27,7 +27,9 @@ class ModelTestCase(AllenNlpTestCase):
         self.param_file = param_file
         params = Params.from_file(self.param_file)
 
-        reader = DatasetReader.from_params(params["dataset_reader"], serialization_dir=serialization_dir)
+        reader = DatasetReader.from_params(
+            params["dataset_reader"], serialization_dir=serialization_dir
+        )
         # The dataset reader might be lazy, but a lazy list here breaks some of our tests.
         instances = reader.read(str(dataset_file))
         # Use parameters for vocabulary if they are present in the config file, so that choices like
@@ -40,7 +42,9 @@ class ModelTestCase(AllenNlpTestCase):
         self.vocab = vocab
         self.instances = instances
         self.instances.index_with(vocab)
-        self.model = Model.from_params(vocab=self.vocab, params=params["model"], serialization_dir=serialization_dir)
+        self.model = Model.from_params(
+            vocab=self.vocab, params=params["model"], serialization_dir=serialization_dir
+        )
 
         # TODO(joelgrus) get rid of these
         # (a lot of the model tests use them, so they'll have to be changed)
