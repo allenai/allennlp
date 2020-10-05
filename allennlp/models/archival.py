@@ -181,9 +181,11 @@ def load_archive(
     load_from_archive = functools.partial(_load_from_archive, cuda_device, overrides, weights_file)
     if os.path.isdir(resolved_archive_file):
         serialization_dir = resolved_archive_file
-        model, config = load_from_archive(serialization_dir)
+        model, config, serialization_dir = load_from_archive(serialization_dir)
     else:
-        model, config = extract_archive_temporarily(resolved_archive_file, load_from_archive)
+        model, config, serialization_dir = extract_archive_temporarily(
+            resolved_archive_file, load_from_archive
+        )
 
     return Archive(model=model, config=config, serialization_dir=serialization_dir)
 
@@ -208,7 +210,7 @@ def _load_from_archive(cuda_device, overrides, weights_file, serialization_dir):
         cuda_device=cuda_device,
     )
 
-    return model, config
+    return model, config, serialization_dir
 
 
 def extract_archive_temporarily(resolved_archive_file, callback):
