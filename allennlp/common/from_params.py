@@ -494,7 +494,7 @@ def construct_arg(
     else:
         # Pass it on as is and hope for the best.   ¯\_(ツ)_/¯
         if isinstance(popped_params, Params):
-            return popped_params.as_dict(quiet=True)
+            return popped_params.as_dict()
         return popped_params
 
 
