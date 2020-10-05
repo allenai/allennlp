@@ -29,8 +29,9 @@
 
 - [Website](https://allennlp.org/)
 - [Guide](https://guide.allennlp.org/)
-- [Forum](https://discourse.allennlp.org)
 - [Documentation](https://docs.allennlp.org/) ( [latest](https://docs.allennlp.org/latest/) | [stable](https://docs.allennlp.org/stable/) | [master](https://docs.allennlp.org/master/) )
+- [Forum](https://discourse.allennlp.org)
+- [Stack Overflow](https://stackoverflow.com/questions/tagged/allennlp)
 - [Contributing Guidelines](CONTRIBUTING.md)
 - [Officially Supported Models](https://github.com/allenai/allennlp-models)
     - [Pretrained Models](https://github.com/allenai/allennlp-models/blob/master/allennlp_models/pretrained.py)
