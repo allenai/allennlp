@@ -298,7 +298,7 @@ class Model(torch.nn.Module, Registrable):
         # embeddings/weights from.  We're now _loading_ the model, so those weights will already be
         # stored in our model.  We don't need any pretrained weight file anymore, and we don't
         # want the code to look for it, so we remove it from the parameters here.
-        remove_pretrained_weights_params(model_params)
+        remove_pretrained_embedding_params(model_params)
         model = Model.from_params(
             vocab=vocab, params=model_params, serialization_dir=serialization_dir
         )
@@ -457,7 +457,8 @@ class Model(torch.nn.Module, Registrable):
 Model.register("from_archive", constructor="from_archive")(Model)
 
 
-def remove_pretrained_weights_params(params: Params):
+def remove_pretrained_embedding_params(params: Params):
+    # TODO(eladsegal): Rename to remove_pretrained_weights_params
     if isinstance(params, Params):  # The model could possibly be a string, for example.
         keys = params.keys()
         if "pretrained_file" in keys:
@@ -466,4 +467,4 @@ def remove_pretrained_weights_params(params: Params):
             del params["weights_file_path"]
         for value in params.values():
             if isinstance(value, Params):
-                remove_pretrained_weights_params(value)
+                remove_pretrained_embedding_params(value)
