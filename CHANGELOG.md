@@ -55,6 +55,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   at around the 9 minute mark.
 - Fixed a bug where parameters to a `FromParams` class that are dictionaries wouldn't get logged
   when an instance is instantiated `from_params`.
+- Fix a bug in common.util.is_master that considered every worker as master when there was only a single node. 
 
 
 ## [v1.1.0](https://github.com/allenai/allennlp/releases/tag/v1.1.0) - 2020-09-08
