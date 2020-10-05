@@ -28,6 +28,7 @@ import math
 from typing import Callable, List, Tuple, Dict
 import itertools
 from overrides import overrides
+import os
 
 import torch
 import torch.nn.init
@@ -386,7 +387,23 @@ class PretrainedModelInitializer(Initializer):
     ) -> None:
         if weights_file_path is None:
             return
-        self.weights: Dict[str, torch.Tensor] = torch.load(weights_file_path, map_location="cpu")
+
+        from allennlp.models.archival import (
+            extract_archive_temporarily,
+            _WEIGHTS_NAME,
+        )  # import here to avoid circular imports
+
+        self.weights: Dict[str, torch.Tensor]
+        if os.path.basename(weights_file_path).endswith(".tar.gz"):
+            self.weights = extract_archive_temporarily(
+                weights_file_path,
+                lambda serialization_dir: torch.load(
+                    os.path.join(serialization_dir, _WEIGHTS_NAME), map_location="cpu"
+                ),
+            )
+        else:
+            self.weights = torch.load(weights_file_path, map_location="cpu")
+
         self.parameter_name_overrides = parameter_name_overrides or {}
 
     @overrides

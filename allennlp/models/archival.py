@@ -9,6 +9,7 @@ import tempfile
 import tarfile
 import shutil
 from pathlib import Path
+import functools
 
 from torch.nn import Module
 
@@ -177,40 +178,53 @@ def load_archive(
     else:
         logger.info(f"loading archive file {archive_file} from cache at {resolved_archive_file}")
 
+    load_from_archive = functools.partial(_load_from_archive, cuda_device, overrides, weights_file)
+    if os.path.isdir(resolved_archive_file):
+        serialization_dir = resolved_archive_file
+        model, config = load_from_archive(serialization_dir)
+    else:
+        model, config = extract_archive_temporarily(resolved_archive_file, load_from_archive)
+
+    return Archive(model=model, config=config, serialization_dir=serialization_dir)
+
+
+def _load_from_archive(cuda_device, overrides, weights_file, serialization_dir):
+    # Load config
+    config = Params.from_file(os.path.join(serialization_dir, CONFIG_NAME), overrides)
+
+    if weights_file:
+        weights_path = weights_file
+    else:
+        weights_path = os.path.join(serialization_dir, _WEIGHTS_NAME)
+        # Fallback for serialization directories.
+        if not os.path.exists(weights_path):
+            weights_path = os.path.join(serialization_dir, _DEFAULT_WEIGHTS)
+
+    # Instantiate model. Use a duplicate of the config, as it will get consumed.
+    model = Model.load(
+        config.duplicate(),
+        weights_file=weights_path,
+        serialization_dir=serialization_dir,
+        cuda_device=cuda_device,
+    )
+
+    return model, config
+
+
+def extract_archive_temporarily(resolved_archive_file, callback):
     tempdir = None
     try:
-        if os.path.isdir(resolved_archive_file):
-            serialization_dir = resolved_archive_file
-        else:
-            # Extract archive to temp dir
-            tempdir = tempfile.mkdtemp()
-            logger.info(f"extracting archive file {resolved_archive_file} to temp dir {tempdir}")
-            with tarfile.open(resolved_archive_file, "r:gz") as archive:
-                archive.extractall(tempdir)
-            serialization_dir = tempdir
+        tempdir = tempfile.mkdtemp()
+        logger.info(f"extracting archive file {resolved_archive_file} to temp dir {tempdir}")
+        with tarfile.open(resolved_archive_file, "r:gz") as archive:
+            archive.extractall(tempdir)
+        serialization_dir = tempdir
 
-        # Load config
-        config = Params.from_file(os.path.join(serialization_dir, CONFIG_NAME), overrides)
-
-        if weights_file:
-            weights_path = weights_file
-        else:
-            weights_path = os.path.join(serialization_dir, _WEIGHTS_NAME)
-            # Fallback for serialization directories.
-            if not os.path.exists(weights_path):
-                weights_path = os.path.join(serialization_dir, _DEFAULT_WEIGHTS)
-
-        # Instantiate model. Use a duplicate of the config, as it will get consumed.
-        model = Model.load(
-            config.duplicate(),
-            weights_file=weights_path,
-            serialization_dir=serialization_dir,
-            cuda_device=cuda_device,
-        )
+        callback_output = callback(serialization_dir)
 
     finally:
         if tempdir is not None:
             logger.info(f"removing temporary unarchived model dir at {tempdir}")
             shutil.rmtree(tempdir, ignore_errors=True)
 
-    return Archive(model=model, config=config, serialization_dir=serialization_dir)
+    return callback_output
