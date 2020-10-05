@@ -872,9 +872,7 @@ class GradientDescentTrainer(Trainer):
             train_metrics = self._train_epoch(epoch)
 
             if self._master:
-                self._checkpointer.save_checkpoint(
-                    epoch, self, save_model_only=True
-                )
+                self._checkpointer.save_checkpoint(epoch, self, save_model_only=True)
 
             # Wait for the master to finish saving the model checkpoint
             if self._distributed:
