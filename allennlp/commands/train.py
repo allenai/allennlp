@@ -249,6 +249,12 @@ def train_model(
 
     # Otherwise, we are running multiple processes for training.
     else:
+        common_logging.prepare_global_logging(
+            serialization_dir,
+            rank=0,
+            world_size=1,
+        )
+
         # We are careful here so that we can raise a good error if someone
         # passed the wrong thing - cuda_devices are required.
         device_ids = distributed_params.pop("cuda_devices", None)
