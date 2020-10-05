@@ -645,7 +645,7 @@ class TrainModel(Registrable):
         vocabulary_ = vocabulary.construct(instances=instance_generator)
         if not vocabulary_:
             vocabulary_ = Vocabulary.from_instances(instance_generator)
-        model_ = model.construct(vocab=vocabulary_)
+        model_ = model.construct(vocab=vocabulary_, serialization_dir=serialization_dir)
 
         # Initializing the model can have side effect of expanding the vocabulary.
         # Save the vocab only in the master. In the degenerate non-distributed

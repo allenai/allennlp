@@ -25,6 +25,7 @@ class Archive(NamedTuple):
 
     model: Model
     config: Params
+    serialization_dir: str
 
     def extract_module(self, path: str, freeze: bool = True) -> Module:
         """
@@ -194,4 +195,4 @@ def load_archive(
             logger.info(f"removing temporary unarchived model dir at {tempdir}")
             shutil.rmtree(tempdir, ignore_errors=True)
 
-    return Archive(model=model, config=config)
+    return Archive(model=model, config=config, serialization_dir=serialization_dir)
