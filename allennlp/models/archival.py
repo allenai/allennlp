@@ -25,7 +25,7 @@ class Archive(NamedTuple):
 
     model: Model
     config: Params
-    serialization_dir: str
+    serialization_dir: Union[str, PathLike]
 
     def extract_module(self, path: str, freeze: bool = True) -> Module:
         """

@@ -128,7 +128,7 @@ def datasets_from_params(
     train: bool = True,
     validation: bool = True,
     test: bool = True,
-    serialization_dir: Optional[str] = None,
+    serialization_dir: Optional[Union[str, PathLike]] = None,
 ) -> Dict[str, Union["AllennlpDataset", "AllennlpLazyDataset"]]:
     """
     Load datasets specified by the config.
