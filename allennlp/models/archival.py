@@ -2,7 +2,7 @@
 Helper functions for archiving models and restoring archived models.
 """
 from os import PathLike
-from typing import NamedTuple, Union, Dict, Any
+from typing import NamedTuple, Union, Dict, Any, List, Optional
 import logging
 import os
 import tempfile
@@ -89,10 +89,22 @@ CONFIG_NAME = "config.json"
 _WEIGHTS_NAME = "weights.th"
 
 
+def verify_additional_archival_targets(additional_archival_targets: Optional[List[str]] = None):
+    if additional_archival_targets is None:
+        return
+    saved_names = [CONFIG_NAME, _WEIGHTS_NAME, _DEFAULT_WEIGHTS, "vocabulary"]
+    for archival_target in additional_archival_targets:
+        if archival_target in saved_names:
+            raise ConfigurationError(
+                f"{', '.join(saved_names)} are saved names and cannot be used for additional_archival_targets."
+            )
+
+
 def archive_model(
     serialization_dir: Union[str, PathLike],
     weights: str = _DEFAULT_WEIGHTS,
     archive_path: Union[str, PathLike] = None,
+    additional_archival_targets: Optional[List[str]] = None,
 ) -> None:
     """
     Archive the model weights, its training configuration, and its vocabulary to `model.tar.gz`.
@@ -128,6 +140,12 @@ def archive_model(
         archive.add(config_file, arcname=CONFIG_NAME)
         archive.add(weights_file, arcname=_WEIGHTS_NAME)
         archive.add(os.path.join(serialization_dir, "vocabulary"), arcname="vocabulary")
+
+        if additional_archival_targets is not None:
+            for archival_target in additional_archival_targets:
+                archival_target_path = os.path.join(serialization_dir, archival_target)
+                if os.path.exists(archival_target_path):
+                    archive.add(archival_target_path, arcname=archival_target)
 
 
 def load_archive(

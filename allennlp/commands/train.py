@@ -23,7 +23,7 @@ from allennlp.common import util as common_util
 from allennlp.common.plugins import import_plugins
 from allennlp.data import DatasetReader, Vocabulary
 from allennlp.data import DataLoader
-from allennlp.models.archival import archive_model, CONFIG_NAME
+from allennlp.models.archival import archive_model, CONFIG_NAME, verify_additional_archival_targets
 from allennlp.models.model import _DEFAULT_WEIGHTS, Model
 from allennlp.training.trainer import Trainer
 from allennlp.training import util as training_util
@@ -225,6 +225,9 @@ def train_model(
     training_util.create_serialization_dir(params, serialization_dir, recover, force)
     params.to_file(os.path.join(serialization_dir, CONFIG_NAME))
 
+    additional_archival_targets = params["trainer"].get("additional_archival_targets", None)
+    verify_additional_archival_targets(additional_archival_targets)
+
     distributed_params = params.params.pop("distributed", None)
     # If distributed isn't in the config and the config contains strictly
     # one cuda device, we just run a single training process.
@@ -239,7 +242,9 @@ def train_model(
         )
 
         if not dry_run:
-            archive_model(serialization_dir)
+            archive_model(
+                serialization_dir, additional_archival_targets=additional_archival_targets
+            )
         return model
 
     # Otherwise, we are running multiple processes for training.
@@ -300,13 +305,16 @@ def train_model(
                 world_size,
                 device_ids,
                 file_friendly_logging,
+                additional_archival_targets,
             ),
             nprocs=num_procs,
         )
         if dry_run:
             return None
         else:
-            archive_model(serialization_dir)
+            archive_model(
+                serialization_dir, additional_archival_targets=additional_archival_targets
+            )
             model = Model.load(params, serialization_dir)
             return model
 
@@ -323,6 +331,7 @@ def _train_worker(
     world_size: int = 1,
     distributed_device_ids: List[int] = None,
     file_friendly_logging: bool = False,
+    additional_archival_targets: List[str] = None,
 ) -> Optional[Model]:
     """
     Helper to train the configured model/experiment. In distributed mode, this is spawned as a
@@ -357,6 +366,8 @@ def _train_worker(
     file_friendly_logging : `bool`, optional (default=`False`)
         If `True`, we add newlines to tqdm output, even on an interactive terminal, and we slow
         down tqdm's output to only once every 10 seconds.
+    additional_archival_targets : `List[str]`, optional
+        Relative paths to serialization_dir that should be archived in addition to the default ones.
 
     # Returns
 
@@ -448,7 +459,9 @@ def _train_worker(
                 "Training interrupted by the user. Attempting to create "
                 "a model archive using the current best epoch weights."
             )
-            archive_model(serialization_dir)
+            archive_model(
+                serialization_dir, additional_archival_targets=additional_archival_targets
+            )
         raise
 
     if master:
