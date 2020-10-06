@@ -402,7 +402,7 @@ class PretrainedModelInitializer(Initializer):
                 ),
             )
         else:
-            self.weights: Dict[str, torch.Tensor] = torch.load(weights_file_path)
+            self.weights = torch.load(weights_file_path)
 
         self.parameter_name_overrides = parameter_name_overrides or {}
 
