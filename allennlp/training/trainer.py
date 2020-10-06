@@ -6,7 +6,7 @@ import re
 import time
 import traceback
 from contextlib import contextmanager
-from typing import Any, Dict, Iterator, List, Optional, Tuple, Type, Union
+from typing import Any, Callable, Dict, Iterator, List, Optional, Tuple, Type, Union
 
 from allennlp.common.util import int_to_device
 
@@ -199,42 +199,32 @@ class TrackEpochCallback:
         trainer.model.epoch = epoch + 1
 
 
-class EndCallback(Registrable):
-    """
-    An optional callback that you can pass to the `GradientDescentTrainer` that will be called at
-    the end of training after the final epoch. The default implementation does nothing. You can
-    implement your own callback and do whatever you want (such as exporting data) after training has ended.
-    """
-
-    def __call__(
-        self,
-        trainer: "GradientDescentTrainer",
-        metrics: Dict[str, Any],
-        epoch: int,
-        is_master: bool,
-    ) -> None:
-        pass
+_BasicCallback = Union[BatchCallback, EpochCallback]
 
 
-EndCallback.register("null")(EndCallback)
+class TrainerCallbackMeta(type):
+    def __new__(cls, name, bases, dct):
+        """
+        Add subclasses that wrap the `TrainerCallback` into other interfaces.
+        """
+        subtype = super().__new__(cls, name, bases, dct)
+        # These subtypes wrap the `TrainerCallback` into the `_BasicCallback` interfaces. 
+        subtype.Batch = subtype._make_callback_type(BatchCallback, subtype.on_batch)
+        subtype.Epoch = subtype._make_callback_type(EpochCallback, subtype.on_epoch)
+        subtype.End = subtype._make_callback_type(EpochCallback, subtype.on_end)
+        return subtype
 
 
-_BasicCallback = Union[BatchCallback, EpochCallback, EndCallback]
-
-
-class TrainerCallback(Registrable):
+class TrainerCallback(Registrable, metaclass=TrainerCallbackMeta):
     """
     A general callback object that wraps all three types of callbacks into one.
 
     Rather than a `__call__` method, this class has `on_batch`, `on_epoch`, and `on_end` methods, corresponding to
     each callback type. Each one receives the state of the wrapper object as `self`. This enables easier state
     sharing between related callbacks.
-    """
 
-    def __init__(self):
-        self.batch_callback = self._make_callback(BatchCallback)
-        self.epoch_callback = self._make_callback(EpochCallback)
-        self.end_callback = self._make_callback(EndCallback)
+    Under the hood, this is a metaclass that creates wrapping subclasses each time a subclass is created.
+    """
 
     def on_batch(
         self,
@@ -266,19 +256,24 @@ class TrainerCallback(Registrable):
     ) -> None:
         pass
 
-    _callback_map = {
-        BatchCallback: on_batch,
-        EpochCallback: on_epoch,
-        EndCallback: on_end,
-    }
+    @classmethod
+    def _make_callback_type(cls, ctype: Type[_BasicCallback], call: Callable[[], None]) -> Type[_BasicCallback]:
+        class _Wrapper(ctype):
+            def __init__(self, trainer_callback: cls):
+                self.trainer_callback = trainer_callback
 
-    def _make_callback(self, call_type: Type[_BasicCallback]) -> _BasicCallback:
-        class _Wrapper(call_type):
-            def __call__(inner_self, *args):
-                cmap = TrainerCallback._callback_map
-                cmap[call_type](self, *args)
-
-        return _Wrapper()
+            def __call__(self, trainer: "GradientDescentTrainer", *args, **kwargs):
+                call(self.trainer_callback, trainer, *args, **kwargs)
+        return _Wrapper
+    
+    def batch(self):
+        return self.Batch(self)
+    
+    def epoch(self):
+        return self.Epoch(self)
+    
+    def end(self):
+        return self.End(self)
 
 
 TrainerCallback.register("null")(TrainerCallback)
@@ -401,10 +396,10 @@ class GradientDescentTrainer(Trainer):
         A list of callbacks that will be called at the end of every epoch, and at the start of
         training (with epoch = -1).
 
-    end_callbacks : `List[EndCallback]`, optional (default = `None`)
-        A list of callbacks that will be called at the end of training.
+    end_callbacks : `List[EpochCallback]`, optional (default = `None`)
+        A list of callbacks that will be called after the final epoch at the end of training.
 
-    end_callbacks : `List[TrainerCallback]`, optional (default = `None`)
+    trainer_callbacks : `List[TrainerCallback]`, optional (default = `None`)
         A list of callbacks that will be called at each batch, epoch, and at the start and end of training.
 
     distributed : `bool`, optional, (default = `False`)
@@ -458,7 +453,7 @@ class GradientDescentTrainer(Trainer):
         moving_average: Optional[MovingAverage] = None,
         batch_callbacks: List[BatchCallback] = None,
         epoch_callbacks: List[EpochCallback] = None,
-        end_callbacks: List[EndCallback] = None,
+        end_callbacks: List[EpochCallback] = None,
         trainer_callbacks: List[TrainerCallback] = None,
         distributed: bool = False,
         local_rank: int = 0,
@@ -511,9 +506,9 @@ class GradientDescentTrainer(Trainer):
         self._end_callbacks = end_callbacks or []
 
         for callback in trainer_callbacks or []:
-            self._batch_callbacks.append(callback.batch_callback)
-            self._epoch_callbacks.append(callback.epoch_callback)
-            self._end_callbacks.append(callback.end_callback)
+            self._batch_callbacks.append(callback.batch())
+            self._epoch_callbacks.append(callback.epoch())
+            self._end_callbacks.append(callback.end())
 
         # We keep the total batch number as an instance variable because it
         # is used inside a closure for the hook which logs activations in

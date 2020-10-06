@@ -28,6 +28,7 @@ from allennlp.training import (
     TensorboardWriter,
     BatchCallback,
     EpochCallback,
+    TrainerCallback,
     TrackEpochCallback,
 )
 from allennlp.training.learning_rate_schedulers import CosineWithRestarts
@@ -1028,11 +1029,11 @@ class TestTrainer(TrainerTestBase):
             end_callbacks=[FakeEndCallback()],
         )
         trainer.train()
-        expected_calls = [4]
-        assert trainer.epoch_callback_calls == expected_calls
+        expected_calls = [3]
+        assert trainer.end_callback_calls == expected_calls
 
     def test_trainer_callback_is_called_everywhere(self):
-        class FakeTrainerCallback(EpochCallback):
+        class FakeTrainerCallback(TrainerCallback):
             def on_batch(
                 self,
                 trainer: "GradientDescentTrainer",
@@ -1073,9 +1074,9 @@ class TestTrainer(TrainerTestBase):
             self.model,
             self.optimizer,
             self.data_loader,
-            num_epochs=4,
+            num_epochs=2,
             validation_data_loader=self.validation_data_loader,
-            end_callbacks=[FakeTrainerCallback()],
+            trainer_callbacks=[FakeTrainerCallback()],
         )
         trainer.train()
         expected_batch_calls = [
@@ -1084,8 +1085,9 @@ class TestTrainer(TrainerTestBase):
             for is_train in (True, False)
             for batch_number in range(len(self.instances) // 2)
         ]
-        expected_epoch_calls = [epoch for epoch in range(-1, 4)]
-        expected_end_calls = [4]
+        expected_epoch_calls = [epoch for epoch in range(-1, 2)]
+        expected_end_calls = [1]
+
         assert trainer.batch_callback_calls == expected_batch_calls
         assert trainer.epoch_callback_calls == expected_epoch_calls
         assert trainer.end_callback_calls == expected_end_calls
