@@ -1,4 +1,6 @@
 from typing import Dict, Optional
+import os
+import tarfile
 
 import pytest
 import torch
@@ -78,6 +80,23 @@ class TestPretrainedModelInitializer(AllenNlpTestCase):
         initializer = Initializer.from_params(params)
         assert initializer.weights
         assert initializer.parameter_name_overrides == name_overrides
+
+    def test_from_params_tar_gz(self):
+        try:
+            # Create temp.tar.gz
+            temp_tar_gz = os.path.join(self.TEST_DIR, "temp.tar.gz")
+            with tarfile.open(temp_tar_gz, "w:gz") as archive:
+                archive.add(self.temp_file, arcname=os.path.basename(self.temp_file))
+            params = Params({"type": "pretrained", "weights_file_path": temp_tar_gz})
+            initializer = Initializer.from_params(params)
+        finally:
+            os.remove(temp_tar_gz)
+
+        assert initializer.weights
+        assert initializer.parameter_name_overrides == {}
+
+        for name, parameter in self.net2.state_dict().items():
+            assert torch.equal(parameter, initializer.weights[name])
 
     def test_default_parameter_names(self):
         # This test initializes net1 to net2's parameters. It doesn't use
