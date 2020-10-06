@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Dict, Any
 
 from overrides import overrides
 import torch
@@ -33,7 +33,15 @@ class PretrainedTransformerMismatchedEmbedder(TokenEmbedder):
         is used.
     gradient_checkpointing: `bool`, optional (default = `None`)
         Enable or disable gradient checkpointing.
-    """
+    tokenizer_kwargs: `Dict[str, Any]`, optional (default = `None`)
+        Dictionary with
+        [additional arguments](https://github.com/huggingface/transformers/blob/155c782a2ccd103cf63ad48a2becd7c76a7d2115/transformers/tokenization_utils.py#L691)
+        for `AutoTokenizer.from_pretrained`.
+    transformer_kwargs: `Dict[str, Any]`, optional (default = `None`)
+        Dictionary with
+        [additional arguments](https://github.com/huggingface/transformers/blob/155c782a2ccd103cf63ad48a2becd7c76a7d2115/transformers/modeling_utils.py#L253)
+        for `AutoModel.from_pretrained`.
+    """  # noqa: E501
 
     def __init__(
         self,
@@ -42,6 +50,8 @@ class PretrainedTransformerMismatchedEmbedder(TokenEmbedder):
         train_parameters: bool = True,
         last_layer_only: bool = True,
         gradient_checkpointing: Optional[bool] = None,
+        tokenizer_kwargs: Optional[Dict[str, Any]] = None,
+        transformer_kwargs: Optional[Dict[str, Any]] = None,
     ) -> None:
         super().__init__()
         # The matched version v.s. mismatched
@@ -51,6 +61,8 @@ class PretrainedTransformerMismatchedEmbedder(TokenEmbedder):
             train_parameters=train_parameters,
             last_layer_only=last_layer_only,
             gradient_checkpointing=gradient_checkpointing,
+            tokenizer_kwargs=tokenizer_kwargs,
+            transformer_kwargs=transformer_kwargs,
         )
 
     @overrides

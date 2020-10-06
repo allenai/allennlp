@@ -1,5 +1,5 @@
 import math
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Dict, Any
 
 from overrides import overrides
 
@@ -42,7 +42,15 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         is used.
     gradient_checkpointing: `bool`, optional (default = `None`)
         Enable or disable gradient checkpointing.
-    """
+    tokenizer_kwargs: `Dict[str, Any]`, optional (default = `None`)
+        Dictionary with
+        [additional arguments](https://github.com/huggingface/transformers/blob/155c782a2ccd103cf63ad48a2becd7c76a7d2115/transformers/tokenization_utils.py#L691)
+        for `AutoTokenizer.from_pretrained`.
+    transformer_kwargs: `Dict[str, Any]`, optional (default = `None`)
+        Dictionary with
+        [additional arguments](https://github.com/huggingface/transformers/blob/155c782a2ccd103cf63ad48a2becd7c76a7d2115/transformers/modeling_utils.py#L253)
+        for `AutoModel.from_pretrained`.
+    """  # noqa: E501
 
     authorized_missing_keys = [r"position_ids$"]
 
@@ -57,12 +65,18 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         override_weights_file: Optional[str] = None,
         override_weights_strip_prefix: Optional[str] = None,
         gradient_checkpointing: Optional[bool] = None,
+        tokenizer_kwargs: Optional[Dict[str, Any]] = None,
+        transformer_kwargs: Optional[Dict[str, Any]] = None,
     ) -> None:
         super().__init__()
         from allennlp.common import cached_transformers
 
         self.transformer_model = cached_transformers.get(
-            model_name, True, override_weights_file, override_weights_strip_prefix
+            model_name,
+            True,
+            override_weights_file=override_weights_file,
+            override_weights_strip_prefix=override_weights_strip_prefix,
+            **(transformer_kwargs or {}),
         )
 
         if gradient_checkpointing is not None:
@@ -83,7 +97,10 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
             self._scalar_mix = ScalarMix(self.config.num_hidden_layers)
             self.config.output_hidden_states = True
 
-        tokenizer = PretrainedTransformerTokenizer(model_name)
+        tokenizer = PretrainedTransformerTokenizer(
+            model_name,
+            tokenizer_kwargs=tokenizer_kwargs,
+        )
         self._num_added_start_tokens = len(tokenizer.single_sequence_start_tokens)
         self._num_added_end_tokens = len(tokenizer.single_sequence_end_tokens)
         self._num_added_tokens = self._num_added_start_tokens + self._num_added_end_tokens

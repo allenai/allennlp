@@ -285,8 +285,12 @@ def search_learning_rate(
 
         for param_group in trainer.optimizer.param_groups:
             param_group["lr"] = current_lr
+            # Zero gradients.
+            # NOTE: this is actually more efficient than calling `self.optimizer.zero_grad()`
+            # because it avoids a read op when the gradients are first updated below.
+            for p in param_group["params"]:
+                p.grad = None
 
-        trainer.optimizer.zero_grad()
         loss = trainer.batch_outputs(batch, for_training=True)["loss"]
         loss.backward()
         loss = loss.detach().cpu().item()
