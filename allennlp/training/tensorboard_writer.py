@@ -331,3 +331,13 @@ class TensorboardWriter(FromParams):
             self._train_log.close()
         if self._validation_log is not None:
             self._validation_log.close()
+
+    def flush(self) -> None:
+        """
+        Calls the `flush` method of the `SummaryWriter` s which makes sure that pending
+        scalars are flushed to disk.
+        """
+        if self._train_log is not None:
+            self._train_log.flush()
+        if self._validation_log is not None:
+            self._validation_log.flush()

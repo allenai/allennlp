@@ -990,6 +990,9 @@ class GradientDescentTrainer(Trainer):
 
             epochs_trained += 1
 
+        # make sure pending events are flushed to disk
+        self._tensorboard.flush()
+
         # Load the best model state before returning
         best_model_state = self._checkpointer.best_model_state()
         if best_model_state:
