@@ -6,7 +6,7 @@ import re
 import time
 import traceback
 from contextlib import contextmanager
-from typing import Any, Dict, Iterator, List, Optional, Tuple, Union
+from typing import Any, Dict, Iterator, List, Optional, Tuple, Type, Union
 
 from allennlp.common.util import int_to_device
 
@@ -199,6 +199,91 @@ class TrackEpochCallback:
         trainer.model.epoch = epoch + 1
 
 
+class EndCallback(Registrable):
+    """
+    An optional callback that you can pass to the `GradientDescentTrainer` that will be called at
+    the end of training after the final epoch. The default implementation does nothing. You can
+    implement your own callback and do whatever you want (such as exporting data) after training has ended.
+    """
+
+    def __call__(
+        self,
+        trainer: "GradientDescentTrainer",
+        metrics: Dict[str, Any],
+        epoch: int,
+        is_master: bool,
+    ) -> None:
+        pass
+
+
+EndCallback.register("null")(EndCallback)
+
+
+_BasicCallback = Union[BatchCallback, EpochCallback, EndCallback]
+
+
+class TrainerCallback(Registrable):
+    """
+    A general callback object that wraps all three types of callbacks into one.
+
+    Rather than a `__call__` method, this class has `on_batch`, `on_epoch`, and `on_end` methods, corresponding to
+    each callback type. Each one receives the state of the wrapper object as `self`. This enables easier state
+    sharing between related callbacks.
+    """
+
+    def __init__(self):
+        self.batch_callback = self._make_callback(BatchCallback)
+        self.epoch_callback = self._make_callback(EpochCallback)
+        self.end_callback = self._make_callback(EndCallback)
+
+    def on_batch(
+        self,
+        trainer: "GradientDescentTrainer",
+        batch_inputs: List[List[TensorDict]],
+        batch_outputs: List[Dict[str, Any]],
+        epoch: int,
+        batch_number: int,
+        is_training: bool,
+        is_master: bool,
+    ) -> None:
+        pass
+
+    def on_epoch(
+        self,
+        trainer: "GradientDescentTrainer",
+        metrics: Dict[str, Any],
+        epoch: int,
+        is_master: bool,
+    ) -> None:
+        pass
+
+    def on_end(
+        self,
+        trainer: "GradientDescentTrainer",
+        metrics: Dict[str, Any],
+        epoch: int,
+        is_master: bool,
+    ) -> None:
+        pass
+
+    _callback_map = {
+        BatchCallback: on_batch,
+        EpochCallback: on_epoch,
+        EndCallback: on_end,
+    }
+
+    def _make_callback(self, call_type: Type[_BasicCallback]) -> _BasicCallback:
+        class _Wrapper(call_type):
+            def __call__(inner_self, *args):
+                cmap = TrainerCallback._callback_map
+                cmap[call_type](self, *args)
+
+        return _Wrapper()
+
+
+TrainerCallback.register("null")(TrainerCallback)
+
+
 @Trainer.register("gradient_descent", constructor="from_partial_objects")
 class GradientDescentTrainer(Trainer):
     """
@@ -316,6 +401,12 @@ class GradientDescentTrainer(Trainer):
         A list of callbacks that will be called at the end of every epoch, and at the start of
         training (with epoch = -1).
 
+    end_callbacks : `List[EndCallback]`, optional (default = `None`)
+        A list of callbacks that will be called at the end of training.
+
+    end_callbacks : `List[TrainerCallback]`, optional (default = `None`)
+        A list of callbacks that will be called at each batch, epoch, and at the start and end of training.
+
     distributed : `bool`, optional, (default = `False`)
         If set, PyTorch's `DistributedDataParallel` is used to train the model in multiple GPUs. This also
         requires `world_size` to be greater than 1.
@@ -367,6 +458,8 @@ class GradientDescentTrainer(Trainer):
         moving_average: Optional[MovingAverage] = None,
         batch_callbacks: List[BatchCallback] = None,
         epoch_callbacks: List[EpochCallback] = None,
+        end_callbacks: List[EndCallback] = None,
+        trainer_callbacks: List[TrainerCallback] = None,
         distributed: bool = False,
         local_rank: int = 0,
         world_size: int = 1,
@@ -415,6 +508,12 @@ class GradientDescentTrainer(Trainer):
         self._moving_average = moving_average
         self._batch_callbacks = batch_callbacks or []
         self._epoch_callbacks = epoch_callbacks or []
+        self._end_callbacks = end_callbacks or []
+
+        for callback in trainer_callbacks or []:
+            self._batch_callbacks.append(callback.batch_callback)
+            self._epoch_callbacks.append(callback.epoch_callback)
+            self._end_callbacks.append(callback.end_callback)
 
         # We keep the total batch number as an instance variable because it
         # is used inside a closure for the hook which logs activations in
@@ -970,6 +1069,9 @@ class GradientDescentTrainer(Trainer):
                 logger.info("Estimated training time remaining: %s", formatted_time)
 
             epochs_trained += 1
+
+        for callback in self._end_callbacks:
+            callback(self, metrics=metrics, epoch=epoch, is_master=self._master)
 
         # make sure pending events are flushed to disk and files are closed properly
         self._tensorboard.close()
