@@ -29,8 +29,9 @@
 
 - [Website](https://allennlp.org/)
 - [Guide](https://guide.allennlp.org/)
-- [Forum](https://discourse.allennlp.org)
 - [Documentation](https://docs.allennlp.org/) ( [latest](https://docs.allennlp.org/latest/) | [stable](https://docs.allennlp.org/stable/) | [master](https://docs.allennlp.org/master/) )
+- [Forum](https://discourse.allennlp.org)
+- [Stack Overflow](https://stackoverflow.com/questions/tagged/allennlp)
 - [Contributing Guidelines](CONTRIBUTING.md)
 - [Officially Supported Models](https://github.com/allenai/allennlp-models)
     - [Pretrained Models](https://github.com/allenai/allennlp-models/blob/master/allennlp_models/pretrained.py)
@@ -49,7 +50,7 @@ created a couple of template repositories that you can use as a starting place:
 * If you'd prefer to use python code to configure your experiments and run your training loop, use
   [this template](https://github.com/allenai/allennlp-template-python-script). There are a few
   things that are currently a little harder in this setup (loading a saved model, and using
-  distributed training), but except for those its functionality is equivalent to the config files
+  distributed training), but otherwise it's functionality equivalent to the config files
   setup.
 
 In addition, there are external tutorials:

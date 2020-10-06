@@ -11,6 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Added context manager functionality (`__enter__` and `__exit__`) to `Trainer`,
   which will call automatically close used resources if `with` statement is used.
+- Added a `build-vocab` subcommand that can be used to build a vocabulary from a training config file.
+- Added `tokenizer_kwargs` argument to `PretrainedTransformerMismatchedIndexer`.
+- Added `tokenizer_kwargs` and `transformer_kwargs` arguments to `PretrainedTransformerMismatchedEmbedder`.
 - Added official support for Python 3.8.
 - Added a script: `scripts/release_notes.py`, which automatically prepares markdown release notes from the
   CHANGELOG and commit history.
@@ -30,15 +33,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Now `trainer.train()` does not close the `tensorboard` writer in the end (moved to `Trainer.close()`).
-  Instead, `with` statement is used with `Trainer` to auto-close such objects properly.
+- `trainer.train()` does not close the `tensorboard` writer, it merely flushes is. This makes it possible to use the
+  `GradientDescentTrainer` object more than once. To close the writer, call `GradientDescentTrainer.close()`, or
+  use it in a `with` statement.
+- Subcommands that don't require plugins will no longer cause plugins to be loaded or have an `--include-package` flag.
+- Allow overrides to be JSON string or `dict`.
 - `transformers` dependency updated to version 3.1.0.
 - When `cached_path` is called on a local archive with `extract_archive=True`, the archive is now extracted into a unique subdirectory of the cache root instead of a subdirectory of the archive's directory. The extraction directory is also unique to the modification time of the archive, so if the file changes, subsequent calls to `cached_path` will know to re-extract the archive.
 - Removed the `truncation_strategy` parameter to `PretrainedTransformerTokenizer`. The way we're calling the tokenizer, the truncation strategy takes no effect anyways.
 
+### Removed
+
+- Removed `common.util.is_master` function.
+
 ### Fixed
 
-- Fixed a bug where sometimes tensorboard logger may be not closed properly. Making `Trainer` a context manager.
+- Class decorators now displayed in API docs.
 - Fixed up the documentation for the `allennlp.nn.beam_search` module.
 - Ignore `*args` when constructing classes with `FromParams`.
 - Ensured some consistency in the types of the values that metrics return.
@@ -51,7 +61,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed a bug where `cached_path()` would fail if passed a `cache_dir` with the user home shortcut `~/`.
 - Fixed a bug in our doc building script where markdown links did not render properly
   if the "href" part of the link (the part inside the `()`) was on a new line.
-
+- Changed how gradients are zeroed out with an optimization. See [this video from NVIDIA](https://www.youtube.com/watch?v=9mS1fIYj1So)
+  at around the 9 minute mark.
+- Fixed a bug where parameters to a `FromParams` class that are dictionaries wouldn't get logged
+  when an instance is instantiated `from_params`.
+- Fixed a bug in distributed training where the vocab would be saved from every worker, when it should have been saved by only the local master process.
 
 ## [v1.1.0](https://github.com/allenai/allennlp/releases/tag/v1.1.0) - 2020-09-08
 

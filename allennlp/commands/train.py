@@ -122,7 +122,7 @@ def train_model_from_args(args: argparse.Namespace):
 def train_model_from_file(
     parameter_filename: Union[str, PathLike],
     serialization_dir: Union[str, PathLike],
-    overrides: str = "",
+    overrides: Union[str, Dict[str, Any]] = "",
     recover: bool = False,
     force: bool = False,
     node_rank: int = 0,
@@ -140,8 +140,8 @@ def train_model_from_file(
     serialization_dir : `str`
         The directory in which to save results and logs. We just pass this along to
         [`train_model`](#train_model).
-    overrides : `str`
-        A JSON string that we will use to override values in the input parameter file.
+    overrides : `Union[str, Dict[str, Any]]`, optional (default = `""`)
+        A JSON string or a dict that we will use to override values in the input parameter file.
     recover : `bool`, optional (default=`False`)
         If `True`, we will try to recover a training run from an existing serialization
         directory.  This is only intended for use when something actually crashed during the middle
@@ -374,7 +374,6 @@ def _train_worker(
 
     distributed = world_size > 1
 
-    # not using `allennlp.common.util.is_master` as the process group is yet to be initialized
     master = process_rank == 0
 
     include_package = include_package or []
@@ -653,7 +652,7 @@ class TrainModel(Registrable):
         # case, we're trivially the master. In the distributed case this is safe
         # to do without worrying about race conditions since saving and loading
         # the vocab involves acquiring a file lock.
-        if common_util.is_master():
+        if local_rank == 0:
             vocabulary_path = os.path.join(serialization_dir, "vocabulary")
             vocabulary_.save_to_files(vocabulary_path)
 

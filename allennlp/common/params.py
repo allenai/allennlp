@@ -383,12 +383,6 @@ class Params(MutableMapping):
                 else:
                     logger.info(f"{history}{key} = {value}")
 
-        logger.info(
-            "Converting Params object to dict; logging of default "
-            "values will not occur when dictionary parameters are "
-            "used subsequently."
-        )
-        logger.info("CURRENTLY DEFINED PARAMETERS: ")
         log_recursively(self.params, self.history)
         return params_as_dict
 
@@ -457,7 +451,10 @@ class Params(MutableMapping):
 
     @classmethod
     def from_file(
-        cls, params_file: Union[str, PathLike], params_overrides: str = "", ext_vars: dict = None
+        cls,
+        params_file: Union[str, PathLike],
+        params_overrides: Union[str, Dict[str, Any]] = "",
+        ext_vars: dict = None,
     ) -> "Params":
         """
         Load a `Params` object from a configuration file.
@@ -468,7 +465,7 @@ class Params(MutableMapping):
 
             The path to the configuration file to load.
 
-        params_overrides: `str`, optional
+        params_overrides: `Union[str, Dict[str, Any]]`, optional (default = `""`)
 
             A dict of overrides that can be applied to final object.
             e.g. {"model.embedding_dim": 10}
@@ -490,6 +487,8 @@ class Params(MutableMapping):
 
         file_dict = json.loads(evaluate_file(params_file, ext_vars=ext_vars))
 
+        if isinstance(params_overrides, dict):
+            params_overrides = json.dumps(params_overrides)
         overrides_dict = parse_overrides(params_overrides)
         param_dict = with_fallback(preferred=overrides_dict, fallback=file_dict)
 
