@@ -257,16 +257,16 @@ class TrainerCallback(Registrable, metaclass=TrainerCallbackMeta):
         pass
 
     @classmethod
-    def _make_callback_type(
-        cls, ctype: Type[_BasicCallback], call: Callable[[], None]
-    ) -> Type[_BasicCallback]:
-        class _Wrapper(ctype):
-            def __init__(self, trainer_callback: cls):
+    def _make_callback_type(cls,
+                            call_type: Type[_BasicCallback],
+                            call: Callable[[], None],
+                            ) -> Type[_BasicCallback]:  # type: ignore
+        class _Wrapper(call_type):  # type: ignore
+            def __init__(self, trainer_callback: "TrainerCallback"):
                 self.trainer_callback = trainer_callback
 
             def __call__(self, trainer: "GradientDescentTrainer", *args, **kwargs):
-                call(self.trainer_callback, trainer, *args, **kwargs)
-
+                call(self.trainer_callback, trainer, *args, **kwargs)  # type: ignore
         return _Wrapper
 
     def batch(self):
