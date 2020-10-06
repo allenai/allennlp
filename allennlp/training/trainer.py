@@ -588,6 +588,7 @@ class GradientDescentTrainer(Trainer):
                 for p in param_group["params"]:
                     p.grad = None
 
+            batch_loss = 0.0
             batch_group_outputs = []
             for batch in batch_group:
                 with amp.autocast(self._use_amp):
@@ -599,8 +600,7 @@ class GradientDescentTrainer(Trainer):
                         raise ValueError("nan loss encountered")
                     loss = loss / len(batch_group)
 
-                    batch_loss = loss.item()
-                    train_loss += batch_loss
+                    batch_loss += loss.item()
                     if reg_loss is not None:
                         reg_loss = reg_loss / len(batch_group)
                         batch_reg_loss = reg_loss.item()
@@ -610,6 +610,8 @@ class GradientDescentTrainer(Trainer):
                     self._scaler.scale(loss).backward()
                 else:
                     loss.backward()
+
+            train_loss += batch_loss
 
             batch_grad_norm = self.rescale_gradients()
 
