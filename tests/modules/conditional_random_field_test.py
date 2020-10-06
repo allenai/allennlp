@@ -64,7 +64,7 @@ class TestConditionalRandomField(AllenNlpTestCase):
         best_scores = []
 
         for logit, mas in zip(logits, mask):
-            mask_indices = mas.nonzero().squeeze()
+            mask_indices = mas.nonzero(as_tuple=False).squeeze()
             logit = torch.index_select(logit, 0, mask_indices)
             sequence_length = logit.shape[0]
             most_likely, most_likelihood = None, -float("inf")

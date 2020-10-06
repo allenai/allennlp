@@ -11,10 +11,7 @@ assignees: ''
 Please fill this template entirely and do not erase any of it.
 We reserve the right to close without a response bug reports which are incomplete.
 
-If you can't fill in the checklist then it's likely that this is a question, not a bug,
-in which case it probably belongs on our discource forum instead:
-
-https://discourse.allennlp.org/
+If you have a question rather than a bug, please ask on [Stack Overflow](https://stackoverflow.com/questions/tagged/allennlp) rather than posting an issue here.
 -->
 
 ## Checklist

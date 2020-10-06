@@ -3,7 +3,6 @@ import os
 import pathlib
 import shutil
 import tempfile
-from unittest import mock
 
 from allennlp.common.checks import log_pytorch_version_info
 
@@ -38,19 +37,5 @@ class AllenNlpTestCase:
 
         os.makedirs(self.TEST_DIR, exist_ok=True)
 
-        # Due to a bug in pytest we'll end up with a bunch of logging errors if we try to
-        # log anything within an 'atexit' hook.
-        # When https://github.com/pytest-dev/pytest/issues/5502 is fixed we should
-        # be able to remove this work-around.
-        def _cleanup_archive_dir_without_logging(path: str):
-            if os.path.exists(path):
-                shutil.rmtree(path)
-
-        self.patcher = mock.patch(
-            "allennlp.models.archival._cleanup_archive_dir", _cleanup_archive_dir_without_logging
-        )
-        self.mock_cleanup_archive_dir = self.patcher.start()
-
     def teardown_method(self):
         shutil.rmtree(self.TEST_DIR)
-        self.patcher.stop()

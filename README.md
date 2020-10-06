@@ -29,8 +29,9 @@
 
 - [Website](https://allennlp.org/)
 - [Guide](https://guide.allennlp.org/)
-- [Forum](https://discourse.allennlp.org)
 - [Documentation](https://docs.allennlp.org/) ( [latest](https://docs.allennlp.org/latest/) | [stable](https://docs.allennlp.org/stable/) | [master](https://docs.allennlp.org/master/) )
+- [Forum](https://discourse.allennlp.org)
+- [Stack Overflow](https://stackoverflow.com/questions/tagged/allennlp)
 - [Contributing Guidelines](CONTRIBUTING.md)
 - [Officially Supported Models](https://github.com/allenai/allennlp-models)
     - [Pretrained Models](https://github.com/allenai/allennlp-models/blob/master/allennlp_models/pretrained.py)
@@ -49,7 +50,7 @@ created a couple of template repositories that you can use as a starting place:
 * If you'd prefer to use python code to configure your experiments and run your training loop, use
   [this template](https://github.com/allenai/allennlp-template-python-script). There are a few
   things that are currently a little harder in this setup (loading a saved model, and using
-  distributed training), but except for those its functionality is equivalent to the config files
+  distributed training), but otherwise it's functionality equivalent to the config files
   setup.
 
 In addition, there are external tutorials:
@@ -105,12 +106,12 @@ We support AllenNLP on Mac and Linux environments. We presently do not support W
 #### Setting up a virtual environment
 
 [Conda](https://conda.io/) can be used set up a virtual environment with the
-version of Python required for AllenNLP.  If you already have a Python 3.6 or 3.7
+version of Python required for AllenNLP.  If you already have a Python 3
 environment you want to use, you can skip to the 'installing via pip' section.
 
 1.  [Download and install Conda](https://conda.io/projects/conda/en/latest/user-guide/install/index.html).
 
-2.  Create a Conda environment with Python 3.7:
+2.  Create a Conda environment with Python 3.7 (3.6 or 3.8 would work as well):
 
     ```
     conda create -n allennlp python=3.7

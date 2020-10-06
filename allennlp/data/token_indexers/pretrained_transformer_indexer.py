@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Any
 import logging
 import torch
 from allennlp.common.util import pad_sequence_to_length
@@ -38,14 +38,25 @@ class PretrainedTransformerIndexer(TokenIndexer):
         before feeding into the embedder. The embedder embeds these segments independently and
         concatenate the results to get the original document representation. Should be set to
         the same value as the `max_length` option on the `PretrainedTransformerEmbedder`.
-    """
+    tokenizer_kwargs : `Dict[str, Any]`, optional (default = `None`)
+        Dictionary with
+        [additional arguments](https://github.com/huggingface/transformers/blob/155c782a2ccd103cf63ad48a2becd7c76a7d2115/transformers/tokenization_utils.py#L691)
+        for `AutoTokenizer.from_pretrained`.
+    """  # noqa: E501
 
     def __init__(
-        self, model_name: str, namespace: str = "tags", max_length: int = None, **kwargs
+        self,
+        model_name: str,
+        namespace: str = "tags",
+        max_length: int = None,
+        tokenizer_kwargs: Optional[Dict[str, Any]] = None,
+        **kwargs,
     ) -> None:
         super().__init__(**kwargs)
         self._namespace = namespace
-        self._allennlp_tokenizer = PretrainedTransformerTokenizer(model_name)
+        self._allennlp_tokenizer = PretrainedTransformerTokenizer(
+            model_name, tokenizer_kwargs=tokenizer_kwargs
+        )
         self._tokenizer = self._allennlp_tokenizer.tokenizer
         self._added_to_vocabulary = False
 
