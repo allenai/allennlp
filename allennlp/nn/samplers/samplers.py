@@ -38,13 +38,20 @@ class TopKSampler(Sampler):
         self.temperature = temperature or 1.0
         self.filter_val = min_value_of_dtype(torch.float)
 
-    def __call__(self, logits: torch.Tensor, k: int = 1) -> torch.Tensor:
-        min_threshold = torch.topk(logits, k)[0][..., -1]
-        filtered_indices = logits < min_threshold
-        logits[..., filtered_indices] = filter_val
+    def __call__(self, logits: torch.Tensor, num_samples: int = 1, k: int = 1, with_replacement: bool = True) -> torch.Tensor:
 
-        filtered_probabilites = torch.nn.functional.softmax(filtered_logits_descending, dim=-1)
-        return torch.multinomial(filtered_probabilites, 1)
+        assert k <= len(logits)
+        
+        min_threshold = torch.topk(logits, k)[0][..., -1].unsqueeze(dim=-1)
+        filtered_indices = logits < min_threshold
+        logits[..., filtered_indices] = self.filter_val
+
+        filtered_probabilites = torch.nn.functional.softmax(logits, dim=-1)
+        selected_indices = torch.multinomial(filtered_probabilites, num_samples,replacement=with_replacement)
+
+        # Return (selected log probabilities, selected classes)
+        # shape: (len(logits),1) , (len(logits), 1) 
+        return (torch.gather(logits, 1, selected_indices), selected_indices)
 
 @Sampler.register("TopP")
 class TopPSampler(Sampler):
@@ -58,7 +65,7 @@ class TopPSampler(Sampler):
 
     Registered as a `Sampler` with name "TopK".
     """
-    def __init__(self, p: float = 0.9, temperature: float = 1.0, filter_val: float = -1000):
+    def __init__(self, p: float = 0.9, temperature: float = 1.0, filter_val: float = -float('inf')):
         assert p <= 1.0, f"p must be <= 0"
         self.p = p
         self.temperature = temperature or 1.0
@@ -66,7 +73,7 @@ class TopPSampler(Sampler):
             
 
 
-    def __call__(self, logits: torch.Tensor ) -> torch.Tensor:
+    def __call__(self, logits: torch.Tensor, num_samples: int = 1, with_replacement: bool = True) -> torch.Tensor:
         """
         Performs top-p sampling on the given `logits`.
         `logits` is a tensor of log-probabilities to be selected from.
@@ -87,9 +94,15 @@ class TopPSampler(Sampler):
         filtered_indices[..., 1:] = filtered_indices[..., :-1].clone()
         filtered_indices[..., 0] = 0
 
+        #print('rifght', sorting_indices[filtered_indices])
         # Here we set the filtered indices in the original logits to be the filter value
         logits[..., sorting_indices[filtered_indices]] = self.filter_val
 
         filtered_probabilites = torch.nn.functional.softmax(logits, dim=-1)
 
-        return torch.multinomial(filtered_probabilites, 1)
+        # Here we sample from the filtered distribution
+        selected_indices = torch.multinomial(filtered_probabilites, num_samples, replacement=with_replacement)
+
+        # Return (selected log probabilities, selected classes)
+        # shape: (len(logits),1) , (len(logits), 1) 
+        return (torch.gather(logits, 1, selected_indices), selected_indices)

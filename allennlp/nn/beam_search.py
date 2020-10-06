@@ -170,13 +170,13 @@ class BeamSearch:
                 f"Please decrease beam_size or per_node_beam_size."
             )
 
-        '''
-        Need to get (instead of top)
-        '''
+        # Get the initial predicted classed and their log probabilities.
+        # If this search includes sampling, select the tokens using the designated sampler.
+        # Else, select the top `beam_size` tokens.
+        # shape: (batch_size, beam_size), (batch_size, beam_size)
         if sampler is not None:
-            start_top_log_probabilities, start_predicted_classes = sampler(start_class_log_probabilities)   
+            start_top_log_probabilities, start_predicted_classes = sampler(start_class_log_probabilities, self.beam_size)   
         else:
-            # shape: (batch_size, beam_size), (batch_size, beam_size)
             start_top_log_probabilities, start_predicted_classes = start_class_log_probabilities.topk(
                 self.beam_size
             )
@@ -237,7 +237,6 @@ class BeamSearch:
             # then we can stop early.
             if (last_predictions == self._end_index).all():
                 break
-
             # Take a step. This get the predicted log probs of the next classes
             # and updates the state.
             # shape: (batch_size * beam_size, num_classes)
@@ -262,7 +261,7 @@ class BeamSearch:
 
             # shape (both): (batch_size * beam_size, per_node_beam_size)
             if sampler is not None:
-                top_log_probabilities, predicted_classes = sampler(cleaned_log_probabilities)   
+                top_log_probabilities, predicted_classes = sampler(cleaned_log_probabilities, self.per_node_beam_size)   
             else:
                 top_log_probabilities, predicted_classes = cleaned_log_probabilities.topk(
                     self.per_node_beam_size
@@ -314,7 +313,6 @@ class BeamSearch:
             # division as the tensor is a LongTensor.)
             # shape: (batch_size, beam_size)
             backpointer = restricted_beam_indices // self.per_node_beam_size
-
             backpointers.append(backpointer)
 
             # Keep only the pieces of the state tensors corresponding to the
