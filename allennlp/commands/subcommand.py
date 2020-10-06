@@ -24,7 +24,13 @@ class Subcommand(Registrable):
     [`main`](#main).
     """
 
-    reverse_registry: Dict[Type, str] = {}
+    requires_plugins: bool = True
+    """
+    If `True`, the sub-command will trigger a call to `import_plugins` and will also
+    have an additional `--include-package` flag.
+    """
+
+    _reverse_registry: Dict[Type, str] = {}
 
     def add_subparser(self, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
         raise NotImplementedError
@@ -40,11 +46,11 @@ class Subcommand(Registrable):
             subclass = super_register_fn(subclass)
             # Don't need to check `exist_ok`, as it's done by super.
             # Also, don't need to delete previous entries if overridden, they can just stay there.
-            cls.reverse_registry[subclass] = name
+            cls._reverse_registry[subclass] = name
             return subclass
 
         return add_name_to_reverse_registry
 
     @property
     def name(self) -> str:
-        return self.reverse_registry[self.__class__]
+        return self._reverse_registry[self.__class__]

@@ -374,7 +374,6 @@ def _train_worker(
 
     distributed = world_size > 1
 
-    # not using `allennlp.common.util.is_master` as the process group is yet to be initialized
     master = process_rank == 0
 
     include_package = include_package or []
@@ -652,7 +651,7 @@ class TrainModel(Registrable):
         # case, we're trivially the master. In the distributed case this is safe
         # to do without worrying about race conditions since saving and loading
         # the vocab involves acquiring a file lock.
-        if common_util.is_master():
+        if local_rank == 0:
             vocabulary_path = os.path.join(serialization_dir, "vocabulary")
             vocabulary_.save_to_files(vocabulary_path)
 
