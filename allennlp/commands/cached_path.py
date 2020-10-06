@@ -21,6 +21,8 @@ logger = logging.getLogger(__name__)
 
 @Subcommand.register("cached-path")
 class CachedPath(Subcommand):
+    requires_plugins: bool = False
+
     @overrides
     def add_subparser(self, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
         description = """Cache remote files to the AllenNLP cache."""

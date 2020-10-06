@@ -497,46 +497,6 @@ def flatten_filename(file_path: str) -> str:
     return file_path.replace("/", "_SLASH_")
 
 
-def is_master(
-    global_rank: int = None, world_size: int = None, num_procs_per_node: int = None
-) -> bool:
-    """
-    Checks if the process is a "master" of its node in a distributed process group. If a
-    process group is not initialized, this returns `True`.
-
-    # Parameters
-
-    global_rank : `int` ( default = `None` )
-        Global rank of the process if in a distributed process group. If not
-        given, rank is obtained using `torch.distributed.get_rank()`
-    world_size : `int` ( default = `None` )
-        Number of processes in the distributed group. If not
-        given, this is obtained using `torch.distributed.get_world_size()`
-    num_procs_per_node: `int` ( default = `None` )
-        Number of GPU processes running per node
-    """
-
-    # In non-distributed case, a "master" process doesn't make any
-    # sense. So instead of raising an error, returning True would
-    # make things less painful
-    if not is_distributed():
-        return True
-
-    if global_rank is None:
-        global_rank = dist.get_rank()
-
-    if world_size is None:
-        world_size = dist.get_world_size()
-
-    if num_procs_per_node is None and os.environ:
-        num_procs_per_node = int(os.environ.get("ALLENNLP_PROCS_PER_NODE", world_size))
-
-    # rank == 0 would do in a single-node multi-GPU setup. However,
-    # in a multi-node case, every node has a logical master and hence
-    # the mod(%) op.
-    return global_rank % (world_size / num_procs_per_node) == 0
-
-
 def is_distributed() -> bool:
     """
     Checks if the distributed process group is available and has been initialized
