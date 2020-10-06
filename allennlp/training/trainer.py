@@ -208,7 +208,7 @@ class TrainerCallbackMeta(type):
         Add subclasses that wrap the `TrainerCallback` into other interfaces.
         """
         subtype = super().__new__(cls, name, bases, dct)
-        # These subtypes wrap the `TrainerCallback` into the `_BasicCallback` interfaces. 
+        # These subtypes wrap the `TrainerCallback` into the `_BasicCallback` interfaces.
         subtype.Batch = subtype._make_callback_type(BatchCallback, subtype.on_batch)
         subtype.Epoch = subtype._make_callback_type(EpochCallback, subtype.on_epoch)
         subtype.End = subtype._make_callback_type(EpochCallback, subtype.on_end)
@@ -257,21 +257,24 @@ class TrainerCallback(Registrable, metaclass=TrainerCallbackMeta):
         pass
 
     @classmethod
-    def _make_callback_type(cls, ctype: Type[_BasicCallback], call: Callable[[], None]) -> Type[_BasicCallback]:
+    def _make_callback_type(
+        cls, ctype: Type[_BasicCallback], call: Callable[[], None]
+    ) -> Type[_BasicCallback]:
         class _Wrapper(ctype):
             def __init__(self, trainer_callback: cls):
                 self.trainer_callback = trainer_callback
 
             def __call__(self, trainer: "GradientDescentTrainer", *args, **kwargs):
                 call(self.trainer_callback, trainer, *args, **kwargs)
+
         return _Wrapper
-    
+
     def batch(self):
         return self.Batch(self)
-    
+
     def epoch(self):
         return self.Epoch(self)
-    
+
     def end(self):
         return self.End(self)
 
