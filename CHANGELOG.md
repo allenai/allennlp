@@ -28,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   be used from the `cached-path` command with `allennlp cached-path --inspect`.
 - Added a function `remove_cache_entries` to `common.file_utils` that removes any cache entries matching the given
   glob patterns. This can used from the `cached-path` command with `allennlp cached-path --remove some-files-*`.
+- Added logging for the main process when running in distributed mode.
 
 ### Changed
 
