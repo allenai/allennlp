@@ -382,8 +382,10 @@ class PretrainedModelInitializer(Initializer):
     """
 
     def __init__(
-        self, weights_file_path: str, parameter_name_overrides: Dict[str, str] = None
+        self, weights_file_path: str = None, parameter_name_overrides: Dict[str, str] = None
     ) -> None:
+        if weights_file_path is None:
+            return
         self.weights: Dict[str, torch.Tensor] = torch.load(weights_file_path)
         self.parameter_name_overrides = parameter_name_overrides or {}
 
