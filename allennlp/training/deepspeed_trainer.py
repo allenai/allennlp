@@ -8,8 +8,6 @@ import logging
 import os
 import re
 import math
-import json
-import tempfile
 import time
 import traceback
 from copy import deepcopy
@@ -24,6 +22,8 @@ from torch.cuda import amp
 from torch.nn.parallel import DistributedDataParallel
 
 import deepspeed
+# from deepspeed.runtime.engine import DeepSpeedEngine
+from allennlp.training.deepspeed_engine_adapter import AllennlpDeepSpeedEngineAdapter as DeepSpeedEngine
 
 from allennlp.common import Lazy, Registrable, Tqdm, Params, FromParams
 from allennlp.common import util as common_util
@@ -44,6 +44,11 @@ logger = logging.getLogger(__name__)
 
 JsonDict = Dict[str, Any]
 
+# import torch.autograd.profiler as profiler
+# import sys; sys.tracebacklimit = 0
+# from pyinstrument import Profiler
+# profiler = Profiler()
+
 class DeepspeedConfig(FromParams):
     def __init__(
         self,
@@ -61,46 +66,39 @@ class DeepspeedConfig(FromParams):
         self.zero_allow_untested_optimizer = zero_allow_untested_optimizer
         self.wall_clock_breakdown = wall_clock_breakdown
 
-    @staticmethod
-    def build_deepspeed_args(local_rank: int = 0):
-        from argparse import Namespace
-
-        args = dict(deepspeed_config=deepspeed_config_path, deepspeed=True, local_rank=local_rank)
-        return Namespace(**args)
-
-    @property
-    def config(self):
-        # return {
+        # self.config = {
         #     'fp16': self.fp16,
         #     'amp': self.amp,
         #     'zero_optimization': self.zero_optimization,
         #     'zero_allow_untested_optimizer': self.zero_allow_untested_optimizer
         # }
-        return vars(self)
 
     def launch(
         self,
         model: torch.nn.Module,
-        optimizer: Union[str, torch.optim.Optimizer],
         local_rank: int, 
-        serialization_dir: str,
         batch_size: int, 
         gradient_accumulation_steps: int,
         **kwargs
     ):
-        path = ''
-        config = dict(**self.config, train_batch_size=batch_size, gradient_accumulation_steps=gradient_accumulation_steps)
-        ds = deepspeed.initialize(
-            args=self.build_deepspeed_args(path, local_rank),
-            model=model,
-            model_parameters=model.parameters(),
-            dist_init_required=False,
-            config_params=config,
-            **kwargs
-        )
+        from argparse import Namespace
 
-        # os.remove(path)
-        return ds
+        args = Namespace(deepspeed_config=None, deepspeed=True, local_rank=local_rank)
+        config = dict(**vars(self), train_batch_size=batch_size, gradient_accumulation_steps=gradient_accumulation_steps)
+
+        ds = DeepSpeedEngine(
+            args=args,
+            model=model,
+            # optimizer=optimizer,
+            # optimizer=Optimizer.default(model.named_parameters()),
+            model_parameters=model.parameters(),
+            # training_data=training_data,
+            # lr_scheduler=lr_scheduler,
+            # mpu=mpu,
+            dist_init_required=False,
+            config_params=config
+        )
+        return ds, ds.optimizer
 
 @Trainer.register("deepspeed", constructor="from_partial_objects")
 class DeepspeedTrainer(Trainer):
@@ -179,11 +177,9 @@ class DeepspeedTrainer(Trainer):
         self._pytorch_model = self.model
         
         self._ds_config = deepspeed_config
-        self.model_engine, self.optimizer, _, _ = self._ds_config.launch(
+        self.model_engine, self.optimizer, *_ = self._ds_config.launch(
             self.model,
-            None,
             local_rank,
-            serialization_dir,
             self.data_loader.batch_size,
             num_gradient_accumulation_steps
         )
@@ -200,7 +196,12 @@ class DeepspeedTrainer(Trainer):
         """
         # batch = nn_util.move_to_device(batch, self.cuda_device)
         batch = nn_util.move_to_device(batch, self.model_engine.device)
+        # with profiler.profile(use_cuda=True, profile_memory=True) as prof:
+            #with profiler.record_function("forward"):
+        # with Profiler() as profiler:
         output_dict = self.model_engine(**batch)
+        # print(prof.key_averages().table(sort_by="cpu_time_total", row_limit=10))
+        # print(profiler.output_text(unicode=True, color=True, show_all=True, timeline=True))
 
         if for_training:
             try:
@@ -749,13 +750,6 @@ class DeepspeedTrainer(Trainer):
                     parameter.requires_grad_(False)
 
         common_util.log_frozen_and_tunable_parameter_names(model)
-
-        batches_per_epoch: Optional[int]
-        try:
-            batches_per_epoch = len(data_loader)
-            batches_per_epoch = math.ceil(batches_per_epoch / num_gradient_accumulation_steps)
-        except TypeError:
-            batches_per_epoch = None
 
         parameters = [[n, p] for n, p in model.named_parameters() if p.requires_grad]
         moving_average_ = moving_average.construct(parameters=parameters)
