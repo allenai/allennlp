@@ -28,6 +28,7 @@ from typing import (
     Iterable,
     Dict,
     NamedTuple,
+    MutableMapping,
 )
 from hashlib import sha256
 from functools import wraps
@@ -390,9 +391,35 @@ def _serialize(data):
 
 
 class TensorCache(MutableMapping[str, Tensor], ABC):
+    """
+    This is a key-value store, mapping strings to tensors. The data is kept on disk,
+    making this class useful as a cache for storing tensors.
+
+    `TensorCache` is also safe to access from multiple processes at the same time, so
+    you can use it in distributed training situations, or from multiple training
+    runs at the same time.
+    """
+
     def __init__(
-        self, filename: Union[str, PathLike], map_size: int = 1024 * 1024 * 1024 * 1024
+        self, filename: Union[str, PathLike], *, map_size: int = 1024 * 1024 * 1024 * 1024
     ) -> None:
+        """
+        Creates a `TensorCache` by either opening an existing one on disk, or creating
+        a new one. Its interface is almost exactly like a Python dictionary, where the
+        keys are strings and the values are `torch.Tensor`.
+
+        Parameters
+        ----------
+        filename: `str`
+            Path to the location of the cache
+        map_size: `int`, optional, defaults to 1TB
+            This is the maximum size the cache will ever grow to. On reasonable operating
+            systems, there is no penalty to making this a large value.
+            `TensorCache` uses a memory-mapped file to store the data. When the file is
+            first opened, we have to give the maximum size it can ever grow to. This is
+            that number. Reasonable operating systems don't actually allocate that space
+            until it is really needed.
+        """
         self.lmdb_env = lmdb.open(
             filename,
             subdir=False,
@@ -467,6 +494,7 @@ class TensorCache(MutableMapping[str, Tensor], ABC):
         return self.lmdb_env.stat()["entries"]
 
     def __iter__(self):
+        # It is not hard to implement this, but we have not needed it so far.
         raise NotImplementedError()
 
 
