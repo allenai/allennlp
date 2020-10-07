@@ -40,6 +40,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and they both now return the results in bytes as integers. Also, the `peak_gpu_memory` function now utilizes PyTorch functions to find the memory
   usage instead of shelling out to the `nvidia-smi` command. This is more efficient and also more accurate because it only takes
   into account the tensor allocations of the current PyTorch process.
+- Make sure weights are first loaded to the cpu when using PretrainedModelInitializer, preventing wasted GPU memory.
 
 ### Removed
 
