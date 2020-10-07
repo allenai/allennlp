@@ -212,7 +212,6 @@ class BeamSearch:
         log_probs_after_end[:, self._end_index] = 0.0
 
         # Set the same state for each element in the beam.
-        print("state in", sys.getsizeof(state))
         for key, state_tensor in state.items():
             if state_tensor is None:
                 continue
@@ -220,8 +219,6 @@ class BeamSearch:
                 "decoder_hidden",
                 "decoder_context",
             }
-
-            print("key01: ", sys.getsizeof(state[key]))
 
             if multilayer_rnn_decoder:
                 # shape: (num_layers, batch_size * beam_size, *)
@@ -239,7 +236,6 @@ class BeamSearch:
                     .expand(batch_size, self.beam_size, *last_dims)
                     .reshape(batch_size * self.beam_size, *last_dims)
                 )
-            print("key02: ", sys.getsizeof(state[key]))
 
         for timestep in range(self.max_steps - 1):
             # shape: (batch_size * beam_size,)
@@ -338,7 +334,6 @@ class BeamSearch:
                     "decoder_context",
                 }
 
-                print("key0: ", sys.getsizeof(state[key]))
                 if multilayer_rnn_decoder:
                     # shape: (num_layers, batch_size * beam_size, *)
                     num_layers, _, *last_dims = state_tensor.size()
@@ -360,16 +355,12 @@ class BeamSearch:
                     expanded_backpointer = backpointer.view(
                         batch_size, self.beam_size, *([1] * len(last_dims))
                     ).expand(batch_size, self.beam_size, *last_dims)
-
-                    print("key: ", sys.getsizeof(state[key]))
                     # shape: (batch_size * beam_size, *)
                     state[key] = (
                         state_tensor.reshape(batch_size, self.beam_size, *last_dims)
                         .gather(1, expanded_backpointer)
                         .reshape(batch_size * self.beam_size, *last_dims)
                     )
-
-                    print("key2:", sys.getsizeof(state[key]))
 
         if not torch.isfinite(last_log_probabilities).all():
             warnings.warn(
