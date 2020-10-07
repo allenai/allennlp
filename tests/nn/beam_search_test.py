@@ -237,8 +237,8 @@ class BeamSearchTest(AllenNlpTestCase):
         beam_size = 3
         take_step = take_step_with_timestep
 
-        top_p, log_probs = BeamSearch.top_p_sampling(
-            self.end_index, initial_predictions, {}, take_step, beam_size=beam_size
+        top_p, log_probs = BeamSearch.top_p_sampling(self.end_index, beam_size=beam_size).search(
+            initial_predictions, {}, take_step
         )
 
         # bem_search = BeamSearch(self.end_index, beam_size=3, per_node_beam_size = 1)
@@ -261,8 +261,8 @@ class BeamSearchTest(AllenNlpTestCase):
         take_step = take_step_with_timestep
 
         top_k, log_probs = BeamSearch.top_k_sampling(
-            self.end_index, initial_predictions, {}, take_step, k=1, beam_size=beam_size
-        )
+            self.end_index, k=1, beam_size=beam_size
+        ).search(initial_predictions, {}, take_step)
 
         beam_size = beam_size or 1
         batch_size = 5
@@ -280,8 +280,8 @@ class BeamSearchTest(AllenNlpTestCase):
         take_step = take_step_with_timestep
 
         with pytest.warns(RuntimeWarning, match="Empty sequences predicted"):
-            predictions, log_probs = BeamSearch.top_p_sampling(
-                self.end_index, initial_predictions, {}, take_step, beam_size=1
+            predictions, log_probs = BeamSearch.top_p_sampling(self.end_index, beam_size=1).search(
+                initial_predictions, {}, take_step
             )
         # predictions hould have shape `(batch_size, beam_size, max_predicted_length)`.
         assert list(predictions.size()) == [2, 1, 1]
@@ -295,8 +295,8 @@ class BeamSearchTest(AllenNlpTestCase):
         take_step = take_step_with_timestep
 
         with pytest.warns(RuntimeWarning, match="Empty sequences predicted"):
-            predictions, log_probs = BeamSearch.top_k_sampling(
-                self.end_index, initial_predictions, {}, take_step, k=1, beam_size=1
+            predictions, log_probs = BeamSearch.top_k_sampling(self.end_index, beam_size=1).search(
+                initial_predictions, {}, take_step
             )
         # predictions hould have shape `(batch_size, beam_size, max_predicted_length)`.
         assert list(predictions.size()) == [2, 1, 1]
@@ -315,8 +315,8 @@ class BeamSearchTest(AllenNlpTestCase):
             take_step = take_step_with_timestep
             beam_size = 3
             top_k, log_probs = BeamSearch.top_k_sampling(
-                self.end_index, initial_predictions, {}, take_step, k=k, beam_size=beam_size
-            )
+                self.end_index, k=k, beam_size=beam_size
+            ).search(initial_predictions, {}, take_step)
 
     @pytest.mark.parametrize(
         "p",
@@ -328,5 +328,5 @@ class BeamSearchTest(AllenNlpTestCase):
             take_step = take_step_with_timestep
             beam_size = 3
             top_p, log_probs = BeamSearch.top_p_sampling(
-                self.end_index, initial_predictions, {}, take_step, p=p, beam_size=beam_size
-            )
+                self.end_index, p=p, beam_size=beam_size
+            ).search(initial_predictions, {}, take_step)
