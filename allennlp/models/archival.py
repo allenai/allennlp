@@ -161,14 +161,11 @@ def load_archive(
 
     if os.path.isdir(resolved_archive_file):
         serialization_dir = resolved_archive_file
-        model, config, serialization_dir = _load_model(
-            cuda_device, overrides, weights_file, serialization_dir
-        )
+        model, config = _load_model(cuda_device, overrides, weights_file, serialization_dir)
     else:
         with extract_archive(weights_file_path) as extraction_path:
-            model, config, serialization_dir = _load_model(
-                cuda_device, overrides, weights_file, extraction_path
-            )
+            serialization_dir = extraction_path
+            model, config = _load_model(cuda_device, overrides, weights_file, serialization_dir)
 
     return Archive(model=model, config=config)
 
@@ -190,7 +187,7 @@ def _load_model(cuda_device, overrides, weights_file, serialization_dir):
         cuda_device=cuda_device,
     )
 
-    return model, config, serialization_dir
+    return model, config
 
 
 def get_weights_path(serialization_dir):
