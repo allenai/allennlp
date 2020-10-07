@@ -129,8 +129,6 @@ class BeamSearchTest(AllenNlpTestCase):
         state["decoder_hidden"] = state["decoder_hidden"].unsqueeze(0).repeat(2, 1, 1)
         # shape: (2, batch_size, 3)
 
-        print("state", sys.getsizeof(state))
-
         seq = [
             [1, 0, 1],
             [1, 0, 1],
