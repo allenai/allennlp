@@ -996,6 +996,13 @@ class GradientDescentTrainer(Trainer):
             epoch_start_time = time.time()
             train_metrics = self._train_epoch(epoch)
 
+            if self._master:
+                self._checkpointer.save_checkpoint(epoch, self, save_model_only=True)
+
+            # Wait for the master to finish saving the model checkpoint
+            if self._distributed:
+                dist.barrier()
+
             # get peak of memory usage
             for key, value in train_metrics.items():
                 if key.startswith("gpu_") and key.endswith("_memory_MB"):
