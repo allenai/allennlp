@@ -37,6 +37,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `transformers` dependency updated to version 3.1.0.
 - When `cached_path` is called on a local archive with `extract_archive=True`, the archive is now extracted into a unique subdirectory of the cache root instead of a subdirectory of the archive's directory. The extraction directory is also unique to the modification time of the archive, so if the file changes, subsequent calls to `cached_path` will know to re-extract the archive.
 - Removed the `truncation_strategy` parameter to `PretrainedTransformerTokenizer`. The way we're calling the tokenizer, the truncation strategy takes no effect anyways.
+- `allennlp.common.util.peak_memory_mb` renamed to `peak_cpu_memory`, and `allennlp.common.util.gpu_memory_mb` renamed to `peak_gpu_memory`,
+  and they both now return the results in bytes as integers. Also, the `peak_gpu_memory` function now utilizes PyTorch functions to find the memory
+  usage instead of shelling out to the `nvidia-smi` command. This is more efficient and also more accurate because it only takes
+  into account the tensor allocations of the current PyTorch process.
 
 ### Removed
 
@@ -44,6 +48,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Fixed a bug where the reported `batch_loss` metric was incorrect when training with gradient accumulation.
 - Class decorators now displayed in API docs.
 - Fixed up the documentation for the `allennlp.nn.beam_search` module.
 - Ignore `*args` when constructing classes with `FromParams`.
