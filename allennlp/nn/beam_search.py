@@ -2,8 +2,6 @@ from inspect import signature
 from typing import List, Callable, Tuple, Dict, cast, TypeVar
 import warnings
 
-import sys
-
 import torch
 
 from allennlp.common.checks import ConfigurationError
@@ -159,10 +157,10 @@ class BeamSearch:
             ):
                 return old_step(last_predictions, state)
 
-            return self._search(start_predictions, start_state, new_step)
+            return self._search(start_predictions, start_state, new_step, sampler)
         else:
             return self._search(
-                start_predictions, start_state, cast(StepFunctionTypeWithTimestep, step)
+                start_predictions, start_state, cast(StepFunctionTypeWithTimestep, step), sampler
             )
 
     def _search(
@@ -170,6 +168,7 @@ class BeamSearch:
         start_predictions: torch.Tensor,
         start_state: StateType,
         step: StepFunctionTypeWithTimestep,
+        sampler: Sampler = None,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
 
         batch_size = start_predictions.size()[0]
@@ -467,7 +466,8 @@ class BeamSearch:
         # Make sure `k` is a valid threshold
         if type(k) is not int or k < 1:
             raise ConfigurationError(
-                f'{"value of selection threshold `k` invalid."}' f'{"`k` must be a positive `int`."}'
+                f'{"value of selection threshold `k` invalid."}'
+                f'{"`k` must be a positive `int`."}'
             )
         sampler_k = TopKSampler(k, temperature)
         return cls(

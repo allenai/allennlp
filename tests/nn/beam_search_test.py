@@ -8,9 +8,6 @@ from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.nn.beam_search import BeamSearch
 
-import sys
-
-
 transition_probabilities = torch.tensor(
     [
         [0.0, 0.4, 0.3, 0.2, 0.1, 0.0],  # start token -> jth token
@@ -238,6 +235,8 @@ class BeamSearchTest(AllenNlpTestCase):
     def test_top_p_search(self):
         initial_predictions = torch.tensor([0] * 5)
         beam_size = 3
+        take_step = take_step_with_timestep
+
         top_p, log_probs = BeamSearch.top_p_sampling(
             self.end_index, initial_predictions, {}, take_step, beam_size=beam_size
         )
@@ -259,6 +258,8 @@ class BeamSearchTest(AllenNlpTestCase):
     def test_top_k_search(self):
         initial_predictions = torch.tensor([0] * 5)
         beam_size = 3
+        take_step = take_step_with_timestep
+
         top_k, log_probs = BeamSearch.top_k_sampling(
             self.end_index, initial_predictions, {}, take_step, k=1, beam_size=beam_size
         )
@@ -276,6 +277,8 @@ class BeamSearchTest(AllenNlpTestCase):
 
     def test_empty_p(self):
         initial_predictions = torch.LongTensor([self.end_index - 1, self.end_index - 1])
+        take_step = take_step_with_timestep
+
         with pytest.warns(RuntimeWarning, match="Empty sequences predicted"):
             predictions, log_probs = BeamSearch.top_p_sampling(
                 self.end_index, initial_predictions, {}, take_step, beam_size=1
@@ -289,6 +292,8 @@ class BeamSearchTest(AllenNlpTestCase):
 
     def test_empty_k(self):
         initial_predictions = torch.LongTensor([self.end_index - 1, self.end_index - 1])
+        take_step = take_step_with_timestep
+
         with pytest.warns(RuntimeWarning, match="Empty sequences predicted"):
             predictions, log_probs = BeamSearch.top_k_sampling(
                 self.end_index, initial_predictions, {}, take_step, k=1, beam_size=1
@@ -307,6 +312,7 @@ class BeamSearchTest(AllenNlpTestCase):
     def test_k_val(self, k):
         with pytest.raises(ConfigurationError):
             initial_predictions = torch.tensor([0] * 5)
+            take_step = take_step_with_timestep
             beam_size = 3
             top_k, log_probs = BeamSearch.top_k_sampling(
                 self.end_index, initial_predictions, {}, take_step, k=k, beam_size=beam_size
@@ -319,6 +325,7 @@ class BeamSearchTest(AllenNlpTestCase):
     def test_p_val(self, p):
         with pytest.raises(ConfigurationError):
             initial_predictions = torch.tensor([0] * 5)
+            take_step = take_step_with_timestep
             beam_size = 3
             top_p, log_probs = BeamSearch.top_p_sampling(
                 self.end_index, initial_predictions, {}, take_step, p=p, beam_size=beam_size
