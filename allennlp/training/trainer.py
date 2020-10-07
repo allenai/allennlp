@@ -236,6 +236,9 @@ class TrainerCallback(Registrable, metaclass=TrainerCallbackMeta):
         is_training: bool,
         is_master: bool,
     ) -> None:
+        """
+        This callback hook is called after the end of each batch. This is equivalent to `BatchCallback`.
+        """
         pass
 
     def on_epoch(
@@ -245,6 +248,9 @@ class TrainerCallback(Registrable, metaclass=TrainerCallbackMeta):
         epoch: int,
         is_master: bool,
     ) -> None:
+        """
+        This callback hook is called after the end of each epoch. This is equivalent to `EpochCallback`.
+        """
         pass
 
     def on_end(
@@ -254,6 +260,9 @@ class TrainerCallback(Registrable, metaclass=TrainerCallbackMeta):
         epoch: int,
         is_master: bool,
     ) -> None:
+        """
+        This callback hook is called after the final training epoch. The `epoch` is passed as an argument.
+        """
         pass
 
     @classmethod
@@ -270,12 +279,21 @@ class TrainerCallback(Registrable, metaclass=TrainerCallbackMeta):
         return _Wrapper
 
     def batch(self):
+        """
+        Construct a `BatchCallback` wrapper for this `TrainCallback`.
+        """
         return self.Batch(self)
 
     def epoch(self):
+        """
+        Construct an `EpochCallback` wrapper for this instance.
+        """
         return self.Epoch(self)
 
     def end(self):
+        """
+        Construct an `EpochCallback` wrapping the `on_end` end-of-training hook.
+        """
         return self.End(self)
 
 
@@ -400,7 +418,8 @@ class GradientDescentTrainer(Trainer):
         training (with epoch = -1).
 
     end_callbacks : `List[EpochCallback]`, optional (default = `None`)
-        A list of callbacks that will be called after the final epoch at the end of training.
+        A list of callbacks that will be called after the final epoch at the end of training. The type of the
+        callbacks is the same as `epoch_callbacks`.
 
     trainer_callbacks : `List[TrainerCallback]`, optional (default = `None`)
         A list of callbacks that will be called at each batch, epoch, and at the start and end of training.
