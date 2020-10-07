@@ -1,3 +1,4 @@
+from datetime import timedelta
 import sys
 from collections import OrderedDict
 
@@ -134,3 +135,35 @@ class TestCommonUtils(AllenNlpTestCase):
         for ptb_string, expected in test_cases:
             actual = util.sanitize_ptb_tokenized_string(ptb_string)
             assert actual == expected
+
+
+@pytest.mark.parametrize(
+    "size, result",
+    [
+        (12, "12B"),
+        (int(1.2 * 1024), "1.2K"),
+        (12 * 1024, "12K"),
+        (120 * 1024, "120K"),
+        (int(1.2 * 1024 * 1024), "1.2M"),
+        (12 * 1024 * 1024, "12M"),
+        (120 * 1024 * 1024, "120M"),
+        (int(1.2 * 1024 * 1024 * 1024), "1.2G"),
+        (12 * 1024 * 1024 * 1024, "12G"),
+    ],
+)
+def test_format_size(size: int, result: str):
+    assert util.format_size(size) == result
+
+
+@pytest.mark.parametrize(
+    "td, result",
+    [
+        (timedelta(days=2, hours=3), "2 days"),
+        (timedelta(days=1, hours=3), "1 day"),
+        (timedelta(hours=3, minutes=12), "3 hours"),
+        (timedelta(hours=1, minutes=12), "1 hour, 12 mins"),
+        (timedelta(minutes=12), "12 mins"),
+    ],
+)
+def test_format_timedelta(td: timedelta, result: str):
+    assert util.format_timedelta(td) == result
