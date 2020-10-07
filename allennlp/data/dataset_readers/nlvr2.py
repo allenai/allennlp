@@ -9,7 +9,7 @@ from torch import Tensor
 
 from allennlp.common.file_utils import cached_path, json_lines_from_file, TensorCache
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
-from allennlp.data.fields import ArrayField, LabelField, ListField, MetadataField, TextField
+from allennlp.data.fields import TensorField, LabelField, ListField, MetadataField, TextField
 from allennlp.data.image_loader import ImageLoader
 from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import PretrainedTransformerIndexer
@@ -204,8 +204,8 @@ class Nlvr2Reader(DatasetReader):
 
         fields = {
             "sentence": sentence_field,
-            "box_features": ListField([ArrayField(left_features), ArrayField(right_features)]),
-            "box_coordinates": ListField([ArrayField(left_coords), ArrayField(right_coords)]),
+            "box_features": ListField([TensorField(left_features), TensorField(right_features)]),
+            "box_coordinates": ListField([TensorField(left_coords), TensorField(right_coords)]),
             "identifier": MetadataField(identifier),
         }
 
