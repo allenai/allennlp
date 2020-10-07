@@ -202,20 +202,35 @@ class TrackEpochCallback:
 _BasicCallback = Union[BatchCallback, EpochCallback]
 
 
-class TrainerCallbackMeta(type):
+class _TrainerCallbackMeta(type):
     def __new__(cls, name, bases, dct):
         """
         Add subclasses that wrap the `TrainerCallback` into other interfaces.
         """
         subtype = super().__new__(cls, name, bases, dct)
         # These subtypes wrap the `TrainerCallback` into the `_BasicCallback` interfaces.
-        subtype.Batch = subtype._make_callback_type(BatchCallback, subtype.on_batch)
-        subtype.Epoch = subtype._make_callback_type(EpochCallback, subtype.on_epoch)
-        subtype.End = subtype._make_callback_type(EpochCallback, subtype.on_end)
+        subtype.Batch = cls._make_callback_type(BatchCallback, subtype.on_batch)
+        subtype.Epoch = cls._make_callback_type(EpochCallback, subtype.on_epoch)
+        subtype.End = cls._make_callback_type(EpochCallback, subtype.on_end)
         return subtype
 
+    @classmethod
+    def _make_callback_type(
+        cls,
+        call_type: Type[_BasicCallback],
+        call: Callable[[], None],
+    ) -> Type[_BasicCallback]:  # type: ignore
+        class _Wrapper(call_type):  # type: ignore
+            def __init__(self, trainer_callback: "TrainerCallback"):
+                self.trainer_callback = trainer_callback
 
-class TrainerCallback(Registrable, metaclass=TrainerCallbackMeta):
+            def __call__(self, trainer: "GradientDescentTrainer", *args, **kwargs):
+                call(self.trainer_callback, trainer, *args, **kwargs)  # type: ignore
+
+        return _Wrapper
+
+
+class TrainerCallback(Registrable, metaclass=_TrainerCallbackMeta):
     """
     A general callback object that wraps all three types of callbacks into one.
 
@@ -265,34 +280,27 @@ class TrainerCallback(Registrable, metaclass=TrainerCallbackMeta):
         """
         pass
 
-    @classmethod
-    def _make_callback_type(cls,
-                            call_type: Type[_BasicCallback],
-                            call: Callable[[], None],
-                            ) -> Type[_BasicCallback]:  # type: ignore
-        class _Wrapper(call_type):  # type: ignore
-            def __init__(self, trainer_callback: "TrainerCallback"):
-                self.trainer_callback = trainer_callback
-
-            def __call__(self, trainer: "GradientDescentTrainer", *args, **kwargs):
-                call(self.trainer_callback, trainer, *args, **kwargs)  # type: ignore
-        return _Wrapper
-
     def batch(self):
         """
         Construct a `BatchCallback` wrapper for this `TrainCallback`.
+
+        The `cls.Batch` type is created by the metaclass.
         """
         return self.Batch(self)
 
     def epoch(self):
         """
         Construct an `EpochCallback` wrapper for this instance.
+
+        The `cls.Epoch` type is created by the metaclass.
         """
         return self.Epoch(self)
 
     def end(self):
         """
         Construct an `EpochCallback` wrapping the `on_end` end-of-training hook.
+
+        The `cls.End` type is created by the metaclass.
         """
         return self.End(self)
 
