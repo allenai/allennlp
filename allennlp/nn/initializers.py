@@ -389,18 +389,14 @@ class PretrainedModelInitializer(Initializer):
             return
 
         from allennlp.models.archival import (
-            extract_archive_temporarily,
-            _WEIGHTS_NAME,
+            extract_archive,
+            get_weights_path,
         )  # import here to avoid circular imports
 
         self.weights: Dict[str, torch.Tensor]
         if os.path.basename(weights_file_path).endswith(".tar.gz"):
-            self.weights = extract_archive_temporarily(
-                weights_file_path,
-                lambda serialization_dir: torch.load(
-                    os.path.join(serialization_dir, _WEIGHTS_NAME)
-                ),
-            )
+            with extract_archive(weights_file_path) as extraction_path:
+                self.weights = torch.load(get_weights_path(extraction_path))
         else:
             self.weights = torch.load(weights_file_path)
 
