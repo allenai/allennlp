@@ -3,10 +3,12 @@ Utilities for working with the local dataset cache.
 """
 
 import glob
+import io
 import os
 import logging
 import tempfile
 import json
+from abc import ABC
 from collections import defaultdict
 from dataclasses import dataclass, asdict
 from datetime import timedelta
@@ -26,22 +28,30 @@ from typing import (
     Iterable,
     Dict,
     NamedTuple,
+    MutableMapping,
 )
 from hashlib import sha256
 from functools import wraps
+from weakref import WeakValueDictionary
 from zipfile import ZipFile, is_zipfile
 import tarfile
 import shutil
+import pickle
+
+import numpy as np
 import time
 
 import boto3
 import botocore
+import torch
 from botocore.exceptions import ClientError, EndpointConnectionError
 from filelock import FileLock
 import requests
 from requests.adapters import HTTPAdapter
 from requests.exceptions import ConnectionError
 from requests.packages.urllib3.util.retry import Retry
+import lmdb
+from torch import Tensor
 
 from allennlp.common.tqdm import Tqdm
 
@@ -375,6 +385,119 @@ def _find_latest_cached(url: str, cache_dir: Union[str, Path]) -> Optional[str]:
     return None
 
 
+def _serialize(data):
+    buffer = pickle.dumps(data, protocol=-1)
+    return np.frombuffer(buffer, dtype=np.uint8)
+
+
+class TensorCache(MutableMapping[str, Tensor], ABC):
+    """
+    This is a key-value store, mapping strings to tensors. The data is kept on disk,
+    making this class useful as a cache for storing tensors.
+
+    `TensorCache` is also safe to access from multiple processes at the same time, so
+    you can use it in distributed training situations, or from multiple training
+    runs at the same time.
+    """
+
+    def __init__(
+        self, filename: Union[str, PathLike], *, map_size: int = 1024 * 1024 * 1024 * 1024
+    ) -> None:
+        """
+        Creates a `TensorCache` by either opening an existing one on disk, or creating
+        a new one. Its interface is almost exactly like a Python dictionary, where the
+        keys are strings and the values are `torch.Tensor`.
+
+        Parameters
+        ----------
+        filename: `str`
+            Path to the location of the cache
+        map_size: `int`, optional, defaults to 1TB
+            This is the maximum size the cache will ever grow to. On reasonable operating
+            systems, there is no penalty to making this a large value.
+            `TensorCache` uses a memory-mapped file to store the data. When the file is
+            first opened, we have to give the maximum size it can ever grow to. This is
+            that number. Reasonable operating systems don't actually allocate that space
+            until it is really needed.
+        """
+        self.lmdb_env = lmdb.open(
+            filename,
+            subdir=False,
+            map_size=map_size,
+            max_readers=os.cpu_count() * 2,
+            max_spare_txns=os.cpu_count() * 2,
+            metasync=False,
+            sync=True,
+            readahead=False,
+            meminit=False,
+        )
+
+        # We have another cache here that makes sure we return the same object for the same key. Without it,
+        # you would get a different tensor, using different memory, every time you call __getitem__(), even
+        # if you call it with the same key.
+        # The downside is that we can't keep self.cache_cache up to date when multiple processes modify the
+        # cache at the same time. We can guarantee though that it is up to date as long as processes either
+        # write new values, or read existing ones.
+        self.cache_cache: MutableMapping[str, Tensor] = WeakValueDictionary()
+
+    def __contains__(self, key: object):
+        if not isinstance(key, str):
+            return False
+        if key in self.cache_cache:
+            return True
+        encoded_key = key.encode()
+        with self.lmdb_env.begin(write=False) as txn:
+            result = txn.get(encoded_key)
+            return result is not None
+
+    def __getitem__(self, key: str):
+        try:
+            return self.cache_cache[key]
+        except KeyError:
+            encoded_key = key.encode()
+            with self.lmdb_env.begin(write=False) as txn:
+                buffer = txn.get(encoded_key)
+                if buffer is None:
+                    raise KeyError()
+                tensor = torch.load(io.BytesIO(buffer), map_location="cpu")
+            self.cache_cache[key] = tensor
+            return tensor
+
+    def __setitem__(self, key: str, tensor: torch.Tensor):
+        encoded_key = key.encode()
+        buffer = io.BytesIO()
+        if tensor.storage().size() != np.prod(tensor.size()):
+            tensor = tensor.clone()
+        assert tensor.storage().size() == np.prod(tensor.size())
+        torch.save(tensor.detach(), buffer, pickle_protocol=pickle.HIGHEST_PROTOCOL)
+        with self.lmdb_env.begin(write=True) as txn:
+            txn.put(encoded_key, buffer.getbuffer())
+
+        self.cache_cache[key] = tensor
+
+    def __delitem__(self, key: str):
+        encoded_key = key.encode()
+        with self.lmdb_env.begin(write=True) as txn:
+            txn.delete(encoded_key)
+
+        try:
+            del self.cache_cache[key]
+        except KeyError:
+            pass
+
+    def __del__(self):
+        if self.lmdb_env is not None:
+            self.lmdb_env.close()
+            self.lmdb_env = None
+
+    def __len__(self):
+        return self.lmdb_env.stat()["entries"]
+
+    def __iter__(self):
+        # It is not hard to implement this, but we have not needed it so far.
+        raise NotImplementedError()
+
+
 class CacheFile:
     """
     This is a context manager that makes robust caching easier.
@@ -387,7 +510,7 @@ class CacheFile:
     """
 
     def __init__(
-        self, cache_filename: Union[Path, str], mode: str = "w+b", suffix: str = ".tmp"
+        self, cache_filename: Union[PathLike, str], mode: str = "w+b", suffix: str = ".tmp"
     ) -> None:
         self.cache_filename = (
             cache_filename if isinstance(cache_filename, Path) else Path(cache_filename)
@@ -585,9 +708,9 @@ def get_file_extension(path: str, dot=True, lower: bool = True):
 
 
 def open_compressed(
-    filename: Union[str, Path], mode: str = "rt", encoding: Optional[str] = "UTF-8", **kwargs
+    filename: Union[str, PathLike], mode: str = "rt", encoding: Optional[str] = "UTF-8", **kwargs
 ):
-    if isinstance(filename, Path):
+    if isinstance(filename, PathLike):
         filename = str(filename)
     open_fn: Callable = open
 
@@ -602,7 +725,7 @@ def open_compressed(
     return open_fn(filename, mode=mode, encoding=encoding, **kwargs)
 
 
-def text_lines_from_file(filename: Union[str, Path], strip_lines: bool = True) -> Iterator[str]:
+def text_lines_from_file(filename: Union[str, PathLike], strip_lines: bool = True) -> Iterator[str]:
     with open_compressed(filename, "rt", encoding="UTF-8", errors="replace") as p:
         if strip_lines:
             for line in p:
@@ -611,7 +734,7 @@ def text_lines_from_file(filename: Union[str, Path], strip_lines: bool = True) -
             yield from p
 
 
-def json_lines_from_file(filename: Union[str, Path]) -> Iterable[Union[list, dict]]:
+def json_lines_from_file(filename: Union[str, PathLike]) -> Iterable[Union[list, dict]]:
     return (json.loads(line) for line in text_lines_from_file(filename))
 
 

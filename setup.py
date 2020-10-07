@@ -51,6 +51,7 @@ setup(
     ),
     install_requires=[
         "torch>=1.6.0,<1.7.0",
+        "torchvision>=0.7.0",
         "jsonnet>=0.10.0 ; sys.platform != 'win32'",
         "overrides==3.1.0",
         "nltk",
@@ -68,6 +69,7 @@ setup(
         "jsonpickle",
         "dataclasses;python_version<'3.7'",
         "filelock>=3.0,<3.1",
+        "lmdb",
     ],
     entry_points={"console_scripts": ["allennlp=allennlp.__main__:run"]},
     include_package_data=True,

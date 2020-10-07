@@ -3,7 +3,8 @@ from typing import Dict, Optional
 from overrides import overrides
 import torch
 
-from allennlp.data import TextFieldTensors, Vocabulary
+from allennlp.data.fields.text_field import TextFieldTensors
+from allennlp.data.vocabulary import Vocabulary
 from allennlp.modules.backbones.backbone import Backbone
 from allennlp.modules.token_embedders.pretrained_transformer_embedder import (
     PretrainedTransformerEmbedder,

@@ -1,3 +1,6 @@
+# Because the _install_ of this depends on torch, we can't put this in setup.py.
+git+https://github.com/facebookresearch/detectron2@v0.2.1
+
 #### TESTING-RELATED PACKAGES ####
 
 # Checks style, syntax, and other useful errors.

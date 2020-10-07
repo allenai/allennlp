@@ -75,8 +75,8 @@ class BertSelfAttention(torch.nn.Module):
         super().__init__()
         if hidden_size % num_attention_heads != 0:
             raise ValueError(
-                "The hidden size (%d) is not a multiple of the number of attention "
-                "heads (%d)" % (hidden_size, num_attention_heads)
+                "The hidden size (%d) is not a multiple of the number of attention heads (%d)"
+                % (hidden_size, num_attention_heads)
             )
         self.num_attention_heads = num_attention_heads
         self.attention_head_size = int(hidden_size / num_attention_heads)
@@ -233,8 +233,8 @@ class BertBiAttention(torch.nn.Module):
         super().__init__()
         if combined_hidden_size % num_attention_heads != 0:
             raise ValueError(
-                "The hidden size (%d) is not a multiple of the number of attention "
-                "heads (%d)" % (combined_hidden_size, num_attention_heads)
+                "The hidden size (%d) is not a multiple of the number of attention heads (%d)"
+                % (combined_hidden_size, num_attention_heads)
             )
 
         self.num_attention_heads = num_attention_heads
@@ -765,7 +765,7 @@ class BertImageFeatureEmbeddings(torch.nn.Module, FromParams):
 
     def forward(self, image_feature: torch.Tensor, image_location: torch.Tensor):
         img_embeddings = self.image_embeddings(image_feature)
-        loc_embeddings = self.image_location_embeddings(image_location)
+        loc_embeddings = self.image_location_embeddings(image_location.float())
         embeddings = self.layer_norm(img_embeddings + loc_embeddings)
         embeddings = self.dropout(embeddings)
 
@@ -912,20 +912,20 @@ class Nlvr2Vilbert(Model):
     @overrides
     def forward(
         self,  # type: ignore
-        sentence: List[str],
-        visual_features: torch.Tensor,
+        box_features: torch.Tensor,
         box_coordinates: torch.Tensor,
-        image_id: List[List[str]],
         identifier: List[str],
-        sentence_field: TextFieldTensors,
-        denotation: torch.Tensor = None,
+        sentence: TextFieldTensors,
+        label: torch.Tensor = None,
     ) -> Dict[str, torch.Tensor]:
 
-        batch_size, num_images, _, feature_size = visual_features.size()
+        batch_size, num_images, _, feature_size = box_features.size()
 
-        input_ids = sentence_field["tokens"]["token_ids"]
-        token_type_ids = sentence_field["tokens"]["type_ids"]
-        attention_mask = sentence_field["tokens"]["mask"]
+        # TODO(mattg): have this make fewer assumptions.
+        input_ids = sentence["tokens"]["token_ids"]
+        token_type_ids = sentence["tokens"]["type_ids"]
+        attention_mask = sentence["tokens"]["mask"]
+
         # All batch instances will always have the same number of images and boxes, so no masking
         # is necessary, and this is just a tensor of ones.
         image_attention_mask = torch.ones_like(box_coordinates[:, :, :, 0])
@@ -959,7 +959,7 @@ class Nlvr2Vilbert(Model):
         )
 
         # (batch_size, num_images, num_boxes, image_embedding_dim)
-        v_embedding_output = self.image_embeddings(visual_features, box_coordinates)
+        v_embedding_output = self.image_embeddings(box_features, box_coordinates)
         encoded_layers_t, encoded_layers_v = self.encoder(
             embedding_output,
             v_embedding_output,
@@ -986,16 +986,16 @@ class Nlvr2Vilbert(Model):
 
         outputs = {}
         outputs["logits"] = logits
-        if denotation is not None:
-            outputs["loss"] = self.loss(logits, denotation).sum()
-            self._denotation_accuracy(logits, denotation)
+        if label is not None:
+            outputs["loss"] = self.loss(logits, label).sum()
+            self._denotation_accuracy(logits, label)
             # Update group predictions for consistency computation
             predicted_binary = logits.argmax(1)
             for i in range(len(identifier)):
                 ident_parts = identifier[i].split("-")
                 group_id = "-".join([ident_parts[0], ident_parts[1], ident_parts[-1]])
                 self.consistency_wrong_map.setdefault(group_id, 0)
-                if predicted_binary[i].item() != denotation[i].item():
+                if predicted_binary[i].item() != label[i].item():
                     self.consistency_wrong_map[group_id] += 1
         return outputs
 

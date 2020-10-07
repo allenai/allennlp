@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+
 ## Unreleased (2.0 branch)
 
 ### Added
@@ -15,6 +16,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 whatever other relevant inputs it got) to each `Head` that's in use.  This is intended for
 multi-task learning, but so far it is incomplete, as there are no corresponding dataset readers or
 data loaders.  Those are coming soon.
+- Added `TensorCache` class for caching tensors on disk
+- Added reader for the NLVR2 dataset
+- Added cache for Detectron models that we might re-use several times in the code base
+- Added abstraction and concrete implementation for image loading
+- Added abstraction and concrete implementation for `GridEmbedder`
+- Added abstraction and demo implementation for an image augmentation module.
+- Added abstraction and concrete implementation for region detectors.
 
 ### Changed
 
@@ -23,6 +31,13 @@ data loaders.  Those are coming soon.
 - The `DataLoader` now decides whether to load instances lazily or not.
   With the `PyTorchDataLoader` this is controlled with the `lazy` parameter, but with
   the `MultiProcessDataLoading` this is controlled by the `max_instances_in_memory` setting.
+- `ArrayField` is now implemented in terms of torch tensors, not numpy.
+
+### Fixed
+
+- Ignore *args when constructing classes with `FromParams`.
+- Ensured some consistency in the types of the values that metrics return.
+- `PretrainedTransformerTokenizer` will now never return a sequence that's longer than `max_length`, even with special tokens
 
 
 ## Unreleased (1.x branch)
@@ -81,6 +96,7 @@ data loaders.  Those are coming soon.
 - Fixed a bug where parameters to a `FromParams` class that are dictionaries wouldn't get logged
   when an instance is instantiated `from_params`.
 - Fixed a bug in distributed training where the vocab would be saved from every worker, when it should have been saved by only the local master process.
+
 
 ## [v1.1.0](https://github.com/allenai/allennlp/releases/tag/v1.1.0) - 2020-09-08
 
