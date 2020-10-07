@@ -48,7 +48,13 @@ class BeamSearch(Registrable):
         more diversity into the search. See
         [*Beam Search Strategies for Neural Machine Translation*, Freitag and Al-Onaizan, 2017]
         (https://arxiv.org/abs/1702.01806).
+    sampler : `Sampler`, optional (default = `None`)
+        A sampler that can be used to select subsequent tokens.
+        If not given, search defaults to selecting the top `per_node_beam_size` tokens at each
+        step
     """
+
+    default_implementation = "without_sampling"
 
     def __init__(
         self,
@@ -405,6 +411,53 @@ class BeamSearch(Registrable):
         return all_predictions, last_log_probabilities
 
     @classmethod
+    def without_sampling(
+        cls,
+        end_index: int,
+        max_steps: int = 50,
+        beam_size: int = 10,
+        per_node_beam_size: int = None,
+        sampler: Sampler = None,
+    ) -> "BeamSearch":
+        """
+        Given an index of the end token in target vocabulary, return a BeamSearch object
+        that can be used to find `beam_size` candidate sequences, found by sampling from
+        the top `k` tokens to choose from at each step.
+
+        # Parameters
+
+        end_index : `int`
+            The index of the "stop" or "end" token in the target vocabulary.
+        max_steps : `int`, optional (default = `50`)
+            The maximum number of decoding steps to take, i.e. the maximum length
+            of the predicted sequences.
+        beam_size : `int`, optional (default = `10`)
+            The width of the beam used.
+        per_node_beam_size : `int`, optional (default = `beam_size`)
+            The maximum number of candidates to consider per node, at each step in the search.
+            If not given, this just defaults to `beam_size`. Setting this parameter
+            to a number smaller than `beam_size` may give better results, as it can introduce
+            more diversity into the search. See
+            [*Beam Search Strategies for Neural Machine Translation*, Freitag and Al-Onaizan, 2017]
+            (https://arxiv.org/abs/1702.01806).
+        sampler : `Sampler`, optional (default = `None`)
+            A sampler that can be used to select subsequent tokens.
+            If not given, search defaults to selecting the top `per_node_beam_size` tokens at each
+            step
+
+        # Returns
+
+        `BeamSearch` object with the defined parameters
+        """
+        return cls(
+            end_index=end_index,
+            max_steps=max_steps,
+            beam_size=beam_size,
+            per_node_beam_size=per_node_beam_size,
+            sampler=sampler,
+        )
+
+    @classmethod
     def top_k_sampling(
         cls,
         end_index: int,
@@ -414,52 +467,30 @@ class BeamSearch(Registrable):
         temperature: float = 1.0,
     ) -> "BeamSearch":
         """
-        Given an initial state, step function, and index of the end token in target vocabulary,
-        apply beam search to find `beam_size` candidate sequences, found by sampling from
-        tokens which cumulatively make up the top `p` of the total tokens to choose from.
+        Given an index of the end token in target vocabulary, return a BeamSearch object
+        that can be used to find `beam_size` candidate sequences, found by sampling from
+        the top `k` tokens to choose from at each step.
 
         # Parameters
 
         end_index : `int`
             The index of the "stop" or "end" token in the target vocabulary.
-        start_predictions : `torch.Tensor`
-            A tensor containing the initial predictions with shape `(batch_size,)`.
-            Usually the initial predictions are just the index of the "start" token
-            in the target vocabulary.
-        start_state : `StateType`
-            The initial state passed to the `step` function. Each value of the state dict
-            should be a tensor of shape `(batch_size, *)`, where `*` means any other
-            number of dimensions.
-        step : `StepFunctionType`
-            A function that is responsible for computing the next most likely tokens,
-            given the current state and the predictions from the last time step.
-            The function should accept two arguments. The first being a tensor
-            of shape `(group_size,)`, representing the index of the predicted
-            tokens from the last time step, and the second being the current state.
-            The `group_size` will be `batch_size * beam_size`, except in the initial
-            step, for which it will just be `batch_size`.
-            The function is expected to return a tuple, where the first element
-            is a tensor of shape `(group_size, target_vocab_size)` containing
-            the log probabilities of the tokens for the next step, and the second
-            element is the updated state. The tensor in the state should have shape
-            `(group_size, *)`, where `*` means any other number of dimensions.
         max_steps : `int`, optional (default = `50`)
             The maximum number of decoding steps to take, i.e. the maximum length
             of the predicted sequences.
         beam_size : `int`, optional (default = `10`)
             The width of the beam used.
         k : `int`, optional (default = `1`)
-            The number of top next tokens to select from.
+            The number of top next tokens to sample from.
         temperature : `float`, optional (default = `1.0`)
             The 'temperature' of the probability distribution to be sampled
             from, lowering below 1.0 creates a sharper distribution.
 
         # Returns
 
-        `Tuple[torch.Tensor, torch.Tensor]`
-            Tuple of `(predictions, log_probabilities)`, where `predictions`
-            has shape `(batch_size, beam_size, max_steps)` and `log_probabilities`
-            has shape `(batch_size, beam_size)`.
+        `BeamSearch` object with the defined `end_index`, `max_steps`, and
+        `beam_size`, with subsequent tokens sampled using a `TopKSampler` with
+        the specified `k` and `temperature`
         """
         # Make sure `k` is a valid threshold
         if type(k) is not int or k < 1:
@@ -486,9 +517,10 @@ class BeamSearch(Registrable):
         temperature: float = 1.0,
     ) -> "BeamSearch":
         """
-        Given an initial state, step function, and index of the end token in target vocabulary,
-        apply beam search to find `beam_size` candidate sequences, found by sampling from
-        tokens which cumulatively make up the top `p` of the total tokens to choose from.
+        Given an index of the end token in target vocabulary, return a BeamSearch object
+        that can be used to find `beam_size` candidate sequences, found by sampling from
+        tokens which cumulatively make up the top `p` probability of the total tokens to
+        choose from.
 
         # Parameters
 
@@ -528,10 +560,9 @@ class BeamSearch(Registrable):
 
         # Returns
 
-        `Tuple[torch.Tensor, torch.Tensor]`
-            Tuple of `(predictions, log_probabilities)`, where `predictions`
-            has shape `(batch_size, beam_size, max_steps)` and `log_probabilities`
-            has shape `(batch_size, beam_size)`.
+        `BeamSearch` object with the defined `end_index`, `max_steps`, and
+        `beam_size`, with subsequent tokens sampled using a `TopPSampler` with
+        the specified `p` and `temperature`
         """
         # Make sure `p` is a valid cumulative probability threshold.
         if type(p) is not float or p < 0.0 or p > 1.0:
@@ -550,5 +581,6 @@ class BeamSearch(Registrable):
         )
 
 
+BeamSearch.register("without_sampling", constructor="without_sampling")(BeamSearch)
 BeamSearch.register("top_p_sampling", constructor="top_p_sampling")(BeamSearch)
 BeamSearch.register("top_k_sampling", constructor="top_k_sampling")(BeamSearch)

@@ -31,10 +31,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added a `TrainerCallback` object to support state sharing between batch and epoch-level training callbacks.
 - Added classes: `nn/samplers/samplers.py` with `MultinomialSampler`, `TopKSampler`, and `TopPSampler` for 
   sampling indices from log probabilities
-- Added function `top_k_sampling` to `nn/beam_search.py` that serves beam search with probabilistic sampling in
-  sequences
-- Added function `top_p_sampling` to `nn/beam_search.py` that serves beam search with probabilistic sampling in
-  sequences
+- Made `BeamSearch` registrable.
+- Added `top_k_sampling` and `type_p_sampling` `BeamSearch` implementations.
 
 ### Changed
 

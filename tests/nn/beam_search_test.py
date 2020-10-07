@@ -7,6 +7,8 @@ import torch
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.nn.beam_search import BeamSearch
+from allennlp.common.params import Params
+
 
 transition_probabilities = torch.tensor(
     [
@@ -330,3 +332,39 @@ class BeamSearchTest(AllenNlpTestCase):
             top_p, log_probs = BeamSearch.top_p_sampling(
                 self.end_index, p=p, beam_size=beam_size
             ).search(initial_predictions, {}, take_step)
+
+    def test_params_no_sampling(self):
+        beam_search = BeamSearch.from_params(Params({"beam_size": 2, "end_index": 7}))
+        assert beam_search.beam_size == 2
+        assert beam_search._end_index == 7
+        assert beam_search.sampler is None
+
+    def test_params_k_sampling(self):
+        beam_search = BeamSearch.from_params(
+            Params(
+                {
+                    "type": "top_k_sampling",
+                    "beam_size": 2,
+                    "end_index": 7,
+                    "k": 5,
+                }
+            )
+        )
+        assert beam_search.beam_size == 2
+        assert beam_search._end_index == 7
+        assert beam_search.sampler is not None
+
+    def test_params_p_sampling(self):
+        beam_search = BeamSearch.from_params(
+            Params(
+                {
+                    "type": "top_p_sampling",
+                    "beam_size": 2,
+                    "end_index": 7,
+                    "p": 0.4,
+                }
+            )
+        )
+        assert beam_search.beam_size == 2
+        assert beam_search._end_index == 7
+        assert beam_search.sampler is not None
