@@ -259,7 +259,9 @@ def train_model(
         master_addr = distributed_params.pop("master_address", "127.0.0.1")
         if master_addr in ("127.0.0.1", "0.0.0.0", "localhost"):
             # If running locally, we can automatically find an open port if one is not specified.
-            master_port = distributed_params.pop("master_port", common_util.find_open_port())
+            master_port = (
+                distributed_params.pop("master_port", None) or common_util.find_open_port()
+            )
         else:
             # Otherwise we require that the port be specified.
             master_port = distributed_params.pop("master_port")

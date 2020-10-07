@@ -596,7 +596,7 @@ def find_open_port() -> int:
         sock.bind(("", 0))
         return sock.getsockname()[1]
 
-      
+
 def format_timedelta(td: timedelta) -> str:
     """
     Format a timedelta for humans.
