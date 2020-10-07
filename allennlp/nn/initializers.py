@@ -396,9 +396,9 @@ class PretrainedModelInitializer(Initializer):
         self.weights: Dict[str, torch.Tensor]
         if os.path.basename(weights_file_path).endswith(".tar.gz"):
             with extract_archive(weights_file_path) as extraction_path:
-                self.weights = torch.load(get_weights_path(extraction_path))
+                self.weights = torch.load(get_weights_path(extraction_path), map_location="cpu")
         else:
-            self.weights = torch.load(weights_file_path)
+            self.weights = torch.load(weights_file_path, map_location="cpu")
 
         self.parameter_name_overrides = parameter_name_overrides or {}
 
