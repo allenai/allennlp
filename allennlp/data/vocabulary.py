@@ -307,7 +307,7 @@ class Vocabulary(Registrable):
     @classmethod
     def from_files(
         cls,
-        directory: str,
+        directory: Union[str, os.PathLike],
         padding_token: Optional[str] = DEFAULT_PADDING_TOKEN,
         oov_token: Optional[str] = DEFAULT_OOV_TOKEN,
     ) -> "Vocabulary":

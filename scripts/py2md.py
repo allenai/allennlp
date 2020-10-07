@@ -174,7 +174,7 @@ class AllenNlpDocstringProcessor(Struct):
 
     CROSS_REF_RE = re.compile("(:(class|func|mod):`~?([a-zA-Z0-9_.]+)`)")
     UNDERSCORE_HEADER_RE = re.compile(r"(.*)\n-{3,}\n")
-    MULTI_LINE_LINK_RE = re.compile(r"(\[[^\]]+\])\n(\([^\)]+\))")
+    MULTI_LINE_LINK_RE = re.compile(r"(\[[^\]]+\])\n\s*(\([^\)]+\))")
 
     @override
     def process(self, graph, resolver):
@@ -371,13 +371,17 @@ class AllenNlpRenderer(MarkdownRenderer):
             return signature
 
     def _format_classdef_signature(self, cls: Class) -> str:
+        code = ""
+        if cls.decorators:
+            for dec in cls.decorators:
+                code += "@{}{}\n".format(dec.name, dec.args or "")
         bases = ", ".join(map(str, cls.bases))
         if cls.metaclass:
             bases += ", metaclass=" + str(cls.metaclass)
         if bases:
-            code = "class {}({})".format(cls.name, bases)
+            code += "class {}({})".format(cls.name, bases)
         else:
-            code = "class {}".format(cls.name)
+            code += "class {}".format(cls.name)
         if self.signature_python_help_style:
             code = cls.path() + " = " + code
         if self.classdef_render_init_signature_if_needed and (
