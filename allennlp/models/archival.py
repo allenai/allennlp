@@ -153,7 +153,7 @@ def load_archive(
     """
     with load_archive_contextmanager(
         archive_file, cuda_device, overrides, weights_file
-    ) as archive, serialization_dir:
+    ) as (archive, serialization_dir):
         pass
     return archive
 
