@@ -134,7 +134,7 @@ class TestTrainer(TrainerTestBase):
         assert isinstance(metrics["peak_worker_0_memory_MB"], float)
         assert metrics["peak_worker_0_memory_MB"] > 0
         assert "peak_gpu_0_memory_MB" in metrics
-        assert isinstance(metrics["peak_gpu_0_memory_MB"], int)
+        assert isinstance(metrics["peak_gpu_0_memory_MB"], float)
 
     @requires_multi_gpu
     def test_passing_trainer_multiple_gpus_raises_error(self):
