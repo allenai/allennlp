@@ -164,7 +164,7 @@ def load_archive_contextmanager(
     cuda_device: int = -1,
     overrides: Union[str, Dict[str, Any]] = "",
     weights_file: str = None,
-) -> Archive:
+):
     """
     Instantiates an Archive from an archived `tar.gz` file.
 
