@@ -151,11 +151,11 @@ def load_archive(
     weights_file : `str`, optional (default = `None`)
         The weights file to use.  If unspecified, weights.th in the archive_file will be used.
     """
-    with load_archive_contextmanager(
-        archive_file, cuda_device, overrides, weights_file
-    ) as (archive, serialization_dir):
-        pass
-    return archive
+    with load_archive_contextmanager(archive_file, cuda_device, overrides, weights_file) as (
+        archive,
+        serialization_dir,
+    ):
+        return archive
 
 
 @contextmanager
