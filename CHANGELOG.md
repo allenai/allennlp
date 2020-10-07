@@ -24,6 +24,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   be used from the `cached-path` command with `allennlp cached-path --inspect`.
 - Added a function `remove_cache_entries` to `common.file_utils` that removes any cache entries matching the given
   glob patterns. This can used from the `cached-path` command with `allennlp cached-path --remove some-files-*`.
+- Added classes: `nn/samplers/samplers.py` with `MultinomialSampler`, `TopKSampler`, and `TopPSampler` for 
+  sampling indices from log probabilities
+- Added function `top_k_sampling` to `nn/beam_search.py` that serves beam search with probabilistic sampling in
+  sequences
+- Added function `top_p_sampling` to `nn/beam_search.py` that serves beam search with probabilistic sampling in
+  sequences
+
 
 ### Changed
 

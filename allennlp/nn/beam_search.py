@@ -1,6 +1,8 @@
 from typing import List, Callable, Tuple, Dict, cast
 import warnings
 
+import sys
+
 import torch
 
 from allennlp.common.checks import ConfigurationError
@@ -76,8 +78,11 @@ class BeamSearch:
 
     @torch.no_grad()
     def search(
-        self, start_predictions: torch.Tensor, start_state: StateType, step: StepFunctionType, 
-        sampler: Sampler = None
+        self,
+        start_predictions: torch.Tensor,
+        start_state: StateType,
+        step: StepFunctionType,
+        sampler: Sampler = None,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Given a starting state and a step function, apply beam search to find the
@@ -175,11 +180,14 @@ class BeamSearch:
         # Else, select the top `beam_size` tokens.
         # shape: (batch_size, beam_size), (batch_size, beam_size)
         if sampler is not None:
-            start_top_log_probabilities, start_predicted_classes = sampler(start_class_log_probabilities, self.beam_size)   
-        else:
-            start_top_log_probabilities, start_predicted_classes = start_class_log_probabilities.topk(
-                self.beam_size
+            start_top_log_probabilities, start_predicted_classes = sampler(
+                start_class_log_probabilities, num_samples=self.beam_size
             )
+        else:
+            (
+                start_top_log_probabilities,
+                start_predicted_classes,
+            ) = start_class_log_probabilities.topk(self.beam_size)
 
         if self.beam_size == 1 and (start_predicted_classes == self._end_index).all():
             warnings.warn(
@@ -204,6 +212,7 @@ class BeamSearch:
         log_probs_after_end[:, self._end_index] = 0.0
 
         # Set the same state for each element in the beam.
+        print("state in", sys.getsizeof(state))
         for key, state_tensor in state.items():
             if state_tensor is None:
                 continue
@@ -211,6 +220,8 @@ class BeamSearch:
                 "decoder_hidden",
                 "decoder_context",
             }
+
+            print("key01: ", sys.getsizeof(state[key]))
 
             if multilayer_rnn_decoder:
                 # shape: (num_layers, batch_size * beam_size, *)
@@ -228,6 +239,7 @@ class BeamSearch:
                     .expand(batch_size, self.beam_size, *last_dims)
                     .reshape(batch_size * self.beam_size, *last_dims)
                 )
+            print("key02: ", sys.getsizeof(state[key]))
 
         for timestep in range(self.max_steps - 1):
             # shape: (batch_size * beam_size,)
@@ -258,10 +270,11 @@ class BeamSearch:
                 class_log_probabilities,
             )
 
-
             # shape (both): (batch_size * beam_size, per_node_beam_size)
             if sampler is not None:
-                top_log_probabilities, predicted_classes = sampler(cleaned_log_probabilities, self.per_node_beam_size)   
+                top_log_probabilities, predicted_classes = sampler(
+                    cleaned_log_probabilities, self.per_node_beam_size
+                )
             else:
                 top_log_probabilities, predicted_classes = cleaned_log_probabilities.topk(
                     self.per_node_beam_size
@@ -324,6 +337,8 @@ class BeamSearch:
                     "decoder_hidden",
                     "decoder_context",
                 }
+
+                print("key0: ", sys.getsizeof(state[key]))
                 if multilayer_rnn_decoder:
                     # shape: (num_layers, batch_size * beam_size, *)
                     num_layers, _, *last_dims = state_tensor.size()
@@ -346,12 +361,15 @@ class BeamSearch:
                         batch_size, self.beam_size, *([1] * len(last_dims))
                     ).expand(batch_size, self.beam_size, *last_dims)
 
+                    print("key: ", sys.getsizeof(state[key]))
                     # shape: (batch_size * beam_size, *)
                     state[key] = (
                         state_tensor.reshape(batch_size, self.beam_size, *last_dims)
                         .gather(1, expanded_backpointer)
                         .reshape(batch_size * self.beam_size, *last_dims)
                     )
+
+                    print("key2:", sys.getsizeof(state[key]))
 
         if not torch.isfinite(last_log_probabilities).all():
             warnings.warn(
@@ -370,14 +388,14 @@ class BeamSearch:
 
     @classmethod
     def top_k_sampling(
-        cls, 
+        cls,
         end_index: int,
-        start_predictions: torch.Tensor, 
-        start_state: StateType, 
+        start_predictions: torch.Tensor,
+        start_state: StateType,
         step: StepFunctionType,
         max_steps: int = 50,
         beam_size: int = 10,
-        k: int = 1, 
+        k: int = 1,
         temperature: float = 1.0,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
@@ -417,7 +435,7 @@ class BeamSearch:
             The width of the beam used.
         k : `int`, optional (default = `1`)
             The number of top next tokens to select from.
-        temperature : `float`, optional (default = 1.0)
+        temperature : `float`, optional (default = `1.0`)
             The 'temperature' of the probability distribution to be sampled
             from, lowering below 1.0 creates a sharper distribution.
 
@@ -428,24 +446,29 @@ class BeamSearch:
             has shape `(batch_size, beam_size, max_steps)` and `log_probabilities`
             has shape `(batch_size, beam_size)`.
         """
+        # Make sure `k` is a valid threshold
+        if type(k) is not int or k < 1:
+            raise ConfigurationError(
+                f'{"value of selection threshold `k` invalid."}' f'{"`k` must be a positive `int`."}'
+            )
         sampler_k = TopKSampler(k, temperature)
         return cls(
-            end_index = end_index,
-            max_steps = max_steps,
-            beam_size = beam_size,
-            per_node_beam_size = 1,
+            end_index=end_index,
+            max_steps=max_steps,
+            beam_size=beam_size,
+            per_node_beam_size=1,
         ).search(start_predictions, start_state, step, sampler_k)
 
     @classmethod
     def top_p_sampling(
-        cls, 
+        cls,
         end_index: int,
-        start_predictions: torch.Tensor, 
-        start_state: StateType, 
+        start_predictions: torch.Tensor,
+        start_state: StateType,
         step: StepFunctionType,
         max_steps: int = 50,
         beam_size: int = 10,
-        p: float = 0.9, 
+        p: float = 0.9,
         temperature: float = 1.0,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
@@ -485,7 +508,7 @@ class BeamSearch:
             The width of the beam used.
         p : `float`, optional (default = `0.9`)
             The cumulative probability of top next tokens to select from.
-        temperature : `float`, optional (default = 1.0)
+        temperature : `float`, optional (default = `1.0`)
             The 'temperature' of the probability distribution to be sampled
             from, lowering below 1.0 creates a sharper distribution.
 
@@ -496,10 +519,17 @@ class BeamSearch:
             has shape `(batch_size, beam_size, max_steps)` and `log_probabilities`
             has shape `(batch_size, beam_size)`.
         """
+        # Make sure `p` is a valid cumulative probability threshold.
+        if type(p) is not float or p < 0.0 or p > 1.0:
+            raise ConfigurationError(
+                f'{"value of cumulative probability threshold `p`=({p}) too small."}'
+                f'{"`p` must be a float between `0.0` and `1.0`"}'
+            )
+
         sampler_p = TopPSampler(p, temperature)
         return cls(
-            end_index = end_index,
-            max_steps = max_steps,
-            beam_size = beam_size,
-            per_node_beam_size = 1,
+            end_index=end_index,
+            max_steps=max_steps,
+            beam_size=beam_size,
+            per_node_beam_size=1,
         ).search(start_predictions, start_state, step, sampler_p)

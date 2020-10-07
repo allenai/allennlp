@@ -1,5 +1,5 @@
 """
-This module contains classes representing samplers which leverage the 
+This module contains classes representing samplers which leverage the
 multinomial distribution to sample point(s) given log-probabilities
 """
 
