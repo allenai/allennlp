@@ -9,7 +9,7 @@ from torch import Tensor
 
 from allennlp.common.file_utils import cached_path, json_lines_from_file, TensorCache
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
-from allennlp.data.fields import ArrayField, LabelField, ListField, MetadataField, TextField
+from allennlp.data.fields import TensorField, LabelField, ListField, MetadataField, TextField
 from allennlp.data.image_loader import ImageLoader
 from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import PretrainedTransformerIndexer
@@ -23,26 +23,45 @@ from allennlp.modules.vision.region_detector import RegionDetector
 @DatasetReader.register("nlvr2")
 class Nlvr2Reader(DatasetReader):
     """
+    Reads the NLVR2 dataset from http://lil.nlp.cornell.edu/nlvr/.
+
+    In this task, the model is presented with two images and a sentence referring to those images.
+    The task for the model is to identify whether the sentence is true or false.
+    Accordingly, the instances produced by this reader contain two images, featurized into the
+    fields "box_features" and "box_coordinates". In addition to that, it produces a `TextField`
+    called "sentence", and a `MetadataField` called "identifier". The latter contains the question
+    id from the question set.
+
     Parameters
     ----------
     image_dir: `str`
         Path to directory containing `png` image files.
     image_loader: `ImageLoader`
-        For whatever image preprocessing you want to do.
+        An image loader to read the images with
     image_featurizer: `GridEmbedder`
         The backbone image processor (like a ResNet), whose output will be passed to the region
         detector for finding object boxes in the image.
     region_detector: `RegionDetector`
         For pulling out regions of the image (both coordinates and features) that will be used by
         downstream models.
+    feature_cache_dir: `str`, optional
+        If given, the reader will attempt to use the featurized image cache in this directory.
+        Caching the featurized images can result in big performance improvements, so it is
+        recommended to set this.
     data_dir: `str`
         Path to directory containing text files for each dataset split. These files contain
         the sentences and metadata for each task instance.  If this is `None`, we will grab the
         files from the official NLVR github repository.
     feature_cache_dir: `str`, optional
         Path to a directory that will contain a cache of featurized images.
-    tokenizer: `Tokenizer`, optional
-    token_indexers: `Dict[str, TokenIndexer]`
+    tokenizer: `Tokenizer`, optional, defaults to `PretrainedTransformerTokenizer("bert-base-uncased")`
+    token_indexers: `Dict[str, TokenIndexer]`, optional,
+        defaults to`{"tokens": PretrainedTransformerIndexer("bert-base-uncased")}`
+    cuda_device: `int`, optional
+        Set this to run image featurization on the given GPU. By default, image featurization runs on CPU.
+    max_instances: `int`, optional
+        If set, the reader only returns the first `max_instances` instances, and then stops.
+        This is useful for testing.
     """
 
     def __init__(
@@ -185,8 +204,8 @@ class Nlvr2Reader(DatasetReader):
 
         fields = {
             "sentence": sentence_field,
-            "box_features": ListField([ArrayField(left_features), ArrayField(right_features)]),
-            "box_coordinates": ListField([ArrayField(left_coords), ArrayField(right_coords)]),
+            "box_features": ListField([TensorField(left_features), TensorField(right_features)]),
+            "box_coordinates": ListField([TensorField(left_coords), TensorField(right_coords)]),
             "identifier": MetadataField(identifier),
         }
 

@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Dict, Any
 
 from overrides import overrides
 
@@ -31,7 +31,11 @@ class BertPooler(Seq2VecEncoder):
         Otherwise they will not.
     dropout : `float`, optional, (default = `0.0`)
         Amount of dropout to apply after pooling
-    """
+    transformer_kwargs: `Dict[str, Any]`, optional (default = `None`)
+        Dictionary with
+        [additional arguments](https://github.com/huggingface/transformers/blob/155c782a2ccd103cf63ad48a2becd7c76a7d2115/transformers/modeling_utils.py#L253)
+        for `AutoModel.from_pretrained`.
+    """  # noqa: E501
 
     def __init__(
         self,
@@ -40,14 +44,19 @@ class BertPooler(Seq2VecEncoder):
         override_weights_file: Optional[str] = None,
         override_weights_strip_prefix: Optional[str] = None,
         requires_grad: bool = True,
-        dropout: float = 0.0
+        dropout: float = 0.0,
+        transformer_kwargs: Optional[Dict[str, Any]] = None,
     ) -> None:
         super().__init__()
 
         from allennlp.common import cached_transformers
 
         model = cached_transformers.get(
-            pretrained_model, False, override_weights_file, override_weights_strip_prefix
+            pretrained_model,
+            False,
+            override_weights_file,
+            override_weights_strip_prefix,
+            **(transformer_kwargs or {}),
         )
 
         self._dropout = torch.nn.Dropout(p=dropout)

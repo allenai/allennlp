@@ -2,13 +2,13 @@
 Helper functions for archiving models and restoring archived models.
 """
 from os import PathLike
-from typing import NamedTuple, Union
-import atexit
+from typing import NamedTuple, Union, Dict, Any
 import logging
 import os
 import tempfile
 import tarfile
 import shutil
+from pathlib import Path
 
 from torch.nn import Module
 
@@ -130,9 +130,9 @@ def archive_model(
 
 
 def load_archive(
-    archive_file: str,
+    archive_file: Union[str, Path],
     cuda_device: int = -1,
-    overrides: str = "",
+    overrides: Union[str, Dict[str, Any]] = "",
     weights_file: str = None,
 ) -> Archive:
     """
@@ -140,12 +140,12 @@ def load_archive(
 
     # Parameters
 
-    archive_file : `str`
+    archive_file : `Union[str, Path]`
         The archive file to load the model from.
     cuda_device : `int`, optional (default = `-1`)
         If `cuda_device` is >= 0, the model will be loaded onto the
         corresponding GPU. Otherwise it will be loaded onto the CPU.
-    overrides : `str`, optional (default = `""`)
+    overrides : `Union[str, Dict[str, Any]]`, optional (default = `""`)
         JSON overrides to apply to the unarchived `Params` object.
     weights_file : `str`, optional (default = `None`)
         The weights file to use.  If unspecified, weights.th in the archive_file will be used.
@@ -158,43 +158,40 @@ def load_archive(
     else:
         logger.info(f"loading archive file {archive_file} from cache at {resolved_archive_file}")
 
-    if os.path.isdir(resolved_archive_file):
-        serialization_dir = resolved_archive_file
-    else:
-        # Extract archive to temp dir
-        tempdir = tempfile.mkdtemp()
-        logger.info(f"extracting archive file {resolved_archive_file} to temp dir {tempdir}")
-        with tarfile.open(resolved_archive_file, "r:gz") as archive:
-            archive.extractall(tempdir)
-        # Postpone cleanup until exit in case the unarchived contents are needed outside
-        # this function.
-        atexit.register(_cleanup_archive_dir, tempdir)
+    tempdir = None
+    try:
+        if os.path.isdir(resolved_archive_file):
+            serialization_dir = resolved_archive_file
+        else:
+            # Extract archive to temp dir
+            tempdir = tempfile.mkdtemp()
+            logger.info(f"extracting archive file {resolved_archive_file} to temp dir {tempdir}")
+            with tarfile.open(resolved_archive_file, "r:gz") as archive:
+                archive.extractall(tempdir)
+            serialization_dir = tempdir
 
-        serialization_dir = tempdir
+        # Load config
+        config = Params.from_file(os.path.join(serialization_dir, CONFIG_NAME), overrides)
 
-    # Load config
-    config = Params.from_file(os.path.join(serialization_dir, CONFIG_NAME), overrides)
+        if weights_file:
+            weights_path = weights_file
+        else:
+            weights_path = os.path.join(serialization_dir, _WEIGHTS_NAME)
+            # Fallback for serialization directories.
+            if not os.path.exists(weights_path):
+                weights_path = os.path.join(serialization_dir, _DEFAULT_WEIGHTS)
 
-    if weights_file:
-        weights_path = weights_file
-    else:
-        weights_path = os.path.join(serialization_dir, _WEIGHTS_NAME)
-        # Fallback for serialization directories.
-        if not os.path.exists(weights_path):
-            weights_path = os.path.join(serialization_dir, _DEFAULT_WEIGHTS)
+        # Instantiate model. Use a duplicate of the config, as it will get consumed.
+        model = Model.load(
+            config.duplicate(),
+            weights_file=weights_path,
+            serialization_dir=serialization_dir,
+            cuda_device=cuda_device,
+        )
 
-    # Instantiate model. Use a duplicate of the config, as it will get consumed.
-    model = Model.load(
-        config.duplicate(),
-        weights_file=weights_path,
-        serialization_dir=serialization_dir,
-        cuda_device=cuda_device,
-    )
+    finally:
+        if tempdir is not None:
+            logger.info(f"removing temporary unarchived model dir at {tempdir}")
+            shutil.rmtree(tempdir, ignore_errors=True)
 
     return Archive(model=model, config=config)
-
-
-def _cleanup_archive_dir(path: str):
-    if os.path.exists(path):
-        logger.info("removing temporary unarchived model dir at %s", path)
-        shutil.rmtree(path)

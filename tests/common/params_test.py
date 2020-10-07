@@ -33,14 +33,18 @@ class TestParams(AllenNlpTestCase):
         Params.from_file(filename)
         del os.environ["BAD_ENVIRONMENT_VARIABLE"]
 
-    def test_overrides(self):
+    @pytest.mark.parametrize("input_type", [dict, str])
+    def test_overrides(self, input_type):
         filename = self.FIXTURES_ROOT / "simple_tagger" / "experiment.json"
-        overrides = (
-            '{ "train_data_path": "FOO", "model": { "type": "BAR" },'
-            '"model.text_field_embedder.tokens.type": "BAZ",'
-            '"data_loader.batch_sampler.sorting_keys.0": "question"}'
+        overrides = {
+            "train_data_path": "FOO",
+            "model": {"type": "BAR"},
+            "model.text_field_embedder.tokens.type": "BAZ",
+            "data_loader.batch_sampler.sorting_keys.0": "question",
+        }
+        params = Params.from_file(
+            filename, overrides if input_type == dict else json.dumps(overrides)
         )
-        params = Params.from_file(filename, overrides)
 
         assert "dataset_reader" in params
         assert "trainer" in params

@@ -21,6 +21,7 @@ def get(
     make_copy: bool,
     override_weights_file: Optional[str] = None,
     override_weights_strip_prefix: Optional[str] = None,
+    **kwargs,
 ) -> transformers.PreTrainedModel:
     """
     Returns a transformer model from the cache.
@@ -74,9 +75,16 @@ def get(
                     )
                 override_weights = {strip_prefix(k): override_weights[k] for k in valid_keys}
 
-            transformer = AutoModel.from_pretrained(model_name, state_dict=override_weights)
+            transformer = AutoModel.from_pretrained(
+                model_name,
+                state_dict=override_weights,
+                **kwargs,
+            )
         else:
-            transformer = AutoModel.from_pretrained(model_name)
+            transformer = AutoModel.from_pretrained(
+                model_name,
+                **kwargs,
+            )
         _model_cache[spec] = transformer
     if make_copy:
         import copy
@@ -95,6 +103,9 @@ def get_tokenizer(model_name: str, **kwargs) -> transformers.PreTrainedTokenizer
     global _tokenizer_cache
     tokenizer = _tokenizer_cache.get(cache_key, None)
     if tokenizer is None:
-        tokenizer = transformers.AutoTokenizer.from_pretrained(model_name, **kwargs)
+        tokenizer = transformers.AutoTokenizer.from_pretrained(
+            model_name,
+            **kwargs,
+        )
         _tokenizer_cache[cache_key] = tokenizer
     return tokenizer
