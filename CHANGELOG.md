@@ -31,7 +31,7 @@ data loaders.  Those are coming soon.
 - The `DataLoader` now decides whether to load instances lazily or not.
   With the `PyTorchDataLoader` this is controlled with the `lazy` parameter, but with
   the `MultiProcessDataLoading` this is controlled by the `max_instances_in_memory` setting.
-- `ArrayField` is now implemented in terms of torch tensors, not numpy.
+- `TensorField` is now implemented in terms of torch tensors, not numpy.
 
 ### Fixed
 
@@ -179,7 +179,7 @@ data loaders.  Those are coming soon.
   in the log output even when `train_parameters` was set to `False`.
 - Fixed a bug with the sharded dataset reader where it would only read a fraction of the instances
   in distributed training.
-- Fixed checking equality of `ArrayField`s.
+- Fixed checking equality of `TensorField`s.
 - Fixed a bug where `NamespaceSwappingField` did not work correctly with `.empty_field()`.
 - Put more sensible defaults on the `huggingface_adamw` optimizer.
 - Simplified logging so that all logging output always goes to one file.
