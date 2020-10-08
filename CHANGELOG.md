@@ -74,6 +74,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed a bug where parameters to a `FromParams` class that are dictionaries wouldn't get logged
   when an instance is instantiated `from_params`.
 - Fixed a bug in distributed training where the vocab would be saved from every worker, when it should have been saved by only the local master process.
+- Fixed a bug in the calculation of rouge metrics during distributed training where the total sequence count was not being aggregated across GPUs.
 
 ## [v1.1.0](https://github.com/allenai/allennlp/releases/tag/v1.1.0) - 2020-09-08
 
