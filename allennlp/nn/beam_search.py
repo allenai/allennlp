@@ -510,7 +510,7 @@ class BeamSearch(Registrable):
         temperature: float = 1.0,
     ) -> "BeamSearch":
         """
-        Given an index of the end token in target vocabulary, return a BeamSearch object
+        Given an index of the end token in target vocabulary, return a `BeamSearch` object
         that can be used to find `beam_size` candidate sequences.
         # Parameters
 
