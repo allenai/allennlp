@@ -51,7 +51,7 @@ class BeamSearch(Registrable):
     sampler : `Sampler`, optional (default = `None`)
         A sampler that can be used to select subsequent tokens.
         If not given, search defaults to selecting the top `per_node_beam_size` tokens at each
-        step
+        step.
     """
 
     default_implementation = "without_sampling"
@@ -417,7 +417,6 @@ class BeamSearch(Registrable):
         max_steps: int = 50,
         beam_size: int = 10,
         per_node_beam_size: int = None,
-        sampler: Sampler = None,
     ) -> "BeamSearch":
         """
         Given an index of the end token in target vocabulary, return a BeamSearch object
@@ -440,10 +439,6 @@ class BeamSearch(Registrable):
             more diversity into the search. See
             [*Beam Search Strategies for Neural Machine Translation*, Freitag and Al-Onaizan, 2017]
             (https://arxiv.org/abs/1702.01806).
-        sampler : `Sampler`, optional (default = `None`)
-            A sampler that can be used to select subsequent tokens.
-            If not given, search defaults to selecting the top `per_node_beam_size` tokens at each
-            step
 
         # Returns
 
@@ -454,7 +449,6 @@ class BeamSearch(Registrable):
             max_steps=max_steps,
             beam_size=beam_size,
             per_node_beam_size=per_node_beam_size,
-            sampler=sampler,
         )
 
     @classmethod
@@ -468,8 +462,7 @@ class BeamSearch(Registrable):
     ) -> "BeamSearch":
         """
         Given an index of the end token in target vocabulary, return a BeamSearch object
-        that can be used to find `beam_size` candidate sequences, found by sampling from
-        the top `k` tokens to choose from at each step.
+        that can be used to find `beam_size` candidate sequences.
 
         # Parameters
 
@@ -518,10 +511,7 @@ class BeamSearch(Registrable):
     ) -> "BeamSearch":
         """
         Given an index of the end token in target vocabulary, return a BeamSearch object
-        that can be used to find `beam_size` candidate sequences, found by sampling from
-        tokens which cumulatively make up the top `p` probability of the total tokens to
-        choose from.
-
+        that can be used to find `beam_size` candidate sequences.
         # Parameters
 
         end_index : `int`

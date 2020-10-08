@@ -27,7 +27,7 @@ class MultinomialSampler(Sampler):
         return (torch.gather(logits, 1, selected_indices), selected_indices)
 
 
-@Sampler.register("TopK")
+@Sampler.register("top-k")
 class TopKSampler(Sampler):
     """
     Represents a Sampler which redistributes the probability mass function among
@@ -38,7 +38,7 @@ class TopKSampler(Sampler):
     sharper probability distribution and a `temperature` above 1.0 produces a flatter probability
     distribution.
 
-    Registered as a `Sampler` with name "TopK".
+    Registered as a `Sampler` with name "top-k".
     """
 
     def __init__(self, k: int = 1, temperature: float = 1.0, filter_val: float = -float("inf")):
@@ -67,7 +67,7 @@ class TopKSampler(Sampler):
         return (torch.gather(logits, 1, selected_indices), selected_indices)
 
 
-@Sampler.register("TopP")
+@Sampler.register("top-p")
 class TopPSampler(Sampler):
     """
     Represents a Sampler which redistributes the probability mass function among
@@ -77,7 +77,7 @@ class TopPSampler(Sampler):
     A `temperature` below 1.0 produces a sharper probability distribution and a `temperature`
     above 1.0 produces a flatter probability distribution.
 
-    Registered as a `Sampler` with name "TopK".
+    Registered as a `Sampler` with name "top-p".
     """
 
     def __init__(self, p: float = 0.9, temperature: float = 1.0, filter_val: float = -float("inf")):
