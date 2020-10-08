@@ -29,6 +29,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added a function `remove_cache_entries` to `common.file_utils` that removes any cache entries matching the given
   glob patterns. This can used from the `cached-path` command with `allennlp cached-path --remove some-files-*`.
 - Added a `TrainerCallback` object to support state sharing between batch and epoch-level training callbacks.
+- Added classes: `nn/samplers/samplers.py` with `MultinomialSampler`, `TopKSampler`, and `TopPSampler` for 
+  sampling indices from log probabilities
+- Made `BeamSearch` registrable.
+- Added `top_k_sampling` and `type_p_sampling` `BeamSearch` implementations.
 
 ### Changed
 
