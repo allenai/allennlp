@@ -30,6 +30,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   glob patterns. This can used from the `cached-path` command with `allennlp cached-path --remove some-files-*`.
 - Added a `TrainerCallback` object to support state sharing between batch and epoch-level training callbacks.
 - Added support for .tar.gz in PretrainedModelInitializer.
+- Added classes: `nn/samplers/samplers.py` with `MultinomialSampler`, `TopKSampler`, and `TopPSampler` for 
+  sampling indices from log probabilities
+- Made `BeamSearch` registrable.
+- Added `top_k_sampling` and `type_p_sampling` `BeamSearch` implementations.
 
 ### Changed
 
@@ -71,6 +75,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed a bug where parameters to a `FromParams` class that are dictionaries wouldn't get logged
   when an instance is instantiated `from_params`.
 - Fixed a bug in distributed training where the vocab would be saved from every worker, when it should have been saved by only the local master process.
+- Fixed a bug in the calculation of rouge metrics during distributed training where the total sequence count was not being aggregated across GPUs.
 
 ## [v1.1.0](https://github.com/allenai/allennlp/releases/tag/v1.1.0) - 2020-09-08
 
