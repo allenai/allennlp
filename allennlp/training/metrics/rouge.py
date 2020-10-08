@@ -206,7 +206,13 @@ class ROUGE(Metric):
         # ROUGE-L
         self._total_rouge_l_f1 += self._get_rouge_l_score(predictions, gold_targets)
 
-        self._total_sequence_count += len(predictions)
+        sequence_count = len(predictions)
+        if is_distributed():
+            device = predictions.device
+            _sequence_count = torch.tensor(sequence_count).to(device)
+            dist.all_reduce(_sequence_count, op=dist.ReduceOp.SUM)
+            sequence_count = _sequence_count.item()
+        self._total_sequence_count += sequence_count
 
     def _metric_mean(self, metric_sum):
         if self._total_sequence_count == 0:

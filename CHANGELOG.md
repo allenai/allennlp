@@ -28,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   be used from the `cached-path` command with `allennlp cached-path --inspect`.
 - Added a function `remove_cache_entries` to `common.file_utils` that removes any cache entries matching the given
   glob patterns. This can used from the `cached-path` command with `allennlp cached-path --remove some-files-*`.
+- Added a `TrainerCallback` object to support state sharing between batch and epoch-level training callbacks.
 
 ### Changed
 
@@ -37,6 +38,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - When `cached_path` is called on a local archive with `extract_archive=True`, the archive is now extracted into a unique subdirectory of the cache root instead of a subdirectory of the archive's directory. The extraction directory is also unique to the modification time of the archive, so if the file changes, subsequent calls to `cached_path` will know to re-extract the archive.
 - Removed the `truncation_strategy` parameter to `PretrainedTransformerTokenizer`. The way we're calling the tokenizer, the truncation strategy takes no effect anyways.
 - Don't load weights with PretrainedModelInitializer when loading a model, as it is not needed.
+- Distributed training will now automatically search for a local open port if the `master_port` parameter is not provided.
+- In training, save model weights before evaluation.
+- `allennlp.common.util.peak_memory_mb` renamed to `peak_cpu_memory`, and `allennlp.common.util.gpu_memory_mb` renamed to `peak_gpu_memory`,
+  and they both now return the results in bytes as integers. Also, the `peak_gpu_memory` function now utilizes PyTorch functions to find the memory
+  usage instead of shelling out to the `nvidia-smi` command. This is more efficient and also more accurate because it only takes
+  into account the tensor allocations of the current PyTorch process.
+- Make sure weights are first loaded to the cpu when using PretrainedModelInitializer, preventing wasted GPU memory.
 
 ### Removed
 
@@ -44,6 +52,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Fixed a bug where the reported `batch_loss` metric was incorrect when training with gradient accumulation.
 - Class decorators now displayed in API docs.
 - Fixed up the documentation for the `allennlp.nn.beam_search` module.
 - Ignore `*args` when constructing classes with `FromParams`.
@@ -62,6 +71,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed a bug where parameters to a `FromParams` class that are dictionaries wouldn't get logged
   when an instance is instantiated `from_params`.
 - Fixed a bug in distributed training where the vocab would be saved from every worker, when it should have been saved by only the local master process.
+- Fixed a bug in the calculation of rouge metrics during distributed training where the total sequence count was not being aggregated across GPUs.
 
 ## [v1.1.0](https://github.com/allenai/allennlp/releases/tag/v1.1.0) - 2020-09-08
 

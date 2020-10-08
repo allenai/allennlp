@@ -33,7 +33,7 @@ jobs:
 
     - name: Set Docker tag
       run: |
-        echo "::set-env name=DOCKER_TAG::$GITHUB_SHA";
+        echo "DOCKER_TAG=$GITHUB_SHA" >> $GITHUB_ENV
 
     - name: Build test image
       run: |
