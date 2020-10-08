@@ -219,6 +219,16 @@ class TestTrain(AllenNlpTestCase):
         assert "out_worker0.log" in serialized_files
         assert "out_worker1.log" in serialized_files
         assert "model.tar.gz" in serialized_files
+        assert "metrics.json" in serialized_files
+
+        # Make sure the metrics look right.
+        with open(os.path.join(out_dir, "metrics.json")) as f:
+            metrics = json.load(f)
+            assert metrics["peak_worker_0_memory_MB"] > 0
+            assert metrics["peak_worker_1_memory_MB"] > 0
+            if torch.cuda.device_count() >= 2:
+                assert metrics["peak_gpu_0_memory_MB"] > 0
+                assert metrics["peak_gpu_1_memory_MB"] > 0
 
         # Check we can load the serialized model
         assert load_archive(out_dir).model

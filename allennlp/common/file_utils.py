@@ -758,47 +758,6 @@ def _get_resource_size(path: str) -> int:
     return total_size
 
 
-def format_timedelta(td: timedelta) -> str:
-    """
-    Format a timedelta for humans.
-    """
-    if td.days > 1:
-        return f"{td.days} days"
-    elif td.days > 0:
-        return f"{td.days} day"
-    else:
-        hours, remainder = divmod(td.seconds, 3600)
-        minutes, _ = divmod(remainder, 60)
-        if hours > 1:
-            return f"{hours} hours"
-        elif hours > 0:
-            return f"{hours} hour, {minutes} mins"
-        else:
-            return f"{minutes} mins"
-
-
-def format_size(size: int) -> str:
-    """
-    Format a size (in bytes) for humans.
-    """
-    GBs = size / (1024 * 1024 * 1024)
-    if GBs >= 10:
-        return f"{int(round(GBs, 0))}G"
-    if GBs >= 1:
-        return f"{round(GBs, 1):.1f}G"
-    MBs = size / (1024 * 1024)
-    if MBs >= 10:
-        return f"{int(round(MBs, 0))}M"
-    if MBs >= 1:
-        return f"{round(MBs, 1):.1f}M"
-    KBs = size / 1024
-    if KBs >= 10:
-        return f"{int(round(KBs, 0))}K"
-    if KBs >= 1:
-        return f"{round(KBs, 1):.1f}K"
-    return f"{size}B"
-
-
 class _CacheEntry(NamedTuple):
     regular_files: List[_Meta]
     extraction_dirs: List[_Meta]
@@ -865,6 +824,8 @@ def inspect_cache(patterns: List[str] = None, cache_dir: Union[str, Path] = None
     """
     Print out useful information about the cache directory.
     """
+    from allennlp.common.util import format_timedelta, format_size
+
     cache_dir = os.path.expanduser(cache_dir or CACHE_DIRECTORY)
 
     # Gather cache entries by resource.

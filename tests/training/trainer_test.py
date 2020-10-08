@@ -26,6 +26,7 @@ from allennlp.training import (
     TensorboardWriter,
     BatchCallback,
     EpochCallback,
+    TrainerCallback,
     TrackEpochCallback,
 )
 from allennlp.training.learning_rate_schedulers import CosineWithRestarts
@@ -128,7 +129,7 @@ class TestTrainer(TrainerTestBase):
         assert isinstance(metrics["peak_worker_0_memory_MB"], float)
         assert metrics["peak_worker_0_memory_MB"] > 0
         assert "peak_gpu_0_memory_MB" in metrics
-        assert isinstance(metrics["peak_gpu_0_memory_MB"], int)
+        assert isinstance(metrics["peak_gpu_0_memory_MB"], float)
 
     @requires_multi_gpu
     def test_passing_trainer_multiple_gpus_raises_error(self):
@@ -996,6 +997,91 @@ class TestTrainer(TrainerTestBase):
         )
         trainer.train()
         assert trainer.model.epoch == num_epochs
+
+    def test_end_callback_is_called_at_end(self):
+        class FakeEndCallback(EpochCallback):
+            def __call__(
+                self,
+                trainer: "GradientDescentTrainer",
+                metrics: Dict[str, Any],
+                epoch: int,
+                is_master: bool,
+            ) -> None:
+                if not hasattr(trainer, "end_callback_calls"):
+                    trainer.end_callback_calls = []  # type: ignore
+                trainer.end_callback_calls.append(epoch)  # type: ignore
+
+        trainer = GradientDescentTrainer(
+            self.model,
+            self.optimizer,
+            self.data_loader,
+            num_epochs=4,
+            validation_data_loader=self.validation_data_loader,
+            end_callbacks=[FakeEndCallback()],
+        )
+        trainer.train()
+        expected_calls = [3]
+        assert trainer.end_callback_calls == expected_calls
+
+    def test_trainer_callback_is_called_everywhere(self):
+        class FakeTrainerCallback(TrainerCallback):
+            def on_batch(
+                self,
+                trainer: "GradientDescentTrainer",
+                batch_inputs: List[List[TensorDict]],
+                batch_outputs: List[Dict[str, Any]],
+                epoch: int,
+                batch_number: int,
+                is_training: bool,
+                is_master: bool,
+            ) -> None:
+                if not hasattr(trainer, "batch_callback_calls"):
+                    trainer.batch_callback_calls = []  # type: ignore
+                trainer.batch_callback_calls.append((epoch, batch_number, is_training))  # type: ignore
+
+            def on_epoch(
+                self,
+                trainer: "GradientDescentTrainer",
+                metrics: Dict[str, Any],
+                epoch: int,
+                is_master: bool,
+            ) -> None:
+                if not hasattr(trainer, "epoch_callback_calls"):
+                    trainer.epoch_callback_calls = []  # type: ignore
+                trainer.epoch_callback_calls.append(epoch)  # type: ignore
+
+            def on_end(
+                self,
+                trainer: "GradientDescentTrainer",
+                metrics: Dict[str, Any],
+                epoch: int,
+                is_master: bool,
+            ) -> None:
+                if not hasattr(trainer, "end_callback_calls"):
+                    trainer.end_callback_calls = []  # type: ignore
+                trainer.end_callback_calls.append(epoch)  # type: ignore
+
+        trainer = GradientDescentTrainer(
+            self.model,
+            self.optimizer,
+            self.data_loader,
+            num_epochs=2,
+            validation_data_loader=self.validation_data_loader,
+            trainer_callbacks=[FakeTrainerCallback()],
+        )
+        trainer.train()
+        expected_batch_calls = [
+            (epoch, batch_number + 1, is_train)
+            for epoch in range(2)
+            for is_train in (True, False)
+            for batch_number in range(len(self.instances) // 2)
+        ]
+        expected_epoch_calls = [epoch for epoch in range(-1, 2)]
+        expected_end_calls = [1]
+
+        assert trainer.batch_callback_calls == expected_batch_calls
+        assert trainer.epoch_callback_calls == expected_epoch_calls
+        assert trainer.end_callback_calls == expected_end_calls
 
     def test_total_loss_is_average_of_batch_loss(self):
         batches_per_epoch = 3
