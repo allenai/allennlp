@@ -7,7 +7,7 @@ from allennlp.nn.util import min_value_of_dtype
 @Sampler.register("multinomial")
 class MultinomialSampler(Sampler):
     """
-    Represents a sampler to choose calues from a multinomial distribution
+    Represents a sampler to choose values from a multinomial distribution.
 
     Registered as a `Sampler` with name "multinomial".
     """
@@ -30,7 +30,7 @@ class MultinomialSampler(Sampler):
 @Sampler.register("top-k")
 class TopKSampler(Sampler):
     """
-    Represents a Sampler which redistributes the probability mass function among
+    Represents a `Sampler` which redistributes the probability mass function among
     the top `k` choices then selects from that subset
     `logits` is a tensor of log-probabilities to be selected from.
     `k` is the number of highest-probability options that the returned choice will be selected from
@@ -70,7 +70,7 @@ class TopKSampler(Sampler):
 @Sampler.register("top-p")
 class TopPSampler(Sampler):
     """
-    Represents a Sampler which redistributes the probability mass function among
+    Represents a `Sampler` which redistributes the probability mass function among
     the top choices with a cumulative probability of at least `p` then selects from that subset
     `p` if minimum cumulative probability of highest-probability options that the returned
     choice will be selected from `temperature` modules the probabilitis of the selected tokens.
