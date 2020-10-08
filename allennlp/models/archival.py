@@ -135,35 +135,6 @@ def load_archive(
     cuda_device: int = -1,
     overrides: Union[str, Dict[str, Any]] = "",
     weights_file: str = None,
-) -> Archive:
-    """
-    Instantiates an Archive from an archived `tar.gz` file.
-
-    # Parameters
-
-    archive_file : `Union[str, Path]`
-        The archive file to load the model from.
-    cuda_device : `int`, optional (default = `-1`)
-        If `cuda_device` is >= 0, the model will be loaded onto the
-        corresponding GPU. Otherwise it will be loaded onto the CPU.
-    overrides : `Union[str, Dict[str, Any]]`, optional (default = `""`)
-        JSON overrides to apply to the unarchived `Params` object.
-    weights_file : `str`, optional (default = `None`)
-        The weights file to use.  If unspecified, weights.th in the archive_file will be used.
-    """
-    with load_archive_contextmanager(archive_file, cuda_device, overrides, weights_file) as (
-        archive,
-        serialization_dir,
-    ):
-        return archive
-
-
-@contextmanager
-def load_archive_contextmanager(
-    archive_file: Union[str, Path],
-    cuda_device: int = -1,
-    overrides: Union[str, Dict[str, Any]] = "",
-    weights_file: str = None,
 ):
     """
     Instantiates an Archive from an archived `tar.gz` file.
@@ -192,38 +163,30 @@ def load_archive_contextmanager(
     try:
         if os.path.isdir(resolved_archive_file):
             serialization_dir = resolved_archive_file
-            model, config = _load_model(cuda_device, overrides, weights_file, serialization_dir)
         else:
-            with extract_archive(resolved_archive_file, cleanup=False) as tempdir:
+            with extracted_archive(resolved_archive_file, cleanup=False) as tempdir:
                 serialization_dir = tempdir
-                model, config = _load_model(cuda_device, overrides, weights_file, serialization_dir)
 
-        archive = Archive(model=model, config=config)
-        yield archive, serialization_dir
+        # Load config
+        config = Params.from_file(os.path.join(serialization_dir, CONFIG_NAME), overrides)
+
+        if weights_file:
+            weights_path = weights_file
+        else:
+            weights_path = get_weights_path(serialization_dir)
+
+        # Instantiate model. Use a duplicate of the config, as it will get consumed.
+        model = Model.load(
+            config.duplicate(),
+            weights_file=weights_path,
+            serialization_dir=serialization_dir,
+            cuda_device=cuda_device,
+        )
     finally:
         if tempdir is not None:
             logger.info(f"removing temporary unarchived model dir at {tempdir}")
             shutil.rmtree(tempdir, ignore_errors=True)
-
-
-def _load_model(cuda_device, overrides, weights_file, serialization_dir):
-    # Load config
-    config = Params.from_file(os.path.join(serialization_dir, CONFIG_NAME), overrides)
-
-    if weights_file:
-        weights_path = weights_file
-    else:
-        weights_path = get_weights_path(serialization_dir)
-
-    # Instantiate model. Use a duplicate of the config, as it will get consumed.
-    model = Model.load(
-        config.duplicate(),
-        weights_file=weights_path,
-        serialization_dir=serialization_dir,
-        cuda_device=cuda_device,
-    )
-
-    return model, config
+    return Archive(model=model, config=config)
 
 
 def get_weights_path(serialization_dir):
@@ -235,7 +198,7 @@ def get_weights_path(serialization_dir):
 
 
 @contextmanager
-def extract_archive(resolved_archive_file, cleanup=True):
+def extracted_archive(resolved_archive_file, cleanup=True):
     tempdir = None
     try:
         tempdir = tempfile.mkdtemp()

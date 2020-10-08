@@ -28,7 +28,7 @@ import math
 from typing import Callable, List, Tuple, Dict
 import itertools
 from overrides import overrides
-import os
+import tarfile
 
 import torch
 import torch.nn.init
@@ -389,13 +389,13 @@ class PretrainedModelInitializer(Initializer):
             return
 
         from allennlp.models.archival import (
-            extract_archive,
+            extracted_archive,
             get_weights_path,
         )  # import here to avoid circular imports
 
         self.weights: Dict[str, torch.Tensor]
-        if os.path.basename(weights_file_path).endswith(".tar.gz"):
-            with extract_archive(weights_file_path) as extraction_path:
+        if tarfile.is_tarfile(weights_file_path):
+            with extracted_archive(weights_file_path) as extraction_path:
                 self.weights = torch.load(get_weights_path(extraction_path), map_location="cpu")
         else:
             self.weights = torch.load(weights_file_path, map_location="cpu")
