@@ -9,7 +9,6 @@ import tempfile
 import tarfile
 import shutil
 from pathlib import Path
-from contextlib import contextmanager
 
 from torch.nn import Module
 
@@ -135,7 +134,7 @@ def load_archive(
     cuda_device: int = -1,
     overrides: Union[str, Dict[str, Any]] = "",
     weights_file: str = None,
-):
+) -> Archive:
     """
     Instantiates an Archive from an archived `tar.gz` file.
 

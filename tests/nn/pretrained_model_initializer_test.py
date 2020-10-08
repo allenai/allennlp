@@ -83,8 +83,8 @@ class TestPretrainedModelInitializer(AllenNlpTestCase):
         assert initializer.parameter_name_overrides == name_overrides
 
     def test_from_params_tar_gz(self):
-        with tempfile.NamedTemporaryFile(suffix='.tar.gz') as f:
-            with tarfile.open(fileobj=f, mode='w:gz') as archive:
+        with tempfile.NamedTemporaryFile(suffix=".tar.gz") as f:
+            with tarfile.open(fileobj=f, mode="w:gz") as archive:
                 archive.add(self.temp_file, arcname=os.path.basename(self.temp_file))
             f.flush()
             params = Params({"type": "pretrained", "weights_file_path": f.name})
