@@ -1,9 +1,15 @@
 local model_name = "bert-base-uncased";
+local effective_batch_size = 128;
+local gpu_batch_size = 32;
+local num_gpus = 1;
+
 {
   "dataset_reader": {
     "type": "vqav2",
     "image_dir": "/net/nfs2.corp/prior/datasets/coco",
     "feature_cache_dir": "/net/nfs2.corp/prior/datasets/coco/coco_experiment_cache",
+    #"image_dir": "/Users/dirkg/Documents/data/vision/coco",
+    #"feature_cache_dir": "/Users/dirkg/Documents/data/vision/coco/feature_cache/vqa",
     "image_loader": "detectron",
     "image_featurizer": "resnet_backbone",
     "region_detector": "faster_rcnn",
@@ -41,8 +47,12 @@ local model_name = "bert-base-uncased";
     "fusion_method": "mul"
   },
   "data_loader": {
-    "batch_size": 32,
+    "batch_size": gpu_batch_size,
     "shuffle": true
+  },
+  [if num_gpus > 1 then "distributed"]: {
+    #"cuda_devices": std.range(0, num_gpus - 1)
+    "cuda_devices": std.repeat([-1], num_gpus)  # Use this for debugging on CPU
   },
   "trainer": {
     "optimizer": {
@@ -55,5 +65,6 @@ local model_name = "bert-base-uncased";
     },
     "validation_metric": "+fscore",
     "num_epochs": 20,
+    "num_gradient_accumulation_steps": effective_batch_size / gpu_batch_size / std.max(1, num_gpus)
   },
 }
