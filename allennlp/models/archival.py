@@ -9,6 +9,7 @@ import tempfile
 import tarfile
 import shutil
 from pathlib import Path
+from contextlib import contextmanager
 
 from torch.nn import Module
 
