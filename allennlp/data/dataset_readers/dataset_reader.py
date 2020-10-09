@@ -154,6 +154,7 @@ class DatasetReader(Registrable):
         max_instances: Optional[int] = None,
         manual_distributed_sharding: bool = False,
         manual_multi_process_sharding: bool = False,
+        serialization_dir: Optional[str] = None,
     ) -> None:
         self.lazy = lazy
         self.max_instances = max_instances
@@ -163,6 +164,7 @@ class DatasetReader(Registrable):
             os.makedirs(self._cache_directory, exist_ok=True)
         self.manual_distributed_sharding = manual_distributed_sharding
         self.manual_multi_process_sharding = manual_multi_process_sharding
+        self._serialization_dir = serialization_dir
 
     def read(self, file_path: Union[Path, str]) -> Union[AllennlpDataset, AllennlpLazyDataset]:
         """

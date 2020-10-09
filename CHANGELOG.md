@@ -34,6 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   sampling indices from log probabilities
 - Made `BeamSearch` registrable.
 - Added `top_k_sampling` and `type_p_sampling` `BeamSearch` implementations.
+- Pass `serialization_dir` to `Model` and `DatasetReader`, and support `include_in_archive`.
 
 ### Changed
 

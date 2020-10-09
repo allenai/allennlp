@@ -2,7 +2,7 @@
 Helper functions for archiving models and restoring archived models.
 """
 from os import PathLike
-from typing import NamedTuple, Union, Dict, Any
+from typing import NamedTuple, Union, Dict, Any, List, Optional
 import logging
 import os
 import tempfile
@@ -93,10 +93,22 @@ CONFIG_NAME = "config.json"
 _WEIGHTS_NAME = "weights.th"
 
 
+def verify_include_in_archive(include_in_archive: Optional[List[str]] = None):
+    if include_in_archive is None:
+        return
+    saved_names = [CONFIG_NAME, _WEIGHTS_NAME, _DEFAULT_WEIGHTS, "vocabulary"]
+    for archival_target in include_in_archive:
+        if archival_target in saved_names:
+            raise ConfigurationError(
+                f"{', '.join(saved_names)} are saved names and cannot be used for include_in_archive."
+            )
+
+
 def archive_model(
     serialization_dir: Union[str, PathLike],
     weights: str = _DEFAULT_WEIGHTS,
     archive_path: Union[str, PathLike] = None,
+    include_in_archive: Optional[List[str]] = None,
 ) -> None:
     """
     Archive the model weights, its training configuration, and its vocabulary to `model.tar.gz`.
@@ -132,6 +144,12 @@ def archive_model(
         archive.add(config_file, arcname=CONFIG_NAME)
         archive.add(weights_file, arcname=_WEIGHTS_NAME)
         archive.add(os.path.join(serialization_dir, "vocabulary"), arcname="vocabulary")
+
+        if include_in_archive is not None:
+            for archival_target in include_in_archive:
+                archival_target_path = os.path.join(serialization_dir, archival_target)
+                if os.path.exists(archival_target_path):
+                    archive.add(archival_target_path, arcname=archival_target)
 
 
 def load_archive(
@@ -180,7 +198,9 @@ def load_archive(
         config = Params.from_file(os.path.join(serialization_dir, CONFIG_NAME), overrides)
 
         # Instantiate model and dataset readers. Use a duplicate of the config, as it will get consumed.
-        dataset_reader, validation_dataset_reader = _load_dataset_readers(config.duplicate())
+        dataset_reader, validation_dataset_reader = _load_dataset_readers(
+            config.duplicate(), serialization_dir
+        )
         model = _load_model(config.duplicate(), weights_path, serialization_dir, cuda_device)
     finally:
         if tempdir is not None:
@@ -195,13 +215,17 @@ def load_archive(
     )
 
 
-def _load_dataset_readers(config):
-    dataset_reader = DatasetReader.from_params(config.get("dataset_reader"))
+def _load_dataset_readers(config, serialization_dir):
+    dataset_reader = DatasetReader.from_params(
+        config.get("dataset_reader"), serialization_dir=serialization_dir
+    )
 
     validation_dataset_reader = None
     validation_dataset_reader_params = config.get("validation_dataset_reader", None)
     if validation_dataset_reader_params is not None:
-        validation_dataset_reader = DatasetReader.from_params(validation_dataset_reader_params)
+        validation_dataset_reader = DatasetReader.from_params(
+            validation_dataset_reader_params, serialization_dir=serialization_dir
+        )
 
     return dataset_reader, validation_dataset_reader
 
