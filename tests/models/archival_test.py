@@ -76,7 +76,9 @@ class ArchivalTest(AllenNlpTestCase):
         assert params2.as_dict() == params_dict_copy
 
     def test_archiving_with_validation_dataset_reader(self):
-        self.params["validation_dataset_reader"] = copy.deepcopy(self.params["dataset_reader"].as_dict())
+        self.params["validation_dataset_reader"] = copy.deepcopy(
+            self.params["dataset_reader"].as_dict()
+        )
         # copy params, since they'll get consumed during training
         params_copy = self.params.duplicate()
         params_dict_copy = copy.deepcopy(self.params.as_dict())
