@@ -7,6 +7,7 @@ import torch
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.nn.beam_search import BeamSearch
+from allennlp.common.params import Params
 
 
 transition_probabilities = torch.tensor(
@@ -21,8 +22,8 @@ transition_probabilities = torch.tensor(
 )
 
 
-def take_step(
-    last_predictions: torch.Tensor, state: Dict[str, torch.Tensor], step: int
+def take_step_no_timestep(
+    last_predictions: torch.Tensor, state: Dict[str, torch.Tensor]
 ) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:
     """
     Take decoding step.
@@ -41,6 +42,14 @@ def take_step(
         log_probs_list.append(log_probs)
 
     return torch.stack(log_probs_list), state
+
+
+def take_step_with_timestep(
+    last_predictions: torch.Tensor,
+    state: Dict[str, torch.Tensor],
+    timestep: int,
+) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:
+    return take_step_no_timestep(last_predictions, state)
 
 
 class BeamSearchTest(AllenNlpTestCase):
@@ -62,6 +71,7 @@ class BeamSearchTest(AllenNlpTestCase):
         expected_log_probs: np.array = None,
         beam_search: BeamSearch = None,
         state: Dict[str, torch.Tensor] = None,
+        take_step=take_step_with_timestep,
     ) -> None:
         expected_top_k = expected_top_k if expected_top_k is not None else self.expected_top_k
         expected_log_probs = (
@@ -83,8 +93,9 @@ class BeamSearchTest(AllenNlpTestCase):
         assert list(log_probs.size()) == [batch_size, beam_size]
         np.testing.assert_allclose(log_probs[0].numpy(), expected_log_probs)
 
-    def test_search(self):
-        self._check_results()
+    @pytest.mark.parametrize("step_function", [take_step_with_timestep, take_step_no_timestep])
+    def test_search(self, step_function):
+        self._check_results(take_step=step_function)
 
     def test_finished_state(self):
         state = {}
@@ -207,16 +218,153 @@ class BeamSearchTest(AllenNlpTestCase):
         # The beam search should warn us of this.
         initial_predictions = torch.LongTensor([self.end_index - 1, self.end_index - 1])
         with pytest.warns(RuntimeWarning, match="Infinite log probabilities"):
-            self.beam_search.search(initial_predictions, {}, take_step)
+            self.beam_search.search(initial_predictions, {}, take_step_no_timestep)
 
     def test_empty_sequences(self):
         initial_predictions = torch.LongTensor([self.end_index - 1, self.end_index - 1])
         beam_search = BeamSearch(self.end_index, beam_size=1)
         with pytest.warns(RuntimeWarning, match="Empty sequences predicted"):
-            predictions, log_probs = beam_search.search(initial_predictions, {}, take_step)
+            predictions, log_probs = beam_search.search(
+                initial_predictions, {}, take_step_with_timestep
+            )
         # predictions hould have shape `(batch_size, beam_size, max_predicted_length)`.
         assert list(predictions.size()) == [2, 1, 1]
         # log probs hould have shape `(batch_size, beam_size)`.
         assert list(log_probs.size()) == [2, 1]
         assert (predictions == self.end_index).all()
         assert (log_probs == 0).all()
+
+    def test_top_p_search(self):
+        initial_predictions = torch.tensor([0] * 5)
+        beam_size = 3
+        take_step = take_step_with_timestep
+
+        top_p, log_probs = BeamSearch.top_p_sampling(self.end_index, beam_size=beam_size).search(
+            initial_predictions, {}, take_step
+        )
+
+        # bem_search = BeamSearch(self.end_index, beam_size=3, per_node_beam_size = 1)
+        # top_p, log_probs = beam_search.search(initial_predictions, {}, take_step)
+
+        beam_size = beam_size or 1
+        batch_size = 5
+
+        # top_p should be shape `(batch_size, beam_size, max_predicted_length)`.
+        assert list(top_p.size())[:-1] == [batch_size, beam_size]
+
+        assert ((0 <= top_p) & (top_p <= 5)).all()
+
+        # log_probs should be shape `(batch_size, beam_size, max_predicted_length)`.
+        assert list(log_probs.size()) == [batch_size, beam_size]
+
+    def test_top_k_search(self):
+        initial_predictions = torch.tensor([0] * 5)
+        beam_size = 3
+        take_step = take_step_with_timestep
+
+        top_k, log_probs = BeamSearch.top_k_sampling(
+            self.end_index, k=1, beam_size=beam_size
+        ).search(initial_predictions, {}, take_step)
+
+        beam_size = beam_size or 1
+        batch_size = 5
+
+        # top_p should be shape `(batch_size, beam_size, max_predicted_length)`.
+        assert list(top_k.size())[:-1] == [batch_size, beam_size]
+
+        assert ((0 <= top_k) & (top_k <= 5)).all()
+
+        # log_probs should be shape `(batch_size, beam_size, max_predicted_length)`.
+        assert list(log_probs.size()) == [batch_size, beam_size]
+
+    def test_empty_p(self):
+        initial_predictions = torch.LongTensor([self.end_index - 1, self.end_index - 1])
+        take_step = take_step_with_timestep
+
+        with pytest.warns(RuntimeWarning, match="Empty sequences predicted"):
+            predictions, log_probs = BeamSearch.top_p_sampling(self.end_index, beam_size=1).search(
+                initial_predictions, {}, take_step
+            )
+        # predictions hould have shape `(batch_size, beam_size, max_predicted_length)`.
+        assert list(predictions.size()) == [2, 1, 1]
+        # log probs hould have shape `(batch_size, beam_size)`.
+        assert list(log_probs.size()) == [2, 1]
+        assert (predictions == self.end_index).all()
+        assert (log_probs == 0).all()
+
+    def test_empty_k(self):
+        initial_predictions = torch.LongTensor([self.end_index - 1, self.end_index - 1])
+        take_step = take_step_with_timestep
+
+        with pytest.warns(RuntimeWarning, match="Empty sequences predicted"):
+            predictions, log_probs = BeamSearch.top_k_sampling(self.end_index, beam_size=1).search(
+                initial_predictions, {}, take_step
+            )
+        # predictions hould have shape `(batch_size, beam_size, max_predicted_length)`.
+        assert list(predictions.size()) == [2, 1, 1]
+        # log probs hould have shape `(batch_size, beam_size)`.
+        assert list(log_probs.size()) == [2, 1]
+        assert (predictions == self.end_index).all()
+        assert (log_probs == 0).all()
+
+    @pytest.mark.parametrize(
+        "k",
+        [-1.0, 1.2, 1.1, "foo", float("inf")],
+    )
+    def test_k_val(self, k):
+        with pytest.raises(ConfigurationError):
+            initial_predictions = torch.tensor([0] * 5)
+            take_step = take_step_with_timestep
+            beam_size = 3
+            top_k, log_probs = BeamSearch.top_k_sampling(
+                self.end_index, k=k, beam_size=beam_size
+            ).search(initial_predictions, {}, take_step)
+
+    @pytest.mark.parametrize(
+        "p",
+        [-1.0, 1.1, 2, "foo", float("inf")],
+    )
+    def test_p_val(self, p):
+        with pytest.raises(ConfigurationError):
+            initial_predictions = torch.tensor([0] * 5)
+            take_step = take_step_with_timestep
+            beam_size = 3
+            top_p, log_probs = BeamSearch.top_p_sampling(
+                self.end_index, p=p, beam_size=beam_size
+            ).search(initial_predictions, {}, take_step)
+
+    def test_params_no_sampling(self):
+        beam_search = BeamSearch.from_params(Params({"beam_size": 2, "end_index": 7}))
+        assert beam_search.beam_size == 2
+        assert beam_search._end_index == 7
+        assert beam_search.sampler is None
+
+    def test_params_k_sampling(self):
+        beam_search = BeamSearch.from_params(
+            Params(
+                {
+                    "type": "top_k_sampling",
+                    "beam_size": 2,
+                    "end_index": 7,
+                    "k": 5,
+                }
+            )
+        )
+        assert beam_search.beam_size == 2
+        assert beam_search._end_index == 7
+        assert beam_search.sampler is not None
+
+    def test_params_p_sampling(self):
+        beam_search = BeamSearch.from_params(
+            Params(
+                {
+                    "type": "top_p_sampling",
+                    "beam_size": 2,
+                    "end_index": 7,
+                    "p": 0.4,
+                }
+            )
+        )
+        assert beam_search.beam_size == 2
+        assert beam_search._end_index == 7
+        assert beam_search.sampler is not None

@@ -396,7 +396,7 @@ class ConditionalRandomField(torch.nn.Module):
         tag_sequence = torch.Tensor(max_seq_length + 2, num_tags + 2)
 
         for prediction, prediction_mask in zip(logits, mask):
-            mask_indices = prediction_mask.nonzero().squeeze()
+            mask_indices = prediction_mask.nonzero(as_tuple=False).squeeze()
             masked_prediction = torch.index_select(prediction, 0, mask_indices)
             sequence_length = masked_prediction.shape[0]
 

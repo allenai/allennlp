@@ -84,6 +84,7 @@ class TestEvaluate(AllenNlpTestCase):
 
     def test_output_file_evaluate_from_args(self):
         output_file = str(self.TEST_DIR / "metrics.json")
+        predictions_output_file = str(self.TEST_DIR / "predictions.jsonl")
         kebab_args = [
             "evaluate",
             str(
@@ -94,12 +95,20 @@ class TestEvaluate(AllenNlpTestCase):
             "-1",
             "--output-file",
             output_file,
+            "--predictions-output-file",
+            predictions_output_file,
         ]
         args = self.parser.parse_args(kebab_args)
         computed_metrics = evaluate_from_args(args)
+
         with open(output_file, "r") as file:
             saved_metrics = json.load(file)
         assert computed_metrics == saved_metrics
+
+        with open(predictions_output_file, "r") as file:
+            for line in file:
+                prediction = json.loads(line.strip())
+            assert "tags" in prediction
 
     def test_evaluate_works_with_vocab_expansion(self):
         archive_path = str(

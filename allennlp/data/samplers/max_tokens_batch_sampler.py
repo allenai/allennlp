@@ -38,7 +38,7 @@ class MaxTokensBatchSampler(BucketBatchSampler):
         padding keys and seeing which one has the longest length.  We use that one for padding.
         This should give reasonable results in most cases. Some cases where it might not be the
         right thing to do are when you have a `ListField[TextField]`, or when you have a really
-        long, constant length `ArrayField`.
+        long, constant length `TensorField`.
 
         When you need to specify this yourself, you can create an instance from your dataset and
         call `Instance.get_padding_lengths()` to see a list of all keys used in your data.  You

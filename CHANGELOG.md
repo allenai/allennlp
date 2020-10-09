@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+
 ## Unreleased (2.0 branch)
 
 ### Added
@@ -15,6 +16,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 whatever other relevant inputs it got) to each `Head` that's in use.  This is intended for
 multi-task learning, but so far it is incomplete, as there are no corresponding dataset readers or
 data loaders.  Those are coming soon.
+- Added `TensorCache` class for caching tensors on disk
+- Added reader for the NLVR2 dataset
+- Added cache for Detectron models that we might re-use several times in the code base
+- Added abstraction and concrete implementation for image loading
+- Added abstraction and concrete implementation for `GridEmbedder`
+- Added abstraction and demo implementation for an image augmentation module.
+- Added abstraction and concrete implementation for region detectors.
 - Transformer toolkit to plug and play with modular components of transformer architectures.
 
 ### Changed
@@ -24,25 +32,86 @@ data loaders.  Those are coming soon.
 - The `DataLoader` now decides whether to load instances lazily or not.
   With the `PyTorchDataLoader` this is controlled with the `lazy` parameter, but with
   the `MultiProcessDataLoading` this is controlled by the `max_instances_in_memory` setting.
+- `TensorField` is now implemented in terms of torch tensors, not numpy.
+
+### Fixed
+
+- Ignore *args when constructing classes with `FromParams`.
+- Ensured some consistency in the types of the values that metrics return.
+- `PretrainedTransformerTokenizer` will now never return a sequence that's longer than `max_length`, even with special tokens
 
 
 ## Unreleased (1.x branch)
 
 ### Added
 
+- Added a `build-vocab` subcommand that can be used to build a vocabulary from a training config file.
+- Added `tokenizer_kwargs` argument to `PretrainedTransformerMismatchedIndexer`.
+- Added `tokenizer_kwargs` and `transformer_kwargs` arguments to `PretrainedTransformerMismatchedEmbedder`.
+- Added official support for Python 3.8.
+- Added a script: `scripts/release_notes.py`, which automatically prepares markdown release notes from the
+  CHANGELOG and commit history.
+- Added a flag `--predictions-output-file` to the `evaluate` command, which tells AllenNLP to write the
+  predictions from the given dataset to the file as JSON lines.
 - Added the ability to ignore certain missing keys when loading a model from an archive. This is done
   by adding a class-level variable called `authorized_missing_keys` to any PyTorch module that a `Model` uses.
   If defined, `authorized_missing_keys` should be a list of regex string patterns.
 - Added `FBetaMultiLabelMeasure`, a multi-label Fbeta metric. This is a subclass of the existing `FBetaMeasure`.
+- Added ability to pass additional key word arguments to `cached_transformers.get()`, which will be passed on to `AutoModel.from_pretrained()`.
+- Added an `overrides` argument to `Predictor.from_path()`.
+- Added a `cached-path` command.
+- Added a function `inspect_cache` to `common.file_utils` that prints useful information about the cache. This can also 
+  be used from the `cached-path` command with `allennlp cached-path --inspect`.
+- Added a function `remove_cache_entries` to `common.file_utils` that removes any cache entries matching the given
+  glob patterns. This can used from the `cached-path` command with `allennlp cached-path --remove some-files-*`.
+- Added a `TrainerCallback` object to support state sharing between batch and epoch-level training callbacks.
+- Added classes: `nn/samplers/samplers.py` with `MultinomialSampler`, `TopKSampler`, and `TopPSampler` for 
+  sampling indices from log probabilities
+- Made `BeamSearch` registrable.
+- Added `top_k_sampling` and `type_p_sampling` `BeamSearch` implementations.
 
 ### Changed
 
+- Subcommands that don't require plugins will no longer cause plugins to be loaded or have an `--include-package` flag.
+- Allow overrides to be JSON string or `dict`.
 - `transformers` dependency updated to version 3.1.0.
+- When `cached_path` is called on a local archive with `extract_archive=True`, the archive is now extracted into a unique subdirectory of the cache root instead of a subdirectory of the archive's directory. The extraction directory is also unique to the modification time of the archive, so if the file changes, subsequent calls to `cached_path` will know to re-extract the archive.
+- Removed the `truncation_strategy` parameter to `PretrainedTransformerTokenizer`. The way we're calling the tokenizer, the truncation strategy takes no effect anyways.
+- Distributed training will now automatically search for a local open port if the `master_port` parameter is not provided.
+- In training, save model weights before evaluation.
+- `allennlp.common.util.peak_memory_mb` renamed to `peak_cpu_memory`, and `allennlp.common.util.gpu_memory_mb` renamed to `peak_gpu_memory`,
+  and they both now return the results in bytes as integers. Also, the `peak_gpu_memory` function now utilizes PyTorch functions to find the memory
+  usage instead of shelling out to the `nvidia-smi` command. This is more efficient and also more accurate because it only takes
+  into account the tensor allocations of the current PyTorch process.
+- Make sure weights are first loaded to the cpu when using PretrainedModelInitializer, preventing wasted GPU memory.
+
+### Removed
+
+- Removed `common.util.is_master` function.
 
 ### Fixed
 
-- Ignore *args when constructing classes with `FromParams`.
-- Ensured some consistency in the types of the values that metrics return
+- Fixed a bug where the reported `batch_loss` metric was incorrect when training with gradient accumulation.
+- Class decorators now displayed in API docs.
+- Fixed up the documentation for the `allennlp.nn.beam_search` module.
+- Ignore `*args` when constructing classes with `FromParams`.
+- Ensured some consistency in the types of the values that metrics return.
+- Fix a PyTorch warning by explicitly providing the `as_tuple` argument (leaving
+  it as its default value of `False`) to `Tensor.nonzero()`.
+- Remove temporary directory when extracting model archive in `load_archive`
+  at end of function rather than via `atexit`.
+- Fixed a bug where using `cached_path()` offline could return a cached resource's lock file instead
+  of the cache file.
+- Fixed a bug where `cached_path()` would fail if passed a `cache_dir` with the user home shortcut `~/`.
+- Fixed a bug in our doc building script where markdown links did not render properly
+  if the "href" part of the link (the part inside the `()`) was on a new line.
+- Changed how gradients are zeroed out with an optimization. See [this video from NVIDIA](https://www.youtube.com/watch?v=9mS1fIYj1So)
+  at around the 9 minute mark.
+- Fixed a bug where parameters to a `FromParams` class that are dictionaries wouldn't get logged
+  when an instance is instantiated `from_params`.
+- Fixed a bug in distributed training where the vocab would be saved from every worker, when it should have been saved by only the local master process.
+- Fixed a bug in the calculation of rouge metrics during distributed training where the total sequence count was not being aggregated across GPUs.
+
 
 ## [v1.1.0](https://github.com/allenai/allennlp/releases/tag/v1.1.0) - 2020-09-08
 
@@ -125,7 +194,7 @@ data loaders.  Those are coming soon.
   in the log output even when `train_parameters` was set to `False`.
 - Fixed a bug with the sharded dataset reader where it would only read a fraction of the instances
   in distributed training.
-- Fixed checking equality of `ArrayField`s.
+- Fixed checking equality of `TensorField`s.
 - Fixed a bug where `NamespaceSwappingField` did not work correctly with `.empty_field()`.
 - Put more sensible defaults on the `huggingface_adamw` optimizer.
 - Simplified logging so that all logging output always goes to one file.

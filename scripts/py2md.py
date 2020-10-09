@@ -174,6 +174,7 @@ class AllenNlpDocstringProcessor(Struct):
 
     CROSS_REF_RE = re.compile("(:(class|func|mod):`~?([a-zA-Z0-9_.]+)`)")
     UNDERSCORE_HEADER_RE = re.compile(r"(.*)\n-{3,}\n")
+    MULTI_LINE_LINK_RE = re.compile(r"(\[[^\]]+\])\n\s*(\([^\)]+\))")
 
     @override
     def process(self, graph, resolver):
@@ -190,6 +191,10 @@ class AllenNlpDocstringProcessor(Struct):
 
         # Standardize header syntax to use '#' instead of underscores.
         docstring = self.UNDERSCORE_HEADER_RE.sub(r"# \g<1>", docstring)
+
+        # It's common to break up markdown links into multiple lines in docstrings, but
+        # they won't render as links in the doc HTML unless they are all on one line.
+        docstring = self.MULTI_LINE_LINK_RE.sub(r"\g<1>\g<2>", docstring)
 
         for line in docstring.split("\n"):
             # Check if we're starting or ending a codeblock.
@@ -368,13 +373,17 @@ class AllenNlpRenderer(MarkdownRenderer):
             return signature
 
     def _format_classdef_signature(self, cls: Class) -> str:
+        code = ""
+        if cls.decorators:
+            for dec in cls.decorators:
+                code += "@{}{}\n".format(dec.name, dec.args or "")
         bases = ", ".join(map(str, cls.bases))
         if cls.metaclass:
             bases += ", metaclass=" + str(cls.metaclass)
         if bases:
-            code = "class {}({})".format(cls.name, bases)
+            code += "class {}({})".format(cls.name, bases)
         else:
-            code = "class {}".format(cls.name)
+            code += "class {}".format(cls.name)
         if self.signature_python_help_style:
             code = cls.path() + " = " + code
         if self.classdef_render_init_signature_if_needed and (

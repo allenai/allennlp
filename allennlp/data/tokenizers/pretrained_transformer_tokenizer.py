@@ -44,18 +44,10 @@ class PretrainedTransformerTokenizer(Tokenizer):
     stride : `int`, optional (default=`0`)
         If set to a number along with max_length, the overflowing tokens returned will contain some tokens
         from the main sequence returned. The value of this argument defines the number of additional tokens.
-    truncation_strategy : `str`, optional (default=`'longest_first'`)
-        String selected in the following options:
-        - 'longest_first' (default) Iteratively reduce the inputs sequence until the input is under max_length
-        starting from the longest one at each token (when there is a pair of input sequences)
-        - 'only_first': Only truncate the first sequence
-        - 'only_second': Only truncate the second sequence
-        - 'do_not_truncate': Do not truncate (raise an error if the input sequence is longer than max_length)
-    tokenizer_kwargs: `Dict[str, Any]`
+    tokenizer_kwargs: `Dict[str, Any]`, optional (default = `None`)
         Dictionary with
         [additional arguments](https://github.com/huggingface/transformers/blob/155c782a2ccd103cf63ad48a2becd7c76a7d2115/transformers/tokenization_utils.py#L691)
         for `AutoTokenizer.from_pretrained`.
-
     """  # noqa: E501
 
     def __init__(
@@ -64,7 +56,6 @@ class PretrainedTransformerTokenizer(Tokenizer):
         add_special_tokens: bool = True,
         max_length: Optional[int] = None,
         stride: int = 0,
-        truncation_strategy: str = "longest_first",
         tokenizer_kwargs: Optional[Dict[str, Any]] = None,
     ) -> None:
         if tokenizer_kwargs is None:
@@ -83,7 +74,6 @@ class PretrainedTransformerTokenizer(Tokenizer):
         self._add_special_tokens = add_special_tokens
         self._max_length = max_length
         self._stride = stride
-        self._truncation_strategy = truncation_strategy
 
         self._tokenizer_lowercases = self.tokenizer_lowercases(self.tokenizer)
 
@@ -231,12 +221,15 @@ class PretrainedTransformerTokenizer(Tokenizer):
         """
         This method only handles a single sentence (or sequence) of text.
         """
+        max_length = self._max_length
+        if max_length is not None and self._add_special_tokens:
+            max_length -= self.num_special_tokens_for_sequence()
+
         encoded_tokens = self.tokenizer.encode_plus(
             text=text,
             add_special_tokens=False,
-            max_length=self._max_length,
+            max_length=max_length,
             stride=self._stride,
-            truncation=self._truncation_strategy if self._max_length is not None else False,
             return_tensors=None,
             return_offsets_mapping=self.tokenizer.is_fast,
             return_attention_mask=False,

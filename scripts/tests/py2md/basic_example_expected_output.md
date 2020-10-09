@@ -1,5 +1,7 @@
 This is a docstring.
 
+And this is a multi-line line: [http://example.com](https://example.com/blah/blah/blah.html).
+
 <a name=".scripts.tests.py2md.basic_example.SOME_GLOBAL_VAR"></a>
 ## SOME\_GLOBAL\_VAR
 
@@ -146,5 +148,22 @@ class AnotherClassWithReallyLongConstructor:
  |     these_variable_names_are_terrible: str = "yea I know",
  |     **kwargs
  | ) -> None
+```
+
+<a name=".scripts.tests.py2md.basic_example.ClassWithDecorator"></a>
+## ClassWithDecorator
+
+```python
+@dataclass
+class ClassWithDecorator
+```
+
+<a name=".scripts.tests.py2md.basic_example.ClassWithDecorator.x"></a>
+### x
+
+```python
+class ClassWithDecorator:
+ | ...
+ | x: int = None
 ```
 

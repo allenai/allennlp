@@ -22,9 +22,9 @@ jobs:
     - name: Set Docker tag
       run: |
         if [[ $GITHUB_EVENT_NAME == 'release' ]]; then
-            echo "::set-env name=DOCKER_TAG::${GITHUB_REF#refs/tags/}";
+            echo "DOCKER_TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV;
         else
-            echo "::set-env name=DOCKER_TAG::$GITHUB_SHA";
+            echo "DOCKER_TAG=$GITHUB_SHA" >> $GITHUB_ENV;
         fi
 
     - name: Build test image
@@ -42,7 +42,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python: ['3.6', '3.7']
+        python: ['3.7', '3.8']
 
     steps:
     - uses: actions/checkout@v2
@@ -110,7 +110,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python: ['3.6', '3.7']
+        python: ['3.7', '3.8']
 
     steps:
     - uses: actions/checkout@v2
@@ -190,7 +190,7 @@ jobs:
         # This is somewhat bizarre, but you can't set env variables to bash
         # commands in the action workflow - so we have to use this odd way of
         # exporting a variable instead.
-        echo ::set-env name=ALLENNLP_VERSION_SUFFIX::.dev$(date -u +%Y%m%d)
+        echo "ALLENNLP_VERSION_SUFFIX=dev$(date -u +%Y%m%d)" >> $GITHUB_ENV
 
     - name: Check version and release tag match
       if: github.event_name == 'release'
@@ -230,7 +230,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python: ['3.6', '3.7']
+        python: ['3.7', '3.8']
 
     steps:
     - name: Setup Python
@@ -274,9 +274,9 @@ jobs:
     - name: Set Docker image name
       run: |
         if [[ $GITHUB_EVENT_NAME == 'release' ]]; then
-            echo "::set-env name=DOCKER_IMAGE_NAME::allennlp/allennlp:${GITHUB_REF#refs/tags/}";
+            echo "DOCKER_IMAGE_NAME=allennlp/allennlp:${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV;
         else
-            echo "::set-env name=DOCKER_IMAGE_NAME::allennlp/commit:$GITHUB_SHA";
+            echo "DOCKER_IMAGE_NAME=allennlp/commit:$GITHUB_SHA" >> $GITHUB_ENV;
         fi
 
     - name: Download core package
@@ -364,9 +364,9 @@ jobs:
     - name: Set target folders
       run: |
         if [[ $GITHUB_EVENT_NAME == 'release' ]]; then
-            echo "::set-env name=DOCS_FOLDER::${GITHUB_REF#refs/tags/}";
+            echo "DOCS_FOLDER=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV;
         else
-            echo "::set-env name=DOCS_FOLDER::master";
+            echo "DOCS_FOLDER=master" >> $GITHUB_ENV;
         fi
 
     - name: Stage docs

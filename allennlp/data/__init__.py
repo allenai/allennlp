@@ -16,3 +16,4 @@ from allennlp.data.tokenizers.token import Token
 from allennlp.data.tokenizers.tokenizer import Tokenizer
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.data.batch import Batch
+from allennlp.data.image_loader import ImageLoader, DetectronImageLoader

@@ -277,7 +277,8 @@ class ModelTestCase(AllenNlpTestCase):
         disable_dropout: bool = True,
     ):
         print("Checking gradients")
-        model.zero_grad()
+        for p in model.parameters():
+            p.grad = None
         model.train()
 
         original_dropouts: Dict[str, float] = {}
