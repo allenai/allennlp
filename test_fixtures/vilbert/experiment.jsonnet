@@ -21,7 +21,7 @@ local model_name = "epwalsh/bert-xsmall-dummy";
   "validation_data_path": "test_fixtures/data/nlvr2/tiny-dev.json",
   "model": {
     "type": "nlvr2_vilbert_from_huggingface",
-    "model_name": model_name,
+    "pretrained_module": model_name,
     "image_feature_dim": 10,
     "image_hidden_size": 200,
     "image_num_hidden_layers": 1,
