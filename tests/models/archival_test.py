@@ -5,6 +5,7 @@ import torch
 from allennlp.commands.train import train_model
 from allennlp.common import Params
 from allennlp.common.testing import AllenNlpTestCase
+from allennlp.data.dataset_readers import DatasetReader
 from allennlp.models.archival import archive_model, load_archive
 
 
@@ -43,13 +44,14 @@ class ArchivalTest(AllenNlpTestCase):
                 "train_data_path": str(self.FIXTURES_ROOT / "data" / "sequence_tagging.tsv"),
                 "validation_data_path": str(self.FIXTURES_ROOT / "data" / "sequence_tagging.tsv"),
                 "data_loader": {"batch_size": 2},
-                "trainer": {"num_epochs": 2, "optimizer": "adam"},
+                "trainer": {"num_epochs": 2, "optimizer": "adam", "cuda_device": -1},
             }
         )
 
     def test_archiving(self):
         # copy params, since they'll get consumed during training
-        params_copy = copy.deepcopy(self.params.as_dict())
+        params_copy = self.params.duplicate()
+        params_dict_copy = copy.deepcopy(self.params.as_dict())
 
         # `train_model` should create an archive
         serialization_dir = self.TEST_DIR / "archive_test"
@@ -63,9 +65,46 @@ class ArchivalTest(AllenNlpTestCase):
 
         assert_models_equal(model, model2)
 
+        assert isinstance(
+            archive.dataset_reader,
+            type(DatasetReader.from_params(params_copy["dataset_reader"])),
+        )
+        assert archive.validation_dataset_reader is None
+
         # check that params are the same
         params2 = archive.config
-        assert params2.as_dict() == params_copy
+        assert params2.as_dict() == params_dict_copy
+
+    def test_archiving_with_validation_dataset_reader(self):
+        self.params["validation_dataset_reader"] = copy.deepcopy(self.params["dataset_reader"].as_dict())
+        # copy params, since they'll get consumed during training
+        params_copy = self.params.duplicate()
+        params_dict_copy = copy.deepcopy(self.params.as_dict())
+
+        # `train_model` should create an archive
+        serialization_dir = self.TEST_DIR / "archive_test"
+        model = train_model(self.params, serialization_dir=serialization_dir)
+
+        archive_path = serialization_dir / "model.tar.gz"
+
+        # load from the archive
+        archive = load_archive(archive_path)
+        model2 = archive.model
+
+        assert_models_equal(model, model2)
+
+        assert isinstance(
+            archive.dataset_reader,
+            type(DatasetReader.from_params(params_copy["dataset_reader"])),
+        )
+        assert isinstance(
+            archive.validation_dataset_reader,
+            type(DatasetReader.from_params(params_copy["validation_dataset_reader"])),
+        )
+
+        # check that params are the same
+        params2 = archive.config
+        assert params2.as_dict() == params_dict_copy
 
     def test_archive_model_uses_archive_path(self):
 
@@ -81,7 +120,7 @@ class ArchivalTest(AllenNlpTestCase):
 
     def test_loading_serialization_directory(self):
         # copy params, since they'll get consumed during training
-        params_copy = copy.deepcopy(self.params.as_dict())
+        params_dict_copy = copy.deepcopy(self.params.as_dict())
 
         # `train_model` should create an archive
         serialization_dir = self.TEST_DIR / "serialization"
@@ -95,7 +134,7 @@ class ArchivalTest(AllenNlpTestCase):
 
         # check that params are the same
         params2 = archive.config
-        assert params2.as_dict() == params_copy
+        assert params2.as_dict() == params_dict_copy
 
     def test_can_load_from_archive_model(self):
         serialization_dir = self.FIXTURES_ROOT / "basic_classifier" / "from_archive_serialization"

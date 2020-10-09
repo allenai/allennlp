@@ -10,12 +10,14 @@ import tarfile
 import shutil
 from pathlib import Path
 from contextlib import contextmanager
+import copy
 
 from torch.nn import Module
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.file_utils import cached_path
 from allennlp.common.params import Params
+from allennlp.data.dataset_readers import DatasetReader
 from allennlp.models.model import Model, _DEFAULT_WEIGHTS
 
 logger = logging.getLogger(__name__)
@@ -26,6 +28,8 @@ class Archive(NamedTuple):
 
     model: Model
     config: Params
+    dataset_reader: DatasetReader
+    validation_dataset_reader: DatasetReader
 
     def extract_module(self, path: str, freeze: bool = True) -> Module:
         """
@@ -167,26 +171,48 @@ def load_archive(
             with extracted_archive(resolved_archive_file, cleanup=False) as tempdir:
                 serialization_dir = tempdir
 
-        # Load config
-        config = Params.from_file(os.path.join(serialization_dir, CONFIG_NAME), overrides)
-
         if weights_file:
             weights_path = weights_file
         else:
             weights_path = get_weights_path(serialization_dir)
 
-        # Instantiate model. Use a duplicate of the config, as it will get consumed.
-        model = Model.load(
-            config.duplicate(),
-            weights_file=weights_path,
-            serialization_dir=serialization_dir,
-            cuda_device=cuda_device,
-        )
+        # Load config
+        config = Params.from_file(os.path.join(serialization_dir, CONFIG_NAME), overrides)
+
+        # Instantiate model and dataset readers. Use a duplicate of the config, as it will get consumed.
+        dataset_reader, validation_dataset_reader = _load_dataset_readers(config.duplicate())
+        model = _load_model(config.duplicate(), weights_path, serialization_dir, cuda_device)
     finally:
         if tempdir is not None:
             logger.info(f"removing temporary unarchived model dir at {tempdir}")
             shutil.rmtree(tempdir, ignore_errors=True)
-    return Archive(model=model, config=config)
+
+    return Archive(
+        model=model,
+        config=config,
+        dataset_reader=dataset_reader,
+        validation_dataset_reader=validation_dataset_reader,
+    )
+
+
+def _load_dataset_readers(config):
+    dataset_reader = DatasetReader.from_params(config.get("dataset_reader"))
+
+    validation_dataset_reader = None
+    validation_dataset_reader_params = config.get("validation_dataset_reader", None)
+    if validation_dataset_reader_params is not None:
+        validation_dataset_reader = DatasetReader.from_params(validation_dataset_reader_params)
+
+    return dataset_reader, validation_dataset_reader
+
+
+def _load_model(config, weights_path, serialization_dir, cuda_device):
+    return Model.load(
+        config,
+        weights_file=weights_path,
+        serialization_dir=serialization_dir,
+        cuda_device=cuda_device,
+    )
 
 
 def get_weights_path(serialization_dir):

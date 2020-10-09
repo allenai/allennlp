@@ -105,7 +105,8 @@ class ModelTestCase(AllenNlpTestCase):
             assert metric_value is not None, f"Cannot find {metric_to_check} in metrics.json file"
             assert metric_terminal_value is not None, "Please specify metric terminal value"
             assert abs(metric_value - metric_terminal_value) < metric_tolerance
-        loaded_model = load_archive(archive_file, cuda_device=cuda_device).model
+        archive = load_archive(archive_file, cuda_device=cuda_device)
+        loaded_model = archive.model
         state_keys = model.state_dict().keys()
         loaded_state_keys = loaded_model.state_dict().keys()
         assert state_keys == loaded_state_keys
@@ -116,8 +117,8 @@ class ModelTestCase(AllenNlpTestCase):
                 loaded_model.state_dict()[key].cpu().numpy(),
                 err_msg=key,
             )
+        reader = archive.dataset_reader
         params = Params.from_file(param_file, params_overrides=overrides)
-        reader = DatasetReader.from_params(params["dataset_reader"])
 
         print("Reading with original model")
         model_dataset = reader.read(params["validation_data_path"])

@@ -316,11 +316,10 @@ class Predictor(Registrable):
             Predictor.by_name(predictor_name) if predictor_name is not None else cls  # type: ignore
         )
 
-        if dataset_reader_to_load == "validation" and "validation_dataset_reader" in config:
-            dataset_reader_params = config["validation_dataset_reader"]
+        if dataset_reader_to_load == "validation" and archive.validation_dataset_reader is not None:
+            dataset_reader = archive.validation_dataset_reader
         else:
-            dataset_reader_params = config["dataset_reader"]
-        dataset_reader = DatasetReader.from_params(dataset_reader_params)
+            dataset_reader = archive.dataset_reader
 
         model = archive.model
         if frozen:
