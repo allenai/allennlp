@@ -5,11 +5,11 @@ import torch
 from allennlp.common import Params
 from allennlp.common import cached_transformers
 from allennlp.common.testing import assert_equal_parameters
-from allennlp.modules.transformer import TransformerEncoder
+from allennlp.modules.transformer import TransformerBlock
 from allennlp.common.testing import AllenNlpTestCase
 
 
-class TestTransformerEncoder(AllenNlpTestCase):
+class TestTransformerBlock(AllenNlpTestCase):
     def setup_method(self):
         super().setup_method()
 
@@ -25,7 +25,7 @@ class TestTransformerEncoder(AllenNlpTestCase):
 
         params = Params(copy.deepcopy(self.params_dict))
 
-        self.transformer_encoder = TransformerEncoder.from_params(params)
+        self.transformer_block = TransformerBlock.from_params(params)
 
         self.pretrained_name = "bert-base-uncased"
 
@@ -33,22 +33,22 @@ class TestTransformerEncoder(AllenNlpTestCase):
 
     def test_can_construct_from_params(self):
 
-        modules = dict(self.transformer_encoder.named_modules())
+        modules = dict(self.transformer_block.named_modules())
         assert len(modules["layers"]) == self.params_dict["num_hidden_layers"]
 
     def test_forward_runs(self):
-        self.transformer_encoder.forward(torch.randn(2, 3, 6), torch.randn(2, 2, 3, 3))
+        self.transformer_block.forward(torch.randn(2, 3, 6), torch.randn(2, 2, 3, 3))
 
     def test_loading_from_pretrained_weights(self):
         pretrained_module = self.pretrained.encoder
-        module = TransformerEncoder.from_pretrained_module(pretrained_module)
+        module = TransformerBlock.from_pretrained_module(pretrained_module)
         mapping = {
             val: key for key, val in module._construct_default_mapping("huggingface").items()
         }
         assert_equal_parameters(pretrained_module, module, mapping)
 
     def test_loading_from_pretrained_weights_using_model_name(self):
-        module = TransformerEncoder.from_pretrained_module(self.pretrained_name)
+        module = TransformerBlock.from_pretrained_module(self.pretrained_name)
         mapping = {
             val: key for key, val in module._construct_default_mapping("huggingface").items()
         }
@@ -56,17 +56,17 @@ class TestTransformerEncoder(AllenNlpTestCase):
 
     def test_loading_partial_pretrained_weights(self):
 
-        kwargs = TransformerEncoder._get_input_arguments(self.pretrained.encoder)
+        kwargs = TransformerBlock._get_input_arguments(self.pretrained.encoder)
         # The pretrained module has 12 bert layers, while the instance will have only 3.
         kwargs["num_hidden_layers"] = 3
-        transformer_encoder = TransformerEncoder(**kwargs)
-        transformer_encoder._load_from_pretrained_module(self.pretrained.encoder)
+        transformer_block = TransformerBlock(**kwargs)
+        transformer_block._load_from_pretrained_module(self.pretrained.encoder)
         mapping = {
             val: key
-            for key, val in transformer_encoder._construct_default_mapping("huggingface").items()
+            for key, val in transformer_block._construct_default_mapping("huggingface").items()
         }
         assert_equal_parameters(
             self.pretrained.encoder,
-            transformer_encoder,
+            transformer_block,
             mapping,
         )

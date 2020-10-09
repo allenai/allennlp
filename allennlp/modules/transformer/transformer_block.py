@@ -9,7 +9,7 @@ from allennlp.modules.transformer.transformer_layer import TransformerLayer
 from allennlp.modules.transformer.transformer_module import TransformerModule
 
 
-class TransformerEncoder(TransformerModule, FromParams):
+class TransformerBlock(TransformerModule, FromParams):
 
     _huggingface_mapping = {"layer": "layers"}
     _relevant_module = "encoder"
@@ -38,19 +38,19 @@ class TransformerEncoder(TransformerModule, FromParams):
 
     def forward(
         self,
-        hidden_states,
-        attention_mask=None,
-        head_mask=None,
-        encoder_hidden_states=None,
-        encoder_attention_mask=None,
-        output_attentions=False,
-        output_hidden_states=False,
+        hidden_states: torch.Tensor,
+        attention_mask: Optional[torch.Tensor] = None,
+        head_mask: Optional[torch.Tensor] = None,
+        encoder_hidden_states: Optional[torch.Tensor] = None,
+        encoder_attention_mask: Optional[torch.Tensor] = None,
+        output_attentions: bool = False,
+        output_hidden_states: bool = False,
     ):
         all_hidden_states = () if output_hidden_states else None
         all_attentions = () if output_attentions else None
         for i, layer_module in enumerate(self.layers):
             if output_hidden_states:
-                all_hidden_states = all_hidden_states + (hidden_states,)
+                all_hidden_states = all_hidden_states + (hidden_states,)  # type: ignore
 
             layer_head_mask = head_mask[i] if head_mask is not None else None
 
@@ -64,10 +64,10 @@ class TransformerEncoder(TransformerModule, FromParams):
             )
             hidden_states = layer_outputs[0]
             if output_attentions:
-                all_attentions = all_attentions + (layer_outputs[1],)
+                all_attentions = all_attentions + (layer_outputs[1],)  # type: ignore
 
         if output_hidden_states:
-            all_hidden_states = all_hidden_states + (hidden_states,)
+            all_hidden_states = all_hidden_states + (hidden_states,)  # type: ignore
 
         return tuple(v for v in [hidden_states, all_hidden_states, all_attentions] if v is not None)
 

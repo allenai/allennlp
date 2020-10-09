@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 
 @Model.register("nlvr2_vilbert")
-@Model.register("nlvr2_vilbert_from_huggingface", constructor="from_pretrained_module")
+@Model.register("nlvr2_vilbert_from_pretrained", constructor="from_pretrained_module")
 class Nlvr2Vilbert(Model, TransformerModule):
     """
     Model for the NLVR2 task based on the LXMERT paper (Tan et al. 2019).
@@ -99,13 +99,9 @@ class Nlvr2Vilbert(Model, TransformerModule):
             pretrained_module, source=source, mapping=mapping
         )
         submodules = cls._get_mapped_submodules(pretrained_module, source, mapping)
-        text_embeddings = deepcopy(submodules["embeddings"])
-        # FIX: change to below:
-        # text_embeddings = TransformerEmbeddings.from_pretrained_module(submodules["embeddings"])
+        text_embeddings = TextEmbeddings.get_relevant_module(submodules["embeddings"])
 
         if "huggingface" in source:
-            # FIX: change this part to use mapping.
-
             if source == "albert-huggingface":
                 linear_transform = deepcopy(submodules["encoder"].embedding_hidden_mapping_in)
 
@@ -213,7 +209,7 @@ class Nlvr2Vilbert(Model, TransformerModule):
         )
 
         # (batch_size, num_images, num_boxes, image_embedding_dim)
-        v_embedding_output = self.image_embeddings(box_features, box_coordinates)
+        v_embedding_output = self.image_embeddings(box_features, box_coordinates.float())
         encoded_layers_t, encoded_layers_v = self.encoder(
             embedding_output,
             v_embedding_output,

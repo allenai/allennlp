@@ -22,7 +22,7 @@ class TransformerModule(torch.nn.Module):
     """
 
     _huggingface_mapping: Dict[str, str] = {}
-    _relevant_module: str = ""
+    _relevant_module: Optional[str] = None
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -66,7 +66,6 @@ class TransformerModule(torch.nn.Module):
                         list(module._construct_default_mapping(source).items())
                         + list(mapping.items())
                     )
-        # self._default_mapping = mapping
         return mapping
 
     def _load_from_pretrained_module(
@@ -138,7 +137,7 @@ class TransformerModule(torch.nn.Module):
 
         relevant_module = relevant_module or cls._relevant_module
 
-        if relevant_module != "":
+        if relevant_module is not None:
             submodules = cls._get_mapped_submodules(pretrained_module, source, mapping)
             # If the relevant_module is not found, we assume that the pretrained_module
             # is already the relevant module.

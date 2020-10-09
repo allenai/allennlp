@@ -7,7 +7,7 @@ from allennlp.common import FromParams
 from allennlp.modules.transformer.transformer_module import TransformerModule
 
 
-class TextEmbeddings(torch.nn.Module, FromParams):
+class TextEmbeddings(TransformerModule, FromParams):
     """Construct the embeddings from word, position and token_type embeddings."""
 
     def __init__(
@@ -67,7 +67,7 @@ class ImageFeatureEmbeddings(torch.nn.Module, FromParams):
 
     def forward(self, image_feature: torch.Tensor, image_location: torch.Tensor):
         img_embeddings = self.image_embeddings(image_feature)
-        loc_embeddings = self.image_location_embeddings(image_location.float())
+        loc_embeddings = self.image_location_embeddings(image_location)
         embeddings = self.layer_norm(img_embeddings + loc_embeddings)
         embeddings = self.dropout(embeddings)
 
@@ -144,16 +144,3 @@ class TransformerEmbeddings(TransformerModule, FromParams):
         embeddings = self.embeddings([input_ids, position_ids, token_type_ids])
 
         return embeddings
-
-
-# class ImageFeatureEmbeddings(Embeddings):
-#     """Construct the embeddings from image, spatial location (omit now) and
-#     token_type embeddings.
-#     """
-
-#     def __init__(self, feature_dim: int, hidden_dim: int, dropout: float = 0.0):
-
-#         image_embeddings = torch.nn.Linear(feature_dim, hidden_dim)
-#         image_location_embeddings = torch.nn.Linear(4, hidden_dim)
-#         embeddings = [image_embeddings, image_location_embeddings]
-#         super().__init__(embeddings, hidden_dim, dropout)
