@@ -27,6 +27,7 @@ jobs:
   gpu_checks:
     name: GPU Checks
     runs-on: [self-hosted, GPU]
+    timeout-minutes: 15
 
     steps:
     - uses: actions/checkout@v2
