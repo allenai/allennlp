@@ -10,7 +10,6 @@ import tarfile
 import shutil
 from pathlib import Path
 from contextlib import contextmanager
-import copy
 
 from torch.nn import Module
 

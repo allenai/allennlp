@@ -14,7 +14,6 @@ from overrides import overrides
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common import logging as common_logging
 from allennlp.common.util import prepare_environment
-from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data import DataLoader
 from allennlp.models.archival import load_archive
 from allennlp.training.util import evaluate
