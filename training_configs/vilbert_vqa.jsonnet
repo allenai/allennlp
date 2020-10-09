@@ -75,8 +75,8 @@ local num_gpus = 1;
     "shuffle": true
   },
   [if num_gpus > 1 then "distributed"]: {
-    #"cuda_devices": std.range(0, num_gpus - 1)
-    "cuda_devices": std.repeat([-1], num_gpus)  # Use this for debugging on CPU
+    "cuda_devices": std.range(0, num_gpus - 1)
+    #"cuda_devices": std.repeat([-1], num_gpus)  # Use this for debugging on CPU
   },
   "trainer": {
     "optimizer": {
