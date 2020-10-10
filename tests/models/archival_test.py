@@ -69,40 +69,10 @@ class ArchivalTest(AllenNlpTestCase):
             archive.dataset_reader,
             type(DatasetReader.from_params(params_copy["dataset_reader"])),
         )
-        assert archive.validation_dataset_reader is None
-
-        # check that params are the same
-        params2 = archive.config
-        assert params2.as_dict() == params_dict_copy
-
-    def test_archiving_with_validation_dataset_reader(self):
-        self.params["validation_dataset_reader"] = copy.deepcopy(
-            self.params["dataset_reader"].as_dict()
-        )
-        # copy params, since they'll get consumed during training
-        params_copy = self.params.duplicate()
-        params_dict_copy = copy.deepcopy(self.params.as_dict())
-
-        # `train_model` should create an archive
-        serialization_dir = self.TEST_DIR / "archive_test"
-        model = train_model(self.params, serialization_dir=serialization_dir)
-
-        archive_path = serialization_dir / "model.tar.gz"
-
-        # load from the archive
-        archive = load_archive(archive_path)
-        model2 = archive.model
-
-        assert_models_equal(model, model2)
-
-        assert isinstance(
-            archive.dataset_reader,
-            type(DatasetReader.from_params(params_copy["dataset_reader"])),
-        )
         assert isinstance(
             archive.validation_dataset_reader,
-            type(DatasetReader.from_params(params_copy["validation_dataset_reader"])),
-        )
+            type(DatasetReader.from_params(params_copy["dataset_reader"])),
+        )  # validation_dataset_reader is not in the config, so fall back to dataset_reader
 
         # check that params are the same
         params2 = archive.config

@@ -197,10 +197,13 @@ def load_archive(
 def _load_dataset_readers(config):
     dataset_reader = DatasetReader.from_params(config.get("dataset_reader"))
 
-    validation_dataset_reader = None
+    # Try to use the validation dataset reader if there is one - otherwise fall back
+    # to the default dataset_reader used for both training and validation.
     validation_dataset_reader_params = config.get("validation_dataset_reader", None)
     if validation_dataset_reader_params is not None:
         validation_dataset_reader = DatasetReader.from_params(validation_dataset_reader_params)
+    else:
+        validation_dataset_reader = DatasetReader.from_params(config.get("dataset_reader"))
 
     return dataset_reader, validation_dataset_reader
 
