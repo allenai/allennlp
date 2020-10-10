@@ -1,3 +1,4 @@
+import numpy
 import torch
 
 from allennlp.nn.samplers.sampler import Sampler
@@ -53,11 +54,18 @@ class TopKSampler(Sampler):
 
         assert self.k <= len(logits)
 
+        # First apply temperature coefficient:
+        logits = logits / self.temperature
+
+        # Find the indices that are not to be selected from
         min_threshold = torch.topk(logits, self.k)[0][..., -1].unsqueeze(dim=-1)
         filtered_indices = logits < min_threshold
-        logits[..., filtered_indices] = self.filter_val
 
+        # Prevent the filtered indiceds from being selected
+        logits[..., filtered_indices] = self.filter_val
         filtered_probabilites = torch.nn.functional.softmax(logits, dim=-1)
+
+        # Sample from the remaining indices
         selected_indices = torch.multinomial(
             filtered_probabilites, num_samples, replacement=with_replacement
         )
@@ -122,4 +130,39 @@ class TopPSampler(Sampler):
 
         # Return (selected log probabilities, selected classes)
         # shape: (len(logits),1) , (len(logits), 1)
+        return (torch.gather(logits, 1, selected_indices), selected_indices)
+
+@Sampler.register("gumbel-max")
+class GumbelMaxSampler(Sampler):
+    """
+    Represents a `Sampler` which uses the Gumbel-Max trick to sample `num_samples` 
+    instances without replacement
+    `logits` is a tensor of log-probabilities to be selected from.
+    `temperature` modules the probabilitis of the selected tokens. A `temperature` below 1.0 produces a
+    sharper probability distribution and a `temperature` above 1.0 produces a flatter probability
+    distribution.
+    `num_samples` is the number of instances to sample
+
+    Registered as a `Sampler` with name "gumbel-max"ß.
+    """
+    def __init__(self, temperature: float = 1.0):
+        self.temperature = temperature or 1.0
+
+    def __call__(
+        self, logits: torch.Tensor, num_samples: int = 1
+    ) -> torch.Tensor:
+        # Make sure we're not trying to select more than available
+        assert num_samples <= len(logits)
+
+        # Add the gumbel distributed noise 
+        tensor_shape = logits.size()
+        noise = torch.distributions.Gumbel(torch.zeros(tensor_shape), torch.ones(tensor_shape))
+    
+        # First apply temperature coefficient:
+        logits_prime = (logits + noise) / self.temperature
+
+        # selecting the top indices
+        _, selected_indices = torch.topk(logits_prime, num_samples)
+
+        # returning the selected logits along with their indices
         return (torch.gather(logits, 1, selected_indices), selected_indices)
