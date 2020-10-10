@@ -67,11 +67,11 @@ class ArchivalTest(AllenNlpTestCase):
 
         assert isinstance(
             archive.dataset_reader,
-            type(DatasetReader.from_params(params_copy["dataset_reader"])),
+            type(DatasetReader.from_params(params_copy["dataset_reader"].duplicate())),
         )
         assert isinstance(
             archive.validation_dataset_reader,
-            type(DatasetReader.from_params(params_copy["dataset_reader"])),
+            type(DatasetReader.from_params(params_copy["dataset_reader"].duplicate())),
         )  # validation_dataset_reader is not in the config, so fall back to dataset_reader
 
         # check that params are the same
