@@ -23,7 +23,6 @@ from torch.nn.parallel import DistributedDataParallel
 
 import deepspeed
 # from deepspeed.runtime.engine import DeepSpeedEngine
-from allennlp.training.deepspeed_engine_adapter import AllennlpDeepSpeedEngineAdapter as DeepSpeedEngine
 
 from allennlp.common import Lazy, Registrable, Tqdm, Params, FromParams
 from allennlp.common import util as common_util
@@ -40,22 +39,21 @@ from allennlp.training.optimizers import Optimizer
 from allennlp.training.tensorboard_writer import TensorboardWriter
 from allennlp.training.trainer import Trainer, BatchCallback, EpochCallback
 
+from allennlp.training.deepspeed.engine_adapter import AllennlpDeepSpeedEngineAdapter as DeepSpeedEngine
+from allennlp.training.deepspeed.optimizers.zero_optimization import ZeroOptimizer
+
 logger = logging.getLogger(__name__)
 
 JsonDict = Dict[str, Any]
 
-# import torch.autograd.profiler as profiler
-# import sys; sys.tracebacklimit = 0
-# from pyinstrument import Profiler
-# profiler = Profiler()
-
 class DeepspeedConfig(FromParams):
     def __init__(
         self,
-        optimizer: JsonDict,
+        optimizer: Lazy[Optimizer], # JsonDict,
         fp16: JsonDict = {'enabled': False},
         amp:  JsonDict = {'enabled': False},
         zero_optimization: Union[bool, Dict] = False,
+        zero_optimizer: Lazy[ZeroOptimizer] = None,
         zero_allow_untested_optimizer: bool = True,
         wall_clock_breakdown: bool = False
     ):
@@ -65,13 +63,7 @@ class DeepspeedConfig(FromParams):
         self.zero_optimization = zero_optimization
         self.zero_allow_untested_optimizer = zero_allow_untested_optimizer
         self.wall_clock_breakdown = wall_clock_breakdown
-
-        # self.config = {
-        #     'fp16': self.fp16,
-        #     'amp': self.amp,
-        #     'zero_optimization': self.zero_optimization,
-        #     'zero_allow_untested_optimizer': self.zero_allow_untested_optimizer
-        # }
+        self._zero_optim = zero_optimizer
 
     def launch(
         self,
@@ -82,19 +74,22 @@ class DeepspeedConfig(FromParams):
         **kwargs
     ):
         from argparse import Namespace
-
         args = Namespace(deepspeed_config=None, deepspeed=True, local_rank=local_rank)
-        config = dict(**vars(self), train_batch_size=batch_size, gradient_accumulation_steps=gradient_accumulation_steps)
 
+        optimizer = self.optimizer.construct(model_parameters=model.parameters())
+        del self.optimizer
+
+        zero_optim = self._zero_optim
+        del self._zero_optim
+        # del self.zero_optimization
+
+        config = dict(**vars(self), train_batch_size=batch_size, gradient_accumulation_steps=gradient_accumulation_steps)
         ds = DeepSpeedEngine(
             args=args,
             model=model,
-            # optimizer=optimizer,
-            # optimizer=Optimizer.default(model.named_parameters()),
+            optimizer=optimizer,
+            zero_optimizer=zero_optim,
             model_parameters=model.parameters(),
-            # training_data=training_data,
-            # lr_scheduler=lr_scheduler,
-            # mpu=mpu,
             dist_init_required=False,
             config_params=config
         )
