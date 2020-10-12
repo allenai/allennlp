@@ -139,7 +139,7 @@ def cached_path(
     cache_dir = os.path.expanduser(cache_dir)
     os.makedirs(cache_dir, exist_ok=True)
 
-    if isinstance(url_or_filename, PathLike):
+    if not isinstance(url_or_filename, str):
         url_or_filename = str(url_or_filename)
 
     file_path: str
