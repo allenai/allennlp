@@ -9,6 +9,7 @@ from allennlp.common.checks import ConfigurationError
 from allennlp.nn.samplers.sampler import Sampler
 from allennlp.nn.samplers.samplers import TopKSampler
 from allennlp.nn.samplers.samplers import TopPSampler
+from allennlp.nn.samplers.samplers import GumbelMaxSampler
 
 
 StateType = Dict[str, torch.Tensor]
@@ -489,7 +490,35 @@ class BeamSearch(Registrable):
             sampler=sampler_p,
         )
 
+    @classmethod
+    def stochastic_beam_search(
+        cls,
+        end_index: int,
+        max_steps: int = 50,
+        beam_size: int = 10,
+        per_node_beam_size: int = None,
+        temperature: float = 1.0,
+    ) -> "BeamSearch":
+        """
+        Given an index of the end token in target vocabulary, return a `BeamSearch` object
+        that can be used to find `beam_size` candidate sequences, found by using Stochastic
+        Beam Search, which leverages Gumbel-TopK sampling. See
+        [*Stochastic Beams and Where to Find Them: The Gumbel-Top-k Trick for Sampling 
+        Sequences Without Replacement*, W Kool, H Van Hoof and M Welling, 2010]
+        (https://arxiv.org/abs/1903.06059).
+        """
+        
+        gumbel_sampler = GumbelMaxSampler(temperature)
+        return cls(
+            end_index=end_index,
+            max_steps=max_steps,
+            beam_size=beam_size,
+            per_node_beam_size=per_node_beam_size,
+            sampler=gumbel_sampler,
+        )
+
 
 BeamSearch.register("without_sampling", constructor="without_sampling")(BeamSearch)
 BeamSearch.register("top_p_sampling", constructor="top_p_sampling")(BeamSearch)
 BeamSearch.register("top_k_sampling", constructor="top_k_sampling")(BeamSearch)
+BeamSearch.register("stochastic_beam_search", constructor="stochastic_beam_search")(BeamSearch)

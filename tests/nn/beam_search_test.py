@@ -243,9 +243,6 @@ class BeamSearchTest(AllenNlpTestCase):
             initial_predictions, {}, take_step
         )
 
-        # bem_search = BeamSearch(self.end_index, beam_size=3, per_node_beam_size = 1)
-        # top_p, log_probs = beam_search.search(initial_predictions, {}, take_step)
-
         beam_size = beam_size or 1
         batch_size = 5
 
@@ -273,6 +270,26 @@ class BeamSearchTest(AllenNlpTestCase):
         assert list(top_k.size())[:-1] == [batch_size, beam_size]
 
         assert ((0 <= top_k) & (top_k <= 5)).all()
+
+        # log_probs should be shape `(batch_size, beam_size, max_predicted_length)`.
+        assert list(log_probs.size()) == [batch_size, beam_size]
+
+    def test_stochastic_beam_search(self):
+        initial_predictions = torch.tensor([0] * 5)
+        beam_size = 3
+        take_step = take_step_with_timestep
+
+        top_p, log_probs = BeamSearch.stochastic_beam_search(self.end_index, beam_size=beam_size).search(
+            initial_predictions, {}, take_step
+        )
+
+        beam_size = beam_size or 1
+        batch_size = 5
+
+        # top_p should be shape `(batch_size, beam_size, max_predicted_length)`.
+        assert list(top_p.size())[:-1] == [batch_size, beam_size]
+
+        assert ((0 <= top_p) & (top_p <= 5)).all()
 
         # log_probs should be shape `(batch_size, beam_size, max_predicted_length)`.
         assert list(log_probs.size()) == [batch_size, beam_size]
@@ -368,3 +385,19 @@ class BeamSearchTest(AllenNlpTestCase):
         assert beam_search.beam_size == 2
         assert beam_search._end_index == 7
         assert beam_search.sampler is not None
+
+    def test_params_stochastic_beam_search(self):
+        beam_search = BeamSearch.from_params(
+            Params(
+                {
+                    "type": "stochastic_beam_search",
+                    "beam_size": 2,
+                    "end_index": 7,
+                }
+            )
+        )
+        assert beam_search.beam_size == 2
+        assert beam_search._end_index == 7
+        assert beam_search.sampler is not None
+
+    

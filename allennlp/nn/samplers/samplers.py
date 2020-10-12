@@ -156,10 +156,12 @@ class GumbelMaxSampler(Sampler):
 
         # Add the gumbel distributed noise 
         tensor_shape = logits.size()
-        noise = torch.distributions.Gumbel(torch.zeros(tensor_shape), torch.ones(tensor_shape))
+        noise = torch.distributions.Gumbel(torch.tensor([0.0]), torch.tensor([1.0])).sample(tensor_shape)
+        noise = noise.squeeze()
     
-        # First apply temperature coefficient:
-        logits_prime = (logits + noise) / self.temperature
+        assert noise.size() == logits.size()
+        # Add the noise then apply temperature coefficient:
+        logits_prime = torch.add(logits, noise) / self.temperature
 
         # selecting the top indices
         _, selected_indices = torch.topk(logits_prime, num_samples)
