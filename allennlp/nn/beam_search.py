@@ -503,11 +503,11 @@ class BeamSearch(Registrable):
         Given an index of the end token in target vocabulary, return a `BeamSearch` object
         that can be used to find `beam_size` candidate sequences, found by using Stochastic
         Beam Search, which leverages Gumbel-TopK sampling. See
-        [*Stochastic Beams and Where to Find Them: The Gumbel-Top-k Trick for Sampling 
+        [*Stochastic Beams and Where to Find Them: The Gumbel-Top-k Trick for Sampling
         Sequences Without Replacement*, W Kool, H Van Hoof and M Welling, 2010]
         (https://arxiv.org/abs/1903.06059).
         """
-        
+
         gumbel_sampler = GumbelMaxSampler(temperature)
         return cls(
             end_index=end_index,

@@ -279,9 +279,9 @@ class BeamSearchTest(AllenNlpTestCase):
         beam_size = 3
         take_step = take_step_with_timestep
 
-        top_p, log_probs = BeamSearch.stochastic_beam_search(self.end_index, beam_size=beam_size).search(
-            initial_predictions, {}, take_step
-        )
+        top_p, log_probs = BeamSearch.stochastic_beam_search(
+            self.end_index, beam_size=beam_size
+        ).search(initial_predictions, {}, take_step)
 
         beam_size = beam_size or 1
         batch_size = 5
@@ -399,5 +399,3 @@ class BeamSearchTest(AllenNlpTestCase):
         assert beam_search.beam_size == 2
         assert beam_search._end_index == 7
         assert beam_search.sampler is not None
-
-    

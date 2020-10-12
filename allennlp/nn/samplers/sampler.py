@@ -9,6 +9,6 @@ class Sampler(Registrable):
     """
 
     def __call__(
-        self, logits: torch.Tensor, num_samples: int = 1, with_replacement: bool = True
+        self, logits: torch.Tensor, num_samples: int = 1
     ) -> torch.Tensor:
         raise NotImplementedError

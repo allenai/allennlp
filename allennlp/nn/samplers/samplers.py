@@ -1,4 +1,3 @@
-import numpy
 import torch
 
 from allennlp.nn.samplers.sampler import Sampler
@@ -132,10 +131,11 @@ class TopPSampler(Sampler):
         # shape: (len(logits),1) , (len(logits), 1)
         return (torch.gather(logits, 1, selected_indices), selected_indices)
 
+
 @Sampler.register("gumbel-max")
 class GumbelMaxSampler(Sampler):
     """
-    Represents a `Sampler` which uses the Gumbel-Max trick to sample `num_samples` 
+    Represents a `Sampler` which uses the Gumbel-Max trick to sample `num_samples`
     instances without replacement
     `logits` is a tensor of log-probabilities to be selected from.
     `temperature` modules the probabilitis of the selected tokens. A `temperature` below 1.0 produces a
@@ -145,20 +145,21 @@ class GumbelMaxSampler(Sampler):
 
     Registered as a `Sampler` with name "gumbel-max"ß.
     """
+
     def __init__(self, temperature: float = 1.0):
         self.temperature = temperature or 1.0
 
-    def __call__(
-        self, logits: torch.Tensor, num_samples: int = 1
-    ) -> torch.Tensor:
+    def __call__(self, logits: torch.Tensor, num_samples: int = 1) -> torch.Tensor:
         # Make sure we're not trying to select more than available
         assert num_samples <= len(logits)
 
-        # Add the gumbel distributed noise 
+        # Add the gumbel distributed noise
         tensor_shape = logits.size()
-        noise = torch.distributions.Gumbel(torch.tensor([0.0]), torch.tensor([1.0])).sample(tensor_shape)
+        noise = torch.distributions.Gumbel(torch.tensor([0.0]), torch.tensor([1.0])).sample(
+            tensor_shape
+        )
         noise = noise.squeeze()
-    
+
         assert noise.size() == logits.size()
         # Add the noise then apply temperature coefficient:
         logits_prime = torch.add(logits, noise) / self.temperature
