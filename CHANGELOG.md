@@ -30,6 +30,7 @@ data loaders.  Those are coming soon.
 - Added abstraction and concrete implementation for `GridEmbedder`
 - Added abstraction and demo implementation for an image augmentation module.
 - Added abstraction and concrete implementation for region detectors.
+- Transformer toolkit to plug and play with modular components of transformer architectures.
 
 ### Changed
 
@@ -133,7 +134,7 @@ data loaders.  Those are coming soon.
 
 ### Added
 
-- `Predictor.capture_model_internals()` now accepts a regex specifying which modules to capture
+- `Predictor.capture_model_internals()` now accepts a regex specifying which modules to capture.
 
 
 ## [v1.1.0rc4](https://github.com/allenai/allennlp/releases/tag/v1.1.0rc4) - 2020-08-20

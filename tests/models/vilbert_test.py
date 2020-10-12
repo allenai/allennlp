@@ -1,5 +1,4 @@
-from transformers.modeling_auto import AutoModel
-
+from allennlp.common import cached_transformers
 from allennlp.common.testing import ModelTestCase
 from allennlp.models.vilbert import Nlvr2Vilbert
 
@@ -22,9 +21,9 @@ class TestVilbert(ModelTestCase):
 
     def test_model_loads_weights_correctly(self):
         model_name = "epwalsh/bert-xsmall-dummy"
-        model = Nlvr2Vilbert.from_huggingface_model_name(
+        model = Nlvr2Vilbert.from_pretrained_module(
+            pretrained_module=model_name,
             vocab=None,
-            model_name=model_name,
             image_feature_dim=2048,
             image_num_hidden_layers=1,
             image_hidden_size=3,
@@ -42,10 +41,11 @@ class TestVilbert(ModelTestCase):
         def convert_transformer_param_name(name: str):
             # We wrap the encoder in a `TimeDistributed`, which gives us this extra _module.
             name = name.replace("encoder", "encoder._module")
+            name = name.replace("layer", "layers1")
             name = name.replace("LayerNorm", "layer_norm")
             return name
 
-        transformer = AutoModel.from_pretrained(model_name)
+        transformer = cached_transformers.get(model_name, False)
         model_parameters = dict(model.named_parameters())
         transformer_parameters = dict(transformer.named_parameters())
 

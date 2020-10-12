@@ -13,7 +13,8 @@ class AdditiveAttention(Attention):
     `x` and the matrix `y` is computed as `V tanh(Wx + Uy)`.
 
     This attention is often referred as concat or additive attention. It was introduced in
-    <https://arxiv.org/abs/1409.0473> by Bahdanau et al.
+    [Neural Machine Translation by Jointly Learning to Align and Translate (Bahdanau et al, 2015)]
+    (https://api.semanticscholar.org/CorpusID:11212020).
 
     Registered as an `Attention` with name "additive".
 
