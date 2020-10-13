@@ -1554,9 +1554,9 @@ def add_sentence_boundary_token_ids(
     tensor_with_boundary_tokens = tensor.new_zeros(*new_shape, device=tensor.device)
     if len(tensor_shape) == 2:
         tensor_with_boundary_tokens[:, 1:-1] = tensor
-        tensor_with_boundary_tokens[:, 0] = sentence_begin_token.detach().to(tensor.device)
+        tensor_with_boundary_tokens[:, 0] = sentence_begin_token
         for i, j in enumerate(sequence_lengths):
-            tensor_with_boundary_tokens[i, j + 1] = sentence_end_token.detach().to(tensor.device)
+            tensor_with_boundary_tokens[i, j + 1] = sentence_end_token
         new_mask = tensor_with_boundary_tokens != 0
     elif len(tensor_shape) == 3:
         tensor_with_boundary_tokens[:, 1:-1, :] = tensor
