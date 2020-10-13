@@ -223,6 +223,11 @@ class BeamSearch(Registrable):
                 start_predicted_classes,
             ) = start_class_log_probabilities.topk(self.beam_size)
 
+        if isinstance(self.sampler, GumbelMaxSampler):
+            last_true_probabilities = torch.gather(
+                start_class_log_probabilities, 1, start_predicted_classes
+            )
+
         if self.beam_size == 1 and (start_predicted_classes == self._end_index).all():
             warnings.warn(
                 "Empty sequences predicted. You may want to increase the beam size or ensure "
@@ -328,6 +333,26 @@ class BeamSearch(Registrable):
                 batch_size, self.beam_size * self.per_node_beam_size
             )
 
+            # Track the true probabilities in addition to perturbed for stochastic search
+            if isinstance(self.sampler, GumbelMaxSampler):
+                # shape: (batch_size * beam_size, per_node_beam_size)
+                expanded_true_log_probabilities = (
+                    last_true_probabilities.unsqueeze(2)
+                    .expand(batch_size, self.beam_size, self.per_node_beam_size)
+                    .reshape(batch_size * self.beam_size, self.per_node_beam_size)
+                )
+
+                # shape: (batch_size * beam_size, per_node_beam_size)
+                summed_true_log_probabilities = (
+                    cleaned_log_probabilities.gather(1, predicted_classes)
+                    + expanded_true_log_probabilities
+                )
+
+                # shape: (batch_size, beam_size * per_node_beam_size)
+                reshaped_summed_true_probabilities = summed_true_log_probabilities.reshape(
+                    batch_size, self.beam_size * self.per_node_beam_size
+                )
+
             # shape: (batch_size, beam_size * per_node_beam_size)
             reshaped_predicted_classes = predicted_classes.reshape(
                 batch_size, self.beam_size * self.per_node_beam_size
@@ -344,6 +369,15 @@ class BeamSearch(Registrable):
             restricted_predicted_classes = reshaped_predicted_classes.gather(
                 1, restricted_beam_indices
             )
+
+            # track the true probabilities for the selected beams
+            # shape: (batch_size, beam_size)
+            if isinstance(self.sampler, GumbelMaxSampler):
+                restricted_true_probabilities = reshaped_summed_true_probabilities.gather(
+                    1, restricted_beam_indices
+                )
+
+                last_true_probabilities = restricted_true_probabilities
 
             predictions.append(restricted_predicted_classes)
 
@@ -408,6 +442,10 @@ class BeamSearch(Registrable):
 
         # shape: (batch_size, beam_size, max_steps)
         all_predictions = torch.cat(list(reversed(reconstructed_predictions)), 2)
+
+        # If stochastic beam search, return the true probabilities instead of perturbed
+        if isinstance(self.sampler, GumbelMaxSampler):
+            return all_predictions, last_true_probabilities
 
         return all_predictions, last_log_probabilities
 
