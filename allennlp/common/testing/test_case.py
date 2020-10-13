@@ -11,7 +11,7 @@ TEST_DIR = tempfile.mkdtemp(prefix="allennlp_tests")
 
 class AllenNlpTestCase:
     """
-    A custom subclass of `unittest.TestCase` that disables some of the more verbose AllenNLP
+    A custom testing class that disables some of the more verbose AllenNLP
     logging and that creates and destroys a temp directory as a test fixture.
     """
 
