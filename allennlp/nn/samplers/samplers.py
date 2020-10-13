@@ -143,7 +143,7 @@ class GumbelMaxSampler(Sampler):
     distribution.
     `num_samples` is the number of instances to sample
 
-    Registered as a `Sampler` with name "gumbel-max"ß.
+    Registered as a `Sampler` with name "gumbel-max".
     """
 
     def __init__(self, temperature: float = 1.0):
