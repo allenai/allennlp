@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Dict
 
 import torch
 
@@ -105,14 +105,17 @@ class TransformerEmbeddings(TransformerModule, FromParams):
     (https://api.semanticscholar.org/CorpusID:52967399)
     """
 
+    _relevant_module = "embeddings"
+    _huggingface_mapping = {"LayerNorm": "embeddings.layer_norm", "dropout": "embeddings.dropout"}
+
     def __init__(
         self,
         vocab_size: int,
         hidden_size: int,
-        pad_token_id: int,
-        max_position_embeddings: int,
-        type_vocab_size: int,
-        dropout: float,
+        pad_token_id: int = 0,
+        max_position_embeddings: int = 512,
+        type_vocab_size: int = 2,
+        dropout: float = 0.1,
     ):
         super().__init__()
         word_embeddings = torch.nn.Embedding(vocab_size, hidden_size, padding_idx=pad_token_id)
@@ -144,3 +147,25 @@ class TransformerEmbeddings(TransformerModule, FromParams):
         embeddings = self.embeddings([input_ids, position_ids, token_type_ids])
 
         return embeddings
+
+    @classmethod
+    def _get_input_arguments(
+        cls,
+        pretrained_module: torch.nn.Module,
+        source="huggingface",
+        mapping: Optional[Dict[str, str]] = None,
+        **kwargs,
+    ):
+        submodules = cls._get_mapped_submodules(pretrained_module, source, mapping)
+
+        final_kwargs = {}
+
+        final_kwargs["vocab_size"] = submodules["word_embeddings"].num_embeddings
+        final_kwargs["hidden_size"] = submodules["word_embeddings"].embedding_dim
+        final_kwargs["pad_token_id"] = submodules["word_embeddings"].padding_idx
+        final_kwargs["max_position_embeddings"] = submodules["position_embeddings"].num_embeddings
+        final_kwargs["type_vocab_size"] = submodules["token_type_embeddings"].num_embeddings
+
+        final_kwargs.update(**kwargs)
+
+        return final_kwargs

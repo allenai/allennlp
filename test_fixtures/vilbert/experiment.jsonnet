@@ -28,6 +28,8 @@ local model_name = "epwalsh/bert-xsmall-dummy";
     "combined_hidden_size": 200,
     "pooled_output_dim": 100,
     "image_intermediate_size": 50,
+    "image_num_attention_heads": 8,
+    "combined_num_attention_heads": 8,
     "image_attention_dropout": 0.0,
     "image_hidden_dropout": 0.0,
     "v_biattention_id": [0, 1],

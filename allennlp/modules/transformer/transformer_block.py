@@ -19,10 +19,10 @@ class TransformerBlock(TransformerModule, FromParams):
         num_hidden_layers: int,
         hidden_size: int,
         intermediate_size: int,
-        num_attention_heads: int,
-        attention_dropout: float,
-        hidden_dropout: float,
-        activation: Union[str, torch.nn.Module],
+        num_attention_heads: int = 8,
+        attention_dropout: float = 0.1,
+        hidden_dropout: float = 0.1,
+        activation: Union[str, torch.nn.Module] = "relu",
     ):
         super().__init__()
         self._hidden_size = hidden_size

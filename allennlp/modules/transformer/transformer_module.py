@@ -1,4 +1,4 @@
-from typing import Optional, Dict, Union
+from typing import Optional, Dict, Union, List
 import logging
 import inspect
 
@@ -73,12 +73,14 @@ class TransformerModule(torch.nn.Module):
         pretrained_module: torch.nn.Module,
         source="huggingface",
         mapping: Optional[Dict[str, str]] = None,
+        ignore_absent_parameters: Optional[List] = None,
     ):
         """
         Loads the weights of the `pretrained_module` into the instance.
         Optionally, a `mapping` is specified for any differences in parameter names
         between `pretrained_module` and the instance.
         """
+        ignore_absent_parameters = ignore_absent_parameters or []
         if mapping is None:
             mapping = self._construct_default_mapping(source)
 
@@ -90,12 +92,15 @@ class TransformerModule(torch.nn.Module):
                 # so that we replace the names of submodules too.
                 # eg. module.key.anothermodule --> module.val.anothermodule
                 pretrained_name = pretrained_name.replace(key, val)
-            if pretrained_name not in pretrained_parameters:
-                raise ValueError(
-                    f"Couldn't find a matching parameter for {name}. Is this module "
-                    "compatible with the pretrained module you're using?"
-                )
-            parameter.data.copy_(pretrained_parameters[pretrained_name].data)
+            if not any(
+                [pretrained_name.startswith(paraname) for paraname in ignore_absent_parameters]
+            ):
+                if pretrained_name not in pretrained_parameters:
+                    raise ValueError(
+                        f"Couldn't find a matching parameter for {name}. Is this module "
+                        "compatible with the pretrained module you're using?"
+                    )
+                parameter.data.copy_(pretrained_parameters[pretrained_name].data)
 
     @classmethod
     def _get_input_arguments(
