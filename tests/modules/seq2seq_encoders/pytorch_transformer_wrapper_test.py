@@ -95,6 +95,8 @@ def test_positional_encodings(positional_encoding: Optional[str]):
         shuffled_output = transformer(shuffled_input, mask)
 
         if positional_encoding is None:
+            print(torch.gather(unshuffled_output, 1, shuffle))
+            print(shuffled_output)
             assert torch.allclose(
                 torch.gather(unshuffled_output, 1, shuffle), shuffled_output, atol=2e-7
             )
