@@ -34,7 +34,7 @@ class Nlvr2Vilbert(Model, TransformerModule):
     """
 
     # NOTE: This line is unnecessary and will be removed.
-    # It's to showcase the possiblity of addressing Matt's comment:
+    # It's to showcase the possibility of addressing Matt's comment:
     #   TODO(mattg): This call to `transformer.embeddings` works with some transformers, but I'm
     #   not sure it works for all of them, or what to do if it fails. ...
     # See `from_pretrained_module` defined below to see how it is used.
