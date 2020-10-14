@@ -97,3 +97,25 @@ class TransformerBlock(TransformerModule, FromParams):
         final_kwargs.update(**kwargs)
 
         return final_kwargs
+
+    @classmethod
+    def from_pretrained_module(  # type: ignore
+        cls,
+        pretrained_module: Union[str, torch.nn.Module],
+        num_hidden_layers: Optional[Union[int, range]] = None,
+        source="huggingface",
+        mapping: Optional[Dict[str, str]] = None,
+        **kwargs,
+    ):
+        final_kwargs = {}
+        if num_hidden_layers is not None:
+            if isinstance(num_hidden_layers, range):
+                if mapping is None:
+                    mapping = {}
+                    for num_layer, mapped in enumerate(num_hidden_layers):
+                        mapping[str(mapped)] = str(num_layer)
+                final_kwargs["num_hidden_layers"] = len(num_hidden_layers)
+            else:
+                final_kwargs["num_hidden_layers"] = num_hidden_layers
+
+        return super().from_pretrained_module(pretrained_module, source, mapping, **final_kwargs)

@@ -35,16 +35,19 @@ class TransformerModule(torch.nn.Module):
         Subclasses overload this method, and provide appropriate name mapping based on the source.
         """
         submodules = dict(pretrained_module.named_modules())
-        if mapping is None:
-            if "huggingface" in source:
-                mapping = cls._huggingface_mapping
-            else:
-                mapping = {}
-        # inverse_mapping = {val: key for key, val in mapping.items()}
+        combined_mapping = {}
+        if "huggingface" in source:
+            combined_mapping.update(cls._huggingface_mapping)
+        if mapping is not None:
+            combined_mapping.update(mapping)
+        # if mapping is None:
+        #     if "huggingface" in source:
+        #         mapping = cls._huggingface_mapping
+        #     else:
+        #         mapping = {}
         for name, module in pretrained_module.named_modules():
             newname = name
-            # for key, val in inverse_mapping.items():
-            for key, val in mapping.items():
+            for key, val in combined_mapping.items():
                 newname = newname.replace(key, val)
             submodules[newname] = submodules.pop(name)
         return submodules
@@ -81,10 +84,13 @@ class TransformerModule(torch.nn.Module):
         between `pretrained_module` and the instance.
         """
         ignore_absent_parameters = ignore_absent_parameters or []
-        if mapping is None:
-            mapping = self._construct_default_mapping(source)
+        # if mapping is None:
+        #    mapping = self._construct_default_mapping(source)
+        combined_mapping = self._construct_default_mapping(source)
+        if mapping is not None:
+            combined_mapping.update(mapping)
 
-        inverse_mapping = {val: key for key, val in mapping.items()}
+        inverse_mapping = {val: key for key, val in combined_mapping.items()}
         pretrained_parameters = dict(pretrained_module.named_parameters())
         for name, parameter in self.named_parameters():
             pretrained_name = name
@@ -183,5 +189,5 @@ class TransformerModule(torch.nn.Module):
         final_kwargs = cls._get_input_arguments(pretrained_module, source, mapping)
         final_kwargs.update(kwargs)
         module = cls(**final_kwargs)
-        module._load_from_pretrained_module(pretrained_module)
+        module._load_from_pretrained_module(pretrained_module, source, mapping)
         return module
