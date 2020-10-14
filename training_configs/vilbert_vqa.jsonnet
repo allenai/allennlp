@@ -23,7 +23,7 @@ local num_gpus = 1;
         "model_name": model_name
       }
     },
-    #"max_instances": 10000,
+    #"max_instances": 1000,
     "image_processing_batch_size": 16
   },
   "vocabulary": {"min_count": {"answers": 9}},
