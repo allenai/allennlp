@@ -8,15 +8,10 @@ import torch
 
 from allennlp.data import TextFieldTensors, Vocabulary
 from allennlp.models.model import Model
+from allennlp.modules import TimeDistributed
+from allennlp.modules.transformer import TextEmbeddings, ImageFeatureEmbeddings, BiModalEncoder, ActivationLayer
 from allennlp.nn import util
 from allennlp.training.metrics import F1MultiLabelMeasure
-
-from allennlp.models.vilbert import (
-    BertEmbeddings,
-    BertImageFeatureEmbeddings,
-    BertEncoder,
-    BertPooler,
-)
 
 from transformers.modeling_auto import AutoModel
 
@@ -37,9 +32,9 @@ class VqaVilbert(Model):
     def __init__(
         self,
         vocab: Vocabulary,
-        text_embeddings: BertEmbeddings,
-        image_embeddings: BertImageFeatureEmbeddings,
-        encoder: BertEncoder,
+        text_embeddings: TextEmbeddings,
+        image_embeddings: ImageFeatureEmbeddings,
+        encoder: BiModalEncoder,
         pooled_output_dim: int,
         fusion_method: str = "sum",
         dropout: float = 0.1,
@@ -55,9 +50,12 @@ class VqaVilbert(Model):
         self.image_embeddings = image_embeddings
         self.encoder = encoder
 
-        self.t_pooler = BertPooler(encoder.text_hidden_size, pooled_output_dim)
-        self.v_pooler = BertPooler(encoder.image_hidden_size, pooled_output_dim)
-
+        self.t_pooler = TimeDistributed(
+            ActivationLayer(encoder.hidden_size1, pooled_output_dim, torch.nn.ReLU())
+        )
+        self.v_pooler = TimeDistributed(
+            ActivationLayer(encoder.hidden_size2, pooled_output_dim, torch.nn.ReLU())
+        )
         num_labels = vocab.get_vocab_size(label_namespace)
         self.label_namespace = label_namespace
 
@@ -127,13 +125,13 @@ class VqaVilbert(Model):
 
             text_embeddings = EmbeddingsShim(text_embeddings, linear_transform)
 
-        image_embeddings = BertImageFeatureEmbeddings(
+        image_embeddings = ImageFeatureEmbeddings(
             feature_dim=image_feature_dim,
             hidden_dim=image_hidden_size,
             dropout=image_hidden_dropout,
         )
 
-        encoder = BertEncoder.from_huggingface_model(
+        encoder = BiModalEncoder.from_huggingface_model(
             model=transformer,
             image_num_hidden_layers=image_num_hidden_layers,
             image_hidden_size=image_hidden_size,
