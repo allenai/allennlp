@@ -63,11 +63,11 @@ def test_positional_encodings(positional_encoding: Optional[str]):
 
         if positional_encoding is None:
             assert torch.allclose(
-                torch.gather(unshuffled_output, 1, shuffle), shuffled_output, atol=2e-7
+                torch.gather(unshuffled_output, 1, shuffle), shuffled_output, atol=2e-5
             )
         else:
             assert not torch.allclose(
-                torch.gather(unshuffled_output, 1, shuffle), shuffled_output, atol=2e-7
+                torch.gather(unshuffled_output, 1, shuffle), shuffled_output, atol=2e-5
             )
 
 
