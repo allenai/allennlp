@@ -6,10 +6,12 @@ local num_gpus = 1;
 {
   "dataset_reader": {
     "type": "vqav2",
-    "image_dir": "/net/nfs2.corp/prior/datasets/coco",
-    "feature_cache_dir": "/net/nfs2.corp/prior/datasets/coco/coco_experiment_cache",
-    #"image_dir": "/Users/dirkg/Documents/data/vision/coco",
-    #"feature_cache_dir": "/Users/dirkg/Documents/data/vision/coco/feature_cache/vqa",
+    #"image_dir": "/net/nfs2.corp/prior/datasets/coco",
+    #"feature_cache_dir": "/net/nfs2.corp/prior/datasets/coco/coco_experiment_cache",
+    #"image_dir": "/net/s3/allennlp/dirkg/data/vision/coco",
+    #"feature_cache_dir": "/net/s3/allennlp/dirkg/data/vision/coco/feature_cache/vqa",
+    "image_dir": "/Users/dirkg/Documents/data/vision/coco",
+    "feature_cache_dir": "/Users/dirkg/Documents/data/vision/coco/feature_cache/vqa",
     "image_loader": "detectron",
     "image_featurizer": "resnet_backbone",
     "region_detector": "faster_rcnn",
@@ -23,6 +25,8 @@ local num_gpus = 1;
         "model_name": model_name
       }
     }
+    #"max_instances": 1000,
+    "image_processing_batch_size": 16
   },
   "vocabulary": {"min_count": {"answers": 9}},
   "train_data_path": "balanced_real_train",

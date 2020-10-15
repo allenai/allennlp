@@ -6,10 +6,10 @@ local num_gpus = 1;
 {
   "dataset_reader": {
     "type": "vqav2",
-    "image_dir": "/net/nfs.corp/allennlp/dirkg/data/vision/coco",
-    "feature_cache_dir": "/net/nfs.corp/allennlp/dirkg/data/vision/coco/feature_cache/vqa",
-    #"image_dir": "/Users/dirkg/Documents/data/vision/coco",
-    #"feature_cache_dir": "/Users/dirkg/Documents/data/vision/coco/feature_cache/vqa",
+    #"image_dir": "/net/s3/allennlp/dirkg/data/vision/coco",
+    #"feature_cache_dir": "/net/s3/allennlp/dirkg/data/vision/coco/feature_cache/vqa",
+    "image_dir": "/Users/dirkg/Documents/data/vision/coco",
+    "feature_cache_dir": "/Users/dirkg/Documents/data/vision/coco/feature_cache/vqa",
     "image_loader": "detectron",
     "image_featurizer": "resnet_backbone",
     "region_detector": "faster_rcnn",
@@ -23,7 +23,7 @@ local num_gpus = 1;
         "model_name": model_name
       }
     },
-    #"max_instances": 10000,
+    #"max_instances": 1000,
     "image_processing_batch_size": 16
   },
   "vocabulary": {"min_count": {"answers": 9}},
@@ -44,28 +44,29 @@ local num_gpus = 1;
       "hidden_dim": 1024
     },
     "encoder": {
-      "image_hidden_size": 1024,
-      "image_num_hidden_layers": 6,
-      "image_intermediate_size": 1024,
-      "image_num_attention_heads": 8,
-      "image_attention_dropout": 0.1,
-      "image_hidden_dropout": 0.1,
+      # vision
+      "hidden_size1": 1024,
+      "num_hidden_layers1": 6,
+      "intermediate_size1": 1024,
+      "num_attention_heads1": 8,
+      "attention_dropout1": 0.1,
+      "hidden_dropout1": 0.1,
+      "biattention_id1": [0, 1, 2, 3, 4, 5],
+      "fixed_layer1": 0,
 
-      "text_hidden_size": 768,
-      "text_num_hidden_layers": 12,
-      "text_intermediate_size": 3072,
-      "text_num_attention_heads": 12,
-      "text_attention_dropout": 0.1,
-      "text_hidden_dropout": 0.1,
+      # text
+      "hidden_size2": 768,
+      "num_hidden_layers2": 12,
+      "intermediate_size2": 3072,
+      "num_attention_heads2": 12,
+      "attention_dropout2": 0.1,
+      "hidden_dropout2": 0.1,
+      "biattention_id2": [6, 7, 8, 9, 10, 11],
+      "fixed_layer2": 0,
 
       "combined_num_attention_heads": 8,
       "combined_hidden_size": 1024,
       "activation": "gelu",
-
-      "v_biattention_id": [0, 1, 2, 3, 4, 5],
-      "t_biattention_id": [6, 7, 8, 9, 10, 11],
-      "fixed_t_layer": 0,
-      "fixed_v_layer": 0
     },
     "pooled_output_dim": 1024,
     "fusion_method": "mul"
