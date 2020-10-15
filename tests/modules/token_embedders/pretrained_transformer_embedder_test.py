@@ -26,24 +26,26 @@ class TestPretrainedTransformerEmbedder(AllenNlpTestCase):
         assert tuple(output.size()) == (1, 4, 768)
 
     @pytest.mark.parametrize(
-        "train_parameters, last_layer_only, gradient_checkpointing",
+        "model_name, train_parameters, last_layer_only, gradient_checkpointing",
         [
-            (True, True, False),
-            (False, True, False),
-            (True, False, False),
-            (False, False, False),
-            (
-                True,
-                False,
-                True,
-            ),  # checkpointing only makes sense when we're actually training the layers
+            (model_name, train_parameters, last_layer_only, gradient_checkpointing)
+            for model_name in {"bert-base-uncased", "patrickvonplaten/t5-tiny-random"}
+            for train_parameters in {True, False}
+            for last_layer_only in {True, False}
+            for gradient_checkpointing in {True, False}
+            if train_parameters
+            or not gradient_checkpointing  # checkpointing only makes sense when we're actually training the layers
         ],
     )
     def test_end_to_end(
-        self, train_parameters: bool, last_layer_only: bool, gradient_checkpointing: bool
+        self,
+        model_name: str,
+        train_parameters: bool,
+        last_layer_only: bool,
+        gradient_checkpointing: bool,
     ):
-        tokenizer = PretrainedTransformerTokenizer(model_name="bert-base-uncased")
-        token_indexer = PretrainedTransformerIndexer(model_name="bert-base-uncased")
+        tokenizer = PretrainedTransformerTokenizer(model_name=model_name)
+        token_indexer = PretrainedTransformerIndexer(model_name=model_name)
 
         sentence1 = "A, AllenNLP sentence."
         tokens1 = tokenizer.tokenize(sentence1)
@@ -62,7 +64,7 @@ class TestPretrainedTransformerEmbedder(AllenNlpTestCase):
                 "token_embedders": {
                     "bert": {
                         "type": "pretrained_transformer",
-                        "model_name": "bert-base-uncased",
+                        "model_name": model_name,
                         "train_parameters": train_parameters,
                         "last_layer_only": last_layer_only,
                         "gradient_checkpointing": gradient_checkpointing,
