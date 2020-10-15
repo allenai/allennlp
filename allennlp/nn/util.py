@@ -1560,9 +1560,11 @@ def add_sentence_boundary_token_ids(
         new_mask = tensor_with_boundary_tokens != 0
     elif len(tensor_shape) == 3:
         tensor_with_boundary_tokens[:, 1:-1, :] = tensor
+        sentence_begin_token = sentence_begin_token.detach().to(tensor.device)
+        sentence_end_token = sentence_end_token.detach().to(tensor.device)
         for i, j in enumerate(sequence_lengths):
-            tensor_with_boundary_tokens[i, 0, :] = sentence_begin_token.detach().to(tensor.device)
-            tensor_with_boundary_tokens[i, j + 1, :] = sentence_end_token.detach().to(tensor.device)
+            tensor_with_boundary_tokens[i, 0, :] = sentence_begin_token
+            tensor_with_boundary_tokens[i, j + 1, :] = sentence_end_token
         new_mask = (tensor_with_boundary_tokens > 0).sum(dim=-1) > 0
     else:
         raise ValueError("add_sentence_boundary_token_ids only accepts 2D and 3D input")
