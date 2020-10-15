@@ -16,7 +16,7 @@ from allennlp.modules.transformer import (
     TextEmbeddings,
     ImageFeatureEmbeddings,
     BiModalEncoder,
-    ActivationLayer,
+    TransformerPooler,
     TransformerModule,
 )
 
@@ -60,12 +60,8 @@ class Nlvr2Vilbert(Model, TransformerModule):
         self.image_embeddings = image_embeddings
         self.encoder = TimeDistributed(encoder)
 
-        self.t_pooler = TimeDistributed(
-            ActivationLayer(encoder.hidden_size1, pooled_output_dim, torch.nn.ReLU())
-        )
-        self.v_pooler = TimeDistributed(
-            ActivationLayer(encoder.hidden_size2, pooled_output_dim, torch.nn.ReLU())
-        )
+        self.t_pooler = TimeDistributed(TransformerPooler(encoder.hidden_size1, pooled_output_dim))
+        self.v_pooler = TimeDistributed(TransformerPooler(encoder.hidden_size2, pooled_output_dim))
         self.classifier = torch.nn.Linear(pooled_output_dim * 2, 2)
         self.dropout = torch.nn.Dropout(dropout)
 
@@ -221,8 +217,8 @@ class Nlvr2Vilbert(Model, TransformerModule):
         sequence_output_t = encoded_layers_t[:, :, :, :, -1]
         sequence_output_v = encoded_layers_v[:, :, :, :, -1]
 
-        pooled_output_t = self.t_pooler(sequence_output_t, pool=True)
-        pooled_output_v = self.v_pooler(sequence_output_v, pool=True)
+        pooled_output_t = self.t_pooler(sequence_output_t)
+        pooled_output_v = self.v_pooler(sequence_output_v)
 
         if self.fusion_method == "sum":
             pooled_output = self.dropout(pooled_output_t + pooled_output_v)
