@@ -226,8 +226,9 @@ class BeamSearch(Registrable):
         # Some samplers add perturb the log probabilities with random noise, such
         # as the GumbelMaxSampler, so we need to recover and keep track of the
         # true log probabilities here.
+        last_true_log_probabilities: Optional[torch.Tensor] = None
         if self.sampler is not None:
-            last_true_probabilities = torch.gather(
+            last_true_log_probabilities = torch.gather(
                 start_class_log_probabilities, 1, start_predicted_classes
             )
 
@@ -338,10 +339,10 @@ class BeamSearch(Registrable):
 
             # Track the true probabilities in addition to perturbed probabilities
             # for use in samplers that may perturb probabilities
-            if self.sampler is not None:
+            if last_true_log_probabilities is not None:
                 # shape: (batch_size * beam_size, per_node_beam_size)
                 expanded_true_log_probabilities = (
-                    last_true_probabilities.unsqueeze(2)
+                    last_true_log_probabilities.unsqueeze(2)
                     .expand(batch_size, self.beam_size, self.per_node_beam_size)
                     .reshape(batch_size * self.beam_size, self.per_node_beam_size)
                 )
@@ -376,12 +377,12 @@ class BeamSearch(Registrable):
 
             # track the true probabilities for the selected beams
             # shape: (batch_size, beam_size)
-            if self.sampler is not None:
+            if last_true_log_probabilities is not None:
                 restricted_true_probabilities = reshaped_summed_true_probabilities.gather(
                     1, restricted_beam_indices
                 )
 
-                last_true_probabilities = restricted_true_probabilities
+                last_true_log_probabilities = restricted_true_probabilities
 
             predictions.append(restricted_predicted_classes)
 
@@ -448,8 +449,8 @@ class BeamSearch(Registrable):
         all_predictions = torch.cat(list(reversed(reconstructed_predictions)), 2)
 
         # If a sampler is used, return the true probabilities instead of perturbed probabilities
-        if self.sampler is not None:
-            return all_predictions, last_true_probabilities
+        if last_true_log_probabilities is not None:
+            return all_predictions, last_true_log_probabilities
 
         return all_predictions, last_log_probabilities
 
