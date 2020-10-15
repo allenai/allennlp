@@ -6,10 +6,10 @@ from typing import Dict, List
 from overrides import overrides
 import torch
 
+from allennlp.common import FromParams
 from allennlp.data import TextFieldTensors, Vocabulary
 from allennlp.models.model import Model
-from allennlp.modules import TimeDistributed
-from allennlp.modules.transformer import TextEmbeddings, ImageFeatureEmbeddings, BiModalEncoder, ActivationLayer
+from allennlp.modules.transformer import TextEmbeddings, ImageFeatureEmbeddings, BiModalEncoder
 from allennlp.nn import util
 from allennlp.training.metrics import F1MultiLabelMeasure
 
@@ -40,6 +40,9 @@ class VqaVilbert(Model):
         dropout: float = 0.1,
         label_namespace: str = "answers",
     ) -> None:
+        from allennlp.modules import TimeDistributed
+        from allennlp.modules.transformer import ActivationLayer
+
         super().__init__(vocab)
         self.loss = torch.nn.BCELoss()
         self.consistency_wrong_map: Dict[str, int] = collections.Counter()
@@ -50,12 +53,9 @@ class VqaVilbert(Model):
         self.image_embeddings = image_embeddings
         self.encoder = encoder
 
-        self.t_pooler = TimeDistributed(
-            ActivationLayer(encoder.hidden_size1, pooled_output_dim, torch.nn.ReLU())
-        )
-        self.v_pooler = TimeDistributed(
-            ActivationLayer(encoder.hidden_size2, pooled_output_dim, torch.nn.ReLU())
-        )
+        self.v_pooler = ActivationLayer(encoder.hidden_size1, pooled_output_dim, torch.nn.ReLU())
+        self.t_pooler = ActivationLayer(encoder.hidden_size2, pooled_output_dim, torch.nn.ReLU())
+
         num_labels = vocab.get_vocab_size(label_namespace)
         self.label_namespace = label_namespace
 
@@ -202,19 +202,19 @@ class VqaVilbert(Model):
         # (batch_size, num_boxes, image_embedding_dim)
         v_embedding_output = self.image_embeddings(box_features, box_coordinates)
         
-        encoded_layers_t, encoded_layers_v = self.encoder(
-            embedding_output,
+        encoded_layers_v, encoded_layers_t = self.encoder(
             v_embedding_output,
-            extended_attention_mask,
+            embedding_output,
             extended_image_attention_mask,
+            extended_attention_mask,
             extended_co_attention_mask,
         )
         
         sequence_output_t = encoded_layers_t[:, :, :, -1]
         sequence_output_v = encoded_layers_v[:, :, :, -1]
 
-        pooled_output_t = self.t_pooler(sequence_output_t)
-        pooled_output_v = self.v_pooler(sequence_output_v)
+        pooled_output_t = self.t_pooler(sequence_output_t, pool=True)
+        pooled_output_v = self.v_pooler(sequence_output_v, pool=True)
 
         if self.fusion_method == "sum":
             pooled_output = self.dropout(pooled_output_t + pooled_output_v)

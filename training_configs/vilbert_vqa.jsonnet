@@ -48,7 +48,7 @@ local num_gpus = 1;
       "hidden_size1": 1024,
       "num_hidden_layers1": 6,
       "intermediate_size1": 1024,
-      #"num_attention_heads1": 8,
+      "num_attention_heads1": 8,
       "attention_dropout1": 0.1,
       "hidden_dropout1": 0.1,
       "biattention_id1": [0, 1, 2, 3, 4, 5],
@@ -58,15 +58,13 @@ local num_gpus = 1;
       "hidden_size2": 768,
       "num_hidden_layers2": 12,
       "intermediate_size2": 3072,
-      #"num_attention_heads2": 12,
+      "num_attention_heads2": 12,
       "attention_dropout2": 0.1,
       "hidden_dropout2": 0.1,
       "biattention_id2": [6, 7, 8, 9, 10, 11],
       "fixed_layer2": 0,
 
-      "num_attention_heads": 8,    # TODO: this setting should be per mode
-
-      #"combined_num_attention_heads": 8,
+      "combined_num_attention_heads": 8,
       "combined_hidden_size": 1024,
       "activation": "gelu",
     },
