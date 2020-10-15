@@ -321,14 +321,14 @@ class TestParams(AllenNlpTestCase):
         filename = self.FIXTURES_ROOT / "simple_tagger" / "experiment.json"
         params = Params.from_file(filename)
 
-        assert params["dataloader"]["batch_sampler"]["type"] == "bucket"
-        assert params["dataloader"]["batch_sampler"]["batch_size"] == 80
+        assert params["data_loader"]["batch_sampler"]["type"] == "bucket"
+        assert params["data_loader"]["batch_sampler"]["batch_size"] == 80
 
         remove_keys_from_params(params, keys=["batch_size"])
-        assert "batch_size" not in params["dataloader"]["batch_sampler"]
+        assert "batch_size" not in params["data_loader"]["batch_sampler"]
 
         remove_keys_from_params(params, keys=["type", "batch_size"])
-        assert "type" not in params["dataloader"]["batch_sampler"]
+        assert "type" not in params["data_loader"]["batch_sampler"]
 
-        remove_keys_from_params(params, keys=["dataloader"])
-        assert "dataloader" not in params
+        remove_keys_from_params(params, keys=["data_loader"])
+        assert "data_loader" not in params
