@@ -319,7 +319,7 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
 
         embeddings = embeddings.reshape(batch_size, num_segments, self._max_length, embedding_size)
         embeddings = embeddings[
-            :, :, self._num_added_start_tokens : -self._num_added_end_tokens, :
+            :, :, self._num_added_start_tokens : embeddings.size(2) - self._num_added_end_tokens, :
         ]  # truncate segment-level start/end tokens
         embeddings = embeddings.reshape(batch_size, -1, embedding_size)  # flatten
 

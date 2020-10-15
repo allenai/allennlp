@@ -176,7 +176,9 @@ class PretrainedTransformerIndexer(TokenIndexer):
 
             indices = output["token_ids"]
             # Strips original special tokens
-            indices = indices[self._num_added_start_tokens : -self._num_added_end_tokens]
+            indices = indices[
+                self._num_added_start_tokens : len(indices) - self._num_added_end_tokens
+            ]
             # Folds indices
             folded_indices = [
                 indices[i : i + self._effective_max_length]
