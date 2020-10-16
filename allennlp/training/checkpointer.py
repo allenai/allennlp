@@ -1,4 +1,4 @@
-from typing import Union, Dict, Any, List, Tuple
+from typing import Union, Dict, Any, List, Tuple, Optional
 
 import logging
 import os
@@ -146,7 +146,7 @@ class Checkpointer(Registrable):
                             if os.path.isfile(fname):
                                 os.remove(fname)
 
-    def find_latest_checkpoint(self) -> Tuple[str, str]:
+    def find_latest_checkpoint(self) -> Optional[Tuple[str, str]]:
         """
         Return the location of the latest model and training state files.
         If there isn't a valid checkpoint then return None.
