@@ -299,7 +299,9 @@ class Model(torch.nn.Module, Registrable):
         # stored in our model. We don't need any pretrained weight file or initializers anymore,
         # and we don't want the code to look for it, so we remove it from the parameters here.
         remove_keys_from_params(model_params)
-        model = Model.from_params(vocab=vocab, params=model_params, serialization_dir=serialization_dir)
+        model = Model.from_params(
+            vocab=vocab, params=model_params, serialization_dir=serialization_dir
+        )
 
         # Force model to cpu or gpu, as appropriate, to make sure that the embeddings are
         # in sync with the weights

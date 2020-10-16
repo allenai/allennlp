@@ -197,7 +197,9 @@ def load_archive(
         config = Params.from_file(os.path.join(serialization_dir, CONFIG_NAME), overrides)
 
         # Instantiate model and dataset readers. Use a duplicate of the config, as it will get consumed.
-        dataset_reader, validation_dataset_reader = _load_dataset_readers(config.duplicate(), serialization_dir)
+        dataset_reader, validation_dataset_reader = _load_dataset_readers(
+            config.duplicate(), serialization_dir
+        )
         model = _load_model(config.duplicate(), weights_path, serialization_dir, cuda_device)
     finally:
         if tempdir is not None:
@@ -222,7 +224,9 @@ def _load_dataset_readers(config, serialization_dir):
     )
 
     dataset_reader = DatasetReader.from_params(dataset_reader_params, serialization_dir)
-    validation_dataset_reader = DatasetReader.from_params(validation_dataset_reader_params, serialization_dir)
+    validation_dataset_reader = DatasetReader.from_params(
+        validation_dataset_reader_params, serialization_dir
+    )
 
     return dataset_reader, validation_dataset_reader
 
