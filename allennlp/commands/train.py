@@ -686,8 +686,9 @@ class TrainModel(Registrable):
                 if getattr(validation_data_loader_, "_batches_per_epoch", None) is not None:
                     warnings.warn(
                         "Using 'data_loader' params to construct validation data loader since "
-                        "'validation_data_loader' params not specified, but you have 'data_loader.batches_per_epoch'"
-                        "set which may result in different validation datasets for each epoch.",
+                        "'validation_data_loader' params not specified, but you have "
+                        "'data_loader.batches_per_epoch' set which may result in different "
+                        "validation datasets for each epoch.",
                         UserWarning,
                     )
         else:
