@@ -51,6 +51,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   into account the tensor allocations of the current PyTorch process.
 - Make sure weights are first loaded to the cpu when using PretrainedModelInitializer, preventing wasted GPU memory.
 - Load dataset readers in `load_archive`.
+- Updated `AllenNlpTestCase` docstring to remove reference to `unittest.TestCase`
 
 ### Removed
 
@@ -78,6 +79,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   when an instance is instantiated `from_params`.
 - Fixed a bug in distributed training where the vocab would be saved from every worker, when it should have been saved by only the local master process.
 - Fixed a bug in the calculation of rouge metrics during distributed training where the total sequence count was not being aggregated across GPUs.
+- Fixed `allennlp.nn.util.add_sentence_boundary_token_ids()` to use `device` parameter of input tensor.
 
 ## [v1.1.0](https://github.com/allenai/allennlp/releases/tag/v1.1.0) - 2020-09-08
 
