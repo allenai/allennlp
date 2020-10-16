@@ -89,8 +89,9 @@ class MediumTransformer(torch.nn.Module):
         right = self.embeddings(right_token_ids)
         right = self.separate_transformer(right)
 
-        # combine the sequences in some meaningful way. here, we just add them.
-        # combined = combine_masked_sequences(left, left_mask, right, right_mask)
+        # combine the sequences in some meaningful way.
+        # Here, we just add them for simplicity. In reality,
+        # concatenation may be a better option.
         combined = left + right
 
         return self.combined_transformer(combined)
