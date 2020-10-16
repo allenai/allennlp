@@ -78,6 +78,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed a bug in distributed training where the vocab would be saved from every worker, when it should have been saved by only the local master process.
 - Fixed a bug in the calculation of rouge metrics during distributed training where the total sequence count was not being aggregated across GPUs.
 - Fixed `allennlp.nn.util.add_sentence_boundary_token_ids()` to use `device` parameter of input tensor.
+- Fixed the computation of saliency maps in the Interpret code when using mismatched indexing.
+  Previously, we would compute gradients from the top of the transformer, after aggregation from
+wordpieces to tokens, which gives results that are not very informative.  Now, we compute gradients
+with respect to the embedding layer, and aggregate wordpieces to tokens separately.
 
 ## [v1.1.0](https://github.com/allenai/allennlp/releases/tag/v1.1.0) - 2020-09-08
 
