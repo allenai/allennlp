@@ -223,9 +223,9 @@ def _load_dataset_readers(config, serialization_dir):
         "validation_dataset_reader", dataset_reader_params.duplicate()
     )
 
-    dataset_reader = DatasetReader.from_params(dataset_reader_params, serialization_dir)
+    dataset_reader = DatasetReader.from_params(dataset_reader_params, serialization_dir=serialization_dir)
     validation_dataset_reader = DatasetReader.from_params(
-        validation_dataset_reader_params, serialization_dir
+        validation_dataset_reader_params, serialization_dir=serialization_dir
     )
 
     return dataset_reader, validation_dataset_reader
