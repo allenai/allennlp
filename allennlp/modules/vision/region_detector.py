@@ -89,7 +89,7 @@ class FasterRcnnRegionDetector(RegionDetector):
 
         from allennlp.common import detectron
 
-        flat_parameters = detectron.DetectronFlatParameters(
+        self.flat_parameters = detectron.DetectronFlatParameters(
             meta_architecture=meta_architecture,
             weights=weights,
             device=device,
@@ -113,9 +113,16 @@ class FasterRcnnRegionDetector(RegionDetector):
             rpn_bbox_loss_weight=rpn_bbox_loss_weight,
             test_detections_per_image=detections_per_image,
         )
-        pipeline = detectron.get_pipeline_from_flat_parameters(flat_parameters, make_copy=False)
-        self.model = pipeline.model
+        self._model_object = None
         self.detections_per_image = detections_per_image
+
+    @property
+    def _model(self):
+        if self._model_object is None:
+            from allennlp.common import detectron
+            pipeline = detectron.get_pipeline_from_flat_parameters(self.flat_parameters, make_copy=False)
+            self._model_object = pipeline.model
+        return self._model_object
 
     def forward(
         self, raw_images: FloatTensor, image_sizes: IntTensor, featurized_images: FloatTensor
