@@ -13,7 +13,7 @@ import numpy
 import torch
 
 from allennlp.common.checks import ConfigurationError
-from allennlp.common.params import Params
+from allennlp.common.params import Params, remove_keys_from_params
 from allennlp.common.registrable import Registrable
 from allennlp.data import Instance, Vocabulary
 from allennlp.data.batch import Batch
@@ -289,10 +289,10 @@ class Model(torch.nn.Module, Registrable):
         model_params = config.get("model")
 
         # The experiment config tells us how to _train_ a model, including where to get pre-trained
-        # embeddings from.  We're now _loading_ the model, so those embeddings will already be
-        # stored in our weights.  We don't need any pretrained weight file anymore, and we don't
-        # want the code to look for it, so we remove it from the parameters here.
-        remove_pretrained_embedding_params(model_params)
+        # embeddings/weights from. We're now _loading_ the model, so those weights will already be
+        # stored in our model. We don't need any pretrained weight file or initializers anymore,
+        # and we don't want the code to look for it, so we remove it from the parameters here.
+        remove_keys_from_params(model_params)
         model = Model.from_params(vocab=vocab, params=model_params)
 
         # Force model to cpu or gpu, as appropriate, to make sure that the embeddings are
@@ -449,11 +449,13 @@ class Model(torch.nn.Module, Registrable):
 Model.register("from_archive", constructor="from_archive")(Model)
 
 
+def remove_weights_related_keys_from_params(
+    params: Params, keys: List[str] = ["pretrained_file", "initializer"]
+):
+    remove_keys_from_params(params, keys)
+
+
 def remove_pretrained_embedding_params(params: Params):
-    if isinstance(params, Params):  # The model could possibly be a string, for example.
-        keys = params.keys()
-        if "pretrained_file" in keys:
-            del params["pretrained_file"]
-        for value in params.values():
-            if isinstance(value, Params):
-                remove_pretrained_embedding_params(value)
+    """This function only exists for backwards compatibility.
+    Please use `remove_weights_related_keys_from_params()` instead."""
+    remove_keys_from_params(params, ["pretrained_file"])
