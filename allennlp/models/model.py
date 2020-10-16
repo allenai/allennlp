@@ -453,3 +453,9 @@ def remove_weights_related_keys_from_params(
     params: Params, keys: List[str] = ["pretrained_file", "initializer"]
 ):
     remove_keys_from_params(params, keys)
+
+
+def remove_pretrained_embedding_params(params: Params):
+    """This function only exists for backwards compatibility.
+    Please use `remove_weights_related_keys_from_params()` instead."""
+    remove_keys_from_params(params, ["pretrained_file"])
