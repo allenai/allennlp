@@ -30,6 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   glob patterns. This can used from the `cached-path` command with `allennlp cached-path --remove some-files-*`.
 - Added logging for the main process when running in distributed mode.
 - Added a `TrainerCallback` object to support state sharing between batch and epoch-level training callbacks.
+- Added support for .tar.gz in PretrainedModelInitializer.
 - Added classes: `nn/samplers/samplers.py` with `MultinomialSampler`, `TopKSampler`, and `TopPSampler` for 
   sampling indices from log probabilities
 - Made `BeamSearch` registrable.
@@ -49,6 +50,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   usage instead of shelling out to the `nvidia-smi` command. This is more efficient and also more accurate because it only takes
   into account the tensor allocations of the current PyTorch process.
 - Make sure weights are first loaded to the cpu when using PretrainedModelInitializer, preventing wasted GPU memory.
+- Load dataset readers in `load_archive`.
 - Updated `AllenNlpTestCase` docstring to remove reference to `unittest.TestCase`
 
 ### Removed
