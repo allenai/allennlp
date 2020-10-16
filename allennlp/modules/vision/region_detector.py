@@ -133,28 +133,28 @@ class FasterRcnnRegionDetector(RegionDetector):
             {"image": (image[:, :height, :width] * 256).byte(), "height": height, "width": width}
             for image, (height, width) in zip(raw_images, image_sizes)
         ]
-        image_list = self.model.preprocess_image(raw_images)
+        image_list = self._model.preprocess_image(raw_images)
 
         # RPN
-        assert len(self.model.proposal_generator.in_features) == 1
+        assert len(self._model.proposal_generator.in_features) == 1
         featurized_images_in_dict = {
-            self.model.proposal_generator.in_features[0]: featurized_images
+            self._model.proposal_generator.in_features[0]: featurized_images
         }
 
-        proposals, _ = self.model.proposal_generator(image_list, featurized_images_in_dict, None)
+        proposals, _ = self._model.proposal_generator(image_list, featurized_images_in_dict, None)
 
         # this will concatenate the pooled_features from different images.
-        _, pooled_features = self.model.roi_heads.get_roi_features(
+        _, pooled_features = self._model.roi_heads.get_roi_features(
             featurized_images_in_dict, proposals
         )
 
-        predictions = self.model.roi_heads.box_predictor(pooled_features)
+        predictions = self._model.roi_heads.box_predictor(pooled_features)
 
         # class probability
         cls_probs = F.softmax(predictions[0], dim=-1)
         cls_probs = cls_probs[:, :-1]  # background is last
 
-        predictions, r_indices = self.model.roi_heads.box_predictor.inference(
+        predictions, r_indices = self._model.roi_heads.box_predictor.inference(
             predictions, proposals
         )
 
