@@ -6,7 +6,14 @@ from collections import OrderedDict
 import pytest
 
 from allennlp.common.checks import ConfigurationError
-from allennlp.common.params import infer_and_cast, Params, parse_overrides, unflatten, with_fallback
+from allennlp.common.params import (
+    infer_and_cast,
+    Params,
+    parse_overrides,
+    unflatten,
+    with_fallback,
+    remove_keys_from_params,
+)
 from allennlp.common.testing import AllenNlpTestCase
 
 
@@ -309,3 +316,19 @@ class TestParams(AllenNlpTestCase):
         params = Params({"model": "module.submodule.ModelName"})
         with pytest.raises(ConfigurationError):
             params.pop_choice("model", choices, allow_class_names=False)
+
+    def test_remove_keys_from_params(self):
+        filename = self.FIXTURES_ROOT / "simple_tagger" / "experiment.json"
+        params = Params.from_file(filename)
+
+        assert params["data_loader"]["batch_sampler"]["type"] == "bucket"
+        assert params["data_loader"]["batch_sampler"]["batch_size"] == 80
+
+        remove_keys_from_params(params, keys=["batch_size"])
+        assert "batch_size" not in params["data_loader"]["batch_sampler"]
+
+        remove_keys_from_params(params, keys=["type", "batch_size"])
+        assert "type" not in params["data_loader"]["batch_sampler"]
+
+        remove_keys_from_params(params, keys=["data_loader"])
+        assert "data_loader" not in params
