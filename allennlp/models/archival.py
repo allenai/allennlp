@@ -197,9 +197,7 @@ def load_archive(
         config = Params.from_file(os.path.join(serialization_dir, CONFIG_NAME), overrides)
 
         # Instantiate model and dataset readers. Use a duplicate of the config, as it will get consumed.
-        dataset_reader, validation_dataset_reader = _load_dataset_readers(
-            config.duplicate(), serialization_dir
-        )
+        dataset_reader, validation_dataset_reader = _load_dataset_readers(config.duplicate(), serialization_dir)
         model = _load_model(config.duplicate(), weights_path, serialization_dir, cuda_device)
     finally:
         if tempdir is not None:
@@ -215,16 +213,16 @@ def load_archive(
 
 
 def _load_dataset_readers(config, serialization_dir):
-    dataset_reader = DatasetReader.from_params(
-        config.get("dataset_reader"), serialization_dir=serialization_dir
+    dataset_reader_params = config.get("dataset_reader")
+
+    # Try to use the validation dataset reader if there is one - otherwise fall back
+    # to the default dataset_reader used for both training and validation.
+    validation_dataset_reader_params = config.get(
+        "validation_dataset_reader", dataset_reader_params.duplicate()
     )
 
-    validation_dataset_reader = None
-    validation_dataset_reader_params = config.get("validation_dataset_reader", None)
-    if validation_dataset_reader_params is not None:
-        validation_dataset_reader = DatasetReader.from_params(
-            validation_dataset_reader_params, serialization_dir=serialization_dir
-        )
+    dataset_reader = DatasetReader.from_params(dataset_reader_params, serialization_dir)
+    validation_dataset_reader = DatasetReader.from_params(validation_dataset_reader_params, serialization_dir)
 
     return dataset_reader, validation_dataset_reader
 

@@ -44,6 +44,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `transformers` dependency updated to version 3.1.0.
 - When `cached_path` is called on a local archive with `extract_archive=True`, the archive is now extracted into a unique subdirectory of the cache root instead of a subdirectory of the archive's directory. The extraction directory is also unique to the modification time of the archive, so if the file changes, subsequent calls to `cached_path` will know to re-extract the archive.
 - Removed the `truncation_strategy` parameter to `PretrainedTransformerTokenizer`. The way we're calling the tokenizer, the truncation strategy takes no effect anyways.
+- Don't use initializers when loading a model, as it is not needed.
 - Distributed training will now automatically search for a local open port if the `master_port` parameter is not provided.
 - In training, save model weights before evaluation.
 - `allennlp.common.util.peak_memory_mb` renamed to `peak_cpu_memory`, and `allennlp.common.util.gpu_memory_mb` renamed to `peak_gpu_memory`,
@@ -52,6 +53,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   into account the tensor allocations of the current PyTorch process.
 - Make sure weights are first loaded to the cpu when using PretrainedModelInitializer, preventing wasted GPU memory.
 - Load dataset readers in `load_archive`.
+- Updated `AllenNlpTestCase` docstring to remove reference to `unittest.TestCase`
 
 ### Removed
 
@@ -79,6 +81,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   when an instance is instantiated `from_params`.
 - Fixed a bug in distributed training where the vocab would be saved from every worker, when it should have been saved by only the local master process.
 - Fixed a bug in the calculation of rouge metrics during distributed training where the total sequence count was not being aggregated across GPUs.
+- Fixed `allennlp.nn.util.add_sentence_boundary_token_ids()` to use `device` parameter of input tensor.
 
 ## [v1.1.0](https://github.com/allenai/allennlp/releases/tag/v1.1.0) - 2020-09-08
 

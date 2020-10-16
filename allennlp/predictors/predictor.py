@@ -316,7 +316,7 @@ class Predictor(Registrable):
             Predictor.by_name(predictor_name) if predictor_name is not None else cls  # type: ignore
         )
 
-        if dataset_reader_to_load == "validation" and archive.validation_dataset_reader is not None:
+        if dataset_reader_to_load == "validation":
             dataset_reader = archive.validation_dataset_reader
         else:
             dataset_reader = archive.dataset_reader

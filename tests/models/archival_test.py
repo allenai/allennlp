@@ -11,7 +11,7 @@ from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.dataset_readers import DatasetReader
-from allennlp.models.archival import archive_model, load_archive, CONFIG_NAME
+from allennlp.models.archival import archive_model, load_archive
 
 
 def assert_models_equal(model, model2):
@@ -72,9 +72,12 @@ class ArchivalTest(AllenNlpTestCase):
 
         assert isinstance(
             archive.dataset_reader,
-            type(DatasetReader.from_params(params_copy["dataset_reader"])),
+            type(DatasetReader.from_params(params_copy["dataset_reader"].duplicate())),
         )
-        assert archive.validation_dataset_reader is None
+        assert isinstance(
+            archive.validation_dataset_reader,
+            type(DatasetReader.from_params(params_copy["dataset_reader"].duplicate())),
+        )  # validation_dataset_reader is not in the config, so fall back to dataset_reader
 
         # check that params are the same
         params2 = archive.config

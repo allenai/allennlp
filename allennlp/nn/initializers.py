@@ -385,9 +385,6 @@ class PretrainedModelInitializer(Initializer):
     def __init__(
         self, weights_file_path: str, parameter_name_overrides: Dict[str, str] = None
     ) -> None:
-        if weights_file_path is None:
-            return
-
         from allennlp.models.archival import (
             extracted_archive,
             get_weights_path,
