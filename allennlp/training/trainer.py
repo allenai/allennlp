@@ -966,6 +966,13 @@ class GradientDescentTrainer(Trainer):
         Trains the supplied model with the supplied parameters.
         """
         try:
+            return self._try_train()
+        finally:
+            # make sure pending events are flushed to disk and files are closed properly
+            self._tensorboard.close()
+
+    def _try_train(self) -> Dict[str, Any]:
+        try:
             epoch_counter = self._restore_checkpoint()
         except RuntimeError:
             traceback.print_exc()
@@ -1068,7 +1075,8 @@ class GradientDescentTrainer(Trainer):
 
             if self._serialization_dir and self._master:
                 common_util.dump_metrics(
-                    os.path.join(self._serialization_dir, f"metrics_epoch_{epoch}.json"), metrics
+                    os.path.join(self._serialization_dir, f"metrics_epoch_{epoch}.json"),
+                    metrics,
                 )
 
             # The Scheduler API is agnostic to whether your schedule requires a validation metric -
@@ -1105,9 +1113,6 @@ class GradientDescentTrainer(Trainer):
 
         for callback in self._end_callbacks:
             callback(self, metrics=metrics, epoch=epoch, is_master=self._master)
-
-        # make sure pending events are flushed to disk and files are closed properly
-        self._tensorboard.close()
 
         # Load the best model state before returning
         best_model_state = self._checkpointer.best_model_state()

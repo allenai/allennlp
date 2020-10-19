@@ -81,6 +81,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed a bug in distributed training where the vocab would be saved from every worker, when it should have been saved by only the local master process.
 - Fixed a bug in the calculation of rouge metrics during distributed training where the total sequence count was not being aggregated across GPUs.
 - Fixed `allennlp.nn.util.add_sentence_boundary_token_ids()` to use `device` parameter of input tensor.
+- Be sure to close the TensorBoard writer even when training doesn't finish.
 - Fixed the docstring for `PyTorchSeq2VecWrapper`.
 
 ## [v1.1.0](https://github.com/allenai/allennlp/releases/tag/v1.1.0) - 2020-09-08
