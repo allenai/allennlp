@@ -8,147 +8,118 @@ Examples:
 1. Create a small transformer that uses GLoVE embeddings.
 
 ```
-from allennlp.modules.transformer import TransformerEncoder
-from allennlp.modules.token_embedders.embedding import Embedding
+embedding_file = str(self.FIXTURES_ROOT / "embeddings/glove.6B.300d.sample.txt.gz")
 
-embedding_file = os.path.join("embeddings/glove.6B.300d.sample.txt.gz")
-vocab = Vocabulary()
-# populate vocab.
+class TinyTransformer(TokenEmbedder):
+    def __init__(self, vocab, embedding_dim, hidden_size, intermediate_size):
+        super().__init__()
+        self.embeddings = Embedding(
+            pretrained_file=embedding_file,
+            embedding_dim=embedding_dim,
+            projection_dim=hidden_size,
+            vocab=vocab,
+        )
 
-class TinyTransformer(Model, TransformerModule):
-    _huggingface_mapping = TransformerEncoder._huggingface_mapping
-    def __init__(self,
-                 vocab,
-                 embedding_file,
-                 embedding_dim: int,
-                 encoder: TransformerEncoder,
-                ):
-        super().__init__(vocab)
-        self.embedding_layer = Embedding(pretrained_file=embedding_file,
-                                         embedding_dim=embedding_dim,
-                                         projection_dim=encoder._hidden_size,
-                                         vocab=vocab)
+        self.transformer = TransformerBlock(
+            num_hidden_layers=4,
+            hidden_size=hidden_size,
+            intermediate_size=intermediate_size,
+        )
 
-        self.encoder = encoder
+    @overrides
+    def forward(self, token_ids: torch.LongTensor):
+        x = self.embeddings(token_ids)
+        x = self.transformer(x)
+        return x
 
-    def forward(self, inp):
-        embedded = self.embedding_layer(inp)
-        outputs = self.encoder(embedded)
-        return outputs
-
-encoder = TransformerEncoder(num_hidden_layers=4,
-                             hidden_size=80,
-                             intermediate_size=40,
-                             num_attention_heads=8,
-                             attention_dropout=0.1,
-                             hidden_dropout=0.1,
-                             activation="relu")
-
-tiny = TinyTransformer(vocab, embedding_file, embedding_dim=300, encoder=encoder)
+tiny = TinyTransformer(self.vocab, embedding_dim=300, hidden_size=80, intermediate_size=40)
 ```
 
 2. Use the first 4 layers of `bert-base-uncased`.
 
 ```
-from transformers.modeling_auto import AutoModel
-pretrained = AutoModel.from_pretrained('bert-base-uncased')
-encoder = TransformerEncoder.from_pretrained_module(pretrained.encoder, num_hidden_layers=4)
+pretrained = cached_transformers.get("bert-base-uncased", False)
 
-tiny = TinyTransformer(vocab, embedding_file, embedding_dim=300, encoder=encoder)
-```
+class SmallTransformer(TokenEmbedder):
+    def __init__(self):
+        super().__init__()
+        self.embeddings = TransformerEmbeddings.from_pretrained_module(pretrained)
 
-Alternatively, override the `from_pretrained_module` method in `TinyTransformer`.
+        self.transformer = TransformerBlock.from_pretrained_module(
+            pretrained, num_hidden_layers=4
+        )
 
-```
-    @classmethod
-    def from_pretrained_module(
-        cls,
-        pretrained_module: torch.nn.Module,
-        vocab: Vocabulary,
-        embedding_file: str,
-        embedding_dim: int,
-        source="huggingface",
-        mapping: Optional[Dict[str, str]] = None,
-        **kwargs,
-    ):
-        encoder = TransformerEncoder.from_pretrained_module(pretrained_module.encoder, source, mapping, **kwargs)
-        final_kwargs = {}
-        final_kwargs["vocab"] = vocab
-        final_kwargs["embedding_file"] = embedding_file
-        final_kwargs["embedding_dim"] = embedding_dim
-        final_kwargs["encoder"] = encoder
-        return cls(**final_kwargs)
+    @overrides
+    def forward(self, token_ids: torch.LongTensor):
+        x = self.embeddings(token_ids)
+        x = self.transformer(x)
+        return x
 
-tiny = TinyTransformer.from_pretrained_module(pretrained, vocab, embedding_file, embedding_dim=300, num_hidden_layers=4)
+small = SmallTransformer()
+assert len(small.transformer.layers) == 4
+small.forward(torch.LongTensor([[0, 1, 2]]))
 ```
 
 3. Use the first 8 layers of `bert-base-uncased` to separately encode two text inputs, combine the representations,
 and use the last 4 layers on the combined representation.
 
-```class CombineTransformer(Model, TransformerModule):
-    _huggingface_mapping = TransformerEncoder._huggingface_mapping
-    def __init__(self,
-                 vocab,
-                 embedding_file,
-                 embedding_dim: int,
-                 text_encoder: TransformerEncoder,
-                 combine_encoder: TransformerEncoder,
-                ):
-        super().__init__(vocab)
-        self.embedding_layer = Embedding(pretrained_file=embedding_file,
-                                         embedding_dim=embedding_dim,
-                                         projection_dim=encoder._hidden_size,
-                                         vocab=vocab)
+```
+class MediumTransformer(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.embeddings = TransformerEmbeddings.from_pretrained_module("bert-base-uncased")
+        self.separate_transformer = TransformerBlock.from_pretrained_module(
+            "bert-base-uncased", num_hidden_layers=range(0, 8)
+        )
+        self.combined_transformer = TransformerBlock.from_pretrained_module(
+            "bert-base-uncased",
+            num_hidden_layers=range(8, 12),
+        )
 
-        self.text_encoder = text_encoder
-        self.combine_encoder = combine_encoder
-
-
-    def forward(self, text1, text2):
-        embedded1 = self.embedding_layer(text1)
-        embedded2 = self.embedding_layer(text2)
-        enc1 = self.text_encoder(embedded1)
-        enc2 = self.text_encoder(embedded2)
-        combined = enc1 + enc2 # Can also concat instead of add.
-        outputs = self.combine_encoder(combined)
-        return outputs
-
-    @classmethod
-    def from_pretrained_module(
-        cls,
-        pretrained_module: torch.nn.Module,
-        vocab: Vocabulary,
-        embedding_file: str,
-        embedding_dim: int,
-        source="huggingface",
-        mapping: Optional[Dict[str, str]] = None,
-        **kwargs,
+    @overrides
+    def forward(
+        self,
+        left_token_ids: torch.LongTensor,
+        right_token_ids: torch.LongTensor,
     ):
-        num_hidden_layers = kwargs.get("num_hidden_layers", 8)
-        text_encoder = TransformerEncoder.from_pretrained_module(pretrained_module.encoder,
-                                                             source,
-                                                             mapping,
-                                                             num_hidden_layers=num_hidden_layers)
 
-        combine_hidden_layers = kwargs.get("combine_hidden_layers", 4)
-        mapping = copy.deepcopy(TransformerEncoder._huggingface_mapping)
-        mapping["0"] = "8"
-        mapping["1"] = "9"
-        mapping["2"] = "10"
-        mapping["3"] = "11"
-        combine_encoder = TransformerEncoder.from_pretrained_module(pretrained_module.encoder,
-                                                                    source,
-                                                                    mapping,
-                                                                    num_hidden_layers=combine_hidden_layers)
-        final_kwargs = {}
-        final_kwargs["vocab"] = vocab
-        final_kwargs["embedding_file"] = embedding_file
-        final_kwargs["embedding_dim"] = embedding_dim
-        final_kwargs["text_encoder"] = text_encoder
-        final_kwargs["combine_encoder"] = combine_encoder
-        return cls(**final_kwargs)
+        left = self.embeddings(left_token_ids)
+        left = self.separate_transformer(left)
 
-combined_transformer = CombineTransformer.from_pretrained_module(pretrained, vocab, embedding_file, 300)
+        right = self.embeddings(right_token_ids)
+        right = self.separate_transformer(right)
+
+        # combine the sequences in some meaningful way.
+        # Here, we just add them for simplicity. In reality,
+        # concatenation may be a better option.
+        combined = left + right
+
+        return self.combined_transformer(combined)
+
+medium = MediumTransformer()
+assert (len(medium.separate_transformer.layers)) == 8
+assert (len(medium.combined_transformer.layers)) == 4
+```
+
+4. Combine different flavors of BERT.
+
+```
+# Regular BERT, but with AlBERT's special compressed embedding scheme
+class AlmostRegularTransformer(TokenEmbedder):
+    def __init__(self):
+        super().__init__()
+        self.embeddings = TransformerEmbeddings.get_relevant_module("albert-base-v2")
+        self.transformer = TransformerBlock.from_pretrained_module("bert-base-uncased")
+        # We want to tune only the embeddings, because that's our experiment.
+        self.transformer.requires_grad = False
+
+    @overrides
+    def forward(self, token_ids: torch.LongTensor, mask: torch.BoolTensor):
+        x = self.embeddings(token_ids, mask)
+        x = self.transformer(x)
+        return x
+
+almost = AlmostRegularTransformer()
 ```
 """
 

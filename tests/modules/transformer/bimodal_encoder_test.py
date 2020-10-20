@@ -1,5 +1,5 @@
 import copy
-
+import torch
 from allennlp.common import Params
 from allennlp.common import cached_transformers
 from allennlp.common.testing import assert_equal_parameters
@@ -19,7 +19,9 @@ class TestBiModalEncoder(AllenNlpTestCase):
             "combined_hidden_size": 12,
             "intermediate_size1": 3,
             "intermediate_size2": 3,
-            "num_attention_heads": 2,
+            "num_attention_heads1": 4,
+            "num_attention_heads2": 6,
+            "combined_num_attention_heads": 2,
             "attention_dropout1": 0.1,
             "hidden_dropout1": 0.2,
             "attention_dropout2": 0.1,
@@ -27,8 +29,8 @@ class TestBiModalEncoder(AllenNlpTestCase):
             "activation": "relu",
             "biattention_id1": [1, 2],
             "biattention_id2": [1, 2],
-            "fixed_layer1": 2,
-            "fixed_layer2": 2,
+            "fixed_layer1": 1,
+            "fixed_layer2": 1,
         }
 
         params = Params(copy.deepcopy(self.params_dict))
@@ -44,7 +46,13 @@ class TestBiModalEncoder(AllenNlpTestCase):
         assert len(modules["layers2"]) == self.params_dict["num_hidden_layers2"]
 
     def test_forward_runs(self):
-        pass
+
+        embedding1 = torch.randn(16, 34, self.params_dict["hidden_size1"])
+        embedding2 = torch.randn(16, 2, self.params_dict["hidden_size2"])
+        attn_mask1 = torch.randn(16, 1, 1, 34)
+        attn_mask2 = torch.randn(16, 1, 1, 2)
+
+        self.bimodal_encoder.forward(embedding1, embedding2, attn_mask1, attn_mask2)
 
     def test_loading_from_pretrained_weights(self):
         pretrained_module = self.pretrained.encoder
@@ -53,6 +61,8 @@ class TestBiModalEncoder(AllenNlpTestCase):
             "hidden_size2",
             "combined_hidden_size",
             "intermediate_size2",
+            "num_attention_heads2",
+            "combined_num_attention_heads",
             "attention_dropout2",
             "hidden_dropout2",
             "biattention_id1",
@@ -71,3 +81,12 @@ class TestBiModalEncoder(AllenNlpTestCase):
             ignore_missing=True,
             mapping=mapping,
         )
+
+    def test_default_parameters(self):
+        encoder = BiModalEncoder()
+        embedding1 = torch.randn(16, 34, 1024)
+        embedding2 = torch.randn(16, 2, 1024)
+        attn_mask1 = torch.randn(16, 1, 1, 34)
+        attn_mask2 = torch.randn(16, 1, 1, 2)
+
+        encoder.forward(embedding1, embedding2, attn_mask1, attn_mask2)
