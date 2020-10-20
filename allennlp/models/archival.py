@@ -10,6 +10,7 @@ import tarfile
 import shutil
 from pathlib import Path
 from contextlib import contextmanager
+import glob
 
 from torch.nn import Module
 
@@ -122,6 +123,8 @@ def archive_model(
         A full path to serialize the model to. The default is "model.tar.gz" inside the
         serialization_dir. If you pass a directory here, we'll serialize the model
         to "model.tar.gz" inside the directory.
+    include_in_archive : `List[str]`, optional, (default = `None`)
+        Paths relative to `serialization_dir` that should be archived in addition to the default ones.
     """
     weights_file = os.path.join(serialization_dir, weights)
     if not os.path.exists(weights_file):
@@ -147,8 +150,10 @@ def archive_model(
         if include_in_archive is not None:
             for archival_target in include_in_archive:
                 archival_target_path = os.path.join(serialization_dir, archival_target)
-                if os.path.exists(archival_target_path):
-                    archive.add(archival_target_path, arcname=archival_target)
+                for path in glob.glob(archival_target_path):
+                    if os.path.exists(path):
+                        arcname = path[len(os.path.join(serialization_dir, "")) :]
+                        archive.add(path, arcname=arcname)
 
 
 def load_archive(

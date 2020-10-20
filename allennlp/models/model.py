@@ -66,6 +66,8 @@ class Model(torch.nn.Module, Registrable):
         separately.
     regularizer: `RegularizerApplicator`, optional
         If given, the `Trainer` will use this to regularize model parameters.
+    serialization_dir: `str`, optional
+        The directory in which the training output is saved to, or the directory the model is loaded from.
     """
 
     _warn_for_unseparable_batches: Set[str] = set()

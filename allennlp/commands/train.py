@@ -377,7 +377,7 @@ def _train_worker(
         If `True`, we add newlines to tqdm output, even on an interactive terminal, and we slow
         down tqdm's output to only once every 10 seconds.
     include_in_archive : `List[str]`, optional
-        Relative paths to serialization_dir that should be archived in addition to the default ones.
+        Paths relative to `serialization_dir` that should be archived in addition to the default ones.
 
     # Returns
 

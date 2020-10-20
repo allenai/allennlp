@@ -138,13 +138,17 @@ class ArchivalTest(AllenNlpTestCase):
         train_model(self.params, serialization_dir=serialization_dir)
 
         # Archive with additional archival targets
-        archive_model(serialization_dir=serialization_dir, include_in_archive=["metrics.json"])
+        archive_model(
+            serialization_dir=serialization_dir, include_in_archive=["metrics_epoch_*.json"]
+        )
 
         # Assert that the additional targets were archived
         with tempfile.TemporaryDirectory() as tempdir:
             with tarfile.open(serialization_dir / "model.tar.gz", "r:gz") as archive:
                 archive.extractall(tempdir)
-            assert os.path.isfile(os.path.join(tempdir, "metrics.json"))
+            assert os.path.isfile(os.path.join(tempdir, "metrics_epoch_0.json"))
+            assert os.path.isfile(os.path.join(tempdir, "metrics_epoch_1.json"))
+            assert not os.path.isfile(os.path.join(tempdir, "metrics.json"))
 
     def test_archive_model_with_invalid_additional_targets(self):
         params = Params(self.params.as_dict())
