@@ -26,4 +26,5 @@ class TestTransformerPooler(AllenNlpTestCase):
 
     def test_forward_runs(self):
 
-        self.pooler.forward(torch.randn(2, 7, 5))
+        out = self.pooler.forward(torch.randn(2, 7, 5))
+        assert out.size() == (2, 3)
