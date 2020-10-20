@@ -17,14 +17,18 @@ class MultinomialSampler(Sampler):
         self.filter_val = min_value_of_dtype(torch.float)
 
     def __call__(
-        self, logits: torch.Tensor, num_samples: int = 1, with_replacement: bool = True
+        self,
+        log_probs: torch.Tensor,
+        perturbed_log_probs: torch.Tensor = None,
+        num_samples: int = 1,
+        with_replacement: bool = True,
     ) -> torch.Tensor:
-        probabilities = torch.nn.functional.softmax(logits, dim=-1)
+        probabilities = torch.nn.functional.softmax(log_probs, dim=-1)
         selected_indices = torch.multinomial(
             probabilities, num_samples, replacement=with_replacement
         )
 
-        return (torch.gather(logits, 1, selected_indices), selected_indices)
+        return (torch.gather(log_probs, 1, selected_indices), selected_indices)
 
 
 @Sampler.register("top-k")
@@ -32,7 +36,7 @@ class TopKSampler(Sampler):
     """
     Represents a `Sampler` which redistributes the probability mass function among
     the top `k` choices then selects from that subset
-    `logits` is a tensor of log-probabilities to be selected from.
+    `log_probs` is a tensor of log-probabilities to be selected from.
     `k` is the number of highest-probability options that the returned choice will be selected from
     `temperature` modules the probabilitis of the selected tokens. A `temperature` below 1.0 produces a
     sharper probability distribution and a `temperature` above 1.0 produces a flatter probability
@@ -48,21 +52,25 @@ class TopKSampler(Sampler):
         self.filter_val = min_value_of_dtype(torch.float)
 
     def __call__(
-        self, logits: torch.Tensor, num_samples: int = 1, with_replacement: bool = True
+        self,
+        log_probs: torch.Tensor,
+        perturbed_log_probs: torch.Tensor = None,
+        num_samples: int = 1,
+        with_replacement: bool = True,
     ) -> torch.Tensor:
 
-        assert self.k <= len(logits)
+        assert self.k <= len(log_probs)
 
         # First apply temperature coefficient:
-        logits = logits / self.temperature
+        log_probs = log_probs / self.temperature
 
         # Find the indices that are not to be selected from
-        min_threshold = torch.topk(logits, self.k)[0][..., -1].unsqueeze(dim=-1)
-        filtered_indices = logits < min_threshold
+        min_threshold = torch.topk(log_probs, self.k)[0][..., -1].unsqueeze(dim=-1)
+        filtered_indices = log_probs < min_threshold
 
         # Prevent the filtered indiceds from being selected
-        logits[..., filtered_indices] = self.filter_val
-        filtered_probabilites = torch.nn.functional.softmax(logits, dim=-1)
+        log_probs[..., filtered_indices] = self.filter_val
+        filtered_probabilites = torch.nn.functional.softmax(log_probs, dim=-1)
 
         # Sample from the remaining indices
         selected_indices = torch.multinomial(
@@ -70,8 +78,8 @@ class TopKSampler(Sampler):
         )
 
         # Return (selected log probabilities, selected classes)
-        # shape: (len(logits),1) , (len(logits), 1)
-        return (torch.gather(logits, 1, selected_indices), selected_indices)
+        # shape: (len(log_probs),1) , (len(log_probs), 1)
+        return (torch.gather(log_probs, 1, selected_indices), selected_indices)
 
 
 @Sampler.register("top-p")
@@ -94,19 +102,23 @@ class TopPSampler(Sampler):
         self.filter_val = min_value_of_dtype(torch.float)
 
     def __call__(
-        self, logits: torch.Tensor, num_samples: int = 1, with_replacement: bool = True
+        self,
+        log_probs: torch.Tensor,
+        perturbed_log_probs: torch.Tensor = None,
+        num_samples: int = 1,
+        with_replacement: bool = True,
     ) -> torch.Tensor:
         """
-        Performs top-p sampling on the given `logits`.
-        `logits` is a tensor of log-probabilities to be selected from.
+        Performs top-p sampling on the given `log_probs`.
+        `log_probs` is a tensor of log-probabilities to be selected from.
         Returns the
         """
         # First apply temperature coefficient:
-        logits = logits / self.temperature
+        log_probs = log_probs / self.temperature
 
         # Sort the probabilities to highest-first, then find the cumulative sum accross those
-        logits_descending, sorting_indices = torch.sort(logits, descending=True)
-        probabilities_descending = torch.nn.functional.softmax(logits_descending, dim=-1)
+        log_probs_descending, sorting_indices = torch.sort(log_probs, descending=True)
+        probabilities_descending = torch.nn.functional.softmax(log_probs_descending, dim=-1)
         probabilities_summed = torch.cumsum(probabilities_descending, dim=-1)
 
         # When the cumulative sum reaches p, replace all remaining with `filter_val`
@@ -117,10 +129,10 @@ class TopPSampler(Sampler):
         filtered_indices[..., 0] = 0
 
         # print('rifght', sorting_indices[filtered_indices])
-        # Here we set the filtered indices in the original logits to be the filter value
-        logits[..., sorting_indices[filtered_indices]] = self.filter_val
+        # Here we set the filtered indices in the original log_probs to be the filter value
+        log_probs[..., sorting_indices[filtered_indices]] = self.filter_val
 
-        filtered_probabilites = torch.nn.functional.softmax(logits, dim=-1)
+        filtered_probabilites = torch.nn.functional.softmax(log_probs, dim=-1)
 
         # Here we sample from the filtered distribution
         selected_indices = torch.multinomial(
@@ -128,44 +140,62 @@ class TopPSampler(Sampler):
         )
 
         # Return (selected log probabilities, selected classes)
-        # shape: (len(logits),1) , (len(logits), 1)
-        return (torch.gather(logits, 1, selected_indices), selected_indices)
+        # shape: (len(log_probs),1) , (len(log_probs), 1)
+        return (torch.gather(log_probs, 1, selected_indices), selected_indices)
 
 
 @Sampler.register("gumbel-max")
 class GumbelMaxSampler(Sampler):
     """
     Represents a `Sampler` which uses the Gumbel-Max trick to sample `num_samples`
-    instances without replacement
-    `logits` is a tensor of log-probabilities to be selected from.
-    `temperature` modules the probabilitis of the selected tokens. A `temperature` below 1.0 produces a
-    sharper probability distribution and a `temperature` above 1.0 produces a flatter probability
-    distribution.
+    instances without replacement, See
+    [*Stochastic Beams and Where to Find Them: The Gumbel-Top-k Trick for Sampling
+    Sequences Without Replacement*, W Kool, H Van Hoof and M Welling, 2010]
+    (https://arxiv.org/abs/1903.06059).
+    `log_probs` is a tensor of normalized log-probabilities of the partial sequence up to that point
+    `T` is a tensor of the previous sampled perturbed log-probabilities
     `num_samples` is the number of instances to sample
 
     Registered as a `Sampler` with name "gumbel-max".
     """
 
-    def __init__(self, temperature: float = 1.0):
-        self.temperature = temperature or 1.0
+    def __init__(self):
+        self.num_samples = 1
 
-    def __call__(self, logits: torch.Tensor, num_samples: int = 1) -> torch.Tensor:
+    def __call__(
+        self,
+        log_probs: torch.Tensor,
+        perturbed_log_probs: torch.Tensor = None,
+        num_samples: int = 1,
+    ) -> torch.Tensor:
         # Make sure we're not trying to select more than available
-        assert num_samples <= len(logits)
+        assert num_samples <= log_probs.size(-1)
 
-        # Add the gumbel distributed noise
-        tensor_shape = logits.size()
-        noise = torch.distributions.Gumbel(torch.tensor([0.0]), torch.tensor([1.0])).sample(
-            tensor_shape
+        if perturbed_log_probs is None:
+            perturbed_log_probs = torch.zeros(len(log_probs), 1)
+
+        # Next, we find the gumbel perturbed probabilites by sampling elements
+        # from the gumbel distribution and shifting them to `log_probs`
+        g_phi = self._gumbel(log_probs) + log_probs
+
+        # Now we find the maximum from these samples
+        Z, _ = g_phi.max(dim=-1)
+
+        # Find the truncated gumbel distribution conditioned on max = Z
+        # (numerically stable implementation)
+        g_phi_tilde = self._truncated_gumbel(perturbed_log_probs, Z, g_phi)
+
+        # Select the top (max, argmax) instances from the truncated Gumbel
+        return torch.topk(g_phi_tilde, num_samples)
+
+    def _gumbel(self, log_probs):
+        return -torch.log(-torch.log(torch.rand_like(log_probs)))
+
+    def _truncated_gumbel(self, perturbed_log_probs, Z, g_phi):
+        # Computation of the truncatd gumbel distribution can be computationally
+        # unstable. Instead, we compute:
+        v = perturbed_log_probs - g_phi + torch.log1p(-torch.exp(g_phi - Z.unsqueeze(dim=-1)))
+        g_phi_tilde = (
+            perturbed_log_probs - torch.nn.functional.relu(v) - torch.log1p(torch.exp(-v.abs()))
         )
-        noise = noise.squeeze()
-
-        assert noise.size() == logits.size()
-        # Add the noise then apply temperature coefficient:
-        logits_prime = torch.add(logits, noise) / self.temperature
-
-        # selecting the top indices
-        _, selected_indices = torch.topk(logits_prime, num_samples)
-
-        # returning the selected logits along with their indices
-        return (torch.gather(logits, 1, selected_indices), selected_indices)
+        return g_phi_tilde

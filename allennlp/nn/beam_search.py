@@ -1,5 +1,5 @@
 from inspect import signature
-from typing import List, Callable, Tuple, Dict, cast, TypeVar
+from typing import List, Callable, Tuple, Dict, cast, TypeVar, Optional
 import warnings
 
 import torch
@@ -214,9 +214,18 @@ class BeamSearch(Registrable):
         # Else, select the top `beam_size` tokens.
         # shape: (batch_size, beam_size), (batch_size, beam_size)
         if self.sampler is not None:
-            start_top_log_probabilities, start_predicted_classes = self.sampler(
-                start_class_log_probabilities, num_samples=self.beam_size
-            )
+            if isinstance(self.sampler, GumbelMaxSampler):
+                # phi represents the summed log probabilities of the sequence at hand
+                phi = start_class_log_probabilities
+
+                # Our sampler gets the perturbed log probabilities for each token
+                start_top_log_probabilities, start_predicted_classes = self.sampler(
+                    phi, num_samples=self.beam_size
+                )
+            else:
+                start_top_log_probabilities, start_predicted_classes = self.sampler(
+                    start_class_log_probabilities, num_samples=self.beam_size
+                )
         else:
             (
                 start_top_log_probabilities,
@@ -298,6 +307,17 @@ class BeamSearch(Registrable):
                 batch_size * self.beam_size, num_classes
             )
 
+            # shape: (batch_size * beam_size, 1)
+            last_log_probabilities = last_log_probabilities.unsqueeze(-1).reshape(
+                batch_size * self.beam_size, 1
+            )
+
+            if last_true_log_probabilities is not None:
+                # shape: (batch_size * beam_size, 1)
+                last_true_log_probabilities = last_true_log_probabilities.unsqueeze(-1).reshape(
+                    batch_size * self.beam_size, 1
+                )
+
             # Here we are finding any beams where we predicted the end token in
             # the previous timestep and replacing the distribution with a
             # one-hot distribution, forcing the beam to predict the end token
@@ -311,9 +331,21 @@ class BeamSearch(Registrable):
 
             # shape (both): (batch_size * beam_size, per_node_beam_size)
             if self.sampler is not None:
-                top_log_probabilities, predicted_classes = self.sampler(
-                    cleaned_log_probabilities, self.per_node_beam_size
-                )
+                if isinstance(self.sampler, GumbelMaxSampler):
+                    # phi represents the summed log probabilities of the sequence at hand
+                    phi = torch.add(last_true_log_probabilities, cleaned_log_probabilities)
+
+                    # Returs the top (perturbed) log probabilities and their indices
+                    # Sampled using the gumbel top-k trick
+                    # shape (batch_size * beam_size, per_node_beam_size) for both
+                    top_log_probabilities, predicted_classes = self.sampler(
+                        phi, last_log_probabilities, num_samples=self.per_node_beam_size
+                    )
+                else:
+                    # print("clspw", cleaned_log_probabilities)
+                    top_log_probabilities, predicted_classes = self.sampler(
+                        cleaned_log_probabilities, self.per_node_beam_size
+                    )
             else:
                 top_log_probabilities, predicted_classes = cleaned_log_probabilities.topk(
                     self.per_node_beam_size
@@ -323,10 +355,8 @@ class BeamSearch(Registrable):
             # so that we can add them to the current log probs for this timestep.
             # This lets us maintain the log probability of each element on the beam.
             # shape: (batch_size * beam_size, per_node_beam_size)
-            expanded_last_log_probabilities = (
-                last_log_probabilities.unsqueeze(2)
-                .expand(batch_size, self.beam_size, self.per_node_beam_size)
-                .reshape(batch_size * self.beam_size, self.per_node_beam_size)
+            expanded_last_log_probabilities = last_log_probabilities.expand(
+                batch_size * self.beam_size, self.per_node_beam_size
             )
 
             # shape: (batch_size * beam_size, per_node_beam_size)
@@ -341,10 +371,8 @@ class BeamSearch(Registrable):
             # for use in samplers that may perturb probabilities
             if last_true_log_probabilities is not None:
                 # shape: (batch_size * beam_size, per_node_beam_size)
-                expanded_true_log_probabilities = (
-                    last_true_log_probabilities.unsqueeze(2)
-                    .expand(batch_size, self.beam_size, self.per_node_beam_size)
-                    .reshape(batch_size * self.beam_size, self.per_node_beam_size)
+                expanded_true_log_probabilities = last_true_log_probabilities.expand(
+                    batch_size * self.beam_size, self.per_node_beam_size
                 )
 
                 # shape: (batch_size * beam_size, per_node_beam_size)
@@ -378,11 +406,11 @@ class BeamSearch(Registrable):
             # track the true probabilities for the selected beams
             # shape: (batch_size, beam_size)
             if last_true_log_probabilities is not None:
-                restricted_true_probabilities = reshaped_summed_true_probabilities.gather(
+                restricted_true_log_probabilities = reshaped_summed_true_probabilities.gather(
                     1, restricted_beam_indices
                 )
 
-                last_true_log_probabilities = restricted_true_probabilities
+                last_true_log_probabilities = restricted_true_log_probabilities
 
             predictions.append(restricted_predicted_classes)
 
@@ -540,7 +568,6 @@ class BeamSearch(Registrable):
         max_steps: int = 50,
         beam_size: int = 10,
         per_node_beam_size: int = None,
-        temperature: float = 1.0,
     ) -> "BeamSearch":
         """
         Given an index of the end token in target vocabulary, return a `BeamSearch` object
@@ -551,12 +578,12 @@ class BeamSearch(Registrable):
         (https://arxiv.org/abs/1903.06059).
         """
 
-        gumbel_sampler = GumbelMaxSampler(temperature)
+        gumbel_sampler = GumbelMaxSampler()
         return cls(
             end_index=end_index,
             max_steps=max_steps,
             beam_size=beam_size,
-            per_node_beam_size=per_node_beam_size,
+            per_node_beam_size=per_node_beam_size or beam_size,
             sampler=gumbel_sampler,
         )
 
