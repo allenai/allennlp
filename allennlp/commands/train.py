@@ -9,6 +9,7 @@ import logging
 import os
 from os import PathLike
 from typing import Any, Dict, List, Optional, Union
+import warnings
 
 import torch
 import torch.distributed as dist
@@ -682,6 +683,14 @@ class TrainModel(Registrable):
             validation_data_loader_ = validation_data_loader.construct(dataset=validation_data)
             if validation_data_loader_ is None:
                 validation_data_loader_ = data_loader.construct(dataset=validation_data)
+                if getattr(validation_data_loader_, "_batches_per_epoch", None) is not None:
+                    warnings.warn(
+                        "Using 'data_loader' params to construct validation data loader since "
+                        "'validation_data_loader' params not specified, but you have "
+                        "'data_loader.batches_per_epoch' set which may result in different "
+                        "validation datasets for each epoch.",
+                        UserWarning,
+                    )
         else:
             validation_data_loader_ = None
 
