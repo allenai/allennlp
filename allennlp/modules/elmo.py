@@ -113,7 +113,7 @@ class Elmo(torch.nn.Module, FromParams):
                 raise ConfigurationError("Don't provide options_file or weight_file with module")
             self._elmo_lstm = module
         else:
-            self._elmo_lstm = _ElmoBiLm(
+            self._elmo_lstm = _ElmoBiLm(  # type: ignore
                 options_file,
                 weight_file,
                 requires_grad=requires_grad,
@@ -125,7 +125,7 @@ class Elmo(torch.nn.Module, FromParams):
         self._scalar_mixes: Any = []
         for k in range(num_output_representations):
             scalar_mix = ScalarMix(
-                self._elmo_lstm.num_layers,
+                self._elmo_lstm.num_layers,  # type: ignore
                 do_layer_norm=do_layer_norm,
                 initial_scalar_parameters=scalar_mix_parameters,
                 trainable=scalar_mix_parameters is None,
@@ -181,7 +181,7 @@ class Elmo(torch.nn.Module, FromParams):
             reshaped_word_inputs = word_inputs
 
         # run the biLM
-        bilm_output = self._elmo_lstm(reshaped_inputs, reshaped_word_inputs)
+        bilm_output = self._elmo_lstm(reshaped_inputs, reshaped_word_inputs)  # type: ignore
         layer_activations = bilm_output["activations"]
         mask_with_bos_eos = bilm_output["mask"]
 

@@ -49,6 +49,7 @@ class Instance(Mapping[str, Field]):
         """
         self.fields[field_name] = field
         if self.indexed:
+            assert vocab is not None
             field.index(vocab)
 
     def count_vocab_items(self, counter: Dict[str, Dict[str, int]]):

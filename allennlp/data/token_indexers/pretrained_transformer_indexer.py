@@ -108,7 +108,7 @@ class PretrainedTransformerIndexer(TokenIndexer):
         output: IndexedTokenList = {
             "token_ids": indices,
             "mask": [True] * len(indices),
-            "type_ids": type_ids,
+            "type_ids": type_ids or [0] * len(indices),
         }
 
         return self._postprocess_output(output)
@@ -141,7 +141,7 @@ class PretrainedTransformerIndexer(TokenIndexer):
         indices: List[int] = []
         type_ids: List[int] = []
         for token in tokens:
-            if getattr(token, "text_id", None) is not None:
+            if token.text_id is not None:
                 # `text_id` being set on the token means that we aren't using the vocab, we just use
                 # this id instead. Id comes from the pretrained vocab.
                 # It is computed in PretrainedTransformerTokenizer.
@@ -152,7 +152,7 @@ class PretrainedTransformerIndexer(TokenIndexer):
                     f" for the following token: {token.text}"
                 )
 
-            if type_ids is not None and getattr(token, "type_id", None) is not None:
+            if type_ids is not None and token.type_id is not None:
                 type_ids.append(token.type_id)
             else:
                 type_ids.append(0)

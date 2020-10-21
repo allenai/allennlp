@@ -315,6 +315,7 @@ class _EncoderBase(torch.nn.Module):
             mask_batch_size = mask.size(0)
             mask = mask.view(1, mask_batch_size, 1)
             new_states = []
+            assert self._states is not None
             for old_state in self._states:
                 old_state_batch_size = old_state.size(1)
                 if old_state_batch_size != mask_batch_size:

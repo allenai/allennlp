@@ -50,11 +50,7 @@ format :
 
 .PHONY : typecheck
 typecheck :
-	mypy . \
-		--ignore-missing-imports \
-		--no-strict-optional \
-		--no-site-packages \
-		--cache-dir=/dev/null
+	mypy . --cache-dir=/dev/null
 
 .PHONY : test
 test :

@@ -55,6 +55,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Make sure weights are first loaded to the cpu when using PretrainedModelInitializer, preventing wasted GPU memory.
 - Load dataset readers in `load_archive`.
 - Updated `AllenNlpTestCase` docstring to remove reference to `unittest.TestCase`
+- Enforced stricter typing requirements around the use of `Optional[T]` types.
 
 ### Removed
 

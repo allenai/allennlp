@@ -124,6 +124,10 @@ class SequenceLabelField(Field[torch.Tensor]):
 
     @overrides
     def as_tensor(self, padding_lengths: Dict[str, int]) -> torch.Tensor:
+        if self._indexed_labels is None:
+            raise ConfigurationError(
+                "You must call .index(vocabulary) on a field before calling .as_tensor()"
+            )
         desired_num_tokens = padding_lengths["num_tokens"]
         padded_tags = pad_sequence_to_length(self._indexed_labels, desired_num_tokens)
         tensor = torch.LongTensor(padded_tags)

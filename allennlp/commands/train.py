@@ -394,6 +394,8 @@ def _train_worker(
     include_package = include_package or []
 
     if distributed:
+        assert distributed_device_ids is not None
+
         # Since the worker is spawned and not forked, the extra imports need to be done again.
         # Both the ones from the plugins and the ones from `include_package`.
         import_plugins()
@@ -660,6 +662,7 @@ class TrainModel(Registrable):
         if not vocabulary_:
             vocabulary_ = Vocabulary.from_instances(instance_generator)
         model_ = model.construct(vocab=vocabulary_)
+        assert model_ is not None
 
         # Initializing the model can have side effect of expanding the vocabulary.
         # Save the vocab only in the master. In the degenerate non-distributed
@@ -710,6 +713,7 @@ class TrainModel(Registrable):
             data_loader=data_loader_,
             validation_data_loader=validation_data_loader_,
         )
+        assert trainer_ is not None
 
         return cls(
             serialization_dir=serialization_dir,

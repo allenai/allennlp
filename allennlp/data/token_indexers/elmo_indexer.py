@@ -3,7 +3,6 @@ from typing import Dict, List
 from overrides import overrides
 import torch
 
-from allennlp.common.checks import ConfigurationError
 from allennlp.common.util import pad_sequence_to_length
 from allennlp.data.tokenizers.token import Token
 from allennlp.data.token_indexers.token_indexer import TokenIndexer, IndexedTokenList
@@ -138,13 +137,9 @@ class ELMoTokenCharactersIndexer(TokenIndexer):
 
         # https://github.com/allenai/allennlp/blob/master/allennlp/data/token_indexers/wordpiece_indexer.py#L113
 
-        texts = [token.text for token in tokens]
-
-        if any(text is None for text in texts):
-            raise ConfigurationError(
-                "ELMoTokenCharactersIndexer needs a tokenizer that retains text"
-            )
-        return {"elmo_tokens": [self._mapper.convert_word_to_char_ids(text) for text in texts]}
+        return {
+            "elmo_tokens": [self._mapper.convert_word_to_char_ids(t.ensure_text()) for t in tokens]
+        }
 
     @overrides
     def as_padded_tensor_dict(

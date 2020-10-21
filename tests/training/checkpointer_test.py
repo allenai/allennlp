@@ -106,10 +106,12 @@ class TestCheckpointer(AllenNlpTestCase):
         Tests that registering Checkpointer subclasses works correctly.
         """
 
+        serialization_dir = str(self.TEST_DIR)
+
         @Checkpointer.register("checkpointer_subclass")
         class CheckpointerSubclass(Checkpointer):
             def __init__(self, x: int, y: int) -> None:
-                super().__init__()
+                super().__init__(serialization_dir)
                 self.x = x
                 self.y = y
 
