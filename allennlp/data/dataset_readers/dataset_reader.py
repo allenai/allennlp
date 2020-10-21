@@ -140,6 +140,9 @@ class DatasetReader(Registrable):
             within `_read()`**. In that case you should set `manual_multi_process_sharding`
             to `True`.
 
+    serialization_dir: `str`, optional (default=`None`)
+        The directory in which the training output is saved to, or the directory the model is loaded from.
+
     """
 
     CACHE_FILE_LOCK_TIMEOUT: int = 10
@@ -154,6 +157,7 @@ class DatasetReader(Registrable):
         max_instances: Optional[int] = None,
         manual_distributed_sharding: bool = False,
         manual_multi_process_sharding: bool = False,
+        serialization_dir: Optional[str] = None,
     ) -> None:
         self.lazy = lazy
         self.max_instances = max_instances
@@ -163,6 +167,7 @@ class DatasetReader(Registrable):
             os.makedirs(self._cache_directory, exist_ok=True)
         self.manual_distributed_sharding = manual_distributed_sharding
         self.manual_multi_process_sharding = manual_multi_process_sharding
+        self.serialization_dir = serialization_dir
 
     def read(self, file_path: Union[Path, str]) -> Union[AllennlpDataset, AllennlpLazyDataset]:
         """
