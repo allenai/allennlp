@@ -132,15 +132,12 @@ class ArchivalTest(AllenNlpTestCase):
                 # check.
                 pass
 
-    def test_archive_model_with_additional_targets(self):
+    def test_include_in_archive(self):
+        self.params["include_in_archive"] = ["metrics_epoch_*.json"]
+
         serialization_dir = self.TEST_DIR / "serialization"
         # Train a model
         train_model(self.params, serialization_dir=serialization_dir)
-
-        # Archive with additional archival targets
-        archive_model(
-            serialization_dir=serialization_dir, include_in_archive=["metrics_epoch_*.json"]
-        )
 
         # Assert that the additional targets were archived
         with tempfile.TemporaryDirectory() as tempdir:
@@ -150,12 +147,11 @@ class ArchivalTest(AllenNlpTestCase):
             assert os.path.isfile(os.path.join(tempdir, "metrics_epoch_1.json"))
             assert not os.path.isfile(os.path.join(tempdir, "metrics.json"))
 
-    def test_archive_model_with_invalid_additional_targets(self):
-        params = Params(self.params.as_dict())
-        params["trainer"]["include_in_archive"] = [CONFIG_NAME]
+    def test_invalid_include_in_archive(self):
+        self.params["include_in_archive"] = [CONFIG_NAME]
 
         serialization_dir = self.TEST_DIR / "serialization"
 
         with pytest.raises(ConfigurationError) as exc:
-            train_model(params, serialization_dir=serialization_dir)
+            train_model(self.params, serialization_dir=serialization_dir)
             assert "are saved names and cannot be used" in str(exc.value)

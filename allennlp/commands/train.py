@@ -225,7 +225,7 @@ def train_model(
     training_util.create_serialization_dir(params, serialization_dir, recover, force)
     params.to_file(os.path.join(serialization_dir, CONFIG_NAME))
 
-    include_in_archive = params["trainer"].get("include_in_archive", None)
+    include_in_archive = params.pop("include_in_archive", None)
     verify_include_in_archive(include_in_archive)
 
     distributed_params = params.params.pop("distributed", None)
