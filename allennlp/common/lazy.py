@@ -1,4 +1,4 @@
-from typing import Callable, Generic, TypeVar, Optional
+from typing import Callable, Generic, TypeVar, Optional, Type, Union
 
 T = TypeVar("T")
 
@@ -39,8 +39,8 @@ class Lazy(Generic[T]):
 
     """
 
-    def __init__(self, constructor: Callable[..., T]):
+    def __init__(self, constructor: Union[Type[T], Callable[..., Optional[T]]]):
         self._constructor = constructor
 
     def construct(self, **kwargs) -> Optional[T]:
-        return self._constructor(**kwargs)
+        return self._constructor(**kwargs)  # type: ignore[call-arg]
