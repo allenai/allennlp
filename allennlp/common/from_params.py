@@ -300,9 +300,6 @@ def pop_and_construct_arg(
 
     popped_params = params.pop(name, default) if default != _NO_DEFAULT else params.pop(name)
     if popped_params is None:
-        origin = getattr(annotation, "__origin__", None)
-        if origin == Lazy:
-            return Lazy(lambda **kwargs: None)
         return None
 
     return construct_arg(class_name, name, popped_params, annotation, default, **extras)
@@ -452,7 +449,8 @@ def construct_arg(
         )
     elif origin == Lazy:
         if popped_params is default:
-            return Lazy(lambda **kwargs: default)
+            return default
+
         value_cls = args[0]
         subextras = create_extras(value_cls, extras)
 

@@ -1224,12 +1224,12 @@ class GradientDescentTrainer(Trainer):
         num_gradient_accumulation_steps: int = 1,
         use_amp: bool = False,
         no_grad: List[str] = None,
-        optimizer: Lazy[Optimizer] = None,
+        optimizer: Lazy[Optimizer] = Lazy(Optimizer.default),
         learning_rate_scheduler: Lazy[LearningRateScheduler] = None,
         momentum_scheduler: Lazy[MomentumScheduler] = None,
-        tensorboard_writer: Lazy[TensorboardWriter] = None,
+        tensorboard_writer: Lazy[TensorboardWriter] = Lazy(TensorboardWriter),
         moving_average: Lazy[MovingAverage] = None,
-        checkpointer: Lazy[Checkpointer] = None,
+        checkpointer: Lazy[Checkpointer] = Lazy(Checkpointer),
         batch_callbacks: List[BatchCallback] = None,
         epoch_callbacks: List[EpochCallback] = None,
     ) -> "Trainer":
@@ -1269,8 +1269,6 @@ class GradientDescentTrainer(Trainer):
 
         parameters = [[n, p] for n, p in model.named_parameters() if p.requires_grad]
         optimizer_ = optimizer.construct(model_parameters=parameters)
-        if not optimizer_:
-            optimizer_ = Optimizer.default(parameters)
 
         common_util.log_frozen_and_tunable_parameter_names(model)
 
@@ -1281,14 +1279,23 @@ class GradientDescentTrainer(Trainer):
         except TypeError:
             batches_per_epoch = None
 
-        moving_average_ = moving_average.construct(parameters=parameters)
-        learning_rate_scheduler_ = learning_rate_scheduler.construct(
-            optimizer=optimizer_, num_epochs=num_epochs, num_steps_per_epoch=batches_per_epoch
+        moving_average_ = (
+            None if moving_average is None else moving_average.construct(parameters=parameters)
         )
-        momentum_scheduler_ = momentum_scheduler.construct(optimizer=optimizer_)
-
-        checkpointer_ = checkpointer.construct() or Checkpointer(serialization_dir)
-        tensorboard_writer_ = tensorboard_writer.construct() or TensorboardWriter(serialization_dir)
+        learning_rate_scheduler_ = (
+            None
+            if learning_rate_scheduler is None
+            else learning_rate_scheduler.construct(
+                optimizer=optimizer_, num_epochs=num_epochs, num_steps_per_epoch=batches_per_epoch
+            )
+        )
+        momentum_scheduler_ = (
+            None
+            if momentum_scheduler is None
+            else momentum_scheduler.construct(optimizer=optimizer_)
+        )
+        checkpointer_ = checkpointer.construct(serialization_dir=serialization_dir)
+        tensorboard_writer_ = tensorboard_writer.construct(serialization_dir=serialization_dir)
 
         return cls(
             model,
