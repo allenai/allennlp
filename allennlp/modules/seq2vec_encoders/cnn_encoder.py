@@ -111,18 +111,27 @@ class CnnEncoder(Seq2VecEncoder):
         # `(batch_size, num_conv_layers * num_filters)`, which then gets projected using the
         # projection layer, if requested.
 
-        # To respect ensure the cnn_encoder respects masking we add a large negative value to 
+        # To respect ensure the cnn_encoder respects masking we add a large negative value to
         # the activations of all filters that convolved over a masked token. We do this by
         # first enumerating all filters for a given convolution size (torch.arange())
-        # then by comparing it to an index of the last filter that does not involve a masked token (.ge())
-        # and finally adjusting dimensions to allow for addition and multiplying by a large negative value (.unsqueeze())
+        # then by comparing it to an index of the last filter that does not involve a masked
+        # token (.ge()) and finally adjusting dimensions to allow for addition and multiplying
+        # by a large negative value (.unsqueeze())
         filter_outputs = []
         for i in range(len(self._convolution_layers)):
             convolution_layer = getattr(self, "conv_layer_{}".format(i))
             # Forward pass of the convolutions
             activations = self._activation(convolution_layer(tokens))
             # Create activation mask
-            activations_mask = torch.arange(tokens.shape[2] - convolution_layer.kernel_size[0] + 1).ge((mask.sum(dim=1) - convolution_layer.kernel_size[0] + 1).unsqueeze(dim=-1)).unsqueeze(dim=1)*min_value_of_dtype(activations.dtype)
+            activations_mask = torch.arange(
+                tokens.shape[2] - convolution_layer.kernel_size[0] + 1
+            ).ge(
+                (mask.sum(dim=1) - convolution_layer.kernel_size[0] + 1).unsqueeze(dim=-1)
+            ).unsqueeze(
+                dim=1
+            ) * min_value_of_dtype(
+                activations.dtype
+            )
             # Apply the attention mask
             activations = activations + activations_mask
             # Pick out the max filters
