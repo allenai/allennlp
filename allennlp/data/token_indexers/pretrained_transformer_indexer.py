@@ -131,9 +131,7 @@ class PretrainedTransformerIndexer(TokenIndexer):
             for i in range(len(token_ids))
         ]
 
-    def _extract_token_and_type_ids(
-        self, tokens: List[Token]
-    ) -> Tuple[List[int], Optional[List[int]]]:
+    def _extract_token_and_type_ids(self, tokens: List[Token]) -> Tuple[List[int], List[int]]:
         """
         Roughly equivalent to `zip(*[(token.text_id, token.type_id) for token in tokens])`,
         with some checks.
@@ -141,22 +139,12 @@ class PretrainedTransformerIndexer(TokenIndexer):
         indices: List[int] = []
         type_ids: List[int] = []
         for token in tokens:
-            if token.text_id is not None:
-                # `text_id` being set on the token means that we aren't using the vocab, we just use
-                # this id instead. Id comes from the pretrained vocab.
-                # It is computed in PretrainedTransformerTokenizer.
-                indices.append(token.text_id)
-            else:
-                raise KeyError(
-                    "Using PretrainedTransformerIndexer but field text_id is not set"
-                    f" for the following token: {token.text}"
-                )
-
-            if type_ids is not None and token.type_id is not None:
-                type_ids.append(token.type_id)
-            else:
-                type_ids.append(0)
-
+            indices.append(
+                token.text_id
+                if token.text_id is not None
+                else self._tokenizer.convert_tokens_to_ids(token.text)
+            )
+            type_ids.append(token.type_id if token.type_id is not None else 0)
         return indices, type_ids
 
     def _postprocess_output(self, output: IndexedTokenList) -> IndexedTokenList:
