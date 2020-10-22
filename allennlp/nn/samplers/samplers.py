@@ -23,7 +23,8 @@ class MultinomialSampler(Sampler):
         num_samples: int = 1,
         with_replacement: bool = True,
     ) -> torch.Tensor:
-        probabilities = torch.nn.functional.softmax(log_probs, dim=-1)
+        probabilities = log_probs.exp()
+        
         selected_indices = torch.multinomial(
             probabilities, num_samples, replacement=with_replacement
         )
@@ -156,6 +157,9 @@ class GumbelMaxSampler(Sampler):
     `T` is a tensor of the previous sampled perturbed log-probabilities
     `num_samples` is the number of instances to sample
 
+    Returns a tensor of the top `num_samples` perturbed log probabilities and their 
+    indices within `log_probs`.
+
     Registered as a `Sampler` with name "gumbel-max".
     """
 
@@ -167,6 +171,7 @@ class GumbelMaxSampler(Sampler):
         log_probs: torch.Tensor,
         perturbed_log_probs: torch.Tensor = None,
         num_samples: int = 1,
+        with_replacement: bool = True,
     ) -> torch.Tensor:
         # Make sure we're not trying to select more than available
         assert num_samples <= log_probs.size(-1)
