@@ -6,6 +6,7 @@ from torch.nn import Conv1d, Linear
 
 from allennlp.modules.seq2vec_encoders.seq2vec_encoder import Seq2VecEncoder
 from allennlp.nn import Activation
+from allennlp.nn.util import min_value_of_dtype
 
 
 @Seq2VecEncoder.register("cnn")
@@ -94,6 +95,9 @@ class CnnEncoder(Seq2VecEncoder):
     def forward(self, tokens: torch.Tensor, mask: torch.BoolTensor):
         if mask is not None:
             tokens = tokens * mask.unsqueeze(-1)
+        else:
+            # If mask doesn't exist create one of shape (batch_size, num_tokens)
+            mask = torch.ones(tokens.shape[0], tokens.shape[1]).bool()
 
         # Our input is expected to have shape `(batch_size, num_tokens, embedding_dim)`.  The
         # convolution layers expect input of shape `(batch_size, in_channels, sequence_length)`,
@@ -102,15 +106,27 @@ class CnnEncoder(Seq2VecEncoder):
         tokens = torch.transpose(tokens, 1, 2)
         # Each convolution layer returns output of size `(batch_size, num_filters, pool_length)`,
         # where `pool_length = num_tokens - ngram_size + 1`.  We then do an activation function,
-        # then do max pooling over each filter for the whole input sequence.  Because our max
-        # pooling is simple, we just use `torch.max`.  The resultant tensor of has shape
+        # masking, then do max pooling over each filter for the whole input sequence.
+        # Because our max pooling is simple, we just use `torch.max`.  The resultant tensor has shape
         # `(batch_size, num_conv_layers * num_filters)`, which then gets projected using the
         # projection layer, if requested.
 
+        # To respect ensure the cnn_encoder respects masking we add a large negative value to 
+        # the activations of all filters that convolved over a masked token. We do this by
+        # first enumerating all filters for a given convolution size (torch.arange())
+        # then by comparing it to an index of the last filter that does not involve a masked token (.ge())
+        # and finally adjusting dimensions to allow for addition and multiplying by a large negative value (.unsqueeze())
         filter_outputs = []
         for i in range(len(self._convolution_layers)):
             convolution_layer = getattr(self, "conv_layer_{}".format(i))
-            filter_outputs.append(self._activation(convolution_layer(tokens)).max(dim=2)[0])
+            # Forward pass of the convolutions
+            activations = self._activation(convolution_layer(tokens))
+            # Create activation mask
+            activations_mask = torch.arange(tokens.shape[2] - convolution_layer.kernel_size[0] + 1).ge((mask.sum(dim=1) - convolution_layer.kernel_size[0] + 1).unsqueeze(dim=-1)).unsqueeze(dim=1)*min_value_of_dtype(activations.dtype)
+            # Apply the attention mask
+            activations = activations + activations_mask
+            # Pick out the max filters
+            filter_outputs.append(activations.max(dim=2)[0])
 
         # Now we have a list of `num_conv_layers` tensors of shape `(batch_size, num_filters)`.
         # Concatenating them gives us a tensor of shape `(batch_size, num_filters * num_conv_layers)`.
