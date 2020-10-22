@@ -298,7 +298,9 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         # We want to remove all segment-level special tokens but maintain sequence-level ones
         num_wordpieces = num_segment_concat_wordpieces - (num_segments - 1) * self._num_added_tokens
 
-        embeddings = embeddings.reshape(batch_size, num_segments * self._max_length, embedding_size)  # type: ignore
+        embeddings = embeddings.reshape(
+            batch_size, num_segments * self._max_length, embedding_size  # type: ignore
+        )
         mask = mask.reshape(batch_size, num_segments * self._max_length)  # type: ignore
         # We assume that all 1s in the mask precede all 0s, and add an assert for that.
         # Open an issue on GitHub if this breaks for you.
