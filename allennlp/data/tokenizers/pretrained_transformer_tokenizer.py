@@ -222,23 +222,25 @@ class PretrainedTransformerTokenizer(Tokenizer):
         This method only handles a single sentence (or sequence) of text.
         """
         max_length = self._max_length
-        if max_length is not None and self._add_special_tokens:
-            max_length -= self.num_special_tokens_for_sequence()
+        if max_length is not None and not self._add_special_tokens:
+            max_length += self.num_special_tokens_for_sequence()
 
         encoded_tokens = self.tokenizer.encode_plus(
             text=text,
-            add_special_tokens=False,
+            add_special_tokens=True,
             max_length=max_length,
             stride=self._stride,
             return_tensors=None,
             return_offsets_mapping=self.tokenizer.is_fast,
             return_attention_mask=False,
             return_token_type_ids=True,
+            return_special_tokens_mask=True,
         )
         # token_ids contains a final list with ids for both regular and special tokens
-        token_ids, token_type_ids, token_offsets = (
+        token_ids, token_type_ids, special_tokens_mask, token_offsets = (
             encoded_tokens["input_ids"],
             encoded_tokens["token_type_ids"],
+            encoded_tokens["special_tokens_mask"],
             encoded_tokens.get("offset_mapping"),
         )
 
@@ -247,7 +249,16 @@ class PretrainedTransformerTokenizer(Tokenizer):
             token_offsets = self._estimate_character_indices(text, token_ids)
 
         tokens = []
-        for token_id, token_type_id, offsets in zip(token_ids, token_type_ids, token_offsets):
+        for token_id, token_type_id, special_token_mask, offsets in zip(
+            token_ids, token_type_ids, special_tokens_mask, token_offsets
+        ):
+            # In `special_tokens_mask`, 1s indicate special tokens and 0s indicate regular tokens.
+            # NOTE: in transformers v3.4.0 (and probably older versions) the docstring
+            # for `encode_plus` was incorrect as it had the 0s and 1s reversed.
+            # https://github.com/huggingface/transformers/pull/7949 fixed this.
+            if not self._add_special_tokens and special_token_mask == 1:
+                continue
+
             if offsets is None or offsets[0] >= offsets[1]:
                 start = None
                 end = None
@@ -263,9 +274,6 @@ class PretrainedTransformerTokenizer(Tokenizer):
                     idx_end=end,
                 )
             )
-
-        if self._add_special_tokens:
-            tokens = self.add_special_tokens(tokens)
 
         return tokens
 

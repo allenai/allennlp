@@ -77,8 +77,6 @@ benchmarks :
 
 .PHONY : install
 install :
-	# Making sure the typing backport isn't installed.
-	pip uninstall -y typing
 	# Ensure pip, setuptools, and wheel are up-to-date.
 	pip install --upgrade pip setuptools wheel
 	# Due to a weird thing with pip, we may need egg-info before running `pip install -e`.
@@ -86,9 +84,6 @@ install :
 	python setup.py install_egg_info
 	# Install allennlp as editable and all dependencies.
 	pip install --upgrade --upgrade-strategy eager -e . -r dev-requirements.txt
-	# The above command might install the typing backport because of pydoc-markdown,
-	# so we have to uninstall it again.
-	pip uninstall -y typing
 
 #
 # Documention helpers.

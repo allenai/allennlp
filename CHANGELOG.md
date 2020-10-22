@@ -37,6 +37,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   sampling indices from log probabilities
 - Made `BeamSearch` registrable.
 - Added `top_k_sampling` and `type_p_sampling` `BeamSearch` implementations.
+- Pass `serialization_dir` to `Model` and `DatasetReader`.
+- Added an optional `include_in_archive` parameter to the top-level of configuration files. When specified, `include_in_archive` should be a list of paths relative to the serialization directory which will be bundled up with the final archived model from a training run.
 
 ### Changed
 

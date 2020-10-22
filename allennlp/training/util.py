@@ -124,7 +124,11 @@ def read_all_datasets(
 
 
 def datasets_from_params(
-    params: Params, train: bool = True, validation: bool = True, test: bool = True
+    params: Params,
+    train: bool = True,
+    validation: bool = True,
+    test: bool = True,
+    serialization_dir: Optional[Union[str, PathLike]] = None,
 ) -> Dict[str, Union["AllennlpDataset", "AllennlpLazyDataset"]]:
     """
     Load datasets specified by the config.
@@ -139,7 +143,9 @@ def datasets_from_params(
         return datasets
 
     dataset_reader_params = params.pop("dataset_reader")
-    dataset_reader = DatasetReader.from_params(dataset_reader_params)
+    dataset_reader = DatasetReader.from_params(
+        dataset_reader_params, serialization_dir=serialization_dir
+    )
 
     if train:
         train_data_path = params.pop("train_data_path")
@@ -157,7 +163,7 @@ def datasets_from_params(
     if validation_dataset_reader_params is not None:
         logger.info("Using a separate dataset reader to load validation and test data.")
         validation_and_test_dataset_reader = DatasetReader.from_params(
-            validation_dataset_reader_params
+            validation_dataset_reader_params, serialization_dir=serialization_dir
         )
 
     if validation:
@@ -464,7 +470,7 @@ def make_vocab_from_params(
     if datasets_for_vocab_creation is None:
         # If `datasets_for_vocab_creation` was not specified, we'll use all datasets
         # from the config.
-        datasets = datasets_from_params(params)
+        datasets = datasets_from_params(params, serialization_dir=serialization_dir)
     else:
         for dataset_name in datasets_for_vocab_creation:
             data_path = f"{dataset_name}_data_path"
@@ -472,6 +478,7 @@ def make_vocab_from_params(
                 raise ConfigurationError(f"invalid 'datasets_for_vocab_creation' {dataset_name}")
         datasets = datasets_from_params(
             params,
+            serialization_dir=serialization_dir,
             train=("train" in datasets_for_vocab_creation),
             validation=("validation" in datasets_for_vocab_creation),
             test=("test" in datasets_for_vocab_creation),

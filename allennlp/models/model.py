@@ -66,15 +66,23 @@ class Model(torch.nn.Module, Registrable):
         separately.
     regularizer: `RegularizerApplicator`, optional
         If given, the `Trainer` will use this to regularize model parameters.
+    serialization_dir: `str`, optional
+        The directory in which the training output is saved to, or the directory the model is loaded from.
     """
 
     _warn_for_unseparable_batches: Set[str] = set()
     default_predictor: Optional[str] = None
 
-    def __init__(self, vocab: Vocabulary, regularizer: RegularizerApplicator = None) -> None:
+    def __init__(
+        self,
+        vocab: Vocabulary,
+        regularizer: RegularizerApplicator = None,
+        serialization_dir: Optional[str] = None,
+    ) -> None:
         super().__init__()
         self.vocab = vocab
         self._regularizer = regularizer
+        self.serialization_dir = serialization_dir
 
     def get_regularization_penalty(self) -> Optional[torch.Tensor]:
         """
@@ -293,7 +301,9 @@ class Model(torch.nn.Module, Registrable):
         # stored in our model. We don't need any pretrained weight file or initializers anymore,
         # and we don't want the code to look for it, so we remove it from the parameters here.
         remove_keys_from_params(model_params)
-        model = Model.from_params(vocab=vocab, params=model_params)
+        model = Model.from_params(
+            vocab=vocab, params=model_params, serialization_dir=serialization_dir
+        )
 
         # Force model to cpu or gpu, as appropriate, to make sure that the embeddings are
         # in sync with the weights
