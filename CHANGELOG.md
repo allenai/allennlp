@@ -63,7 +63,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Removed `common.util.is_master` function.
 
 ### Fixed
-
+- Fix distributed metrics error.
 - Fixed a bug where the reported `batch_loss` metric was incorrect when training with gradient accumulation.
 - Class decorators now displayed in API docs.
 - Fixed up the documentation for the `allennlp.nn.beam_search` module.
