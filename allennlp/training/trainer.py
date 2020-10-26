@@ -1232,6 +1232,8 @@ class GradientDescentTrainer(Trainer):
         checkpointer: Lazy[Checkpointer] = Lazy(Checkpointer),
         batch_callbacks: List[BatchCallback] = None,
         epoch_callbacks: List[EpochCallback] = None,
+        end_callbacks: List[EpochCallback] = None,
+        trainer_callbacks: List[TrainerCallback] = None,
     ) -> "Trainer":
         """
         This method exists so that we can have a documented method to construct this class using
@@ -1316,6 +1318,8 @@ class GradientDescentTrainer(Trainer):
             moving_average=moving_average_,
             batch_callbacks=batch_callbacks,
             epoch_callbacks=epoch_callbacks,
+            end_callbacks=end_callbacks,
+            trainer_callbacks=trainer_callbacks,
             distributed=distributed,
             local_rank=local_rank,
             world_size=world_size,
