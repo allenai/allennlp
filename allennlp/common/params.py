@@ -6,7 +6,7 @@ import zlib
 from collections import OrderedDict
 from collections.abc import MutableMapping
 from os import PathLike
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Union, Optional
 
 from overrides import overrides
 
@@ -250,7 +250,7 @@ class Params(MutableMapping):
         else:
             return self._check_is_dict(key, value)
 
-    def pop_int(self, key: str, default: Any = DEFAULT) -> int:
+    def pop_int(self, key: str, default: Any = DEFAULT) -> Optional[int]:
         """
         Performs a pop and coerces to an int.
         """
@@ -260,7 +260,7 @@ class Params(MutableMapping):
         else:
             return int(value)
 
-    def pop_float(self, key: str, default: Any = DEFAULT) -> float:
+    def pop_float(self, key: str, default: Any = DEFAULT) -> Optional[float]:
         """
         Performs a pop and coerces to a float.
         """
@@ -270,7 +270,7 @@ class Params(MutableMapping):
         else:
             return float(value)
 
-    def pop_bool(self, key: str, default: Any = DEFAULT) -> bool:
+    def pop_bool(self, key: str, default: Any = DEFAULT) -> Optional[bool]:
         """
         Performs a pop and coerces to a bool.
         """

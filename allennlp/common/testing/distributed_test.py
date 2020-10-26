@@ -9,9 +9,9 @@ from allennlp.common.checks import check_for_gpu
 
 def init_process(
     process_rank: int,
-    distributed_device_ids: List[int] = None,
-    world_size: int = 1,
-    func: Callable = None,
+    world_size: int,
+    distributed_device_ids: List[int],
+    func: Callable,
     func_args: Tuple = None,
     func_kwargs: Dict[str, Any] = None,
     master_addr: str = "127.0.0.1",
@@ -40,13 +40,13 @@ def init_process(
             timeout=datetime.timedelta(seconds=120),
         )
 
-    func(global_rank, world_size, gpu_id, *func_args, **func_kwargs)
+    func(global_rank, world_size, gpu_id, *(func_args or []), **(func_kwargs or {}))
 
     dist.barrier()
 
 
 def run_distributed_test(
-    device_ids: List[int] = [-1, -1],
+    device_ids: List[int] = None,
     func: Callable = None,
     *args,
     **kwargs,
@@ -62,6 +62,7 @@ def run_distributed_test(
     func: `Callable`
         `func` needs to be global for spawning the processes, so that it can be pickled.
     """
+    device_ids = device_ids or [-1, -1]
     check_for_gpu(device_ids)
     # "fork" start method is the default and should be preferred, except when we're
     # running the tests on GPU, in which case we need to use "spawn".
@@ -69,7 +70,7 @@ def run_distributed_test(
     nprocs = world_size = len(device_ids)
     mp.start_processes(
         init_process,
-        args=(device_ids, world_size, func, args, kwargs),
+        args=(world_size, device_ids, func, args, kwargs),
         nprocs=nprocs,
         start_method=start_method,
     )

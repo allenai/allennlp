@@ -114,12 +114,13 @@ class Embedding(TokenEmbedder):
                 "Embedding must be constructed with either num_embeddings or a vocabulary."
             )
 
+        _vocab_namespace: Optional[str] = vocab_namespace
         if num_embeddings is None:
-            num_embeddings = vocab.get_vocab_size(vocab_namespace)
+            num_embeddings = vocab.get_vocab_size(_vocab_namespace)  # type: ignore
         else:
             # If num_embeddings is present, set default namespace to None so that extend_vocab
             # call doesn't misinterpret that some namespace was originally used.
-            vocab_namespace = None
+            _vocab_namespace = None  # type: ignore
 
         self.num_embeddings = num_embeddings
         self.padding_index = padding_index
@@ -127,7 +128,7 @@ class Embedding(TokenEmbedder):
         self.norm_type = norm_type
         self.scale_grad_by_freq = scale_grad_by_freq
         self.sparse = sparse
-        self._vocab_namespace = vocab_namespace
+        self._vocab_namespace = _vocab_namespace
         self._pretrained_file = pretrained_file
 
         self.output_dim = projection_dim or embedding_dim
@@ -152,7 +153,7 @@ class Embedding(TokenEmbedder):
             # extend_vocab method, which relies on the value of vocab_namespace being None
             # to infer at what stage the embedding has been constructed. Phew.
             weight = _read_pretrained_embeddings_file(
-                pretrained_file, embedding_dim, vocab, vocab_namespace or "tokens"
+                pretrained_file, embedding_dim, vocab, vocab_namespace
             )
             self.weight = torch.nn.Parameter(weight, requires_grad=trainable)
 

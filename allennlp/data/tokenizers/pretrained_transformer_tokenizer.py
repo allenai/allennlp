@@ -109,7 +109,7 @@ class PretrainedTransformerTokenizer(Tokenizer):
         from allennlp.common import cached_transformers
 
         tokenizer_with_special_tokens = cached_transformers.get_tokenizer(
-            model_name, add_special_tokens=True, **tokenizer_kwargs
+            model_name, add_special_tokens=True, **(tokenizer_kwargs or {})
         )
         dummy_output = tokenizer_with_special_tokens.encode_plus(
             token_a,
@@ -391,7 +391,7 @@ class PretrainedTransformerTokenizer(Tokenizer):
 
     def intra_word_tokenize_sentence_pair(
         self, string_tokens_a: List[str], string_tokens_b: List[str]
-    ) -> Tuple[List[Token], List[Tuple[int, int]], List[Tuple[int, int]]]:
+    ) -> Tuple[List[Token], List[Optional[Tuple[int, int]]], List[Optional[Tuple[int, int]]]]:
         """
         Tokenizes each word into wordpieces separately and returns the wordpiece IDs.
         Also calculates offsets such that wordpieces[offsets[i][0]:offsets[i][1] + 1]
@@ -429,15 +429,15 @@ class PretrainedTransformerTokenizer(Tokenizer):
         if tokens2 is None:
             return (
                 self.single_sequence_start_tokens
-                + with_new_type_id(tokens1, self.single_sequence_token_type_id)
+                + with_new_type_id(tokens1, self.single_sequence_token_type_id)  # type: ignore
                 + self.single_sequence_end_tokens
             )
         else:
             return (
                 self.sequence_pair_start_tokens
-                + with_new_type_id(tokens1, self.sequence_pair_first_token_type_id)
+                + with_new_type_id(tokens1, self.sequence_pair_first_token_type_id)  # type: ignore
                 + self.sequence_pair_mid_tokens
-                + with_new_type_id(tokens2, self.sequence_pair_second_token_type_id)
+                + with_new_type_id(tokens2, self.sequence_pair_second_token_type_id)  # type: ignore
                 + self.sequence_pair_end_tokens
             )
 

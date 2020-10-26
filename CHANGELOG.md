@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Changed
+
+- Enforced stricter typing requirements around the use of `Optional[T]` types.
+- Changed the behavior of `Lazy` types in `from_params` methods. Previously, if you defined a `Lazy` parameter like
+  `foo: Lazy[Foo] = None` in a custom `from_params` classmethod, then `foo` would actually never be `None`.
+  This behavior is now different. If no params were given for `foo`, it will be `None`.
+  You can also now set default values for foo like `foo: Lazy[Foo] = Lazy(Foo)`.
+  Or, if you want you want a default value but also want to allow for `None` values, you can
+  write it like this: `foo: Optional[Lazy[Foo]] = Lazy(Foo)`.
+
 ### Fixed
 
 - Made it possible to instantiate `TrainerCallback` from config files.

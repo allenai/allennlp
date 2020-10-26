@@ -15,7 +15,7 @@ class LinearWithWarmup(PolynomialDecay):
         self,
         optimizer: torch.optim.Optimizer,
         num_epochs: int,
-        num_steps_per_epoch: int = None,
+        num_steps_per_epoch: int,
         warmup_steps: int = 100,
         last_epoch: int = -1,
     ) -> None:
