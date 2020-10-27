@@ -72,6 +72,10 @@ jobs:
       run: |
         pip freeze
 
+    - name: Test install
+      run: |
+        allennlp test-install
+
     - name: Format
       if: always()
       run: |
