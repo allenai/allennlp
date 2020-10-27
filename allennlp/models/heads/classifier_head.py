@@ -22,7 +22,7 @@ class ClassifierHead(Head):
     vocab : `Vocabulary`
         Used to get the number of labels, if `num_labels` is not provided, and to translate label
         indices to strings in `make_output_human_readable`.
-    seq2vec_encoder : `Seq2VecEncoder`, optional (default = `ClsPooler`)
+    seq2vec_encoder : `Seq2VecEncoder`
         The input to this module is assumed to be a sequence of encoded vectors.  We use a
         `Seq2VecEncoder` to compress this into a single vector on which we can perform
         classification.
