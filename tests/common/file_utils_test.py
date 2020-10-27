@@ -18,7 +18,7 @@ from allennlp.common.file_utils import (
     _split_s3_path,
     open_compressed,
     CacheFile,
-    _Meta,
+    Meta,
     _find_entries,
     inspect_cache,
     remove_cache_entries,
@@ -85,7 +85,7 @@ class TestFileUtils(AllenNlpTestCase):
             os.path.join(self.TEST_DIR, _resource_to_filename(url, etag)) for etag in etags
         ]
         for filename, etag in zip(filenames, etags):
-            meta = _Meta(
+            meta = Meta(
                 resource=url, cached_path=filename, creation_time=time.time(), etag=etag, size=2341
             )
             meta.to_file()
@@ -106,7 +106,7 @@ class TestFileUtils(AllenNlpTestCase):
         # We also want to make sure this works when the latest cached version doesn't
         # have a corresponding etag.
         filename = os.path.join(self.TEST_DIR, _resource_to_filename(url))
-        meta = _Meta(resource=url, cached_path=filename, creation_time=time.time(), size=2341)
+        meta = Meta(resource=url, cached_path=filename, creation_time=time.time(), size=2341)
         with open(filename, "w") as f:
             f.write("some random data")
 
@@ -192,7 +192,7 @@ class TestFileUtils(AllenNlpTestCase):
         filename = get_from_cache(url, cache_dir=self.TEST_DIR)
         assert filename == os.path.join(self.TEST_DIR, _resource_to_filename(url, etag="0"))
         assert os.path.exists(filename + ".json")
-        meta = _Meta.from_path(filename + ".json")
+        meta = Meta.from_path(filename + ".json")
         assert meta.resource == url
 
         # We should have made one HEAD request and one GET request.
@@ -284,7 +284,7 @@ class TestFileUtils(AllenNlpTestCase):
             f.write(self.glove_bytes)
         with open(filename + ".json", "w") as meta_file:
             json.dump({"url": url, "etag": etag}, meta_file)
-        meta = _Meta.from_path(filename + ".json")
+        meta = Meta.from_path(filename + ".json")
         assert meta.resource == url
         assert meta.etag == etag
         assert meta.creation_time is not None
@@ -300,7 +300,7 @@ class TestFileUtils(AllenNlpTestCase):
         with open(filename, "wb") as f:
             f.write(self.glove_bytes)
         open(cache_path + ".lock", "a").close()
-        meta = _Meta(
+        meta = Meta(
             resource=url,
             cached_path=cache_path,
             etag=etag,

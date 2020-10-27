@@ -231,7 +231,7 @@ def cached_path(
                 # Extraction was successful, rename temp directory to final
                 # cache directory and dump the meta data.
                 os.replace(tmp_extraction_dir, extraction_path)
-                meta = _Meta(
+                meta = Meta(
                     resource=url_or_filename,
                     cached_path=extraction_path,
                     creation_time=time.time(),
@@ -418,7 +418,7 @@ class CacheFile:
 
 
 @dataclass
-class _Meta:
+class Meta:
     """
     Any resource that is downloaded to - or extracted in - the cache directory will
     have a meta JSON file written next to it, which corresponds to an instance
@@ -426,7 +426,7 @@ class _Meta:
 
     In older versions of AllenNLP, this meta document just had two fields: 'url' and
     'etag'. The 'url' field is now the more general 'resource' field, but these old
-    meta files are still compatible when a `_Meta` is instantiated with the `.from_path()`
+    meta files are still compatible when a `Meta` is instantiated with the `.from_path()`
     class method.
     """
 
@@ -465,7 +465,7 @@ class _Meta:
             json.dump(asdict(self), meta_file)
 
     @classmethod
-    def from_path(cls, path: Union[str, Path]) -> "_Meta":
+    def from_path(cls, path: Union[str, Path]) -> "Meta":
         path = str(path)
         with open(path) as meta_file:
             data = json.load(meta_file)
@@ -554,7 +554,7 @@ def get_from_cache(url: str, cache_dir: Union[str, Path] = None) -> str:
                     _http_get(url, cache_file)
 
             logger.debug("creating metadata file for %s", cache_path)
-            meta = _Meta(
+            meta = Meta(
                 resource=url,
                 cached_path=cache_path,
                 creation_time=time.time(),
@@ -636,8 +636,8 @@ def _get_resource_size(path: str) -> int:
 
 
 class _CacheEntry(NamedTuple):
-    regular_files: List[_Meta]
-    extraction_dirs: List[_Meta]
+    regular_files: List[Meta]
+    extraction_dirs: List[Meta]
 
 
 def _find_entries(
@@ -657,7 +657,7 @@ def _find_entries(
     total_size: int = 0
     cache_entries: Dict[str, _CacheEntry] = defaultdict(lambda: _CacheEntry([], []))
     for meta_path in glob.glob(str(cache_dir) + "/*.json"):
-        meta = _Meta.from_path(meta_path)
+        meta = Meta.from_path(meta_path)
         if patterns and not any(fnmatch(meta.resource, p) for p in patterns):
             continue
         if meta.extraction_dir:
