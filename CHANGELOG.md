@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   You can also now set default values for foo like `foo: Lazy[Foo] = Lazy(Foo)`.
   Or, if you want you want a default value but also want to allow for `None` values, you can
   write it like this: `foo: Optional[Lazy[Foo]] = Lazy(Foo)`.
+- Added support for PyTorch version 1.7.
 
 ### Fixed
 
