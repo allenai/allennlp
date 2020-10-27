@@ -87,7 +87,7 @@ install :
 	# In PyTorch 1.7, dataclasses is an unconditional dependency, when it should
 	# only be a dependency for Python < 3.7. This has been fixed on PyTorch master branch,
 	# so we should be able to remove this check with the next PyTorch release.
-	# pip uninstall -y dataclasses
+	pip uninstall -y dataclasses
 
 #
 # Documention helpers.
