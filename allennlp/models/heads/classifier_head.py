@@ -6,7 +6,6 @@ import torch
 from allennlp.data import Vocabulary
 from allennlp.models.heads.head import Head
 from allennlp.modules import FeedForward, Seq2VecEncoder
-from allennlp.modules.seq2vec_encoders import ClsPooler
 from allennlp.training.metrics import CategoricalAccuracy
 
 
@@ -26,9 +25,7 @@ class ClassifierHead(Head):
     seq2vec_encoder : `Seq2VecEncoder`, optional (default = `ClsPooler`)
         The input to this module is assumed to be a sequence of encoded vectors.  We use a
         `Seq2VecEncoder` to compress this into a single vector on which we can perform
-        classification.  If nothing is provided, we will use a `ClsPooler`, which simply takes the
-        first element of the sequence as the single vector (and is the standard thing to do when you
-        are running a classifier on top of a transformer).
+        classification.
     feedforward : `FeedForward`, optional, (default = `None`)
         An optional feedforward layer to apply on the pooled output before performing the
         classification.
@@ -49,7 +46,7 @@ class ClassifierHead(Head):
     def __init__(
         self,
         vocab: Vocabulary,
-        seq2vec_encoder: Seq2VecEncoder = None,
+        seq2vec_encoder: Seq2VecEncoder,
         feedforward: Optional[FeedForward] = None,
         input_dim: int = None,
         dropout: float = None,
@@ -58,9 +55,9 @@ class ClassifierHead(Head):
     ) -> None:
 
         super().__init__(vocab)
-        self._seq2vec_encoder = seq2vec_encoder or ClsPooler()
+        self._seq2vec_encoder = seq2vec_encoder
         self._feedforward = feedforward
-        if feedforward is not None:
+        if self._feedforward is not None:
             self._classifier_input_dim = self._feedforward.get_output_dim()
         else:
             self._classifier_input_dim = self._seq2vec_encoder.get_output_dim() or input_dim

@@ -739,6 +739,46 @@ class TestFromParams(AllenNlpTestCase):
 
         Testing.from_params(Params({"lazy_object": {"string": test_string}}))
 
+    def test_optional_vs_required_lazy_objects(self):
+        class ConstructedObject(FromParams):
+            def __init__(self, a: int):
+                self.a = a
+
+        class Testing(FromParams):
+            def __init__(
+                self,
+                lazy1: Lazy[ConstructedObject],
+                lazy2: Lazy[ConstructedObject] = Lazy(ConstructedObject),
+                lazy3: Lazy[ConstructedObject] = None,
+                lazy4: Optional[Lazy[ConstructedObject]] = Lazy(ConstructedObject),
+            ) -> None:
+                self.lazy1 = lazy1.construct()
+                self.lazy2 = lazy2.construct(a=2)
+                self.lazy3 = None if lazy3 is None else lazy3.construct()
+                self.lazy4 = None if lazy4 is None else lazy4.construct(a=1)
+
+        test1 = Testing.from_params(Params({"lazy1": {"a": 1}}))
+        assert test1.lazy1.a == 1
+        assert test1.lazy2.a == 2
+        assert test1.lazy3 is None
+        assert test1.lazy4 is not None
+
+        test2 = Testing.from_params(Params({"lazy1": {"a": 1}, "lazy2": {"a": 3}}))
+        assert test2.lazy1.a == 1
+        assert test2.lazy2.a == 3
+        assert test2.lazy3 is None
+        assert test2.lazy4 is not None
+
+        test3 = Testing.from_params(Params({"lazy1": {"a": 1}, "lazy3": {"a": 3}, "lazy4": None}))
+        assert test3.lazy1.a == 1
+        assert test3.lazy2.a == 2
+        assert test3.lazy3 is not None
+        assert test3.lazy3.a == 3
+        assert test3.lazy4 is None
+
+        with pytest.raises(ConfigurationError, match='key "lazy1" is required'):
+            Testing.from_params(Params({}))
+
     def test_iterable(self):
         from allennlp.common.registrable import Registrable
 

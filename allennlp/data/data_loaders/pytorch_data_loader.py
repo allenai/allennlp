@@ -1,4 +1,4 @@
-from typing import List, Iterator
+from typing import List, Iterator, Optional
 
 from torch.utils import data
 
@@ -241,17 +241,15 @@ class PyTorchDataLoader(data.DataLoader, DataLoader):
                 list(Tqdm.tqdm(reader.read(data_path), desc="reading instances"))
             )
 
+        sampler_: Optional[PyTorchSampler] = None
         if sampler is not None:
             sampler_ = sampler.construct(data_source=dataset)
-        else:
-            sampler_ = None
 
+        batch_sampler_: Optional[PyTorchBatchSampler] = None
         if batch_sampler is not None:
             batch_sampler_ = batch_sampler.construct(
                 data_source=dataset, sampler=sampler_, batch_size=batch_size
             )
-        else:
-            batch_sampler_ = None
 
         return cls(
             dataset=dataset,

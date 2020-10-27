@@ -1230,9 +1230,11 @@ def batched_index_select(
 
     An example use case of this function is looking up the start and end indices of spans in a
     sequence tensor. This is used in the
-    [CoreferenceResolver](../models/coreference_resolution/coref.md). Model to select
-    contextual word representations corresponding to the start and end indices of mentions. The key
-    reason this can't be done with basic torch functions is that we want to be able to use look-up
+    [CoreferenceResolver](https://docs.allennlp.org/models/master/models/coref/models/coref/)
+    model to select contextual word representations corresponding to the start and end indices of
+    mentions.
+
+    The key reason this can't be done with basic torch functions is that we want to be able to use look-up
     tensors with an arbitrary number of dimensions (for example, in the coref model, we don't know
     a-priori how many spans we are looking up).
 
@@ -1551,7 +1553,7 @@ def add_sentence_boundary_token_ids(
     tensor_shape = list(tensor.data.shape)
     new_shape = list(tensor_shape)
     new_shape[1] = tensor_shape[1] + 2
-    tensor_with_boundary_tokens = tensor.new_zeros(*new_shape)
+    tensor_with_boundary_tokens = tensor.new_zeros(*new_shape, device=tensor.device)
     if len(tensor_shape) == 2:
         tensor_with_boundary_tokens[:, 1:-1] = tensor
         tensor_with_boundary_tokens[:, 0] = sentence_begin_token
@@ -1560,6 +1562,8 @@ def add_sentence_boundary_token_ids(
         new_mask = tensor_with_boundary_tokens != 0
     elif len(tensor_shape) == 3:
         tensor_with_boundary_tokens[:, 1:-1, :] = tensor
+        sentence_begin_token = sentence_begin_token.detach().to(tensor.device)
+        sentence_end_token = sentence_end_token.detach().to(tensor.device)
         for i, j in enumerate(sequence_lengths):
             tensor_with_boundary_tokens[i, 0, :] = sentence_begin_token
             tensor_with_boundary_tokens[i, j + 1, :] = sentence_end_token

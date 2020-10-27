@@ -14,7 +14,6 @@ from overrides import overrides
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common import logging as common_logging
 from allennlp.common.util import prepare_environment
-from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data import DataLoader
 from allennlp.models.archival import load_archive
 from allennlp.training.util import evaluate
@@ -131,13 +130,7 @@ def evaluate_from_args(args: argparse.Namespace) -> Dict[str, Any]:
 
     # Load the evaluation data
 
-    # Try to use the validation dataset reader if there is one - otherwise fall back
-    # to the default dataset_reader used for both training and validation.
-    validation_dataset_reader_params = config.pop("validation_dataset_reader", None)
-    if validation_dataset_reader_params is not None:
-        dataset_reader = DatasetReader.from_params(validation_dataset_reader_params)
-    else:
-        dataset_reader = DatasetReader.from_params(config.pop("dataset_reader"))
+    dataset_reader = archive.validation_dataset_reader
 
     evaluation_data_path = args.input_file
     logger.info("Reading evaluation data from %s", evaluation_data_path)

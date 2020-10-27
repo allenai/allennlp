@@ -185,7 +185,9 @@ def find_learning_rate_model(
         ),
     )
 
-    model = Model.from_params(vocab=vocab, params=params.pop("model"))
+    model = Model.from_params(
+        vocab=vocab, params=params.pop("model"), serialization_dir=serialization_dir
+    )
 
     all_data_loaders["train"].index_with(vocab)
 

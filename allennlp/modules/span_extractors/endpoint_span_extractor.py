@@ -1,3 +1,5 @@
+from typing import Optional
+
 import torch
 from torch.nn.parameter import Parameter
 from overrides import overrides
@@ -5,7 +7,6 @@ from overrides import overrides
 from allennlp.modules.span_extractors.span_extractor import SpanExtractor
 from allennlp.modules.token_embedders.embedding import Embedding
 from allennlp.nn import util
-
 from allennlp.common.checks import ConfigurationError
 
 
@@ -70,6 +71,7 @@ class EndpointSpanExtractor(SpanExtractor):
         if use_exclusive_start_indices:
             self._start_sentinel = Parameter(torch.randn([1, 1, int(input_dim)]))
 
+        self._span_width_embedding: Optional[Embedding] = None
         if num_width_embeddings is not None and span_width_embedding_dim is not None:
             self._span_width_embedding = Embedding(
                 num_embeddings=num_width_embeddings, embedding_dim=span_width_embedding_dim
@@ -79,8 +81,6 @@ class EndpointSpanExtractor(SpanExtractor):
                 "To use a span width embedding representation, you must"
                 "specify both num_width_buckets and span_width_embedding_dim."
             )
-        else:
-            self._span_width_embedding = None
 
     def get_input_dim(self) -> int:
         return self._input_dim
@@ -152,7 +152,7 @@ class EndpointSpanExtractor(SpanExtractor):
             # Embed the span widths and concatenate to the rest of the representations.
             if self._bucket_widths:
                 span_widths = util.bucket_values(
-                    span_ends - span_starts, num_total_buckets=self._num_width_embeddings
+                    span_ends - span_starts, num_total_buckets=self._num_width_embeddings  # type: ignore
                 )
             else:
                 span_widths = span_ends - span_starts

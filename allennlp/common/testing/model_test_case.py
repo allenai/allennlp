@@ -18,16 +18,18 @@ from allennlp.training import GradientDescentTrainer
 
 class ModelTestCase(AllenNlpTestCase):
     """
-    A subclass of [`AllenNlpTestCase`](./allennlp_test_case.md)
+    A subclass of [`AllenNlpTestCase`](./test_case.md)
     with added methods for testing [`Model`](../../models/model.md) subclasses.
     """
 
-    def set_up_model(self, param_file, dataset_file):
+    def set_up_model(self, param_file, dataset_file, serialization_dir=None):
 
         self.param_file = param_file
         params = Params.from_file(self.param_file)
 
-        reader = DatasetReader.from_params(params["dataset_reader"])
+        reader = DatasetReader.from_params(
+            params["dataset_reader"], serialization_dir=serialization_dir
+        )
         # The dataset reader might be lazy, but a lazy list here breaks some of our tests.
         instances = list(reader.read(str(dataset_file)))
         # Use parameters for vocabulary if they are present in the config file, so that choices like
@@ -39,7 +41,9 @@ class ModelTestCase(AllenNlpTestCase):
             vocab = Vocabulary.from_instances(instances)
         self.vocab = vocab
         self.instances = instances
-        self.model = Model.from_params(vocab=self.vocab, params=params["model"])
+        self.model = Model.from_params(
+            vocab=self.vocab, params=params["model"], serialization_dir=serialization_dir
+        )
 
         # TODO(joelgrus) get rid of these
         # (a lot of the model tests use them, so they'll have to be changed)
@@ -95,6 +99,7 @@ class ModelTestCase(AllenNlpTestCase):
         save_dir = self.TEST_DIR / "save_and_load_test"
         archive_file = save_dir / "model.tar.gz"
         model = train_model_from_file(param_file, save_dir, overrides=overrides)
+        assert model is not None
         metrics_file = save_dir / "metrics.json"
         if metric_to_check is not None:
             metrics = json.loads(metrics_file.read_text())
@@ -104,7 +109,8 @@ class ModelTestCase(AllenNlpTestCase):
             assert metric_value is not None, f"Cannot find {metric_to_check} in metrics.json file"
             assert metric_terminal_value is not None, "Please specify metric terminal value"
             assert abs(metric_value - metric_terminal_value) < metric_tolerance
-        loaded_model = load_archive(archive_file, cuda_device=cuda_device).model
+        archive = load_archive(archive_file, cuda_device=cuda_device)
+        loaded_model = archive.model
         state_keys = model.state_dict().keys()
         loaded_state_keys = loaded_model.state_dict().keys()
         assert state_keys == loaded_state_keys
@@ -115,8 +121,8 @@ class ModelTestCase(AllenNlpTestCase):
                 loaded_model.state_dict()[key].cpu().numpy(),
                 err_msg=key,
             )
+        reader = archive.dataset_reader
         params = Params.from_file(param_file, params_overrides=overrides)
-        reader = DatasetReader.from_params(params["dataset_reader"])
 
         # Need to duplicate params because DataLoader.from_params will consume.
         data_loader_params = params["data_loader"]

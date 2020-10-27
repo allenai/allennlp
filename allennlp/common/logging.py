@@ -99,7 +99,7 @@ def prepare_global_logging(
     if os.environ.get("ALLENNLP_DEBUG"):
         LEVEL = logging.DEBUG
     else:
-        level_name = os.environ.get("ALLENNLP_LOG_LEVEL")
+        level_name = os.environ.get("ALLENNLP_LOG_LEVEL", "INFO")
         LEVEL = logging._nameToLevel.get(level_name, logging.INFO)
 
     file_handler.setLevel(LEVEL)

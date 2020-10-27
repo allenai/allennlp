@@ -36,15 +36,34 @@ data loaders.  Those are coming soon.
 
 ### Fixed
 
-- Ignore *args when constructing classes with `FromParams`.
+- Ignore `*args` when constructing classes with `FromParams`.
 - Ensured some consistency in the types of the values that metrics return.
 - `PretrainedTransformerTokenizer` will now never return a sequence that's longer than `max_length`, even with special tokens
 
 
 ## Unreleased (1.x branch)
 
+### Changed
+
+- Enforced stricter typing requirements around the use of `Optional[T]` types.
+- Changed the behavior of `Lazy` types in `from_params` methods. Previously, if you defined a `Lazy` parameter like
+  `foo: Lazy[Foo] = None` in a custom `from_params` classmethod, then `foo` would actually never be `None`.
+  This behavior is now different. If no params were given for `foo`, it will be `None`.
+  You can also now set default values for foo like `foo: Lazy[Foo] = Lazy(Foo)`.
+  Or, if you want you want a default value but also want to allow for `None` values, you can
+  write it like this: `foo: Optional[Lazy[Foo]] = Lazy(Foo)`.
+
+### Fixed
+
+- Made it possible to instantiate `TrainerCallback` from config files.
+- Fixed the remaining broken internal links in the API docs.
+
+## [v1.2.0rc1](https://github.com/allenai/allennlp/releases/tag/v1.2.0rc1) - 2020-10-22
+
 ### Added
 
+- Added a warning when `batches_per_epoch` for the validation data loader is inherited from
+  the train data loader.
 - Added a `build-vocab` subcommand that can be used to build a vocabulary from a training config file.
 - Added `tokenizer_kwargs` argument to `PretrainedTransformerMismatchedIndexer`.
 - Added `tokenizer_kwargs` and `transformer_kwargs` arguments to `PretrainedTransformerMismatchedEmbedder`.
@@ -64,11 +83,15 @@ data loaders.  Those are coming soon.
   be used from the `cached-path` command with `allennlp cached-path --inspect`.
 - Added a function `remove_cache_entries` to `common.file_utils` that removes any cache entries matching the given
   glob patterns. This can used from the `cached-path` command with `allennlp cached-path --remove some-files-*`.
+- Added logging for the main process when running in distributed mode.
 - Added a `TrainerCallback` object to support state sharing between batch and epoch-level training callbacks.
+- Added support for .tar.gz in PretrainedModelInitializer.
 - Added classes: `nn/samplers/samplers.py` with `MultinomialSampler`, `TopKSampler`, and `TopPSampler` for 
   sampling indices from log probabilities
 - Made `BeamSearch` registrable.
 - Added `top_k_sampling` and `type_p_sampling` `BeamSearch` implementations.
+- Pass `serialization_dir` to `Model` and `DatasetReader`.
+- Added an optional `include_in_archive` parameter to the top-level of configuration files. When specified, `include_in_archive` should be a list of paths relative to the serialization directory which will be bundled up with the final archived model from a training run.
 
 ### Changed
 
@@ -77,6 +100,7 @@ data loaders.  Those are coming soon.
 - `transformers` dependency updated to version 3.1.0.
 - When `cached_path` is called on a local archive with `extract_archive=True`, the archive is now extracted into a unique subdirectory of the cache root instead of a subdirectory of the archive's directory. The extraction directory is also unique to the modification time of the archive, so if the file changes, subsequent calls to `cached_path` will know to re-extract the archive.
 - Removed the `truncation_strategy` parameter to `PretrainedTransformerTokenizer`. The way we're calling the tokenizer, the truncation strategy takes no effect anyways.
+- Don't use initializers when loading a model, as it is not needed.
 - Distributed training will now automatically search for a local open port if the `master_port` parameter is not provided.
 - In training, save model weights before evaluation.
 - `allennlp.common.util.peak_memory_mb` renamed to `peak_cpu_memory`, and `allennlp.common.util.gpu_memory_mb` renamed to `peak_gpu_memory`,
@@ -84,6 +108,8 @@ data loaders.  Those are coming soon.
   usage instead of shelling out to the `nvidia-smi` command. This is more efficient and also more accurate because it only takes
   into account the tensor allocations of the current PyTorch process.
 - Make sure weights are first loaded to the cpu when using PretrainedModelInitializer, preventing wasted GPU memory.
+- Load dataset readers in `load_archive`.
+- Updated `AllenNlpTestCase` docstring to remove reference to `unittest.TestCase`
 
 ### Removed
 
@@ -91,6 +117,7 @@ data loaders.  Those are coming soon.
 
 ### Fixed
 
+- Fix CUDA/CPU device mismatch bug during distributed training for categorical accuracy metric.
 - Fixed a bug where the reported `batch_loss` metric was incorrect when training with gradient accumulation.
 - Class decorators now displayed in API docs.
 - Fixed up the documentation for the `allennlp.nn.beam_search` module.
@@ -111,6 +138,9 @@ data loaders.  Those are coming soon.
   when an instance is instantiated `from_params`.
 - Fixed a bug in distributed training where the vocab would be saved from every worker, when it should have been saved by only the local master process.
 - Fixed a bug in the calculation of rouge metrics during distributed training where the total sequence count was not being aggregated across GPUs.
+- Fixed `allennlp.nn.util.add_sentence_boundary_token_ids()` to use `device` parameter of input tensor.
+- Be sure to close the TensorBoard writer even when training doesn't finish.
+- Fixed the docstring for `PyTorchSeq2VecWrapper`.
 
 
 ## [v1.1.0](https://github.com/allenai/allennlp/releases/tag/v1.1.0) - 2020-09-08
