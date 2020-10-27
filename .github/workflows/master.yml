@@ -147,8 +147,7 @@ jobs:
     - name: Clean up
       if: always()
       run: |
-        pip uninstall --yes allennlp
-        pip uninstall --yes allennlp_models
+        pip uninstall --yes allennlp allennlp-models
 
   # Builds package distribution files for PyPI.
   build_package:

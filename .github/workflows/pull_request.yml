@@ -168,6 +168,11 @@ jobs:
       run: |
         cd allennlp-models && make test
 
+    - name: Clean up
+      if: always()
+      run: |
+        pip uninstall --yes allennlp allennlp-models
+
   # Tests installing from the distribution files.
   test_package:
     name: Test Package
@@ -201,7 +206,7 @@ jobs:
         # only be a conditional dependency for Python < 3.7.
         # This has been fixed on PyTorch master branch, so we should be able to
         # remove this check with the next PyTorch release.
-        # pip uninstall -y dataclasses
+        pip uninstall -y dataclasses
 
     - name: Pip freeze
       run: |

@@ -84,10 +84,6 @@ install :
 	python setup.py install_egg_info
 	# Install allennlp as editable and all dependencies.
 	pip install --upgrade --upgrade-strategy eager -e . -r dev-requirements.txt
-	# In PyTorch 1.7, dataclasses is an unconditional dependency, when it should
-	# only be a dependency for Python < 3.7. This has been fixed on PyTorch master branch,
-	# so we should be able to remove this check with the next PyTorch release.
-	pip uninstall -y dataclasses
 
 #
 # Documention helpers.
