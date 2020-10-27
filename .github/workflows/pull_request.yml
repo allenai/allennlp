@@ -106,6 +106,7 @@ jobs:
         python setup.py bdist_wheel sdist
 
     - name: Save core package
+      if: matrix.python == '3.7'
       uses: actions/upload-artifact@v1
       with:
         name: core-package
