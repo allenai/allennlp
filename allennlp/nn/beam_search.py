@@ -242,7 +242,7 @@ class BeamSearch(Registrable):
             )
             if last_true_log_probabilities is not None:
                 return start_predicted_classes.unsqueeze(-1), last_true_log_probabilities
-                
+
             return start_predicted_classes.unsqueeze(-1), start_top_log_probabilities
 
         # The log probabilities for the last time step.
