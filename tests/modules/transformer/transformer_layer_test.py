@@ -48,8 +48,8 @@ class TestAttentionLayer(AllenNlpTestCase):
         assert attention_layer.output.dropout.p == self.params_dict["hidden_dropout"]
 
     def test_forward_runs(self):
-
-        self.attention_layer.forward(torch.randn(2, 3, 6), torch.randn(2, 2, 3, 3))
+        attention_mask = torch.tensor([[0, 1, 0], [1, 1, 0]])
+        self.attention_layer.forward(torch.randn(2, 3, 6), attention_mask=attention_mask)
 
 
 class TestTransformerLayer(AllenNlpTestCase):
@@ -122,8 +122,8 @@ class TestTransformerLayer(AllenNlpTestCase):
         assert transformer_layer.output.dropout.p == self.params_dict["hidden_dropout"]
 
     def test_forward_runs(self):
-
-        self.transformer_layer.forward(torch.randn(2, 3, 6), torch.randn(2, 2, 3, 3))
+        attention_mask = torch.tensor([[0, 1, 0], [1, 1, 0]])
+        self.transformer_layer.forward(torch.randn(2, 3, 6), attention_mask=attention_mask)
 
     def test_loading_from_pretrained_weights(self):
 
@@ -134,7 +134,10 @@ class TestTransformerLayer(AllenNlpTestCase):
 
         module = TransformerLayer.from_pretrained_module(pretrained_module)
         mapping = {
-            val: key for key, val in module._construct_default_mapping("huggingface").items()
+            val: key
+            for key, val in module._construct_default_mapping(
+                pretrained_module, "huggingface", {}
+            ).items()
         }
         assert_equal_parameters(pretrained_module, module, mapping=mapping)
 
@@ -147,6 +150,9 @@ class TestTransformerLayer(AllenNlpTestCase):
 
         module = TransformerLayer.from_pretrained_module(self.pretrained_name)
         mapping = {
-            val: key for key, val in module._construct_default_mapping("huggingface").items()
+            val: key
+            for key, val in module._construct_default_mapping(
+                pretrained_module, "huggingface", {}
+            ).items()
         }
         assert_equal_parameters(pretrained_module, module, mapping=mapping)

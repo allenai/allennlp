@@ -56,7 +56,7 @@ class TransformerBlock(TransformerModule, FromParams):
 
             layer_outputs = layer_module(
                 hidden_states,
-                0.0,
+                attention_mask,
                 layer_head_mask,
                 encoder_hidden_states,
                 encoder_attention_mask,

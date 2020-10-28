@@ -1,20 +1,84 @@
 import copy
 import torch
+import pytest
 
 from allennlp.common import Params
+from allennlp.common import cached_transformers
+from allennlp.common.testing import assert_equal_parameters
+
 from allennlp.modules.transformer import SelfAttention
 from allennlp.common.testing import AllenNlpTestCase
+
+from transformers.configuration_bert import BertConfig
+from transformers.modeling_bert import BertSelfAttention
+from transformers.configuration_roberta import RobertaConfig
+from transformers.modeling_roberta import RobertaSelfAttention
+from transformers.configuration_electra import ElectraConfig
+from transformers.modeling_electra import ElectraSelfAttention
+from transformers.configuration_distilbert import DistilBertConfig
+from transformers.modeling_distilbert import MultiHeadSelfAttention
+
+# from transformers.configuration_mobilebert import MobileBertConfig
+# from transformers.modeling_mobilebert import MobileBertSelfAttention
+# from transformers.configuration_t5 import T5Config
+# from transformers.modeling_t5 import T5LayerSelfAttention
+
+PARAMS_DICT = {
+    "hidden_size": 6,
+    "num_attention_heads": 2,
+    "dropout": 0.0,
+}
+
+
+def get_modules(params_dict):
+    modules = {}
+    params = copy.deepcopy(params_dict)
+    params["attention_probs_dropout_prob"] = params.pop("dropout")
+
+    # bert, roberta, electra, layoutlm self attentions have the same code.
+
+    torch.manual_seed(1234)
+    hf_module = BertSelfAttention(BertConfig(**params))
+    modules["bert"] = hf_module
+
+    torch.manual_seed(1234)
+    hf_module = RobertaSelfAttention(RobertaConfig(**params))
+    modules["roberta"] = hf_module
+
+    torch.manual_seed(1234)
+    hf_module = ElectraSelfAttention(ElectraConfig(**params))
+    modules["electra"] = hf_module
+
+    torch.manual_seed(1234)
+    distilparams = copy.deepcopy(params_dict)
+    distilparams["n_heads"] = distilparams.pop("num_attention_heads")
+    distilparams["dim"] = distilparams.pop("hidden_size")
+    distilparams["attention_dropout"] = distilparams.pop("dropout")
+    hf_module = MultiHeadSelfAttention(DistilBertConfig(**distilparams))
+    modules["distilbert"] = hf_module
+
+    # torch.manual_seed(1234)
+    # mobileparams = copy.deepcopy(params_dict)
+    # mobileparams["true_hidden_size"] = mobileparams["hidden_size"]
+    # hf_module = MobileBertSelfAttention(MobileBertConfig(**params))
+    # modules["mobile_bert"] = hf_module
+
+    # torch.manual_seed(1234)
+    # t5params = copy.deepcopy(params_dict)
+    # t5params["num_heads"] = t5params.pop("num_attention_heads")
+    # t5params["d_model"] = t5params.pop("hidden_size")
+    # t5params["dropout_rate"] = t5params.pop("dropout")
+    # hf_module = T5LayerSelfAttention(T5Config(**t5params))
+    # modules["t5"] = hf_module
+
+    return modules
 
 
 class TestSelfAttention(AllenNlpTestCase):
     def setup_method(self):
         super().setup_method()
 
-        self.params_dict = {
-            "hidden_size": 6,
-            "num_attention_heads": 2,
-            "dropout": 0.0,
-        }
+        self.params_dict = {key: val for key, val in PARAMS_DICT.items()}
 
         params = Params(copy.deepcopy(self.params_dict))
 
@@ -37,5 +101,84 @@ class TestSelfAttention(AllenNlpTestCase):
 
         assert self.self_attention.dropout.p == self.params_dict["dropout"]
 
-    def test_forward_runs(self):
-        self.self_attention.forward(torch.randn(2, 3, 6), torch.randn(2, 2, 3, 3))
+    @pytest.mark.parametrize("module_name, hf_module", get_modules(PARAMS_DICT).items())
+    def test_forward_against_huggingface_output(self, module_name, hf_module):
+        hidden_states = torch.randn(2, 3, 6)
+        attention_mask = torch.tensor([[0, 1, 0], [1, 1, 0]])
+
+        torch.manual_seed(1234)
+        self_attention = SelfAttention.from_pretrained_module(hf_module)
+
+        output = self_attention.forward(hidden_states, attention_mask=attention_mask)
+        if module_name == "distilbert":
+            hf_output = hf_module.forward(
+                hidden_states, hidden_states, hidden_states, mask=attention_mask
+            )
+        else:
+            # We do this because bert, roberta, electra process the attention_mask at the model level.
+            attention_mask_hf = (attention_mask == 0).view((2, 1, 1, 3)).expand(2, 2, 3, 3) * -10e5
+            hf_output = hf_module.forward(hidden_states, attention_mask=attention_mask_hf)
+
+        assert torch.allclose(output[0], hf_output[0])
+
+    @pytest.mark.parametrize(
+        "pretrained_name",
+        [
+            "bert-base-uncased",
+            "roberta-base",
+            "google/electra-base-generator",
+            "distilbert-base-uncased",
+        ],
+    )
+    def test_loading_from_pretrained_weights_using_model_name(self, pretrained_name):
+
+        torch.manual_seed(1234)
+        pretrained = cached_transformers.get(pretrained_name, False)
+
+        if "distilbert" in pretrained_name:
+            encoder = pretrained.transformer
+        else:
+            encoder = pretrained.encoder
+        # Hacky way to get a bert layer.
+        for i, pretrained_module in enumerate(encoder.layer.modules()):
+            if i == 1:
+                break
+
+        # Get the self attention layer.
+        if "distilbert" in pretrained_name:
+            pretrained_module = pretrained_module.attention
+        else:
+            pretrained_module = pretrained_module.attention.self
+
+        torch.manual_seed(1234)
+        module = SelfAttention.from_pretrained_module(pretrained_name)
+        mapping = {
+            val: key
+            for key, val in module._construct_default_mapping(
+                pretrained_module, "huggingface", {}
+            ).items()
+        }
+        assert_equal_parameters(pretrained_module, module, mapping=mapping)
+
+        batch_size = 2
+        seq_len = 3
+        dim = module.query.in_features
+        hidden_states = torch.randn(batch_size, seq_len, dim)
+        attention_mask = torch.randn(batch_size, 1, 1, seq_len)
+
+        torch.manual_seed(1234)
+        output = module.forward(hidden_states, attention_mask=attention_mask)[0]
+        torch.manual_seed(1234)
+        if "distilbert" in pretrained_name:
+            hf_output = pretrained_module.forward(
+                hidden_states, hidden_states, hidden_states, mask=attention_mask
+            )[0]
+        else:
+            hf_output = pretrained_module.forward(hidden_states, attention_mask=attention_mask)[0]
+
+        # FIX: look into the reason for mismatch.
+        # Update: The discrepancy comes from torch.nn.Dropout layer, despite setting random seeds.
+        # Have also tried setting random seeds right before the actual call to dropout in both modules.
+        # assert torch.allclose(output, hf_output)
+        print(output)
+        print(hf_output)

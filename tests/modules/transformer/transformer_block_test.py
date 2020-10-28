@@ -37,20 +37,26 @@ class TestTransformerBlock(AllenNlpTestCase):
         assert len(modules["layers"]) == self.params_dict["num_hidden_layers"]
 
     def test_forward_runs(self):
-        self.transformer_block.forward(torch.randn(2, 3, 6), torch.randn(2, 2, 3, 3))
+        self.transformer_block.forward(torch.randn(2, 3, 6), attention_mask=torch.randn(2, 3))
 
     def test_loading_from_pretrained_weights(self):
         pretrained_module = self.pretrained.encoder
         module = TransformerBlock.from_pretrained_module(pretrained_module)
         mapping = {
-            val: key for key, val in module._construct_default_mapping("huggingface").items()
+            val: key
+            for key, val in module._construct_default_mapping(
+                pretrained_module, "huggingface", {}
+            ).items()
         }
         assert_equal_parameters(pretrained_module, module, mapping)
 
     def test_loading_from_pretrained_weights_using_model_name(self):
         module = TransformerBlock.from_pretrained_module(self.pretrained_name)
         mapping = {
-            val: key for key, val in module._construct_default_mapping("huggingface").items()
+            val: key
+            for key, val in module._construct_default_mapping(
+                self.pretrained, "huggingface", {}
+            ).items()
         }
         assert_equal_parameters(self.pretrained.encoder, module, mapping)
 
@@ -63,7 +69,9 @@ class TestTransformerBlock(AllenNlpTestCase):
         transformer_block._load_from_pretrained_module(self.pretrained.encoder)
         mapping = {
             val: key
-            for key, val in transformer_block._construct_default_mapping("huggingface").items()
+            for key, val in transformer_block._construct_default_mapping(
+                self.pretrained.encoder, "huggingface", {}
+            ).items()
         }
         assert_equal_parameters(
             self.pretrained.encoder,

@@ -17,15 +17,30 @@ class TransformerModule(torch.nn.Module):
     any differences in the module names between the class modules and the huggingface model's
     modules.
 
-    `_relevant_module` is an optional str which is the expected name of the module in
-    the huggingface pretrained model.
+    `_relevant_module` is an optional str or list of str which contains the expected name of the module
+    in the huggingface pretrained model. It can be a list to account for different names in different
+    models. The search is carried out in the order of the list.
     """
 
     _huggingface_mapping: Dict[str, str] = {}
-    _relevant_module: Optional[str] = None
+    _relevant_module: Optional[Union[str, List[str]]] = None
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+    @classmethod
+    def _get_mapping(
+        cls,
+        pretrained_module: Optional[torch.nn.Module] = None,
+        source="huggingface",
+        mapping: Optional[Dict[str, str]] = None,
+    ):
+        combined_mapping = {}
+        if "huggingface" in source:
+            combined_mapping.update(cls._huggingface_mapping)
+        if mapping is not None:
+            combined_mapping.update(mapping)
+        return combined_mapping
 
     @classmethod
     def _get_mapped_submodules(
@@ -35,11 +50,7 @@ class TransformerModule(torch.nn.Module):
         Subclasses overload this method, and provide appropriate name mapping based on the source.
         """
         submodules = dict(pretrained_module.named_modules())
-        combined_mapping = {}
-        if "huggingface" in source:
-            combined_mapping.update(cls._huggingface_mapping)
-        if mapping is not None:
-            combined_mapping.update(mapping)
+        combined_mapping = cls._get_mapping(pretrained_module, source, mapping)
         for name, module in pretrained_module.named_modules():
             newname = name
             for key, val in combined_mapping.items():
@@ -47,21 +58,28 @@ class TransformerModule(torch.nn.Module):
             submodules[newname] = submodules.pop(name)
         return submodules
 
-    def _construct_default_mapping(self, source):
+    def _construct_default_mapping(
+        self,
+        pretrained_module,
+        source: str = "huggingface",
+        mapping: Optional[Dict[str, str]] = None,
+    ):
         """
         Recursively constructs the default mapping of parameter names for loading pretrained module weights.
         Keys are parameter names from this module, and values are corresponding parameter names in the
         expected pretrained module, as per `source`.
         """
-        mapping = {}
-        if "huggingface" in source:
-            mapping = self._huggingface_mapping
+        mapping = self._get_mapping(pretrained_module, source, mapping)
         for name, module in self.named_modules():
             if name != "":
                 if hasattr(module, "_construct_default_mapping"):
                     # We handle collisions by giving priority to the outer module's mapping.
                     mapping = dict(
-                        list(module._construct_default_mapping(source).items())
+                        list(
+                            module._construct_default_mapping(
+                                pretrained_module, source, mapping
+                            ).items()
+                        )
                         + list(mapping.items())
                     )
         return mapping
@@ -79,7 +97,7 @@ class TransformerModule(torch.nn.Module):
         between `pretrained_module` and the instance.
         """
         ignore_absent_parameters = ignore_absent_parameters or []
-        combined_mapping = self._construct_default_mapping(source)
+        combined_mapping = self._construct_default_mapping(pretrained_module, source, mapping)
         if mapping is not None:
             combined_mapping.update(mapping)
 
@@ -119,7 +137,7 @@ class TransformerModule(torch.nn.Module):
     def get_relevant_module(
         cls,
         pretrained_module: Union[str, torch.nn.Module],
-        relevant_module: Optional[str] = None,
+        relevant_module: Optional[Union[str, List[str]]] = None,
         source="huggingface",
         mapping: Optional[Dict[str, str]] = None,
     ):
@@ -145,9 +163,16 @@ class TransformerModule(torch.nn.Module):
             submodules = cls._get_mapped_submodules(pretrained_module, source, mapping)
             # If the relevant_module is not found, we assume that the pretrained_module
             # is already the relevant module.
-            if relevant_module in submodules:
-                pretrained_module = submodules[relevant_module]
-            else:
+            if isinstance(relevant_module, str):
+                relevant_module = [relevant_module]
+            found = False
+            for module in relevant_module:
+                if module in submodules:
+                    pretrained_module = submodules[module]
+                    found = True
+                    break
+
+            if not found:
                 logger.warning(
                     "{} was not found! The submodules are: {}".format(
                         relevant_module, submodules.keys()

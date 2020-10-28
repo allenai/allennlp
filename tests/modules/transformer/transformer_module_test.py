@@ -21,7 +21,7 @@ class TestTransformerModule(AllenNlpTestCase):
                 super().__init__()
                 self.linear = torch.nn.Linear(inp, out)
 
-            def _construct_default_mapping(self, source):
+            def _construct_default_mapping(self, pretrained_module, source, mapping):
                 # return {"linear": "ff"}
                 return {"ff": "linear"}
 
@@ -55,7 +55,10 @@ class TestTransformerModule(AllenNlpTestCase):
         iold.forward(x)
         inew = InternalNew(3, 5)
         inew._load_from_pretrained_module(iold)
-        mapping = {val: key for key, val in inew._construct_default_mapping("huggingface").items()}
+        mapping = {
+            val: key
+            for key, val in inew._construct_default_mapping(iold, "huggingface", {}).items()
+        }
         assert_equal_parameters(iold, inew, mapping=mapping)
 
         eold = ExternalOld(3, 5)
@@ -64,5 +67,8 @@ class TestTransformerModule(AllenNlpTestCase):
 
         enew = External(3, 5)
         enew._load_from_pretrained_module(eold)
-        mapping = {val: key for key, val in enew._construct_default_mapping("huggingface").items()}
+        mapping = {
+            val: key
+            for key, val in enew._construct_default_mapping(eold, "huggingface", {}).items()
+        }
         assert_equal_parameters(eold, enew, mapping=mapping)
