@@ -165,7 +165,7 @@ def make_parameter_groups(
     return parameter_groups
 
 
-class Optimizer(Registrable):
+class Optimizer(torch.optim.Optimizer, Registrable):
     """
     This class just allows us to implement `Registrable` for Pytorch Optimizers.  We do something a
     little bit different with `Optimizers`, because they are implemented as classes in PyTorch, and

@@ -110,6 +110,11 @@ class TextField(SequenceField[TextFieldTensors]):
 
     @overrides
     def as_tensor(self, padding_lengths: Dict[str, int]) -> TextFieldTensors:
+        if self._indexed_tokens is None:
+            raise ConfigurationError(
+                "You must call .index(vocabulary) on a field before calling .as_tensor()"
+            )
+
         tensors = {}
 
         indexer_lengths: Dict[str, Dict[str, int]] = defaultdict(dict)
