@@ -24,7 +24,7 @@ class MultinomialSampler(Sampler):
         with_replacement: bool = True,
     ) -> torch.Tensor:
         probabilities = log_probs.exp()
-        
+
         selected_indices = torch.multinomial(
             probabilities, num_samples, replacement=with_replacement
         )
@@ -62,6 +62,9 @@ class TopKSampler(Sampler):
 
         assert self.k <= len(log_probs)
 
+        if perturbed_log_probs is None:
+            perturbed_log_probs = log_probs.clone()
+
         # First apply temperature coefficient:
         perturbed_log_probs = perturbed_log_probs / self.temperature
 
@@ -80,7 +83,7 @@ class TopKSampler(Sampler):
 
         # Return (selected log probabilities, selected classes)
         # shape: (len(log_probs),1) , (len(log_probs), 1)
-        return (torch.gather(log_probs, 1, selected_indices), selected_indices)
+        return (torch.gather(perturbed_log_probs, 1, selected_indices), selected_indices)
 
 
 @Sampler.register("top-p")
@@ -114,6 +117,9 @@ class TopPSampler(Sampler):
         `log_probs` is a tensor of log-probabilities to be selected from.
         Returns the
         """
+        if perturbed_log_probs is None:
+            perturbed_log_probs = log_probs.clone()
+
         # First apply temperature coefficient:
         perturbed_log_probs = perturbed_log_probs / self.temperature
 
@@ -129,7 +135,9 @@ class TopPSampler(Sampler):
         filtered_indices[..., 1:] = filtered_indices[..., :-1].clone()
         filtered_indices[..., 0] = 0
 
-        for row, sort_indices, filter_vals in zip(perturbed_log_probs, sorting_indices, filtered_indices):
+        for row, sort_indices, filter_vals in zip(
+            perturbed_log_probs, sorting_indices, filtered_indices
+        ):
             filter_idx = sort_indices[filter_vals]
             row[filter_idx] = self.filter_val
 
@@ -142,7 +150,7 @@ class TopPSampler(Sampler):
 
         # Return (selected log probabilities, selected classes)
         # shape: (len(log_probs),1) , (len(log_probs), 1)
-        return (torch.gather(perturbed_log_probs, 1, selected_indices), selected_indices)
+        return (torch.gather(log_probs, 1, selected_indices), selected_indices)
 
 
 @Sampler.register("gumbel-max")
@@ -157,7 +165,7 @@ class GumbelMaxSampler(Sampler):
     `T` is a tensor of the previous sampled perturbed log-probabilities
     `num_samples` is the number of instances to sample
 
-    Returns a tensor of the top `num_samples` perturbed log probabilities and their 
+    Returns a tensor of the top `num_samples` perturbed log probabilities and their
     indices within `log_probs`.
 
     Registered as a `Sampler` with name "gumbel-max".

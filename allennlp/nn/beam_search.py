@@ -215,7 +215,9 @@ class BeamSearch(Registrable):
         # shape: (batch_size, beam_size), (batch_size, beam_size)
         if self.sampler is not None:
             start_top_log_probabilities, start_predicted_classes = self.sampler(
-                start_class_log_probabilities, start_class_log_probabilities, num_samples=self.beam_size
+                start_class_log_probabilities,
+                start_class_log_probabilities,
+                num_samples=self.beam_size,
             )
         else:
             (
@@ -324,13 +326,16 @@ class BeamSearch(Registrable):
 
             if last_true_log_probabilities is not None:
                 # add the last true probs to previous sequence probs
-                summed_true_log_probabilities = torch.add(last_true_log_probabilities, cleaned_log_probabilities)
-                
+                summed_true_log_probabilities = torch.add(
+                    last_true_log_probabilities, cleaned_log_probabilities
+                )
 
             # shape (both): (batch_size * beam_size, per_node_beam_size)
             if self.sampler is not None:
                 top_log_probabilities, predicted_classes = self.sampler(
-                    summed_true_log_probabilities, summed_log_probabilities, num_samples=self.per_node_beam_size
+                    summed_true_log_probabilities,
+                    summed_log_probabilities,
+                    num_samples=self.per_node_beam_size,
                 )
             else:
                 top_log_probabilities, predicted_classes = summed_log_probabilities.topk(
@@ -338,7 +343,7 @@ class BeamSearch(Registrable):
                 )
 
             summed_top_log_probabilities = top_log_probabilities
-            
+
             # shape: (batch_size, beam_size * per_node_beam_size)
             reshaped_summed = summed_top_log_probabilities.reshape(
                 batch_size, self.beam_size * self.per_node_beam_size
