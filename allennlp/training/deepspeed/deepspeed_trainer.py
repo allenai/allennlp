@@ -1,8 +1,3 @@
-import logging
-from deepspeed.utils import logger as ds_logger
-ds_logger.setLevel(logging.WARNING)
-ds_logger.propagate = False
-
 import datetime
 import logging
 import os
@@ -10,19 +5,14 @@ import re
 import math
 import time
 import traceback
+from argparse import Namespace
 from copy import deepcopy
 from contextlib import contextmanager
 from typing import Any, Dict, Iterator, List, Optional, Tuple, Union
-
-from allennlp.common.util import int_to_device
+from dataclasses import dataclass, asdict
 
 import torch
 import torch.distributed as dist
-from torch.cuda import amp
-from torch.nn.parallel import DistributedDataParallel
-
-import deepspeed
-# from deepspeed.runtime.engine import DeepSpeedEngine
 
 from allennlp.common import Lazy, Registrable, Tqdm, Params, FromParams
 from allennlp.common import util as common_util
@@ -39,61 +29,27 @@ from allennlp.training.optimizers import Optimizer
 from allennlp.training.tensorboard_writer import TensorboardWriter
 from allennlp.training.trainer import Trainer, BatchCallback, EpochCallback
 
-from allennlp.training.deepspeed.engine_adapter import AllennlpDeepSpeedEngineAdapter as DeepSpeedEngine
+from allennlp.training.deepspeed.engine_adapter import AllennlpDeepSpeedEngineAdapter
 from allennlp.training.deepspeed.optimizers.zero_optimization import ZeroOptimizer
+
+from pytorch_memlab import LineProfiler
 
 logger = logging.getLogger(__name__)
 
-JsonDict = Dict[str, Any]
+@dataclass
+class DeepspeedFP16Config(FromParams):
+    enabled: bool = False
+    loss_scale: float = 0.
+    initial_scale_power: int = 32
+    loss_scale_window: int = 1000
+    hysteresis: int = 2
+    min_loss_scale: float = 1.
 
-class DeepspeedConfig(FromParams):
-    def __init__(
-        self,
-        optimizer: Lazy[Optimizer], # JsonDict,
-        fp16: JsonDict = {'enabled': False},
-        amp:  JsonDict = {'enabled': False},
-        zero_optimization: Union[bool, Dict] = False,
-        zero_optimizer: Lazy[ZeroOptimizer] = None,
-        zero_allow_untested_optimizer: bool = True,
-        wall_clock_breakdown: bool = False
-    ):
-        self.optimizer = optimizer
-        self.fp16 = fp16
-        self.amp = amp
-        self.zero_optimization = zero_optimization
-        self.zero_allow_untested_optimizer = zero_allow_untested_optimizer
-        self.wall_clock_breakdown = wall_clock_breakdown
-        self._zero_optim = zero_optimizer
+@dataclass
+class DeepspeedAMPConfig(FromParams):
+    enabled: bool = False
+    opt_level: str = "O1"
 
-    def launch(
-        self,
-        model: torch.nn.Module,
-        local_rank: int, 
-        batch_size: int, 
-        gradient_accumulation_steps: int,
-        **kwargs
-    ):
-        from argparse import Namespace
-        args = Namespace(deepspeed_config=None, deepspeed=True, local_rank=local_rank)
-
-        optimizer = self.optimizer.construct(model_parameters=model.parameters())
-        del self.optimizer
-
-        zero_optim = self._zero_optim
-        del self._zero_optim
-        # del self.zero_optimization
-
-        config = dict(**vars(self), train_batch_size=batch_size, gradient_accumulation_steps=gradient_accumulation_steps)
-        ds = DeepSpeedEngine(
-            args=args,
-            model=model,
-            optimizer=optimizer,
-            zero_optimizer=zero_optim,
-            model_parameters=model.parameters(),
-            dist_init_required=False,
-            config_params=config
-        )
-        return ds, ds.optimizer
 
 @Trainer.register("deepspeed", constructor="from_partial_objects")
 class DeepspeedTrainer(Trainer):
@@ -101,7 +57,9 @@ class DeepspeedTrainer(Trainer):
         self,
         model: Model,
         data_loader: DataLoader,
-        deepspeed_config: DeepspeedConfig,
+        # deepspeed_config: DeepspeedConfig,
+        deepspeed_engine: AllennlpDeepSpeedEngineAdapter,
+        deepspeed_optimizer: ZeroOptimizer,
         patience: Optional[int] = None,
         validation_metric: str = "-loss",
         validation_data_loader: DataLoader = None,
@@ -116,14 +74,21 @@ class DeepspeedTrainer(Trainer):
         distributed: bool = False,
         local_rank: int = 0,
         world_size: int = 1,
-        num_gradient_accumulation_steps: int = 1,
-        use_amp: bool = False,
+        num_gradient_accumulation_steps: int = 1
     ) -> None:
         super().__init__(serialization_dir, cuda_device, distributed, local_rank, world_size)
 
         # I am not calling move_to_gpu here, because if the model is
         # not already on the GPU then the optimizer is going to be wrong.
         self.model = model
+
+        self.model_engine = deepspeed_engine
+        self.optimizer = deepspeed_optimizer
+
+        if hasattr(self.model_engine, 'timers'):
+            def mute_log(*args, **kwargs):
+                pass
+            self.model_engine.timers.log = mute_log
 
         self.data_loader = data_loader
         self._validation_data_loader = validation_data_loader
@@ -170,33 +135,18 @@ class DeepspeedTrainer(Trainer):
         self._num_gradient_accumulation_steps = num_gradient_accumulation_steps
 
         self._pytorch_model = self.model
-        
-        self._ds_config = deepspeed_config
-        self.model_engine, self.optimizer, *_ = self._ds_config.launch(
-            self.model,
-            local_rank,
-            self.data_loader.batch_size,
-            num_gradient_accumulation_steps
-        )
-
-        if hasattr(self.model_engine, 'timers'):
-            def mute_log(*args, **kwargs):
-                pass
-            self.model_engine.timers.log = mute_log
 
     def batch_outputs(self, batch: TensorDict, for_training: bool) -> Dict[str, torch.Tensor]:
         """
         Does a forward pass on the given batch and returns the output dictionary that the model
         returns, after adding any specified regularization penalty to the loss (if training).
         """
-        # batch = nn_util.move_to_device(batch, self.cuda_device)
         batch = nn_util.move_to_device(batch, self.model_engine.device)
-        # with profiler.profile(use_cuda=True, profile_memory=True) as prof:
-            #with profiler.record_function("forward"):
-        # with Profiler() as profiler:
         output_dict = self.model_engine(**batch)
-        # print(prof.key_averages().table(sort_by="cpu_time_total", row_limit=10))
-        # print(profiler.output_text(unicode=True, color=True, show_all=True, timeline=True))
+        
+        # for worker in range(2):
+        #     logger.info(torch.cuda.memory_summary(worker))
+        # logger.info(torch.cuda.memory_summary(self.model_engine.device))
 
         if for_training:
             try:
@@ -273,7 +223,10 @@ class DeepspeedTrainer(Trainer):
             self._batch_num_total += 1
             batch_num_total = self._batch_num_total
 
+            # with LineProfiler(self.batch_outputs, target_gpu=self.model_engine.device) as prof:
             batch_outputs = self.batch_outputs(batch, for_training=True)
+            # prof.print_stats() # display()
+
             loss = batch_outputs.get("loss")
             reg_loss = batch_outputs.get("reg_loss")
             if torch.isnan(loss):
@@ -332,7 +285,7 @@ class DeepspeedTrainer(Trainer):
                     param_updates,
                 )
 
-                self._checkpointer.maybe_save_checkpoint(self, epoch, batches_this_epoch)
+                # self._checkpointer.maybe_save_checkpoint(self, epoch, batches_this_epoch)
             
             for callback in self._batch_callbacks:
                 callback(
@@ -581,7 +534,7 @@ class DeepspeedTrainer(Trainer):
                 )
 
 
-            if self._master:
+            if False and self._master:
                 self._checkpointer.save_checkpoint(
                     epoch, self, is_best_so_far=self._metric_tracker.is_best_so_far()
                 )
@@ -610,9 +563,9 @@ class DeepspeedTrainer(Trainer):
         self._tensorboard.close()
 
         # Load the best model state before returning
-        best_model_state = self._checkpointer.best_model_state()
-        if best_model_state:
-            self.model.load_state_dict(best_model_state)
+        # best_model_state = self._checkpointer.best_model_state()
+        # if best_model_state:
+        #     self.model.load_state_dict(best_model_state)
 
         return metrics
 
@@ -694,7 +647,11 @@ class DeepspeedTrainer(Trainer):
         model: Model,
         serialization_dir: str,
         data_loader: DataLoader,
-        deepspeed_config: DeepspeedConfig,
+        fp16: DeepspeedFP16Config = DeepspeedFP16Config(),
+        amp:  DeepspeedAMPConfig = DeepspeedAMPConfig(),
+        zero_allow_untested_optimizer: bool = True,
+        wall_clock_breakdown: bool = False,
+
         validation_data_loader: DataLoader = None,
         local_rank: int = 0,
         patience: int = None,
@@ -706,38 +663,13 @@ class DeepspeedTrainer(Trainer):
         num_gradient_accumulation_steps: int = 1,
         no_grad: List[str] = None,
         optimizer: Lazy[Optimizer] = None,
+        zero_optimizer: Lazy[ZeroOptimizer] = None,
         tensorboard_writer: Lazy[TensorboardWriter] = None,
         moving_average: Lazy[MovingAverage] = None,
         checkpointer: Lazy[Checkpointer] = None,
         batch_callbacks: List[BatchCallback] = None,
         epoch_callbacks: List[EpochCallback] = None,
     ) -> "Trainer":
-        """
-        This method exists so that we can have a documented method to construct this class using
-        `FromParams`. If you are not using `FromParams` or config files, you can safely ignore this
-        method.
-        The reason we can't just use `__init__` with `FromParams` here is because there are
-        sequential dependencies to this class's arguments.  Anything that has a `Lazy[]` type
-        annotation needs something from one of the non-`Lazy` arguments.  The `Optimizer` needs to
-        have the parameters from the `Model` before it's constructed, and the `Schedulers` need to
-        have the `Optimizer`. Because of this, the typical way we construct things `FromParams`
-        doesn't work, so we use `Lazy` to allow for constructing the objects sequentially.
-        If you're not using `FromParams`, you can just construct these arguments in the right order
-        yourself in your code and call the constructor directly.
-        """
-        if cuda_device is None:
-            from torch import cuda
-
-            if cuda.device_count() > 0:
-                cuda_device = 0
-            else:
-                cuda_device = -1
-
-        check_for_gpu(cuda_device)
-        if cuda_device >= 0:
-            # Moving model to GPU here so that the optimizer state gets constructed on
-            # the right device.
-            model = model.cuda(cuda_device)
 
         if no_grad:
             for name, parameter in model.named_parameters():
@@ -752,10 +684,31 @@ class DeepspeedTrainer(Trainer):
         checkpointer_ = checkpointer.construct() or Checkpointer(serialization_dir)
         tensorboard_writer_ = tensorboard_writer.construct() or TensorboardWriter(serialization_dir)
 
+        optim_ = optimizer.construct(model_parameters=model.parameters()) # deepspeed only wants params, not names
+        model_engine = AllennlpDeepSpeedEngineAdapter(
+            args=Namespace(deepspeed_config=None, deepspeed=True, local_rank=local_rank),
+            model=model,
+            optimizer=optim_,
+            zero_optimizer=zero_optimizer,
+            model_parameters=model.parameters(),
+            dist_init_required=False,
+            config_params=dict(
+                fp=asdict(fp16), 
+                amp=asdict(amp), 
+                train_batch_size=data_loader.batch_size, 
+                gradient_accumulation_steps=num_gradient_accumulation_steps,
+                zero_allow_untested_optimizer=zero_allow_untested_optimizer,
+                wall_clock_breakdown=wall_clock_breakdown,
+                tensorboard_enabled=False
+            )
+        )
+        ds_optimizer = model_engine.optimizer
+
         return cls(
             model,
             data_loader,
-            deepspeed_config=deepspeed_config,
+            deepspeed_engine=model_engine,
+            deepspeed_optimizer=ds_optimizer,
             patience=patience,
             validation_metric=validation_metric,
             validation_data_loader=validation_data_loader,
@@ -772,3 +725,18 @@ class DeepspeedTrainer(Trainer):
             world_size=world_size,
             num_gradient_accumulation_steps=num_gradient_accumulation_steps,
         )
+
+
+def launch_ds(
+    model: torch.nn.Module,
+    optimizer,
+    zero_optim,
+    fp16: DeepspeedFP16Config,
+    amp:  DeepspeedAMPConfig,
+    local_rank: int, 
+    batch_size: int, 
+    gradient_accumulation_steps: int,
+    zero_allow_untested_optimizer: bool,
+    wall_clock_breakdown: bool
+):
+    return ds, ds.optimizer

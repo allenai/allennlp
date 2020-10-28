@@ -2,6 +2,11 @@
 Copyright 2019 The Microsoft DeepSpeed Team
 '''
 
+import logging
+from deepspeed.utils import logger as ds_logger
+ds_logger.setLevel(logging.WARNING)
+ds_logger.propagate = False
+
 import os
 import torch
 import warnings
@@ -42,7 +47,6 @@ from deepspeed.runtime.engine import (
 
 from allennlp.common import Lazy, FromParams
 from allennlp.training.deepspeed.optimizers.zero_optimization import ZeroOptimizer
-# from allennlp.training.deepspeed.optimizers.fp16 import DeepspeedFP16Optimizer
 from allennlp.training.deepspeed.optimizers.basic import *
 
 
@@ -138,6 +142,10 @@ class AllennlpDeepSpeedEngineAdapter(FromParams, nn.Module):
     @property
     def dynamic_loss_scale(self):
         return self.loss_scale == 0
+
+    @property
+    def postscale_gradients(self):
+        return not self._config.prescale_gradients
 
     def _configure_lr_scheduler(self, client_lr_scheduler):
         # First check for scheduler in json configuration
@@ -246,7 +254,7 @@ class AllennlpDeepSpeedEngineAdapter(FromParams, nn.Module):
             verbose=False
         )
 
-        if not self.dynamic_loss_scale():
+        if not self.dynamic_loss_scale:
             return FP16_Optimizer(**defaults, static_loss_scale=self.loss_scale)
 
         defaults.update(dict(

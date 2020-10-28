@@ -33,13 +33,6 @@ from allennlp.training.optimizers import Optimizer
 
 @Optimizer.register('fused_adam', constructor='construct')
 class DeepspeedFusedAdamOptimizer(Optimizer, FusedAdam):
-    # def __init__(
-    #     self,
-    #     model_parameters,
-    #     **kwargs
-    # ):
-    #     super().__init__(model_parameters, **kwargs)
-    
     @staticmethod
     def construct(model_parameters, **kwargs):
         return FusedAdam(model_parameters, **kwargs)
