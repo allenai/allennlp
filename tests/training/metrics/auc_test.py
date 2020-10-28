@@ -100,6 +100,7 @@ class AucTest(AllenNlpTestCase):
         labels = torch.randint(3, 5, (8,), dtype=torch.long)
         # We make sure that the positive label is always present.
         labels[0] = 4
+        labels[4] = 4
 
         false_positive_rates, true_positive_rates, _ = metrics.roc_curve(
             labels.cpu().numpy(), predictions.cpu().numpy(), pos_label=4
@@ -124,6 +125,7 @@ class AucTest(AllenNlpTestCase):
         labels = torch.randint(3, 5, (8,), dtype=torch.long)
         # We make sure that the positive label is always present.
         labels[0] = 4
+        labels[2] = 4
 
         false_positive_rates, true_positive_rates, _ = metrics.roc_curve(
             labels.cpu().numpy(), predictions.cpu().numpy(), pos_label=4
