@@ -18,7 +18,7 @@ from allennlp.training import GradientDescentTrainer
 
 class ModelTestCase(AllenNlpTestCase):
     """
-    A subclass of [`AllenNlpTestCase`](./allennlp_test_case.md)
+    A subclass of [`AllenNlpTestCase`](./test_case.md)
     with added methods for testing [`Model`](../../models/model.md) subclasses.
     """
 
@@ -100,6 +100,7 @@ class ModelTestCase(AllenNlpTestCase):
         save_dir = self.TEST_DIR / "save_and_load_test"
         archive_file = save_dir / "model.tar.gz"
         model = train_model_from_file(param_file, save_dir, overrides=overrides)
+        assert model is not None
         metrics_file = save_dir / "metrics.json"
         if metric_to_check is not None:
             metrics = json.loads(metrics_file.read_text())

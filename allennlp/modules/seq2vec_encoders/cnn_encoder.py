@@ -64,7 +64,6 @@ class CnnEncoder(Seq2VecEncoder):
         self._num_filters = num_filters
         self._ngram_filter_sizes = ngram_filter_sizes
         self._activation = conv_layer_activation or Activation.by_name("relu")()
-        self._output_dim = output_dim
 
         self._convolution_layers = [
             Conv1d(
@@ -78,8 +77,9 @@ class CnnEncoder(Seq2VecEncoder):
             self.add_module("conv_layer_%d" % i, conv_layer)
 
         maxpool_output_dim = self._num_filters * len(self._ngram_filter_sizes)
-        if self._output_dim:
-            self.projection_layer = Linear(maxpool_output_dim, self._output_dim)
+        if output_dim:
+            self.projection_layer = Linear(maxpool_output_dim, output_dim)
+            self._output_dim = output_dim
         else:
             self.projection_layer = None
             self._output_dim = maxpool_output_dim

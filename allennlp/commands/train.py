@@ -401,6 +401,8 @@ def _train_worker(
     include_package = include_package or []
 
     if distributed:
+        assert distributed_device_ids is not None
+
         # Since the worker is spawned and not forked, the extra imports need to be done again.
         # Both the ones from the plugins and the ones from `include_package`.
         import_plugins()
@@ -556,7 +558,7 @@ class TrainModel(Registrable):
         model: Lazy[Model],
         data_loader: Lazy[DataLoader],
         trainer: Lazy[Trainer],
-        vocabulary: Lazy[Vocabulary] = None,
+        vocabulary: Lazy[Vocabulary] = Lazy(Vocabulary),
         datasets_for_vocab_creation: List[str] = None,
         validation_dataset_reader: DatasetReader = None,
         validation_data_path: str = None,
@@ -591,11 +593,13 @@ class TrainModel(Registrable):
 
             In a typical AllenNLP configuration file, this parameter does not get an entry as a
             top-level key, it gets passed in separately.
+
         local_rank: `int`
             The process index that is initialized using the GPU device id.
 
             In a typical AllenNLP configuration file, this parameter does not get an entry as a
             top-level key, it gets passed in separately.
+
         dataset_reader: `DatasetReader`
             The `DatasetReader` that will be used for training and (by default) for validation.
         train_data_path: `str`
@@ -610,7 +614,7 @@ class TrainModel(Registrable):
         trainer: `Lazy[Trainer]`
             The `Trainer` that actually implements the training loop.  This is a lazy object because
             it depends on the model that's going to be trained.
-        vocabulary: `Lazy[Vocabulary]`, optional (default=`None`)
+        vocabulary: `Lazy[Vocabulary]`, optional (default=`Lazy(Vocabulary)`)
             The `Vocabulary` that we will use to convert strings in the data to integer ids (and
             possibly set sizes of embedding matrices in the `Model`).  By default we construct the
             vocabulary from the instances that we read.
@@ -664,8 +668,7 @@ class TrainModel(Registrable):
         )
 
         vocabulary_ = vocabulary.construct(instances=instance_generator)
-        if not vocabulary_:
-            vocabulary_ = Vocabulary.from_instances(instance_generator)
+
         model_ = model.construct(vocab=vocabulary_, serialization_dir=serialization_dir)
 
         # Initializing the model can have side effect of expanding the vocabulary.
@@ -682,13 +685,9 @@ class TrainModel(Registrable):
 
         data_loader_ = data_loader.construct(dataset=datasets["train"])
         validation_data = datasets.get("validation")
+        validation_data_loader_: Optional[DataLoader] = None
         if validation_data is not None:
-            # Because of the way Lazy[T] works, we can't check it's existence
-            # _before_ we've tried to construct it. It returns None if it is not
-            # present, so we try to construct it first, and then afterward back off
-            # to the data_loader configuration used for training if it returns None.
-            validation_data_loader_ = validation_data_loader.construct(dataset=validation_data)
-            if validation_data_loader_ is None:
+            if validation_data_loader is None:
                 validation_data_loader_ = data_loader.construct(dataset=validation_data)
                 if getattr(validation_data_loader_, "_batches_per_epoch", None) is not None:
                     warnings.warn(
@@ -698,16 +697,16 @@ class TrainModel(Registrable):
                         "validation datasets for each epoch.",
                         UserWarning,
                     )
-        else:
-            validation_data_loader_ = None
+            else:
+                validation_data_loader_ = validation_data_loader.construct(dataset=validation_data)
 
         test_data = datasets.get("test")
+        test_data_loader: Optional[DataLoader] = None
         if test_data is not None:
-            test_data_loader = validation_data_loader.construct(dataset=test_data)
-            if test_data_loader is None:
+            if validation_data_loader is None:
                 test_data_loader = data_loader.construct(dataset=test_data)
-        else:
-            test_data_loader = None
+            else:
+                test_data_loader = validation_data_loader.construct(dataset=test_data)
 
         # We don't need to pass serialization_dir and local_rank here, because they will have been
         # passed through the trainer by from_params already, because they were keyword arguments to
@@ -717,6 +716,7 @@ class TrainModel(Registrable):
             data_loader=data_loader_,
             validation_data_loader=validation_data_loader_,
         )
+        assert trainer_ is not None
 
         return cls(
             serialization_dir=serialization_dir,

@@ -64,16 +64,11 @@ class BasicClassifier(Model):
 
         super().__init__(vocab, **kwargs)
         self._text_field_embedder = text_field_embedder
-
-        if seq2seq_encoder:
-            self._seq2seq_encoder = seq2seq_encoder
-        else:
-            self._seq2seq_encoder = None
-
+        self._seq2seq_encoder = seq2seq_encoder
         self._seq2vec_encoder = seq2vec_encoder
         self._feedforward = feedforward
         if feedforward is not None:
-            self._classifier_input_dim = self._feedforward.get_output_dim()
+            self._classifier_input_dim = feedforward.get_output_dim()
         else:
             self._classifier_input_dim = self._seq2vec_encoder.get_output_dim()
 

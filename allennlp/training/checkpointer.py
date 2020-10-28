@@ -48,7 +48,7 @@ class Checkpointer(Registrable):
 
     def __init__(
         self,
-        serialization_dir: str = None,
+        serialization_dir: str,
         keep_serialized_model_every_num_seconds: int = None,
         num_serialized_models_to_keep: int = 2,
         model_save_interval: float = None,
@@ -164,7 +164,7 @@ class Checkpointer(Registrable):
         # int (for end of epoch files) or with epoch and timestamp for
         # within epoch checkpoints, e.g. 5.2018-02-02-15-33-42
         found_epochs = [
-            re.search(r"model_state_epoch_([0-9\.\-]+)\.th", x).group(1) for x in model_checkpoints
+            re.search(r"model_state_epoch_([0-9\.\-]+)\.th", x).group(1) for x in model_checkpoints  # type: ignore
         ]
         int_epochs: Any = []
         for epoch in found_epochs:

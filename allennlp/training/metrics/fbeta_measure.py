@@ -199,13 +199,13 @@ class FBetaMeasure(Metric):
         if self._labels is not None:
             # Retain only selected labels and order them
             tp_sum = tp_sum[self._labels]
-            pred_sum = pred_sum[self._labels]
-            true_sum = true_sum[self._labels]
+            pred_sum = pred_sum[self._labels]  # type: ignore
+            true_sum = true_sum[self._labels]  # type: ignore
 
         if self._average == "micro":
             tp_sum = tp_sum.sum()
-            pred_sum = pred_sum.sum()
-            true_sum = true_sum.sum()
+            pred_sum = pred_sum.sum()  # type: ignore
+            true_sum = true_sum.sum()  # type: ignore
 
         beta2 = self._beta ** 2
         # Finally, we have all our sufficient statistics.
@@ -220,7 +220,7 @@ class FBetaMeasure(Metric):
             fscore = fscore.mean()
         elif self._average == "weighted":
             weights = true_sum
-            weights_sum = true_sum.sum()
+            weights_sum = true_sum.sum()  # type: ignore
             precision = _prf_divide((weights * precision).sum(), weights_sum)
             recall = _prf_divide((weights * recall).sum(), weights_sum)
             fscore = _prf_divide((weights * fscore).sum(), weights_sum)
