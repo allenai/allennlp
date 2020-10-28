@@ -75,7 +75,9 @@ class PretrainedTransformerMismatchedIndexer(TokenIndexer):
     def tokens_to_indices(self, tokens: List[Token], vocabulary: Vocabulary) -> IndexedTokenList:
         self._matched_indexer._add_encoding_to_vocabulary_if_needed(vocabulary)
 
-        wordpieces, offsets = self._allennlp_tokenizer.intra_word_tokenize([t.text for t in tokens])
+        wordpieces, offsets = self._allennlp_tokenizer.intra_word_tokenize(
+            [t.ensure_text() for t in tokens]
+        )
 
         # For tokens that don't correspond to any word pieces, we put (-1, -1) into the offsets.
         # That results in the embedding for the token to be all zeros.

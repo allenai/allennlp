@@ -128,16 +128,10 @@ class _PredictManager:
 
         self._predictor = predictor
         self._input_file = input_file
-        if output_file is not None:
-            self._output_file = open(output_file, "w")
-        else:
-            self._output_file = None
+        self._output_file = None if output_file is None else open(output_file, "w")
         self._batch_size = batch_size
         self._print_to_console = print_to_console
-        if has_dataset_reader:
-            self._dataset_reader = predictor._dataset_reader
-        else:
-            self._dataset_reader = None
+        self._dataset_reader = None if not has_dataset_reader else predictor._dataset_reader
 
     def _predict_json(self, batch_data: List[JsonDict]) -> Iterator[str]:
         if len(batch_data) == 1:

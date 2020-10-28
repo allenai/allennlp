@@ -171,7 +171,7 @@ class SpanBasedF1Measure(Metric):
                 for label_id in sequence_gold_label[:length].tolist()
             ]
 
-            tags_to_spans_function = None
+            tags_to_spans_function: TAGS_TO_SPANS_FUNCTION_TYPE
             # `label_encoding` is empty and `tags_to_spans_function` is provided.
             if self._label_encoding is None and self._tags_to_spans_function:
                 tags_to_spans_function = self._tags_to_spans_function
@@ -184,6 +184,8 @@ class SpanBasedF1Measure(Metric):
                 tags_to_spans_function = bioul_tags_to_spans
             elif self._label_encoding == "BMES":
                 tags_to_spans_function = bmes_tags_to_spans
+            else:
+                raise ValueError(f"Unexpected label encoding scheme '{self._label_encoding}'")
 
             predicted_spans = tags_to_spans_function(predicted_string_labels, self._ignore_classes)
             gold_spans = tags_to_spans_function(gold_string_labels, self._ignore_classes)
