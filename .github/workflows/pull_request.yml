@@ -97,21 +97,6 @@ jobs:
       run: |
         make build-docs
 
-    - name: Build core package
-      if: matrix.python == '3.7'
-      run: |
-        echo "Building packages"
-        # Just print out the version for debugging.
-        make version
-        python setup.py bdist_wheel sdist
-
-    - name: Save core package
-      if: matrix.python == '3.7'
-      uses: actions/upload-artifact@v1
-      with:
-        name: core-package
-        path: dist
-
     - name: Upload coverage to Codecov
       if: matrix.python == '3.7' && github.repository == 'allenai/allennlp'
       uses: codecov/codecov-action@v1
@@ -172,46 +157,3 @@ jobs:
       if: always()
       run: |
         pip uninstall --yes allennlp allennlp-models
-
-  # Tests installing from the distribution files.
-  test_package:
-    name: Test Package
-    if: github.repository == 'allenai/allennlp'
-    needs: [check_core]  # needs the package artifact created from 'check_core' job.
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python: ['3.7', '3.8']
-
-    steps:
-    - name: Setup Python
-      uses: actions/setup-python@v1
-      with:
-        python-version: ${{ matrix.python }}
-
-    - name: Install requirements
-      run: |
-        pip install --upgrade pip setuptools wheel
-
-    - name: Download core package
-      uses: actions/download-artifact@v1
-      with:
-        name: core-package
-        path: dist
-
-    - name: Install core package
-      run: |
-        pip install $(ls dist/*.whl)
-        # In PyTorch 1.7, dataclasses is an unconditional dependency, when it should
-        # only be a conditional dependency for Python < 3.7.
-        # This has been fixed on PyTorch master branch, so we should be able to
-        # remove this check with the next PyTorch release.
-        pip uninstall -y dataclasses
-
-    - name: Pip freeze
-      run: |
-        pip freeze
-
-    - name: Test install
-      run: |
-        allennlp test-install
