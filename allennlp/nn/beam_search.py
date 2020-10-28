@@ -494,6 +494,7 @@ class BeamSearch(Registrable):
         beam_size: int = 10,
         k: int = 1,
         temperature: float = 1.0,
+        with_replacement: bool = False,
     ) -> "BeamSearch":
         """
         Given an index of the end token in target vocabulary, return a `BeamSearch` object
@@ -506,7 +507,7 @@ class BeamSearch(Registrable):
                 f'{"value of selection threshold `k` invalid."}'
                 f'{"`k` must be a positive `int`."}'
             )
-        sampler_k = TopKSampler(k, temperature)
+        sampler_k = TopKSampler(k, temperature, with_replacement=with_replacement)
         return cls(
             end_index=end_index,
             max_steps=max_steps,
@@ -523,6 +524,7 @@ class BeamSearch(Registrable):
         beam_size: int = 10,
         p: float = 0.9,
         temperature: float = 1.0,
+        with_replacement: bool = False,
     ) -> "BeamSearch":
         """
         Given an index of the end token in target vocabulary, return a `BeamSearch` object
@@ -537,7 +539,7 @@ class BeamSearch(Registrable):
                 f'{"`p` must be a float between `0.0` and `1.0`"}'
             )
 
-        sampler_p = TopPSampler(p, temperature)
+        sampler_p = TopPSampler(p, temperature, with_replacement=with_replacement)
         return cls(
             end_index=end_index,
             max_steps=max_steps,
@@ -547,7 +549,7 @@ class BeamSearch(Registrable):
         )
 
     @classmethod
-    def stochastic_beam_search(
+    def stochastic(
         cls,
         end_index: int,
         max_steps: int = 50,
@@ -576,4 +578,4 @@ class BeamSearch(Registrable):
 BeamSearch.register("without_sampling", constructor="without_sampling")(BeamSearch)
 BeamSearch.register("top_p_sampling", constructor="top_p_sampling")(BeamSearch)
 BeamSearch.register("top_k_sampling", constructor="top_k_sampling")(BeamSearch)
-BeamSearch.register("stochastic_beam_search", constructor="stochastic_beam_search")(BeamSearch)
+BeamSearch.register("stochastic", constructor="stochastic")(BeamSearch)

@@ -85,9 +85,6 @@ class BeamSearchTest(AllenNlpTestCase):
         initial_predictions = torch.tensor([0] * batch_size)
         top_k, log_probs = beam_search.search(initial_predictions, state, take_step)  # type: ignore
 
-        # print("top k", top_k)
-        # print("probs", log_probs)
-
         # top_k should be shape `(batch_size, beam_size, max_predicted_length)`.
         assert list(top_k.size())[:-1] == [batch_size, beam_size]
         np.testing.assert_array_equal(top_k[0].numpy(), expected_top_k)
@@ -263,7 +260,7 @@ class BeamSearchTest(AllenNlpTestCase):
         take_step = take_step_with_timestep
 
         top_k, log_probs = BeamSearch.top_k_sampling(
-            self.end_index, k=1, beam_size=beam_size
+            self.end_index, k=1, beam_size=beam_size, with_replacement=True
         ).search(initial_predictions, {}, take_step)
 
         beam_size = beam_size or 1
@@ -282,9 +279,9 @@ class BeamSearchTest(AllenNlpTestCase):
         beam_size = 3
         take_step = take_step_with_timestep
 
-        top_k, log_probs = BeamSearch.stochastic_beam_search(
-            self.end_index, beam_size=beam_size
-        ).search(initial_predictions, {}, take_step)
+        top_k, log_probs = BeamSearch.stochastic(self.end_index, beam_size=beam_size).search(
+            initial_predictions, {}, take_step
+        )
 
         beam_size = beam_size or 1
         batch_size = 5
@@ -393,7 +390,7 @@ class BeamSearchTest(AllenNlpTestCase):
         beam_search = BeamSearch.from_params(
             Params(
                 {
-                    "type": "stochastic_beam_search",
+                    "type": "stochastic",
                     "beam_size": 2,
                     "end_index": 7,
                 }

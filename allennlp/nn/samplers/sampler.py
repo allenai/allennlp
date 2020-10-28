@@ -13,6 +13,5 @@ class Sampler(Registrable):
         log_probs: torch.Tensor,
         perturbed_log_probs: torch.Tensor = None,
         num_samples: int = 1,
-        with_replacement: bool = True,
     ) -> torch.Tensor:
         raise NotImplementedError

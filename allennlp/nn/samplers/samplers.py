@@ -12,21 +12,26 @@ class MultinomialSampler(Sampler):
     Registered as a `Sampler` with name "multinomial".
     """
 
-    def __init__(self, temperature: float = 1.0, filter_val: float = -float("inf")) -> None:
+    def __init__(
+        self,
+        temperature: float = 1.0,
+        filter_val: float = -float("inf"),
+        with_replacement: bool = True,
+    ) -> None:
         self.temperature = temperature
         self.filter_val = min_value_of_dtype(torch.float)
+        self.with_replacement = with_replacement
 
     def __call__(
         self,
         log_probs: torch.Tensor,
         perturbed_log_probs: torch.Tensor = None,
         num_samples: int = 1,
-        with_replacement: bool = True,
     ) -> torch.Tensor:
         probabilities = log_probs.exp()
 
         selected_indices = torch.multinomial(
-            probabilities, num_samples, replacement=with_replacement
+            probabilities, num_samples, replacement=self.with_replacement
         )
 
         return (torch.gather(log_probs, 1, selected_indices), selected_indices)
@@ -46,18 +51,24 @@ class TopKSampler(Sampler):
     Registered as a `Sampler` with name "top-k".
     """
 
-    def __init__(self, k: int = 1, temperature: float = 1.0, filter_val: float = -float("inf")):
+    def __init__(
+        self,
+        k: int = 1,
+        temperature: float = 1.0,
+        filter_val: float = -float("inf"),
+        with_replacement: bool = True,
+    ):
         assert k >= 1, f'{"k must be >= 1"}'
         self.k = k
         self.temperature = temperature or 1.0
         self.filter_val = min_value_of_dtype(torch.float)
+        self.with_replacement = with_replacement
 
     def __call__(
         self,
         log_probs: torch.Tensor,
         perturbed_log_probs: torch.Tensor = None,
         num_samples: int = 1,
-        with_replacement: bool = True,
     ) -> torch.Tensor:
 
         assert self.k <= len(log_probs)
@@ -78,7 +89,7 @@ class TopKSampler(Sampler):
 
         # Sample from the remaining indices
         selected_indices = torch.multinomial(
-            filtered_probabilites, num_samples, replacement=with_replacement
+            filtered_probabilites, num_samples, replacement=self.with_replacement
         )
 
         # Return (selected log probabilities, selected classes)
@@ -99,24 +110,25 @@ class TopPSampler(Sampler):
     Registered as a `Sampler` with name "top-p".
     """
 
-    def __init__(self, p: float = 0.9, temperature: float = 1.0, filter_val: float = -float("inf")):
+    def __init__(
+        self,
+        p: float = 0.9,
+        temperature: float = 1.0,
+        filter_val: float = -float("inf"),
+        with_replacement: bool = True,
+    ):
         assert p <= 1.0, f'{"p must be <= 0"}'
         self.p = p
         self.temperature = temperature or 1.0
         self.filter_val = min_value_of_dtype(torch.float)
+        self.with_replacement = with_replacement
 
     def __call__(
         self,
         log_probs: torch.Tensor,
         perturbed_log_probs: torch.Tensor = None,
         num_samples: int = 1,
-        with_replacement: bool = True,
     ) -> torch.Tensor:
-        """
-        Performs top-p sampling on the given `log_probs`.
-        `log_probs` is a tensor of log-probabilities to be selected from.
-        Returns the
-        """
         if perturbed_log_probs is None:
             perturbed_log_probs = log_probs.clone()
 
@@ -145,7 +157,7 @@ class TopPSampler(Sampler):
 
         # Here we sample from the filtered distribution
         selected_indices = torch.multinomial(
-            filtered_probabilites, num_samples, replacement=with_replacement
+            filtered_probabilites, num_samples, replacement=self.with_replacement
         )
 
         # Return (selected log probabilities, selected classes)
@@ -179,7 +191,6 @@ class GumbelMaxSampler(Sampler):
         log_probs: torch.Tensor,
         perturbed_log_probs: torch.Tensor = None,
         num_samples: int = 1,
-        with_replacement: bool = True,
     ) -> torch.Tensor:
         # Make sure we're not trying to select more than available
         assert num_samples <= log_probs.size(-1)
