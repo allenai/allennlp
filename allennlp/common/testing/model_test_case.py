@@ -18,7 +18,7 @@ from allennlp.training import GradientDescentTrainer
 
 class ModelTestCase(AllenNlpTestCase):
     """
-    A subclass of [`AllenNlpTestCase`](./allennlp_test_case.md)
+    A subclass of [`AllenNlpTestCase`](./test_case.md)
     with added methods for testing [`Model`](../../models/model.md) subclasses.
     """
 
