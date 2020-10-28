@@ -63,10 +63,10 @@ class TopKSampler(Sampler):
         assert self.k <= len(log_probs)
 
         # First apply temperature coefficient:
-        log_probs = log_probs / self.temperature
+        perturbed_log_probs = perturbed_log_probs / self.temperature
 
         # Find the indices that are not to be selected from
-        min_threshold = torch.topk(log_probs, self.k)[0][..., -1].unsqueeze(dim=-1)
+        min_threshold = torch.topk(perturbed_log_probs, self.k)[0][..., -1].unsqueeze(dim=-1)
         filtered_indices = log_probs < min_threshold
 
         # Prevent the filtered indiceds from being selected
@@ -115,10 +115,10 @@ class TopPSampler(Sampler):
         Returns the
         """
         # First apply temperature coefficient:
-        log_probs = log_probs / self.temperature
+        perturbed_log_probs = perturbed_log_probs / self.temperature
 
         # Sort the probabilities to highest-first, then find the cumulative sum accross those
-        log_probs_descending, sorting_indices = torch.sort(log_probs, descending=True)
+        log_probs_descending, sorting_indices = torch.sort(perturbed_log_probs, descending=True)
         probabilities_descending = torch.nn.functional.softmax(log_probs_descending, dim=-1)
         probabilities_summed = torch.cumsum(probabilities_descending, dim=-1)
 
@@ -129,11 +129,11 @@ class TopPSampler(Sampler):
         filtered_indices[..., 1:] = filtered_indices[..., :-1].clone()
         filtered_indices[..., 0] = 0
 
-        # print('rifght', sorting_indices[filtered_indices])
-        # Here we set the filtered indices in the original log_probs to be the filter value
-        log_probs[..., sorting_indices[filtered_indices]] = self.filter_val
+        for row, sort_indices, filter_vals in zip(perturbed_log_probs, sorting_indices, filtered_indices):
+            filter_idx = sort_indices[filter_vals]
+            row[filter_idx] = self.filter_val
 
-        filtered_probabilites = torch.nn.functional.softmax(log_probs, dim=-1)
+        filtered_probabilites = torch.nn.functional.softmax(perturbed_log_probs, dim=-1)
 
         # Here we sample from the filtered distribution
         selected_indices = torch.multinomial(
@@ -142,7 +142,7 @@ class TopPSampler(Sampler):
 
         # Return (selected log probabilities, selected classes)
         # shape: (len(log_probs),1) , (len(log_probs), 1)
-        return (torch.gather(log_probs, 1, selected_indices), selected_indices)
+        return (torch.gather(perturbed_log_probs, 1, selected_indices), selected_indices)
 
 
 @Sampler.register("gumbel-max")

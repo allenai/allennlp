@@ -214,18 +214,9 @@ class BeamSearch(Registrable):
         # Else, select the top `beam_size` tokens.
         # shape: (batch_size, beam_size), (batch_size, beam_size)
         if self.sampler is not None:
-            if isinstance(self.sampler, GumbelMaxSampler):
-                # phi represents the summed log probabilities of the sequence at hand
-                phi = start_class_log_probabilities
-
-                # Our sampler gets the perturbed log probabilities for each token
-                start_top_log_probabilities, start_predicted_classes = self.sampler(
-                    phi, num_samples=self.beam_size
-                )
-            else:
-                start_top_log_probabilities, start_predicted_classes = self.sampler(
-                    start_class_log_probabilities, num_samples=self.beam_size
-                )
+            start_top_log_probabilities, start_predicted_classes = self.sampler(
+                start_class_log_probabilities, start_class_log_probabilities, num_samples=self.beam_size
+            )
         else:
             (
                 start_top_log_probabilities,
@@ -329,39 +320,25 @@ class BeamSearch(Registrable):
                 class_log_probabilities,
             )
 
+            summed_log_probabilities = torch.add(last_log_probabilities, cleaned_log_probabilities)
+
+            if last_true_log_probabilities is not None:
+                # add the last true probs to previous sequence probs
+                summed_true_log_probabilities = torch.add(last_true_log_probabilities, cleaned_log_probabilities)
+                
+
             # shape (both): (batch_size * beam_size, per_node_beam_size)
             if self.sampler is not None:
-                if isinstance(self.sampler, GumbelMaxSampler):
-                    # phi represents the summed log probabilities of the sequence at hand
-                    phi = torch.add(last_true_log_probabilities, cleaned_log_probabilities)
-
-                    # Returs the top (perturbed) log probabilities and their indices
-                    # Sampled using the gumbel top-k trick
-                    # shape (batch_size * beam_size, per_node_beam_size) for both
-                    top_log_probabilities, predicted_classes = self.sampler(
-                        phi, last_log_probabilities, num_samples=self.per_node_beam_size
-                    )
-                else:
-                    # print("clspw", cleaned_log_probabilities)
-                    top_log_probabilities, predicted_classes = self.sampler(
-                        cleaned_log_probabilities, self.per_node_beam_size
-                    )
+                top_log_probabilities, predicted_classes = self.sampler(
+                    summed_true_log_probabilities, summed_log_probabilities, num_samples=self.per_node_beam_size
+                )
             else:
-                top_log_probabilities, predicted_classes = cleaned_log_probabilities.topk(
+                top_log_probabilities, predicted_classes = summed_log_probabilities.topk(
                     self.per_node_beam_size
                 )
 
-            # Here we expand the last log probabilities to (batch_size * beam_size, per_node_beam_size)
-            # so that we can add them to the current log probs for this timestep.
-            # This lets us maintain the log probability of each element on the beam.
-            # shape: (batch_size * beam_size, per_node_beam_size)
-            expanded_last_log_probabilities = last_log_probabilities.expand(
-                batch_size * self.beam_size, self.per_node_beam_size
-            )
-
-            # shape: (batch_size * beam_size, per_node_beam_size)
-            summed_top_log_probabilities = top_log_probabilities + expanded_last_log_probabilities
-
+            summed_top_log_probabilities = top_log_probabilities
+            
             # shape: (batch_size, beam_size * per_node_beam_size)
             reshaped_summed = summed_top_log_probabilities.reshape(
                 batch_size, self.beam_size * self.per_node_beam_size

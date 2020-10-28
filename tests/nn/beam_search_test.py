@@ -242,7 +242,7 @@ class BeamSearchTest(AllenNlpTestCase):
         beam_size = 3
         take_step = take_step_with_timestep
 
-        top_p, log_probs = BeamSearch.top_p_sampling(self.end_index, beam_size=beam_size).search(
+        top_p, log_probs = BeamSearch.top_p_sampling(self.end_index, beam_size=beam_size, max_steps=3).search(
             initial_predictions, {}, take_step
         )
 
