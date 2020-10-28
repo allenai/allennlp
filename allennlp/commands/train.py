@@ -593,11 +593,13 @@ class TrainModel(Registrable):
 
             In a typical AllenNLP configuration file, this parameter does not get an entry as a
             top-level key, it gets passed in separately.
+
         local_rank: `int`
             The process index that is initialized using the GPU device id.
 
             In a typical AllenNLP configuration file, this parameter does not get an entry as a
             top-level key, it gets passed in separately.
+
         dataset_reader: `DatasetReader`
             The `DatasetReader` that will be used for training and (by default) for validation.
         train_data_path: `str`

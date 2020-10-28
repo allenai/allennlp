@@ -50,7 +50,7 @@ setup(
         ]
     ),
     install_requires=[
-        "torch>=1.6.0,<1.7.0",
+        "torch>=1.6.0,<1.8.0",
         "jsonnet>=0.10.0 ; sys.platform != 'win32'",
         "overrides==3.1.0",
         "nltk",

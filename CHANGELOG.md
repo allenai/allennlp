@@ -16,10 +16,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   You can also now set default values for foo like `foo: Lazy[Foo] = Lazy(Foo)`.
   Or, if you want you want a default value but also want to allow for `None` values, you can
   write it like this: `foo: Optional[Lazy[Foo]] = Lazy(Foo)`.
+- Added support for PyTorch version 1.7.
 
 ### Fixed
 
 - Made it possible to instantiate `TrainerCallback` from config files.
+- Fixed the remaining broken internal links in the API docs.
 
 ## [v1.2.0rc1](https://github.com/allenai/allennlp/releases/tag/v1.2.0rc1) - 2020-10-22
 
@@ -106,6 +108,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed `allennlp.nn.util.add_sentence_boundary_token_ids()` to use `device` parameter of input tensor.
 - Be sure to close the TensorBoard writer even when training doesn't finish.
 - Fixed the docstring for `PyTorchSeq2VecWrapper`.
+- Fix intra word tokenization for `PretrainedTransformerTokenizer` when disabling fast tokenizer.
 
 ## [v1.1.0](https://github.com/allenai/allennlp/releases/tag/v1.1.0) - 2020-09-08
 
