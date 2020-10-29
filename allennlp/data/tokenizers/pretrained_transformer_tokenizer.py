@@ -351,7 +351,6 @@ class PretrainedTransformerTokenizer(Tokenizer):
                 return_tensors=None,
                 return_offsets_mapping=False,
                 return_attention_mask=False,
-                return_token_type_ids=False,
             )
             wp_ids = wordpieces["input_ids"]
 

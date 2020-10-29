@@ -360,7 +360,7 @@ class Hotflip(Attacker):
             # This happens when we've truncated our fake embedding matrix.  We need to do a dot
             # product with the word vector of the current token; if that token is out of
             # vocabulary for our truncated matrix, we need to run it through the embedding layer.
-            inputs = self._make_embedder_input([self.vocab.get_token_from_index(token_idx)])
+            inputs = self._make_embedder_input([self.vocab.get_token_from_index(token_idx.item())])
             word_embedding = self.embedding_layer(inputs)[0]
         else:
             word_embedding = torch.nn.functional.embedding(
