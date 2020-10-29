@@ -22,6 +22,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Made it possible to instantiate `TrainerCallback` from config files.
 - Fixed the remaining broken internal links in the API docs.
+- Fixed a bug where Hotflip would crash with a model that had multiple TokenIndexers and the input
+  used rare vocabulary items.
+- Fixed a bug where `BeamSearch` would fail if `max_steps` was equal to 1.
 
 ## [v1.2.0rc1](https://github.com/allenai/allennlp/releases/tag/v1.2.0rc1) - 2020-10-22
 
@@ -51,10 +54,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added logging for the main process when running in distributed mode.
 - Added a `TrainerCallback` object to support state sharing between batch and epoch-level training callbacks.
 - Added support for .tar.gz in PretrainedModelInitializer.
-- Added classes: `nn/samplers/samplers.py` with `MultinomialSampler`, `TopKSampler`, and `TopPSampler` for 
-  sampling indices from log probabilities
-- Made `BeamSearch` registrable.
-- Added `top_k_sampling` and `type_p_sampling` `BeamSearch` implementations.
+- Made `BeamSearch` instantiable `from_params`.
 - Pass `serialization_dir` to `Model` and `DatasetReader`.
 - Added an optional `include_in_archive` parameter to the top-level of configuration files. When specified, `include_in_archive` should be a list of paths relative to the serialization directory which will be bundled up with the final archived model from a training run.
 
