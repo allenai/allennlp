@@ -97,6 +97,8 @@ And others on the [AI2 AllenNLP blog](https://medium.com/ai2-blog/allennlp/home)
 
 AllenNLP requires Python 3.6.1 or later. The preferred way to install AllenNLP is via `pip`.  Just run `pip install allennlp` in your Python environment and you're good to go!
 
+> ⚠️ If you're using Python 3.7 or greater, you should ensure that you don't have the PyPI version of `dataclasses` installed after running the above command, as this could cause issues on certain platforms. You can quickly check this by running `pip freeze | grep dataclasses`. If you see something like `dataclasses=0.6` in the output, then just run `pip uninstall -y dataclasses`.
+
 If you need pointers on setting up an appropriate Python environment or would like to install AllenNLP using a different method, see below.
 
 We support AllenNLP on Mac and Linux environments. We presently do not support Windows but are open to contributions.
