@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Made it possible to instantiate `TrainerCallback` from config files.
 - Fixed the remaining broken internal links in the API docs.
 - Fixed a bug where `BeamSearch` would fail if `max_steps` was equal to 1.
+- Fixed `BasicTextFieldEmbedder` to not raise ConfigurationError if it has embedders that are empty and not in input
 
 ## [v1.2.0rc1](https://github.com/allenai/allennlp/releases/tag/v1.2.0rc1) - 2020-10-22
 

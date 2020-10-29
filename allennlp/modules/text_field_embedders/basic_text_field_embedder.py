@@ -66,7 +66,8 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
                 for name, embedder in self._token_embedders.items()
                 if name in embedder_keys - input_keys
             ):
-                # Allow extra embedders that are only in the token embedders (but not input) and empty to pass config check
+                # Allow extra embedders that are only in the token embedders (but not input) and are empty to pass
+                # config check
                 pass
             else:
                 raise ConfigurationError(message)
