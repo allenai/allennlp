@@ -247,7 +247,7 @@ jobs:
     - name: Install core package
       run: |
         pip install $(ls dist/*.whl)
-        # In PyTorch 1.7, dataclasses is an unconditional dependency, when it should
+        # TODO(epwalsh): In PyTorch 1.7, dataclasses is an unconditional dependency, when it should
         # only be a conditional dependency for Python < 3.7.
         # This has been fixed on PyTorch master branch, so we should be able to
         # remove this check with the next PyTorch release.
