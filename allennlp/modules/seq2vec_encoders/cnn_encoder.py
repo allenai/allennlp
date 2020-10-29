@@ -143,6 +143,9 @@ class CnnEncoder(Seq2VecEncoder):
             torch.cat(filter_outputs, dim=1) if len(filter_outputs) > 1 else filter_outputs[0]
         )
 
+        # Replace the maxpool activations that picked up the masks with 0s
+        maxpool_output[maxpool_output == min_value_of_dtype(maxpool_output.dtype)] = 0.0
+
         if self.projection_layer:
             result = self.projection_layer(maxpool_output)
         else:
