@@ -96,7 +96,7 @@ class MultinomialSampler(Sampler):
     ) -> torch.Tensor:
         if self.temperature != 1.0:
             log_probs = torch.nn.functional.log_softmax(log_probs / self.temperature, dim=-1)
-        # Shape: (batch_size, num_samples)
+        # shape: (batch_size, num_samples)
         return torch.multinomial(log_probs.exp(), num_samples, replacement=False)
 
 
@@ -125,25 +125,25 @@ class TopKSampler(Sampler):
         assert self.k >= num_samples
         assert self.k <= log_probs.size()[1]
 
-        # Shape (both): (batch_size, k)
+        # shape (both): (batch_size, k)
         top_k_log_probs, top_k_indices = log_probs.topk(self.k, dim=-1)
 
         # Apply temperature if necessary.
-        # Shape: (batch_size, k)
+        # shape: (batch_size, k)
         if self.temperature != 1.0:
             top_k_log_probs = top_k_log_probs / self.temperature
 
         # Re-normalize the subset.
-        # Shape: (batch_size, k)
+        # shape: (batch_size, k)
         normalized_top_k_probs = torch.nn.functional.softmax(top_k_log_probs, dim=-1)
 
         # Sample from the re-normalized subset.
         # NOTE: These indices are not indices into `log_probs`, they are indices into `top_k_log_probs`.
-        # Shape: (batch_size, num_samples)
+        # shape: (batch_size, num_samples)
         sampled_indices = torch.multinomial(normalized_top_k_probs, num_samples, replacement=False)
 
         # Convert `sampled_indices` back to indices in the original `log_probs` tensor.
-        # Shape: (batch_size, num_samples)
+        # shape: (batch_size, num_samples)
         return top_k_indices.gather(-1, sampled_indices)
 
 
@@ -174,30 +174,30 @@ class TopPSampler(Sampler):
             log_probs = torch.nn.functional.log_softmax(log_probs / self.temperature, dim=-1)
 
         # Sort the probabilities to highest-first, then find the cumulative sum accross those
-        # Shape (both): (batch_size, num_classes)
+        # shape (both): (batch_size, num_classes)
         log_probs_descending, sorting_indices = torch.sort(log_probs, descending=True)
 
         # Re-normalize.
-        # Shape: (batch_size, num_classes)
+        # shape: (batch_size, num_classes)
         probs_descending = log_probs_descending.exp()
 
         # Take cumulative sum.
-        # Shape: (batch_size, num_classes)
+        # shape: (batch_size, num_classes)
         probabilities_summed = torch.cumsum(probs_descending, dim=-1)
 
         # Create a mask for filtering out probabilities that don't make the top `p`.
-        # Shape: (batch_size, num_classes)
+        # shape: (batch_size, num_classes)
         exclusion_mask = probabilities_summed > self.p
 
         # Now re-normalized the included log probs.
-        # Shape: (batch_size, num_classes)
+        # shape: (batch_size, num_classes)
         log_probs_descending[exclusion_mask] = min_value_of_dtype(log_probs.dtype)
-        # Shape: (batch_size, num_classes)
+        # shape: (batch_size, num_classes)
         included_probs = torch.nn.functional.softmax(log_probs_descending, dim=-1)
 
         # Sample from the re-normalized subset.
         # NOTE: These indices are not indices into `log_probs`, they are indices into `log_probs_descending`.
-        # Shape: (batch_size, num_samples)
+        # shape: (batch_size, num_samples)
         sampled_indices = torch.multinomial(included_probs, num_samples, replacement=False)
 
         # Convert `sampled_indices` back to indices in the original `log_probs` tensor.
@@ -426,30 +426,7 @@ class BeamSearch(FromParams):
         log_probs_after_end[:, self._end_index] = 0.0
 
         # Set the same state for each element in the beam.
-        for key, state_tensor in state.items():
-            if state_tensor is None:
-                continue
-            multilayer_rnn_decoder = state_tensor.dim() == 3 and key in {
-                "decoder_hidden",
-                "decoder_context",
-            }
-
-            if multilayer_rnn_decoder:
-                # shape: (num_layers, batch_size * beam_size, *)
-                num_layers, _, *last_dims = state_tensor.size()
-                state[key] = (
-                    state_tensor.unsqueeze(2)
-                    .expand(num_layers, batch_size, self.beam_size, *last_dims)
-                    .reshape(num_layers, batch_size * self.beam_size, *last_dims)
-                )
-            else:
-                # shape: (batch_size * beam_size, *)
-                _, *last_dims = state_tensor.size()
-                state[key] = (
-                    state_tensor.unsqueeze(1)
-                    .expand(batch_size, self.beam_size, *last_dims)
-                    .reshape(batch_size * self.beam_size, *last_dims)
-                )
+        self._update_initial_state(state, batch_size)
 
         for timestep in range(self.max_steps - 1):
             # shape: (batch_size * beam_size,)
@@ -509,7 +486,7 @@ class BeamSearch(FromParams):
             )
 
             # Keep only the top `beam_size` beam indices.
-            # shape: (batch_size, beam_size), (batch_size, beam_size)
+            # shape (both): (batch_size, beam_size)
             restricted_beam_log_probs, restricted_beam_indices = self.beam_sampler(
                 reshaped_summed, self.beam_size
             )
@@ -535,41 +512,7 @@ class BeamSearch(FromParams):
 
             # Keep only the pieces of the state tensors corresponding to the
             # ancestors created this iteration.
-            for key, state_tensor in state.items():
-                if state_tensor is None:
-                    continue
-                multilayer_rnn_decoder = state_tensor.dim() == 3 and key in {
-                    "decoder_hidden",
-                    "decoder_context",
-                }
-
-                if multilayer_rnn_decoder:
-                    # shape: (num_layers, batch_size * beam_size, *)
-                    num_layers, _, *last_dims = state_tensor.size()
-                    expanded_backpointer = backpointer.view(
-                        batch_size, self.beam_size, *([1] * len(last_dims))
-                    ).expand(batch_size, self.beam_size, *last_dims)
-                    expanded_backpointer = expanded_backpointer.unsqueeze(0).repeat(
-                        num_layers, 1, 1, 1
-                    )
-                    # shape: (num_layers, batch_size * beam_size, *)
-                    state[key] = (
-                        state_tensor.reshape(num_layers, batch_size, self.beam_size, *last_dims)
-                        .gather(2, expanded_backpointer)
-                        .reshape(num_layers, batch_size * self.beam_size, *last_dims)
-                    )
-                else:
-                    _, *last_dims = state_tensor.size()
-                    # shape: (batch_size, beam_size, *)
-                    expanded_backpointer = backpointer.view(
-                        batch_size, self.beam_size, *([1] * len(last_dims))
-                    ).expand(batch_size, self.beam_size, *last_dims)
-                    # shape: (batch_size * beam_size, *)
-                    state[key] = (
-                        state_tensor.reshape(batch_size, self.beam_size, *last_dims)
-                        .gather(1, expanded_backpointer)
-                        .reshape(batch_size * self.beam_size, *last_dims)
-                    )
+            self._update_state(state, backpointer)
 
         if not torch.isfinite(last_log_probabilities).all():
             warnings.warn(
@@ -585,3 +528,67 @@ class BeamSearch(FromParams):
         all_predictions = torch.cat(list(reversed(reconstructed_predictions)), 2)
 
         return all_predictions, last_log_probabilities
+
+    @staticmethod
+    def _is_multilayer_rnn_decoder(key: str, state_tensor: torch.Tensor) -> bool:
+        return state_tensor.dim() == 3 and key in {
+            "decoder_hidden",
+            "decoder_context",
+        }
+
+    def _update_initial_state(self, state: StateType, batch_size: int):
+        for key, state_tensor in state.items():
+            if state_tensor is None:
+                continue
+            multilayer_rnn_decoder = self._is_multilayer_rnn_decoder(key, state_tensor)
+
+            if multilayer_rnn_decoder:
+                # shape: (num_layers, batch_size * beam_size, *)
+                num_layers, _, *last_dims = state_tensor.size()
+                state[key] = (
+                    state_tensor.unsqueeze(2)
+                    .expand(num_layers, batch_size, self.beam_size, *last_dims)
+                    .reshape(num_layers, batch_size * self.beam_size, *last_dims)
+                )
+            else:
+                # shape: (batch_size * beam_size, *)
+                _, *last_dims = state_tensor.size()
+                state[key] = (
+                    state_tensor.unsqueeze(1)
+                    .expand(batch_size, self.beam_size, *last_dims)
+                    .reshape(batch_size * self.beam_size, *last_dims)
+                )
+
+    def _update_state(self, state: StateType, backpointer: torch.Tensor):
+        batch_size = backpointer.size()[0]
+
+        for key, state_tensor in state.items():
+            if state_tensor is None:
+                continue
+            multilayer_rnn_decoder = self._is_multilayer_rnn_decoder(key, state_tensor)
+
+            if multilayer_rnn_decoder:
+                # shape: (num_layers, batch_size * beam_size, *)
+                num_layers, _, *last_dims = state_tensor.size()
+                expanded_backpointer = backpointer.view(
+                    batch_size, self.beam_size, *([1] * len(last_dims))
+                ).expand(batch_size, self.beam_size, *last_dims)
+                expanded_backpointer = expanded_backpointer.unsqueeze(0).repeat(num_layers, 1, 1, 1)
+                # shape: (num_layers, batch_size * beam_size, *)
+                state[key] = (
+                    state_tensor.reshape(num_layers, batch_size, self.beam_size, *last_dims)
+                    .gather(2, expanded_backpointer)
+                    .reshape(num_layers, batch_size * self.beam_size, *last_dims)
+                )
+            else:
+                _, *last_dims = state_tensor.size()
+                # shape: (batch_size, beam_size, *)
+                expanded_backpointer = backpointer.view(
+                    batch_size, self.beam_size, *([1] * len(last_dims))
+                ).expand(batch_size, self.beam_size, *last_dims)
+                # shape: (batch_size * beam_size, *)
+                state[key] = (
+                    state_tensor.reshape(batch_size, self.beam_size, *last_dims)
+                    .gather(1, expanded_backpointer)
+                    .reshape(batch_size * self.beam_size, *last_dims)
+                )
