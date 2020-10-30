@@ -208,6 +208,9 @@ class GumbelMaxSampler(Sampler):
         # Find the truncated gumbel distribution conditioned on max = Z
         # (numerically stable implementation)
         g_phi_tilde = self._truncated_gumbel(perturbed_log_probs, Z, g_phi)
+       
+        # Filter out NaN
+        g_phi_tilde[g_phi_tilde != g_phi_tilde] = min_value_of_dtype(torch.float)
 
         # Select the top (max, argmax) instances from the truncated Gumbel
         return torch.topk(g_phi_tilde, num_samples)
