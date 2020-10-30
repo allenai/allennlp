@@ -2,10 +2,12 @@ from inspect import signature
 from typing import List, Callable, Tuple, Dict, cast, TypeVar
 import warnings
 
+from overrides import overrides
 import torch
 
-from allennlp.common import FromParams
+from allennlp.common import FromParams, Registrable
 from allennlp.common.checks import ConfigurationError
+from allennlp.nn.util import min_value_of_dtype
 
 
 StateType = Dict[str, torch.Tensor]
@@ -23,6 +25,183 @@ The type of step function that can be passed to [`BeamSearch.search`](#search).
 This can either be [`StepFunctionTypeWithTimestep`](#stepfunctiontypewithtimestep)
 or [`StepFunctionTypeNoTimestep`](#stepfunctiontypenotimestep).
 """
+
+
+class Sampler(Registrable):
+    """
+    An abstract class representing a multinomial sampler that can be used sample.
+    candidates (either nodes or beams) within `BeamSearch`.
+
+    A `Sampler` just has one required method for subclasses to implement, `_sample`,
+    which should take a tensor of normalized log probabilities with shape `(batch_size, num_classes)`,
+    and an integer representing the number of samples to take for each example in the batch.
+
+    The output should be a tensor of indices with shape `(batch_size, num_samples)`,
+    representing the indices of the sampled examples.
+    """
+
+    default_implementation = "deterministic"
+
+    def __call__(
+        self, log_probs: torch.Tensor, num_samples: int
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        assert num_samples <= log_probs.size()[1]
+        indices = self._sample(log_probs, num_samples)
+        return log_probs.gather(-1, indices), indices
+
+    def _sample(
+        self,
+        log_probs: torch.Tensor,
+        num_samples: int,
+    ) -> torch.Tensor:
+        raise NotImplementedError
+
+
+@Sampler.register("deterministic")
+class DeterministicSampler(Sampler):
+    @overrides
+    def __call__(
+        self, log_probs: torch.Tensor, num_samples: int
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        selected_log_probs, selected_indices = torch.topk(log_probs, num_samples, dim=-1)
+        return selected_log_probs, selected_indices
+
+    @overrides
+    def _sample(
+        self,
+        log_probs: torch.Tensor,
+        num_samples: int,
+    ) -> torch.Tensor:
+        return torch.topk(log_probs, num_samples, dim=-1)[1]
+
+
+@Sampler.register("multinomial")
+class MultinomialSampler(Sampler):
+    """
+    A simple multinomial `Sampler` which just samplers using the distribution
+    of the given `log_probs`.
+    """
+
+    def __init__(
+        self,
+        temperature: float = 1.0,
+    ) -> None:
+        self.temperature = temperature
+
+    @overrides
+    def _sample(
+        self,
+        log_probs: torch.Tensor,
+        num_samples: int,
+    ) -> torch.Tensor:
+        if self.temperature != 1.0:
+            log_probs = torch.nn.functional.log_softmax(log_probs / self.temperature, dim=-1)
+        # Shape: (batch_size, num_samples)
+        return torch.multinomial(log_probs.exp(), num_samples, replacement=False)
+
+
+@Sampler.register("top-k")
+class TopKSampler(Sampler):
+    """
+    A `Sampler` which redistributes the probability mass function among the top `k` choices,
+    and then samples from that subset.
+    """
+
+    def __init__(
+        self,
+        k: int = 1,
+        temperature: float = 1.0,
+    ):
+        assert k >= 1
+        self.k = k
+        self.temperature = temperature
+
+    @overrides
+    def _sample(
+        self,
+        log_probs: torch.Tensor,
+        num_samples: int,
+    ) -> torch.Tensor:
+        assert self.k >= num_samples
+        assert self.k <= log_probs.size()[1]
+
+        # Shape (both): (batch_size, k)
+        top_k_log_probs, top_k_indices = log_probs.topk(self.k, dim=-1)
+
+        # Apply temperature if necessary.
+        # Shape: (batch_size, k)
+        if self.temperature != 1.0:
+            top_k_log_probs = top_k_log_probs / self.temperature
+
+        # Re-normalize the subset.
+        # Shape: (batch_size, k)
+        normalized_top_k_probs = torch.nn.functional.softmax(top_k_log_probs, dim=-1)
+
+        # Sample from the re-normalized subset.
+        # NOTE: These indices are not indices into `log_probs`, they are indices into `top_k_log_probs`.
+        # Shape: (batch_size, num_samples)
+        sampled_indices = torch.multinomial(normalized_top_k_probs, num_samples, replacement=False)
+
+        # Convert `sampled_indices` back to indices in the original `log_probs` tensor.
+        # Shape: (batch_size, num_samples)
+        return top_k_indices.gather(-1, sampled_indices)
+
+
+@Sampler.register("top-p")
+class TopPSampler(Sampler):
+    """
+    A `Sampler` which redistributes the probability mass function among
+    the top choices with a cumulative probability of at least `p`, then samples from that subset.
+    """
+
+    def __init__(
+        self,
+        p: float = 0.9,
+        temperature: float = 1.0,
+    ):
+        assert 0 < p <= 1.0
+        self.p = p
+        self.temperature = temperature or 1.0
+
+    @overrides
+    def _sample(
+        self,
+        log_probs: torch.Tensor,
+        num_samples: int,
+    ) -> torch.Tensor:
+        # First apply temperature coefficient:
+        if self.temperature != 1.0:
+            log_probs = torch.nn.functional.log_softmax(log_probs / self.temperature, dim=-1)
+
+        # Sort the probabilities to highest-first, then find the cumulative sum accross those
+        # Shape (both): (batch_size, num_classes)
+        log_probs_descending, sorting_indices = torch.sort(log_probs, descending=True)
+
+        # Re-normalize.
+        # Shape: (batch_size, num_classes)
+        probs_descending = log_probs_descending.exp()
+
+        # Take cumulative sum.
+        # Shape: (batch_size, num_classes)
+        probabilities_summed = torch.cumsum(probs_descending, dim=-1)
+
+        # Create a mask for filtering out probabilities that don't make the top `p`.
+        # Shape: (batch_size, num_classes)
+        exclusion_mask = probabilities_summed > self.p
+
+        # Now re-normalized the included log probs.
+        # Shape: (batch_size, num_classes)
+        log_probs_descending[exclusion_mask] = min_value_of_dtype(log_probs.dtype)
+        # Shape: (batch_size, num_classes)
+        included_probs = torch.nn.functional.softmax(log_probs_descending, dim=-1)
+
+        # Sample from the re-normalized subset.
+        # NOTE: These indices are not indices into `log_probs`, they are indices into `log_probs_descending`.
+        # Shape: (batch_size, num_samples)
+        sampled_indices = torch.multinomial(included_probs, num_samples, replacement=False)
+
+        # Convert `sampled_indices` back to indices in the original `log_probs` tensor.
+        return sorting_indices.gather(-1, sampled_indices)
 
 
 class BeamSearch(FromParams):
@@ -45,6 +224,15 @@ class BeamSearch(FromParams):
         more diversity into the search. See
         [*Beam Search Strategies for Neural Machine Translation*, Freitag and Al-Onaizan, 2017]
         (https://arxiv.org/abs/1702.01806).
+    node_sampler : `Sampler`, optional (default = `None`)
+        An optional `Sampler` which is used to pick next candidate nodes within each beam.
+        If not specified, `DeterministicSampler` will be used, which just takes the `per_node_beam_size`
+        most likely nodes.
+    beam_sampler : `Sampler`, optional (default = `None`)
+        An optional `Sampler` which is used to filter down the number of expanded beams at each step
+        from `beam_size * per_node_beam_size` back to `beam_size`.
+        If not specified, `DeterministicSampler` will be used, which just takes the `beam_size`
+        most likely beams.
     """
 
     def __init__(
@@ -53,6 +241,8 @@ class BeamSearch(FromParams):
         max_steps: int = 50,
         beam_size: int = 10,
         per_node_beam_size: int = None,
+        node_sampler: Sampler = None,
+        beam_sampler: Sampler = None,
     ) -> None:
         assert max_steps > 0
         assert beam_size > 0
@@ -63,6 +253,8 @@ class BeamSearch(FromParams):
         self.max_steps = max_steps
         self.beam_size = beam_size
         self.per_node_beam_size = per_node_beam_size or beam_size
+        self.node_sampler = node_sampler or DeterministicSampler()
+        self.beam_sampler = beam_sampler or DeterministicSampler()
 
     @staticmethod
     def _reconstruct_sequences(predictions, backpointers):
@@ -174,7 +366,6 @@ class BeamSearch(FromParams):
         start_state: StateType,
         step: StepFunctionTypeWithTimestep,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
-
         batch_size = start_predictions.size()[0]
 
         # List of (batch_size, beam_size) tensors. One for each time step. Does not
@@ -210,7 +401,7 @@ class BeamSearch(FromParams):
         (
             start_top_log_probabilities,
             start_predicted_classes,
-        ) = start_class_log_probabilities.topk(self.beam_size)
+        ) = self.node_sampler(start_class_log_probabilities, self.beam_size)
 
         if self.beam_size == 1 and (start_predicted_classes == self._end_index).all():
             warnings.warn(
@@ -290,8 +481,8 @@ class BeamSearch(FromParams):
             )
 
             # shape (both): (batch_size * beam_size, per_node_beam_size)
-            top_log_probabilities, predicted_classes = cleaned_log_probabilities.topk(
-                self.per_node_beam_size
+            top_log_probabilities, predicted_classes = self.node_sampler(
+                cleaned_log_probabilities, self.per_node_beam_size
             )
 
             # Here we expand the last log probabilities to (batch_size * beam_size, per_node_beam_size)
@@ -319,8 +510,8 @@ class BeamSearch(FromParams):
 
             # Keep only the top `beam_size` beam indices.
             # shape: (batch_size, beam_size), (batch_size, beam_size)
-            restricted_beam_log_probs, restricted_beam_indices = reshaped_summed.topk(
-                self.beam_size
+            restricted_beam_log_probs, restricted_beam_indices = self.beam_sampler(
+                reshaped_summed, self.beam_size
             )
 
             # Use the beam indices to extract the corresponding classes.
