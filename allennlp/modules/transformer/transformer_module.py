@@ -35,6 +35,10 @@ class TransformerModule(torch.nn.Module):
         source="huggingface",
         mapping: Optional[Dict[str, str]] = None,
     ):
+        """
+        Returns the mapping to be used, based on the optional `pretrained_module`.
+        If `pretrained_module` is not given, the default module-level mapping is returned.
+        """
         combined_mapping = {}
         if "huggingface" in source:
             combined_mapping.update(cls._huggingface_mapping)

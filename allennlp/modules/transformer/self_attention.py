@@ -77,18 +77,23 @@ class SelfAttention(TransformerModule, FromParams):
         query_states: torch.Tensor,
         key_states: Optional[torch.Tensor] = None,
         value_states: Optional[torch.Tensor] = None,
-        attention_mask: Optional[torch.Tensor] = None,
+        attention_mask: Optional[torch.BoolTensor] = None,
         head_mask: Optional[torch.Tensor] = None,
         output_attentions: bool = False,
     ):
         """
-        atttention_mask: `torch.Tensor`, optional
-            Optional mask of 0s and 1s
-        FIX: add details about attention_mask vs encoder_attention_masks.
-        TODO: add option for pruning.
+        query_states : `torch.Tensor`
+            Shape `batch_size x seq_len x hidden_dim`
+        key_states : `torch.Tensor`, optional
+            Shape `batch_size x seq_len x hidden_dim`
+        value_states : `torch.Tensor`, optional
+            Shape `batch_size x seq_len x hidden_dim`
+        attention_mask : `torch.BoolTensor`, optional
+            Shape `batch_size x seq_len`
+        head_mask : `torch.BoolTensor`, optional
+        output_attentions : `bool`
+            Whether to also return the attention probabilities, default = `False`
         """
-        # key_states = key_states or query_states
-        # value_states = value_states or value_states
         if key_states is None:
             key_states = query_states
         if value_states is None:
@@ -112,9 +117,7 @@ class SelfAttention(TransformerModule, FromParams):
             attention_mask = (attention_mask == 0).view(mask_reshp).expand_as(
                 attention_scores
             ) * -10e5
-            # attention_scores.masked_fill_(attention_mask, -float("inf"))
             attention_scores = attention_scores + attention_mask
-        # return attention_scores
 
         # Normalize the attention scores to probabilities.
         attention_probs = torch.nn.Softmax(dim=-1)(attention_scores)
@@ -177,8 +180,6 @@ class SelfAttention(TransformerModule, FromParams):
             final_kwargs["output_linear"] = True  # Since this is the distilbert case.
         else:
             raise AttributeError("Cannot find a relevant attribute for number of heads.")
-
-        # TODO: if distilbert, set pruning to be True.
 
         final_kwargs["dropout"] = submodules["dropout"].p
 

@@ -167,7 +167,7 @@ class TestSelfAttention(AllenNlpTestCase):
         attention_mask = torch.randn(batch_size, 1, 1, seq_len)
 
         torch.manual_seed(1234)
-        output = module.forward(hidden_states, attention_mask=attention_mask)[0]
+        output = module.forward(hidden_states, attention_mask=attention_mask.squeeze())[0]
         torch.manual_seed(1234)
         if "distilbert" in pretrained_name:
             hf_output = pretrained_module.forward(
