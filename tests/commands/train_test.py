@@ -219,6 +219,16 @@ class TestTrain(AllenNlpTestCase):
         assert "out_worker0.log" in serialized_files
         assert "out_worker1.log" in serialized_files
         assert "model.tar.gz" in serialized_files
+        assert "metrics.json" in serialized_files
+
+        # Make sure the metrics look right.
+        with open(os.path.join(out_dir, "metrics.json")) as f:
+            metrics = json.load(f)
+            assert metrics["peak_worker_0_memory_MB"] > 0
+            assert metrics["peak_worker_1_memory_MB"] > 0
+            if torch.cuda.device_count() >= 2:
+                assert metrics["peak_gpu_0_memory_MB"] > 0
+                assert metrics["peak_gpu_1_memory_MB"] > 0
 
         # Check we can load the serialized model
         assert load_archive(out_dir).model
@@ -754,9 +764,6 @@ class TestDryRun(AllenNlpTestCase):
         with pytest.raises(ConfigurationError):
             train_model(self.params, self.TEST_DIR, dry_run=True)
 
-    def test_dry_run_without_vocabulary_key(self):
-        train_model(self.params, self.TEST_DIR, dry_run=True)
-
     def test_dry_run_makes_vocab(self):
         vocab_path = self.TEST_DIR / "vocabulary"
 
@@ -880,3 +887,8 @@ class TestDryRun(AllenNlpTestCase):
             assert args.param_path == "path/to/params"
             assert args.serialization_dir == "serialization_dir"
             assert args.dry_run
+
+    def test_warn_validation_loader_batches_per_epoch(self):
+        self.params["data_loader"]["batches_per_epoch"] = 3
+        with pytest.warns(UserWarning, match="batches_per_epoch"):
+            train_model(self.params, self.TEST_DIR, dry_run=True)

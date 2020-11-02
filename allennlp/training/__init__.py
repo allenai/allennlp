@@ -6,6 +6,7 @@ from allennlp.training.trainer import (
     GradientDescentTrainer,
     BatchCallback,
     EpochCallback,
+    TrainerCallback,
     TrackEpochCallback,
 )
 from allennlp.training.deepspeed import DeepspeedTrainer

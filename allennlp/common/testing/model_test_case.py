@@ -22,12 +22,14 @@ class ModelTestCase(AllenNlpTestCase):
     with added methods for testing [`Model`](../../models/model.md) subclasses.
     """
 
-    def set_up_model(self, param_file, dataset_file):
+    def set_up_model(self, param_file, dataset_file, serialization_dir=None):
 
         self.param_file = param_file
         params = Params.from_file(self.param_file)
 
-        reader = DatasetReader.from_params(params["dataset_reader"])
+        reader = DatasetReader.from_params(
+            params["dataset_reader"], serialization_dir=serialization_dir
+        )
         # The dataset reader might be lazy, but a lazy list here breaks some of our tests.
         instances = reader.read(str(dataset_file))
         # Use parameters for vocabulary if they are present in the config file, so that choices like
@@ -40,7 +42,9 @@ class ModelTestCase(AllenNlpTestCase):
         self.vocab = vocab
         self.instances = instances
         self.instances.index_with(vocab)
-        self.model = Model.from_params(vocab=self.vocab, params=params["model"])
+        self.model = Model.from_params(
+            vocab=self.vocab, params=params["model"], serialization_dir=serialization_dir
+        )
 
         # TODO(joelgrus) get rid of these
         # (a lot of the model tests use them, so they'll have to be changed)
@@ -105,7 +109,8 @@ class ModelTestCase(AllenNlpTestCase):
             assert metric_value is not None, f"Cannot find {metric_to_check} in metrics.json file"
             assert metric_terminal_value is not None, "Please specify metric terminal value"
             assert abs(metric_value - metric_terminal_value) < metric_tolerance
-        loaded_model = load_archive(archive_file, cuda_device=cuda_device).model
+        archive = load_archive(archive_file, cuda_device=cuda_device)
+        loaded_model = archive.model
         state_keys = model.state_dict().keys()
         loaded_state_keys = loaded_model.state_dict().keys()
         assert state_keys == loaded_state_keys
@@ -116,8 +121,8 @@ class ModelTestCase(AllenNlpTestCase):
                 loaded_model.state_dict()[key].cpu().numpy(),
                 err_msg=key,
             )
+        reader = archive.dataset_reader
         params = Params.from_file(param_file, params_overrides=overrides)
-        reader = DatasetReader.from_params(params["dataset_reader"])
 
         print("Reading with original model")
         model_dataset = reader.read(params["validation_data_path"])

@@ -9,6 +9,7 @@ import logging
 import os
 from os import PathLike
 from typing import Any, Dict, List, Optional, Union
+import warnings
 
 import torch
 import torch.distributed as dist
@@ -23,7 +24,7 @@ from allennlp.common import util as common_util
 from allennlp.common.plugins import import_plugins
 from allennlp.data import DatasetReader, Vocabulary
 from allennlp.data import DataLoader
-from allennlp.models.archival import archive_model, CONFIG_NAME
+from allennlp.models.archival import archive_model, CONFIG_NAME, verify_include_in_archive
 from allennlp.models.model import _DEFAULT_WEIGHTS, Model
 from allennlp.training.trainer import Trainer
 from allennlp.training import util as training_util
@@ -225,6 +226,9 @@ def train_model(
     training_util.create_serialization_dir(params, serialization_dir, recover, force)
     params.to_file(os.path.join(serialization_dir, CONFIG_NAME))
 
+    include_in_archive = params.pop("include_in_archive", None)
+    verify_include_in_archive(include_in_archive)
+
     distributed_params = params.params.pop("distributed", None)
     # If distributed isn't in the config and the config contains strictly
     # one cuda device, we just run a single training process.
@@ -239,11 +243,17 @@ def train_model(
         )
 
         if not dry_run:
-            archive_model(serialization_dir)
+            archive_model(serialization_dir, include_in_archive=include_in_archive)
         return model
 
     # Otherwise, we are running multiple processes for training.
     else:
+        common_logging.prepare_global_logging(
+            serialization_dir,
+            rank=0,
+            world_size=1,
+        )
+
         # We are careful here so that we can raise a good error if someone
         # passed the wrong thing - cuda_devices are required.
         device_ids = distributed_params.pop("cuda_devices", None)
@@ -257,7 +267,15 @@ def train_model(
         check_for_gpu(device_ids)
 
         master_addr = distributed_params.pop("master_address", "127.0.0.1")
-        master_port = distributed_params.pop("master_port", 29500)
+        if master_addr in ("127.0.0.1", "0.0.0.0", "localhost"):
+            # If running locally, we can automatically find an open port if one is not specified.
+            master_port = (
+                distributed_params.pop("master_port", None) or common_util.find_open_port()
+            )
+        else:
+            # Otherwise we require that the port be specified.
+            master_port = distributed_params.pop("master_port")
+
         num_procs = len(device_ids)
         world_size = num_nodes * num_procs
 
@@ -300,13 +318,14 @@ def train_model(
                 world_size,
                 device_ids,
                 file_friendly_logging,
+                include_in_archive,
             ),
             nprocs=num_procs,
         )
         if dry_run:
             return None
         else:
-            archive_model(serialization_dir)
+            archive_model(serialization_dir, include_in_archive=include_in_archive)
             model = Model.load(params, serialization_dir)
             return model
 
@@ -323,6 +342,7 @@ def _train_worker(
     world_size: int = 1,
     distributed_device_ids: List[int] = None,
     file_friendly_logging: bool = False,
+    include_in_archive: List[str] = None,
 ) -> Optional[Model]:
     """
     Helper to train the configured model/experiment. In distributed mode, this is spawned as a
@@ -357,6 +377,8 @@ def _train_worker(
     file_friendly_logging : `bool`, optional (default=`False`)
         If `True`, we add newlines to tqdm output, even on an interactive terminal, and we slow
         down tqdm's output to only once every 10 seconds.
+    include_in_archive : `List[str]`, optional
+        Paths relative to `serialization_dir` that should be archived in addition to the default ones.
 
     # Returns
 
@@ -374,7 +396,6 @@ def _train_worker(
 
     distributed = world_size > 1
 
-    # not using `allennlp.common.util.is_master` as the process group is yet to be initialized
     master = process_rank == 0
 
     include_package = include_package or []
@@ -448,7 +469,7 @@ def _train_worker(
                 "Training interrupted by the user. Attempting to create "
                 "a model archive using the current best epoch weights."
             )
-            archive_model(serialization_dir)
+            archive_model(serialization_dir, include_in_archive=include_in_archive)
         raise
 
     if master:
@@ -645,14 +666,14 @@ class TrainModel(Registrable):
         vocabulary_ = vocabulary.construct(instances=instance_generator)
         if not vocabulary_:
             vocabulary_ = Vocabulary.from_instances(instance_generator)
-        model_ = model.construct(vocab=vocabulary_)
+        model_ = model.construct(vocab=vocabulary_, serialization_dir=serialization_dir)
 
         # Initializing the model can have side effect of expanding the vocabulary.
         # Save the vocab only in the master. In the degenerate non-distributed
         # case, we're trivially the master. In the distributed case this is safe
         # to do without worrying about race conditions since saving and loading
         # the vocab involves acquiring a file lock.
-        if common_util.is_master():
+        if local_rank == 0:
             vocabulary_path = os.path.join(serialization_dir, "vocabulary")
             vocabulary_.save_to_files(vocabulary_path)
 
@@ -669,6 +690,14 @@ class TrainModel(Registrable):
             validation_data_loader_ = validation_data_loader.construct(dataset=validation_data)
             if validation_data_loader_ is None:
                 validation_data_loader_ = data_loader.construct(dataset=validation_data)
+                if getattr(validation_data_loader_, "_batches_per_epoch", None) is not None:
+                    warnings.warn(
+                        "Using 'data_loader' params to construct validation data loader since "
+                        "'validation_data_loader' params not specified, but you have "
+                        "'data_loader.batches_per_epoch' set which may result in different "
+                        "validation datasets for each epoch.",
+                        UserWarning,
+                    )
         else:
             validation_data_loader_ = None
 

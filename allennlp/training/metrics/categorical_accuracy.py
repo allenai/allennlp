@@ -99,6 +99,9 @@ class CategoricalAccuracy(Metric):
         _correct_count = correct.sum()
 
         if is_distributed():
+            device = torch.device("cuda" if dist.get_backend() == "nccl" else "cpu")
+            _correct_count = _correct_count.to(device)
+            _total_count = _total_count.to(device)
             dist.all_reduce(_correct_count, op=dist.ReduceOp.SUM)
             dist.all_reduce(_total_count, op=dist.ReduceOp.SUM)
 

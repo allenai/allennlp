@@ -10,6 +10,8 @@ assignees: ''
 <!--
 Please fill this template entirely and do not erase any of it.
 We reserve the right to close without a response bug reports which are incomplete.
+
+If you have a question rather than a bug, please ask on [Stack Overflow](https://stackoverflow.com/questions/tagged/allennlp) rather than posting an issue here.
 -->
 
 ## Checklist

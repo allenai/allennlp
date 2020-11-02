@@ -165,7 +165,7 @@ def find_learning_rate_model(
     # See https://github.com/allenai/allennlp/issues/3658
     assert not distributed_params, "find-lr is not compatible with DistributedDataParallel."
 
-    all_datasets = datasets_from_params(params)
+    all_datasets = datasets_from_params(params, serialization_dir=serialization_dir)
     datasets_for_vocab_creation = set(params.pop("datasets_for_vocab_creation", all_datasets))
 
     for dataset in datasets_for_vocab_creation:
@@ -188,7 +188,9 @@ def find_learning_rate_model(
 
     train_data = all_datasets["train"]
     train_data.index_with(vocab)
-    model = Model.from_params(vocab=vocab, params=params.pop("model"))
+    model = Model.from_params(
+        vocab=vocab, params=params.pop("model"), serialization_dir=serialization_dir
+    )
     data_loader = DataLoader.from_params(dataset=train_data, params=params.pop("data_loader"))
 
     trainer_params = params.pop("trainer")

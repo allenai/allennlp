@@ -1,3 +1,5 @@
+import pytest
+
 from allennlp.common import cached_transformers
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Vocabulary
@@ -82,22 +84,18 @@ class TestPretrainedTransformerIndexer(AllenNlpTestCase):
         indexed = indexer.tokens_to_indices(allennlp_tokens, vocab)
         assert indexed["token_ids"] == expected_ids, f"{allennlp_tokens}\n{tokens}"
 
-    def test_transformers_vocab_sizes(self):
-        def check_vocab_size(model_name: str):
-            namespace = "tags"
-            tokenizer = cached_transformers.get_tokenizer(model_name)
-            allennlp_tokenizer = PretrainedTransformerTokenizer(model_name)
-            indexer = PretrainedTransformerIndexer(model_name=model_name, namespace=namespace)
-            allennlp_tokens = allennlp_tokenizer.tokenize("AllenNLP is great!")
-            vocab = Vocabulary()
-            # here we copy entire transformers vocab
-            indexed = indexer.tokens_to_indices(allennlp_tokens, vocab)
-            del indexed
-            assert vocab.get_vocab_size(namespace=namespace) == tokenizer.vocab_size
-
-        check_vocab_size("roberta-base")
-        check_vocab_size("bert-base-cased")
-        check_vocab_size("xlm-mlm-ende-1024")
+    @pytest.mark.parametrize("model_name", ["roberta-base", "bert-base-cased", "xlm-mlm-ende-1024"])
+    def test_transformers_vocab_sizes(self, model_name):
+        namespace = "tags"
+        tokenizer = cached_transformers.get_tokenizer(model_name)
+        allennlp_tokenizer = PretrainedTransformerTokenizer(model_name)
+        indexer = PretrainedTransformerIndexer(model_name=model_name, namespace=namespace)
+        allennlp_tokens = allennlp_tokenizer.tokenize("AllenNLP is great!")
+        vocab = Vocabulary()
+        # here we copy entire transformers vocab
+        indexed = indexer.tokens_to_indices(allennlp_tokens, vocab)
+        del indexed
+        assert vocab.get_vocab_size(namespace=namespace) == tokenizer.vocab_size
 
     def test_transformers_vocabs_added_correctly(self):
         namespace, model_name = "tags", "roberta-base"

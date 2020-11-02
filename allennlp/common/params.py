@@ -383,12 +383,6 @@ class Params(MutableMapping):
                 else:
                     logger.info(f"{history}{key} = {value}")
 
-        logger.info(
-            "Converting Params object to dict; logging of default "
-            "values will not occur when dictionary parameters are "
-            "used subsequently."
-        )
-        logger.info("CURRENTLY DEFINED PARAMETERS: ")
         log_recursively(self.params, self.history)
         return params_as_dict
 
@@ -604,3 +598,14 @@ def _replace_none(params: Any) -> Any:
     elif isinstance(params, list):
         return [_replace_none(value) for value in params]
     return params
+
+
+def remove_keys_from_params(params: Params, keys: List[str] = ["pretrained_file", "initializer"]):
+    if isinstance(params, Params):  # The model could possibly be a string, for example.
+        param_keys = params.keys()
+        for key in keys:
+            if key in param_keys:
+                del params[key]
+        for value in params.values():
+            if isinstance(value, Params):
+                remove_keys_from_params(value, keys)

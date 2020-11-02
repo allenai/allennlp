@@ -1,4 +1,4 @@
-from typing import Union, Dict, Any, List, Tuple
+from typing import Union, Dict, Any, List, Tuple, Optional
 
 import logging
 import os
@@ -90,6 +90,7 @@ class Checkpointer(Registrable):
         epoch: Union[int, str],
         trainer: "allennlp.training.trainer.Trainer",
         is_best_so_far: bool = False,
+        save_model_only=False,
     ) -> None:
         if self._serialization_dir is not None:
             with trainer.get_checkpoint_state() as state:
@@ -97,11 +98,16 @@ class Checkpointer(Registrable):
                 model_path = os.path.join(
                     self._serialization_dir, "model_state_epoch_{}.th".format(epoch)
                 )
-                torch.save(model_state, model_path)
+                if not os.path.isfile(model_path):
+                    torch.save(model_state, model_path)
+                if save_model_only:
+                    return
+
                 training_path = os.path.join(
                     self._serialization_dir, "training_state_epoch_{}.th".format(epoch)
                 )
-                torch.save({**training_states, "epoch": epoch}, training_path)
+                if not os.path.isfile(training_path):
+                    torch.save({**training_states, "epoch": epoch}, training_path)
 
             # The main checkpointing logic is now done, this is just shuffling files around, to keep
             # track of best weights, and to remove old checkpoints, if desired.
@@ -140,7 +146,7 @@ class Checkpointer(Registrable):
                             if os.path.isfile(fname):
                                 os.remove(fname)
 
-    def find_latest_checkpoint(self) -> Tuple[str, str]:
+    def find_latest_checkpoint(self) -> Optional[Tuple[str, str]]:
         """
         Return the location of the latest model and training state files.
         If there isn't a valid checkpoint then return None.
