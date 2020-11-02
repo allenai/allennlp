@@ -1,6 +1,6 @@
 import logging
 import random
-from typing import List, Iterable, Optional, Iterator, TypeVar
+from typing import List, Iterable, Iterator, TypeVar
 
 from allennlp.data.samplers import BatchSampler, BucketBatchSampler
 from torch.utils import data
@@ -54,7 +54,7 @@ class MaxTokensBatchSampler(BucketBatchSampler):
     def __init__(
         self,
         data_source: data.Dataset,
-        max_tokens: Optional[int] = None,
+        max_tokens: int,
         sorting_keys: List[str] = None,
         padding_noise: float = 0.1,
     ):

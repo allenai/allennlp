@@ -137,15 +137,10 @@ class PyTorchDataLoader(data.DataLoader, DataLoader):
         multiprocessing_context: str = None,
         batches_per_epoch: int = None,
     ) -> "PyTorchDataLoader":
-
-        if batch_sampler is not None:
-            batch_sampler_ = batch_sampler.construct(data_source=dataset)
-        else:
-            batch_sampler_ = None
-        if sampler is not None:
-            sampler_ = sampler.construct(data_source=dataset)
-        else:
-            sampler_ = None
+        batch_sampler_ = (
+            None if batch_sampler is None else batch_sampler.construct(data_source=dataset)
+        )
+        sampler_ = None if sampler is None else sampler.construct(data_source=dataset)
 
         return cls(
             dataset=dataset,

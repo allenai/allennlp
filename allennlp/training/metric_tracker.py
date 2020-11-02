@@ -32,22 +32,18 @@ class MetricTracker:
     def __init__(
         self, patience: Optional[int] = None, metric_name: str = None, should_decrease: bool = None
     ) -> None:
-        self._best_so_far: float = None
+        self._best_so_far: Optional[float] = None
         self._patience = patience
         self._epochs_with_no_improvement = 0
         self._is_best_so_far = True
         self.best_epoch_metrics: Dict[str, float] = {}
         self._epoch_number = 0
-        self.best_epoch: int = None
+        self.best_epoch: Optional[int] = None
 
         # If the metric name starts with "+", we want it to increase.
         # If the metric name starts with "-", we want it to decrease.
         # We also allow you to not specify a metric name and just set `should_decrease` directly.
-        if should_decrease is None and metric_name is None:
-            raise ConfigurationError(
-                "must specify either `should_decrease` or `metric_name` (but not both)"
-            )
-        elif should_decrease is not None and metric_name is not None:
+        if should_decrease is not None and metric_name is not None:
             raise ConfigurationError(
                 "must specify either `should_decrease` or `metric_name` (but not both)"
             )
@@ -58,8 +54,12 @@ class MetricTracker:
                 self._should_decrease = False
             else:
                 raise ConfigurationError("metric_name must start with + or -")
-        else:
+        elif should_decrease is not None:
             self._should_decrease = should_decrease
+        else:
+            raise ConfigurationError(
+                "must specify either `should_decrease` or `metric_name` (but not both)"
+            )
 
     def clear(self) -> None:
         """

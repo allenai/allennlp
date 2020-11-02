@@ -548,6 +548,7 @@ class Vocabulary(Registrable):
         self._non_padded_namespaces.update(non_padded_namespaces)
 
         for namespace in counter:
+            pretrained_set: Optional[Set] = None
             if namespace in pretrained_files:
                 pretrained_list = _read_pretrained_tokens(pretrained_files[namespace])
                 min_embeddings = min_pretrained_embeddings.get(namespace, 0)
@@ -556,10 +557,9 @@ class Vocabulary(Registrable):
                     tokens_new = pretrained_list[:min_embeddings]
                     tokens_to_add[namespace] = tokens_old + tokens_new
                 pretrained_set = set(pretrained_list)
-            else:
-                pretrained_set = None
             token_counts = list(counter[namespace].items())
             token_counts.sort(key=lambda x: x[1], reverse=True)
+            max_vocab: Optional[int]
             try:
                 max_vocab = max_vocab_size[namespace]
             except KeyError:

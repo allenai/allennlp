@@ -445,7 +445,7 @@ class _Meta:
     The unix timestamp of when the corresponding resource was cached or extracted.
     """
 
-    size: int = None
+    size: int = 0
     """
     The size of the corresponding resource, in bytes.
     """

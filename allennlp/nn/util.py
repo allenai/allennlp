@@ -1230,9 +1230,11 @@ def batched_index_select(
 
     An example use case of this function is looking up the start and end indices of spans in a
     sequence tensor. This is used in the
-    [CoreferenceResolver](../models/coreference_resolution/coref.md). Model to select
-    contextual word representations corresponding to the start and end indices of mentions. The key
-    reason this can't be done with basic torch functions is that we want to be able to use look-up
+    [CoreferenceResolver](https://docs.allennlp.org/models/master/models/coref/models/coref/)
+    model to select contextual word representations corresponding to the start and end indices of
+    mentions.
+
+    The key reason this can't be done with basic torch functions is that we want to be able to use look-up
     tensors with an arbitrary number of dimensions (for example, in the coref model, we don't know
     a-priori how many spans we are looking up).
 

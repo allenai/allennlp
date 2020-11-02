@@ -38,8 +38,8 @@ class Registrable(FromParams):
     a subclass to load all other subclasses and the abstract class).
     """
 
-    _registry: Dict[Type, Dict[str, Tuple[Type, str]]] = defaultdict(dict)
-    default_implementation: str = None
+    _registry: Dict[Type, Dict[str, Tuple[Type, Optional[str]]]] = defaultdict(dict)
+    default_implementation: Optional[str] = None
 
     @classmethod
     def register(cls: Type[T], name: str, constructor: str = None, exist_ok: bool = False):
@@ -152,7 +152,7 @@ class Registrable(FromParams):
         function to use).
         """
         if name in Registrable._registry[cls]:
-            subclass, constructor = Registrable._registry[cls].get(name)
+            subclass, constructor = Registrable._registry[cls][name]
             return subclass, constructor
         elif "." in name:
             # This might be a fully qualified class name, so we'll try importing its "module"

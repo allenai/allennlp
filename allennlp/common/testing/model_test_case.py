@@ -18,16 +18,18 @@ from allennlp.training import GradientDescentTrainer
 
 class ModelTestCase(AllenNlpTestCase):
     """
-    A subclass of [`AllenNlpTestCase`](./allennlp_test_case.md)
+    A subclass of [`AllenNlpTestCase`](./test_case.md)
     with added methods for testing [`Model`](../../models/model.md) subclasses.
     """
 
-    def set_up_model(self, param_file, dataset_file):
+    def set_up_model(self, param_file, dataset_file, serialization_dir=None):
 
         self.param_file = param_file
         params = Params.from_file(self.param_file)
 
-        reader = DatasetReader.from_params(params["dataset_reader"])
+        reader = DatasetReader.from_params(
+            params["dataset_reader"], serialization_dir=serialization_dir
+        )
         # The dataset reader might be lazy, but a lazy list here breaks some of our tests.
         instances = reader.read(str(dataset_file))
         # Use parameters for vocabulary if they are present in the config file, so that choices like
@@ -40,7 +42,9 @@ class ModelTestCase(AllenNlpTestCase):
         self.vocab = vocab
         self.instances = instances
         self.instances.index_with(vocab)
-        self.model = Model.from_params(vocab=self.vocab, params=params["model"])
+        self.model = Model.from_params(
+            vocab=self.vocab, params=params["model"], serialization_dir=serialization_dir
+        )
 
         # TODO(joelgrus) get rid of these
         # (a lot of the model tests use them, so they'll have to be changed)
@@ -96,6 +100,7 @@ class ModelTestCase(AllenNlpTestCase):
         save_dir = self.TEST_DIR / "save_and_load_test"
         archive_file = save_dir / "model.tar.gz"
         model = train_model_from_file(param_file, save_dir, overrides=overrides)
+        assert model is not None
         metrics_file = save_dir / "metrics.json"
         if metric_to_check is not None:
             metrics = json.loads(metrics_file.read_text())

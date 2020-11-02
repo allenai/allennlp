@@ -50,7 +50,7 @@ setup(
         ]
     ),
     install_requires=[
-        "torch>=1.6.0,<1.7.0",
+        "torch>=1.6.0,<1.8.0",
         "jsonnet>=0.10.0 ; sys.platform != 'win32'",
         "overrides==3.1.0",
         "nltk",
@@ -64,7 +64,7 @@ setup(
         "scikit-learn",
         "scipy",
         "pytest",
-        "transformers>=3.1,<3.4",
+        "transformers>=3.1,<3.5",
         "jsonpickle",
         "dataclasses;python_version<'3.7'",
         "filelock>=3.0,<3.1",

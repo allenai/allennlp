@@ -1,12 +1,17 @@
 import copy
+import os
+import tempfile
+import tarfile
 
+import pytest
 import torch
 
 from allennlp.commands.train import train_model
 from allennlp.common import Params
+from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.dataset_readers import DatasetReader
-from allennlp.models.archival import archive_model, load_archive
+from allennlp.models.archival import archive_model, load_archive, CONFIG_NAME
 
 
 def assert_models_equal(model, model2):
@@ -126,3 +131,27 @@ class ArchivalTest(AllenNlpTestCase):
                 # In this case, the parameters are definitely different, no need for the above
                 # check.
                 pass
+
+    def test_include_in_archive(self):
+        self.params["include_in_archive"] = ["metrics_epoch_*.json"]
+
+        serialization_dir = self.TEST_DIR / "serialization"
+        # Train a model
+        train_model(self.params, serialization_dir=serialization_dir)
+
+        # Assert that the additional targets were archived
+        with tempfile.TemporaryDirectory() as tempdir:
+            with tarfile.open(serialization_dir / "model.tar.gz", "r:gz") as archive:
+                archive.extractall(tempdir)
+            assert os.path.isfile(os.path.join(tempdir, "metrics_epoch_0.json"))
+            assert os.path.isfile(os.path.join(tempdir, "metrics_epoch_1.json"))
+            assert not os.path.isfile(os.path.join(tempdir, "metrics.json"))
+
+    def test_invalid_include_in_archive(self):
+        self.params["include_in_archive"] = [CONFIG_NAME]
+
+        serialization_dir = self.TEST_DIR / "serialization"
+
+        with pytest.raises(ConfigurationError) as exc:
+            train_model(self.params, serialization_dir=serialization_dir)
+            assert "are saved names and cannot be used" in str(exc.value)

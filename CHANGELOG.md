@@ -5,10 +5,46 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+
 ## Unreleased
+
+### Fixed
+
+- Fixed the computation of saliency maps in the Interpret code when using mismatched indexing.
+  Previously, we would compute gradients from the top of the transformer, after aggregation from
+  wordpieces to tokens, which gives results that are not very informative.  Now, we compute gradients
+  with respect to the embedding layer, and aggregate wordpieces to tokens separately.
+
+
+## [v1.2.0](https://github.com/allenai/allennlp/releases/tag/v1.2.0) - 2020-10-29
+
+### Changed
+
+- Enforced stricter typing requirements around the use of `Optional[T]` types.
+- Changed the behavior of `Lazy` types in `from_params` methods. Previously, if you defined a `Lazy` parameter like
+  `foo: Lazy[Foo] = None` in a custom `from_params` classmethod, then `foo` would actually never be `None`.
+  This behavior is now different. If no params were given for `foo`, it will be `None`.
+  You can also now set default values for foo like `foo: Lazy[Foo] = Lazy(Foo)`.
+  Or, if you want you want a default value but also want to allow for `None` values, you can
+  write it like this: `foo: Optional[Lazy[Foo]] = Lazy(Foo)`.
+- Added support for PyTorch version 1.7.
+
+### Fixed
+
+- Made it possible to instantiate `TrainerCallback` from config files.
+- Fixed the remaining broken internal links in the API docs.
+- Fixed a bug where Hotflip would crash with a model that had multiple TokenIndexers and the input
+  used rare vocabulary items.
+- Fixed a bug where `BeamSearch` would fail if `max_steps` was equal to 1.
+- Fixed `BasicTextFieldEmbedder` to not raise ConfigurationError if it has embedders that are empty and not in input
+
+
+## [v1.2.0rc1](https://github.com/allenai/allennlp/releases/tag/v1.2.0rc1) - 2020-10-22
 
 ### Added
 
+- Added a warning when `batches_per_epoch` for the validation data loader is inherited from
+  the train data loader.
 - Added a `build-vocab` subcommand that can be used to build a vocabulary from a training config file.
 - Added `tokenizer_kwargs` argument to `PretrainedTransformerMismatchedIndexer`.
 - Added `tokenizer_kwargs` and `transformer_kwargs` arguments to `PretrainedTransformerMismatchedEmbedder`.
@@ -31,10 +67,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added logging for the main process when running in distributed mode.
 - Added a `TrainerCallback` object to support state sharing between batch and epoch-level training callbacks.
 - Added support for .tar.gz in PretrainedModelInitializer.
-- Added classes: `nn/samplers/samplers.py` with `MultinomialSampler`, `TopKSampler`, and `TopPSampler` for 
-  sampling indices from log probabilities
-- Made `BeamSearch` registrable.
-- Added `top_k_sampling` and `type_p_sampling` `BeamSearch` implementations.
+- Made `BeamSearch` instantiable `from_params`.
+- Pass `serialization_dir` to `Model` and `DatasetReader`.
+- Added an optional `include_in_archive` parameter to the top-level of configuration files. When specified, `include_in_archive` should be a list of paths relative to the serialization directory which will be bundled up with the final archived model from a training run.
 
 ### Changed
 
@@ -60,6 +95,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Fix CUDA/CPU device mismatch bug during distributed training for categorical accuracy metric.
 - Fixed a bug where the reported `batch_loss` metric was incorrect when training with gradient accumulation.
 - Class decorators now displayed in API docs.
 - Fixed up the documentation for the `allennlp.nn.beam_search` module.
@@ -81,11 +117,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed a bug in distributed training where the vocab would be saved from every worker, when it should have been saved by only the local master process.
 - Fixed a bug in the calculation of rouge metrics during distributed training where the total sequence count was not being aggregated across GPUs.
 - Fixed `allennlp.nn.util.add_sentence_boundary_token_ids()` to use `device` parameter of input tensor.
-- Fixed the computation of saliency maps in the Interpret code when using mismatched indexing.
-  Previously, we would compute gradients from the top of the transformer, after aggregation from
-wordpieces to tokens, which gives results that are not very informative.  Now, we compute gradients
-with respect to the embedding layer, and aggregate wordpieces to tokens separately.
+- Be sure to close the TensorBoard writer even when training doesn't finish.
 - Fixed the docstring for `PyTorchSeq2VecWrapper`.
+- Fix intra word tokenization for `PretrainedTransformerTokenizer` when disabling fast tokenizer.
 
 ## [v1.1.0](https://github.com/allenai/allennlp/releases/tag/v1.1.0) - 2020-09-08
 
