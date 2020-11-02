@@ -27,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed a bug where Hotflip would crash with a model that had multiple TokenIndexers and the input
   used rare vocabulary items.
 - Fixed a bug where `BeamSearch` would fail if `max_steps` was equal to 1.
+- Fixed `BasicTextFieldEmbedder` to not raise ConfigurationError if it has embedders that are empty and not in input
 
 ## [v1.2.0rc1](https://github.com/allenai/allennlp/releases/tag/v1.2.0rc1) - 2020-10-22
 
