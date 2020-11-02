@@ -69,20 +69,20 @@ class TransformerModule(torch.nn.Module):
         Keys are parameter names from this module, and values are corresponding parameter names in the
         expected pretrained module, as per `source`.
         """
-        mapping = self._get_mapping(pretrained_module, source, mapping)
+        combined_mapping = self._get_mapping(pretrained_module, source, mapping)
         for name, module in self.named_modules():
             if name != "":
                 if hasattr(module, "_construct_default_mapping"):
                     # We handle collisions by giving priority to the outer module's mapping.
-                    mapping = dict(
+                    combined_mapping = dict(
                         list(
                             module._construct_default_mapping(
-                                pretrained_module, source, mapping
+                                pretrained_module, source, combined_mapping
                             ).items()
                         )
-                        + list(mapping.items())
+                        + list(combined_mapping.items())
                     )
-        return mapping
+        return combined_mapping
 
     def _load_from_pretrained_module(
         self,
