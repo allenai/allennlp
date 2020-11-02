@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [v1.2.0](https://github.com/allenai/allennlp/releases/tag/v1.2.0) - 2020-10-29
+
 ### Changed
 
 - Enforced stricter typing requirements around the use of `Optional[T]` types.
@@ -22,6 +24,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Made it possible to instantiate `TrainerCallback` from config files.
 - Fixed the remaining broken internal links in the API docs.
+- Fixed a bug where Hotflip would crash with a model that had multiple TokenIndexers and the input
+  used rare vocabulary items.
 - Fixed a bug where `BeamSearch` would fail if `max_steps` was equal to 1.
 - Fixed `BasicTextFieldEmbedder` to not raise ConfigurationError if it has embedders that are empty and not in input
 
