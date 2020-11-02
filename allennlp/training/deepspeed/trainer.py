@@ -30,9 +30,10 @@ from allennlp.training.moving_average import MovingAverage
 from allennlp.training.optimizers import Optimizer
 from allennlp.training.tensorboard_writer import TensorboardWriter
 
-from allennlp.training.trainer import Trainer, BatchCallback, EpochCallback
+from allennlp.training.trainer import Trainer, BatchCallback, EpochCallback, TrainerCallback
 
 from allennlp.training.deepspeed.config import DeepspeedConfig, DeepspeedArgs
+from allennlp.training.deepspeed.checkpointer import DeepspeedCheckpointer
 from allennlp.training.deepspeed.utils import launch_deepspeed
 
 logger = logging.getLogger(__name__)
@@ -55,6 +56,8 @@ class DeepspeedTrainer(Trainer):
         moving_average: Optional[MovingAverage] = None,
         batch_callbacks: List[BatchCallback] = None,
         epoch_callbacks: List[EpochCallback] = None,
+        end_callbacks: List[EpochCallback] = None,
+        trainer_callbacks: List[TrainerCallback] = None,
         distributed: bool = False,
         local_rank: int = 0,
         world_size: int = 1,
@@ -91,11 +94,17 @@ class DeepspeedTrainer(Trainer):
         if checkpointer is not None:
             self._checkpointer = checkpointer
         else:
-            self._checkpointer = Checkpointer(serialization_dir)
+            self._checkpointer = DeepspeedCheckpointer(serialization_dir)
 
         self._moving_average = moving_average
         self._batch_callbacks = batch_callbacks or []
         self._epoch_callbacks = epoch_callbacks or []
+        self._end_callbacks = end_callbacks or []
+
+        for callback in trainer_callbacks or []:
+            self._batch_callbacks.append(callback.batch())
+            self._epoch_callbacks.append(callback.epoch())
+            self._end_callbacks.append(callback.end())
 
         # We keep the total batch number as an instance variable because it
         # is used inside a closure for the hook which logs activations in
@@ -144,13 +153,13 @@ class DeepspeedTrainer(Trainer):
         """
         logger.info("Epoch %d/%d", epoch, self._num_epochs - 1)
         cpu_memory_usage = []
-        for worker, memory in common_util.peak_memory_mb().items():
+        for worker, memory in common_util.peak_cpu_memory().items():
             cpu_memory_usage.append((worker, memory))
-            logger.info(f"Worker {worker} memory usage MB: {memory}")
+            logger.info(f"Worker {worker} memory usage: {common_util.format_size(memory)}")
         gpu_memory_usage = []
-        for gpu, memory in common_util.gpu_memory_mb().items():
+        for gpu, memory in common_util.peak_gpu_memory().items():
             gpu_memory_usage.append((gpu, memory))
-            logger.info(f"GPU {gpu} memory usage MB: {memory}")
+            logger.info(f"GPU {gpu} memory usage: {common_util.format_size(memory)}")
 
         regularization_penalty = self.model.get_regularization_penalty()
 
@@ -283,9 +292,9 @@ class DeepspeedTrainer(Trainer):
         )
 
         for (worker, memory) in cpu_memory_usage:
-            metrics["worker_" + str(worker) + "_memory_MB"] = memory
+            metrics["worker_" + str(worker) + "_memory_MB"] = memory / (1024 * 1024)
         for (gpu_num, memory) in gpu_memory_usage:
-            metrics["gpu_" + str(gpu_num) + "_memory_MB"] = memory
+            metrics["gpu_" + str(gpu_num) + "_memory_MB"] = memory / (1024 * 1024)
         return metrics
 
     def _validation_loss(self, epoch: int) -> Tuple[float, float, int]:
@@ -506,14 +515,10 @@ class DeepspeedTrainer(Trainer):
                 )
 
 
-            if False and self._master:
-                self._checkpointer.save_checkpoint(
-                    epoch, self, is_best_so_far=self._metric_tracker.is_best_so_far()
-                )
-
-            # Wait for the master to finish saving the checkpoint
-            if self._distributed:
-                dist.barrier()
+            # deepspeed checkpointing handles master / dist.barrier calls
+            self._checkpointer.save_checkpoint(
+                epoch, self, is_best_so_far=self._metric_tracker.is_best_so_far()
+            )
 
             for callback in self._epoch_callbacks:
                 callback(self, metrics=metrics, epoch=epoch, is_master=self._master)
@@ -558,7 +563,7 @@ class DeepspeedTrainer(Trainer):
         }
 
         try:
-            yield model_state, training_states
+            yield self.model_engine, model_state, training_states
         finally:
             if self._moving_average is not None:
                 self._moving_average.restore()
@@ -578,16 +583,16 @@ class DeepspeedTrainer(Trainer):
             The epoch at which to resume training, which should be one after the epoch
             in the saved training state.
         """
-        model_state, training_state = self._checkpointer.restore_checkpoint()
+        checkpoint_id, model_state, training_state = self._checkpointer.restore_checkpoint()
 
         if not training_state:
             # No checkpoint to restore, start at 0
             return 0
 
         self.model.load_state_dict(model_state)
-        self.model_engine.load_checkpoint()
-        self.optimizer.load_state_dict(training_state["optimizer"])
-        training_util.move_optimizer_to_cuda(self.optimizer)
+        self.model_engine.load_checkpoint(self._serialization_dir, checkpoint_id)
+        # self.optimizer.load_state_dict(training_state["optimizer"])
+        # training_util.move_optimizer_to_cuda(self.optimizer)
 
         # Currently the `training_state` contains a serialized `MetricTracker`.
         if "metric_tracker" in training_state:
@@ -639,6 +644,8 @@ class DeepspeedTrainer(Trainer):
         checkpointer: Lazy[Checkpointer] = None,
         batch_callbacks: List[BatchCallback] = None,
         epoch_callbacks: List[EpochCallback] = None,
+        end_callbacks: List[EpochCallback] = None,
+        trainer_callbacks: List[TrainerCallback] = None,
     ) -> "Trainer":
         if no_grad:
             for name, parameter in model.named_parameters():
@@ -650,7 +657,7 @@ class DeepspeedTrainer(Trainer):
         parameters = [[n, p] for n, p in model.named_parameters() if p.requires_grad]
         moving_average_ = moving_average.construct(parameters=parameters)
 
-        checkpointer_ = checkpointer.construct() or Checkpointer(serialization_dir)
+        checkpointer_ = checkpointer.construct() or DeepspeedCheckpointer(serialization_dir)
         tensorboard_writer_ = tensorboard_writer.construct() or TensorboardWriter(serialization_dir)
 
         if deepspeed_config.optimizer:
@@ -672,7 +679,6 @@ class DeepspeedTrainer(Trainer):
             model,
             data_loader,
             deepspeed_engine=model_engine,
-            # optimizer=ds_optimizer,
             patience=patience,
             validation_metric=validation_metric,
             validation_data_loader=validation_data_loader,
@@ -684,6 +690,8 @@ class DeepspeedTrainer(Trainer):
             moving_average=moving_average_,
             batch_callbacks=batch_callbacks,
             epoch_callbacks=epoch_callbacks,
+            end_callbacks=end_callbacks,
+            trainer_callbacks=trainer_callbacks,
             distributed=distributed,
             local_rank=local_rank,
             world_size=world_size,
