@@ -5,7 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+
 ## Unreleased
+
+### Fixed
+
+- Fixed the computation of saliency maps in the Interpret code when using mismatched indexing.
+  Previously, we would compute gradients from the top of the transformer, after aggregation from
+  wordpieces to tokens, which gives results that are not very informative.  Now, we compute gradients
+  with respect to the embedding layer, and aggregate wordpieces to tokens separately.
+
 
 ## [v1.2.0](https://github.com/allenai/allennlp/releases/tag/v1.2.0) - 2020-10-29
 
@@ -28,6 +37,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   used rare vocabulary items.
 - Fixed a bug where `BeamSearch` would fail if `max_steps` was equal to 1.
 - Fixed `BasicTextFieldEmbedder` to not raise ConfigurationError if it has embedders that are empty and not in input
+
 
 ## [v1.2.0rc1](https://github.com/allenai/allennlp/releases/tag/v1.2.0rc1) - 2020-10-22
 
