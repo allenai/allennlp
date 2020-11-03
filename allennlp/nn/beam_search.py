@@ -29,179 +29,207 @@ or [`StepFunctionTypeNoTimestep`](#stepfunctiontypenotimestep).
 
 class Sampler(Registrable):
     """
-    An abstract class representing a multinomial sampler that can be used sample.
+    An abstract class representing a multinomial sampler that can be used to sample
     candidates (either nodes or beams) within `BeamSearch`.
 
-    A `Sampler` just has one required method for subclasses to implement, `_sample`,
-    which should take a tensor of normalized log probabilities with shape `(batch_size, num_classes)`,
-    and an integer representing the number of samples to take for each example in the batch.
+    A `Sampler` just has three methods, `init_state()`, `sample_nodes()` and `sample_beams()`.
 
-    The output should be a tensor of indices with shape `(batch_size, num_samples)`,
-    representing the indices of the sampled examples.
+    `init_state()` takes three arguments:
+    - a tensor of starting log probs with shape `(batch_size,, num_classes)`,
+    - the batch size, an int,
+    - and the number of classes, also an int.
+
+    It returns a state dictionary with any state tensors needed for subsequent
+    calls to `sample_nodes()` and `sample_beams()`.
+
+    By default this method just returns an empty dictionary.
+
+    Both `sample_nodes()` and `sample_beams()` should take three arguments:
+    - tensor of normalized log probabilities with shape `(batch_size, num_examples)`,
+    - an integer representing the number of samples to take for each example in the batch,
+    - and a state dictionary which could contain any tensors needed for the `Sampler` to keep
+      track of state.
+
+    For `sample_nodes()`, `num_examples = num_classes`, but for `sample_beams`,
+    `num_examples = beam_size * per_node_beam_size`.
+
+    The return value should be a tuple containing:
+    - a tensor of log probabilities of the sampled examples with shape `(batch_size, num_samples)`,
+    - a tensor of indices of the sampled examples with shape `(batch_size, num_samples)`,
+    - and the updated state dictionary.
+
+    A default implementation of `sample_beams` is provided, which just deterministically
+    picks the `k` examples with highest log probability.
     """
 
     default_implementation = "deterministic"
 
-    def __call__(
-        self, log_probs: torch.Tensor, num_samples: int
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
-        assert num_samples <= log_probs.size()[1]
-        indices = self._sample(log_probs, num_samples)
-        return log_probs.gather(-1, indices), indices
+    def init_state(
+        self, start_class_log_probabilities: torch.Tensor, batch_size: int, num_classes: int
+    ) -> StateType:
+        return {}
 
-    def _sample(
-        self,
-        log_probs: torch.Tensor,
-        num_samples: int,
-    ) -> torch.Tensor:
+    def sample_nodes(
+        self, log_probs: torch.Tensor, per_node_beam_size: int, state: StateType
+    ) -> Tuple[torch.Tensor, torch.Tensor, StateType]:
         raise NotImplementedError
+
+    def sample_beams(
+        self, log_probs: torch.Tensor, beam_size: int, state: StateType
+    ) -> Tuple[torch.Tensor, torch.Tensor, StateType]:
+        selected_log_probs, selected_indices = torch.topk(log_probs, beam_size, dim=-1)
+        return selected_log_probs, selected_indices, {}
 
 
 @Sampler.register("deterministic")
 class DeterministicSampler(Sampler):
-    @overrides
-    def __call__(
-        self, log_probs: torch.Tensor, num_samples: int
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
-        selected_log_probs, selected_indices = torch.topk(log_probs, num_samples, dim=-1)
-        return selected_log_probs, selected_indices
+    """
+    A `Sampler` that just deterministically returns the `k` nodes or beams with highest
+    log probability.
+    """
 
     @overrides
-    def _sample(
-        self,
-        log_probs: torch.Tensor,
-        num_samples: int,
-    ) -> torch.Tensor:
-        return torch.topk(log_probs, num_samples, dim=-1)[1]
+    def sample_nodes(
+        self, log_probs: torch.Tensor, per_node_beam_size: int, state: StateType
+    ) -> Tuple[torch.Tensor, torch.Tensor, StateType]:
+        selected_log_probs, selected_indices = torch.topk(log_probs, per_node_beam_size, dim=-1)
+        return selected_log_probs, selected_indices, {}
 
 
 @Sampler.register("multinomial")
 class MultinomialSampler(Sampler):
-    """
-    A simple multinomial `Sampler` which just samplers using the distribution
-    of the given `log_probs`.
-    """
-
-    def __init__(
-        self,
-        temperature: float = 1.0,
-    ) -> None:
-        self.temperature = temperature
-
-    @overrides
-    def _sample(
-        self,
-        log_probs: torch.Tensor,
-        num_samples: int,
-    ) -> torch.Tensor:
-        if self.temperature != 1.0:
-            log_probs = torch.nn.functional.log_softmax(log_probs / self.temperature, dim=-1)
-        # shape: (batch_size, num_samples)
-        return torch.multinomial(log_probs.exp(), num_samples, replacement=False)
+    raise NotImplementedError
 
 
 @Sampler.register("top-k")
 class TopKSampler(Sampler):
-    """
-    A `Sampler` which redistributes the probability mass function among the top `k` choices,
-    and then samples from that subset.
-    """
-
-    def __init__(
-        self,
-        k: int = 1,
-        temperature: float = 1.0,
-    ):
-        assert k >= 1
-        self.k = k
-        self.temperature = temperature
-
-    @overrides
-    def _sample(
-        self,
-        log_probs: torch.Tensor,
-        num_samples: int,
-    ) -> torch.Tensor:
-        assert self.k >= num_samples
-        assert self.k <= log_probs.size()[1]
-
-        # shape (both): (batch_size, k)
-        top_k_log_probs, top_k_indices = log_probs.topk(self.k, dim=-1)
-
-        # Apply temperature if necessary.
-        # shape: (batch_size, k)
-        if self.temperature != 1.0:
-            top_k_log_probs = top_k_log_probs / self.temperature
-
-        # Re-normalize the subset.
-        # shape: (batch_size, k)
-        normalized_top_k_probs = torch.nn.functional.softmax(top_k_log_probs, dim=-1)
-
-        # Sample from the re-normalized subset.
-        # NOTE: These indices are not indices into `log_probs`, they are indices into `top_k_log_probs`.
-        # shape: (batch_size, num_samples)
-        sampled_indices = torch.multinomial(normalized_top_k_probs, num_samples, replacement=False)
-
-        # Convert `sampled_indices` back to indices in the original `log_probs` tensor.
-        # shape: (batch_size, num_samples)
-        return top_k_indices.gather(-1, sampled_indices)
+    raise NotImplementedError
 
 
 @Sampler.register("top-p")
 class TopPSampler(Sampler):
-    """
-    A `Sampler` which redistributes the probability mass function among
-    the top choices with a cumulative probability of at least `p`, then samples from that subset.
-    """
+    raise NotImplementedError
 
-    def __init__(
-        self,
-        p: float = 0.9,
-        temperature: float = 1.0,
-    ):
-        assert 0 < p <= 1.0
-        self.p = p
-        self.temperature = temperature or 1.0
+
+@Sampler.register("gumbel")
+class GumbelSampler(Sampler):
+    def __init__(self, temperature: float = 1.0):
+        self.temperature = temperature
 
     @overrides
-    def _sample(
+    def init_state(
+        self, start_class_log_probabilities: torch.Tensor, batch_size: int, num_classes: int
+    ) -> StateType:
+        # shape: (batch_size, num_classes)
+        zeros = start_class_log_probabilities.new_zeros((batch_size, num_classes))
+
+        # shape: (batch_size, num_classes)
+        G_phi_S = self.gumbel_with_max(start_class_log_probabilities, zeros)
+
+        return {"G_phi_S": G_phi_S}
+
+    @overrides
+    def sample_nodes(
         self,
         log_probs: torch.Tensor,
-        num_samples: int,
-    ) -> torch.Tensor:
+        per_node_beam_size: int,
+        state: StateType,
+    ) -> Tuple[torch.Tensor, torch.Tensor, StateType]:
         # First apply temperature coefficient:
+        # shape: (batch_size * beam_size, num_classes)
         if self.temperature != 1.0:
-            log_probs = torch.nn.functional.log_softmax(log_probs / self.temperature, dim=-1)
+            _log_probs = torch.nn.functional.log_softmax(log_probs / self.temperature, dim=-1)
+        else:
+            _log_probs = log_probs
 
-        # Sort the probabilities to highest-first, then find the cumulative sum accross those
-        # shape (both): (batch_size, num_classes)
-        log_probs_descending, sorting_indices = torch.sort(log_probs, descending=True)
+        # shape: (group_size,)
+        phi_S = state["phi_S"]
 
-        # Re-normalize.
-        # shape: (batch_size, num_classes)
-        probs_descending = log_probs_descending.exp()
+        # shape: (group_size, num_classes)
+        phi_S = phi_S.unsqueeze(-1).expand_as(_log_probs)
 
-        # Take cumulative sum.
-        # shape: (batch_size, num_classes)
-        probabilities_summed = torch.cumsum(probs_descending, dim=-1)
+        # shape: (group_size, num_classes)
+        phi_S_new = phi_S + _log_probs
 
-        # Create a mask for filtering out probabilities that don't make the top `p`.
-        # shape: (batch_size, num_classes)
-        exclusion_mask = probabilities_summed > self.p
+        # shape: (group_size, 1)
+        G_phi_S = state["G_phi_S"].unsqueeze(-1)
 
-        # Now re-normalized the included log probs.
-        # shape: (batch_size, num_classes)
-        log_probs_descending[exclusion_mask] = min_value_of_dtype(log_probs.dtype)
-        # shape: (batch_size, num_classes)
-        included_probs = torch.nn.functional.softmax(log_probs_descending, dim=-1)
+        # shape: (group_size, num_classes)
+        G_phi_S_new = self.gumbel_with_max(phi_S_new, G_phi_S)
 
-        # Sample from the re-normalized subset.
-        # NOTE: These indices are not indices into `log_probs`, they are indices into `log_probs_descending`.
-        # shape: (batch_size, num_samples)
-        sampled_indices = torch.multinomial(included_probs, num_samples, replacement=False)
+        # Replace NaNs with very negative number.
+        # shape: (group_size, num_classes)
+        #  G_phi_S_new[G_phi_S_new.isnan()] = min_value_of_dtype(G_phi_S_new.dtype)
 
-        # Convert `sampled_indices` back to indices in the original `log_probs` tensor.
-        return sorting_indices.gather(-1, sampled_indices)
+        # shape (both): (group_size, per_node_beam_size)
+        top_G_phi_S_new, top_indices = torch.topk(G_phi_S_new, per_node_beam_size, dim=-1)
+
+        # shape: (group_size, per_node_beam_size)
+        top_log_probs = log_probs.gather(1, top_indices)
+
+        return top_log_probs, top_indices, {"G_phi_S": top_G_phi_S_new}
+
+    @overrides
+    def sample_beams(
+        self,
+        log_probs: torch.Tensor,
+        beam_size: int,
+        state: StateType,
+    ) -> Tuple[torch.Tensor, torch.Tensor, StateType]:
+        """
+        Returns the beams with the highest perturbed log probabilities.
+        """
+        # shape (log_probs): (batch_size, beam_size * per_node_beam_size)
+
+        batch_size = log_probs.size()[0]
+
+        # shape: (batch_size * beam_size, per_node_beam_size)
+        G_phi_S = state["G_phi_S"]
+
+        # shape: (batch_size, beam_size * per_node_beam_size)
+        G_phi_S = G_phi_S.reshape_as(log_probs)
+
+        # shape (both): (batch_size, beam_size)
+        G_phi_S_new, selected_indices = torch.topk(G_phi_S, beam_size, dim=-1)
+
+        # shape: (batch_size * beam_size,)
+        G_phi_S_new = G_phi_S_new.reshape(batch_size * beam_size)
+
+        # shape: (batch_size, beam_size)
+        selected_log_probs = log_probs.gather(1, selected_indices)
+
+        # shape: (batch_size * beam_size,)
+        phi_S = selected_log_probs.reshape(batch_size * beam_size)
+
+        return selected_log_probs, selected_indices, {"G_phi_S": G_phi_S_new, "phi_S": phi_S}
+
+    def gumbel(self, phi) -> torch.Tensor:
+        """
+        Sample `Gumbel(phi)`.
+
+        `phi` should have shape `(batch_size, num_classes)`.
+        """
+        return -torch.log(-torch.log(torch.rand_like(phi))) + phi
+
+    def gumbel_with_max(self, phi, T) -> torch.Tensor:
+        """
+        Sample `Gumbel(phi)` conditioned on the maximum value being equal to `T`.
+
+        `phi` should have shape `(batch_size, num_classes)` and `T` should have
+        shape `(batch_size, 1)`.
+        """
+        # Shape: (batch_size, num_classes)
+        G_phi = self.gumbel(phi)
+
+        # Now we find the maximum from these samples.
+        # Shape: (batch_size, )
+        Z, _ = G_phi.max(dim=-1)
+
+        # Shape: (batch_size, num_classes)
+        v = T - G_phi + torch.log1p(-torch.exp(G_phi - Z.unsqueeze(-1)))
+
+        # Shape: (batch_size, num_classes)
+        return T - torch.nn.functional.relu(v) - torch.log1p(torch.exp(-v.abs()))
 
 
 class BeamSearch(FromParams):
@@ -224,15 +252,10 @@ class BeamSearch(FromParams):
         more diversity into the search. See
         [*Beam Search Strategies for Neural Machine Translation*, Freitag and Al-Onaizan, 2017]
         (https://arxiv.org/abs/1702.01806).
-    node_sampler : `Sampler`, optional (default = `None`)
-        An optional `Sampler` which is used to pick next candidate nodes within each beam.
+    sampler : `Sampler`, optional (default = `None`)
+        An optional `Sampler` which is used to pick next candidate nodes and beams.
         If not specified, `DeterministicSampler` will be used, which just takes the `per_node_beam_size`
-        most likely nodes.
-    beam_sampler : `Sampler`, optional (default = `None`)
-        An optional `Sampler` which is used to filter down the number of expanded beams at each step
-        from `beam_size * per_node_beam_size` back to `beam_size`.
-        If not specified, `DeterministicSampler` will be used, which just takes the `beam_size`
-        most likely beams.
+        most likely nodes and the `beam_size` most likely beams.
     """
 
     def __init__(
@@ -241,8 +264,7 @@ class BeamSearch(FromParams):
         max_steps: int = 50,
         beam_size: int = 10,
         per_node_beam_size: int = None,
-        node_sampler: Sampler = None,
-        beam_sampler: Sampler = None,
+        sampler: Sampler = None,
     ) -> None:
         assert max_steps > 0
         assert beam_size > 0
@@ -253,8 +275,7 @@ class BeamSearch(FromParams):
         self.max_steps = max_steps
         self.beam_size = beam_size
         self.per_node_beam_size = per_node_beam_size or beam_size
-        self.node_sampler = node_sampler or DeterministicSampler()
-        self.beam_sampler = beam_sampler or DeterministicSampler()
+        self.sampler = sampler or DeterministicSampler()
 
     @staticmethod
     def _reconstruct_sequences(predictions, backpointers):
@@ -396,12 +417,17 @@ class BeamSearch(FromParams):
                 f"Please decrease beam_size or per_node_beam_size."
             )
 
+        sampler_state = self.sampler.init_state(
+            start_class_log_probabilities, batch_size, num_classes
+        )
+
         # Get the initial predicted classed and their log probabilities.
         # shape: (batch_size, beam_size), (batch_size, beam_size)
         (
             start_top_log_probabilities,
             start_predicted_classes,
-        ) = self.node_sampler(start_class_log_probabilities, self.beam_size)
+            sampler_state,
+        ) = self.sampler.sample_beams(start_class_log_probabilities, self.beam_size, sampler_state)
 
         if self.beam_size == 1 and (start_predicted_classes == self._end_index).all():
             warnings.warn(
@@ -458,8 +484,8 @@ class BeamSearch(FromParams):
             )
 
             # shape (both): (batch_size * beam_size, per_node_beam_size)
-            top_log_probabilities, predicted_classes = self.node_sampler(
-                cleaned_log_probabilities, self.per_node_beam_size
+            top_log_probabilities, predicted_classes, sampler_state = self.sampler.sample_nodes(
+                cleaned_log_probabilities, self.per_node_beam_size, sampler_state
             )
 
             # Here we expand the last log probabilities to (batch_size * beam_size, per_node_beam_size)
@@ -487,9 +513,11 @@ class BeamSearch(FromParams):
 
             # Keep only the top `beam_size` beam indices.
             # shape (both): (batch_size, beam_size)
-            restricted_beam_log_probs, restricted_beam_indices = self.beam_sampler(
-                reshaped_summed, self.beam_size
-            )
+            (
+                restricted_beam_log_probs,
+                restricted_beam_indices,
+                sampler_state,
+            ) = self.sampler.sample_beams(reshaped_summed, self.beam_size, sampler_state)
 
             # Use the beam indices to extract the corresponding classes.
             # shape: (batch_size, beam_size)
@@ -537,6 +565,9 @@ class BeamSearch(FromParams):
         }
 
     def _update_initial_state(self, state: StateType, batch_size: int):
+        """
+        Expand tensors in a state dictionary from `(batch_size, *)` to `(batch_size * beam_size, *)`.
+        """
         for key, state_tensor in state.items():
             if state_tensor is None:
                 continue
