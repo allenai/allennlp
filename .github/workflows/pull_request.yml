@@ -159,5 +159,4 @@ jobs:
     - name: Clean up
       if: always()
       run: |
-        pip uninstall --yes allennlp
-        pip uninstall --yes allennlp_models
+        pip uninstall --yes allennlp allennlp-models

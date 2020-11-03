@@ -1,3 +1,5 @@
+import torch
+
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.token_indexers import TokenCharactersIndexer
 from allennlp.interpret.attackers import Hotflip
@@ -49,3 +51,12 @@ class TestHotflip(AllenNlpTestCase):
         assert len(attack["final"][0]) == len(
             attack["original"]
         )  # hotflip replaces words without removing
+
+        # This checks for a bug that arose with a change in the pytorch API.  We want to be sure we
+        # can handle the case where we have to re-encode a vocab item because we didn't save it in
+        # our fake embedding matrix (see Hotflip docstring for more info).
+        hotflipper = Hotflip(predictor, max_tokens=50)
+        hotflipper.initialize()
+        hotflipper._first_order_taylor(
+            grad=torch.rand((10,)).numpy(), token_idx=torch.tensor(60), sign=1
+        )
