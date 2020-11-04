@@ -332,6 +332,7 @@ class VQAv2Reader(DatasetReader):
                     desc="Discovering images",
                 )
             }
+            logger.info("Done discovering images")
             # image loading
             self.image_loader = image_loader
             self.image_featurizer = image_featurizer.to(self.cuda_device)
