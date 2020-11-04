@@ -324,6 +324,7 @@ class VQAv2Reader(DatasetReader):
 
         self.skip_image_feature_extraction = skip_image_feature_extraction
         if not skip_image_feature_extraction:
+            logger.info("Discovering images ...")
             self.images = {
                 os.path.basename(filename): filename
                 for filename in tqdm(
