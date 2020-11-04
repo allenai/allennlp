@@ -6,7 +6,6 @@ from typing import Dict, List
 from overrides import overrides
 import torch
 
-from allennlp.common import FromParams
 from allennlp.data import TextFieldTensors, Vocabulary
 from allennlp.models.model import Model
 from allennlp.modules.transformer import TextEmbeddings, ImageFeatureEmbeddings, BiModalEncoder
@@ -40,7 +39,6 @@ class VqaVilbert(Model):
         dropout: float = 0.1,
         label_namespace: str = "answers",
     ) -> None:
-        from allennlp.modules import TimeDistributed
         from allennlp.modules.transformer import ActivationLayer
 
         super().__init__(vocab)
@@ -53,8 +51,8 @@ class VqaVilbert(Model):
         self.image_embeddings = image_embeddings
         self.encoder = encoder
 
-        self.v_pooler = ActivationLayer(encoder.hidden_size1, pooled_output_dim, torch.nn.ReLU())
-        self.t_pooler = ActivationLayer(encoder.hidden_size2, pooled_output_dim, torch.nn.ReLU())
+        self.v_pooler = ActivationLayer(encoder.hidden_size1, pooled_output_dim, torch.nn.ReLU(), pool=True)
+        self.t_pooler = ActivationLayer(encoder.hidden_size2, pooled_output_dim, torch.nn.ReLU(), pool=True)
 
         num_labels = vocab.get_vocab_size(label_namespace)
         self.label_namespace = label_namespace
@@ -72,7 +70,7 @@ class VqaVilbert(Model):
         image_hidden_size: int,
         image_num_attention_heads: int,
         combined_hidden_size: int,
-        combined_num_attention_heads: int, 
+        combined_num_attention_heads: int,
         pooled_output_dim: int,
         image_intermediate_size: int,
         image_attention_dropout: float,
@@ -201,7 +199,7 @@ class VqaVilbert(Model):
 
         # (batch_size, num_boxes, image_embedding_dim)
         v_embedding_output = self.image_embeddings(box_features, box_coordinates)
-        
+
         encoded_layers_v, encoded_layers_t = self.encoder(
             v_embedding_output,
             embedding_output,
@@ -209,12 +207,12 @@ class VqaVilbert(Model):
             extended_attention_mask,
             extended_co_attention_mask,
         )
-        
+
         sequence_output_t = encoded_layers_t[:, :, :, -1]
         sequence_output_v = encoded_layers_v[:, :, :, -1]
 
-        pooled_output_t = self.t_pooler(sequence_output_t, pool=True)
-        pooled_output_v = self.v_pooler(sequence_output_v, pool=True)
+        pooled_output_t = self.t_pooler(sequence_output_t)
+        pooled_output_v = self.v_pooler(sequence_output_v)
 
         if self.fusion_method == "sum":
             pooled_output = self.dropout(pooled_output_t + pooled_output_v)
@@ -244,11 +242,14 @@ class VqaVilbert(Model):
             binary_label_mask = weighted_labels.new_ones(logits.size())
             binary_label_mask[:, 0] = 0
             binary_label_mask[:, 1] = 0
-            
-            outputs["loss"] = torch.nn.functional.binary_cross_entropy_with_logits(
-                logits, weighted_labels, weight=binary_label_mask, reduction='sum'
-            ) / batch_size
-            
+
+            outputs["loss"] = (
+                torch.nn.functional.binary_cross_entropy_with_logits(
+                    logits, weighted_labels, weight=binary_label_mask, reduction="sum"
+                )
+                / batch_size
+            )
+
             # TODO(mattg): Multi-label F1 is good, but it is not exactly the VQA accuracy metric.
             # That still needs to be implemented.
             self.f1(logits, weighted_labels, binary_label_mask.bool())

@@ -120,7 +120,10 @@ class FasterRcnnRegionDetector(RegionDetector):
     def _model(self):
         if self._model_object is None:
             from allennlp.common import detectron
-            pipeline = detectron.get_pipeline_from_flat_parameters(self.flat_parameters, make_copy=False)
+
+            pipeline = detectron.get_pipeline_from_flat_parameters(
+                self.flat_parameters, make_copy=False
+            )
             self._model_object = pipeline.model
         return self._model_object
 

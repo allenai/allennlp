@@ -1,15 +1,16 @@
 import json
-# Path to your existing training config.
-CONFIG_PATH = "test_fixtures/vilbert_vqa/experiment_from_huggingface.jsonnet"
 from allennlp.common.params import Params
 from allennlp.training.util import make_vocab_from_params
 
+# Path to your existing training config.
+CONFIG_PATH = "test_fixtures/vilbert_vqa/experiment_from_huggingface.jsonnet"
+
 params_overrides = {
-    'dataset_reader':{
-        'skip_image_feature_extraction': True,
+    "dataset_reader": {
+        "skip_image_feature_extraction": True,
     },
-    'vocabulary':{
-        'min_count':{'answers':9},
+    "vocabulary": {
+        "min_count": {"answers": 9},
     },
 }
 params_overrides = json.dumps(params_overrides)

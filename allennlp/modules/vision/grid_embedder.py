@@ -85,7 +85,10 @@ class ResnetBackbone(GridEmbedder):
     def _pipeline(self):
         if self._pipeline_object is None:
             from allennlp.common import detectron
-            self._pipeline_object = detectron.get_pipeline_from_flat_parameters(self.flat_parameters, make_copy=False)
+
+            self._pipeline_object = detectron.get_pipeline_from_flat_parameters(
+                self.flat_parameters, make_copy=False
+            )
         return self._pipeline_object
 
     @property

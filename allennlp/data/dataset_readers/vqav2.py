@@ -205,7 +205,7 @@ punct = [
 ]
 
 
-def process_punctuation(inText):
+def process_punctuation(inText: str) -> str:
     outText = inText
     for p in punct:
         if (p + " " in inText or " " + p in inText) or (re.search(comma_strip, inText) is not None):
@@ -216,23 +216,21 @@ def process_punctuation(inText):
     return outText
 
 
-def process_digit_article(inText):
-    outText = []
-    tempText = inText.lower().split()
-    for word in tempText:
-        word = manual_map.setdefault(word, word)
+def process_digit_article(input: str) -> str:
+    output = []
+    for word in input.lower().split():
+        word = manual_map.get(word, word)
         if word not in articles:
-            outText.append(word)
+            output.append(word)
         else:
             pass
-    for wordId, word in enumerate(outText):
+    for index, word in enumerate(output):
         if word in contractions:
-            outText[wordId] = contractions[word]
-    outText = " ".join(outText)
-    return outText
+            output[index] = contractions[word]
+    return " ".join(output)
 
 
-def preprocess_answer(answer):
+def preprocess_answer(answer: str) -> str:
     answer = process_digit_article(process_punctuation(answer))
     answer = answer.replace(",", "")
     return answer
@@ -282,7 +280,9 @@ class VQAv2Reader(DatasetReader):
         image_featurizer: GridEmbedder,
         region_detector: RegionDetector,
         *,
-        answer_vocab: Union[str, List[str]] = "https://storage.googleapis.com/allennlp-public-data/vqav2/answers.txt",
+        answer_vocab: Union[
+            str, Iterable[str]
+        ] = "https://storage.googleapis.com/allennlp-public-data/vqav2/answers.txt",
         feature_cache_dir: Optional[Union[str, PathLike]] = None,
         tokenizer: Tokenizer = None,
         token_indexers: Dict[str, TokenIndexer] = None,
@@ -307,7 +307,7 @@ class VQAv2Reader(DatasetReader):
                 cuda_device = -1
         check_for_gpu(cuda_device)
         self.cuda_device = int_to_device(cuda_device)
-    
+
         # tokenizers and indexers
         if tokenizer is None:
             tokenizer = PretrainedTransformerTokenizer("bert-base-uncased")
@@ -319,10 +319,8 @@ class VQAv2Reader(DatasetReader):
         # read answer vocab
         if isinstance(answer_vocab, str):
             answer_vocab = cached_path(answer_vocab)
-            self.answer_vocab = text_lines_from_file(answer_vocab)
-        else:
-            self.answer_vocab = answer_vocab
-        self.answer_vocab = frozenset(preprocess_answer(a) for a in self.answer_vocab)
+            answer_vocab = text_lines_from_file(answer_vocab)
+        self.answer_vocab = frozenset(preprocess_answer(a) for a in answer_vocab)
 
         self.skip_image_feature_extraction = skip_image_feature_extraction
         if not skip_image_feature_extraction:
@@ -381,63 +379,53 @@ class VQAv2Reader(DatasetReader):
         aws_base = "https://s3.amazonaws.com/cvmlp/vqa/"
         mscoco_base = aws_base + "mscoco/vqa/"
         scene_base = aws_base + "abstract_v002/vqa/"
+
+        # fmt: off
         splits = {
             "balanced_real_train": Split(
-                [mscoco_base
-                + "v2_Annotations_Train_mscoco.zip!v2_mscoco_train2014_annotations.json"],
-                [mscoco_base
-                + "v2_Questions_Train_mscoco.zip!v2_OpenEnded_mscoco_train2014_questions.json"],
+                [mscoco_base + "v2_Annotations_Train_mscoco.zip!v2_mscoco_train2014_annotations.json"],  # noqa: E501
+                [mscoco_base + "v2_Questions_Train_mscoco.zip!v2_OpenEnded_mscoco_train2014_questions.json"],  # noqa: E501
             ),
             "balanced_real_val": Split(
-                [mscoco_base + "v2_Annotations_Val_mscoco.zip!v2_mscoco_val2014_annotations.json"],
-                [mscoco_base
-                + "v2_Questions_Val_mscoco.zip!v2_OpenEnded_mscoco_val2014_questions.json"],
+                [mscoco_base + "v2_Annotations_Val_mscoco.zip!v2_mscoco_val2014_annotations.json"],  # noqa: E501
+                [mscoco_base + "v2_Questions_Val_mscoco.zip!v2_OpenEnded_mscoco_val2014_questions.json"],  # noqa: E501
             ),
             "balanced_real_test": Split(
                 [],
-                [mscoco_base
-                + "v2_Questions_Test_mscoco.zip!v2_OpenEnded_mscoco_test2015_questions.json"],
+                [mscoco_base + "v2_Questions_Test_mscoco.zip!v2_OpenEnded_mscoco_test2015_questions.json"],  # noqa: E501
             ),
             "balanced_real_train_val": Split(
-                [mscoco_base
-                + "v2_Annotations_Train_mscoco.zip!v2_mscoco_train2014_annotations.json", 
-                mscoco_base + "v2_Annotations_Val_mscoco.zip!v2_mscoco_val2014_annotations.json"],
-                [mscoco_base
-                + "v2_Questions_Train_mscoco.zip!v2_OpenEnded_mscoco_train2014_questions.json",
-                mscoco_base
-                + "v2_Questions_Val_mscoco.zip!v2_OpenEnded_mscoco_val2014_questions.json"],
+                [
+                    mscoco_base + "v2_Annotations_Train_mscoco.zip!v2_mscoco_train2014_annotations.json",  # noqa: E501
+                    mscoco_base + "v2_Annotations_Val_mscoco.zip!v2_mscoco_val2014_annotations.json",  # noqa: E501
+                ],
+                [
+                    mscoco_base + "v2_Questions_Train_mscoco.zip!v2_OpenEnded_mscoco_train2014_questions.json",  # noqa: E501
+                    mscoco_base + "v2_Questions_Val_mscoco.zip!v2_OpenEnded_mscoco_val2014_questions.json",  # noqa: E501
+                ],
             ),
-
             "balanced_bas_train": Split(  # "bas" is Binary Abstract Scenes
-                [scene_base
-                + "Annotations_Binary_Train2017_abstract_v002.zip!abstract_v002_train2017_annotations.json"],
-                [scene_base
-                + "Questions_Binary_Train2017_abstract_v002.zip!OpenEnded_abstract_v002_train2017_questions.json"],
+                [scene_base + "Annotations_Binary_Train2017_abstract_v002.zip!abstract_v002_train2017_annotations.json"],  # noqa: E501
+                [scene_base + "Questions_Binary_Train2017_abstract_v002.zip!OpenEnded_abstract_v002_train2017_questions.json"],  # noqa: E501
             ),
             "balanced_bas_val": Split(
-                [scene_base
-                + "Annotations_Binary_Val2017_abstract_v002.zip!abstract_v002_val2017_annotations.json"],
-                [scene_base
-                + "Questions_Binary_Val2017_abstract_v002.zip!OpenEnded_abstract_v002_val2017_questions.json"],
+                [scene_base + "Annotations_Binary_Val2017_abstract_v002.zip!abstract_v002_val2017_annotations.json"],  # noqa: E501
+                [scene_base + "Questions_Binary_Val2017_abstract_v002.zip!OpenEnded_abstract_v002_val2017_questions.json"],  # noqa: E501
             ),
             "abstract_scenes_train": Split(
-                [scene_base
-                + "Annotations_Train_abstract_v002.zip!abstract_v002_train2015_annotations.json"],
-                [scene_base
-                + "Questions_Train_abstract_v002.zip!OpenEnded_abstract_v002_train2015_questions.json"],
+                [scene_base + "Annotations_Train_abstract_v002.zip!abstract_v002_train2015_annotations.json"],  # noqa: E501
+                [scene_base + "Questions_Train_abstract_v002.zip!OpenEnded_abstract_v002_train2015_questions.json"],  # noqa: E501
             ),
             "abstract_scenes_val": Split(
-                [scene_base
-                + "Annotations_Val_abstract_v002.zip!abstract_v002_val2015_annotations.json"],
-                [scene_base
-                + "Questions_Val_abstract_v002.zip!OpenEnded_abstract_v002_val2015_questions.json"],
+                [scene_base + "Annotations_Val_abstract_v002.zip!abstract_v002_val2015_annotations.json"],  # noqa: E501
+                [scene_base + "Questions_Val_abstract_v002.zip!OpenEnded_abstract_v002_val2015_questions.json"],  # noqa: E501
             ),
             "abstract_scenes_test": Split(
                 [],
-                [scene_base
-                + "Questions_Test_abstract_v002.zip!OpenEnded_abstract_v002_test2015_questions.json"],
+                [scene_base + "Questions_Test_abstract_v002.zip!OpenEnded_abstract_v002_test2015_questions.json"],  # noqa: E501
             ),
         }
+        # fmt: on
 
         if isinstance(split_name, str):
             try:
@@ -467,16 +455,19 @@ class VQAv2Reader(DatasetReader):
                 questions_file = json.load(f)
                 image_subtype = questions_file["data_subtype"]
                 for ques in questions_file["questions"]:
-                    ques['image_subtype'] = image_subtype
+                    ques["image_subtype"] = image_subtype
                     questions.append(ques)
 
         question_dicts = list(self.shard_iterable(questions))
+        processed_images: Iterable[Optional[Tuple[Tensor, Tensor]]]
         if not self.skip_image_feature_extraction:
             # It would be much easier to just process one image at a time, but it's faster to process
             # them in batches. So this code gathers up instances until it has enough to fill up a batch
             # that needs processing, and then processes them all.
             processed_images = self._process_image_paths(
-                self.images[f"COCO_{question_dict['image_subtype']}_{question_dict['image_id']:012d}.jpg"]
+                self.images[
+                    f"COCO_{question_dict['image_subtype']}_{question_dict['image_id']:012d}.jpg"
+                ]
                 for question_dict in question_dicts
             )
         else:
@@ -499,7 +490,9 @@ class VQAv2Reader(DatasetReader):
             if attempted_instances_count % 2000 == 0:
                 failed_instances_fraction = failed_instances_count / attempted_instances_count
                 if failed_instances_fraction > 0.1:
-                    logger.warning(f"{failed_instances_fraction*100:.0f}% of instances have no answers.")
+                    logger.warning(
+                        f"{failed_instances_fraction*100:.0f}% of instances have no answers."
+                    )
 
     def _process_image_paths(
         self, image_paths: Iterable[str], *, use_cache: bool = True
@@ -565,17 +558,19 @@ class VQAv2Reader(DatasetReader):
         self,  # type: ignore
         question: str,
         image: Union[str, Tuple[Tensor, Tensor]],
-        answers: List[Dict[str, str]] = None,
+        answers: Optional[List[Dict[str, str]]] = None,
         *,
         use_cache: bool = True,
     ) -> Optional[Instance]:
         tokenized_question = self._tokenizer.tokenize(question)
         question_field = TextField(tokenized_question, None)
-        fields = {
+        from allennlp.data import Field
+
+        fields: Dict[str, Field] = {
             "question": question_field,
         }
 
-        if image is not None: 
+        if image is not None:
             if isinstance(image, str):
                 features, coords = next(self._process_image_paths([image], use_cache=use_cache))
             else:
@@ -583,15 +578,14 @@ class VQAv2Reader(DatasetReader):
 
             fields["box_features"] = ArrayField(features)
             fields["box_coordinates"] = ArrayField(coords)
-    
+
         if answers:
             answer_fields = []
             weights = []
-            answer_counts = Counter()
+            answer_counts: MutableMapping[str, int] = Counter()
 
-            for answer in answers:
-                answer = preprocess_answer(answer["answer"])
-                answer_counts[answer] += 1
+            for answer in (a["answer"] for a in answers):
+                answer_counts[preprocess_answer(answer)] += 1
 
             for answer, count in answer_counts.items():
                 if answer in self.answer_vocab:
