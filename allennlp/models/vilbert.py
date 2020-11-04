@@ -16,7 +16,7 @@ from allennlp.modules.transformer import (
     TextEmbeddings,
     ImageFeatureEmbeddings,
     BiModalEncoder,
-    ActivationLayer,
+    TransformerPooler,
     TransformerModule,
 )
 
@@ -34,7 +34,7 @@ class Nlvr2Vilbert(Model, TransformerModule):
     """
 
     # NOTE: This line is unnecessary and will be removed.
-    # It's to showcase the possibility of addressing Matt's comment:
+    # It's to showcase the possiblity of addressing Matt's comment:
     #   TODO(mattg): This call to `transformer.embeddings` works with some transformers, but I'm
     #   not sure it works for all of them, or what to do if it fails. ...
     # See `from_pretrained_module` defined below to see how it is used.
@@ -60,12 +60,8 @@ class Nlvr2Vilbert(Model, TransformerModule):
         self.image_embeddings = image_embeddings
         self.encoder = TimeDistributed(encoder)
 
-        self.t_pooler = TimeDistributed(
-            ActivationLayer(encoder.hidden_size1, pooled_output_dim, torch.nn.ReLU())
-        )
-        self.v_pooler = TimeDistributed(
-            ActivationLayer(encoder.hidden_size2, pooled_output_dim, torch.nn.ReLU())
-        )
+        self.t_pooler = TimeDistributed(TransformerPooler(encoder.hidden_size1, pooled_output_dim))
+        self.v_pooler = TimeDistributed(TransformerPooler(encoder.hidden_size2, pooled_output_dim))
         self.classifier = torch.nn.Linear(pooled_output_dim * 2, 2)
         self.dropout = torch.nn.Dropout(dropout)
 

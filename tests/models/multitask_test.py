@@ -8,6 +8,7 @@ from allennlp.data.tokenizers import PretrainedTransformerTokenizer
 from allennlp.models.heads import ClassifierHead
 from allennlp.models import MultiTaskModel
 from allennlp.modules.backbones import PretrainedTransformerBackbone
+from allennlp.modules.seq2vec_encoders import ClsPooler
 
 
 class TestMultiTaskModel(ModelTestCase):
@@ -16,8 +17,8 @@ class TestMultiTaskModel(ModelTestCase):
         transformer_name = "epwalsh/bert-xsmall-dummy"
         vocab = Vocabulary()
         backbone = PretrainedTransformerBackbone(vocab, transformer_name)
-        head1 = ClassifierHead(vocab, input_dim=20, num_labels=3)
-        head2 = ClassifierHead(vocab, input_dim=20, num_labels=4)
+        head1 = ClassifierHead(vocab, seq2vec_encoder=ClsPooler(20), input_dim=20, num_labels=3)
+        head2 = ClassifierHead(vocab, seq2vec_encoder=ClsPooler(20), input_dim=20, num_labels=4)
         # We'll start with one head, and add another later.
         model = MultiTaskModel(vocab, backbone, {"cls": head1})
 

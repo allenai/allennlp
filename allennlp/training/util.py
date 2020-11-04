@@ -85,10 +85,14 @@ def str_to_time(time_str: str) -> datetime.datetime:
 
 
 def data_loaders_from_params(
-    params: Params, train: bool = True, validation: bool = True, test: bool = True
+    params: Params,
+    train: bool = True,
+    validation: bool = True,
+    test: bool = True,
+    serialization_dir: Optional[Union[str, PathLike]] = None,
 ) -> Dict[str, DataLoader]:
     """
-    Load datasets specified by the config.
+    Instantiate data loaders specified by the config.
     """
     data_loaders: Dict[str, DataLoader] = {}
 
@@ -100,7 +104,9 @@ def data_loaders_from_params(
         return data_loaders
 
     dataset_reader_params = params.pop("dataset_reader")
-    dataset_reader = DatasetReader.from_params(dataset_reader_params)
+    dataset_reader = DatasetReader.from_params(
+        dataset_reader_params, serialization_dir=serialization_dir
+    )
     data_loader_params = params.pop("data_loader")
 
     if train:
@@ -120,7 +126,7 @@ def data_loaders_from_params(
     if validation_dataset_reader_params is not None:
         logger.info("Using a separate dataset reader to load validation and test data.")
         validation_and_test_dataset_reader = DatasetReader.from_params(
-            validation_dataset_reader_params
+            validation_dataset_reader_params, serialization_dir=serialization_dir
         )
 
     validation_data_loader_params = params.pop("validation_data_loader", data_loader_params)
@@ -435,7 +441,7 @@ def make_vocab_from_params(
     if datasets_for_vocab_creation is None:
         # If `datasets_for_vocab_creation` was not specified, we'll use all datasets
         # from the config.
-        data_loaders = data_loaders_from_params(params)
+        data_loaders = data_loaders_from_params(params, serialization_dir=serialization_dir)
     else:
         for dataset_name in datasets_for_vocab_creation:
             data_path = f"{dataset_name}_data_path"
@@ -443,6 +449,7 @@ def make_vocab_from_params(
                 raise ConfigurationError(f"invalid 'datasets_for_vocab_creation' {dataset_name}")
         data_loaders = data_loaders_from_params(
             params,
+            serialization_dir=serialization_dir,
             train=("train" in datasets_for_vocab_creation),
             validation=("validation" in datasets_for_vocab_creation),
             test=("test" in datasets_for_vocab_creation),

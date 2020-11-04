@@ -368,10 +368,16 @@ class MultiProcessDataLoader(DataLoader):
                     for batch_indices in self.batch_sampler.get_batch_indices(instances)
                 )
             else:
-                batches = lazy_groups_of(instances, self.batch_size)
+                # NOTE: it's safe to assume `batch_size` is not `None` when `batch_sampler` is `None`.
+                # Hence the `type: ignore` comment.
+                batches = lazy_groups_of(instances, self.batch_size)  # type: ignore[arg-type]
 
             for batch in batches:
-                if self.batch_sampler is None and self.drop_last and len(batch) < self.batch_size:
+                if (
+                    self.batch_sampler is None
+                    and self.drop_last
+                    and len(batch) < self.batch_size  # type: ignore[operator]
+                ):
                     break
                 yield self.collate_fn(batch)
 

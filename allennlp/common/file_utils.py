@@ -149,7 +149,7 @@ def cached_path(
     cache_dir = os.path.expanduser(cache_dir)
     os.makedirs(cache_dir, exist_ok=True)
 
-    if isinstance(url_or_filename, PathLike):
+    if not isinstance(url_or_filename, str):
         url_or_filename = str(url_or_filename)
 
     file_path: str
@@ -420,12 +420,13 @@ class TensorCache(MutableMapping[str, Tensor], ABC):
             that number. Reasonable operating systems don't actually allocate that space
             until it is really needed.
         """
+        cpu_count = os.cpu_count() or 1
         self.lmdb_env = lmdb.open(
             filename,
             subdir=False,
             map_size=map_size,
-            max_readers=os.cpu_count() * 2,
-            max_spare_txns=os.cpu_count() * 2,
+            max_readers=cpu_count * 2,
+            max_spare_txns=cpu_count * 2,
             metasync=False,
             sync=True,
             readahead=False,
@@ -568,7 +569,7 @@ class _Meta:
     The unix timestamp of when the corresponding resource was cached or extracted.
     """
 
-    size: int = None
+    size: int = 0
     """
     The size of the corresponding resource, in bytes.
     """
@@ -710,7 +711,7 @@ def get_file_extension(path: str, dot=True, lower: bool = True):
 def open_compressed(
     filename: Union[str, PathLike], mode: str = "rt", encoding: Optional[str] = "UTF-8", **kwargs
 ):
-    if isinstance(filename, PathLike):
+    if not isinstance(filename, str):
         filename = str(filename)
     open_fn: Callable = open
 

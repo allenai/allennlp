@@ -14,6 +14,7 @@ jobs:
   gpu_checks:
     name: GPU Checks
     if: github.repository == 'allenai/allennlp'  # self-hosted runner only available on main repo
+    timeout-minutes: 15
     runs-on: [self-hosted, GPU]
 
     steps:
@@ -150,8 +151,7 @@ jobs:
     - name: Clean up
       if: always()
       run: |
-        pip uninstall --yes allennlp
-        pip uninstall --yes allennlp_models
+        pip uninstall --yes allennlp allennlp-models
 
   # Builds package distribution files for PyPI.
   build_package:
@@ -251,6 +251,11 @@ jobs:
     - name: Install core package
       run: |
         pip install $(ls dist/*.whl)
+        # TODO(epwalsh): In PyTorch 1.7, dataclasses is an unconditional dependency, when it should
+        # only be a conditional dependency for Python < 3.7.
+        # This has been fixed on PyTorch master branch, so we should be able to
+        # remove this check with the next PyTorch release.
+        pip uninstall -y dataclasses
 
     - name: Pip freeze
       run: |

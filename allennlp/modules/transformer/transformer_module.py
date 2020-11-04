@@ -40,11 +40,6 @@ class TransformerModule(torch.nn.Module):
             combined_mapping.update(cls._huggingface_mapping)
         if mapping is not None:
             combined_mapping.update(mapping)
-        # if mapping is None:
-        #     if "huggingface" in source:
-        #         mapping = cls._huggingface_mapping
-        #     else:
-        #         mapping = {}
         for name, module in pretrained_module.named_modules():
             newname = name
             for key, val in combined_mapping.items():
@@ -84,8 +79,6 @@ class TransformerModule(torch.nn.Module):
         between `pretrained_module` and the instance.
         """
         ignore_absent_parameters = ignore_absent_parameters or []
-        # if mapping is None:
-        #    mapping = self._construct_default_mapping(source)
         combined_mapping = self._construct_default_mapping(source)
         if mapping is not None:
             combined_mapping.update(mapping)

@@ -1,6 +1,6 @@
 import logging
 import math
-from typing import List, Iterable, Tuple, Sequence
+from typing import List, Iterable, Tuple, Sequence, Optional
 import random
 
 from allennlp.common.checks import ConfigurationError
@@ -88,7 +88,7 @@ class BucketBatchSampler(BatchSampler):
             # Make sure instance is indexed before calling .get_padding
             lengths = []
             noisy_lengths = []
-            for field_name in self.sorting_keys:
+            for field_name in self.sorting_keys:  # type: ignore
                 if field_name not in instance.fields:
                     raise ConfigurationError(
                         f'Sorting key "{field_name}" is not a field in instance. '
@@ -132,7 +132,7 @@ class BucketBatchSampler(BatchSampler):
             are not homogeneous, you might need more.
         """
         max_length = 0.0
-        longest_field: str = None
+        longest_field: Optional[str] = None
         for i, instance in enumerate(instances):
             for field_name, field in instance.fields.items():
                 length = len(field)

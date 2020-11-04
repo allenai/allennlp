@@ -9,6 +9,7 @@ import logging
 import os
 from os import PathLike
 from typing import Any, Dict, List, Optional, Union
+import warnings
 
 import torch
 import torch.distributed as dist
@@ -23,7 +24,7 @@ from allennlp.common import util as common_util
 from allennlp.common.plugins import import_plugins
 from allennlp.data import DatasetReader, Vocabulary
 from allennlp.data import DataLoader
-from allennlp.models.archival import archive_model, CONFIG_NAME
+from allennlp.models.archival import archive_model, CONFIG_NAME, verify_include_in_archive
 from allennlp.models.model import _DEFAULT_WEIGHTS, Model
 from allennlp.training.trainer import Trainer
 from allennlp.training import util as training_util
@@ -225,6 +226,9 @@ def train_model(
     training_util.create_serialization_dir(params, serialization_dir, recover, force)
     params.to_file(os.path.join(serialization_dir, CONFIG_NAME))
 
+    include_in_archive = params.pop("include_in_archive", None)
+    verify_include_in_archive(include_in_archive)
+
     distributed_params = params.params.pop("distributed", None)
     # If distributed isn't in the config and the config contains strictly
     # one cuda device, we just run a single training process.
@@ -239,11 +243,17 @@ def train_model(
         )
 
         if not dry_run:
-            archive_model(serialization_dir)
+            archive_model(serialization_dir, include_in_archive=include_in_archive)
         return model
 
     # Otherwise, we are running multiple processes for training.
     else:
+        common_logging.prepare_global_logging(
+            serialization_dir,
+            rank=0,
+            world_size=1,
+        )
+
         # We are careful here so that we can raise a good error if someone
         # passed the wrong thing - cuda_devices are required.
         device_ids = distributed_params.pop("cuda_devices", None)
@@ -308,13 +318,14 @@ def train_model(
                 world_size,
                 device_ids,
                 file_friendly_logging,
+                include_in_archive,
             ),
             nprocs=num_procs,
         )
         if dry_run:
             return None
         else:
-            archive_model(serialization_dir)
+            archive_model(serialization_dir, include_in_archive=include_in_archive)
             model = Model.load(params, serialization_dir)
             return model
 
@@ -331,6 +342,7 @@ def _train_worker(
     world_size: int = 1,
     distributed_device_ids: List[int] = None,
     file_friendly_logging: bool = False,
+    include_in_archive: List[str] = None,
 ) -> Optional[Model]:
     """
     Helper to train the configured model/experiment. In distributed mode, this is spawned as a
@@ -365,6 +377,8 @@ def _train_worker(
     file_friendly_logging : `bool`, optional (default=`False`)
         If `True`, we add newlines to tqdm output, even on an interactive terminal, and we slow
         down tqdm's output to only once every 10 seconds.
+    include_in_archive : `List[str]`, optional
+        Paths relative to `serialization_dir` that should be archived in addition to the default ones.
 
     # Returns
 
@@ -387,6 +401,8 @@ def _train_worker(
     include_package = include_package or []
 
     if distributed:
+        assert distributed_device_ids is not None
+
         # Since the worker is spawned and not forked, the extra imports need to be done again.
         # Both the ones from the plugins and the ones from `include_package`.
         import_plugins()
@@ -455,7 +471,7 @@ def _train_worker(
                 "Training interrupted by the user. Attempting to create "
                 "a model archive using the current best epoch weights."
             )
-            archive_model(serialization_dir)
+            archive_model(serialization_dir, include_in_archive=include_in_archive)
         raise
 
     if master:
@@ -545,7 +561,7 @@ class TrainModel(Registrable):
         model: Lazy[Model],
         data_loader: Lazy[DataLoader],
         trainer: Lazy[Trainer],
-        vocabulary: Lazy[Vocabulary] = None,
+        vocabulary: Lazy[Vocabulary] = Lazy(Vocabulary),
         datasets_for_vocab_creation: List[str] = None,
         validation_dataset_reader: DatasetReader = None,
         validation_data_path: DataPath = None,
@@ -606,7 +622,7 @@ class TrainModel(Registrable):
             The `Trainer` that actually implements the training loop.  This is a lazy object because
             it depends on the model that's going to be trained.
 
-        vocabulary: `Lazy[Vocabulary]`, optional (default=`None`)
+        vocabulary: `Lazy[Vocabulary]`, optional (default=`Lazy(Vocabulary)`)
             The `Vocabulary` that we will use to convert strings in the data to integer ids (and
             possibly set sizes of embedding matrices in the `Model`).  By default we construct the
             vocabulary from the instances that we read.
@@ -648,26 +664,34 @@ class TrainModel(Registrable):
         # Validation data loader.
         if validation_data_path is not None:
             validation_dataset_reader = validation_dataset_reader or dataset_reader
-            validation_data_loader_ = validation_data_loader.construct(
-                reader=validation_dataset_reader, data_path=validation_data_path
-            )
-            if validation_data_loader_ is None:
-                validation_data_loader_ = data_loader.construct(
+            if validation_data_loader is not None:
+                data_loaders["validation"] = validation_data_loader.construct(
                     reader=validation_dataset_reader, data_path=validation_data_path
                 )
-            data_loaders["validation"] = validation_data_loader_
+            else:
+                data_loaders["validation"] = data_loader.construct(
+                    reader=validation_dataset_reader, data_path=validation_data_path
+                )
+                if getattr(data_loaders["validation"], "batches_per_epoch", None) is not None:
+                    warnings.warn(
+                        "Using 'data_loader' params to construct validation data loader since "
+                        "'validation_data_loader' params not specified, but you have "
+                        "'data_loader.batches_per_epoch' set which may result in different "
+                        "validation datasets for each epoch.",
+                        UserWarning,
+                    )
 
         # Test data loader.
         if test_data_path is not None:
             test_dataset_reader = validation_dataset_reader or dataset_reader
-            test_data_loader_ = validation_data_loader.construct(
-                reader=test_dataset_reader, data_path=test_data_path
-            )
-            if test_data_loader_ is None:
-                test_data_loader_ = data_loader.construct(
+            if validation_data_loader is not None:
+                data_loaders["test"] = validation_data_loader.construct(
                     reader=test_dataset_reader, data_path=test_data_path
                 )
-            data_loaders["test"] = test_data_loader_
+            else:
+                data_loaders["test"] = data_loader.construct(
+                    reader=test_dataset_reader, data_path=test_data_path
+                )
 
         if datasets_for_vocab_creation:
             for key in datasets_for_vocab_creation:
@@ -687,9 +711,8 @@ class TrainModel(Registrable):
         )
 
         vocabulary_ = vocabulary.construct(instances=instance_generator)
-        if not vocabulary_:
-            vocabulary_ = Vocabulary.from_instances(instance_generator)
-        model_ = model.construct(vocab=vocabulary_)
+
+        model_ = model.construct(vocab=vocabulary_, serialization_dir=serialization_dir)
 
         # Initializing the model can have side effect of expanding the vocabulary.
         # Save the vocab only in the master. In the degenerate non-distributed
@@ -711,6 +734,7 @@ class TrainModel(Registrable):
             data_loader=data_loaders["train"],
             validation_data_loader=data_loaders.get("validation"),
         )
+        assert trainer_ is not None
 
         return cls(
             serialization_dir=serialization_dir,

@@ -41,7 +41,7 @@ try:
     import resource
 except ImportError:
     # resource doesn't exist on Windows systems
-    resource = None
+    resource = None  # type: ignore
 
 logger = logging.getLogger(__name__)
 

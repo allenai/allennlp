@@ -112,6 +112,9 @@ class DatasetReader(Registrable):
 
         See the section below about how to do this.
 
+    serialization_dir: `str`, optional (default=`None`)
+        The directory in which the training output is saved to, or the directory the model is loaded from.
+
     # Using your reader with multi-process or distributed data loading
 
     There are two things you may need to update in your `DatasetReader` in order for
@@ -162,6 +165,7 @@ class DatasetReader(Registrable):
         max_instances: Optional[int] = None,
         manual_distributed_sharding: bool = False,
         manual_multi_process_sharding: bool = False,
+        serialization_dir: Optional[str] = None,
     ) -> None:
         # Do some validation.
         if max_instances is not None and max_instances < 0:
@@ -170,6 +174,7 @@ class DatasetReader(Registrable):
         self.max_instances = max_instances
         self.manual_distributed_sharding = manual_distributed_sharding
         self.manual_multi_process_sharding = manual_multi_process_sharding
+        self.serialization_dir = serialization_dir
         self._worker_info: Optional[WorkerInfo] = None
         self._distributed_info: Optional[DistributedInfo] = None
         # If we're actually in the main process, we can find the info using torch utils.

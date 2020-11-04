@@ -1,6 +1,6 @@
 from collections import defaultdict
 import inspect
-from typing import Any, Dict, List, Set
+from typing import Any, Dict, List, Set, Optional
 
 from overrides import overrides
 import torch
@@ -91,7 +91,7 @@ class MultiTaskModel(Model):
             **{key: get_forward_arguments(heads[key]) for key in heads},
         }
         self._loss_weights = loss_weights or defaultdict(lambda: 1.0)
-        self._active_heads: List[str] = None
+        self._active_heads: Optional[List[str]] = None
         initializer(self)
 
     def set_active_heads(self, active_heads: List[str]) -> None:

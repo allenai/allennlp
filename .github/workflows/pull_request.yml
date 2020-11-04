@@ -28,6 +28,7 @@ jobs:
   gpu_checks:
     name: GPU Checks
     runs-on: [self-hosted, GPU]
+    timeout-minutes: 15
 
     steps:
     - uses: actions/checkout@v2
@@ -158,5 +159,4 @@ jobs:
     - name: Clean up
       if: always()
       run: |
-        pip uninstall --yes allennlp
-        pip uninstall --yes allennlp_models
+        pip uninstall --yes allennlp allennlp-models

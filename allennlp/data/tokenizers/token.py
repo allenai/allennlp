@@ -101,6 +101,15 @@ class Token:
     def __repr__(self):
         return self.__str__()
 
+    def ensure_text(self) -> str:
+        """
+        Return the `text` field, raising an exception if it's `None`.
+        """
+        if self.text is None:
+            raise ValueError("Unexpected null text for token")
+        else:
+            return self.text
+
 
 def show_token(token: Token) -> str:
     return (

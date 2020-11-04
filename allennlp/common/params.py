@@ -6,7 +6,7 @@ import zlib
 from collections import OrderedDict
 from collections.abc import MutableMapping
 from os import PathLike
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Union, Optional
 
 from overrides import overrides
 
@@ -250,7 +250,7 @@ class Params(MutableMapping):
         else:
             return self._check_is_dict(key, value)
 
-    def pop_int(self, key: str, default: Any = DEFAULT) -> int:
+    def pop_int(self, key: str, default: Any = DEFAULT) -> Optional[int]:
         """
         Performs a pop and coerces to an int.
         """
@@ -260,7 +260,7 @@ class Params(MutableMapping):
         else:
             return int(value)
 
-    def pop_float(self, key: str, default: Any = DEFAULT) -> float:
+    def pop_float(self, key: str, default: Any = DEFAULT) -> Optional[float]:
         """
         Performs a pop and coerces to a float.
         """
@@ -270,7 +270,7 @@ class Params(MutableMapping):
         else:
             return float(value)
 
-    def pop_bool(self, key: str, default: Any = DEFAULT) -> bool:
+    def pop_bool(self, key: str, default: Any = DEFAULT) -> Optional[bool]:
         """
         Performs a pop and coerces to a bool.
         """
@@ -598,3 +598,14 @@ def _replace_none(params: Any) -> Any:
     elif isinstance(params, list):
         return [_replace_none(value) for value in params]
     return params
+
+
+def remove_keys_from_params(params: Params, keys: List[str] = ["pretrained_file", "initializer"]):
+    if isinstance(params, Params):  # The model could possibly be a string, for example.
+        param_keys = params.keys()
+        for key in keys:
+            if key in param_keys:
+                del params[key]
+        for value in params.values():
+            if isinstance(value, Params):
+                remove_keys_from_params(value, keys)
