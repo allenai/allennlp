@@ -51,8 +51,12 @@ class VqaVilbert(Model):
         self.image_embeddings = image_embeddings
         self.encoder = encoder
 
-        self.v_pooler = ActivationLayer(encoder.hidden_size1, pooled_output_dim, torch.nn.ReLU(), pool=True)
-        self.t_pooler = ActivationLayer(encoder.hidden_size2, pooled_output_dim, torch.nn.ReLU(), pool=True)
+        self.v_pooler = ActivationLayer(
+            encoder.hidden_size1, pooled_output_dim, torch.nn.ReLU(), pool=True
+        )
+        self.t_pooler = ActivationLayer(
+            encoder.hidden_size2, pooled_output_dim, torch.nn.ReLU(), pool=True
+        )
 
         num_labels = vocab.get_vocab_size(label_namespace)
         self.label_namespace = label_namespace
