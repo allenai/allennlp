@@ -123,20 +123,27 @@ class CnnEncoder(Seq2VecEncoder):
         last_unmasked_tokens = mask.sum(dim=1).unsqueeze(dim=-1)
         for i in range(len(self._convolution_layers)):
             convolution_layer = getattr(self, "conv_layer_{}".format(i))
-            # Forward pass of the convolutions
+            pool_length = tokens.shape[2] - convolution_layer.kernel_size[0] + 1
+            
+            # Forward pass of the convolutions.
+            # shape: (batch_size, num_filters, pool_length)
             activations = self._activation(convolution_layer(tokens))
-            # Create activation mask
-            activations_mask = torch.arange(
+            
+            # Create activation mask.
+            # shape: (batch_size, pool_length)
+            indices = torch.arange(
                 tokens.shape[2] - convolution_layer.kernel_size[0] + 1
-            ).ge(
-                (mask.sum(dim=1) - convolution_layer.kernel_size[0] + 1).unsqueeze(dim=-1)
-            ).unsqueeze(
-                dim=1
-            ) * min_value_of_dtype(
-                activations.dtype
-            )
-            # Apply the attention mask
-            activations = activations + activations_mask
+            ).unsqueeze(0).expand(batch_size, pool_length)
+            # shape: (batch_size, pool_length)
+            activations_mask = indices.ge(last_unmasked_tokens - pool_length)
+            # shape: (batch_size, num_filters, pool_length)
+            activations_mask = activations_mask.unsqueeze(1).expand_as(activations)
+            
+            # Replace masked out values with smallest possible value of the dtype so
+            # that max pooling will ignore these activations.
+            # shape: (batch_size, pool_length)
+            activations = activations + (activations_mask * min_value_of_dtype(activations.dtype))
+
             # Pick out the max filters
             filter_outputs.append(activations.max(dim=2)[0])
 
