@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Added
+
+- Added an optional `seed` parameter to `ModelTestCase.set_up_model` which sets the random
+  seed for `random`, `numpy`, and `torch`.
+
 ### Fixed
 
 - Fixed the computation of saliency maps in the Interpret code when using mismatched indexing.
