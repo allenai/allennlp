@@ -135,7 +135,7 @@ class CnnEncoder(Seq2VecEncoder):
                 pool_length
             ).unsqueeze(0).expand(batch_size, pool_length)
             # shape: (batch_size, pool_length)
-            activations_mask = indices.ge(last_unmasked_tokens - pool_length)
+            activations_mask = indices.ge(last_unmasked_tokens - convolution_layer.kernel_size[0] + 1)
             # shape: (batch_size, num_filters, pool_length)
             activations_mask = activations_mask.unsqueeze(1).expand_as(activations)
             
