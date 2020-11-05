@@ -73,7 +73,10 @@ class TestBiModalEncoder(AllenNlpTestCase):
         kwargs = {key: self.params_dict[key] for key in required_kwargs}
         module = BiModalEncoder.from_pretrained_module(pretrained_module, **kwargs)
         mapping = {
-            val: key for key, val in module._construct_default_mapping("huggingface").items()
+            val: key
+            for key, val in module._construct_default_mapping(
+                pretrained_module, "huggingface", {}
+            ).items()
         }
         assert_equal_parameters(
             pretrained_module,

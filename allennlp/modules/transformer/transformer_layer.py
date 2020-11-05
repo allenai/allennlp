@@ -12,6 +12,8 @@ from allennlp.modules.transformer.output_layer import OutputLayer
 
 
 class AttentionLayer(TransformerModule, FromParams):
+    _relevant_module = "encoder.layers.0.attention"
+
     def __init__(
         self,
         hidden_size: int,
@@ -32,17 +34,40 @@ class AttentionLayer(TransformerModule, FromParams):
         encoder_attention_mask: Optional[torch.Tensor] = None,
         output_attentions: bool = False,
     ):
+        if encoder_attention_mask is not None:
+            attention_mask = encoder_attention_mask
         self_output = self.self(
             input_tensor,
+            encoder_hidden_states,
+            encoder_hidden_states,
             attention_mask,
             head_mask,
-            encoder_hidden_states,
-            encoder_attention_mask,
             output_attentions,
         )
         attention_output = self.output(self_output[0], input_tensor)
         outputs = (attention_output,) + self_output[1:]  # add attentions if we output them
         return outputs
+
+    @classmethod
+    def _get_input_arguments(
+        cls,
+        pretrained_module: torch.nn.Module,
+        source="huggingface",
+        mapping: Optional[Dict[str, str]] = None,
+        **kwargs,
+    ):
+        submodules = cls._get_mapped_submodules(pretrained_module, source, mapping)
+
+        final_kwargs = {}
+
+        final_kwargs["hidden_size"] = submodules["self.query"].in_features
+        final_kwargs["num_attention_heads"] = submodules["self"].num_attention_heads
+        final_kwargs["attention_dropout"] = submodules["self.dropout"].p
+        final_kwargs["hidden_dropout"] = submodules["output.dropout"].p
+
+        final_kwargs.update(**kwargs)
+
+        return final_kwargs
 
 
 class TransformerLayer(TransformerModule, FromParams):
