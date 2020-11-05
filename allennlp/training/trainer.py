@@ -1227,7 +1227,7 @@ class GradientDescentTrainer(Trainer):
         optimizer: Lazy[Optimizer] = Lazy(Optimizer.default),
         learning_rate_scheduler: Lazy[LearningRateScheduler] = None,
         momentum_scheduler: Lazy[MomentumScheduler] = None,
-        tensorboard_writer: Optional[Lazy[TensorboardWriter]] = Lazy(TensorboardWriter),
+        tensorboard_writer: Lazy[TensorboardWriter] = Lazy(TensorboardWriter),
         moving_average: Lazy[MovingAverage] = None,
         checkpointer: Lazy[Checkpointer] = Lazy(Checkpointer),
         batch_callbacks: List[BatchCallback] = None,
