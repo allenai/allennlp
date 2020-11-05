@@ -118,6 +118,9 @@ class CnnEncoder(Seq2VecEncoder):
         # token (.ge()) and finally adjusting dimensions to allow for addition and multiplying
         # by a large negative value (.unsqueeze())
         filter_outputs = []
+        batch_size = tokens.shape[0]
+        # shape: (batch_size, 1)
+        last_unmasked_tokens = mask.sum(dim=1).unsqueeze(dim=-1)
         for i in range(len(self._convolution_layers)):
             convolution_layer = getattr(self, "conv_layer_{}".format(i))
             # Forward pass of the convolutions
