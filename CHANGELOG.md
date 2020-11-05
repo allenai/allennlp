@@ -7,12 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 ## Unreleased
-- Changed `tensorboard_writer` to optional in `Trainer`
 
 ### Added
 
 - Added an optional `seed` parameter to `ModelTestCase.set_up_model` which sets the random
   seed for `random`, `numpy`, and `torch`.
+- Changed `tensorboard_writer` as optional in `Trainer`
 
 ### Fixed
 
