@@ -638,10 +638,10 @@ class DeepspeedTrainer(Trainer):
         no_grad: List[str] = None,
         optimizer: Lazy[Optimizer] = None,
         deepspeed_optimizer: Dict[str, Any] = None,
-        deepspeed_args: Lazy[DeepspeedArgs] = None,
-        tensorboard_writer: Lazy[TensorboardWriter] = None,
+        deepspeed_args: Lazy[DeepspeedArgs] = Lazy(DeepspeedArgs),
+        tensorboard_writer: Lazy[TensorboardWriter] = Lazy(TensorboardWriter),
         moving_average: Lazy[MovingAverage] = None,
-        checkpointer: Lazy[Checkpointer] = None,
+        checkpointer: Lazy[Checkpointer] = Lazy(DeepspeedCheckpointer),
         batch_callbacks: List[BatchCallback] = None,
         epoch_callbacks: List[EpochCallback] = None,
         end_callbacks: List[EpochCallback] = None,
@@ -655,10 +655,12 @@ class DeepspeedTrainer(Trainer):
         common_util.log_frozen_and_tunable_parameter_names(model)
 
         parameters = [[n, p] for n, p in model.named_parameters() if p.requires_grad]
-        moving_average_ = moving_average.construct(parameters=parameters)
+        moving_average_ = (
+            None if moving_average is None else moving_average.construct(parameters=parameters)
+        )
 
-        checkpointer_ = checkpointer.construct() or DeepspeedCheckpointer(serialization_dir)
-        tensorboard_writer_ = tensorboard_writer.construct() or TensorboardWriter(serialization_dir)
+        checkpointer_ = checkpointer.construct(serialization_dir=serialization_dir)
+        tensorboard_writer_ = tensorboard_writer.construct(serialization_dir=serialization_dir)
 
         if deepspeed_config.optimizer:
             optim_ = None
