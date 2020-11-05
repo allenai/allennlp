@@ -23,7 +23,7 @@ def launch_deepspeed(
     if not(optimizer is None or config.optimizer is None):
         raise ConfigurationError(f"Cannot provide both optimizer and deepspeed_optimizer. {optimizer, config.to_dict()}")
 
-    config = dict(**config.to_dict(), train_batch_size=batch_size, gradient_accumulation_steps=gradient_accumulation_steps)
+    config = dict(**{k: v for k, v in config.to_dict().items() if v is not None}, train_batch_size=batch_size, gradient_accumulation_steps=gradient_accumulation_steps)
     ds = DeepSpeedEngine(
         args=args,
         model=model,

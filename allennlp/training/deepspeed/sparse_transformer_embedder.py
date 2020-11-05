@@ -3,6 +3,7 @@ from allennlp.modules.token_embedders.pretrained_transformer_embedder import Pre
 
 from deepspeed.ops.sparse_attention.sparse_attention_utils import SparseAttentionUtils
 
+# Doesn't work yet
 @TokenEmbedder.register('sparse_transformer')
 class SparseTransformerEmbedder(PretrainedTransformerEmbedder):
     class __init__(self, **kwargs):

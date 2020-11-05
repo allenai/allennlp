@@ -23,6 +23,11 @@ class DeepspeedOptimizerConfig(FromParams):
     type: str
     params: Dict[str, Any]
 
+@dataclass
+class DeepspeedLRSchedulerConfig(FromParams):
+    type: str
+    params: Dict[str, Any]
+
 class DeepspeedZeROStage(IntEnum):
     DISABLED = 0
     OPTIMIZER = 1
@@ -46,6 +51,7 @@ class DeepspeedConfig(FromParams):
     fp16: DeepspeedFP16Config
     amp: DeepspeedAMPConfig = DeepspeedAMPConfig()
     optimizer: DeepspeedOptimizerConfig = None
+    scheduler: DeepspeedLRSchedulerConfig = None
     
     zero_allow_untested_optimizer: bool = True
     wall_clock_breakdown: bool = False
