@@ -43,6 +43,11 @@ data loaders.  Those are coming soon.
 
 ## Unreleased (1.x branch)
 
+### Added
+
+- Added an optional `seed` parameter to `ModelTestCase.set_up_model` which sets the random
+  seed for `random`, `numpy`, and `torch`.
+
 ### Fixed
 
 - Fixed the computation of saliency maps in the Interpret code when using mismatched indexing.
