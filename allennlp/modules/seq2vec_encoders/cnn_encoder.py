@@ -111,7 +111,7 @@ class CnnEncoder(Seq2VecEncoder):
         # `(batch_size, num_conv_layers * num_filters)`, which then gets projected using the
         # projection layer, if requested.
 
-        # To respect ensure the cnn_encoder respects masking we add a large negative value to
+        # To ensure the cnn_encoder respects masking we add a large negative value to
         # the activations of all filters that convolved over a masked token. We do this by
         # first enumerating all filters for a given convolution size (torch.arange())
         # then by comparing it to an index of the last filter that does not involve a masked
