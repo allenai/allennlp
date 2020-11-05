@@ -1,9 +1,11 @@
 import copy
 import json
 from os import PathLike
+import random
 from typing import Any, Dict, Iterable, Set, Union
 
 import torch
+import numpy
 from numpy.testing import assert_allclose
 
 from allennlp.commands.train import train_model_from_file
@@ -18,13 +20,23 @@ from allennlp.training import GradientDescentTrainer
 
 class ModelTestCase(AllenNlpTestCase):
     """
-    A subclass of [`AllenNlpTestCase`](./allennlp_test_case.md)
+    A subclass of [`AllenNlpTestCase`](./test_case.md)
     with added methods for testing [`Model`](../../models/model.md) subclasses.
     """
 
-    def set_up_model(self, param_file, dataset_file, serialization_dir=None):
+    def set_up_model(
+        self,
+        param_file: PathLike,
+        dataset_file: PathLike,
+        serialization_dir: PathLike = None,
+        seed: int = None,
+    ):
+        if seed is not None:
+            random.seed(seed)
+            numpy.random.seed(seed)
+            torch.manual_seed(seed)
 
-        self.param_file = param_file
+        self.param_file = str(param_file)
         params = Params.from_file(self.param_file)
 
         reader = DatasetReader.from_params(
@@ -100,6 +112,7 @@ class ModelTestCase(AllenNlpTestCase):
         save_dir = self.TEST_DIR / "save_and_load_test"
         archive_file = save_dir / "model.tar.gz"
         model = train_model_from_file(param_file, save_dir, overrides=overrides)
+        assert model is not None
         metrics_file = save_dir / "metrics.json"
         if metric_to_check is not None:
             metrics = json.loads(metrics_file.read_text())
