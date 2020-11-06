@@ -1227,7 +1227,7 @@ class GradientDescentTrainer(Trainer):
         optimizer: Lazy[Optimizer] = Lazy(Optimizer.default),
         learning_rate_scheduler: Lazy[LearningRateScheduler] = None,
         momentum_scheduler: Lazy[MomentumScheduler] = None,
-        tensorboard_writer: Optional[Lazy[TensorboardWriter]] = Lazy(TensorboardWriter),
+        tensorboard_writer: Optional[Lazy[TensorboardWriter]] = None,
         moving_average: Lazy[MovingAverage] = None,
         checkpointer: Lazy[Checkpointer] = Lazy(Checkpointer),
         batch_callbacks: List[BatchCallback] = None,
@@ -1297,8 +1297,11 @@ class GradientDescentTrainer(Trainer):
             else momentum_scheduler.construct(optimizer=optimizer_)
         )
         checkpointer_ = checkpointer.construct(serialization_dir=serialization_dir)
-        tensorboard_writer_ = tensorboard_writer.construct(serialization_dir=serialization_dir)
 
+        if tensorboard_writer is not None:
+            tensorboard_writer_ = tensorboard_writer.construct(serialization_dir=serialization_dir)
+        else:
+            None
         return cls(
             model,
             optimizer_,
