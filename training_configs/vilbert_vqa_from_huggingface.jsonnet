@@ -58,7 +58,8 @@ local vocabulary = {
   },
   "data_loader": {
     "batch_size": gpu_batch_size,
-    "shuffle": true
+    "shuffle": true,
+    #"max_instances_in_memory": 1024
   },
   [if num_gpus > 1 then "distributed"]: {
     #"cuda_devices": std.range(0, num_gpus - 1)
