@@ -57,7 +57,7 @@ local vocabulary = {
   "data_loader": {
     "batch_size": gpu_batch_size,
     "shuffle": true,
-    #"max_instances_in_memory": 1024
+    "max_instances_in_memory": 1024
   },
   [if num_gpus > 1 then "distributed"]: {
     #"cuda_devices": std.range(0, num_gpus - 1)
@@ -70,7 +70,8 @@ local vocabulary = {
     },
     "learning_rate_scheduler": {
       "type": "linear_with_warmup",
-      "warmup_steps": 300000 / 30
+      "warmup_steps": 300000 / 30,
+      "num_steps_per_epoch": std.ceil(644401 / $["data_loader"]["batch_size"] / $["trainer"]["num_gradient_accumulation_steps"])
     },
     "validation_metric": "+fscore",
     "num_epochs": 20,
