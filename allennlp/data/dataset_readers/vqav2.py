@@ -27,7 +27,8 @@ import torch.distributed as dist
 from allennlp.common import util
 from allennlp.common.checks import check_for_gpu, ConfigurationError
 from allennlp.common.util import int_to_device
-from allennlp.common.file_utils import cached_path, TensorCache, text_lines_from_file
+from allennlp.common.file_utils import cached_path, TensorCache
+from allennlp.data.vocabulary import Vocabulary
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.fields import ArrayField, LabelField, ListField, TextField
 from allennlp.data.image_loader import ImageLoader
@@ -281,8 +282,8 @@ class VQAv2Reader(DatasetReader):
         region_detector: RegionDetector,
         *,
         answer_vocab: Union[
-            str, Iterable[str]
-        ] = "https://storage.googleapis.com/allennlp-public-data/vqav2/answers.txt",
+            Vocabulary, str
+        ] = "https://storage.googleapis.com/allennlp-public-data/vqav2/vqav2_vocab.tar.gz",
         feature_cache_dir: Optional[Union[str, PathLike]] = None,
         tokenizer: Tokenizer = None,
         token_indexers: Dict[str, TokenIndexer] = None,
@@ -318,9 +319,12 @@ class VQAv2Reader(DatasetReader):
 
         # read answer vocab
         if isinstance(answer_vocab, str):
-            answer_vocab = cached_path(answer_vocab)
-            answer_vocab = text_lines_from_file(answer_vocab)
-        self.answer_vocab = frozenset(preprocess_answer(a) for a in answer_vocab)
+            answer_vocab = cached_path(answer_vocab, extract_archive=True)
+            answer_vocab = Vocabulary.from_files(answer_vocab)
+        self.answer_vocab = frozenset(
+            preprocess_answer(a)
+            for a in answer_vocab.get_token_to_index_vocabulary("answers").keys()
+        )
 
         self.skip_image_feature_extraction = skip_image_feature_extraction
         if not skip_image_feature_extraction:

@@ -3,6 +3,12 @@ local effective_batch_size = 128;
 local gpu_batch_size = 32;
 local num_gpus = 1;
 
+local vocabulary = {
+  "type": "from_files",
+  "directory": "https://storage.googleapis.com/allennlp-public-data/vqav2/vqav2_vocab.tar.gz"
+};
+
+
 {
   "dataset_reader": {
     "type": "vqav2",
@@ -24,9 +30,10 @@ local num_gpus = 1;
       }
     },
     #"max_instances": 1000,
-    "image_processing_batch_size": 16
+    "image_processing_batch_size": 16,
+    "answer_vocab": vocabulary
   },
-  "vocabulary": {"min_count": {"answers": 9}},
+  "vocabulary": vocabulary,
   "train_data_path": "balanced_real_train",
   "validation_data_path": "balanced_real_val",
   "model": {
