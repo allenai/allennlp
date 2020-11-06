@@ -12,8 +12,8 @@ local vocabulary = {
 {
   "dataset_reader": {
     "type": "vqav2",
-    #"image_dir": "/net/s3/allennlp/dirkg/data/vision/coco",
-    #"feature_cache_dir": "/net/s3/allennlp/dirkg/data/vision/coco/feature_cache/vqa",
+    #"image_dir": "/mnt/tank/dirkg/data/vision/coco",
+    #"feature_cache_dir": "/mnt/tank/dirkg/data/vision/vqa_feature_cache",
     "image_dir": "/Users/dirkg/Documents/data/vision/coco",
     "feature_cache_dir": "/Users/dirkg/Documents/data/vision/coco/feature_cache/vqa",
     "image_loader": "detectron",
