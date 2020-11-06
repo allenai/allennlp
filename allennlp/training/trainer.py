@@ -1300,7 +1300,9 @@ class GradientDescentTrainer(Trainer):
 
         if tensorboard_writer is not None:
             tensorboard_writer_ = tensorboard_writer.construct(serialization_dir=serialization_dir)
-        
+        else:
+            tensorboard_writer_ = TensorboardWriter()
+
         return cls(
             model,
             optimizer_,
