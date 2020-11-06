@@ -34,8 +34,8 @@ local vocabulary = {
     "answer_vocab": vocabulary
   },
   "vocabulary": vocabulary,
-  "train_data_path": "balanced_real_train",
-  "validation_data_path": "balanced_real_val",
+  "train_data_path": ["balanced_real_train", "balanced_real_val[1000:]"],
+  "validation_data_path": "balanced_real_val[:1000]",
   "model": {
     "type": "vqa_vilbert",
     "text_embeddings": {

@@ -25,7 +25,7 @@ from tqdm import tqdm
 import torch.distributed as dist
 
 from allennlp.common import util
-from allennlp.common.checks import check_for_gpu, ConfigurationError
+from allennlp.common.checks import check_for_gpu
 from allennlp.common.util import int_to_device
 from allennlp.common.file_utils import cached_path, TensorCache
 from allennlp.data.vocabulary import Vocabulary
@@ -377,10 +377,27 @@ class VQAv2Reader(DatasetReader):
         return self._coordinates_cache_instance
 
     @overrides
-    def _read(self, split_name: str):
+    def _read(self, splits_or_list_of_splits: Union[str, List[str]]):
+        # if we are given a list of splits, concatenate them
+        if isinstance(splits_or_list_of_splits, str):
+            split_name = splits_or_list_of_splits
+        else:
+            for split_name in splits_or_list_of_splits:
+                yield from self._read(split_name)
+            return
+
+        # if the splits are using slicing syntax, honor it
+        slice_match = re.match(r"(.*)\[([0123456789:]*)]", split_name)
+        if slice_match is None:
+            question_slice = slice(None, None, None)
+        else:
+            split_name = slice_match[1]
+            slice_args = [int(a) if len(a) > 0 else None for a in slice_match[2].split(":")]
+            question_slice = slice(*slice_args)
+
         class Split(NamedTuple):
-            annotations: Optional[List[str]]
-            questions: List[str]
+            annotations: Optional[str]
+            questions: str
 
         aws_base = "https://s3.amazonaws.com/cvmlp/vqa/"
         mscoco_base = aws_base + "mscoco/vqa/"
@@ -389,80 +406,63 @@ class VQAv2Reader(DatasetReader):
         # fmt: off
         splits = {
             "balanced_real_train": Split(
-                [mscoco_base + "v2_Annotations_Train_mscoco.zip!v2_mscoco_train2014_annotations.json"],  # noqa: E501
-                [mscoco_base + "v2_Questions_Train_mscoco.zip!v2_OpenEnded_mscoco_train2014_questions.json"],  # noqa: E501
+                mscoco_base + "v2_Annotations_Train_mscoco.zip!v2_mscoco_train2014_annotations.json",  # noqa: E501
+                mscoco_base + "v2_Questions_Train_mscoco.zip!v2_OpenEnded_mscoco_train2014_questions.json",  # noqa: E501
             ),
             "balanced_real_val": Split(
-                [mscoco_base + "v2_Annotations_Val_mscoco.zip!v2_mscoco_val2014_annotations.json"],  # noqa: E501
-                [mscoco_base + "v2_Questions_Val_mscoco.zip!v2_OpenEnded_mscoco_val2014_questions.json"],  # noqa: E501
+                mscoco_base + "v2_Annotations_Val_mscoco.zip!v2_mscoco_val2014_annotations.json",  # noqa: E501
+                mscoco_base + "v2_Questions_Val_mscoco.zip!v2_OpenEnded_mscoco_val2014_questions.json",  # noqa: E501
             ),
             "balanced_real_test": Split(
-                [],
-                [mscoco_base + "v2_Questions_Test_mscoco.zip!v2_OpenEnded_mscoco_test2015_questions.json"],  # noqa: E501
-            ),
-            "balanced_real_train_val": Split(
-                [
-                    mscoco_base + "v2_Annotations_Train_mscoco.zip!v2_mscoco_train2014_annotations.json",  # noqa: E501
-                    mscoco_base + "v2_Annotations_Val_mscoco.zip!v2_mscoco_val2014_annotations.json",  # noqa: E501
-                ],
-                [
-                    mscoco_base + "v2_Questions_Train_mscoco.zip!v2_OpenEnded_mscoco_train2014_questions.json",  # noqa: E501
-                    mscoco_base + "v2_Questions_Val_mscoco.zip!v2_OpenEnded_mscoco_val2014_questions.json",  # noqa: E501
-                ],
+                None,
+                mscoco_base + "v2_Questions_Test_mscoco.zip!v2_OpenEnded_mscoco_test2015_questions.json",  # noqa: E501
             ),
             "balanced_bas_train": Split(  # "bas" is Binary Abstract Scenes
-                [scene_base + "Annotations_Binary_Train2017_abstract_v002.zip!abstract_v002_train2017_annotations.json"],  # noqa: E501
-                [scene_base + "Questions_Binary_Train2017_abstract_v002.zip!OpenEnded_abstract_v002_train2017_questions.json"],  # noqa: E501
+                scene_base + "Annotations_Binary_Train2017_abstract_v002.zip!abstract_v002_train2017_annotations.json",  # noqa: E501
+                scene_base + "Questions_Binary_Train2017_abstract_v002.zip!OpenEnded_abstract_v002_train2017_questions.json",  # noqa: E501
             ),
             "balanced_bas_val": Split(
-                [scene_base + "Annotations_Binary_Val2017_abstract_v002.zip!abstract_v002_val2017_annotations.json"],  # noqa: E501
-                [scene_base + "Questions_Binary_Val2017_abstract_v002.zip!OpenEnded_abstract_v002_val2017_questions.json"],  # noqa: E501
+                scene_base + "Annotations_Binary_Val2017_abstract_v002.zip!abstract_v002_val2017_annotations.json",  # noqa: E501
+                scene_base + "Questions_Binary_Val2017_abstract_v002.zip!OpenEnded_abstract_v002_val2017_questions.json",  # noqa: E501
             ),
             "abstract_scenes_train": Split(
-                [scene_base + "Annotations_Train_abstract_v002.zip!abstract_v002_train2015_annotations.json"],  # noqa: E501
-                [scene_base + "Questions_Train_abstract_v002.zip!OpenEnded_abstract_v002_train2015_questions.json"],  # noqa: E501
+                scene_base + "Annotations_Train_abstract_v002.zip!abstract_v002_train2015_annotations.json",  # noqa: E501
+                scene_base + "Questions_Train_abstract_v002.zip!OpenEnded_abstract_v002_train2015_questions.json",  # noqa: E501
             ),
             "abstract_scenes_val": Split(
-                [scene_base + "Annotations_Val_abstract_v002.zip!abstract_v002_val2015_annotations.json"],  # noqa: E501
-                [scene_base + "Questions_Val_abstract_v002.zip!OpenEnded_abstract_v002_val2015_questions.json"],  # noqa: E501
+                scene_base + "Annotations_Val_abstract_v002.zip!abstract_v002_val2015_annotations.json",  # noqa: E501
+                scene_base + "Questions_Val_abstract_v002.zip!OpenEnded_abstract_v002_val2015_questions.json",  # noqa: E501
             ),
             "abstract_scenes_test": Split(
-                [],
-                [scene_base + "Questions_Test_abstract_v002.zip!OpenEnded_abstract_v002_test2015_questions.json"],  # noqa: E501
+                None,
+                scene_base + "Questions_Test_abstract_v002.zip!OpenEnded_abstract_v002_test2015_questions.json",  # noqa: E501
             ),
         }
         # fmt: on
 
-        if isinstance(split_name, str):
-            try:
-                split = splits[split_name]
-            except KeyError:
-                raise ValueError(
-                    f"Unrecognized split: {split_name}. We require a split, not a filename, for "
-                    "VQA because the image filenames require using the split."
-                )
-        elif isinstance(split_name, list):
-            if len(split_name) != 2:
-                raise ValueError(f"Need two files passed to this reader, got: {split_name}")
-            split = Split(split_name[0], split_name[1])
-        else:
-            raise ConfigurationError("Expected a string or a list for the dataset reader.")
+        try:
+            split = splits[split_name]
+        except KeyError:
+            raise ValueError(
+                f"Unrecognized split: {split_name}. We require a split, not a filename, for "
+                "VQA because the image filenames require using the split."
+            )
 
         annotations_by_question_id = {}
-        for annotation_path in split.annotations:
-            with open(cached_path(annotation_path, extract_archive=True)) as f:
+        if split.annotations is not None:
+            with open(cached_path(split.annotations, extract_archive=True)) as f:
                 annotations = json.load(f)
             for a in annotations["annotations"]:
                 annotations_by_question_id[a["question_id"]] = a
 
         questions = []
-        for question_path in split.questions:
-            with open(cached_path(question_path, extract_archive=True)) as f:
-                questions_file = json.load(f)
-            image_subtype = questions_file["data_subtype"]
-            for ques in questions_file["questions"]:
-                ques["image_subtype"] = image_subtype
-                questions.append(ques)
+        with open(cached_path(split.questions, extract_archive=True)) as f:
+            questions_file = json.load(f)
+        image_subtype = questions_file["data_subtype"]
+        for ques in questions_file["questions"]:
+            ques["image_subtype"] = image_subtype
+            questions.append(ques)
+        questions = questions[question_slice]
 
         question_dicts = list(self.shard_iterable(questions))
         processed_images: Iterable[Optional[Tuple[Tensor, Tensor]]]
