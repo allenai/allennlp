@@ -452,17 +452,17 @@ class VQAv2Reader(DatasetReader):
         for annotation_path in split.annotations:
             with open(cached_path(annotation_path, extract_archive=True)) as f:
                 annotations = json.load(f)
-                for a in annotations["annotations"]:
-                    annotations_by_question_id[a["question_id"]] = a
+            for a in annotations["annotations"]:
+                annotations_by_question_id[a["question_id"]] = a
 
         questions = []
         for question_path in split.questions:
             with open(cached_path(question_path, extract_archive=True)) as f:
                 questions_file = json.load(f)
-                image_subtype = questions_file["data_subtype"]
-                for ques in questions_file["questions"]:
-                    ques["image_subtype"] = image_subtype
-                    questions.append(ques)
+            image_subtype = questions_file["data_subtype"]
+            for ques in questions_file["questions"]:
+                ques["image_subtype"] = image_subtype
+                questions.append(ques)
 
         question_dicts = list(self.shard_iterable(questions))
         processed_images: Iterable[Optional[Tuple[Tensor, Tensor]]]
