@@ -291,6 +291,7 @@ class VQAv2Reader(DatasetReader):
         max_instances: Optional[int] = None,
         image_processing_batch_size: int = 8,
         skip_image_feature_extraction: bool = False,
+        keep_unanswerable_questions: bool = True
     ) -> None:
         super().__init__(
             max_instances=max_instances,
@@ -318,13 +319,16 @@ class VQAv2Reader(DatasetReader):
         self._token_indexers = token_indexers
 
         # read answer vocab
-        if isinstance(answer_vocab, str):
-            answer_vocab = cached_path(answer_vocab, extract_archive=True)
-            answer_vocab = Vocabulary.from_files(answer_vocab)
-        self.answer_vocab = frozenset(
-            preprocess_answer(a)
-            for a in answer_vocab.get_token_to_index_vocabulary("answers").keys()
-        )
+        if keep_unanswerable_questions:
+            self.answer_vocab = None
+        else:
+            if isinstance(answer_vocab, str):
+                answer_vocab = cached_path(answer_vocab, extract_archive=True)
+                answer_vocab = Vocabulary.from_files(answer_vocab)
+            self.answer_vocab = frozenset(
+                preprocess_answer(a)
+                for a in answer_vocab.get_token_to_index_vocabulary("answers").keys()
+            )
 
         self.skip_image_feature_extraction = skip_image_feature_extraction
         if not skip_image_feature_extraction:
@@ -594,7 +598,7 @@ class VQAv2Reader(DatasetReader):
                 answer_counts[preprocess_answer(answer)] += 1
 
             for answer, count in answer_counts.items():
-                if answer in self.answer_vocab:
+                if self.answer_vocab is None or answer in self.answer_vocab:
                     answer_fields.append(LabelField(answer, label_namespace="answers"))
                     weights.append(get_score(count))
 
