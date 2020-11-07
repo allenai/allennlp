@@ -30,7 +30,11 @@ local vocabulary = {
     },
     #"max_instances": 1000,
     "image_processing_batch_size": 16,
-    "answer_vocab": vocabulary
+    "answer_vocab": vocabulary,
+    "keep_unanswerable_questions": false
+  },
+  "validation_dataset_reader": self.dataset_reader {
+    "keep_unanswerable_questions": true
   },
   "vocabulary": vocabulary,
   "train_data_path": ["balanced_real_train", "balanced_real_val[1000:]"],

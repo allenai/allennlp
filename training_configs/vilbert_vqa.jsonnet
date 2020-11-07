@@ -55,24 +55,24 @@ local vocabulary = {
       "hidden_dim": 1024
     },
     "encoder": {
-      # vision
-      "hidden_size1": 1024,
-      "num_hidden_layers1": 6,
-      "intermediate_size1": 1024,
-      "num_attention_heads1": 8,
+      # text
+      "hidden_size1": 768,
+      "num_hidden_layers1": 12,
+      "intermediate_size1": 3072,
+      "num_attention_heads1": 12,
       "attention_dropout1": 0.1,
       "hidden_dropout1": 0.1,
-      "biattention_id1": [0, 1, 2, 3, 4, 5],
+      "biattention_id1": [6, 7, 8, 9, 10, 11],
       "fixed_layer1": 0,
 
-      # text
-      "hidden_size2": 768,
-      "num_hidden_layers2": 12,
-      "intermediate_size2": 3072,
-      "num_attention_heads2": 12,
+      # vision
+      "hidden_size2": 1024,
+      "num_hidden_layers2": 6,
+      "intermediate_size2": 1024,
+      "num_attention_heads2": 8,
       "attention_dropout2": 0.1,
       "hidden_dropout2": 0.1,
-      "biattention_id2": [6, 7, 8, 9, 10, 11],
+      "biattention_id2": [0, 1, 2, 3, 4, 5],
       "fixed_layer2": 0,
 
       "combined_num_attention_heads": 8,

@@ -51,10 +51,10 @@ class VqaVilbert(Model):
         self.image_embeddings = image_embeddings
         self.encoder = encoder
 
-        self.v_pooler = ActivationLayer(
+        self.t_pooler = ActivationLayer(
             encoder.hidden_size1, pooled_output_dim, torch.nn.ReLU(), pool=True
         )
-        self.t_pooler = ActivationLayer(
+        self.v_pooler = ActivationLayer(
             encoder.hidden_size2, pooled_output_dim, torch.nn.ReLU(), pool=True
         )
 
@@ -133,20 +133,20 @@ class VqaVilbert(Model):
             dropout=image_hidden_dropout,
         )
 
-        encoder = BiModalEncoder.from_huggingface_model(
-            model=transformer,
-            image_num_hidden_layers=image_num_hidden_layers,
-            image_hidden_size=image_hidden_size,
-            image_num_attenton_heads=image_num_attention_heads,
+        encoder = BiModalEncoder.from_pretrained_module(
+            pretrained_module=transformer,
+            num_hidden_layers2=image_num_hidden_layers,
+            hidden_size2=image_hidden_size,
+            num_attention_heads2=image_num_attention_heads,
             combined_hidden_size=combined_hidden_size,
             combined_num_attention_heads=combined_num_attention_heads,
-            image_intermediate_size=image_intermediate_size,
-            image_attention_dropout=image_attention_dropout,
-            image_hidden_dropout=image_hidden_dropout,
-            v_biattention_id=v_biattention_id,
-            t_biattention_id=t_biattention_id,
-            fixed_t_layer=fixed_t_layer,
-            fixed_v_layer=fixed_v_layer,
+            intermediate_size2=image_intermediate_size,
+            attention_dropout2=image_attention_dropout,
+            hidden_dropout2=image_hidden_dropout,
+            biattention_id1=t_biattention_id,
+            biattention_id2=v_biattention_id,
+            fixed_layer1=fixed_t_layer,
+            fixed_layer2=fixed_v_layer
         )
         return cls(
             vocab=vocab,
@@ -204,11 +204,11 @@ class VqaVilbert(Model):
         # (batch_size, num_boxes, image_embedding_dim)
         v_embedding_output = self.image_embeddings(box_features, box_coordinates)
 
-        encoded_layers_v, encoded_layers_t = self.encoder(
-            v_embedding_output,
+        encoded_layers_t, encoded_layers_v = self.encoder(
             embedding_output,
-            extended_image_attention_mask,
+            v_embedding_output,
             extended_attention_mask,
+            extended_image_attention_mask,
             extended_co_attention_mask,
         )
 
