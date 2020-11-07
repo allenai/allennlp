@@ -19,6 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Previously, we would compute gradients from the top of the transformer, after aggregation from
   wordpieces to tokens, which gives results that are not very informative.  Now, we compute gradients
   with respect to the embedding layer, and aggregate wordpieces to tokens separately.
+- Fixed the heuristics for finding embedding layers in the case of RoBERTa. An update in the
+  `transformers` library broke our old heuristic.
 
 
 ## [v1.2.0](https://github.com/allenai/allennlp/releases/tag/v1.2.0) - 2020-10-29
