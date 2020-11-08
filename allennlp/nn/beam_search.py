@@ -98,17 +98,157 @@ class DeterministicSampler(Sampler):
 
 @Sampler.register("multinomial")
 class MultinomialSampler(Sampler):
-    raise NotImplementedError
+    """
+    Represents a sampler to choose values from a multinomial distribution.
+    Registered as a `Sampler` with name "multinomial".
+    `log_probs` is a tensor of normalized log-probabilities to be selected from.
+    `temperature` modules the probabilitis of the selected tokens. A `temperature` below 1.0 produces a
+    sharper probability distribution and a `temperature` above 1.0 produces a flatter probability
+    distribution.
+    """
 
+    def __init__(
+        self,
+        temperature: float = 1.0,
+        with_replacement: bool = True,
+    ) -> None:
+        self.temperature = temperature
+        self.filter_val = min_value_of_dtype(torch.float)
+        self.with_replacement = with_replacement
+
+    @overrides
+    def sample_nodes(
+        self, log_probs: torch.Tensor, per_node_beam_size: int, state: StateType
+    ) -> Tuple[torch.Tensor, torch.Tensor, StateType]:
+        if self.temperature == 1.0:
+            probabilities = log_probs.exp()
+        else: 
+            probabilities = log_probs / self.temperature
+            probabilities = torch.nn.functional.softmax(probabilities, dim=-1)
+
+        selected_indices = torch.multinomial(
+            probabilities, per_node_beam_size, replacement=self.with_replacement
+        )
+
+        return torch.gather(log_probs, 1, selected_indices), selected_indices, state
 
 @Sampler.register("top-k")
 class TopKSampler(Sampler):
-    raise NotImplementedError
+    """
+    Represents a `Sampler` which redistributes the probability mass function among
+    the top `k` choices then selects from that subset
+    `log_probs` is a tensor of normalized log-probabilities to be selected from.
+    `k` is the number of highest-probability options that the returned choice will be selected from
+    `temperature` modules the probabilitis of the selected tokens. A `temperature` below 1.0 produces a
+    sharper probability distribution and a `temperature` above 1.0 produces a flatter probability
+    distribution.
+    Registered as a `Sampler` with name "top-k".
+    """
+
+    def __init__(
+        self,
+        k: int = 1,
+        temperature: float = 1.0,
+        filter_val: float = -float("inf"),
+        with_replacement: bool = True,
+    ):
+        assert k >= 1, f'{"k must be >= 1"}'
+        self.k = k
+        self.temperature = temperature or 1.0
+        self.filter_val = min_value_of_dtype(torch.float)
+        self.with_replacement = with_replacement
+
+    @overrides
+    def sample_nodes(
+        self, log_probs: torch.Tensor, per_node_beam_size: int, state: StateType
+    ) -> Tuple[torch.Tensor, torch.Tensor, StateType]:
+        assert self.k <= len(log_probs[-1])
+
+        if self.temperature != 1.0:
+            log_probs = log_probs / self.temperature
+
+        # Find the indices that are not to be selected from
+        min_threshold = torch.topk(log_probs, self.k)[0][..., -1].unsqueeze(dim=-1)
+        filtered_indices = log_probs < min_threshold
+
+        # Prevent the filtered indiceds from being selected
+        log_probs[..., filtered_indices] = self.filter_val
+        filtered_probabilities = torch.nn.functional.softmax(log_probs, dim=-1)
+
+        # Shape: (batch_size*beam_size, per_node_beam_size)
+        selected_indices = torch.multinomial(
+            filtered_probabilities, per_node_beam_size, replacement=self.with_replacement
+        )
+
+        # Return (selected log probabilities, selected classes)
+        # shape: (batch_size*beam_size, num_samples), (batch_size*beam_size, num_samples)
+        return torch.gather(log_probs, 1, selected_indices), selected_indices, state
 
 
 @Sampler.register("top-p")
 class TopPSampler(Sampler):
-    raise NotImplementedError
+    """
+    Represents a `Sampler` which redistributes the probability mass function among
+    the top choices with a cumulative probability of at least `p` then selects from that subset
+    `p` if minimum cumulative probability of highest-probability options that the returned
+    choice will be selected from `temperature` modules the probabilitis of the selected tokens.
+    A `temperature` below 1.0 produces a sharper probability distribution and a `temperature`
+    above 1.0 produces a flatter probability distribution.
+    Registered as a `Sampler` with name "top-p".
+    """
+
+    def __init__(
+        self,
+        p: float = 0.9,
+        temperature: float = 1.0,
+        filter_val: float = -float("inf"),
+        with_replacement: bool = True,
+    ):
+        assert p <= 1.0, f'{"p must be <= 1.0"}'
+        self.p = p
+        self.temperature = temperature or 1.0
+        self.filter_val = min_value_of_dtype(torch.float)
+        self.with_replacement = with_replacement
+
+    @overrides
+    def sample_nodes(
+        self, log_probs: torch.Tensor, per_node_beam_size: int, state: StateType
+    ) -> Tuple[torch.Tensor, torch.Tensor, StateType]:
+
+        # First apply temperature coefficient:
+        if self.temperature != 1.0:
+            _log_probs = log_probs / self.temperature
+        else: 
+            _log_probs = log_probs
+
+        # Sort the probabilities to hi ghest-first, then find the cumulative sum accross those
+        log_probs_descending, sorting_indices = torch.sort(_log_probs, descending=True)
+        probabilities_descending = torch.nn.functional.softmax(log_probs_descending, dim=-1)
+        probabilities_summed = torch.cumsum(probabilities_descending, dim=-1)
+
+        # When the cumulative sum reaches p, replace all remaining with `filter_val`
+        filtered_indices = probabilities_summed >= self.p
+
+        # We want to include the firt index where probabilities_summes >= p, so we shift over one
+        filtered_indices[..., 1:] = filtered_indices[..., :-1].clone()
+        filtered_indices[..., 0] = 0
+
+        for row, sort_indices, filter_vals in zip(
+            _log_probs, sorting_indices, filtered_indices
+        ):
+            filter_idx = sort_indices[filter_vals]
+            row[filter_idx] = self.filter_val
+
+        filtered_probabilites = torch.nn.functional.softmax(_log_probs, dim=-1)
+
+        # Here we sample from the filtered distribution
+        selected_indices = torch.multinomial(
+            filtered_probabilites, per_node_beam_size, replacement=self.with_replacement
+        )
+
+        # Return (selected log probabilities, selected classes)
+        # shape: (len(log_probs),1) , (len(log_probs), 1)
+        return torch.gather(_log_probs, 1, selected_indices), selected_indices, state
 
 
 @Sampler.register("gumbel")
