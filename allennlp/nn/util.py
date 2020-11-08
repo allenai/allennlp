@@ -1745,6 +1745,20 @@ def inspect_parameters(module: torch.nn.Module, quiet: bool = False) -> Dict[str
     return results
 
 
+def find_text_field_embedder(model: torch.nn.Module) -> torch.nn.Module:
+    """
+    Takes a `Model` and returns the `Module` that is a `TextFieldEmbedder`.  We return just the
+    first one, as it's very rare to have more than one.  If there isn't a `TextFieldEmbedder` in the
+    given `Model`, we raise a `ValueError`.
+    """
+    from allennlp.modules.text_field_embedders.text_field_embedder import TextFieldEmbedder
+
+    for module in model.modules():
+        if isinstance(module, TextFieldEmbedder):
+            return module
+    raise ValueError("Couldn't find TextFieldEmbedder!")
+
+
 def find_embedding_layer(model: torch.nn.Module) -> torch.nn.Module:
     """
     Takes a model (typically an AllenNLP `Model`, but this works for any `torch.nn.Module`) and
@@ -1757,35 +1771,23 @@ def find_embedding_layer(model: torch.nn.Module) -> torch.nn.Module:
     # TextFieldEmbedder in a second pass if we didn't find a special case.
     from transformers.modeling_gpt2 import GPT2Model
     from transformers.modeling_bert import BertEmbeddings
+    from transformers.modeling_albert import AlbertEmbeddings
+    from transformers.modeling_roberta import RobertaEmbeddings
     from allennlp.modules.text_field_embedders.text_field_embedder import TextFieldEmbedder
     from allennlp.modules.text_field_embedders.basic_text_field_embedder import (
         BasicTextFieldEmbedder,
     )
     from allennlp.modules.token_embedders.embedding import Embedding
 
-    # The special case only works if we don't have mismatched embedding.  What we essentially want
-    # to do is grab a transformer's wordpiece embedding layer, because using that is a lot easier
-    # for something like hotflip than running a network to embed all tokens in a vocabulary.  If
-    # you've used a mismatched embedder, though, your input tokens are actually *words*, so that's
-    # what we'll be visualizing and attacking, even though you're modeling things at the wordpiece
-    # level.  In this case, we need to return gradients and things at the word level, so we can't
-    # use our shortcut of just returning the wordpiece embedding.
-    mismatched = False
     for module in model.modules():
-        if "Mismatched" in module.__class__.__name__:
-            # We don't currently have a good way to check whether an embedder is mismatched, and it
-            # doesn't seem like it's worth it to try to add an API call for this somewhere,
-            # especially as we can't really call it here in a type-safe way, anyway, as we're
-            # iterating over plain pytorch Modules.  This check should work for now (v1.0), but it's
-            # possible that some class gets added later that will require this check to change.
-            mismatched = True
-
-    if not mismatched:
-        for module in model.modules():
-            if isinstance(module, BertEmbeddings):
-                return module.word_embeddings
-            if isinstance(module, GPT2Model):
-                return module.wte
+        if isinstance(module, BertEmbeddings):
+            return module.word_embeddings
+        if isinstance(module, RobertaEmbeddings):
+            return module.word_embeddings
+        if isinstance(module, AlbertEmbeddings):
+            return module.word_embeddings
+        if isinstance(module, GPT2Model):
+            return module.wte
 
     for module in model.modules():
         if isinstance(module, TextFieldEmbedder):
@@ -1804,6 +1806,33 @@ def find_embedding_layer(model: torch.nn.Module) -> torch.nn.Module:
                             return embedder
             return module
     raise RuntimeError("No embedding module found!")
+
+
+def get_token_offsets_from_text_field_inputs(
+    text_field_inputs: List[Any],
+) -> Optional[torch.Tensor]:
+    """
+    Given a list of inputs to a TextFieldEmbedder, tries to find token offsets from those inputs, if
+    there are any.  You will have token offsets if you are using a mismatched token embedder; if
+    you're not, the return value from this function should be None.  This function is intended to be
+    called from a `forward_hook` attached to a `TextFieldEmbedder`, so the inputs are formatted just
+    as a list.
+
+    It's possible in theory that you could have multiple offsets as inputs to a single call to a
+    `TextFieldEmbedder`, but that's an extremely rare use case (I can't really imagine anyone
+    wanting to do that).  In that case, we'll only return the first one.  If you need different
+    behavior for your model, open an issue on github describing what you're doing.
+    """
+    for input_index, text_field_input in enumerate(text_field_inputs):
+        if not isinstance(text_field_input, dict):
+            continue
+        for input_value in text_field_input.values():
+            if not isinstance(input_value, dict):
+                continue
+            for embedder_arg_name, embedder_arg_value in input_value.items():
+                if embedder_arg_name == "offsets":
+                    return embedder_arg_value
+    return None
 
 
 def extend_layer(layer: torch.nn.Module, new_dim: int) -> None:
