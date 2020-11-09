@@ -61,6 +61,10 @@ data loaders.  Those are coming soon.
   Previously, we would compute gradients from the top of the transformer, after aggregation from
   wordpieces to tokens, which gives results that are not very informative.  Now, we compute gradients
   with respect to the embedding layer, and aggregate wordpieces to tokens separately.
+- Fixed the heuristics for finding embedding layers in the case of RoBERTa. An update in the
+  `transformers` library broke our old heuristic.
+- Fixed typo with registered name of ROUGE metric. Previously was `rogue`, fixed to `rouge`.
+- Fixed default masks that were erroneously created on the CPU even when a GPU is available.
 
 
 ## [v1.2.0](https://github.com/allenai/allennlp/releases/tag/v1.2.0) - 2020-10-29
@@ -166,6 +170,7 @@ data loaders.  Those are coming soon.
 - Fixed `allennlp.nn.util.add_sentence_boundary_token_ids()` to use `device` parameter of input tensor.
 - Be sure to close the TensorBoard writer even when training doesn't finish.
 - Fixed the docstring for `PyTorchSeq2VecWrapper`.
+- Fixed a bug in the cnn_encoder where activations involving masked tokens could be picked up by the max
 - Fix intra word tokenization for `PretrainedTransformerTokenizer` when disabling fast tokenizer.
 
 
