@@ -6,7 +6,7 @@ from allennlp.common import util
 from allennlp.data.batch import Batch
 from allennlp.data.data_loaders.data_loader import DataLoader, TensorDict
 from allennlp.data.data_loaders.multi_process_data_loader import MultiProcessDataLoader
-from allennlp.data.data_loaders.multitask_scheduler import MultiTaskScheduler
+from allennlp.data.data_loaders.multitask_scheduler import MultiTaskScheduler, RoundRobinScheduler
 from allennlp.data.data_loaders.multitask_epoch_sampler import MultiTaskEpochSampler
 from allennlp.data.dataset_readers.multitask import MultiTaskDatasetReader
 from allennlp.data.instance import Instance
@@ -113,7 +113,7 @@ class MultiTaskDataLoader(DataLoader):
     ) -> None:
         self.readers = reader.readers
         self.data_paths = data_path
-        self.scheduler = scheduler
+        self.scheduler = scheduler or RoundRobinScheduler()
         self.sampler = sampler
 
         self._batch_size = batch_size
@@ -125,6 +125,11 @@ class MultiTaskDataLoader(DataLoader):
                     f"Multiplier value ({multiplier}) is larger than batch size ({batch_size})"
                 )
         self._drop_last = drop_last
+
+        if instances_per_epoch is not None and sampler is None:
+            raise ValueError(
+                "You must provide an EpochSampler if you want to not use all instances every epoch"
+            )
 
         self._num_workers = num_workers or {}
         self._max_instances_in_memory = max_instances_in_memory or {}
@@ -169,16 +174,16 @@ class MultiTaskDataLoader(DataLoader):
         # Here we try to estimate the actual length.  If you are using varying batch size
         # multipliers per task, we may get batch packing orders that make this an underestimate, as
         # this assumes that all batches are full, which may not be true.
-        total_instances = 0
+        total_instances = 0.0
         for key, loader in self._loaders.items():
             # This will raise a TypeError if any of the underlying loaders doesn't have a length,
             # which is actually what we want.  If the loader has a length, we set batch_size = 1, so
             # this will give us the right number of instances.
             total_instances += self._batch_size_multiplier.get(key, 1.0) * len(loader)
         if self._drop_last or total_instances % self._batch_size == 0:
-            return total_instances // self._batch_size
+            return int(total_instances) // self._batch_size
         else:
-            return 1 + total_instances // self._batch_size
+            return int(1 + total_instances) // self._batch_size
 
     def __iter__(self) -> Iterator[TensorDict]:
         # Basic outline: first we _sample_ the instances that we're going to be using for this
@@ -190,7 +195,7 @@ class MultiTaskDataLoader(DataLoader):
         epoch_instances = self._get_instances_for_epoch()
         scheduled_instances = self.scheduler.order_epoch_instances(epoch_instances)
         batch_instances: List[Instance] = []
-        current_batch_size = 0
+        current_batch_size = 0.0
         for dataset, instance in scheduled_instances:
             current_batch_size += self._batch_size_multiplier.get(dataset, 1.0)
             if current_batch_size > self._batch_size:
@@ -234,6 +239,12 @@ class MultiTaskDataLoader(DataLoader):
                 key: util.shuffle_iterable(loader.iter_instances())
                 for key, loader in self._loaders.items()
             }
+        if self.sampler is None:
+            # We already checked for this in the constructor, so this should never happen unless you
+            # modified the object after creation.  But mypy is complaining, so here's another check.
+            raise ValueError(
+                "You must specify an EpochSampler if self._instances_per_epoch is not None"
+            )
         dataset_proportions = self.sampler.get_task_proportions(self._loaders)
         num_instances_per_dataset = {
             key: math.floor(proportion * self._instances_per_epoch)
