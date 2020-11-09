@@ -80,10 +80,10 @@ class HomogeneousRoundRobinScheduler(MultiTaskScheduler):
         Determines how many instances to group together in each dataset.  If this is an `int`, the
         same value is used for all datasets; otherwise, the keys must correspond to the dataset
         names used elsewhere in the multi-task code.  Note also that this needs to match the batch
-        size (and batch size multipliers, if you used them) set in the `MultiTaskDataLoader`;
-        because of how the ordering works, we will actually unroll the batching that we create here,
-        so that the `MultiTaskDataLoader` can re-batch them (this is because not all ordering
-        methods perform batching, so we do it in the data loader itself).
+        size set in the `MultiTaskDataLoader`; because of how the ordering works, we will actually
+        unroll the batching that we create here, so that the `MultiTaskDataLoader` can re-batch them
+        (this is because not all ordering methods perform batching, so we do it in the data loader
+        itself).
     """
 
     def __init__(self, batch_size: Union[int, Dict[str, int]]):

@@ -16,6 +16,13 @@ from allennlp.data.instance import Instance
 from allennlp.data.vocabulary import Vocabulary
 
 
+def maybe_shuffle_instances(loader: DataLoader, shuffle: bool) -> Iterable[Instance]:
+    if shuffle:
+        return util.shuffle_iterable(loader.iter_instances())
+    else:
+        return loader.iter_instances()
+
+
 @DataLoader.register("multitask")
 class MultiTaskDataLoader(DataLoader):
     """
@@ -99,6 +106,9 @@ class MultiTaskDataLoader(DataLoader):
         Used when creating one `MultiProcessDataLoader` per dataset.  If you want non-default
         behavior for this parameter in the `DataLoader` for a particular dataset, pass the
         corresponding value here, keyed by the dataset name.
+    shuffle: `bool`, optional (default = `True`)
+        If `False`, we will not shuffle the instances that come from each underlying data loader.
+        You almost certainly never want to use this except when debugging.
     """
 
     def __init__(
@@ -117,10 +127,11 @@ class MultiTaskDataLoader(DataLoader):
         start_method: Dict[str, str] = None,
         instance_queue_size: Dict[str, int] = None,
         instance_chunk_size: Dict[str, int] = None,
+        shuffle: bool = True,
     ) -> None:
         self.readers = reader.readers
         self.data_paths = data_path
-        self.scheduler = scheduler or HomogeneousRoundRobinScheduler()
+        self.scheduler = scheduler or HomogeneousRoundRobinScheduler(batch_size=batch_size)
         self.sampler = sampler
 
         self._batch_size = batch_size
@@ -132,6 +143,7 @@ class MultiTaskDataLoader(DataLoader):
                     f"Multiplier value ({multiplier}) is larger than batch size ({batch_size})"
                 )
         self._drop_last = drop_last
+        self._shuffle = shuffle
 
         if instances_per_epoch is not None and sampler is None:
             raise ValueError(
@@ -169,7 +181,7 @@ class MultiTaskDataLoader(DataLoader):
                 # this loader, you end up with `loader` always referring to the last loader in the
                 # iteration...  mypy also doesn't know what to do with this, for some reason I can't
                 # figure out.
-                lambda l=loader: util.shuffle_iterable(l.iter_instances())  # type: ignore
+                lambda l=loader: maybe_shuffle_instances(l, self._shuffle)  # type: ignore
             )
             for key, loader in self._loaders.items()
         }
@@ -243,7 +255,7 @@ class MultiTaskDataLoader(DataLoader):
     def _get_instances_for_epoch(self) -> Dict[str, Iterable[Instance]]:
         if self._instances_per_epoch is None:
             return {
-                key: util.shuffle_iterable(loader.iter_instances())
+                key: maybe_shuffle_instances(loader, self._shuffle)
                 for key, loader in self._loaders.items()
             }
         if self.sampler is None:
