@@ -12,6 +12,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Added an optional `seed` parameter to `ModelTestCase.set_up_model` which sets the random
   seed for `random`, `numpy`, and `torch`.
+- Added classes: `nn/samplers/samplers.py` with `MultinomialSampler`, `TopKSampler`, `TopPSampler`, and
+  `GumbelMaxSampler` for sampling indices from log probabilities
+- Added `Sampler` parameter in `BeamSearch` for non-deterministic beam search
 
 ### Fixed
 
