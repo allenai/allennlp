@@ -26,7 +26,7 @@ class MultiTaskDataLoader(DataLoader):
     desired, to have the sampling and/or scheduling behavior be dependent on the current state of
     training.
 
-    While it is not necessarily required, this `DatasetReader` was designed to be used alongisde a
+    While it is not necessarily required, this `DatasetReader` was designed to be used alongside a
     `MultiTaskModel`, which can handle instances coming from different datasets.  If your datasets
     are similar enough (say, they are all reading comprehension datasets with the same format), or
     your model is flexible enough, then you could feasibly use this `DataLoader` with a normal,
@@ -53,17 +53,15 @@ class MultiTaskDataLoader(DataLoader):
         for an epoch, this `sampler` will tell us with what proportion we should sample from each
         dataset.  For instance, we might want to focus more on datasets that are underperforming in
         some way, by having those datasets contribute more instances this epoch than other datasets.
-    batch_size_multiplier: `Dict[str, int]`, optional (default = `None`)
+    batch_size_multiplier: `Dict[str, float]`, optional (default = `None`)
         If this is not `None`, it specifies how much of the batch an instance from each dataset
         takes up.  That is, if this is 1 for every dataset (which is the default), then batch size
-        is computed as normal.  If dataset "A" has a value of 2 in this dictionary, than each
-        instance from dataset "A" counts as 2 instances for the purposes of computing batch size.
+        is computed as normal.  If dataset "A" has a value of 1.5 in this dictionary, than each
+        instance from dataset "A" counts as 1.5 instances for the purposes of computing batch size.
         This option is available to you to account for the fact that some operations might be *much*
         less costly than others (e.g., if you are multitasking a coref model with a simple document
-        classification model).  If you want finer-grained control than integer multiples, just scale
-        all values in the dictionary and the batch size accordingly (e.g., to achieve a 1:1.5 ratio,
-        double your batch size and use 2 and 3 as your multipliers).  If you use this, you're on
-        your own as far as figuring out how it interacts with optimization behavior.
+        classification model).  If you use this, you're on your own as far as figuring out how it
+        interacts with optimization behavior.
     instances_per_epoch: `int`, optional (default = `None`)
         If not `None`, we will use this many instances per epoch of training, drawing from the
         underlying datasets with proportions given by the `scheduler`.  Note that this is
@@ -105,7 +103,7 @@ class MultiTaskDataLoader(DataLoader):
         scheduler: MultiTaskScheduler = None,
         sampler: MultiTaskEpochSampler = None,
         instances_per_epoch: int = None,
-        batch_size_multiplier: Dict[str, int] = None,
+        batch_size_multiplier: Dict[str, float] = None,
         drop_last: bool = False,
         num_workers: Dict[str, int] = None,
         max_instances_in_memory: Dict[str, int] = None,
@@ -176,7 +174,7 @@ class MultiTaskDataLoader(DataLoader):
             # This will raise a TypeError if any of the underlying loaders doesn't have a length,
             # which is actually what we want.  If the loader has a length, we set batch_size = 1, so
             # this will give us the right number of instances.
-            total_instances += self._batch_size_multiplier.get(key, 1) * len(loader)
+            total_instances += self._batch_size_multiplier.get(key, 1.0) * len(loader)
         if self._drop_last or total_instances % self._batch_size == 0:
             return total_instances // self._batch_size
         else:
@@ -194,12 +192,12 @@ class MultiTaskDataLoader(DataLoader):
         batch_instances: List[Instance] = []
         current_batch_size = 0
         for dataset, instance in scheduled_instances:
-            current_batch_size += self._batch_size_multiplier.get(dataset, 1)
+            current_batch_size += self._batch_size_multiplier.get(dataset, 1.0)
             if current_batch_size > self._batch_size:
                 batch = Batch(batch_instances)
                 yield batch.as_tensor_dict()
                 batch_instances = [instance]
-                current_batch_size = self._batch_size_multiplier.get(dataset, 1)
+                current_batch_size = self._batch_size_multiplier.get(dataset, 1.0)
             else:
                 batch_instances.append(instance)
 
