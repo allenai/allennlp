@@ -9,7 +9,7 @@ from allennlp.common.util import is_distributed
 from allennlp.training.metrics.metric import Metric
 
 
-@Metric.register("rogue")
+@Metric.register("rouge")
 class ROUGE(Metric):
     """
     Recall-Oriented Understudy for Gisting Evaluation (ROUGE)
