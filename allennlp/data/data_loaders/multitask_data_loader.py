@@ -6,7 +6,10 @@ from allennlp.common import util
 from allennlp.data.batch import Batch
 from allennlp.data.data_loaders.data_loader import DataLoader, TensorDict
 from allennlp.data.data_loaders.multi_process_data_loader import MultiProcessDataLoader
-from allennlp.data.data_loaders.multitask_scheduler import MultiTaskScheduler, RoundRobinScheduler
+from allennlp.data.data_loaders.multitask_scheduler import (
+    MultiTaskScheduler,
+    HomogeneousRoundRobinScheduler,
+)
 from allennlp.data.data_loaders.multitask_epoch_sampler import MultiTaskEpochSampler
 from allennlp.data.dataset_readers.multitask import MultiTaskDatasetReader
 from allennlp.data.instance import Instance
@@ -44,10 +47,14 @@ class MultiTaskDataLoader(DataLoader):
         The number of instances (from any dataset) that should be combined together into a single
         batch.  See also the `batch_size_multiplier` argument for additional control over exactly
         how batch size is computed.
-    scheduler: `MultiTaskScheduler`, optional (default = `RoundRobinScheduler`)
+    scheduler: `MultiTaskScheduler`, optional (default = `HomogeneousRoundRobinScheduler`)
         The `scheduler` determines how instances are ordered within an epoch.  By default, we'll
-        select one instance from each dataset in turn, trying to ensure as uniform a mix of datasets
-        as possible.
+        select one batch of instances from each dataset in turn, trying to ensure as uniform a mix
+        of datasets as possible.  Note that if your model can handle it, using a
+        `RoundRobinScheduler` is likely better than a `HomogeneousRoundRobinScheduler` (because it
+        does a better job mixing gradient signals from various datasets), so you may want to
+        consider switching.  We use the homogeneous version as default because it should work for
+        any allennlp model, while the non-homogeneous one might not.
     sampler: `MultiTaskEpochSampler`, optional (default = `None`)
         Only used if `instances_per_epoch` is not `None`. If we need to select a subset of the data
         for an epoch, this `sampler` will tell us with what proportion we should sample from each
@@ -113,7 +120,7 @@ class MultiTaskDataLoader(DataLoader):
     ) -> None:
         self.readers = reader.readers
         self.data_paths = data_path
-        self.scheduler = scheduler or RoundRobinScheduler()
+        self.scheduler = scheduler or HomogeneousRoundRobinScheduler()
         self.sampler = sampler
 
         self._batch_size = batch_size
