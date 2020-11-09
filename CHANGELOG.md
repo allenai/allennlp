@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   with respect to the embedding layer, and aggregate wordpieces to tokens separately.
 - Fixed the heuristics for finding embedding layers in the case of RoBERTa. An update in the
   `transformers` library broke our old heuristic.
+- Fixed default masks that were erroneously created on the CPU even when a GPU is available.
 
 
 ## [v1.2.0](https://github.com/allenai/allennlp/releases/tag/v1.2.0) - 2020-10-29
