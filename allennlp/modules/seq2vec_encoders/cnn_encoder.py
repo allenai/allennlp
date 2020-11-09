@@ -131,7 +131,11 @@ class CnnEncoder(Seq2VecEncoder):
 
             # Create activation mask.
             # shape: (batch_size, pool_length)
-            indices = torch.arange(pool_length).unsqueeze(0).expand(batch_size, pool_length)
+            indices = (
+                torch.arange(pool_length, device=activations.device)
+                .unsqueeze(0)
+                .expand(batch_size, pool_length)
+            )
             # shape: (batch_size, pool_length)
             activations_mask = indices.ge(
                 last_unmasked_tokens - convolution_layer.kernel_size[0] + 1
