@@ -182,6 +182,11 @@ class PretrainedTransformerTokenizer(Tokenizer):
             return_token_type_ids=True,
             return_attention_mask=False,
         )
+        if len(dummy_output["token_type_ids"]) != len(dummy_output["input_ids"]):
+            logger.warning(
+                "Tokenizer library did not return valid token type ids. We will assume they are all zero."
+            )
+            dummy_output["token_type_ids"] = [0] * len(dummy_output["input_ids"])
 
         seen_dummy_a = False
         for token_id, token_type_id in zip(
