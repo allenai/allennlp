@@ -21,6 +21,11 @@ WORKDIR /stage/allennlp
 # Install the wheel of AllenNLP.
 COPY dist dist/
 RUN pip install $(ls dist/*.whl)
+# TODO(epwalsh): In PyTorch 1.7, dataclasses is an unconditional dependency, when it should
+# only be a conditional dependency for Python < 3.7.
+# This has been fixed on PyTorch master branch, so we should be able to
+# remove this check with the next PyTorch release.
+RUN pip uninstall -y dataclasses
 
 # Copy wrapper script to allow beaker to run resumable training workloads.
 COPY scripts/ai2_internal/resumable_train.sh /stage/allennlp

@@ -39,7 +39,7 @@ nr.databind.core<0.0.17
 nr.interface<0.0.4
 
 mkdocs==1.1.2
-mkdocs-material>=5.5.0,<6.1.0
+mkdocs-material>=5.5.0,<6.2.0
 markdown-include==0.6.0
 
 #### PACKAGE-UPLOAD PACKAGES ####

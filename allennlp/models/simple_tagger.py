@@ -94,6 +94,7 @@ class SimpleTagger(Model):
             calculate_span_f1 = label_encoding is not None
 
         self.calculate_span_f1 = calculate_span_f1
+        self._f1_metric: Optional[SpanBasedF1Measure] = None
         if calculate_span_f1:
             if not label_encoding:
                 raise ConfigurationError(
@@ -102,8 +103,6 @@ class SimpleTagger(Model):
             self._f1_metric = SpanBasedF1Measure(
                 vocab, tag_namespace=label_namespace, label_encoding=label_encoding
             )
-        else:
-            self._f1_metric = None
 
         initializer(self)
 
@@ -174,7 +173,7 @@ class SimpleTagger(Model):
             for metric in self.metrics.values():
                 metric(logits, tags, mask)
             if self.calculate_span_f1:
-                self._f1_metric(logits, tags, mask)
+                self._f1_metric(logits, tags, mask)  # type: ignore
             output_dict["loss"] = loss
 
         if metadata is not None:
@@ -213,7 +212,7 @@ class SimpleTagger(Model):
         }
 
         if self.calculate_span_f1:
-            f1_dict = self._f1_metric.get_metric(reset)
+            f1_dict = self._f1_metric.get_metric(reset)  # type: ignore
             if self._verbose_metrics:
                 metrics_to_return.update(f1_dict)
             else:

@@ -47,7 +47,7 @@ class Trainer(Registrable):
 
     def __init__(
         self,
-        serialization_dir: str,
+        serialization_dir: str = None,
         cuda_device: Optional[Union[int, torch.device]] = None,
         distributed: bool = False,
         local_rank: int = 0,
@@ -116,6 +116,7 @@ class BatchCallback(Registrable):
         trainer: "GradientDescentTrainer",
         batch_inputs: List[List[TensorDict]],
         batch_outputs: List[Dict[str, Any]],
+        batch_metrics: Dict[str, Any],
         epoch: int,
         batch_number: int,
         is_training: bool,
@@ -137,6 +138,7 @@ class TensoboardBatchMemoryUsage(BatchCallback):
         trainer: "GradientDescentTrainer",
         batch_inputs: List[List[TensorDict]],
         batch_outputs: List[Dict[str, Any]],
+        batch_metrics: Dict[str, Any],
         epoch: int,
         batch_number: int,
         is_training: bool,
@@ -245,6 +247,7 @@ class TrainerCallback(Registrable, metaclass=_TrainerCallbackMeta):
         trainer: "GradientDescentTrainer",
         batch_inputs: List[List[TensorDict]],
         batch_outputs: List[Dict[str, Any]],
+        batch_metrics: Dict[str, Any],
         epoch: int,
         batch_number: int,
         is_training: bool,
@@ -519,9 +522,8 @@ class GradientDescentTrainer(Trainer):
 
         self._num_epochs = num_epochs
 
-        if checkpointer is not None:
-            self._checkpointer = checkpointer
-        else:
+        self._checkpointer: Optional[Checkpointer] = checkpointer
+        if checkpointer is None and serialization_dir is not None:
             self._checkpointer = Checkpointer(serialization_dir)
 
         self._grad_norm = grad_norm
@@ -637,13 +639,9 @@ class GradientDescentTrainer(Trainer):
 
         train_loss = 0.0
         batch_loss = 0.0
+        train_reg_loss = None if regularization_penalty is None else 0.0
+        batch_reg_loss = None if regularization_penalty is None else 0.0
 
-        if regularization_penalty is not None:
-            train_reg_loss = 0.0
-            batch_reg_loss = 0.0
-        else:
-            train_reg_loss = None
-            batch_reg_loss = None
         # Set the model to "train" mode.
         self._pytorch_model.train()
 
@@ -717,7 +715,7 @@ class GradientDescentTrainer(Trainer):
                 with amp.autocast(self._use_amp):
                     batch_outputs = self.batch_outputs(batch, for_training=True)
                     batch_group_outputs.append(batch_outputs)
-                    loss = batch_outputs.get("loss")
+                    loss = batch_outputs["loss"]
                     reg_loss = batch_outputs.get("reg_loss")
                     if torch.isnan(loss):
                         raise ValueError("nan loss encountered")
@@ -727,7 +725,7 @@ class GradientDescentTrainer(Trainer):
                     if reg_loss is not None:
                         reg_loss = reg_loss / len(batch_group)
                         batch_reg_loss = reg_loss.item()
-                        train_reg_loss += batch_reg_loss
+                        train_reg_loss += batch_reg_loss  # type: ignore
 
                 if self._scaler is not None:
                     self._scaler.scale(loss).backward()
@@ -800,12 +798,14 @@ class GradientDescentTrainer(Trainer):
                     param_updates,
                 )
 
-                self._checkpointer.maybe_save_checkpoint(self, epoch, batches_this_epoch)
+                if self._checkpointer is not None:
+                    self._checkpointer.maybe_save_checkpoint(self, epoch, batches_this_epoch)
             for callback in self._batch_callbacks:
                 callback(
                     self,
                     batch_group,
                     batch_group_outputs,
+                    metrics,
                     epoch,
                     batches_this_epoch,
                     is_training=True,
@@ -844,7 +844,7 @@ class GradientDescentTrainer(Trainer):
             metrics["gpu_" + str(gpu_num) + "_memory_MB"] = memory / (1024 * 1024)
         return metrics
 
-    def _validation_loss(self, epoch: int) -> Tuple[float, float, int]:
+    def _validation_loss(self, epoch: int) -> Tuple[float, Optional[float], int]:
         """
         Computes the validation loss. Returns it and the number of batches.
         """
@@ -873,14 +873,10 @@ class GradientDescentTrainer(Trainer):
             val_generator_tqdm = validation_data_loader
 
         batches_this_epoch = 0
-        val_loss = 0
-        val_batch_loss = 0
-        if regularization_penalty is not None:
-            val_reg_loss = 0
-            val_batch_reg_loss = 0
-        else:
-            val_reg_loss = None
-            val_batch_reg_loss = None
+        val_loss = 0.0
+        val_batch_loss = 0.0
+        val_reg_loss = None if regularization_penalty is None else 0.0
+        val_batch_reg_loss = None if regularization_penalty is None else 0.0
         done_early = False
         for batch in val_generator_tqdm:
             if self._distributed:
@@ -913,11 +909,11 @@ class GradientDescentTrainer(Trainer):
                     # count those batches for which we actually have a loss.  If this variable ever
                     # gets used for something else, we might need to change things around a bit.
                     batches_this_epoch += 1
-                    val_batch_loss = loss.detach().cpu().numpy()
+                    val_batch_loss = loss.item()
                     val_loss += val_batch_loss
                     if reg_loss is not None:
-                        val_batch_reg_loss = reg_loss.detach().cpu().numpy()
-                        val_reg_loss += val_batch_reg_loss
+                        val_batch_reg_loss = reg_loss.item()
+                        val_reg_loss += val_batch_reg_loss  # type: ignore
 
             # Update the description with the latest metrics
             val_metrics = training_util.get_metrics(
@@ -940,6 +936,7 @@ class GradientDescentTrainer(Trainer):
                     self,
                     [batch],
                     [batch_outputs],
+                    val_metrics,
                     epoch,
                     batches_this_epoch,
                     is_training=False,
@@ -966,6 +963,13 @@ class GradientDescentTrainer(Trainer):
         Trains the supplied model with the supplied parameters.
         """
         try:
+            return self._try_train()
+        finally:
+            # make sure pending events are flushed to disk and files are closed properly
+            self._tensorboard.close()
+
+    def _try_train(self) -> Dict[str, Any]:
+        try:
             epoch_counter = self._restore_checkpoint()
         except RuntimeError:
             traceback.print_exc()
@@ -980,7 +984,7 @@ class GradientDescentTrainer(Trainer):
         logger.info("Beginning training.")
 
         val_metrics: Dict[str, float] = {}
-        this_epoch_val_metric: float = None
+        this_epoch_val_metric: float
         metrics: Dict[str, Any] = {}
         epochs_trained = 0
         training_start_time = time.time()
@@ -996,7 +1000,7 @@ class GradientDescentTrainer(Trainer):
             epoch_start_time = time.time()
             train_metrics = self._train_epoch(epoch)
 
-            if self._master:
+            if self._master and self._checkpointer is not None:
                 self._checkpointer.save_checkpoint(epoch, self, save_model_only=True)
 
             # Wait for the master to finish saving the model checkpoint
@@ -1068,7 +1072,8 @@ class GradientDescentTrainer(Trainer):
 
             if self._serialization_dir and self._master:
                 common_util.dump_metrics(
-                    os.path.join(self._serialization_dir, f"metrics_epoch_{epoch}.json"), metrics
+                    os.path.join(self._serialization_dir, f"metrics_epoch_{epoch}.json"),
+                    metrics,
                 )
 
             # The Scheduler API is agnostic to whether your schedule requires a validation metric -
@@ -1078,7 +1083,7 @@ class GradientDescentTrainer(Trainer):
             if self._momentum_scheduler:
                 self._momentum_scheduler.step(this_epoch_val_metric)
 
-            if self._master:
+            if self._master and self._checkpointer is not None:
                 self._checkpointer.save_checkpoint(
                     epoch, self, is_best_so_far=self._metric_tracker.is_best_so_far()
                 )
@@ -1106,11 +1111,10 @@ class GradientDescentTrainer(Trainer):
         for callback in self._end_callbacks:
             callback(self, metrics=metrics, epoch=epoch, is_master=self._master)
 
-        # make sure pending events are flushed to disk and files are closed properly
-        self._tensorboard.close()
-
         # Load the best model state before returning
-        best_model_state = self._checkpointer.best_model_state()
+        best_model_state = (
+            None if self._checkpointer is None else self._checkpointer.best_model_state()
+        )
         if best_model_state:
             self.model.load_state_dict(best_model_state)
 
@@ -1162,6 +1166,9 @@ class GradientDescentTrainer(Trainer):
             The epoch at which to resume training, which should be one after the epoch
             in the saved training state.
         """
+        if self._checkpointer is None:
+            return 0
+
         model_state, training_state = self._checkpointer.restore_checkpoint()
 
         if not training_state:
@@ -1217,19 +1224,21 @@ class GradientDescentTrainer(Trainer):
         cuda_device: Optional[Union[int, torch.device]] = None,
         grad_norm: float = None,
         grad_clipping: float = None,
-        distributed: bool = None,
+        distributed: bool = False,
         world_size: int = 1,
         num_gradient_accumulation_steps: int = 1,
         use_amp: bool = False,
         no_grad: List[str] = None,
-        optimizer: Lazy[Optimizer] = None,
+        optimizer: Lazy[Optimizer] = Lazy(Optimizer.default),
         learning_rate_scheduler: Lazy[LearningRateScheduler] = None,
         momentum_scheduler: Lazy[MomentumScheduler] = None,
-        tensorboard_writer: Lazy[TensorboardWriter] = None,
+        tensorboard_writer: Lazy[TensorboardWriter] = Lazy(TensorboardWriter),
         moving_average: Lazy[MovingAverage] = None,
-        checkpointer: Lazy[Checkpointer] = None,
+        checkpointer: Lazy[Checkpointer] = Lazy(Checkpointer),
         batch_callbacks: List[BatchCallback] = None,
         epoch_callbacks: List[EpochCallback] = None,
+        end_callbacks: List[EpochCallback] = None,
+        trainer_callbacks: List[TrainerCallback] = None,
     ) -> "Trainer":
         """
         This method exists so that we can have a documented method to construct this class using
@@ -1267,8 +1276,6 @@ class GradientDescentTrainer(Trainer):
 
         parameters = [[n, p] for n, p in model.named_parameters() if p.requires_grad]
         optimizer_ = optimizer.construct(model_parameters=parameters)
-        if not optimizer_:
-            optimizer_ = Optimizer.default(parameters)
 
         common_util.log_frozen_and_tunable_parameter_names(model)
 
@@ -1279,14 +1286,23 @@ class GradientDescentTrainer(Trainer):
         except TypeError:
             batches_per_epoch = None
 
-        moving_average_ = moving_average.construct(parameters=parameters)
-        learning_rate_scheduler_ = learning_rate_scheduler.construct(
-            optimizer=optimizer_, num_epochs=num_epochs, num_steps_per_epoch=batches_per_epoch
+        moving_average_ = (
+            None if moving_average is None else moving_average.construct(parameters=parameters)
         )
-        momentum_scheduler_ = momentum_scheduler.construct(optimizer=optimizer_)
-
-        checkpointer_ = checkpointer.construct() or Checkpointer(serialization_dir)
-        tensorboard_writer_ = tensorboard_writer.construct() or TensorboardWriter(serialization_dir)
+        learning_rate_scheduler_ = (
+            None
+            if learning_rate_scheduler is None
+            else learning_rate_scheduler.construct(
+                optimizer=optimizer_, num_epochs=num_epochs, num_steps_per_epoch=batches_per_epoch
+            )
+        )
+        momentum_scheduler_ = (
+            None
+            if momentum_scheduler is None
+            else momentum_scheduler.construct(optimizer=optimizer_)
+        )
+        checkpointer_ = checkpointer.construct(serialization_dir=serialization_dir)
+        tensorboard_writer_ = tensorboard_writer.construct(serialization_dir=serialization_dir)
 
         return cls(
             model,
@@ -1307,6 +1323,8 @@ class GradientDescentTrainer(Trainer):
             moving_average=moving_average_,
             batch_callbacks=batch_callbacks,
             epoch_callbacks=epoch_callbacks,
+            end_callbacks=end_callbacks,
+            trainer_callbacks=trainer_callbacks,
             distributed=distributed,
             local_rank=local_rank,
             world_size=world_size,

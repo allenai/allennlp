@@ -38,6 +38,7 @@ class TrainingDataLoggerBatchCallback(BatchCallback):
         trainer: "GradientDescentTrainer",
         batch_inputs: List[TensorDict],
         batch_outputs: List[Dict[str, Any]],
+        batch_metrics: Dict[str, Any],
         epoch: int,
         batch_number: int,
         is_training: bool,
@@ -60,6 +61,7 @@ class TrainingDeviceLoggerBatchCallback(BatchCallback):
         trainer: "GradientDescentTrainer",
         batch_inputs: List[TensorDict],
         batch_outputs: List[Dict[str, Any]],
+        batch_metrics: Dict[str, Any],
         epoch: int,
         batch_number: int,
         is_training: bool,
@@ -532,6 +534,7 @@ class TestTrain(AllenNlpTestCase):
                 trainer: GradientDescentTrainer,
                 batch_inputs: List[List[TensorDict]],
                 batch_outputs: List[Dict[str, Any]],
+                batch_metrics: Dict[str, Any],
                 epoch: int,
                 batch_number: int,
                 is_training: bool,
@@ -764,9 +767,6 @@ class TestDryRun(AllenNlpTestCase):
         with pytest.raises(ConfigurationError):
             train_model(self.params, self.TEST_DIR, dry_run=True)
 
-    def test_dry_run_without_vocabulary_key(self):
-        train_model(self.params, self.TEST_DIR, dry_run=True)
-
     def test_dry_run_makes_vocab(self):
         vocab_path = self.TEST_DIR / "vocabulary"
 
@@ -890,3 +890,8 @@ class TestDryRun(AllenNlpTestCase):
             assert args.param_path == "path/to/params"
             assert args.serialization_dir == "serialization_dir"
             assert args.dry_run
+
+    def test_warn_validation_loader_batches_per_epoch(self):
+        self.params["data_loader"]["batches_per_epoch"] = 3
+        with pytest.warns(UserWarning, match="batches_per_epoch"):
+            train_model(self.params, self.TEST_DIR, dry_run=True)

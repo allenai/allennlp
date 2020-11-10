@@ -4,11 +4,8 @@ import warnings
 
 import torch
 
-from allennlp.common import Registrable
+from allennlp.common import FromParams
 from allennlp.common.checks import ConfigurationError
-from allennlp.nn.samplers.sampler import Sampler
-from allennlp.nn.samplers.samplers import TopKSampler
-from allennlp.nn.samplers.samplers import TopPSampler
 
 
 StateType = Dict[str, torch.Tensor]
@@ -28,7 +25,7 @@ or [`StepFunctionTypeNoTimestep`](#stepfunctiontypenotimestep).
 """
 
 
-class BeamSearch(Registrable):
+class BeamSearch(FromParams):
     """
     Implements the beam search algorithm for decoding the most likely sequences.
 
@@ -48,13 +45,7 @@ class BeamSearch(Registrable):
         more diversity into the search. See
         [*Beam Search Strategies for Neural Machine Translation*, Freitag and Al-Onaizan, 2017]
         (https://arxiv.org/abs/1702.01806).
-    sampler : `Sampler`, optional (default = `None`)
-        A sampler that can be used to select subsequent tokens.
-        If not given, search defaults to selecting the top `per_node_beam_size` tokens at each
-        step.
     """
-
-    default_implementation = "without_sampling"
 
     def __init__(
         self,
@@ -62,19 +53,25 @@ class BeamSearch(Registrable):
         max_steps: int = 50,
         beam_size: int = 10,
         per_node_beam_size: int = None,
-        sampler: Sampler = None,
     ) -> None:
+        assert max_steps > 0
+        assert beam_size > 0
+        if per_node_beam_size is not None:
+            assert per_node_beam_size > 0
+
         self._end_index = end_index
         self.max_steps = max_steps
         self.beam_size = beam_size
         self.per_node_beam_size = per_node_beam_size or beam_size
-        self.sampler = sampler
 
     @staticmethod
     def _reconstruct_sequences(predictions, backpointers):
         # Reconstruct the sequences.
         # shape: [(batch_size, beam_size, 1)]
         reconstructed_predictions = [predictions[-1].unsqueeze(2)]
+
+        if not backpointers:
+            return reconstructed_predictions
 
         # shape: (batch_size, beam_size)
         cur_backpointers = backpointers[-1]
@@ -209,18 +206,11 @@ class BeamSearch(Registrable):
             )
 
         # Get the initial predicted classed and their log probabilities.
-        # If this search includes sampling, select the tokens using the designated sampler.
-        # Else, select the top `beam_size` tokens.
         # shape: (batch_size, beam_size), (batch_size, beam_size)
-        if self.sampler is not None:
-            start_top_log_probabilities, start_predicted_classes = self.sampler(
-                start_class_log_probabilities, num_samples=self.beam_size
-            )
-        else:
-            (
-                start_top_log_probabilities,
-                start_predicted_classes,
-            ) = start_class_log_probabilities.topk(self.beam_size)
+        (
+            start_top_log_probabilities,
+            start_predicted_classes,
+        ) = start_class_log_probabilities.topk(self.beam_size)
 
         if self.beam_size == 1 and (start_predicted_classes == self._end_index).all():
             warnings.warn(
@@ -300,14 +290,9 @@ class BeamSearch(Registrable):
             )
 
             # shape (both): (batch_size * beam_size, per_node_beam_size)
-            if self.sampler is not None:
-                top_log_probabilities, predicted_classes = self.sampler(
-                    cleaned_log_probabilities, self.per_node_beam_size
-                )
-            else:
-                top_log_probabilities, predicted_classes = cleaned_log_probabilities.topk(
-                    self.per_node_beam_size
-                )
+            top_log_probabilities, predicted_classes = cleaned_log_probabilities.topk(
+                self.per_node_beam_size
+            )
 
             # Here we expand the last log probabilities to (batch_size * beam_size, per_node_beam_size)
             # so that we can add them to the current log probs for this timestep.
@@ -409,87 +394,3 @@ class BeamSearch(Registrable):
         all_predictions = torch.cat(list(reversed(reconstructed_predictions)), 2)
 
         return all_predictions, last_log_probabilities
-
-    @classmethod
-    def without_sampling(
-        cls,
-        end_index: int,
-        max_steps: int = 50,
-        beam_size: int = 10,
-        per_node_beam_size: int = None,
-    ) -> "BeamSearch":
-        """
-        Given an index of the end token in target vocabulary, return a `BeamSearch` object
-        that can be used to find `beam_size` candidate sequences.
-        """
-        return cls(
-            end_index=end_index,
-            max_steps=max_steps,
-            beam_size=beam_size,
-            per_node_beam_size=per_node_beam_size,
-        )
-
-    @classmethod
-    def top_k_sampling(
-        cls,
-        end_index: int,
-        max_steps: int = 50,
-        beam_size: int = 10,
-        k: int = 1,
-        temperature: float = 1.0,
-    ) -> "BeamSearch":
-        """
-        Given an index of the end token in target vocabulary, return a `BeamSearch` object
-        that can be used to find `beam_size` candidate sequences, found by sampling from
-        the top `k` tokens to choose from at each step.
-        """
-        # Make sure `k` is a valid threshold
-        if type(k) is not int or k < 1:
-            raise ConfigurationError(
-                f'{"value of selection threshold `k` invalid."}'
-                f'{"`k` must be a positive `int`."}'
-            )
-        sampler_k = TopKSampler(k, temperature)
-        return cls(
-            end_index=end_index,
-            max_steps=max_steps,
-            beam_size=beam_size,
-            per_node_beam_size=1,
-            sampler=sampler_k,
-        )
-
-    @classmethod
-    def top_p_sampling(
-        cls,
-        end_index: int,
-        max_steps: int = 50,
-        beam_size: int = 10,
-        p: float = 0.9,
-        temperature: float = 1.0,
-    ) -> "BeamSearch":
-        """
-        Given an index of the end token in target vocabulary, return a `BeamSearch` object
-        that can be used to find `beam_size` candidate sequences, found by sampling from
-        tokens which cumulatively make up the top `p` probability of the total tokens to
-        choose from.
-        """
-        # Make sure `p` is a valid cumulative probability threshold.
-        if type(p) is not float or p < 0.0 or p > 1.0:
-            raise ConfigurationError(
-                f'{"value of cumulative probability threshold `p`=({p}) too small."}'
-                f'{"`p` must be a float between `0.0` and `1.0`"}'
-            )
-
-        sampler_p = TopPSampler(p, temperature)
-        return cls(
-            end_index=end_index,
-            max_steps=max_steps,
-            beam_size=beam_size,
-            per_node_beam_size=1,
-            sampler=sampler_p,
-        )
-
-
-BeamSearch.register("without_sampling", constructor="without_sampling")(BeamSearch)
-BeamSearch.register("top_p_sampling", constructor="top_p_sampling")(BeamSearch)
-BeamSearch.register("top_k_sampling", constructor="top_k_sampling")(BeamSearch)

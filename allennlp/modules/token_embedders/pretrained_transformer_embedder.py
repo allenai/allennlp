@@ -170,6 +170,7 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
             )
 
         transformer_mask = segment_concat_mask if self._max_length is not None else mask
+        assert transformer_mask is not None
         # Shape: [batch_size, num_wordpieces, embedding_size],
         # or if self._max_length is not None:
         # [batch_size * num_segments, self._max_length, embedding_size]
@@ -237,8 +238,8 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
             Shape: [batch_size * num_segments, self._max_length].
         """
         num_segment_concat_wordpieces = token_ids.size(1)
-        num_segments = math.ceil(num_segment_concat_wordpieces / self._max_length)
-        padded_length = num_segments * self._max_length
+        num_segments = math.ceil(num_segment_concat_wordpieces / self._max_length)  # type: ignore
+        padded_length = num_segments * self._max_length  # type: ignore
         length_to_pad = padded_length - num_segment_concat_wordpieces
 
         def fold(tensor):  # Shape: [batch_size, num_segment_concat_wordpieces]
@@ -297,8 +298,10 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         # We want to remove all segment-level special tokens but maintain sequence-level ones
         num_wordpieces = num_segment_concat_wordpieces - (num_segments - 1) * self._num_added_tokens
 
-        embeddings = embeddings.reshape(batch_size, num_segments * self._max_length, embedding_size)
-        mask = mask.reshape(batch_size, num_segments * self._max_length)
+        embeddings = embeddings.reshape(
+            batch_size, num_segments * self._max_length, embedding_size  # type: ignore
+        )
+        mask = mask.reshape(batch_size, num_segments * self._max_length)  # type: ignore
         # We assume that all 1s in the mask precede all 0s, and add an assert for that.
         # Open an issue on GitHub if this breaks for you.
         # Shape: (batch_size,)

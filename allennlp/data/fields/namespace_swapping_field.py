@@ -28,12 +28,13 @@ class NamespaceSwappingField(Field[torch.Tensor]):
     def __init__(self, source_tokens: List[Token], target_namespace: str) -> None:
         self._source_tokens = source_tokens
         self._target_namespace = target_namespace
-        self._mapping_array: List[int] = None
+        self._mapping_array: List[int] = []
 
     @overrides
     def index(self, vocab: Vocabulary):
         self._mapping_array = [
-            vocab.get_token_index(x.text, self._target_namespace) for x in self._source_tokens
+            vocab.get_token_index(x.ensure_text(), self._target_namespace)
+            for x in self._source_tokens
         ]
 
     @overrides
