@@ -207,8 +207,8 @@ class TopPSampler(Sampler):
 
     p : `float`, optional (default = `0.9`)
         The cumulative probability cutoff threshold. A higher value of `p` will result in more possible
-        examples to sample from. If `with_replacement` is `False` and the number of possible samples is 
-        insufficient to sample without replacement from when calling `sample_nodes`, then the top 
+        examples to sample from. If `with_replacement` is `False` and the number of possible samples is
+        insufficient to sample without replacement from when calling `sample_nodes`, then the top
         `per_node_beam_size` examples will be chosen.
     temperature : `float`, optional (default = `1.0`)
         A `temperature` below 1.0 produces a sharper probability distribution and a `temperature`
@@ -442,7 +442,7 @@ class BeamSearch(FromParams):
         (https://arxiv.org/abs/1702.01806).
     sampler : `Sampler`, optional (default = `None`)
         An optional `Sampler` which is used to pick next candidate nodes and beams.
-        If not specified, `DeterministicSampler` will be used, which just takes the 
+        If not specified, `DeterministicSampler` will be used, which just takes the
         `per_node_beam_size` most likely nodes and the `beam_size` most likely beams.
     """
 
