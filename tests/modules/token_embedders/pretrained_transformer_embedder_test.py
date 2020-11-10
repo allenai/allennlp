@@ -100,7 +100,10 @@ class TestPretrainedTransformerEmbedder(AllenNlpTestCase):
         [
             (train_parameters, last_layer_only, gradient_checkpointing)
             for train_parameters in {True, False}
-            for last_layer_only in {True}   # Huggingface T5 is totally different in the way it returns the intermediate layers, and we don't support that.
+            for last_layer_only in {
+                True
+            }  # Huggingface T5 is totally different in the way it returns the
+            # intermediate layers, and we don't support that.
             for gradient_checkpointing in {True, False}
             if train_parameters
             or not gradient_checkpointing  # checkpointing only makes sense when we're actually training the layers
@@ -117,12 +120,12 @@ class TestPretrainedTransformerEmbedder(AllenNlpTestCase):
 
         sentence1 = "A, AllenNLP sentence."
         tokens1 = tokenizer.tokenize(sentence1)
-        expected_tokens1 = ['▁A', ',', '▁Allen', 'N', 'LP', '▁sentence', '.']
+        expected_tokens1 = ["▁A", ",", "▁Allen", "N", "LP", "▁sentence", ".", "</s>"]
         assert [t.text for t in tokens1] == expected_tokens1
 
         sentence2 = "AllenNLP is great"
         tokens2 = tokenizer.tokenize(sentence2)
-        expected_tokens2 = ['▁Allen', 'N', 'LP', '▁is', '▁great']
+        expected_tokens2 = ["▁Allen", "N", "LP", "▁is", "▁great", "</s>"]
         assert [t.text for t in tokens2] == expected_tokens2
 
         vocab = Vocabulary()
@@ -136,6 +139,7 @@ class TestPretrainedTransformerEmbedder(AllenNlpTestCase):
                         "train_parameters": train_parameters,
                         "last_layer_only": last_layer_only,
                         "gradient_checkpointing": gradient_checkpointing,
+                        "sub_module": "encoder",
                     }
                 }
             }
@@ -156,13 +160,13 @@ class TestPretrainedTransformerEmbedder(AllenNlpTestCase):
         assert tokens["bert"]["token_ids"].shape == (2, max_length)
 
         assert tokens["bert"]["mask"].tolist() == [
-            [True, True, True, True, True, True, True],
-            [True, True, True, True, True, False, False],
+            [True, True, True, True, True, True, True, True],
+            [True, True, True, True, True, True, False, False],
         ]
 
         # Attention mask
         bert_vectors = token_embedder(tokens)
-        assert bert_vectors.size() == (2, 7, 64)
+        assert bert_vectors.size() == (2, 8, 64)
         assert bert_vectors.requires_grad == (train_parameters or not last_layer_only)
 
     def test_big_token_type_ids(self):
