@@ -97,7 +97,7 @@ class CnnEncoder(Seq2VecEncoder):
             tokens = tokens * mask.unsqueeze(-1)
         else:
             # If mask doesn't exist create one of shape (batch_size, num_tokens)
-            mask = torch.ones(tokens.shape[0], tokens.shape[1]).bool()
+            mask = torch.ones(tokens.shape[0], tokens.shape[1], device=tokens.device).bool()
 
         # Our input is expected to have shape `(batch_size, num_tokens, embedding_dim)`.  The
         # convolution layers expect input of shape `(batch_size, in_channels, sequence_length)`,
@@ -131,7 +131,11 @@ class CnnEncoder(Seq2VecEncoder):
 
             # Create activation mask.
             # shape: (batch_size, pool_length)
-            indices = torch.arange(pool_length).unsqueeze(0).expand(batch_size, pool_length)
+            indices = (
+                torch.arange(pool_length, device=activations.device)
+                .unsqueeze(0)
+                .expand(batch_size, pool_length)
+            )
             # shape: (batch_size, pool_length)
             activations_mask = indices.ge(
                 last_unmasked_tokens - convolution_layer.kernel_size[0] + 1
