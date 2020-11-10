@@ -1,46 +1,67 @@
 """
-Plugin management.
+# Plugin management.
 
 AllenNLP supports loading "plugins" dynamically. A plugin is just a Python package that
-can be found and imported by AllenNLP. This is done by creating a file named `.allennlp_plugins`
-in the directory where the `allennlp` command is run that lists the modules that should be loaded,
-one per line.
+provides custom registered classes or additional `allennlp` subcommands.
+
+In order for AllenNLP to find your plugins, you have to create either a local plugins file named `.allennlp_plugins`
+in the directory where the `allennlp` command is run, or a global plugins file at `~/.allennlp/plugins`.
+The file should list the plugin modules that you want to be loaded, one per line.
+A plugins file in the current directory will take precedence over a global plugins file in `~/.allennlp/`.
 """
 
 import importlib
 import logging
 import os
+from pathlib import Path
 import sys
 from typing import Iterable
 
 from allennlp.common.util import push_python_path, import_module_and_submodules
 
+
 logger = logging.getLogger(__name__)
 
 
+LOCAL_PLUGINS_FILENAME = ".allennlp_plugins"
+"""
+Local plugin files should have this name.
+"""
+
+GLOBAL_PLUGINS_FILENAME = str(Path.home() / ".allennlp" / "plugins")
+"""
+The global plugins file will be found here.
+"""
+
 DEFAULT_PLUGINS = ("allennlp_models", "allennlp_server")
+"""
+Default plugins do not need to be declared in a plugins file. They will always
+be imported when they are installed in the current Python environment.
+"""
 
 
-def discover_file_plugins(plugins_filename: str = ".allennlp_plugins") -> Iterable[str]:
+def discover_file_plugins(plugins_filename: os.PathLike = LOCAL_PLUGINS_FILENAME) -> Iterable[str]:
     """
     Returns an iterable of the plugins found, declared within a file whose path is `plugins_filename`.
     """
-    if os.path.isfile(plugins_filename):
-        with open(plugins_filename) as file_:
-            for module_name in file_.readlines():
-                module_name = module_name.strip()
-                if module_name:
-                    yield module_name
-    else:
-        return []
+    with open(plugins_filename) as file_:
+        for module_name in file_.readlines():
+            module_name = module_name.strip()
+            if module_name:
+                yield module_name
 
 
 def discover_plugins() -> Iterable[str]:
     """
     Returns an iterable of the plugins found.
     """
-    with push_python_path("."):
-        yield from discover_file_plugins()
+    if os.path.isfile(LOCAL_PLUGINS_FILENAME):
+        with push_python_path("."):
+            yield from discover_file_plugins(LOCAL_PLUGINS_FILENAME)
+    elif os.path.isfile(GLOBAL_PLUGINS_FILENAME):
+        yield from discover_file_plugins(GLOBAL_PLUGINS_FILENAME)
+    else:
+        yield from []
 
 
 def import_plugins() -> None:

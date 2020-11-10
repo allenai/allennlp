@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Added an optional `seed` parameter to `ModelTestCase.set_up_model` which sets the random
   seed for `random`, `numpy`, and `torch`.
+- Added support for a global plugins file at `~/.allennlp/plugins`.
+- Added more documentation about plugins.
 
 ### Changed
 
