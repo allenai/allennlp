@@ -19,6 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Fixed a bug where forward hooks were not cleaned up with saliency interpreters if there
+  was an exception.
 - Fixed the computation of saliency maps in the Interpret code when using mismatched indexing.
   Previously, we would compute gradients from the top of the transformer, after aggregation from
   wordpieces to tokens, which gives results that are not very informative.  Now, we compute gradients
