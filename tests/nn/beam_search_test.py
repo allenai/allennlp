@@ -411,15 +411,15 @@ class BeamSearchTest(AllenNlpTestCase):
         assert all([x > 1 and x < 5 for x in classes[1]])
 
     def test_top_p_sampler(self):
-        sampler = TopPSampler(p=0.7, temperature=0.9)
+        sampler = TopPSampler(p=0.8, temperature=0.9)
 
         probabilities, classes, state = sampler.sample_nodes(log_probabilities, 3, {"foo": "bar"})
 
         assert probabilities.size() == classes.size()
         assert classes.size() == (2, 3)
 
-        assert all([x > 1 and x < 4 for x in classes[0]])
-        assert all([x > 1 and x < 4 for x in classes[1]])
+        assert all([x > 0 and x < 4 for x in classes[0]])
+        assert all([x > 1 and x < 5 for x in classes[1]])
 
     def test_gumbel_sampler(self):
         sampler = GumbelSampler()

@@ -112,7 +112,7 @@ class MultinomialSampler(Sampler):
     def __init__(
         self,
         temperature: float = 1.0,
-        with_replacement: bool = True,
+        with_replacement: bool = False,
     ) -> None:
         self.temperature = temperature
         self.filter_val = min_value_of_dtype(torch.float)
@@ -151,7 +151,7 @@ class TopKSampler(Sampler):
         k: int = 1,
         temperature: float = 1.0,
         filter_val: float = -float("inf"),
-        with_replacement: bool = True,
+        with_replacement: bool = False,
     ):
         if not isinstance(k, int) or k < 1:
             raise ValueError("k must be a positive integer")
@@ -206,7 +206,7 @@ class TopPSampler(Sampler):
         p: float = 0.9,
         temperature: float = 1.0,
         filter_val: float = -float("inf"),
-        with_replacement: bool = True,
+        with_replacement: bool = False,
     ):
         if not isinstance(p, float) or p < 0.0 or p > 1.0:
             raise ValueError("p must be a non-negative float no greater than 1.0")
@@ -242,11 +242,12 @@ class TopPSampler(Sampler):
             filter_idx = sort_indices[filter_vals]
             row[filter_idx] = self.filter_val
 
-        filtered_probabilites = torch.nn.functional.softmax(_log_probs, dim=-1)
+        filtered_probabilities = torch.nn.functional.softmax(_log_probs, dim=-1)
+        print(filtered_probabilities)
 
         # Here we sample from the filtered distribution
         selected_indices = torch.multinomial(
-            filtered_probabilites, per_node_beam_size, replacement=self.with_replacement
+            filtered_probabilities, per_node_beam_size, replacement=self.with_replacement
         )
 
         # Return (selected log probabilities, selected classes)
