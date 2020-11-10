@@ -169,7 +169,9 @@ class TopKSampler(Sampler):
         self, log_probs: torch.Tensor, per_node_beam_size: int, state: StateType
     ) -> Tuple[torch.Tensor, torch.Tensor, StateType]:
         if not per_node_beam_size <= self.k <= log_probs.size()[1]:
-            raise ValueError("k must be a postive integer no less than per_node_beam_size and no greater than vocabulary size")
+            raise ValueError(
+                "k must be a postive integer no less than per_node_beam_size and no greater than vocabulary size"
+            )
 
         # shape (both): (batch_size, k)
         top_k_log_probs, top_k_indices = log_probs.topk(self.k, dim=-1)
