@@ -265,8 +265,9 @@ class MultiTaskDataLoader(DataLoader):
                 "You must specify an EpochSampler if self._instances_per_epoch is not None"
             )
         dataset_proportions = self.sampler.get_task_proportions(self._loaders)
+        proportion_sum = sum(dataset_proportions.values())
         num_instances_per_dataset = {
-            key: math.floor(proportion * self._instances_per_epoch)
+            key: math.floor(proportion * self._instances_per_epoch / proportion_sum)
             for key, proportion in dataset_proportions.items()
         }
         return {
