@@ -166,7 +166,7 @@ class MultiTaskDataLoader(DataLoader):
         # This stores our current iterator with each dataset, so we don't just iterate over the
         # first k instances every epoch if we're using instances_per_epoch.  We'll grab instances
         # from here each epoch, and refresh it when it runs out.  We only use this in the case that
-        # batchs_per_epoch is not None, but these iterators are lazy, so always creating them
+        # instances_per_epoch is not None, but these iterators are lazy, so always creating them
         # doesn't hurt anything.
         self._iterators: Dict[str, Iterator[Instance]] = {
             # NOTE: The order in which we're calling these iterator functions is important.  We want
