@@ -220,7 +220,7 @@ class TopPSampler(Sampler):
         with_replacement: bool = False,
     ):
         if p < 0.0 or p > 1.0:
-            raise ValueError("p must be a non-negative float no greater than 1.0")
+            raise ValueError("p must be a positive float no greater than 1.0")
         self.p = p
         self.temperature = temperature or 1.0
         self.with_replacement = with_replacement
