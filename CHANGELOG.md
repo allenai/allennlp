@@ -13,6 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added an optional `seed` parameter to `ModelTestCase.set_up_model` which sets the random
   seed for `random`, `numpy`, and `torch`.
 
+### Changed
+
+- Pass batch metrics to `BatchCallback`.
+
 ### Fixed
 
 - Fixed a bug where forward hooks were not cleaned up with saliency interpreters if there
