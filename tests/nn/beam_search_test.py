@@ -411,7 +411,7 @@ class BeamSearchTest(AllenNlpTestCase):
         assert all([x > 1 and x < 5 for x in classes[1]])
 
     def test_top_p_sampler(self):
-        sampler = TopPSampler(p=0.8, temperature=1.0)
+        sampler = TopPSampler(p=0.8, temperature=0.9)
 
         probabilities, classes, state = sampler.sample_nodes(log_probabilities, 3, {"foo": "bar"})
 
@@ -420,6 +420,14 @@ class BeamSearchTest(AllenNlpTestCase):
 
         assert all([x > 0 and x < 4 for x in classes[0]])
         assert all([x > 1 and x < 5 for x in classes[1]])
+
+        # Make sure the filtered classes include the first class that exceeds p
+        sampler = TopPSampler(p=0.7, temperature=1.0)
+
+        probabilities, classes, state = sampler.sample_nodes(log_probabilities, 2, {"foo": "bar"})
+
+        assert all([x == 2 or x == 3 or x == 1 for x in classes[0]])
+        assert all([x == 2 or x == 3 for x in classes[1]])
 
     def test_gumbel_sampler(self):
         sampler = GumbelSampler()
