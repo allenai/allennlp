@@ -7,8 +7,7 @@ provides custom registered classes or additional `allennlp` subcommands.
 In order for AllenNLP to find your plugins, you have to create either a local plugins
 file named `.allennlp_plugins` in the directory where the `allennlp` command is run, or a global
 plugins file at `~/.allennlp/plugins`. The file should list the plugin modules that you want to
-be loaded, one per line. A plugins file in the current directory will take precedence
-over a global plugins file in `~/.allennlp/`.
+be loaded, one per line.
 """
 
 import importlib
@@ -56,13 +55,20 @@ def discover_plugins() -> Iterable[str]:
     """
     Returns an iterable of the plugins found.
     """
+    plugins: Set[str] = set()
     if os.path.isfile(LOCAL_PLUGINS_FILENAME):
         with push_python_path("."):
-            yield from discover_file_plugins(LOCAL_PLUGINS_FILENAME)
-    elif os.path.isfile(GLOBAL_PLUGINS_FILENAME):
-        yield from discover_file_plugins(GLOBAL_PLUGINS_FILENAME)
-    else:
-        yield from []
+            for plugin in discover_file_plugins(LOCAL_PLUGINS_FILENAME):
+                if plugin in plugins:
+                    continue
+                yield plugin
+                plugins.add(plugin)
+    if os.path.isfile(GLOBAL_PLUGINS_FILENAME):
+        for plugin in discover_file_plugins(GLOBAL_PLUGINS_FILENAME):
+            if plugin in plugins:
+                continue
+            yield plugin
+            plugins.add(plugin)
 
 
 def import_plugins() -> None:

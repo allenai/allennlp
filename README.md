@@ -72,7 +72,6 @@ There are several official [default plugins](https://docs.allennlp.org/master/ap
 In order for AllenNLP to find personal or third-party plugins, you have to create either a local plugins file named `.allennlp_plugins`
 in the directory where the `allennlp` command is run, or a global plugins file at `~/.allennlp/plugins`.
 The file should list the plugin modules that you want to be loaded, one per line.
-A plugins file in the current directory will take precedence over a global plugins file in `~/.allennlp/`.
 
 To test that your plugins can be found and imported by AllenNLP, you can run the `allennlp test-install` command.
 Each discovered plugin will be logged to the terminal.
