@@ -28,7 +28,7 @@ transition_probabilities = torch.tensor(
 )
 
 log_probabilities = torch.log(
-    torch.tensor([[0.1, 0.2, 0.3, 0.4, 0.0, 0.0], [0.0, 0.0, 0.4, 0.3, 0.2, 0.1]])
+    torch.tensor([[0.1, 0.3, 0.3, 0.3, 0.0, 0.0], [0.0, 0.0, 0.4, 0.3, 0.2, 0.1]])
 )
 
 
@@ -279,7 +279,7 @@ class BeamSearchTest(AllenNlpTestCase):
         # log_probs should be shape `(batch_size, beam_size, max_predicted_length)`.
         assert list(log_probs.size()) == [batch_size, beam_size]
 
-    @pytest.mark.parametrize("p_val", [-1.0, 1.2, 1.1, "foo", float("inf")])
+    @pytest.mark.parametrize("p_val", [-1.0, 1.2, 1.1, float("inf")])
     def test_p_val(self, p_val):
         with pytest.raises(ValueError):
             initial_predictions = torch.tensor([0] * 5)
@@ -312,7 +312,7 @@ class BeamSearchTest(AllenNlpTestCase):
         # log_probs should be shape `(batch_size, beam_size, max_predicted_length)`.
         assert list(log_probs.size()) == [batch_size, beam_size]
 
-    @pytest.mark.parametrize("k_val", [-1.0, 1.2, 1.1, "foo", float("inf")])
+    @pytest.mark.parametrize("k_val", [-1, 0])
     def test_k_val(self, k_val):
         with pytest.raises(ValueError):
             initial_predictions = torch.tensor([0] * 5)
@@ -411,7 +411,7 @@ class BeamSearchTest(AllenNlpTestCase):
         assert all([x > 1 and x < 5 for x in classes[1]])
 
     def test_top_p_sampler(self):
-        sampler = TopPSampler(p=0.8, temperature=0.9)
+        sampler = TopPSampler(p=0.8, temperature=1.0)
 
         probabilities, classes, state = sampler.sample_nodes(log_probabilities, 3, {"foo": "bar"})
 
