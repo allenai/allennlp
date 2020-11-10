@@ -35,6 +35,7 @@ class Sampler(Registrable):
     A `Sampler` just has three methods, `init_state()`, `sample_nodes()` and `sample_beams()`.
 
     `init_state()` takes three arguments:
+
     - a tensor of starting log probs with shape `(batch_size,, num_classes)`,
     - the batch size, an int,
     - and the number of classes, also an int.
@@ -45,6 +46,7 @@ class Sampler(Registrable):
     By default this method just returns an empty dictionary.
 
     Both `sample_nodes()` and `sample_beams()` should take three arguments:
+
     - tensor of normalized log probabilities with shape `(batch_size, num_examples)`,
     - an integer representing the number of samples to take for each example in the batch,
     - and a state dictionary which could contain any tensors needed for the `Sampler` to keep
@@ -54,6 +56,7 @@ class Sampler(Registrable):
     `num_examples = beam_size * per_node_beam_size`.
 
     The return value should be a tuple containing:
+
     - a tensor of log probabilities of the sampled examples with shape `(batch_size, num_samples)`,
     - a tensor of indices of the sampled examples with shape `(batch_size, num_samples)`,
     - and the updated state dictionary.
@@ -175,22 +178,27 @@ class TopKSampler(Sampler):
 
         # shape (both): (batch_size, k)
         top_k_log_probs, top_k_indices = log_probs.topk(self.k, dim=-1)
+
         # Apply temperature if necessary.
         # shape: (batch_size, k)
         if self.temperature != 1.0:
             top_k_log_probs = top_k_log_probs / self.temperature
+
         # Re-normalize the subset.
         # shape: (batch_size, k)
         normalized_top_k_probs = torch.nn.functional.softmax(top_k_log_probs, dim=-1)
+
         # Sample from the re-normalized subset.
         # NOTE: These indices are not indices into `log_probs`, they are indices into `top_k_log_probs`.
         # shape: (batch_size, per_node_beam_size)
         sampled_indices = torch.multinomial(
             normalized_top_k_probs, per_node_beam_size, replacement=self.with_replacement
         )
+
         # Convert `sampled_indices` back to indices in the original `log_probs` tensor.
         # shape: (batch_size, per_node_beam_size)
         indices = top_k_indices.gather(-1, sampled_indices)
+
         return log_probs.gather(1, indices), indices, state
 
 
@@ -235,8 +243,6 @@ class TopPSampler(Sampler):
     ) -> Tuple[torch.Tensor, torch.Tensor, StateType]:
         if not per_node_beam_size <= log_probs.size()[1]:
             raise ValueError("per_node_beam_size cannot be greater than vocabulary size")
-        # Calculate filter value
-        filter_val = min_value_of_dtype(log_probs.dtype)
 
         # First apply temperature coefficient:
         if self.temperature != 1.0:
@@ -255,7 +261,7 @@ class TopPSampler(Sampler):
         # shape: (batch_size, num_classes)
         exclusion_mask = probabilities_summed >= self.p
 
-        # We want to include the firt index where probabilities_summes >= p, so we shift over one.
+        # We want to include the first index where probabilities_summed >= p, so we shift over one.
         exclusion_mask[..., 1:] = exclusion_mask[..., :-1].clone()
         exclusion_mask[..., 0] = False
 
@@ -263,10 +269,9 @@ class TopPSampler(Sampler):
         if not self.with_replacement:
             exclusion_mask[..., :per_node_beam_size] = False
 
-        # Now re-normalized the included log probs.
-        # shape: (batch_size, num_classes)
-        log_probs_descending[exclusion_mask] = filter_val
+        log_probs_descending[exclusion_mask] = min_value_of_dtype(log_probs.dtype)
 
+        # Now re-normalized the included log probs.
         # shape: (batch_size, num_classes)
         filtered_probabilities = torch.nn.functional.softmax(log_probs_descending, dim=-1)
 
@@ -292,7 +297,7 @@ class GumbelSampler(Sampler):
     A `Sampler` which uses the Gumbel-Top-K trick to sample without replacement. See
     [*Stochastic Beams and Where to Find Them: The Gumbel-Top-k Trick for Sampling
     Sequences Without Replacement*, W Kool, H Van Hoof and M Welling, 2010]
-    (https://arxiv.org/abs/1903.06059).
+    (https://api.semanticscholar.org/CorpusID:76662039).
 
     # Parameters
 
@@ -428,22 +433,29 @@ class BeamSearch(FromParams):
 
     end_index : `int`
         The index of the "stop" or "end" token in the target vocabulary.
+
     max_steps : `int`, optional (default = `50`)
         The maximum number of decoding steps to take, i.e. the maximum length
         of the predicted sequences.
+
     beam_size : `int`, optional (default = `10`)
         The width of the beam used.
+
     per_node_beam_size : `int`, optional (default = `beam_size`)
         The maximum number of candidates to consider per node, at each step in the search.
         If not given, this just defaults to `beam_size`. Setting this parameter
         to a number smaller than `beam_size` may give better results, as it can introduce
         more diversity into the search. See
         [*Beam Search Strategies for Neural Machine Translation*, Freitag and Al-Onaizan, 2017]
-        (https://arxiv.org/abs/1702.01806).
+        (https://api.semanticscholar.org/CorpusID:2229477).
+
     sampler : `Sampler`, optional (default = `None`)
         An optional `Sampler` which is used to pick next candidate nodes and beams.
         If not specified, `DeterministicSampler` will be used, which just takes the
         `per_node_beam_size` most likely nodes and the `beam_size` most likely beams.
+
+        Using the [`GumbelSampler`](#gumbelsampler), on the other hand, will give you
+        [Stochastic Beam Search](https://api.semanticscholar.org/CorpusID:76662039).
     """
 
     def __init__(
@@ -454,10 +466,12 @@ class BeamSearch(FromParams):
         per_node_beam_size: int = None,
         sampler: Sampler = None,
     ) -> None:
-        assert max_steps > 0
-        assert beam_size > 0
-        if per_node_beam_size is not None:
-            assert per_node_beam_size > 0
+        if not max_steps > 0:
+            raise ValueError("max_steps must be positive")
+        if not beam_size > 0:
+            raise ValueError("beam_size must be positive")
+        if per_node_beam_size is not None and not per_node_beam_size > 0:
+            raise ValueError("per_node_beam_size must be positive")
 
         self._end_index = end_index
         self.max_steps = max_steps
