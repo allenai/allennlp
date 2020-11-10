@@ -15,7 +15,7 @@ import logging
 import os
 from pathlib import Path
 import sys
-from typing import Iterable
+from typing import Iterable, Set
 
 from allennlp.common.util import push_python_path, import_module_and_submodules
 
