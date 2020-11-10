@@ -4,10 +4,11 @@
 AllenNLP supports loading "plugins" dynamically. A plugin is just a Python package that
 provides custom registered classes or additional `allennlp` subcommands.
 
-In order for AllenNLP to find your plugins, you have to create either a local plugins file named `.allennlp_plugins`
-in the directory where the `allennlp` command is run, or a global plugins file at `~/.allennlp/plugins`.
-The file should list the plugin modules that you want to be loaded, one per line.
-A plugins file in the current directory will take precedence over a global plugins file in `~/.allennlp/`.
+In order for AllenNLP to find your plugins, you have to create either a local plugins
+file named `.allennlp_plugins` in the directory where the `allennlp` command is run, or a global
+plugins file at `~/.allennlp/plugins`. The file should list the plugin modules that you want to
+be loaded, one per line. A plugins file in the current directory will take precedence
+over a global plugins file in `~/.allennlp/`.
 """
 
 import importlib
@@ -40,7 +41,7 @@ be imported when they are installed in the current Python environment.
 """
 
 
-def discover_file_plugins(plugins_filename: os.PathLike = LOCAL_PLUGINS_FILENAME) -> Iterable[str]:
+def discover_file_plugins(plugins_filename: str = LOCAL_PLUGINS_FILENAME) -> Iterable[str]:
     """
     Returns an iterable of the plugins found, declared within a file whose path is `plugins_filename`.
     """
