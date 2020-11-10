@@ -205,7 +205,9 @@ class TopPSampler(Sampler):
 
     p : `float`, optional (default = `0.9`)
         The cumulative probability cutoff threshold. A higher value of `p` will result in more possible
-        examples to sample from.
+        examples to sample from. If `with_replacement` is `False` and the number of possible samples is 
+        insufficient to sample without replacement from when calling `sample_nodes`, then the top 
+        `per_node_beam_size` examples will be chosen.
     temperature : `float`, optional (default = `1.0`)
         A `temperature` below 1.0 produces a sharper probability distribution and a `temperature`
         above 1.0 produces a flatter probability distribution.
@@ -252,6 +254,10 @@ class TopPSampler(Sampler):
         # We want to include the firt index where probabilities_summes >= p, so we shift over one.
         exclusion_mask[..., 1:] = exclusion_mask[..., :-1].clone()
         exclusion_mask[..., 0] = False
+
+        # Make sure there's at least `per_node_beam_size` options to be selected.
+        if not self.with_replacement:
+            exclusion_mask[..., :per_node_beam_size] = False
 
         # Now re-normalized the included log probs.
         # shape: (batch_size, num_classes)
@@ -432,8 +438,8 @@ class BeamSearch(FromParams):
         (https://arxiv.org/abs/1702.01806).
     sampler : `Sampler`, optional (default = `None`)
         An optional `Sampler` which is used to pick next candidate nodes and beams.
-        If not specified, `DeterministicSampler` will be used, which just takes the `per_node_beam_size`
-        most likely nodes and the `beam_size` most likely beams.
+        If not specified, `DeterministicSampler` will be used, which just takes the 
+        `per_node_beam_size` most likely nodes and the `beam_size` most likely beams.
     """
 
     def __init__(
