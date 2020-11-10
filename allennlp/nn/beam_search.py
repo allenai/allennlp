@@ -169,7 +169,9 @@ class TopKSampler(Sampler):
         self, log_probs: torch.Tensor, per_node_beam_size: int, state: StateType
     ) -> Tuple[torch.Tensor, torch.Tensor, StateType]:
         if not per_node_beam_size <= self.k <= log_probs.size()[1]:
-            raise ValueError("k must be a postive integer no greater than vocabulary size")
+            raise ValueError(
+                "k must be a postive integer no less than per_node_beam_size and no greater than vocabulary size"
+            )
 
         # shape (both): (batch_size, k)
         top_k_log_probs, top_k_indices = log_probs.topk(self.k, dim=-1)
@@ -222,7 +224,7 @@ class TopPSampler(Sampler):
         with_replacement: bool = False,
     ):
         if p < 0.0 or p > 1.0:
-            raise ValueError("p must be a non-negative float no greater than 1.0")
+            raise ValueError("p must be a positive float no greater than 1.0")
         self.p = p
         self.temperature = temperature or 1.0
         self.with_replacement = with_replacement
@@ -231,6 +233,8 @@ class TopPSampler(Sampler):
     def sample_nodes(
         self, log_probs: torch.Tensor, per_node_beam_size: int, state: StateType
     ) -> Tuple[torch.Tensor, torch.Tensor, StateType]:
+        if not per_node_beam_size <= log_probs.size()[1]:
+            raise ValueError("per_node_beam_size cannot be greater than vocabulary size")
         # Calculate filter value
         filter_val = min_value_of_dtype(log_probs.dtype)
 
