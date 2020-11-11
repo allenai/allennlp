@@ -14,6 +14,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   seed for `random`, `numpy`, and `torch`.
 - Added support for a global plugins file at `~/.allennlp/plugins`.
 - Added more documentation about plugins.
+- Added sampler class and parameter in beam search for non-deterministic search, with several
+  implementations, including `MultinomialSampler`, `TopKSampler`, `TopPSampler`, and
+  `GumbelMaxSampler`. Utilizing `GumbelMaxSampler` will give [Stochastic Beam Search](https://api.semanticscholar.org/CorpusID:76662039).
 
 ### Changed
 
