@@ -13,9 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A new high-performance default `DataLoader`: `MultiProcessDataLoading`.
 - A `MultiTaskModel` and abstractions to use with it, including `Backbone` and `Head`.  The
   `MultiTaskModel` first runs its inputs through the `Backbone`, then passes the result (and
-whatever other relevant inputs it got) to each `Head` that's in use.  This is intended for
-multi-task learning, but so far it is incomplete, as there are no corresponding dataset readers or
-data loaders.  Those are coming soon.
+whatever other relevant inputs it got) to each `Head` that's in use.
+- A `MultiTaskDataLoader`, with a corresponding `MultiTaskDatasetReader`, and a couple of new
+  configuration objects: `MultiTaskEpochSampler` (for deciding what proportion to sample from each
+dataset at every epoch) and a `MultiTaskScheduler` (for ordering the instances within an epoch).
 - Added `TensorCache` class for caching tensors on disk
 - Added reader for the NLVR2 dataset
 - Added cache for Detectron models that we might re-use several times in the code base
