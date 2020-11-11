@@ -21,6 +21,10 @@ from allennlp.data.dataset_readers.dataset_reader import AllennlpLazyDataset
 from allennlp.data.fields import LabelField
 
 
+def mock_collate_fn(item):
+    return item[0]
+
+
 class TestDatasetReader(AllenNlpTestCase):
     def setup_method(self):
         super().setup_method()
@@ -188,7 +192,7 @@ class TestDatasetReader(AllenNlpTestCase):
         )
         reader = TextClassificationJsonReader(lazy=True, cache_directory=self.cache_directory)
         deque(
-            PyTorchDataLoader(reader.read(data_file), collate_fn=lambda b: b[0], num_workers=2),
+            PyTorchDataLoader(reader.read(data_file), collate_fn=mock_collate_fn, num_workers=2),
             maxlen=0,
         )
 
@@ -204,7 +208,7 @@ class TestDatasetReader(AllenNlpTestCase):
 
         # Reading again from a multi-process loader should read from the cache.
         new_instances = list(
-            PyTorchDataLoader(reader.read(data_file), collate_fn=lambda b: b[0], num_workers=2)
+            PyTorchDataLoader(reader.read(data_file), collate_fn=mock_collate_fn, num_workers=2)
         )
         assert len(instances) == len(new_instances)
 
@@ -232,7 +236,7 @@ class TestDatasetReader(AllenNlpTestCase):
         reader = TextClassificationJsonReader(max_instances=2, lazy=True)
         instances = list(
             PyTorchDataLoader(
-                reader.read(data_file), collate_fn=lambda b: b[0], num_workers=num_workers
+                reader.read(data_file), collate_fn=mock_collate_fn, num_workers=num_workers
             )
         )
         assert len(instances) == 2
