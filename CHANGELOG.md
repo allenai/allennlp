@@ -12,6 +12,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Added an optional `seed` parameter to `ModelTestCase.set_up_model` which sets the random
   seed for `random`, `numpy`, and `torch`.
+- Added sampler class and parameter in beam search for non-deterministic search, with several
+  implementations, including `MultinomialSampler`, `TopKSampler`, `TopPSampler`, and
+  `GumbelMaxSampler`. Utilizing `GumbelMaxSampler` will give [Stochastic Beam Search](https://api.semanticscholar.org/CorpusID:76662039).
 
 ### Changed
 
