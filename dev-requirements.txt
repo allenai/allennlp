@@ -23,7 +23,7 @@ matplotlib>=2.2.3
 responses>=0.7
 # This needs to be pinned below 1.26.0 for responses to work until
 # https://github.com/getsentry/responses/issues/354 is resolved.
-urllib3<1.26.0
+urllib3<1.27.0
 
 # For running tests that aren't 100% reliable.
 flaky
