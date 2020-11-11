@@ -35,22 +35,29 @@ dataset at every epoch) and a `MultiTaskScheduler` (for ordering the instances w
   the `MultiProcessDataLoading` this is controlled by the `max_instances_in_memory` setting.
 - `TensorField` is now implemented in terms of torch tensors, not numpy.
 
-### Fixed
-
-- Ignore `*args` when constructing classes with `FromParams`.
-- Ensured some consistency in the types of the values that metrics return.
-- `PretrainedTransformerTokenizer` will now never return a sequence that's longer than `max_length`, even with special tokens
-
 
 ## Unreleased (1.x branch)
+
+## [v1.2.1](https://github.com/allenai/allennlp/releases/tag/v1.2.1) - 2020-11-10
 
 ### Added
 
 - Added an optional `seed` parameter to `ModelTestCase.set_up_model` which sets the random
   seed for `random`, `numpy`, and `torch`.
+- Added support for a global plugins file at `~/.allennlp/plugins`.
+- Added more documentation about plugins.
+- Added sampler class and parameter in beam search for non-deterministic search, with several
+  implementations, including `MultinomialSampler`, `TopKSampler`, `TopPSampler`, and
+  `GumbelMaxSampler`. Utilizing `GumbelMaxSampler` will give [Stochastic Beam Search](https://api.semanticscholar.org/CorpusID:76662039).
+
+### Changed
+
+- Pass batch metrics to `BatchCallback`.
 
 ### Fixed
 
+- Fixed a bug where forward hooks were not cleaned up with saliency interpreters if there
+  was an exception.
 - Fixed the computation of saliency maps in the Interpret code when using mismatched indexing.
   Previously, we would compute gradients from the top of the transformer, after aggregation from
   wordpieces to tokens, which gives results that are not very informative.  Now, we compute gradients
@@ -59,7 +66,7 @@ dataset at every epoch) and a `MultiTaskScheduler` (for ordering the instances w
   `transformers` library broke our old heuristic.
 - Fixed typo with registered name of ROUGE metric. Previously was `rogue`, fixed to `rouge`.
 - Fixed default masks that were erroneously created on the CPU even when a GPU is available.
-
+- Fixed pretrained embeddings for transformers that don't use end tokens.
 
 ## [v1.2.0](https://github.com/allenai/allennlp/releases/tag/v1.2.0) - 2020-10-29
 
