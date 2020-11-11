@@ -1,6 +1,9 @@
 """
 Various utilities that don't fit anywhere else.
 """
+import base64
+import io
+import pickle
 from datetime import timedelta
 import importlib
 import json
@@ -32,6 +35,7 @@ import torch
 import torch.distributed as dist
 from spacy.cli.download import download as spacy_download
 from spacy.language import Language as SpacyModelType
+import mmh3
 
 from allennlp.common.checks import log_pytorch_version_info
 from allennlp.common.params import Params
@@ -636,3 +640,12 @@ def format_size(size: int) -> str:
     if KBs >= 1:
         return f"{round(KBs, 1):.1f}K"
     return f"{size}B"
+
+
+def hash_object(o: Any, length: int = 32) -> str:
+    """Returns a 32-character hash code of arbitrary Python objects."""
+    with io.BytesIO() as buffer:
+        pickle.dump(o, buffer)
+        hash = mmh3.hash_bytes(buffer.getvalue(), x64arch=True)
+    hash = base64.b32encode(hash).decode("UTF-8")
+    return hash[:length].lower()
