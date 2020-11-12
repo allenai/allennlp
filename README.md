@@ -72,26 +72,31 @@ team here at AI2, and some of which are maintained by the broader community.
 <tr>
     <td><b> Plugin </b></td>
     <td><b> Maintainer </b></td>
+    <td><b> CLI </b></td>
     <td><b> Description </b></td>
 </tr>
 <tr>
     <td> <a href="https://github.com/allenai/allennlp-models"><b>allennlp-models</b></a> </td>
     <td> AI2 </td>
+    <td> No </td>
     <td> A collection of state-of-the-art models </td>
 </tr>
 <tr>
     <td> <a href="https://github.com/allenai/allennlp-semparse"><b>allennlp-semparse</b></a> </td>
     <td> AI2 </td>
+    <td> No </td>
     <td> A framework for building semantic parsers </td>
 </tr>
 <tr>
     <td> <a href="https://github.com/allenai/allennlp-server"><b>allennlp-server</b></a> </td>
     <td> AI2 </td>
+    <td> Yes </td>
     <td> A simple demo server for serving models </td>
 </tr>
 <tr>
     <td> <a href="https://github.com/himkt/allennlp-optuna"><b>allennlp-optuna</b></a> </td>
     <td> <a href="https://himkt.github.io/profile/">Makoto Hiramatsu</a> </td>
+    <td> Yes </td>
     <td> <a href="https://optuna.org/">Optuna</a> integration for hyperparameter optimization </td>
 </tr>
 </table>
