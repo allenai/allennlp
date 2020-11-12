@@ -385,11 +385,17 @@ class GumbelSampler(Sampler):
         # shape (both): (batch_size, beam_size)
         G_phi_S_new, selected_indices = torch.topk(G_phi_S, beam_size, dim=-1)
 
-        # shape: (batch_size * beam_size,)
-        G_phi_S_new = G_phi_S_new.reshape(batch_size * beam_size)
-
         # shape: (batch_size, beam_size)
         selected_log_probs = log_probs.gather(1, selected_indices)
+
+        # Now sort the selected beams by their true log prob.
+        # shape (all): (batch_size, beam_size)
+        selected_log_probs, sort_indices = selected_log_probs.sort(dim=-1, descending=True)
+        selected_indices = selected_indices.gather(1, sort_indices)
+        G_phi_S_new = G_phi_S_new.gather(1, sort_indices)
+
+        # shape: (batch_size * beam_size,)
+        G_phi_S_new = G_phi_S_new.reshape(batch_size * beam_size)
 
         # shape: (batch_size * beam_size,)
         phi_S = selected_log_probs.reshape(batch_size * beam_size)
