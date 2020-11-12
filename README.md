@@ -65,12 +65,36 @@ And others on the [AI2 AllenNLP blog](https://medium.com/ai2-blog/allennlp/home)
 AllenNLP supports loading "plugins" dynamically. A plugin is just a Python package that
 provides custom registered classes or additional `allennlp` subcommands.
 
-There are several official [default plugins](https://docs.allennlp.org/master/api/common/plugins/#default_plugins) and an ecosystem of third-party plugins, including:
+There is ecosystem of open source plugins, some of which are maintained by the AllenNLP
+team here at AI2, and some of which are maintained by the broader community.
 
-* [allennlp-optuna](https://github.com/himkt/allennlp-optuna)
+<table>
+<tr>
+    <td><b> Plugin </b></td>
+    <td><b> Maintainer </b></td>
+    <td><b> Description </b></td>
+</tr>
+<tr>
+    <td> <a href="https://github.com/allenai/allennlp-models"><b>allennlp-models</b></a> </td>
+    <td> AI2 </td>
+    <td> A collection of state-of-the-art models </td>
+</tr>
+<tr>
+    <td> <a href="https://github.com/allenai/allennlp-server"><b>allennlp-server</b></a> </td>
+    <td> AI2 </td>
+    <td> A simple demo server for serving models </td>
+</tr>
+<tr>
+    <td> <a href="https://github.com/himkt/allennlp-optuna"><b>allennlp-optuna</b></a> </td>
+    <td> <a href="https://himkt.github.io/profile/">Makoto Hiramatsu</a> </td>
+    <td> <a href="https://optuna.org/">Optuna</a> integration for hyperparameter optimization </td>
+</tr>
+</table>
 
-In order for AllenNLP to find personal or third-party plugins, you have to create either a local plugins file named `.allennlp_plugins`
-in the directory where the `allennlp` command is run, or a global plugins file at `~/.allennlp/plugins`.
+AllenNLP will automatically find any official AI2-maintained plugins that you have installed,
+but for AllenNLP to find personal or third-party plugins you've installed,
+you also have to create either a local plugins file named `.allennlp_plugins`
+in the directory where you run the `allennlp` command, or a global plugins file at `~/.allennlp/plugins`.
 The file should list the plugin modules that you want to be loaded, one per line.
 
 To test that your plugins can be found and imported by AllenNLP, you can run the `allennlp test-install` command.
