@@ -80,6 +80,11 @@ team here at AI2, and some of which are maintained by the broader community.
     <td> A collection of state-of-the-art models </td>
 </tr>
 <tr>
+    <td> <a href="https://github.com/allenai/allennlp-semparse"><b>allennlp-semparse</b></a> </td>
+    <td> AI2 </td>
+    <td> A framework for building semantic parsers </td>
+</tr>
+<tr>
     <td> <a href="https://github.com/allenai/allennlp-server"><b>allennlp-server</b></a> </td>
     <td> AI2 </td>
     <td> A simple demo server for serving models </td>
@@ -108,31 +113,31 @@ to distribute as a plugin, see the [subcommand API docs](https://docs.allennlp.o
 <table>
 <tr>
     <td><b> allennlp </b></td>
-    <td> an open-source NLP research library, built on PyTorch </td>
+    <td> An open-source NLP research library, built on PyTorch </td>
 </tr>
 <tr>
     <td><b> allennlp.commands </b></td>
-    <td> functionality for a CLI and web service </td>
+    <td> Functionality for the CLI </td>
+</tr>
+<tr>
+    <td><b> allennlp.common </b></td>
+    <td> Utility modules that are used across the library </td>
 </tr>
 <tr>
     <td><b> allennlp.data </b></td>
-    <td> a data processing module for loading datasets and encoding strings as integers for representation in matrices </td>
-</tr>
-<tr>
-    <td><b> allennlp.models </b></td>
-    <td> a collection of state-of-the-art models </td>
+    <td> A data processing module for loading datasets and encoding strings as integers for representation in matrices </td>
 </tr>
 <tr>
     <td><b> allennlp.modules </b></td>
-    <td> a collection of PyTorch modules for use with text </td>
+    <td> A collection of PyTorch modules for use with text </td>
 </tr>
 <tr>
     <td><b> allennlp.nn </b></td>
-    <td> tensor utility functions, such as initializers and activation functions </td>
+    <td> Tensor utility functions, such as initializers and activation functions </td>
 </tr>
 <tr>
     <td><b> allennlp.training </b></td>
-    <td> functionality for training models </td>
+    <td> Functionality for training models </td>
 </tr>
 </table>
 

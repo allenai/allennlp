@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Added
+
+- Adds [`allennlp-semparse`](https://github.com/allenai/allennlp-semparse) as an official, default plugin.
+
 ### Fixed
 
 - `GumbelSampler` now sorts the beams by their true log prob.
