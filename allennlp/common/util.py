@@ -1,6 +1,9 @@
 """
 Various utilities that don't fit anywhere else.
 """
+import hashlib
+import io
+import pickle
 from datetime import timedelta
 import importlib
 import json
@@ -636,3 +639,12 @@ def format_size(size: int) -> str:
     if KBs >= 1:
         return f"{round(KBs, 1):.1f}K"
     return f"{size}B"
+
+
+def hash_object(o: Any) -> str:
+    """Returns a 32-character hash code of arbitrary Python objects."""
+    m = hashlib.blake2b()
+    with io.BytesIO() as buffer:
+        pickle.dump(o, buffer)
+        m.update(buffer.getbuffer())
+        return m.hexdigest()
