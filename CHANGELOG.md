@@ -38,6 +38,11 @@ dataset at every epoch) and a `MultiTaskScheduler` (for ordering the instances w
 
 ## Unreleased (1.x branch)
 
+### Fixed
+
+- `GumbelSampler` now sorts the beams by their true log prob.
+
+
 ## [v1.2.1](https://github.com/allenai/allennlp/releases/tag/v1.2.1) - 2020-11-10
 
 ### Added
@@ -48,7 +53,7 @@ dataset at every epoch) and a `MultiTaskScheduler` (for ordering the instances w
 - Added more documentation about plugins.
 - Added sampler class and parameter in beam search for non-deterministic search, with several
   implementations, including `MultinomialSampler`, `TopKSampler`, `TopPSampler`, and
-  `GumbelMaxSampler`. Utilizing `GumbelMaxSampler` will give [Stochastic Beam Search](https://api.semanticscholar.org/CorpusID:76662039).
+  `GumbelSampler`. Utilizing `GumbelSampler` will give [Stochastic Beam Search](https://api.semanticscholar.org/CorpusID:76662039).
 
 ### Changed
 
@@ -67,6 +72,8 @@ dataset at every epoch) and a `MultiTaskScheduler` (for ordering the instances w
 - Fixed typo with registered name of ROUGE metric. Previously was `rogue`, fixed to `rouge`.
 - Fixed default masks that were erroneously created on the CPU even when a GPU is available.
 - Fixed pretrained embeddings for transformers that don't use end tokens.
+- Fixed the transformer tokenizer cache when the tokenizers are initialized with custom kwargs.
+
 
 ## [v1.2.0](https://github.com/allenai/allennlp/releases/tag/v1.2.0) - 2020-10-29
 
