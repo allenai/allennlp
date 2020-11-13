@@ -22,5 +22,5 @@ from allennlp.data.dataset_readers.text_classification_json import TextClassific
 try:
     from allennlp.data.dataset_readers.nlvr2 import Nlvr2Reader
 except ModuleNotFoundError as err:
-    if err.name != "detectron2":
+    if err.name not in ("detectron2", "torchvision"):
         raise

@@ -20,5 +20,5 @@ from allennlp.data.batch import Batch
 try:
     from allennlp.data.image_loader import ImageLoader, DetectronImageLoader
 except ModuleNotFoundError as err:
-    if err.name != "detectron2":
+    if err.name not in ("detectron2", "torchvision"):
         raise
