@@ -238,18 +238,7 @@ def preprocess_answer(answer: str) -> str:
 
 
 def get_score(count: int) -> float:
-    if count == 0:
-        return 0.0
-    elif count == 1:
-        return 0.3
-    elif count == 2:
-        return 0.6
-    elif count == 3:
-        return 0.9
-    elif count > 3:
-        return 1.0
-    else:
-        raise ValueError()
+    return min(1.0, count / 3)
 
 
 @DatasetReader.register("vqav2")
