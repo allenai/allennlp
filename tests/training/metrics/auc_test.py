@@ -58,6 +58,7 @@ class AucTest(AllenNlpTestCase):
         predictions = torch.randn(8, device=device)
         labels = torch.randint(3, 5, (8,), dtype=torch.long, device=device)
         # We make sure that the positive label is always present.
+        predictions[1] = 4
         labels[0] = 4
         auc(predictions, labels)
         computed_auc_value = auc.get_metric(reset=True)
@@ -99,6 +100,7 @@ class AucTest(AllenNlpTestCase):
         predictions = torch.randn(8)
         labels = torch.randint(3, 5, (8,), dtype=torch.long)
         # We make sure that the positive label is always present.
+        predictions[1] = 4
         labels[0] = 4
 
         false_positive_rates, true_positive_rates, _ = metrics.roc_curve(
@@ -123,6 +125,7 @@ class AucTest(AllenNlpTestCase):
         predictions = torch.randn(8)
         labels = torch.randint(3, 5, (8,), dtype=torch.long)
         # We make sure that the positive label is always present.
+        predictions[1] = 4
         labels[0] = 4
 
         false_positive_rates, true_positive_rates, _ = metrics.roc_curve(
