@@ -280,7 +280,7 @@ class VQAv2Reader(DatasetReader):
         max_instances: Optional[int] = None,
         image_processing_batch_size: int = 8,
         skip_image_feature_extraction: bool = False,
-        keep_unanswerable_questions: bool = True
+        keep_unanswerable_questions: bool = True,
     ) -> None:
         super().__init__(
             max_instances=max_instances,

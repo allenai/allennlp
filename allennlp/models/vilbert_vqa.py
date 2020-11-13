@@ -10,7 +10,6 @@ from allennlp.data import TextFieldTensors, Vocabulary
 from allennlp.models.model import Model
 from allennlp.modules.transformer import TextEmbeddings, ImageFeatureEmbeddings, BiModalEncoder
 from allennlp.nn import util
-from allennlp.training.metrics import F1MultiLabelMeasure
 
 from transformers.modeling_auto import AutoModel
 
@@ -44,7 +43,12 @@ class VqaVilbert(Model):
         super().__init__(vocab)
         self.loss = torch.nn.BCELoss()
         self.consistency_wrong_map: Dict[str, int] = collections.Counter()
-        self.f1 = F1MultiLabelMeasure(average="micro")
+        from allennlp.training.metrics import F1MultiLabelMeasure
+
+        self.f1_metric = F1MultiLabelMeasure(average="micro")
+        from allennlp.training.metrics.vqa import VqaMeasure
+
+        self.vqa_metric = VqaMeasure()
         self.fusion_method = fusion_method
 
         self.embeddings = text_embeddings
@@ -146,7 +150,7 @@ class VqaVilbert(Model):
             biattention_id1=t_biattention_id,
             biattention_id2=v_biattention_id,
             fixed_layer1=fixed_t_layer,
-            fixed_layer2=fixed_v_layer
+            fixed_layer2=fixed_v_layer,
         )
         return cls(
             vocab=vocab,
@@ -254,14 +258,15 @@ class VqaVilbert(Model):
                 / batch_size
             )
 
-            # TODO(mattg): Multi-label F1 is good, but it is not exactly the VQA accuracy metric.
-            # That still needs to be implemented.
-            self.f1(logits, weighted_labels, binary_label_mask.bool())
+            self.f1_metric(logits, weighted_labels, binary_label_mask.bool())
+            self.vqa_metric(logits, labels, label_weights)
         return outputs
 
     @overrides
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
-        return self.f1.get_metric(reset)
+        result = self.f1_metric.get_metric(reset)
+        result["vqa_score"] = self.vqa_metric.get_metric(reset)["score"]
+        return result
 
     @overrides
     def make_output_human_readable(

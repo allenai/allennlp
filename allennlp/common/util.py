@@ -638,3 +638,18 @@ def format_size(size: int) -> str:
     if KBs >= 1:
         return f"{round(KBs, 1):.1f}K"
     return f"{size}B"
+
+
+def nan_safe_tensor_divide(numerator, denominator):
+    """Performs division and handles divide-by-zero.
+
+    On zero-division, sets the corresponding result elements to zero.
+    """
+    result = numerator / denominator
+    mask = denominator == 0.0
+    if not mask.any():
+        return result
+
+    # remove nan
+    result[mask] = 0.0
+    return result
