@@ -20,7 +20,7 @@ WORKDIR /stage/allennlp
 
 # Install the wheel of AllenNLP.
 COPY dist dist/
-RUN pip install $(ls dist/*.whl)
+RUN pip install $(ls dist/*.whl)[vision]
 
 # Install detectron2.
 RUN pip install detectron2 -f https://dl.fbaipublicfiles.com/detectron2/wheels/cu102/torch1.7/index.html

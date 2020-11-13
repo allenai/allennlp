@@ -83,7 +83,7 @@ install :
 	# See https://github.com/pypa/pip/issues/4537.
 	python setup.py install_egg_info
 	# Install allennlp as editable and all dependencies except detectron since it requires torch to already be installed.
-	grep -Ev 'detectron' dev-requirements.txt | pip install --upgrade --upgrade-strategy eager -e . -r /dev/stdin
+	grep -Ev 'detectron' dev-requirements.txt | pip install --upgrade --upgrade-strategy eager -e .[vision] -r /dev/stdin
 	# Now install detectron.
 	grep -E 'detectron' dev-requirements.txt | pip install --upgrade -r /dev/stdin
 
