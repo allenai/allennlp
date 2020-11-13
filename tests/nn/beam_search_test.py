@@ -6,7 +6,13 @@ import torch
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.nn.beam_search import BeamSearch
+from allennlp.nn.beam_search import (
+    MultinomialSampler,
+    BeamSearch,
+    TopKSampler,
+    TopPSampler,
+    GumbelSampler,
+)
 from allennlp.common.params import Params
 
 
@@ -17,8 +23,12 @@ transition_probabilities = torch.tensor(
         [0.0, 0.0, 0.0, 1.0, 0.0, 0.0],  # 2nd token -> jth token
         [0.0, 0.0, 0.0, 0.0, 1.0, 0.0],  # ...
         [0.0, 0.0, 0.0, 0.0, 0.0, 1.0],  # ...
-        [0.0, 0.0, 0.0, 0.0, 0.0, 1.0],
+        [0.2, 0.1, 0.2, 0.2, 0.2, 0.3],
     ]  # end token -> jth token
+)
+
+log_probabilities = torch.log(
+    torch.tensor([[0.1, 0.3, 0.3, 0.3, 0.0, 0.0], [0.0, 0.0, 0.4, 0.3, 0.2, 0.1]])
 )
 
 
@@ -247,3 +257,191 @@ class BeamSearchTest(AllenNlpTestCase):
         beam_search = BeamSearch.from_params(Params({"beam_size": 2, "end_index": 7}))
         assert beam_search.beam_size == 2
         assert beam_search._end_index == 7
+
+    def test_top_p_search(self):
+        initial_predictions = torch.tensor([0] * 5)
+        beam_size = 3
+        take_step = take_step_with_timestep
+        p_sampler = TopPSampler(p=0.8)
+
+        top_p, log_probs = BeamSearch(
+            self.end_index, beam_size=beam_size, max_steps=10, sampler=p_sampler
+        ).search(initial_predictions, {}, take_step)
+
+        beam_size = beam_size or 1
+        batch_size = 5
+
+        # top_p should be shape `(batch_size, beam_size, max_predicted_length)`.
+        assert list(top_p.size())[:-1] == [batch_size, beam_size]
+
+        assert ((0 <= top_p) & (top_p <= 5)).all()
+
+        # log_probs should be shape `(batch_size, beam_size, max_predicted_length)`.
+        assert list(log_probs.size()) == [batch_size, beam_size]
+
+    @pytest.mark.parametrize("p_val", [-1.0, 1.2, 1.1, float("inf")])
+    def test_p_val(self, p_val):
+        with pytest.raises(ValueError):
+            initial_predictions = torch.tensor([0] * 5)
+            take_step = take_step_with_timestep
+            beam_size = 3
+            p_sampler = TopPSampler(p=p_val, with_replacement=True)
+
+            top_k, log_probs = BeamSearch(
+                self.end_index, beam_size=beam_size, max_steps=10, sampler=p_sampler
+            ).search(initial_predictions, {}, take_step)
+
+    def test_top_k_search(self):
+        initial_predictions = torch.tensor([0] * 5)
+        beam_size = 3
+        take_step = take_step_with_timestep
+        k_sampler = TopKSampler(k=5, with_replacement=True)
+
+        top_k, log_probs = BeamSearch(
+            self.end_index, beam_size=beam_size, max_steps=10, sampler=k_sampler
+        ).search(initial_predictions, {}, take_step)
+
+        beam_size = beam_size or 1
+        batch_size = 5
+
+        # top_p should be shape `(batch_size, beam_size, max_predicted_length)`.
+        assert list(top_k.size())[:-1] == [batch_size, beam_size]
+
+        assert ((0 <= top_k) & (top_k <= 5)).all()
+
+        # log_probs should be shape `(batch_size, beam_size, max_predicted_length)`.
+        assert list(log_probs.size()) == [batch_size, beam_size]
+
+    @pytest.mark.parametrize("k_val", [-1, 0])
+    def test_k_val(self, k_val):
+        with pytest.raises(ValueError):
+            initial_predictions = torch.tensor([0] * 5)
+            take_step = take_step_with_timestep
+            beam_size = 3
+            k_sampler = TopKSampler(k=k_val, with_replacement=True)
+
+            top_k, log_probs = BeamSearch(
+                self.end_index, beam_size=beam_size, max_steps=10, sampler=k_sampler
+            ).search(initial_predictions, {}, take_step)
+
+    def test_stochastic_beam_search(self):
+        initial_predictions = torch.tensor([0] * 5)
+        batch_size = 5
+        beam_size = 3
+        take_step = take_step_with_timestep
+
+        gumbel_sampler = GumbelSampler()
+
+        top_k, log_probs = BeamSearch(
+            self.end_index, beam_size=beam_size, max_steps=10, sampler=gumbel_sampler
+        ).search(initial_predictions, {}, take_step)
+
+        # top_p should be shape `(batch_size, beam_size, max_predicted_length)`.
+        assert list(top_k.size())[:-1] == [batch_size, beam_size]
+
+        assert ((0 <= top_k) & (top_k <= 5)).all()
+
+        # log_probs should be shape `(batch_size, beam_size, max_predicted_length)`.
+        assert list(log_probs.size()) == [batch_size, beam_size]
+
+        # Check to make sure that once the end index is predicted, all subsequent tokens
+        # must be the end index. This has been tested on toy examples in which
+        for batch in top_k:
+            for beam in batch:
+                reached_end = False
+                for token in beam:
+                    if token == self.end_index:
+                        reached_end = True
+                    if reached_end:
+                        assert token == self.end_index
+
+    def test_params_sampling(self):
+        beam_search = BeamSearch.from_params(
+            Params(
+                {
+                    "sampler": {
+                        "type": "top-k",
+                        "k": 4,
+                    },
+                    "beam_size": 2,
+                    "end_index": 7,
+                }
+            )
+        )
+        assert beam_search.beam_size == 2
+        assert beam_search._end_index == 7
+        assert beam_search.sampler is not None
+
+    def test_params_p_sampling(self):
+        beam_search = BeamSearch.from_params(
+            Params(
+                {
+                    "sampler": {
+                        "type": "top-p",
+                        "p": 0.8,
+                    },
+                    "beam_size": 2,
+                    "end_index": 7,
+                }
+            )
+        )
+        assert beam_search.beam_size == 2
+        assert beam_search._end_index == 7
+        assert beam_search.sampler is not None
+
+    def test_multinomial_sampler(self):
+        sampler = MultinomialSampler(temperature=0.9)
+
+        probabilities, classes, state = sampler.sample_nodes(log_probabilities, 3, {"foo": "bar"})
+
+        assert probabilities.size() == classes.size()
+        assert classes.size() == (2, 3)
+        assert all([x < 4 for x in classes[0]])
+        assert all([x > 1 for x in classes[1]])
+
+    def test_top_k_sampler(self):
+        sampler = TopKSampler(k=3, temperature=0.9)
+
+        probabilities, classes, state = sampler.sample_nodes(log_probabilities, 3, {"foo": "bar"})
+
+        assert probabilities.size() == classes.size()
+        assert classes.size() == (2, 3)
+
+        assert all([x > 0 and x < 4 for x in classes[0]])
+        assert all([x > 1 and x < 5 for x in classes[1]])
+
+    def test_top_p_sampler(self):
+        sampler = TopPSampler(p=0.8, temperature=0.9)
+
+        probabilities, classes, state = sampler.sample_nodes(log_probabilities, 3, {"foo": "bar"})
+
+        assert probabilities.size() == classes.size()
+        assert classes.size() == (2, 3)
+
+        assert all([x > 0 and x < 4 for x in classes[0]])
+        assert all([x > 1 and x < 5 for x in classes[1]])
+
+        # Make sure the filtered classes include the first class that exceeds p
+        sampler = TopPSampler(p=0.7, temperature=1.0)
+
+        probabilities, classes, state = sampler.sample_nodes(log_probabilities, 2, {"foo": "bar"})
+
+        assert all([x == 2 or x == 3 or x == 1 for x in classes[0]])
+        assert all([x == 2 or x == 3 for x in classes[1]])
+
+    def test_gumbel_sampler(self):
+        sampler = GumbelSampler()
+        num_classes = len(log_probabilities[0])
+        sampler_state = sampler.init_state(log_probabilities, batch_size=2, num_classes=num_classes)
+
+        log_probs, indices, state = sampler.sample_beams(log_probabilities, 3, sampler_state)
+
+        assert log_probs.size() == indices.size()
+        assert indices.size() == (2, 3)
+
+        # Make sure the probabilities are sorted.
+        _, sorted_indices = log_probs.sort(dim=-1, descending=True)
+        assert (sorted_indices == torch.arange(3).unsqueeze(0)).all()
+
+        assert all([x >= 0 and x < 4 for x in indices[0]])
+        assert all([x > 1 and x <= 5 for x in indices[1]])

@@ -1,6 +1,9 @@
 """
 Various utilities that don't fit anywhere else.
 """
+import hashlib
+import io
+import pickle
 from datetime import timedelta
 import importlib
 import json
@@ -653,3 +656,55 @@ def nan_safe_tensor_divide(numerator, denominator):
     # remove nan
     result[mask] = 0.0
     return result
+
+
+def shuffle_iterable(i: Iterable[T], pool_size: int = 1024) -> Iterable[T]:
+    import random
+
+    i = iter(i)
+    pool = []
+
+    # fill up the pool
+    for item in i:
+        pool.append(item)
+        if len(pool) >= pool_size:
+            break
+
+    # play in it
+    while len(pool) > 0:
+        index = random.randrange(len(pool))
+        yield pool[index]
+        try:
+            pool[index] = next(i)
+        except StopIteration:
+            del pool[index]
+            break
+
+    # drain it
+    random.shuffle(pool)
+    yield from pool
+
+
+def cycle_iterator_function(iterator_function: Callable[[], Iterable[T]]) -> Iterator[T]:
+    """
+    Functionally equivalent to `itertools.cycle(iterator_function())`, but this function does not
+    cache the result of calling the iterator like `cycle` does.  Instead, we just call
+    `iterator_function()` again whenever we get a `StopIteration`.  This should only be preferred
+    over `itertools.cycle` in cases where you're sure you don't want the caching behavior that's
+    done in `itertools.cycle`.
+    """
+    iterator = iter(iterator_function())
+    while True:
+        try:
+            yield next(iterator)
+        except StopIteration:
+            iterator = iter(iterator_function())
+
+
+def hash_object(o: Any) -> str:
+    """Returns a 32-character hash code of arbitrary Python objects."""
+    m = hashlib.blake2b()
+    with io.BytesIO() as buffer:
+        pickle.dump(o, buffer)
+        m.update(buffer.getbuffer())
+        return m.hexdigest()

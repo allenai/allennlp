@@ -88,9 +88,11 @@ class IntegratedGradient(SaliencyInterpreter):
             # Hook for modifying embedding value
             handles = self._register_hooks(alpha, embeddings_list, token_offsets)
 
-            grads = self.predictor.get_gradients([instance])[0]
-            for handle in handles:
-                handle.remove()
+            try:
+                grads = self.predictor.get_gradients([instance])[0]
+            finally:
+                for handle in handles:
+                    handle.remove()
 
             # Running sum of gradients
             if ig_grads == {}:

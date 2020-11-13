@@ -60,6 +60,25 @@ In addition, there are external tutorials:
 
 And others on the [AI2 AllenNLP blog](https://medium.com/ai2-blog/allennlp/home).
 
+## Plugins
+
+AllenNLP supports loading "plugins" dynamically. A plugin is just a Python package that
+provides custom registered classes or additional `allennlp` subcommands.
+
+There are several official [default plugins](https://docs.allennlp.org/master/api/common/plugins/#default_plugins) and an ecosystem of third-party plugins, including:
+
+* [allennlp-optuna](https://github.com/himkt/allennlp-optuna)
+
+In order for AllenNLP to find personal or third-party plugins, you have to create either a local plugins file named `.allennlp_plugins`
+in the directory where the `allennlp` command is run, or a global plugins file at `~/.allennlp/plugins`.
+The file should list the plugin modules that you want to be loaded, one per line.
+
+To test that your plugins can be found and imported by AllenNLP, you can run the `allennlp test-install` command.
+Each discovered plugin will be logged to the terminal.
+
+For more information about plugins, see the [plugins API docs](https://docs.allennlp.org/master/api/common/plugins/). And for information on how to create a custom subcommand
+to distribute as a plugin, see the [subcommand API docs](https://docs.allennlp.org/master/api/commands/subcommand/).
+
 ## Package Overview
 
 <table>
