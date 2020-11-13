@@ -16,4 +16,9 @@ from allennlp.data.tokenizers.token import Token
 from allennlp.data.tokenizers.tokenizer import Tokenizer
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.data.batch import Batch
-from allennlp.data.image_loader import ImageLoader, DetectronImageLoader
+
+try:
+    from allennlp.data.image_loader import ImageLoader, DetectronImageLoader
+except ModuleNotFoundError as err:
+    if err.name != "detectron2":
+        raise

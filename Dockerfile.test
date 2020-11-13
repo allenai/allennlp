@@ -32,12 +32,11 @@ COPY dev-requirements.txt dev-requirements.txt
 # re-install the full package below.
 RUN pip install --no-cache-dir -e . && \
     pip install --no-cache-dir -r dev-requirements.txt && \
-    pip uninstall -y typing && \
     pip uninstall -y allennlp && \
     rm -rf allennlp/
 
 # reinstall Detectron, because the version referenced in dev-requirements.txt is not reliable.
-RUN python -m pip install detectron2 -f https://dl.fbaipublicfiles.com/detectron2/wheels/cu102/torch1.6/index.html
+RUN pip install detectron2 -f https://dl.fbaipublicfiles.com/detectron2/wheels/cu102/torch1.7/index.html
 
 # Now add the full package source and re-install just the package.
 COPY . .
