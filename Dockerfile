@@ -18,9 +18,14 @@ LABEL com.nvidia.volumes.needed="nvidia_driver"
 
 WORKDIR /stage/allennlp
 
+# Install torch first. This build arg should be in the from of a version requirement,
+# like '==1.7' or '==1.7+cu102'.
+ARG TORCH
+RUN pip install --no-cache-dir torch${TORCH} -f https://download.pytorch.org/whl/torch_stable.html
+
 # Install the wheel of AllenNLP.
 COPY dist dist/
-RUN pip install $(ls dist/*.whl)
+RUN pip install --no-cache-dir $(ls dist/*.whl)
 # TODO(epwalsh): In PyTorch 1.7, dataclasses is an unconditional dependency, when it should
 # only be a conditional dependency for Python < 3.7.
 # This has been fixed on PyTorch master branch, so we should be able to

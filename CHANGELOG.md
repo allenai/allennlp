@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added Docker builds for other torch-supported versions of CUDA.
 - Adds [`allennlp-semparse`](https://github.com/allenai/allennlp-semparse) as an official, default plugin.
 
 ### Fixed

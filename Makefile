@@ -13,6 +13,8 @@ MD_DOCS_EXTRAS = $(addprefix $(MD_DOCS_ROOT),README.md CHANGELOG.md CONTRIBUTING
 DOCKER_TAG = latest
 DOCKER_IMAGE_NAME = allennlp/allennlp:$(DOCKER_TAG)
 DOCKER_TEST_IMAGE_NAME = allennlp/test:$(DOCKER_TAG)
+# Our self-hosted runner currently has CUDA 11.0.
+DOCKER_TEST_TORCH_VERSION = '==1.7.0+cu110'
 DOCKER_RUN_CMD = docker run --rm \
 		-v $$HOME/.allennlp:/root/.allennlp \
 		-v $$HOME/.cache/torch:/root/.cache/torch \
@@ -139,9 +141,10 @@ clean :
 .PHONY : docker-image
 docker-image :
 	docker build \
-			--pull \
-			-f Dockerfile \
-			-t $(DOCKER_IMAGE_NAME) .
+		--pull \
+		-f Dockerfile \
+		--build-arg TORCH=$(DOCKER_TORCH_VERSION) \
+		-t $(DOCKER_IMAGE_NAME) .
 
 .PHONY : docker-run
 docker-run :
@@ -149,7 +152,11 @@ docker-run :
 
 .PHONY : docker-test-image
 docker-test-image :
-	docker build --pull -f Dockerfile.test -t $(DOCKER_TEST_IMAGE_NAME) .
+	docker build \
+		--pull \
+		-f Dockerfile.test \
+		--build-arg TORCH=$(DOCKER_TEST_TORCH_VERSION) \
+		-t $(DOCKER_TEST_IMAGE_NAME) .
 
 .PHONY : docker-test-run
 docker-test-run :
