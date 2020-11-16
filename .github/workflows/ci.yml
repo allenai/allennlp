@@ -284,9 +284,9 @@ jobs:
 
     - name: Set Docker image name
       env:
-        CUDA: matrix.cuda
+        CUDA: ${{ matrix.cuda }}
       run: |
-        echo "DOCKER_CUDA_TAG=-cuda$CUDA" >> $GITHUB_ENV;
+        echo "DOCKER_CUDA_TAG=cuda$CUDA" >> $GITHUB_ENV;
         if [[ $GITHUB_EVENT_NAME == 'release' ]]; then
             echo "DOCKER_IMAGE_NAME=allennlp/allennlp:${GITHUB_REF#refs/tags/}-${DOCKER_CUDA_TAG}" >> $GITHUB_ENV;
         else
@@ -295,7 +295,7 @@ jobs:
 
     - name: Build image
       run: |
-        make docker-image DOCKER_IMAGE_NAME=$DOCKER_IMAGE_NAME DOCKER_TORCH_VERSION=$DOCKER_TORCH_VERSION
+        make docker-image DOCKER_IMAGE_NAME="$DOCKER_IMAGE_NAME" DOCKER_TORCH_VERSION="$DOCKER_TORCH_VERSION"
 
     - name: Test image
       run: |
