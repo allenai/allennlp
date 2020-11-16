@@ -204,19 +204,26 @@ whether you will leverage a GPU or just run on a CPU.  Docker provides more
 isolation and consistency, and also makes it easy to distribute your
 environment to a compute cluster.
 
-Once you have [installed Docker](https://docs.docker.com/engine/installation/)
-just run the following command to get an environment that will run on either the cpu or gpu.
+AllenNLP provides [official Docker images](https://hub.docker.com/r/allennlp/allennlp) with the library and all of its dependencies installed.
+
+Once you have [installed Docker](https://docs.docker.com/engine/installation/),
+you should also install the [NVIDIA Container Toolkit](https://github.com/NVIDIA/nvidia-docker)
+if you have GPUs available.
+
+Then run the following command to get an environment that will run on GPU:
 
 ```bash
 mkdir -p $HOME/.allennlp/
-docker run --rm -v $HOME/.allennlp:/root/.allennlp allennlp/allennlp:latest
+docker run --rm --gpus all -v $HOME/.allennlp:/root/.allennlp allennlp/allennlp:latest
 ```
 
 You can test the Docker environment with
 
 ```bash
-docker run --rm -v $HOME/.allennlp:/root/.allennlp allennlp/allennlp:latest test-install 
+docker run --rm --gpus all -v $HOME/.allennlp:/root/.allennlp allennlp/allennlp:latest test-install 
 ```
+
+If you don't have GPUs available, just omit the `--gpus all` flag.
 
 ### Installing from source
 

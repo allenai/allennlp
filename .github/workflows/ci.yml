@@ -282,7 +282,7 @@ jobs:
             exit 1;
         fi
 
-    - name: Set Docker image name
+    - name: Set image name
       env:
         CUDA: ${{ matrix.cuda }}
       run: |
